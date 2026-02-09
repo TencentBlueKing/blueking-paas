@@ -7,9 +7,9 @@
       <li>
         <img
           class="loading"
-          src="/static/images/btn_loading.gif"
-        >
-        <span> {{ $t('搜索中...') }} </span>
+          :src="btnLoadingGif"
+        />
+        <span>{{ $t('搜索中...') }}</span>
       </li>
     </template>
     <template v-else>
@@ -17,13 +17,13 @@
         v-if="curDisplayedAppList.length === 0"
         class="no-data"
       >
-        <span> {{ filterKey ? $t('无匹配数据'): $t('无应用') }}</span>
+        <span>{{ filterKey ? $t('无匹配数据') : $t('无应用') }}</span>
       </li>
       <!-- 在顶部导航是需要控制显示应用的个数 -->
       <li
         v-for="(item, index) in curDisplayedAppList"
         :key="index"
-        :class="{ 'on': curActiveIndex === index }"
+        :class="{ on: curActiveIndex === index }"
       >
         <a
           href="javascript:void(0);"
@@ -81,6 +81,7 @@ export default {
       isLoading: false,
       appList: [],
       curDisplayedAppList: [],
+      btnLoadingGif: require('@static/images/btn_loading.gif'),
     };
   },
   watch: {
@@ -110,7 +111,7 @@ export default {
           ...this.$route.query,
         },
       };
-      target.name = (this.searchAppsRouterName === 'customed' ? this.$route.name : 'appSummary');
+      target.name = this.searchAppsRouterName === 'customed' ? this.$route.name : 'appSummary';
       if (['monitorAlarm', 'appLog'].includes(this.$route.name)) {
         target.query = {};
       }
@@ -145,14 +146,16 @@ export default {
     // 获取所有应用列表
     getApplicationList() {
       this.isLoading = true;
-      this.$store.dispatch('search/fetchSearchApp', {
-        filterKey: '',
-        params: this.params,
-      }).then((appList) => {
-        this.appList = appList;
-        this.curDisplayedAppList = appList;
-        this.$emit('app-filter', this.curDisplayedAppList.length);
-      })
+      this.$store
+        .dispatch('search/fetchSearchApp', {
+          filterKey: '',
+          params: this.params,
+        })
+        .then((appList) => {
+          this.appList = appList;
+          this.curDisplayedAppList = appList;
+          this.$emit('app-filter', this.curDisplayedAppList.length);
+        })
         .finally(() => {
           this.isLoading = false;
           this.$emit('search-ready', this.appList);
@@ -177,73 +180,73 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    @import "../../assets/css/components/conf.scss";
+@import '../../assets/css/components/conf.scss';
 
-    .ps-app-list {
-        background: #fff;
-        max-height: 300px;
-        overflow: auto;
+.ps-app-list {
+  background: #fff;
+  max-height: 300px;
+  overflow: auto;
 
-        li {
-            line-height: 32px;
-            padding: 0 20px;
-            font-size: 12px;
+  li {
+    line-height: 32px;
+    padding: 0 20px;
+    font-size: 12px;
 
-            a {
-                color: $appMainFontColor;
-                font-size: 12px;
-                display: block;
-                overflow: hidden;
-                white-space: nowrap;
-                text-overflow: ellipsis;
+    a {
+      color: $appMainFontColor;
+      font-size: 12px;
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
 
-                .paasng-star-cover {
-                  color: #FFB848 !important;
-                }
+      .paasng-star-cover {
+        color: #ffb848 !important;
+      }
 
-                .paasng-star-line {
-                  color: #C4C6CC !important;
-                }
+      .paasng-star-line {
+        color: #c4c6cc !important;
+      }
 
-                .star-icon {
-                    width: 8%;
-                    float: left;
-                }
+      .star-icon {
+        width: 8%;
+        float: left;
+      }
 
-                .app-name {
-                    width: 52%;
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    float: left;
-                }
+      .app-name {
+        width: 52%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        float: left;
+      }
 
-                .app-code {
-                    color: #C4C6CC;
-                    float: right;
-                    width: 40%;
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    text-align: right;
-                }
-            }
-
-            &:hover,
-            &.on {
-                background: #F0F1F5;
-
-                a {
-                    color: $appPrimaryColor;
-                }
-            }
-
-            &.no-data:hover {
-                background: #FFF;
-            }
-        }
-
-        .loading {
-            margin-right: 5px;
-            vertical-align: middle;
-        }
+      .app-code {
+        color: #c4c6cc;
+        float: right;
+        width: 40%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        text-align: right;
+      }
     }
+
+    &:hover,
+    &.on {
+      background: #f0f1f5;
+
+      a {
+        color: $appPrimaryColor;
+      }
+    }
+
+    &.no-data:hover {
+      background: #fff;
+    }
+  }
+
+  .loading {
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+}
 </style>

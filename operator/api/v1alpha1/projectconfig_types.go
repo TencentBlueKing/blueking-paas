@@ -88,6 +88,16 @@ type AutoscalingConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
+// AppLogHostPath contains the config for app logging volumes
+type AppLogHostPath struct {
+	// LegacyPath is the host path for legacy app logging volume
+	// Default: /data/bkapp/logs
+	LegacyPath string `json:"legacyPath"`
+	// MulModulePath is the host path for multi-module app logging volume
+	// Default: /data/bkapp/v3logs
+	MulModulePath string `json:"mulModulePath"`
+}
+
 //+kubebuilder:object:root=true
 
 // ProjectConfig is the Schema for the project configs API
@@ -100,10 +110,13 @@ type ProjectConfig struct {
 
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
+	LogHostPath   AppLogHostPath      `json:"logHostPath"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	ResRequests   ResRequestsConfig   `json:"resRequests"`
-	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
-	MaxProcesses  int32               `json:"maxProcesses"`
+	// NOTE: ResRequests 是 operator 为 BkApp 设置的默认 resource requests,
+	// 仅当 BkApp 中 ResourceQuota 没有提供 requests 的情况下有效
+	ResRequests  ResRequestsConfig `json:"resRequests"`
+	Autoscaling  AutoscalingConfig `json:"autoscaling"`
+	MaxProcesses int32             `json:"maxProcesses"`
 }
 
 // NewProjectConfig create project config
@@ -128,6 +141,10 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResRequests.ProcDefaultCPURequest = ""
 
 	conf.MaxProcesses = 8
+
+	// log host path defaults
+	conf.LogHostPath.LegacyPath = "/data/bkapp/logs"
+	conf.LogHostPath.MulModulePath = "/data/bkapp/v3logs"
 
 	return &conf
 }
@@ -185,4 +202,14 @@ func (p *ProjectConfig) GetCustomDomainIngressClassName() string {
 // IsAutoscalingEnabled returns whether autoscaling is enabled
 func (p *ProjectConfig) IsAutoscalingEnabled() bool {
 	return p.Autoscaling.Enabled
+}
+
+// GetLegacyLogHostPath returns the host path for legacy app logging volume
+func (p *ProjectConfig) GetLegacyLogHostPath() string {
+	return p.LogHostPath.LegacyPath
+}
+
+// GetMulModuleLogHostPath returns the host path for multi-module app logging volume
+func (p *ProjectConfig) GetMulModuleLogHostPath() string {
+	return p.LogHostPath.MulModulePath
 }

@@ -90,3 +90,5 @@ layers =
     base
 containers=
     paas_wl.infras.resources
+ignore_imports =
+    paas_wl.bk_app.applications.models.app -> paas_wl.infras.resources.utils.basic

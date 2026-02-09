@@ -1263,7 +1263,7 @@ export default {
   管理实例: 'Manage instances',
   删除服务: 'Delete service',
   '所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。': 'All data related to the applied instance will be destroyed. The binding relationship between the APP and the service will also be released.',
-  '预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID': 'Both staging and production instances will be deleted; this action is irreversible, please enter the full APP ID',
+  '预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入{type}': 'Both staging and production instances will be deleted; this action is irreversible, please enter the full {type}',
   '确认：': 'Confirm:',
   隐藏: 'Hide',
   显示: 'Show',
@@ -3104,4 +3104,5 @@ export default {
   切换为代码仓库: 'Switch to Code Repository',
   是否切换为代码仓库: 'Switch to Code Repository?',
   '一旦修改为代码仓库部署后，不能再改回源码包部署。': 'Once changed to code repository deployment, it cannot be reverted to source package deployment.',
+  复制审批链接: 'Copy Approval Link',
 };

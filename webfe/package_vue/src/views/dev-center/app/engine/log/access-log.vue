@@ -96,7 +96,7 @@
           <img
             v-if="!hasChartData"
             class="chart-placeholder"
-            src="/static/images/chart-default.svg"
+            :src="chartDefault"
           />
         </div>
 
@@ -368,6 +368,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      chartDefault: require('@static/images/chart-default.svg'),
       name: 'log-component',
       filterKeyword: '',
       contentHeight: 400,
@@ -1060,7 +1061,7 @@ export default {
   width: 227px;
   padding: 0 30px 0 10px;
   cursor: pointer;
-  background: url(/static/images/query-date-icon.png) 270px center no-repeat;
+  background: url(~@static/images/query-date-icon.png) 270px center no-repeat;
   font-size: 13px;
 }
 

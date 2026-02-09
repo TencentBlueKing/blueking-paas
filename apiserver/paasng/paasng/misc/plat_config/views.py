@@ -22,6 +22,8 @@ from rest_framework.viewsets import ViewSet
 
 from paas_wl.infras.cluster.constants import BK_LOG_DEFAULT_ENABLED
 
+from .serializers import EncryptConfigOutputSLZ
+
 
 class FrontendFeatureViewSet(ViewSet):
     @swagger_auto_schema(tags=["前端特性配置"])
@@ -54,6 +56,10 @@ class FrontendFeatureViewSet(ViewSet):
             "APP_AVAILABILITY_LEVEL": settings.FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL,
             # 是否展示 MCP Server 云 API 权限
             "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
+            # 是否允许用户自定义持久存储大小
+            "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
+            # 是否开启构建 S-Mart 包功能
+            "SMART_APP_BUILDER": settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {
@@ -81,5 +87,25 @@ class FrontendFeatureViewSet(ViewSet):
             "MULTI_TENANT_MODE": settings.ENABLE_MULTI_TENANT_MODE,
             # 是否使用蓝鲸日志平台方案
             "BK_LOG": BK_LOG_DEFAULT_ENABLED,
+            # 是否开启前端加密
+            "FRONTEND_ENCRYPTION": settings.ENABLE_FRONTEND_ENCRYPT,
         }
+
         return Response(data={**features_reuses_backend_settings, **fronted_features})
+
+
+class FrontendEncryptConfigViewSet(ViewSet):
+    @swagger_auto_schema(tags=["前端特性配置"], responses={200: EncryptConfigOutputSLZ()})
+    def get_encrypt_config(self, request):
+        encrypt_config = {
+            "enabled": settings.ENABLE_FRONTEND_ENCRYPT,
+        }
+        if settings.ENABLE_FRONTEND_ENCRYPT:
+            encrypt_config.update(
+                {
+                    "public_key": settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
+                    "encrypt_cipher_type": settings.FRONTEND_ENCRYPT_CIPHER_TYPE,
+                }
+            )
+
+        return Response(data=EncryptConfigOutputSLZ(encrypt_config).data)

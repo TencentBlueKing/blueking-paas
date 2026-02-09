@@ -109,7 +109,7 @@ export default {
   },
   data() {
     return {
-      defaultImg: '/static/images/default_logo.png',
+      defaultImg: require('@static/images/default_logo.png'),
     };
   },
   methods: {

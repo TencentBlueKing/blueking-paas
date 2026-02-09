@@ -78,7 +78,7 @@
                 v-else
                 class="iframe-loading"
               >
-                <img src="/static/images/loading.gif" />
+                <img :src="loadingGif" />
                 <p>{{ $t('沙箱环境正在启动，预计需要约 30 秒，请稍候。') }}</p>
               </div>
             </div>
@@ -151,6 +151,7 @@ export default {
       sandboxAccessible: false,
       isLoading: true,
       deployId: '',
+      loadingGif: require('@static/images/loading.gif'),
       buildLog: '',
       runLog: '',
       isRunNowLoading: false,
@@ -204,7 +205,7 @@ export default {
     },
     // 沙箱加载完成（除状态 Ready 外，还需要检查是否可访问，即网络已通）
     isSandboxReady() {
-      return this.sandboxData.status === 'ready' && this.sandboxAccessible && this.isVerifyPassword;
+      return this.sandboxData?.status === 'ready' && this.sandboxAccessible && this.isVerifyPassword;
     },
     // 构建成功
     isBuildSuccess() {

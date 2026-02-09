@@ -16,13 +16,21 @@
 # to the current version of the project delivered to anyone in the future.
 
 import io
+from unittest import mock
 
 import pytest
 from blue_krill.contextlib import nullcontext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator, IntegerOrCharField, SafePathField
+from paasng.utils.serializers import (
+    Base64FileField,
+    ConfigVarReservedKeyValidator,
+    DecryptableCharField,
+    DecryptableJSONField,
+    IntegerOrCharField,
+    SafePathField,
+)
 
 
 class Base64FileFieldSLZ(serializers.Serializer):
@@ -149,3 +157,78 @@ class TestSafePathField:
     def test_invalid(self, safe_path):
         slz = SafePathSLZ(data={"safe_path": safe_path})
         assert slz.is_valid() is False
+
+
+class DecryptableJSONFieldSLZ(serializers.Serializer):
+    payload = DecryptableJSONField()
+
+
+class TestDecryptableJSONField:
+    def test_to_internal_value_decrypts_nested_values(self):
+        slz = DecryptableJSONFieldSLZ(
+            data={
+                "payload": {
+                    "plain": "value",
+                    "secret": {"_encrypted": True, "_encrypted_value": "cipher1"},
+                    "nested": [1, {"_encrypted": True, "_encrypted_value": "cipher2"}],
+                }
+            }
+        )
+        field = slz.fields["payload"]
+        with mock.patch.object(field, "decrypt", side_effect=lambda value: f"dec:{value}") as decrypt_mock:
+            slz.is_valid(raise_exception=True)
+
+            assert slz.validated_data["payload"]["secret"] == "dec:cipher1"
+            assert slz.validated_data["payload"]["nested"][1] == "dec:cipher2"
+            decrypt_mock.assert_has_calls([mock.call("cipher1"), mock.call("cipher2")])
+
+    def test_to_internal_value_rejects_too_deep_data(self):
+        slz = DecryptableJSONFieldSLZ(data={"payload": {}})
+        field = slz.fields["payload"]
+
+        # 构造一个过深的 json 数据
+        data: dict = {}
+        current: dict = data
+        for _ in range(field.MAX_RECURSION_DEPTH + 1):
+            current["child"] = {}
+            current = current["child"]
+
+        with (
+            mock.patch.object(field, "decrypt", return_value="dec"),
+            pytest.raises(ValidationError),
+        ):
+            field.to_internal_value(data)
+
+
+class DecryptableCharFieldSLZ(serializers.Serializer):
+    value = DecryptableCharField()
+
+
+class TestDecryptableCharField:
+    def test_to_internal_value_plain(self):
+        slz = DecryptableCharFieldSLZ(data={"value": "plain"})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["value"] == "plain"
+
+    def test_to_internal_value_encrypted(self):
+        slz = DecryptableCharFieldSLZ(data={"value": {"_encrypted": True, "_encrypted_value": "cipher"}})
+        field = slz.fields["value"]
+        with mock.patch.object(field, "decrypt", return_value="plain") as decrypt_mock:
+            slz.is_valid(raise_exception=True)
+
+            assert slz.validated_data["value"] == "plain"
+            decrypt_mock.assert_called_once_with("cipher")
+
+    @pytest.mark.parametrize(
+        ("value", "expected", "ctx"),
+        [
+            ({"_encrypted": True, "_encrypted_value": "ciphertext"}, True, nullcontext()),
+            ({"_encrypted": True}, False, pytest.raises(ValidationError)),
+            ({"_encrypted": False, "_encrypted_value": "ciphertext"}, False, pytest.raises(ValidationError)),
+            ("plain", False, nullcontext()),
+        ],
+    )
+    def test_is_encrypted_value(self, value, expected, ctx):
+        slz = DecryptableCharFieldSLZ(data={"value": value})
+        with ctx:
+            assert slz.fields["value"].is_encrypted_value(value)[0] == expected

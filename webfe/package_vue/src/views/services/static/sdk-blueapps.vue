@@ -75,7 +75,7 @@
                 apiData: {
                     name: this.$t('开发框架'),
                     apititle: this.$t('蓝鲸应用开发框架'),
-                    image: '/static/images/service-pic10.png',
+                    image: require('@static/images/service-pic10.png'),
                     apiexplain: this.$t('蓝鲸应用开发框架为开发者提供统一登录鉴权、敏感权限、功能开关、权限控制、日志、查询组件、常用tags等基础功能模块，以及CRUD、云API调用、任务调度、后台任务等样例，助力开发者快速上手开发蓝鲸应用'),
                     apiList: appList
                 }

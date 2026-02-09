@@ -106,7 +106,7 @@
               ]"
               @click="changeSourceControl(item.value)"
             >
-              <img :src="'/static/images/' + item.imgSrc + '.png'" />
+              <img :src="getSourceImage(item.imgSrc)" />
               <p
                 class="source-control-title"
                 :title="item.name"
@@ -263,6 +263,18 @@ import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
 import { fileDownload } from '@/common/utils';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import dayjs from 'dayjs';
+import { mapState } from 'vuex';
+import { encryptString } from '@/common/crypto';
+
+// 导入所有代码源图片
+const sourceImages = {
+  bk_gitlab: require('@static/images/bk_gitlab.png'),
+  bk_svn: require('@static/images/bk_svn.png'),
+  bare_git: require('@static/images/bare_git.png'),
+  tc_git: require('@static/images/tc_git.png'),
+  github: require('@static/images/github.png'),
+  gitee: require('@static/images/gitee.png'),
+};
 
 export default {
   components: {
@@ -383,9 +395,14 @@ export default {
   },
 
   computed: {
+    ...mapState('tenantConfig', ['encryptConfig']),
     curSourceControl() {
       const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
       return match;
+    },
+    // 获取代码源图片
+    getSourceImage() {
+      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     // 部署目录校验
     isSourceDirInvalid() {
@@ -425,7 +442,7 @@ export default {
   methods: {
     async init() {
       // 获取模块基本信息
-      await Promise.all([this.fetchModuleInfo(), this.fetchAccountAllowSourceControlType()]);
+      await Promise.all([this.fetchModuleInfo(), this.fetchAccountAllowSourceControlType(), this.fetchEncryptConfig()]);
       await this.fetchLanguageInfo();
       // 获取代码检查详情
       this.getCodeInspection();
@@ -440,6 +457,11 @@ export default {
           this.changeSourceControl(key);
         }
       }
+    },
+
+    // 获取加密配置
+    async fetchEncryptConfig() {
+      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch((e) => this.catchErrorHandler(e));
     },
 
     // 获取代码源列表
@@ -664,7 +686,7 @@ export default {
         if (config && config.authInfo) {
           params.data.source_repo_auth_info = {
             username: config.authInfo.account,
-            password: config.authInfo.password,
+            password: encryptString(config.authInfo.password, this.encryptConfig),
           };
         }
 
@@ -703,10 +725,7 @@ export default {
         await this.fetchModuleInfo();
         this.isCodeSourceEdit = false;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         this.switchLoading = false;
       }

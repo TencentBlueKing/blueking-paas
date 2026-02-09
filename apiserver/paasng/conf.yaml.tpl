@@ -628,9 +628,17 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ## 是否使用 DockerRegistryToken 来验证，为 false 时使用 HTTPBasicAuthentication
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
-## 如果用到 python manage.py push_smart_image, SMART_IMAGE_TAG 和 SMART_CNB_IMAGE_TAG 必须设置有效值
-# SMART_IMAGE_TAG: v0.0.1-smart
-# SMART_CNB_IMAGE_TAG: v0.0.1-smart
+## 如果用到 python manage.py push_smart_image, APP_IMAGE 必须设置有效值
+# APP_IMAGE: hub.bktencent.com/blueking/slug-app:v0.0.1
+
+## 可以通过 SMART_CNB_IMAGE_CONF 来配置多个基础镜像。 未显式设置 default 时, 平台会使用默认配置
+# SMART_CNB_IMAGE_CONF:
+#   default:
+#     name: bkpaas/run-heroku-bionic
+#     tag: v1.0.2
+#   ts4:
+#     name: bkpaas/run-ts4
+#     tag: v1.0.2
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 
@@ -748,6 +756,18 @@ BK_AUDIT_ENDPOINT = ""
 #   requests:
 #     cpu: 500m
 #     memory: 1024Mi
+
+
+## ---------------------------------------- 持久存储配置 ----------------------------------------
+
+## 持久存储默认存储大小，默认值 1Gi
+# DEFAULT_PERSISTENT_STORAGE_SIZE: 1Gi
+
+## 是否允许用户自定义持久存储大小，默认值为 false
+# PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM: false
+
+## 自定义容量的最大值（单位: Gi），默认值为 100
+# PERSISTENT_STORAGE_SIZE_MAX: 100
 
 
 ## ---------------------------------------- 部署环境相关 ----------------------------------------
@@ -933,6 +953,21 @@ DEV_SANDBOX_CLUSTER: ""
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = [21, 22, 23]
+
+## ------------------------------------ 前端加密传输配置 ------------------------------------
+
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT: False
+
+# 具体加密使用的算法
+FRONTEND_ENCRYPT_CIPHER_TYPE: "SM2"
+
+# SM2 密钥生成方式请参考 apiserver/README.md 中的「前端加密配置」章节
+# SM2 公钥, PEM 格式, Base64 编码
+FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64: ""
+
+# SM2 私钥, PEM 格式, Base64 编码
+FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
 
 ## ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 

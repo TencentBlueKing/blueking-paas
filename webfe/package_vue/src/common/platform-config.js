@@ -38,8 +38,8 @@ export default async function (vm) {
     productNameEn: 'BK Developer Center',
     brandName: window.GLOBAL_CONFIG.APP_VERSION === 'te' ? '蓝鲸' : '蓝鲸智云',
     brandNameEn: 'Tencent BlueKing',
-    appLogo: '/static/images/logo.svg',
-    favicon: '/static/images/logo.svg',
+    appLogo: require('@static/images/logo.svg'),
+    favicon: require('@static/images/logo.svg'),
     version: window.BK_PAAS_VERSION,
     footerInfo: vm.GLOBAL.LINK.BK_HELP
       ? `[联系BK助手](${vm.GLOBAL.LINK.BK_HELP}) | [蓝鲸桌面](${vm.GLOBAL.LINK.BK_DESKTOP})`

@@ -25,6 +25,7 @@
         >
           {{ placeholder }}
         </div>
+        <i class="bk-icon icon-angle-down dropdown-icon"></i>
       </div>
       <bk-option
         v-for="option in options"
@@ -58,7 +59,7 @@ export default {
     },
     width: {
       type: [String, Number],
-      default: '300px',
+      default: 300,
     },
     disabled: {
       type: Boolean,
@@ -70,6 +71,9 @@ export default {
       if (!this.value) return '';
       const option = this.options.find((item) => item.value === this.value);
       return option?.label || this.value;
+    },
+    selectWidth() {
+      return `${this.width}px`;
     },
   },
   methods: {
@@ -83,10 +87,11 @@ export default {
 
 <style lang="scss" scoped>
 .prefix-select-container {
-  width: v-bind(width);
+  width: v-bind(selectWidth);
   .prefix-select-cls {
     background-color: #fff;
     .trigger-container {
+      position: relative;
       height: 100%;
       display: flex;
       text-align: center;
@@ -107,6 +112,21 @@ export default {
         color: #c3cdd7;
         cursor: pointer;
         user-select: none;
+      }
+      .dropdown-icon {
+        position: absolute;
+        right: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 22px;
+        color: #979ba5;
+        transition: transform 0.3s;
+        pointer-events: none;
+      }
+    }
+    &.is-focus {
+      .dropdown-icon {
+        transform: translateY(-50%) rotate(180deg);
       }
     }
     &.is-disabled {

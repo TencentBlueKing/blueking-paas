@@ -8,7 +8,7 @@
         <div class="flex-row align-items-center">
           <img
             :src="curPluginInfo.logo"
-            onerror="this.src='/static/images/plugin-default.svg'"
+            onerror="this.src=`${pluginDefault}`"
           />
           <div class="pl10">
             <div
@@ -56,7 +56,7 @@
               >
                 <img
                   :src="item.logo"
-                  onerror="this.src='/static/images/plugin-default.svg'"
+                  onerror="this.src=`${pluginDefault}`"
                 />
                 <div
                   class="plugin-name ft12 pl10"
@@ -102,6 +102,7 @@ export default {
   mixins: [pluginBaseMixin],
   data() {
     return {
+      pluginDefault: require('@static/images/plugin-default.svg'),
       showSelectData: false,
       searchValue: '',
       pluginList: [],
@@ -182,7 +183,9 @@ export default {
       if (this.searchValue === '') {
         this.viewPluinList = this.pluginList;
       }
-      this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
+      this.viewPluinList = this.pluginList.filter(
+        (item) => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1
+      );
     }, 100),
 
     getTarget(pluginId, pdId) {

@@ -67,7 +67,7 @@
               class="flex-row align-items-center flex-nowrap"
             >
               <img
-                :src="row.logo ? row.logo : '/static/images/default_logo.png'"
+                :src="row.logo ? row.logo : defaultLogo"
                 class="app-logo"
               />
               <div class="flex-column app-infos text-ellipsis">
@@ -93,12 +93,12 @@
               {{ row[column.prop] || '--' }}
             </div>
             <div
-              v-else-if="column.prop === 'is_active'"
+              v-else-if="column.prop === 'app_status'"
               class="flex-row align-items-center"
             >
-              <i :class="['dot', { successful: row.is_active }]"></i>
-              <span :class="{ 'off-shelf': !row.is_active }">
-                {{ row.is_active ? $t('正常') : $t('下架') }}
+              <i :class="['dot', row.app_status]"></i>
+              <span :class="{ 'off-shelf': row.app_status === 'offline' }">
+                {{ $t(APP_STATUS[row.app_status]) || '--' }}
               </span>
             </div>
             <bk-user-display-name
@@ -160,6 +160,7 @@
 <script>
 import TenantSelect from '../../services/service-plan/tenant-select';
 import DeleteDialog from '@/components/delete-dialog';
+import { APP_STATUS } from '@/common/constants';
 import { mapState, mapGetters } from 'vuex';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -184,6 +185,7 @@ export default {
       searchValue: '',
       appList: [],
       isTableLoading: false,
+      defaultLogo: require('@static/images/default_logo.png'),
       pagination: {
         current: 1,
         count: 0,
@@ -213,6 +215,8 @@ export default {
         loading: false,
         deletedKey: '',
       },
+      // 应用状态
+      APP_STATUS,
     };
   },
   computed: {
@@ -304,13 +308,14 @@ export default {
         },
         {
           label: this.$t('状态'),
-          prop: 'is_active',
+          prop: 'app_status',
           filters: [
-            { text: this.$t('正常'), value: true },
-            { text: this.$t('下架'), value: false },
+            { text: this.$t('未部署'), value: 'not_deployed' },
+            { text: this.$t('正常'), value: 'normal' },
+            { text: this.$t('下架'), value: 'offline' },
           ],
           'filter-multiple': false,
-          'column-key': 'is_active',
+          'column-key': 'app_status',
         },
         {
           label: this.$t('创建人'),
@@ -436,10 +441,6 @@ export default {
         offset: limit * (current - 1),
         ...filteredData,
       };
-      if (!this.isSoftDeletePage) {
-        // 已下架的应用永远排在最后
-        queryParams.order_by = queryParams.order_by ? `-is_active,${queryParams.order_by}` : '-is_active';
-      }
       if (this.searchValue) {
         queryParams.search = this.searchValue;
       }
@@ -470,6 +471,9 @@ export default {
         this.tableEmptyConf.isAbnormal = false;
         this.updateTableEmptyConfig();
       } catch (e) {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
+          return;
+        }
         this.tableEmptyConf.isAbnormal = true;
         this.catchErrorHandler(e);
       } finally {
@@ -624,11 +628,23 @@ export default {
         background: #979ba5;
         border-radius: 50%;
       }
-      &.successful {
+      &.normal {
         &::before {
           background: #3fc06d;
         }
         background: #daf6e5;
+      }
+      &.not_deployed {
+        &::before {
+          background: #ff9c01;
+        }
+        background: #ffe8c3;
+      }
+      &.offline {
+        &::before {
+          background: #979ba5;
+        }
+        background: #979ba529;
       }
     }
   }

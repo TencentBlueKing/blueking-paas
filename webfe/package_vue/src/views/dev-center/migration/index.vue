@@ -257,7 +257,6 @@
                       :href="appItem.legacy_url"
                       class="ps-table-app"
                     >
-                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
                       <fallback-image
                         :url="appItem.logo"
                         :url-fallback="defaultLogo"
@@ -431,7 +430,6 @@
                       :href="appItem.legacy_url"
                       class="ps-table-app"
                     >
-                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
                       <fallback-image
                         :url="appItem.logo"
                         :url-fallback="defaultLogo"
@@ -655,7 +653,6 @@
 
 <script>
 import FallbackImage from '@/components/ui/fallback-image';
-import defaultLogo from '../../../../static/images/default_logo.png';
 
 export default {
   components: {
@@ -710,7 +707,7 @@ export default {
         offline_url: '',
         is_third_app: false,
       },
-      defaultLogo,
+      defaultLogo: require('@static/images/default_logo.png'),
     };
   },
   computed: {

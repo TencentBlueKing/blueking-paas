@@ -16,6 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+/* global require */
+
 export const APP_TYPES = {
   dj18_hello_world: 'backend',
   dj18_with_auth: 'web',
@@ -26,21 +28,29 @@ export const APP_TYPES = {
   nodejs_express_hello_world: 'backend',
 };
 export const APP_LANGUAGES_IMAGE = {
-  Python: {
-    normal: '/static/images/python-1.png',
-    hover: '/static/images/python.png',
+  get Python() {
+    return {
+      normal: require('@static/images/python-1.png'),
+      hover: require('@static/images/python.png'),
+    };
   },
-  PHP: {
-    normal: '/static/images/php.png',
-    hover: '/static/images/php-1.png',
+  get PHP() {
+    return {
+      normal: require('@static/images/php.png'),
+      hover: require('@static/images/php-1.png'),
+    };
   },
-  Go: {
-    normal: '/static/images/golang.png',
-    hover: '/static/images/golang-1.png',
+  get Go() {
+    return {
+      normal: require('@static/images/golang.png'),
+      hover: require('@static/images/golang-1.png'),
+    };
   },
-  NodeJS: {
-    normal: '/static/images/nodejs.png',
-    hover: '/static/images/nodejs-1.png',
+  get NodeJS() {
+    return {
+      normal: require('@static/images/nodejs.png'),
+      hover: require('@static/images/nodejs-1.png'),
+    };
   },
 };
 
@@ -124,7 +134,6 @@ export const ENV_ENUM = {
   stag: '预发布环境',
 };
 
-export const RESQUOTADATA = ['default', '1C512M', '2C1G', '2C2G', '4C1G', '4C2G'];
 export const PLUGIN_ITSM_APPLY = {
   plugin_id: '插件标识',
   plugin_name: '插件名称',
@@ -425,4 +434,13 @@ export const MCP_SERVER_STATUS = {
   rejected: '已拒绝',
   pending: '申请中',
   need_apply: '未申请',
+};
+
+/**
+ * 应用状态
+ */
+export const APP_STATUS = {
+  not_deployed: '未部署',
+  normal: '正常',
+  offline: '下架',
 };

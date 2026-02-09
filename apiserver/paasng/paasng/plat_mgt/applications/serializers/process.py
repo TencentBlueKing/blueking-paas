@@ -19,6 +19,8 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.platform.bkapp_model.serializers.serializers import validate_res_quota_plan
 from paasng.platform.engine.constants import AppEnvName
 
 
@@ -54,6 +56,18 @@ class ResourcesSLZ(serializers.Serializer):
         return attrs
 
 
+class PlanResourcesSLZ(serializers.Serializer):
+    """资源配置 - 方案名称"""
+
+    plan = serializers.CharField(help_text="资源配额方案名称")
+
+    def validate_plan(self, value):
+        """验证 plan 字段"""
+        if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError(_("资源配额方案 {plan} 不存在或未启用").format(plan=value))
+        return value
+
+
 # ============= Output Serializers =============
 
 
@@ -61,13 +75,15 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
+    override_resources = ResourcesSLZ(help_text="管理员配置的资源配额", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
     """单个进程规格输出序列化器"""
 
     name = serializers.CharField(help_text="进程名称")
+    plan_name = serializers.CharField(help_text="资源配额方案")
     env_overlays = serializers.DictField(
         child=EnvOverlayOutputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=False
     )
@@ -87,7 +103,27 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    override_plan_name = serializers.CharField(
+        help_text="资源配额方案名称",
+        allow_null=True,
+        required=False,
+        validators=[validate_res_quota_plan],
+    )
+    override_resources = ResourcesSLZ(
+        help_text="资源配额",
+        allow_null=True,
+        required=False,
+    )
+
+    def validate(self, attrs):
+        """验证 override_plan_name 和 override_resources 不能同时提供"""
+        plan_name = attrs.get("override_plan_name")
+        resources = attrs.get("override_resources")
+
+        if plan_name and resources:
+            raise serializers.ValidationError(_("只能提供 override_plan_name 或 override_resources 其中之一"))
+
+        return attrs
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

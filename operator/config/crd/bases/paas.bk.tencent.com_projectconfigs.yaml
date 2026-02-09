@@ -198,6 +198,23 @@ spec:
             - resourceNamespace
             - retryPeriod
             type: object
+          logHostPath:
+            description: AppLogHostPath contains the config for app logging volumes
+            properties:
+              legacyPath:
+                description: |-
+                  LegacyPath is the host path for legacy app logging volume
+                  Default: /data/bkapp/logs
+                type: string
+              mulModulePath:
+                description: |-
+                  MulModulePath is the host path for multi-module app logging volume
+                  Default: /data/bkapp/v3logs
+                type: string
+            required:
+            - legacyPath
+            - mulModulePath
+            type: object
           maxProcesses:
             format: int32
             type: integer
@@ -255,7 +272,9 @@ spec:
             - procDefaultMemLimit
             type: object
           resRequests:
-            description: ResRequestsConfig contains bkapp resource requests
+            description: |-
+              NOTE: ResRequests 是 operator 为 BkApp 设置的默认 resource requests,
+              仅当 BkApp 中 ResourceQuota 没有提供 requests 的情况下有效
             properties:
               procDefaultCPURequest:
                 description: ProcDefaultCPURequest is process's default cpu request
@@ -300,6 +319,7 @@ spec:
         required:
         - autoscaling
         - ingressPlugin
+        - logHostPath
         - maxProcesses
         - platform
         - resLimits

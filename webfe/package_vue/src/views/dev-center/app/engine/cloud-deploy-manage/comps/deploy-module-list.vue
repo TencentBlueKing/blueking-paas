@@ -356,7 +356,6 @@ export default {
       } else {
         this.deploymentInfoData = this.deploymentInfoDataBackUp.filter((module) => module.module_name === value);
       }
-      this.init();
     },
     isWatchOfflineing(newVal, oldVal) {
       if (oldVal && !newVal) {
@@ -371,6 +370,10 @@ export default {
 
   beforeDestroy() {
     bus.$off('get-release-info');
+    if (this.intervalTimer) {
+      clearTimeout(this.intervalTimer);
+      this.intervalTimer = null;
+    }
   },
 
   mounted() {

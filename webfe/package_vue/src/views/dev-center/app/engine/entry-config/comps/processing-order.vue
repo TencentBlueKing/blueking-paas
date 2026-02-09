@@ -175,6 +175,7 @@ export default {
   mixins: [appBaseInfoMixin],
   data() {
     return {
+      sortIcon: require('@static/images/sort-icon.png'),
       isFirstLoading: true,
       orderList: [],
       auditParams: {
@@ -243,7 +244,7 @@ export default {
               transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
             },
             attrs: {
-              src: '/static/images/sort-icon.png',
+              src: this.sortIcon,
             },
           }),
         ],

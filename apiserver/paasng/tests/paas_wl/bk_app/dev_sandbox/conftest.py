@@ -20,7 +20,7 @@ import pytest
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import DevWlAppConstructor
-from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, DevSandboxEnvVarList, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
@@ -35,7 +35,12 @@ def default_cluster():
 
 @pytest.fixture()
 def dev_sandbox_model(bk_cnative_app, bk_module) -> DevSandboxModel:
-    return DevSandboxModel.objects.create(module=bk_module, env_vars={}, version_info=None, owner="admin")
+    return DevSandboxModel.objects.create(
+        module=bk_module,
+        env_vars=DevSandboxEnvVarList([]),
+        version_info=None,
+        owner="admin",
+    )
 
 
 @pytest.fixture()

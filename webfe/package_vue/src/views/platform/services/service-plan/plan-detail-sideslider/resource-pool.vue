@@ -1,13 +1,20 @@
 <template>
   <div class="resource-pool-container">
-    <div class="flex-row justify-content-between">
-      <bk-button
-        :theme="'primary'"
-        class="mr10"
-        @click="addInstances"
-      >
-        {{ $t('添加实例') }}
-      </bk-button>
+    <div class="flex-row justify-content-between align-items-center">
+      <div class="flex-row align-items-center">
+        <bk-button
+          :theme="'primary'"
+          class="mr10"
+          @click="addInstances"
+        >
+          {{ $t('添加实例') }}
+        </bk-button>
+        <!-- 显示配置/隐藏配置的快捷入口 -->
+        <TogglePlaintextButton
+          v-model="isAllPlaintext"
+          @toggle="toggleAllPlaintext"
+        />
+      </div>
     </div>
     <bk-table
       :data="instances"
@@ -20,51 +27,29 @@
         :label="$t('实例凭证')"
         prop="conditions"
       >
-        <div
-          class="json-pretty-wrapper"
-          slot-scope="{ row }"
-        >
-          <!-- JSON格式预览 -->
-          <vue-json-pretty
-            class="paas-vue-json-pretty-cls"
+        <template slot-scope="{ row }">
+          <MaskedTextViewer
             :data="row.jsonData"
             :deep="Object.keys(row.jsonData)?.length ? 1 : 0"
-            :show-length="true"
-            :highlight-mouseover-node="true"
+            :plaintext.sync="plaintextStatusMap[`${row.uuid}-credentials`]"
           />
-          <i
-            v-bk-tooltips="$t('复制')"
-            class="paasng-icon paasng-general-copy"
-            v-copy="handleCopy(row.jsonData)"
-          ></i>
-        </div>
+        </template>
       </bk-table-column>
       <bk-table-column :label="`TLS ${$t('配置')}`">
-        <div
-          class="json-pretty-wrapper"
-          slot-scope="{ row }"
-        >
+        <template slot-scope="{ row }">
           <template v-if="!row.tlsConfig">--</template>
-          <template v-else>
-            <vue-json-pretty
-              class="paas-vue-json-pretty-cls"
-              :data="row.tlsConfig"
-              :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
-              :show-length="true"
-              :highlight-mouseover-node="true"
-            />
-            <i
-              v-bk-tooltips="$t('复制')"
-              class="paasng-icon paasng-general-copy"
-              v-copy="handleCopy(row.tlsConfig)"
-            ></i>
-          </template>
-        </div>
+          <MaskedTextViewer
+            v-else
+            :data="row.tlsConfig"
+            :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
+            :plaintext.sync="plaintextStatusMap[`${row.uuid}-tls`]"
+          />
+        </template>
       </bk-table-column>
       <bk-table-column
         :label="$t('已分配')"
         prop="name"
-        :width="100"
+        :width="80"
         show-overflow-tooltip
       >
         <template slot-scope="{ row }">
@@ -141,8 +126,9 @@
 
 <script>
 import EditAddDialog from './edit-add-dialog.vue';
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+import MaskedTextViewer from '@/components/masked-text-viewer';
+import TogglePlaintextButton from '../../toggle-plaintext-button.vue';
+
 export default {
   props: {
     data: {
@@ -155,8 +141,9 @@ export default {
     },
   },
   components: {
-    VueJsonPretty,
+    MaskedTextViewer,
     EditAddDialog,
+    TogglePlaintextButton,
   },
   data() {
     return {
@@ -170,7 +157,40 @@ export default {
       },
       // 当前方案下的资源池
       instances: [],
+      // 每行的明文/密文状态 { 'rowId-credentials': true/false, 'rowId-tls': true/false }
+      plaintextStatusMap: {},
+      // 全部显示/隐藏的状态
+      isAllPlaintext: false,
     };
+  },
+  computed: {
+    // 计算是否所有配置都处于显示状态
+    allPlaintextKeys() {
+      const keys = [];
+      this.instances.forEach((instance) => {
+        keys.push(`${instance.uuid}-credentials`);
+        // 只有存在 tlsConfig 时才需要统计该项
+        if (instance.tlsConfig) {
+          keys.push(`${instance.uuid}-tls`);
+        }
+      });
+      return keys;
+    },
+  },
+  watch: {
+    // 监听 plaintextStatusMap 的变化，计算 isAllPlaintext
+    plaintextStatusMap: {
+      handler() {
+        if (this.allPlaintextKeys.length === 0) {
+          this.isAllPlaintext = false;
+          return;
+        }
+        // 检查所有配置项是否都为显示状态
+        const allPlaintext = this.allPlaintextKeys.every((key) => this.plaintextStatusMap[key] === true);
+        this.isAllPlaintext = allPlaintext;
+      },
+      deep: true,
+    },
   },
   created() {
     this.getPreCreatedInstances();
@@ -220,6 +240,8 @@ export default {
             tlsConfig,
           });
         });
+        // 初始化每个实例的配置项状态为 false
+        this.initPlaintextStatus();
         this.$emit('change', this.instances.length);
       } catch (e) {
         this.catchErrorHandler(e);
@@ -254,16 +276,6 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    handleCopy(data) {
-      try {
-        return JSON.stringify(data, null, 2);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('JSON格式化失败', e),
-        });
-      }
-    },
     // 克隆
     handleClone(row) {
       this.dialogConfig.planId = row?.plan_id;
@@ -275,6 +287,26 @@ export default {
       };
       this.$refs.dialogRef?.addResourcePool(params, true);
     },
+    // 初始化配置项的显示/隐藏状态
+    initPlaintextStatus() {
+      this.instances.forEach((instance) => {
+        // 为每个实例的凭证和TLS配置初始化状态（如果未设置则默认为 false）
+        if (this.plaintextStatusMap[`${instance.uuid}-credentials`] === undefined) {
+          this.$set(this.plaintextStatusMap, `${instance.uuid}-credentials`, false);
+        }
+        if (this.plaintextStatusMap[`${instance.uuid}-tls`] === undefined) {
+          this.$set(this.plaintextStatusMap, `${instance.uuid}-tls`, false);
+        }
+      });
+    },
+    // 全部显示/隐藏配置
+    toggleAllPlaintext(newStatus) {
+      // 更新当前显示的所有实例的状态（包括凭证和TLS配置）
+      this.instances.forEach((instance) => {
+        this.$set(this.plaintextStatusMap, `${instance.uuid}-credentials`, newStatus);
+        this.$set(this.plaintextStatusMap, `${instance.uuid}-tls`, newStatus);
+      });
+    },
   },
 };
 </script>
@@ -284,24 +316,8 @@ export default {
   .resource-pool-cls {
     margin-top: 16px;
     /deep/ .bk-table-row.hover-row {
-      i.paasng-general-copy {
+      .masked-text-viewer i.paasng-icon {
         display: block !important;
-      }
-    }
-    .json-pretty-wrapper {
-      display: flex;
-      .paas-vue-json-pretty-cls {
-        flex: 1;
-        margin-right: 16px;
-      }
-      i.paasng-general-copy {
-        display: none;
-        position: absolute;
-        top: 50%;
-        right: 0;
-        color: #3a84ff;
-        cursor: pointer;
-        transform: translateY(-50%);
       }
     }
   }

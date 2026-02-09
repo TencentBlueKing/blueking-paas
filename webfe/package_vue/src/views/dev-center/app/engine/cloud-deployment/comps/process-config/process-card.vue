@@ -7,7 +7,7 @@
       <div class="logo mr10">
         <img
           class="image-icon"
-          src="/static/images/deploy-4.svg"
+          :src="deployIcon"
         />
       </div>
       <div class="title">
@@ -43,7 +43,7 @@
       >
         <img
           class="servie-icon"
-          src="/static/images/svc.svg"
+          :src="svcIcon"
         />
       </div>
     </div>
@@ -84,7 +84,10 @@ export default {
     },
   },
   data() {
-    return {};
+    return {
+      deployIcon: require('@static/images/deploy-4.svg'),
+      svcIcon: require('@static/images/svc.svg'),
+    };
   },
   computed: {
     wrapperClasses() {

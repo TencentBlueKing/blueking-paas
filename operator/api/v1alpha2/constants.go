@@ -81,6 +81,11 @@ const (
 	// JSON 结构: {"processName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
 	OverrideProcResAnnoKey = "bkapp.paas.bk.tencent.com/proc-res-override"
 
+	// ResQuotaPlansAnnoKey 注解中存储资源配额方案配置的键名
+	// 用户自定义的资源配额方案配置
+	// JSON 结构: {"resQuotaPlanName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
+	ResQuotaPlansAnnoKey = "bkapp.paas.bk.tencent.com/res-quota-plans"
+
 	// EgressClusterStateNameAnnoKey 注解中存储 Egress 相关配置的键名
 	// 在集群中，作为出口 ip 的节点被打上了 {EgressClusterStateNameAnnoKey:"1"} 的标签
 	// 并且通过 nodeSelector 将开启了出口 ip 功能的应用调度到相应（拥有该标签）的节点
@@ -155,8 +160,8 @@ const (
 // AllowedScalingPolicies 允许使用的扩缩容策略
 var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
 
-// AllowedResQuotaPlans 允许使用的资源配额方案
-var AllowedResQuotaPlans = []ResQuotaPlan{
+// LegacyAllowPlans 允许使用的历史资源配额方案
+var LegacyAllowPlans = []ResQuotaPlan{
 	ResQuotaPlanDefault,
 	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,

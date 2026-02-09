@@ -17,13 +17,16 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 
 from .constants import SecretType
 from .kres_slzs import SecretDeserializer, SecretSerializer
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -39,4 +42,4 @@ class Secret(AppEntity):
         serializer = SecretSerializer
 
 
-secret_kmodel: AppEntityManager[Secret] = AppEntityManager(Secret)
+secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)

@@ -1,21 +1,31 @@
 const webpack = require('webpack');
 const path = require('path');
-const fs = require('fs');
-const dotenv = require('dotenv');
-const dotenv_expand = require('dotenv-expand');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const PreTaskPlugin = require('./pre-task-plugin');
+const FixCssUrlPlugin = require('./fix-css-url-plugin');
 
 const now = new Date();
-const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join(''); // 版本号，eg: 2019-2-25_9:12:52
+const RELEASE_VERSION = [
+  now.getFullYear(),
+  '-',
+  now.getMonth() + 1,
+  '-',
+  now.getDate(),
+  '_',
+  now.getHours(),
+  ':',
+  now.getMinutes(),
+  ':',
+  now.getSeconds(),
+].join(''); // 版本号，eg: 2019-2-25_9:12:52
 
 module.exports = {
-  host: process.env.BK_APP_HOST,  // bk-local中配置
+  host: process.env.BK_APP_HOST, // bk-local中配置
   port: 6060, // 端口号
   publicPath: '/',
   cache: true,
   open: true,
-  replaceStatic: true,
 
   // webpack config 配置
   configureWebpack(context) {
@@ -26,7 +36,7 @@ module.exports = {
       // 由于目前是先读取 dotenv 再加载 bk.config.js, 因此执行 npm run build 时加载的仍然是 .bk.production.env 的变量
       context.mode = 'development';
     }
-    
+
     // 读取并校验 BK_HTTPS 环境变量的值
     let enableHTTPS = (process.env.BK_HTTPS || 'false').toLowerCase();
     if (!['true', 'false'].includes(enableHTTPS)) {
@@ -41,24 +51,46 @@ module.exports = {
   },
 
   chainWebpack(config) {
+    const isProduction = config.toConfig().mode === 'production';
+
+    // 添加 alias 配置
+    config.resolve.alias
+      .set('@', path.resolve(__dirname, 'src'))
+      .set('@static', path.resolve(__dirname, 'static'));
+
+    // 修复 @blueking/crypto-js-sdk 的 process.versions.node 检测问题
+    config.plugin('defineProcessVersions').use(webpack.DefinePlugin, [
+      {
+        'process.versions': JSON.stringify({}),
+      },
+    ]);
+
     // plugin
-    config
-      .plugin('providePlugin')
-      .use(webpack.ProvidePlugin, [{
+    config.plugin('providePlugin').use(webpack.ProvidePlugin, [
+      {
         $: 'jquery',
-      }]);
-    config
-      .plugin('html')
-      .use(webpack.DefinePlugin, [{
+      },
+    ]);
+    config.plugin('html').use(webpack.DefinePlugin, [
+      {
         RELEASE_VERSION: JSON.stringify(RELEASE_VERSION),
-      }]);
-    config.plugin('preTaskPlugin')
-      .use(new PreTaskPlugin());
+      },
+    ]);
+    config.plugin('preTaskPlugin').use(new PreTaskPlugin());
+    // 修复 CSS 中的静态资源路径，支持动态 BK_STATIC_URL
+    config.plugin('fixCssUrlPlugin').use(new FixCssUrlPlugin({
+      debug: process.env.NODE_ENV === 'development',
+    }));
+    config.plugin('html-main').use(HtmlWebpackPlugin, [
+      {
+        template: isProduction ? 'index.html' : 'index.dev.html',
+        inject: isProduction ? false : true,
+      },
+    ]);
 
     if (process.env.NODE_ENV === 'staging') {
-      config.devtool('inline-source-map')
+      config.devtool('inline-source-map');
     }
-
     return config;
   },
 };

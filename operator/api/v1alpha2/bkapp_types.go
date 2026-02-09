@@ -106,8 +106,8 @@ type ResourceSpec struct {
 	Memory string `json:"memory"`
 }
 
-// ProcResOverride defines resource override for a process
-type ProcResOverride struct {
+// ProcResources defines resource specification for a process
+type ProcResources struct {
 	// Limits describes the maximum amount of compute resources allowed
 	// +kubebuilder:validation:Required
 	Limits ResourceSpec `json:"limits"`
@@ -118,7 +118,11 @@ type ProcResOverride struct {
 }
 
 // OverrideProcResConfig maps process name to its resource override configuration
-type OverrideProcResConfig map[string]ProcResOverride
+type OverrideProcResConfig map[string]ProcResources
+
+// ResQuotaPlans maps resource quota plan name to its resource configuration
+// Used in annotation to define custom quota plans
+type ResQuotaPlans map[string]ProcResources
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
@@ -155,6 +159,25 @@ type AppSpec struct {
 	// However, it is primarily informational here, the real control logic is in paas "apiserver".
 	// +optional
 	Observability *Observability `json:"observability,omitempty"`
+
+	// Schedule holds scheduling related configurations, includes node selector and tolerations.
+	// +optional
+	Schedule *Schedule `json:"schedule,omitempty"`
+}
+
+// Schedule holds scheduling related configurations, includes node selector and tolerations.
+type Schedule struct {
+	// NodeSelector is a selector which must be true for the pod to fit on a node.
+	// Selector which must match a node's labels for the pod to be scheduled on that node.
+	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Tolerations are applied to pods, and allow (but do not require) the pods to schedule
+	// onto nodes with matching taints.
+	// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // GetWebProcess will find the web process in Spec.Processes

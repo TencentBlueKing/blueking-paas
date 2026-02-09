@@ -60,12 +60,37 @@
               v-bk-tooltips="capacitySelectionDisabledConfig"
               :value="'2Gi'"
               :disabled="preReleaseEnvironment"
-            >2GB</bk-radio>
+            >
+              2GB
+            </bk-radio>
             <bk-radio
               v-bk-tooltips="capacitySelectionDisabledConfig"
               :value="'4Gi'"
               :disabled="preReleaseEnvironment"
-            >4GB</bk-radio>
+            >
+              4GB
+            </bk-radio>
+            <bk-radio
+              v-if="platformFeature?.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM"
+              v-bk-tooltips="capacitySelectionDisabledConfig"
+              :value="'custom'"
+              :disabled="preReleaseEnvironment"
+            >
+              <div class="flex-row align-items-center gap-8">
+                {{ $t('自定义') }}
+                <template v-if="createPersistentStorageData.capacity === 'custom'">
+                  <bk-input
+                    type="number"
+                    style="width: 70px"
+                    :min="1"
+                    :precision="0"
+                    :initial-control-value="0"
+                    v-model="customStorageSize"
+                  ></bk-input>
+                  GB
+                </template>
+              </div>
+            </bk-radio>
           </bk-radio-group>
           <p class="capacity-tips">{{ $t('申请成功后无法调整，请合理评估。') }}</p>
         </bk-form-item>
@@ -75,6 +100,8 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
+
 const defaultSourceType = 'PersistentStorage';
 export default {
   name: 'CreatePersistentStorageDailog',
@@ -98,14 +125,13 @@ export default {
         stage: 'stag',
         capacity: '1Gi',
       },
+      customStorageSize: 4,
     };
   },
   computed: {
+    ...mapState(['platformFeature', 'localLanguage']),
     appCode() {
       return this.$route.params.id;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
     },
     preReleaseEnvironment() {
       return this.createPersistentStorageData.stage === 'stag';
@@ -123,11 +149,15 @@ export default {
     // 新建存储
     async handlerConfirm() {
       this.storageDialogConfig.isLoading = true;
+      const storageSize =
+        this.createPersistentStorageData.capacity === 'custom'
+          ? `${this.customStorageSize}Gi`
+          : this.createPersistentStorageData.capacity;
       const data = {
         environment_name: this.createPersistentStorageData.stage,
         source_type: defaultSourceType,
         persistent_storage_source: {
-          storage_size: this.createPersistentStorageData.capacity,
+          storage_size: storageSize,
         },
       };
       try {
@@ -170,7 +200,7 @@ export default {
 
 <style lang="scss" scoped>
 .capacity-tips {
-  color: #979BA5;
+  color: #979ba5;
   font-size: 12px;
 }
 </style>

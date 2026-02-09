@@ -13,7 +13,7 @@
                 apiData: {
                     name: this.$t('应用引擎'),
                     apititle: this.$t('应用引擎'),
-                    image: '/static/images/app-engine.png',
+                    image: require('@static/images/app-engine.png'),
                     apiexplain: this.$t('蓝鲸PaaS平台提供的多语言应用引擎'),
                     apiList: [
                         {

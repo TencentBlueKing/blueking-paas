@@ -35,7 +35,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AppStatus
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
@@ -130,6 +130,21 @@ class ApplicationQuerySet(models.QuerySet):
         # Generate a new QuerySet object
         return self.model.objects.filter(id__in=ids)
 
+    def filter_by_app_status(self, app_status: AppStatus) -> QuerySet:
+        """Filter applications by app status"""
+        # 外链应用永远是 normal 状态
+        if app_status == AppStatus.NOT_DEPLOYED:
+            return self.filter(last_deployed_date__isnull=True).exclude(type=ApplicationType.ENGINELESS_APP)
+        if app_status == AppStatus.NORMAL:
+            return self.filter(
+                Q(type=ApplicationType.ENGINELESS_APP) | Q(last_deployed_date__isnull=False, is_active=True)
+            )
+        if app_status == AppStatus.OFFLINE:
+            return self.filter(last_deployed_date__isnull=False, is_active=False).exclude(
+                type=ApplicationType.ENGINELESS_APP
+            )
+        return self
+
 
 class ApplicationManager(models.Manager):
     """Manager for Applications"""
@@ -145,7 +160,6 @@ class BaseApplicationFilter:
     def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
-        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -155,6 +169,7 @@ class BaseApplicationFilter:
         order_by: Optional[List] = None,
         app_tenant_mode: Optional[str] = None,
         market_enabled: Optional[bool] = None,
+        app_status: Optional[AppStatus] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:
@@ -171,8 +186,9 @@ class BaseApplicationFilter:
         if has_deployed is not None:
             # When application has been deployed, it's `last_deployed_date` will not be empty.
             queryset = queryset.filter(last_deployed_date__isnull=not has_deployed)
-        if is_active is not None:
-            queryset = queryset.filter(is_active=is_active)
+        # App status filter: not_deployed / normal / offline
+        if app_status is not None:
+            queryset = queryset.filter_by_app_status(app_status)
         if order_by:
             queryset = cls.process_order_by(order_by, queryset)
         if source_origin:
@@ -245,7 +261,6 @@ class UserApplicationFilter:
     def filter(
         self,
         exclude_collaborated=False,
-        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -253,6 +268,7 @@ class UserApplicationFilter:
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
         app_tenant_mode: Optional[str] = None,
+        app_status: Optional[AppStatus] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:
@@ -268,7 +284,6 @@ class UserApplicationFilter:
 
         return BaseApplicationFilter.filter_queryset(
             applications,
-            is_active=is_active,
             regions=regions,
             languages=languages,
             search_term=search_term,
@@ -276,6 +291,7 @@ class UserApplicationFilter:
             order_by=order_by,
             type_=type_,
             app_tenant_mode=app_tenant_mode,
+            app_status=app_status,
         )
 
 
@@ -367,6 +383,19 @@ class Application(OwnerTimestampedModel):
     def has_deployed(self) -> bool:
         """If current application has been SUCCESSFULLY deployed"""
         return bool(self.last_deployed_date)
+
+    @property
+    def app_status(self) -> "AppStatus":
+        """Get the application status based on deployment and active state"""
+        # 外链应用不需要部署, 永远为正常
+        if self.type == ApplicationType.ENGINELESS_APP:
+            return AppStatus.NORMAL
+
+        if not self.last_deployed_date:
+            return AppStatus.NOT_DEPLOYED
+        if not self.is_active:
+            return AppStatus.OFFLINE
+        return AppStatus.NORMAL
 
     @property
     def config_info(self) -> Dict:
@@ -731,3 +760,12 @@ class SMartAppExtraInfo(models.Model):
         """
         self.artifact_metadata.module_image_tars[module_name] = image_tar
         self.save(update_fields=["artifact_metadata"])
+
+    def set_base_image_id(self, base_image_id: str):
+        """设置基础镜像 id"""
+        self.artifact_metadata.base_image_id = base_image_id
+        self.save(update_fields=["artifact_metadata"])
+
+    def get_base_image_id(self) -> str:
+        """获取基础镜像 id"""
+        return self.artifact_metadata.base_image_id

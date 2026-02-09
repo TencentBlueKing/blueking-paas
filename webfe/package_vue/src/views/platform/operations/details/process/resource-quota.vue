@@ -10,7 +10,7 @@
         @click="handleEdit"
       >
         <i class="paasng-icon paasng-edit-2 f12"></i>
-        {{ $t('编辑') }}
+        {{ $t('编辑资源配额') }}
       </bk-button>
     </div>
     <!-- 查看态 -->
@@ -18,36 +18,48 @@
       v-if="!isEdit"
       class="view-mode-section"
     >
-      <div class="flex-row align-items-start gap-24">
-        <div
+      <DetailsRow
+        class="mb-8"
+        :fit-content="true"
+        :label="`${$t('类型')}：`"
+        :value="resourceQuotaType === 'file' ? $t('以应用描述文件为准') : $t('自定义')"
+      />
+      <DescriptionFile
+        v-if="resourceQuotaType === 'file'"
+        :process-data="processData"
+        :is-edit="isEdit"
+      />
+      <div
+        class="flex-row align-items-start gap-24"
+        v-else
+      >
+        <!-- 查看态，兼容情况三：预设方案，传 override_plan_name: '预设方案名称'，通过 override_plan_name 在 planList 中获取对应的limits、requests -->
+        <SectionContainer
           v-for="env in envList"
           :key="env.key"
-          class="env-container flex-1"
-          :class="{ mr0: env.key === 'stag' }"
+          :title="env.label"
+          :container-class="['flex-1', { mr0: env.key === 'stag' }]"
         >
-          <div class="env-name">{{ env.label }}</div>
-          <div class="env-form">
-            <DetailsRow
-              :label="`${$t('资源配额方案')}：`"
-              :label-width="150"
-              :value="getPlanName(env.key)"
-            />
-            <DetailsRow
-              label="CPU Limits / Requests："
-              :label-width="150"
-              :value="`${getCpuLabel(formData[env.key].resources.limits.cpu)} / ${getCpuLabel(
-                formData[env.key].resources.requests.cpu
-              )}`"
-            />
-            <DetailsRow
-              :label="`${$t('内存')} Limits / Requests：`"
-              :label-width="150"
-              :value="`${getMemoryLabel(formData[env.key].resources.limits.memory)} / ${getMemoryLabel(
-                formData[env.key].resources.requests.memory
-              )}`"
-            />
-          </div>
-        </div>
+          <DetailsRow
+            :label="`${$t('资源配额方案')}：`"
+            :label-width="150"
+            :value="getPlanName(env.key)"
+          />
+          <DetailsRow
+            label="CPU Limits / Requests："
+            :label-width="150"
+            :value="`${getCpuLabel(getViewResources(env.key).limits.cpu)} / ${getCpuLabel(
+              getViewResources(env.key).requests.cpu
+            )}`"
+          />
+          <DetailsRow
+            :label="`${$t('内存')} Limits / Requests：`"
+            :label-width="150"
+            :value="`${getMemoryLabel(getViewResources(env.key).limits.memory)} / ${getMemoryLabel(
+              getViewResources(env.key).requests.memory
+            )}`"
+          />
+        </SectionContainer>
       </div>
     </section>
     <!-- 编辑态 -->
@@ -55,9 +67,29 @@
       v-else
       class="edit-mode-section"
     >
-      <div class="env-container">
-        <div class="env-name">{{ $t('预发布环境') }}</div>
-        <div class="env-form">
+      <!-- 资源配额方案类型 -->
+      <bk-form
+        :label-width="50"
+        class="mb-20"
+        ext-cls="resource-quota-type-form-cls"
+      >
+        <bk-form-item
+          :label="$t('类型')"
+          :required="true"
+        >
+          <bk-radio-group v-model="resourceQuotaType">
+            <bk-radio :value="'file'">{{ $t('以应用描述文件为准') }}</bk-radio>
+            <bk-radio :value="'custom'">{{ $t('自定义') }}</bk-radio>
+          </bk-radio-group>
+        </bk-form-item>
+      </bk-form>
+      <DescriptionFile
+        v-if="resourceQuotaType === 'file'"
+        :process-data="processData"
+        :is-edit="isEdit"
+      />
+      <template v-else>
+        <SectionContainer :title="$t('预发布环境')">
           <bk-form
             ref="stagForm"
             :label-width="120"
@@ -80,9 +112,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -155,12 +187,12 @@
               </bk-form-item>
             </div>
           </bk-form>
-        </div>
-      </div>
-      <!-- 生产环境 -->
-      <div class="env-container mt-24">
-        <div class="env-name">{{ $t('生产环境') }}</div>
-        <div class="env-form">
+        </SectionContainer>
+        <!-- 生产环境 -->
+        <SectionContainer
+          :title="$t('生产环境')"
+          class="mt-24"
+        >
           <bk-form
             ref="prodForm"
             :label-width="120"
@@ -183,9 +215,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -256,8 +288,8 @@
               </bk-form-item>
             </div>
           </bk-form>
-        </div>
-      </div>
+        </SectionContainer>
+      </template>
       <div class="mt-24">
         <bk-button
           :theme="'primary'"
@@ -281,6 +313,9 @@
 <script>
 import DetailsRow from '@/components/details-row';
 import PrefixSelect from './comps/prefix-select.vue';
+import { convertMemoryToBytes } from '@/common/utils';
+import DescriptionFile from './description-file.vue';
+import SectionContainer from '@/components/section-container';
 
 export default {
   name: 'ResourceQuota',
@@ -297,6 +332,8 @@ export default {
   components: {
     DetailsRow,
     PrefixSelect,
+    DescriptionFile,
+    SectionContainer,
   },
   data() {
     // 通用必填校验规则
@@ -341,6 +378,7 @@ export default {
     });
 
     return {
+      resourceQuotaType: 'custom',
       formData: {
         stag: {
           plan_name: '',
@@ -371,6 +409,7 @@ export default {
       isEdit: false,
       // 备份原始数据
       originalFormData: null,
+      originalResourceQuotaType: null,
     };
   },
   computed: {
@@ -403,11 +442,31 @@ export default {
     moduleId() {
       this.resetToViewMode();
     },
+    // 监听 stag 环境 CPU Limit 变化，触发 Request 校验
+    'formData.stag.resources.limits.cpu'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.cpu');
+    },
+    'formData.stag.resources.limits.memory'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.memory');
+    },
+    // 监听 prod 环境 CPU Limit 变化，触发 Request 校验
+    'formData.prod.resources.limits.cpu'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.cpu');
+    },
+    'formData.prod.resources.limits.memory'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.memory');
+    },
   },
   created() {
     this.init();
   },
   methods: {
+    // 触发指定表单字段的校验
+    triggerValidation(formRef, field) {
+      this.$refs[formRef]?.validateField(field).catch((e) => {
+        console.error(`Validation error on field:`, e);
+      });
+    },
     // 校验 CPU Requests 是否小于等于 Limits
     validateCpuRequest(value, env) {
       const limitValue = this.formData[env].resources.limits.cpu;
@@ -422,17 +481,45 @@ export default {
       const limitValue = this.formData[env].resources.limits.memory;
       if (!value || !limitValue) return true;
       // 将内存值转换为字节数进行比较
-      const requestBytes = this.convertMemoryToBytes(value);
-      const limitBytes = this.convertMemoryToBytes(limitValue);
+      const requestBytes = convertMemoryToBytes(value);
+      const limitBytes = convertMemoryToBytes(limitValue);
       return requestBytes <= limitBytes;
     },
     // 获取资源配额方案名称
     getPlanName(env) {
+      // 情况三：预设方案，override_plan_name: '预设方案名称'
+      const envData = this.processData?.env_overlays?.[env];
+      if (envData?.override_plan_name) {
+        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
+        return plan?.name || envData.override_plan_name || '--';
+      }
+
+      // 其他情况：从 formData 中获取
       if (this.formData[env].plan_name === 'custom') {
         return this.$t('自定义');
       }
-      const plan = this.planList.find((item) => item.value === this.formData[env].plan_name);
+      const plan = this.planList.find((item) => item.name === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
+    },
+    // 获取查看态展示的资源数据（兼容情况三：override_plan_name）
+    getViewResources(env) {
+      const envData = this.processData?.env_overlays?.[env];
+      if (!envData) {
+        return this.createEmptyResources();
+      }
+
+      // 情况三：预设方案，override_plan_name: '预设方案名称'
+      if (envData.override_plan_name) {
+        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
+        if (plan) {
+          return {
+            limits: plan.limits || { cpu: '', memory: '' },
+            requests: plan.requests || { cpu: '', memory: '' },
+          };
+        }
+      }
+
+      return this.formData[env].resources;
     },
     // 获取 CPU 对应的 label
     getCpuLabel(value) {
@@ -468,25 +555,62 @@ export default {
     },
     // 初始化表单数据
     initFormData() {
-      if (!this.processData?.env_overlays) return;
+      // env_overlays 为空对象 {} 或不存在时，使用 processData.plan_name 初始化（情况一：以描述文件为准）
+      const envOverlays = this.processData?.env_overlays;
+      const isEnvOverlaysEmpty = !envOverlays || Object.keys(envOverlays).length === 0;
 
-      const { prod, stag } = this.processData.env_overlays;
+      // 兼容接口返回的 env_overlays 为 {} 的情况
+      if (isEnvOverlaysEmpty) {
+        // 情况一：以描述文件为准
+        this.resourceQuotaType = 'file';
+        if (this.processData?.plan_name) {
+          ['stag', 'prod'].forEach((env) => {
+            this.formData[env].plan_name = this.processData.plan_name;
+            this.handlePlanChange(this.processData.plan_name, env);
+          });
+        }
+        return;
+      }
+
+      const { prod, stag } = envOverlays;
+
+      // 判断 resourceQuotaType 的初始值
+      // 如果 stag 和 prod 的 override_plan_name 和 override_resources 都为 null，则为 'file'（以描述文件为准），否则为 'custom'（自定义）
+      const isStagNull = stag?.override_plan_name === null && stag?.override_resources === null;
+      const isProdNull = prod?.override_plan_name === null && prod?.override_resources === null;
+
+      this.resourceQuotaType = isStagNull && isProdNull ? 'file' : 'custom';
+
       [
         { env: 'stag', data: stag },
         { env: 'prod', data: prod },
       ].forEach(({ env, data }) => {
         if (!data) return;
 
-        // resources 不为 null 且不为 undefined 表示自定义资源配额
-        if (data.resources !== null && data.resources !== undefined) {
-          // 自定义资源配额
+        // 情况三：预设方案，override_plan_name: '预设方案名称'
+        if (data.override_plan_name) {
+          this.formData[env].plan_name = data.override_plan_name;
+          // 从 planList 中获取对应的 limits 和 requests
+          const plan = this.planList.find((item) => item.name === data.override_plan_name);
+          if (plan) {
+            this.formData[env].resources = {
+              limits: plan.limits || { cpu: '', memory: '' },
+              requests: plan.requests || { cpu: '', memory: '' },
+            };
+          } else {
+            this.formData[env].resources = this.createEmptyResources();
+          }
+        }
+        // 情况二：自定义资源配额，override_resources: { limits: {}, requests: {} }
+        else if (data.override_resources?.limits || data.override_resources?.requests) {
           this.formData[env].plan_name = 'custom';
           this.formData[env].resources = {
-            limits: data.resources.limits || { cpu: '', memory: '' },
-            requests: data.resources.requests || { cpu: '', memory: '' },
+            limits: data.override_resources.limits || { cpu: '', memory: '' },
+            requests: data.override_resources.requests || { cpu: '', memory: '' },
           };
-        } else if (data.plan_name) {
-          // 预设方案（resources 为 null）
+        }
+        // 情况一：以描述文件为准
+        else if (data.plan_name) {
           this.formData[env].plan_name = data.plan_name;
           this.handlePlanChange(data.plan_name, env);
         }
@@ -495,6 +619,7 @@ export default {
     handleEdit() {
       // 备份当前数据
       this.originalFormData = JSON.parse(JSON.stringify(this.formData));
+      this.originalResourceQuotaType = this.resourceQuotaType;
       this.isEdit = true;
     },
     // 取消编辑
@@ -508,14 +633,19 @@ export default {
         this.formData = JSON.parse(JSON.stringify(this.originalFormData));
         this.originalFormData = null;
       }
+      if (this.originalResourceQuotaType !== null) {
+        // 还原备份的类型
+        this.resourceQuotaType = this.originalResourceQuotaType;
+        this.originalResourceQuotaType = null;
+      }
       this.isEdit = false;
     },
     // 获取资源配额方案
     async fetchPlanList() {
       try {
-        const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
+        const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', {});
         this.planList = res;
-        this.planList.push({ name: this.$t('自定义'), value: 'custom' });
+        this.planList.push({ name: 'custom' });
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -530,23 +660,6 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    // 将内存值转换为字节数用于比较
-    convertMemoryToBytes(value) {
-      if (!value) return 0;
-      const units = {
-        Ki: 1024,
-        Mi: 1024 * 1024,
-        Gi: 1024 * 1024 * 1024,
-        Ti: 1024 * 1024 * 1024 * 1024,
-      };
-      const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti)$/);
-      if (match) {
-        const num = parseFloat(match[1]);
-        const unit = match[2];
-        return num * units[unit];
-      }
-      return 0;
-    },
     // 处理资源配额方案切换
     handlePlanChange(value, env) {
       if (!value || value === '') {
@@ -559,12 +672,12 @@ export default {
         this.formData[env].resources = this.createEmptyResources();
       } else {
         // 预设方案，填充预设值
-        const plan = this.planList.find((item) => item.value === value);
+        const plan = this.planList.find((item) => item.name === value);
         if (plan) {
           this.formData[env].plan_name = value;
           this.formData[env].resources = {
-            limits: plan.limit || { cpu: '', memory: '' },
-            requests: plan.request || { cpu: '', memory: '' },
+            limits: plan.limits || { cpu: '', memory: '' },
+            requests: plan.requests || { cpu: '', memory: '' },
           };
         } else {
           // 找不到方案，使用空值
@@ -573,26 +686,62 @@ export default {
         }
       }
     },
+    /**
+     * 获取资源配额参数
+     * @param {string} env - 环境 ('stag' | 'prod')
+     * @returns {object} - resources 参数
+     */
+    getResourcesParams(env) {
+      // 情况一：以描述文件为准，override_plan_name 和 override_resources 都传 null
+      if (this.resourceQuotaType === 'file') {
+        return {
+          override_plan_name: null,
+          override_resources: null,
+        };
+      }
+
+      const envData = this.formData[env];
+
+      // 情况二：自定义方案，传 override_resources: { limits: {}, requests: {} }，override_plan_name: null
+      if (envData.plan_name === 'custom') {
+        return {
+          override_plan_name: null,
+          override_resources: {
+            limits: envData.resources.limits,
+            requests: envData.resources.requests,
+          },
+        };
+      }
+
+      // 情况三：预设方案，传 override_plan_name: '预设方案名称'，override_resources: null
+      return {
+        override_plan_name: envData.plan_name,
+        override_resources: null,
+      };
+    },
     // 提交
     async handleSubmit() {
       try {
-        // 并行校验两个表单
-        await Promise.all([this.$refs.stagForm.validate(), this.$refs.prodForm.validate()]);
+        if (this.resourceQuotaType === 'custom') {
+          // 并行校验两个表单
+          await Promise.all([this.$refs.stagForm.validate(), this.$refs.prodForm.validate()]);
+        }
         // 校验通过，提交数据
         await this.updateProcessResources();
       } catch (error) {
-        console.log('Form validation failed', error);
+        console.error('Form validation failed', error);
       }
     },
     // 更新单个进程的资源限制
     async updateProcessResources() {
-      // 构建接口数据格式，统一只传 resources
+      // 构建接口数据格式
       const envOverlays = {};
 
       ['stag', 'prod'].forEach((env) => {
-        const envData = this.formData[env];
+        const params = this.getResourcesParams(env);
         envOverlays[env] = {
-          resources: envData.resources,
+          override_plan_name: params.override_plan_name,
+          override_resources: params.override_resources,
         };
       });
 
@@ -612,6 +761,7 @@ export default {
         });
         // 保存成功后清空备份并关闭编辑模式
         this.originalFormData = null;
+        this.originalResourceQuotaType = null;
         this.isEdit = false;
       } catch (e) {
         this.catchErrorHandler(e);
@@ -624,6 +774,11 @@ export default {
 <style lang="scss" scoped>
 .resource-quota-container {
   padding: 24px 0;
+  .resource-quota-type-form-cls {
+    /deep/ .bk-label {
+      width: fit-content !important;
+    }
+  }
   .top-section {
     height: 22px;
     .title {
@@ -637,40 +792,12 @@ export default {
     margin-left: 104px;
     margin-top: 16px;
   }
-  .env-container {
-    flex: 1;
-    margin-right: 104px;
-    .plan-select-cls {
-      background-color: #fff;
-    }
-    .env-name {
-      height: 32px;
-      line-height: 32px;
-      padding: 0 16px;
-      color: #313238;
-      background-color: #f0f1f5;
-    }
-    .env-form {
-      padding: 24px;
-      background-color: #f5f7fa;
-      i.paasng-info-line {
-        color: #979ba5;
-      }
-      /deep/ .bk-form-item.is-error .PrefixSelect-cls {
-        position: relative;
-        z-index: 99;
-      }
-      /deep/ .details-row .value {
-        padding-left: 10px;
-      }
-    }
-    .c-form-item-row {
-      margin-top: 22px;
-      /deep/ .bk-form-item {
-        margin-top: 0;
-        &:last-child .bk-form-content {
-          margin-left: 0 !important;
-        }
+  .c-form-item-row {
+    margin-top: 22px;
+    /deep/ .bk-form-item {
+      margin-top: 0;
+      &:last-child .bk-form-content {
+        margin-left: 0 !important;
       }
     }
   }

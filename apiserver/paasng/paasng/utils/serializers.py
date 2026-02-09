@@ -16,14 +16,21 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import logging
 import re
-from typing import List, Optional, Union
+from binascii import Error as Base64DecodeError
+from functools import cached_property
+from typing import Any, List, Optional, Tuple, Union
 
 import arrow
+from bkcrypto import constants as bkcrypto_constants
+from bkcrypto.asymmetric import options
+from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
@@ -39,6 +46,8 @@ from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+
+logger = logging.getLogger(__name__)
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -355,3 +364,108 @@ class SafePathField(serializers.RegexField):
         if path_may_escape(data):
             self.fail("escape_risk", path=data)
         return data
+
+
+class BaseDecryptFieldMixin:
+    """加密字段解密混入类，提供 SM2 解密能力
+
+    支持两种输入格式:
+    - 明文值: 直接传递原始字符串, 如 "the_value"
+    - 加密值: 例如: {"_encrypted": true, "_encrypted_value": "xxxxx"}. "encrypted_value" 是加密后的 hex 字符串再 base64 编码
+    """
+
+    ENCRYPTED_FLAG_KEY = "_encrypted"
+    ENCRYPTED_VALUE_KEY = "_encrypted_value"
+
+    @cached_property
+    def cipher_handler(self):
+        if settings.FRONTEND_ENCRYPT_CIPHER_TYPE != "SM2":
+            raise ImproperlyConfigured(f"unsupported cipher type: {settings.FRONTEND_ENCRYPT_CIPHER_TYPE}")
+
+        if not (settings.FRONTEND_ENCRYPT_PUBLIC_KEY and settings.FRONTEND_ENCRYPT_PRIVATE_KEY):
+            raise ImproperlyConfigured("SM2 public key or private key not set")
+
+        return get_asymmetric_cipher(
+            cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
+            cipher_options={
+                bkcrypto_constants.AsymmetricCipherType.SM2.value: options.SM2AsymmetricOptions(
+                    public_key_string=settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
+                    private_key_string=settings.FRONTEND_ENCRYPT_PRIVATE_KEY,
+                ),
+            },
+        )
+
+    def decrypt(self, value: str) -> str:
+        try:
+            return self.cipher_handler.decrypt(value)
+        except ImproperlyConfigured:
+            raise
+        except Base64DecodeError:
+            raise serializers.ValidationError(_("Base64 解码失败: {value}").format(value=value))
+        except Exception:
+            logger.exception("decrypt error")
+            raise serializers.ValidationError(_("后端解密失败"))
+
+    def is_encrypted_value(self, value) -> Tuple[bool, Any]:
+        """
+        判断是否为加密值格式
+        合法的加密值格式仅为 {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str()}
+        对于包括加密标识键但格式不正确的情况, 抛出异常
+        """
+        match value:
+            case {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str() as val}:
+                return True, val
+            case dict() if self.ENCRYPTED_FLAG_KEY in value:
+                # 包含加密标识键但格式不正确的情况, 抛出异常
+                raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
+
+        return False, value
+
+    def decrypt_if_needed(self, value) -> str:
+        """如果是加密值格式则解密，否则直接返回原始值"""
+        is_encrypted, val = self.is_encrypted_value(value)
+        if is_encrypted:
+            return self.decrypt(val)
+        return value
+
+
+class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
+    """
+    用于接收(部分)加密的 JSON 字段, 递归处理所有值， 最大递归深度为 `self.MAX_RECURSION_DEPTH`
+    加密结构约定及判断规则见 `BaseDecryptFieldMixin.is_encrypted_value`, 若为加密值会先解密
+    """
+
+    MAX_RECURSION_DEPTH = 8
+
+    default_error_messages = {"max_recursion_depth": _("数据嵌套层级过深，最大层级为 {max_depth}")}
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        return self._decrypt_recursive(data, depth=0)
+
+    def _decrypt_recursive(self, data, depth: int):
+        """递归遍历数据，解密所有加密值"""
+        if depth > self.MAX_RECURSION_DEPTH:
+            self.fail("max_recursion_depth", max_depth=self.MAX_RECURSION_DEPTH)
+
+        is_encrypted, val = self.is_encrypted_value(data)
+        if is_encrypted:
+            return self.decrypt(val)
+
+        if isinstance(data, dict):
+            return {k: self._decrypt_recursive(v, depth + 1) for k, v in data.items()}
+
+        if isinstance(data, list):
+            return [self._decrypt_recursive(item, depth + 1) for item in data]
+
+        return data
+
+
+class DecryptableCharField(BaseDecryptFieldMixin, serializers.CharField):
+    """
+    用于接收可能被前端加密的字符串字段
+    加密结构约定及判断规则见 `BaseDecryptFieldMixin.is_encrypted_value`, 若为加密值会先解密
+    """
+
+    def to_internal_value(self, data):
+        return super().to_internal_value(self.decrypt_if_needed(data))

@@ -33,7 +33,7 @@
                 apiData: {
                     name: this.$t('持续集成'),
                     apititle: this.$t('持续集成'),
-                    image: '/static/images/DCloud.png',
+                    image: require('@static/images/DCloud.png'),
                     apiexplain: this.$t('蓝鲸提供源码质量检查，在应用部署之后默认启动，并生成检查报告'),
                     apiList: [
                         {

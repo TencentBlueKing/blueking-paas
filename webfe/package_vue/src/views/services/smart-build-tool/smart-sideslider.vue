@@ -249,7 +249,10 @@ export default {
       this.buildLoading = true;
       try {
         const ret = await this.$store.dispatch('tool/smartBuild', {
-          data: this.packageData,
+          data: {
+            ...this.packageData,
+            packaging_version: 'v1',
+          },
         });
         this.buildData = ret;
         this.isExecutionDetails = true;

@@ -36,7 +36,7 @@
             class="paas-loading-content"
           >
             <div class="no-permission">
-              <img src="/static/images/permissions.png" />
+              <img :src="permissions" />
               <h2 v-if="errorMessage">
                 {{ errorMessage }}
               </h2>
@@ -79,7 +79,7 @@
         class="nofound"
         style="width: 1180px; margin: 0px auto"
       >
-        <img src="/static/images/404.png" />
+        <img :src="notFoundImg" />
         <p>{{ $t('应用找不到了！') }}</p>
       </div>
     </template>
@@ -111,6 +111,8 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      permissions: require('@static/images/permissions.png'),
+      notFoundImg: require('@static/images/404.png'),
       isAppFound: true,
       appInfo: {
         userType: '',
@@ -315,7 +317,7 @@ export default {
       if (curAppInfo.application && curAppInfo.application.logo_url) {
         this.appInfo.logo = curAppInfo.application.logo_url;
       } else {
-        this.appInfo.logo = '/static/images/default_logo.png';
+        this.appInfo.logo = require('@static/images/default_logo.png');
       }
     },
     updateBaseInfo() {

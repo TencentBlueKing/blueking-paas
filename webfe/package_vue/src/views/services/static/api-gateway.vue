@@ -15,7 +15,7 @@ export default {
         hasLink: true,
         link: this.GLOBAL.LINK.APIGW_INDEX,
         apititle: this.$t('API 网关'),
-        image: '/static/images/API Gateway.png',
+        image: require('@static/images/API Gateway.png'),
         apiexplain: this.$t(
           '蓝鲸API网关服务，帮助开发者创建、发布、维护、监控和保护 API，以快速、低成本、低风险地对外开放蓝鲸应用或其他系统的数据或服务'
         ),

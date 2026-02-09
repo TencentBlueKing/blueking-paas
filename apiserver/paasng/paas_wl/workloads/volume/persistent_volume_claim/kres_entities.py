@@ -17,12 +17,16 @@
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from paas_wl.infras.resources.base.kres import KPersistentVolumeClaim
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
 from .kres_slzs import PersistentVolumeClaimDeserializer, PersistentVolumeClaimSerializer
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +42,7 @@ class PersistentVolumeClaim(AppEntity):
         serializer = PersistentVolumeClaimSerializer
 
 
-class PersistentVolumeClaimManager(AppEntityManager[PersistentVolumeClaim]):
+class PersistentVolumeClaimManager(AppEntityManager[PersistentVolumeClaim, "WlApp"]):
     def __init__(self):
         super().__init__(PersistentVolumeClaim)
 

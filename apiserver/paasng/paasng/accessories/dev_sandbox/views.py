@@ -128,7 +128,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         enabled_addons_services = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            env_vars.update(get_env_vars_selected_addons(stag_env, enabled_addons_services))
+            env_vars.extend(get_env_vars_selected_addons(stag_env, enabled_addons_services))
 
         dev_sandbox = DevSandbox.objects.create(
             module=module,
@@ -142,7 +142,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 下发沙箱 k8s 资源
         try:
             DevSandboxController(dev_sandbox).deploy(
-                envs=env_vars,
+                envs=env_vars.kv_map,
                 source_code_cfg=source_code_cfg,
                 code_editor_cfg=dev_sandbox.code_editor_config,
             )
@@ -346,4 +346,4 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox = self._get_dev_sandbox()
         env_vars = dev_sandbox.list_env_vars()
 
-        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars, many=True).data)
+        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars.list, many=True).data)

@@ -36,7 +36,7 @@
             class="paas-loading-content"
           >
             <div class="no-permission">
-              <img src="/static/images/permissions.png" />
+              <img :src="permissionsImg" />
               <h2 v-if="errorMessage">
                 {{ errorMessage }}
               </h2>
@@ -65,7 +65,7 @@
         class="nofound"
         style="width: 1180px; margin: 0px auto"
       >
-        <img src="/static/images/404.png" />
+        <img :src="notFoundImg" />
         <p>{{ $t('应用找不到了！') }}</p>
       </div>
     </template>
@@ -101,6 +101,8 @@ export default {
       errorMessage: '',
       deniedMessageType: 'default',
       showMarketMenus: true,
+      permissionsImg: require('@static/images/permissions.png'),
+      notFoundImg: require('@static/images/404.png'),
       // 非应用引擎 应用 时所要显示的父级导航
       parentNavIds: [8, 10],
       // 非应用引擎 应用 时所要显示的子级导航

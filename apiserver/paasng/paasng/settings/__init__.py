@@ -40,6 +40,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 
+import base64
 import copy
 import os
 import ssl
@@ -184,6 +185,7 @@ INSTALLED_APPS = [
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
     "paasng.platform.smart_app",
+    "paasng.platform.agent_sandbox",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
     "paasng.bk_plugins.pluginscenter.iam_adaptor",
@@ -251,14 +253,13 @@ MIDDLEWARE = [
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
+    # 激活用户时区（需要在所有认证中间件之后）
+    "paasng.infras.accounts.middlewares.UserTimezoneMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
-
-# 管理者用户：拥有全量应用权限（经权限中心鉴权）
-ADMIN_USERNAME = settings.get("ADMIN_USERNAME", "admin")
 
 AUTH_USER_MODEL = "bkpaas_auth.User"
 
@@ -372,7 +373,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework.authentication.SessionAuthentication",),
-    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
+    # Custom datetime format with timezone offset: "2025-10-28 07:58:00 +0800"
+    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S %z",
     # TIPS: 覆盖 SearchFilter、OrderingFilter 的过滤参数，与应用列表保持用同样的搜索、排序字段
     "SEARCH_PARAM": "search_term",
     "ORDERING_PARAM": "order_by",
@@ -672,6 +674,11 @@ BK_APP_SECRET = settings.get("BK_APP_SECRET", "")
 # 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
 ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
 
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+# 多租户模式下使用 bk-admin，非多租户模式下使用 admin（保持向后兼容）
+_DEFAULT_ADMIN_USERNAME = "bk-admin" if ENABLE_MULTI_TENANT_MODE else "admin"
+ADMIN_USERNAME = settings.get("ADMIN_USERNAME", _DEFAULT_ADMIN_USERNAME)
+
 # PaaS 2.0 在权限中心注册的系统ID （并非是平台的 Code）
 IAM_SYSTEM_ID = settings.get("IAM_SYSTEM_ID", default="bk_paas")
 
@@ -776,6 +783,12 @@ AUTO_CREATE_REGULAR_USER = settings.get("AUTO_CREATE_REGULAR_USER", True)
 MAX_MODULES_COUNT_PER_APPLICATION = settings.get("MAX_MODULES_COUNT_PER_APPLICATION", default=10, cast="@int")
 # 应用单个模块允许创建的最大 process 数量
 MAX_PROCESSES_PER_MODULE = settings.get("MAX_PROCESSES_PER_MODULE", default=16, cast="@int")
+# 自动清理多余镜像功能-单个模块下最多保留的历史镜像数量
+MAX_RESERVED_IMAGES_PER_MODULE = settings.get("MAX_RESERVED_IMAGES_PER_MODULE", default=10, cast="@int")
+# 是否开启每次部署后 自动清理多余镜像功能
+AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY = settings.get(
+    "AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY", default=False, cast="@bool"
+)
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var="PAAS_LEGACY_DATABASE_URL", env_var_prefix="PAAS_LEGACY_", for_tests=RUNNING_TESTS
@@ -1296,6 +1309,9 @@ COLORFUL_TERMINAL_OUTPUT = True
 # s-mart 包构建工具相关配置
 # ---------------------
 
+# 是否启用 S-Mart 包构建功能
+FE_FEATURE_SETTINGS_SMART_APP_BUILDER = settings.get("FE_FEATURE_SETTINGS_SMART_APP_BUILDER", False)
+
 # CNB 构建工具镜像名
 SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")
 
@@ -1318,12 +1334,18 @@ SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas
 SMART_DOCKER_REGISTRY_USERNAME = settings.get("SMART_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking")
-# S-Mart 基础镜像信息
-_SMART_TAG_SUFFIX = "smart"
-SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
-SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
+# S-Mart slug-app 基础镜像信息
+SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-app"
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}"
+
+# S-Mart CNB 镜像信息
+SMART_CNB_IMAGE_CONF = settings.get("SMART_CNB_IMAGE_CONF", {})
+SMART_CNB_DEFAULT_IMAGE_ID = "default"
+if SMART_CNB_DEFAULT_IMAGE_ID not in SMART_CNB_IMAGE_CONF:
+    SMART_CNB_IMAGE_CONF[SMART_CNB_DEFAULT_IMAGE_ID] = {
+        "name": f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic",
+        "tag": "v1.0.4",
+    }
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
@@ -1528,6 +1550,12 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
 
+# 是否允许用户自定义持久存储大小 (默认不允许, 可通过 helm values 配置开启)
+PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM: bool = settings.get("PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM", False)
+
+# 自定义容量的最大值 (单位: Gi)
+PERSISTENT_STORAGE_SIZE_MAX: int = settings.get("PERSISTENT_STORAGE_SIZE_MAX", 100)
+
 # ---------------------------------------------
 #  前端特性配置
 # ---------------------------------------------
@@ -1556,7 +1584,7 @@ FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX"
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限
-FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", False)
+FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", True)
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
@@ -1565,3 +1593,24 @@ FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)
 # apiserver 的版本号
 APISERVER_VERSION = settings.get("APISERVER_VERSION")
+
+# ---------------------------------------------
+#  前端加密配置项
+# ---------------------------------------------
+
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
+# 具体加密使用的算法
+FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
+
+# SM2 密钥生成方式请参考 apiserver/README.md 中的「前端加密配置」章节
+# SM2 公钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64")
+FRONTEND_ENCRYPT_PUBLIC_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64).decode() if _FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64 else None
+)
+# SM2 私钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64")
+FRONTEND_ENCRYPT_PRIVATE_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64).decode() if _FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64 else None
+)

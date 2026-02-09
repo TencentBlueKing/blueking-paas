@@ -361,3 +361,40 @@ export function fileDownload(url, filename = '') {
   a.click();
   a.remove();
 }
+
+/**
+ * 将文本内容转换为密文（星号）
+ * 保留换行符，其他字符全部替换为星号
+ * @param {String} content - 需要转换的文本内容
+ * @return {String} 转换后的密文内容
+ */
+export function convertToMaskedText(content) {
+  if (!content) return '';
+  // 保留换行符，其他字符替换为星号
+  return content.replace(/[^\n]/g, '*');
+}
+
+/**
+ * 将内存值转换为字节数用于比较
+ * 支持 Ki、Mi、Gi、Ti 等 Kubernetes 标准单位
+ * @param {String} value - 内存值,例如: '256Mi', '1Gi', '512Ki'
+ * @return {Number} 转换后的字节数
+ * @example
+ */
+export function convertMemoryToBytes(value) {
+  if (!value) return 0;
+  const units = {
+    Ki: 1024,
+    Mi: 1024 * 1024,
+    Gi: 1024 * 1024 * 1024,
+    Ti: 1024 * 1024 * 1024 * 1024,
+  };
+  const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti)$/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    const unit = match[2];
+    return num * units[unit];
+  }
+  return 0;
+}
+

@@ -183,7 +183,7 @@ class ServiceInstance(UuidAuditedModel):
 
 
 class PreCreatedInstanceManager(models.Manager):
-    def select_by_policy_or_fifo(self, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
+    def select_by_policy_or_fifo(self, plan: "Plan", params: dict[str, str]) -> Optional["PreCreatedInstance"]:
         """
         在指定 plan 下选择一个未分配的预创建实例 (通常应在事务中调用)
         根据 `params` 尝试按绑定策略匹配, 未命中时再回退为普通 FIFO
@@ -193,14 +193,13 @@ class PreCreatedInstanceManager(models.Manager):
         """
         unallocated_qs = self.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
 
-        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=unallocated_qs)
-
-        # 无绑定策略的预分配实例, 也就是按照 FIFO 策略分配的实例
-        without_policies_qs = unallocated_qs.filter(binding_policies__isnull=True)
+        fifo_allocation_qs = unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.FIFO)
+        policy_allocation_qs = unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.POLICY)
+        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=policy_allocation_qs)
 
         if all(params.get(k, "") == "" for k in ("application_code", "env_name", "module_name")):
             logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
-            return without_policies_qs.first()
+            return fifo_allocation_qs.first()
 
         policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy(
             app_code=params.get("application_code"),
@@ -210,9 +209,9 @@ class PreCreatedInstanceManager(models.Manager):
         )
         if not policy:
             logger.debug("no matching binding policy found, use plain FIFO match strategy")
-            return unallocated_qs.first()
+            return fifo_allocation_qs.first()
 
-        return unallocated_qs.filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
+        return unallocated_qs.filter(pk=policy.pre_created_instance.pk).first()
 
 
 class PreCreatedInstance(UuidAuditedModel):
@@ -253,21 +252,41 @@ class PreCreatedInstanceBindingPolicyManager(models.Manager):
         :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
         """
         if policy_qs is None:
-            policy_qs = self.filter(pre_created_instance__is_allocated=False)
+            policy_qs = self.filter(
+                pre_created_instance__is_allocated=False,
+                pre_created_instance__allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            )
+
+        def _field_candidates(field_name: str, value):
+            if value is None:
+                return Q(**{f"{field_name}__isnull": True})
+            return Q(**{field_name: value}) | Q(**{f"{field_name}__isnull": True})
 
         candidates = policy_qs.filter(
-            Q(app_code=app_code) | Q(app_code__isnull=True),
-            Q(module_name=module_name) | Q(module_name__isnull=True),
-            Q(env_name=env_name) | Q(env_name__isnull=True),
+            _field_candidates("app_code", app_code),
+            _field_candidates("module_name", module_name),
+            _field_candidates("env_name", env_name),
         )
 
         if not candidates.exists():
             return None
 
         match_weight = (
-            Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
-            + Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
-            + Case(When(env_name=env_name, then=Value(1)), default=Value(0), output_field=IntegerField())
+            (
+                Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
+                if app_code is not None
+                else Value(0)
+            )
+            + (
+                Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
+                if module_name is not None
+                else Value(0)
+            )
+            + (
+                Case(When(env_name=env_name, then=Value(1)), default=Value(0), output_field=IntegerField())
+                if env_name is not None
+                else Value(0)
+            )
         )
         return candidates.annotate(match_weight=match_weight).order_by("-match_weight", "created").first()
 

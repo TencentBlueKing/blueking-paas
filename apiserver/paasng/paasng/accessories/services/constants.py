@@ -19,5 +19,5 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
 class PreCreatedInstanceAllocationType(StrStructuredEnum):
-    FIFO = EnumField("fifo", label="FIFO")
+    FIFO = EnumField("fifo", label="先进先出分配")
     POLICY = EnumField("policy", label="策略分配")

@@ -15,7 +15,18 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
-// ExecuteCommand executes a command
+// ExecuteCommand godoc
+//
+//	@Summary		Execute a command
+//	@Description	Execute a shell command and return the output and exit code
+//	@Tags			process
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		ExecuteRequest	true	"Command execution request"
+//	@Success		200		{object}	ExecuteResponse
+//	@Router			/process/execute [post]
+//
+//	@id				ExecuteCommand
 func ExecuteCommand(c *gin.Context) {
 	var request ExecuteRequest
 

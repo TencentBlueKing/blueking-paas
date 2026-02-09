@@ -12,6 +12,7 @@ var G *Config
 
 // Config represents the daemon configuration
 type Config struct {
+	Environment string `env:"ENVIRONMENT" envDefault:"stag"`
 	// ServerPort daemon 服务端口
 	ServerPort int `env:"SERVER_PORT" envDefault:"8000"`
 	// Token 调用 daemon server 的 token

@@ -11,7 +11,18 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
-// CreateFolder creates a folder.
+// CreateFolder godoc
+//
+//	@Summary		Create a folder
+//	@Description	Create a new folder with optional permission mode
+//	@Tags			files
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	CreateFolderRequest	true	"Folder creation request"
+//	@Success		201
+//	@Router			/files/folder [post]
+//
+//	@id				CreateFolder
 func CreateFolder(c *gin.Context) {
 	var request CreateFolderRequest
 

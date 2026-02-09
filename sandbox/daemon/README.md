@@ -51,6 +51,7 @@ $ ./build/daemon
 
 | 环境变量 | 说明 | 默认值 |
 |---------|------|--------|
+| `ENVIRONMENT` | 运行环境（`prod` 为生产环境，其他为非生产环境） | `stag` |
 | `SERVER_PORT` | HTTP 服务监听端口 | `8000` |
 | `TOKEN` | API 调用认证 Token | `jwram1lpbnuugmcv` |
 | `MAX_EXEC_TIMEOUT` | 命令执行最大超时时间 | `360s` |
@@ -63,180 +64,33 @@ $ ./build/daemon
 
 ## API 接口
 
-所有需要认证的接口（除 `/health` 外）都需要在请求头中携带 Token：
+### 认证方式
+
+所有需要认证的接口（除 `/health` 和 `/swagger/*` 外）都需要在请求头中携带 Token：
 
 ```http
 Authorization: Bearer <TOKEN>
 ```
 
-### 1. 健康检查
+### 接口列表
 
-检查服务是否正常运行（无需认证）。
+- `GET /health` - 健康检查（无需认证）
+- `POST /process/execute` - 执行命令
+- `POST /files/upload` - 上传文件
+- `GET /files/download` - 下载文件
+- `POST /files/folder` - 创建文件夹
+- `DELETE /files/` - 删除文件或文件夹
 
-**请求**
+### API 文档
 
-```http
-GET /health
-```
+完整的 API 接口文档请访问 Swagger UI：
 
-**响应**
+- 开发环境：`http://localhost:8000/swagger/index.html`
+- 生产环境不开放 Swagger 文档
 
-```json
-{
-  "status": "ok"
-}
-```
+如需重新生成 Swagger 文档，请运行：
 
-### 2. 执行命令
-
-远程执行系统命令。
-
-**请求**
-
-```http
-POST /process/execute
-Content-Type: application/json
-
-{
-  "command": "ls -la /tmp",
-  "timeout": 30,
-  "cwd": "/home/user"
-}
-```
-
-**请求参数**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `command` | string | 是 | 要执行的命令（支持引号解析） |
-| `timeout` | uint32 | 否 | 超时时间（秒），不设置则使用全局配置 |
-| `cwd` | string | 否 | 工作目录，不设置则使用当前目录 |
-
-**响应**
-
-```json
-{
-    "exitCode": 0,
-    "output": "total 8\ndrwxrwxrwt  10 root  wheel  320 Feb  5 10:00 .\n..."
-}
-```
-
-**响应字段**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `exitCode` | int | 命令退出码，0 表示成功，-1 表示执行失败 |
-| `output` | string | 命令的标准输出和标准错误输出（合并） |
-
-**特性说明**
-
-- 支持命令字符串中的引号解析（单引号和双引号）
-- 自动管理进程组，确保子进程也能被正确终止
-- 超时后会强制终止整个进程组
-- 返回合并的 stdout 和 stderr 输出
-
-### 3. 上传文件
-
-上传文件到服务器指定路径。
-
-**请求**
-
-```http
-POST /files/upload
-Content-Type: multipart/form-data
-
-destPath: /tmp/uploaded_file.txt
-file: <binary file data>
-```
-
-**请求参数**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `destPath` | string | 是 | 目标文件路径（完整路径） |
-| `file` | file | 是 | 要上传的文件 |
-
-**响应**
-
-```
-HTTP/1.1 200 OK
-```
-
-### 4. 下载文件
-
-从服务器下载文件。
-
-**请求**
-
-```http
-GET /files/download?path=/tmp/myfile.txt
-Authorization: Bearer <TOKEN>
-```
-
-**请求参数**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | string | 是 | 要下载的文件路径（完整路径） |
-
-**响应**
-
-返回文件的二进制内容，响应头包含：
-- `Content-Type: application/octet-stream`
-- `Content-Disposition: attachment; filename=<文件名>`
-
-
-### 5. 创建文件夹
-
-创建文件夹，支持递归创建多级目录。
-
-**请求**
-
-```http
-POST /files/folder
-Authorization: Bearer <TOKEN>
-Content-Type: application/json
-
-{
-  "path": "/tmp/new/folder",
-  "mode": "0755"
-}
-```
-
-**请求参数**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | string | 是 | 要创建的文件夹路径 |
-| `mode` | string | 否 | 文件夹权限（八进制字符串），默认 `0755` |
-
-**响应**
-
-```
-HTTP/1.1 201 Created
-```
-
-### 6. 删除文件
-
-删除文件或文件夹。
-
-**请求**
-
-```http
-DELETE /files/?path=/tmp/myfile.txt&recursive=true
-Authorization: Bearer <TOKEN>
-```
-
-**请求参数**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | string | 是 | 要删除的文件或文件夹路径 |
-| `recursive` | boolean | 否 | 是否递归删除（删除文件夹时必须设置为 `true`） |
-
-**响应**
-
-```
-HTTP/1.1 204 No Content
+```bash
+make build
 ```
 

@@ -9,7 +9,19 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
-// DeleteFile deletes a file.
+// DeleteFile godoc
+//
+//	@Summary		Delete a file or folder
+//	@Description	Delete a file or folder at the specified path, with optional recursive deletion for directories
+//	@Tags			files
+//	@Accept			json
+//	@Produce		json
+//	@Param			path		query	string	true	"Path to the file or folder to delete"
+//	@Param			recursive	query	bool	false	"Enable recursive deletion for directories"
+//	@Success		204
+//	@Router			/files/ [delete]
+//
+//	@id				DeleteFile
 func DeleteFile(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {

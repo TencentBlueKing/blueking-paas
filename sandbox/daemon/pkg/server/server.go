@@ -5,7 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	swaggerfiles "github.com/swaggo/files"
+	ginswagger "github.com/swaggo/gin-swagger"
 
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/docs"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/fs"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
@@ -16,6 +19,15 @@ import (
 //
 // It returns an error if the server fails to run.
 func Start() error {
+	docs.SwaggerInfo.Description = "BKPaaS Sandbox Daemon API"
+	docs.SwaggerInfo.Title = "BKPaaS Sandbox Daemon API"
+	docs.SwaggerInfo.BasePath = "/"
+
+	// Set Gin to release mode in production
+	if config.G.Environment == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	r := gin.Default()
 
 	r.Use(httputil.Recovery())
@@ -23,6 +35,10 @@ func Start() error {
 	r.Use(httputil.LoggingMiddleware())
 
 	binding.Validator = new(httputil.DefaultValidator)
+
+	if config.G.Environment != "prod" {
+		r.GET("/swagger/*any", ginswagger.WrapHandler(swaggerfiles.Handler))
+	}
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {

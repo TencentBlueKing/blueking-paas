@@ -26,6 +26,10 @@ GINKGO_VERSION ?= v2.28.1
 GOCILINT ?= $(LOCALBIN)/golangci-lint
 GOCILINT_VERSION ?= v2.4.0
 
+# swagger doc generator
+SWAG ?= $(LOCALBIN)/swag
+SWAG_VERSION ?= latest
+
 ## Format
 .PHONY: fmt
 fmt: golangci-lint  ## Format the code
@@ -51,8 +55,18 @@ ginkgo: $(GINKGO)  ## install ginkgo tool
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
+## Docs
+.PHONY: swag-init
+swag-init: $(SWAG)  ## Generate swagger documentation
+	$(SWAG) fmt && $(SWAG) init --parseDependency --parseInternal --parseDepth 1 -o docs -g cmd/main.go
+
+.PHONY: swag
+swag: $(SWAG)  ## install swag tool
+$(SWAG): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION)
+
 ## Build
 .PHONY: build
-build:  ## Build the binary
+build: swag-init ## Build the binary
 	mkdir -p ${PACKAGE_PATH}
 	${GO_BUILD} -o ${PACKAGE_PATH}/daemon ${WORKSPACE}/cmd/main.go

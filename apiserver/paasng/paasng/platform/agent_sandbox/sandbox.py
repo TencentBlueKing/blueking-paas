@@ -76,8 +76,8 @@ def create_sandbox(
     if not name:
         name = f"sbx-{sandbox_id.hex}"
 
-    if Sandbox.objects.filter(tenant_id=application.tenant_id, name=name).exists():
-        raise SandboxAlreadyExists(f"sandbox name {name} already exists")
+    if Sandbox.objects.filter(tenant_id=application.tenant_id, application=application, name=name).exists():
+        raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
     sandbox = Sandbox.objects.create(
         uuid=sandbox_id,

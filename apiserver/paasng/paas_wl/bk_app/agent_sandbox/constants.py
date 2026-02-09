@@ -14,6 +14,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+# The default value for sandbox's target
+# TODO: Add more targets support later
+DEFAULT_TARGET = "default"
+
+# The default value for sandbox's snapshot
+# TODO: Add more snapshot support later
+DEFAULT_SNAPSHOT = "default_image"
+
 # ================================
 # Constants for "K8s Pod Sandbox"
 # ================================

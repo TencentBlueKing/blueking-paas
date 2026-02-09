@@ -160,6 +160,9 @@ class AllocationPrecedencePolicy:
                 usernames = [u.strip() for u in value.split(",")]
                 if ctx.username not in usernames:
                     return False
+            elif key == ClusterAllocationPolicyCondType.USAGE_IS:
+                if ctx.usage != value:
+                    return False
             else:
                 raise ValueError(f"unknown cluster allocation policy condition type: {key}")
 
@@ -177,12 +180,14 @@ class AllocationContext:
     :param region: 应用版本
     :param environment: 部署环境
     :param username: 操作人，非必选
+    :param usage: 集群用途，非必选
     """
 
     tenant_id: str
     region: str
     environment: str
     username: str | None = None
+    usage: str | None = None
 
     @classmethod
     def create_for_future_system_apps(cls):
@@ -223,7 +228,7 @@ class AllocationContext:
     def __str__(self):
         return (
             f"<tenant_id: {self.tenant_id}, region: {self.region}, "
-            + f"env: {self.environment}, username: {self.username}>"
+            + f"env: {self.environment}, username: {self.username}, usage: {self.usage}>"
         )
 
 

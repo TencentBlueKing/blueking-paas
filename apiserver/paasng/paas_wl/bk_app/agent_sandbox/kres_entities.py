@@ -65,8 +65,10 @@ class AgentSandboxKresApp:
             AllocationContext(
                 tenant_id=self.tenant_id,
                 region=self.region,
-                # By default, use the "prod" environment cluster
-                environment="prod",
+                # Use agent_sandbox usage to allocate dedicated cluster for sandbox
+                usage="agent_sandbox",
+                # agent_sandbox 不区分环境
+                environment="",
             )
         ).get_default()
         return get_client_by_cluster_name(cluster.name)

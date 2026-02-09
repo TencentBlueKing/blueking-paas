@@ -180,4 +180,5 @@ class TestClusterAllocationPolicyViewSet:
         assert resp.json() == [
             {"key": "region_is", "name": "Region"},
             {"key": "username_in", "name": "Username.In"},
+            {"key": "usage_is", "name": "Usage"},
         ]

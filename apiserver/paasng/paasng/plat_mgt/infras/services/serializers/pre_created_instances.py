@@ -27,25 +27,21 @@ from paasng.accessories.services.constants import PreCreatedInstanceAllocationTy
 from paasng.plat_mgt.infras.services.constants import TLS_STRING_FIELDS
 
 
-class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
+class PreCreatedInstanceBindingPolicySLZ(serializers.Serializer):
     app_code = serializers.CharField(help_text="应用编码", required=False)
     module_name = serializers.CharField(help_text="模块名称", required=False)
     env_name = serializers.CharField(help_text="环境名称", required=False)
 
-    def to_internal_value(self, data):
-        # 过滤无效的匹配规则
-        result = {}
-        for key, _val in data.items():
-            val = str(_val).strip()
-            if val == "":
-                continue
-            result[key] = val
-        return super().to_internal_value(result)
 
+class PreCreatedInstanceBindingPolicyInputSLZ(PreCreatedInstanceBindingPolicySLZ):
     def validate(self, attrs):
         if all(attrs.get(field, "") == "" for field in ("app_code", "module_name", "env_name")):
             raise serializers.ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))
         return super().validate(attrs)
+
+
+class PreCreatedInstanceBindingPolicyOutputSLZ(PreCreatedInstanceBindingPolicySLZ):
+    pass
 
 
 class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
@@ -97,7 +93,7 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
         policy = instance.binding_policies.first()
         if not policy:
             return {}
-        return PreCreatedInstanceBindingPolicyInputSLZ(policy).data
+        return PreCreatedInstanceBindingPolicyOutputSLZ(policy).data
 
     def to_representation(self, instance) -> Dict:
         result = super().to_representation(instance)

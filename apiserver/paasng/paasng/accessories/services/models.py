@@ -248,8 +248,7 @@ class PreCreatedInstanceBindingPolicyManager(models.Manager):
     ) -> Optional["PreCreatedInstanceBindingPolicy"]:
         """
         找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env_name(1)
-        可以理解为按 (app_code, module_name, env) 从大到小排
-        当相同时，返回 created_at 最早的那条
+        可以理解为按 (app_code, module_name, env) 从大到小排, 相同时，返回 created_at 最早的那条
 
         :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
         """

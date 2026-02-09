@@ -182,6 +182,39 @@ class ServiceInstance(UuidAuditedModel):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
 
 
+class PreCreatedInstanceManager(models.Manager):
+    def select_by_policy_or_fifo(self, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
+        """
+        在指定 plan 下选择一个未分配的预创建实例 (通常应在事务中调用)
+        根据 `params` 尝试按绑定策略匹配, 未命中时再回退为普通 FIFO
+
+        :param params: 策略匹配参数, 目前包含 application_code, module_name, env_name 三个维度(均选填)
+        :return: 命中的预创建实例；若没有可用实例则返回 None
+        """
+        unallocated_qs = self.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
+
+        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=unallocated_qs)
+
+        # 无绑定策略的预分配实例, 也就是按照 FIFO 策略分配的实例
+        without_policies_qs = unallocated_qs.filter(binding_policies__isnull=True)
+
+        if all(params.get(k, "") == "" for k in ("application_code", "env_name", "module_name")):
+            logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
+            return without_policies_qs.first()
+
+        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy(
+            app_code=params.get("application_code"),
+            module_name=params.get("module_name"),
+            env_name=params.get("env_name"),
+            policy_qs=policy_qs,
+        )
+        if not policy:
+            logger.debug("no matching binding policy found, use plain FIFO match strategy")
+            return unallocated_qs.first()
+
+        return unallocated_qs.filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
+
+
 class PreCreatedInstance(UuidAuditedModel):
     """预创建的服务实例"""
 
@@ -195,6 +228,8 @@ class PreCreatedInstance(UuidAuditedModel):
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
     tenant_id = tenant_id_field_factory()
 
+    objects = PreCreatedInstanceManager()
+
     def acquire(self):
         self.is_allocated = True
         self.save(update_fields=["is_allocated"])
@@ -203,46 +238,39 @@ class PreCreatedInstance(UuidAuditedModel):
         self.is_allocated = False
         self.save(update_fields=["is_allocated"])
 
-    @classmethod
-    def select_for_request(cls, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
-        """
-        在指定 plan 下选择一个未分配的预创建实例 (通常应在事务中调用)
-
-        选择流程：
-        1) 先按创建时间升序 (FIFO) 锁定候选实例 (`select_for_update`)
-        2) 若 `params` 中不包含 `application_code`/`module_name`/`env` 任一字段:
-           回退为“无策略实例优先”的 FIFO (仅从未配置绑定策略的实例中选择)
-        3) 只要 `params` 中包含上述任一字段，就会尝试按绑定策略匹配
-           未命中时再回退为普通 FIFO
-
-        :param params: 策略匹配参数. 是否进入策略匹配分支由是否包含
-            `application_code`/`module_name`/`env` 任一字段决定
-        :return: 命中的预创建实例；若没有可用实例则返回 None
-        """
-        unallocated_qs = cls.objects.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
-
-        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=unallocated_qs)
-        without_policies_qs = unallocated_qs.exclude(
-            pk__in=PreCreatedInstanceBindingPolicy.objects.values("pre_created_instance")
-        )
-        if not any(k in params for k in ("application_code", "env", "module_name")):
-            logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
-            return without_policies_qs.first()
-
-        policy = PreCreatedInstanceBindingPolicy.resolve_policy(
-            app_code=params["application_code"],
-            module_name=params["module_name"],
-            env=params["env"],
-            policy_qs=policy_qs,
-        )
-        if not policy:
-            logger.debug("no matching binding policy found, use plain FIFO match strategy")
-            return unallocated_qs.first()
-
-        return unallocated_qs.filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
-
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
+
+
+class PreCreatedInstanceBindingPolicyManager(models.Manager):
+    def resolve_policy(
+        self, app_code, module_name, env_name, policy_qs: Optional["QuerySet"] = None
+    ) -> Optional["PreCreatedInstanceBindingPolicy"]:
+        """
+        找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env_name(1)
+        可以理解为按 (app_code, module_name, env) 从大到小排
+        当相同时，返回 created_at 最早的那条
+
+        :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
+        """
+        if policy_qs is None:
+            policy_qs = self.objects.filter(pre_created_instance__is_allocated=False)
+
+        candidates = policy_qs.filter(
+            Q(app_code=app_code) | Q(app_code__isnull=True),
+            Q(module_name=module_name) | Q(module_name__isnull=True),
+            Q(env_name=env_name) | Q(env_name__isnull=True),
+        )
+
+        if not candidates.exists():
+            return None
+
+        match_weight = (
+            Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
+            + Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
+            + Case(When(env_name=env_name, then=Value(1)), default=Value(0), output_field=IntegerField())
+        )
+        return candidates.annotate(match_weight=match_weight).order_by("-match_weight", "created").first()
 
 
 class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
@@ -256,39 +284,10 @@ class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
     )
     app_code = models.CharField(max_length=20, null=True)
     module_name = models.CharField(max_length=20, null=True)
-    env = models.CharField(max_length=16, null=True)
+    env_name = models.CharField(max_length=16, null=True)
 
     tenant_id = tenant_id_field_factory(db_index=False)
-
-    @classmethod
-    def resolve_policy(
-        cls, app_code, module_name, env, policy_qs: Optional["QuerySet"] = None
-    ) -> Optional["PreCreatedInstanceBindingPolicy"]:
-        """
-        找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env(1)
-        可以理解为按 (app_code, module_name, env) 的匹配程度排序
-        当匹配程度相同时，返回 created_at 最早的那条
-
-        :param policy_qs: 可选的 QuerySet, 用于指定查询范围
-        """
-        if policy_qs is None:
-            policy_qs = cls.objects.filter(pre_created_instance__is_allocated=False)
-
-        candidates = policy_qs.filter(
-            Q(app_code=app_code) | Q(app_code__isnull=True),
-            Q(module_name=module_name) | Q(module_name__isnull=True),
-            Q(env=env) | Q(env__isnull=True),
-        ).exclude(app_code__isnull=True, module_name__isnull=True, env__isnull=True)
-
-        if not candidates.exists():
-            return None
-
-        match_weight = (
-            Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
-            + Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
-            + Case(When(env=env, then=Value(1)), default=Value(0), output_field=IntegerField())
-        )
-        return candidates.annotate(match_weight=match_weight).order_by("-match_weight", "created").first()
+    objects = PreCreatedInstanceBindingPolicyManager()
 
 
 class Plan(UuidAuditedModel):

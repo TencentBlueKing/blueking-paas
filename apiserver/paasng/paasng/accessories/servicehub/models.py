@@ -77,7 +77,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
             "application_code": application_environment.application.code,
             "application_id": application_environment.application.id,
             "module_name": application_environment.module.name,
-            "env": application_environment.environment,
+            "env_name": application_environment.environment,
         }
 
         service_instance = self.service.create_service_instance_by_plan(self.plan, params=params)

@@ -109,9 +109,9 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         instance.allocation_type = data["allocation_type"]
         instance.save(update_fields=["config", "credentials"])
 
-        if data.get("binding_policy"):
+        if binding_policy := data.get("binding_policy"):
             PreCreatedInstanceBindingPolicy.objects.update_or_create(
-                pre_created_instance=instance, tenant_id=instance.tenant_id, defaults=data.get("binding_policy", {})
+                pre_created_instance=instance, tenant_id=instance.tenant_id, defaults=binding_policy
             )
         else:
             instance.binding_policies.all().delete()

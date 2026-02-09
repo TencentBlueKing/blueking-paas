@@ -1,18 +1,15 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
-	golog "log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server"
@@ -21,8 +18,10 @@ import (
 // entrypointManager manages the lifecycle of an entrypoint command,
 // including starting, logging, and graceful shutdown.
 type entrypointManager struct {
-	cmd       *exec.Cmd
-	wg        sync.WaitGroup
+	cmd *exec.Cmd
+	wg  sync.WaitGroup
+	// closed when the command completes
+	done      chan struct{}
 	logFile   *os.File
 	logWriter io.Writer
 	errWriter io.Writer
@@ -32,6 +31,7 @@ type entrypointManager struct {
 // If logFilePath is empty, stdout/stderr will be used.
 func newEntrypointManager(logFilePath string) *entrypointManager {
 	em := &entrypointManager{
+		done:      make(chan struct{}),
 		logWriter: os.Stdout,
 		errWriter: os.Stderr,
 	}
@@ -42,7 +42,7 @@ func newEntrypointManager(logFilePath string) *entrypointManager {
 
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		log.Errorf("Failed to open log file at %s due to %v, fallback to STDOUT and STDERR", logFilePath, err)
+		slog.Error("Failed to open log file, fallback to STDOUT and STDERR", "path", logFilePath, "error", err)
 		return em
 	}
 
@@ -75,6 +75,7 @@ func (em *entrypointManager) Start(args []string) {
 	em.wg.Add(1)
 	go func() {
 		defer em.wg.Done()
+		defer close(em.done)
 		if err := em.cmd.Wait(); err != nil {
 			fmt.Fprintf(em.errWriter, "command exited with error: %v\n", err) // nolint
 		} else {
@@ -91,49 +92,40 @@ func (em *entrypointManager) Shutdown(shutdownTimeout, sigtermTimeout time.Durat
 		return
 	}
 
-	log.Info("Waiting for entrypoint command to complete...")
+	slog.Info("Waiting for entrypoint command to complete...")
 
 	if em.waitWithTimeout(shutdownTimeout) {
-		log.Info("Entrypoint command completed")
+		slog.Info("Entrypoint command completed")
 		return
 	}
 
 	// Command did not complete within timeout, send SIGTERM
-	log.Warn("Entrypoint command did not complete within timeout, sending SIGTERM...")
+	slog.Warn("Entrypoint command did not complete within timeout, sending SIGTERM...")
 	if err := em.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-		log.Errorf("Failed to send SIGTERM to entrypoint command: %v", err)
+		slog.Error("Failed to send SIGTERM to entrypoint command", "error", err)
 	}
 
 	if em.waitWithTimeout(sigtermTimeout) {
-		log.Info("Entrypoint command terminated gracefully")
+		slog.Info("Entrypoint command terminated gracefully")
 		return
 	}
 
 	// Command did not respond to SIGTERM, send SIGKILL
-	log.Warn("Entrypoint command did not respond to SIGTERM, sending SIGKILL...")
+	slog.Warn("Entrypoint command did not respond to SIGTERM, sending SIGKILL...")
 	if err := em.cmd.Process.Kill(); err != nil {
-		log.Errorf("Failed to kill entrypoint command: %v", err)
+		slog.Error("Failed to kill entrypoint command", "error", err)
 	}
 	em.wg.Wait()
-	log.Info("Entrypoint command killed")
+	slog.Info("Entrypoint command killed")
 }
 
 // waitWithTimeout waits for the command to complete within the given timeout.
 // Returns true if the command completed, false if the timeout was reached.
 func (em *entrypointManager) waitWithTimeout(timeout time.Duration) bool {
-	done := make(chan struct{})
-	go func() {
-		em.wg.Wait()
-		close(done)
-	}()
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
 	select {
-	case <-done:
+	case <-em.done:
 		return true
-	case <-ctx.Done():
+	case <-time.After(timeout):
 		return false
 	}
 }
@@ -150,6 +142,7 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
+		slog.Error("Failed to load config", "error", err)
 		panic(err)
 	}
 
@@ -157,7 +150,7 @@ func main() {
 
 	logFile, err := os.OpenFile(cfg.DaemonLogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		log.Error("Failed to open log file at ", cfg.DaemonLogFilePath)
+		slog.Error("Failed to open log file", "path", cfg.DaemonLogFilePath, "error", err)
 	} else {
 		defer logFile.Close() // nolint
 		logWriter = logFile
@@ -169,11 +162,11 @@ func main() {
 	if cfg.UserHomeAsWorkDir {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Warnf("failed to get home directory: %v", err)
+			slog.Warn("failed to get home directory", "error", err)
 		} else {
 			err = os.Chdir(homeDir)
 			if err != nil {
-				log.Warnf("failed to change working directory to home directory: %v", err)
+				slog.Warn("failed to change working directory to home directory", "error", err)
 			}
 		}
 	}
@@ -181,6 +174,9 @@ func main() {
 	// Initialize and start entrypoint command
 	entrypoint := newEntrypointManager(cfg.EntrypointLogFilePath)
 	defer entrypoint.Close()
+
+	// entrypoint 并非指 daemon 服务本身, 而是用户镜像的自定义启动命令(如 `start web`), 此时沙箱环境的启动命令变成 `./daemon start web`
+	// 实际上, entrypoint 会作为 daemon 的子进程被拉起并托管
 	entrypoint.Start(os.Args[1:])
 
 	// Start the main server in a go routine
@@ -198,39 +194,19 @@ func main() {
 	// Wait for either an error or shutdown signal
 	select {
 	case err := <-errChan:
-		log.Errorf("Error: %v", err)
+		slog.Error("Error", "error", err)
 	case sig := <-sigChan:
-		log.Infof("Received signal %v, shutting down gracefully...", sig)
+		slog.Info("Received signal, shutting down gracefully...", "signal", sig)
 	}
 
 	// Gracefully shutdown entrypoint command
 	entrypoint.Shutdown(cfg.EntrypointShutdownTimeout, cfg.SigtermShutdownTimeout)
 
-	log.Info("Shutdown complete")
+	slog.Info("Shutdown complete")
 }
 
 func initLogs(logWriter io.Writer) {
-	logLevel := log.WarnLevel
-
-	logLevelEnv, logLevelSet := os.LookupEnv("LOG_LEVEL")
-
-	if logLevelSet {
-		var err error
-		logLevel, err = log.ParseLevel(logLevelEnv)
-		if err != nil {
-			logLevel = log.WarnLevel
-		}
-	}
-
-	log.SetLevel(logLevel)
-	logFormatter := &config.LogFormatter{
-		TextFormatter: &log.TextFormatter{
-			ForceColors: true,
-		},
-		LogFileWriter: logWriter,
-	}
-
-	log.SetFormatter(logFormatter)
-
-	golog.SetOutput(log.New().WriterLevel(log.DebugLevel))
+	logLevel := config.ParseLogLevel(config.G.LogLevel)
+	handler := config.NewMultiWriterHandler(logLevel, os.Stdout, logWriter)
+	slog.SetDefault(slog.New(handler))
 }

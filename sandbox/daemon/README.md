@@ -41,45 +41,35 @@ $ make test
 # 构建
 $ make build
 # 运行
-$ ./build/daemon
+$ TOKEN=your-secret-token ./build/daemon
 ```
-
 
 ## 配置说明
 
-服务通过环境变量进行配置：
+服务通过环境变量进行配置，完整的配置项请参考 [pkg/config/config.go](pkg/config/config.go)。
 
-| 环境变量 | 说明 | 默认值 |
-|---------|------|--------|
-| `ENVIRONMENT` | 运行环境（`prod` 为生产环境，其他为非生产环境） | `stag` |
-| `SERVER_PORT` | HTTP 服务监听端口 | `8000` |
-| `TOKEN` | API 调用认证 Token | `jwram1lpbnuugmcv` |
-| `MAX_EXEC_TIMEOUT` | 命令执行最大超时时间 | `360s` |
-| `LOG_LEVEL` | 日志级别 | `warn` |
-| `DAYTONA_DAEMON_LOG_FILE_PATH` | Daemon 日志文件路径 | `/tmp/sandbox-daemon.log` |
-| `ENTRYPOINT_LOG_FILE_PATH` | Entrypoint 日志文件路径 | `/tmp/sandbox-entrypoint.log` |
-| `ENTRYPOINT_SHUTDOWN_TIMEOUT` | 关闭 Entrypoint 的超时时间 | `60s` |
-| `SIGTERM_SHUTDOWN_TIMEOUT` | 收到 SIGTERM 后关闭的超时时间 | `5s` |
-| `USER_HOME_AS_WORKDIR` | 是否使用用户 home 目录作为工作目录 | `false` |
+常用配置样例：
+
+```bash
+# 基础配置
+export TOKEN=your-secret-token      # API 认证 Token（必须设置）
+export SERVER_PORT=8000             # HTTP 服务端口
+export LOG_LEVEL=info               # 日志级别：debug, info, warn, error
+
+# 生产环境配置
+export ENVIRONMENT=prod             # 设置为 prod 将关闭 Swagger 文档
+export MAX_EXEC_TIMEOUT=600s        # 命令执行超时时间
+```
 
 ## API 接口
 
 ### 认证方式
 
-所有需要认证的接口（除 `/health` 和 `/swagger/*` 外）都需要在请求头中携带 Token：
+所有需要认证的接口（除 `/health` 和 `/swagger/*` 外）都需要在请求头中携带 TOKEN：
 
 ```http
 Authorization: Bearer <TOKEN>
 ```
-
-### 接口列表
-
-- `GET /health` - 健康检查（无需认证）
-- `POST /process/execute` - 执行命令
-- `POST /files/upload` - 上传文件
-- `GET /files/download` - 下载文件
-- `POST /files/folder` - 创建文件夹
-- `DELETE /files/` - 删除文件或文件夹
 
 ### API 文档
 
@@ -91,6 +81,6 @@ Authorization: Bearer <TOKEN>
 如需重新生成 Swagger 文档，请运行：
 
 ```bash
-make build
+$ make build
 ```
 

@@ -1,6 +1,6 @@
 ## Context
 
-You are in the daemon repo, helping implement features, fix bugs, and refactor existing code.
+You are in the sandbox daemon repo, which provides core runtime services for agent sandbox environments. This daemon is a critical component that runs inside sandbox containers, offering remote command execution and others to support agent operations. You are helping implement features, fix bugs, and refactor existing code.
 
 ## Source code
 
@@ -24,7 +24,6 @@ You are in the daemon repo, helping implement features, fix bugs, and refactor e
 ### Running our tests
 
 * Run all tests: `make test`
-* Run specific package tests: `go test ./pkg/server/process/...`
 * ALWAYS prefer specifying test packages for efficiency.
 
 ### Building

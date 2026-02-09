@@ -53,7 +53,7 @@ func ExecuteCommand(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// Execute the command
+	// 构建执行命令
 	cmd := exec.CommandContext(ctx, cmdParts[0], cmdParts[1:]...)
 	if request.Cwd != nil {
 		cmd.Dir = *request.Cwd
@@ -67,6 +67,7 @@ func ExecuteCommand(c *gin.Context) {
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
 
+	// 执行命令
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// 不直接用 err 的原因是, 它是 signal: killed, 不能表示超时

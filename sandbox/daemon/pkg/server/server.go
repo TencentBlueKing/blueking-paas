@@ -28,7 +28,7 @@ func Start() error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := gin.Default()
+	r := gin.New()
 
 	r.Use(httputil.Recovery())
 	r.Use(httputil.ErrorMiddleware())

@@ -1,10 +1,10 @@
 package config
 
 import (
+	"errors"
 	"time"
 
-	env "github.com/caarlos0/env/v10"
-	log "github.com/sirupsen/logrus"
+	"github.com/caarlos0/env/v10"
 )
 
 // G represents the global configuration
@@ -12,14 +12,19 @@ var G *Config
 
 // Config represents the daemon configuration
 type Config struct {
+	// Environment 运行环境
 	Environment string `env:"ENVIRONMENT" envDefault:"stag"`
+	// ServerHost daemon 服务地址
+	ServerHost string `env:"SERVER_HOST" envDefault:"127.0.0.1"`
 	// ServerPort daemon 服务端口
 	ServerPort int `env:"SERVER_PORT" envDefault:"8000"`
 	// Token 调用 daemon server 的 token
-	Token string `env:"TOKEN" envDefault:"jwram1lpbnuugmcv"`
+	Token string `env:"TOKEN"`
 
+	// LogLevel 日志级别
+	LogLevel string `env:"LOG_LEVEL" envDefault:"warn"`
 	// DaemonLogFilePath daemon 日志文件路径
-	DaemonLogFilePath string `env:"DAYTONA_DAEMON_LOG_FILE_PATH" envDefault:"/tmp/sandbox-daemon.log"`
+	DaemonLogFilePath string `env:"DAEMON_LOG_FILE_PATH" envDefault:"/tmp/sandbox-daemon.log"`
 
 	// EntrypointLogFilePath entrypoint 日志文件路径
 	EntrypointLogFilePath string `env:"ENTRYPOINT_LOG_FILE_PATH" envDefault:"/tmp/sandbox-entrypoint.log"`
@@ -38,7 +43,11 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
+		return nil, err
+	}
+
+	if cfg.Token == "" {
+		return nil, errors.New("TOKEN is empty")
 	}
 
 	// Set the global configuration

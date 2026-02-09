@@ -2,17 +2,18 @@ package httputil
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 )
 
 const maxStackTraceSize = 64 * 1024 // 64 KB
 
+// TODO: 需要忽略的路径
 var ignoreLoggingPaths = map[string]bool{}
 
 // ErrorMiddleware handles errors
@@ -49,29 +50,29 @@ func LoggingMiddleware() gin.HandlerFunc {
 		statusCode := ctx.Writer.Status()
 
 		if len(ctx.Errors) > 0 {
-			log.WithFields(log.Fields{
-				"method":  reqMethod,
-				"URI":     reqUri,
-				"status":  statusCode,
-				"latency": latencyTime,
-				"error":   ctx.Errors.String(),
-			}).Error("API ERROR")
+			slog.Error("API ERROR",
+				"method", reqMethod,
+				"URI", reqUri,
+				"status", statusCode,
+				"latency", latencyTime,
+				"error", ctx.Errors.String(),
+			)
 		} else {
 			fullPath := ctx.FullPath()
 			if ignoreLoggingPaths[fullPath] {
-				log.WithFields(log.Fields{
-					"method":  reqMethod,
-					"URI":     reqUri,
-					"status":  statusCode,
-					"latency": latencyTime,
-				}).Debug("API REQUEST")
+				slog.Debug("API REQUEST",
+					"method", reqMethod,
+					"URI", reqUri,
+					"status", statusCode,
+					"latency", latencyTime,
+				)
 			} else {
-				log.WithFields(log.Fields{
-					"method":  reqMethod,
-					"URI":     reqUri,
-					"status":  statusCode,
-					"latency": latencyTime,
-				}).Info("API REQUEST")
+				slog.Info("API REQUEST",
+					"method", reqMethod,
+					"URI", reqUri,
+					"status", statusCode,
+					"latency", latencyTime,
+				)
 			}
 		}
 	}
@@ -111,11 +112,11 @@ func Recovery() gin.HandlerFunc {
 					return
 				}
 
-				log.Errorf("panic recovered: %v", err)
+				slog.Error("panic recovered", "error", err)
 				// print caller stack
 				buf := make([]byte, maxStackTraceSize)
 				stackSize := runtime.Stack(buf, false)
-				log.Errorf("stack trace: %s", string(buf[:stackSize]))
+				slog.Error("stack trace", "stack", string(buf[:stackSize]))
 
 				if ctx.Writer.Written() {
 					return

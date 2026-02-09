@@ -16,10 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 import textwrap
+import uuid
 
 from django.core.management.base import BaseCommand, CommandError
 
-from paasng.platform.agent_sandbox.sandbox import AgentSandboxFactory
+from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_SNAPSHOT, DEFAULT_TARGET
+from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager
 from paasng.platform.applications.models import Application
 
 
@@ -37,8 +39,12 @@ class Command(BaseCommand):
             raise CommandError(f"Application {app_code} not found") from exc
 
         self.stdout.write(self.style.WARNING("Creating sandbox..."))
-        factory = AgentSandboxFactory(app)
-        sandbox = factory.create()
+        mgr = AgentSandboxResManager(app, DEFAULT_TARGET)
+        sandbox = mgr.create(
+            name="demo-sandbox",
+            sandbox_id=uuid.uuid4().hex,
+            snapshot=DEFAULT_SNAPSHOT,
+        )
         self.stdout.write(self.style.SUCCESS(f"Sandbox created: {sandbox.entity.name}"))
 
         try:
@@ -64,5 +70,5 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"logs (tail):\n{logs}"))
         finally:
             self.stdout.write(self.style.WARNING("Destroying sandbox..."))
-            factory.destroy(sandbox)
+            mgr.destroy(sandbox)
             self.stdout.write(self.style.SUCCESS("Sandbox destroyed"))

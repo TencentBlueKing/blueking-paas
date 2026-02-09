@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/server/httputil"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
 var _ = Describe("UploadFile", func() {
@@ -77,7 +77,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "test.txt", content)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "binary.bin", binaryContent)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -108,7 +108,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "new.txt", newContent)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -126,7 +126,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "file.txt", content)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -229,7 +229,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "original.txt", content)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -246,7 +246,7 @@ var _ = Describe("UploadFile", func() {
 			req := createMultipartRequest(destPath, "test.txt", content)
 			router.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(http.StatusNoContent))
 
 			data, err := os.ReadFile(destPath)
 			Expect(err).NotTo(HaveOccurred())

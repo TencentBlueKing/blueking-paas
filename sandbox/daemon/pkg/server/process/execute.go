@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/config"
-	"github.com/bkpaas/sandbox/daemon/pkg/server/httputil"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
 // ExecuteCommand executes a command
@@ -42,6 +42,7 @@ func ExecuteCommand(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// Execute the command
 	cmd := exec.CommandContext(ctx, cmdParts[0], cmdParts[1:]...)
 	if request.Cwd != nil {
 		cmd.Dir = *request.Cwd
@@ -57,6 +58,7 @@ func ExecuteCommand(c *gin.Context) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// 不直接用 err 的原因是, 它是 signal: killed, 不能表示超时
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			httputil.RequestTimeoutResponse(c, errors.New("command execution timeout"))
 			return
@@ -91,7 +93,8 @@ func ExecuteCommand(c *gin.Context) {
 	})
 }
 
-// parseCommand splits a command string properly handling quotes
+// parseCommand splits a command string properly handling quotes.
+// see detail cases in execute_test.go
 func parseCommand(command string) []string {
 	var args []string
 	var current bytes.Buffer

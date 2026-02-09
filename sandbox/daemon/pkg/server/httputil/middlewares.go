@@ -77,6 +77,7 @@ func LoggingMiddleware() gin.HandlerFunc {
 	}
 }
 
+// TokenAuthMiddleware checks token
 func TokenAuthMiddleware(token string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authorizationHeader := c.GetHeader("Authorization")

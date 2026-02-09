@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/server/httputil"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
 // UploadFile handles file uploads.
@@ -27,5 +27,5 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	httputil.EmptySuccessResponse(c)
+	httputil.NoContentResponse(c)
 }

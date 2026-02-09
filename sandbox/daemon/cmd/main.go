@@ -14,8 +14,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/config"
-	"github.com/bkpaas/sandbox/daemon/pkg/server"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server"
 )
 
 // entrypointManager manages the lifecycle of an entrypoint command,

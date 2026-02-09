@@ -1,11 +1,11 @@
-module github.com/bkpaas/sandbox/daemon
+module github.com/TencentBlueking/blueking-paas/sandbox/daemon
 
 go 1.25.4
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/gin-gonic/gin v1.11.0
-	github.com/go-playground/validator/v10 v10.27.0
+	github.com/go-playground/validator/v10 v10.30.1
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/sirupsen/logrus v1.9.4
@@ -16,7 +16,7 @@ require (
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

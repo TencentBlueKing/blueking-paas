@@ -1,17 +1,8 @@
-ifdef VERSION
-    VERSION=${VERSION}
-else
-    VERSION=$(shell git describe --always)
-endif
-
-ifdef GIT_HASH
-    GIT_HASH=${GIT_HASH}
-else
-    GIT_HASH=$(shell git rev-parse HEAD)
-endif
+VERSION ?= $(shell git describe --always)
+GIT_HASH ?= $(shell git rev-parse HEAD)
 
 WORKSPACE=$(shell pwd)
-BUILD_TIME=${shell date +%Y-%m-%dT%I:%M:%S}
+BUILD_TIME=$(shell date +%Y-%m-%dT%I:%M:%S)
 GO_BUILD=CGO_ENABLED=0 go build -trimpath
 
 # build path config

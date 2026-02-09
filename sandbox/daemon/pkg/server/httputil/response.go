@@ -20,14 +20,14 @@ func SuccessResponse(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, data)
 }
 
-// EmptySuccessResponse sends a success response without any data
-func EmptySuccessResponse(c *gin.Context) {
-	c.Status(http.StatusOK)
-}
-
 // CreatedSuccessResponse sends a response indicating resource creation
 func CreatedSuccessResponse(c *gin.Context) {
 	c.Status(http.StatusCreated)
+}
+
+// NoContentResponse sends a no content response
+func NoContentResponse(c *gin.Context) {
+	c.Status(http.StatusNoContent)
 }
 
 // BadRequestResponse sends a bad request response
@@ -48,11 +48,6 @@ func ForbiddenResponse(c *gin.Context, err error) {
 // NotFoundResponse sends a not found response
 func NotFoundResponse(c *gin.Context, err error) {
 	c.AbortWithError(http.StatusNotFound, err) // nolint
-}
-
-// NoContentResponse sends a no content response
-func NoContentResponse(c *gin.Context) {
-	c.Status(http.StatusNoContent)
 }
 
 // InternalErrorResponse sends an internal error response

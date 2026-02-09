@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/server/httputil"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
 var _ = Describe("DownloadFile", func() {

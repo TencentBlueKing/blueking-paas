@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
-	"github.com/bkpaas/sandbox/daemon/pkg/config"
-	"github.com/bkpaas/sandbox/daemon/pkg/server/fs"
-	"github.com/bkpaas/sandbox/daemon/pkg/server/httputil"
-	"github.com/bkpaas/sandbox/daemon/pkg/server/process"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/fs"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/process"
 )
 
 // Start starts the main server.

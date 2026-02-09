@@ -62,17 +62,17 @@ def create_sandbox(
     application: Application,
     creator: str,
     name: str | None = None,
-    env: dict | None = None,
+    env_vars: dict | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
     :param application: The application that the sandbox belongs to.
     :param creator: The creator of the sandbox.
     :param name: The name of the sandbox, optional.
-    :param env: The environment variables dict, optional.
+    :param env_vars: The environment variables dict, optional.
     """
     sandbox_id = uuid.uuid4()
-    env = env or {}
+    env_vars = env_vars or {}
     if not name:
         name = f"sbx-{sandbox_id.hex}"
 
@@ -85,19 +85,19 @@ def create_sandbox(
         name=name,
         snapshot=DEFAULT_SNAPSHOT,
         target=DEFAULT_TARGET,
-        env=env,
+        env_vars=env_vars,
         status=SandboxStatus.PENDING.value,
         creator=creator,
         tenant_id=application.tenant_id,
     )
 
-    factory = AgentSandboxFactory(application, sandbox.target)
+    mgr = AgentSandboxResManager(application, sandbox.target)
     try:
-        factory.create(
+        mgr.create(
             name=sandbox.name,
             sandbox_id=sandbox.uuid.hex,
             snapshot=sandbox.snapshot,
-            env=sandbox.env,
+            env_vars=sandbox.env_vars,
         )
     except SandboxError:
         sandbox.status = SandboxStatus.ERR_CREATING.value
@@ -116,9 +116,9 @@ def delete_sandbox(sandbox: Sandbox) -> None:
 
     :param sandbox: The sandbox to delete.
     """
-    factory = AgentSandboxFactory(sandbox.application, sandbox.target)
+    mgr = AgentSandboxResManager(sandbox.application, sandbox.target)
     try:
-        factory.destroy_by_name(sandbox.name)
+        mgr.destroy_by_name(sandbox.name)
     except SandboxError:
         sandbox.status = SandboxStatus.ERR_DELETING.value
         sandbox.save(update_fields=["status"])
@@ -135,12 +135,12 @@ def get_sandbox_client(sandbox: Sandbox) -> "KubernetesPodSandbox":
     :param sandbox: The sandbox record.
     :returns: The runtime sandbox client for process and filesystem operations.
     """
-    factory = AgentSandboxFactory(sandbox.application, sandbox.target)
-    return factory.get_from_record(sandbox)
+    mgr = AgentSandboxResManager(sandbox.application, sandbox.target)
+    return mgr.get_from_db_record(sandbox)
 
 
-class AgentSandboxFactory:
-    """A factory for creating agent sandboxes.
+class AgentSandboxResManager:
+    """The class helps managing agent sandbox resources.
 
     :param app: The application that the sandbox belongs to.
     :param target: The target that all the sandboxes should run in.
@@ -158,14 +158,14 @@ class AgentSandboxFactory:
         name: str,
         sandbox_id: str,
         snapshot: str,
-        env: dict[str, str] | None = None,
+        env_vars: dict[str, str] | None = None,
     ) -> "KubernetesPodSandbox":
         """Create a new sandbox.
 
         :param name: The name of the sandbox.
         :param sandbox_id: The ID of the the sandbox.
         :param snapshot: The snapshot name used for initialize the sandbox.
-        :param env: The environment variables injected into the sandbox.
+        :param env_vars: The environment variables injected into the sandbox.
         :return: The sandbox object.
         """
         sandbox = AgentSandbox.create(
@@ -174,7 +174,7 @@ class AgentSandboxFactory:
             sandbox_id=sandbox_id,
             workdir=DEFAULT_WORKDIR,
             snapshot=snapshot,
-            env=env,
+            env=env_vars,
         )
         sandbox_created = False
         try:
@@ -202,8 +202,8 @@ class AgentSandboxFactory:
     def destroy(self, sbx: "KubernetesPodSandbox") -> None:
         self.destroy_by_name(sbx.entity.name)
 
-    def get_from_record(self, sandbox: Sandbox) -> "KubernetesPodSandbox":
-        """Build a runtime sandbox client from a Sandbox record."""
+    def get_from_db_record(self, sandbox: Sandbox) -> "KubernetesPodSandbox":
+        """Build a runtime sandbox client from a Sandbox record in database."""
         try:
             entity = AgentSandbox.create(
                 self.kres_app,
@@ -211,7 +211,7 @@ class AgentSandboxFactory:
                 sandbox_id=sandbox.uuid.hex,
                 workdir=DEFAULT_WORKDIR,
                 snapshot=sandbox.snapshot,
-                env=sandbox.env,
+                env=sandbox.env_vars,
             )
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
@@ -255,18 +255,18 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         self.namespace = self.kres_app.namespace
 
     def exec(
-        self, cmd: list[str] | str, cwd: str | None = None, env: dict | None = None, timeout: int = 60
+        self, cmd: list[str] | str, cwd: str | None = None, env_vars: dict | None = None, timeout: int = 60
     ) -> ExecResult:
         """Execute a command inside the sandbox.
 
         :param cmd: The command to execute, can be a string or a list of strings.
         :param cwd: The working directory, defaults to the sandbox's workdir.
-        :param env: The environment variables to set, defaults to empty.
+        :param env_vars: The environment variables to set, defaults to empty.
         :param timeout: The timeout for the command execution, in seconds.
         """
         cwd = cwd or self.entity.workdir
-        env = env or {}
-        shell_cmd = self._build_shell_command(cmd, cwd, env)
+        env_vars = env_vars or {}
+        shell_cmd = self._build_shell_command(cmd, cwd, env_vars)
         stdout, stderr = self._stream_exec(shell_cmd, timeout=timeout)
         stderr, exit_code = self._extract_exit_code(stderr)
         return ExecResult(stdout=stdout, stderr=stderr, exit_code=exit_code)
@@ -349,10 +349,12 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         except ApiException as exc:
             raise SandboxError("failed to get sandbox logs") from KresAgentSandboxError(str(exc), exc)
 
-    def _build_shell_command(self, cmd: list[str] | str, cwd: str, env: dict) -> list[str]:
+    def _build_shell_command(self, cmd: list[str] | str, cwd: str, env_vars: dict) -> list[str]:
         """Build the shell command to be executed inside the sandbox."""
         cmd_str = cmd if isinstance(cmd, str) else " ".join(shlex.quote(item) for item in cmd)
-        env_prefix = " ".join(f"{self._validate_env_key(key)}={shlex.quote(str(value))}" for key, value in env.items())
+        env_prefix = " ".join(
+            f"{self._validate_env_key(key)}={shlex.quote(str(value))}" for key, value in env_vars.items()
+        )
         if env_prefix:
             cmd_str = f"export {env_prefix}; {cmd_str}"
         if cwd:

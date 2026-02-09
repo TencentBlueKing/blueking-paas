@@ -20,7 +20,7 @@ from rest_framework import serializers
 from .models import Sandbox
 
 
-class SandboxEnvField(serializers.JSONField):
+class SandboxEnvVarsField(serializers.JSONField):
     """A JSON object field for sandbox environment variables."""
 
     default_error_messages = {
@@ -41,7 +41,9 @@ class SandboxCreateInputSLZ(serializers.Serializer):
     """The serializer for creating sandbox."""
 
     name = serializers.CharField(label="名称", max_length=64, required=False, help_text="不提供则基于 UUID 生成")
-    env = SandboxEnvField(label="环境变量", required=False, default=dict, help_text="用于注入到沙箱内的环境变量")
+    env_vars = SandboxEnvVarsField(
+        label="环境变量", required=False, default=dict, help_text="用于注入到沙箱内的环境变量"
+    )
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
@@ -54,7 +56,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
             "name",
             "snapshot",
             "target",
-            "env",
+            "env_vars",
             "cpu",
             "memory",
             "status",
@@ -110,7 +112,7 @@ class SandboxExecInputSLZ(serializers.Serializer):
         allow_blank=False,
         help_text="命令执行目录，不提供时使用沙箱默认工作目录",
     )
-    env = SandboxEnvField(label="环境变量", required=False, default=dict, help_text="命令执行环境变量")
+    env_vars = SandboxEnvVarsField(label="环境变量", required=False, default=dict, help_text="命令执行环境变量")
     timeout = serializers.IntegerField(
         label="超时（秒）", required=False, default=60, min_value=1, help_text="执行超时时间"
     )

@@ -18,19 +18,19 @@ import uuid
 import pytest
 
 from paas_wl.bk_app.agent_sandbox import constants as sbx_constants
-from paasng.platform.agent_sandbox.sandbox import AgentSandboxFactory
+from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
 def sandbox(bk_app):
-    factory = AgentSandboxFactory(bk_app, sbx_constants.DEFAULT_TARGET)
+    mgr = AgentSandboxResManager(bk_app, sbx_constants.DEFAULT_TARGET)
     id_ = uuid.uuid4().hex
-    sandbox = factory.create(name=f"test-sbx-{id_}", sandbox_id=id_, snapshot=sbx_constants.DEFAULT_SNAPSHOT)
+    sandbox = mgr.create(name=f"test-sbx-{id_}", sandbox_id=id_, snapshot=sbx_constants.DEFAULT_SNAPSHOT)
     yield sandbox
 
-    factory.destroy(sandbox)
+    mgr.destroy(sandbox)
 
 
 class TestKubernetesPodSandbox:
@@ -39,8 +39,8 @@ class TestKubernetesPodSandbox:
         assert result.exit_code == 0
         assert result.stdout.strip() == sbx_constants.DEFAULT_WORKDIR
 
-    def test_exec_with_env(self, sandbox):
-        result = sandbox.exec("echo $FOO", env={"FOO": "BAR"})
+    def test_exec_with_env_vars(self, sandbox):
+        result = sandbox.exec("echo $FOO", env_vars={"FOO": "BAR"})
         assert result.exit_code == 0
         assert result.stdout.strip() == "BAR"
 

@@ -59,7 +59,7 @@ urlpatterns = [
         name="agent_sandbox.process.exec",
     ),
     path(
-        "api/agent_sandbox/sandboxes/<str:sandbox_id>/code_interpreter/run",
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/processes/code_run",
         AgentSandboxProcessViewSet.as_view({"post": "code_run"}),
         name="agent_sandbox.process.code_run",
     ),

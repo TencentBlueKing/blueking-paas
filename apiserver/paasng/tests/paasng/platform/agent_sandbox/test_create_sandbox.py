@@ -22,31 +22,31 @@ from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_TARGET
 from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
-from paasng.platform.agent_sandbox.sandbox import AgentSandboxFactory, create_sandbox
+from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager, create_sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestCreateSandbox:
     def test_create_success(self, bk_app, bk_user):
-        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="demo", env={"FOO": "BAR"})
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="demo", env_vars={"FOO": "BAR"})
         try:
             sandbox.refresh_from_db()
             assert sandbox.status == SandboxStatus.RUNNING.value
             assert sandbox.started_at is not None
         finally:
-            AgentSandboxFactory(bk_app, DEFAULT_TARGET).destroy_by_name("demo")
+            AgentSandboxResManager(bk_app, DEFAULT_TARGET).destroy_by_name("demo")
             sandbox.delete()
 
     def test_create_resource_failed(self, bk_app, bk_user):
         with (
             suppress(SandboxError),
             mock.patch(
-                "paasng.platform.agent_sandbox.sandbox.AgentSandboxFactory.create",
+                "paasng.platform.agent_sandbox.sandbox.AgentSandboxResManager.create",
                 side_effect=SandboxError("boom"),
             ),
         ):
-            create_sandbox(application=bk_app, name="failed", env={"FOO": "BAR"}, creator=bk_user.pk)
+            create_sandbox(application=bk_app, name="failed", env_vars={"FOO": "BAR"}, creator=bk_user.pk)
 
         sandbox = Sandbox.objects.get(application=bk_app, name="failed")
         assert sandbox.status == SandboxStatus.ERR_CREATING.value

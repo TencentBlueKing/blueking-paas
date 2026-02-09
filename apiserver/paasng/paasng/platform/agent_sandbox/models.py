@@ -28,12 +28,12 @@ class Sandbox(UuidAuditedModel):
     """
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="sandboxes")
-    name = models.CharField(verbose_name="名称", max_length=64, help_text="租户内唯一，未提供时自动生成")
+    name = models.CharField(verbose_name="名称", max_length=64, help_text="租户内应用内唯一，未提供时自动生成")
 
     snapshot = models.CharField(verbose_name="快照名字", max_length=128, help_text="沙箱初始化使用的快照（镜像）")
 
     target = models.CharField(verbose_name="目标区域", max_length=32, help_text="沙箱所属目标区域（集群）")
-    env = models.JSONField(verbose_name="环境变量", default=dict)
+    env_vars = models.JSONField(verbose_name="环境变量", default=dict)
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
 
@@ -45,4 +45,4 @@ class Sandbox(UuidAuditedModel):
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("tenant_id", "name")
+        unique_together = ("tenant_id", "application_id", "name")

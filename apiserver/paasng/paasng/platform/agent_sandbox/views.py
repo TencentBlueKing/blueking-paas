@@ -76,7 +76,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                 application=application,
                 creator=request.user.pk,
                 name=data.get("name"),
-                env=data.get("env"),
+                env_vars=data.get("env_vars"),
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
@@ -200,7 +200,7 @@ class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet
             result = get_sandbox_client(sandbox).exec(
                 cmd=data["cmd"],
                 cwd=data.get("cwd"),
-                env=data["env"],
+                env_vars=data["env_vars"],
                 timeout=data["timeout"],
             )
         except SandboxError:

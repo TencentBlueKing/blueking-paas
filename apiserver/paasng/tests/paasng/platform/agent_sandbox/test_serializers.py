@@ -17,34 +17,33 @@
 import pytest
 from rest_framework import serializers
 
-from paasng.platform.agent_sandbox.serializers import SandboxEnvField
+from paasng.platform.agent_sandbox.serializers import SandboxEnvVarsField
 
 
 class DummyEnvSerializer(serializers.Serializer):
-    env = SandboxEnvField(required=False, default=dict)
+    env_vars = SandboxEnvVarsField(required=False, default=dict)
 
 
-def test_env_must_be_object():
-    slz = DummyEnvSerializer(data={"env": "not-object"})
-
+def test_env_vars_must_be_object():
+    slz = DummyEnvSerializer(data={"env_vars": "not-object"})
     assert not slz.is_valid()
-    assert str(slz.errors["env"][0]) == "env must be an object"
+    assert str(slz.errors["env_vars"][0]) == "env must be an object"
 
 
 @pytest.mark.parametrize(
     "env_value",
     [{1: "one"}, {"FOO": 1}, {"FOO": "BAR", "COUNT": 1}],
 )
-def test_env_must_be_string_mapping(env_value):
-    slz = DummyEnvSerializer(data={"env": env_value})
+def test_env_vars_must_be_string_mapping(env_value):
+    slz = DummyEnvSerializer(data={"env_vars": env_value})
 
     assert not slz.is_valid()
-    assert str(slz.errors["env"][0]) == "env must be an object of string key-value pairs"
+    assert str(slz.errors["env_vars"][0]) == "env must be an object of string key-value pairs"
 
 
-def test_env_accepts_string_mapping():
+def test_env_vars_accepts_string_mapping():
     env = {"FOO": "BAR", "EMPTY": ""}
-    slz = DummyEnvSerializer(data={"env": env})
+    slz = DummyEnvSerializer(data={"env_vars": env})
 
     slz.is_valid(raise_exception=True)
-    assert slz.validated_data["env"] == env
+    assert slz.validated_data["env_vars"] == env

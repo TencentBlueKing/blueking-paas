@@ -61,7 +61,7 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
-        tls_info = data.get("cfg", {}).get("tls")
+        tls_info = data.get("config", {}).get("tls")
         if not tls_info or not isinstance(tls_info, dict):
             return data
 
@@ -70,7 +70,7 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
             val = tls_info.get(k)
             if val:
                 tls_info[k] = base64.b64encode(val.encode()).decode()
-        data["cfg"]["tls"] = tls_info
+        data["config"]["tls"] = tls_info
         return data
 
     def validate(self, attrs):

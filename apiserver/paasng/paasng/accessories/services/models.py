@@ -254,7 +254,7 @@ class PreCreatedInstanceBindingPolicyManager(models.Manager):
         :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
         """
         if policy_qs is None:
-            policy_qs = self.objects.filter(pre_created_instance__is_allocated=False)
+            policy_qs = self.filter(pre_created_instance__is_allocated=False)
 
         candidates = policy_qs.filter(
             Q(app_code=app_code) | Q(app_code__isnull=True),

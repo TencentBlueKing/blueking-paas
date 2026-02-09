@@ -90,34 +90,34 @@ class TestPreCreatedInstanceBindingPolicy:
             pre_created_instance=ins_app_env,
             app_code="app",
             module_name=None,
-            env="prod",
+            env_name="prod",
         )
         policy_module_env = G(
             PreCreatedInstanceBindingPolicy,
             pre_created_instance=ins_module_env,
             app_code=None,
             module_name="mod",
-            env="prod",
+            env_name="prod",
         )
         policy_env_only = G(
             PreCreatedInstanceBindingPolicy,
             pre_created_instance=ins_env_only,
             app_code=None,
             module_name=None,
-            env="prod",
+            env_name="prod",
         )
 
         # 优先级计算可以认为是比较 (app_code, module_name, env) 的大小, app_code 优先
         qs = PreCreatedInstanceBindingPolicy.objects.filter(
             pre_created_instance__in=PreCreatedInstance.objects.filter(plan=bk_plan)
         )
-        policy = PreCreatedInstanceBindingPolicy.resolve_policy("app", "mod", "prod", qs)
+        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy("app", "mod", "prod", qs)
         assert policy == policy_app_env
 
-        policy = PreCreatedInstanceBindingPolicy.resolve_policy("other", "mod", "prod", qs)
+        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy("other", "mod", "prod", qs)
         assert policy == policy_module_env
 
-        policy = PreCreatedInstanceBindingPolicy.resolve_policy(None, None, "prod", qs)
+        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy(None, None, "prod", qs)
         assert policy == policy_env_only
 
 
@@ -127,7 +127,7 @@ class TestPreCreatedInstanceSelectForRequest:
         ins_without_policy = G(PreCreatedInstance, plan=bk_plan)
         G(PreCreatedInstanceBindingPolicy, pre_created_instance=ins_with_policy, app_code="app")
 
-        instance = PreCreatedInstance.select_for_request(bk_plan, {})
+        instance = PreCreatedInstance.objects.select_by_policy_or_fifo(bk_plan, {})
         assert instance == ins_without_policy
 
     @pytest.mark.parametrize(
@@ -142,10 +142,10 @@ class TestPreCreatedInstanceSelectForRequest:
             pre_created_instance=policy_instance,
             app_code="app",
             module_name="mod",
-            env=policy_env,
+            env_name=policy_env,
         )
 
-        instance = PreCreatedInstance.select_for_request(
-            bk_plan, {"application_code": "app", "module_name": "mod", "env": "prod"}
+        instance = PreCreatedInstance.objects.select_by_policy_or_fifo(
+            bk_plan, {"application_code": "app", "module_name": "mod", "env_name": "prod"}
         )
         assert instance == (policy_instance if expect_policy else fifo_first)

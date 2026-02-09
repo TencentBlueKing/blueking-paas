@@ -4863,8 +4863,8 @@ msgid "数据嵌套层级过深，最大层级为 {max_depth}"
 msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"
 
 #: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:39
-msgid "至少需要指定一个匹配规则"
-msgstr "At least one matching rule must be specified"
+msgid "至少需要指定一个匹配规则, 且匹配规则不能为空字符串"
+msgstr "At least one matching rule must be specified, and the rule must not be an empty string"
 
 #: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:77
 msgid "POLICY 类型的预创建实例必须指定 binding_policy"

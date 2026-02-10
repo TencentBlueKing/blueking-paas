@@ -27,7 +27,9 @@ class Sandbox(UuidAuditedModel):
     typically used for running AI agent tasks.
     """
 
-    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="sandboxes")
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="sandboxes"
+    )
     name = models.CharField(verbose_name="名称", max_length=64, help_text="租户内应用内唯一，未提供时自动生成")
 
     snapshot = models.CharField(verbose_name="快照名字", max_length=128, help_text="沙箱初始化使用的快照（镜像）")

@@ -53,7 +53,7 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
         choices=PreCreatedInstanceAllocationType.get_django_choices(),
     )
 
-    # 对 config.tls base64 编码
+    # 对 config.tls base64 编码后入库, 后续可以直接用于创建 k8s Secret
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 

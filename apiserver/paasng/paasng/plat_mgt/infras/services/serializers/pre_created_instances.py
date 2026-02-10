@@ -57,6 +57,7 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
+        # tls 和前端约定放在 config.tls 下
         tls_info = data.get("config", {}).get("tls")
         if not tls_info or not isinstance(tls_info, dict):
             return data

@@ -77,9 +77,9 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             allocation_type=data["allocation_type"],
             tenant_id=plan.tenant_id,
         )
-        if data.get("binding_policy"):
+        if binding_policy := data.get("binding_policy"):
             PreCreatedInstanceBindingPolicy.objects.create(
-                pre_created_instance=ins, tenant_id=ins.tenant_id, **data["binding_policy"]
+                pre_created_instance=ins, tenant_id=ins.tenant_id, **binding_policy
             )
 
         add_plat_mgt_audit_record(

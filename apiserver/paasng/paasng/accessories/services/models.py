@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
 from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.db.models import Case, IntegerField, Q, Value, When
+from django.db.models.query import QuerySet
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
@@ -31,8 +32,6 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
-    from django.db.models.query import QuerySet
-
     from paasng.accessories.services.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
@@ -243,11 +242,11 @@ class PreCreatedInstance(UuidAuditedModel):
 
 class PreCreatedInstanceBindingPolicyManager(models.Manager):
     def resolve_policy(
-        self, app_code, module_name, env_name, policy_qs: Optional["QuerySet"] = None
+        self, app_code: str | None, module_name: str | None, env_name: str | None, policy_qs: QuerySet | None = None
     ) -> Optional["PreCreatedInstanceBindingPolicy"]:
         """
         找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env_name(1)
-        可以理解为按 (app_code, module_name, env) 从大到小排, 相同时，返回 created_at 最早的那条
+        可以理解为按 (app_code, module_name, env_name) 从大到小排, 相同时，返回 created_at 最早的那条
 
         :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
         """

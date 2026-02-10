@@ -62,5 +62,5 @@ func Start() error {
 	// 删除文件
 	fsController.DELETE("/", fs.DeleteFile)
 
-	return r.Run(fmt.Sprintf(":%d", config.G.ServerPort))
+	return r.Run(fmt.Sprintf("%s:%d", config.G.ServerHost, config.G.ServerPort))
 }

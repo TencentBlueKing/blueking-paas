@@ -875,6 +875,10 @@ msgstr ""
 "Configuration resource instance exception: unable to provision instance for "
 "services<{service_name}>"
 
+#: paasng/accessories/servicehub/local/manager.py:165
+msgid "资源不足, 配置实例失败"
+msgstr "Insufficient resources, failed to provision instance"
+
 #: paasng/accessories/servicehub/remote/manager.py:504
 #, python-brace-format
 msgid ""

@@ -23,7 +23,7 @@ from django.utils.translation import gettext as _
 from rest_framework.exceptions import ErrorDetail, ValidationError
 
 from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfoError
-from paasng.accessories.services.exceptions import ResourceNotEnoughError
+from paasng.accessories.services.exceptions import InsufficientResourceError
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def find_innermost_exception(exception: BaseException) -> BaseException:
 def detect_error_code(exception_cls: Type[BaseException]) -> Optional[APIError]:
     if exception_cls == GetClusterEgressInfoError:
         return error_codes.CANNOT_GET_CLUSTER_INFO
-    if exception_cls == ResourceNotEnoughError:
+    if exception_cls == InsufficientResourceError:
         return error_codes.RESOURCE_POOL_IS_EMPTY
 
     logger.warning("Can't get error code from Exception<%s>", exception_cls)

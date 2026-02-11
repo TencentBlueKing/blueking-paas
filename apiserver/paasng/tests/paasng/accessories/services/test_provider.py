@@ -21,8 +21,8 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
-from paasng.accessories.services.exceptions import ResourceNotEnoughError
-from paasng.accessories.services.models import Plan, PreCreatedInstance, _resolve_policy_instance
+from paasng.accessories.services.exceptions import InsufficientResourceError
+from paasng.accessories.services.models import Plan, PreCreatedInstance
 
 pytestmark = pytest.mark.django_db
 
@@ -80,8 +80,48 @@ class TestResourcePoolProvider:
             assert PreCreatedInstance.objects.get(pk=pools[0].pk).is_allocated
             assert PreCreatedInstance.objects.count() == len(pools)
 
-    def test_provision_with_policy_match(self, bk_service, bk_plan):
-        """带完整 params 时, 应通过策略匹配选中 POLICY 实例而非 FIFO 实例"""
+    @pytest.mark.parametrize(
+        ("policy_binding", "params", "expect_policy"),
+        [
+            pytest.param(
+                # 完全匹配: 三个维度都命中
+                {"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]},
+                {"application_code": "myapp", "module_name": "default", "env_name": "prod"},
+                True,
+                id="exact_match_all_dimensions",
+            ),
+            pytest.param(
+                # 通配维度: 策略只绑定 app_code, module_name/env_name 为空(通配)
+                {"app_code": ["myapp"]},
+                {"application_code": "myapp", "module_name": "default", "env_name": "prod"},
+                True,
+                id="wildcard_module_and_env",
+            ),
+            pytest.param(
+                # 多值列表: env_name 包含多个可选值, 命中其中一个即可
+                {"app_code": ["myapp"], "env_name": ["prod", "stag"]},
+                {"application_code": "myapp", "module_name": "default", "env_name": "stag"},
+                True,
+                id="multi_value_env_match",
+            ),
+            pytest.param(
+                # 不匹配: app_code 不同, 应回退到 FIFO
+                {"app_code": ["otherapp"], "module_name": ["default"], "env_name": ["prod"]},
+                {"application_code": "myapp", "module_name": "default", "env_name": "prod"},
+                False,
+                id="app_code_mismatch_fallback_fifo",
+            ),
+            pytest.param(
+                # 不匹配: 策略绑定了 env_name 但 params 提供的 env 不在列表中
+                {"app_code": ["myapp"], "env_name": ["prod"]},
+                {"application_code": "myapp", "module_name": "default", "env_name": "stag"},
+                False,
+                id="env_mismatch_fallback_fifo",
+            ),
+        ],
+    )
+    def test_provision_with_policy_match(self, bk_service, bk_plan, policy_binding, params, expect_policy):
+        """根据不同的 binding_policy 与 params 组合, 验证策略匹配或回退到 FIFO"""
         fifo_ins = G(
             PreCreatedInstance,
             plan=bk_plan,
@@ -93,110 +133,58 @@ class TestResourcePoolProvider:
             plan=bk_plan,
             allocation_type=PreCreatedInstanceAllocationType.POLICY,
             credentials=json.dumps({"host": "policy-host"}),
-            binding_policy={"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]},
+            binding_policy=policy_binding,
+        )
+
+        instance = bk_service.create_service_instance_by_plan(bk_plan, params)
+
+        if expect_policy:
+            assert instance.config["__pk__"] == str(policy_ins.pk)
+            assert json.loads(instance.credentials)["REDIS_HOST"] == "policy-host"
+            assert PreCreatedInstance.objects.get(pk=policy_ins.pk).is_allocated
+            assert not PreCreatedInstance.objects.get(pk=fifo_ins.pk).is_allocated
+        else:
+            assert instance.config["__pk__"] == str(fifo_ins.pk)
+            assert json.loads(instance.credentials)["REDIS_HOST"] == "fifo-host"
+            assert PreCreatedInstance.objects.get(pk=fifo_ins.pk).is_allocated
+            assert not PreCreatedInstance.objects.get(pk=policy_ins.pk).is_allocated
+
+    def test_provision_policy_score_priority(self, bk_service, bk_plan):
+        """多个 POLICY 实例均匹配时, 应选中得分最高的 (app_code=3 > module_name=2 > env_name=1)"""
+        G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.FIFO,
+            credentials=json.dumps({"host": "fifo-host"}),
+        )
+        # 只匹配 env_name, score=1
+        low_score_ins = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            credentials=json.dumps({"host": "low-score"}),
+            binding_policy={"env_name": ["prod"]},
+        )
+        # 匹配 app_code + module_name, score=3+2=5
+        high_score_ins = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            credentials=json.dumps({"host": "high-score"}),
+            binding_policy={"app_code": ["myapp"], "module_name": ["default"]},
         )
 
         params = {"application_code": "myapp", "module_name": "default", "env_name": "prod"}
         instance = bk_service.create_service_instance_by_plan(bk_plan, params)
 
-        assert instance.config["__pk__"] == str(policy_ins.pk)
-        assert json.loads(instance.credentials)["REDIS_HOST"] == "policy-host"
-        assert PreCreatedInstance.objects.get(pk=policy_ins.pk).is_allocated
-        assert not PreCreatedInstance.objects.get(pk=fifo_ins.pk).is_allocated
+        assert instance.config["__pk__"] == str(high_score_ins.pk)
+        assert json.loads(instance.credentials)["REDIS_HOST"] == "high-score"
+        assert PreCreatedInstance.objects.get(pk=high_score_ins.pk).is_allocated
+        assert not PreCreatedInstance.objects.get(pk=low_score_ins.pk).is_allocated
 
     def test_provision_raises_when_all_allocated(self, bk_service, bk_plan):
         """所有实例均已分配时, 应抛出 ResourceNotEnoughError"""
         G(PreCreatedInstance, plan=bk_plan, credentials=json.dumps({}), is_allocated=True)
 
-        with pytest.raises(ResourceNotEnoughError, match="资源不足"):
+        with pytest.raises(InsufficientResourceError, match="资源不足"):
             bk_service.create_service_instance_by_plan(bk_plan, {})
-
-
-class TestPreCreatedInstanceBindingPolicy:
-    def test_resolve_policy_match_priority(self, bk_plan):
-        ins_app_env = G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            binding_policy={"app_code": ["app"], "env_name": ["prod"]},
-        )
-        ins_module_env = G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            binding_policy={"module_name": ["mod"], "env_name": ["prod"]},
-        )
-        ins_env_only = G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            binding_policy={"env_name": ["prod"]},
-        )
-
-        candidates = list(
-            PreCreatedInstance.objects.filter(
-                plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY
-            ).order_by("created")
-        )
-
-        # 优先级计算可以认为是比较 (app_code, module_name, env) 的大小, app_code 优先
-        result = _resolve_policy_instance("app", "mod", "prod", candidates)
-        assert result == ins_app_env
-
-        result = _resolve_policy_instance("other", "mod", "prod", candidates)
-        assert result == ins_module_env
-
-        result = _resolve_policy_instance(None, None, "prod", candidates)
-        assert result == ins_env_only
-
-
-class TestPreCreatedInstanceSelectForRequest:
-    def test_missing_params_uses_fifo_without_policies(self, bk_plan):
-        G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            binding_policy={"app_code": ["app"]},
-        )
-        ins_without_policy = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO)
-
-        instance = PreCreatedInstance.objects.select_by_policy_or_fifo(bk_plan, {})
-        assert instance == ins_without_policy
-
-    @pytest.mark.parametrize(
-        ("policy_env", "expect_policy"),
-        [("prod", True), ("stag", False)],
-    )
-    def test_policy_match_and_fallback(self, bk_plan, policy_env, expect_policy):
-        fifo_first = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO)
-        policy_instance = G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            binding_policy={"app_code": ["app"], "module_name": ["mod"], "env_name": [policy_env]},
-        )
-
-        instance = PreCreatedInstance.objects.select_by_policy_or_fifo(
-            bk_plan, {"application_code": "app", "module_name": "mod", "env_name": "prod"}
-        )
-        assert instance == (policy_instance if expect_policy else fifo_first)
-
-    @pytest.mark.parametrize(
-        ("params", "description"),
-        [
-            ({}, "FIFO path"),
-            ({"application_code": "app", "module_name": "", "env_name": "prod"}, "POLICY path"),
-        ],
-    )
-    def test_all_allocated_returns_none(self, bk_plan, params, description):
-        """FIFO 和 POLICY 两条路径下, 所有实例已分配时应返回 None"""
-        G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO, is_allocated=True)
-        G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            is_allocated=True,
-            binding_policy={"app_code": ["app"], "env_name": ["prod"]},
-        )
-
-        assert PreCreatedInstance.objects.select_by_policy_or_fifo(bk_plan, params) is None

@@ -56,7 +56,7 @@ from paasng.accessories.servicehub.services import (
     ServiceObj,
     UnboundEngineAppInstanceRel,
 )
-from paasng.accessories.services.exceptions import ResourceNotEnoughError
+from paasng.accessories.services.exceptions import InsufficientResourceError
 from paasng.accessories.services.models import Plan, Service
 from paasng.accessories.services.providers import get_plan_schema_by_provider_name
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
@@ -161,7 +161,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
 
         try:
             self.db_obj.create_service_instance()
-        except ResourceNotEnoughError:
+        except InsufficientResourceError:
             raise error_codes.RESOURCE_POOL_IS_EMPTY.f(_("资源不足, 配置实例失败"))
         except Exception as e:
             raise ProvisionInstanceError(

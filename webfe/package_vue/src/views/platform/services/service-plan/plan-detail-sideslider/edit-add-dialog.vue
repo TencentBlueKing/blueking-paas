@@ -7,6 +7,7 @@
     :mask-close="false"
     :auto-close="false"
     render-directive="if"
+    ext-cls="resource-pool-dialog"
     :title="isAdd ? $t('添加实例') : $t('编辑实例')"
     @value-change="valueChange"
   >
@@ -28,20 +29,11 @@
       </bk-button>
     </div>
     <div class="dialog-content">
-      <bk-alert
-        class="mb16"
-        type="info"
-        :title="
-          $t('实例配置将以环境变量方式注入至应用运行时环境（每个配置项将添加 {n} 前缀，且会转换成全大写字母）', {
-            n: this.data.service,
-          })
-        "
-        closable
-      ></bk-alert>
       <bk-form
         ref="formRef"
-        :label-width="200"
         form-type="vertical"
+        :model="formData"
+        :rules="formRules"
       >
         <bk-form-item
           :label="$t('可回收复用')"
@@ -52,36 +44,124 @@
             v-model="formData.recyclable"
           ></bk-switcher>
         </bk-form-item>
+
+        <!-- 配置项标题 -->
+        <div class="section-title">{{ $t('配置项') }}</div>
+
+        <!-- 根据 service_config.config_items 动态生成配置项 -->
         <bk-form-item
-          :label="$t('实例凭证')"
-          :required="true"
-          :desc="credentialDesc"
+          v-for="item in configItems"
+          :key="item.key"
+          :label="item.key"
+          :required="item.required"
+          :property="`configValues.${item.key}`"
         >
-          <div class="json-editor-wrapper">
-            <JsonEditorVue
-              class="pt-json-editor-custom-cls"
-              ref="jsonEditor"
-              style="width: 100%; height: 100%"
-              v-model="valuesJson"
-              :debounce="20"
-              :mode="'text'"
-            />
-          </div>
+          <bk-switcher
+            v-if="item.type === 'boolean' || item.type === 'bool'"
+            theme="primary"
+            v-model="formData.configValues[item.key]"
+          ></bk-switcher>
+          <!-- 数字类型：使用 input type=number -->
+          <bk-input
+            v-else-if="item.type === 'integer' || item.type === 'number'"
+            v-model="formData.configValues[item.key]"
+            type="number"
+            :placeholder="$t('请输入')"
+          ></bk-input>
+          <!-- 字符串类型：使用 input，带示例 placeholder -->
+          <bk-input
+            v-else
+            v-model="formData.configValues[item.key]"
+            :placeholder="item.example ? `${$t('示例')}：${item.example}` : $t('请输入')"
+          ></bk-input>
         </bk-form-item>
-        <bk-form-item
-          :label="`TLS ${$t('配置')}`"
-          :desc="tlsDesc"
-        >
-          <div class="json-editor-wrapper">
-            <JsonEditorVue
-              class="pt-json-editor-custom-cls"
-              ref="tlsConfigEditor"
-              style="width: 100%; height: 100%"
-              v-model="tlsConfigJson"
-              :debounce="20"
-              :mode="'text'"
+
+        <!-- TLS 配置（仅当 service_config.tls 为 true 时显示） -->
+        <template v-if="showTlsConfig">
+          <div class="section-title">{{ $t('TLS 配置') }}</div>
+          <bk-form-item
+            label="ca"
+            :required="true"
+            property="tlsConfig.ca"
+          >
+            <TextareaUpload
+              v-model="formData.tlsConfig.ca"
+              :placeholder="$t('请输入')"
+              :tip="$t('支持扩展名：.key .pem .txt .yaml')"
             />
-          </div>
+          </bk-form-item>
+          <bk-form-item
+            label="cert"
+            :required="true"
+            property="tlsConfig.cert"
+          >
+            <TextareaUpload
+              v-model="formData.tlsConfig.cert"
+              :placeholder="$t('请输入')"
+              :tip="$t('支持扩展名：.key .pem .txt .yaml')"
+            />
+          </bk-form-item>
+          <bk-form-item
+            label="key"
+            :required="true"
+            property="tlsConfig.key"
+          >
+            <TextareaUpload
+              v-model="formData.tlsConfig.key"
+              :placeholder="$t('请输入')"
+              :tip="$t('支持扩展名：.key .pem .txt .yaml')"
+            />
+          </bk-form-item>
+          <!-- insecure_skip_verify -->
+          <bk-form-item
+            label="insecure_skip_verify"
+            :required="false"
+          >
+            <bk-switcher
+              theme="primary"
+              v-model="formData.tlsConfig.insecure_skip_verify"
+            ></bk-switcher>
+          </bk-form-item>
+        </template>
+
+        <!-- 预览环境变量（可折叠） -->
+        <EnvPreview
+          :template="envTemplate"
+          :config-values="formData.configValues"
+          :tls-config="formData.tlsConfig"
+          :show-tls="showTlsConfig"
+          :service-name="data.service || ''"
+        />
+
+        <!-- 分配方式 -->
+        <bk-form-item
+          :label="$t('分配方式')"
+          :required="true"
+        >
+          <SwitchDisplay
+            class="switch-cls"
+            :list="methodList"
+            :active="methodValue"
+            @change="handlerChange"
+          >
+            <template #default="{ item }">
+              <i
+                v-if="item.name === methodValue"
+                class="paasng-icon paasng-app-store"
+              ></i>
+              <span>{{ item.label }}</span>
+            </template>
+          </SwitchDisplay>
+          <bk-alert
+            v-if="methodValue === 'uniform'"
+            class="mt-16"
+            type="info"
+            :title="$t('应用申请增强服务实例时，按 FIFO（先进先出）顺序分配。')"
+          ></bk-alert>
+          <RuleBasedForm
+            ref="ruleBasedForm"
+            v-else
+          />
         </bk-form-item>
       </bk-form>
     </div>
@@ -89,12 +169,18 @@
 </template>
 
 <script>
-import JsonEditorVue from 'json-editor-vue';
-import { validateJson } from '../../validators';
+import SwitchDisplay from '@/components/switch-display';
+import RuleBasedForm from './rule-based-form.vue';
+import EnvPreview from './env-preview.vue';
+import TextareaUpload from './textarea-upload.vue';
+
 export default {
-  name: 'SandboxDialog',
+  name: 'EditAddDialog',
   components: {
-    JsonEditorVue,
+    SwitchDisplay,
+    RuleBasedForm,
+    EnvPreview,
+    TextareaUpload,
   },
   props: {
     show: {
@@ -105,17 +191,30 @@ export default {
       type: Object,
       default: () => {},
     },
+    // 服务配置信息
+    serviceConfig: {
+      type: Object,
+      default: () => ({}),
+    },
   },
   data() {
     return {
       formData: {
         recyclable: true,
-        config: {},
+        configValues: {},
+        tlsConfig: {
+          ca: '',
+          cert: '',
+          key: '',
+          insecure_skip_verify: false,
+        },
       },
-      valuesJson: {},
       dialogLoading: false,
-      // tls配置
-      tlsConfigJson: {},
+      methodList: [
+        { name: 'uniform', label: this.$t('按顺序分配') },
+        { name: 'rule_based', label: this.$t('按规则分配'), icon: 'paasng-grid' },
+      ],
+      methodValue: 'uniform',
     };
   },
   computed: {
@@ -130,11 +229,66 @@ export default {
     isAdd() {
       return this.data.type === 'add';
     },
-    tlsDesc() {
-      return `${this.$t('配置示例')}：{ "ca": "...", "cert": "...", "key": "..." }`;
+    // 配置项列表
+    configItems() {
+      return this.serviceConfig?.config_items || [];
     },
-    credentialDesc() {
-      return `${this.$t('配置示例')}：{ "host": "127.0.0.1", "port": 6379, "password": "" }`;
+    // 是否显示 TLS 配置
+    showTlsConfig() {
+      return this.serviceConfig?.tls === true;
+    },
+    // 环境变量模板
+    envTemplate() {
+      return this.serviceConfig?.template || [];
+    },
+    // 动态生成表单校验规则
+    formRules() {
+      const rules = {};
+      // 配置项校验
+      this.configItems.forEach((item) => {
+        if (item.required) {
+          rules[`configValues.${item.key}`] = [
+            {
+              required: true,
+              message: this.$t('必填项'),
+              trigger: 'blur',
+            },
+          ];
+        }
+      });
+      // TLS 配置校验
+      if (this.showTlsConfig) {
+        ['ca', 'cert', 'key'].forEach((field) => {
+          rules[`tlsConfig.${field}`] = [
+            {
+              required: true,
+              message: this.$t('必填项'),
+              trigger: 'blur',
+            },
+          ];
+        });
+      }
+      return rules;
+    },
+  },
+  watch: {
+    // 监听配置项变化，初始化 configValues
+    configItems: {
+      immediate: true,
+      handler(items) {
+        if (items && items.length) {
+          const configValues = {};
+          items.forEach((item) => {
+            // 布尔类型默认 false，其他默认空字符串
+            if (item.type === 'boolean' || item.type === 'bool') {
+              configValues[item.key] = false;
+            } else {
+              configValues[item.key] = '';
+            }
+          });
+          this.formData.configValues = configValues;
+        }
+      },
     },
   },
   methods: {
@@ -146,116 +300,251 @@ export default {
       if (flag && !this.isAdd) {
         const { row = {} } = this.data;
         this.formData.recyclable = row.config?.recyclable ?? false;
-        this.valuesJson = JSON.parse(row.credentials);
-        this.tlsConfigJson = row.config?.tls ? this.parseJsonData(row.config.tls) : {};
+        // 解析 credentials 填充配置项
+        try {
+          const credentials = JSON.parse(row.credentials || '{}');
+          this.configItems.forEach((item) => {
+            if (item.type === 'boolean' || item.type === 'bool') {
+              this.formData.configValues[item.key] = credentials[item.key] ?? false;
+            } else {
+              this.formData.configValues[item.key] = credentials[item.key] ?? '';
+            }
+          });
+        } catch (e) {
+          console.warn('解析 credentials 失败', e);
+        }
+        // 填充 TLS 配置
+        if (this.showTlsConfig && row.config?.tls) {
+          const tlsData = this.parseJsonData(row.config.tls);
+          this.formData.tlsConfig = {
+            ca: tlsData.ca || '',
+            cert: tlsData.cert || '',
+            key: tlsData.key || '',
+            insecure_skip_verify: tlsData.insecure_skip_verify ?? false,
+          };
+        }
+        // 填充分配方式（根据 binding_policy 是否存在且有值来判断）
+        const hasBindingPolicy = row.binding_policy && Object.keys(row.binding_policy).length > 0;
+        this.methodValue = hasBindingPolicy ? 'rule_based' : 'uniform';
+        // 填充规则数据（需要等待 RuleBasedForm 组件渲染完成）
+        if (hasBindingPolicy) {
+          this.$nextTick(() => {
+            // 双层 nextTick 确保条件渲染的组件已挂载
+            this.$nextTick(() => {
+              const rulesList = this.parseBindingPolicy(row.binding_policy);
+              this.$refs.ruleBasedForm?.setData(rulesList);
+            });
+          });
+        }
       } else {
-        this.valuesJson = {};
-        this.tlsConfigJson = {};
+        // 重置表单
+        const configValues = {};
+        this.configItems.forEach((item) => {
+          if (item.type === 'boolean' || item.type === 'bool') {
+            configValues[item.key] = false;
+          } else {
+            configValues[item.key] = '';
+          }
+        });
         this.formData = {
           recyclable: true,
-          config: {},
+          configValues,
+          tlsConfig: {
+            ca: '',
+            cert: '',
+            key: '',
+            insecure_skip_verify: false,
+          },
         };
+        // 重置分配方式
+        this.methodValue = 'uniform';
       }
     },
     close() {
       this.dialogVisible = false;
     },
+    // 格式化配置项为 credentials JSON
+    formatCredentials() {
+      const credentials = {};
+      this.configItems.forEach((item) => {
+        const value = this.formData.configValues[item.key];
+        if (value !== '' && value !== undefined) {
+          // 数字类型转换
+          if (item.type === 'integer' || item.type === 'number') {
+            credentials[item.key] = Number(value);
+          } else if (item.type === 'boolean' || item.type === 'bool') {
+            credentials[item.key] = Boolean(value);
+          } else {
+            credentials[item.key] = value;
+          }
+        }
+      });
+      return JSON.stringify(credentials);
+    },
     formatConfig() {
-      const config = {};
-      // 可回收复用：开启
-      if (this.formData.recyclable) {
-        config.recyclable = true;
-      }
-      const tls = this.parseJsonData(this.tlsConfigJson);
-      if (Object.keys(tls || {}).length) {
-        config.tls = tls;
+      const config = {
+        // 可回收复用始终传递
+        recyclable: this.formData.recyclable,
+      };
+      // TLS 配置
+      if (this.showTlsConfig) {
+        const { ca, cert, key, insecure_skip_verify } = this.formData.tlsConfig;
+        if (ca || cert || key || insecure_skip_verify) {
+          config.tls = {
+            ca,
+            cert,
+            key,
+            insecure_skip_verify,
+          };
+        } else {
+          config.tls = null;
+        }
+      } else {
+        config.tls = null;
       }
       return config;
     },
-    // 确认
-    handleConfirm() {
-      this.$refs.formRef
-        ?.validate()
-        .then(() => {
-          // 基础JSON校验
-          const validateResult = validateJson(this.valuesJson, this.$refs.jsonEditor?.jsonEditor);
-          const tlsValidateResult = validateJson(this.tlsConfigJson, this.$refs.tlsConfigEditor?.jsonEditor);
-          if (!validateResult || !tlsValidateResult) {
-            return;
-          }
-          this.dialogLoading = true;
-          const params = {
-            plan: this.data.planId,
-            // 实例配置：JSON格式
-            credentials: typeof this.valuesJson === 'object' ? JSON.stringify(this.valuesJson) : this.valuesJson,
-            config: this.formatConfig(),
-          };
-          if (this.isAdd) {
-            this.addResourcePool(params);
+    // 解析 binding_policy 为规则列表（用于编辑回显）
+    parseBindingPolicy(bindingPolicy) {
+      const rulesList = [];
+      // 反向字段映射：接口的 binding_policy key -> rule-based-form 中的 field
+      const fieldMap = {
+        app_code: 'app_id',
+        module_name: 'module_name',
+        env_name: 'environment',
+      };
+      Object.entries(bindingPolicy).forEach(([policyKey, values]) => {
+        const field = fieldMap[policyKey];
+        if (field) {
+          // 环境字段为单选，其他字段为数组
+          if (field === 'environment' && Array.isArray(values)) {
+            // 环境每个值单独一条规则
+            values.forEach((value) => {
+              rulesList.push({ field, value });
+            });
           } else {
-            this.updateResourcePool(params);
+            // 其他字段保持数组格式
+            rulesList.push({ field, value: Array.isArray(values) ? values : [values] });
           }
-        })
-        .catch((e) => {
-          console.warn(e);
-        });
+        }
+      });
+      return rulesList.length > 0 ? rulesList : [{ field: '', value: [] }];
     },
-    // 添加资源池
-    async addResourcePool(data, isClone = false) {
+    // 格式化规则数据为 binding_policy
+    formatBindingPolicy(rulesList) {
+      const bindingPolicy = {};
+      // 字段映射：rule-based-form 中的 field -> 接口的 binding_policy key
+      const fieldMap = {
+        app_id: 'app_code',
+        module_name: 'module_name',
+        environment: 'env_name',
+      };
+      rulesList.forEach((rule) => {
+        const policyKey = fieldMap[rule.field];
+        if (policyKey) {
+          // 值统一转为数组格式
+          const values = Array.isArray(rule.value) ? rule.value : [rule.value];
+          // 如果已存在该字段，合并数组
+          if (bindingPolicy[policyKey]) {
+            bindingPolicy[policyKey] = [...bindingPolicy[policyKey], ...values];
+          } else {
+            bindingPolicy[policyKey] = values;
+          }
+        }
+      });
+      return bindingPolicy;
+    },
+    // 确认
+    async handleConfirm() {
       try {
-        await this.$store.dispatch('tenant/addResourcePool', {
-          planId: this.data.planId,
-          data,
-        });
-        this.$paasMessage({
-          theme: 'success',
-          message: isClone ? this.$t('克隆成功') : this.$t('添加成功'),
-        });
-        this.$emit('refresh', true);
-        // 关闭弹窗
-        this.close();
+        await this.$refs.formRef?.validate();
+
+        // 按规则分配，校验规则表单
+        if (this.methodValue === 'rule_based') {
+          const ruleValidate = await this.$refs.ruleBasedForm?.validate();
+          if (!ruleValidate?.flag) return;
+        }
+        this.dialogLoading = true;
+
+        // 构建请求参数
+        const params = {
+          plan: this.data.planId,
+          credentials: this.formatCredentials(),
+          config: this.formatConfig(),
+          allocation_type: this.methodValue === 'rule_based' ? 'policy' : 'fifo',
+        };
+
+        // 按规则分配时添加 binding_policy
+        if (this.methodValue === 'rule_based') {
+          const ruleData = this.$refs.ruleBasedForm?.getData();
+          params.binding_policy = this.formatBindingPolicy(ruleData);
+        }
+
+        await this.submitResourcePool(params);
       } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.dialogLoading = false;
+        console.warn('表单校验失败', e);
       }
     },
-    // 编辑资源池
-    async updateResourcePool(data) {
-      try {
-        const { planId, row } = this.data;
-        await this.$store.dispatch('tenant/updateResourcePool', {
-          planId,
-          id: row.uuid,
-          data,
-        });
-        this.$paasMessage({
-          theme: 'success',
+    // 提交资源池（添加/编辑/克隆）
+    async submitResourcePool(data, isClone = false) {
+      const { planId, row } = this.data;
+      const isUpdate = !this.isAdd && !isClone;
+
+      const actionMap = {
+        update: {
+          action: 'tenant/updateResourcePool',
+          payload: { planId, id: row?.uuid, data },
           message: this.$t('编辑成功'),
-        });
+        },
+        clone: {
+          action: 'tenant/addResourcePool',
+          payload: { planId, data },
+          message: this.$t('克隆成功'),
+        },
+        add: {
+          action: 'tenant/addResourcePool',
+          payload: { planId, data },
+          message: this.$t('添加成功'),
+        },
+      };
+
+      const type = isUpdate ? 'update' : isClone ? 'clone' : 'add';
+      const { action, payload, message } = actionMap[type];
+
+      try {
+        await this.$store.dispatch(action, payload);
+        this.$paasMessage({ theme: 'success', message });
         this.$emit('refresh', true);
-        // 关闭弹窗
         this.close();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         this.dialogLoading = false;
       }
+    },
+    handlerChange(item) {
+      this.methodValue = item.name;
+    },
+    // 克隆资源池（对外暴露的方法）
+    cloneResourcePool(params) {
+      this.submitResourcePool(params, true);
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+/deep/ .resource-pool-dialog {
+  .bk-dialog-body {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
 .dialog-content {
-  .mb16 {
-    margin-bottom: 16px;
-  }
-  .json-editor-wrapper {
-    height: 220px;
-  }
-  .pt-json-editor-custom-cls .jse-main .jse-message.jse-error {
-    display: none;
+  .section-title {
+    height: 32px;
+    line-height: 32px;
+    margin-top: 8px;
   }
 }
 </style>

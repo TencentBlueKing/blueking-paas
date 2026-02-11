@@ -119,6 +119,7 @@
       ref="dialogRef"
       :show.sync="dialogConfig.isShow"
       :data="dialogConfig"
+      :service-config="serviceConfig"
       @refresh="getPreCreatedInstances"
     />
   </div>
@@ -157,6 +158,8 @@ export default {
       },
       // 当前方案下的资源池
       instances: [],
+      // 服务配置信息
+      serviceConfig: {},
       // 每行的明文/密文状态 { 'rowId-credentials': true/false, 'rowId-tls': true/false }
       plaintextStatusMap: {},
       // 全部显示/隐藏的状态
@@ -233,6 +236,7 @@ export default {
           tenantId: this.tenantId,
           planId: this.data?.uuid,
         });
+        this.serviceConfig = ret?.service_config || {};
         this.instances = ret?.pre_created_instances?.map((item) => {
           const tlsConfig = this.formatTlsConfig(item.config?.tls);
           return Object.assign(item, {
@@ -279,13 +283,19 @@ export default {
     // 克隆
     handleClone(row) {
       this.dialogConfig.planId = row?.plan_id;
-      const { plan_id, credentials, config } = row;
+      const { plan_id, credentials, config, binding_policy } = row;
       const params = {
         plan: plan_id,
         credentials,
         config,
+        // 根据 binding_policy 是否存在判断分配方式
+        allocation_type: binding_policy && Object.keys(binding_policy).length > 0 ? 'policy' : 'fifo',
       };
-      this.$refs.dialogRef?.addResourcePool(params, true);
+      // 有规则时添加 binding_policy
+      if (binding_policy && Object.keys(binding_policy).length > 0) {
+        params.binding_policy = binding_policy;
+      }
+      this.$refs.dialogRef?.cloneResourcePool(params);
     },
     // 初始化配置项的显示/隐藏状态
     initPlaintextStatus() {

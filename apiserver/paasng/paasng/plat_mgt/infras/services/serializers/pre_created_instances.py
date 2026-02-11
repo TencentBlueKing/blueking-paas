@@ -56,7 +56,7 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     def validate(self, attrs):
         allocation_type = attrs["allocation_type"]
         policy = attrs.get("binding_policy", {})
-        policy_validate = all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
+        policy_validate = not all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
 
         if allocation_type == PreCreatedInstanceAllocationType.POLICY and not policy_validate:
             raise ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))

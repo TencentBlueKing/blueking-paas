@@ -15,7 +15,7 @@ type Config struct {
 	// Environment 运行环境
 	Environment string `env:"ENVIRONMENT" envDefault:"stag"`
 	// ServerHost daemon 服务地址
-	ServerHost string `env:"SERVER_HOST" envDefault:"127.0.0.1"`
+	ServerHost string `env:"SERVER_HOST" envDefault:"0.0.0.0"`
 	// ServerPort daemon 服务端口
 	ServerPort int `env:"SERVER_PORT" envDefault:"8000"`
 	// Token 调用 daemon server 的 token

@@ -44,6 +44,16 @@ class SandboxCreateInputSLZ(serializers.Serializer):
     env_vars = SandboxEnvVarsField(
         label="环境变量", required=False, default=dict, help_text="用于注入到沙箱内的环境变量"
     )
+    snapshot = serializers.CharField(
+        label="快照镜像", max_length=256, required=False, help_text="沙箱使用的快照镜像，不提供则使用默认镜像"
+    )
+    snapshot_entrypoint = serializers.ListField(
+        child=serializers.CharField(),
+        label="快照入口命令",
+        required=False,
+        help_text="快照镜像的入口命令列表",
+    )
+    workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):

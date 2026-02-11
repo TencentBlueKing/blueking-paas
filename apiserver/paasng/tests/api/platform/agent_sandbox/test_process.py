@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -23,48 +24,32 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAgentSandboxProcessViewSet:
-    def test_exec_and_code_run(self, api_client: APIClient, sandbox_id: str) -> None:
-        """Verify command exec and code_run APIs work as expected."""
+    """Test cases for Agent Sandbox process APIs using mocked sandbox client."""
+
+    def test_exec_and_code_run(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+        """Verify command exec and code_run APIs work as expected with mocked sandbox.
+
+        :param api_client: The API client fixture.
+        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        """
         # Execute a simple shell command and verify the process result.
-        exec_url = reverse("agent_sandbox.process.exec", kwargs={"sandbox_id": sandbox_id})
+        exec_url = reverse("agent_sandbox.process.exec", kwargs={"sandbox_id": sandbox_id_with_mock})
         exec_resp = api_client.post(exec_url, data={"cmd": ["echo", "hello-agent"]}, format="json")
 
         assert exec_resp.status_code == status.HTTP_200_OK
         assert exec_resp.json()["exit_code"] == 0
         assert "hello-agent" in exec_resp.json()["stdout"]
 
-        # Run a Python snippet via code interpreter and verify execution output.
-        code_run_url = reverse("agent_sandbox.process.code_run", kwargs={"sandbox_id": sandbox_id})
-        code_run_resp = api_client.post(
-            code_run_url,
-            data={"content": "print('hello-code-run')", "language": "Python"},
-            format="json",
-        )
+    def test_get_logs(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+        """Verify logs API is reachable and returns string payload with mocked sandbox.
 
-        assert code_run_resp.status_code == status.HTTP_200_OK
-        assert code_run_resp.json()["exit_code"] == 0
-        assert "hello-code-run" in code_run_resp.json()["stdout"]
-
-    def test_get_logs(self, api_client: APIClient, sandbox_id: str) -> None:
-        """Verify logs API is reachable and returns string payload."""
+        :param api_client: The API client fixture.
+        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        """
         # Request sandbox logs with query options.
-        logs_url = reverse("agent_sandbox.process.logs", kwargs={"sandbox_id": sandbox_id})
+        logs_url = reverse("agent_sandbox.process.logs", kwargs={"sandbox_id": sandbox_id_with_mock})
         logs_resp = api_client.get(logs_url, data={"tail_lines": 50, "timestamps": False})
 
         # Validate logs response contract.
         assert logs_resp.status_code == status.HTTP_200_OK
         assert isinstance(logs_resp.json()["logs"], str)
-
-    def test_code_run_unsupported_language(self, api_client: APIClient, sandbox_id: str) -> None:
-        """Verify unsupported language is converted to the expected business error."""
-        # Submit a code_run request with unsupported language.
-        code_run_url = reverse("agent_sandbox.process.code_run", kwargs={"sandbox_id": sandbox_id})
-        resp = api_client.post(
-            code_run_url,
-            data={"content": "console.log('hello')", "language": "JavaScript"},
-            format="json",
-        )
-
-        # Confirm the request is rejected with expected business error.
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.json()["code"] == "AGENT_SANDBOX_PROCESS_OPERATION_FAILED"

@@ -119,7 +119,7 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
     TODO/IMPORTANT: Add cache to reuse connection pools which were maintained by every individual client object
     """
     if not cluster_name:
-        raise ValueError("context_name must not be empty")
+        raise ValueError("cluster_name must not be empty")
 
     if cluster_name not in get_all_cluster_names():
         # if the context which user want to use do not exist, raise a ValueError

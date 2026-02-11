@@ -56,9 +56,9 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     def validate(self, attrs):
         allocation_type = attrs["allocation_type"]
         policy = attrs.get("binding_policy", {})
-        policy_validate = not all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
+        is_policy_valid = not all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
 
-        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not policy_validate:
+        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not is_policy_valid:
             raise ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))
         if allocation_type == PreCreatedInstanceAllocationType.FIFO and policy:
             raise ValidationError(_("FIFO 类型的预创建实例不允许指定 binding_policy"))

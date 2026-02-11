@@ -68,7 +68,7 @@ class ResourcePoolProvider(BaseProvider):
 
     def create(self, params: Dict) -> InstanceData:
         with transaction.atomic():
-            instance = PreCreatedInstance.objects.select_by_policy_or_fifo(self.plan, params)
+            instance = PreCreatedInstance.objects.select_precreated_instance(self.plan, params)
             if instance is None:
                 raise InsufficientResourceError(_("资源不足, 配置资源实例失败."))
 

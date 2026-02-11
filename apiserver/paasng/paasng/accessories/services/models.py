@@ -180,13 +180,13 @@ class ServiceInstance(UuidAuditedModel):
 
 
 class PreCreatedInstanceManager(models.Manager):
-    def select_by_policy_or_fifo(self, plan: "Plan", params: dict[str, str]) -> Optional["PreCreatedInstance"]:
+    def select_precreated_instance(self, plan: "Plan", params: dict[str, str]) -> Optional["PreCreatedInstance"]:
         """
-        NOTE: 多进程环境下应在事务中调用此函数
-        在指定 plan 下选择一个未分配的预创建实例, 根据 `params` 尝试按绑定策略匹配, 未命中时回退为普通 FIFO 选择策略
+        NOTE: 应在事务中调用此函数
+        在指定 plan 下选择一个未分配的预创建实例, 根据 `params` 尝试按绑定策略匹配, 未命中策略时回退为普通 FIFO 选择
 
         :param params: 策略匹配参数, 目前包含 application_code, module_name, env_name 三个维度(均选填)
-        :return: 命中的预创建实例; 若没有可用实例则返回 None
+        :return: 最匹配的预创建实例; 若没有可用实例则返回 None
         """
         unallocated_qs = self.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
 
@@ -197,7 +197,7 @@ class PreCreatedInstanceManager(models.Manager):
             return fifo_allocation_qs.first()
 
         policy_instances = list(unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.POLICY))
-        matched = _resolve_policy_instance(
+        matched = PreCreatedInstance.match_instances(
             app_code=params.get("application_code"),
             module_name=params.get("module_name"),
             env_name=params.get("env_name"),
@@ -220,6 +220,9 @@ class PreCreatedInstance(UuidAuditedModel):
     allocation_type = models.CharField(
         max_length=32, default=PreCreatedInstanceAllocationType.FIFO, help_text="分配类型"
     )
+
+    # binding_policy 中每个维度存储为列表, 例如 {"app_code": ["myapp"], "env_name": ["prod", "stag"]}
+    # 值为空列表时表示不匹配, None 表示通配
     binding_policy = JSONField(
         default=dict,
         help_text='绑定策略, 每个维度为列表, 如 {"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]}',
@@ -240,52 +243,54 @@ class PreCreatedInstance(UuidAuditedModel):
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
 
+    @staticmethod
+    def match_instances(
+        app_code: str | None,
+        module_name: str | None,
+        env_name: str | None,
+        candidates: list["PreCreatedInstance"],
+    ) -> Optional["PreCreatedInstance"]:
+        """
+        在给定的 PrecreatedInstance 候选实例中, 找到最匹配绑定策略的实例
+        匹配优先级为 app_code(3) > module_name(2) > env_name(1), 相同时按 created 排序取最早的
+        """
 
-def _resolve_policy_instance(
-    app_code: str | None,
-    module_name: str | None,
-    env_name: str | None,
-    candidates: list["PreCreatedInstance"],
-) -> Optional["PreCreatedInstance"]:
-    """
-    在给定的 POLICY 类型候选实例中, 找到最匹配的绑定策略实例.
-    匹配优先级为 app_code(3) > module_name(2) > env_name(1), 相同时按 created 排序取最早的.
+        def _matches(policy_vals: list | None, param_val: str | None) -> bool:
+            """策略字段为 None 表示通配, 否则 param_val 需在列表中"""
+            if policy_vals is None:
+                return True
+            if policy_vals == []:
+                logger.warning(
+                    "empty policy_val will never match, may is it a mistake?"
+                )  # empty list in policy is probably a mistake, log a warning
+                return False
+            return param_val in policy_vals
 
-    binding_policy 中每个维度存储为列表, 例如 {"app_code": ["myapp"], "env_name": ["prod", "stag"]}.
-    空列表或缺失的维度视为通配(匹配任意值).
-    """
+        scored: list[tuple[int, "PreCreatedInstance"]] = []
+        for ins in candidates:
+            bp = ins.binding_policy or {}
+            p_app = bp.get("app_code")
+            p_mod = bp.get("module_name")
+            p_env = bp.get("env_name")
 
-    def _matches(policy_vals: list | None, param_val: str | None) -> bool:
-        """策略字段为空列表或缺失表示通配, 否则 param_val 需在列表中"""
-        if not policy_vals:
-            return True
-        return param_val in policy_vals
+            if not (_matches(p_app, app_code) and _matches(p_mod, module_name) and _matches(p_env, env_name)):
+                continue
 
-    scored: list[tuple[int, "PreCreatedInstance"]] = []
-    for ins in candidates:
-        bp = ins.binding_policy or {}
-        p_app = bp.get("app_code") or []
-        p_mod = bp.get("module_name") or []
-        p_env = bp.get("env_name") or []
+            score = 0
+            if p_app and app_code in p_app:
+                score += 3
+            if p_mod and module_name in p_mod:
+                score += 2
+            if p_env and env_name in p_env:
+                score += 1
+            scored.append((score, ins))
 
-        if not (_matches(p_app, app_code) and _matches(p_mod, module_name) and _matches(p_env, env_name)):
-            continue
+        if not scored:
+            return None
 
-        score = 0
-        if p_app and app_code in p_app:
-            score += 3
-        if p_mod and module_name in p_mod:
-            score += 2
-        if p_env and env_name in p_env:
-            score += 1
-        scored.append((score, ins))
-
-    if not scored:
-        return None
-
-    # 按 score 降序, created 升序
-    scored.sort(key=lambda x: (-x[0], x[1].created))
-    return scored[0][1]
+        # 按 score 降序, created 升序
+        scored.sort(key=lambda x: (-x[0], x[1].created))
+        return scored[0][1]
 
 
 class Plan(UuidAuditedModel):

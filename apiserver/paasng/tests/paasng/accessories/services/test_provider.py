@@ -151,27 +151,21 @@ class TestResourcePoolProvider:
 
     def test_provision_policy_score_priority(self, bk_service, bk_plan):
         """多个 POLICY 实例均匹配时, 应选中得分最高的 (app_code=3 > module_name=2 > env_name=1)"""
-        G(
-            PreCreatedInstance,
-            plan=bk_plan,
-            allocation_type=PreCreatedInstanceAllocationType.FIFO,
-            credentials=json.dumps({"host": "fifo-host"}),
-        )
-        # 只匹配 env_name, score=1
+        # 匹配 app_code + module_name, score=5
         low_score_ins = G(
             PreCreatedInstance,
             plan=bk_plan,
             allocation_type=PreCreatedInstanceAllocationType.POLICY,
             credentials=json.dumps({"host": "low-score"}),
-            binding_policy={"env_name": ["prod"]},
+            binding_policy={"app_code": ["myapp"], "module_name": ["default"]},
         )
-        # 匹配 app_code + module_name, score=3+2=5
+        # 匹配 app_code + module_name + env_name, score=6
         high_score_ins = G(
             PreCreatedInstance,
             plan=bk_plan,
             allocation_type=PreCreatedInstanceAllocationType.POLICY,
             credentials=json.dumps({"host": "high-score"}),
-            binding_policy={"app_code": ["myapp"], "module_name": ["default"]},
+            binding_policy={"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]},
         )
 
         params = {"application_code": "myapp", "module_name": "default", "env_name": "prod"}

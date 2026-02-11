@@ -21,8 +21,6 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
-from django.db.models import Case, IntegerField, Q, Value, When
-from django.db.models.query import QuerySet
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
@@ -184,33 +182,32 @@ class ServiceInstance(UuidAuditedModel):
 class PreCreatedInstanceManager(models.Manager):
     def select_by_policy_or_fifo(self, plan: "Plan", params: dict[str, str]) -> Optional["PreCreatedInstance"]:
         """
-        在指定 plan 下选择一个未分配的预创建实例 (通常应在事务中调用)
-        根据 `params` 尝试按绑定策略匹配, 未命中时再回退为普通 FIFO
+        NOTE: 多进程环境下应在事务中调用此函数
+        在指定 plan 下选择一个未分配的预创建实例, 根据 `params` 尝试按绑定策略匹配, 未命中时回退为普通 FIFO 选择策略
 
         :param params: 策略匹配参数, 目前包含 application_code, module_name, env_name 三个维度(均选填)
-        :return: 命中的预创建实例；若没有可用实例则返回 None
+        :return: 命中的预创建实例; 若没有可用实例则返回 None
         """
         unallocated_qs = self.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
 
         fifo_allocation_qs = unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.FIFO)
-        policy_allocation_qs = unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.POLICY)
-        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=policy_allocation_qs)
 
         if all(params.get(k, "") == "" for k in ("application_code", "env_name", "module_name")):
             logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
             return fifo_allocation_qs.first()
 
-        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy(
+        policy_instances = list(unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.POLICY))
+        matched = _resolve_policy_instance(
             app_code=params.get("application_code"),
             module_name=params.get("module_name"),
             env_name=params.get("env_name"),
-            policy_qs=policy_qs,
+            candidates=policy_instances,
         )
-        if not policy:
+        if not matched:
             logger.debug("no matching binding policy found, use plain FIFO match strategy")
             return fifo_allocation_qs.first()
 
-        return unallocated_qs.filter(pk=policy.pre_created_instance.pk).first()
+        return matched
 
 
 class PreCreatedInstance(UuidAuditedModel):
@@ -222,6 +219,10 @@ class PreCreatedInstance(UuidAuditedModel):
     # see constants.PreCreatedInstanceAllocationType
     allocation_type = models.CharField(
         max_length=32, default=PreCreatedInstanceAllocationType.FIFO, help_text="分配类型"
+    )
+    binding_policy = JSONField(
+        default=dict,
+        help_text='绑定策略, 每个维度为列表, 如 {"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]}',
     )
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
     tenant_id = tenant_id_field_factory()
@@ -240,71 +241,51 @@ class PreCreatedInstance(UuidAuditedModel):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
 
 
-class PreCreatedInstanceBindingPolicyManager(models.Manager):
-    def resolve_policy(
-        self, app_code: str | None, module_name: str | None, env_name: str | None, policy_qs: QuerySet | None = None
-    ) -> Optional["PreCreatedInstanceBindingPolicy"]:
-        """
-        找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env_name(1)
-        可以理解为按 (app_code, module_name, env_name) 从大到小排, 相同时，返回 created_at 最早的那条
+def _resolve_policy_instance(
+    app_code: str | None,
+    module_name: str | None,
+    env_name: str | None,
+    candidates: list["PreCreatedInstance"],
+) -> Optional["PreCreatedInstance"]:
+    """
+    在给定的 POLICY 类型候选实例中, 找到最匹配的绑定策略实例.
+    匹配优先级为 app_code(3) > module_name(2) > env_name(1), 相同时按 created 排序取最早的.
 
-        :param policy_qs: 可选的 QuerySet, 指定查询范围来隔离 Plan
-        """
-        if policy_qs is None:
-            policy_qs = self.filter(
-                pre_created_instance__is_allocated=False,
-                pre_created_instance__allocation_type=PreCreatedInstanceAllocationType.POLICY,
-            )
+    binding_policy 中每个维度存储为列表, 例如 {"app_code": ["myapp"], "env_name": ["prod", "stag"]}.
+    空列表或缺失的维度视为通配(匹配任意值).
+    """
 
-        def _field_candidates(field_name: str, value):
-            if value is None:
-                return Q(**{f"{field_name}__isnull": True})
-            return Q(**{field_name: value}) | Q(**{f"{field_name}__isnull": True})
+    def _matches(policy_vals: list | None, param_val: str | None) -> bool:
+        """策略字段为空列表或缺失表示通配, 否则 param_val 需在列表中"""
+        if not policy_vals:
+            return True
+        return param_val in policy_vals
 
-        candidates = policy_qs.filter(
-            _field_candidates("app_code", app_code),
-            _field_candidates("module_name", module_name),
-            _field_candidates("env_name", env_name),
-        )
+    scored: list[tuple[int, "PreCreatedInstance"]] = []
+    for ins in candidates:
+        bp = ins.binding_policy or {}
+        p_app = bp.get("app_code") or []
+        p_mod = bp.get("module_name") or []
+        p_env = bp.get("env_name") or []
 
-        if not candidates.exists():
-            return None
+        if not (_matches(p_app, app_code) and _matches(p_mod, module_name) and _matches(p_env, env_name)):
+            continue
 
-        match_weight = (
-            (
-                Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
-                if app_code is not None
-                else Value(0)
-            )
-            + (
-                Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
-                if module_name is not None
-                else Value(0)
-            )
-            + (
-                Case(When(env_name=env_name, then=Value(1)), default=Value(0), output_field=IntegerField())
-                if env_name is not None
-                else Value(0)
-            )
-        )
-        return candidates.annotate(match_weight=match_weight).order_by("-match_weight", "created").first()
+        score = 0
+        if p_app and app_code in p_app:
+            score += 3
+        if p_mod and module_name in p_mod:
+            score += 2
+        if p_env and env_name in p_env:
+            score += 1
+        scored.append((score, ins))
 
+    if not scored:
+        return None
 
-class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
-    pre_created_instance = models.ForeignKey(
-        PreCreatedInstance,
-        on_delete=models.CASCADE,
-        db_constraint=False,
-        blank=True,
-        null=True,
-        related_name="binding_policies",
-    )
-    app_code = models.CharField(max_length=20, null=True)
-    module_name = models.CharField(max_length=20, null=True)
-    env_name = models.CharField(max_length=16, null=True)
-
-    tenant_id = tenant_id_field_factory(db_index=False)
-    objects = PreCreatedInstanceBindingPolicyManager()
+    # 按 score 降序, created 升序
+    scored.sort(key=lambda x: (-x[0], x[1].created))
+    return scored[0][1]
 
 
 class Plan(UuidAuditedModel):

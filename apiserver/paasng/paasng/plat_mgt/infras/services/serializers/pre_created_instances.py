@@ -27,27 +27,10 @@ from paasng.accessories.services.constants import PreCreatedInstanceAllocationTy
 from paasng.plat_mgt.infras.services.constants import TLS_STRING_FIELDS
 
 
-class PreCreatedInstanceBindingPolicySLZ(serializers.Serializer):
-    app_code = serializers.CharField(help_text="应用编码", required=False)
-    module_name = serializers.CharField(help_text="模块名称", required=False)
-    env_name = serializers.CharField(help_text="环境名称", required=False)
-
-
-class PreCreatedInstanceBindingPolicyInputSLZ(PreCreatedInstanceBindingPolicySLZ):
-    def validate(self, attrs):
-        if all(attrs.get(field, "") == "" for field in ("app_code", "module_name", "env_name")):
-            raise serializers.ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))
-        return super().validate(attrs)
-
-
-class PreCreatedInstanceBindingPolicyOutputSLZ(PreCreatedInstanceBindingPolicySLZ):
-    pass
-
-
 class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     config = serializers.JSONField(help_text="预创建实例的配置")
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
-    binding_policy = PreCreatedInstanceBindingPolicyInputSLZ(help_text="实例绑定策略", required=False, default=dict)
+    binding_policy = serializers.JSONField(help_text="实例绑定策略", required=False, default=dict)
     allocation_type = serializers.ChoiceField(
         help_text="预创建实例的分配类型",
         choices=PreCreatedInstanceAllocationType.get_django_choices(),
@@ -72,11 +55,12 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
 
     def validate(self, attrs):
         allocation_type = attrs["allocation_type"]
-        has_policy = bool(attrs.get("binding_policy"))
+        policy = attrs.get("binding_policy", {})
+        policy_validate = all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
 
-        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not has_policy:
-            raise ValidationError(_("POLICY 类型的预创建实例必须指定 binding_policy"))
-        if allocation_type == PreCreatedInstanceAllocationType.FIFO and has_policy:
+        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not policy_validate:
+            raise ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))
+        if allocation_type == PreCreatedInstanceAllocationType.FIFO and policy:
             raise ValidationError(_("FIFO 类型的预创建实例不允许指定 binding_policy"))
         return attrs
 
@@ -88,13 +72,7 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
     tenant_id = serializers.CharField(help_text="租户 id")
-    binding_policy = serializers.SerializerMethodField(help_text="实例绑定策略")
-
-    def get_binding_policy(self, instance) -> Dict:
-        policy = instance.binding_policies.first()
-        if not policy:
-            return {}
-        return PreCreatedInstanceBindingPolicyOutputSLZ(policy).data
+    binding_policy = serializers.JSONField(help_text="实例绑定策略")
 
     def to_representation(self, instance) -> Dict:
         result = super().to_representation(instance)

@@ -22,7 +22,7 @@ from django_dynamic_fixture import G
 
 from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
 from paasng.accessories.services.exceptions import ResourceNotEnoughError
-from paasng.accessories.services.models import Plan, PreCreatedInstance, PreCreatedInstanceBindingPolicy
+from paasng.accessories.services.models import Plan, PreCreatedInstance, _resolve_policy_instance
 
 pytestmark = pytest.mark.django_db
 
@@ -93,13 +93,7 @@ class TestResourcePoolProvider:
             plan=bk_plan,
             allocation_type=PreCreatedInstanceAllocationType.POLICY,
             credentials=json.dumps({"host": "policy-host"}),
-        )
-        G(
-            PreCreatedInstanceBindingPolicy,
-            pre_created_instance=policy_ins,
-            app_code="myapp",
-            module_name="default",
-            env_name="prod",
+            binding_policy={"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]},
         )
 
         params = {"application_code": "myapp", "module_name": "default", "env_name": "prod"}
@@ -120,51 +114,51 @@ class TestResourcePoolProvider:
 
 class TestPreCreatedInstanceBindingPolicy:
     def test_resolve_policy_match_priority(self, bk_plan):
-        ins_app_env = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY)
-        ins_module_env = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY)
-        ins_env_only = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY)
+        ins_app_env = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            binding_policy={"app_code": ["app"], "env_name": ["prod"]},
+        )
+        ins_module_env = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            binding_policy={"module_name": ["mod"], "env_name": ["prod"]},
+        )
+        ins_env_only = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            binding_policy={"env_name": ["prod"]},
+        )
 
-        policy_app_env = G(
-            PreCreatedInstanceBindingPolicy,
-            pre_created_instance=ins_app_env,
-            app_code="app",
-            module_name=None,
-            env_name="prod",
-        )
-        policy_module_env = G(
-            PreCreatedInstanceBindingPolicy,
-            pre_created_instance=ins_module_env,
-            app_code=None,
-            module_name="mod",
-            env_name="prod",
-        )
-        policy_env_only = G(
-            PreCreatedInstanceBindingPolicy,
-            pre_created_instance=ins_env_only,
-            app_code=None,
-            module_name=None,
-            env_name="prod",
+        candidates = list(
+            PreCreatedInstance.objects.filter(
+                plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY
+            ).order_by("created")
         )
 
         # 优先级计算可以认为是比较 (app_code, module_name, env) 的大小, app_code 优先
-        qs = PreCreatedInstanceBindingPolicy.objects.filter(
-            pre_created_instance__in=PreCreatedInstance.objects.filter(plan=bk_plan)
-        )
-        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy("app", "mod", "prod", qs)
-        assert policy == policy_app_env
+        result = _resolve_policy_instance("app", "mod", "prod", candidates)
+        assert result == ins_app_env
 
-        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy("other", "mod", "prod", qs)
-        assert policy == policy_module_env
+        result = _resolve_policy_instance("other", "mod", "prod", candidates)
+        assert result == ins_module_env
 
-        policy = PreCreatedInstanceBindingPolicy.objects.resolve_policy(None, None, "prod", qs)
-        assert policy == policy_env_only
+        result = _resolve_policy_instance(None, None, "prod", candidates)
+        assert result == ins_env_only
 
 
 class TestPreCreatedInstanceSelectForRequest:
     def test_missing_params_uses_fifo_without_policies(self, bk_plan):
-        ins_with_policy = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY)
+        G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            binding_policy={"app_code": ["app"]},
+        )
         ins_without_policy = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO)
-        G(PreCreatedInstanceBindingPolicy, pre_created_instance=ins_with_policy, app_code="app")
 
         instance = PreCreatedInstance.objects.select_by_policy_or_fifo(bk_plan, {})
         assert instance == ins_without_policy
@@ -175,13 +169,11 @@ class TestPreCreatedInstanceSelectForRequest:
     )
     def test_policy_match_and_fallback(self, bk_plan, policy_env, expect_policy):
         fifo_first = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO)
-        policy_instance = G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.POLICY)
-        G(
-            PreCreatedInstanceBindingPolicy,
-            pre_created_instance=policy_instance,
-            app_code="app",
-            module_name="mod",
-            env_name=policy_env,
+        policy_instance = G(
+            PreCreatedInstance,
+            plan=bk_plan,
+            allocation_type=PreCreatedInstanceAllocationType.POLICY,
+            binding_policy={"app_code": ["app"], "module_name": ["mod"], "env_name": [policy_env]},
         )
 
         instance = PreCreatedInstance.objects.select_by_policy_or_fifo(
@@ -199,12 +191,12 @@ class TestPreCreatedInstanceSelectForRequest:
     def test_all_allocated_returns_none(self, bk_plan, params, description):
         """FIFO 和 POLICY 两条路径下, 所有实例已分配时应返回 None"""
         G(PreCreatedInstance, plan=bk_plan, allocation_type=PreCreatedInstanceAllocationType.FIFO, is_allocated=True)
-        policy_ins = G(
+        G(
             PreCreatedInstance,
             plan=bk_plan,
             allocation_type=PreCreatedInstanceAllocationType.POLICY,
             is_allocated=True,
+            binding_policy={"app_code": ["app"], "env_name": ["prod"]},
         )
-        G(PreCreatedInstanceBindingPolicy, pre_created_instance=policy_ins, app_code="app", env_name="prod")
 
         assert PreCreatedInstance.objects.select_by_policy_or_fifo(bk_plan, params) is None

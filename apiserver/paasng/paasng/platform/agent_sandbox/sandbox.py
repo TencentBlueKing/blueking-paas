@@ -17,6 +17,7 @@
 
 import copy
 import logging
+import re
 import shlex
 
 from django.utils import timezone
@@ -54,6 +55,9 @@ from paasng.platform.applications.models import Application
 logger = logging.getLogger(__name__)
 
 
+ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
 def create_sandbox(
     application: Application,
     creator: str,
@@ -73,7 +77,7 @@ def create_sandbox(
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
     """
-    sandbox_obj = Sandbox.objects.create(
+    sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
         snapshot=snapshot or DEFAULT_IMAGE,
@@ -146,9 +150,11 @@ class AgentSandboxResManager:
         :param sandbox_obj: The sandbox object from db.
         :return: The sandbox client.
         """
-        env = copy.deepcopy(sandbox_obj.env_vars)
-        env["TOKEN"] = sandbox_obj.daemon_token
-        env["SERVER_PORT"] = str(DAEMON_BIND_PORT)
+        env: dict[str, str] = {
+            **copy.deepcopy(sandbox_obj.env_vars),
+            "TOKEN": sandbox_obj.daemon_token,
+            "SERVER_PORT": str(DAEMON_BIND_PORT),
+        }
 
         sandbox = AgentSandbox.create(
             self.kres_app,
@@ -340,6 +346,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
 
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""
+        # TODO: 将 SandboxDaemonClient 缓存为实例属性（lazy init），或者至少在 KubernetesPodSandbox 级别共享同一个 session?
         return SandboxDaemonClient(self.daemon_endpoint, self.daemon_token)
 
     def get_status(self) -> str:
@@ -392,10 +399,8 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     @staticmethod
     def _validate_env_key(key: object) -> str:
         """Validate that the environment variable key is valid."""
-        import re
 
         key_str = str(key)
-        pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-        if not pattern.fullmatch(key_str):
+        if not ENV_KEY_PATTERN.fullmatch(key_str):
             raise SandboxError(f"invalid environment variable key: {key_str!r}")
         return key_str

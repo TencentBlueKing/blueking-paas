@@ -64,7 +64,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     )
     def create(self, request, code):
         """创建一个新的 Agent Sandbox，新沙箱将自动进入运行状态。"""
-        # TODO: Add permission check
+        # TODO: Add permission check. 最终是应用认证/鉴权+用户认证
         application = self.get_application_without_perm()
         slz = SandboxCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

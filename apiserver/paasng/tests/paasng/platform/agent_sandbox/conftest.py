@@ -36,10 +36,10 @@ def _skip_if_old_k8s_version(skip_if_old_k8s_version):
 
 @pytest.fixture(scope="session", autouse=True)
 def _mock_daemon_host_port() -> Iterator[None]:
-    """Mock find_available_port and find_available_host for sandbox creation tests."""
+    """Mock find_available_port and list_available_hosts for sandbox creation tests."""
     with (
         mock.patch("paasng.platform.agent_sandbox.models.find_available_port", return_value=30001),
-        mock.patch("paasng.platform.agent_sandbox.models.find_available_host", return_value="192.168.1.1"),
+        mock.patch("paasng.platform.agent_sandbox.models.list_available_hosts", return_value=["192.168.1.1"]),
     ):
         yield
 

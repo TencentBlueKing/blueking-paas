@@ -63,6 +63,7 @@ class AgentSandboxKresApp:
     def get_kube_api_client(self) -> EnhancedApiClient:
         """Get the kubernetes API client for current app."""
         if self.target:
+            # TODO 考虑在集群信息中增加用途描述, 再校验
             return get_client_by_cluster_name(self.target)
 
         raise ValueError("missing valid target")
@@ -75,6 +76,7 @@ class AgentSandbox(KresAppEntity):
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
     :param image: The container image used in the sandbox.
+    :param command: The command to run in the sandbox. Always set to /usr/local/bin/daemon.
     :param args: The arguments to pass to the command (/usr/local/bin/daemon).
     :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
@@ -84,10 +86,12 @@ class AgentSandbox(KresAppEntity):
     workdir: str
     image: str
     env: dict[str, str] = field(default_factory=dict)
+    command: list[str] = field(default_factory=list)
     args: list[str] = field(default_factory=list)
     status: str = "Pending"
 
     def __post_init__(self):
+        # 此处强制覆盖
         self.command = DAEMON_COMMAND
 
     class Meta:
@@ -130,6 +134,15 @@ class AgentSandbox(KresAppEntity):
 
 @dataclass
 class AgentSandboxService(KresAppEntity):
+    """Agent sandbox service backed by a Kubernetes Service.
+
+    This service exposes the agent sandbox pod to allow external access to the daemon process
+    running inside the sandbox.
+
+    :param ports: The list of service port pairs that map service ports to container ports.
+    :param sandbox_id: The unique ID of the sandbox that this service is associated with.
+    """
+
     ports: list[ServicePortPair]
     sandbox_id: str
 

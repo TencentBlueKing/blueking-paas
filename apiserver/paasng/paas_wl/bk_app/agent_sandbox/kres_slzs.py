@@ -89,7 +89,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             if getattr(item, "name", None)
         }
         labels = kube_data.metadata.labels or {}
-        sandbox_id = AgentSandboxLabels.parse_sandbox_id(labels)
+        sandbox_id = AgentSandboxLabels.parse(labels)
 
         return self.entity_type(
             app=app,
@@ -160,7 +160,7 @@ class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxSer
             app=app,
             name=kube_data.metadata.name,
             ports=ports,
-            sandbox_id=AgentSandboxLabels.parse_sandbox_id(kube_data.metadata.labels),
+            sandbox_id=AgentSandboxLabels.parse(kube_data.metadata.labels),
         )
 
 
@@ -170,8 +170,8 @@ class AgentSandboxLabels:
     key_sandbox_id = "bkapp.paas.bk.tencent.com/sandbox-id"
 
     @classmethod
-    def parse_sandbox_id(cls, labels: dict[str, str]) -> str:
-        """Parse sandbox id from an agent sandbox Pod.
+    def parse(cls, labels: dict[str, str]) -> str:
+        """Parse labels from an agent sandbox Pod.
 
         :return: sandbox_id
         """

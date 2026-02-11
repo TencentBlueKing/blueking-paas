@@ -18,14 +18,12 @@ import random
 import uuid
 
 from blue_krill.models.fields import EncryptField
-from django.conf import settings
 from django.db import models
 from django.utils.crypto import get_random_string
 
+from paas_wl.bk_app.agent_sandbox.cluster import find_available_port, list_available_hosts
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
-from paas_wl.workloads.networking.egress.cluster_state import format_nodes_data
-from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.utils.models import BkUserField, UuidAuditedModel
@@ -34,10 +32,10 @@ from .constants import SandboxStatus
 from .exceptions import SandboxAlreadyExists, SandboxCreateError
 
 
-class SandboxQuerySet(models.QuerySet):
-    """沙箱 QuerySet 类"""
+class SandboxManager(models.Manager):
+    """沙箱 Manager 类"""
 
-    def create(
+    def new(
         self,
         application: Application,
         creator: str,
@@ -46,7 +44,7 @@ class SandboxQuerySet(models.QuerySet):
         env_vars: dict | None = None,
         name: str | None = None,
         workspace: str | None = None,
-    ) -> "Sandbox":
+    ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
         if not name:
@@ -80,18 +78,17 @@ class SandboxQuerySet(models.QuerySet):
             .exclude(status=SandboxStatus.DELETED.value)
             .values_list("daemon_port", flat=True)
         )
-        # 单个集群, NodePort 类型的 service 的可用端口有范围限制
-        daemon_port = find_available_port(
-            settings.AGENT_SANDBOX_NODE_PORT_RANGE[0], settings.AGENT_SANDBOX_NODE_PORT_RANGE[1], used_ports
-        )
+        # 单个集群, NodePort 类型的 service 的可用端口限制在 30000~32767 之间
+        daemon_port = find_available_port(30000, 32767, used_ports)
         if daemon_port is None:
             raise SandboxCreateError(f"no available ports in cluster {target}")
 
-        daemon_host = find_available_host(target)
-        if not daemon_host:
+        available_hosts = list_available_hosts(target)
+        if not available_hosts:
             raise SandboxCreateError(f"no available nodes found in cluster {target}")
+        daemon_host = random.choice(available_hosts)
 
-        return super().create(
+        return self.create(
             uuid=sandbox_id,
             application=application,
             name=name,
@@ -105,11 +102,8 @@ class SandboxQuerySet(models.QuerySet):
             tenant_id=application.tenant_id,
             daemon_host=daemon_host,
             daemon_port=daemon_port,
-            daemon_token=get_random_string(16),
+            daemon_token=get_random_string(32),
         )
-
-
-SandboxManager = models.Manager.from_queryset(SandboxQuerySet)
 
 
 class Sandbox(UuidAuditedModel):
@@ -123,6 +117,8 @@ class Sandbox(UuidAuditedModel):
     name = models.CharField(verbose_name="名称", max_length=64, help_text="租户内应用内唯一，未提供时自动生成")
 
     snapshot = models.CharField(verbose_name="快照名字", max_length=128, help_text="沙箱初始化使用的快照（镜像）")
+    # snapshot_entrypoint 是用户镜像(snapshot)的自定义入口启动命令(如 `start web`), 此时沙箱环境的启动命令变成 `/usr/local/bin/daemon start web`.
+    # 对于 snapshot 而言, 它是 entrypoint, 对于 Pod 而言, 它是 args
     snapshot_entrypoint = models.JSONField(default=list, help_text="沙箱快照启动时指定的 entrypoint")
     workspace = models.CharField(verbose_name="工作空间", null=True, max_length=128, help_text="沙箱工作空间")
 
@@ -138,6 +134,7 @@ class Sandbox(UuidAuditedModel):
     status = models.CharField(verbose_name="状态", max_length=16, default=SandboxStatus.PENDING.value)
 
     started_at = models.DateTimeField("启动时间", null=True)
+    stopped_at = models.DateTimeField("停止时间", null=True)
     deleted_at = models.DateTimeField("删除时间", null=True)
 
     creator = BkUserField()
@@ -145,39 +142,9 @@ class Sandbox(UuidAuditedModel):
 
     objects = SandboxManager()
 
+    class Meta:
+        unique_together = ("tenant_id", "application_id", "name")
+
     @property
     def daemon_endpoint(self) -> str:
         return f"{self.daemon_host}:{self.daemon_port}"
-
-
-def find_available_port(port_min: int, port_max: int, used_ports: set) -> int | None:
-    """查找可用端口"""
-
-    port_count = port_max - port_min + 1
-    if len(used_ports) == port_count:
-        # 端口已被耗尽
-        return None
-
-    # 利用"环形扫描"算法，从随机起点开始查找可用端口，避免展开整个端口范围
-    # 随机选一个起始偏移量
-    offset = random.randrange(port_count)
-    daemon_port = next(
-        (p for i in range(port_count) if (p := port_min + (offset + i) % port_count) not in used_ports),
-        None,
-    )
-    return daemon_port
-
-
-def find_available_host(cluster_name: str) -> str | None:
-    # 从数据库获取集群最新的节点状态，提取节点 IP 列表
-    cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
-    if not cluster_state:
-        return None
-
-    nodes_data = format_nodes_data(cluster_state.nodes_data)
-    node_ips = [node["internal_ip_address"] for node in nodes_data if node.get("internal_ip_address")]
-
-    if not node_ips:
-        return None
-
-    return random.choice(node_ips)

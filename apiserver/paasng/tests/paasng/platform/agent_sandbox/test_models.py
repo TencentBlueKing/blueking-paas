@@ -19,33 +19,9 @@ import pytest
 
 from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists
-from paasng.platform.agent_sandbox.models import Sandbox, find_available_port
+from paasng.platform.agent_sandbox.models import Sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-class TestFindAvailablePort:
-    """Test find_available_port function."""
-
-    def test_find_port_in_empty_set(self):
-        """Test finding port when no ports are used."""
-        port = find_available_port(30000, 30010, set())
-        assert port is not None
-        assert 30000 <= port <= 30010
-
-    def test_find_port_with_some_used(self):
-        """Test finding port when some ports are used."""
-        used_ports = {30000, 30001, 30002}
-        port = find_available_port(30000, 30010, used_ports)
-        assert port is not None
-        assert port not in used_ports
-        assert 30000 <= port <= 30010
-
-    def test_find_port_all_used(self):
-        """Test that None is returned when all ports are used."""
-        used_ports = set(range(30000, 30011))
-        port = find_available_port(30000, 30010, used_ports)
-        assert port is None
 
 
 class TestSandboxModel:
@@ -53,7 +29,7 @@ class TestSandboxModel:
 
     def test_sandbox_create_basic(self, bk_app, bk_user):
         """Test basic sandbox creation."""
-        sandbox = Sandbox.objects.create(
+        sandbox = Sandbox.objects.new(
             application=bk_app,
             creator=bk_user.pk,
             snapshot="python:3.11-alpine",
@@ -66,11 +42,11 @@ class TestSandboxModel:
         assert sandbox.daemon_host == "192.168.1.1"
         assert sandbox.daemon_port == 30001
         assert sandbox.daemon_token is not None
-        assert len(sandbox.daemon_token) == 16
+        assert len(sandbox.daemon_token) == 32
 
     def test_sandbox_create_duplicate_name(self, bk_app, bk_user):
         """Test that creating sandbox with duplicate name raises error."""
-        Sandbox.objects.create(
+        Sandbox.objects.new(
             application=bk_app,
             creator=bk_user.pk,
             snapshot="python:3.11-alpine",
@@ -78,7 +54,7 @@ class TestSandboxModel:
         )
 
         with pytest.raises(SandboxAlreadyExists):
-            Sandbox.objects.create(
+            Sandbox.objects.new(
                 application=bk_app,
                 creator=bk_user.pk,
                 snapshot="python:3.11-alpine",

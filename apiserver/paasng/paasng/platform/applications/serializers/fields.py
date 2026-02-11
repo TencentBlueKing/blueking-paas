@@ -25,7 +25,7 @@ from paasng.platform.applications.models import Application
 from paasng.utils.serializers import NickNameField, SafePathField
 from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator
 
-from .validators import AppIDUniqueValidator, AppNameUniqueValidator
+from .validators import AppIDUniqueValidator, AppNameUniqueValidator, AppUniqueValidator
 
 
 class AppIDField(serializers.RegexField):
@@ -87,7 +87,14 @@ class AppNameField(NickNameField):
     """Field for validating application name"""
 
     def __init__(self, *args, **kwargs):
-        preset_kwargs = dict(max_length=20, help_text="应用名称", validators=[AppNameUniqueValidator()])
+        preset_kwargs = dict(
+            max_length=20,
+            help_text="应用名称",
+            validators=[
+                AppNameUniqueValidator(),
+                AppUniqueValidator(field_name="name_en", lookup="iexact"),
+            ],
+        )
         preset_kwargs.update(kwargs)
         super().__init__(*args, **preset_kwargs)
 

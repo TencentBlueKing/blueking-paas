@@ -19,10 +19,14 @@ from dataclasses import dataclass, field
 from attrs import define
 from django.conf import settings
 
-from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_IMAGE, DEFAULT_SNAPSHOT, DEFAULT_TARGET
-from paas_wl.bk_app.agent_sandbox.kres_slzs import AgentSandboxDeserializer, AgentSandboxSerializer
-from paas_wl.infras.cluster.entities import AllocationContext
-from paas_wl.infras.cluster.shim import ClusterAllocator
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND
+from paas_wl.bk_app.agent_sandbox.kres_slzs import (
+    AgentSandboxDeserializer,
+    AgentSandboxSerializer,
+    AgentSandboxServiceDeserializer,
+    AgentSandboxServiceSerializer,
+    ServicePortPair,
+)
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.infras.resources.kube_res.base import KresAppEntity, KresAppEntityManager
@@ -58,31 +62,22 @@ class AgentSandboxKresApp:
 
     def get_kube_api_client(self) -> EnhancedApiClient:
         """Get the kubernetes API client for current app."""
-        if self.target != DEFAULT_TARGET:
-            raise RuntimeError(f"target unsupported: {self.target}")
+        if self.target:
+            # TODO 考虑在集群信息中增加用途描述, 再校验
+            return get_client_by_cluster_name(self.target)
 
-        cluster = ClusterAllocator(
-            AllocationContext(
-                tenant_id=self.tenant_id,
-                region=self.region,
-                # Use agent_sandbox usage to allocate dedicated cluster for sandbox
-                usage="agent_sandbox",
-                # agent_sandbox 不区分环境
-                environment="",
-            )
-        ).get_default()
-        return get_client_by_cluster_name(cluster.name)
+        raise ValueError("missing valid target")
 
 
 @dataclass
 class AgentSandbox(KresAppEntity):
     """Agent sandbox backed by a Pod.
 
-    **Only for experimental use.**
-
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
     :param image: The container image used in the sandbox.
+    :param command: The command to run in the sandbox. Always set to /usr/local/bin/daemon.
+    :param args: The arguments to pass to the command (/usr/local/bin/daemon).
     :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
     """
@@ -91,7 +86,13 @@ class AgentSandbox(KresAppEntity):
     workdir: str
     image: str
     env: dict[str, str] = field(default_factory=dict)
+    command: list[str] = field(default_factory=list)
+    args: list[str] = field(default_factory=list)
     status: str = "Pending"
+
+    def __post_init__(self):
+        # 此处强制覆盖
+        self.command = DAEMON_COMMAND
 
     class Meta:
         kres_class = kres.KPod
@@ -106,21 +107,59 @@ class AgentSandbox(KresAppEntity):
         sandbox_id: str,
         workdir: str,
         snapshot: str,
+        snapshot_entrypoint: list[str] | None = None,
         env: dict[str, str] | None = None,
     ) -> "AgentSandbox":
-        """Create an AgentSandbox instance."""
-        if snapshot == DEFAULT_SNAPSHOT:
-            image = DEFAULT_IMAGE
-        else:
-            raise ValueError(f"unsupported snapshot: {snapshot}")
+        """Create an AgentSandbox instance.
+
+        :param app: The AgentSandboxKresApp instance.
+        :param name: The name of the sandbox.
+        :param sandbox_id: The unique ID of the sandbox.
+        :param workdir: The working directory inside the sandbox.
+        :param snapshot: The snapshot to use for the sandbox.
+        :param snapshot_entrypoint: The snapshot_entrypoint to be used as args for the command.
+        :param env: The environment variables to set in the sandbox.
+        :return: A new AgentSandbox instance.
+        """
         return cls(
             app=app,
             name=name,
             sandbox_id=sandbox_id,
             workdir=workdir,
-            image=image,
+            image=snapshot,
             env=env or {},
+            args=snapshot_entrypoint or [],
         )
 
 
+@dataclass
+class AgentSandboxService(KresAppEntity):
+    """Agent sandbox service backed by a Kubernetes Service.
+
+    This service exposes the agent sandbox pod to allow external access to the daemon process
+    running inside the sandbox.
+
+    :param ports: The list of service port pairs that map service ports to container ports.
+    :param sandbox_id: The unique ID of the sandbox that this service is associated with.
+    """
+
+    ports: list[ServicePortPair]
+    sandbox_id: str
+
+    class Meta:
+        kres_class = kres.KService
+        serializer = AgentSandboxServiceSerializer
+        deserializer = AgentSandboxServiceDeserializer
+
+    @classmethod
+    def create(cls, sandbox: AgentSandbox, node_port: int) -> "AgentSandboxService":
+        ports = [
+            ServicePortPair(name="daemon", port=DAEMON_BIND_PORT, target_port=DAEMON_BIND_PORT, node_port=node_port)
+        ]
+        return cls(app=sandbox.app, name=sandbox.name, ports=ports, sandbox_id=sandbox.sandbox_id)
+
+
 agent_sandbox_kmodel: KresAppEntityManager[AgentSandbox, AgentSandboxKresApp] = KresAppEntityManager(AgentSandbox)
+agent_sandbox_svc_kmodel: KresAppEntityManager[AgentSandboxService, AgentSandboxKresApp] = KresAppEntityManager(
+    AgentSandboxService
+)

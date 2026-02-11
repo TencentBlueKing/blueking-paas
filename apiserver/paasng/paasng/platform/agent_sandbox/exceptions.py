@@ -27,9 +27,17 @@ class SandboxAlreadyExists(SandboxError):
     """Raised when a sandbox already exists."""
 
 
+class SandboxCreateError(SandboxError):
+    """Raised when creating a sandbox fails."""
+
+
 class SandboxFileError(SandboxError):
     """Raised when file operations in the sandbox fail."""
 
 
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+class SandboxExecError(SandboxError):
+    """Raised when executing a command in the sandbox fails."""
+
+
+class SandboxDaemonAPIError(Exception):
+    """Raised when the sandbox daemon API returns an error."""

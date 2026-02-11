@@ -26,8 +26,6 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import (
@@ -57,7 +55,7 @@ logger = logging.getLogger(__name__)
 class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     """Agent Sandbox 相关接口"""
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=["agent_sandbox"],
@@ -66,7 +64,8 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     )
     def create(self, request, code):
         """创建一个新的 Agent Sandbox，新沙箱将自动进入运行状态。"""
-        application = self.get_application()
+        # TODO: Add permission check. 最终是应用认证/鉴权+用户认证
+        application = self.get_application_without_perm()
         slz = SandboxCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -77,6 +76,9 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                 creator=request.user.pk,
                 name=data.get("name"),
                 env_vars=data.get("env_vars"),
+                snapshot=data.get("snapshot"),
+                snapshot_entrypoint=data.get("snapshot_entrypoint"),
+                workspace=data.get("workspace"),
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
@@ -106,14 +108,14 @@ class SandboxPermissionMixin:
 
     def _get_sandbox_with_perm(self, request, sandbox_id: str) -> Sandbox:
         sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
-        self.check_object_permissions(request, sandbox.application)
+        # TODO: Add permission check
         return sandbox
 
 
 class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
     """Agent Sandbox 文件系统相关接口。"""
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxCreateFolderInputSLZ(), responses={204: ""})
     def create_folder(self, request, sandbox_id):
@@ -184,7 +186,7 @@ class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
 class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
     """Agent Sandbox 进程相关接口。"""
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=["agent_sandbox"], request_body=SandboxExecInputSLZ(), responses={200: SandboxProcessOutputSLZ()}

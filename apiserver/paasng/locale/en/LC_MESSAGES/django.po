@@ -875,6 +875,10 @@ msgstr ""
 "Configuration resource instance exception: unable to provision instance for "
 "services<{service_name}>"
 
+#: paasng/accessories/servicehub/local/manager.py:165
+msgid "资源不足, 配置实例失败"
+msgstr "Insufficient resources, failed to provision instance"
+
 #: paasng/accessories/servicehub/remote/manager.py:504
 #, python-brace-format
 msgid ""
@@ -4861,6 +4865,18 @@ msgstr "Invalid encrypted value format: {value}"
 #, python-brace-format
 msgid "数据嵌套层级过深，最大层级为 {max_depth}"
 msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"
+
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:39
+msgid "至少需要指定一个匹配规则, 且匹配规则不能为空字符串"
+msgstr "At least one matching rule must be specified, and the rule must not be an empty string"
+
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:77
+msgid "POLICY 类型的预创建实例必须指定 binding_policy"
+msgstr "POLICY pre-created instances must specify binding_policy"
+
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:79
+msgid "FIFO 类型的预创建实例不允许指定 binding_policy"
+msgstr "FIFO pre-created instances must not specify binding_policy"
 
 #: paasng/plat_mgt/infras/services/serializers/services.py:134
 msgid "本地增强服务必须指定 provider_name"

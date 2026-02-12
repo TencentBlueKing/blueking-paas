@@ -14,15 +14,55 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import base64
+import binascii
 import json
 from typing import Dict
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
+from paasng.plat_mgt.infras.services.constants import TLS_STRING_FIELDS
 
 
 class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     config = serializers.JSONField(help_text="预创建实例的配置")
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
+    binding_policy = serializers.JSONField(help_text="实例绑定策略", required=False, default=dict)
+    allocation_type = serializers.ChoiceField(
+        help_text="预创建实例的分配类型",
+        choices=PreCreatedInstanceAllocationType.get_django_choices(),
+    )
+
+    # 对 config.tls base64 编码后入库, 后续可以直接用于创建 k8s Secret
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        # tls 和前端约定放在 config.tls 下
+        tls_info = data.get("config", {}).get("tls")
+        if not tls_info or not isinstance(tls_info, dict):
+            return data
+
+        tls_info = tls_info.copy()
+        for k in TLS_STRING_FIELDS:
+            val = tls_info.get(k)
+            if val:
+                tls_info[k] = base64.b64encode(val.encode()).decode()
+        data["config"]["tls"] = tls_info
+        return data
+
+    def validate(self, attrs):
+        allocation_type = attrs["allocation_type"]
+        policy = attrs.get("binding_policy", {})
+        is_policy_valid = not all(policy.get(k, "") == "" for k in ("app_code", "module_name", "env_name"))
+
+        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not is_policy_valid:
+            raise ValidationError(_("至少需要指定一个匹配规则, 且匹配规则不能为空字符串"))
+        if allocation_type == PreCreatedInstanceAllocationType.FIFO and policy:
+            raise ValidationError(_("FIFO 类型的预创建实例不允许指定 binding_policy"))
+        return attrs
 
 
 class PreCreatedInstanceOutputSLZ(serializers.Serializer):
@@ -32,6 +72,7 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
     tenant_id = serializers.CharField(help_text="租户 id")
+    binding_policy = serializers.JSONField(help_text="实例绑定策略")
 
     def to_representation(self, instance) -> Dict:
         result = super().to_representation(instance)
@@ -39,4 +80,14 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
         if isinstance(result["config"], str):
             result["config"] = json.loads(result["config"])
 
+        tls_info = result["config"].get("tls")
+        if not (tls_info and isinstance(tls_info, dict)):
+            return result
+
+        for k in TLS_STRING_FIELDS:
+            if val := tls_info.get(k):
+                try:
+                    tls_info[k] = base64.b64decode(val.encode()).decode()
+                except (binascii.Error, UnicodeDecodeError):
+                    tls_info[k] = val
         return result

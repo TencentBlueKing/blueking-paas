@@ -15,6 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
-class InsufficientResourceError(Exception):
-    """资源不足异常"""
+
+class PreCreatedInstanceAllocationType(StrStructuredEnum):
+    FIFO = EnumField("fifo", label="先进先出分配")
+    POLICY = EnumField("policy", label="策略分配")

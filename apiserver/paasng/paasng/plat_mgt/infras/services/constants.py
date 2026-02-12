@@ -15,6 +15,5 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
-class InsufficientResourceError(Exception):
-    """资源不足异常"""
+# 预分配实例下, TLS 的字符串类型的配置项, 需要进行 Base64 编码/解码 处理
+TLS_STRING_FIELDS = ("ca", "cert", "key")

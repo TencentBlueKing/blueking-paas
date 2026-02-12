@@ -32,8 +32,9 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     binding_policy = serializers.JSONField(help_text="实例绑定策略", required=False, default=dict)
     allocation_type = serializers.ChoiceField(
-        help_text="预创建实例的分配类型",
+        default=PreCreatedInstanceAllocationType.FIFO.value,
         choices=PreCreatedInstanceAllocationType.get_django_choices(),
+        help_text="预创建实例的分配类型",
     )
 
     # 对 config.tls base64 编码后入库, 后续可以直接用于创建 k8s Secret
@@ -73,6 +74,7 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
     tenant_id = serializers.CharField(help_text="租户 id")
     binding_policy = serializers.JSONField(help_text="实例绑定策略")
+    allocation_type = serializers.CharField(help_text="预创建实例的分配类型")
 
     def to_representation(self, instance) -> Dict:
         result = super().to_representation(instance)

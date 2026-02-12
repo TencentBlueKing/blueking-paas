@@ -7,7 +7,11 @@
       <i class="paasng-icon paasng-eye mr5"></i>
       <span class="preview-title">{{ $t('预览环境变量') }}</span>
       <span class="preview-desc">{{ $t('配置项将以环境变量方式注入至应用运行时环境') }}</span>
-      <!-- paasng-icon paasng-ps-arrow-up -->
+      <i
+        style="color: #c4c6cc"
+        class="paasng-icon paasng-info-line ml-8"
+        v-bk-tooltips="previewDesc"
+      ></i>
       <i :class="['paasng-icon', 'paasng-ps-arrow-up', 'toggle-icon', { 'is-collapsed': expanded }]"></i>
     </div>
     <div
@@ -45,17 +49,7 @@ export default {
       type: Object,
       default: () => ({}),
     },
-    // TLS 配置
-    tlsConfig: {
-      type: Object,
-      default: () => ({}),
-    },
-    // 是否显示 TLS
-    showTls: {
-      type: Boolean,
-      default: false,
-    },
-    // 服务名称（用于生成 TLS 前缀）
+    // 服务名称（用于生成提示中的前缀）
     serviceName: {
       type: String,
       default: '',
@@ -75,28 +69,20 @@ export default {
     // 预览环境变量列表
     envVars() {
       // 根据 template 生成环境变量预览
-      const templateVars = this.template.map((tpl) => {
+      return this.template.map((tpl) => {
         const value = tpl.value.replace(/\{\{(\w+)\}\}/g, (_, key) => {
           const actualValue = this.configValues[key];
           return actualValue !== undefined && actualValue !== '' ? actualValue : `{{${key}}}`;
         });
         return `${tpl.key}:${value}`;
       });
-
-      // 添加 TLS 配置预览
-      if (!this.showTls) return templateVars;
-
-      const { ca, cert, key, insecure_skip_verify } = this.tlsConfig;
-      if (!ca && !cert && !key && !insecure_skip_verify) return templateVars;
-
-      const tlsObj = {
-        ...(ca && { ca: this.truncateValue(ca) }),
-        ...(cert && { cert: this.truncateValue(cert) }),
-        ...(key && { key: this.truncateValue(key) }),
-        ...(insecure_skip_verify && { insecure_skip_verify }),
-      };
-
-      return [...templateVars, `${this.getServicePrefix()}_TLS:${JSON.stringify(tlsObj)}`];
+    },
+    previewDesc() {
+      const id = this.serviceName ? this.serviceName.toUpperCase().replace(/-/g, '_').replace(/_$/, '') : 'ID';
+      return this.$t(
+        'TLS 相关的配置（证书和密钥）以文件形式存储在容器内; 环境变量 {id}_CERT、{id}_KEY、{id}_CA 分别指向对应文件的路径',
+        { id }
+      );
     },
   },
   watch: {
@@ -105,15 +91,6 @@ export default {
     },
   },
   methods: {
-    // 截取长字符串用于预览
-    truncateValue(val, maxLen = 10) {
-      if (!val) return '';
-      return val.length > maxLen ? `${val.substring(0, maxLen)}...` : val;
-    },
-    // 获取服务前缀
-    getServicePrefix() {
-      return this.serviceName.toUpperCase().replace(/-/g, '_');
-    },
     // 手动控制展开/折叠
     toggle(state) {
       if (typeof state === 'boolean') {

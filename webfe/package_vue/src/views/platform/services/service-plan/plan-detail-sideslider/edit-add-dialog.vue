@@ -128,8 +128,6 @@
         <EnvPreview
           :template="envTemplate"
           :config-values="formData.configValues"
-          :tls-config="formData.tlsConfig"
-          :show-tls="showTlsConfig"
           :service-name="data.service || ''"
         />
 

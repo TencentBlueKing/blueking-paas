@@ -418,4 +418,10 @@ export default {
   源码摘要: 'Source Code Summary',
   '支持开发者中心 1.5.x 及以上版本': 'Supports Developer Center version 1.5.x and above',
   '支持开发者中心 1.7.x 及以上版本，构建更快、包更小，适合多模块共享代码的场景': 'Supports Developer Center version 1.7.x and above, faster builds, smaller packages, ideal for scenarios with multiple modules sharing code',
+  配置项: 'Configuration Item',
+  预览环境变量: 'Preview Environment Variables',
+  按顺序分配: 'Allocate in Order',
+  配置项将以环境变量方式注入至应用运行时环境: 'Configuration items will be injected into the application runtime environment as environment variables',
+  '应用申请增强服务实例时，按 FIFO（先进先出）顺序分配。': 'When an application requests an enhanced service instance, it is allocated in FIFO (first-in, first-out) order.',
+  'TLS 相关的配置（证书和密钥）以文件形式存储在容器内; 环境变量 {id}_CERT、{id}_KEY、{id}_CA 分别指向对应文件的路径': 'TLS-related configurations (certificates and keys) are stored as files in the container; environment variables {id}_CERT, {id}_KEY, {id}_CA point to the corresponding file paths',
 };

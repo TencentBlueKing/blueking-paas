@@ -10,7 +10,7 @@
     >
       <!-- 左侧卡片区域 -->
       <div class="rule-card">
-        <div class="condition-tag">and</div>
+        <div class="condition-tag">AND</div>
         <!-- 匹配规则 -->
         <bk-form
           :ref="`ruleForm-${index}`"

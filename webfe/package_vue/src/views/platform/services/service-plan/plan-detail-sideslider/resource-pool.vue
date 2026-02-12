@@ -35,15 +35,34 @@
           />
         </template>
       </bk-table-column>
-      <bk-table-column :label="`TLS ${$t('配置')}`">
+      <bk-table-column :label="$t('分配方式')">
         <template slot-scope="{ row }">
-          <template v-if="!row.tlsConfig">--</template>
-          <MaskedTextViewer
+          <!-- 按规则分配 -->
+          <div
+            v-if="row.binding_policy && Object.keys(row.binding_policy).length > 0"
+            class="allocation-rules"
+          >
+            <div
+              v-for="(ruleItem, ruleIndex) in formatAllocationRules(row.binding_policy)"
+              :key="ruleIndex"
+              class="rule-item"
+            >
+              <bk-tag
+                v-if="ruleIndex > 0"
+                theme="info"
+              >
+                AND
+              </bk-tag>
+              <bk-tag>{{ ruleItem }}</bk-tag>
+            </div>
+          </div>
+          <!-- 按顺序分配 -->
+          <bk-tag
             v-else
-            :data="row.tlsConfig"
-            :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
-            :plaintext.sync="plaintextStatusMap[`${row.uuid}-tls`]"
-          />
+            ext-cls="order-tag"
+          >
+            FIFO{{ $t('（先进先出）') }}
+          </bk-tag>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -202,6 +221,35 @@ export default {
     formatServiceName() {
       return `${this.data?.service_name?.toLocaleUpperCase()}_`;
     },
+    // 格式化分配规则用于显示
+    formatAllocationRules(bindingPolicy) {
+      const rules = [];
+      const fieldLabelMap = {
+        app_code: this.$t('应用 ID'),
+        module_name: this.$t('模块名称'),
+        env_name: this.$t('环境'),
+      };
+      const envLabelMap = {
+        stag: this.$t('预发布环境'),
+        prod: this.$t('生产环境'),
+      };
+      Object.entries(bindingPolicy).forEach(([key, values]) => {
+        const label = fieldLabelMap[key] || key;
+        if (Array.isArray(values) && values.length > 0) {
+          if (values.length === 1) {
+            // 单个值用 =
+            const displayValue = key === 'env_name' ? envLabelMap[values[0]] || values[0] : values[0];
+            rules.push(`${label} = ${displayValue}`);
+          } else {
+            // 多个值用 IN
+            const displayValues =
+              key === 'env_name' ? values.map((v) => envLabelMap[v] || v).join(', ') : values.join(', ');
+            rules.push(`${label} IN (${displayValues})`);
+          }
+        }
+      });
+      return rules;
+    },
     // 添加实例
     addInstances() {
       this.dialogConfig.isShow = true;
@@ -329,6 +377,20 @@ export default {
       .masked-text-viewer i.paasng-icon {
         display: block !important;
       }
+    }
+  }
+  /deep/ .order-tag.bk-tag {
+    margin-left: 0 !important;
+  }
+}
+// 分配方式样式
+.allocation-rules {
+  padding: 8px 0;
+  .rule-item {
+    display: flex;
+    align-items: center;
+    /deep/ .bk-tag:first-child {
+      margin-left: 0 !important;
     }
   }
 }

@@ -86,7 +86,7 @@
                   <span
                     v-for="(v, k) in item.matcher"
                     class="tag rule"
-                    :key="`rule-${v}`"
+                    :key="`rule-${k}-${v}`"
                     v-show="v"
                   >
                     {{ `${matchingRulesMap[k]} = ${v}` }}
@@ -217,7 +217,11 @@ export default {
   methods: {
     init() {
       this.isTableLoading = true;
-      Promise.all([this.getTenants(), this.getClusterAllocationPolicies()]).finally(() => {
+      Promise.all([
+        this.getTenants(),
+        this.getClusterAllocationPolicies(),
+        this.getClusterAllocationPolicyConditionTypes(),
+      ]).finally(() => {
         // 将策略与租户数据重组
         this.platformList = this.tenants
           .map((tenant) => ({
@@ -245,7 +249,6 @@ export default {
         this.isTableLoading = false;
         this.isContentLoading = false;
       });
-      this.getClusterAllocationPolicyConditionTypes();
     },
     // 关键字搜索
     filterByKeyword(list) {

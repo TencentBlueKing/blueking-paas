@@ -14,28 +14,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-# The default value for sandbox's target
-# TODO: Add more targets support later
-DEFAULT_TARGET = "default"
-
-# The default value for sandbox's snapshot
-# TODO: Add more snapshot support later
-DEFAULT_SNAPSHOT = "default_image"
-
 # ================================
 # Constants for "K8s Pod Sandbox"
 # ================================
 
 # The Default image for running k8s pod sandbox
 DEFAULT_IMAGE = "python:3.11-alpine"
-# The default working directory in sandbox container
-DEFAULT_WORKDIR = "/workspace"
-# The default command to keep the sandbox pod alive
-DEFAULT_COMMAND = ["/bin/sh", "-c", "sleep 36000"]
 # The default termination grace period seconds for sandbox pod
 DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
 # The default resource specification for sandbox pod
 DEFAULT_RESOURCES = {
-    "limits": {"cpu": "2000m", "memory": "512Mi"},
-    "requests": {"cpu": "100m", "memory": "128Mi"},
+    "limits": {"cpu": "4000m", "memory": "1024Mi"},
+    "requests": {"cpu": "50m", "memory": "128Mi"},
 }
+
+
+# The command for sandbox daemon
+DAEMON_COMMAND = ["/usr/local/bin/daemon"]
+# The bind port for sandbox daemon
+DAEMON_BIND_PORT = 8000

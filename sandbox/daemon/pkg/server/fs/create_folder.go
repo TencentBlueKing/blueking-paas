@@ -1,0 +1,56 @@
+package fs
+
+import (
+	"errors"
+	"io"
+	"os"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
+)
+
+// CreateFolder godoc
+//
+//	@Summary		Create a folder
+//	@Description	Create a new folder with optional permission mode
+//	@Tags			files
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	CreateFolderRequest	true	"Folder creation request"
+//	@Success		201
+//	@Router			/files/folder [post]
+//
+//	@id				CreateFolder
+func CreateFolder(c *gin.Context) {
+	var request CreateFolderRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		if errors.Is(err, io.EOF) {
+			httputil.BadRequestResponse(c, errors.New("request body is empty or missing"))
+		} else {
+			httputil.BadRequestResponse(c, err)
+		}
+		return
+	}
+
+	// Get the permission mode from query params, default to 0755
+	mode := request.Mode
+	var perm os.FileMode = 0o755
+	if mode != "" {
+		modeNum, err := strconv.ParseUint(mode, 8, 32)
+		if err != nil {
+			httputil.BadRequestResponse(c, errors.New("invalid mode format"))
+			return
+		}
+		perm = os.FileMode(modeNum)
+	}
+
+	if err := os.MkdirAll(request.Path, perm); err != nil {
+		httputil.BadRequestResponse(c, err)
+		return
+	}
+
+	httputil.CreatedSuccessResponse(c)
+}

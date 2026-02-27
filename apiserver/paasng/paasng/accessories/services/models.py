@@ -24,6 +24,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
+from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
 from paasng.core.core.storages.object_storage import service_logo_storage
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
@@ -178,14 +179,58 @@ class ServiceInstance(UuidAuditedModel):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
 
 
+class PreCreatedInstanceManager(models.Manager):
+    def select_precreated_instance(self, plan: "Plan", params: dict[str, str]) -> Optional["PreCreatedInstance"]:
+        """
+        NOTE: 应在事务中调用此函数
+        在指定 plan 下选择一个未分配的预创建实例, 根据 `params` 尝试按绑定策略匹配, 未命中策略时回退为普通 FIFO 选择
+
+        :param params: 策略匹配参数, 目前包含 application_code, module_name, env_name 三个维度(均选填)
+        :return: 最匹配的预创建实例; 若没有可用实例则返回 None
+        """
+        unallocated_qs = self.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
+
+        fifo_allocation_qs = unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.FIFO)
+
+        if all(params.get(k, "") == "" for k in ("application_code", "env_name", "module_name")):
+            logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
+            return fifo_allocation_qs.first()
+
+        policy_instances = list(unallocated_qs.filter(allocation_type=PreCreatedInstanceAllocationType.POLICY))
+        matched = PreCreatedInstance.match_instances(
+            app_code=params.get("application_code"),
+            module_name=params.get("module_name"),
+            env_name=params.get("env_name"),
+            candidates=policy_instances,
+        )
+        if not matched:
+            logger.debug("no matching binding policy found, use plain FIFO match strategy")
+            return fifo_allocation_qs.first()
+
+        return matched
+
+
 class PreCreatedInstance(UuidAuditedModel):
     """预创建的服务实例"""
 
     plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, db_constraint=False, blank=True, null=True)
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
+    # see constants.PreCreatedInstanceAllocationType
+    allocation_type = models.CharField(
+        max_length=32, default=PreCreatedInstanceAllocationType.FIFO, help_text="分配类型"
+    )
+
+    # binding_policy 中每个维度存储为列表, 例如 {"app_code": ["myapp"], "env_name": ["prod", "stag"]}
+    # 值为空列表时表示不匹配, None 表示通配
+    binding_policy = JSONField(
+        default=dict,
+        help_text='绑定策略, 每个维度为列表, 如 {"app_code": ["myapp"], "module_name": ["default"], "env_name": ["prod"]}',
+    )
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
     tenant_id = tenant_id_field_factory()
+
+    objects = PreCreatedInstanceManager()
 
     def acquire(self):
         self.is_allocated = True
@@ -197,6 +242,55 @@ class PreCreatedInstance(UuidAuditedModel):
 
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
+
+    @staticmethod
+    def match_instances(
+        app_code: str | None,
+        module_name: str | None,
+        env_name: str | None,
+        candidates: list["PreCreatedInstance"],
+    ) -> Optional["PreCreatedInstance"]:
+        """
+        在给定的 PrecreatedInstance 候选实例中, 找到最匹配绑定策略的实例
+        匹配优先级为 app_code(3) > module_name(2) > env_name(1), 相同时按 created 排序取最早的
+        """
+
+        def _matches(policy_vals: list | None, param_val: str | None) -> bool:
+            """策略字段为 None 表示通配, 否则 param_val 需在列表中"""
+            if policy_vals is None:
+                return True
+            if policy_vals == []:
+                logger.warning(
+                    "empty policy_val will never match, may is it a mistake?"
+                )  # empty list in policy is probably a mistake, log a warning
+                return False
+            return param_val in policy_vals
+
+        scored: list[tuple[int, "PreCreatedInstance"]] = []
+        for ins in candidates:
+            bp = ins.binding_policy or {}
+            p_app = bp.get("app_code")
+            p_mod = bp.get("module_name")
+            p_env = bp.get("env_name")
+
+            if not (_matches(p_app, app_code) and _matches(p_mod, module_name) and _matches(p_env, env_name)):
+                continue
+
+            score = 0
+            if p_app and app_code in p_app:
+                score += 3
+            if p_mod and module_name in p_mod:
+                score += 2
+            if p_env and env_name in p_env:
+                score += 1
+            scored.append((score, ins))
+
+        if not scored:
+            return None
+
+        # 按 score 降序, created 升序
+        scored.sort(key=lambda x: (-x[0], x[1].created))
+        return scored[0][1]
 
 
 class Plan(UuidAuditedModel):

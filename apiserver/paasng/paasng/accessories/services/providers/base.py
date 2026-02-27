@@ -18,12 +18,12 @@
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import ClassVar, Dict, Optional, Set
+from typing import ClassVar, Dict, Set
 
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paasng.accessories.services.exceptions import ResourceNotEnoughError
+from paasng.accessories.services.exceptions import InsufficientResourceError
 from paasng.accessories.services.models import InstanceData, PreCreatedInstance
 from paasng.accessories.services.utils import gen_addons_cert_mount_path
 
@@ -68,14 +68,9 @@ class ResourcePoolProvider(BaseProvider):
 
     def create(self, params: Dict) -> InstanceData:
         with transaction.atomic():
-            instance: Optional[PreCreatedInstance] = (
-                PreCreatedInstance.objects.select_for_update()
-                .filter(plan=self.plan, is_allocated=False)
-                .order_by("created")
-                .first()
-            )
+            instance = PreCreatedInstance.objects.select_precreated_instance(self.plan, params)
             if instance is None:
-                raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
+                raise InsufficientResourceError(_("资源不足, 配置资源实例失败."))
 
             instance.acquire()
 

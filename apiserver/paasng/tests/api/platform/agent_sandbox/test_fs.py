@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import uuid
 
 import pytest
@@ -26,19 +27,25 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAgentSandboxFSViewSet:
-    def test_file_lifecycle(self, api_client: APIClient, sandbox_id: str) -> None:
-        """Verify folder/file lifecycle APIs work end-to-end."""
+    """Test cases for Agent Sandbox file system APIs using mocked sandbox client."""
+
+    def test_file_lifecycle(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+        """Verify folder/file lifecycle APIs work end-to-end with mocked sandbox.
+
+        :param api_client: The API client fixture.
+        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        """
         folder_path = f"/workspace/{uuid.uuid4().hex[:8]}"
         file_path = f"{folder_path}/hello.txt"
         payload = b"hello-agent-sandbox\n"
 
         # Create a folder first
-        create_folder_url = reverse("agent_sandbox.fs.create_folder", kwargs={"sandbox_id": sandbox_id})
+        create_folder_url = reverse("agent_sandbox.fs.create_folder", kwargs={"sandbox_id": sandbox_id_with_mock})
         create_folder_resp = api_client.post(create_folder_url, data={"path": folder_path, "mode": "755"})
         assert create_folder_resp.status_code == status.HTTP_204_NO_CONTENT
 
         # Upload a file into the created folder
-        upload_file_url = reverse("agent_sandbox.fs.upload_file", kwargs={"sandbox_id": sandbox_id})
+        upload_file_url = reverse("agent_sandbox.fs.upload_file", kwargs={"sandbox_id": sandbox_id_with_mock})
         upload_file_resp = api_client.post(
             upload_file_url,
             data={"path": file_path, "file": SimpleUploadedFile("hello.txt", payload)},
@@ -47,20 +54,24 @@ class TestAgentSandboxFSViewSet:
         assert upload_file_resp.status_code == status.HTTP_204_NO_CONTENT
 
         # Download the uploaded file
-        download_file_url = reverse("agent_sandbox.fs.download_file", kwargs={"sandbox_id": sandbox_id})
+        download_file_url = reverse("agent_sandbox.fs.download_file", kwargs={"sandbox_id": sandbox_id_with_mock})
         download_file_resp = api_client.get(download_file_url, data={"path": file_path})
         assert download_file_resp.status_code == status.HTTP_200_OK
         assert download_file_resp.content == payload
         assert download_file_resp["Content-Disposition"] == 'attachment; filename="hello.txt"'
 
         # Delete the file
-        delete_file_url = reverse("agent_sandbox.fs.delete_file", kwargs={"sandbox_id": sandbox_id})
+        delete_file_url = reverse("agent_sandbox.fs.delete_file", kwargs={"sandbox_id": sandbox_id_with_mock})
         delete_file_resp = api_client.post(delete_file_url, data={"path": file_path})
         assert delete_file_resp.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_download_missing_file(self, api_client: APIClient, sandbox_id: str) -> None:
-        """Verify downloading a missing file returns the expected error code."""
-        download_file_url = reverse("agent_sandbox.fs.download_file", kwargs={"sandbox_id": sandbox_id})
+    def test_download_missing_file(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+        """Verify downloading a missing file returns the expected error code.
+
+        :param api_client: The API client fixture.
+        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        """
+        download_file_url = reverse("agent_sandbox.fs.download_file", kwargs={"sandbox_id": sandbox_id_with_mock})
         resp = api_client.get(download_file_url, data={"path": f"/workspace/{uuid.uuid4().hex[:8]}.txt"})
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST

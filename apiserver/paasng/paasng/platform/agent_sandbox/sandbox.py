@@ -15,34 +15,36 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import base64
+import copy
 import logging
-import os
 import re
 import shlex
-import time
-import uuid
 
 from django.utils import timezone
-from kubernetes.client import CoreV1Api
 from kubernetes.client.exceptions import ApiException
-from kubernetes.stream import stream as kube_stream
 
-from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_SNAPSHOT, DEFAULT_TARGET, DEFAULT_WORKDIR
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DEFAULT_IMAGE
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
-from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp, agent_sandbox_kmodel
+from paas_wl.bk_app.agent_sandbox.kres_entities import (
+    AgentSandbox,
+    AgentSandboxKresApp,
+    AgentSandboxService,
+    agent_sandbox_kmodel,
+    agent_sandbox_svc_kmodel,
+)
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
-    SandboxAlreadyExists,
     SandboxCreateTimeout,
+    SandboxDaemonAPIError,
     SandboxError,
-    SandboxExecTimeout,
+    SandboxExecError,
     SandboxFileError,
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
@@ -50,12 +52,10 @@ from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 
-# A special marker string to indicate the exit code in the stderr output.
-# Explained: a echo command with this marker is appended to the end of the executed command.
-_EXIT_CODE_MARKER = "__BKPAAS_EXIT_CODE__:"
-_ENV_VAR_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-
 logger = logging.getLogger(__name__)
+
+
+ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def create_sandbox(
@@ -63,6 +63,9 @@ def create_sandbox(
     creator: str,
     name: str | None = None,
     env_vars: dict | None = None,
+    snapshot: str | None = None,
+    snapshot_entrypoint: list | None = None,
+    workspace: str | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -70,73 +73,61 @@ def create_sandbox(
     :param creator: The creator of the sandbox.
     :param name: The name of the sandbox, optional.
     :param env_vars: The environment variables dict, optional.
+    :param snapshot: The snapshot name, optional.
+    :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
+    :param workspace: The workspace path, optional.
     """
-    sandbox_id = uuid.uuid4()
-    env_vars = env_vars or {}
-    if not name:
-        name = f"sbx-{sandbox_id.hex}"
-
-    if Sandbox.objects.filter(tenant_id=application.tenant_id, application=application, name=name).exists():
-        raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
-
-    sandbox = Sandbox.objects.create(
-        uuid=sandbox_id,
+    sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
-        snapshot=DEFAULT_SNAPSHOT,
-        target=DEFAULT_TARGET,
+        snapshot=snapshot or DEFAULT_IMAGE,
+        snapshot_entrypoint=snapshot_entrypoint,
         env_vars=env_vars,
-        status=SandboxStatus.PENDING.value,
         creator=creator,
-        tenant_id=application.tenant_id,
+        workspace=workspace,
     )
 
-    mgr = AgentSandboxResManager(application, sandbox.target)
+    mgr = AgentSandboxResManager(application, sandbox_obj.target)
     try:
-        mgr.create(
-            name=sandbox.name,
-            sandbox_id=sandbox.uuid.hex,
-            snapshot=sandbox.snapshot,
-            env_vars=sandbox.env_vars,
-        )
+        mgr.provision(sandbox_obj)
     except SandboxError:
-        sandbox.status = SandboxStatus.ERR_CREATING.value
-        sandbox.save(update_fields=["status"])
+        sandbox_obj.status = SandboxStatus.ERR_CREATING.value
+        sandbox_obj.save(update_fields=["status"])
         raise
 
     # The sandbox started successfully and running.
-    sandbox.status = SandboxStatus.RUNNING.value
-    sandbox.started_at = timezone.now()
-    sandbox.save(update_fields=["status", "started_at", "updated"])
-    return sandbox
+    sandbox_obj.status = SandboxStatus.RUNNING.value
+    sandbox_obj.started_at = timezone.now()
+    sandbox_obj.save(update_fields=["status", "started_at", "updated"])
+    return sandbox_obj
 
 
-def delete_sandbox(sandbox: Sandbox) -> None:
+def delete_sandbox(sandbox_obj: Sandbox) -> None:
     """Stop and delete a sandbox.
 
-    :param sandbox: The sandbox to delete.
+    :param sandbox_obj: The sandbox to delete.
     """
-    mgr = AgentSandboxResManager(sandbox.application, sandbox.target)
+    mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
     try:
-        mgr.destroy_by_name(sandbox.name)
+        mgr.destroy_by_name(sandbox_obj.name)
     except SandboxError:
-        sandbox.status = SandboxStatus.ERR_DELETING.value
-        sandbox.save(update_fields=["status"])
+        sandbox_obj.status = SandboxStatus.ERR_DELETING.value
+        sandbox_obj.save(update_fields=["status"])
         raise
+    # TODO: delete the sandbox record?
+    sandbox_obj.status = SandboxStatus.DELETED.value
+    sandbox_obj.deleted_at = timezone.now()
+    sandbox_obj.save(update_fields=["status", "deleted_at", "updated"])
 
-    sandbox.status = SandboxStatus.DELETED.value
-    sandbox.deleted_at = timezone.now()
-    sandbox.save(update_fields=["status", "deleted_at", "updated"])
 
-
-def get_sandbox_client(sandbox: Sandbox) -> "KubernetesPodSandbox":
+def get_sandbox_client(sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
     """Build a runtime sandbox client from a Sandbox record.
 
-    :param sandbox: The sandbox record.
+    :param sandbox_obj: The sandbox record.
     :returns: The runtime sandbox client for process and filesystem operations.
     """
-    mgr = AgentSandboxResManager(sandbox.application, sandbox.target)
-    return mgr.get_from_db_record(sandbox)
+    mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
+    return mgr.get_from_db_record(sandbox_obj)
 
 
 class AgentSandboxResManager:
@@ -153,28 +144,26 @@ class AgentSandboxResManager:
         self.app = app
         self.kres_app = AgentSandboxKresApp(paas_app_id=app.code, tenant_id=app.tenant_id, target=target)
 
-    def create(
-        self,
-        name: str,
-        sandbox_id: str,
-        snapshot: str,
-        env_vars: dict[str, str] | None = None,
-    ) -> "KubernetesPodSandbox":
-        """Create a new sandbox.
+    def provision(self, sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
+        """Provision a sandbox by a sandbox record in database.
 
-        :param name: The name of the sandbox.
-        :param sandbox_id: The ID of the the sandbox.
-        :param snapshot: The snapshot name used for initialize the sandbox.
-        :param env_vars: The environment variables injected into the sandbox.
-        :return: The sandbox object.
+        :param sandbox_obj: The sandbox object from db.
+        :return: The sandbox client.
         """
+        env: dict[str, str] = {
+            **copy.deepcopy(sandbox_obj.env_vars),
+            "TOKEN": sandbox_obj.daemon_token,
+            "SERVER_PORT": str(DAEMON_BIND_PORT),
+        }
+
         sandbox = AgentSandbox.create(
             self.kres_app,
-            name=name,
-            sandbox_id=sandbox_id,
-            workdir=DEFAULT_WORKDIR,
-            snapshot=snapshot,
-            env=env_vars,
+            name=sandbox_obj.name,
+            sandbox_id=sandbox_obj.uuid.hex,
+            workdir=sandbox_obj.workspace,
+            snapshot=sandbox_obj.snapshot,
+            snapshot_entrypoint=sandbox_obj.snapshot_entrypoint,
+            env=env,
         )
         sandbox_created = False
         try:
@@ -190,32 +179,43 @@ class AgentSandboxResManager:
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
-        return KubernetesPodSandbox(self.app, sandbox)
+
+        # 下发 NodePort 类型的 service, 关联到 sandbox pod, 以暴露 daemon 服务
+        sandbox_svc = AgentSandboxService.create(sandbox, sandbox_obj.daemon_port)
+        try:
+            agent_sandbox_svc_kmodel.create(sandbox_svc)
+        except ApiException as exc:
+            raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
+
+        return KubernetesPodSandbox(sandbox, sandbox_obj.daemon_endpoint, sandbox_obj.daemon_token)
 
     def destroy_by_name(self, name: str) -> None:
         """Destroy a sandbox by its name"""
         try:
             agent_sandbox_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
+            # service name 和 pod name 相同
+            agent_sandbox_svc_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
         except ApiException as exc:
             raise SandboxError("failed to delete sandbox pod") from KresAgentSandboxError(str(exc), exc)
 
     def destroy(self, sbx: "KubernetesPodSandbox") -> None:
         self.destroy_by_name(sbx.entity.name)
 
-    def get_from_db_record(self, sandbox: Sandbox) -> "KubernetesPodSandbox":
+    def get_from_db_record(self, sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
         """Build a runtime sandbox client from a Sandbox record in database."""
         try:
             entity = AgentSandbox.create(
                 self.kres_app,
-                name=sandbox.name,
-                sandbox_id=sandbox.uuid.hex,
-                workdir=DEFAULT_WORKDIR,
-                snapshot=sandbox.snapshot,
-                env=sandbox.env_vars,
+                name=sandbox_obj.name,
+                sandbox_id=sandbox_obj.uuid.hex,
+                workdir=sandbox_obj.workspace,
+                snapshot=sandbox_obj.snapshot,
+                snapshot_entrypoint=sandbox_obj.snapshot_entrypoint,
+                env=sandbox_obj.env_vars,
             )
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
-        return KubernetesPodSandbox(self.app, entity)
+        return KubernetesPodSandbox(entity, sandbox_obj.daemon_endpoint, sandbox_obj.daemon_token)
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:
@@ -242,22 +242,28 @@ class AgentSandboxResManager:
 
 
 class KubernetesPodSandbox(SandboxProcess, SandboxFS):
-    """Sandbox implementation backed by a Kubernetes Pod.
+    """Sandbox implementation backed by a Kubernetes Pod with daemon service.
 
-    **Experimental only**
+    This class uses a daemon HTTP service running inside the Pod for process
+    execution and filesystem operations, while still using Kubernetes API for
+    Pod lifecycle management (status, logs).
 
+    :param entity: The AgentSandbox entity containing sandbox configuration.
+    :param daemon_endpoint: The daemon service endpoint (e.g., "127.0.0.1:8080").
+    :param daemon_token: The authentication token for the daemon service.
     """
 
-    def __init__(self, app: Application, entity: AgentSandbox):
-        self.app = app
+    def __init__(self, entity: AgentSandbox, daemon_endpoint: str, daemon_token: str):
         self.entity = entity
+        self.daemon_endpoint = daemon_endpoint
+        self.daemon_token = daemon_token
         self.kres_app = self.entity.app
         self.namespace = self.kres_app.namespace
 
     def exec(
         self, cmd: list[str] | str, cwd: str | None = None, env_vars: dict | None = None, timeout: int = 60
     ) -> ExecResult:
-        """Execute a command inside the sandbox.
+        """Execute a command inside the sandbox via daemon API.
 
         :param cmd: The command to execute, can be a string or a list of strings.
         :param cwd: The working directory, defaults to the sandbox's workdir.
@@ -266,68 +272,88 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         """
         cwd = cwd or self.entity.workdir
         env_vars = env_vars or {}
-        shell_cmd = self._build_shell_command(cmd, cwd, env_vars)
-        stdout, stderr = self._stream_exec(shell_cmd, timeout=timeout)
-        stderr, exit_code = self._extract_exit_code(stderr)
-        return ExecResult(stdout=stdout, stderr=stderr, exit_code=exit_code)
+
+        # Build the command string with environment variables
+        cmd_str = self._build_command_string(cmd, env_vars)
+
+        try:
+            with self.daemon_client() as client:
+                result = client.execute(command=cmd_str, cwd=cwd, timeout=timeout)
+                # The daemon API returns combined output, we put it in stdout
+                # and leave stderr empty since the daemon doesn't separate them
+                return ExecResult(stdout=result.output, stderr="", exit_code=result.exit_code)
+        except SandboxDaemonAPIError as exc:
+            raise SandboxExecError(f"failed to execute command: {exc}")
 
     def code_run(self, content: str, language: str = "Python") -> CodeRunResult:
         """Run a piece of code inside the sandbox."""
         if language.lower() != "python":
             raise SandboxError(f"unsupported language: {language}")
 
-        filename = os.path.join(self.entity.workdir, f"code_run_{self.entity.name[:8]}.py")
-        self.upload_file(content.encode(), filename)
-        result = self.exec(["python", filename], cwd=self.entity.workdir)
+        # TODO 通过 base64 等方式, 提升 content 安全性
+        result = self.exec(["python", "-c", content], cwd=self.entity.workdir)
         return CodeRunResult(stdout=result.stdout, stderr=result.stderr, exit_code=result.exit_code)
 
     def create_folder(self, path: str, mode: str) -> None:
-        """Create a folder inside the sandbox."""
-        cmd = f"mkdir -p {shlex.quote(path)} && chmod {shlex.quote(mode)} {shlex.quote(path)}"
-        result = self.exec(cmd)
-        if result.exit_code != 0:
-            raise SandboxFileError(result.stderr or "failed to create folder")
+        """Create a folder inside the sandbox via daemon API.
+
+        :param path: The path of the folder to create.
+        :param mode: The permission mode (e.g., "0755").
+        """
+        try:
+            with self.daemon_client() as client:
+                client.create_folder(path=path, mode=mode)
+        except SandboxDaemonAPIError as exc:
+            raise SandboxFileError(f"failed to create folder: {exc}")
 
     def upload_file(self, file: bytes, remote_path: str, timeout: int = 30 * 60) -> None:
-        """Upload a file to the sandbox."""
-        encoded = base64.b64encode(file).decode()
-        encoded_len = len(encoded)
-        shell_cmd = [
-            "/bin/sh",
-            "-c",
-            # dd reads a fixed number of bytes, so the command can finish without closing stdin explicitly.
-            f"dd bs=1 count={encoded_len} status=none | base64 -d > {shlex.quote(remote_path)}; "
-            f"echo {_EXIT_CODE_MARKER}$? 1>&2",
-        ]
-        _, stderr = self._stream_exec(shell_cmd, timeout=timeout, stdin_data=encoded)
-        stderr, exit_code = self._extract_exit_code(stderr)
-        if exit_code != 0:
-            raise SandboxFileError(stderr or "failed to upload file")
+        """Upload a file to the sandbox via daemon API.
+
+        :param file: The file content as bytes.
+        :param remote_path: The destination path in the sandbox.
+        :param timeout: The timeout for the upload in seconds.
+        """
+        try:
+            with self.daemon_client() as client:
+                client.upload_file(file_content=file, dest_path=remote_path, timeout=timeout)
+        except SandboxDaemonAPIError as exc:
+            raise SandboxFileError(f"failed to upload file: {exc}")
 
     def delete_file(self, path: str, recursive: bool = False) -> None:
-        """Delete a file from the sandbox.
+        """Delete a file from the sandbox via daemon API.
 
         :param path: The path of the file to delete.
         :param recursive: Must be True to delete directories recursively.
         """
-        flag = "-rf" if recursive else "-f"
-        result = self.exec(["rm", flag, path])
-        if result.exit_code != 0:
-            raise SandboxFileError(result.stderr or "failed to delete file")
+        try:
+            with self.daemon_client() as client:
+                client.delete_file(path=path, recursive=recursive)
+        except SandboxDaemonAPIError as exc:
+            raise SandboxFileError(f"failed to delete file: {exc}")
 
     def download_file(self, remote_path: str, timeout: int = 30 * 60) -> bytes:
-        """Download a file from the sandbox."""
-        result = self.exec(f"base64 {shlex.quote(remote_path)}", timeout=timeout)
-        if result.exit_code != 0:
-            raise SandboxFileError(result.stderr or "failed to download file")
-        payload = "".join(result.stdout.splitlines())
+        """Download a file from the sandbox via daemon API.
+
+        :param remote_path: The path of the file to download.
+        :param timeout: The timeout for the download in seconds.
+        :returns: The file content as bytes.
+        """
         try:
-            return base64.b64decode(payload)
-        except Exception as exc:
-            raise SandboxFileError("failed to decode file content") from exc
+            with self.daemon_client() as client:
+                return client.download_file(path=remote_path, timeout=timeout)
+        except SandboxDaemonAPIError as exc:
+            raise SandboxFileError(f"failed to download file: {exc}")
+
+    def daemon_client(self) -> SandboxDaemonClient:
+        """Get the daemon client for this sandbox."""
+        # TODO: 将 SandboxDaemonClient 缓存为实例属性（lazy init），或者至少在 KubernetesPodSandbox 级别共享同一个 session?
+        return SandboxDaemonClient(self.daemon_endpoint, self.daemon_token)
 
     def get_status(self) -> str:
-        """Get the current status of the sandbox."""
+        """Get the current status of the sandbox.
+
+        Note: This still uses Kubernetes API as the daemon doesn't provide status info.
+        """
         try:
             sandbox = agent_sandbox_kmodel.get(self.kres_app, self.entity.name)
         except AppEntityNotFound as exc:
@@ -336,7 +362,10 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
             return sandbox.status
 
     def get_logs(self, tail_lines: int | None = None, timestamps: bool = False) -> str:
-        """Get the logs of the sandbox."""
+        """Get the logs of the sandbox.
+
+        Note: This still uses Kubernetes API as the daemon doesn't provide logs.
+        """
         try:
             with self.kres_app.get_kube_api_client() as client:
                 resp = kres.KPod(client).get_log(
@@ -349,83 +378,29 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         except ApiException as exc:
             raise SandboxError("failed to get sandbox logs") from KresAgentSandboxError(str(exc), exc)
 
-    def _build_shell_command(self, cmd: list[str] | str, cwd: str, env_vars: dict) -> list[str]:
-        """Build the shell command to be executed inside the sandbox."""
+    def _build_command_string(self, cmd: list[str] | str, env_vars: dict) -> str:
+        """Build the command string with environment variables.
+
+        :param cmd: The command to execute, can be a string or a list of strings.
+        :param env_vars: The environment variables to set.
+        :returns: The complete command string.
+        """
         cmd_str = cmd if isinstance(cmd, str) else " ".join(shlex.quote(item) for item in cmd)
-        env_prefix = " ".join(
+
+        if not env_vars:
+            return cmd_str
+
+        # Build environment variable exports
+        env_exports = " ".join(
             f"{self._validate_env_key(key)}={shlex.quote(str(value))}" for key, value in env_vars.items()
         )
-        if env_prefix:
-            cmd_str = f"export {env_prefix}; {cmd_str}"
-        if cwd:
-            cmd_str = f"cd {shlex.quote(cwd)} && {cmd_str}"
-        cmd_str = f"{cmd_str}; echo {_EXIT_CODE_MARKER}$? 1>&2"
-        return ["/bin/sh", "-c", cmd_str]
+        return f"export {env_exports}; {cmd_str}"
 
     @staticmethod
     def _validate_env_key(key: object) -> str:
+        """Validate that the environment variable key is valid."""
+
         key_str = str(key)
-        if not _ENV_VAR_KEY_PATTERN.fullmatch(key_str):
+        if not ENV_KEY_PATTERN.fullmatch(key_str):
             raise SandboxError(f"invalid environment variable key: {key_str!r}")
         return key_str
-
-    def _stream_exec(self, command: list[str], timeout: int, stdin_data: str | None = None) -> tuple[str, str]:
-        """Execute a command inside the sandbox."""
-        with self.kres_app.get_kube_api_client() as client:
-            try:
-                resp = kube_stream(
-                    CoreV1Api(client).connect_get_namespaced_pod_exec,
-                    self.entity.name,
-                    self.kres_app.namespace,
-                    command=command,
-                    stderr=True,
-                    stdin=stdin_data is not None,
-                    stdout=True,
-                    tty=False,
-                    _preload_content=False,
-                    _request_timeout=timeout,
-                )
-                if stdin_data is not None:
-                    resp.write_stdin(stdin_data)
-                    close_stdin = getattr(resp, "close_stdin", None)
-                    if callable(close_stdin):
-                        close_stdin()
-                stdout, stderr = self._collect_stream_output(resp, timeout)
-                resp.close()
-            except ApiException as exc:
-                raise SandboxError("pod exec failed") from KresAgentSandboxError(str(exc), exc)
-            else:
-                return stdout, stderr
-
-    def _collect_stream_output(self, resp, timeout: int) -> tuple[str, str]:
-        """Collect output from the stream response."""
-        stdout_chunks: list[str] = []
-        stderr_chunks: list[str] = []
-        deadline = time.monotonic() + timeout
-        while resp.is_open():
-            if time.monotonic() > deadline:
-                resp.close()
-                raise SandboxExecTimeout("command execution timed out")
-            resp.update(timeout=1)
-            while resp.peek_stdout():
-                stdout_chunks.append(resp.read_stdout())
-            while resp.peek_stderr():
-                stderr_chunks.append(resp.read_stderr())
-        return "".join(stdout_chunks), "".join(stderr_chunks)
-
-    @staticmethod
-    def _extract_exit_code(stderr: str) -> tuple[str, int]:
-        """Extract the exit code from stderr output."""
-        lines = stderr.splitlines()
-        if not lines:
-            return stderr, -1
-        last_line = lines[-1]
-        if not last_line.startswith(_EXIT_CODE_MARKER):
-            return stderr, -1
-        code_str = last_line[len(_EXIT_CODE_MARKER) :].strip()
-        try:
-            exit_code = int(code_str)
-        except ValueError:
-            exit_code = -1
-        cleaned = "\n".join(lines[:-1])
-        return cleaned, exit_code

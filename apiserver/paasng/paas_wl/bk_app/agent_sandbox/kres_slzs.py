@@ -14,21 +14,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from attrs import define
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.agent_sandbox.constants import (
-    DEFAULT_COMMAND,
     DEFAULT_IMAGE,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
-    DEFAULT_WORKDIR,
 )
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp
+    from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp, AgentSandboxService
+
+
+@define
+class ServicePortPair:
+    name: str
+    port: int
+    target_port: int
+    node_port: int
+    protocol: str = "TCP"
 
 
 class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
@@ -40,30 +48,31 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
             "kind": "Pod",
             "metadata": {
                 "name": obj.name,
-                "labels": AgentSandboxLabels.generate(obj.app._safe_app_id, obj.sandbox_id),
+                "labels": AgentSandboxLabels.generate(obj.sandbox_id),
             },
             "spec": self._construct_pod_spec(obj),
         }
 
-    def _construct_pod_spec(self, obj: "AgentSandbox") -> Dict:
-        workdir = obj.workdir or DEFAULT_WORKDIR
-        vol_name = "workspace"
+    @staticmethod
+    def _construct_pod_spec(obj: "AgentSandbox") -> Dict:
         env = [{"name": key, "value": value} for key, value in obj.env.items()]
+
+        main_container = {
+            "name": "main",
+            "image": obj.image,
+            "command": obj.command,
+            "args": obj.args,
+            "resources": DEFAULT_RESOURCES,
+            "env": env,
+            "imagePullPolicy": "IfNotPresent",
+        }
+        if obj.workdir:
+            main_container["workingDir"] = obj.workdir
+
         return {
             "restartPolicy": "Never",
             "terminationGracePeriodSeconds": DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
-            "containers": [
-                {
-                    "name": "main",
-                    "image": obj.image,
-                    "command": DEFAULT_COMMAND,
-                    "workingDir": workdir,
-                    "resources": DEFAULT_RESOURCES,
-                    "env": env,
-                    "volumeMounts": [{"name": vol_name, "mountPath": workdir}],
-                }
-            ],
-            "volumes": [{"name": vol_name, "emptyDir": {}}],
+            "containers": [main_container],
         }
 
 
@@ -72,7 +81,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
 
     def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandbox":
         main_container = kube_data.spec.containers[0]
-        workdir = getattr(main_container, "workingDir", DEFAULT_WORKDIR)
+        workdir = getattr(main_container, "workingDir", "")
         # Parse and get env as dict
         env = {
             str(item.name): str(getattr(item, "value", ""))
@@ -80,7 +89,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             if getattr(item, "name", None)
         }
         labels = kube_data.metadata.labels or {}
-        _, sandbox_id = AgentSandboxLabels.parse(labels)
+        sandbox_id = AgentSandboxLabels.parse(labels)
 
         return self.entity_type(
             app=app,
@@ -89,6 +98,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             workdir=workdir,
             image=getattr(main_container, "image", DEFAULT_IMAGE),
             env=env,
+            args=getattr(main_container, "args", []),
             status=self._get_status(kube_data),
         )
 
@@ -103,27 +113,75 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
         return phase
 
 
+class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService"]):
+    def serialize(self, obj: "AgentSandboxService", original_obj: Optional[ResourceInstance] = None, **kwargs):
+        labels = AgentSandboxLabels.generate(obj.sandbox_id)
+        body: Dict[str, Any] = {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": obj.name,
+                "labels": labels,
+            },
+            "spec": {
+                "type": "NodePort",
+                "ports": [
+                    {
+                        "name": port.name,
+                        "port": port.port,
+                        "targetPort": port.target_port,
+                        "protocol": port.protocol,
+                        "nodePort": port.node_port,
+                    }
+                    for port in obj.ports
+                ],
+                "selector": labels,
+            },
+        }
+
+        if original_obj:
+            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
+
+        return body
+
+
+class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxService", "AgentSandboxKresApp"]):
+    def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandboxService":
+        ports = [
+            ServicePortPair(
+                name=p.name,
+                port=p.port,
+                target_port=p.targetPort,
+                node_port=getattr(p, "nodePort", 0),
+            )
+            for p in kube_data.spec.ports
+        ]
+        return self.entity_type(
+            app=app,
+            name=kube_data.metadata.name,
+            ports=ports,
+            sandbox_id=AgentSandboxLabels.parse(kube_data.metadata.labels),
+        )
+
+
 class AgentSandboxLabels:
     """Generate and parse labels for an agent sandbox Pod."""
 
-    key_app_id = "bkapp.paas.bk.tencent.com/code"
     key_sandbox_id = "bkapp.paas.bk.tencent.com/sandbox-id"
 
     @classmethod
-    def parse(cls, labels: dict[str, str]) -> tuple[str, str]:
+    def parse(cls, labels: dict[str, str]) -> str:
         """Parse labels from an agent sandbox Pod.
 
-        :return: (paas_app_id, sandbox_id)
+        :return: sandbox_id
         """
-        paas_app_id = labels.get(cls.key_app_id, "")
         sandbox_id = labels.get(cls.key_sandbox_id, "")
-        return paas_app_id, sandbox_id
+        return sandbox_id
 
     @classmethod
-    def generate(cls, paas_app_id: str, sandbox_id: str) -> dict[str, str]:
+    def generate(cls, sandbox_id: str) -> dict[str, str]:
         """Generate labels for an agent sandbox Pod."""
         return {
             "app.kubernetes.io/managed-by": "bkpaas-agent-sandbox",
-            cls.key_app_id: paas_app_id,
             cls.key_sandbox_id: sandbox_id,
         }

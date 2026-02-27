@@ -90,6 +90,7 @@ class ClusterAllocationPolicyCondType(StrStructuredEnum):
 
     REGION_IS = EnumField("region_is", label="Region")
     USERNAME_IN = EnumField("username_in", label="Username.In")
+    USAGE_IS = EnumField("usage_is", label="Usage")
 
 
 class ClusterComponentName(StrStructuredEnum):

@@ -164,7 +164,12 @@ class DeploymentStateMgr:
         # Update the status of the deployment and the env obj.
         self.update(status=status.value, err_detail=err_detail)
         env_obj = self.deployment.app_environment
-        # Only restore archived status when deployment in release phase and deployment is not interrupted.
+        # Only set is_offlined to False (mark env as online) when the deployment is in the release
+        # phase and has not been interrupted.
+        #
+        # NOTE: Checking if JobStatus is INTERRUPTED is for semantic integrity assurance,
+        # because interrupted operations are meaningless during the release phase,
+        # and the release operation will still complete.
         if self.phase_type == DeployPhaseTypes.RELEASE and status != JobStatus.INTERRUPTED and env_obj.is_offlined:
             env_obj.restore_archived()
 

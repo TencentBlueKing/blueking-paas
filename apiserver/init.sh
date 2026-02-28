@@ -308,6 +308,8 @@ ensure-init-data() {
     python manage.py loaddata fixtures/services.yaml
     # 初始化本地 redis 增强服务的 Plan
     python manage.py init_redis_service_plans
+    # 配置内置资源配额的 requests
+    python manage.py update_builtin_plans_requests --cpu ${PAAS_BUILTIN_PLANS_REQUESTS_CPU} --memory ${PAAS_BUILTIN_PLANS_REQUESTS_MEM}
 }
 
 ensure-runtime-steps() {

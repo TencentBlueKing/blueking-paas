@@ -51,12 +51,12 @@ class BaseArchiveManager:
 
         :param operator: 操作人(user_id)
         :return: OfflineOperation
-        :raise Deployment.DoseNotExist: 未曾部署成功, 无需下架
+        :raise Deployment.DoseNotExist: 未曾部署, 无需下架
         :raise OfflineOperationExistError: 当已存在正在下架的任务时抛该异常
         """
-        deployment = DeploymentGetter(env=self.env).get_latest_succeeded()
+        deployment = DeploymentGetter(env=self.env).get_latest_deployment()
         if deployment is None:
-            # raise Deployment.DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
+            # raise Deployment.DoseNotExist 即说明没有部署过，那么也不存在下架的必要
             raise Deployment.DoesNotExist
         latest_offline_operation = OfflineOperationGetter(env=self.env).get_latest_succeeded()
         if latest_offline_operation is not None:

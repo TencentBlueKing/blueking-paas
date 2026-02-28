@@ -24,6 +24,7 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.applications.constants import AppStatus
 from paasng.platform.evaluation.constants import BatchTaskStatus
 from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.datetime import humanize_timedelta
@@ -37,7 +38,11 @@ class ApplicationFilterSLZ(serializers.Serializer):
 
     valid_order_by_fields = ("code", "created", "latest_operated_at")
 
-    is_active = serializers.BooleanField(required=False, allow_null=True, help_text="应用是否活跃")
+    app_status = serializers.ChoiceField(
+        required=False,
+        choices=AppStatus.get_choices(),
+        help_text="应用部署状态: not_deployed(未部署) / normal(正常) / offline(下架)",
+    )
     regions = serializers.ListField(required=False, help_text="应用 region")
     languages = serializers.ListField(required=False, help_text="应用开发语言")
     search_term = serializers.CharField(required=False, help_text="搜索关键字")
@@ -53,6 +58,11 @@ class ApplicationFilterSLZ(serializers.Serializer):
             if f.name not in self.valid_order_by_fields:
                 raise ValidationError("无效的排序选项：%s" % f)
         return fields
+
+    def validate_app_status(self, value: str | None):
+        if value:
+            return AppStatus(value)
+        return None
 
 
 class LegacyApplicationFilterSLZ(serializers.Serializer):

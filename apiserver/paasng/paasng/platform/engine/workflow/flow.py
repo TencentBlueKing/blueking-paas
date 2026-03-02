@@ -164,13 +164,14 @@ class DeploymentStateMgr:
         # Update the status of the deployment and the env obj.
         self.update(status=status.value, err_detail=err_detail)
         env_obj = self.deployment.app_environment
-        # Only set is_offlined to False (mark env as online) when the deployment is in the release
-        # phase and has not been interrupted.
+
+        # Always clear is_offlined when the release phase ends (including failure and interruption),
+        # because resources may have already been created in the cluster, and clearing this flag
+        # ensures stop-process and offline operations work normally.
         #
-        # NOTE: Checking if JobStatus is INTERRUPTED is for semantic integrity assurance,
-        # because interrupted operations are meaningless during the release phase,
-        # and the release operation will still complete.
-        if self.phase_type == DeployPhaseTypes.RELEASE and status != JobStatus.INTERRUPTED and env_obj.is_offlined:
+        # NOTE: The release phase can be interrupted, but resource submission cannot be stopped
+        # mid-flight; the subsequent status polling will handle the interruption signal.
+        if self.phase_type == DeployPhaseTypes.RELEASE and env_obj.is_offlined:
             env_obj.restore_archived()
 
         # End the deploy phase by sending signal, this should cause the clients that are watching

@@ -16,7 +16,7 @@
           :label="$t('所属租户')"
           :count-map="appCountInfo"
           :has-count="!isSoftDeletePage"
-          @change="getPlatformApps"
+          @change="handleTenantChange"
         />
       </div>
       <bk-input
@@ -428,6 +428,11 @@ export default {
     },
     // 搜索
     handleSearch() {
+      this.resetPage();
+      this.getPlatformApps();
+    },
+    // 切换租户
+    handleTenantChange() {
       this.resetPage();
       this.getPlatformApps();
     },

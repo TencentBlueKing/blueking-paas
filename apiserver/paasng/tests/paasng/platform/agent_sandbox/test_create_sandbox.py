@@ -45,6 +45,7 @@ def mock_sandbox_provision() -> Iterator[mock.MagicMock]:
         yield mock_provision
 
 
+# TODO: 利用实际的集群资源来测试沙箱的创建
 class TestCreateSandbox:
     """Test sandbox creation functionality."""
 
@@ -89,6 +90,7 @@ class TestCreateSandbox:
         assert sandbox.snapshot_entrypoint == ["python", "-m", "http.server"]
 
 
+# TODO: 利用实际的集群资源来测试沙箱的删除
 class TestDeleteSandbox:
     """Test sandbox deletion functionality."""
 

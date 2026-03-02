@@ -26,28 +26,28 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestAgentSandboxProcessViewSet:
     """Test cases for Agent Sandbox process APIs using mocked sandbox client."""
 
-    def test_exec_and_code_run(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+    def test_exec_and_code_run(self, api_client: APIClient, sandbox_id: str) -> None:
         """Verify command exec and code_run APIs work as expected with mocked sandbox.
 
         :param api_client: The API client fixture.
-        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        :param sandbox_id: The sandbox UUID with mocked client backend.
         """
         # Execute a simple shell command and verify the process result.
-        exec_url = reverse("agent_sandbox.process.exec", kwargs={"sandbox_id": sandbox_id_with_mock})
+        exec_url = reverse("agent_sandbox.process.exec", kwargs={"sandbox_id": sandbox_id})
         exec_resp = api_client.post(exec_url, data={"cmd": ["echo", "hello-agent"]}, format="json")
 
         assert exec_resp.status_code == status.HTTP_200_OK
         assert exec_resp.json()["exit_code"] == 0
         assert "hello-agent" in exec_resp.json()["stdout"]
 
-    def test_get_logs(self, api_client: APIClient, sandbox_id_with_mock: str) -> None:
+    def test_get_logs(self, api_client: APIClient, sandbox_id: str) -> None:
         """Verify logs API is reachable and returns string payload with mocked sandbox.
 
         :param api_client: The API client fixture.
-        :param sandbox_id_with_mock: The sandbox UUID with mocked client backend.
+        :param sandbox_id: The sandbox UUID with mocked client backend.
         """
         # Request sandbox logs with query options.
-        logs_url = reverse("agent_sandbox.process.logs", kwargs={"sandbox_id": sandbox_id_with_mock})
+        logs_url = reverse("agent_sandbox.process.logs", kwargs={"sandbox_id": sandbox_id})
         logs_resp = api_client.get(logs_url, data={"tail_lines": 50, "timestamps": False})
 
         # Validate logs response contract.

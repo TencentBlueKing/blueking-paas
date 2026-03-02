@@ -21,12 +21,10 @@ from unittest import mock
 
 import pytest
 
-from paasng.platform.agent_sandbox.entities import ExecResult
-from paasng.platform.agent_sandbox.exceptions import SandboxFileError
+from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp
 from paasng.platform.agent_sandbox.models import Sandbox
-
-# The default working directory in sandbox container
-DEFAULT_WORKDIR = "/workspace"
+from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
+from tests.paasng.platform.agent_sandbox.stubs import DEFAULT_WORKDIR, StubDaemonClientFactory
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -44,76 +42,33 @@ def _mock_daemon_host_port() -> Iterator[None]:
         yield
 
 
-class MockKubernetesPodSandbox:
-    """Mock implementation of KubernetesPodSandbox for API testing.
+@pytest.fixture(autouse=True)
+def _mock_verified_app_permission() -> Iterator[None]:
+    """Mock IsVerifiedAppPermission to always return True for testing.
 
-    Provides in-memory file system and command execution simulation.
+    This bypasses the API Gateway app verification check in tests.
     """
-
-    def __init__(self):
-        # In-memory file system storage: {path: content_bytes}
-        self._files: dict[str, bytes] = {}
-        # In-memory folder storage: set of folder paths
-        self._folders: set[str] = {DEFAULT_WORKDIR}
-
-    def exec(
-        self, cmd: list[str] | str, cwd: str | None = None, env_vars: dict | None = None, timeout: int = 60
-    ) -> ExecResult:
-        """Execute a command and return simulated result."""
-        # Handle echo command
-        if isinstance(cmd, list) and cmd and cmd[0] == "echo":
-            output = " ".join(cmd[1:]) + "\n"
-            return ExecResult(stdout=output, stderr="", exit_code=0)
-
-        return ExecResult(stdout="", stderr="", exit_code=0)
-
-    def code_run(self, content: str, language: str = "Python") -> ExecResult:
-        """Run code and return simulated result."""
-        return ExecResult(stdout="", stderr="", exit_code=0)
-
-    def create_folder(self, path: str, mode: str) -> None:
-        """Create a folder in the in-memory storage."""
-        self._folders.add(path)
-
-    def upload_file(self, file: bytes, remote_path: str, timeout: int = 30 * 60) -> None:
-        """Upload a file to the in-memory storage."""
-        self._files[remote_path] = file
-
-    def download_file(self, remote_path: str, timeout: int = 30 * 60) -> bytes:
-        """Download a file from the in-memory storage."""
-        if remote_path not in self._files:
-            raise SandboxFileError(f"failed to download file: File not found: {remote_path}")
-        return self._files[remote_path]
-
-    def delete_file(self, path: str, recursive: bool = False) -> None:
-        """Delete a file or folder from the in-memory storage."""
-        if path in self._files:
-            del self._files[path]
-        elif path in self._folders:
-            if recursive:
-                self._folders.discard(path)
-                to_delete = [p for p in self._files if p.startswith(path + "/")]
-                for p in to_delete:
-                    del self._files[p]
-            else:
-                self._folders.discard(path)
-
-    def get_logs(self, tail_lines: int | None = None, timestamps: bool = False) -> str:
-        """Return simulated logs."""
-        return "test log output\n"
+    with mock.patch(
+        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+        return_value=True,
+    ), mock.patch(
+        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
+        return_value=True,
+    ):
+        yield
 
 
 @pytest.fixture()
-def mock_k8s_sandbox() -> MockKubernetesPodSandbox:
-    """Fixture that provides a MockKubernetesPodSandbox instance.
+def stub_daemon_factory() -> StubDaemonClientFactory:
+    """Fixture that provides a StubDaemonClientFactory instance.
 
-    :returns: A mock sandbox for testing sandbox operations.
+    :returns: A factory for creating stub daemon clients with shared state.
     """
-    return MockKubernetesPodSandbox()
+    return StubDaemonClientFactory()
 
 
 @pytest.fixture()
-def sandbox_record(bk_app: Any) -> Sandbox:
+def sandbox_obj(bk_app: Any) -> Sandbox:
     """Create a Sandbox record in database for testing.
 
     This fixture creates a Sandbox model instance without actually provisioning
@@ -134,21 +89,48 @@ def sandbox_record(bk_app: Any) -> Sandbox:
 
 
 @pytest.fixture()
-def sandbox_id_with_mock(
-    sandbox_record: Sandbox,
-    mock_k8s_sandbox: MockKubernetesPodSandbox,
+def sandbox_id(
+    sandbox_obj: Sandbox,
+    stub_daemon_factory: StubDaemonClientFactory,
 ) -> Generator[str, None, None]:
-    """Fixture that provides a sandbox UUID with mocked KubernetesPodSandbox.
+    """Fixture that provides a sandbox UUID with mocked daemon client.
 
-    This fixture creates a Sandbox record and mocks get_sandbox_client to return
-    a MockKubernetesPodSandbox, enabling API tests without real K8s resources.
+    This fixture creates a Sandbox record and returns a KubernetesPodSandbox
+    with StubDaemonClient backend, enabling API tests without real K8s/daemon.
 
-    :param sandbox_record: The sandbox record fixture.
-    :param mock_k8s_sandbox: The mock sandbox fixture.
+    :param sandbox_obj: The sandbox record fixture.
+    :param stub_daemon_factory: The daemon client factory fixture.
     :returns: The sandbox UUID string.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.views.get_sandbox_client",
-        return_value=mock_k8s_sandbox,
+    kres_app = AgentSandboxKresApp(
+        paas_app_id=sandbox_obj.application.code,
+        tenant_id=sandbox_obj.application.tenant_id,
+        target=sandbox_obj.target,
+    )
+    entity = AgentSandbox.create(
+        app=kres_app,
+        name=sandbox_obj.name,
+        sandbox_id=sandbox_obj.uuid.hex,
+        workdir=sandbox_obj.workspace,
+        snapshot=sandbox_obj.snapshot,
+        env=sandbox_obj.env_vars,
+    )
+    sandbox_client = KubernetesPodSandbox(
+        entity=entity,
+        daemon_endpoint=sandbox_obj.daemon_endpoint,
+        daemon_token=sandbox_obj.daemon_token,
+    )
+
+    def patched_daemon_client():
+        return stub_daemon_factory.get_client(sandbox_client.daemon_endpoint, sandbox_client.daemon_token)
+
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.get_sandbox_client",
+            return_value=sandbox_client,
+        ),
+        mock.patch.object(sandbox_client, "daemon_client", patched_daemon_client),
+        # Mock get_logs since it directly calls K8s API
+        mock.patch.object(sandbox_client, "get_logs", return_value="test log output\n"),
     ):
-        yield sandbox_record.uuid.hex
+        yield sandbox_obj.uuid.hex

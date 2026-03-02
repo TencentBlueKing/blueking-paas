@@ -32,18 +32,18 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestAgentSandboxViewSetCreate:
     """Test cases for AgentSandboxViewSet.create API."""
 
-    def test_create_sandbox_success(self, api_client: APIClient, bk_app: Any, sandbox_record: Sandbox) -> None:
+    def test_create_sandbox_success(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
         """Verify sandbox creation API works with mocked create_sandbox.
 
         :param api_client: The API client fixture.
         :param bk_app: The application fixture.
-        :param sandbox_record: The sandbox record fixture (used as mock return value).
+        :param sandbox_obj: The sandbox record fixture (used as mock return value).
         """
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
             "paasng.platform.agent_sandbox.views.create_sandbox",
-            return_value=sandbox_record,
+            return_value=sandbox_obj,
         ):
             resp = api_client.post(
                 create_url,
@@ -102,19 +102,19 @@ class TestAgentSandboxViewSetCreate:
 class TestAgentSandboxViewSetDestroy:
     """Test cases for AgentSandboxViewSet.destroy API."""
 
-    def test_destroy_sandbox_success(self, api_client: APIClient, sandbox_record: Sandbox) -> None:
+    def test_destroy_sandbox_success(self, api_client: APIClient, sandbox_obj: Sandbox) -> None:
         """Verify sandbox destruction API works with mocked delete_sandbox.
 
         :param api_client: The API client fixture.
-        :param sandbox_record: The sandbox record fixture.
+        :param sandbox_obj: The sandbox record fixture.
         """
-        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_record.uuid.hex})
+        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
 
         with mock.patch("paasng.platform.agent_sandbox.views.delete_sandbox") as mock_delete:
             resp = api_client.delete(destroy_url)
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        mock_delete.assert_called_once_with(sandbox_record)
+        mock_delete.assert_called_once_with(sandbox_obj)
 
     def test_destroy_sandbox_not_found(self, api_client: APIClient) -> None:
         """Verify sandbox destruction returns 404 when sandbox not found.
@@ -126,13 +126,13 @@ class TestAgentSandboxViewSetDestroy:
 
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_destroy_sandbox_failed(self, api_client: APIClient, sandbox_record: Sandbox) -> None:
+    def test_destroy_sandbox_failed(self, api_client: APIClient, sandbox_obj: Sandbox) -> None:
         """Verify sandbox destruction returns proper error when deletion fails.
 
         :param api_client: The API client fixture.
-        :param sandbox_record: The sandbox record fixture.
+        :param sandbox_obj: The sandbox record fixture.
         """
-        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_record.uuid.hex})
+        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
 
         with mock.patch(
             "paasng.platform.agent_sandbox.views.delete_sandbox",

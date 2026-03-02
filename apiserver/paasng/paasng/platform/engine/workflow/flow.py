@@ -165,12 +165,8 @@ class DeploymentStateMgr:
         self.update(status=status.value, err_detail=err_detail)
         env_obj = self.deployment.app_environment
 
-        # release 阶段无论以何种状态结束 (包括失败和中断), 都需要清除 is_offlined 标志,
-        # 以确保后续停止进程或下架操作正常运行.
-        #
-        # 不区分 status 的原因:
-        #   release 阶段的资源下发一旦开始便无法中止 (中断信号也会被忽略, 由后续状态轮询处理),
-        #   因此无论以何种状态结束, 都需要清除 is_offlined 标志.
+        # 进入 release 阶段后, 需要将 is_offlined 标志设置为 False (标记为上线状态).
+        # NOTE: release 阶段任务失败或任务被中断也算上线, 如果仅判断成功状态, 则逻辑无法停止进程或下架应用.
         if self.phase_type == DeployPhaseTypes.RELEASE and env_obj.is_offlined:
             env_obj.restore_archived()
 

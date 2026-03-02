@@ -165,12 +165,12 @@ class DeploymentStateMgr:
         self.update(status=status.value, err_detail=err_detail)
         env_obj = self.deployment.app_environment
 
-        # Always clear is_offlined when the release phase ends (including failure and interruption),
-        # because resources may have already been created in the cluster, and clearing this flag
-        # ensures stop-process and offline operations work normally.
+        # release 阶段无论以何种状态结束 (包括失败和中断), 都需要清除 is_offlined 标志,
+        # 以确保后续停止进程或下架操作正常运行.
         #
-        # NOTE: The release phase can be interrupted, but resource submission cannot be stopped
-        # mid-flight; the subsequent status polling will handle the interruption signal.
+        # 不区分 status 的原因:
+        #   release 阶段的资源下发一旦开始便无法中止 (中断信号也会被忽略, 由后续状态轮询处理),
+        #   因此无论以何种状态结束, 都需要清除 is_offlined 标志.
         if self.phase_type == DeployPhaseTypes.RELEASE and env_obj.is_offlined:
             env_obj.restore_archived()
 

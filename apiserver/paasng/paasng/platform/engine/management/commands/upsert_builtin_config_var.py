@@ -35,9 +35,7 @@ class Command(BaseCommand):
     help = "Upsert a built-in environment variable (BuiltinConfigVar)"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--key", dest="key", required=True, help="环境变量名（必须以 BK_、BKAPP_ 或 BKPAAS_ 开头）"
-        )
+        parser.add_argument("--key", dest="key", required=True, help="环境变量名")
         parser.add_argument("--value", dest="value", required=True, help="环境变量值")
         parser.add_argument("--description", dest="description", default="", help="环境变量描述")
 

@@ -42,11 +42,12 @@ def _mock_daemon_host_port() -> Iterator[None]:
         yield
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def _mock_verified_app_permission() -> Iterator[None]:
     """Mock IsVerifiedAppPermission to always return True for testing.
 
     This bypasses the API Gateway app verification check in tests.
+    Use this fixture explicitly in tests that need permission bypass.
     """
     with mock.patch(
         "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
@@ -54,6 +55,35 @@ def _mock_verified_app_permission() -> Iterator[None]:
     ), mock.patch(
         "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
         return_value=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def _mock_unverified_app_permission() -> Iterator[None]:
+    """Mock IsVerifiedAppPermission to return False for has_permission.
+
+    Use this to test scenarios where the request app is not verified.
+    """
+    with mock.patch(
+        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+        return_value=False,
+    ):
+        yield
+
+
+@pytest.fixture()
+def _mock_app_mismatch_permission() -> Iterator[None]:
+    """Mock IsVerifiedAppPermission to pass has_permission but fail has_object_permission.
+
+    Use this to test scenarios where the request app doesn't match the target app.
+    """
+    with mock.patch(
+        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+        return_value=True,
+    ), mock.patch(
+        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
+        return_value=False,
     ):
         yield
 

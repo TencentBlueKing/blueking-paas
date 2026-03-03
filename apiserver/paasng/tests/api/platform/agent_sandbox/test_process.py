@@ -23,6 +23,7 @@ from rest_framework.test import APIClient
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.usefixtures("_mock_verified_app_permission")
 class TestAgentSandboxProcessViewSet:
     """Test cases for Agent Sandbox process APIs using mocked sandbox client."""
 

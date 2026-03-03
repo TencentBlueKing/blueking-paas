@@ -29,6 +29,7 @@ from paasng.platform.agent_sandbox.models import Sandbox
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.usefixtures("_mock_verified_app_permission")
 class TestAgentSandboxViewSetCreate:
     """Test cases for AgentSandboxViewSet.create API."""
 
@@ -99,6 +100,7 @@ class TestAgentSandboxViewSetCreate:
         assert resp.json()["code"] == "AGENT_SANDBOX_CREATE_FAILED"
 
 
+@pytest.mark.usefixtures("_mock_verified_app_permission")
 class TestAgentSandboxViewSetDestroy:
     """Test cases for AgentSandboxViewSet.destroy API."""
 
@@ -142,3 +144,46 @@ class TestAgentSandboxViewSetDestroy:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "AGENT_SANDBOX_DELETE_FAILED"
+
+
+@pytest.mark.usefixtures("_mock_unverified_app_permission")
+class TestAgentSandboxPermissionDenied:
+    """Test cases for permission denied scenarios."""
+
+    def test_create_sandbox_unverified_app(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify sandbox creation returns 403 when request app is not verified.
+
+        :param api_client: The API client fixture.
+        :param bk_app: The application fixture.
+        """
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+        resp = api_client.post(create_url, data={"name": "test-sandbox"}, format="json")
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_destroy_sandbox_unverified_app(self, api_client: APIClient, sandbox_obj: Sandbox) -> None:
+        """Verify sandbox destruction returns 403 when request app is not verified.
+
+        :param api_client: The API client fixture.
+        :param sandbox_obj: The sandbox record fixture.
+        """
+        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
+        resp = api_client.delete(destroy_url)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("_mock_app_mismatch_permission")
+class TestAgentSandboxAppMismatch:
+    """Test cases for app mismatch scenarios (request app != target app)."""
+
+    def test_destroy_sandbox_app_mismatch(self, api_client: APIClient, sandbox_obj: Sandbox) -> None:
+        """Verify sandbox destruction returns 403 when request app doesn't match target app.
+
+        :param api_client: The API client fixture.
+        :param sandbox_obj: The sandbox record fixture.
+        """
+        destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
+        resp = api_client.delete(destroy_url)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN

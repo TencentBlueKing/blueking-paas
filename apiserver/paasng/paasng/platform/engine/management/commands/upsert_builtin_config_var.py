@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """
-A command for adding built-in environment variables (BuiltinConfigVar).
+A command for upserting built-in environment variables (BuiltinConfigVar).
 """
 
 from bkpaas_auth import get_user_by_user_id
@@ -30,9 +30,9 @@ from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 class Command(BaseCommand):
-    """添加内置环境变量"""
+    """添加或更新内置环境变量"""
 
-    help = "Add a built-in environment variable (BuiltinConfigVar)"
+    help = "Upsert a built-in environment variable (BuiltinConfigVar)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -40,50 +40,26 @@ class Command(BaseCommand):
         )
         parser.add_argument("--value", dest="value", required=True, help="环境变量值")
         parser.add_argument("--description", dest="description", default="", help="环境变量描述")
-        parser.add_argument(
-            "--operator",
-            dest="operator",
-            required=False,
-            type=str,
-            default=settings.ADMIN_USERNAME,
-            help="操作人用户名",
-        )
-        parser.add_argument(
-            "--update",
-            dest="update",
-            action="store_true",
-            default=False,
-            help="若环境变量已存在则更新其值和描述",
-        )
 
-    def handle(self, key, value, description, operator, update, *args, **options):
-        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
+    def handle(self, key, value, description, *args, **options):
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, settings.ADMIN_USERNAME))
 
-        # Validate key format
+        # Note: Validate manually instead of reusing BuiltinConfigVarCreateInputSLZ, because its
+        # validate_key() rejects duplicate keys, which conflicts with upsert semantics.
         if not RE_CONFIG_VAR_KEY.match(key):
             raise CommandError(
                 f"Invalid key format: '{key}'. Key must start with an uppercase letter and consist of "
                 "uppercase letters, digits, and underscores only."
             )
-
-        # Validate key prefix
         valid_prefixes = CustomBuiltinConfigVarPrefix.get_values()
         if not key.startswith(tuple(valid_prefixes)):
             raise CommandError(
                 f"Invalid key prefix for '{key}'. Key must start with one of: {', '.join(valid_prefixes)}"
             )
 
-        existing = BuiltinConfigVar.objects.filter(key=key).first()
-        if existing:
-            if not update:
-                raise CommandError(
-                    f"Built-in environment variable '{key}' already exists. Use --update flag to overwrite it."
-                )
-            existing.value = value
-            existing.description = description
-            existing.operator = operator
-            existing.save(update_fields=["value", "description", "operator", "updated"])
-            self.stdout.write(self.style.SUCCESS(f"Successfully updated built-in environment variable '{key}'."))
-        else:
-            BuiltinConfigVar.objects.create(key=key, value=value, description=description, operator=operator)
-            self.stdout.write(self.style.SUCCESS(f"Successfully created built-in environment variable '{key}'."))
+        _, created = BuiltinConfigVar.objects.update_or_create(
+            key=key,
+            defaults={"value": value, "description": description, "operator": operator},
+        )
+        action = "created" if created else "updated"
+        self.stdout.write(self.style.SUCCESS(f"Successfully {action} built-in environment variable '{key}'."))

@@ -117,7 +117,7 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
         return body
 
 
-class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
+class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxIngress":
         spec = kube_data.spec
         rules = spec.get("rules") or []

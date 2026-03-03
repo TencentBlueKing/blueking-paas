@@ -165,7 +165,8 @@
                   :disabled="
                     !!deploymentInfo.state.offline.pending ||
                     !!deploymentInfo.state.deployment.pending ||
-                    !deploymentInfo.state.deployment.latest_succeeded
+                    !deploymentInfo.state.deployment.latest ||
+                    deploymentInfo.state.offline.latest_succeeded
                   "
                   :loading="!!deploymentInfo.state.offline.pending"
                 >
@@ -370,6 +371,10 @@ export default {
 
   beforeDestroy() {
     bus.$off('get-release-info');
+    if (this.intervalTimer) {
+      clearTimeout(this.intervalTimer);
+      this.intervalTimer = null;
+    }
   },
 
   mounted() {

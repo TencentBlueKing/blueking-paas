@@ -56,7 +56,7 @@ def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
         return None
 
 
-class ProcessDeserializer(AppEntityDeserializer["Process"]):
+class ProcessDeserializer(AppEntityDeserializer["Process", "WlApp"]):
     """Deserializer for Process"""
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Process":
@@ -202,7 +202,7 @@ class ProcessDeserializer(AppEntityDeserializer["Process"]):
         raise RuntimeError("No main container found in resource")
 
 
-class InstanceDeserializer(AppEntityDeserializer["Instance"]):
+class InstanceDeserializer(AppEntityDeserializer["Instance", "WlApp"]):
     """Deserializer for Instance"""
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Instance":

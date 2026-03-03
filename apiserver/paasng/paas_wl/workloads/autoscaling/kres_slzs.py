@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 
 
-class ProcAutoscalingDeserializer(AppEntityDeserializer["ProcAutoscaling"]):
+class ProcAutoscalingDeserializer(AppEntityDeserializer["ProcAutoscaling", "WlApp"]):
     """Deserializer for ProcAutoscaling"""
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcAutoscaling":

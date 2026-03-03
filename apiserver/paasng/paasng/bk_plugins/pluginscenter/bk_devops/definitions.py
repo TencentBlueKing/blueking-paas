@@ -83,7 +83,7 @@ class BuildStageStatus(BaseModel):
 
     stageId: str
     name: str
-    status: str
+    status: Optional[str]
     startEpoch: Optional[int]
     elapsed: Optional[int]
     showMsg: Optional[str]

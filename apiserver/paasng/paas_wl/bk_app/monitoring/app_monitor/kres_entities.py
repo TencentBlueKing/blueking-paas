@@ -17,13 +17,16 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from paas_wl.infras.resources.base.crd import KServiceMonitor
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 
 from .entities import Endpoint, ServiceSelector
 from .kres_slzs import ServiceMonitorDeserializer, ServiceMonitorSerializer
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -42,4 +45,4 @@ class ServiceMonitor(AppEntity):
         serializer = ServiceMonitorSerializer
 
 
-service_monitor_kmodel: AppEntityManager[ServiceMonitor] = AppEntityManager(ServiceMonitor)
+service_monitor_kmodel: "AppEntityManager[ServiceMonitor, WlApp]" = AppEntityManager(ServiceMonitor)

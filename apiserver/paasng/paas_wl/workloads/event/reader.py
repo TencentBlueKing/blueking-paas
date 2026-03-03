@@ -21,7 +21,7 @@ from paas_wl.infras.resources.kube_res.base import AppEntityReader, ResourceList
 from .kres_entities import Event
 
 
-class EventReader(AppEntityReader[Event]):
+class EventReader(AppEntityReader[Event, WlApp]):
     """Reader for Event"""
 
     def list_by_app_instance_name(self, app: WlApp, app_instance_name: str) -> ResourceList[Event]:

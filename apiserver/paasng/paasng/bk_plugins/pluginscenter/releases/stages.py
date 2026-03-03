@@ -266,8 +266,13 @@ class PipelineStage(BaseStageController):
     def async_check_status(self) -> bool:
         if self.build is None:
             return False
-        status = self.ctl.retrieve_build_status(build=self.build)
-        self._update_pipline_status(status.status, status.stageStatus)
+        # 部分情况下调用蓝盾 API 返回的字段会跟预期不一致而导致报错
+        try:
+            status = self.ctl.retrieve_build_status(build=self.build)
+            self._update_pipline_status(status.status, status.stageStatus)
+        except Exception:
+            logger.exception("update pipeline status error")
+            return False
         return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def execute(self, operator: str):

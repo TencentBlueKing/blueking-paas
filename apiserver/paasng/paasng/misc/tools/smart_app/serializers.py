@@ -92,6 +92,7 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     app_code = serializers.CharField(help_text="应用 code")
     source_origin = serializers.CharField(help_text="源码来源")
     app_version = serializers.CharField(help_text="应用版本号")
+    packaging_version = serializers.CharField(help_text="包版本")
     package_name = serializers.CharField(help_text="源码包名")
     sha256_signature = serializers.CharField(help_text="源码包 sha256 签名")
     status = serializers.CharField(help_text="构建状态")

@@ -82,7 +82,7 @@ class ServiceViewSet(viewsets.GenericViewSet):
         except ServiceObjNotFound:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        slz = ServiceUpdateSLZ(data=request.data)
+        slz = ServiceUpdateSLZ(data=request.data, context={"service": service})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         data_before = ServiceObjOutputSLZ(service).data

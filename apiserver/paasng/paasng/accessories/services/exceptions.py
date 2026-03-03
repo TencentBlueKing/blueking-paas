@@ -16,5 +16,5 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-class ResourceNotEnoughError(Exception):
+class InsufficientResourceError(Exception):
     """资源不足异常"""

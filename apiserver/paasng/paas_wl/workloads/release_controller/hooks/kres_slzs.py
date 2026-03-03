@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class CommandDeserializer(AppEntityDeserializer["Command"]):
+class CommandDeserializer(AppEntityDeserializer["Command", "WlApp"]):
     api_version = "v1"
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Command":

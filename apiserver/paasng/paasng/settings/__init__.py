@@ -185,6 +185,7 @@ INSTALLED_APPS = [
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
     "paasng.platform.smart_app",
+    "paasng.platform.agent_sandbox",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
     "paasng.bk_plugins.pluginscenter.iam_adaptor",
@@ -253,7 +254,7 @@ MIDDLEWARE = [
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
     # 激活用户时区（需要在所有认证中间件之后）
-    "paasng.infras.accounts.middlewares.UserTimezoneMiddleware",
+    "bkpaas_auth.middlewares.UserTimezoneMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
@@ -1307,6 +1308,9 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ---------------------
 # s-mart 包构建工具相关配置
 # ---------------------
+
+# 是否启用 S-Mart 包构建功能
+FE_FEATURE_SETTINGS_SMART_APP_BUILDER = settings.get("FE_FEATURE_SETTINGS_SMART_APP_BUILDER", False)
 
 # CNB 构建工具镜像名
 SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")

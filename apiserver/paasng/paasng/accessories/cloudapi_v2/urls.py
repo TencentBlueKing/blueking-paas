@@ -15,33 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import path
-
-from .mcp_servers import views
+from django.urls import include, path
 
 urlpatterns = [
-    # 获取 mcp-server 列表
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/inner/mcp-servers/",
-        views.MCPServerAPIViewSet.as_view({"get": "list_mcp_servers"}),
-        name="api.cloudapi.v2.mcp_servers",
-    ),
-    # 获取 app mcp-server 权限列表
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/inner/mcp-servers/permissions/",
-        views.MCPServerAPIViewSet.as_view({"get": "list_app_mcp_server_permissions"}),
-        name="api.cloudapi.v2.app_mcp_server_permissions",
-    ),
-    # 批量申请权限
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/inner/mcp-servers/permissions/apply/",
-        views.MCPServerAPIViewSet.as_view({"post": "apply_mcp_server_permissions"}),
-        name="api.cloudapi.v2.mcp_server_permissions_apply",
-    ),
-    # 权限申请记录
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/inner/mcp-servers/permissions/apply-records/",
-        views.MCPServerAPIViewSet.as_view({"get": "list_mcp_server_permissions_apply_records"}),
-        name="api.cloudapi.v2.mcp_server_permissions_apply_records",
-    ),
+    # MCP Server 相关
+    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.mcp_servers.urls")),
+    # 网关 API & ESB 组件 API 相关
+    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.apigateway.urls")),
 ]

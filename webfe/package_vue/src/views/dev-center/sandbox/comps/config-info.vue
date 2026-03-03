@@ -102,7 +102,8 @@
               class="value flex-1 text-ellipsis f12"
               v-bk-overflow-tips
             >
-              {{ item.value || '--' }}
+              {{ item.is_sensitive ? "******" : item.value || '--' }}
+
             </div>
           </div>
           <div class="actions">

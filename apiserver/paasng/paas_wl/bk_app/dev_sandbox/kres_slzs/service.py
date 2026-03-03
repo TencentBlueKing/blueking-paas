@@ -57,7 +57,7 @@ class DevSandboxServiceSerializer(AppEntitySerializer["DevSandboxService"]):
         return body
 
 
-class DevSandboxServiceDeserializer(AppEntityDeserializer["DevSandboxService"]):
+class DevSandboxServiceDeserializer(AppEntityDeserializer["DevSandboxService", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxService":
         ports = [
             ServicePortPair(

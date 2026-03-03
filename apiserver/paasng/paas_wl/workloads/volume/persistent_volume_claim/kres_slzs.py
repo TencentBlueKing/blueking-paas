@@ -48,7 +48,7 @@ class PersistentVolumeClaimSerializer(AppEntitySerializer["PersistentVolumeClaim
         }
 
 
-class PersistentVolumeClaimDeserializer(AppEntityDeserializer["PersistentVolumeClaim"]):
+class PersistentVolumeClaimDeserializer(AppEntityDeserializer["PersistentVolumeClaim", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "PersistentVolumeClaim":
         return self.entity_type(
             app=app,

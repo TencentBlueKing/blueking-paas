@@ -1,0 +1,147 @@
+definitions:
+  pkg_server_fs.CreateFolderRequest:
+    properties:
+      mode:
+        type: string
+      path:
+        type: string
+    required:
+    - path
+    type: object
+  pkg_server_process.ExecuteRequest:
+    properties:
+      command:
+        type: string
+      cwd:
+        description: Current working directory
+        type: string
+      timeout:
+        type: integer
+    required:
+    - command
+    type: object
+  pkg_server_process.ExecuteResponse:
+    properties:
+      exitCode:
+        type: integer
+      output:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /files/:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a file or folder at the specified path, with optional recursive
+        deletion for directories
+      operationId: DeleteFile
+      parameters:
+      - description: Path to the file or folder to delete
+        in: query
+        name: path
+        required: true
+        type: string
+      - description: Enable recursive deletion for directories
+        in: query
+        name: recursive
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Delete a file or folder
+      tags:
+      - files
+  /files/download:
+    get:
+      consumes:
+      - application/json
+      description: Download a file from the specified path
+      operationId: DownloadFile
+      parameters:
+      - description: Path to the file to download
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+      summary: Download a file
+      tags:
+      - files
+  /files/folder:
+    post:
+      consumes:
+      - application/json
+      description: Create a new folder with optional permission mode
+      operationId: CreateFolder
+      parameters:
+      - description: Folder creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_fs.CreateFolderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      summary: Create a folder
+      tags:
+      - files
+  /files/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a file to the specified destination path
+      operationId: UploadFile
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Destination path for the uploaded file
+        in: formData
+        name: destPath
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Upload a file
+      tags:
+      - files
+  /process/execute:
+    post:
+      consumes:
+      - application/json
+      description: Execute a shell command and return the output and exit code
+      operationId: ExecuteCommand
+      parameters:
+      - description: Command execution request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_process.ExecuteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_server_process.ExecuteResponse'
+      summary: Execute a command
+      tags:
+      - process
+swagger: "2.0"

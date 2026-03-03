@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import TYPE_CHECKING
 
 from django.db import models
 from django.utils.functional import cached_property
@@ -25,6 +26,9 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.bk_app.applications.models.validators import validate_app_name, validate_app_structure
 from paasng.core.tenant.fields import tenant_id_field_factory
+
+if TYPE_CHECKING:
+    from paas_wl.infras.resources.base.base import EnhancedApiClient  # noqa F401
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +88,15 @@ class App(UuidAuditedModel):
         from paas_wl.bk_app.applications.managers import get_metadata
 
         return get_metadata(self).environment
+
+    def get_kube_api_client(self) -> "EnhancedApiClient":
+        """Get the kube client for this app.
+
+        **This method exists for match KresAppProtocol interface.**
+        """
+        from paas_wl.infras.resources.utils.basic import get_client_by_app
+
+        return get_client_by_app(self)
 
     @property
     def latest_config(self):

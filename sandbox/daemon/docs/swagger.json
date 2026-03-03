@@ -1,0 +1,223 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/files/": {
+            "delete": {
+                "description": "Delete a file or folder at the specified path, with optional recursive deletion for directories",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Delete a file or folder",
+                "operationId": "DeleteFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Path to the file or folder to delete",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Enable recursive deletion for directories",
+                        "name": "recursive",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/files/download": {
+            "get": {
+                "description": "Download a file from the specified path",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Download a file",
+                "operationId": "DownloadFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Path to the file to download",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/files/folder": {
+            "post": {
+                "description": "Create a new folder with optional permission mode",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Create a folder",
+                "operationId": "CreateFolder",
+                "parameters": [
+                    {
+                        "description": "Folder creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_fs.CreateFolderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/files/upload": {
+            "post": {
+                "description": "Upload a file to the specified destination path",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Upload a file",
+                "operationId": "UploadFile",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Destination path for the uploaded file",
+                        "name": "destPath",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/process/execute": {
+            "post": {
+                "description": "Execute a shell command and return the output and exit code",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "process"
+                ],
+                "summary": "Execute a command",
+                "operationId": "ExecuteCommand",
+                "parameters": [
+                    {
+                        "description": "Command execution request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_process.ExecuteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_process.ExecuteResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "pkg_server_fs.CreateFolderRequest": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "mode": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_process.ExecuteRequest": {
+            "type": "object",
+            "required": [
+                "command"
+            ],
+            "properties": {
+                "command": {
+                    "type": "string"
+                },
+                "cwd": {
+                    "description": "Current working directory",
+                    "type": "string"
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_process.ExecuteResponse": {
+            "type": "object",
+            "properties": {
+                "exitCode": {
+                    "type": "integer"
+                },
+                "output": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

@@ -62,8 +62,9 @@ class TestSmartAppBuilder:
 
     def test_launch_build_process(self, smart_app_builder):
         with (
-            mock.patch(
-                "paasng.misc.tools.smart_app.build.builder.get_default_cluster_name",
+            mock.patch.object(
+                SmartAppBuilder,
+                "_get_default_cluster_name",
                 return_value=CLUSTER_NAME_FOR_TESTING,
             ),
             mock.patch(

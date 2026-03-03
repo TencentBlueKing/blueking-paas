@@ -17,7 +17,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Literal, Optional
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional
 
 from paas_wl.bk_app.monitoring.bklog.constants import BkLogConfigType
 from paas_wl.bk_app.monitoring.bklog.entities import LabelSelector, LogFilterCondition
@@ -25,6 +25,9 @@ from paas_wl.bk_app.monitoring.bklog.kres_slzs import BKLogConfigDeserializer, B
 from paas_wl.infras.resources.base import crd
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,7 @@ class BkAppLogConfig(AppEntity):
         serializer = BKLogConfigSerializer
 
 
-class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig]):
+class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig, "WlApp"]):
     def __init__(self):
         super().__init__(BkAppLogConfig)
 

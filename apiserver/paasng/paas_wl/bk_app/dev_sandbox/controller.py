@@ -88,10 +88,10 @@ class DevSandboxController:
     :param dev_sandbox: 开发沙箱（DB 模型）
     """
 
-    sandbox_mgr = AppEntityManager(DevSandbox)
-    service_mgr = AppEntityManager(DevSandboxService)
-    ingress_mgr = AppEntityManager(DevSandboxIngress)
-    configmap_mgr = AppEntityManager(DevSandboxConfigMap)
+    sandbox_mgr: AppEntityManager[DevSandbox, WlApp] = AppEntityManager(DevSandbox)
+    service_mgr: AppEntityManager[DevSandboxService, WlApp] = AppEntityManager(DevSandboxService)
+    ingress_mgr: AppEntityManager[DevSandboxIngress, WlApp] = AppEntityManager(DevSandboxIngress)
+    configmap_mgr: AppEntityManager[DevSandboxConfigMap, WlApp] = AppEntityManager(DevSandboxConfigMap)
 
     def __init__(self, dev_sandbox: "DevSandboxModel"):
         self.dev_sandbox = dev_sandbox

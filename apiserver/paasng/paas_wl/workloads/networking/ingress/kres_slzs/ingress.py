@@ -112,7 +112,7 @@ class IngressV1Beta1Serializer(AppEntitySerializer["ProcessIngress"]):
         return body
 
 
-class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
+class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress", "WlApp"]):
     """Deserializer for ProcessIngress in ApiVersion networking.k8s.io/v1beta1 or extensions/v1beta1
 
     IMPORTANT: This class is not compatible with ingress-nginx >= 1.0
@@ -274,7 +274,7 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
         return body
 
 
-class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
+class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress", "WlApp"]):
     """Deserializer for ProcessIngress in ApiVersion networking.k8s.io/v1, which is available in k8s 1.19+
 
     IMPORTANT: This class is not compatible with ingress-nginx < 1.0

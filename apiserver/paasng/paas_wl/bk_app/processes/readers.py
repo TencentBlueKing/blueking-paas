@@ -56,7 +56,7 @@ class ProcessAPIAdapter:
         return {RESOURCE_TYPE_KEY: "process"}
 
 
-class ProcessReader(AppEntityReader[Process]):
+class ProcessReader(AppEntityReader[Process, WlApp]):
     """Manager for ProcSpecs"""
 
     def list_by_app_with_meta(
@@ -79,7 +79,7 @@ class ProcessReader(AppEntityReader[Process]):
 process_kmodel = ProcessReader(Process)
 
 
-class InstanceReader(AppEntityReader[Instance]):
+class InstanceReader(AppEntityReader[Instance, WlApp]):
     """Customized reader for ProcInstance"""
 
     def list_by_process_type(self, app: "WlApp", process_type: str) -> List[Instance]:
@@ -138,7 +138,7 @@ def retrieve_associated_wl_app(labels: Dict[str, str]) -> WlApp:
         raise NotAppScopedResource
 
 
-class ProcessNamespaceScopedReader(NamespaceScopedReader[Process]):
+class ProcessNamespaceScopedReader(NamespaceScopedReader[Process, WlApp]):
     entity_type = Process
 
     def list_by_ns_with_mdata(
@@ -149,12 +149,12 @@ class ProcessNamespaceScopedReader(NamespaceScopedReader[Process]):
         labels.update(extra_labels)
         return super().list_by_ns_with_mdata(cluster_name, namespace, labels)
 
-    def retrieve_associated_wl_app(self, kube_data: ResourceInstance) -> WlApp:
+    def retrieve_associated_kres_app(self, kube_data: ResourceInstance) -> WlApp:
         labels: Dict[str, str] = kube_data.metadata.labels or {}
         return retrieve_associated_wl_app(labels)
 
 
-class InstanceNamespaceScopeReader(NamespaceScopedReader[Instance]):
+class InstanceNamespaceScopeReader(NamespaceScopedReader[Instance, WlApp]):
     entity_type = Instance
 
     def list_by_ns_with_mdata(
@@ -165,7 +165,7 @@ class InstanceNamespaceScopeReader(NamespaceScopedReader[Instance]):
         labels.update(extra_labels)
         return super().list_by_ns_with_mdata(cluster_name, namespace, labels)
 
-    def retrieve_associated_wl_app(self, kube_data: ResourceInstance) -> WlApp:
+    def retrieve_associated_kres_app(self, kube_data: ResourceInstance) -> WlApp:
         labels: Dict[str, str] = kube_data.metadata.labels or {}
         return retrieve_associated_wl_app(labels)
 

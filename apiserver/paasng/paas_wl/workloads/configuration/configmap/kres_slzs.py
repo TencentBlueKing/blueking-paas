@@ -41,7 +41,7 @@ class ConfigMapSerializer(AppEntitySerializer["ConfigMap"]):
         }
 
 
-class ConfigMapDeserializer(AppEntityDeserializer["ConfigMap"]):
+class ConfigMapDeserializer(AppEntityDeserializer["ConfigMap", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ConfigMap":
         return self.entity_type(
             app=app,

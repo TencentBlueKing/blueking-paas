@@ -50,7 +50,7 @@ class ImageCredentialsSerializer(AppEntitySerializer["ImageCredentials"]):
         }
 
 
-class ImageCredentialsDeserializer(AppEntityDeserializer["ImageCredentials"]):
+class ImageCredentialsDeserializer(AppEntityDeserializer["ImageCredentials", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance):
         if kube_data.type != constants.KUBE_SECRET_TYPE:
             raise ValueError(f"Invalid kube resource: {kube_data.type}")

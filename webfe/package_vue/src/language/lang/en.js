@@ -1580,7 +1580,6 @@ export default {
   '基于蓝鲸PaaS，支持在线拖拽布局后，一键部署至线上环境。': 'Based on BlueKing PaaS, it supports online drag-and-drop layout and one-click deployment to the online environment.',
   '蓝鲸MagicBox提供丰富的PC端、移动端前端UI组件，更有样例套餐助您快速搭建前端页面。同时蓝鲸MagicBox提供可视化开发服务，支持在线拖拽页面，所见即所得。': 'BlueKing MagicBox provides a wealth of front-end UI components for PC and mobile, and there are sample packages to help you quickly build front-end pages. At the same time, BlueKing MagicBox provides visual development services, supports dragging and dropping pages online, and what you see is what you get.',
   运维开发平台: 'LessCode',
-  '支持在线拖拽，使用MagicBox提供的组件，自由布局页面。': 'Support online drag and drop, use the components provided by MagicBox, and freely layout pages.',
   前端jQuery组件库: 'Front-end jQuery Component Library',
   '提供表单、表格、富文本、按钮等丰富的UI组件，包括PC版、移动版。': 'Provides rich UI components such as forms, tables, rich text, buttons, etc., including PC version and mobile version.',
   前端Vue组件库: 'Front-end Vue Component Library',

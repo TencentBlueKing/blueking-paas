@@ -56,6 +56,7 @@ from paasng.accessories.servicehub.services import (
     ServiceObj,
     UnboundEngineAppInstanceRel,
 )
+from paasng.accessories.services.exceptions import InsufficientResourceError
 from paasng.accessories.services.models import Plan, Service
 from paasng.accessories.services.providers import get_plan_schema_by_provider_name
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
@@ -63,6 +64,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +139,8 @@ class LocalServiceObj(ServiceObj):
 class LocalEngineAppInstanceRel(EngineAppInstanceRel):
     """A relationship between EngineApp and Provisioned instance"""
 
+    db_obj: ServiceEngineAppAttachment
+
     def __init__(self, db_obj: ServiceEngineAppAttachment):
         self.db_obj = db_obj
 
@@ -157,6 +161,8 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
 
         try:
             self.db_obj.create_service_instance()
+        except InsufficientResourceError:
+            raise error_codes.RESOURCE_POOL_IS_EMPTY.f(_("资源不足, 配置实例失败"))
         except Exception as e:
             raise ProvisionInstanceError(
                 _("配置资源实例异常: unable to provision instance for services<{service_name}>").format(

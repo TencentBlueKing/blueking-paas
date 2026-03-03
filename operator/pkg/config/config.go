@@ -35,6 +35,12 @@ type ProjectConfigReader interface {
 	// GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress
 	GetCustomDomainIngressClassName() string
 	IsAutoscalingEnabled() bool
+
+	// Logging related methods
+	// GetLegacyLogHostPath returns the host path for legacy app logging volume
+	GetLegacyLogHostPath() string
+	// GetMulModuleLogHostPath returns the host path for multi-module app logging volume
+	GetMulModuleLogHostPath() string
 }
 
 // defaultConfig is a default implementation of ProjectConfigReader, it will be used
@@ -76,6 +82,14 @@ func (d defaultConfig) GetCustomDomainIngressClassName() string {
 
 func (d defaultConfig) IsAutoscalingEnabled() bool {
 	return false
+}
+
+func (d defaultConfig) GetLegacyLogHostPath() string {
+	return "/data/bkapp/logs"
+}
+
+func (d defaultConfig) GetMulModuleLogHostPath() string {
+	return "/data/bkapp/v3logs"
 }
 
 // Global global config instance

@@ -18,7 +18,7 @@
 import datetime
 import logging
 from dataclasses import dataclass
-from typing import Dict, Literal
+from typing import TYPE_CHECKING, Dict, Literal
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base import kres
@@ -34,6 +34,9 @@ from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paas_wl.workloads.release_controller.hooks.entities import CommandKubeAdaptor
 from paas_wl.workloads.release_controller.hooks.kres_slzs import CommandDeserializer, CommandSerializer
 from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -106,4 +109,4 @@ class Command(AppEntity):
         )
 
 
-command_kmodel: AppEntityManager[Command] = AppEntityManager(Command)
+command_kmodel: AppEntityManager[Command, "WlApp"] = AppEntityManager(Command)

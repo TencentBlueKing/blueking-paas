@@ -74,8 +74,11 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             plan=plan,
             config=data["config"],
             credentials=data["credentials"],
+            allocation_type=data["allocation_type"],
+            binding_policy=data.get("binding_policy") or {},
             tenant_id=plan.tenant_id,
         )
+
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
@@ -100,7 +103,9 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
         instance.config = data["config"]
         instance.credentials = data["credentials"]
-        instance.save(update_fields=["config", "credentials"])
+        instance.allocation_type = data["allocation_type"]
+        instance.binding_policy = data.get("binding_policy") or {}
+        instance.save(update_fields=["config", "credentials", "allocation_type", "binding_policy"])
 
         data_after = PreCreatedInstanceOutputSLZ(instance).data
         add_plat_mgt_audit_record(

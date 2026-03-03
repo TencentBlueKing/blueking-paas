@@ -86,7 +86,7 @@ class ImageCredentials(AppEntity):
         return {item.registry: "Basic " + b64encode(f"{item.username}:{item.password}") for item in self.credentials}
 
 
-class ImageCredentialsManager(AppEntityManager[ImageCredentials]):
+class ImageCredentialsManager(AppEntityManager[ImageCredentials, WlApp]):
     def __init__(self):
         super().__init__(ImageCredentials)
 

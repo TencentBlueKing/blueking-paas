@@ -24,13 +24,15 @@ from paasng.accessories.cloudapi_v2.mcp_servers.apigw.clients import Client
 from paasng.accessories.cloudapi_v2.mcp_servers.exceptions import MCPServerApiGatewayServiceError
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
+STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway", "prod")
+
 
 class MCPServerApiClient:
     """mcp server api 通过 APIGW 提供的 API"""
 
     def __init__(self, tenant_id: str):
         self.tenant_id = tenant_id
-        client = Client(endpoint=settings.BK_API_URL_TMPL_FOR_APIGW, stage="prod")
+        client = Client(endpoint=settings.BK_API_URL_TMPL_FOR_APIGW, stage=STAGE)
         client.update_headers(self._prepare_headers())
         self.client = client.api
 

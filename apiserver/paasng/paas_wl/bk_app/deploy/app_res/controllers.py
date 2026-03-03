@@ -91,7 +91,7 @@ class ProcessesHandler(ResourceHandlerBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.process_manager = AppEntityManager(Process)
+        self.process_manager: AppEntityManager[Process, "WlApp"] = AppEntityManager(Process)
 
     def deploy(self, processes: List[Process]):
         """Deploy a list process objects.
@@ -623,7 +623,7 @@ class CommandHandler(PodScheduleHandler):
 class ProcAutoscalingHandler(ResourceHandlerBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.manager = AppEntityManager(ProcAutoscaling)
+        self.manager: AppEntityManager[ProcAutoscaling, "WlApp"] = AppEntityManager(ProcAutoscaling)
 
     def deploy(self, scaling: ProcAutoscaling):
         """向集群中下发 GPA （创建/更新）"""

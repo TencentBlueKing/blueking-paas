@@ -51,6 +51,10 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "AccountAllowAppSourceControlView",
     "StatisticsPVAPIView",
     "ApplicationsSearchViewset",
+    # TODO: 优化 Agent 沙箱鉴权
+    "AgentSandboxViewSet",
+    "AgentSandboxFSViewSet",
+    "AgentSandboxProcessViewSet",
     # [CONFIRMED]: the view have implemented more detailed permission checking in its own way
     "MigrationDetailViewset.state",
     "MigrationDetailViewset.old_state",

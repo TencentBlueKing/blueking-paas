@@ -16,12 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.workloads.networking.ingress.entities import PServicePortPair
 from paas_wl.workloads.networking.ingress.kres_slzs.service import ProcessServiceDeserializer, ProcessServiceSerializer
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp
 
 
 @dataclass
@@ -41,4 +44,4 @@ class ProcessService(AppEntity):
         serializer = ProcessServiceSerializer
 
 
-service_kmodel: AppEntityManager[ProcessService] = AppEntityManager(ProcessService)
+service_kmodel: AppEntityManager[ProcessService, "WlApp"] = AppEntityManager(ProcessService)

@@ -309,7 +309,6 @@ ensure-init-data() {
     # 初始化本地 redis 增强服务的 Plan
     python manage.py init_redis_service_plans
     # 配置内置资源配额的 requests
-    # At least one of --cpu or --memory must be provided
     if [[ -n "${PAAS_BUILTIN_PLANS_CPU_REQUEST}" || -n "${PAAS_BUILTIN_PLANS_MEMORY_REQUEST}" ]]; then
         python manage.py update_builtin_plans_requests --cpu ${PAAS_BUILTIN_PLANS_CPU_REQUEST} --memory ${PAAS_BUILTIN_PLANS_MEMORY_REQUEST}
     fi

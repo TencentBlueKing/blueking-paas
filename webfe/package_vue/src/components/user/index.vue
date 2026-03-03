@@ -1,13 +1,13 @@
 <template>
   <div :class="localValue">
-    <!-- 多租户人员选择器 -->
+    <!-- 人员选择器 -->
     <bk-user-selector
-      v-if="isMultiTenantDisplayMode"
+      v-if="isMultiTenantDisplayMode || $isInternalVersion"
       ref="bkUserSelector"
       v-model="localValue"
       v-bind="props"
       :api-base-url="apiBaseUrl"
-      :tenant-id="tenantId"
+      :tenant-id="tenantId || 'default'"
       :multiple="multiple"
     ></bk-user-selector>
     <template v-else>
@@ -105,7 +105,13 @@ export default {
       return this.multiple ? -1 : 1;
     },
     apiBaseUrl() {
-      return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
+      // 多租户模式
+      if (this.isMultiTenantDisplayMode) {
+        return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
+      }
+      // 上云版
+      const baseUrl = window.BK_API_URL_TMPL;
+      return baseUrl?.includes('{api_name}') ? `${baseUrl.replace('{api_name}', 'bk-user-web')}/prod` : baseUrl;
     },
   },
   methods: {

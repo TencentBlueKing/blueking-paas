@@ -60,9 +60,11 @@ export DJANGO_SETTINGS_MODULE="svc_redis.settings"
 # Add the helm chart
 $ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
 
-# Deploy the redis-operator（已验证 v0.19.3 版本可用）
+# Deploy the redis-operator
 $ helm upgrade redis-operator ot-helm/redis-operator \
-  --install --create-namespace --namespace ot-operators
+  --install --create-namespace --namespace ot-operators \
+  --version 0.23.0 \
+  --set manager.config.kubeClientQPS=100
   
 # Test
 $ helm test redis-operator --namespace ot-operators 

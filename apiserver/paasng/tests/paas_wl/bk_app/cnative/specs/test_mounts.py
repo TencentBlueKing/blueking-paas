@@ -139,7 +139,7 @@ class TestVolumeSourceController:
             app_code=bk_app.code,
             module_id=bk_module.id,
             mount_path="/path/",
-            environment_name=MountEnvName.GLOBAL,
+            environment_name=MountEnvName.STAG,
             name="mount-configmap",
             source_type=VolumeSourceType.ConfigMap.value,
             tenant_id=bk_app.tenant_id,
@@ -184,7 +184,7 @@ class TestVolumeSourceController:
         mounts.deploy_volume_source(bk_stag_env)
 
         cm = configmap_kmodel.get(app=bk_stag_env.wl_app, name=new_source.name)
-        assert cm.data == new_data
+        assert dict(cm.data) == new_data
 
         # Old pending_delete=True DB record should be removed
         assert not self._configmap_source_exists(mount_configmap, pending_delete=True)

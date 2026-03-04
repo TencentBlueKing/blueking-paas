@@ -42,6 +42,12 @@ class ConfigMapSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     data = models.JSONField(default=dict)
     display_name = models.CharField(max_length=63, null=True, help_text=_("挂载资源展示名称"))
+    # Note: pending_delete 字段为 False 时表示下次部署时会使用该记录, True 时表示下次部署该记录会被删除
+    #
+    # - 创建记录时, pending_delete 默认为 False, 表示该记录会被正常使用
+    # - 修改记录时, 先将原有记录的 pending_delete 字段设置为 True, 然后创建一条新的记录, 新记录的 pending_delete 字段设置为 False
+    # - 删除记录时, 将记录的 pending_delete 字段设置为 True
+    pending_delete = models.BooleanField(default=False, help_text=_("是否标记为待删除状态"))
 
     tenant_id = tenant_id_field_factory()
 
@@ -49,7 +55,7 @@ class ConfigMapSource(TimestampedModel):
         return self.display_name or f"ConfigMap-{self.created.strftime('%y%m%d%H%M')}"
 
     class Meta:
-        unique_together = ("name", "application_id", "environment_name")
+        unique_together = ("name", "application_id", "environment_name", "pending_delete")
 
 
 class PersistentStorageSource(TimestampedModel):

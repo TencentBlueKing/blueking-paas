@@ -40,7 +40,6 @@ from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, c
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag, ModuleEnvironment
-from paasng.platform.modules.models import Module
 
 
 class BaseVolumeSourceController:
@@ -106,7 +105,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         return VolumeSource(configMap=ConfigMapSourceSpec(name=name))
 
     def list_by_app(self, application_id: str) -> QuerySet[ConfigMapSource]:
-        return self.model_class.objects.filter(application_id=application_id)
+        return self.model_class.objects.filter(application_id=application_id, pending_delete=False)
 
     def create_by_app(self, application_id: str, environment_name: str, tenant_id: str, **kwargs) -> None:
         """configmap 类型属于模块级别,暂不支持应用级别单独创建"""
@@ -121,6 +120,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             application_id=app_id,
             environment_name=env_name,
             name=source_name,
+            pending_delete=False,
         )
 
     def create_by_env(
@@ -138,22 +138,37 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         )
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
-        # 需要删除对应的 k8s volume 资源
         source = self.model_class.objects.get(
             application_id=app_id,
             name=source_name,
+            pending_delete=False,
         )
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
-
-        # 更新 source 对象
         data = kwargs.get("data", {})
-        source.environment_name = env_name
-        source.data = data
-        source.save(update_fields=["environment_name", "data"])
-        return source
+
+        if self.model_class.objects.filter(
+            application_id=app_id,
+            name=source_name,
+            pending_delete=True,
+        ).exists():
+            # 如果已经存在 pending_delete=True 的记录 (有过修改但没有部署),
+            # 直接修改 pending_delete=False 的记录, 不创建新记录.
+            source.data = data
+            source.environment_name = env_name
+            source.save(update_fields=["data", "environment_name"])
+            return source
+
+        source.pending_delete = True
+        source.save(update_fields=["pending_delete"])
+
+        return self.model_class.objects.create(
+            application_id=app_id,
+            module_id=module_id,
+            environment_name=env_name,
+            name=source_name,
+            data=data,
+            pending_delete=False,
+            tenant_id=source.tenant_id,
+        )
 
     def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
         source = self.get_by_env(
@@ -162,12 +177,18 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             source_name=source_name,
         )
 
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
-
-        source.delete()
+        if self.model_class.objects.filter(
+            application_id=app_id,
+            name=source_name,
+            pending_delete=True,
+        ).exists():
+            # 已存在 pending_delete=True 的记录 (有过修改但没有部署),
+            # 说明当前 source 是新建的记录, 直接删除即可.
+            source.delete()
+        else:
+            # 没有 pending_delete=True 的记录, 将当前记录标记为待删除.
+            source.pending_delete = True
+            source.save(update_fields=["pending_delete"])
 
     def upsert_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
         configmap_kmodel.upsert(ConfigMap(app=wl_app, name=source.name, data=source.data))
@@ -270,10 +291,43 @@ def deploy_volume_source(env: ModuleEnvironment):
     mount_queryset = Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
+    # 0. 清理所有孤立的 pending_delete=True 记录 (Mount 已删除, 但 ConfigMapSource 仍残留)
+    active_source_names = mount_queryset.values_list("source_config__configMap__name", flat=True)
+    orphan_sources = ConfigMapSource.objects.filter(
+        application_id=env.module.application.id,
+        module_id=env.module.id,
+        environment_name__in=[env.environment, MountEnvName.GLOBAL.value],
+        pending_delete=True,
+    ).exclude(name__in=active_source_names)
+    cm_controller = ConfigMapSourceController()
+    for source in orphan_sources:
+        cm_controller.delete_k8s_resource(source, env.wl_app)
+        if source.environment_name == MountEnvName.GLOBAL.value:
+            # global 类型影响所有环境，当前环境已清理 k8s 资源
+            # 将 environment_name 改为另一个环境，等待该环境部署时再清理
+            other_env = (
+                MountEnvName.PROD.value if env.environment == MountEnvName.STAG.value else MountEnvName.STAG.value
+            )
+            source.environment_name = other_env
+            source.save(update_fields=["environment_name"])
+        else:
+            source.delete()
+
     for m in mount_queryset:
         controller = init_volume_source_controller(m.source_type)
+        # 1. 处理 pending_delete=True 的记录, 删除 k8s 资源并清理 DB 记录
+        pending_delete_source = controller.model_class.objects.filter(
+            application_id=env.module.application.id,
+            name=m.get_source_name,
+            pending_delete=True,
+        )
+        for source in pending_delete_source:
+            controller.delete_k8s_resource(source, env.wl_app)
+            source.delete()
+
+        # 2. 处理 pending_delete=False 的记录, 同步 k8s 资源
         source = controller.get_by_env(
-            app_id=m.module.application.id,
+            app_id=env.module.application.id,
             env_name=m.environment_name,
             source_name=m.get_source_name,
         )

@@ -88,6 +88,10 @@ class BaseVolumeSourceController:
         """通过模块、环境创建/更新对应 model 对象"""
         raise NotImplementedError
 
+    def get_pending_delete_sources(self, application_id: str, source_name: str) -> QuerySet:
+        """获取待删除的 source 记录, 默认返回空 queryset (不支持 pending_delete 的子类使用)"""
+        return self.model_class.objects.none()
+
     def upsert_k8s_resource(self, source: Union[ConfigMapSource, PersistentStorageSource], wl_app: WlApp) -> None:
         """创建/更新对应 k8s 资源"""
         raise NotImplementedError
@@ -106,6 +110,13 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def list_by_app(self, application_id: str) -> QuerySet[ConfigMapSource]:
         return self.model_class.objects.filter(application_id=application_id, pending_delete=False)
+
+    def get_pending_delete_sources(self, application_id: str, source_name: str) -> QuerySet[ConfigMapSource]:
+        return self.model_class.objects.filter(
+            application_id=application_id,
+            name=source_name,
+            pending_delete=True,
+        )
 
     def create_by_app(self, application_id: str, environment_name: str, tenant_id: str, **kwargs) -> None:
         """configmap 类型属于模块级别,暂不支持应用级别单独创建"""
@@ -316,10 +327,9 @@ def deploy_volume_source(env: ModuleEnvironment):
     for m in mount_queryset:
         controller = init_volume_source_controller(m.source_type)
         # 1. 处理 pending_delete=True 的记录, 删除 k8s 资源并清理 DB 记录
-        pending_delete_source = controller.model_class.objects.filter(
+        pending_delete_source = controller.get_pending_delete_sources(
             application_id=env.module.application.id,
-            name=m.get_source_name,
-            pending_delete=True,
+            source_name=m.get_source_name,
         )
         for source in pending_delete_source:
             controller.delete_k8s_resource(source, env.wl_app)

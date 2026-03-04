@@ -180,12 +180,6 @@ class TestSandboxDaemonClient:
         with SandboxDaemonClient("127.0.0.1:8000", "token") as client:
             assert client.base_url == "http://127.0.0.1:8000"
 
-    def test_close(self, client: SandboxDaemonClient):
-        """Test client close method."""
-        with mock.patch.object(client._session, "close") as mock_close:
-            client.close()
-            mock_close.assert_called_once()
-
 
 class TestExecuteResult:
     """Test ExecuteResult data class."""

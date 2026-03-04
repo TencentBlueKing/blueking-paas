@@ -88,16 +88,20 @@ class BaseVolumeSourceController:
         """通过模块、环境创建/更新对应 model 对象"""
         raise NotImplementedError
 
-    def get_pending_delete_sources(self, application_id: str, source_name: str) -> QuerySet:
-        """获取待删除的 source 记录, 默认返回空 queryset (不支持 pending_delete 的子类使用)"""
-        return self.model_class.objects.none()
-
     def upsert_k8s_resource(self, source: Union[ConfigMapSource, PersistentStorageSource], wl_app: WlApp) -> None:
         """创建/更新对应 k8s 资源"""
         raise NotImplementedError
 
     def delete_k8s_resource(self, source: Union[ConfigMapSource, PersistentStorageSource], wl_app: WlApp) -> None:
         """删除对应 k8s 资源"""
+        raise NotImplementedError
+
+    def deploy(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        """将当前 source_type 下所有 mount 的 source 同步到 k8s.
+
+        :param env: 当前部署的模块环境
+        :param mounts: 当前环境下所有 mount 的 queryset (已按 env 过滤)
+        """
         raise NotImplementedError
 
 
@@ -110,13 +114,6 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def list_by_app(self, application_id: str) -> QuerySet[ConfigMapSource]:
         return self.model_class.objects.filter(application_id=application_id, pending_delete=False)
-
-    def get_pending_delete_sources(self, application_id: str, source_name: str) -> QuerySet[ConfigMapSource]:
-        return self.model_class.objects.filter(
-            application_id=application_id,
-            name=source_name,
-            pending_delete=True,
-        )
 
     def create_by_app(self, application_id: str, environment_name: str, tenant_id: str, **kwargs) -> None:
         """configmap 类型属于模块级别,暂不支持应用级别单独创建"""
@@ -207,6 +204,47 @@ class ConfigMapSourceController(BaseVolumeSourceController):
     def delete_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source.name, data=source.data))
 
+    def deploy(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        # 0. 清理孤立的 pending_delete=True 记录
+        active_source_names = [m.source_config.configMap.name for m in mounts if m.source_config.configMap is not None]
+        orphan_sources = self.model_class.objects.filter(
+            application_id=env.module.application.id,
+            module_id=env.module.id,
+            environment_name__in=[env.environment, MountEnvName.GLOBAL.value],
+            pending_delete=True,
+        ).exclude(name__in=active_source_names)
+        for source in orphan_sources:
+            self.delete_k8s_resource(source, env.wl_app)
+            if source.environment_name == MountEnvName.GLOBAL.value:
+                # global 类型影响所有环境，当前环境已清理 k8s 资源
+                # 将 environment_name 改为另一个环境，等待该环境部署时再清理
+                other_env = (
+                    MountEnvName.PROD.value if env.environment == MountEnvName.STAG.value else MountEnvName.STAG.value
+                )
+                source.environment_name = other_env
+                source.save(update_fields=["environment_name"])
+            else:
+                source.delete()
+
+        for m in mounts:
+            # 1. 处理 pending_delete=True 的记录，删除 k8s 资源并清理 DB 记录
+            pending_delete_source = self.model_class.objects.filter(
+                application_id=env.module.application.id,
+                name=m.get_source_name,
+                pending_delete=True,
+            )
+            for source in pending_delete_source:
+                self.delete_k8s_resource(source, env.wl_app)
+                source.delete()
+
+            # 2. 同步 pending_delete=False 的记录到 k8s
+            source = self.get_by_env(
+                app_id=env.module.application.id,
+                env_name=m.environment_name,
+                source_name=m.get_source_name,
+            )
+            self.upsert_k8s_resource(source, env.wl_app)
+
 
 class PersistentStorageSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.PersistentStorage
@@ -288,6 +326,15 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             )
         )
 
+    def deploy(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        for m in mounts:
+            source = self.get_by_env(
+                app_id=env.module.application.id,
+                env_name=m.environment_name,
+                source_name=m.get_source_name,
+            )
+            self.upsert_k8s_resource(source, env.wl_app)
+
 
 def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
     return BaseVolumeSourceController.get_source_class(volume_source_type)()
@@ -302,48 +349,9 @@ def deploy_volume_source(env: ModuleEnvironment):
     mount_queryset = Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
-    # 0. 清理所有孤立的 pending_delete=True 记录 (Mount 已删除, 但 ConfigMapSource 仍残留)
-    active_source_names = [
-        m.source_config.configMap.name for m in mount_queryset if m.source_config.configMap is not None
-    ]
-    orphan_sources = ConfigMapSource.objects.filter(
-        application_id=env.module.application.id,
-        module_id=env.module.id,
-        environment_name__in=[env.environment, MountEnvName.GLOBAL.value],
-        pending_delete=True,
-    ).exclude(name__in=active_source_names)
-    cm_controller = ConfigMapSourceController()
-    for source in orphan_sources:
-        cm_controller.delete_k8s_resource(source, env.wl_app)
-        if source.environment_name == MountEnvName.GLOBAL.value:
-            # global 类型影响所有环境，当前环境已清理 k8s 资源
-            # 将 environment_name 改为另一个环境，等待该环境部署时再清理
-            other_env = (
-                MountEnvName.PROD.value if env.environment == MountEnvName.STAG.value else MountEnvName.STAG.value
-            )
-            source.environment_name = other_env
-            source.save(update_fields=["environment_name"])
-        else:
-            source.delete()
-
-    for m in mount_queryset:
-        controller = init_volume_source_controller(m.source_type)
-        # 1. 处理 pending_delete=True 的记录, 删除 k8s 资源并清理 DB 记录
-        pending_delete_source = controller.get_pending_delete_sources(
-            application_id=env.module.application.id,
-            source_name=m.get_source_name,
-        )
-        for source in pending_delete_source:
-            controller.delete_k8s_resource(source, env.wl_app)
-            source.delete()
-
-        # 2. 处理 pending_delete=False 的记录, 同步 k8s 资源
-        source = controller.get_by_env(
-            app_id=env.module.application.id,
-            env_name=m.environment_name,
-            source_name=m.get_source_name,
-        )
-        controller.upsert_k8s_resource(source, env.wl_app)
+    for source_type in VolumeSourceType:
+        controller = init_volume_source_controller(source_type)
+        controller.deploy(env, mount_queryset.filter(source_type=source_type))
 
 
 class MountManager:

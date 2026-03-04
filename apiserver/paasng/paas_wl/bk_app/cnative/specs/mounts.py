@@ -303,7 +303,10 @@ def deploy_volume_source(env: ModuleEnvironment):
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
     # 0. 清理所有孤立的 pending_delete=True 记录 (Mount 已删除, 但 ConfigMapSource 仍残留)
-    active_source_names = mount_queryset.values_list("source_config__configMap__name", flat=True)
+    # 因为 PersistentStorage 类型的 mount 没有 configMap.name, 会返回 None, 这里需要过滤掉 None 的情况
+    active_source_names = [
+        name for name in mount_queryset.values_list("source_config__configMap__name", flat=True) if name is not None
+    ]
     orphan_sources = ConfigMapSource.objects.filter(
         application_id=env.module.application.id,
         module_id=env.module.id,

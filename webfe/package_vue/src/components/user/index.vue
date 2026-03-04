@@ -107,11 +107,12 @@ export default {
     apiBaseUrl() {
       // 多租户模式
       if (this.isMultiTenantDisplayMode) {
-        return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
+        return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
       }
       // 上云版
       const baseUrl = window.BK_API_URL_TMPL;
-      return baseUrl?.includes('{api_name}') ? `${baseUrl.replace('{api_name}', 'bk-user-web')}/prod` : baseUrl;
+      const envPath = window.BK_USER_API_STAGE ? `/${window.BK_USER_API_STAGE}` : '/prod';
+      return baseUrl?.includes('{api_name}') ? `${baseUrl.replace('{api_name}', 'bk-user-web')}${envPath}` : baseUrl;
     },
   },
   methods: {

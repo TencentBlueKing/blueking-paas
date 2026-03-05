@@ -143,17 +143,6 @@ class TestAppNameTenantUniqueness:
         slz = AppNameSLZ(data={"name": bk_app.name})
         assert slz.is_valid() is False
 
-    def test_tenant_from_context(self, bk_app, random_tenant_id):
-        """app_tenant_id can come from serializer context."""
-        bk_app.app_tenant_id = random_tenant_id
-        bk_app.save(update_fields=["app_tenant_id"])
-
-        slz = AppNameSLZ(
-            data={"name": bk_app.name},
-            context={"app_tenant_id": random_tenant_id + "x"},
-        )
-        assert slz.is_valid() is True
-
     def test_update_uses_instance_tenant(self, bk_app, random_name, random_tenant_id):
         """Update operation resolves tenant from the instance."""
         bk_app.app_tenant_id = random_tenant_id

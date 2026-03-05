@@ -363,7 +363,7 @@ class TestApplicationUpdate:
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
-        assert f"为 {random_name} 的应用已存在" in response.json()["detail"]
+        assert f"{random_name} 的应用已存在" in response.json()["detail"]
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
     @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")

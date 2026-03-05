@@ -137,7 +137,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 S-Mart 应用"))
 
-        slz = PackageStashConfirmRequestSLZ(data=request.data)
+        slz = PackageStashConfirmRequestSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
 
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(

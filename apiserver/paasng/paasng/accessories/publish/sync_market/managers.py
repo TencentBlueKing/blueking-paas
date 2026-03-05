@@ -113,11 +113,18 @@ class AppManger(AppAdaptor):
         app = self.session.query(self.model).filter_by(code=code).scalar()
         return app
 
-    def verify_name_is_unique(self, name: str, code: Optional[str] = None) -> bool:
+    def verify_name_is_unique(
+        self, name: str, code: Optional[str] = None, field_name: str = "name", app_tenant_id: Optional[str] = None
+    ) -> bool:
         qs = self.session.query(self.model)
         if code:
             qs = qs.filter(self.model.code != code)
-        app = qs.filter_by(name=name).scalar()
+        if app_tenant_id and hasattr(self.model, "app_tenant_id"):
+            qs = qs.filter(self.model.app_tenant_id == app_tenant_id)
+        if field_name == "name_en":
+            app = qs.filter_by(name_en=name).scalar()
+        else:
+            app = qs.filter_by(name=name).scalar()
         return not app
 
     def delete_by_code(self, code: str):

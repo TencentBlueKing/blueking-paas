@@ -17,6 +17,7 @@
 
 from typing import Optional
 
+from django.core.exceptions import FieldDoesNotExist
 from django.dispatch.dispatcher import Signal
 from django.utils.translation import gettext_lazy as _
 from rest_framework.validators import UniqueValidator, ValidationError, qs_exists
@@ -56,12 +57,12 @@ class AppUniqueValidator(UniqueValidator):
             raise ValidationError(self.get_message(value), code="unique")
 
         # Send signal to external data sources
-        self.signal_external(value, instance=instance)
+        self.signal_external(value, instance=instance, field_name=self.field_name)
 
-    def signal_external(self, value: str, instance: Optional[Application]):
+    def signal_external(self, value: str, instance: Optional[Application], **kwargs):
         """Send signal to external data sources, will raise ValidateError when external validation fails"""
         try:
-            self.signal.send(sender=self.__class__, value=value, instance=instance)
+            self.signal.send(sender=self.__class__, value=value, instance=instance, **kwargs)
         except AppFieldValidationError as e:
             if e.reason == "duplicated":
                 raise ValidationError(self.get_message(value), code="unique")
@@ -72,9 +73,103 @@ class AppUniqueValidator(UniqueValidator):
 
 
 class AppNameUniqueValidator(AppUniqueValidator):
+    """Validator for application name uniqueness.
+
+    Extends the base validator with:
+    - I18N field name resolution (name_en, name_zh_cn, etc.)
+    - Tenant-scoped uniqueness (unique within the same app_tenant_id)
+    """
+
     field_name = "name"
     field_label = "应用名称"
     signal = prepare_use_application_name
+
+    def __call__(self, value, serializer_field):
+        # Determine the existing instance, if this is an update operation.
+        instance = getattr(serializer_field.parent, "instance", None)
+        if not isinstance(instance, Application):
+            instance = serializer_field.parent.context.get("application", None)
+
+        field_name = self._resolve_field_name(serializer_field)
+        app_tenant_id = self._resolve_app_tenant_id(serializer_field, instance)
+        queryset = self.queryset
+        queryset = self.filter_queryset(value, queryset, field_name)
+        queryset = self._narrow_by_tenant(queryset, serializer_field, instance)
+        queryset = self.exclude_current_instance(queryset, instance)
+        if qs_exists(queryset):
+            raise ValidationError(self.get_message(value), code="unique")
+
+        # Send signal to external data sources
+        self.signal_external(value, instance=instance, field_name=field_name, app_tenant_id=app_tenant_id)
+
+    def _resolve_field_name(self, serializer_field) -> str:
+        """Resolve the actual model field name for uniqueness check.
+
+        The serializer field name may not match the model field we should check
+        against. Two known scenarios:
+
+        1. I18NExtend / FallbackMixin — ``_i18n_field_name`` carries the real
+           i18n column name (e.g. "name_en", "name_zh_cn").
+        2. Explicit ``source`` — e.g. ``AppNameField(source="name_en")``.
+
+        We try each candidate and use the first one that maps to an actual
+        model field; otherwise fall back to the class-level ``self.field_name``.
+        """
+        candidates = [
+            getattr(serializer_field, "_i18n_field_name", None),
+            getattr(serializer_field, "source", None),
+        ]
+        model_meta = self.queryset.model._meta
+        for candidate in candidates:
+            if candidate:
+                try:
+                    model_meta.get_field(candidate)
+                except FieldDoesNotExist:
+                    pass
+                else:
+                    return candidate
+        return self.field_name
+
+    def _narrow_by_tenant(self, queryset, serializer_field, instance: Optional[Application]):
+        """Narrow the queryset to the same ``app_tenant_id`` so that uniqueness
+        is scoped per-tenant — i.e. ``(app_tenant_id, <field>)`` rather than
+        global.
+        """
+        app_tenant_id = self._resolve_app_tenant_id(serializer_field, instance)
+        return queryset.filter(app_tenant_id=app_tenant_id)
+
+    @staticmethod
+    def _resolve_app_tenant_id(serializer_field, instance: Optional[Application]) -> str:
+        """Resolve ``app_tenant_id`` for the current validation.
+
+        Resolution order:
+        1. The existing ``instance`` (update operations).
+        2. ``context["app_tenant_id"]`` set by the view / serializer layer.
+        3. ``context["application"].app_tenant_id`` (e.g. market views).
+
+        :raises ValidationError: When none of the above provides a value.
+        """
+        if instance:
+            return instance.app_tenant_id
+
+        parent = serializer_field.parent
+        if parent is not None:
+            context = getattr(parent, "context", {})
+            if "app_tenant_id" in context:
+                return context["app_tenant_id"]
+
+            app = context.get("application")
+            if isinstance(app, Application):
+                return app.app_tenant_id
+
+        raise ValidationError(
+            "app_tenant_id is required for name uniqueness validation but was not found "
+            "in instance, or serializer context."
+        )
+
+    def get_message(self, value) -> str:
+        """Get user-friendly error message"""
+        return _("{}({}) 为 {} 的应用已存在").format(_(self.field_label), self.field_name, value)
 
 
 class AppIDUniqueValidator(AppUniqueValidator):

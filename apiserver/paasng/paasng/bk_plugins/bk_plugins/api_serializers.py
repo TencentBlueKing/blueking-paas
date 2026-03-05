@@ -20,6 +20,7 @@
 from rest_framework import serializers
 
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.utils import validate_app_tenant_info
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.serializers import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
@@ -50,6 +51,11 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     plugin_tenant_mode = serializers.ChoiceField(choices=AppTenantMode.get_choices(), help_text="租户模式")
     plugin_tenant_id = serializers.CharField(allow_null=True, allow_blank=True, help_text="租户 ID")
     tenant_id = serializers.CharField(help_text="所属租户")
+
+    def to_internal_value(self, data):
+        validate_app_tenant_info(data["plugin_tenant_mode"], data.get("plugin_tenant_id", ""))
+        self.context["app_tenant_id"] = data.get("plugin_tenant_id", "")
+        return super().to_internal_value(data)
 
 
 class PluginArchiveRequestSLZ(serializers.Serializer):

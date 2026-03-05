@@ -31,11 +31,31 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
+from paasng.platform.applications.tenant import resolve_app_tenant_id_from_user
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 
+class AppTenantContextMixin(serializers.Serializer):
+    """Mixin that resolves app_tenant_id from user and app_tenant_mode before validation.
+
+    This is needed when AppNameField (with AppNameUniqueValidator) and app_tenant_mode
+    are used together. The validator requires app_tenant_id in context to perform
+    tenant-scoped uniqueness check.
+
+    Subclasses must define an `app_tenant_mode` field.
+    """
+
+    def to_internal_value(self, data):
+        if "app_tenant_id" not in self.context:
+            user = self.context.get("user")
+            if user:
+                raw_mode = data.get("app_tenant_mode") if isinstance(data, dict) else None
+                self.context["app_tenant_id"] = resolve_app_tenant_id_from_user(user, raw_mode)
+        return super().to_internal_value(data)
+
+
 @i18n
-class AppBasicInfoMixin(serializers.Serializer):
+class AppBasicInfoMixin(AppTenantContextMixin):
     code = AppIDField()
     name = I18NExtend(AppNameField())
     app_tenant_mode = serializers.ChoiceField(

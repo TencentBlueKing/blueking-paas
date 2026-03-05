@@ -125,7 +125,8 @@ def test_get_service_remote_endpoints_extra_services_merge_provision_params(sett
                     "provision_params_tmpl": {
                         "egress_info": "{cluster_info.egress_info_json}",
                     },
-                    "any_other": "foo",
+                    "prefer_async_delete": False,
+                    "is_ready": False,
                 },
             ],
         }
@@ -138,7 +139,8 @@ def test_get_service_remote_endpoints_extra_services_merge_provision_params(sett
     redis_ep = eps[1]
     assert redis_ep["name"] == "redis_remote"
     assert redis_ep["endpoint_url"] == "http://svc-redis-web/"
-    assert redis_ep["any_other"] == "foo"
+    assert redis_ep["prefer_async_delete"] is False
+    assert redis_ep["is_ready"] is False
 
 
 @pytest.mark.parametrize(

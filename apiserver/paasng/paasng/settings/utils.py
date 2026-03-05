@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import os
 import re
 import socket
@@ -26,6 +27,8 @@ from blue_krill.secure.dj_environ import SecureEnv
 from dynaconf.base import LazySettings
 from dynaconf.utils import object_merge
 from environ import Env
+
+logger = logging.getLogger(__name__)
 
 
 def get_database_conf(
@@ -184,6 +187,9 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
 
     extra_services = settings.get("RSVC_BUNDLE_EXTRA_SERVICES", [])
     for svc in extra_services:
+        if not svc.get("name") or not svc.get("endpoint_url"):
+            logger.warning("invalid extra service config, missing name/endpoint_url: %s", svc)
+            continue
         endpoints.append(object_merge(template, svc))
 
     return endpoints

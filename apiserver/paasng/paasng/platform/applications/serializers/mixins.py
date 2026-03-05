@@ -46,11 +46,15 @@ class AppTenantContextMixin(serializers.Serializer):
     """
 
     def to_internal_value(self, data):
-        if "app_tenant_id" not in self.context:
-            user = self.context.get("user")
-            if user:
-                raw_mode = data.get("app_tenant_mode") if isinstance(data, dict) else None
+        if "app_tenant_id" in self.context:
+            return super().to_internal_value(data)
+
+        if user := self.context.get("user"):
+            raw_mode = data.get("app_tenant_mode") if isinstance(data, dict) else None
+            try:
                 self.context["app_tenant_id"] = resolve_app_tenant_id_from_user(user, raw_mode)
+            except ValidationError as e:
+                raise ValidationError({"app_tenant_mode": e.detail})
         return super().to_internal_value(data)
 
 

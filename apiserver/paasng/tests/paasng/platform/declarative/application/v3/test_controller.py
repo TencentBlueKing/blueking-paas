@@ -47,10 +47,15 @@ from tests.utils.helpers import create_app
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def get_app_description(app_json: Dict) -> ApplicationDesc:
-    """A help tool get parse the application json data, describe at app_desc.yml::app to ApplicationDesc"""
+def get_app_description(app_json: Dict, app_tenant_id: str = "") -> ApplicationDesc:
+    """A help tool get parse the application json data, describe at app_desc.yml::app to ApplicationDesc
+
+    :param app_json: The application json data.
+    :param app_tenant_id: The app_tenant_id for name uniqueness validation context.
+    """
     instance = get_application(app_json, CNATIVE_APP_CODE_FIELD)
-    desc = validate_desc(AppDescriptionSLZ, app_json, instance=instance)
+    context = {"app_tenant_id": app_tenant_id}
+    desc = validate_desc(AppDescriptionSLZ, app_json, instance=instance, context=context)
     return desc
 
 
@@ -77,12 +82,12 @@ def declarative_controller(bk_user, app_tenant):
 
 class TestAppDeclarativeControllerCreation:
     @pytest.mark.parametrize("field_name", ["bkAppCode", "bkAppName", "region"])
-    def test_run_invalid_input(self, random_name, field_name, declarative_controller):
+    def test_run_invalid_input(self, random_name, field_name, declarative_controller, app_tenant):
         app_json = {"bkAppCode": random_name, "bkAppName": random_name}
         app_json[field_name] = "@invalid value" * 10
 
         with pytest.raises(DescriptionValidationError) as exc_info:
-            declarative_controller.perform_action(get_app_description(app_json))
+            declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         assert field_name in exc_info.value.detail
 
     @pytest.mark.parametrize(
@@ -94,33 +99,33 @@ class TestAppDeclarativeControllerCreation:
             (30, pytest.raises(DescriptionValidationError)),
         ],
     )
-    def test_app_code_length(self, bk_app_code_len, ctx, declarative_controller):
+    def test_app_code_length(self, bk_app_code_len, ctx, declarative_controller, app_tenant):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len - 2))}"
         app_json = builder.make_app_desc(bk_app_code, decorator.with_module("default", True))
 
         with ctx:
-            declarative_controller.perform_action(get_app_description(app_json))
+            declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
 
-    def test_name_is_duplicated(self, random_name, declarative_controller):
+    def test_name_is_duplicated(self, random_name, declarative_controller, app_tenant):
         existed_app = create_app()
         app_json = {
             "bkAppCode": random_name,
             "bkAppName": existed_app.name,
         }
         with pytest.raises(DescriptionValidationError) as exc_info:
-            declarative_controller.perform_action(get_app_description(app_json))
+            declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         assert "bkAppName" in exc_info.value.detail
 
     @pytest.mark.parametrize("module_name", ["$", "0us0", "-a", "a-", "_a", "a_", "a0us0b"])
-    def test_invalid_module_name(self, module_name, random_name):
+    def test_invalid_module_name(self, module_name, random_name, app_tenant):
         app_json = builder.make_app_desc(random_name, decorator.with_module(module_name=module_name, is_default=True))
         with pytest.raises(DescriptionValidationError):
-            get_app_description(app_json)
+            get_app_description(app_json, app_tenant.app_tenant_id)
 
     def test_normal(self, random_name, declarative_controller, app_tenant):
         app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))
-        application = declarative_controller.perform_action(get_app_description(app_json))
+        application = declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         assert application.tenant_id == app_tenant.tenant_id
         assert application.app_tenant_id == app_tenant.app_tenant_id
         assert application.app_tenant_mode == app_tenant.app_tenant_mode
@@ -128,7 +133,7 @@ class TestAppDeclarativeControllerCreation:
         default_module = application.get_default_module()
         assert default_module.tenant_id == app_tenant.tenant_id
 
-    def test_i18n(self, random_name, declarative_controller):
+    def test_i18n(self, random_name, declarative_controller, app_tenant):
         app_json = builder.make_app_desc(
             random_name,
             decorator.with_module("default", True),
@@ -136,7 +141,7 @@ class TestAppDeclarativeControllerCreation:
                 introduction="介绍", description="描述", introduction_en="introduction", description_en="description"
             ),
         )
-        application = declarative_controller.perform_action(get_app_description(app_json))
+        application = declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         with override("zh-cn"):
             assert application.get_product().introduction == "介绍"
             assert application.get_product().description == "描述"
@@ -147,13 +152,13 @@ class TestAppDeclarativeControllerCreation:
 
 class TestAppDeclarativeControllerUpdate:
     @pytest.fixture()
-    def existed_app(self, random_name, declarative_controller):
+    def existed_app(self, random_name, declarative_controller, app_tenant):
         """Create an application before to test update"""
         app_json = builder.make_app_desc(
             random_name,
             decorator.with_module("default", True),
         )
-        declarative_controller.perform_action(get_app_description(app_json))
+        declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         return Application.objects.get(code=random_name)
 
     def test_without_permission(self, bk_user, existed_app, app_tenant):
@@ -165,10 +170,10 @@ class TestAppDeclarativeControllerUpdate:
 
         controller = AppDeclarativeController(another_user, app_tenant)
         with pytest.raises(DescriptionValidationError) as exc_info:
-            controller.perform_action(get_app_description(app_json))
+            controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         assert "bk_app_code" in exc_info.value.detail
 
-    def test_name_not_modified(self, existed_app, declarative_controller):
+    def test_name_not_modified(self, existed_app, declarative_controller, app_tenant):
         # Use new name
         new_name = existed_app.name + "2"
         new_name_en = existed_app.name + "en"
@@ -180,19 +185,19 @@ class TestAppDeclarativeControllerUpdate:
         app_json["bkAppName"] = new_name
         app_json["bkAppNameEn"] = new_name_en
 
-        application = declarative_controller.perform_action(get_app_description(app_json))
+        application = declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
         application.refresh_from_db()
         assert application.name == existed_app.name
         assert application.name_en == existed_app.name
 
-    def test_normal(self, existed_app, declarative_controller):
+    def test_normal(self, existed_app, declarative_controller, app_tenant):
         app_json = builder.make_app_desc(
             existed_app.code,
             decorator.with_module("default", True),
         )
         app_json["bkAppName"] = existed_app.name
 
-        declarative_controller.perform_action(get_app_description(app_json))
+        declarative_controller.perform_action(get_app_description(app_json, app_tenant.app_tenant_id))
 
 
 class TestMarketField:
@@ -202,7 +207,7 @@ class TestMarketField:
             decorator.with_module("default", True),
             decorator.with_market(introduction=random_name, tag=tag),
         )
-        declarative_controller.perform_action(get_app_description(app_desc))
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
 
         product = Product.objects.get(code=random_name)
         assert product.get_tag() == tag
@@ -215,7 +220,7 @@ class TestMarketDisplayOptionsField:
         minimal_app_desc = builder.make_app_desc(
             random_name, decorator.with_module("default", True), decorator.with_market(introduction=random_name)
         )
-        declarative_controller.perform_action(get_app_description(minimal_app_desc))
+        declarative_controller.perform_action(get_app_description(minimal_app_desc, app_tenant.app_tenant_id))
 
         product = Product.objects.get(code=random_name)
         assert product.get_tag() is None
@@ -260,15 +265,15 @@ class TestServicesField:
             ),
         )
 
-    def test_creation(self, random_name, app_desc, declarative_controller):
-        declarative_controller.perform_action(get_app_description(app_desc))
+    def test_creation(self, random_name, app_desc, declarative_controller, app_tenant):
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
 
         service_obj = mixed_service_mgr.find_by_name("mysql")
         application = Application.objects.get(code=random_name)
         assert mixed_service_mgr.module_is_bound_with(service_obj, application.get_default_module()) is True
 
-    def test_update_add(self, random_name, app_desc, declarative_controller):
-        declarative_controller.perform_action(get_app_description(app_desc))
+    def test_update_add(self, random_name, app_desc, declarative_controller, app_tenant):
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
 
         # Add a new service
         service_obj = mixed_service_mgr.find_by_name("rabbitmq")
@@ -276,26 +281,26 @@ class TestServicesField:
 
         assert mixed_service_mgr.module_is_bound_with(service_obj, module) is False
         app_desc["modules"][0]["spec"]["addons"].append({"name": service_obj.name})
-        declarative_controller.perform_action(get_app_description(app_desc))
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
         assert mixed_service_mgr.module_is_bound_with(service_obj, module) is True
 
-    def test_not_existed_service(self, random_name, app_desc, declarative_controller):
+    def test_not_existed_service(self, random_name, app_desc, declarative_controller, app_tenant):
         app_desc["modules"][0]["spec"]["addons"] = [{"name": "invalid-service"}]
 
-        declarative_controller.perform_action(get_app_description(app_desc))
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
 
         application = Application.objects.get(code=random_name)
         services = mixed_service_mgr.list_binded(application.get_default_module())
         assert len(list(services)) == 0
 
-    def test_shared_service(self, random_name, app_desc, declarative_controller):
+    def test_shared_service(self, random_name, app_desc, declarative_controller, app_tenant):
         decorator.with_module(
             random_name + "1",
             is_default=False,
             module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name}], "processes": []},
         )(app_desc)
 
-        declarative_controller.perform_action(get_app_description(app_desc))
+        declarative_controller.perform_action(get_app_description(app_desc, app_tenant.app_tenant_id))
 
         service_obj = mixed_service_mgr.find_by_name("mysql", settings.DEFAULT_REGION_NAME)
         application = Application.objects.get(code=random_name)
@@ -306,11 +311,11 @@ class TestServicesField:
         assert info.ref_module == ref_module
         assert info.module == module
 
-    def test_shared_service_but_module_not_found(self, random_name, app_desc):
+    def test_shared_service_but_module_not_found(self, random_name, app_desc, app_tenant):
         decorator.with_module(
             random_name + "1",
             is_default=False,
             module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name + "2"}], "processes": []},
         )(app_desc)
         with pytest.raises(DescriptionValidationError):
-            get_app_description(app_desc)
+            get_app_description(app_desc, app_tenant.app_tenant_id)

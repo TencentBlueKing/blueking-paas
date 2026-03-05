@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
     def handle(self, cpu, memory, *args, **options):
         if not cpu and not memory:
-            raise CommandError("At least one of --cpu or --memory must be provided")
+            return
 
         # dummy value just for validation
         input_data = {"cpu": "1m", "memory": "1Mi"}

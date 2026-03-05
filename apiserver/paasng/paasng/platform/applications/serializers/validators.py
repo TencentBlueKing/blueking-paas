@@ -57,7 +57,7 @@ class AppUniqueValidator(UniqueValidator):
             raise ValidationError(self.get_message(value), code="unique")
 
         # Send signal to external data sources
-        self.signal_external(value, instance=instance, field_name=self.field_name)
+        self.signal_external(value, instance=instance)
 
     def signal_external(self, value: str, instance: Optional[Application], **kwargs):
         """Send signal to external data sources, will raise ValidateError when external validation fails"""

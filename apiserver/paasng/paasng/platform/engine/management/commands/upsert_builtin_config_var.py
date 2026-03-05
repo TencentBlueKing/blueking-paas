@@ -42,8 +42,8 @@ class Command(BaseCommand):
     def handle(self, key, value, description, *args, **options):
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, settings.ADMIN_USERNAME))
 
-        # Note: Validate manually instead of reusing BuiltinConfigVarCreateInputSLZ, because its
-        # validate_key() rejects duplicate keys, which conflicts with upsert semantics.
+        # Note: The key validation logic below is aligned with BuiltinConfigVarCreateInputSLZ.
+        # Keep them in sync if the validation rules change.
         if not RE_CONFIG_VAR_KEY.match(key):
             raise CommandError(
                 f"Invalid key format: '{key}'. Key must start with an uppercase letter and consist of "

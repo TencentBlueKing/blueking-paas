@@ -121,7 +121,7 @@ class AppManger(AppAdaptor):
             qs = qs.filter(self.model.code != code)
         if app_tenant_id and hasattr(self.model, "app_tenant_id"):
             qs = qs.filter(self.model.app_tenant_id == app_tenant_id)
-        if field_name == "name_en":
+        if field_name == "name_en" and hasattr(self.model, "name_en"):
             app = qs.filter_by(name_en=name).scalar()
         else:
             app = qs.filter_by(name=name).scalar()

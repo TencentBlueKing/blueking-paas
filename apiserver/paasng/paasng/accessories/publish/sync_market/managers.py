@@ -21,9 +21,11 @@ from dataclasses import asdict
 from typing import Optional
 
 from django.utils.translation import get_language
+from sqlalchemy import and_, or_
 
 from paasng.accessories.publish.market.models import Tag
 from paasng.accessories.publish.sync_market.models import TagData, TagMap
+from paasng.core.tenant.constants import AppTenantMode
 
 try:
     from paasng.infras.legacydb_te.adaptors import (
@@ -119,13 +121,37 @@ class AppManger(AppAdaptor):
         qs = self.session.query(self.model)
         if code:
             qs = qs.filter(self.model.code != code)
-        if app_tenant_id and hasattr(self.model, "app_tenant_id"):
-            qs = qs.filter(self.model.app_tenant_id == app_tenant_id)
+        if app_tenant_id is not None:
+            qs = self._narrow_by_tenant(qs, app_tenant_id)
         if field_name == "name_en" and hasattr(self.model, "name_en"):
             app = qs.filter_by(name_en=name).scalar()
         else:
             app = qs.filter_by(name=name).scalar()
         return not app
+
+    def _narrow_by_tenant(self, qs, app_tenant_id: str):
+        """Narrow the query so that uniqueness is scoped per-tenant while
+        also preventing conflicts with global applications.
+
+        Rules:
+        - Global apps (app_tenant_id="") must have globally unique names, so
+          no filtering is applied.
+        - Tenant-specific apps must not collide with apps in the same tenant
+          OR with any global app.
+        """
+        if not hasattr(self.model, "app_tenant_id"):
+            return qs
+
+        if app_tenant_id == "":
+            return qs
+
+        tenant_filter = self.model.app_tenant_id == app_tenant_id
+        global_filter = and_(
+            self.model.app_tenant_id == "",
+            self.model.app_tenant_mode == AppTenantMode.GLOBAL.value,
+        )
+
+        return qs.filter(or_(tenant_filter, global_filter))
 
     def delete_by_code(self, code: str):
         """根据 code 从 DB 中删除应用"""

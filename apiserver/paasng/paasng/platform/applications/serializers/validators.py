@@ -18,10 +18,12 @@
 from typing import Optional
 
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.dispatch.dispatcher import Signal
 from django.utils.translation import gettext_lazy as _
 from rest_framework.validators import UniqueValidator, ValidationError, qs_exists
 
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.exceptions import AppFieldValidationError
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import prepare_use_application_code, prepare_use_application_name
@@ -131,12 +133,23 @@ class AppNameUniqueValidator(AppUniqueValidator):
         return self.field_name
 
     def _narrow_by_tenant(self, queryset, serializer_field, instance: Optional[Application]):
-        """Narrow the queryset to the same ``app_tenant_id`` so that uniqueness
-        is scoped per-tenant — i.e. ``(app_tenant_id, <field>)`` rather than
-        global.
+        """Narrow the queryset so that uniqueness is scoped per-tenant while
+        also preventing conflicts with global applications.
+
+        Rules:
+        - Global apps (app_tenant_id="") must have globally unique names, so
+          no filtering is applied — the queryset covers all records.
+        - Tenant-specific apps must not collide with apps in the same tenant
+          OR with any global app.
         """
         app_tenant_id = self._resolve_app_tenant_id(serializer_field, instance)
-        return queryset.filter(app_tenant_id=app_tenant_id)
+        if app_tenant_id == "":
+            # Global app: name must be unique across ALL records.
+            return queryset
+
+        return queryset.filter(
+            Q(app_tenant_id=app_tenant_id) | Q(app_tenant_id="", app_tenant_mode=AppTenantMode.GLOBAL)
+        )
 
     @staticmethod
     def _resolve_app_tenant_id(serializer_field, instance: Optional[Application]) -> str:

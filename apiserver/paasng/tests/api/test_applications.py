@@ -285,7 +285,6 @@ class TestApplicationCreateWithoutEngine:
                 "market_params": {},
             },
         )
-        print("DEBUG response:", response.json())
         assert response.status_code == 201
         assert response.json()["application"]["type"] == "engineless_app"
 

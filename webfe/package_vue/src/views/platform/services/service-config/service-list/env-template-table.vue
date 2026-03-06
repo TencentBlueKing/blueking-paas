@@ -44,10 +44,10 @@ export default {
     },
   },
   computed: {
-    // 环境变量模板列表：根据配置项和服务ID生成
+    // 环境变量模板列表：根据配置项和服务ID生成（新建行编辑时也直接生成）
     templateList() {
       return (this.configItems || [])
-        .filter((item) => item.key && !item.isNew)
+        .filter((item) => item.key)
         .map((item) => ({
           key: `${this.serviceId}_${item.key}`.toUpperCase(),
           value: `{{${item.key}}}`,

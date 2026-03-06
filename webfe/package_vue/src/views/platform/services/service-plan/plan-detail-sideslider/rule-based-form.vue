@@ -61,16 +61,13 @@
                   :name="option.label"
                 ></bk-option>
               </bk-select>
-              <!-- 其他字段：使用标签输入框，支持多值 -->
-              <bk-tag-input
+              <bk-input
                 v-else
-                v-model="rule.value"
+                :value="formatArrayToString(rule.value)"
                 class="value-input"
-                :placeholder="$t('请输入后按 Enter')"
-                :allow-create="true"
-                :has-delete-icon="true"
-                :paste-fn="handlePaste"
-              ></bk-tag-input>
+                :placeholder="$t('请输入，多个值用逗号分隔')"
+                @change="(val) => handleInputChange(rule, val)"
+              ></bk-input>
             </bk-form-item>
           </div>
         </bk-form>
@@ -163,9 +160,17 @@ export default {
       rule.value = rule.field === 'environment' ? '' : [];
       this.emitChange();
     },
-    // 粘贴处理（支持逗号、空格分隔）
-    handlePaste(value) {
-      return value.split(/[,，\s]+/).filter(Boolean);
+    // 数组转字符串（用于显示）
+    formatArrayToString(value) {
+      if (Array.isArray(value)) {
+        return value.join(',');
+      }
+      return value || '';
+    },
+    // 输入框（字符串转数组）
+    handleInputChange(rule, val) {
+      rule.value = val ? val.split(/[,，\s]+/).filter(Boolean) : [];
+      this.emitChange();
     },
     // 添加规则
     handleAdd(index) {

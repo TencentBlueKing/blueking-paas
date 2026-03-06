@@ -130,9 +130,10 @@
     </bk-table>
     <bk-button
       text
+      size="small"
       @click="handleAdd"
     >
-      <i class="paasng-icon paasng-plus-circle mr5"></i>
+      <i class="paasng-icon paasng-plus-circle f14"></i>
       {{ $t('新增字段') }}
     </bk-button>
   </div>

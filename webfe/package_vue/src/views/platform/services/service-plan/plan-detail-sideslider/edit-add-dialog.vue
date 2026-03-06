@@ -66,7 +66,7 @@
             v-else-if="item.type === 'integer' || item.type === 'number'"
             v-model="formData.configValues[item.key]"
             type="number"
-            :placeholder="$t('请输入')"
+            :placeholder="item.example ? `${$t('示例')}：${item.example}` : $t('请输入')"
           ></bk-input>
           <!-- 字符串类型：使用 input，带示例 placeholder -->
           <bk-input

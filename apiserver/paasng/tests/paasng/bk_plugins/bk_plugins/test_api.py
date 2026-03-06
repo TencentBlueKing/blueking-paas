@@ -45,7 +45,7 @@ def valid_plugin_data():
         "extra_fields": {"email": "test@example.com", "distributor_codes": ["1", "2"]},
         "repository": "https://git.example.com/test-plugin.git",
         "operator": "test_user",
-        "plugin_tenant_mode": AppTenantMode.GLOBAL.value,
+        "plugin_tenant_mode": AppTenantMode.SINGLE.value,
         "plugin_tenant_id": "default",
         "tenant_id": "default",
     }

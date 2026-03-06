@@ -219,7 +219,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
     )
     def create_third_party(self, request):
-        slz = ThirdPartyAppCreateInputSLZ(data=request.data)
+        slz = ThirdPartyAppCreateInputSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -265,7 +265,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
-        slz = LessCodeAppCreateInputSLZ(data=request.data)
+        slz = LessCodeAppCreateInputSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
 
@@ -284,7 +284,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
     )
     def create_ai_agent_app(self, request):
-        serializer = AIAgentAppCreateInputSLZ(data=request.data)
+        serializer = AIAgentAppCreateInputSLZ(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
 

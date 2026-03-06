@@ -141,7 +141,11 @@ class CNativeAppDescriptionHandler:
             app_spec_v3.AppDescriptionSLZ,
             app_desc_json,
             instance,
-            context={"app_version": self.json_data.get("appVersion"), "spec_version": AppSpecVersion.VER_3},
+            context={
+                "app_version": self.json_data.get("appVersion"),
+                "spec_version": AppSpecVersion.VER_3,
+                "app_tenant_id": self.app_tenant.app_tenant_id,
+            },
         )
         return app_desc
 
@@ -188,7 +192,11 @@ class AppDescriptionHandler:
             app_spec_v2.AppDescriptionSLZ,
             app_desc_json,
             instance,
-            context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_2},
+            context={
+                "app_version": self.json_data.get("app_version"),
+                "spec_version": AppSpecVersion.VER_2,
+                "app_tenant_id": self.app_tenant.app_tenant_id,
+            },
         )
         return app_desc
 

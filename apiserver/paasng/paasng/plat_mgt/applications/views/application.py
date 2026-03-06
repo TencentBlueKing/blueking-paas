@@ -171,6 +171,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
             },
         )
 
+        # NOTE: ApplicationNameUpdateInputSLZ 继承自 UpdateApplicationNameSLZ, 后者在校验 name 字段时, 会直接更新 bk_console 中的应用名称
+        # FIXME: 该逻辑需要重构, 在 serializer 中直接更新 bk_console 中的应用名称不合适, 操作太隐藏, 不好维护
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data

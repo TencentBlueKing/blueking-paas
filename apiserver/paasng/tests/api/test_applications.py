@@ -355,14 +355,14 @@ class TestApplicationUpdate:
         assert app.extra_info.tag == tag
 
     def test_duplicated(self, api_client, bk_app, bk_user, random_name, tag):
-        G(Application, name=random_name)
+        G(Application, name=random_name, app_tenant_id=bk_app.app_tenant_id)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
             data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
-        assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
+        assert f"{random_name} 的应用已存在" in response.json()["detail"]
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
     @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")

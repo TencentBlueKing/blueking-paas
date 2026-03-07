@@ -84,7 +84,7 @@ class TestQueryAlertsParams:
         ("create_query_params", "expected_query_string"),
         [
             (
-                lambda: AppQueryAlertsParams(),
+                AppQueryAlertsParams,
                 None,
             ),
             (

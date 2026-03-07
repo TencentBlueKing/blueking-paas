@@ -146,7 +146,7 @@ class MetaDataFileReader:
         :param file_paths: A sequence of possible file paths to read
         :return: (file content | None, error message)
         """
-        not_found_map = {key: False for key in file_paths}
+        not_found_map = dict.fromkeys(file_paths, False)
         for possible_key in file_paths:
             try:
                 content = self.read_file(possible_key, version_info)

@@ -83,7 +83,7 @@ class Instance(AppEntity):
 
     @classmethod
     def get_shorter_instance_name(cls, instance_name: str) -> str:
-        return instance_name.split("-")[-1]
+        return instance_name.rsplit("-", maxsplit=1)[-1]
 
 
 @dataclass

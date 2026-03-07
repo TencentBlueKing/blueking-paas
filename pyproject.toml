@@ -9,7 +9,7 @@ package-mode = false
 python = ">=3.11,<3.12"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.8.0"
+ruff = "^0.15.5"
 
 [tool.ruff]
 line-length = 119
@@ -98,6 +98,8 @@ ignore = [
   "G004",
   # pylint: 忽略后，允许使用 global 关键字修改全局变量
   "PLW0603",
+  # pylint: 忽略后，允许在函数体内使用 import 语句
+  "PLC0415",
 ]
 
 # 添加需要额外忽略的目录，比如 Django 自动生成的 migrations 目录

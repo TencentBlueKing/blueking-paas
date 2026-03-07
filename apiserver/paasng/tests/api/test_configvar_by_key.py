@@ -81,7 +81,7 @@ def test_configvar_by_key(
     data = resp.json()
     assert len(data) == len(expected_envs)
     env_map = {d["environment_name"]: d["value"] for d in data}
-    for env, val in zip(expected_envs, expected_values):
+    for env, val in zip(expected_envs, expected_values, strict=False):
         assert env_map[env] == val
 
     # 添加对 is_global 的测试

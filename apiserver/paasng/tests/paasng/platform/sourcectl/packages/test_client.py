@@ -90,7 +90,7 @@ class TestBinaryTarClient:
 
 
 @pytest.mark.parametrize(
-    "client_cls, archive_maker",
+    ("client_cls", "archive_maker"),
     [
         (TarClient, gen_tar),
         (ZipClient, gen_zip),

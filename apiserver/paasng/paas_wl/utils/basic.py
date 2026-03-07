@@ -30,7 +30,7 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 
 # Register cattr custom hooks
-cattr.register_unstructure_hook(UUID, lambda val: str(val))  # type: ignore
+cattr.register_unstructure_hook(UUID, str)  # type: ignore
 cattr.register_structure_hook(UUID, lambda val, _: val if isinstance(val, UUID) else UUID(str(val)))
 # End register
 

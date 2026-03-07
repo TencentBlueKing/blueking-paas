@@ -43,7 +43,7 @@ def dict_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
         elif isinstance(v, tuple):
             converted[key] = tuple(dict_to_camel(x) if isinstance(x, dict) else x for x in v)
         else:
-            converted[key] = data[k]
+            converted[key] = v
 
     return converted
 

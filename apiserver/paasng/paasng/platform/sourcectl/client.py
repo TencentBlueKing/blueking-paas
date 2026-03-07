@@ -158,13 +158,13 @@ class BaseGitApiClient(abc.ABC):
             logger.warning(f"get url `{raw_resp.url}` but 401")
             raise exceptions.AccessTokenError("the access_token can not fetch resource")
         elif raw_resp.status_code == 403:
-            logging.warning(f"get url `{raw_resp.url}` but 403")
+            logger.warning(f"get url `{raw_resp.url}` but 403")
             raise exceptions.AccessTokenForbidden("access token forbidden")
         elif raw_resp.status_code == 504:
-            logging.warning(f"get url `{raw_resp.url}` but 504")
+            logger.warning(f"get url `{raw_resp.url}` but 504")
             raise exceptions.RequestTimeOutError(_("接口请求超时"))
         elif raw_resp.status_code > 500 and raw_resp.status_code != 504:
-            logging.warning(f"get url `{raw_resp.url}` but {raw_resp.status_code}, raw resp: {raw_resp}")
+            logger.warning(f"get url `{raw_resp.url}` but {raw_resp.status_code}, raw resp: {raw_resp}")
             raise exceptions.RequestError(_("接口请求异常"))
 
         try:

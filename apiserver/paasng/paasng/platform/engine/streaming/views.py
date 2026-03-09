@@ -71,8 +71,7 @@ class StreamViewSet(ViewSet):
 
             if not line.startswith("data: "):
                 return line
-            if line.endswith("\n\n"):
-                line = line[:-2]
+            line = line.removesuffix("\n\n")
 
             content = line[6:]
             try:

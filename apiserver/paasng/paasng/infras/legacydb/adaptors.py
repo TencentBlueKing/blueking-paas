@@ -273,8 +273,8 @@ class AuthUserAdaptor:
 
         user = self.model(
             username=username,
-            chname=auth_user.chinese_name if auth_user.chinese_name else "",
-            email=auth_user.email if auth_user.email else "",
+            chname=auth_user.chinese_name or "",
+            email=auth_user.email or "",
             is_staff=auth_user.is_staff,
             is_superuser=auth_user.is_superuser,
             last_login=datetime.datetime.now(),

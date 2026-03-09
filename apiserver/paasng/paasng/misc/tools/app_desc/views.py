@@ -45,7 +45,7 @@ class AppDescTransformAPIView(APIView):
         try:
             spec2_data = yaml.safe_load(yaml_data)
         except yaml.YAMLError as e:
-            return HttpResponseBadRequest(f"Error parsing YAML content: {str(e)}")
+            return HttpResponseBadRequest(f"Error parsing YAML content: {e!s}")
 
         serializer = AppDescSpec2Serializer(data=spec2_data)
         serializer.is_valid(raise_exception=True)
@@ -53,7 +53,7 @@ class AppDescTransformAPIView(APIView):
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(serializer.validated_data)
         except Exception as e:  # noqa: BLE001
-            return HttpResponseBadRequest(f"Error occurred during transformation: {str(e)}")
+            return HttpResponseBadRequest(f"Error occurred during transformation: {e!s}")
 
         try:
             yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
@@ -67,6 +67,6 @@ class AppDescTransformAPIView(APIView):
                 width=1000,
             )
         except yaml.YAMLError as e:
-            return HttpResponseBadRequest(f"Error generating YAML output: {str(e)}")
+            return HttpResponseBadRequest(f"Error generating YAML output: {e!s}")
 
         return HttpResponse(output_yaml, content_type="application/yaml")

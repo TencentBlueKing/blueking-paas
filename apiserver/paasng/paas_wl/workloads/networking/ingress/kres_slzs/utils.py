@@ -255,8 +255,8 @@ class ConfigurationSnippetPatcher:
 
         :return: PatchResult
         """
-        if not re.findall(self.REGEX, base, re.M | re.S):
-            return self.PatchResult(True, "\n".join([base, self.START_MARK, extend, self.END_MARK]))
+        if not re.findall(self.REGEX, base, re.MULTILINE | re.DOTALL):
+            return self.PatchResult(True, "\n".join([base, self.START_MARK, extend, self.END_MARK]))  # noqa: FLY002
         return self.PatchResult(False, base)
 
     def unpatch(self, snippet: str) -> PatchResult:
@@ -264,8 +264,10 @@ class ConfigurationSnippetPatcher:
 
         :return: PatchResult
         """
-        if re.findall(self.REGEX, snippet, re.M | re.S):
-            return self.PatchResult(True, re.sub(self.REGEX, "", snippet, count=0, flags=re.M | re.S).strip())
+        if re.findall(self.REGEX, snippet, re.MULTILINE | re.DOTALL):
+            return self.PatchResult(
+                True, re.sub(self.REGEX, "", snippet, count=0, flags=re.MULTILINE | re.DOTALL).strip()
+            )
         return self.PatchResult(False, snippet)
 
     def parse_service_info_from_rules(self, rules: List[ResourceInstance]) -> Tuple[str, str]:

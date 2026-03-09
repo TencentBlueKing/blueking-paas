@@ -24,7 +24,7 @@ from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.source_types import SourcectlTypeNames, SourceTypes, SourceTypeSpec
 
 if TYPE_CHECKING:
-    from paasng.platform.sourcectl.connector import ModuleRepoConnector  # noqa: F401
+    from paasng.platform.sourcectl.connector import ModuleRepoConnector
 
 
 @pytest.fixture()

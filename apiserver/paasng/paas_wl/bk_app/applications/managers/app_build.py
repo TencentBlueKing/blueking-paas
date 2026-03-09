@@ -79,7 +79,7 @@ def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionRe
         try:
             image_info = parse_image(b.image)
             if not image_info.tag:
-                raise ValueError(f"image tag missing, build id: {b.id}, image: {b.image}")  # noqa: TRY301
+                raise ValueError(f"image tag missing, build id: {b.id}, image: {b.image}")
 
             manifest_ref = ManifestRef(
                 repo=image_info.name,

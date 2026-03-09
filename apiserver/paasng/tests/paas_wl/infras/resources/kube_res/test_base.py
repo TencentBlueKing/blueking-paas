@@ -35,7 +35,7 @@ from paas_wl.infras.resources.kube_res.base import (
 from paas_wl.infras.resources.kube_res.exceptions import APIServerVersionIncompatible
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models import WlApp  # noqa: F401
+    from paas_wl.bk_app.applications.models import WlApp
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

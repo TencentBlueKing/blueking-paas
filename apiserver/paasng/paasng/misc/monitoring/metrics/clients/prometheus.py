@@ -45,7 +45,7 @@ class PrometheusMetricClient:
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError("for security reasons, query metric without time range isn't allowed!")  # noqa: TRY301
+                    raise ValueError("for security reasons, query metric without time range isn't allowed!")
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception:

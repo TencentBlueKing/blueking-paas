@@ -213,7 +213,7 @@ def create_legacy_application(code: Optional[str] = None):
     :param code: The application code, default to a random string.
     """
     session = legacy_db.get_scoped_session()
-    app_code = code if code else generate_random_string(length=12)
+    app_code = code or generate_random_string(length=12)
     values = dict(
         code=app_code,
         name=app_code,

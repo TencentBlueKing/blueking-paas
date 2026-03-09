@@ -188,7 +188,7 @@ class BaseGitApiClient(abc.ABC):
         try:
             self.token_holder.refresh()
         except OAuth2Error:
-            logger.error(f"failed to refresh token for {self.token_holder.user.username}")  # noqa: TRY400
+            logger.error(f"failed to refresh token for {self.token_holder.user.username}")
             raise exceptions.AccessTokenRefreshError("fail to refresh token")
 
         # 更新 OAuth token 后更新请求头

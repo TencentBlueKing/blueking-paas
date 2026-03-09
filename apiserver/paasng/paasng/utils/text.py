@@ -40,7 +40,7 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
 RE_TAG = re.compile("<.*?>")
 
 
-def strip_html_tags(s: str, reserved_tags: Collection[str] | None = None) -> str:  # noqa: B006
+def strip_html_tags(s: str, reserved_tags: Collection[str] | None = None) -> str:
     """Remove all HTML tags in string except those matching `reserved_tags`.
 
     :param reserved_tags: Tags were reserved from removing, default to []

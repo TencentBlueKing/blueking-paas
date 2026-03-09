@@ -80,7 +80,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         # PaaS2.0 应用的部署信息固定为 None
         if app_source == SimpleAppSource.DEFAULT:
             deploy_info = get_exposed_links(application)
-            return deploy_info if deploy_info else None
+            return deploy_info or None
         return None
 
     def get_market_address(self, application: Application, app_source: SimpleAppSource) -> Optional[str]:

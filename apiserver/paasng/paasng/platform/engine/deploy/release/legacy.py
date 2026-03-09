@@ -215,7 +215,7 @@ def release_to_k8s(
 
     try:
         DeployAction(env=env, release=release, extra_envs=extra_envs).perform()
-    except KubeException:  # noqa: TRY302
+    except KubeException:
         # TODO: Wrap exception and re-raise
         raise
     return release

@@ -42,17 +42,17 @@ from .processes import sync_processes
 from .svc_discovery import sync_svc_discovery
 
 __all__ = [
+    "clean_empty_overlays",
     "sync_addons",
     "sync_build",
     "sync_domain_resolution",
-    "sync_env_vars",
-    "sync_hooks",
-    "sync_mounts",
-    "sync_processes",
-    "sync_svc_discovery",
-    "sync_observability",
     "sync_env_overlays_autoscalings",
     "sync_env_overlays_replicas",
     "sync_env_overlays_res_quotas",
-    "clean_empty_overlays",
+    "sync_env_vars",
+    "sync_hooks",
+    "sync_mounts",
+    "sync_observability",
+    "sync_processes",
+    "sync_svc_discovery",
 ]

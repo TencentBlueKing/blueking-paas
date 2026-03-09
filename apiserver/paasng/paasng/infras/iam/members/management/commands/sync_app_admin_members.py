@@ -88,7 +88,7 @@ class Command(BaseCommand):
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
-            end_at = end_at if end_at < self.total_count else self.total_count
+            end_at = min(self.total_count, end_at)
             print(f"{start_at + 1} - {end_at}:".rjust(11), " ".join(self.app_codes[start_at:end_at]))  # noqa: T201
 
         print("---------------- data preparation finished ----------------")  # noqa: T201
@@ -173,7 +173,7 @@ class Command(BaseCommand):
                     iam_client.add_grade_manager_members(grade_manager_id, [user])
                     unchanged = False
                 except Exception as e:  # noqa: BLE001
-                    sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {str(e)}")
+                    sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {e!s}")
         else:
             sync_logs.append("no users need to be added as grade manager")
 

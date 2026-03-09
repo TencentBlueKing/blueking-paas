@@ -49,7 +49,7 @@ DEFAULT_PROD_ENV_ID = 2
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
+def django_db_setup(django_db_setup, django_db_blocker):
     """Some initialization jobs before running tests."""
     with django_db_blocker.unblock():
         with transaction.atomic():

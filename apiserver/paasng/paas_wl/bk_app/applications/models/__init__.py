@@ -24,14 +24,14 @@ from .misc import OutputStream, OutputStreamLine
 from .release import Release
 
 __all__ = [
+    "DEFAULT_SLUG_RUNNER_ENTRYPOINT",
     "AuditedModel",
-    "UuidAuditedModel",
-    "WlApp",
-    "Config",
     "Build",
     "BuildProcess",
-    "DEFAULT_SLUG_RUNNER_ENTRYPOINT",
-    "Release",
+    "Config",
     "OutputStream",
     "OutputStreamLine",
+    "Release",
+    "UuidAuditedModel",
+    "WlApp",
 ]

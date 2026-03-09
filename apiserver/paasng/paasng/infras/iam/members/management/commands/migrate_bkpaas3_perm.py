@@ -100,7 +100,7 @@ class Command(BaseCommand):
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
-            end_at = end_at if end_at < self.total_count else self.total_count
+            end_at = min(self.total_count, end_at)
             print(  # noqa: T201
                 f"{start_at + 1} - {end_at}:".rjust(11),
                 " ".join([app["code"] for app in self.applications[start_at:end_at]]),
@@ -198,7 +198,7 @@ class Command(BaseCommand):
             try:
                 iam_client.add_grade_manager_members(grade_manager_id, [username])
             except Exception as e:  # noqa: BLE001
-                migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {str(e)}")
+                migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {e!s}")
 
         # 3. 检查该应用现有的的用户组，是否是默认的三个，如果不是，则删除后重建
         exists_user_group_ids = [
@@ -237,7 +237,7 @@ class Command(BaseCommand):
             try:
                 iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
             except Exception as e:  # noqa: BLE001
-                migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {str(e)}")
+                migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {e!s}")
 
         if developers := self.members_map[developer_key]:
             user_group_id = self.user_group_map[developer_key]
@@ -250,7 +250,7 @@ class Command(BaseCommand):
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:  # noqa: BLE001
-                    migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {str(e)}")
+                    migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {e!s}")
 
         if operators := self.members_map[operator_key]:
             user_group_id = self.user_group_map[operator_key]
@@ -263,7 +263,7 @@ class Command(BaseCommand):
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:  # noqa: BLE001
-                    migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {str(e)}")
+                    migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {e!s}")
 
         migrate_logs.append(f"migrate application [{app_name}/{app_code}] user role success! {idx}/{self.total_count}")
 

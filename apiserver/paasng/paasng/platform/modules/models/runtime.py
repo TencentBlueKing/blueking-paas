@@ -255,7 +255,7 @@ class AppImage(TimestampedModel):
         tag = self.tag
         if not tag:
             tag = "latest"
-        return ":".join([self.image, tag])
+        return f"{self.image}:{tag}"
 
     def __str__(self) -> str:
         return f"{self.name}[{self.pk}]"

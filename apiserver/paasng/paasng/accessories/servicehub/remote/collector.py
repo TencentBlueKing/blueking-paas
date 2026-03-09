@@ -18,8 +18,7 @@
 """Collector for remote services"""
 
 import logging
-from collections import namedtuple
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List, NamedTuple, Optional
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -117,7 +116,10 @@ class RemoteServiceSLZ(serializers.Serializer):
 # Serializers end
 
 
-FetchResult = namedtuple("FetchResult", "config data meta_info")
+class FetchResult(NamedTuple):
+    config: RemoteSvcConfig
+    data: List[Dict]
+    meta_info: Optional[Dict]
 
 
 def fetch_remote_service(config: RemoteSvcConfig) -> FetchResult:

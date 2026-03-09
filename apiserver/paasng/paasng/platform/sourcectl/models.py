@@ -18,9 +18,8 @@
 import datetime
 import logging
 import re
-from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, NamedTuple, Optional, Tuple, TypeVar
 from urllib.parse import urlparse
 
 from bkpaas_auth.models import User
@@ -598,7 +597,9 @@ class BasicAuthHolderManager(models.Manager):
         return self.get(repo_id=repo_obj.get_identity(), repo_type=repo_obj.get_source_type(), module=module)
 
 
-BasicAuth = namedtuple("BasicAuth", "username,password")
+class BasicAuth(NamedTuple):
+    username: str
+    password: str
 
 
 class RepoBasicAuthHolder(TimestampedModel):

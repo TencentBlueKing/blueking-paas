@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from collections import namedtuple
+from typing import Any, NamedTuple
 from unittest.mock import Mock, patch
 
 import pytest
@@ -43,7 +43,11 @@ from .conftest import construct_foo_pod
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
-DummyObjectList = namedtuple("DummyObjectList", "items metadata")
+
+class DummyObjectList(NamedTuple):
+    items: Any
+    metadata: Any
+
 
 # Make a shortcut name
 RG = settings.DEFAULT_REGION_NAME

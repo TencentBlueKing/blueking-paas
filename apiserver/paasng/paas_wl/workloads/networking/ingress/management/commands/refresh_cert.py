@@ -187,9 +187,9 @@ class Command(BaseCommand):
         :param title: Use this title to distinguish different print messages
         """
         if title:
-            print(self.style.SUCCESS(f"[{title.upper()}] ") + message)
+            print(self.style.SUCCESS(f"[{title.upper()}] ") + message)  # noqa: T201
         else:
-            print(message)
+            print(message)  # noqa: T201
 
 
 def find_uninitialized_domains(cert: AppDomainSharedCert) -> Iterable[AppDomain]:

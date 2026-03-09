@@ -75,7 +75,7 @@ class Command(BaseCommand):
         regrant_failed_app_codes = set()
 
         for idx, group in enumerate(groups, start=1):
-            print(
+            print(  # noqa: T201
                 f"regrant app code {group.app_code} role {ApplicationRole(role).name} "
                 + f"iam user group: {group.user_group_id} ({idx}/{total})"
             )
@@ -90,8 +90,8 @@ class Command(BaseCommand):
                     [{"id": group.user_group_id, "role": group.role}],
                 )
             except Exception as e:  # noqa: BLE001
-                print(f"regrant app code {group.app_code} role {ApplicationRole(role).name} iam user group error: {e}")
+                print(f"regrant app code {group.app_code} role {ApplicationRole(role).name} iam user group error: {e}")  # noqa: T201
                 regrant_failed_app_codes.add(group.app_code)
 
         if regrant_failed_app_codes:
-            print(f"regrant failed app codes: {regrant_failed_app_codes}")
+            print(f"regrant failed app codes: {regrant_failed_app_codes}")  # noqa: T201

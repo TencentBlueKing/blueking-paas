@@ -62,7 +62,7 @@ class Command(BaseCommand):
 
     def _prepare(self):
         """中间态数据准备"""
-        print("------------------ start data preparation -----------------")
+        print("------------------ start data preparation -----------------")  # noqa: T201
 
         applications = Application.objects.filter(is_deleted=False)
         grade_managers = ApplicationGradeManager.objects.all()
@@ -96,25 +96,25 @@ class Command(BaseCommand):
 
         self.total_count = len(self.applications)
 
-        print(f"{self.total_count} applications waiting for migrate:")
+        print(f"{self.total_count} applications waiting for migrate:")  # noqa: T201
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
             end_at = end_at if end_at < self.total_count else self.total_count
-            print(
+            print(  # noqa: T201
                 f"{start_at + 1} - {end_at}:".rjust(11),
                 " ".join([app["code"] for app in self.applications[start_at:end_at]]),
             )
 
-        print("---------------- data preparation finished ----------------")
+        print("---------------- data preparation finished ----------------")  # noqa: T201
 
     def _migrate(self):
         """迁移权限数据"""
         if self.dry_run:
-            print("------------------------- DRY-RUN -------------------------")
+            print("------------------------- DRY-RUN -------------------------")  # noqa: T201
             return
 
-        print("---------------- start migrate applications role data ----------------")
+        print("---------------- start migrate applications role data ----------------")  # noqa: T201
 
         self.success_records = []
         self.failed_records = []
@@ -136,10 +136,10 @@ class Command(BaseCommand):
             else:
                 self.success_records.append({"idx": idx, "app": app, "logs": logs})
 
-            print(f"{flag} {idx}/{self.total_count} migrate app [{app['name']}/{app['code']}] user roles {status}")
+            print(f"{flag} {idx}/{self.total_count} migrate app [{app['name']}/{app['code']}] user roles {status}")  # noqa: T201
 
-        print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")
-        print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")
+        print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")  # noqa: T201
+        print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")  # noqa: T201
 
     def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901, PLR0912, PLR0915
         """迁移单个应用权限数据"""
@@ -273,7 +273,7 @@ class Command(BaseCommand):
         if self.dry_run:
             return
 
-        print("---------------- store records to local files ----------------")
+        print("---------------- store records to local files ----------------")  # noqa: T201
 
         with open("./migrate_success_records.json", "w") as fw:
             fw.write(json.dumps(self.success_records, indent=4, ensure_ascii=False))
@@ -281,4 +281,4 @@ class Command(BaseCommand):
         with open("./migrate_failed_records.json", "w") as fw:
             fw.write(json.dumps(self.failed_records, indent=4, ensure_ascii=False))
 
-        print("---------------- store records finished! ----------------")
+        print("---------------- store records finished! ----------------")  # noqa: T201

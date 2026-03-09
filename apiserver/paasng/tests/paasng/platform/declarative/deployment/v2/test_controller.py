@@ -72,7 +72,6 @@ class TestProcessesField:
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
-        print(web.__dict__)
         assert web.get_proc_command() == command
         assert web.command is None
         assert web.args is None

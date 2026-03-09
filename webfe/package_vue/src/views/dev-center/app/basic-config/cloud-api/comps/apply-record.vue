@@ -735,12 +735,11 @@ export default {
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
-        // 新 API 响应格式：直接返回数据，无 result 层级
-        const records = this.isMcpService ? this.formatMcpServiceData(res) : res?.results || [];
+        const records = this.isMcpService ? this.formatMcpServiceData(res) : res.data?.results || [];
         records.forEach((item) => {
           item.type = this.typeValue;
         });
-        this.pagination.count = this.isMcpService ? records.length : res.count;
+        this.pagination.count = this.isMcpService ? records.length : res.data.count;
         this.tableList = records;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
@@ -767,8 +766,7 @@ export default {
           appCode: this.appCode,
           recordId: row.id,
         });
-        // 新 API 响应格式：直接返回数据，无 result 层级
-        this.curRecord = Object.assign(this.curRecord, res);
+        this.curRecord = Object.assign(this.curRecord, res.data);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

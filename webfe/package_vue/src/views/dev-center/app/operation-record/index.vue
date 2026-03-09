@@ -415,8 +415,7 @@ export default {
           appCode: this.appCode,
           recordId: row.data_after.data,
         });
-        // 新 API 响应格式: 直接返回数据, 无 result 层级
-        this.curCloudApiRecord = Object.assign(this.curCloudApiRecord, res);
+        this.curCloudApiRecord = Object.assign(this.curCloudApiRecord, res.data);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

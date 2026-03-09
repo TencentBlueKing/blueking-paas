@@ -167,7 +167,7 @@ class WaitProcedurePoller(TaskPoller):
         """Get process list of last polling action"""
         try:
             return self.store.get()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get last processes, error: %s", e)
             return None
 

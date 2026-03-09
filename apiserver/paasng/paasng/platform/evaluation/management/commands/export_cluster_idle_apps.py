@@ -77,13 +77,13 @@ class Command(BaseCommand):
                         wl_app = env.engine_app.to_wl_obj()
                         if wl_app.latest_config.cluster == cluster_name:
                             return True
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         logger.warning(
                             f"Failed to get cluster info for app {app.code} "
                             f"module {module.name} environment {env.environment}: {e}"
                         )
                         continue
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Exception occurred while determining cluster for app {app.code}: {e}")
         return False
 

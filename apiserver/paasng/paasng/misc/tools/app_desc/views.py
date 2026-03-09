@@ -52,7 +52,7 @@ class AppDescTransformAPIView(APIView):
 
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(serializer.validated_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return HttpResponseBadRequest(f"Error occurred during transformation: {str(e)}")
 
         try:

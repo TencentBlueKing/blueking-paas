@@ -123,7 +123,7 @@ class Command(BaseCommand):
             status, flag = "success", "."
             try:
                 logs = self._migrate_single(idx, app)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.failed_records.append(
                     {
                         "idx": idx,
@@ -197,7 +197,7 @@ class Command(BaseCommand):
                 continue
             try:
                 iam_client.add_grade_manager_members(grade_manager_id, [username])
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {str(e)}")
 
         # 3. 检查该应用现有的的用户组，是否是默认的三个，如果不是，则删除后重建
@@ -236,7 +236,7 @@ class Command(BaseCommand):
         for username in administrators:
             try:
                 iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {str(e)}")
 
         if developers := self.members_map[developer_key]:
@@ -249,7 +249,7 @@ class Command(BaseCommand):
             for username in developers:
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {str(e)}")
 
         if operators := self.members_map[operator_key]:
@@ -262,7 +262,7 @@ class Command(BaseCommand):
             for username in operators:
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {str(e)}")
 
         migrate_logs.append(f"migrate application [{app_name}/{app_code}] user role success! {idx}/{self.total_count}")

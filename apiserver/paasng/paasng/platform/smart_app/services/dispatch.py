@@ -81,7 +81,7 @@ def dispatch_package_to_modules(
         # WARNING: with atomic() 内，子线程无法读取到父事务中的未提交数据
         if _PARALLEL_PATCHING:
             with ThreadPoolExecutor() as executor:
-                results = executor.map(handler, *zip(*tasks))
+                results = executor.map(handler, *zip(*tasks, strict=False))
             return list(results)
         else:
             # Execute Sequentially

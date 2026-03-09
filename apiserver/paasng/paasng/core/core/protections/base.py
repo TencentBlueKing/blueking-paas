@@ -59,6 +59,9 @@ class ProtectionStatus:
             return False
         return self.failed_conditions == other.failed_conditions
 
+    def __hash__(self) -> int:
+        return hash(tuple((item.message, item.action_name) for item in self.failed_conditions))
+
 
 class BaseConditionChecker:
     conditions: List[BaseCondition]

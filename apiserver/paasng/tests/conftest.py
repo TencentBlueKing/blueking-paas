@@ -301,7 +301,7 @@ def _init_test_app_repo(request):
 
     try:
         repo_config = settings.FOR_TESTS_SVN_SERVER_CONF
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # use filelock to ensure svn initial will only run once

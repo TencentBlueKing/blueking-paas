@@ -164,7 +164,7 @@ class TestApp:
         # with pytest.raises(AppFieldValidationError):
         try:
             validate_app_code_uniquely(self, bk_app_full.code)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(e)
 
     def test_validate_app_name(self, bk_app_full):

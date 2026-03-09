@@ -56,12 +56,12 @@ class CNativeBaseMigrator(ABC):
         try:
             if legacy_data := self._generate_legacy_data():
                 self._backup_legacy_data(legacy_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BackupLegacyDataFailed(f"backup data failed: {e}")
 
         try:
             self._migrate()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise MigrationFailed(f"migrate failed: {e}")
 
     def rollback(self):

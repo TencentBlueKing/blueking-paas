@@ -105,7 +105,7 @@ class TestSvnRepositoryClientV2:
         svn_client.get_latest_revision()
 
     def test_package(self, svn_client):
-        file_path = tempfile.mktemp(suffix=".tar.gz")
+        file_path = tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False).name  # noqa: SIM115
         svn_client.package("", file_path)
         assert os.path.exists(file_path)
 

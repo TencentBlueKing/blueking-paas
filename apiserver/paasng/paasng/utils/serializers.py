@@ -192,7 +192,7 @@ class Base64FileField(serializers.Field):
             data = data[7:]
             try:
                 data = base64.b64decode(data)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.fail("invalid_base64", input=data)
 
         if not isinstance(data, bytes):

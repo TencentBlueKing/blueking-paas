@@ -89,7 +89,7 @@ class Command(BaseCommand):
                     app_code_name_map[group.app_code],
                     [{"id": group.user_group_id, "role": group.role}],
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 print(f"regrant app code {group.app_code} role {ApplicationRole(role).name} iam user group error: {e}")
                 regrant_failed_app_codes.add(group.app_code)
 

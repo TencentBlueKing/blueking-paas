@@ -53,15 +53,15 @@ class Command(BaseCommand):
                 plan_uuids.append(str(plan.uuid))
                 if created:
                     self.stdout.write(
-                        f'Init  Plan: {config["name"]} ({config["spec_type"]}) success', self.style.SUCCESS
+                        f"Init  Plan: {config['name']} ({config['spec_type']}) success", self.style.SUCCESS
                     )
                     success_count += 1
                 else:
-                    self.stdout.write(f'Plan already exists: {config["name"]}', self.style.NOTICE)
+                    self.stdout.write(f"Plan already exists: {config['name']}", self.style.NOTICE)
 
             msg = f"Init {success_count}/{len(self.PLAN_CONFIGS)} plans for redis service (tenant_id: {tenant_id})"
             self.stdout.write(self.style.SUCCESS(msg))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.stderr.write(self.style.ERROR(f"Init plans for redis service failed: {str(e)}"))
 
         self._init_redis_service_binding_policy(service_obj, plan_uuids, tenant_id)

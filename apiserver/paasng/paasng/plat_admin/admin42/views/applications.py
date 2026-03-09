@@ -129,7 +129,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
         for rp in self.get_queryset():
             try:
                 administrators = ", ".join(rp.app.get_administrators())
-            except Exception:
+            except Exception:  # noqa: BLE001
                 administrators = "--"
 
             rows.append(

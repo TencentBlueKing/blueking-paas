@@ -42,9 +42,9 @@ class SentryClient:
             elif method == "POST":
                 resp = requests.post(url=url, headers=headers, json=data, timeout=timeout)
             elif method == "DELETE":
-                resp = requests.delete(url=url, headers=headers, json=data)
+                resp = requests.delete(url=url, headers=headers, json=data, timeout=timeout)
             elif method == "PUT":
-                resp = requests.put(url=url, headers=headers, json=data)
+                resp = requests.put(url=url, headers=headers, json=data, timeout=timeout)
             else:
                 return False, None
         except requests.exceptions.RequestException:

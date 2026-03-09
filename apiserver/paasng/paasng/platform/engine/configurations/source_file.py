@@ -146,7 +146,7 @@ class MetaDataFileReader:
         :param file_paths: A sequence of possible file paths to read
         :return: (file content | None, error message)
         """
-        not_found_map = {key: False for key in file_paths}
+        not_found_map = dict.fromkeys(file_paths, False)
         for possible_key in file_paths:
             try:
                 content = self.read_file(possible_key, version_info)
@@ -158,7 +158,7 @@ class MetaDataFileReader:
                 # Set the mark and try the next file path if file not found
                 not_found_map[possible_key] = True
                 continue
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.info("Failed to read file, location: %s, error: %s.", possible_key, str(e))
                 continue
             else:

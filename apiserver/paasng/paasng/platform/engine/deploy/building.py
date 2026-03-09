@@ -154,7 +154,7 @@ class BaseBuilder(DeployStep):
 
             upsert_proc_svc_by_spec_version(app_environment.module, result.spec_version)
         except InitDeployDescHandlerError as e:
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))  # noqa: INT002
         except (DescriptionValidationError, ManifestImportError) as e:
             raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
         except Exception as e:

@@ -28,6 +28,7 @@ import paasng.utils.masked_curlify as curlify
 from paasng.infras.oauth2.exceptions import BkOauthApiException, BkOauthApiResponseError, BkOauthClientDoesNotExist
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 @dataclass
@@ -102,7 +103,7 @@ class BkOauthClient:
             "bk_tenant": {"mode": app_tenant_mode, "id": app_tenant_id},
         }
         with wrap_request_exc():
-            resp = requests.post(url, json=data, headers=self.headers)
+            resp = requests.post(url, json=data, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             self._validate_resp(resp)
 
     def create_app_secret(self, bk_app_code: str):
@@ -111,7 +112,7 @@ class BkOauthClient:
         """
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys"
         with wrap_request_exc():
-            resp = requests.post(url, headers=self.headers)
+            resp = requests.post(url, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             self._validate_resp(resp)
             return
 
@@ -119,7 +120,7 @@ class BkOauthClient:
         """主要用于更换 bk_app_secret 后, 对老的 bk_app_secret进行删除, 若App只剩下唯一一个bk_app_secret, 则无法删除"""
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys/{bk_app_secret_id}"
         with wrap_request_exc():
-            resp = requests.delete(url, headers=self.headers)
+            resp = requests.delete(url, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             self._validate_resp(resp)
             return
 
@@ -128,7 +129,7 @@ class BkOauthClient:
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys/{bk_app_secret_id}"
         with wrap_request_exc():
             data = {"enabled": enabled}
-            resp = requests.put(url, json=data, headers=self.headers)
+            resp = requests.put(url, json=data, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             self._validate_resp(resp)
             return
 
@@ -136,7 +137,7 @@ class BkOauthClient:
         """查询应用 bk_app_secret 列表, 由于支持同一个应用存在2个 bk_app_secret, 所以返回的 bk_app_secret 是一个列表"""
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys"
         with wrap_request_exc():
-            resp = requests.get(url, headers=self.headers)
+            resp = requests.get(url, headers=self.headers, timeout=DEFAULT_TIMEOUT)
 
             # 应用 bk_app_secret 不存在抛出异常
             if resp.status_code == 404:

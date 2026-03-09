@@ -24,7 +24,7 @@ from iam import Resource
 from iam.apply import models
 
 
-class ResourceRequest(ABC):
+class ResourceRequest(ABC):  # noqa: B024
     resource_type = ""
 
     @classmethod

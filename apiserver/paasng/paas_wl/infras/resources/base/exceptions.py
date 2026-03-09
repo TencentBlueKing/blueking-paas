@@ -18,7 +18,7 @@
 
 class KubeException(Exception):
     def __init__(self, *args, **kwargs):
-        self.extra_value = kwargs.get("extra_value", None)
+        self.extra_value = kwargs.get("extra_value")
         super().__init__(*args)
 
 

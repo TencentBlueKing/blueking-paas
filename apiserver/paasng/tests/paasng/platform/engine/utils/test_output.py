@@ -31,18 +31,18 @@ def test_sanitize_message_truncating():
 
 class TestConsoleStream:
     def test_console_stream_stdout(self):
-        line = []
+        line: list[str] = []
         with mock.patch("sys.stdout") as stdout:
-            stdout.write.side_effect = lambda text: line.append(text)
+            stdout.write.side_effect = line.append
             ConsoleStream().write_title("write_title")
             ConsoleStream().write_message("write_message")
 
         assert "".join(line) == "[TITLE]: write_title\nwrite_message\n"
 
     def test_console_stream_stderr(self):
-        line = []
+        line: list[str] = []
         with mock.patch("sys.stderr") as stderr:
-            stderr.write.side_effect = lambda text: line.append(text)
+            stderr.write.side_effect = line.append
             ConsoleStream().write_title("write_title")
             ConsoleStream().write_message("write_message", "STDERR")
 

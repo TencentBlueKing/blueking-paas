@@ -28,6 +28,7 @@ from paasng.misc.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsRes
 from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 class PrometheusMetricClient:
@@ -97,7 +98,8 @@ class PrometheusMetricClient:
             kwargs["auth"] = HTTPBasicAuth(*self.basic_auth)
 
         # long time range may cause timeout
-        resp = requests.request(method, url, **kwargs)
+        timeout = kwargs.pop("timeout", DEFAULT_TIMEOUT)
+        resp = requests.request(method, url, timeout=timeout, **kwargs)
 
         if resp.status_code != desired_code:
             logger.warning("fetch<%s> metrics failed", url)

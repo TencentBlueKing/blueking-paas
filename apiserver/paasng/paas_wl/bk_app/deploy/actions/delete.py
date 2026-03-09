@@ -85,7 +85,7 @@ def _delete_module_related_res(module: Module) -> None:
         # Delete all resources in cluster, allow failure
         try:
             delete_env_resources(env)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Error deleting app cluster resources, app: %s, error: %s", wl_app, e)
 
         # This will also remove cascaded models:

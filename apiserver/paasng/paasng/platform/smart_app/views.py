@@ -118,7 +118,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
         logger.debug("[S-Mart] fetching remote services by region.")
         supported_services = list(mixed_service_mgr.list_visible())
-        supported_services = cast(List[ServiceObj], supported_services)
+        supported_services = cast("List[ServiceObj]", supported_services)
 
         return Response(
             data=PackageStashResponseSLZ(

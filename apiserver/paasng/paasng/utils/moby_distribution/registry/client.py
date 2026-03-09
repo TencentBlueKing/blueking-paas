@@ -217,7 +217,7 @@ class URLBuilder:
 
 
 default_client = cast(
-    DockerRegistryV2Client, LazyProxy(lambda: DockerRegistryV2Client.from_api_endpoint(OFFICIAL_ENDPOINT))
+    "DockerRegistryV2Client", LazyProxy(lambda: DockerRegistryV2Client.from_api_endpoint(OFFICIAL_ENDPOINT))
 )
 
 

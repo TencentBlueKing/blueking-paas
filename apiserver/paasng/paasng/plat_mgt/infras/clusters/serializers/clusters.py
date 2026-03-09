@@ -15,9 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Set
 
-from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
@@ -39,6 +38,9 @@ from paasng.plat_mgt.infras.clusters.constants import (
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.validators import Base64Validator
+
+if TYPE_CHECKING:
+    from django.db.models.query import QuerySet
 
 
 class ElasticSearchConfigSLZ(serializers.Serializer):

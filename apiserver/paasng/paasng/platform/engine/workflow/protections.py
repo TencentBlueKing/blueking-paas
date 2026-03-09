@@ -30,7 +30,6 @@ from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.exceptions import (
     AccessTokenForbidden,
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     from bkpaas_auth.models import User
 
     from paasng.platform.applications.models import ModuleEnvironment
+    from paasng.platform.modules.models import Module
 
 
 class DeployCondition(BaseCondition):

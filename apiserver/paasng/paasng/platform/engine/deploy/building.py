@@ -17,7 +17,7 @@
 
 import logging
 import time
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
@@ -32,7 +32,6 @@ from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.bkapp_model.services import upsert_proc_svc_by_spec_version
@@ -79,6 +78,9 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.blobstore import make_blob_store
 from paasng.utils.i18n.celery import I18nTask
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import ApplicationEnvironment
 
 logger = logging.getLogger(__name__)
 

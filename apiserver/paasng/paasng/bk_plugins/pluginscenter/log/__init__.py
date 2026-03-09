@@ -243,11 +243,11 @@ def _instantiate_log_client(
         elif log_type == LogType.STRUCTURED:
             if not pd.log_config.json_:
                 raise ValueError("this plugin does not support query json logs")
-            search_params = cast(ElasticSearchParams, pd.log_config.json_)
+            search_params = cast("ElasticSearchParams", pd.log_config.json_)
         else:
             if not pd.log_config.ingress:
                 raise ValueError("this plugin does not support query ingress logs")
-            search_params = cast(ElasticSearchParams, pd.log_config.ingress)
+            search_params = cast("ElasticSearchParams", pd.log_config.ingress)
         return log_client, search_params
     # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
     # 插件开发中心只部署主模块的生产环境
@@ -281,11 +281,11 @@ def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:
     elif log_type == LogType.STRUCTURED:
         if not pd.log_config.json_:
             raise ValueError("this plugin does not support query json logs")
-        search_params = cast(ElasticSearchParams, pd.log_config.json_)
+        search_params = cast("ElasticSearchParams", pd.log_config.json_)
     else:
         if not pd.log_config.ingress:
             raise ValueError("this plugin does not support query ingress logs")
-        search_params = cast(ElasticSearchParams, pd.log_config.ingress)
+        search_params = cast("ElasticSearchParams", pd.log_config.ingress)
     return search_params.filterFields
 
 

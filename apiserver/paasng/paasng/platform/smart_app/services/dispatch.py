@@ -139,7 +139,7 @@ def dispatch_slug_image_to_registry(
     client = bksmart_settings.registry.get_client()
     image_ref = ImageRef.from_image(
         from_repo=base_image.name,
-        from_reference=cast(str, base_image.tag),
+        from_reference=cast("str", base_image.tag),
         to_repo=new_image_info.name,
         to_reference=new_image_info.tag,
         client=client,
@@ -190,7 +190,7 @@ def dispatch_cnb_image_to_registry(
         client = bksmart_settings.registry.get_client()
         image_ref = ImageRef.from_image(
             from_repo=base_image.name,
-            from_reference=cast(str, base_image.tag),
+            from_reference=cast("str", base_image.tag),
             to_repo=new_image_info.name,
             to_reference=new_image_info.tag,
             client=client,

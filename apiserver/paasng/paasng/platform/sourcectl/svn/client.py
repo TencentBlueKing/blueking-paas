@@ -231,7 +231,7 @@ class SvnRepositoryClient:
             # Will raise svn: E200009 is file does not exists
             if "svn: E200009" not in str(e):
                 raise
-            raise ReadFileNotFoundError()
+            raise ReadFileNotFoundError
 
     def export(self, subdir, local_path, revision=None):
         """Export contents in a subdir to local_path

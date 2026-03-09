@@ -172,7 +172,7 @@ class WaitProcedurePoller(TaskPoller):
             return None
 
     def get_status(self, processes: List[PlainProcess]) -> PollingResult:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class DynamicReadyTimeoutPolicy(AbortPolicy):

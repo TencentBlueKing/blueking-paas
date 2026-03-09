@@ -100,7 +100,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_market_info: bool,
     ):
         app_data = UniversalAppSLZ(app).data
-        app_instance = cast(Application, app._db_object)
+        app_instance = cast("Application", app._db_object)
 
         # 返回数据中是否包含联系人信息, contact_info_dict 为 None 代表不返回联系人信息
         if contact_info_dict is not None:

@@ -195,7 +195,7 @@ class Build(UuidAuditedModel):
                 password=image_registry.password,
             )
             image = parse_image(self.image, default_registry=image_registry.host)
-            ref = ManifestRef(repo=image.name, reference=cast(str, image.tag), client=registry_client)
+            ref = ManifestRef(repo=image.name, reference=cast("str", image.tag), client=registry_client)
 
             metadata = None
             try:

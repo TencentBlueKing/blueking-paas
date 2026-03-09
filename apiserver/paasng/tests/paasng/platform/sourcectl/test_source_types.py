@@ -67,7 +67,7 @@ class DummyOAuth2Backend(OAuth2Backend):
 
 
 class DummySourceTypeSpec(SourceTypeSpec):
-    connector_class = cast(Type["ModuleRepoConnector"], DummyClass)
+    connector_class = cast("Type[ModuleRepoConnector]", DummyClass)
     repo_controller_class = DummyClass  # type: ignore
     oauth_backend_class = DummyOAuth2Backend
     basic_type = "svn"
@@ -81,7 +81,7 @@ class DummySourceTypeSpec(SourceTypeSpec):
 
 
 class GitDummySourceTypeSpec(SourceTypeSpec):
-    connector_class = cast(Type["ModuleRepoConnector"], DummyClass)
+    connector_class = cast("Type[ModuleRepoConnector]", DummyClass)
     repo_controller_class = DummyClass  # type: ignore
     oauth_backend_class = DummyOAuth2Backend
     basic_type = "git"

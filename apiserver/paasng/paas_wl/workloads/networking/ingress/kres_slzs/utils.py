@@ -18,14 +18,16 @@
 import re
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from blue_krill.text import remove_prefix, remove_suffix
 from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.models import Cluster
+
+if TYPE_CHECKING:
+    from paas_wl.infras.cluster.models import Cluster
 
 
 class IngressNginxAdaptor:

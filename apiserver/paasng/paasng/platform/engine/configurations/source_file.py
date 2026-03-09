@@ -158,7 +158,7 @@ class MetaDataFileReader:
                 # Set the mark and try the next file path if file not found
                 not_found_map[possible_key] = True
                 continue
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.info("Failed to read file, location: %s, error: %s.", possible_key, str(e))
                 continue
             else:

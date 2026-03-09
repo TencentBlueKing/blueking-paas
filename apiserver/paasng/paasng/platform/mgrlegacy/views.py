@@ -419,7 +419,7 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             else:
                 target_replicas = validated_data["target_replicas"]
                 handler.scale(proc_config, target_replicas)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise wl_error_codes.PROCESS_OPERATE_FAILED.f(str(e))
 
         return Response(status=status.HTTP_204_NO_CONTENT)

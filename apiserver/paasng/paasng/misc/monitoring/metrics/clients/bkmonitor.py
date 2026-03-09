@@ -74,7 +74,7 @@ class BkMonitorMetricClient:
             ret = BkPromResult.from_series(series).get_raw_by_container_name(container_name)
             if ret:
                 return ret.get("values", [])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("failed to get metric results: %s", e)
 
         return []

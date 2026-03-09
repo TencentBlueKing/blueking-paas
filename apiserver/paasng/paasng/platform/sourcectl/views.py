@@ -323,7 +323,7 @@ class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         context = get_module_init_repo_context(module, TemplateType.NORMAL)
         try:
             result = upload_init_code_to_storage(module, context)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise error_codes.CANNOT_INIT_APP_TEMPLATE.f(str(e))
         if not result.is_success():
             raise error_codes.CANNOT_INIT_APP_TEMPLATE.f(result.error)

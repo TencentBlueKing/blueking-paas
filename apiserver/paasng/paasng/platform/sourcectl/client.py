@@ -169,7 +169,7 @@ class BaseGitApiClient(abc.ABC):
 
         try:
             return raw_resp.json()
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise exceptions.RequestError(_("解析接口返回结果失败"))
 
     def _refresh_token(self):

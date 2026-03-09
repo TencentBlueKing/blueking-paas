@@ -178,7 +178,7 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
     try:
         process = process_kmodel.get_by_type(app, process_type)
         process.instances = instance_kmodel.list_by_process_type(app, process_type)
-    except Exception:
+    except Exception:  # noqa: BLE001
         raise AppInstancesNotFoundError("failed to get process instances info")
 
     if not process.instances:

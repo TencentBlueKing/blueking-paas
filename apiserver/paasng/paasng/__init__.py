@@ -33,7 +33,7 @@ try:
     path = os.environ.get("prometheus_multiproc_dir")  # noqa: SIM112
     if path is not None:
         os.mkdir(path)
-except Exception:  # noqa: S110
+except Exception:  # noqa: BLE001, S110
     pass
 
 

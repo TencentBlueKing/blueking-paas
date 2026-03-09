@@ -111,7 +111,7 @@ class Command(BaseCommand):
                 logs, unchanged = self._sync_single(idx, app_code)
                 if unchanged:
                     unchanged_cnt += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.failed_records.append(
                     {
                         "idx": idx,
@@ -172,7 +172,7 @@ class Command(BaseCommand):
                 try:
                     iam_client.add_grade_manager_members(grade_manager_id, [user])
                     unchanged = False
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {str(e)}")
         else:
             sync_logs.append("no users need to be added as grade manager")

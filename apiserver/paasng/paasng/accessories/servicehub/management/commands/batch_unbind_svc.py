@@ -88,7 +88,7 @@ class Command(BaseCommand):
         cleaner = ModuleCleaner(module=module)
         try:
             cleaner.delete_services(service_id=service_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.stdout.write(
                 self.style.ERROR(
                     f"APP(code:{app_code})-module({module.name}) fail to unbind the service<{service_id}>: {e}"

@@ -43,7 +43,7 @@ def clean_instances():
         except NotImplementedError:
             logger.warning("remote service should implement delete logic")
             continue
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # remain deleting status if provider delete failed
             logger.warning(f"delete service instance<{uuid}> failed: {e}")
             continue
@@ -76,7 +76,7 @@ def check_unbound_remote_services_recycling():
                     logger.info(f"unbound service instance<{instance.service_instance_id}> is recycled.")
                     continue
                 logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
             else:
                 logger.info(f"unbound service instance<{instance.service_instance_id}> is not recycled.")

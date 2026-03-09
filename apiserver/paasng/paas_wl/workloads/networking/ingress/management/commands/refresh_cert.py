@@ -158,7 +158,7 @@ class Command(BaseCommand):
 
             try:
                 update_or_create_secret_by_cert(app, cert)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.print(f"Unable to update Secret for {app}: {str(e).splitlines()[0]}")
                 error_cnt += 1
         self.print(self.style.SUCCESS(f"Update Secrets finished, error count: {error_cnt}"))

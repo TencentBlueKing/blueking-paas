@@ -162,7 +162,7 @@ class DockerRegistryV2Client:
         url = resp.request.url
         try:
             curl = masked_curlify.to_curl(resp.request)
-        except Exception:
+        except Exception:  # noqa: BLE001
             curl = "<unknown>"
 
         if resp.status_code == 401:

@@ -42,7 +42,7 @@ class IAMPermissionTemplateRender:
         except Exception as e:
             raise ValueError(f"{self.template_str} is not a valid json") from e
         if not isinstance(data, dict):
-            raise ValueError(f"{self.template_str} is not a valid dict")
+            raise TypeError(f"{self.template_str} is not a valid dict")
         if "system_id" not in data or "operations" not in data:
             raise ValueError(f"{self.template_str} is not a valid IAM migrations data")
         return data

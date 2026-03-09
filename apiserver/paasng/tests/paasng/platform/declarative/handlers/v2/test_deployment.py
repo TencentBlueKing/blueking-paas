@@ -111,7 +111,7 @@ class Test__get_deploy_desc_handler:
         assert handler.desc_getter.__name__ == expected_name
 
     def test_unsupported_version(self, yaml_v1_normal):
-        with pytest.raises(ValueError, match='procfile data is empty.* spec version "1" is not supported'):
+        with pytest.raises(ValueError, match=r'procfile data is empty.* spec version "1" is not supported'):
             _ = get_deploy_desc_handler(yaml.safe_load(yaml_v1_normal))
 
 
@@ -192,7 +192,7 @@ class TestAppDescriptionHandler:
         handler = get_deploy_desc_handler(
             yaml.safe_load(content), procfile_data={"web": "gunicorn app", "worker": "celery"}
         )
-        with pytest.raises(DescriptionValidationError, match="Process definitions conflict.*"):
+        with pytest.raises(DescriptionValidationError, match=r"Process definitions conflict.*"):
             handler.handle(bk_deployment)
 
     def test_procfile_only(self, bk_module, bk_deployment):
@@ -241,7 +241,7 @@ class TestAppDescriptionHandler:
                     language: python
         """
         )
-        with pytest.raises(DescriptionValidationError, match="未找到.*当前已配置"):
+        with pytest.raises(DescriptionValidationError, match=r"未找到.*当前已配置"):
             get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_modules_not_found_fallback_to_module(self, bk_deployment):

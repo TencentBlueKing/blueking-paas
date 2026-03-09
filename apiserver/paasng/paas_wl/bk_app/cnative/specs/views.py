@@ -118,7 +118,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.INVALID_CREDENTIALS.f(_("镜像凭证不存在"))
             username, password = credential.username, credential.password
 
-        endpoint, slash, repo = repository.partition("/")
+        endpoint, _slash, repo = repository.partition("/")
         registry_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
 
         self._validate_registry_permission(registry_service)

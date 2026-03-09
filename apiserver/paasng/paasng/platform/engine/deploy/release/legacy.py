@@ -27,7 +27,6 @@ from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
 from paas_wl.bk_app.processes.processes import ProcessManager
-from paas_wl.infras.resources.base.exceptions import KubeException
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
@@ -213,9 +212,5 @@ def release_to_k8s(
         procfile=procfile,
     )
 
-    try:
-        DeployAction(env=env, release=release, extra_envs=extra_envs).perform()
-    except KubeException:
-        # TODO: Wrap exception and re-raise
-        raise
+    DeployAction(env=env, release=release, extra_envs=extra_envs).perform()
     return release

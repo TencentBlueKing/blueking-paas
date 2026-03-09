@@ -22,7 +22,6 @@ import requests
 from .exceptions import RequestSentryAPIFail
 
 logger = logging.getLogger(__name__)
-DEFAULT_TIMEOUT = 120
 
 
 class SentryClient:
@@ -32,7 +31,7 @@ class SentryClient:
         self.base_url = "http://{host}:{port}".format(host=host, port=port)
         self.headers = {"Content-Type": "application/json", "Authorization": "Bearer {token}".format(token=token)}
 
-    def _request(self, method, path, data, timeout=DEFAULT_TIMEOUT):
+    def _request(self, method, path, data, timeout=10):
         url = "{base_url}{path}".format(base_url=self.base_url, path=path)
         headers = self.headers
         try:

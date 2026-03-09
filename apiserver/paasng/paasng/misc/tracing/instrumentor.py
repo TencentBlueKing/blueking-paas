@@ -43,7 +43,7 @@ def requests_callback(span: Span, response: Optional[Response]):
 
     try:
         json_result = response.json()
-    except Exception:  # pylint: disable=broad-except  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         return
 
     if not isinstance(json_result, dict):

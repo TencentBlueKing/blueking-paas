@@ -73,7 +73,7 @@ class PrometheusMetricClient:
         path = "api/v1/query_range"
         params = {"query": query, "start": start, "end": end, "step": step}
         logger.info("prometheus query_range: %s", params)
-        result = self._request(method="GET", path=path, params=params, timeout=DEFAULT_TIMEOUT)
+        result = self._request(method="GET", path=path, params=params, timeout=30)
         try:
             ret = PromResult.from_resp(result).get_raw_by_container_name(container_name)
             if ret:

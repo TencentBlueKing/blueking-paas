@@ -142,7 +142,7 @@ ignore = [
   "S108",
   # flake8-bandit：忽略后，允许使用 "0.0.0.0" IP 地址，易被误报为绑定不安全的地址
   "S104",
-  # flake8-bandit：忽略后，对于开启了 shell=False ，但输入命令为变量的的常规 Popen 调用不再报错，
+  # flake8-bandit：忽略后，对于开启了 shell=False，但输入命令为变量的常规 Popen 调用不再报错，
   # 人为确保输入命令安全（本规则经常产生假阳性）。
   "S603",
   # flake8-django: 忽略后，允许模型的 StringField 使用 null=True

@@ -79,7 +79,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: PlanWithSvcSLZ()},
     )
     def retrieve(self, request, service_id, tenant_id, plan_id, *args, **kwargs):
-        service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
+        _service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         return Response(data=PlanWithSvcSLZ(plan).data)
 
     @swagger_auto_schema(

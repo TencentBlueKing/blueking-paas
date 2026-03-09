@@ -151,7 +151,7 @@ class TestSvnAuth:
             authorization_manager.initialize(path)
 
             assert mock_mod_authz.called
-            args, kwargs = mock_mod_authz.call_args_list[0]
+            _args, kwargs = mock_mod_authz.call_args_list[0]
             assert kwargs["repo_path"].endswith(f"/{bk_app.code}-123")
 
     @pytest.mark.parametrize(

@@ -80,7 +80,7 @@ class LegacyAppProxy:
             return [_("暂不支持轻应用迁移")]
 
         # 非普通应用
-        if self._get_app_type() not in ["common_application"]:
+        if self._get_app_type() != "common_application":
             return [_("暂不支持该类型应用迁移")]
 
         if self.get_language() != AppLanguage.PYTHON.value:
@@ -113,9 +113,9 @@ class LegacyAppProxy:
             return ""
 
         language_lower = self.legacy_app.language.lower()
-        if language_lower in ["python"]:
+        if language_lower == "python":
             return AppLanguage.PYTHON.value
-        elif language_lower in ["java"]:
+        elif language_lower == "java":
             return AppLanguage.JAVA.value
         else:
             raise ValueError(language_lower)
@@ -169,7 +169,7 @@ class LegacyAppProxy:
 
     def is_stag_deployed(self):
         """已经部署到测试环境，且测试环境没有下架"""
-        return self.legacy_app.state not in [LegacyAppState.DEVELOPMENT.value] and self.legacy_app.is_already_test
+        return self.legacy_app.state != LegacyAppState.DEVELOPMENT.value and self.legacy_app.is_already_test
 
     def has_prod_deployed(self):
         """prod环境曾经上线过(现在可能下架了，也可能没有)"""

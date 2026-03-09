@@ -95,7 +95,7 @@ class TestBuildHandler:
             assert kpod_get.called
             assert kpod_create_or_update.called
 
-            args, kwargs = kpod_create_or_update.call_args_list[0]
+            _args, kwargs = kpod_create_or_update.call_args_list[0]
             body = kwargs.get("body")
             assert body["metadata"]["name"] == "slug-builder"
             assert body["spec"]["containers"][0]["env"][0]["value"] == "1"

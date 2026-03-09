@@ -62,7 +62,7 @@ class ProductInfoCondition(DeployCondition):
     action_name = DeployConditions.FILL_PRODUCT_INFO.value
 
     def validate(self):
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+        if self.env.environment != AppEnvironment.PRODUCTION.value:
             return
         if not Product.objects.filter(application=self.env.module.application).exists():
             raise ConditionNotMatched(_("未完善应用市场信息"), self.action_name)
@@ -137,7 +137,7 @@ class PluginTagValidationCondition(DeployCondition):
         if not application.is_plugin_app:
             return
 
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+        if self.env.environment != AppEnvironment.PRODUCTION.value:
             return
 
         try:

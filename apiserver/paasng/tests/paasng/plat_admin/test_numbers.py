@@ -83,7 +83,7 @@ class TestLegacyAppDataBuilder:
 class TestCalculateUserContribution:
     def test_with_mock(self):
         create_app(owner_username="user1", repo_type="bk_svn")
-        user, _, apps = list(group_apps_by_developers(filter_developers=["user1"]))[0]
+        user, _, apps = next(iter(group_apps_by_developers(filter_developers=["user1"])))
         with mock.patch("paasng.platform.sourcectl.svn.client.RemoteClient") as mocked_remote_client:
             mocked_remote_client().calculate_user_contribution.return_value = dict(
                 project_total_lines=0, user_total_lines=0, project_commit_nums=0, user_commit_nums=0

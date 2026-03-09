@@ -137,7 +137,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag
                 # TODO: 当镜像源迁移完成后移除该代码
-                project_name, slash, repo_name = repo.partition("/")
+                project_name, _slash, repo_name = repo.partition("/")
                 raise error_codes.LIST_TAGS_FAILED.set_data(
                     {
                         "tips": _("查看镜像 Tag"),

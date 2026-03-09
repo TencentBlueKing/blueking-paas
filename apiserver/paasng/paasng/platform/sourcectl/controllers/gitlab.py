@@ -132,7 +132,7 @@ class GitlabRepoController(BaseGitRepoController):
         # The extracted repo files was put in an extra sub-directory named "{repo}-{sha}/", So we
         # need to move the files in that directory into it's parent {local_path}
         local_path_obj = Path(local_path).absolute()
-        wrapper_dir = list(local_path_obj.iterdir())[0].absolute()
+        wrapper_dir = next(iter(local_path_obj.iterdir())).absolute()
         for child in wrapper_dir.iterdir():
             # Move all contents into it's parent
             shutil.move(str(child), str(local_path_obj))
@@ -153,7 +153,7 @@ class GitlabRepoController(BaseGitRepoController):
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _version_type, version_name = smart_revision.split(":")
         try:
             commit = self.api_client.repo_last_commit(self.project, version_name)
         except GitlabGetError as e:

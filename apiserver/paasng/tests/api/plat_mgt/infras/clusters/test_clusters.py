@@ -56,7 +56,7 @@ class TestListClusters:
 
         assert len(resp.json()) >= 2
 
-        cluster = [c for c in resp.json() if c["name"] == init_default_cluster.name][0]
+        cluster = next(c for c in resp.json() if c["name"] == init_default_cluster.name)
         assert cluster == {
             "name": init_default_cluster.name,
             "bcs_cluster_id": "BCS-K8S-00000",

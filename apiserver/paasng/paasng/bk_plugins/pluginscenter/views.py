@@ -1098,7 +1098,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             )
         except (RequestError, BkLogApiError) as e:
             # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
-            logger.error("request error when querying stdout log: %s", e)
+            logger.error("request error when querying stdout log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("Failed to query stdout log")
@@ -1136,7 +1136,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             )
         except (RequestError, BkLogApiError) as e:
             # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
-            logger.error("request error when querying structure log: %s", e)
+            logger.error("request error when querying structure log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("Failed to query structure log")
@@ -1172,7 +1172,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             )
         except (RequestError, BkLogApiError) as e:
             # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
-            logger.error("request error when querying ingress log: %s", e)
+            logger.error("request error when querying ingress log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("Failed to query ingress log")
@@ -1209,7 +1209,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             )
         except (RequestError, BkLogApiError) as e:
             # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
-            logger.error("failed to aggregate time-based histogram: %s", e)
+            logger.error("failed to aggregate time-based histogram: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to aggregate time-based histogram")
@@ -1248,7 +1248,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             )
         except (RequestError, BkLogApiError) as e:
             # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
-            logger.error("request error when aggregating log fields: %s", e)
+            logger.error("request error when aggregating log fields: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("Failed to aggregate log fields")

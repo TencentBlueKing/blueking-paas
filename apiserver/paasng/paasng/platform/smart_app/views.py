@@ -98,7 +98,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
         package_fp = slz.validated_data["package"]
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+        _app_tenant_mode, app_tenant_id, _tenant = validate_app_tenant_params(
             request.user, slz.validated_data["app_tenant_mode"]
         )
 

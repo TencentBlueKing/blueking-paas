@@ -156,7 +156,7 @@ class Build(UuidAuditedModel):
         """从 image 字段分割出 repository 属性"""
         if not self.image:
             return None
-        repository, _, tag = self.image.partition(":")
+        repository, _, _tag = self.image.partition(":")
         return repository
 
     @property

@@ -36,7 +36,7 @@ class IdleAppNotificationMuteRuleViewSet(ApplicationCodeInPathMixin, viewsets.Ge
         module = self.get_module_via_path()
         env = self.get_env_via_path()
 
-        rule, _ = IdleAppNotificationMuteRule.objects.update_or_create(
+        _rule, _ = IdleAppNotificationMuteRule.objects.update_or_create(
             user=request.user,
             app_code=app.code,
             module_name=module.name,

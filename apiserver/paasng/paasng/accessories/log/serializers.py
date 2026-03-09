@@ -153,7 +153,7 @@ class LogQueryParamsSLZ(serializers.Serializer):
 
         # 限制最大分页条数
         if attrs["offset"] + attrs["limit"] > MAX_RESULT_WINDOW:
-            raise ValidationError(_(f"最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"))
+            raise ValidationError(_(f"最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"))  # noqa: INT001
         return attrs
 
 

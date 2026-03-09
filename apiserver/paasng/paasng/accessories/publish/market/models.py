@@ -73,14 +73,14 @@ class Tag(models.Model):
     class Meta:
         ordering = ("index", "id")
 
+    def __str__(self):
+        return "{}:{} parent={}".format(self.id, self.name, self.parent)
+
     def get_name_display(self):
         if self.parent:
             return "%s-%s" % (self.parent.name, self.name)
         else:
             return _(self.name)
-
-    def __str__(self):
-        return "{}:{} parent={}".format(self.id, self.name, self.parent)
 
 
 class ProductManager(WithOwnerManager):

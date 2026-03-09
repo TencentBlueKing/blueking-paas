@@ -507,7 +507,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception as e:
             logger.exception("Unknown error occurred when getting compare url, user_id: %s", request.user.pk)
-            raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))
+            raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))  # noqa: INT001
         return Response({"result": compare_url})
 
 

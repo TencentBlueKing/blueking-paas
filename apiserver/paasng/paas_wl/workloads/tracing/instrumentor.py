@@ -43,7 +43,7 @@ def requests_callback(span: Span, response: Optional[Response]):
 
     try:
         json_result = response.json()
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         return
 
     if not isinstance(json_result, dict):
@@ -53,7 +53,7 @@ def requests_callback(span: Span, response: Optional[Response]):
     code = json_result.get("code", 0)
     try:
         code = int(code)
-    except Exception:  # pylint: disable=broad-except
+    except Exception:  # noqa: S110
         pass
     span.set_attribute("result_code", code)
     if code in [0, "0", "00"]:

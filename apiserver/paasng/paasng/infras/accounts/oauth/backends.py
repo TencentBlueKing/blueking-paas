@@ -39,6 +39,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 @define
@@ -250,6 +251,7 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     **{self.COOKIE_KEY: user_credential},
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
         except Exception as e:
             raise BKAppOauthRequestError(
@@ -269,6 +271,7 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     refresh_token=refresh_token,
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
         except Exception as e:
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
@@ -281,6 +284,7 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                 url=self.validate_url,
                 json={"access_token": access_token},
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             ).json()
         except Exception as e:
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
@@ -305,6 +309,7 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                     **{self.COOKIE_KEY: user_credential},
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
         except Exception as e:
             raise BKAppOauthRequestError(
@@ -324,6 +329,7 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                     refresh_token=refresh_token,
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
         except Exception as e:
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
@@ -336,6 +342,7 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                 url=self.validate_url,
                 json={"access_token": access_token},
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             ).json()
         except Exception as e:
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))

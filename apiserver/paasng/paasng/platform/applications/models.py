@@ -242,7 +242,7 @@ class JustLeaveAppManager:
         try:
             self.redis_db.rpush(self.cache_key, app_code)
             self.redis_db.expire(self.cache_key, settings.IAM_PERM_EFFECTIVE_TIMEDELTA)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     def list(self) -> Set[str]:

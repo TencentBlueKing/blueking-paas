@@ -72,7 +72,7 @@ def digest_if_length_exceeded(raw_str: str, limit: int):
     if len(raw_str) <= limit:
         return raw_str
 
-    return hashlib.sha1(force_bytes(raw_str)).hexdigest()[:limit]
+    return hashlib.sha1(force_bytes(raw_str)).hexdigest()[:limit]  # noqa: S324
 
 
 def make_subdict(d: Dict, allowed_keys: Collection):

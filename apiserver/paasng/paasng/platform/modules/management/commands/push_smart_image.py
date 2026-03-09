@@ -68,7 +68,8 @@ class Command(BaseCommand):
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
 
-        image_tarball_path = pathlib.Path(tempfile.mktemp())
+        _file = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
+        image_tarball_path = pathlib.Path(_file.name)
         src_image = parse_image(image)
         try:
             ref = ImageRef.from_image(

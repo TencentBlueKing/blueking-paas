@@ -22,6 +22,7 @@ import requests
 from .exceptions import RequestSentryAPIFail
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 class SentryClient:
@@ -31,7 +32,7 @@ class SentryClient:
         self.base_url = "http://{host}:{port}".format(host=host, port=port)
         self.headers = {"Content-Type": "application/json", "Authorization": "Bearer {token}".format(token=token)}
 
-    def _request(self, method, path, data, timeout=10):
+    def _request(self, method, path, data, timeout=DEFAULT_TIMEOUT):
         url = "{base_url}{path}".format(base_url=self.base_url, path=path)
         headers = self.headers
         try:
@@ -42,9 +43,9 @@ class SentryClient:
             elif method == "POST":
                 resp = requests.post(url=url, headers=headers, json=data, timeout=timeout)
             elif method == "DELETE":
-                resp = requests.delete(url=url, headers=headers, json=data)
+                resp = requests.delete(url=url, headers=headers, json=data, timeout=timeout)
             elif method == "PUT":
-                resp = requests.put(url=url, headers=headers, json=data)
+                resp = requests.put(url=url, headers=headers, json=data, timeout=timeout)
             else:
                 return False, None
         except requests.exceptions.RequestException:

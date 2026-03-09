@@ -31,6 +31,7 @@ from paasng.platform.applications.constants import AppLanguage, ApplicationRole
 from paasng.platform.mgrlegacy.constants import AppMember, LegacyAppState
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 class LegacyAppProxy:
@@ -144,7 +145,7 @@ class LegacyAppProxy:
     def get_logo_file(self):
         logo_url = self.get_logo_url()
         try:
-            response = requests.get(logo_url, stream=True)
+            response = requests.get(logo_url, stream=True, timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 return ContentFile(response.raw.data)
         except Exception:
@@ -153,7 +154,7 @@ class LegacyAppProxy:
         logger.info("尝试返回默认logo")
         try:
             # 参考老版本开发者中心的应用列表页面，如果加载不到应用的logo，则使用默认的logo
-            response = requests.get(settings.APPLICATION_DEFAULT_LOGO, stream=True)
+            response = requests.get(settings.APPLICATION_DEFAULT_LOGO, stream=True, timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 return ContentFile(response.raw.data)
         except Exception:

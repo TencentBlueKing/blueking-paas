@@ -73,7 +73,7 @@ def _init_s3_bucket(request):
         return
     try:
         store.get_client().create_bucket(Bucket=store.bucket)
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
 

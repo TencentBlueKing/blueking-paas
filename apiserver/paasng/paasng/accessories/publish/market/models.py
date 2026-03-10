@@ -18,9 +18,8 @@
 import logging
 import os
 import time
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 from urllib.parse import urlparse
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -73,14 +72,14 @@ class Tag(models.Model):
     class Meta:
         ordering = ("index", "id")
 
+    def __str__(self):
+        return "{}:{} parent={}".format(self.id, self.name, self.parent)
+
     def get_name_display(self):
         if self.parent:
             return "%s-%s" % (self.parent.name, self.name)
         else:
             return _(self.name)
-
-    def __str__(self):
-        return "{}:{} parent={}".format(self.id, self.name, self.parent)
 
 
 class ProductManager(WithOwnerManager):
@@ -368,7 +367,10 @@ class AvailableAddress:
         self.hostname = parse_result.hostname
 
 
-CorpProduct = namedtuple("CorpProduct", "id display_name")
+class CorpProduct(NamedTuple):
+    id: str
+    display_name: str
+
 
 DEFAULT_CORP_PRODUCTS = [
     CorpProduct("-1", "全业务"),

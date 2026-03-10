@@ -147,7 +147,7 @@ class ImageRef(RepositoryResource):
         if no `to_repo` or `to_reference` given, will use RepoTags in `manifest.json`
         """
         with tarfile.open(name=src) as tarball:
-            tarball.extractall(workplace)
+            tarball.extractall(workplace, filter="data")  # type: ignore
 
             manifest_list = json.loads((workplace / "manifest.json").read_text())
             if not isinstance(manifest_list, list) or len(manifest_list) == 0:

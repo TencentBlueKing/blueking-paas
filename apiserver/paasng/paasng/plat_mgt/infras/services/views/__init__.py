@@ -22,9 +22,9 @@ from .services import ServiceViewSet
 
 __all__ = [
     "BindingPolicyViewSet",
-    "PlanViewSet",
-    "ServiceViewSet",
     "CategoryViewSet",
-    "ProviderViewSet",
+    "PlanViewSet",
     "PreCreatedInstanceViewSet",
+    "ProviderViewSet",
+    "ServiceViewSet",
 ]

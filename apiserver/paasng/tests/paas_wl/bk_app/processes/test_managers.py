@@ -141,7 +141,7 @@ class TestProcInstManager:
             "metadata": {"labels": {}, "name": pod_name},
             "spec": serializer._construct_pod_body_specs(process),  # type: ignore
         }
-        pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
+        _pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
         event = None

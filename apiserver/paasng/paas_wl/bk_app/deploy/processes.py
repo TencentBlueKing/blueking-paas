@@ -69,7 +69,7 @@ class AppProcessesController:
         try:
             proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
             self.handler.scale(proc_config, proc_spec.target_replicas)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def stop(self, proc_type: str):
@@ -84,7 +84,7 @@ class AppProcessesController:
         try:
             proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
             self.handler.shutdown(proc_config)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def scale(
@@ -132,7 +132,7 @@ class AppProcessesController:
         try:
             proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
             self.handler.scale(proc_config, proc_spec.target_replicas)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def _deploy_autoscaling(self, scaling: ProcAutoscaling):

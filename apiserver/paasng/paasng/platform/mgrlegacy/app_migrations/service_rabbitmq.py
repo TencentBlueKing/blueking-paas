@@ -56,7 +56,7 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
                 continue
 
             # 申请增强服务实例
-            self.add_log(_(f"正在为 {environment} 环境创建 RabbitMQ 服务实例..."))
+            self.add_log(_(f"正在为 {environment} 环境创建 RabbitMQ 服务实例..."))  # noqa: INT001
             rel.provision()
 
             instance = rel.get_instance()

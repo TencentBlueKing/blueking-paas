@@ -118,7 +118,7 @@ class AlertSLZ(serializers.Serializer):
         labels = instance.get("labels") or []
         env = set(labels) & set(RUN_ENVS)
         if len(env) == 1:
-            return list(env)[0]
+            return next(iter(env))
 
         return None
 

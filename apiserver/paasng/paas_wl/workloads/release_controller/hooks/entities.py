@@ -31,7 +31,7 @@ class CommandKubeAdaptor:
         """Get A k8s friendly pod name."""
         if self.command.type == CommandType.PRE_RELEASE_HOOK.value:
             return "pre-release-hook"
-        return f"command-{str(self.command.pk)}"
+        return f"command-{self.command.pk!s}"
 
 
 @define

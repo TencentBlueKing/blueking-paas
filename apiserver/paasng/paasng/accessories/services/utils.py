@@ -18,7 +18,6 @@
 import random
 import string
 import typing
-from builtins import range
 from typing import Type
 
 from django.conf import settings

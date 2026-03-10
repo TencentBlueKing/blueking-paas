@@ -59,7 +59,7 @@ class HelmClient:
             labels = s.metadata.labels
             try:
                 release_name, version = labels["name"], int(labels["version"])
-            except Exception:
+            except (KeyError, TypeError, ValueError):
                 # 忽略异常数据
                 continue
 

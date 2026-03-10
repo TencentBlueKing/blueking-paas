@@ -24,7 +24,7 @@ class RequestMetricBackendError(Exception):
         self.status_code = resp.status_code
         try:
             self.json_response = resp.json()
-        except Exception:
+        except Exception:  # noqa: BLE001
             self.json_response = {}
         self.error_code = self.get_error_code()
         self.error_message = self.get_error_message()

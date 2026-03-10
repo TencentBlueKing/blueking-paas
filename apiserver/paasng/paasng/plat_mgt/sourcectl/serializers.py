@@ -129,7 +129,7 @@ class BaseSourceTypeSpecConfigInputSLZ(BaseSourceTypeSpecConfigSLZ):
 
         try:
             source_type_spec = cls(**conf["attrs"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ValidationError(_("初始化 SourceTypeSpec 失败：{}").format(str(e)))
 
         if not source_type_spec.support_oauth():

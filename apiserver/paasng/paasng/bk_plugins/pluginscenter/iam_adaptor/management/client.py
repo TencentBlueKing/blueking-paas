@@ -241,7 +241,7 @@ class BKIAMClient:
 
         # 按照顺序，填充申请创建得到的各个用户组的 ID
         user_group_ids = resp.get("data", [])
-        for group, user_group_id in zip(groups, user_group_ids):
+        for group, user_group_id in zip(groups, user_group_ids, strict=False):
             group.id = int(user_group_id)
         return groups
 

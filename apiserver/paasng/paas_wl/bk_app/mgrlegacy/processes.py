@@ -15,12 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import ProcessesInfo
-from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.processes.kres_entities import Process
 
 
 def get_processes_info(wl_app: WlApp) -> ProcessesInfo:

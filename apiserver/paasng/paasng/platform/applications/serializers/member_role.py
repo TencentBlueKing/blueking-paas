@@ -32,11 +32,11 @@ class RoleField(serializers.Field):
     def to_internal_value(self, data):
         try:
             role_id = data["id"]
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise ValidationError('Incorrect role param. Expected like {role: {"id": 3}}.')
         try:
             ApplicationRole(role_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise ValidationError(_("%s 不是合法选项") % role_id)
         return role_id
 

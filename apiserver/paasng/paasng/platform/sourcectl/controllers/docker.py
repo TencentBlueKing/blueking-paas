@@ -55,6 +55,8 @@ class DockerRegistryController:
         else:
             endpoint = remove_suffix(repo_full_url, repo_fullname)
 
+        username: str | None
+        password: str | None
         try:
             holder = RepoBasicAuthHolder.objects.get_by_repo(module=module, repo_obj=source_obj)
             username, password = holder.basic_auth

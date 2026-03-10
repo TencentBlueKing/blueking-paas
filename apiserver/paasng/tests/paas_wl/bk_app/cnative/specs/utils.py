@@ -15,8 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import builtins
-from typing import Callable, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Literal, Optional, Union
 
 from bkpaas_auth.models import User
 
@@ -29,6 +28,9 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, create_app_resource
 from paasng.platform.applications.models import ModuleEnvironment
+
+if TYPE_CHECKING:
+    import builtins
 
 
 def create_cnative_deploy(

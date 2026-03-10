@@ -107,7 +107,7 @@ class SmartTimeRange:
                 raise ValueError("start_time & end_time is necessary if time_range is customized")
         else:
             # 必须带上时区信息, 否则无法正常获取 es index
-            end_time = cast(datetime.datetime, timezone.now())
+            end_time = cast("datetime.datetime", timezone.now())
             start_time = end_time - get_time_delta(self.time_range)
 
         self.start_time = start_time

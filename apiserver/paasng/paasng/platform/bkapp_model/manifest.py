@@ -103,7 +103,7 @@ class ManifestConstructor(ABC):
         :param module: The application module.
         :raise ManifestConstructorError: Unable to apply current constructor due to errors.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class AddonsManifestConstructor(ManifestConstructor):

@@ -88,7 +88,6 @@ class TestTemplateViewSet:
         url = reverse("plat_mgt.templates.list_create")
         custom_data = create_test_template_data(name="custom_template", language="Go")
         resp = plat_mgt_api_client.post(url, custom_data, format="json")
-        print(resp.data)
         assert resp.status_code == status.HTTP_201_CREATED
 
         template = Template.objects.filter(name="custom_template").first()

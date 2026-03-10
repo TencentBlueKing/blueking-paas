@@ -638,11 +638,11 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
     ]
 
     apply_builtin_env_vars(blank_resource, bk_stag_env)
-    vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
+    vars_ = {item.name: item.value for item in blank_resource.spec.configuration.env}
     vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
 
     assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
-    assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+    assert vars_["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
 
 
 class Test__update_cmd_args_from_wl_build:

@@ -886,6 +886,15 @@ spec:
                       description: The containerPort to expose server
                       format: int32
                       type: integer
+                    terminationGracePeriodSeconds:
+                      description: |-
+                        TerminationGracePeriodSeconds is the optional duration in seconds the pod needs to
+                        terminate gracefully. When Set, operator will automatically inject a preStop sleep hook
+                        to delay pod termination, allowing in-flight requests to complete.
+                        If not set, defaults to 30s and a 0s preStop sleep.
+                      format: int64
+                      minimum: 0
+                      type: integer
                   required:
                   - image
                   - name
@@ -2177,6 +2186,15 @@ spec:
                     targetPort:
                       description: The containerPort to expose server
                       format: int32
+                      type: integer
+                    terminationGracePeriodSeconds:
+                      description: |-
+                        TerminationGracePeriodSeconds is the optional duration in seconds the pod needs to
+                        terminate gracefully. When Set, operator will automatically inject a preStop sleep hook
+                        to delay pod termination, allowing in-flight requests to complete.
+                        If not set, defaults to 30s and a 0s preStop sleep.
+                      format: int64
+                      minimum: 0
                       type: integer
                   required:
                   - name

@@ -741,6 +741,11 @@ func (in *Process) DeepCopyInto(out *Process) {
 		*out = new(AutoscalingSpec)
 		**out = **in
 	}
+	if in.TerminationGracePeriodSeconds != nil {
+		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
+		*out = new(int64)
+		**out = **in
+	}
 	if in.Probes != nil {
 		in, out := &in.Probes, &out.Probes
 		*out = new(ProbeSet)

@@ -50,6 +50,16 @@ const (
 
 	// DefaultDeployID is the value that will be used if the DeployID is not set
 	DefaultDeployID = "0"
+
+	// PreStopSleepFraction is the fraction of TerminationGracePeriodSeconds used as the preStop sleep
+	// duration. The remaining fraction is reserved for the container to finish cleanup after the sleep.
+	// e.g. TerminationGracePeriodSeconds=60 -> preStop sleep=30s, reserved=30s.
+	PreStopSleepFraction = 2
+
+	// MinPreStopSleepSeconds is the minimum preStop sleep duration in seconds.
+	// If the calculated sleep duration is less than this value, the preStop hook will not be injected
+	// because it's too small to be meaningful.
+	MinPreStopSleepSeconds = int64(1)
 )
 
 // log is for logging in this package.
@@ -147,7 +157,8 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					NodeSelector:     common.BuildNodeSelector(app),
 					Tolerations:      common.BuildTolerations(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
-					AutomountServiceAccountToken: lo.ToPtr(false),
+					AutomountServiceAccountToken:  lo.ToPtr(false),
+					TerminationGracePeriodSeconds: buildTerminationGracePeriodSeconds(proc),
 				},
 			},
 		},
@@ -215,7 +226,32 @@ func buildContainers(
 		container.ReadinessProbe = proc.Probes.Readiness
 		container.StartupProbe = proc.Probes.Startup
 	}
+
+	// Inject preStop sleep hook for graceful rolling when TerminationGracePeriodSeconds is set.
+	// The sleep duration is (TerminationGracePeriodSeconds / PreStopSleepFraction), reserving the
+	// other half for the container to finish cleanup after the sleep hook completes.
+	// If the calculated sleep is less than MinPreStopSleepSeconds, the hook is skipped as it's
+	// too small to be meaningful.
+	if proc.TerminationGracePeriodSeconds != nil {
+		sleepSeconds := *proc.TerminationGracePeriodSeconds / PreStopSleepFraction
+		if sleepSeconds >= MinPreStopSleepSeconds {
+			container.Lifecycle = &corev1.Lifecycle{
+				PreStop: &corev1.LifecycleHandler{
+					Exec: &corev1.ExecAction{
+						Command: []string{"sleep", strconv.FormatInt(sleepSeconds, 10)},
+					},
+				},
+			}
+		}
+	}
+
 	return []corev1.Container{container}
+}
+
+// buildTerminationGracePeriodSeconds returns the TerminationGracePeriodSeconds for the pod spec.
+// Returns nil if not configured, which means Kubernetes will use its default (30s).
+func buildTerminationGracePeriodSeconds(proc paasv1alpha2.Process) *int64 {
+	return proc.TerminationGracePeriodSeconds
 }
 
 // BuildImagePullSecrets 返回拉取镜像的 Secrets 列表

@@ -202,6 +202,9 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			}
 		}
 
+		// Copy TerminationGracePeriodSeconds field
+		dstProc.TerminationGracePeriodSeconds = proc.TerminationGracePeriodSeconds
+
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)
 	}

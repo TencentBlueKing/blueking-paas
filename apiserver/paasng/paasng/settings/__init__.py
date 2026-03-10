@@ -1585,9 +1585,9 @@ FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX"
 # ---------------------------------------------
 # Agent Sandbox 网关权限授权配置
 # ---------------------------------------------
-# 目标网关名称
+# 开发者中心网关名称
 APIGW_GRANT_GATEWAY_NAME: str = settings.get("APIGW_GRANT_GATEWAY_NAME", "paasv3")
-# Agent Sandbox 相关的可授权资源名称列表
+# Agent Sandbox 相关的可授权 API 列表
 APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
     "APIGW_GRANT_AGENT_SANDBOX_APIS",
     [

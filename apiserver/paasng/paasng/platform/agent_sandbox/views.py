@@ -261,10 +261,10 @@ class AgentSandboxPermissionViewSet(viewsets.ViewSet):
         """
         slz = GrantAgentSandboxPermissionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
+        validated_data = slz.validated_data
 
-        target_app_code = data["target_app_code"]
-        expire_days = data["expire_days"]
+        target_app_code = validated_data["target_app_code"]
+        expire_days = validated_data["expire_days"]
 
         tenant_id = get_tenant_id_for_app(target_app_code)
         try:

@@ -67,9 +67,10 @@
       </bk-table-column>
       <bk-table-column
         :label="$t('已分配')"
-        prop="name"
-        :width="80"
+        prop="is_allocated"
+        :width="100"
         show-overflow-tooltip
+        sortable
       >
         <template slot-scope="{ row }">
           <span :class="['tag', { yes: row.is_allocated }]">{{ row.is_allocated ? $t('是') : $t('否') }}</span>
@@ -125,6 +126,7 @@
             <bk-button
               theme="primary"
               text
+              :disabled="row.is_allocated"
             >
               {{ $t('删除') }}
             </bk-button>

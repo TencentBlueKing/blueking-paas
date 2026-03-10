@@ -105,6 +105,7 @@
               @click="showPlanDetails(row, 'planResourcePool')"
             >
               {{ row.pre_created_instances?.length || 0 }}
+              <i class="paasng-icon paasng-gear"></i>
             </bk-button>
             <span v-else>{{ row.pre_created_instances?.length || 0 }}</span>
           </template>

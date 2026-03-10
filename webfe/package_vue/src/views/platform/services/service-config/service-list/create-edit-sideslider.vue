@@ -356,6 +356,11 @@ export default {
       Promise.all([this.getServicesCategory(), this.getServicesProviderChoices()]);
       const { name, logo, instance_tutorial } = this.data;
       if (this.isEdit) {
+        // 编辑时先禁用编辑器，防止内容变更时自动聚焦和滚动
+        const quill = this.$refs.editor?.quill;
+        if (quill) {
+          quill.enable(false);
+        }
         this.formData = {
           ...this.data,
           config: {
@@ -371,11 +376,18 @@ export default {
       this.$nextTick(() => {
         // 打开侧栏时，获取当前侧栏数据
         this.initSidebarFormData(this.formData);
-        // 聚焦
-        const quill = this.$refs.editor.quill;
-        quill.focus();
-        quill.setSelection(quill.getLength(), 0);
+        if (this.isEdit) {
+          this.resetQuillEditor();
+        }
       });
+    },
+    // 重置编辑器状态，移除焦点并重新启用
+    resetQuillEditor() {
+      const quill = this.$refs.editor?.quill;
+      if (quill) {
+        quill.blur();
+        quill.enable(true);
+      }
     },
     handleDelete() {
       this.files = [];

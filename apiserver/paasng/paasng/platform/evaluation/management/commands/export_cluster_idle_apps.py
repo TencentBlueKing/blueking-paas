@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     f"{round(rp.cpu_usage_avg * 100, 2)}%",
                     str(rp.pv),
                     str(rp.uv),
-                    rp.latest_operator if rp.latest_operator else "--",
+                    rp.latest_operator or "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
                     ", ".join(rp.evaluate_result["issues"]) if rp.evaluate_result else "--",

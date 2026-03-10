@@ -48,10 +48,10 @@ class Command(BaseCommand):
                 except ResourceMissing:
                     continue
 
-                print(f"Existed service found for app {app.name}, serivce={default_service_name}")
+                print(f"Existed service found for app {app.name}, serivce={default_service_name}")  # noqa: T201
                 annotations = svc.metadata.annotations or {}
                 if not annotations:
-                    print(f"Updating service, set annotation to process_type={process_type}")
+                    print(f"Updating service, set annotation to process_type={process_type}")  # noqa: T201
                     annotations["process_type"] = process_type
                     svc.metadata.annotations = annotations
                     KService(client).replace_or_patch(default_service_name, svc, namespace=app.namespace)

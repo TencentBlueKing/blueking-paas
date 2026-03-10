@@ -165,7 +165,7 @@ class TestApp:
         try:
             validate_app_code_uniquely(self, bk_app_full.code)
         except Exception as e:  # noqa: BLE001
-            print(e)
+            print(e)  # noqa: T201
 
     def test_validate_app_name(self, bk_app_full):
         new_app = create_app()

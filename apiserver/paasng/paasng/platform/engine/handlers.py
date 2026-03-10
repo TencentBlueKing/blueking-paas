@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 from django.dispatch import receiver
 from django.utils import timezone
 
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
@@ -29,7 +28,7 @@ from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from .signals import post_appenv_deploy, post_phase_end, pre_appenv_deploy, pre_phase_start
 
 if TYPE_CHECKING:
-    from paasng.platform.applications.models import ApplicationEnvironment
+    from paasng.platform.applications.models import ApplicationEnvironment, ModuleEnvironment
     from paasng.platform.engine.models import Deployment
     from paasng.platform.engine.workflow import DeployStep as DeployStepMemObj
 

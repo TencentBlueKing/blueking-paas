@@ -413,7 +413,7 @@ class RemoteAppManager:
         raise FieldNotFound("builtin_path")
 
     def hybrate_description(self):
-        return self.product.description if self.product.description else ""
+        return self.product.description or ""
 
     def hybrate_external_url(self):
         application = self.application
@@ -448,22 +448,22 @@ class RemoteAppManager:
         return self.display_options.open_mode
 
     def hybrate_height(self):
-        return self.display_options.height if self.display_options.height else 550
+        return self.display_options.height or 550
 
     def hybrate_width(self):
-        return self.display_options.width if self.display_options.width else 890
+        return self.display_options.width or 890
 
     def hybrate_id(self):
         raise FieldNotFound("id")
 
     def hybrate_introduction(self):
-        return self.product.introduction_zh_cn if self.product.introduction_zh_cn else ""
+        return self.product.introduction_zh_cn or ""
 
     def hybrate_name(self):
         return self.product.name_zh_cn
 
     def hybrate_introduction_en(self):
-        return self.product.introduction_en if self.product.introduction_en else ""
+        return self.product.introduction_en or ""
 
     def hybrate_name_en(self):
         return self.product.name_en

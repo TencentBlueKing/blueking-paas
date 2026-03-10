@@ -141,7 +141,7 @@ def _configure_remote_service():
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
+def django_db_setup(django_db_setup, django_db_blocker):
     """Create the default cluster for testing."""
 
     with django_db_blocker.unblock(), transaction.atomic():

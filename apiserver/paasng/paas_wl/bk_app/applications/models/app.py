@@ -28,7 +28,7 @@ from paas_wl.bk_app.applications.models.validators import validate_app_name, val
 from paasng.core.tenant.fields import tenant_id_field_factory
 
 if TYPE_CHECKING:
-    from paas_wl.infras.resources.base.base import EnhancedApiClient  # noqa F401
+    from paas_wl.infras.resources.base.base import EnhancedApiClient
 
 logger = logging.getLogger(__name__)
 

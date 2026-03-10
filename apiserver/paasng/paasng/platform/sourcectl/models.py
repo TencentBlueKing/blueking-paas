@@ -18,9 +18,8 @@
 import datetime
 import logging
 import re
-from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import TYPE_CHECKING, Dict, Generic, List, NamedTuple, Optional, Tuple, TypeVar
 from urllib.parse import urlparse
 
 from bkpaas_auth.models import User
@@ -32,13 +31,15 @@ from translated_fields import TranslatedFieldWithFallback
 from typing_extensions import Protocol
 
 from paasng.core.tenant.fields import tenant_id_field_factory
-from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager_cls
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 from paasng.utils.models import AuditedModel, BkUserField, OwnerTimestampedModel, TimestampedModel
 from paasng.utils.text import remove_prefix, remove_suffix
+
+if TYPE_CHECKING:
+    from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -424,6 +425,8 @@ class CommitLog:
 
 
 class DiffChange(tuple):
+    __slots__ = ()
+
     @classmethod
     def format_from_gitlab(cls, diff):
         flag = "M"
@@ -598,7 +601,9 @@ class BasicAuthHolderManager(models.Manager):
         return self.get(repo_id=repo_obj.get_identity(), repo_type=repo_obj.get_source_type(), module=module)
 
 
-BasicAuth = namedtuple("BasicAuth", "username,password")
+class BasicAuth(NamedTuple):
+    username: str
+    password: str
 
 
 class RepoBasicAuthHolder(TimestampedModel):

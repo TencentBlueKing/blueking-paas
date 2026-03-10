@@ -19,9 +19,8 @@ import uuid
 
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from tests.paasng.accessories.servicehub.utils import SERVICE_COMMON_ARGS
 from tests.utils.basic import generate_random_string
-
-from ..utils import SERVICE_COMMON_ARGS
 
 
 def gen_service():

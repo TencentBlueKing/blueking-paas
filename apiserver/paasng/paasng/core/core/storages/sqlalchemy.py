@@ -17,14 +17,16 @@
 
 """Connect to legacy database of PaaS"""
 
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 from django.conf import settings
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
-from sqlalchemy.orm.mapper import Mapper
 
 from .utils import DummyDB, SADBManager
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.mapper import Mapper
 
 # db engine will be initialize when `engine` property is used.
 if getattr(settings, "PAAS_LEGACY_DBCONF", None) is not None:

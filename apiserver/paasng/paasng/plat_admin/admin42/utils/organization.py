@@ -47,7 +47,7 @@ def get_user_organization(username):
         return UserOrganization()
 
     dept_id, dept_name = int(staff_info["DepartmentId"]), staff_info["DepartmentName"]
-    bg_id, bg_name = tof_get_bg_info_by_dept_id(dept_id, dept_name)
+    _bg_id, bg_name = tof_get_bg_info_by_dept_id(dept_id, dept_name)
     return UserOrganization(
         staff_info["ChineseName"],
         staff_info["StatusName"],

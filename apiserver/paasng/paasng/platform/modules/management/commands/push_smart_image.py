@@ -74,7 +74,7 @@ class Command(BaseCommand):
         try:
             ref = ImageRef.from_image(
                 from_repo=src_image.name,
-                from_reference=cast(str, src_image.tag),
+                from_reference=cast("str", src_image.tag),
                 client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))

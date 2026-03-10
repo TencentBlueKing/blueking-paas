@@ -17,7 +17,7 @@
 
 """HTTP client for communicating with the sandbox daemon service."""
 
-from typing import Any
+from typing import Any, Self
 
 import requests
 from attrs import define
@@ -159,7 +159,7 @@ class SandboxDaemonClient:
         else:
             return resp
 
-    def __enter__(self) -> "SandboxDaemonClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

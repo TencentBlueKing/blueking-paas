@@ -60,7 +60,7 @@ class Command(BaseCommand):
 
     def _prepare(self):
         """中间态数据准备"""
-        print("------------------ start data preparation -----------------")
+        print("------------------ start data preparation -----------------")  # noqa: T201
 
         applications = Application.objects.filter(is_deleted=False)
         grade_managers = ApplicationGradeManager.objects.all()
@@ -84,25 +84,25 @@ class Command(BaseCommand):
         self.total_count = len(self.user_group_map)
         self.app_codes = list(self.user_group_map)
 
-        print(f"{self.total_count} applications waiting for sync:")
+        print(f"{self.total_count} applications waiting for sync:")  # noqa: T201
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
-            end_at = end_at if end_at < self.total_count else self.total_count
-            print(f"{start_at + 1} - {end_at}:".rjust(11), " ".join(self.app_codes[start_at:end_at]))
+            end_at = min(self.total_count, end_at)
+            print(f"{start_at + 1} - {end_at}:".rjust(11), " ".join(self.app_codes[start_at:end_at]))  # noqa: T201
 
-        print("---------------- data preparation finished ----------------")
+        print("---------------- data preparation finished ----------------")  # noqa: T201
 
     def _sync(self):
         """同步分级管理员与管理员用户组成员"""
         if self.dry_run:
-            print("------------------------- DRY-RUN -------------------------")
+            print("------------------------- DRY-RUN -------------------------")  # noqa: T201
             return
 
         self.success_records = []
         self.failed_records = []
 
-        print("---------------- start sync applications administrator ----------------")
+        print("---------------- start sync applications administrator ----------------")  # noqa: T201
 
         unchanged_cnt = 0
         for idx, app_code in enumerate(self.app_codes, start=1):
@@ -124,10 +124,10 @@ class Command(BaseCommand):
             else:
                 self.success_records.append({"idx": idx, "app_code": app_code, "logs": logs})
 
-            print(f"{flag} {idx}/{self.total_count} sync app {app_code} admin members {status}")
+            print(f"{flag} {idx}/{self.total_count} sync app {app_code} admin members {status}")  # noqa: T201
 
-        print(f"---------------- sync {self.total_count} applications administrator finished! ----------------")
-        print(
+        print(f"---------------- sync {self.total_count} applications administrator finished! ----------------")  # noqa: T201
+        print(  # noqa: T201
             f"-- success: {len(self.success_records)} failed: {len(self.failed_records)} unchanged: {unchanged_cnt} --"
         )
 
@@ -173,7 +173,7 @@ class Command(BaseCommand):
                     iam_client.add_grade_manager_members(grade_manager_id, [user])
                     unchanged = False
                 except Exception as e:  # noqa: BLE001
-                    sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {str(e)}")
+                    sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {e!s}")
         else:
             sync_logs.append("no users need to be added as grade manager")
 
@@ -187,7 +187,7 @@ class Command(BaseCommand):
         if self.dry_run:
             return
 
-        print("---------------- store records to local files ----------------")
+        print("---------------- store records to local files ----------------")  # noqa: T201
 
         with open("./sync_success_records.json", "w") as fw:
             fw.write(json.dumps(self.success_records, indent=4, ensure_ascii=False))
@@ -195,4 +195,4 @@ class Command(BaseCommand):
         with open("./sync_failed_records.json", "w") as fw:
             fw.write(json.dumps(self.failed_records, indent=4, ensure_ascii=False))
 
-        print("---------------- store records finished! ----------------")
+        print("---------------- store records finished! ----------------")  # noqa: T201

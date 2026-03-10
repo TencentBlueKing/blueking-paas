@@ -24,7 +24,21 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from functools import lru_cache, reduce
-from typing import Any, Collection, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Collection,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
@@ -47,12 +61,14 @@ from paasng.plat_admin.system.legacy import LegacyAppNormalizer, query_concrete_
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.platform.sourcectl.models import GitProject
-from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 from paasng.utils.text import basic_str_format
+
+if TYPE_CHECKING:
+    from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
+    from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord
@@ -711,11 +727,11 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
     repo_info = type_spec.config_as_arguments()
 
     if app.source_repo_type == get_sourcectl_names().bk_svn:
-        svn_cls = cast(Type[SvnRepoController], type_spec.repo_controller_class)
+        svn_cls = cast("Type[SvnRepoController]", type_spec.repo_controller_class)
         svn_ctl = svn_cls(repo_admin_credentials=repo_admin_credentials, repo_url=app.source_location)
         return svn_ctl.get_client().rclient.calculate_user_contribution(username)
     elif app.source_repo_type in get_sourcectl_names().filter_by_basic_type("git"):
-        git_cls = cast(Type[BaseGitRepoController], type_spec.repo_controller_class)
+        git_cls = cast("Type[BaseGitRepoController]", type_spec.repo_controller_class)
         git_ctl = git_cls(
             repo_url=app.source_location, user_credentials=user_credentials, api_url=repo_info["api_url"]
         )

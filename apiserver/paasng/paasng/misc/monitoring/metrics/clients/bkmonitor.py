@@ -43,7 +43,7 @@ class BkMonitorMetricClient:
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError("query metric in bkmonitor without time range is unsupported!")  # noqa: TRY301
+                    raise ValueError("query metric in bkmonitor without time range is unsupported!")
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception:

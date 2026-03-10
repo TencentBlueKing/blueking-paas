@@ -100,7 +100,7 @@ class AIAgentClient:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             # 记录详细错误信息
-            error_msg = f"call chat completion error: {str(e)}"
+            error_msg = f"call chat completion error: {e!s}"
             request_info = masked_curlify.to_curl(response.request) if response is not None else "N/A"
             response_info = response.text if response is not None else "N/A"
             logger.exception(f"{error_msg}\nURL: {url}\nRequest: {request_info}\nResponse: {response_info}")

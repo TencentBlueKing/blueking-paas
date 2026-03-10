@@ -141,8 +141,8 @@ class Command(BaseCommand):
                 #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name)
                 #  3. 需注释或替换 GCSMysqlServiceMigration、注释 RabbitMQServiceMigration
         if not silence:
-            print(f"create legacy {framework_version} app [{name}]<{deploy_ver}-{code}> with secret key: {secret_key}")
-            print(f"connect to {username}")
+            print(f"create legacy {framework_version} app [{name}]<{deploy_ver}-{code}> with secret key: {secret_key}")  # noqa: T201
+            print(f"connect to {username}")  # noqa: T201
 
     @staticmethod
     def get_or_create_legacy_app(

@@ -113,6 +113,9 @@ class ImageCredentialManager:
             )
         source_obj = self.module.get_source_obj()
         repo_full_url = source_obj.get_repo_url()
+
+        username: str | None
+        password: str | None
         try:
             holder = RepoBasicAuthHolder.objects.get_by_repo(module=self.module, repo_obj=source_obj)
             username, password = holder.basic_auth

@@ -77,7 +77,7 @@ class SentryClient:
         method = "POST"
         path = "/api/0/organizations/{organization}/teams/".format(organization=self.organization)
         data = {"slug": team, "name": team}
-        ok, result = self._request(method, path, data)
+        ok, _result = self._request(method, path, data)
         return ok
 
     # ================= project =================
@@ -85,7 +85,7 @@ class SentryClient:
         method = "POST"
         path = "/api/0/teams/{organization}/{team}/projects/".format(organization=self.organization, team=team)
         data = {"slug": project, "name": project}
-        ok, result = self._request(method, path, data)
+        ok, _result = self._request(method, path, data)
         return ok
 
     # ================= project client key =================

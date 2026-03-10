@@ -90,7 +90,7 @@ class TestValidateBadCase:
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=20)}"
         app_json = builder.make_app_desc(bk_app_code)
-        with pytest.raises(DescriptionValidationError, match="bkAppCode: .*?20"):
+        with pytest.raises(DescriptionValidationError, match=r"bkAppCode: .*?20"):
             get_app_description(app_json)
 
     def test_missing_default_module(self):

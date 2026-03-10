@@ -57,7 +57,7 @@ def poller_mocker():
             mock.patch.object(poller, "_get_current_processes") as current,
         ):
             current.return_value = processes
-            last.return_value = last_processes if last_processes else processes
+            last.return_value = last_processes or processes
             yield
 
     return core

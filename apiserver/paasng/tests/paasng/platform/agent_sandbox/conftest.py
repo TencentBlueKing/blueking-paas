@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from typing import Iterator
+from typing import Iterator, Self
 from unittest import mock
 
 import pytest

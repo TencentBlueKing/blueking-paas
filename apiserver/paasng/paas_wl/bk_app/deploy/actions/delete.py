@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import TYPE_CHECKING
 
 from django.db import models, transaction
 
@@ -26,8 +27,10 @@ from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 

@@ -52,7 +52,7 @@ def service_obj(_faked_remote_services):
 
 @pytest.fixture
 def plan1(service_obj):
-    return list(mixed_plan_mgr.list(service_obj))[0]
+    return next(iter(mixed_plan_mgr.list(service_obj)))
 
 
 @pytest.fixture

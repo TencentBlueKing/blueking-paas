@@ -62,7 +62,7 @@ class Command(BaseCommand):
 
     def _prepare(self):
         """中间态数据准备"""
-        print("------------------ start data preparation -----------------")
+        print("------------------ start data preparation -----------------")  # noqa: T201
 
         applications = Application.objects.filter(is_deleted=False)
         grade_managers = ApplicationGradeManager.objects.all()
@@ -96,25 +96,25 @@ class Command(BaseCommand):
 
         self.total_count = len(self.applications)
 
-        print(f"{self.total_count} applications waiting for migrate:")
+        print(f"{self.total_count} applications waiting for migrate:")  # noqa: T201
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
-            end_at = end_at if end_at < self.total_count else self.total_count
-            print(
+            end_at = min(self.total_count, end_at)
+            print(  # noqa: T201
                 f"{start_at + 1} - {end_at}:".rjust(11),
                 " ".join([app["code"] for app in self.applications[start_at:end_at]]),
             )
 
-        print("---------------- data preparation finished ----------------")
+        print("---------------- data preparation finished ----------------")  # noqa: T201
 
     def _migrate(self):
         """迁移权限数据"""
         if self.dry_run:
-            print("------------------------- DRY-RUN -------------------------")
+            print("------------------------- DRY-RUN -------------------------")  # noqa: T201
             return
 
-        print("---------------- start migrate applications role data ----------------")
+        print("---------------- start migrate applications role data ----------------")  # noqa: T201
 
         self.success_records = []
         self.failed_records = []
@@ -136,10 +136,10 @@ class Command(BaseCommand):
             else:
                 self.success_records.append({"idx": idx, "app": app, "logs": logs})
 
-            print(f"{flag} {idx}/{self.total_count} migrate app [{app['name']}/{app['code']}] user roles {status}")
+            print(f"{flag} {idx}/{self.total_count} migrate app [{app['name']}/{app['code']}] user roles {status}")  # noqa: T201
 
-        print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")
-        print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")
+        print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")  # noqa: T201
+        print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")  # noqa: T201
 
     def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901, PLR0912, PLR0915
         """迁移单个应用权限数据"""
@@ -198,7 +198,7 @@ class Command(BaseCommand):
             try:
                 iam_client.add_grade_manager_members(grade_manager_id, [username])
             except Exception as e:  # noqa: BLE001
-                migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {str(e)}")
+                migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {e!s}")
 
         # 3. 检查该应用现有的的用户组，是否是默认的三个，如果不是，则删除后重建
         exists_user_group_ids = [
@@ -237,7 +237,7 @@ class Command(BaseCommand):
             try:
                 iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
             except Exception as e:  # noqa: BLE001
-                migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {str(e)}")
+                migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {e!s}")
 
         if developers := self.members_map[developer_key]:
             user_group_id = self.user_group_map[developer_key]
@@ -250,7 +250,7 @@ class Command(BaseCommand):
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:  # noqa: BLE001
-                    migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {str(e)}")
+                    migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {e!s}")
 
         if operators := self.members_map[operator_key]:
             user_group_id = self.user_group_map[operator_key]
@@ -263,7 +263,7 @@ class Command(BaseCommand):
                 try:
                     iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:  # noqa: BLE001
-                    migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {str(e)}")
+                    migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {e!s}")
 
         migrate_logs.append(f"migrate application [{app_name}/{app_code}] user role success! {idx}/{self.total_count}")
 
@@ -273,7 +273,7 @@ class Command(BaseCommand):
         if self.dry_run:
             return
 
-        print("---------------- store records to local files ----------------")
+        print("---------------- store records to local files ----------------")  # noqa: T201
 
         with open("./migrate_success_records.json", "w") as fw:
             fw.write(json.dumps(self.success_records, indent=4, ensure_ascii=False))
@@ -281,4 +281,4 @@ class Command(BaseCommand):
         with open("./migrate_failed_records.json", "w") as fw:
             fw.write(json.dumps(self.failed_records, indent=4, ensure_ascii=False))
 
-        print("---------------- store records finished! ----------------")
+        print("---------------- store records finished! ----------------")  # noqa: T201

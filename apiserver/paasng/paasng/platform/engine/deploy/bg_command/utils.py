@@ -15,9 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import TYPE_CHECKING
+
 from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
-from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
+
+if TYPE_CHECKING:
+    from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 
 def interrupt_command(command: "CommandModel") -> bool:

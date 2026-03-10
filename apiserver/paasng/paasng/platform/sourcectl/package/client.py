@@ -152,7 +152,7 @@ class BinaryTarClient(BasePackageClient):
             _, stderr = p.communicate()
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
-                    raise PackageInvalidFileFormatError()
+                    raise PackageInvalidFileFormatError
                 if self._is_not_found_error(stderr):
                     raise ReadFileNotFoundError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
@@ -211,7 +211,7 @@ class BinaryTarClient(BasePackageClient):
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             if self._is_invalid_file_format_error(stderr):
-                raise PackageInvalidFileFormatError()
+                raise PackageInvalidFileFormatError
             raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
         items = stdout.strip().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]

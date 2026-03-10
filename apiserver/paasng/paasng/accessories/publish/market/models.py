@@ -18,9 +18,8 @@
 import logging
 import os
 import time
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 from urllib.parse import urlparse
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -368,7 +367,10 @@ class AvailableAddress:
         self.hostname = parse_result.hostname
 
 
-CorpProduct = namedtuple("CorpProduct", "id display_name")
+class CorpProduct(NamedTuple):
+    id: str
+    display_name: str
+
 
 DEFAULT_CORP_PRODUCTS = [
     CorpProduct("-1", "全业务"),

@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 from django.core.management.base import BaseCommand
@@ -16,8 +15,8 @@ class Command(BaseCommand):
 
     # Note: PLAN_CONFIGS 中第一个方案是默认方案，不能轻易修改顺序
     PLAN_CONFIGS = [
-        {"name": "0shared", "spec_type": "共享实例", "description": "共享实例"},
-        {"name": "1exclusive", "spec_type": "独占实例", "description": "独占实例"},
+        {"name": "0shared", "description": "共享实例"},
+        {"name": "1exclusive", "description": "独占实例"},
     ]
 
     def add_arguments(self, parser):
@@ -45,7 +44,7 @@ class Command(BaseCommand):
                     name=config["name"],
                     tenant_id=tenant_id,
                     defaults={
-                        "config": json.dumps({"specifications": {"type": config["spec_type"]}}),
+                        "config": "{}",
                         "is_active": True,
                         "description": config["description"],
                     },
@@ -53,7 +52,7 @@ class Command(BaseCommand):
                 plan_uuids.append(str(plan.uuid))
                 if created:
                     self.stdout.write(
-                        f"Init  Plan: {config['name']} ({config['spec_type']}) success", self.style.SUCCESS
+                        f"Init Plan: {config['name']} ({config['description']}) success", self.style.SUCCESS
                     )
                     success_count += 1
                 else:

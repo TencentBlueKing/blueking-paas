@@ -285,6 +285,7 @@ class TestProcessesManifestConstructor:
                     "autoscaling": None,
                     "probes": None,
                     "services": None,
+                    "terminationGracePeriodSeconds": None,
                     "components": None,
                 }
             ],

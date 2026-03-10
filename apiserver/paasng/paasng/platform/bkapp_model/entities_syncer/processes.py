@@ -62,6 +62,7 @@ def sync_processes(
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,
+            "termination_grace_period_seconds": process.termination_grace_period_seconds,
             "components": process.components,
         }
         if not use_proc_command:

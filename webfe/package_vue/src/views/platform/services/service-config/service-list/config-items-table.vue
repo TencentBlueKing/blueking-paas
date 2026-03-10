@@ -166,6 +166,11 @@ export default {
             message: this.$t('请输入字段名'),
             trigger: 'blur',
           },
+          {
+            pattern: /^[a-zA-Z0-9_]{1,64}$/,
+            message: this.$t('仅支持字母、数字、下划线，长度1-64个字符'),
+            trigger: 'blur',
+          },
         ],
       },
     };

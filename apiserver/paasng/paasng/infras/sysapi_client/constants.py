@@ -27,6 +27,7 @@ class ClientRole(IntStructuredEnum):
     LIGHT_APP_MAINTAINER = EnumField(70, label=_("轻应用管理"))
 
     LESSCODE = EnumField(80, label=_("lesscode 系统专用角色"))
+    AIDEV = EnumField(90, label=_("AIDev 系统专用角色"))
 
 
 class ClientAction(StrStructuredEnum):
@@ -46,3 +47,6 @@ class ClientAction(StrStructuredEnum):
     # 仅提供给 LessCode 系统使用
     READ_DB_CREDENTIAL = EnumField("sysapi:read:db-credential", label=_("读取 DB 凭证信息"))
     BIND_DB_SERVICE = EnumField("sysapi:bind:db-service", label=_("绑定 DB 服务"))
+
+    # 供 AIDev 系统使用
+    GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))

@@ -36,6 +36,7 @@ ROLE_CHOICES = [
     ClientRole.BASIC_MAINTAINER.value,
     ClientRole.LIGHT_APP_MAINTAINER.value,
     ClientRole.LESSCODE.value,
+    ClientRole.AIDEV.value,
 ]
 
 

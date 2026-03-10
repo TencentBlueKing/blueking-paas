@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from __future__ import annotations
+
 import logging
 import shlex
 from typing import TYPE_CHECKING, Dict, List, Optional
@@ -135,7 +137,7 @@ class ModuleProcessSpec(TimestampedModel):
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
     probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
-    termination_grace_period_seconds = models.IntegerField("优雅终止时间（秒）", null=True)
+    termination_grace_period_seconds = models.IntegerField("优雅终止时间(秒)", null=True)
     components: Optional[List[Component]] = ComponentsField("组件配置", default=None, null=True)
 
     tenant_id = tenant_id_field_factory()

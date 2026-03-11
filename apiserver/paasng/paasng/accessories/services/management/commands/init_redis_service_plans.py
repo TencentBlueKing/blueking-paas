@@ -44,7 +44,6 @@ class Command(BaseCommand):
                     name=config["name"],
                     tenant_id=tenant_id,
                     defaults={
-                        "config": "{}",
                         "is_active": True,
                         "description": config["description"],
                     },

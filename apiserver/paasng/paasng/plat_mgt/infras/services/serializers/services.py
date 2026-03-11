@@ -132,6 +132,7 @@ class ServiceCreateSLZ(serializers.Serializer):
             #  远程增强服务无需 provider_name
             return provider_name
 
+        # 默认使用第一个可用的 provider_name（pool）
         return next(iter(active_provider_maps), None)
 
     def validate_name(self, name: str) -> str:

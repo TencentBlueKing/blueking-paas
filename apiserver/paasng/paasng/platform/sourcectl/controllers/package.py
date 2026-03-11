@@ -17,14 +17,17 @@
 
 import logging
 import shutil
-from os import PathLike
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
+
+if TYPE_CHECKING:
+    from os import PathLike
+
+    from paasng.platform.modules.models.module import Module
 
 logger = logging.getLogger(__name__)
 

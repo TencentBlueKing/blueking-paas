@@ -553,11 +553,11 @@ def make_release_validator(  # noqa: C901
             validate_semver(version, self.context["previous_version"], SemverAutomaticType(attrs["semver_type"]))
         elif version_rule == PluginReleaseVersionRule.REVISION and version != source_version_name:
             raise ValidationError(_("版本号必须与代码分支一致"))
-        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH and version != source_hash:  # noqa: SIM102
+        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH and version != source_hash:
             raise ValidationError(_("版本号必须与提交哈希一致"))
         elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP and (
             not version.startswith(source_version_name)
-        ):  # noqa: SIM102
+        ):
             raise ValidationError(_("版本号必须以代码分支开头"))
 
         if revision_policy:

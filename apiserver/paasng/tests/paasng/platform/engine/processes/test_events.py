@@ -17,10 +17,12 @@
 
 import copy
 import logging
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from paas_wl.bk_app.processes.processes import PlainProcess
 from paasng.platform.engine.processes.events import ProcessEventType, ProcEventsProducer, ProcInstEventType
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.processes.processes import PlainProcess
 
 logger = logging.getLogger(__name__)
 

@@ -20,9 +20,9 @@ from .smart_build import SmartBuildLog, SmartBuildLogLine, SmartBuildRecord
 from .step import SmartBuildStep
 
 __all__ = [
-    "SmartBuildRecord",
-    "SmartBuildPhase",
-    "SmartBuildStep",
     "SmartBuildLog",
     "SmartBuildLogLine",
+    "SmartBuildPhase",
+    "SmartBuildRecord",
+    "SmartBuildStep",
 ]

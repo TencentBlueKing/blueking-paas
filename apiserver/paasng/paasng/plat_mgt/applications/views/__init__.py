@@ -23,18 +23,18 @@ from .process import ApplicationProcessViewSet
 from .services import ApplicationServicesViewSet
 
 __all__ = [
-    # application
-    "ApplicationListViewSet",
-    # feature
-    "ApplicationFeatureViewSet",
-    # member
-    "ApplicationMemberViewSet",
     # application detail
     "ApplicationDetailViewSet",
+    # feature
+    "ApplicationFeatureViewSet",
+    # application
+    "ApplicationListViewSet",
+    # member
+    "ApplicationMemberViewSet",
+    # application process
+    "ApplicationProcessViewSet",
     # application services
     "ApplicationServicesViewSet",
     # deleted application
     "DeletedApplicationViewSet",
-    # application process
-    "ApplicationProcessViewSet",
 ]

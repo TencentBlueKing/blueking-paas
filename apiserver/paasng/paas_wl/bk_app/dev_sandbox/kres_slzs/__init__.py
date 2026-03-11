@@ -20,9 +20,9 @@ from .sandbox import DevSandboxDeserializer, DevSandboxSerializer
 from .service import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
 
 __all__ = [
+    "DevSandboxDeserializer",
     "DevSandboxIngressDeserializer",
     "DevSandboxIngressSerializer",
-    "DevSandboxDeserializer",
     "DevSandboxSerializer",
     "DevSandboxServiceDeserializer",
     "DevSandboxServiceSerializer",

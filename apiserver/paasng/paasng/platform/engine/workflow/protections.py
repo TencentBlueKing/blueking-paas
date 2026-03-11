@@ -30,7 +30,6 @@ from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.exceptions import (
     AccessTokenForbidden,
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     from bkpaas_auth.models import User
 
     from paasng.platform.applications.models import ModuleEnvironment
+    from paasng.platform.modules.models import Module
 
 
 class DeployCondition(BaseCondition):
@@ -62,7 +62,7 @@ class ProductInfoCondition(DeployCondition):
     action_name = DeployConditions.FILL_PRODUCT_INFO.value
 
     def validate(self):
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+        if self.env.environment != AppEnvironment.PRODUCTION.value:
             return
         if not Product.objects.filter(application=self.env.module.application).exists():
             raise ConditionNotMatched(_("未完善应用市场信息"), self.action_name)
@@ -137,7 +137,7 @@ class PluginTagValidationCondition(DeployCondition):
         if not application.is_plugin_app:
             return
 
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+        if self.env.environment != AppEnvironment.PRODUCTION.value:
             return
 
         try:

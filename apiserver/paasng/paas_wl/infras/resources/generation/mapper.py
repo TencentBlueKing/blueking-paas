@@ -138,6 +138,6 @@ def _to_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
             version=proc.version,
             command_name=get_command_name(proc.runtime.proc_command),
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.warning("Error getting mapper_proc_config object, process: %s", proc)
         return None

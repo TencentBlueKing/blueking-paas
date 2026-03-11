@@ -18,17 +18,19 @@
 import logging
 from datetime import datetime
 from operator import attrgetter
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 from django.conf import settings
 
-from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, HelmChartDeployStatus
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 

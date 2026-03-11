@@ -33,10 +33,10 @@ from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paas_wl.workloads.release_controller.hooks.entities import CommandKubeAdaptor
 from paas_wl.workloads.release_controller.hooks.kres_slzs import CommandDeserializer, CommandSerializer
-from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models.app import WlApp
+    from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 logger = logging.getLogger(__name__)
 

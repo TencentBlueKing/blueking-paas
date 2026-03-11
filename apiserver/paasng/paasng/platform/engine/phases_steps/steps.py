@@ -55,7 +55,7 @@ class DeployStepPicker:
     """部署步骤选择器"""
 
     @classmethod
-    def pick(cls, engine_app: "EngineApp") -> StepMetaSet:  # noqa: PLR0911
+    def pick(cls, engine_app: "EngineApp") -> StepMetaSet:
         """通过 engine_app 选择部署阶段应该绑定的步骤
 
         note: 通过 python manage.py upsert_step_meta_set 来更新步骤集

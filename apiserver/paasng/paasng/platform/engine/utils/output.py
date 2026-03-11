@@ -127,14 +127,14 @@ class ConsoleStream(DeployStream):
     """Stream using console, useful for unit tests"""
 
     def write_title(self, title):
-        print(f"[TITLE]: {title}")
+        print(f"[TITLE]: {title}")  # noqa: T201
 
     def write_message(self, message, stream=StreamType.STDOUT):
         f = sys.stderr if stream == StreamType.STDERR else sys.stdout
         print(message, file=f)
 
     def write_event(self, event_name: str, data: dict):
-        return print(f"[{event_name}: {data}")
+        return print(f"[{event_name}: {data}")  # noqa: T201
 
     def close(self):
         pass

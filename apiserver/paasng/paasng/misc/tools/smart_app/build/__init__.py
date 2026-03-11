@@ -20,8 +20,8 @@ from .handler import SmartBuildHandler
 from .start import SmartBuildTaskRunner, create_smart_build_record
 
 __all__ = [
+    "SmartBuildCoordinator",
+    "SmartBuildHandler",
     "SmartBuildTaskRunner",
     "create_smart_build_record",
-    "SmartBuildHandler",
-    "SmartBuildCoordinator",
 ]

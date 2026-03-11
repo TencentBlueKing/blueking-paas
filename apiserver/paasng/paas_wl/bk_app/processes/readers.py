@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, cast
 
 from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic import ResourceInstance
@@ -32,10 +32,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.core.resource import get_process_selector
 from paas_wl.infras.resources.base.exceptions import NotAppScopedResource
-from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.kube_res.base import AppEntityReader, NamespaceScopedReader, ResourceList
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
+
+if TYPE_CHECKING:
+    from paas_wl.infras.resources.base.kres import KPod
 
 
 class ProcessAPIAdapter:
@@ -103,7 +105,7 @@ class InstanceReader(AppEntityReader[Instance, WlApp]):
     def get_logs(self, obj: Instance, tail_lines: Optional[int] = None, **kwargs):
         """Get logs from kubernetes api"""
         with self.kres(obj.app) as kres_client:
-            kres_client = cast(KPod, kres_client)
+            kres_client = cast("KPod", kres_client)
             return kres_client.get_log(
                 name=obj.name,
                 namespace=obj.app.namespace,

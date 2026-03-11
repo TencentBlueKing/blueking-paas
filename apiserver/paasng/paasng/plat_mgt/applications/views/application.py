@@ -98,7 +98,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     )
     def list_tenant_modes(self, request, *args, **kwargs):
         """获取应用租户模式类型列表"""
-        tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
+        tenant_modes = [{"type": tenant_mode, "label": label} for tenant_mode, label in AppTenantMode.get_choices()]
         slz = slzs.TenantModeListOutputSLZ(tenant_modes, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
@@ -109,7 +109,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     )
     def list_app_types(self, request):
         """获取应用类型列表"""
-        app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
+        app_types = [{"type": app_type, "label": label} for app_type, label in ApplicationType.get_choices()]
         slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 

@@ -18,7 +18,7 @@
 import datetime
 import uuid
 from json import dumps
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 from unittest import mock
 from uuid import UUID
 
@@ -39,13 +39,15 @@ from paasng.accessories.servicehub.exceptions import (
 )
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.modules.manager import ModuleCleaner
 from tests.paasng.accessories.servicehub import data_mocks
+
+if TYPE_CHECKING:
+    from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
@@ -445,8 +447,8 @@ class TestLocalMgrProvisionAndInstance:
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
-        delete_service_instance.side_effect = (
-            lambda service_instance: service_instance.delete() if service_instance else None
+        delete_service_instance.side_effect = lambda service_instance: (
+            service_instance.delete() if service_instance else None
         )
 
         mgr = LocalServiceMgr()
@@ -487,8 +489,8 @@ class TestLocalMgrProvisionAndInstance:
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
-        delete_service_instance.side_effect = (
-            lambda service_instance: service_instance.delete() if service_instance else None
+        delete_service_instance.side_effect = lambda service_instance: (
+            service_instance.delete() if service_instance else None
         )
 
         mgr = LocalServiceMgr()

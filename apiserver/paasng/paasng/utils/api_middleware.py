@@ -52,7 +52,7 @@ class ApiLogMiddleware:
             data = dict(
                 method=request.method, endpoint=resolve(request.path_info).url_name, status=response.status_code
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             data = dict(method=request.method, endpoint="", status=response.status_code)
             logger.warning(f"api<{request.path}> resolve failed")
 
@@ -62,7 +62,7 @@ class ApiLogMiddleware:
         try:
             api_data = self.get_api_data(request, response)
             self.save_data(api_data)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             if not settings.DEBUG:
                 logger.warning("%s api log error: %s", request, error)
 
@@ -74,7 +74,7 @@ class ApiLogMiddleware:
         return content
 
     def get_api_data(self, request, response):
-        if request.method in ["OPTIONS"]:
+        if request.method == "OPTIONS":
             return None
 
         username = request.user.username
@@ -132,7 +132,7 @@ def save_redis(doc: Dict):
     doc["tags"] = handler_config.get("tags", [])
     try:
         data = json.dumps(doc)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"unable to dump api log data: {e}")
         return
 

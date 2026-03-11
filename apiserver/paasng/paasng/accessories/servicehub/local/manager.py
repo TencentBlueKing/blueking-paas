@@ -563,7 +563,7 @@ class LocalServiceBinder:
             except ValueError as e:
                 raise BindServicePlanError(str(e))
 
-            plan = cast(LocalPlanObj, plan)
+            plan = cast("LocalPlanObj", plan)
             self._bind_for_env(env, plan)
         return svc_module_attachment
 
@@ -585,7 +585,7 @@ class LocalServiceBinder:
                 raise BindServicePlanError(f"增强服务{self.service.name}方案未配置")
 
             # Use the first plan
-            plan = cast(LocalPlanObj, plans[0])
+            plan = cast("LocalPlanObj", plans[0])
             self._bind_for_env(env, plan)
         return svc_module_attachment
 

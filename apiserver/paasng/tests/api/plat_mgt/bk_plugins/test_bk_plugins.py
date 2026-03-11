@@ -132,7 +132,6 @@ class TestBKPluginMembersManageViewSet:
         # 使用接口前，先添加用户为管理员
         url = reverse("plat_mgt.applications.plugin.members.admin", kwargs={"app_code": bk_plugin_app.code})
         resp = plat_mgt_api_client.post(url)
-        print(resp.data)
         assert resp.status_code == 200
 
         # 现在测试退出管理员

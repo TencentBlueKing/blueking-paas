@@ -15,11 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, TypeVar
+from typing import Any, Self
 
 from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
-
-T = TypeVar("T")
 
 
 class OmittedType:
@@ -29,10 +27,10 @@ class OmittedType:
     def __bool__(self) -> bool:
         return False
 
-    def __copy__(self: T) -> T:
+    def __copy__(self) -> Self:
         return self
 
-    def __deepcopy__(self: T, _: Any) -> T:
+    def __deepcopy__(self, _: Any) -> Self:
         return self
 
     def dict(self, *args, **kwargs):

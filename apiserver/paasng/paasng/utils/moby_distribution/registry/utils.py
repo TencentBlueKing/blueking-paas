@@ -38,10 +38,10 @@ def get_private_key() -> Union[libtrust.ECPrivateKey, libtrust.RSAPrivateKey]:
     if key is not None:
         try:
             return ec_key.ECPrivateKey.from_pem(key, password)
-        except Exception:
+        except Exception:  # noqa: BLE001
             try:
                 return rs_key.RSAPrivateKey.from_pem(key, password)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.warning("Unknown private key.")
     return ec_key.generate_private_key()
 

@@ -62,11 +62,11 @@ class ServiceObj:
 
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         """Return all related plans"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
         """Return all plans under the specified tenant"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 @dataclass

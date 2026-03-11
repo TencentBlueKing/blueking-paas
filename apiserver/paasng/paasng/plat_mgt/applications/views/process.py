@@ -112,7 +112,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 module=module, name=process_name
             )
         except ModuleProcessSpec.DoesNotExist:
-            return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)  # noqa: INT001
         # 构建环境覆盖映射
         env_overlays_map = {o.environment_name: o for o in proc_spec.env_overlays.all()}
         requested_overlays: dict[str, dict] = data["env_overlays"]

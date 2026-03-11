@@ -56,12 +56,12 @@ class CNativeBaseMigrator(ABC):
         try:
             if legacy_data := self._generate_legacy_data():
                 self._backup_legacy_data(legacy_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BackupLegacyDataFailed(f"backup data failed: {e}")
 
         try:
             self._migrate()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise MigrationFailed(f"migrate failed: {e}")
 
     def rollback(self):
@@ -80,12 +80,12 @@ class CNativeBaseMigrator(ABC):
     @abstractmethod
     def _generate_legacy_data(self) -> Optional[DefaultAppLegacyData]:
         """generate legacy data"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def _migrate(self):
         """actual migration logic"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def _can_migrate_or_raise(self):
@@ -94,9 +94,9 @@ class CNativeBaseMigrator(ABC):
 
         :raise PreCheckMigrationFailed: if the migration pre-condition is not met
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def _rollback(self):
         """actual rollback logic"""
-        raise NotImplementedError()
+        raise NotImplementedError

@@ -20,4 +20,4 @@ from .ingress import DevSandboxIngress
 from .sandbox import DevSandbox
 from .service import DevSandboxService
 
-__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService", "DevSandboxConfigMap"]
+__all__ = ["DevSandbox", "DevSandboxConfigMap", "DevSandboxIngress", "DevSandboxService"]

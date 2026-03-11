@@ -119,7 +119,7 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
             error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
                 s3.create_bucket(Bucket=bucket)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Error getting bucket %s, error: %s, further actions on it might fail.", bucket, e)
 
         return RGWBoto3Storage(

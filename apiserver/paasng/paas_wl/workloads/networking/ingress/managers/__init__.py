@@ -22,10 +22,10 @@ from .misc import AppDefaultIngresses, LegacyAppIngressMgr
 from .subpath import assign_subpaths
 
 __all__ = [
-    "AppIngressMgr",
     "AppDefaultIngresses",
-    "LegacyAppIngressMgr",
+    "AppIngressMgr",
     "CustomDomainIngressMgr",
+    "LegacyAppIngressMgr",
     "assign_custom_hosts",
     "assign_subpaths",
     "get_ingress_class_by_wl_app",

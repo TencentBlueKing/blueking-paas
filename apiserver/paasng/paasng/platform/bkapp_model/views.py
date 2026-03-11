@@ -103,7 +103,7 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         update_app_resource(application, module, manifest)
         try:
             import_manifest(module, manifest, fieldmgr.FieldMgrName.APP_DESC)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
 
         return Response(data=get_manifest(module), status=status.HTTP_200_OK)

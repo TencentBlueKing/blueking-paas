@@ -17,7 +17,7 @@
 
 """HTTP client for communicating with the sandbox daemon service."""
 
-from typing import Any
+from typing import Any, Self
 
 import requests
 from attrs import define
@@ -81,7 +81,7 @@ class SandboxDaemonClient:
         self._request(
             "POST",
             "/files/upload",
-            files={"file": (dest_path.split("/")[-1], file_content)},
+            files={"file": (dest_path.rsplit("/", maxsplit=1)[-1], file_content)},
             data={"destPath": dest_path},
             timeout=timeout,
         )
@@ -152,14 +152,14 @@ class SandboxDaemonClient:
             raise SandboxDaemonAPIError(f"Request {path} timed out: {exc}")
         except requests.HTTPError as exc:
             raise SandboxDaemonAPIError(
-                f'HTTP error {exc.response.status_code} on {path}: {exc.response.json().get("message")}'
+                f"HTTP error {exc.response.status_code} on {path}: {exc.response.json().get('message')}"
             )
         except requests.RequestException as exc:
             raise SandboxDaemonAPIError(f"Request failed: {exc}")
         else:
             return resp
 
-    def __enter__(self) -> "SandboxDaemonClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

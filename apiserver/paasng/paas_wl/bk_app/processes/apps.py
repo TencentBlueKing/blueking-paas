@@ -31,5 +31,5 @@ class ProcessesConfig(AppConfig):
 
         try:
             initialize_default_proc_spec_plans()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Can not initialize process spec plans: %s", e)

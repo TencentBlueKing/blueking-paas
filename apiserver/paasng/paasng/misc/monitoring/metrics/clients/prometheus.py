@@ -28,6 +28,7 @@ from paasng.misc.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsRes
 from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 class PrometheusMetricClient:
@@ -44,7 +45,7 @@ class PrometheusMetricClient:
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError("for security reasons, query metric without time range isn't allowed!")  # noqa: TRY301
+                    raise ValueError("for security reasons, query metric without time range isn't allowed!")
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception:
@@ -97,7 +98,8 @@ class PrometheusMetricClient:
             kwargs["auth"] = HTTPBasicAuth(*self.basic_auth)
 
         # long time range may cause timeout
-        resp = requests.request(method, url, **kwargs)
+        timeout = kwargs.pop("timeout", DEFAULT_TIMEOUT)
+        resp = requests.request(method, url, timeout=timeout, **kwargs)
 
         if resp.status_code != desired_code:
             logger.warning("fetch<%s> metrics failed", url)

@@ -15,15 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from __future__ import annotations
+
 import uuid
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from django.conf import settings
-from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import ValidationError
 
-from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import (
     MountEnvName,
     VolumeSourceType,
@@ -41,6 +41,11 @@ from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import Persi
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag, ModuleEnvironment
 from paasng.platform.modules.models import Module
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+
+    from paas_wl.bk_app.applications.models import WlApp
 
 
 class BaseVolumeSourceController:
@@ -97,6 +102,10 @@ class BaseVolumeSourceController:
         """删除对应 k8s 资源"""
         raise NotImplementedError
 
+    def sync_k8s_resource(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        """同步挂载卷对应的 k8s 资源"""
+        raise NotImplementedError
+
 
 class ConfigMapSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.ConfigMap
@@ -134,6 +143,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             environment_name=env_name,
             name=source_name,
             data=data,
+            is_deleted=False,
             tenant_id=tenant_id,
         )
 
@@ -143,16 +153,23 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             application_id=app_id,
             name=source_name,
         )
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
-
-        # 更新 source 对象
         data = kwargs.get("data", {})
+
+        # 如果环境发生变化, 将旧环境加入 pending_delete_envs 字段
+        if source.environment_name != env_name:
+            pending = set(source.pending_delete_envs or [])
+            # global 环境会部署到所有实际环境，需要把所有实际环境均加入待清理
+            if source.environment_name == MountEnvName.GLOBAL:
+                module = Module.objects.get(id=module_id)
+                for env in module.get_envs():
+                    pending.add(env.environment)
+            else:
+                pending.add(source.environment_name)
+            source.pending_delete_envs = list(pending)
+
         source.environment_name = env_name
         source.data = data
-        source.save(update_fields=["environment_name", "data"])
+        source.save(update_fields=["environment_name", "data", "pending_delete_envs"])
         return source
 
     def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
@@ -162,18 +179,54 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             source_name=source_name,
         )
 
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
+        # 将当前 environment_name 对应的所有实际 k8s 环境加入待清理，下次部署时清理 k8s 资源
+        pending = set(source.pending_delete_envs or [])
+        if env_name == MountEnvName.GLOBAL:
+            module = Module.objects.get(id=module_id)
+            for env in module.get_envs():
+                pending.add(env.environment)
+        else:
+            pending.add(env_name)
 
-        source.delete()
+        source.pending_delete_envs = list(pending)
+        source.is_deleted = True
+        source.save(update_fields=["pending_delete_envs", "is_deleted"])
 
     def upsert_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
         configmap_kmodel.upsert(ConfigMap(app=wl_app, name=source.name, data=source.data))
 
     def delete_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source.name, data=source.data))
+
+    def sync_k8s_resource(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        # 1. 清理 pending_delete_envs 中包含当前环境的旧 ConfigMap 资源
+        # 包含两种情况:
+        #   - 修改了 environment_name, 旧环境的 k8s 资源需要删除
+        #   - 删除了挂载卷, 旧环境的 k8s 资源需要删除
+        pending_sources = self.model_class.objects.filter(
+            module_id=env.module.id,
+            pending_delete_envs__contains=env.environment,
+        )
+        for source in pending_sources:
+            self.delete_k8s_resource(source, env.wl_app)
+            # 从 pending_delete_envs 中移除当前环境
+            remaining = [e for e in source.pending_delete_envs if e != env.environment]
+            source.pending_delete_envs = remaining
+            # 如果是删除挂载卷, 则标记为已删除
+            if source.is_deleted and not remaining:
+                # 已经被删除, 且所有环境都没清理完, 删除 DB 记录
+                source.delete()
+            else:
+                source.save(update_fields=["pending_delete_envs"])
+
+        # 2. 创建或更新 k8s 资源
+        for m in mounts:
+            source = self.get_by_env(
+                app_id=m.module.application.id,
+                env_name=m.environment_name,
+                source_name=m.get_source_name,
+            )
+            self.upsert_k8s_resource(source, env.wl_app)
 
 
 class PersistentStorageSourceController(BaseVolumeSourceController):
@@ -256,6 +309,15 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             )
         )
 
+    def sync_k8s_resource(self, env: ModuleEnvironment, mounts: QuerySet) -> None:
+        for m in mounts:
+            source = self.get_by_env(
+                app_id=m.module.application.id,
+                env_name=m.environment_name,
+                source_name=m.get_source_name,
+            )
+            self.upsert_k8s_resource(source, env.wl_app)
+
 
 def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
     return BaseVolumeSourceController.get_source_class(volume_source_type)()
@@ -266,18 +328,13 @@ def generate_source_config_name(app_code: str) -> str:
     return f"{app_code.replace('_', '0us0')}-{uuid.uuid4().hex}"
 
 
-def deploy_volume_source(env: ModuleEnvironment):
+def sync_volume_source(env: ModuleEnvironment):
     mount_queryset = Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
-    for m in mount_queryset:
-        controller = init_volume_source_controller(m.source_type)
-        source = controller.get_by_env(
-            app_id=m.module.application.id,
-            env_name=m.environment_name,
-            source_name=m.get_source_name,
-        )
-        controller.upsert_k8s_resource(source, env.wl_app)
+    for source_type in VolumeSourceType:
+        controller = init_volume_source_controller(source_type)
+        controller.sync_k8s_resource(env, mount_queryset.filter(source_type=source_type.value))
 
 
 class MountManager:

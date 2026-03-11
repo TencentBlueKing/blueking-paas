@@ -42,6 +42,15 @@ class ConfigMapSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     data = models.JSONField(default=dict)
     display_name = models.CharField(max_length=63, null=True, help_text=_("挂载资源展示名称"))
+    # 待删除的环境列表
+    # 包含下面两种场景:
+    #    - 修改了 environment_name 字段, 添加旧环境到 pending_delete_envs 列表
+    #    - 删除了挂载资源, 添加对应环境到 pending_delete_envs 列表
+    # NOTE: 如果原有的 environment_name 是 global, 需要添加所有环境到 pending_delete_envs 列表
+    pending_delete_envs = models.JSONField(
+        default=list, help_text=_("待删除的环境列表, 下次部署时删除对应环境的 k8s 资源")
+    )
+    is_deleted = models.BooleanField(default=False, help_text=_("是否已删除, 配合 pending_delete_envs 字段使用"))
 
     tenant_id = tenant_id_field_factory()
 

@@ -28,7 +28,7 @@ from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.credentials import deploy_addons_tls_certs
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
-from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
+from paas_wl.bk_app.cnative.specs.mounts import sync_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.cnative.specs.resource import is_exposed_grpc_svc
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
@@ -165,7 +165,7 @@ def release_by_k8s_operator(
         # 下发 TLS 证书（Secrets）
         deploy_addons_tls_certs(env)
         # 下发待挂载的 volume source
-        deploy_volume_source(env)
+        sync_volume_source(env)
 
         deployed_manifest = apply_bkapp_to_k8s(env, bkapp_res.to_deployable())
 

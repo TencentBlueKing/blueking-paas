@@ -53,28 +53,6 @@
             v-model="formData[item.property]"
           ></bk-switcher>
         </bk-form-item>
-        <bk-form-item
-          :label="$t('配置')"
-          :required="true"
-          property="config"
-        >
-          <!-- JSON编辑器 -->
-          <div class="editor-wrapper">
-            <JsonEditorVue
-              class="pt-json-editor-custom-cls"
-              ref="jsonEditor"
-              style="width: 100%; height: 100%"
-              v-model="valuesJson"
-              :debounce="20"
-              :mode="'text'"
-            />
-          </div>
-          <!-- 配置示例 -->
-          <ConfigExample
-            v-if="curServiceSchema"
-            :schema="curServiceSchema"
-          />
-        </bk-form-item>
       </bk-form>
       <section class="footer-btns">
         <bk-button
@@ -98,15 +76,8 @@
 </template>
 
 <script>
-import JsonEditorVue from 'json-editor-vue';
-import { validateJson } from '../validators';
-import ConfigExample from './config-example.vue';
 export default {
   name: 'EditAddSideslider',
-  components: {
-    JsonEditorVue,
-    ConfigExample,
-  },
   props: {
     show: {
       type: Boolean,
@@ -145,8 +116,6 @@ export default {
         description: '',
         // 是否可见
         is_active: true,
-        // 方案配置
-        config: {},
       },
       formItems: Object.freeze([
         {
@@ -190,7 +159,6 @@ export default {
         },
         { property: 'is_active', label: '可见', type: 'switcher', required: true },
       ]),
-      valuesJson: {},
     };
   },
   computed: {
@@ -205,10 +173,6 @@ export default {
     isAdd() {
       return this.config.type === 'add';
     },
-    // 当前服务的方案配置示例
-    curServiceSchema() {
-      return this.services.find((v) => v.name === this.formData.service_name)?.plan_schema;
-    },
   },
   methods: {
     close() {
@@ -221,45 +185,29 @@ export default {
         service_name: '',
         description: '',
         is_active: true,
-        config: {},
       };
-      this.valuesJson = {};
       this.saveLoading = false;
     },
     shown() {
       this.formData.service_name = this.serviceName || '';
       if (!this.isAdd) {
         // 编辑回填
-        const { name, service_name, description, is_active, config } = this.data;
+        const { name, service_name, description, is_active } = this.data;
         this.formData = {
           name,
           service_name,
           description,
           is_active,
-          config,
         };
-        this.$nextTick(() => {
-          this.valuesJson = config;
-        });
       }
-    },
-    handleInput(code) {
-      // 编辑后的内容
-      this.formData.config = JSON.parse(code);
     },
     // 提交-校验
     submitData() {
       this.$refs.formRef?.validate().then(
         () => {
-          // JSON校验
-          const validateResult = validateJson(this.valuesJson, this.$refs.jsonEditor?.jsonEditor);
-          if (!validateResult) {
-            return;
-          }
           this.saveLoading = true;
           const params = {
             ...this.formData,
-            config: typeof this.valuesJson === 'string' ? JSON.parse(this.valuesJson) : this.valuesJson,
           };
           delete params.service_name;
           const id = this.services.find((v) => v.name === this.formData.service_name)?.uuid;
@@ -339,12 +287,6 @@ export default {
   padding: 24px 40px;
   .btn-cls {
     min-width: 88px;
-  }
-  .editor-wrapper {
-    height: 350px;
-    /deep/ .jsoneditor-vue {
-      height: 100%;
-    }
   }
   .footer-btns {
     margin-top: 26px;

@@ -156,10 +156,14 @@
             type="info"
             :title="$t('应用申请增强服务实例时，按 FIFO（先进先出）顺序分配。')"
           ></bk-alert>
-          <RuleBasedForm
-            ref="ruleBasedForm"
-            v-else
-          />
+          <template v-else>
+            <bk-alert
+              class="mt-16"
+              type="info"
+              :title="$t('所有条件需同时满足才匹配成功。')"
+            ></bk-alert>
+            <RuleBasedForm ref="ruleBasedForm" />
+          </template>
         </bk-form-item>
       </bk-form>
     </div>

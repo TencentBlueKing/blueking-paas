@@ -424,4 +424,5 @@ export default {
   配置项将以环境变量方式注入至应用运行时环境: 'Configuration items will be injected into the application runtime environment as environment variables',
   '应用申请增强服务实例时，按 FIFO（先进先出）顺序分配。': 'When an application requests an enhanced service instance, it is allocated in FIFO (first-in, first-out) order.',
   'TLS 相关的配置（证书和密钥）以文件形式存储在容器内; 环境变量 {id}_CERT、{id}_KEY、{id}_CA 分别指向对应文件的路径': 'TLS-related configurations (certificates and keys) are stored as files in the container; environment variables {id}_CERT, {id}_KEY, {id}_CA point to the corresponding file paths',
+  '开启 TLS 后，添加实例时需上传 TLS 相关证书。应用部署后，平台会将 TLS 证书路径写入内置环境变量中。': 'After enabling TLS, TLS-related certificates need to be uploaded when adding instances. After the application is deployed, the platform will write the TLS certificate paths to the built-in environment variables.',
 };

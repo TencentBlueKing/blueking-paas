@@ -31,12 +31,6 @@
           >
             {{ $t('添加方案') }}
           </bk-button>
-          <!-- 显示配置/隐藏配置的快捷入口 -->
-          <TogglePlaintextButton
-            v-model="isAllPlaintext"
-            class="ml10"
-            @toggle="toggleAllPlaintext"
-          />
         </div>
         <bk-input
           style="width: 350px"
@@ -71,28 +65,13 @@
           </template>
         </bk-table-column>
         <bk-table-column
-          :label="$t('配置')"
-          prop="conditions"
-          :min-width="200"
-        >
-          <template slot-scope="{ row }">
-            <MaskedTextViewer
-              :data="row.config"
-              :deep="Object.keys(row.config)?.length ? 1 : 0"
-              :plaintext.sync="plaintextStatusMap[row.uuid]"
-            />
-          </template>
-        </bk-table-column>
-        <bk-table-column
           :label="$t('所属服务')"
           prop="service_name"
-          :width="120"
           show-overflow-tooltip
           :render-header="$renderHeader"
         ></bk-table-column>
         <bk-table-column
           :label="$t('资源池')"
-          :width="80"
           show-overflow-tooltip
           :render-header="$renderHeader"
           v-if="activeService.origin === 'local'"
@@ -113,7 +92,7 @@
         <bk-table-column
           :label="$t('是否可见')"
           prop="name"
-          :width="80"
+          :width="120"
           show-overflow-tooltip
           :render-header="$renderHeader"
         >
@@ -123,7 +102,7 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
-          :width="100"
+          :width="150"
         >
           <template slot-scope="{ row }">
             <bk-button
@@ -169,22 +148,18 @@
 </template>
 
 <script>
-import MaskedTextViewer from '@/components/masked-text-viewer';
 import PlanSideslider from './plan-sideslider.vue';
 import PlanDetailSideslider from './plan-detail-sideslider';
 import ServiceList from '../service-config/service-list';
 import TenantSelect from './tenant-select';
-import TogglePlaintextButton from '../toggle-plaintext-button.vue';
 
 export default {
   name: 'ServicePlan',
   components: {
-    MaskedTextViewer,
     PlanSideslider,
     PlanDetailSideslider,
     ServiceList,
     TenantSelect,
-    TogglePlaintextButton,
   },
   props: {
     tenants: {
@@ -219,10 +194,6 @@ export default {
       activeServiceId: '',
       activeService: {},
       tenantPlanCountMap: {},
-      // 每行的明文/密文状态 { rowId: true/false }
-      plaintextStatusMap: {},
-      // 全部显示/隐藏的状态
-      isAllPlaintext: false,
     };
   },
   created() {
@@ -258,10 +229,6 @@ export default {
         };
       });
     },
-    // 计算当前显示的所有方案的配置项 key
-    allPlaintextKeys() {
-      return (this.searchPlans || []).map((plan) => plan.uuid);
-    },
   },
   watch: {
     tenants: {
@@ -270,19 +237,6 @@ export default {
         this.curTenantId = tenantId || newList[0]?.id;
       },
       immediate: true,
-    },
-    // 监听 plaintextStatusMap 的变化，自动计算 isAllPlaintext
-    plaintextStatusMap: {
-      handler() {
-        if (this.allPlaintextKeys.length === 0) {
-          this.isAllPlaintext = false;
-          return;
-        }
-        // 检查所有配置项是否都为显示状态
-        const allPlaintext = this.allPlaintextKeys.every((key) => this.plaintextStatusMap[key] === true);
-        this.isAllPlaintext = allPlaintext;
-      },
-      deep: true,
     },
   },
   methods: {
@@ -297,8 +251,6 @@ export default {
           acc[tenantId] = (acc[tenantId] || 0) + 1;
           return acc;
         }, {});
-        // 初始化每个方案的配置项状态为 false
-        this.initPlaintextStatus();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -379,22 +331,6 @@ export default {
       this.activeService = data;
       this.activeServiceId = data.uuid;
     },
-    // 初始化配置项的显示/隐藏状态
-    initPlaintextStatus() {
-      this.planList.forEach((plan) => {
-        // 为每个方案的配置初始化状态（如果未设置则默认为 false）
-        if (this.plaintextStatusMap[plan.uuid] === undefined) {
-          this.$set(this.plaintextStatusMap, plan.uuid, false);
-        }
-      });
-    },
-    // 全部显示配置/隐藏配置
-    toggleAllPlaintext(newStatus) {
-      const plans = this.searchPlans || [];
-      plans.forEach((plan) => {
-        this.$set(this.plaintextStatusMap, plan.uuid, newStatus);
-      });
-    },
   },
 };
 </script>
@@ -409,11 +345,6 @@ export default {
     padding: 16px;
     .plan-table-cls {
       margin-top: 12px;
-      /deep/ .bk-table-row.hover-row {
-        .masked-text-viewer i.paasng-icon {
-          display: block !important;
-        }
-      }
     }
     .top-bar {
       .left {

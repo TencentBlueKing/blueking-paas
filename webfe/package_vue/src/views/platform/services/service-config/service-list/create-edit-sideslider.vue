@@ -71,25 +71,6 @@
               ></bk-option>
             </bk-select>
           </bk-form-item>
-          <!-- 远程不展示 -->
-          <bk-form-item
-            v-if="formData.origin === 'local'"
-            :label="$t('供应商')"
-            :property="'provider_name'"
-            :error-display-type="'normal'"
-          >
-            <bk-select
-              v-model="formData.provider_name"
-              searchable
-            >
-              <bk-option
-                v-for="option in providerChoices"
-                :key="option.id"
-                :id="option.id"
-                :name="option.name"
-              ></bk-option>
-            </bk-select>
-          </bk-form-item>
           <bk-form-item
             :label="$t('是否可见')"
             :required="true"
@@ -112,13 +93,19 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('支持 TLS')"
-              :desc="$t('环境变量模板中可使用 {{tls}} 引用完整 TLS 配置，或使用 {{tls.ca}} 引用单个字段。')"
               :required="true"
             >
               <bk-switcher
                 v-model="formData.config.tls"
                 theme="primary"
               ></bk-switcher>
+              <p class="g-tip">
+                {{
+                  $t(
+                    '开启 TLS 后，添加实例时需上传 TLS 相关证书。应用部署后，平台会将 TLS 证书路径写入内置环境变量中。'
+                  )
+                }}
+              </p>
             </bk-form-item>
             <bk-form-item
               :label="$t('环境变量模板')"
@@ -218,7 +205,6 @@ function getDefaultFormData() {
       // 环境变量模板
       template: [],
     },
-    provider_name: '',
     // 是否可见
     is_visible: true,
     // 服务介绍
@@ -269,9 +255,6 @@ export default {
       // 分类列表
       categoryList: [],
       categoryLoading: true,
-      // 供应商列表
-      providerChoices: [],
-      providerLoading: true,
       // 富文本框配置
       editorOption: {
         placeholder: this.$t('使用指南会在增强服务实例页面上展示出来'),
@@ -353,7 +336,7 @@ export default {
     // 显示侧栏，数据回填
     handleShown() {
       this.reset();
-      Promise.all([this.getServicesCategory(), this.getServicesProviderChoices()]);
+      this.getServicesCategory();
       const { name, logo, instance_tutorial } = this.data;
       if (this.isEdit) {
         // 编辑时先禁用编辑器，防止内容变更时自动聚焦和滚动
@@ -452,19 +435,6 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.categoryLoading = false;
-      }
-    },
-    // 获取供应商
-    async getServicesProviderChoices() {
-      try {
-        const ret = await this.$store.dispatch('tenant/getServicesProviderChoices');
-        this.providerChoices = Object.entries(ret.provider_choices || {}).map(([key, value]) => {
-          return { id: key, name: value };
-        });
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.providerLoading = false;
       }
     },
     // 新增服务

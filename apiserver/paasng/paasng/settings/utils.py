@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import os
 import re
 import socket
@@ -26,6 +27,8 @@ from blue_krill.secure.dj_environ import SecureEnv
 from dynaconf.base import LazySettings
 from dynaconf.utils import object_merge
 from environ import Env
+
+logger = logging.getLogger(__name__)
 
 
 def get_database_conf(
@@ -101,6 +104,8 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
     - RSVC_BUNDLE_BKREPO_ENDPOINT_URL BKRepo 增强服务地址
     - RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL RabbitMQ 增强服务地址
     - RSVC_BUNDLE_OTEL_ENDPOINT_URL OTEL-APM 增强服务地址
+    - RSVC_BUNDLE_EXTRA_SERVICES 额外自定义远程增强服务列表，每项至少包含 name 和 endpoint_url，
+      会自动与公共 template（jwt_auth_conf、prefer_async_delete 等）合并
     """
     endpoints = settings.get("SERVICE_REMOTE_ENDPOINTS", [])
     if endpoints:
@@ -179,6 +184,14 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                 },
             )
         )
+
+    extra_services = settings.get("RSVC_BUNDLE_EXTRA_SERVICES", [])
+    for svc in extra_services:
+        if not svc.get("name") or not svc.get("endpoint_url"):
+            logger.warning("invalid extra service config, missing name/endpoint_url: %s", svc)
+            continue
+        endpoints.append(object_merge(template, svc))
+
     return endpoints
 
 

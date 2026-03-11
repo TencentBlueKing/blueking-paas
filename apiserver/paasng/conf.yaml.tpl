@@ -462,6 +462,7 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ## - RSVC_BUNDLE_MYSQL_ENDPOINT_URL Mysql 增强服务地址
 ## - RSVC_BUNDLE_BKREPO_ENDPOINT_URL BKRepo 增强服务地址
 ## - RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL RabbitMQ 增强服务地址
+## - RSVC_BUNDLE_EXTRA_SERVICES 额外自定义的增强服务配置项
 ##
 ## 完整增强服务配置示例：
 ## SERVICE_REMOTE_ENDPOINTS:
@@ -482,6 +483,13 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ##    BKRepo: RSVC_BUNDLE_BKREPO_ENDPOINT_URL
 ##    RabbitMQ: RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL
 ## 按照以上映射表，配置您需要的增强服务，若 URL 值不会空，则加载配置时会按照预设模板渲染
+## 3. RSVC_BUNDLE_EXTRA_SERVICES 用以配置不在内置简配项的增强服务, 应至少包括 name 和 endpoint_url, 示例:
+## RSVC_BUNDLE_EXTRA_SERVICES:
+##  - name: gaussdb
+##    endpoint_url: http://svc-gaussdb
+##    provision_params_tmpl:
+##      egress_info: '{cluster_info.egress_info_json}'
+##    ...
 
 # SERVICE_REMOTE_ENDPOINTS: []
 ## Mysql 增强服务地址

@@ -4881,7 +4881,3 @@ msgstr "FIFO pre-created instances must not specify binding_policy"
 #: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:132
 msgid "该实例已被分配，无法删除"
 msgstr "This instance has been allocated, cannot be deleted"
-
-#: paasng/plat_mgt/infras/services/serializers/services.py:134
-msgid "本地增强服务必须指定 provider_name"
-msgstr "provider_name is required for local service"

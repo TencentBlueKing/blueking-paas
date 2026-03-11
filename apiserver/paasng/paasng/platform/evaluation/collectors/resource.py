@@ -173,7 +173,7 @@ class AppResQuotaCollector:
                 if ps.memory:
                     mem_usage_avg_val += ps.replicas * ps.memory.avg
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"failed to get env {env} process metrics: {e}")
 
         return EnvSummary(

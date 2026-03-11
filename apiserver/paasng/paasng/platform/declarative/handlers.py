@@ -331,7 +331,7 @@ def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
     try:
         spec_version = detect_spec_version(desc_data)
     except ValueError as e:
-        raise UnsupportedSpecVer(f'app spec version "{str(e)}" is not supported')
+        raise UnsupportedSpecVer(f'app spec version "{e!s}" is not supported')
 
     match spec_version:
         case AppSpecVersion.VER_2:

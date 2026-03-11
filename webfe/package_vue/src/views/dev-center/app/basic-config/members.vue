@@ -85,9 +85,12 @@
               <div v-bk-overflow-tips>
                 <span
                   v-if="row.user.avatar"
-                  class="user-photo"
+                  :class="['user-photo', { 'is-default-avatar': row.avatarError }]"
                 >
-                  <img :src="row.user.avatar" />
+                  <img
+                    :src="row.user.avatar"
+                    @error="handleAvatarError($event, row)"
+                  />
                 </span>
                 <bk-user-display-name
                   :user-id="row.user.username"
@@ -311,6 +314,7 @@ export default {
           view: this.$t('权限模型'),
         },
       },
+      defaultAvatar: require('@static/images/user.svg'),
     };
   },
   computed: {
@@ -732,6 +736,11 @@ export default {
         return this.$t('仅可修改应用名称/市场信息、管理应用访问权限、查看访问统计数据和告警记录');
       }
     },
+    // 处理头像加载失败
+    handleAvatarError(event, row) {
+      event.target.src = this.defaultAvatar;
+      this.$set(row, 'avatarError', true);
+    },
   },
 };
 </script>
@@ -763,6 +772,17 @@ export default {
   img {
     width: 100%;
     height: 100%;
+  }
+
+  &.is-default-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 32px;
+      height: 32px;
+    }
   }
 }
 

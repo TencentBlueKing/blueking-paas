@@ -39,7 +39,7 @@ class TestListDevSandbox:
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.json()) >= 1
 
-        dev_sandbox = [sb for sb in resp.json() if sb["code"] == bk_dev_sandbox.code][0]
+        dev_sandbox = next(sb for sb in resp.json() if sb["code"] == bk_dev_sandbox.code)
         assert dev_sandbox["module_name"] == "default"
         assert dev_sandbox["version_info"] == {"version_name": "master", "version_type": "branch", "revision": "..."}
 

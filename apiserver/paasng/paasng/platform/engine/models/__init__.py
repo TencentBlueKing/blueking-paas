@@ -24,15 +24,15 @@ from .phases import DeployPhase, DeployPhaseTypes
 from .steps import DeployStep
 
 __all__ = [
+    "ConfigVar",
+    "DeployOptions",
+    "DeployPhase",
+    "DeployPhaseTypes",
+    "DeployStep",
+    "Deployment",
     "EngineApp",
     "MarkStatusMixin",
-    "Deployment",
     "ModuleEnvironmentOperations",
-    "OperationVersionBase",
-    "ConfigVar",
     "OfflineOperation",
-    "DeployPhaseTypes",
-    "DeployPhase",
-    "DeployStep",
-    "DeployOptions",
+    "OperationVersionBase",
 ]

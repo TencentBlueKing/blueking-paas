@@ -72,7 +72,7 @@ class Command(BaseCommand, CommandBasicMixin):
                 start_archive_step(env, operator=app.creator)
             except OfflineOperationExistError:
                 self.print("Archiving is already in progress, check later.", title)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.print(f"Unknown error when archiving, err: {e}", title)
             else:
                 self.print("Archive finished")

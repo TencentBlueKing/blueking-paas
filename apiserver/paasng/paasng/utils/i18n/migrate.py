@@ -49,7 +49,7 @@ def bulk_update_chunk_by_chunk(
         raise RuntimeError(f"Can't get pk field from django model<{model.__name__}>!")
 
     statement_tmpl = (
-        f"UPDATE {table_name} SET {quote_name(to_field)} = {quote_name(from_field)} WHERE {quote_name(pk_field)} = %s"
+        f"UPDATE {table_name} SET {quote_name(to_field)} = {quote_name(from_field)} WHERE {quote_name(pk_field)} = %s"  # noqa: S608
     )
 
     with schema_editor.connection.cursor() as cursor:  # type: CursorWrapper
@@ -68,15 +68,15 @@ def bulk_update_chunk_by_chunk(
 
 def count_table(cursor: CursorWrapper, table_name: str) -> int:
     """count the size of given table"""
-    count_sql = f"SELECT count(1) as cnt FROM {table_name}"
+    count_sql = f"SELECT count(1) as cnt FROM {table_name}"  # noqa: S608
     cursor.execute(count_sql)
     return cursor.fetchone()[0]
 
 
 def fetchall_pks(cursor: CursorWrapper, table_name: str, pk_field: str, total_size: int, batch_size: int) -> List[Any]:
-    init_query_sql = f"SELECT {pk_field} FROM {table_name} ORDER BY {pk_field} LIMIT {batch_size}"
+    init_query_sql = f"SELECT {pk_field} FROM {table_name} ORDER BY {pk_field} LIMIT {batch_size}"  # noqa: S608
     next_query_sql = (
-        f"SELECT {pk_field} FROM {table_name} WHERE {pk_field} > %s ORDER BY {pk_field} LIMIT {batch_size}"
+        f"SELECT {pk_field} FROM {table_name} WHERE {pk_field} > %s ORDER BY {pk_field} LIMIT {batch_size}"  # noqa: S608
     )
 
     cursor.execute(init_query_sql)

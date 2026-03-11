@@ -56,7 +56,7 @@ class BKIAMApiError(BKIAMGatewayServiceError):
         if user_match and quota_match:
             user = user_match.group(1)
             quota = quota_match.group(1)
-            return _(f"用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制")
+            return _(f"用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制")  # noqa: INT001
         else:
             # 没匹配到则返回原始的错误信息
             return message

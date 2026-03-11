@@ -187,5 +187,5 @@ class BareGitRepoController(BaseGitRepoController):
             try:
                 fp.resolve().relative_to(temp_dir)
             except ValueError:
-                raise ReadLinkFileOutsideDirectoryError()
+                raise ReadLinkFileOutsideDirectoryError
             return fp.read_bytes()

@@ -152,7 +152,7 @@ class ServiceHubProbe(VirtualProbe):
                         ),
                     )
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 issues.append(
                     Issue(
                         fatal=True,

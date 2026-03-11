@@ -68,7 +68,7 @@ class SmartAppBuilder:
             # 同步阻塞获取构建日志
             self.start_following_logs(builder_name)
             self.state_mgr.finish(JobStatus.SUCCESSFUL)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.state_mgr.finish(JobStatus.FAILED, str(e))
         finally:
             self.stream.close()

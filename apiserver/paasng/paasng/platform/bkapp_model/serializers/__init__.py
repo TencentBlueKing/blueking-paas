@@ -33,8 +33,8 @@ __all__ = [
     "GetManifestInputSLZ",
     "ModuleDeployHookSLZ",
     "ModuleProcessSpecSLZ",
+    "ModuleProcessSpecsInputSLZ",
     "ModuleProcessSpecsOutputSLZ",
     "ProbeSetSLZ",
     "SvcDiscConfigSLZ",
-    "ModuleProcessSpecsInputSLZ",
 ]

@@ -77,13 +77,13 @@ class Command(BaseCommand):
                         wl_app = env.engine_app.to_wl_obj()
                         if wl_app.latest_config.cluster == cluster_name:
                             return True
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         logger.warning(
                             f"Failed to get cluster info for app {app.code} "
                             f"module {module.name} environment {env.environment}: {e}"
                         )
                         continue
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Exception occurred while determining cluster for app {app.code}: {e}")
         return False
 
@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     f"{round(rp.cpu_usage_avg * 100, 2)}%",
                     str(rp.pv),
                     str(rp.uv),
-                    rp.latest_operator if rp.latest_operator else "--",
+                    rp.latest_operator or "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
                     ", ".join(rp.evaluate_result["issues"]) if rp.evaluate_result else "--",

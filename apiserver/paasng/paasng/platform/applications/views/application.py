@@ -199,7 +199,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         serializer = slzs.SearchApplicationSLZ(data=request.query_params)
         try:
             serializer.is_valid(raise_exception=True)
-        except Exception:
+        except Exception:  # noqa: BLE001
             # if keyword do not match regex, then return none
             return Response({"count": 0, "results": []})
 

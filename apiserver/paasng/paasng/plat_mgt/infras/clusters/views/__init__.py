@@ -24,9 +24,9 @@ from .policies import ClusterAllocationPolicyViewSet
 
 __all__ = [
     "BCSResourceViewSet",
-    "ClusterViewSet",
+    "ClusterAllocationPolicyViewSet",
     "ClusterComponentViewSet",
     "ClusterDefaultConfigViewSet",
     "ClusterFeatureFlagViewSet",
-    "ClusterAllocationPolicyViewSet",
+    "ClusterViewSet",
 ]

@@ -74,7 +74,7 @@ class TestAppCommandExecutor:
         ):
             executor.perform()
 
-        out, err = capsys.readouterr()
+        out, _err = capsys.readouterr()
         assert (
             out == "Starting pre-release phase\n[TITLE]: executing...\n"
             "1\n2\npre-release phase execution succeed.\n[TITLE]: Cleaning up pre-release phase container\n"
@@ -90,7 +90,7 @@ class TestAppCommandExecutor:
         with mock.patch("paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT", 1):
             executor.perform()
 
-        out, err = capsys.readouterr()
+        out, _err = capsys.readouterr()
         assert (
             out
             == "Starting pre-release phase\nPod is not created normally, please contact the cluster administrator.\n"
@@ -127,7 +127,7 @@ class TestAppCommandExecutor:
         ):
             executor.perform()
 
-        out, err = capsys.readouterr()
+        out, _err = capsys.readouterr()
         assert (
             out == "Starting pre-release phase\n[TITLE]: executing...\n"
             "1\n2\nfailed with exit code 1\n[TITLE]: Cleaning up pre-release phase container\n"
@@ -166,7 +166,7 @@ class TestAppCommandExecutor:
         ):
             executor.perform()
 
-        out, err = capsys.readouterr()
+        out, _err = capsys.readouterr()
         assert (
             out == "Starting pre-release phase\n[TITLE]: executing...\n"
             "1\n2\npre-release phase aborted.\n[TITLE]: Cleaning up pre-release phase container\n"

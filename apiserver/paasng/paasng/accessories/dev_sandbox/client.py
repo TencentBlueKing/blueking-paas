@@ -25,6 +25,8 @@ from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, 
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.modules.models import Module
 
+DEFAULT_TIMEOUT = 120
+
 
 class DevSandboxApiClient:
     """沙箱开发 API 客户端（对应 cnb-builder-shim dev-entrypoint）"""
@@ -44,6 +46,7 @@ class DevSandboxApiClient:
             f"http://{detail.urls.devserver}codes/diffs",
             headers={"Authorization": f"Bearer {self.dev_sandbox.token}"},
             params={"content": "true"},
+            timeout=DEFAULT_TIMEOUT,
         )
         if resp.status_code != status.HTTP_200_OK:
             raise DevSandboxApiException(resp.text)
@@ -62,6 +65,7 @@ class DevSandboxApiClient:
             f"http://{detail.urls.devserver}codes/commit",
             headers={"Authorization": f"Bearer {self.dev_sandbox.token}"},
             params={"message": commit_msg},
+            timeout=DEFAULT_TIMEOUT,
         )
         if resp.status_code != status.HTTP_200_OK:
             raise DevSandboxApiException(resp.text)

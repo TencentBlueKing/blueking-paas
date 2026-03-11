@@ -139,7 +139,7 @@ class ServiceCreateSLZ(serializers.Serializer):
                 _(
                     "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
                 ).format(name)
-            )  # noqa: E501
+            )
 
         return name
 

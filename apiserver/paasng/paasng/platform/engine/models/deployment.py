@@ -215,7 +215,7 @@ class Deployment(OperationVersionBase):
 
         try:
             return self.deployphase_set.get(type=DeployPhaseTypes.PREPARATION.value).start_time
-        except Exception:
+        except Exception:  # noqa: BLE001
             # 防御，避免绑定阶段中访问此 API 异常
             logger.warning("failed to get PREPARATION start time from deployment<%s>", self.pk)
             return None
@@ -231,7 +231,7 @@ class Deployment(OperationVersionBase):
                 .first()
                 .complete_time
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("failed to get complete status from deployment<%s>", self.pk)
             return None
 
@@ -245,7 +245,7 @@ class Deployment(OperationVersionBase):
                 .first()
                 .type
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("failed to get complete status from deployment<%s>", self.pk)
             return None
 
@@ -288,7 +288,7 @@ class Deployment(OperationVersionBase):
         # 因此 app_desc 中声明的 hooks 会被覆盖产品上已填写的 hooks 覆盖
         try:
             hooks = self.declarative_config.get_deploy_hooks()
-        except Exception:
+        except Exception:  # noqa: BLE001
             hooks = HookList()
 
         for hook in self.app_environment.module.deploy_hooks.filter(enabled=True):

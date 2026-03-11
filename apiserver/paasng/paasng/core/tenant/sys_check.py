@@ -14,7 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 from django.apps import apps
-from django.core.checks import Error, Warning, register
+from django.core.checks import Error, register
+from django.core.checks import Warning as CheckWarning
 
 
 @register()
@@ -50,7 +51,7 @@ def check_model_multi_tenancy_configured(app_configs, **kwargs) -> list[Error]:
         todo_marker = "[multi-tenancy] TODO"
         if todo_marker in doc_string:
             errors.append(
-                Warning(
+                CheckWarning(
                     f"The model {model._meta.label} has not done multi-tenancy setup.",
                     hint="Complete the TODO by adding a field or setting a marker.",
                 )

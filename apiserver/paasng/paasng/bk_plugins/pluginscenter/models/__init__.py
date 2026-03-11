@@ -35,18 +35,18 @@ from .instances import (
 )
 
 __all__ = [
-    "PluginDefinition",
-    "PluginBasicInfoDefinition",
-    "PluginConfigInfoDefinition",
-    "PluginMarketInfoDefinition",
-    "PluginVisibleRangeDefinition",
-    "PluginInstance",
-    "PluginConfig",
-    "PluginMarketInfo",
-    "PluginRelease",
-    "PluginReleaseStage",
     "ApprovalService",
     "OperationRecord",
+    "PluginBasicInfoDefinition",
+    "PluginConfig",
+    "PluginConfigInfoDefinition",
+    "PluginDefinition",
+    "PluginInstance",
+    "PluginMarketInfo",
+    "PluginMarketInfoDefinition",
+    "PluginRelease",
+    "PluginReleaseStage",
     "PluginReleaseStrategy",
     "PluginVisibleRange",
+    "PluginVisibleRangeDefinition",
 ]

@@ -67,9 +67,9 @@ class FakeApplicationPermission(Permission):
         self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
     ) -> Dict[str, bool]:
         if username in [roles.ADMIN_USER, roles.APP_ADMIN_USER]:
-            return {action_id: True for action_id in action_ids}
+            return dict.fromkeys(action_ids, True)
 
-        multi = {action_id: False for action_id in action_ids}
+        multi = dict.fromkeys(action_ids, False)
         if username == roles.APP_DEVELOP_USER:
             for key in multi:
                 if key in app_develop_allowed_actions:
@@ -85,6 +85,6 @@ class FakeApplicationPermission(Permission):
     ) -> Dict[str, Dict[str, bool]]:
         perms = {}
         for _, r_id in enumerate([res.id for res in resources]):
-            perms[r_id] = {action_id: False for action_id in action_ids}
+            perms[r_id] = dict.fromkeys(action_ids, False)
 
         return perms

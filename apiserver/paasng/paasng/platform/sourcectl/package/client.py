@@ -144,7 +144,7 @@ class BinaryTarClient(BasePackageClient):
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
-                ["tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), filename],
+                ["/bin/tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
@@ -152,7 +152,7 @@ class BinaryTarClient(BasePackageClient):
             _, stderr = p.communicate()
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
-                    raise PackageInvalidFileFormatError()
+                    raise PackageInvalidFileFormatError
                 if self._is_not_found_error(stderr):
                     raise ReadFileNotFoundError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
@@ -203,7 +203,7 @@ class BinaryTarClient(BasePackageClient):
             might be corrupt.
         """
         p = subprocess.Popen(
-            ["tar", "-tf", str(self.filepath.absolute())],
+            ["/bin/tar", "-tf", str(self.filepath.absolute())],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -211,7 +211,7 @@ class BinaryTarClient(BasePackageClient):
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             if self._is_invalid_file_format_error(stderr):
-                raise PackageInvalidFileFormatError()
+                raise PackageInvalidFileFormatError
             raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
         items = stdout.strip().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]
@@ -269,10 +269,10 @@ class ZipClient(BasePackageClient):
         return self.zip_.read(info)
 
     def export(self, local_path: str):
-        self.zip_.extractall(local_path)
+        self.zip_.extractall(local_path)  # noqa: S202
 
         # About symbolic links security check, the zip file module does not support symbolic links
-        # at this moment so we no extra checking is needed.
+        # at this moment so no extra checking is needed.
         # See https://bugs.python.org/issue37921 for more details
 
     def close(self):

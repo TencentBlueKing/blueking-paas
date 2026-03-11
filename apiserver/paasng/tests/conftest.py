@@ -141,7 +141,7 @@ def _configure_remote_service():
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
+def django_db_setup(django_db_setup, django_db_blocker):
     """Create the default cluster for testing."""
 
     with django_db_blocker.unblock(), transaction.atomic():
@@ -301,7 +301,7 @@ def _init_test_app_repo(request):
 
     try:
         repo_config = settings.FOR_TESTS_SVN_SERVER_CONF
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # use filelock to ensure svn initial will only run once

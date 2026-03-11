@@ -16,15 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 from abc import ABC
-from collections import namedtuple
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, NamedTuple, Optional, Union
 
 from django.conf import settings
 from iam import Resource
 from iam.apply import models
 
 
-class ResourceRequest(ABC):
+class ResourceRequest(ABC):  # noqa: B024
     resource_type = ""
 
     @classmethod
@@ -50,7 +49,9 @@ class ResourceRequest(ABC):
         return {}
 
 
-IAMResource = namedtuple("IAMResource", "resource_type resource_id")
+class IAMResource(NamedTuple):
+    resource_type: str
+    resource_id: str
 
 
 class ActionResourcesRequest:

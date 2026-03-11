@@ -143,7 +143,7 @@ class WaitBkAppProcedurePoller(TaskPoller):
         return polling_result
 
     def get_status(self) -> PollingResult:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class WaitAppModelReady(WaitBkAppProcedurePoller):

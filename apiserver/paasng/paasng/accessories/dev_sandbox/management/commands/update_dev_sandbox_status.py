@@ -30,7 +30,7 @@ class Command(BaseCommand):
         for dev_sandbox in DevSandbox.objects.all():
             try:
                 detail = DevSandboxController(dev_sandbox).get_detail()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 # 防止沙箱资源被管理员删除等导致的报错
                 self.stdout.write(
                     self.style.WARNING(f"Failed to get detail of dev sandbox: {dev_sandbox.code}. Error: {e}")
@@ -47,6 +47,6 @@ class Command(BaseCommand):
         try:
             resp = requests.get(url, timeout=5)
             return resp.status_code == status.HTTP_200_OK and resp.json().get("status") == "alive"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.stdout.write(self.style.WARNING(f"Dev sandbox status check failed for URL: {url}. Error: {e}"))
             return False

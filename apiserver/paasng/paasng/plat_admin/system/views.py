@@ -80,7 +80,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         # PaaS2.0 应用的部署信息固定为 None
         if app_source == SimpleAppSource.DEFAULT:
             deploy_info = get_exposed_links(application)
-            return deploy_info if deploy_info else None
+            return deploy_info or None
         return None
 
     def get_market_address(self, application: Application, app_source: SimpleAppSource) -> Optional[str]:
@@ -100,7 +100,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_market_info: bool,
     ):
         app_data = UniversalAppSLZ(app).data
-        app_instance = cast(Application, app._db_object)
+        app_instance = cast("Application", app._db_object)
 
         # 返回数据中是否包含联系人信息, contact_info_dict 为 None 代表不返回联系人信息
         if contact_info_dict is not None:

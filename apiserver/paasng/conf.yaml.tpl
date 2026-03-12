@@ -855,6 +855,9 @@ DEV_SANDBOX_CLUSTER: ""
 # Agent Sandbox 默认运行镜像
 # AGENT_SANDBOX_DEFAULT_IMAGE: "your-registry/agent-sandbox-runtime:latest"
 
+# Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
+# AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
+
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 
 ## Web 模块默认副本数量，默认值：{'stag': 1, 'prod': 2}

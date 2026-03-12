@@ -20,6 +20,7 @@ import logging
 import re
 import shlex
 
+from django.conf import settings
 from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
 
@@ -359,11 +360,13 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
 
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""
+
         return SandboxDaemonClient(
             router_endpoint=self.router_endpoint,
             token=self.daemon_token,
             sandbox_name=self.entity.name,
             namespace=self.namespace,
+            router_auth_token=settings.AGENT_SANDBOX_ROUTER_AUTH_TOKEN,
         )
 
     def get_status(self) -> str:

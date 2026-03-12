@@ -45,9 +45,17 @@ class SandboxDaemonClient:
     :param token: The authentication token for the daemon service.
     :param sandbox_name: The sandbox K8s Service name, sent as X-Sandbox-ID header.
     :param namespace: The sandbox K8s namespace, sent as X-Sandbox-Namespace header.
+    :param router_auth_token: Optional token for authenticating with the router itself.
     """
 
-    def __init__(self, router_endpoint: str, token: str, sandbox_name: str, namespace: str):
+    def __init__(
+        self,
+        router_endpoint: str,
+        token: str,
+        sandbox_name: str,
+        namespace: str,
+        router_auth_token: str = "",
+    ):
         self.base_url = f"http://{router_endpoint}"
         self.timeout = DEFAULT_REQUEST_TIMEOUT
         self._session = requests.Session()
@@ -55,6 +63,8 @@ class SandboxDaemonClient:
         self._session.headers["X-Sandbox-ID"] = sandbox_name
         self._session.headers["X-Sandbox-Namespace"] = namespace
         self._session.headers["X-Sandbox-Port"] = str(DAEMON_BIND_PORT)
+        if router_auth_token:
+            self._session.headers["X-Router-Token"] = router_auth_token
 
     def execute(self, command: str, cwd: str | None = None, timeout: int | None = None) -> ExecuteResult:
         """Execute a command inside the sandbox.

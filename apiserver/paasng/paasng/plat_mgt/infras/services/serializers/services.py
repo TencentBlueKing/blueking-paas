@@ -104,7 +104,7 @@ class ServiceCreateSLZ(serializers.Serializer):
     description = serializers.CharField(help_text="描述")
     long_description = serializers.CharField(help_text="详细描述")
     instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
-    provider_name = serializers.CharField(help_text="供应商", allow_null=True)
+    provider_name = serializers.CharField(help_text="供应商", required=False, allow_null=True, allow_blank=True)
 
     config = serializers.JSONField(required=False, default=dict)
 
@@ -122,7 +122,7 @@ class ServiceCreateSLZ(serializers.Serializer):
 
         return data
 
-    def validate_provider_name(self, provider_name: str) -> str | None:
+    def validate_provider_name(self, provider_name: str) -> str | None:  # noqa: FA102
         if provider_name:
             return provider_name
 
@@ -131,7 +131,8 @@ class ServiceCreateSLZ(serializers.Serializer):
             #  远程增强服务无需 provider_name
             return provider_name
 
-        raise ValidationError(_("本地增强服务必须指定 provider_name"))
+        # 默认使用 pool 作为本地增强服务的 provider
+        return "pool"
 
     def validate_name(self, name: str) -> str:
         if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):

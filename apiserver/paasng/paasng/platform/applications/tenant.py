@@ -51,16 +51,6 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
     return app_tenant_mode, app_tenant_id, tenant
 
 
-def resolve_app_tenant_id_from_user(user: User, raw_app_tenant_mode: str | None) -> str:
-    """Derive ``app_tenant_id`` from user and the raw tenant-mode parameter.
-
-    This is a lightweight helper intended for early-stage validation (e.g.
-    field-level validators) where only the ``app_tenant_id`` is needed.
-    """
-    _, app_tenant_id, _ = validate_app_tenant_params(user, raw_app_tenant_mode)
-    return app_tenant_id
-
-
 def get_tenant_id_for_app(app_code: str) -> str:
     # 如果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
     if not settings.ENABLE_MULTI_TENANT_MODE:

@@ -121,7 +121,7 @@ class AppManger(AppAdaptor):
         qs = self.session.query(self.model)
         if code:
             qs = qs.filter(self.model.code != code)
-        if app_tenant_id is not None:
+        if hasattr(self.model, "app_tenant_id"):
             qs = self._narrow_by_tenant(qs, app_tenant_id)
         if field_name == "name_en" and hasattr(self.model, "name_en"):
             app = qs.filter_by(name_en=name).scalar()
@@ -129,7 +129,7 @@ class AppManger(AppAdaptor):
             app = qs.filter_by(name=name).scalar()
         return not app
 
-    def _narrow_by_tenant(self, qs, app_tenant_id: str):
+    def _narrow_by_tenant(self, qs, app_tenant_id: Optional[str]):
         """Narrow the query so that uniqueness is scoped per-tenant while
         also preventing conflicts with global applications.
 
@@ -139,10 +139,7 @@ class AppManger(AppAdaptor):
         - Tenant-specific apps must not collide with apps in the same tenant
           OR with any global app.
         """
-        if not hasattr(self.model, "app_tenant_id"):
-            return qs
-
-        if app_tenant_id == "":
+        if app_tenant_id is None or app_tenant_id == "":
             return qs
 
         tenant_filter = self.model.app_tenant_id == app_tenant_id

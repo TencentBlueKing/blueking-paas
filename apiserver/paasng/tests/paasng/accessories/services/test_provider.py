@@ -73,7 +73,7 @@ class TestResourcePoolProvider:
         instance = bk_service.create_service_instance_by_plan(bk_plan, {})
         assert PreCreatedInstance.objects.get(pk=pools[0].pk).is_allocated
         bk_service.delete_service_instance(instance)
-        if json.loads(bk_plan.config).get("recyclable", False):
+        if json.loads(bk_plan.config).get("recyclable", True):
             assert not PreCreatedInstance.objects.get(pk=pools[0].pk).is_allocated
             assert PreCreatedInstance.objects.count() == len(pools)
         else:

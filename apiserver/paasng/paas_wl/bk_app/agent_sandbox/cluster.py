@@ -15,11 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paas_wl.infras.cluster.models import Cluster
+from django.conf import settings
 
-# The subdomain prefix for the sandbox router Ingress.
-# The full domain is "{ROUTER_SUBDOMAIN_PREFIX}.{root_domain}".
-ROUTER_SUBDOMAIN_PREFIX = "agent-sbx-router"
+from paas_wl.infras.cluster.models import Cluster
 
 
 def get_router_endpoint(cluster_name: str) -> str:
@@ -38,4 +36,5 @@ def get_router_endpoint(cluster_name: str) -> str:
         raise RuntimeError(f"cluster {cluster_name!r} not found")
 
     root_domain = cluster.ingress_config.default_root_domain.name
-    return f"{ROUTER_SUBDOMAIN_PREFIX}.{root_domain}"
+    prefix = settings.AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX
+    return f"{prefix}.{root_domain}"

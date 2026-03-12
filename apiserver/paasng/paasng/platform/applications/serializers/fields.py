@@ -186,8 +186,8 @@ class AppNameField(NickNameField):
 
         :raises ValidationError: When none of the above provides a value.
         """
-        if app_tenant_id := self.context.get("app_tenant_id"):
-            return app_tenant_id
+        if "app_tenant_id" in self.context:
+            return self.context["app_tenant_id"]
 
         if instance:
             return instance.app_tenant_id

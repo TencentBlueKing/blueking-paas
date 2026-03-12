@@ -104,7 +104,7 @@ class ServiceCreateSLZ(serializers.Serializer):
     description = serializers.CharField(help_text="描述")
     long_description = serializers.CharField(help_text="详细描述")
     instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
-    provider_name = serializers.CharField(help_text="供应商", allow_null=True, allow_blank=True)
+    provider_name = serializers.CharField(help_text="供应商", required=False, allow_null=True, allow_blank=True)
 
     config = serializers.JSONField(required=False, default=dict)
 

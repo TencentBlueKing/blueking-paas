@@ -37,9 +37,9 @@ from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 @i18n
 class AppBasicInfoMixin(serializers.Serializer):
-    """应用基本信息，要求 context 中必须包含 "user"。
+    """应用基本信息，用于不带 app_tenant_id 字段的场景。
 
-    根据用户的租户信息验证并填充 app_tenant_info 到 validated_data 中。
+    通过 context 中的 "user" 获取用户的租户信息，并验证并填充 app_tenant_info 到 validated_data 中。
     """
 
     code = AppIDField()

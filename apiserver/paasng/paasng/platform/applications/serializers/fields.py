@@ -93,12 +93,12 @@ class ApplicationField(serializers.SlugRelatedField):
 class AppNameField(NickNameField):
     """Field for validating application name. It validates uniqueness within a tenant scope.
 
-    App Tenant ID resolution:
+    App Tenant ID resolution (see ``_resolve_app_tenant_id``):
         Uniqueness is scoped per tenant, so ``app_tenant_id`` must be available.
         It is resolved in the following order:
 
-        - **Update**: automatically read from the serializer ``instance`` (Application).
-        - **Create**: must be set by the caller via ``context["app_tenant_id"]``.
+        1. ``context["app_tenant_id"]`` set by the caller.
+        2. The Application instance (``instance.app_tenant_id``), see ``_get_instance``.
 
         A ``ValidationError`` is raised if neither source provides a value.
 
@@ -135,10 +135,21 @@ class AppNameField(NickNameField):
         self._validate_external(value, instance=instance, field_name=resolved_field_name, app_tenant_id=app_tenant_id)
 
     def _get_instance(self) -> Optional[Application]:
-        instance = getattr(self.parent, "instance", None)
-        if not isinstance(instance, Application):
-            return None
-        return instance
+        """Resolve the Application instance for uniqueness check.
+
+        Resolution order:
+        1. ``serializer.instance`` — silently skipped if it is a different model.
+        2. ``context["application"]`` — injected by the caller for non-Application serializers.
+
+        """
+        slz_instance = getattr(self.parent, "instance", None)
+        if isinstance(slz_instance, Application):
+            return slz_instance
+
+        ctx_app = self.context.get("application")
+        if isinstance(ctx_app, Application):
+            return ctx_app
+        return None
 
     def _resolve_field_name(self) -> str:
         """Resolve the actual model field name for uniqueness check.
@@ -170,21 +181,20 @@ class AppNameField(NickNameField):
         """Resolve ``app_tenant_id`` for the current validation.
 
         Resolution order:
-        1. The existing ``instance`` (update operations).
-        2. ``context["app_tenant_id"]`` set by the view / serializer layer.
+        1. ``context["app_tenant_id"]`` set by the caller (e.g. ``AppBasicInfoMixin``).
+        2. The Application instance resolved by ``_get_instance()``.
 
         :raises ValidationError: When none of the above provides a value.
         """
+        if app_tenant_id := self.context.get("app_tenant_id"):
+            return app_tenant_id
+
         if instance:
             return instance.app_tenant_id
 
-        ctx = self.context
-        if "app_tenant_id" in ctx:
-            return ctx["app_tenant_id"]
-
         raise ValidationError(
             "app_tenant_id is required for name uniqueness validation but was not found "
-            "in instance, or serializer context."
+            "in serializer context, or instance."
         )
 
     def _narrow_by_tenant(self, queryset, app_tenant_id: str):

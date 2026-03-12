@@ -22,6 +22,7 @@
       size="small"
       class="resource-pool-cls"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+      :row-class-name="getRowClassName"
     >
       <bk-table-column
         :label="$t('实例凭证')"
@@ -185,6 +186,12 @@ export default {
       plaintextStatusMap: {},
       // 全部显示/隐藏的状态
       isAllPlaintext: false,
+      // 新克隆实例的高亮 ID
+      highlightedRowId: null,
+      // 克隆前的实例 UUID 列表，用于对比找出新增实例
+      previousUuids: [],
+      // 是否需要高亮新增实例
+      pendingHighlight: false,
     };
   },
   computed: {
@@ -294,6 +301,8 @@ export default {
             tlsConfig,
           });
         });
+        // 检测并高亮新克隆的实例
+        this.highlightClonedInstance();
         // 初始化每个实例的配置项状态为 false
         this.initPlaintextStatus();
         this.$emit('change', this.instances.length);
@@ -332,6 +341,7 @@ export default {
     },
     // 克隆
     handleClone(row) {
+      this.prepareCloneHighlight();
       this.dialogConfig.planId = row?.plan_id;
       const { plan_id, credentials, config, binding_policy } = row;
       const params = {
@@ -346,6 +356,31 @@ export default {
         params.binding_policy = binding_policy;
       }
       this.$refs.dialogRef?.cloneResourcePool(params);
+    },
+    // 准备克隆高亮：清空上一个高亮，记录当前实例列表
+    prepareCloneHighlight() {
+      this.highlightedRowId = null;
+      this.previousUuids = this.instances.map((item) => item.uuid);
+      this.pendingHighlight = true;
+    },
+    // 检测并高亮新克隆的实例
+    highlightClonedInstance() {
+      if (!this.pendingHighlight || this.previousUuids.length === 0) return;
+
+      const newInstance = this.instances.find((item) => !this.previousUuids.includes(item.uuid));
+      if (newInstance) {
+        this.highlightedRowId = newInstance.uuid;
+        setTimeout(() => {
+          this.highlightedRowId = null;
+        }, 5000);
+      }
+      // 重置状态
+      this.pendingHighlight = false;
+      this.previousUuids = [];
+    },
+    // 获取行的 class
+    getRowClassName({ row }) {
+      return row.uuid === this.highlightedRowId ? 'cloned-highlight-row' : '';
     },
     // 初始化配置项的显示/隐藏状态
     initPlaintextStatus() {
@@ -407,6 +442,12 @@ export default {
       transform: translateY(-1px);
       color: #ea3636;
     }
+  }
+}
+/deep/ .cloned-highlight-row {
+  background-color: #e1ecff !important;
+  td {
+    background-color: #e1ecff !important;
   }
 }
 </style>

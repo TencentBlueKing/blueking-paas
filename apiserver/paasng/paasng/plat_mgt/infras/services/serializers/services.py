@@ -25,7 +25,6 @@ from rest_framework.exceptions import ValidationError
 from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
-from paasng.accessories.services.providers import active_provider_maps
 from paasng.utils.i18n import to_translated_field
 
 # 增强服务名称规范
@@ -132,8 +131,8 @@ class ServiceCreateSLZ(serializers.Serializer):
             #  远程增强服务无需 provider_name
             return provider_name
 
-        # 默认使用第一个可用的 provider_name（pool）
-        return next(iter(active_provider_maps), None)
+        # 默认使用 pool 作为本地增强服务的 provider
+        return "pool"
 
     def validate_name(self, name: str) -> str:
         if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):

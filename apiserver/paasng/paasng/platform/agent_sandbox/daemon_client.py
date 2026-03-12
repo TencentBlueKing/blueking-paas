@@ -22,6 +22,8 @@ from typing import Any, Self
 import requests
 from attrs import define
 
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
+
 from .exceptions import SandboxDaemonAPIError
 
 # Default timeout for HTTP requests (in seconds)
@@ -37,17 +39,22 @@ class ExecuteResult:
 
 
 class SandboxDaemonClient:
-    """HTTP client for sandbox daemon service.
+    """HTTP client for sandbox daemon service, communicating via the Sandbox Router.
 
-    :param endpoint: The endpoint of the daemon service (e.g., "127.0.0.1:8080").
+    :param router_endpoint: The router endpoint (e.g., "agent-sbx-router.example.com").
     :param token: The authentication token for the daemon service.
+    :param sandbox_name: The sandbox K8s Service name, sent as X-Sandbox-ID header.
+    :param namespace: The sandbox K8s namespace, sent as X-Sandbox-Namespace header.
     """
 
-    def __init__(self, endpoint: str, token: str):
-        self.base_url = f"http://{endpoint}"
+    def __init__(self, router_endpoint: str, token: str, sandbox_name: str, namespace: str):
+        self.base_url = f"http://{router_endpoint}"
         self.timeout = DEFAULT_REQUEST_TIMEOUT
         self._session = requests.Session()
         self._session.headers["Authorization"] = f"Bearer {token}"
+        self._session.headers["X-Sandbox-ID"] = sandbox_name
+        self._session.headers["X-Sandbox-Namespace"] = namespace
+        self._session.headers["X-Sandbox-Port"] = str(DAEMON_BIND_PORT)
 
     def execute(self, command: str, cwd: str | None = None, timeout: int | None = None) -> ExecuteResult:
         """Execute a command inside the sandbox.

@@ -852,6 +852,9 @@ DEV_SANDBOX_CODE_EDITOR_IMAGE: "codercom/code-server:4.9.0"
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER: ""
 
+# Agent Sandbox 默认运行镜像
+# AGENT_SANDBOX_DEFAULT_IMAGE: "your-registry/agent-sandbox-runtime:latest"
+
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 
 ## Web 模块默认副本数量，默认值：{'stag': 1, 'prod': 2}

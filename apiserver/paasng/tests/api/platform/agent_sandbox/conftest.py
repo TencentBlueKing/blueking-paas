@@ -32,16 +32,6 @@ def _skip_if_old_k8s_version(skip_if_old_k8s_version):
     """Auto-apply shared k8s version skip guard for api agent_sandbox tests."""
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_daemon_host_port() -> Iterator[None]:
-    """Mock find_available_port and list_available_hosts for sandbox creation tests."""
-    with (
-        mock.patch("paasng.platform.agent_sandbox.models.find_available_port", return_value=30001),
-        mock.patch("paasng.platform.agent_sandbox.models.list_available_hosts", return_value=["192.168.1.1"]),
-    ):
-        yield
-
-
 @pytest.fixture()
 def _mock_verified_app_permission() -> Iterator[None]:
     """Mock IsVerifiedAppPermission to always return True for testing.
@@ -49,12 +39,15 @@ def _mock_verified_app_permission() -> Iterator[None]:
     This bypasses the API Gateway app verification check in tests.
     Use this fixture explicitly in tests that need permission bypass.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
-        return_value=True,
-    ), mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
-        return_value=True,
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+            return_value=True,
+        ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
+            return_value=True,
+        ),
     ):
         yield
 
@@ -78,12 +71,15 @@ def _mock_app_mismatch_permission() -> Iterator[None]:
 
     Use this to test scenarios where the request app doesn't match the target app.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
-        return_value=True,
-    ), mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
-        return_value=False,
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+            return_value=True,
+        ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
+            return_value=False,
+        ),
     ):
         yield
 
@@ -147,12 +143,12 @@ def sandbox_id(
     )
     sandbox_client = KubernetesPodSandbox(
         entity=entity,
-        daemon_endpoint=sandbox_obj.daemon_endpoint,
+        router_endpoint="agent-sbx-router.example.com",
         daemon_token=sandbox_obj.daemon_token,
     )
 
     def patched_daemon_client():
-        return stub_daemon_factory.get_client(sandbox_client.daemon_endpoint, sandbox_client.daemon_token)
+        return stub_daemon_factory.get_client()
 
     with (
         mock.patch(

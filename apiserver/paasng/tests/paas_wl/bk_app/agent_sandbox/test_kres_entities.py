@@ -133,14 +133,13 @@ class TestAgentSandboxService:
 
     def test_create(self, sandbox: AgentSandbox):
         """Test AgentSandboxService.create factory method."""
-        svc = AgentSandboxService.create(sandbox, node_port=30001)
+        svc = AgentSandboxService.create(sandbox)
 
         assert svc.name == sandbox.name
         assert len(svc.ports) == 1
         assert svc.ports[0].name == "daemon"
         assert svc.ports[0].port == DAEMON_BIND_PORT
         assert svc.ports[0].target_port == DAEMON_BIND_PORT
-        assert svc.ports[0].node_port == 30001
 
 
 class TestAgentSandboxKModel:
@@ -182,8 +181,8 @@ class TestAgentSandboxKModel:
         assert created_sbx.image == sandbox.image
         assert created_sbx.env == sandbox.env
 
-        # test sandbox service
-        svc = AgentSandboxService.create(sandbox, node_port=30001)
+        # test sandbox service (ClusterIP)
+        svc = AgentSandboxService.create(sandbox)
         agent_sandbox_svc_kmodel.create(svc)
 
         created_svc = agent_sandbox_svc_kmodel.get(sbx_app, svc.name)
@@ -192,4 +191,3 @@ class TestAgentSandboxKModel:
         assert created_svc.ports[0].name == svc.ports[0].name
         assert created_svc.ports[0].port == svc.ports[0].port
         assert created_svc.ports[0].target_port == svc.ports[0].target_port
-        assert created_svc.ports[0].node_port == svc.ports[0].node_port

@@ -35,7 +35,6 @@ class ServicePortPair:
     name: str
     port: int
     target_port: int
-    node_port: int
     protocol: str = "TCP"
 
 
@@ -124,14 +123,13 @@ class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService
                 "labels": labels,
             },
             "spec": {
-                "type": "NodePort",
+                "type": "ClusterIP",
                 "ports": [
                     {
                         "name": port.name,
                         "port": port.port,
                         "targetPort": port.target_port,
                         "protocol": port.protocol,
-                        "nodePort": port.node_port,
                     }
                     for port in obj.ports
                 ],
@@ -152,7 +150,6 @@ class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxSer
                 name=p.name,
                 port=p.port,
                 target_port=p.targetPort,
-                node_port=getattr(p, "nodePort", 0),
             )
             for p in kube_data.spec.ports
         ]

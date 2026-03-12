@@ -17,39 +17,22 @@
 
 import pytest
 
-from paas_wl.bk_app.agent_sandbox.cluster import find_available_port, list_available_hosts
+from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestFindAvailablePort:
-    """Test find_available_port function."""
+class TestGetRouterEndpoint:
+    """Test get_router_endpoint function."""
 
-    def test_find_port_in_empty_set(self):
-        """Test finding port when no ports are used."""
-        port = find_available_port(30000, 30010, set())
-        assert port is not None
-        assert 30000 <= port <= 30010
+    def test_returns_endpoint(self):
+        """Test that the endpoint is derived from the cluster's ingress config."""
+        endpoint = get_router_endpoint(CLUSTER_NAME_FOR_TESTING)
+        assert endpoint.startswith("agent-sbx-router.")
+        assert "." in endpoint.split("agent-sbx-router.")[1]
 
-    def test_find_port_with_some_used(self):
-        """Test finding port when some ports are used."""
-        used_ports = {30000, 30001, 30002}
-        port = find_available_port(30000, 30010, used_ports)
-        assert port is not None
-        assert port not in used_ports
-        assert 30000 <= port <= 30010
-
-    def test_find_port_all_used(self):
-        """Test that None is returned when all ports are used."""
-        used_ports = set(range(30000, 30011))
-        port = find_available_port(30000, 30010, used_ports)
-        assert port is None
-
-
-class TestListAvailableHosts:
-    """Test list_available_hosts function."""
-
-    def test_no_cluster_state(self):
-        """Test that empty list is returned when no cluster state exists."""
-        hosts = list_available_hosts("non-existent-cluster")
-        assert hosts == []
+    def test_cluster_not_found(self):
+        """Test that RuntimeError is raised for non-existent cluster."""
+        with pytest.raises(RuntimeError, match="not found"):
+            get_router_endpoint("non-existent-cluster")

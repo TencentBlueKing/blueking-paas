@@ -12,8 +12,18 @@ python = ">=3.11,<3.12"
 ruff = "^0.15.5"
 
 [tool.ruff]
+target-version = "py311"
 line-length = 119
 
+# 添加需要额外忽略的目录，比如 Django 自动生成的 migrations 目录
+extend-exclude = [
+  "*/migrations",
+  "*/paasng/assets",
+  "*/paasng/paasng/platform/mgrlegacy/data",
+  "*/paasng/tests/paasng/platform/mgrlegacy/assets",
+]
+
+[tool.ruff.lint]
 # 每个规则集的具体内容请参考：https://docs.astral.sh/ruff/rules/
 select = [
   "YTT",
@@ -176,19 +186,11 @@ ignore = [
   "A002",
 ]
 
-# 添加需要额外忽略的目录，比如 Django 自动生成的 migrations 目录
-extend-exclude = [
-  "*/migrations",
-  "*/paasng/assets",
-  "*/paasng/paasng/platform/mgrlegacy/data",
-  "*/paasng/tests/paasng/platform/mgrlegacy/assets",
-]
-
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.ruff.isort]
-# 总是显式制定 import section 的顺序
+[tool.ruff.lint.isort]
+# 总是显式指定 import section 的顺序
 section-order = [
   "future",
   "standard-library",

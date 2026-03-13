@@ -58,7 +58,7 @@ class ConfigMapSource(TimestampedModel):
         return self.display_name or f"ConfigMap-{self.created.strftime('%y%m%d%H%M')}"
 
     class Meta:
-        unique_together = ("name", "application_id", "environment_name")
+        unique_together = ("name", "application_id", "environment_name", "is_deleted")
 
 
 class PersistentStorageSource(TimestampedModel):

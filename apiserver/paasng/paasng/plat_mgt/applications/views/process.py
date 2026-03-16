@@ -98,7 +98,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        # 校验 module 的 source_origin 是否可以修改
+        # 校验 module 的 source_origin 是否可以修改, 目前仅 SMart 和 AI Agent 应用支持修改进程资源配额
         module = get_object_or_404(application.modules, name=module_name)
         if module.source_origin != SourceOrigin.S_MART.value and application.is_ai_agent_app is False:
             return Response(

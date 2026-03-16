@@ -122,17 +122,20 @@ class ServiceCreateSLZ(serializers.Serializer):
 
         return data
 
-    def validate_provider_name(self, provider_name: str) -> str | None:  # noqa: FA102
-        if provider_name:
-            return provider_name
-
+    def validate(self, attrs):
+        provider_name = attrs.get("provider_name")
         service = self.context.get("service")
+
+        if provider_name:
+            return attrs
+
         if isinstance(service, RemoteServiceObj):
             #  远程增强服务无需 provider_name
-            return provider_name
+            return attrs
 
         # 默认使用 pool 作为本地增强服务的 provider
-        return "pool"
+        attrs["provider_name"] = "pool"
+        return attrs
 
     def validate_name(self, name: str) -> str:
         if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):

@@ -18,13 +18,14 @@
 from django.conf import settings
 
 from paas_wl.infras.cluster.models import Cluster
+from paasng.platform.modules.constants import ExposedURLType
 
 
 def get_router_endpoint(cluster_name: str) -> str:
     """Get the sandbox router endpoint for a given cluster.
 
     The endpoint is derived from the cluster's ingress_config: the router is expected
-    to be exposed at ``agent-sbx-router.{default_root_domain}``.
+    to be exposed at `agent-sbx-router.{default_root_domain}`.
 
     :param cluster_name: The name of the target cluster.
     :returns: The router host string (e.g., "agent-sbx-router.apps.example.com").
@@ -35,6 +36,13 @@ def get_router_endpoint(cluster_name: str) -> str:
     except Cluster.DoesNotExist:
         raise RuntimeError(f"cluster {cluster_name!r} not found")
 
-    root_domain = cluster.ingress_config.default_root_domain.name
+    try:
+        root_domain = (
+            cluster.ingress_config.default_root_domain.name
+            if cluster.exposed_url_type == ExposedURLType.SUBDOMAIN
+            else cluster.ingress_config.default_sub_path_domain.name
+        )
+    except IndexError:
+        raise RuntimeError(f"cluster {cluster_name!r} has no ingress config")
     prefix = settings.AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX
     return f"{prefix}.{root_domain}"

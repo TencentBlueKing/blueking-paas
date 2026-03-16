@@ -112,7 +112,7 @@ class TestVolumeSourceController:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_deploy(self, bk_stag_env):
-        mounts.sync_volume_source(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
 
     @pytest.fixture()
     def mount_configmap(self, bk_app, bk_module):
@@ -139,7 +139,7 @@ class TestVolumeSourceController:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_configmap(self, bk_stag_env, mount_configmap):
-        mounts.sync_volume_source(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
         controller = init_volume_source_controller(mount_configmap.source_type)
         source = controller.get_by_env(
             app_id=mount_configmap.module.application.id,
@@ -167,7 +167,7 @@ class TestVolumeSourceController:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_pvc(self, bk_stag_env, mount_pvc):
-        mounts.sync_volume_source(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
         controller = init_volume_source_controller(mount_pvc.source_type)
         source = controller.get_by_env(
             app_id=mount_pvc.module.application.id,

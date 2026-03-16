@@ -129,7 +129,6 @@ class ServiceCreateSLZ(serializers.Serializer):
         if provider_name:
             return attrs
 
-        service = self.context.get("service")
         if isinstance(service, RemoteServiceObj):
             #  远程增强服务无需 provider_name
             return attrs

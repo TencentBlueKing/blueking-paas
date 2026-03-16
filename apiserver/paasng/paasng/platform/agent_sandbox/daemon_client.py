@@ -40,11 +40,13 @@ class ExecuteResult:
 
 class SandboxDaemonClient:
     """HTTP client for sandbox daemon service, communicating via the Sandbox Router.
+    The 'Agent Sandbox Router' route request to '{sandbox_name}.{sandbox_namespace}.svc.cluster.local:{sandbox_port}'.
 
     :param router_endpoint: The router endpoint (e.g., "agent-sbx-router.example.com").
     :param token: The authentication token for the daemon service.
     :param sandbox_name: The sandbox K8s Service name, sent as X-Sandbox-ID header.
-    :param namespace: The sandbox K8s namespace, sent as X-Sandbox-Namespace header.
+    :param sandbox_namespace: The sandbox K8s namespace, sent as X-Sandbox-Namespace header.
+    :param sandbox_daemon_port: The port on which the sandbox daemon listens, sent as X-Sandbox-Port header.
     :param router_auth_token: Optional token for authenticating with the router itself.
     """
 
@@ -53,7 +55,8 @@ class SandboxDaemonClient:
         router_endpoint: str,
         token: str,
         sandbox_name: str,
-        namespace: str,
+        sandbox_namespace: str,
+        sandbox_daemon_port: int = DAEMON_BIND_PORT,
         router_auth_token: str = "",
     ):
         self.base_url = f"http://{router_endpoint}"
@@ -61,8 +64,8 @@ class SandboxDaemonClient:
         self._session = requests.Session()
         self._session.headers["Authorization"] = f"Bearer {token}"
         self._session.headers["X-Sandbox-ID"] = sandbox_name
-        self._session.headers["X-Sandbox-Namespace"] = namespace
-        self._session.headers["X-Sandbox-Port"] = str(DAEMON_BIND_PORT)
+        self._session.headers["X-Sandbox-Namespace"] = sandbox_namespace
+        self._session.headers["X-Sandbox-Port"] = str(sandbox_daemon_port)
         if router_auth_token:
             self._session.headers["X-Router-Token"] = router_auth_token
 

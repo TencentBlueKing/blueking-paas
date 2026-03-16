@@ -34,7 +34,7 @@ class TestSandboxDaemonClient:
             router_endpoint="agent-sbx-router.example.com",
             token="test-token",
             sandbox_name="test-sbx",
-            namespace="bk-agent-sbx-demo-app",
+            sandbox_namespace="bk-agent-sbx-demo-app",
         )
 
     def test_init(self, client: SandboxDaemonClient):

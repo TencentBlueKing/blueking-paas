@@ -257,10 +257,12 @@ class AgentSandboxResManager:
 class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     """Sandbox implementation backed by a Kubernetes Pod with daemon service.
 
-    This class communicates with the daemon via a centralized Sandbox Router.
-    The router forwards requests to the correct sandbox Pod using X-Sandbox-ID
-    and X-Sandbox-Namespace headers, while Kubernetes API is still used for
+    This class uses a daemon HTTP service running inside the Pod for process
+    execution and filesystem operations, while still using Kubernetes API for
     Pod lifecycle management (status, logs).
+
+    When requesting a pod, the request is first routed to the Agent Sandbox Router
+    on the sandbox cluster, which then forwards it to the appropriate sandbox daemon.
 
     :param entity: The AgentSandbox entity containing sandbox configuration.
     :param router_endpoint: The sandbox router endpoint (e.g., "agent-sbx-router.apps.example.com").
@@ -365,7 +367,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
             router_endpoint=self.router_endpoint,
             token=self.daemon_token,
             sandbox_name=self.entity.name,
-            namespace=self.namespace,
+            sandbox_namespace=self.namespace,
             router_auth_token=settings.AGENT_SANDBOX_ROUTER_AUTH_TOKEN,
         )
 

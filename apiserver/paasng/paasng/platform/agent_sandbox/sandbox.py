@@ -182,7 +182,7 @@ class AgentSandboxResManager:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
 
-        # 下发 ClusterIP 类型的 service, 关联到 sandbox pod, 由 Sandbox Router 进行流量转发
+        # 下发 ClusterIP 类型的 service, 关联到 sandbox pod, 由 'Agent Sandbox Router' 进行流量转发
         sandbox_svc = AgentSandboxService.create(sandbox)
         try:
             agent_sandbox_svc_kmodel.create(sandbox_svc)
@@ -265,7 +265,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     on the sandbox cluster, which then forwards it to the appropriate sandbox daemon.
 
     :param entity: The AgentSandbox entity containing sandbox configuration.
-    :param router_endpoint: The sandbox router endpoint (e.g., "agent-sbx-router.apps.example.com").
+    :param router_endpoint: The sandbox router endpoint (e.g., "agent-sandbox-router.example.com").
     :param daemon_token: The authentication token for the daemon service.
     """
 
@@ -363,6 +363,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""
 
+        # TODO: 将 SandboxDaemonClient 缓存为实例属性（lazy init），或者至少在 KubernetesPodSandbox 级别共享同一个 session?
         return SandboxDaemonClient(
             router_endpoint=self.router_endpoint,
             token=self.daemon_token,

@@ -102,3 +102,32 @@ class Mount(TimestampedModel):
 
     class Meta:
         unique_together = ("module_id", "mount_path", "environment_name")
+
+
+class MountDeploymentSnapshot(TimestampedModel):
+    """挂载配置的部署快照
+
+    记录某个 module 在摸狗环境上一次成功部署的 volume source 集合.
+    用于下次部署时 diff, 决定哪些资源需要 create/update/delete.
+
+    snapshot_data 示例:
+    [
+        {"source_type": "ConfigMap", "source_name": "configmap-1"},
+        {"source_type": "PersistentStorage", "source_name": "persistentstorage-1"},
+    ]
+    """
+
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    environment_name = models.CharField(
+        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
+    )
+    snapshot_data = models.JSONField(default=list)
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("module_id", "environment_name")
+
+    def get_source_keys(self):
+        """获取 snapshot_data 中所有的 source key (格式: (source_type, source_name)), 供 diff 使用"""
+        return {(item["source_type"], item["source_name"]) for item in self.snapshot_data}

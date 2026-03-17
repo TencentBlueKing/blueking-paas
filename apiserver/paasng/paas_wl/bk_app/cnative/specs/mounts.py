@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -31,7 +31,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentStorage as PersistentStorageSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
-from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
+from paas_wl.bk_app.cnative.specs.models import (
+    ConfigMapSource,
+    Mount,
+    MountDeploymentSnapshot,
+    PersistentStorageSource,
+)
 from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
@@ -40,7 +45,6 @@ from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, c
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag, ModuleEnvironment
-from paasng.platform.modules.models import Module
 
 
 class BaseVolumeSourceController:
@@ -97,6 +101,14 @@ class BaseVolumeSourceController:
         """删除对应 k8s 资源"""
         raise NotImplementedError
 
+    def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
+        """通过 source_name 直接删除对应 k8s 资源"""
+        raise NotImplementedError
+
+    def get_source_by_name(self, app_id: str, source_name: str) -> Union[ConfigMapSource, PersistentStorageSource]:
+        """通过 source_name 查询 source 对象"""
+        raise NotImplementedError
+
 
 class ConfigMapSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.ConfigMap
@@ -138,17 +150,10 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         )
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
-        # 需要删除对应的 k8s volume 资源
         source = self.model_class.objects.get(
             application_id=app_id,
             name=source_name,
         )
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
-
-        # 更新 source 对象
         data = kwargs.get("data", {})
         source.environment_name = env_name
         source.data = data
@@ -161,12 +166,6 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             env_name=env_name,
             source_name=source_name,
         )
-
-        # 删除 mount 对应的 source k8s 资源
-        module = Module.objects.get(id=module_id)
-        for env in module.get_envs():
-            self.delete_k8s_resource(source, env.wl_app)
-
         source.delete()
 
     def upsert_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
@@ -174,6 +173,12 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def delete_k8s_resource(self, source: ConfigMapSource, wl_app: WlApp) -> None:
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source.name, data=source.data))
+
+    def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
+        configmap_kmodel.delete(ConfigMap(app=wl_app, name=source_name, data={}))
+
+    def get_source_by_name(self, app_id: str, source_name: str) -> ConfigMapSource:
+        return self.model_class.objects.get(application_id=app_id, name=source_name)
 
 
 class PersistentStorageSourceController(BaseVolumeSourceController):
@@ -256,6 +261,13 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             )
         )
 
+    def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
+        """persistent storage 暂不支持直接通过 source_name 删除对应 k8s 资源"""
+        return
+
+    def get_source_by_name(self, app_id: str, source_name: str) -> PersistentStorageSource:
+        return self.model_class.objects.get(application_id=app_id, name=source_name)
+
 
 def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
     return BaseVolumeSourceController.get_source_class(volume_source_type)()
@@ -278,6 +290,46 @@ def deploy_volume_source(env: ModuleEnvironment):
             source_name=m.get_source_name,
         )
         controller.upsert_k8s_resource(source, env.wl_app)
+
+
+def cleanup_volume_source_by_snapshot(env: ModuleEnvironment):
+    """部署成功后, 通过 snapshot  diff 清理孤资源, 并更新 snapshot"""
+    # 1. 获取本次部署的 desired (new)
+    mount_queryset = Mount.objects.filter(
+        module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
+    )
+    desired_keys: Set[Tuple[str, str]] = set()
+    for m in mount_queryset:
+        source_name = m.get_source_name
+        if source_name:
+            desired_keys.add((m.source_type, source_name))
+
+    # 2. 获取上次部署成功的 snapshot (old)
+    snapshot = MountDeploymentSnapshot.objects.filter(
+        module_id=env.module.id, environment_name=env.environment
+    ).first()
+    old_keys: Set[Tuple[str, str]] = snapshot.get_source_keys() if snapshot else set()
+
+    # 如果没有 snapshot (首次部署), 跳过 delete, 直接写入 snapshot
+    if snapshot is not None:
+        # 3. diff old and new, 删除 old 中但不在 new 中的资源
+        to_delete_keys = old_keys - desired_keys
+        for source_type, source_name in to_delete_keys:
+            # PersistentStorage 属于应用级别资源, 生命周期由应用级别统一管理, 不再此处删除
+            if source_type == VolumeSourceType.PersistentStorage:
+                continue
+            controller = init_volume_source_controller(source_type)
+            controller.delete_k8s_resource_by_name(source_name, env.wl_app)
+
+    # 4. 更新 snapshot
+    snapshot_data = [
+        {"source_type": source_type, "source_name": source_name} for source_type, source_name in desired_keys
+    ]
+    MountDeploymentSnapshot.objects.update_or_create(
+        module_id=env.module.id,
+        environment_name=env.environment,
+        defaults={"snapshot_data": snapshot_data},
+    )
 
 
 class MountManager:

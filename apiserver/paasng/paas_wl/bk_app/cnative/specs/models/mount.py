@@ -107,7 +107,7 @@ class Mount(TimestampedModel):
 class MountDeploymentSnapshot(TimestampedModel):
     """挂载配置的部署快照
 
-    记录某个 module 在摸狗环境上一次成功部署的 volume source 集合.
+    记录某个 module 在某个环境上一次成功部署的 volume source 集合.
     用于下次部署时 diff, 决定哪些资源需要 create/update/delete.
 
     snapshot_data 示例:

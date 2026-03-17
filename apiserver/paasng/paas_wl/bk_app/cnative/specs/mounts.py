@@ -105,10 +105,6 @@ class BaseVolumeSourceController:
         """通过 source_name 直接删除对应 k8s 资源"""
         raise NotImplementedError
 
-    def get_source_by_name(self, app_id: str, source_name: str) -> Union[ConfigMapSource, PersistentStorageSource]:
-        """通过 source_name 查询 source 对象"""
-        raise NotImplementedError
-
 
 class ConfigMapSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.ConfigMap
@@ -176,9 +172,6 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source_name, data={}))
-
-    def get_source_by_name(self, app_id: str, source_name: str) -> ConfigMapSource:
-        return self.model_class.objects.get(application_id=app_id, name=source_name)
 
 
 class PersistentStorageSourceController(BaseVolumeSourceController):
@@ -264,9 +257,6 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
     def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
         """persistent storage 暂不支持直接通过 source_name 删除对应 k8s 资源"""
         return
-
-    def get_source_by_name(self, app_id: str, source_name: str) -> PersistentStorageSource:
-        return self.model_class.objects.get(application_id=app_id, name=source_name)
 
 
 def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:

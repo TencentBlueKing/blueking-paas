@@ -40,7 +40,7 @@ class ExecuteResult:
 
 class SandboxDaemonClient:
     """HTTP client for sandbox daemon service, communicating via the Sandbox Router.
-    The 'Agent Sandbox Router' route request to '{sandbox_name}.{sandbox_namespace}.svc.cluster.local:{sandbox_port}'.
+    The 'Agent Sandbox Router' routes requests to '{sandbox_name}.{sandbox_namespace}.svc.cluster.local:{sandbox_port}'.
 
     :param router_endpoint: The router endpoint (e.g., "agent-sbx-router.example.com").
     :param token: The authentication token for the daemon service.

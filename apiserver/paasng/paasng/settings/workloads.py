@@ -111,9 +111,6 @@ DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
 # Agent Sandbox 默认运行镜像，须包含 /usr/local/bin/daemon（见 sandbox/daemon/Dockerfile）
 AGENT_SANDBOX_DEFAULT_IMAGE = settings.get("AGENT_SANDBOX_DEFAULT_IMAGE", "python:3.11-alpine")
-# Sandbox Router 的子域名前缀，完整域名为 "{prefix}.{root_domain}", root_domain 由集群配置决定
-# 注意不要和 saas 域名冲突，使用 "agent-sandbox-router"（长度大于 16） 作为前缀，不会和 saas 域名冲突
-AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX = settings.get("AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX", "agent-sandbox-router")
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 AGENT_SANDBOX_ROUTER_AUTH_TOKEN = settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "")
 

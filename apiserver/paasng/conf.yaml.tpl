@@ -855,9 +855,6 @@ DEV_SANDBOX_CLUSTER: ""
 # Agent Sandbox 默认运行镜像
 # AGENT_SANDBOX_DEFAULT_IMAGE: "your-registry/agent-sandbox-runtime:latest"
 
-# Sandbox Router 的子域名前缀，完整域名为 "{prefix}.{root_domain}"
-# AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX: "agent-sbx-router"
-
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 # AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
 

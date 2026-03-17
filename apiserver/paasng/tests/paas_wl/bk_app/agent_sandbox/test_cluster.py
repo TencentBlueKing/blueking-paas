@@ -29,8 +29,8 @@ class TestGetRouterEndpoint:
     def test_returns_endpoint(self):
         """Test that the endpoint is derived from the cluster's ingress config."""
         endpoint = get_router_endpoint(CLUSTER_NAME_FOR_TESTING)
-        assert endpoint.startswith("agent-sbx-router.")
-        assert "." in endpoint.split("agent-sbx-router.")[1]
+        assert endpoint.startswith("agent-sandbox-router.")
+        assert "." in endpoint.split("agent-sandbox-router.")[1]
 
     def test_cluster_not_found(self):
         """Test that RuntimeError is raised for non-existent cluster."""

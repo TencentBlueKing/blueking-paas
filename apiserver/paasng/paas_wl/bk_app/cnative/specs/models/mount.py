@@ -128,6 +128,11 @@ class MountDeploymentSnapshot(TimestampedModel):
     class Meta:
         unique_together = ("module_id", "environment_name")
 
-    def get_source_keys(self):
-        """获取 snapshot_data 中所有的 source key (格式: (source_type, source_name)), 供 diff 使用"""
-        return {(item["source_type"], item["source_name"]) for item in self.snapshot_data}
+    def diff(self, desired: list[dict]) -> list[dict]:
+        """与 desired 做 diff, 返回需要删除的 source 列表 (存在于 snapshot 但不存在于 desired)"""
+        desired_keys = {(item["source_type"], item["source_name"]) for item in desired}
+        old_keys = {(item["source_type"], item["source_name"]) for item in self.snapshot_data}
+        to_delete_keys = old_keys - desired_keys
+        return [
+            {"source_type": source_type, "source_name": source_name} for source_type, source_name in to_delete_keys
+        ]

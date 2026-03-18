@@ -15,8 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import uuid
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -45,6 +46,8 @@ from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, c
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag, ModuleEnvironment
+
+logger = logging.getLogger(__name__)
 
 
 class BaseVolumeSourceController:
@@ -171,6 +174,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source.name, data=source.data))
 
     def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
+        logger.info("delete configmap k8s resource by name: %s, wl_app: %s", source_name, wl_app.name)
         configmap_kmodel.delete(ConfigMap(app=wl_app, name=source_name, data={}))
 
 
@@ -256,7 +260,11 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
 
     def delete_k8s_resource_by_name(self, source_name: str, wl_app: WlApp) -> None:
         """persistent storage 暂不支持直接通过 source_name 删除对应 k8s 资源"""
-        return
+        logger.info(
+            "skip delete persistent storage k8s resource by name: %s, wl_app: %s (not supported)",
+            source_name,
+            wl_app.name,
+        )
 
 
 def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
@@ -272,8 +280,11 @@ def deploy_volume_source(env: ModuleEnvironment):
     mount_queryset = Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
+    controllers: dict[str, BaseVolumeSourceController] = {}
     for m in mount_queryset:
-        controller = init_volume_source_controller(m.source_type)
+        if m.source_type not in controllers:
+            controllers[m.source_type] = init_volume_source_controller(m.source_type)
+        controller = controllers[m.source_type]
         source = controller.get_by_env(
             app_id=m.module.application.id,
             env_name=m.environment_name,
@@ -288,37 +299,42 @@ def cleanup_volume_source_by_snapshot(env: ModuleEnvironment):
     mount_queryset = Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     )
-    desired_keys: Set[Tuple[str, str]] = set()
+    desired: list[dict] = []
     for m in mount_queryset:
         source_name = m.get_source_name
         if source_name:
-            desired_keys.add((m.source_type, source_name))
+            desired.append({"source_type": m.source_type, "source_name": source_name})
 
     # 2. 获取上次部署成功的 snapshot (old)
     snapshot = MountDeploymentSnapshot.objects.filter(
         module_id=env.module.id, environment_name=env.environment
     ).first()
-    old_keys: Set[Tuple[str, str]] = snapshot.get_source_keys() if snapshot else set()
 
     # 如果没有 snapshot (首次部署), 跳过 delete, 直接写入 snapshot
     if snapshot is not None:
         # 3. diff old and new, 删除 old 中但不在 new 中的资源
-        to_delete_keys = old_keys - desired_keys
-        for source_type, source_name in to_delete_keys:
-            # PersistentStorage 属于应用级别资源, 生命周期由应用级别统一管理, 不再此处删除
+        to_delete = snapshot.diff(desired)
+        controllers: dict[str, BaseVolumeSourceController] = {}
+        for item in to_delete:
+            source_type, source_name = item["source_type"], item["source_name"]
+            # PersistentStorage 属于应用级别资源, 生命周期由应用级别统一管理, 不在此处删除
             if source_type == VolumeSourceType.PersistentStorage:
                 continue
-            controller = init_volume_source_controller(source_type)
+            if source_type not in controllers:
+                controllers[source_type] = init_volume_source_controller(source_type)
+            controller = controllers[source_type]
             controller.delete_k8s_resource_by_name(source_name, env.wl_app)
+            logger.info(
+                "cleanup_volume_source_by_snapshot: source_type=%s, source_name=%s",
+                source_type,
+                source_name,
+            )
 
     # 4. 更新 snapshot
-    snapshot_data = [
-        {"source_type": source_type, "source_name": source_name} for source_type, source_name in desired_keys
-    ]
     MountDeploymentSnapshot.objects.update_or_create(
         module_id=env.module.id,
         environment_name=env.environment,
-        defaults={"snapshot_data": snapshot_data},
+        defaults={"snapshot_data": desired},
     )
 
 

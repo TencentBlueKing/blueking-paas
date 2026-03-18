@@ -31,8 +31,8 @@ from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError
-from paasng.platform.agent_sandbox.mixins import SandboxPermissionMixin
-from paasng.platform.agent_sandbox.permissions import IsVerifiedAppPermission
+from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
+from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.sandbox import (
     create_sandbox,
     delete_sandbox,
@@ -59,10 +59,10 @@ from paasng.utils.error_codes import error_codes
 logger = logging.getLogger(__name__)
 
 
-class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxPermissionMixin):
+class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):
     """Agent Sandbox 相关接口"""
 
-    permission_classes = [IsAuthenticated, IsVerifiedAppPermission]
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
 
     @swagger_auto_schema(
         tags=["agent_sandbox"],
@@ -96,7 +96,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
     def destroy(self, request, sandbox_id):
         """停止并销毁一个 Agent Sandbox"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
 
         try:
             delete_sandbox(sandbox)
@@ -106,15 +106,15 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
+class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
     """Agent Sandbox 文件系统相关接口。"""
 
-    permission_classes = [IsAuthenticated, IsVerifiedAppPermission]
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxCreateFolderInputSLZ(), responses={204: ""})
     def create_folder(self, request, sandbox_id):
         """在 Agent Sandbox 中创建目录。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxCreateFolderInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -129,7 +129,7 @@ class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxUploadFileInputSLZ(), responses={204: ""})
     def upload_file(self, request, sandbox_id):
         """上传文件到 Agent Sandbox。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxUploadFileInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -144,7 +144,7 @@ class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxDeleteFileInputSLZ(), responses={204: ""})
     def delete_file(self, request, sandbox_id):
         """删除 Agent Sandbox 中的文件或目录。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxDeleteFileInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -159,7 +159,7 @@ class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
     @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=SandboxDownloadFileInputSLZ(), responses={200: ""})
     def download_file(self, request, sandbox_id):
         """下载 Agent Sandbox 中的文件。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxDownloadFileInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -177,17 +177,17 @@ class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
         return response
 
 
-class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
+class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
     """Agent Sandbox 进程相关接口。"""
 
-    permission_classes = [IsAuthenticated, IsVerifiedAppPermission]
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
 
     @swagger_auto_schema(
         tags=["agent_sandbox"], request_body=SandboxExecInputSLZ(), responses={200: SandboxProcessOutputSLZ()}
     )
     def exec(self, request, sandbox_id):
         """在 Agent Sandbox 内执行命令。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxExecInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -211,7 +211,7 @@ class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet
     )
     def code_run(self, request, sandbox_id):
         """在 Agent Sandbox 内执行代码片段。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxCodeRunInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -228,7 +228,7 @@ class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet
     )
     def logs(self, request, sandbox_id):
         """读取 Agent Sandbox 日志。"""
-        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        sandbox = self.get_sandbox_with_perm(request, sandbox_id)
         slz = SandboxGetLogsInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data

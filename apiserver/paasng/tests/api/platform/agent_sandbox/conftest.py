@@ -44,29 +44,32 @@ def _mock_daemon_host_port() -> Iterator[None]:
 
 @pytest.fixture()
 def _mock_verified_app_permission() -> Iterator[None]:
-    """Mock IsVerifiedAppPermission to always return True for testing.
+    """Mock IsAPIGWVerifiedApp to always return True for testing.
 
     This bypasses the API Gateway app verification check in tests.
     Use this fixture explicitly in tests that need permission bypass.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
-        return_value=True,
-    ), mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
-        return_value=True,
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
+            return_value=True,
+        ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_object_permission",
+            return_value=True,
+        ),
     ):
         yield
 
 
 @pytest.fixture()
 def _mock_unverified_app_permission() -> Iterator[None]:
-    """Mock IsVerifiedAppPermission to return False for has_permission.
+    """Mock IsAPIGWVerifiedApp to return False for has_permission.
 
     Use this to test scenarios where the request app is not verified.
     """
     with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
+        "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
         return_value=False,
     ):
         yield
@@ -74,16 +77,19 @@ def _mock_unverified_app_permission() -> Iterator[None]:
 
 @pytest.fixture()
 def _mock_app_mismatch_permission() -> Iterator[None]:
-    """Mock IsVerifiedAppPermission to pass has_permission but fail has_object_permission.
+    """Mock IsAPIGWVerifiedApp to pass has_permission but fail has_object_permission.
 
     Use this to test scenarios where the request app doesn't match the target app.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_permission",
-        return_value=True,
-    ), mock.patch(
-        "paasng.platform.agent_sandbox.views.IsVerifiedAppPermission.has_object_permission",
-        return_value=False,
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_permission",
+            return_value=True,
+        ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.IsAPIGWVerifiedApp.has_object_permission",
+            return_value=False,
+        ),
     ):
         yield
 

@@ -481,6 +481,8 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - param: logo, file, 应用LOGO，不传则不更新
         """
         application = self.get_application()
+        # NOTE: UpdateApplicationSLZ 继承自 UpdateApplicationNameSLZ, 后者在校验 name 字段时, 会直接更新 bk_console 中的应用名称
+        # FIXME: 该逻辑需要重构, 在 serializer 中直接更新 bk_console 中的应用名称不合适, 操作太隐藏, 不好维护
         serializer = slzs.UpdateApplicationSLZ(data=request.data, instance=application)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

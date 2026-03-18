@@ -30,9 +30,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from yaml import YAMLError
 
-from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
-from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import detect_spec_version, get_desc_handler
+from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.declarative.handlers import detect_spec_version
 from paasng.platform.sourcectl.exceptions import (
     PackageInvalidFileFormatError,
     ReadFileNotFoundError,
@@ -150,14 +149,19 @@ class SourcePackageStatReader:
         """Try extracting version from meta info"""
         if not meta_info:
             return None
+
         try:
-            desc = get_desc_handler(meta_info).app_desc
-        except DescriptionValidationError as e:
-            logger.warning("failed to extract version from app_desc, detail: %s", e)
+            spec_version = detect_spec_version(meta_info)
+        except ValueError:
             return None
-        # smart version was stored as one of app's plugin
-        plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
-        return plugin["data"] if plugin else None
+
+        match spec_version:
+            case AppSpecVersion.VER_3:
+                return meta_info.get("appVersion")
+            case AppSpecVersion.VER_2:
+                return meta_info.get("app_version")
+            case _:
+                return None
 
     def compute_sha256_digest(self) -> str:
         """Compute package's sha256 digest"""

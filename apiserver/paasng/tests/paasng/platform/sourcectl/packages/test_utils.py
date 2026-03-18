@@ -35,6 +35,7 @@ pytestmark = pytest.mark.django_db
             {
                 "spec_version": 2,
                 "app_version": "0.0.1",
+                "tenant": {"app_tenant_mode": "global", "app_tenant_id": "", "tenant_id": "default"},
                 "app": {"bk_app_code": "foo", "bk_app_name": "阿尔法", "bk_app_name_en": "alpha"},
                 "modules": {"default": {"is_default": True, "language": "python"}},
             },

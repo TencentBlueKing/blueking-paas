@@ -52,7 +52,7 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
 
 
 def get_tenant_id_for_app(app_code: str) -> str:
-    # 若果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
+    # 如果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
     if not settings.ENABLE_MULTI_TENANT_MODE:
         return DEFAULT_TENANT_ID
 

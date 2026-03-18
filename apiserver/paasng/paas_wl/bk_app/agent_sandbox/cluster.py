@@ -23,12 +23,14 @@ from .constants import AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX
 
 def get_router_endpoint(cluster_name: str) -> str:
     """Get the sandbox router endpoint for a given cluster.
+    Remember update 'Agent Sandbox Router' ingress config if the cluster's root
+    domain(first domain) update
 
     The endpoint is derived from the cluster's ingress_config: the router is expected
     to be exposed at `{prefix}.{default_root_domain}`.
 
     :param cluster_name: The name of the target cluster.
-    :returns: The router host string (e.g., "agent-sandbox-router.apps.example.com").
+    :returns: The router host string (e.g., "agent-sandbox-router.example.com").
     :raises RuntimeError: If the cluster or its ingress config is missing.
     """
     try:
@@ -36,6 +38,7 @@ def get_router_endpoint(cluster_name: str) -> str:
     except Cluster.DoesNotExist:
         raise RuntimeError(f"cluster {cluster_name!r} not found")
 
+    # TODO 适配好集群域名为子路径的情况
     try:
         root_domain = (
             cluster.ingress_config.default_root_domain.name

@@ -34,7 +34,7 @@ DEFAULT_RESOURCES = {
 # The command for sandbox daemon
 DAEMON_COMMAND = ["/usr/local/bin/daemon"]
 # The bind port for sandbox daemon
-DAEMON_BIND_PORT = 8000
+DAEMON_BIND_PORT = 30000
 
 # The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
 # "agent-sandbox-router" (length > 16) will not conflict with app_code

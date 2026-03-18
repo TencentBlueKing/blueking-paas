@@ -369,6 +369,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
             token=self.daemon_token,
             sandbox_name=self.entity.name,
             sandbox_namespace=self.namespace,
+            sandbox_daemon_port=DAEMON_BIND_PORT,
             router_auth_token=settings.AGENT_SANDBOX_ROUTER_AUTH_TOKEN,
         )
 

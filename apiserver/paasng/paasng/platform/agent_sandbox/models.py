@@ -108,10 +108,6 @@ class Sandbox(UuidAuditedModel):
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
 
-    # daemon_host/daemon_port are deprecated since the introduction of Sandbox Router.
-    # New sandboxes no longer use NodePort; traffic is routed via the central router.
-    daemon_host = models.CharField(max_length=128, blank=True, default="", help_text="(deprecated) daemon 访问地址")
-    daemon_port = models.IntegerField(default=0, help_text="(deprecated) daemon 访问端口")
     daemon_token = EncryptField(help_text="daemon 服务的访问 token")
 
     status = models.CharField(verbose_name="状态", max_length=16, default=SandboxStatus.PENDING.value)
@@ -127,8 +123,3 @@ class Sandbox(UuidAuditedModel):
 
     class Meta:
         unique_together = ("tenant_id", "application_id", "name")
-
-    # deprecated
-    @property
-    def daemon_endpoint(self) -> str:
-        return f"{self.daemon_host}:{self.daemon_port}"

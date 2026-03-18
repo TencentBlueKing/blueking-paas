@@ -57,7 +57,7 @@ class SandboxDaemonClient:
         sandbox_name: str,
         sandbox_namespace: str,
         sandbox_daemon_port: int = DAEMON_BIND_PORT,
-        router_auth_token: str = "",
+        router_auth_token: str | None = None,
     ):
         self.base_url = f"http://{router_endpoint}"
         self.timeout = DEFAULT_REQUEST_TIMEOUT

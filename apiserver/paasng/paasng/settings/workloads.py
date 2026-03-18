@@ -110,7 +110,7 @@ DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080
 DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
 # Agent Sandbox 默认运行镜像，须包含 /usr/local/bin/daemon（见 sandbox/daemon/Dockerfile）
-AGENT_SANDBOX_DEFAULT_IMAGE = settings.get("AGENT_SANDBOX_DEFAULT_IMAGE", "python:3.11-alpine")
+AGENT_SANDBOX_DEFAULT_IMAGE = settings.get("AGENT_SANDBOX_DEFAULT_IMAGE", "bkpaas/agent-sandbox:latest")
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 AGENT_SANDBOX_ROUTER_AUTH_TOKEN = settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "")
 

@@ -288,7 +288,7 @@ def deploy_volume_source(env: ModuleEnvironment):
         source = controller.get_by_env(
             app_id=m.module.application.id,
             env_name=m.environment_name,
-            source_name=m.get_source_name,
+            source_name=m.source_name,
         )
         controller.upsert_k8s_resource(source, env.wl_app)
 
@@ -296,14 +296,7 @@ def deploy_volume_source(env: ModuleEnvironment):
 def cleanup_volume_source_by_snapshot(env: ModuleEnvironment):
     """部署成功后, 通过 snapshot  diff 清理孤资源, 并更新 snapshot"""
     # 1. 获取本次部署的 desired (new)
-    mount_queryset = Mount.objects.filter(
-        module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
-    )
-    desired: list[dict] = []
-    for m in mount_queryset:
-        source_name = m.get_source_name
-        if source_name:
-            desired.append({"source_type": m.source_type, "source_name": source_name})
+    desired = build_desired_snapshot(env.module.id, env.environment)
 
     # 2. 获取上次部署成功的 snapshot (old)
     snapshot = MountDeploymentSnapshot.objects.filter(
@@ -336,6 +329,24 @@ def cleanup_volume_source_by_snapshot(env: ModuleEnvironment):
         environment_name=env.environment,
         defaults={"snapshot_data": desired},
     )
+
+
+def build_desired_snapshot(module_id, environment: str) -> list[dict]:
+    """从 Mount queryset 构建当前环境的 desired snapshot data.
+
+    :param module_id: 模块 ID
+    :param environment: 环境名称
+    :return: desired snapshot data, 格式示例: [{"source_type": "xxx", "source_name": "xxx"}, ... }]
+    """
+    mount_queryset = Mount.objects.filter(
+        module_id=module_id, environment_name__in=[environment, MountEnvName.GLOBAL.value]
+    )
+    desired: list[dict] = []
+    for m in mount_queryset:
+        source_name = m.source_name
+        if source_name:
+            desired.append({"source_type": m.source_type, "source_name": source_name})
+    return desired
 
 
 class MountManager:

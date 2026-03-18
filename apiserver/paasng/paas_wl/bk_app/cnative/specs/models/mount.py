@@ -93,7 +93,7 @@ class Mount(TimestampedModel):
     tenant_id = tenant_id_field_factory()
 
     @property
-    def get_source_name(self):
+    def source_name(self):
         if self.source_type == VolumeSourceType.ConfigMap and self.source_config.configMap:
             return self.source_config.configMap.name
         elif self.source_type == VolumeSourceType.PersistentStorage and self.source_config.persistentStorage:

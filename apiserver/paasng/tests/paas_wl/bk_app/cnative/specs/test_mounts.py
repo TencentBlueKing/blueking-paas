@@ -131,7 +131,7 @@ class TestVolumeSourceController:
             app_id=mount.module.application.id,
             module_id=mount.module.id,
             env_name=mount.environment_name,
-            source_name=mount.get_source_name,
+            source_name=mount.source_name,
             tenant_id=bk_app.tenant_id,
             data=source_data,
         )
@@ -144,7 +144,7 @@ class TestVolumeSourceController:
         source = controller.get_by_env(
             app_id=mount_configmap.module.application.id,
             env_name=mount_configmap.environment_name,
-            source_name=mount_configmap.get_source_name,
+            source_name=mount_configmap.source_name,
         )
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)
@@ -172,7 +172,7 @@ class TestVolumeSourceController:
         source = controller.get_by_env(
             app_id=mount_pvc.module.application.id,
             env_name=mount_pvc.environment_name,
-            source_name=mount_pvc.get_source_name,
+            source_name=mount_pvc.source_name,
         )
         assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)

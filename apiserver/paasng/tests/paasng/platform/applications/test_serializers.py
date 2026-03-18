@@ -137,11 +137,13 @@ class TestAppNameTenantUniqueness:
 
         slz = AppNameSLZ(data={"name": bk_app.name}, context={"app_tenant_id": random_tenant_id})
         assert slz.is_valid() is False
+        assert "应用已存在" in str(slz.errors["name"])
 
     def test_no_tenant_info_raises(self, bk_app):
         """Without app_tenant_id, validation should fail with an error."""
         slz = AppNameSLZ(data={"name": bk_app.name})
         assert slz.is_valid() is False
+        assert "app_tenant_id is required" in str(slz.errors["name"])
 
     def test_update_uses_instance_tenant(self, bk_app, random_name, random_tenant_id):
         """Update operation resolves tenant from the instance."""
@@ -156,6 +158,7 @@ class TestAppNameTenantUniqueness:
         # Update bk_app to another_app's name — same tenant, should fail
         slz = AppNameSLZ(data={"name": another_app.name}, instance=bk_app)
         assert slz.is_valid() is False
+        assert "应用已存在" in str(slz.errors["name"])
 
 
 class AppDescSLZ(serializers.Serializer):

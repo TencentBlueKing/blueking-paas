@@ -53,9 +53,13 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
 
     def to_internal_value(self, data):
-        validate_app_tenant_info(data["plugin_tenant_mode"], data.get("plugin_tenant_id", ""))
-        self.context["app_tenant_id"] = data.get("plugin_tenant_id", "")
-        return super().to_internal_value(data)
+        try:
+            tenant_info = validate_app_tenant_info(data["plugin_tenant_mode"], data.get("plugin_tenant_id", ""))
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+        else:
+            self.context["app_tenant_id"] = tenant_info.app_tenant_id
+            return super().to_internal_value(data)
 
 
 class PluginArchiveRequestSLZ(serializers.Serializer):

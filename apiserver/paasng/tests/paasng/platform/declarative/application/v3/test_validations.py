@@ -41,7 +41,7 @@ def tag(bk_app):
 def get_app_description(app_json: Dict) -> ApplicationDesc:
     """A help tool get parse the application json data, describe at app_desc.yml::app to ApplicationDesc"""
     instance = get_application(app_json, CNATIVE_APP_CODE_FIELD)
-    desc = validate_desc(AppDescriptionSLZ, app_json, instance=instance)
+    desc = validate_desc(AppDescriptionSLZ, app_json, instance=instance, context={"app_tenant_id": ""})
     return desc
 
 

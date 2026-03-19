@@ -329,4 +329,6 @@ class ApiGatewayClient:
         try:
             self.client.grant_apigw_permissions(data=data, path_params={"gateway_name": gateway_name})
         except (APIGatewayResponseError, ResponseError) as e:
-            raise ApiGatewayServiceError(f"grant apigw permissions error: {e}")
+            if e.response_status_code == 404:
+                raise ApiGatewayServiceError(f"apigw {gateway_name} or api resources not found")
+            raise ApiGatewayServiceError(f"grant apigw {gateway_name} permissions error: {e}")

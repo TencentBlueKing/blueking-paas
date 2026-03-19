@@ -48,5 +48,5 @@ class ClientAction(StrStructuredEnum):
     READ_DB_CREDENTIAL = EnumField("sysapi:read:db-credential", label=_("读取 DB 凭证信息"))
     BIND_DB_SERVICE = EnumField("sysapi:bind:db-service", label=_("绑定 DB 服务"))
 
-    # 供 AIDev 系统使用
+    # 目前仅供 AIDev 平台使用， 用于为 AI Agent 应用授权访问平台网关下的 Agent Sandbox 相关 API 的权限。
     GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))

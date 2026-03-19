@@ -52,8 +52,8 @@ def sys_api_client_without_perm(bk_user):
     return APIClient(headers={"Authorization": f"Bearer {token.token}"})
 
 
-class TestAgentSandboxPermissionViewSetGrantPermissions:
-    """Test cases for AgentSandboxPermissionViewSet.grant_permissions API."""
+class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
+    """Test cases for AgentSandboxAPIPermissionViewSet.grant_permissions API."""
 
     @pytest.fixture()
     def grant_url(self) -> str:

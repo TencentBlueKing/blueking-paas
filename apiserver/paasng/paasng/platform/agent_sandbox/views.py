@@ -245,8 +245,12 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
 
 @ForceAllowAuthedApp.mark_view_set
-class AgentSandboxPermissionViewSet(viewsets.ViewSet):
-    """Agent Sandbox 权限授权相关接口（系统 API）"""
+class AgentSandboxAPIPermissionViewSet(viewsets.ViewSet):
+    """Agent Sandbox API 权限管理相关接口。
+
+    AIDev 平台通过该接口为指定的 AI Agent 应用授予 Agent Sandbox 相关 API 的调用权限。
+    授权完成后，该应用即可通过开发者中心提供的网关接口，访问沙箱的创建、删除、文件操作、进程管理及日志查看等接口。
+    """
 
     permission_classes = [sysapi_client_perm_class(ClientAction.GRANT_APIGW_PERMISSIONS)]
 
@@ -256,9 +260,7 @@ class AgentSandboxPermissionViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def grant_permissions(self, request):
-        """
-        该接口供 AIDev 平台调用，为 AI Agent 应用授权访问 Agent Sandbox 相关 API 的权限。
-        """
+        """为指定的 AI Agent 应用授予 Agent Sandbox 相关 API 的调用权限。"""
         slz = GrantAgentSandboxPermissionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
@@ -275,8 +277,7 @@ class AgentSandboxPermissionViewSet(viewsets.ViewSet):
                 resource_names=settings.APIGW_GRANT_AGENT_SANDBOX_APIS,
                 expire_days=expire_days,
             )
-        except ApiGatewayServiceError:
-            logger.exception("Failed to grant API gateway permissions for app: %s", target_app_code)
-            raise error_codes.REMOTE_REQUEST_ERROR.f("调用 API 网关授权接口失败")
+        except ApiGatewayServiceError as e:
+            raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
 
         return Response(status=status.HTTP_201_CREATED)

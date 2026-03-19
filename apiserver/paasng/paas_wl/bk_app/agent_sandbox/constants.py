@@ -18,10 +18,6 @@
 # Constants for "K8s Pod Sandbox"
 # ================================
 
-from django.conf import settings
-
-# The Default image for running k8s pod sandbox
-DEFAULT_IMAGE = settings.AGENT_SANDBOX_DEFAULT_IMAGE
 # The default termination grace period seconds for sandbox pod
 DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
 # The default resource specification for sandbox pod

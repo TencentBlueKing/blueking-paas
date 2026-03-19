@@ -17,10 +17,10 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from attrs import define
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.agent_sandbox.constants import (
-    DEFAULT_IMAGE,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
 )
@@ -95,7 +95,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             name=kube_data.metadata.name,
             sandbox_id=sandbox_id,
             workdir=workdir,
-            image=getattr(main_container, "image", DEFAULT_IMAGE),
+            image=getattr(main_container, "image", settings.AGENT_SANDBOX_DEFAULT_IMAGE),
             env=env,
             args=getattr(main_container, "args", []),
             status=self._get_status(kube_data),

@@ -25,7 +25,7 @@ from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
-from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DEFAULT_IMAGE
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
@@ -82,7 +82,7 @@ def create_sandbox(
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
-        snapshot=snapshot or DEFAULT_IMAGE,
+        snapshot=snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE,
         snapshot_entrypoint=snapshot_entrypoint,
         env_vars=env_vars,
         creator=creator,

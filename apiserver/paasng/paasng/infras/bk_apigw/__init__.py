@@ -14,21 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from typing import Callable
-
-from rest_framework.generics import get_object_or_404
-
-from paasng.platform.agent_sandbox.models import Sandbox
-
-
-class SandboxViewMixin:
-    """A mixin for sandbox-related views, provides shortcut to retrieve
-    a sandbox instance and perform object-level permission checks."""
-
-    check_object_permissions: Callable
-
-    def get_sandbox_with_perm(self, request, sandbox_id: str) -> Sandbox:
-        sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
-        self.check_object_permissions(request, sandbox.application)
-        return sandbox

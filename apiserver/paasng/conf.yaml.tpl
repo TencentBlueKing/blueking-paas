@@ -1011,6 +1011,19 @@ FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
 ## 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 # ALLOW_THIRD_APP_SYS_IDS: ""
 
+## -------------------------------- Agent Sandbox 网关权限授权配置 --------------------------------
+
+## 开发者中心网关名称, 如 paasv3, 具体需要和网关上实际注册保持一致
+# APIGW_GRANT_GATEWAY_NAME: ""
+## Agent Sandbox 相关的可授权 API 列表, 如果有新增接口需要开放, 需要同步更新
+# APIGW_GRANT_AGENT_SANDBOX_APIS:
+#   - create_agent_sandbox
+#   - destroy_agent_sandbox
+#   - exec_in_agent_sandbox
+#   - upload_to_agent_sandbox
+#   - download_from_agent_sandbox
+#   - ...
+
 ## 测试用 k8s apiserver 地址
 # FOR_TESTS_APISERVER_URL： 'http://localhost:28080'
 

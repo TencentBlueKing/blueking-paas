@@ -567,6 +567,12 @@ def sys_lesscode_api_client():
     return _build_api_client(role=ClientRole.LESSCODE)
 
 
+@pytest.fixture()
+def sys_aidev_api_client():
+    """Return an authenticated client which has a system API client with AIDEV permissions"""
+    return _build_api_client(role=ClientRole.AIDEV)
+
+
 def _build_api_client(role: ClientRole):
     """Helper function to build an API client with the given role"""
     client = SysAPIClient.objects.create(name="test_client", role=role)

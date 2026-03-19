@@ -109,6 +109,11 @@ DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
+# Agent Sandbox 默认运行镜像，须包含 /usr/local/bin/daemon（见 sandbox/daemon/Dockerfile）
+AGENT_SANDBOX_DEFAULT_IMAGE = settings.get("AGENT_SANDBOX_DEFAULT_IMAGE", "bkpaas/agent-sandbox:latest")
+# Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
+AGENT_SANDBOX_ROUTER_AUTH_TOKEN = settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "")
+
 # ---------------
 # 资源命名配置
 # ---------------

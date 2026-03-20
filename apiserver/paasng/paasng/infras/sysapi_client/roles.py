@@ -65,6 +65,7 @@ class ClientPermChecker:
             ClientAction.MANAGE_LIGHT_APPLICATIONS: False,
             ClientAction.READ_DB_CREDENTIAL: False,
             ClientAction.BIND_DB_SERVICE: False,
+            ClientAction.GRANT_APIGW_PERMISSIONS: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -81,6 +82,9 @@ class ClientPermChecker:
             ClientAction.READ_DB_CREDENTIAL: True,
             ClientAction.BIND_DB_SERVICE: True,
         }
+        aidev_perms = nobody_perms | {
+            ClientAction.GRANT_APIGW_PERMISSIONS: True,
+        }
 
         return {
             ClientRole.NOBODY: nobody_perms,
@@ -88,6 +92,7 @@ class ClientPermChecker:
             ClientRole.BASIC_MAINTAINER: basic_maintainer_perms,
             ClientRole.LIGHT_APP_MAINTAINER: light_app_maintainer_perms,
             ClientRole.LESSCODE: lesscode_perms,
+            ClientRole.AIDEV: aidev_perms,
         }
 
 

@@ -206,6 +206,7 @@ def make_smart_tarball(tmp_path: Path, desc_updater: Callable, version: str = ""
     with (tardir_path / "app_desc.yaml.tmpl").open(mode="r") as fp:
         desc = yaml.safe_load(fp.read())
         desc["app"]["region"] = settings.DEFAULT_REGION_NAME
+        desc["tenant"] = {"app_tenant_mode": "global", "app_tenant_id": "", "tenant_id": "default"}
 
         desc = desc_updater(desc)
         (tardir_path / "app_desc.yaml").write_text(yaml.safe_dump(desc))

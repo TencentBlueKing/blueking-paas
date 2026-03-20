@@ -54,10 +54,6 @@ class AppSpecVersion(IntStructuredEnum):
     UNSPECIFIED = -1
 
 
-class AppDescPluginType(StrStructuredEnum):
-    APP_VERSION = EnumField("app_version", label="应用版本")
-
-
 class DiffType(StrStructuredEnum):
     ADDED = EnumField("added", label="新增")
     DELETED = EnumField("deleted", label="删除")

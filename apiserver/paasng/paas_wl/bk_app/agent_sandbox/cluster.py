@@ -15,42 +15,36 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import random
+from paas_wl.infras.cluster.models import Cluster
+from paasng.platform.modules.constants import ExposedURLType
 
-from paas_wl.workloads.networking.egress.cluster_state import format_nodes_data
-from paas_wl.workloads.networking.egress.models import RegionClusterState
-
-
-def find_available_port(port_min: int, port_max: int, used_ports: set) -> int | None:
-    """查找可用端口"""
-
-    port_count = port_max - port_min + 1
-    if len(used_ports) == port_count:
-        # 端口已被耗尽
-        return None
-
-    # 利用"环形扫描"算法，从随机起点开始查找可用端口，避免展开整个端口范围
-    # 随机选一个起始偏移量
-    offset = random.randrange(port_count)
-    daemon_port = next(
-        (p for i in range(port_count) if (p := port_min + (offset + i) % port_count) not in used_ports),
-        None,
-    )
-    return daemon_port
+from .constants import AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX
 
 
-def list_available_hosts(cluster_name: str) -> list[str]:
-    """获取集群可用节点 IP 列表
+def get_router_endpoint(cluster_name: str) -> str:
+    """Get the sandbox router endpoint for a given cluster.
+    Remember update 'Agent Sandbox Router' ingress config if the cluster's root
+    domain(first domain) update
 
-    :param cluster_name: 集群名称
-    :returns: 节点 IP 列表，如果没有可用节点则返回空列表
+    The endpoint is derived from the cluster's ingress_config: the router is expected
+    to be exposed at `{prefix}.{default_root_domain}`.
+
+    :param cluster_name: The name of the target cluster.
+    :returns: The router host string (e.g., "agent-sandbox-router.example.com").
+    :raises RuntimeError: If the cluster or its ingress config is missing.
     """
-    # 从数据库获取集群最新的节点状态，提取节点 IP 列表
-    cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
-    if not cluster_state:
-        return []
+    try:
+        cluster = Cluster.objects.get(name=cluster_name)
+    except Cluster.DoesNotExist:
+        raise RuntimeError(f"cluster {cluster_name!r} not found")
 
-    nodes_data = format_nodes_data(cluster_state.nodes_data)
-    node_ips = [node["internal_ip_address"] for node in nodes_data if node.get("internal_ip_address")]
-
-    return node_ips
+    # TODO 适配好集群域名为子路径的情况
+    try:
+        root_domain = (
+            cluster.ingress_config.default_root_domain.name
+            if cluster.exposed_url_type == ExposedURLType.SUBDOMAIN
+            else cluster.ingress_config.default_sub_path_domain.name
+        )
+    except IndexError:
+        raise RuntimeError(f"cluster {cluster_name!r} has no ingress config")
+    return f"{AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX}.{root_domain}"

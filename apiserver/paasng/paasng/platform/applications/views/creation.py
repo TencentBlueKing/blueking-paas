@@ -50,7 +50,6 @@ from paasng.platform.applications.serializers import (
     ThirdPartyAppCreateInputSLZ,
 )
 from paasng.platform.applications.signals import post_create_application
-from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (
     create_application,
     create_default_module,
@@ -132,11 +131,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
             self._create_app_on_lesscode_platform(request, params["code"], params["name_zh_cn"])
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request.user,
-            params["app_tenant_mode"],
-        )
-
         application = create_application(
             code=params["code"],
             name=params["name_zh_cn"],
@@ -144,9 +138,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             app_type=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
             is_plugin_app=params["is_plugin_app"],
-            app_tenant_mode=app_tenant_mode,
-            app_tenant_id=app_tenant_id,
-            tenant_id=tenant.id,
+            app_tenant_info=params["app_tenant_info"],
         )
         module = create_default_module(application, **module_src_cfg)
 
@@ -219,23 +211,17 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
     )
     def create_third_party(self, request):
-        slz = ThirdPartyAppCreateInputSLZ(data=request.data)
+        slz = ThirdPartyAppCreateInputSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request.user,
-            data["app_tenant_mode"],
-        )
         application = create_third_app(
             data["code"],
             data["name_zh_cn"],
             data["name_en"],
             request.user.pk,
-            app_tenant_mode,
-            app_tenant_id,
-            tenant.id,
-            data["market_params"],
+            app_tenant_info=data["app_tenant_info"],
+            market_params=data["market_params"],
         )
 
         return Response(
@@ -265,7 +251,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
-        slz = LessCodeAppCreateInputSLZ(data=request.data)
+        slz = LessCodeAppCreateInputSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
 
@@ -284,7 +270,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
     )
     def create_ai_agent_app(self, request):
-        serializer = AIAgentAppCreateInputSLZ(data=request.data)
+        serializer = AIAgentAppCreateInputSLZ(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
 
@@ -367,11 +353,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         env_cluster_names: Dict[str, str],
     ) -> Response:
         """初始化应用，包含创建默认模块，应用市场配置等"""
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request_user,
-            params["app_tenant_mode"],
-        )
-
         application = create_application(
             code=params["code"],
             name=params["name_zh_cn"],
@@ -380,9 +361,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
             operator=request_user.pk,
-            app_tenant_mode=app_tenant_mode,
-            app_tenant_id=app_tenant_id,
-            tenant_id=tenant.id,
+            app_tenant_info=params["app_tenant_info"],
         )
 
         # Create engine related data

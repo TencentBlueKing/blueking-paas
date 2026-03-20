@@ -17,10 +17,10 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from attrs import define
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.agent_sandbox.constants import (
-    DEFAULT_IMAGE,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
 )
@@ -35,7 +35,6 @@ class ServicePortPair:
     name: str
     port: int
     target_port: int
-    node_port: int
     protocol: str = "TCP"
 
 
@@ -96,7 +95,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             name=kube_data.metadata.name,
             sandbox_id=sandbox_id,
             workdir=workdir,
-            image=getattr(main_container, "image", DEFAULT_IMAGE),
+            image=getattr(main_container, "image", settings.AGENT_SANDBOX_DEFAULT_IMAGE),
             env=env,
             args=getattr(main_container, "args", []),
             status=self._get_status(kube_data),
@@ -124,14 +123,13 @@ class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService
                 "labels": labels,
             },
             "spec": {
-                "type": "NodePort",
+                "type": "ClusterIP",
                 "ports": [
                     {
                         "name": port.name,
                         "port": port.port,
                         "targetPort": port.target_port,
                         "protocol": port.protocol,
-                        "nodePort": port.node_port,
                     }
                     for port in obj.ports
                 ],
@@ -152,7 +150,6 @@ class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxSer
                 name=p.name,
                 port=p.port,
                 target_port=p.targetPort,
-                node_port=getattr(p, "nodePort", 0),
             )
             for p in kube_data.spec.ports
         ]

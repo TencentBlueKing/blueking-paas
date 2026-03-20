@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from typing import Iterator, Self
+from typing import Iterator
 from unittest import mock
 
 import pytest
@@ -30,16 +30,6 @@ from .stubs import DEFAULT_WORKDIR, StubDaemonClient, StubDaemonClientFactory
 @pytest.fixture(scope="session", autouse=True)
 def _skip_if_old_k8s_version(skip_if_old_k8s_version):
     """Auto-apply shared k8s version skip guard for agent_sandbox tests."""
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_daemon_host_port() -> Iterator[None]:
-    """Mock find_available_port and list_available_hosts for sandbox creation tests."""
-    with (
-        mock.patch("paasng.platform.agent_sandbox.models.find_available_port", return_value=30001),
-        mock.patch("paasng.platform.agent_sandbox.models.list_available_hosts", return_value=["192.168.1.1"]),
-    ):
-        yield
 
 
 @pytest.fixture()
@@ -108,13 +98,13 @@ def stub_k8s_sandbox(
     """
     sandbox = KubernetesPodSandbox(
         entity=stub_agent_sandbox,
-        daemon_endpoint="127.0.0.1:8000",
+        router_endpoint="agent-sbx-router.example.com",
         daemon_token="test-token",
     )
 
     # Patch the daemon_client method to return stub client
     def patched_daemon_client():
-        return stub_daemon_factory.get_client(sandbox.daemon_endpoint, sandbox.daemon_token)
+        return stub_daemon_factory.get_client()
 
     with mock.patch.object(sandbox, "daemon_client", patched_daemon_client):
         yield sandbox

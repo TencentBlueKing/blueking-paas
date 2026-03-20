@@ -30,6 +30,7 @@ from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -80,11 +81,14 @@ def create_application(
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
-    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
-    app_tenant_id: str = "",
-    tenant_id: str = DEFAULT_TENANT_ID,
+    app_tenant_info: AppTenantInfo | None = None,
 ):
     """创建 Application 模型"""
+    if not app_tenant_info:
+        app_tenant_info = AppTenantInfo(
+            app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id=DEFAULT_TENANT_ID
+        )
+
     # TODO: region 参数已废弃, 未来版本将删除, 现在的应用创建流程中, 只会使用默认的 region
     default_region = settings.DEFAULT_REGION_NAME
     application = Application.objects.create(
@@ -97,9 +101,9 @@ def create_application(
         name_en=name_en,
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
-        app_tenant_mode=app_tenant_mode.value,
-        app_tenant_id=app_tenant_id,
-        tenant_id=tenant_id,
+        app_tenant_mode=app_tenant_info.app_tenant_mode.value,
+        app_tenant_id=app_tenant_info.app_tenant_id,
+        tenant_id=app_tenant_info.tenant_id,
     )
     create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
@@ -135,9 +139,7 @@ def create_third_app(
     name: str,
     name_en: str,
     operator: str,
-    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
-    app_tenant_id: str = "",
-    tenant_id: str = DEFAULT_TENANT_ID,
+    app_tenant_info: Optional[AppTenantInfo] = None,
     market_params: Optional[dict] = None,
 ) -> Application:
     """创建第三方（外链）应用"""
@@ -151,9 +153,7 @@ def create_third_app(
         app_type=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
-        app_tenant_mode=app_tenant_mode,
-        app_tenant_id=app_tenant_id,
-        tenant_id=tenant_id,
+        app_tenant_info=app_tenant_info,
     )
     create_default_module(application)
 

@@ -137,12 +137,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 S-Mart 应用"))
 
-        slz = PackageStashConfirmRequestSLZ(data=request.data)
+        slz = PackageStashConfirmRequestSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
-
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request.user, slz.validated_data["app_tenant_mode"]
-        )
+        validated_data = slz.validated_data
+        app_tenant_info = validated_data["app_tenant_info"]
 
         with generate_temp_dir() as download_dir:
             # Step 1. retrieve package(tarball)
@@ -165,14 +163,14 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             # 替换成实际待创建的应用信息
             stat.meta_info = update_meta_info(
                 stat.meta_info,
-                app_code=slz.validated_data["code"],
-                app_name=slz.validated_data["name_zh_cn"],
+                app_code=validated_data["code"],
+                app_name=validated_data["name_zh_cn"],
             )
             # 租户信息放到单独的字段中，不会干扰应用描述文件字段
             stat.meta_info["tenant"] = {
-                "app_tenant_mode": app_tenant_mode,
-                "app_tenant_id": app_tenant_id,
-                "tenant_id": tenant.id,
+                "app_tenant_mode": app_tenant_info.app_tenant_mode,
+                "app_tenant_id": app_tenant_info.app_tenant_id,
+                "tenant_id": app_tenant_info.tenant_id,
             }
 
             handler = get_desc_handler(stat.meta_info)

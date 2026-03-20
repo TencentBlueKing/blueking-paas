@@ -34,9 +34,17 @@ class StubDaemonClient:
     providing in-memory file system and command execution capabilities.
     """
 
-    def __init__(self, endpoint: str = "127.0.0.1:8000", token: str = "test-token"):
-        self.endpoint = endpoint
+    def __init__(
+        self,
+        router_endpoint: str = "agent-sbx-router.example.com",
+        token: str = "test-token",
+        sandbox_name: str = "test-sandbox",
+        namespace: str = "bk-agent-sbx-test",
+    ):
+        self.router_endpoint = router_endpoint
         self.token = token
+        self.sandbox_name = sandbox_name
+        self.namespace = namespace
         self.timeout = 60
 
         # In-memory file system storage: {path: content_bytes}
@@ -115,10 +123,10 @@ class StubDaemonClientFactory:
     def __init__(self):
         self._client: StubDaemonClient | None = None
 
-    def get_client(self, endpoint: str = "127.0.0.1:8000", token: str = "test-token") -> StubDaemonClient:
+    def get_client(self) -> StubDaemonClient:
         """Get or create a StubDaemonClient instance."""
         if self._client is None:
-            self._client = StubDaemonClient(endpoint, token)
+            self._client = StubDaemonClient()
         return self._client
 
     def reset(self) -> None:

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -214,7 +214,7 @@ class TestMountDeploymentSnapshotDiff:
     def test_returns_items_not_in_desired(self):
         """old 中有但 desired 中没有的应被返回"""
         snapshot = MountDeploymentSnapshot(
-            [
+            snapshot_data=[
                 {"source_type": "ConfigMap", "source_name": "cm-old"},
                 {"source_type": "ConfigMap", "source_name": "cm-keep"},
             ]
@@ -263,7 +263,10 @@ class TestCleanupVolumeSourceBySnapshot:
             ],
         )
 
-        with patch.object(mounts.ConfigMapSourceController, "delete_k8s_resource_by_name") as mock_delete:
+        with (
+            patch.object(mounts.ConfigMapSourceController, "delete_k8s_resource_by_name") as mock_delete,
+            patch.object(type(bk_stag_env), "wl_app", new_callable=PropertyMock, return_value=MagicMock()),
+        ):
             mounts.cleanup_volume_source_by_snapshot(bk_stag_env)
             # stale-configmap 不在 desired 中, 应被删除
             deleted_names = {call.args[0] for call in mock_delete.call_args_list}

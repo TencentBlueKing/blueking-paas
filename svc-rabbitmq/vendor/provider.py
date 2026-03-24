@@ -24,10 +24,12 @@ from typing import Dict, List, Type
 from django.conf import settings
 from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData
 from paas_service.utils import WRItemList
+from pydantic import ValidationError
 
 from .client import Client
 from .clusters import Cluster
 from .helper import InstanceHelper, Version
+from .models import Cluster as ClusterModel
 from .models import InstanceBill, LimitPolicy, UserPolicy
 from .utils import gen_addons_cert_mount_path, generate_password
 
@@ -55,8 +57,13 @@ class UserPolicyProviderPlugin(ProviderPlugin):
     """用户策略插件"""
 
     def on_create(self):
+        cluster_pk = self.context.get("cluster_pk")
+        if not cluster_pk:
+            logger.warning("skip user policies because cluster_pk is missing")
+            return
+
         policies = self.context.setdefault("policies", [])
-        for instance in UserPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
+        for instance in UserPolicy.objects.filter(enable=True, cluster_id=cluster_pk):
             policy: "UserPolicy" = instance.resolved
             policies.append(policy.name)
             self.client.user_policy.create(
@@ -81,8 +88,12 @@ class LimitPolicyProviderPlugin(ProviderPlugin):
         if version < self.min_version:
             return
 
+        cluster_pk = self.context.get("cluster_pk")
+        if not cluster_pk:
+            logger.warning("skip limit policies because cluster_pk is missing")
+            return
         limits = self.context.setdefault("limits", [])
-        for instance in LimitPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
+        for instance in LimitPolicy.objects.filter(enable=True, cluster_id=cluster_pk):
             policy: "LimitPolicy" = instance.resolved
             limits.append(policy.name)
             self.client.limit_policy.create(self.virtual_host, policy.limit, policy.value)
@@ -132,6 +143,8 @@ class AdminAutoPermission(ProviderPlugin):
 
 PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
     AdminAutoPermission,
+    UserPolicyProviderPlugin,
+    LimitPolicyProviderPlugin,
     DeadLetterRoutingProviderPlugin,
 ]
 
@@ -163,6 +176,19 @@ class Provider(BaseProvider):
         # {prefix}-{name}-{id}
         return "-".join(parts)
 
+    def resolve_cluster_pk(self, cluster: Cluster) -> int | None:
+        """resolve ORM cluster primary key for policy plugins."""
+        if mgmt_api := (cluster.management_api or "").rstrip("/"):
+            for orm in ClusterModel.objects.filter(enable=True):
+                if (orm.management_api or "").rstrip("/") == mgmt_api:
+                    return orm.pk
+        orm_cluster = ClusterModel.objects.filter(
+            enable=True,
+            host=cluster.host,
+            port=cluster.port,
+        ).first()
+        return orm_cluster.pk if orm_cluster else None
+
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""
         if not self.clusters:
@@ -177,7 +203,7 @@ class Provider(BaseProvider):
             }
             try:
                 return Cluster(**values)
-            except Exception as e:
+            except ValidationError as e:
                 raise ValueError(f"cluster 配置不正确: {e}")
 
         result = WRItemList.from_json(self.clusters).get()
@@ -185,7 +211,7 @@ class Provider(BaseProvider):
             raise ValueError("clusters 列表配置不正确，无法获取集群配置")
         try:
             return Cluster(**result.values)
-        except Exception as e:
+        except ValidationError as e:
             raise ValueError(f"cluster 配置不正确: {e}")
 
     def create_instance(
@@ -263,6 +289,14 @@ class Provider(BaseProvider):
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
             cluster = self.pick_cluster()
+            context["cluster_pk"] = self.resolve_cluster_pk(cluster)
+            if context["cluster_pk"] is None:
+                logger.warning(
+                    "cluster_pk resolve failed: host=%s port=%s management_api=%s",
+                    cluster.host,
+                    cluster.port,
+                    cluster.management_api,
+                )
 
             try:
                 return self.create_instance(engine_app_name, bill, context, cluster)

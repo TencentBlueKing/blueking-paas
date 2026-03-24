@@ -150,7 +150,7 @@ class RedisInstanceController:
         )
         return exporter.recycle_endpoint(endpoint)
 
-    def _check_redis_status(self, max_attempts=60, retry_interval=4):
+    def _check_redis_status(self, max_attempts=80, retry_interval=3):
         """
         当采用 ClusterDNS 进行服务访问时，该服务端无法直接访问Redis 实例服务
         因此通过 StatefulSet 就绪副本数，判断 Redis 实例状态，而不是 Redis Ping

@@ -18,6 +18,7 @@
 import logging
 import time
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from svc_redis.cluster.models import TencentCLBListener
 from svc_redis.resources.base.base import get_client_by_cluster_name
@@ -34,6 +35,9 @@ from .manifests import (
     get_redis_resource,
     get_service_monitor_manifest,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic.resource import ResourceField, ResourceInstance
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +67,14 @@ class RedisInstanceController:
         self._deploy_redis_resource()
         endpoint = self._deploy_and_get_endpoint()
         self._deploy_redis_service_monitor()
-        self._check_redis_status()
+        try:
+            self._check_redis_status()
+        except RedisReadinessTimeout as e:
+            raise RedisReadinessTimeout(
+                "Redis instance not ready in the expected time: "
+                f"namespace: {self.namespace}, type: {self.plan_config.type}, "
+                f"cluster_name: {self.plan_config.cluster_name}"
+            ) from e
         return RedisInstanceCredential(
             host=endpoint.host,
             port=endpoint.port,
@@ -139,26 +150,36 @@ class RedisInstanceController:
         )
         return exporter.recycle_endpoint(endpoint)
 
-    def _check_redis_status(self, max_attempts=60, retry_interval=10):
+    def _check_redis_status(self, max_attempts=60, retry_interval=4):
         """
         当采用 ClusterDNS 进行服务访问时，该服务端无法直接访问Redis 实例服务
         因此通过 StatefulSet 就绪副本数，判断 Redis 实例状态，而不是 Redis Ping
+        paas apiserver 侧超时时间为 5 分钟， 故此函数默认设置了 4 分钟的超时时间
 
         :param max_attempts: 最大重试次数
         :param retry_interval: 重试间隔时间（秒）
+        :raises RedisReadinessTimeout: 如果超过最大重试次数仍未就绪，则抛出该异常
         """
-        for attempt in range(1, max_attempts + 1):
+        last_exc = None
+        for _ in range(max_attempts):
             try:
-                sts = KStatefulSet(self.client).get(name=generate_redis_name(), namespace=self.namespace)
-                if not getattr(sts, "status"):
-                    continue
+                sts: ResourceInstance | None = KStatefulSet(self.client).get(
+                    name=generate_redis_name(), namespace=self.namespace
+                )
 
-                if sts.status.replicas == sts.status.readyReplicas:
+                status: ResourceField | None = getattr(sts, "status", None) or 0
+                replicas = getattr(status, "replicas", 0) or 0
+                ready_replicas = getattr(status, "readyReplicas", 0) or 0
+
+                if replicas > 0 and replicas == ready_replicas:
                     return
-            except Exception as e:
-                if attempt >= max_attempts:
-                    raise RedisReadinessTimeout("Redis Readiness Timeout") from e
-                time.sleep(retry_interval)
+            except Exception as e:  # noqa: BLE001
+                last_exc = e
+                logger.info("Error while checking Redis status, %s", e)
+
+            time.sleep(retry_interval)
+
+        raise RedisReadinessTimeout from last_exc
 
 
 class ServiceExporter(ABC):
@@ -228,7 +249,7 @@ class ServiceExporterFactory:
     @staticmethod
     def create_exporter(
         export_type: str,
-        cluster_name: str = None,
+        cluster_name: str | None = None,
     ) -> ServiceExporter:
         """
         根据类型创建对应的Exporter

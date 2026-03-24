@@ -161,13 +161,13 @@ class RedisInstanceController:
         :raises RedisReadinessTimeout: 如果超过最大重试次数仍未就绪，则抛出该异常
         """
         last_exc = None
-        for _ in range(max_attempts):
+        for attempt in range(max_attempts):
             try:
                 sts: ResourceInstance | None = KStatefulSet(self.client).get(
                     name=generate_redis_name(), namespace=self.namespace
                 )
 
-                status: ResourceField | None = getattr(sts, "status", None) or 0
+                status: ResourceField | None = getattr(sts, "status", None)
                 replicas = getattr(status, "replicas", 0) or 0
                 ready_replicas = getattr(status, "readyReplicas", 0) or 0
 
@@ -175,9 +175,10 @@ class RedisInstanceController:
                     return
             except Exception as e:  # noqa: BLE001
                 last_exc = e
-                logger.info("Error while checking Redis status, %s", e)
+                logger.debug("Error while checking Redis status, %s", e)
 
-            time.sleep(retry_interval)
+            if attempt + 1 < max_attempts:
+                time.sleep(retry_interval)
 
         raise RedisReadinessTimeout from last_exc
 

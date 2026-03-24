@@ -321,32 +321,38 @@ def cleanup_volume_source_by_snapshot(env: ModuleEnvironment):
         module_id=env.module.id, environment_name=env.environment
     ).first()
 
+    def _save_snapshot() -> None:
+        MountDeploymentSnapshot.objects.update_or_create(
+            module_id=env.module.id,
+            environment_name=env.environment,
+            defaults={"snapshot_data": desired},
+        )
+
     # 如果没有 snapshot (首次部署), 跳过 delete, 直接写入 snapshot
-    if snapshot is not None:
-        # 3. diff old and new, 删除 old 中但不在 new 中的资源
-        to_delete = snapshot.diff(desired)
-        controllers: dict[str, BaseVolumeSourceController] = {}
-        for item in to_delete:
-            source_type, source_name = item["source_type"], item["source_name"]
-            # PersistentStorage 属于应用级别资源, 生命周期由应用级别统一管理, 不在此处删除
-            if source_type == VolumeSourceType.PersistentStorage:
-                continue
-            if source_type not in controllers:
-                controllers[source_type] = init_volume_source_controller(source_type)
-            controller = controllers[source_type]
-            controller.delete_k8s_resource_by_name(source_name, env.wl_app)
-            logger.info(
-                "cleanup_volume_source_by_snapshot: source_type=%s, source_name=%s",
-                source_type,
-                source_name,
-            )
+    if snapshot is None:
+        _save_snapshot()
+        return
+
+    # 3. diff old and new, 删除 old 中但不在 new 中的资源
+    to_delete = snapshot.diff(desired)
+    controllers: dict[str, BaseVolumeSourceController] = {}
+    for item in to_delete:
+        source_type, source_name = item["source_type"], item["source_name"]
+        # PersistentStorage 属于应用级别资源, 生命周期由应用级别统一管理, 不在此处删除
+        if source_type == VolumeSourceType.PersistentStorage:
+            continue
+        if source_type not in controllers:
+            controllers[source_type] = init_volume_source_controller(source_type)
+        controller = controllers[source_type]
+        controller.delete_k8s_resource_by_name(source_name, env.wl_app)
+        logger.info(
+            "cleanup_volume_source_by_snapshot: source_type=%s, source_name=%s",
+            source_type,
+            source_name,
+        )
 
     # 4. 更新 snapshot
-    MountDeploymentSnapshot.objects.update_or_create(
-        module_id=env.module.id,
-        environment_name=env.environment,
-        defaults={"snapshot_data": desired},
-    )
+    _save_snapshot()
 
 
 class MountManager:

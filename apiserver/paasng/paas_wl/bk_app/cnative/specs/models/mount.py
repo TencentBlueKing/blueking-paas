@@ -129,7 +129,12 @@ class MountDeploymentSnapshot(TimestampedModel):
         unique_together = ("module_id", "environment_name")
 
     def diff(self, desired: list[dict]) -> list[dict]:
-        """与 desired 做 diff, 返回需要删除的 source 列表 (存在于 snapshot 但不存在于 desired)"""
+        """与 desired 做 diff, 返回需要删除的 source 列表 (存在于 snapshot 但不存在于 desired)
+
+
+        :param desired: 期望的 source 列表, 其中包含 source_type 和 source_name 字段
+        :return: 需要删除的 source 列表, 即存在于 snapshot 但不存在于 desired
+        """
         desired_keys = {(item["source_type"], item["source_name"]) for item in desired}
         old_keys = {(item["source_type"], item["source_name"]) for item in self.snapshot_data}
         to_delete_keys = old_keys - desired_keys

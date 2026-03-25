@@ -92,6 +92,7 @@ class HelmReleaseParser:
     def parse(self, skip_invalid: bool = False) -> HelmRelease:
         """
         解析 Helm Release 信息
+
         :param skip_invalid: 如果为 True, 将跳过(置空)非法的 resources, 否则抛出异常
         :return: HelmRelease 对象
         """

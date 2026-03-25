@@ -48,7 +48,7 @@ class HelmClient:
             KSecret(self.client).ops_batch.list(labels={"owner": "helm", "name": name}, namespace=namespace).items
         )
         latest = self._filter_latest_version(secrets)
-        releases = self._parse_secrets_to_releases(latest, ignore_invalid_resources=True)
+        releases = self._parse_secrets_to_releases(latest, skip_invalid=True)
         return releases[0] if releases else None
 
     @staticmethod
@@ -71,12 +71,10 @@ class HelmClient:
         return list(secret_map.values())
 
     @staticmethod
-    def _parse_secrets_to_releases(
-        secrets: List[ResourceInstance], ignore_invalid_resources: bool = False
-    ) -> List[HelmRelease]:
+    def _parse_secrets_to_releases(secrets: List[ResourceInstance], skip_invalid: bool = False) -> List[HelmRelease]:
         """将存储 Helm Release 信息的 Secret 解析成 HelmRelease 对象"""
         return [
-            HelmReleaseParser(s).parse(ignore_invalid_resources=ignore_invalid_resources)
+            HelmReleaseParser(s).parse(skip_invalid=skip_invalid)
             for s in secrets
             if s.type == HELM_RELEASE_SECRET_TYPE
         ]
@@ -91,10 +89,10 @@ class HelmReleaseParser:
         """
         self.secret = secret
 
-    def parse(self, ignore_invalid_resources: bool = False) -> HelmRelease:
+    def parse(self, skip_invalid: bool = False) -> HelmRelease:
         """
         解析 Helm Release 信息
-        :param ignore_invalid_resources: 是否忽略无效的 Kubernetes 资源信息
+        :param skip_invalid: 是否忽略不合法的 Kubernetes 资源信息
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))
@@ -104,7 +102,7 @@ class HelmReleaseParser:
         try:
             resources = [res for res in yaml.safe_load_all(release.get("manifest", "")) if res]
         except yaml.YAMLError:
-            if ignore_invalid_resources:
+            if skip_invalid:
                 resources = []
             else:
                 raise

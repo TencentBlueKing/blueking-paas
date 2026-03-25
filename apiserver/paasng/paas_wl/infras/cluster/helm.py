@@ -40,15 +40,16 @@ class HelmClient:
     def list_releases(self, namespace: str | None = None) -> List[HelmRelease]:
         """获取所有 Helm Release 信息（当前部署的最新版本）"""
         secrets = KSecret(self.client).ops_batch.list(labels={"owner": "helm"}, namespace=namespace).items
-        return self._parse_secrets_to_releases(self._filter_latest_version(secrets))
+        return self._parse_secrets_to_releases(self._filter_latest_version(secrets), include_resources=False)
 
     def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
         """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
-        for rel in self.list_releases(namespace):
-            if rel.chart.name == name:
-                return rel
-
-        return None
+        secrets = (
+            KSecret(self.client).ops_batch.list(labels={"owner": "helm", "name": name}, namespace=namespace).items
+        )
+        latest = self._filter_latest_version(secrets)
+        releases = self._parse_secrets_to_releases(latest)
+        return releases[0] if releases else None
 
     @staticmethod
     def _filter_latest_version(secrets: List[ResourceInstance]) -> List[ResourceInstance]:
@@ -70,9 +71,15 @@ class HelmClient:
         return list(secret_map.values())
 
     @staticmethod
-    def _parse_secrets_to_releases(secrets: List[ResourceInstance]) -> List[HelmRelease]:
+    def _parse_secrets_to_releases(
+        secrets: List[ResourceInstance], include_resources: bool = True
+    ) -> List[HelmRelease]:
         """将存储 Helm Release 信息的 Secret 解析成 HelmRelease 对象"""
-        return [HelmReleaseParser(s).parse() for s in secrets if s.type == HELM_RELEASE_SECRET_TYPE]
+        return [
+            HelmReleaseParser(s).parse(include_resources=include_resources)
+            for s in secrets
+            if s.type == HELM_RELEASE_SECRET_TYPE
+        ]
 
 
 class HelmReleaseParser:
@@ -84,9 +91,10 @@ class HelmReleaseParser:
         """
         self.secret = secret
 
-    def parse(self) -> HelmRelease:
+    def parse(self, include_resources: bool = True) -> HelmRelease:
         """
         解析 Helm Release 信息
+        :param include_resources: 是否包含 Release 关联的 Kubernetes 资源信息
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))
@@ -109,6 +117,8 @@ class HelmReleaseParser:
                 created_at=arrow.get(release_info["last_deployed"]).datetime,
             ),
             values=release.get("config", {}),
-            resources=[res for res in yaml.safe_load_all(release.get("manifest", "")) if res],
+            resources=[res for res in yaml.safe_load_all(release.get("manifest", "")) if res]
+            if include_resources
+            else [],
             secret_name=self.secret.metadata.name,
         )

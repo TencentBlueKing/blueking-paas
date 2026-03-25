@@ -92,7 +92,7 @@ class HelmReleaseParser:
     def parse(self, skip_invalid: bool = False) -> HelmRelease:
         """
         解析 Helm Release 信息
-        :param skip_invalid: 是否忽略不合法的 Kubernetes 资源信息
+        :param skip_invalid: 是否忽略不合法的 Kubernetes 资源信息. 如果为 True, 将置空非法的 resources
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))

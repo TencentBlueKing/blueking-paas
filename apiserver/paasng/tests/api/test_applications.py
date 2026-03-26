@@ -39,7 +39,13 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import (
+    AppFeatureFlag,
+    ApplicationRole,
+    ApplicationType,
+    AppStatus,
+    AvailabilityLevel,
+)
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -986,6 +992,68 @@ class TestListEvaluation:
         for issue in response.data["issue_type_counts"]:
             assert issue["issue_type"] in ["none", "idle", "misconfigured"]
             assert issue["count"] == 1
+
+    def test_type_count(
+        self, api_client, latest_collection_task, app_operation_report1, app_operation_report2, inactive_app, bk_user
+    ):
+        """
+        测试获取应用评估各应用类型数量
+
+        filter_by_app_status 逻辑：
+        - not_deployed: last_deployed_date 为空 且 非 ENGINELESS_APP
+        - normal:       ENGINELESS_APP 类型 或 (last_deployed_date 不为空 且 is_active=True)
+        - offline:      last_deployed_date 不为空 且 is_active=False 且 非 ENGINELESS_APP
+
+        构造场景：
+        - app1 (DEFAULT): last_deployed_date=now, is_active=True -> normal
+        - app2 (DEFAULT): last_deployed_date=now, is_active=False -> offline
+        - inactive_app (DEFAULT): last_deployed_date=None, is_active=False -> not_deployed
+        - engineless_app (ENGINELESS_APP): 外链应用 -> normal
+        """
+        # app1: 已部署且活跃 → normal
+        app1 = app_operation_report1.app
+        app1.type = ApplicationType.DEFAULT
+        app1.last_deployed_date = timezone.now()
+        app1.is_active = True
+        app1.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        # app2: 已部署但已下架 → offline
+        app2 = app_operation_report2.app
+        app2.type = ApplicationType.DEFAULT
+        app2.last_deployed_date = timezone.now()
+        app2.is_active = False
+        app2.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        # inactive_app: last_deployed_date 为空 → not_deployed（is_active=False 不影响此判断）
+        inactive_app.type = ApplicationType.DEFAULT
+        inactive_app.save(update_fields=["type"])
+
+        # engineless_app: 外链应用，永远是 normal 状态
+        engineless_app = create_app(owner_username=bk_user.username)
+        engineless_app.type = ApplicationType.ENGINELESS_APP
+        engineless_app.save(update_fields=["type"])
+
+        response = api_client.get(reverse("api.applications.lists.evaluation.type_count"))
+        assert response.status_code == 200
+        response_data = response.json()
+
+        # 验证总数：app1 + app2 + inactive_app + engineless_app = 4
+        assert response_data["total"] == 4
+
+        # 验证各应用类型数量
+        app_type_counts = {item["type"]: item["count"] for item in response_data["app_type_counts"]}
+        assert app_type_counts == {
+            ApplicationType.DEFAULT.value: 3,
+            ApplicationType.ENGINELESS_APP.value: 1,
+        }
+
+        # 验证各应用状态数量
+        app_status_counts = {item["status"]: item["count"] for item in response_data["app_status_counts"]}
+        assert app_status_counts == {
+            AppStatus.NOT_DEPLOYED.value: 1,  # inactive_app
+            AppStatus.NORMAL.value: 2,  # app1 + engineless_app
+            AppStatus.OFFLINE.value: 1,  # app2
+        }
 
 
 class TestDeploymentModuleOrder:

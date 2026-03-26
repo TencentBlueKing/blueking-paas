@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -137,6 +139,32 @@ func (em *entrypointManager) Close() {
 	}
 }
 
+// runPreStartScript executes the pre-start script synchronously before the entrypoint.
+// Returns nil if the script does not exist (skip) or executes successfully.
+func runPreStartScript(scriptPath string, timeout time.Duration) error {
+	if _, err := os.Stat(scriptPath); errors.Is(err, os.ErrNotExist) {
+		slog.Info("Pre-start script not found, skipping", "path", scriptPath)
+		return nil
+	}
+
+	slog.Info("Running pre-start script", "path", scriptPath, "timeout", timeout)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sh", scriptPath)
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("pre-start script failed: %w", err)
+	}
+
+	slog.Info("Pre-start script completed successfully")
+	return nil
+}
+
 func main() {
 	errChan := make(chan error)
 
@@ -171,13 +199,27 @@ func main() {
 		}
 	}
 
+	// Run pre-start script before entrypoint, exit if it fails
+	if err := runPreStartScript(cfg.PreStartScriptPath, cfg.PreStartTimeout); err != nil {
+		slog.Error("Pre-start script failed, exiting", "path", cfg.PreStartScriptPath, "error", err)
+		os.Exit(1)
+	}
+
 	// Initialize and start entrypoint command
 	entrypoint := newEntrypointManager(cfg.EntrypointLogFilePath)
 	defer entrypoint.Close()
 
 	// entrypoint 并非指 daemon 服务本身, 而是用户镜像的自定义启动命令(如 `start web`), 此时沙箱环境的启动命令变成 `./daemon start web`
 	// 实际上, entrypoint 会作为 daemon 的子进程被拉起并托管
-	entrypoint.Start(os.Args[1:])
+	// 当 os.Args[1:] 为空时, 尝试使用默认的 entrypoint 脚本
+	entrypointArgs := os.Args[1:]
+	if len(entrypointArgs) == 0 {
+		if _, err := os.Stat(cfg.DefaultEntrypointPath); err == nil {
+			slog.Info("No entrypoint args provided, using default entrypoint script", "path", cfg.DefaultEntrypointPath)
+			entrypointArgs = []string{"sh", cfg.DefaultEntrypointPath}
+		}
+	}
+	entrypoint.Start(entrypointArgs)
 
 	// Start the main server in a go routine
 	go func() {

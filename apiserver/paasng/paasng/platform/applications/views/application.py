@@ -354,6 +354,24 @@ class ApplicationListViewSet(viewsets.ViewSet):
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
+        total = UserApplicationFilter(request.user).filter().count()
+
+        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
+
+        serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取应用评估各应用类型数量",
+        responses={200: slzs.ApplicationEvaluationTypeCountListResultSLZ()},
+    )
+    def list_evaluation_type_count(self, request):
+        """获取应用评估各应用类型数量"""
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
         total_applications = UserApplicationFilter(request.user).filter()
         app_type_counts = total_applications.values("type").annotate(count=Count("type"))
         # 应用状态是由 @property 装饰的方法, 不能直接通过 ORM 的方式统计数量
@@ -365,13 +383,12 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         data = {
             "collected_at": latest_collected_at,
-            "issue_type_counts": issue_type_counts,
             "app_type_counts": app_type_counts,
             "app_status_counts": app_status_counts,
             "total": total,
         }
 
-        serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
+        serializer = slzs.ApplicationEvaluationTypeCountListResultSLZ(data)
         return Response(serializer.data)
 
 

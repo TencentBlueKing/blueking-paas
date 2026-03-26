@@ -217,7 +217,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 app_id=mount_instance.module.application.id,
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
-                source_name=mount_instance.get_source_name,
+                source_name=mount_instance.source_name,
                 tenant_id=application.tenant_id,
                 data=data,
             )
@@ -274,7 +274,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             app_id=mount_instance.module.application.id,
             module_id=mount_instance.module.id,
             env_name=mount_instance.environment_name,
-            source_name=mount_instance.get_source_name,
+            source_name=mount_instance.source_name,
             data=configmap_source.get("source_config_data"),
         )
 
@@ -311,7 +311,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             app_id=mount_instance.module.application.id,
             module_id=mount_instance.module.id,
             env_name=mount_instance.environment_name,
-            source_name=mount_instance.get_source_name,
+            source_name=mount_instance.source_name,
         )
         mount_instance.delete()
 

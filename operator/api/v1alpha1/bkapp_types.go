@@ -199,13 +199,14 @@ type Process struct {
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 
-	// TerminationGracePeriodSeconds is the optional duration in seconds the pod needs to
-	// terminate gracefully. When Set, operator will automatically inject a preStop sleep hook
-	// to delay pod termination, allowing in-flight requests to complete.
-	// If not set, defaults to 30s and a 0s preStop sleep.
+	// GracefulShutdownSeconds defines the graceful shutdown window in seconds.
+	// When set, the operator injects a preStop hook to sleep for this duration
+	// and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+	// When unset, no preStop hook is injected and Kubernetes default
+	// terminationGracePeriodSeconds is used.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+	GracefulShutdownSeconds *int64 `json:"gracefulShutdownSeconds,omitempty"`
 
 	// Probes specifies the probe configuration
 	Probes *ProbeSet `json:"probes,omitempty"`

@@ -349,6 +349,16 @@ spec:
                     cpu:
                       description: CPU will be used as limits.cpu
                       type: string
+                    gracefulShutdownSeconds:
+                      description: |-
+                        GracefulShutdownSeconds defines the graceful shutdown window in seconds.
+                        When set, the operator injects a preStop hook to sleep for this duration
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+                        When unset, no preStop hook is injected and Kubernetes default
+                        terminationGracePeriodSeconds is used.
+                      format: int64
+                      minimum: 0
+                      type: integer
                     image:
                       description: Container image name
                       type: string
@@ -885,15 +895,6 @@ spec:
                     targetPort:
                       description: The containerPort to expose server
                       format: int32
-                      type: integer
-                    terminationGracePeriodSeconds:
-                      description: |-
-                        TerminationGracePeriodSeconds is the optional duration in seconds the pod needs to
-                        terminate gracefully. When Set, operator will automatically inject a preStop sleep hook
-                        to delay pod termination, allowing in-flight requests to complete.
-                        If not set, defaults to 30s and a 0s preStop sleep.
-                      format: int64
-                      minimum: 0
                       type: integer
                   required:
                   - image
@@ -1659,6 +1660,16 @@ spec:
                         - version
                         type: object
                       type: array
+                    gracefulShutdownSeconds:
+                      description: |-
+                        GracefulShutdownSeconds defines the graceful shutdown window in seconds.
+                        When set, the operator injects a preStop hook to sleep for this duration
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+                        When unset, no preStop hook is injected and Kubernetes default
+                        terminationGracePeriodSeconds is used.
+                      format: int64
+                      minimum: 0
+                      type: integer
                     name:
                       description: Name of process
                       type: string
@@ -2186,15 +2197,6 @@ spec:
                     targetPort:
                       description: The containerPort to expose server
                       format: int32
-                      type: integer
-                    terminationGracePeriodSeconds:
-                      description: |-
-                        TerminationGracePeriodSeconds is the optional duration in seconds the pod needs to
-                        terminate gracefully. When Set, operator will automatically inject a preStop sleep hook
-                        to delay pod termination, allowing in-flight requests to complete.
-                        If not set, defaults to 30s and a 0s preStop sleep.
-                      format: int64
-                      minimum: 0
                       type: integer
                   required:
                   - name

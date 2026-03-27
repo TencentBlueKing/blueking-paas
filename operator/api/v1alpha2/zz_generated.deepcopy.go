@@ -901,8 +901,8 @@ func (in *Process) DeepCopyInto(out *Process) {
 		*out = new(ProbeSet)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.TerminationGracePeriodSeconds != nil {
-		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
+	if in.GracefulShutdownSeconds != nil {
+		in, out := &in.GracefulShutdownSeconds, &out.GracefulShutdownSeconds
 		*out = new(int64)
 		**out = **in
 	}

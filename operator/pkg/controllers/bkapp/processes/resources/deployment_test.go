@@ -496,13 +496,12 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(lifecycle.PreStop.Exec.Command).To(Equal([]string{"sleep", "60"}))
 		})
 
-		It("set to 0s: terminationGracePeriodSeconds=2, preStop hook should not be injected", func() {
+		It("set to 0s: use default terminationGracePeriodSeconds and do not inject preStop hook", func() {
 			gracefulShutdownSeconds := int64(0)
-			expectedGracePeriod := gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
 			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
 
 			web, _ := BuildProcDeployment(bkapp, "web")
-			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(Equal(&expectedGracePeriod))
+			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(BeNil())
 			Expect(web.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
 		})
 

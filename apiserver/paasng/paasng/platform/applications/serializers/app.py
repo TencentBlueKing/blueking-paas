@@ -205,6 +205,12 @@ class ApplicationEvaluationIssueCountSLZ(serializers.Serializer):
     count = serializers.IntegerField(help_text="应用数量")
 
 
+class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
+
+
 class ApplicationTypeCountSLZ(serializers.Serializer):
     type = serializers.CharField(help_text="应用类型")
     count = serializers.IntegerField(help_text="应用数量")
@@ -215,14 +221,7 @@ class ApplicationStatusCountSLZ(serializers.Serializer):
     count = serializers.IntegerField(help_text="应用数量")
 
 
-class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
-    collected_at = serializers.DateTimeField(help_text="采集时间")
-    issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
-    total = serializers.IntegerField(help_text="应用评估报告总数量")
-
-
-class ApplicationEvaluationTypeCountListResultSLZ(serializers.Serializer):
-    collected_at = serializers.DateTimeField(help_text="采集时间")
+class ApplicationStatisticsListResultSLZ(serializers.Serializer):
     app_type_counts = ApplicationTypeCountSLZ(many=True, help_text="应用类型及数量")
     app_status_counts = ApplicationStatusCountSLZ(many=True, help_text="应用状态及数量")
     total = serializers.IntegerField(help_text="应用评估报告总数量")

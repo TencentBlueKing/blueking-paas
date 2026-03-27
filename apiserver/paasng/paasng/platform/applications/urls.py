@@ -88,14 +88,14 @@ urlpatterns = [
         name="api.applications.lists.evaluation.issue_count",
     ),
     re_path(
-        r"^api/bkapps/applications/lists/evaluation/type_count/$",
-        views.ApplicationListViewSet.as_view({"get": "list_evaluation_type_count"}),
-        name="api.applications.lists.evaluation.type_count",
-    ),
-    re_path(
         r"^api/bkapps/applications/lists/idle/$",
         views.ApplicationListViewSet.as_view({"get": "list_idle"}),
         name="api.applications.lists.idle",
+    ),
+    re_path(
+        r"^api/bkapps/applications/lists/statistics/$",
+        views.ApplicationListViewSet.as_view({"get": "list_statistics"}),
+        name="api.applications.lists.statistics",
     ),
     re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/members/$",

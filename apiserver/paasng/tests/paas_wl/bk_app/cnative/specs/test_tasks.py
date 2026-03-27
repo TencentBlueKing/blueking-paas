@@ -102,19 +102,22 @@ class TestDeployStatusHandler:
         assert dp.reason == "internal"
 
     def test_handle_ready(self, dp, poller):
-        DeployStatusHandler().handle(
-            result=CallbackResult(
-                status=CallbackStatus.NORMAL,
-                data=AbortedDetails(
-                    aborted=False,
-                    extra_data={
-                        "state": ModelResState(DeployStatus.READY, "ready", "foo ready"),
-                        "last_update": arrow.get("2020-10-10").datetime,
-                    },
-                ).dict(),
-            ),
-            poller=poller,
-        )
+        with patch(
+            "paasng.platform.engine.deploy.bg_wait.wait_bkapp.cleanup_volume_source_by_snapshot"
+        ) as mock_cleanup:
+            DeployStatusHandler().handle(
+                result=CallbackResult(
+                    status=CallbackStatus.NORMAL,
+                    data=AbortedDetails(
+                        aborted=False,
+                        extra_data={
+                            "state": ModelResState(DeployStatus.READY, "ready", "foo ready"),
+                            "last_update": arrow.get("2020-10-10").datetime,
+                        },
+                    ).dict(),
+                ),
+                poller=poller,
+            )
 
         dp.refresh_from_db()
         # Assert deploy has been updated
@@ -122,6 +125,17 @@ class TestDeployStatusHandler:
         assert dp.reason == "ready"
         assert dp.message == "foo ready"
         assert dp.last_transition_time.date() == datetime.date(2020, 10, 10)
+        # Assert cleanup is triggered on successful deploy
+        mock_cleanup.assert_called_once_with(dp.environment)
+
+    def test_handle_ready_triggers_cleanup(self, dp, poller):
+        """Verify cleanup_volume_source_by_snapshot is called only when deploy status is READY."""
+        with patch(
+            "paasng.platform.engine.deploy.bg_wait.wait_bkapp.cleanup_volume_source_by_snapshot"
+        ) as mock_cleanup:
+            # ERROR status should NOT trigger cleanup
+            DeployStatusHandler().handle(result=CallbackResult(status=CallbackStatus.EXCEPTION), poller=poller)
+            mock_cleanup.assert_not_called()
 
     def test_is_interrupted(self, dp, poller):
         DeployStatusHandler().handle(

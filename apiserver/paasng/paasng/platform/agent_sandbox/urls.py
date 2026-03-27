@@ -17,7 +17,12 @@
 
 from django.urls import path
 
-from .views import AgentSandboxFSViewSet, AgentSandboxProcessViewSet, AgentSandboxViewSet
+from .views import (
+    AgentSandboxAPIPermissionViewSet,
+    AgentSandboxFSViewSet,
+    AgentSandboxProcessViewSet,
+    AgentSandboxViewSet,
+)
 
 urlpatterns = [
     path(
@@ -67,5 +72,11 @@ urlpatterns = [
         "api/agent_sandbox/sandboxes/<str:sandbox_id>/logs",
         AgentSandboxProcessViewSet.as_view({"get": "logs"}),
         name="agent_sandbox.process.logs",
+    ),
+    # System API for granting Agent Sandbox permissions
+    path(
+        "sys/api/agent_sandbox/permissions/grant/",
+        AgentSandboxAPIPermissionViewSet.as_view({"post": "grant_permissions"}),
+        name="agent_sandbox.permissions.grant",
     ),
 ]

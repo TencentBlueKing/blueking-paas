@@ -18,18 +18,20 @@ from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.applications.models import Application
 
 
-class IsVerifiedAppPermission(BaseAppPermission):
-    """校验请求来源的应用是否已认证"""
+class IsAPIGWVerifiedApp(BaseAppPermission):
+    """校验请求是否经由 API Gateway 转发，且来源应用已通过认证。"""
 
     message = "Request must come from API Gateway with a verified app."
 
     def has_permission(self, request, view) -> bool:
+        """检查请求中是否携带经网关认证的应用信息（request.app 由 ApiGatewayJWTAppMiddleware 注入）。如果未携带，则没有权限。"""
         app = getattr(request, "app", None)
         if not app:
             return False
         return bool(app.verified)
 
     def has_object_permission(self, request, view, obj: Application) -> bool:
+        """检查请求来源应用是否与目标应用一致，如果不一致，则没有权限。"""
         app = getattr(request, "app", None)
         if not app:
             return False

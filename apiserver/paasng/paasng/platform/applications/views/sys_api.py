@@ -30,6 +30,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -255,7 +256,7 @@ class LightAppViewSet(viewsets.ViewSet):
         app_logo_storage.save(logo_name, logo_file)
         bucket = settings.APP_LOGO_BUCKET
         try:
-            from paasng.platform.applications.handlers import initialize_app_logo_metadata
+            from paasng.platform.applications.handlers import initialize_app_logo_metadata  # noqa: PLC0415
 
             initialize_app_logo_metadata(Application._meta.get_field("logo").storage, bucket, logo_name)
         except Exception:
@@ -307,14 +308,15 @@ class SysAppViewSet(viewsets.ViewSet):
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
         application = create_third_app(
-            data["region"],
             data["code"],
             data["name_zh_cn"],
             data["name_en"],
             operator,
-            data["app_tenant_mode"],
-            data["app_tenant_id"],
-            data["tenant_id"],
+            app_tenant_info=AppTenantInfo(
+                app_tenant_mode=data["app_tenant_mode"],
+                app_tenant_id=data["app_tenant_id"],
+                tenant_id=data["tenant_id"],
+            ),
         )
         # 返回应用的密钥信息
         secret = get_oauth2_client_secret(application.code)

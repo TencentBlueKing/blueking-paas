@@ -96,6 +96,7 @@ class UpdateApplicationNameSLZ(serializers.Serializer):
         elif get_language() == "en":
             update_fields["name_en"] = data["name_en"]
 
+        # FIXME: 仅校验, 不更新
         try:
             prepare_change_application_name.send(sender=self.__class__, code=self.instance.code, **update_fields)
         except IntegrityError as e:

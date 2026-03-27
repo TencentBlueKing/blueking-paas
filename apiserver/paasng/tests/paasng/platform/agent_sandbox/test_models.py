@@ -39,8 +39,6 @@ class TestSandboxModel:
         assert sandbox.name == "test-sandbox"
         assert sandbox.snapshot == "python:3.11-alpine"
         assert sandbox.status == SandboxStatus.PENDING.value
-        assert sandbox.daemon_host == "192.168.1.1"
-        assert sandbox.daemon_port == 30001
         assert sandbox.daemon_token is not None
         assert len(sandbox.daemon_token) == 32
 

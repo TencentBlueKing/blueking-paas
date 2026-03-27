@@ -20,9 +20,10 @@
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
-import datetime
+from __future__ import annotations
+
 import json
-from typing import Any, Dict, List, Literal, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union
 
 from pydantic import BaseModel, Field, validator
 
@@ -35,7 +36,10 @@ from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.structure import register
 
-from .metadata import ObjectMetadata
+if TYPE_CHECKING:
+    import datetime
+
+    from .metadata import ObjectMetadata
 
 
 class MetaV1Condition(BaseModel):
@@ -182,7 +186,7 @@ class BkAppProcess(BaseModel):
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None
-    terminationGracePeriodSeconds: int | None = None
+    gracefulShutdownSeconds: int | None = None
     components: List[ProcComponent] | None = None
 
 

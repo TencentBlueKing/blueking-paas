@@ -15,12 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from __future__ import annotations
+
 import json
 import logging
 import shlex
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
@@ -62,7 +64,6 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
@@ -88,6 +89,9 @@ from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
 from paasng.utils.camel_converter import dict_to_camel
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +213,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
-                termination_grace_period_seconds=process_spec.termination_grace_period_seconds,
+                graceful_shutdown_seconds=process_spec.graceful_shutdown_seconds,
                 components=process_spec.components,
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))

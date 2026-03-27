@@ -15,18 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from __future__ import annotations
+
 import shlex
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import Field
 
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
-from .components import Component
-from .probes import ProbeSet
-from .proc_service import ProcService
-from .scaling_config import AutoscalingConfig
+if TYPE_CHECKING:
+    from .components import Component
+    from .probes import ProbeSet
+    from .proc_service import ProcService
+    from .scaling_config import AutoscalingConfig
 
 
 class Process(AllowNotsetModel):
@@ -43,7 +46,7 @@ class Process(AllowNotsetModel):
     :param res_quota_plan: 资源配额套餐名
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
-    :param termination_grace_period_seconds: 优雅终止时间
+    :param graceful_shutdown_seconds: 优雅终止时间
     :param components: 进程组件
     """
 
@@ -61,7 +64,7 @@ class Process(AllowNotsetModel):
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None
-    termination_grace_period_seconds: Optional[int] = None
+    graceful_shutdown_seconds: Optional[int] = None
 
     components: List[Component] | None = None
 

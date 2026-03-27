@@ -56,7 +56,7 @@ class TestCreateAppResource:
                         "resQuotaPlan": None,
                         "autoscaling": None,
                         "probes": None,
-                        "terminationGracePeriodSeconds": None,
+                        "gracefulShutdownSeconds": None,
                     }
                 ],
                 "hooks": None,

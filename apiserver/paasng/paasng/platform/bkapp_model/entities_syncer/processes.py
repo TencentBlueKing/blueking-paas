@@ -15,17 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, Iterable, List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List
 
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.entities import Process
-from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.modules.models import Module
 from paasng.utils.structure import NOTSET, NotSetType
 
 from .result import CommonSyncResult
+
+if TYPE_CHECKING:
+    from paasng.platform.bkapp_model.entities import Process
+    from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig
+    from paasng.platform.modules.models import Module
 
 
 def sync_processes(
@@ -62,7 +66,7 @@ def sync_processes(
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,
-            "termination_grace_period_seconds": process.termination_grace_period_seconds,
+            "graceful_shutdown_seconds": process.graceful_shutdown_seconds,
             "components": process.components,
         }
         if not use_proc_command:

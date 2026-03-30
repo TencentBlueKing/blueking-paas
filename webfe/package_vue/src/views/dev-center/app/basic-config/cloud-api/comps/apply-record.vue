@@ -126,7 +126,7 @@
                 </template>
               </template>
               <template v-else>
-                {{ row.api_name }}
+                {{ row.gateway_name}}
               </template>
             </template>
           </bk-table-column>
@@ -590,7 +590,7 @@ export default {
             ? this.curRecord.name
             : this.isComponentApi
             ? this.curRecord.system_name
-            : this.curRecord.api_name,
+            : this.curRecord.gateway_name,
           show: true,
         }
       );

@@ -116,7 +116,7 @@
             :filter-multiple="true"
           >
             <template slot-scope="{ row }">
-              {{ row[isComponentApi ? 'system_name' : 'api_name'] || '--' }}
+              {{ row[isComponentApi ? 'system_name' : 'gateway_name'] || '--' }}
             </template>
           </bk-table-column>
           <bk-table-column

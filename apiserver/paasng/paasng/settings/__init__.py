@@ -1600,7 +1600,7 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
 )
 
 # ---------------------------------------------
-# Agent Sandbox 镜像仓库配置。该仓库用于存储面向沙箱环境的业务镜像，例如 skill 镜像等
+# Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等
 # ---------------------------------------------
 # 镜像仓库的域名
 AGENT_SANDBOX_DOCKER_REGISTRY_HOST = settings.get("AGENT_SANDBOX_DOCKER_REGISTRY_HOST", APP_DOCKER_REGISTRY_HOST)
@@ -1619,6 +1619,9 @@ AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD = settings.get(
     "AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD", APP_DOCKER_REGISTRY_PASSWORD
 )
 
+# ---------------------------------------------
+# Agent Sandbox 制品存储配置，用于存储构建过程中的中间制品和 daemon 二进制
+# ---------------------------------------------
 # 用于存储 Agent Sandbox 相关中间制品的 bucket
 AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkpaas3-sandbox-packages")
 # 存放 sandbox daemon 二进制的 bucket 和 key

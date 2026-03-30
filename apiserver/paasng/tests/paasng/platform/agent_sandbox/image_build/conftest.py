@@ -17,13 +17,13 @@
 
 import pytest
 
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 
 @pytest.fixture()
-def build() -> ImageBuild:
-    """Create an ImageBuild record for testing."""
-    return ImageBuild.objects.create(
+def build() -> ImageBuildRecord:
+    """Create an ImageBuildRecord for testing."""
+    return ImageBuildRecord.objects.create(
         app_code="test_aidev",
         source_url="https://example.com/source.tar.gz",
         image_name="my-app",

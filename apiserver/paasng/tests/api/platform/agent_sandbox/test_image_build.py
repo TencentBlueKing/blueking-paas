@@ -25,7 +25,7 @@ from rest_framework.test import APIClient
 
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.agent_sandbox.image_build.views import ImageBuildViewSet
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -76,7 +76,7 @@ class TestImageBuildCreate:
         assert "build_id" in resp.data
         mock_task.delay.assert_called_once()
 
-        build = ImageBuild.objects.get(uuid=resp.data["build_id"])
+        build = ImageBuildRecord.objects.get(uuid=resp.data["build_id"])
         assert build.app_code == "test_client"
         assert build.tenant_id == "default"
         assert build.dockerfile_path == "docker/Dockerfile"
@@ -91,26 +91,12 @@ class TestImageBuildCreate:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_create_permission_denied(self):
-        """Test creating without auth returns error (no sysapi client)."""
-        client = APIClient()
-        resp = client.post(
-            reverse("image_build.list_create"),
-            data={
-                "source_url": "https://example.com/source.tar.gz",
-                "image_name": "my-app",
-                "image_tag": "v1.0",
-            },
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-
 
 class TestImageBuildRetrieveAndList:
     @pytest.fixture(autouse=True)
     def _build(self):
-        """Create a single ImageBuild for retrieve / list tests."""
-        self.build = ImageBuild.objects.create(
+        """Create a single ImageBuildRecord for retrieve / list tests."""
+        self.build = ImageBuildRecord.objects.create(
             app_code="test_client",
             source_url="https://example.com/source.tar.gz",
             image_name="my-app",

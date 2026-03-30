@@ -32,7 +32,7 @@ from paasng.platform.agent_sandbox.image_build.serializers import (
     ImageBuildResultSLZ,
 )
 from paasng.platform.agent_sandbox.image_build.tasks import run_image_build
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class ImageBuildViewSet(viewsets.ViewSet):
     """Agent Sandbox 镜像构建相关接口（System API）。"""
 
-    permission_classes = [sysapi_client_perm_class(ClientAction.BUILD_IMAGE)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.BUILD_SANDBOX_IMAGE)]
 
     @swagger_auto_schema(
         tags=["image_build"],
@@ -54,7 +54,7 @@ class ImageBuildViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        build = ImageBuild.objects.create(
+        build = ImageBuildRecord.objects.create(
             app_code=request.app.bk_app_code,
             source_url=data["source_url"],
             image_name=data["image_name"],
@@ -74,7 +74,7 @@ class ImageBuildViewSet(viewsets.ViewSet):
     )
     def retrieve(self, request, build_id):
         """按构建 ID 查询构建结果。"""
-        build = get_object_or_404(ImageBuild, uuid=build_id, app_code=request.app.bk_app_code)
+        build = get_object_or_404(ImageBuildRecord, uuid=build_id, app_code=request.app.bk_app_code)
         return Response(ImageBuildResultSLZ(build).data)
 
     @swagger_auto_schema(
@@ -88,7 +88,7 @@ class ImageBuildViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        queryset = ImageBuild.objects.filter(app_code=request.app.bk_app_code)
+        queryset = ImageBuildRecord.objects.filter(app_code=request.app.bk_app_code)
         if image_name := data.get("image_name"):
             queryset = queryset.filter(image_name=image_name)
         if image_tag := data.get("image_tag"):

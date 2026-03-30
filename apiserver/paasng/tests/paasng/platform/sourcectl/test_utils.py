@@ -17,19 +17,19 @@
 
 from pathlib import Path
 
-from paasng.platform.sourcectl.utils import find_extracted_root
+from paasng.platform.sourcectl.utils import find_content_root
 
 
-class TestFindExtractedRoot:
+class TestFindContentRoot:
     def test_single_top_level_dir(self, tmp_path: Path):
         """When archive extracts to a single directory, return that directory."""
         inner = tmp_path / "myproject"
         inner.mkdir()
         (inner / "app.py").write_text("print('hi')")
-        assert find_extracted_root(tmp_path) == inner
+        assert find_content_root(tmp_path) == inner
 
     def test_multiple_entries(self, tmp_path: Path):
         """When archive extracts to multiple entries, return the extract dir itself."""
         (tmp_path / "app.py").write_text("print('hi')")
         (tmp_path / "Dockerfile").write_text("FROM python:3.11")
-        assert find_extracted_root(tmp_path) == tmp_path
+        assert find_content_root(tmp_path) == tmp_path

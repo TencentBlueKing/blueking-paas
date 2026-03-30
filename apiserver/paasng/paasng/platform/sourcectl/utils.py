@@ -202,7 +202,7 @@ def _generate_temp_file_(suffix="") -> Iterator[Path]:
 generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)
 
 
-def find_extracted_root(extract_dir: Path) -> Path:
+def find_content_root(extract_dir: Path) -> Path:
     """Locate the content root directory after extracting an archive.
 
     Archives may be packed in two common layouts:

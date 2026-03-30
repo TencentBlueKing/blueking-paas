@@ -22,3 +22,7 @@ class CreateRedisFailed(Exception):
 
 class DeleteRedisFailed(Exception):
     pass
+
+
+class InstanceContextMissingError(Exception):
+    """实例上下文缺失"""

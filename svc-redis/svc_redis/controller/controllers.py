@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import base64
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -22,7 +23,10 @@ from abc import ABC, abstractmethod
 from svc_redis.cluster.models import TencentCLBListener
 from svc_redis.resources.base.base import get_client_by_cluster_name
 from svc_redis.resources.base.crd import KServiceMonitor, Redis, RedisReplication
+from svc_redis.resources.base.exceptions import ResourceMissing
 from svc_redis.resources.base.kres import KNamespace, KSecret, KService, KStatefulSet
+from svc_redis.vendor.exceptions import InstanceContextMissingError
+from svc_redis.vendor.models import InstanceBill
 from svc_redis.vendor.redis_crd.constants import DEFAULT_REDIS_PORT, RedisType
 
 from .entities import RedisEndpoint, RedisInstanceCredential, RedisPlanConfig
@@ -47,7 +51,7 @@ class RedisInstanceController:
         self.client = get_client_by_cluster_name(self.plan_config.cluster_name)
         self.KRedis = self._get_redis_kresource()
 
-    def create(self) -> RedisInstanceCredential:
+    def create(self, bill: InstanceBill) -> RedisInstanceCredential:
         """
         创建 Redis 实例
 
@@ -58,17 +62,37 @@ class RedisInstanceController:
         4. 创建 Redis 服务资源
         5. 检测 Redis StatefulSet 副本是否就绪
         """
-        self._ensure_namespace()
-        password = self._deploy_redis_password_secret()
-        self._deploy_redis_resource()
-        endpoint = self._deploy_and_get_endpoint()
-        self._deploy_redis_service_monitor()
-        self._check_redis_status()
+        with bill.lock_for_creation() as acquired:
+            if acquired:
+                # 仅拿到锁时执行创建流程，避免多个创建流程同时进行导致冲突
+                self._create(bill)
+            self._check_redis_status()
+
+        bill.refresh_from_db()
+        context = bill.get_context()
+        endpoint = context.get("endpoint")
+        password = context.get("password")
+
+        if not endpoint or not password:
+            raise InstanceContextMissingError("Redis instance context missing endpoint or password")
+
         return RedisInstanceCredential(
-            host=endpoint.host,
-            port=endpoint.port,
+            host=endpoint["host"],
+            port=endpoint["port"],
             password=password,
         )
+
+    def _create(self, bill: InstanceBill) -> None:
+        with bill.log_context() as context:
+            self._ensure_namespace()
+
+            context["password"] = self._deploy_redis_password_secret()
+            self._deploy_redis_resource()
+
+            if context.get("endpoint") is None:
+                context["endpoint"] = self._deploy_and_get_endpoint().model_dump()
+
+            self._deploy_redis_service_monitor()
 
     def delete(self, credential: RedisInstanceCredential):
         """删除 namespace 以删除所有资源"""
@@ -102,7 +126,7 @@ class RedisInstanceController:
             return
 
         manifest = get_service_monitor_manifest()
-        KServiceMonitor(self.client, api_version=manifest["apiVersion"]).create(
+        KServiceMonitor(self.client, api_version=manifest["apiVersion"]).get_or_create(
             name="svc-redis-prometheus-monitoring", body=manifest, namespace=self.namespace
         )
 
@@ -115,6 +139,12 @@ class RedisInstanceController:
 
     def _deploy_redis_password_secret(self) -> str:
         """创建 Redis 密码 Secret"""
+        try:
+            secret = KSecret(self.client).get(name="redis-secret", namespace=self.namespace)
+            return base64.b64decode(secret.data["password"]).decode("utf-8")
+        except ResourceMissing:
+            pass
+
         from paas_service.utils import generate_password
 
         password = generate_password()
@@ -125,7 +155,7 @@ class RedisInstanceController:
     def _deploy_redis_resource(self):
         """创建 Redis 实例资源(Redis CRD Instance)"""
         manifest = get_redis_resource(self.plan_config).to_deployable()
-        self.KRedis(self.client, api_version=manifest["apiVersion"]).create(
+        self.KRedis(self.client, api_version=manifest["apiVersion"]).get_or_create(
             name=generate_redis_name(), body=manifest, namespace=self.namespace
         )
 
@@ -228,7 +258,7 @@ class ServiceExporterFactory:
     @staticmethod
     def create_exporter(
         export_type: str,
-        cluster_name: str = None,
+        cluster_name: str | None = None,
     ) -> ServiceExporter:
         """
         根据类型创建对应的Exporter

@@ -19,13 +19,16 @@ import logging
 from dataclasses import dataclass
 from typing import Dict
 
+from django.core.exceptions import MultipleObjectsReturned
 from paas_service.base_vendor import BaseProvider, InstanceData
 
 from svc_redis.controller.controllers import RedisInstanceController
 from svc_redis.controller.entities import RedisInstanceCredential, RedisPlanConfig
 from svc_redis.vendor.utils import gen_unique_id
 
-from .exceptions import CreateRedisFailed, DeleteRedisFailed
+from .constants import InstanceStatus
+from .exceptions import CreateRedisFailed, DeleteRedisFailed, InstanceContextMissingError
+from .models import InstanceBill
 
 logger = logging.getLogger(__name__)
 
@@ -77,21 +80,43 @@ class Provider(BaseProvider):
         """
         logger.info("Creating service instance...")
 
+        engine_app_name = params.get("engine_app_name")
+        if not engine_app_name:
+            raise ValueError("Missing required parameter: params.engine_app_name")
+
+        try:
+            bill, _ = InstanceBill.objects.get_or_create(
+                engine_app_name=engine_app_name, instance_status=InstanceStatus.CREATING
+            )
+        except MultipleObjectsReturned:
+            # get_or_create 可能并发创建
+            bill = InstanceBill.objects.filter(engine_app_name=engine_app_name, action="create").first()
+            for ins in InstanceBill.objects.filter(engine_app_name=engine_app_name, action="create").exclude(
+                uuid=bill.uuid
+            ):
+                ins.mark_error("duplicate bill, may lead to zombie instance")
+            logger.warning("multiple bills found for engine_app_name=%s, action=create", engine_app_name)
+
         # 创建唯一的 namespace
-        preferred_name = str(params.get("engine_app_name"))
+        preferred_name = str(engine_app_name)
         uid = gen_unique_id(preferred_name)
         # 为了 namespace 更具可读性，添加前缀
-        namespace = f"svc-redis-{uid}"
+        with bill.log_context() as context:
+            namespace = context.setdefault("namespace", f"svc-redis-{uid}")
 
         try:
             controller = RedisInstanceController(self.plan_config, namespace)
-            credential = controller.create()
+            credential = controller.create(bill)
         except Exception as e:
+            if isinstance(e, InstanceContextMissingError):
+                bill.mark_error(str(e))
             # 如果资源申请失败，实例保持未分配状态
             logger.exception("Resource allocation failed")
             raise CreateRedisFailed("Resource allocation failed") from e
 
-        return InstanceData(credentials=credential.dict(), config={"namespace": namespace})
+        return InstanceData(
+            credentials=credential.model_dump(), config={"namespace": namespace, "bill": bill.uuid.hex}
+        )
 
     def delete(self, instance_data: InstanceData):
         """删除 Redis 实例
@@ -101,6 +126,8 @@ class Provider(BaseProvider):
         logger.info("Deleting service instance...")
         db_info = instance_data.credentials
 
+        bill = InstanceBill.objects.filter(uuid=instance_data.config.get("bill")).first()
+
         credential = RedisInstanceCredential(host=db_info["host"], port=db_info["port"], password=db_info["password"])
         namespace = str(instance_data.config.get("namespace"))
         try:
@@ -109,6 +136,17 @@ class Provider(BaseProvider):
         except Exception as e:
             logger.exception("Resource delete failed")
             raise DeleteRedisFailed("Resource delete failed") from e
+        if bill is not None:
+            bill.instance_status = InstanceStatus.DELETED
+            bill.save()
+
+    def on_async_delete_request(self, instance_data: InstanceData):
+        if not instance_data.config.get("bill"):
+            # 兼容历史数据
+            return
+        bill = InstanceBill.objects.get(uuid=instance_data.config["bill"])
+        bill.instance_status = InstanceStatus.ASYNC_DELETE
+        bill.save()
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError

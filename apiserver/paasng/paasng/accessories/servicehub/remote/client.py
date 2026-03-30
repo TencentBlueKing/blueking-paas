@@ -86,6 +86,7 @@ class RemoteSvcConfig:
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
+        self.create_instance_v2_url = urljoin(self.endpoint_url, "services/{service_id}/instances/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
         self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定
@@ -208,6 +209,19 @@ class RemoteServiceClient:
         :return: <instance dict>
         """
         url = self.config.create_instance_url.format(service_id=service_id, instance_id=instance_id)
+        payload = {"plan_id": plan_id, "params": params}
+        with wrap_request_exc(self):
+            resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
+            self.validate_resp(resp)
+            return resp.json()
+
+    def provision_instance_v2(self, service_id: str, plan_id: str, params: Dict) -> Dict:
+        """Provision a new instance v2, (no instance_id)
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.create_instance_v2_url.format(service_id=service_id)
         payload = {"plan_id": plan_id, "params": params}
         with wrap_request_exc(self):
             resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)

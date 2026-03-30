@@ -45,7 +45,7 @@ class ImageBuildQuerySLZ(serializers.Serializer):
 class ImageBuildResultSLZ(serializers.Serializer):
     build_id = serializers.UUIDField(source="uuid")
     status = serializers.CharField()
-    output_image = serializers.CharField(help_text="完整的镜像输出地址")
+    output_image = serializers.CharField(help_text="完整的输出镜像地址")
     build_logs = serializers.SerializerMethodField()
     started_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField()

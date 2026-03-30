@@ -22,7 +22,7 @@ from celery import shared_task
 from paasng.platform.agent_sandbox.image_build.builder import KanikoBuildExecutor
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.agent_sandbox.image_build.source_prepare import prepare_source
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +31,19 @@ logger = logging.getLogger(__name__)
 def run_image_build(build_id: str):
     """异步执行镜像构建任务。"""
     try:
-        build = ImageBuild.objects.get(uuid=build_id)
-    except ImageBuild.DoesNotExist:
-        logger.exception("ImageBuild %s not found", build_id)
+        build = ImageBuildRecord.objects.get(uuid=build_id)
+    except ImageBuildRecord.DoesNotExist:
+        logger.exception("ImageBuildRecord %s not found", build_id)
         return
 
-    build.start_build()
+    build.mark_as_building()
 
     # 预处理构建包，注入 sandbox daemon 二进制
     try:
         prepare_source(build)
     except Exception:
         logger.exception("Source preparation failed for build %s", build_id)
-        build.finish_build(
+        build.mark_as_completed(
             ImageBuildStatus.FAILED,
             build_logs="Source preparation failed",
         )

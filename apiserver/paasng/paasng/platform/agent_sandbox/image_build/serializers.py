@@ -15,7 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import TYPE_CHECKING
+
 from rest_framework import serializers
+
+if TYPE_CHECKING:
+    from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 
 class ImageBuildCreateInputSLZ(serializers.Serializer):
@@ -40,7 +45,12 @@ class ImageBuildQuerySLZ(serializers.Serializer):
 class ImageBuildResultSLZ(serializers.Serializer):
     build_id = serializers.UUIDField(source="uuid")
     status = serializers.CharField()
-    output_image = serializers.CharField()
-    build_logs = serializers.CharField()
+    output_image = serializers.CharField(help_text="完整的镜像输出地址")
+    build_logs = serializers.SerializerMethodField()
     started_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField()
+
+    def get_build_logs(self, obj: "ImageBuildRecord") -> str:
+        if not obj.completed_at:
+            return f"Building image {obj.output_image} ..."
+        return obj.log.content

@@ -22,15 +22,15 @@ from django.conf import settings
 
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.image_build.builder import KanikoBuildExecutor
+from paasng.platform.agent_sandbox.image_build.builder import _DEFAULT_BUILD_TIMEOUT, KanikoBuildExecutor
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def executor(build: ImageBuild) -> KanikoBuildExecutor:
+def executor(build: ImageBuildRecord) -> KanikoBuildExecutor:
     """Create a KanikoBuildExecutor with K8s dependencies mocked out."""
     _module = "paasng.platform.agent_sandbox.image_build.builder"
     with (
@@ -41,7 +41,7 @@ def executor(build: ImageBuild) -> KanikoBuildExecutor:
         return KanikoBuildExecutor(build)
 
 
-def test_build_env_vars(executor: KanikoBuildExecutor, build: ImageBuild):
+def test_build_env_vars(executor: KanikoBuildExecutor, build: ImageBuildRecord):
     source_get_url = "https://presigned.url/source"
 
     with mock.patch.object(executor, "_generate_source_get_url", return_value=source_get_url):
@@ -60,37 +60,34 @@ def test_build_env_vars(executor: KanikoBuildExecutor, build: ImageBuild):
 
 
 class TestWaitPodCompletion:
-    def test_successful_build(self, executor: KanikoBuildExecutor, build: ImageBuild):
+    def test_successful_build(self, executor: KanikoBuildExecutor):
         executor.kpod = mock.MagicMock()
         executor.kpod.wait_for_status.return_value = PodPhase.SUCCEEDED
         executor.kpod.get_log.return_value = mock.MagicMock(data="Build successful!")
 
-        executor._wait_pod_completion()
+        status, build_logs = executor._wait_pod_completion()
 
-        build.refresh_from_db()
-        assert build.status == ImageBuildStatus.SUCCESSFUL.value
-        assert build.build_logs == "Build successful!"
-        assert build.completed_at is not None
+        assert status == ImageBuildStatus.SUCCESSFUL
+        assert build_logs == "Build successful!"
 
-    def test_failed_build(self, executor: KanikoBuildExecutor, build: ImageBuild):
+    def test_failed_build(self, executor: KanikoBuildExecutor):
         executor.kpod = mock.MagicMock()
         executor.kpod.wait_for_status.return_value = PodPhase.FAILED
         executor.kpod.get_log.return_value = mock.MagicMock(data="Error: build failed")
 
-        executor._wait_pod_completion()
+        status, build_logs = executor._wait_pod_completion()
 
-        build.refresh_from_db()
-        assert build.status == ImageBuildStatus.FAILED.value
-        assert build.build_logs == "Error: build failed"
-        assert build.completed_at is not None
+        assert status == ImageBuildStatus.FAILED
+        assert build_logs == "Error: build failed"
 
-    def test_timeout(self, executor: KanikoBuildExecutor, build: ImageBuild):
+    def test_timeout(self, executor: KanikoBuildExecutor):
         executor.kpod = mock.MagicMock()
-        executor.kpod.wait_for_status.side_effect = ReadTargetStatusTimeout(pod_name="test-pod", max_seconds=300)
+        executor.kpod.wait_for_status.side_effect = ReadTargetStatusTimeout(
+            pod_name="test-pod", max_seconds=_DEFAULT_BUILD_TIMEOUT
+        )
         executor.kpod.get_log.return_value = mock.MagicMock(data="Start building...")
 
-        executor._wait_pod_completion()
+        status, build_logs = executor._wait_pod_completion()
 
-        build.refresh_from_db()
-        assert build.status == ImageBuildStatus.FAILED.value
-        assert build.build_logs == "Start building...\n\nBuild timed out after 300 seconds"
+        assert status == ImageBuildStatus.FAILED
+        assert build_logs == f"Start building...\n\nBuild timed out after {_DEFAULT_BUILD_TIMEOUT} seconds"

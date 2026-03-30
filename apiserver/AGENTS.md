@@ -35,8 +35,6 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
     - Download via URL (HTTP/S3/bkrepo): use `paasng.platform.sourcectl.package.downloader.download_file_via_url`, which supports both HTTP/HTTPS and BlobStore protocols.
     - Download from BlobStore by bucket+key: use `paasng.utils.blobstore.download_file_from_blob_store` instead of manually calling `make_blob_store()` then `store.download_file()`.
     - Upload: use `paasng.platform.sourcectl.package.uploader.upload_to_blob_store`, which handles upload logic and `ObjectAlreadyExists` errors. If the target bucket differs from the default `BLOBSTORE_BUCKET_AP_PACKAGES`, you may keep custom upload logic but should still create the store instance via `paasng.utils.blobstore.make_blob_store`.
-    - URL parsing: use `paasng.platform.sourcectl.package.utils.parse_url` to parse full URLs containing store_type, bucket, and key.
-* Never write raw `requests.get` calls to download files.
 
 ### Creating new REST APIs
 

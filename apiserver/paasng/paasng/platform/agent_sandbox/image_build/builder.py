@@ -22,15 +22,16 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from six import ensure_text
 
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import CreateServiceAccountTimeout, ReadTargetStatusTimeout
+from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.base.kres import KNamespace, KPod
 from paas_wl.utils.constants import PodPhase
 from paas_wl.utils.text import b64encode
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
-from paasng.platform.agent_sandbox.models import ImageBuild
+from paasng.platform.agent_sandbox.models import ImageBuildRecord
 from paasng.utils.blobstore import make_blob_store
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
@@ -39,8 +40,8 @@ logger = logging.getLogger(__name__)
 # Namespace for image build pods
 IMAGE_BUILD_NAMESPACE = "bkpaas-img-build"
 
-# Default build timeout: 5 minutes
-_DEFAULT_BUILD_TIMEOUT = 5 * 60
+# Default build timeout: 10 minutes
+_DEFAULT_BUILD_TIMEOUT = 10 * 60
 
 
 class KanikoBuildExecutor:
@@ -50,9 +51,9 @@ class KanikoBuildExecutor:
     status checking, and Pod cleanup.
     """
 
-    def __init__(self, build: ImageBuild):
+    def __init__(self, build: ImageBuildRecord):
         """
-        :param build: An ImageBuild model instance.
+        :param build: An ImageBuildRecord model instance.
         """
         self.build = build
 
@@ -66,19 +67,24 @@ class KanikoBuildExecutor:
     def execute(self):
         """Run the full build lifecycle.
 
-        All exceptions are handled internally; ``build.finish_build`` is
+        All exceptions are handled internally; ``build.mark_as_completed`` is
         guaranteed to be called before this method returns.
         """
         try:
             self._ensure_namespace()
-            self._create_build_pod()
-            self._wait_pod_completion()
         except Exception:
-            logger.exception("Unexpected error during image build %s", self.build.uuid)
-            self.build.finish_build(
-                ImageBuildStatus.FAILED,
-                build_logs="Unexpected error during image build",
-            )
+            logger.exception("Failed to ensure namespace for image build %s", self.build.uuid)
+            self.build.mark_as_completed(ImageBuildStatus.FAILED, build_logs="Failed to ensure build namespace")
+            return
+
+        try:
+            self._create_build_pod()
+        except Exception:
+            logger.exception("Failed to create build pod for image build %s", self.build.uuid)
+            self.build.mark_as_completed(ImageBuildStatus.FAILED, build_logs="Failed to create build pod")
+        else:
+            status, build_logs = self._wait_pod_completion()
+            self.build.mark_as_completed(status, build_logs=build_logs)
         finally:
             self._cleanup_pod()
 
@@ -88,7 +94,7 @@ class KanikoBuildExecutor:
             AllocationContext(
                 tenant_id=self.build.tenant_id,
                 region=settings.DEFAULT_REGION_NAME,
-                usage="agent_sandbox",
+                usage=ClusterUsage.AGENT_SANDBOX,
                 # agent_sandbox 不区分环境
                 environment="",
             )
@@ -98,11 +104,7 @@ class KanikoBuildExecutor:
     def _ensure_namespace(self):
         """Ensure the build namespace exists."""
         self.kns.get_or_create(name=self.namespace)
-        try:
-            self.kns.wait_for_default_sa(self.namespace, timeout=15)
-        except CreateServiceAccountTimeout:
-            logger.exception("timeout while waiting for the default sa of %s to be created", self.namespace)
-            raise
+        self.kns.wait_for_default_sa(self.namespace, timeout=15)
 
     def _build_env_vars(self) -> list[dict]:
         """Build the environment variables for the Kaniko Pod."""
@@ -115,13 +117,15 @@ class KanikoBuildExecutor:
             "CACHE_REPO": f"{output_image_info.domain}/{output_image_info.name}/dockerbuild-cache",
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
             "DOCKER_CONFIG_JSON": self._get_docker_config_json(),
-            "SKIP_TLS_VERIFY_REGISTRIES": settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST
-            if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY
-            else "",
+            "SKIP_TLS_VERIFY_REGISTRIES": (
+                settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST
+                if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+                else ""
+            ),
         }
 
         if self.build.docker_build_args:
-            # 避免 value 有 "," 导致字符分割是异常, 将内容进行 base64 编码
+            # 避免 value 有 "," 导致字符分割时异常, 将内容进行 base64 编码
             env_vars["BUILD_ARG"] = ",".join([b64encode(f"{k}={v}") for k, v in self.build.docker_build_args.items()])
 
         return [{"name": k, "value": str(v)} for k, v in env_vars.items()]
@@ -184,8 +188,11 @@ class KanikoBuildExecutor:
         }
         self.kpod.create_or_update(name=self.pod_name, namespace=self.namespace, body=pod_body)
 
-    def _wait_pod_completion(self):
-        """Wait for the build pod to finish, then read logs and persist the result."""
+    def _wait_pod_completion(self) -> tuple[ImageBuildStatus, str]:
+        """Wait for the build pod to finish, read logs, and return the result.
+
+        :returns: (status, build_logs) tuple.
+        """
         completion_statuses = {PodPhase.SUCCEEDED, PodPhase.FAILED}
         final_phase = PodPhase.RUNNING
         err_hint = ""
@@ -203,7 +210,7 @@ class KanikoBuildExecutor:
             err_hint = "\n\nUnexpected error while waiting for build pod"
 
         status = ImageBuildStatus.SUCCESSFUL if final_phase == PodPhase.SUCCEEDED else ImageBuildStatus.FAILED
-        self.build.finish_build(status, build_logs=self._read_pod_logs() + err_hint)
+        return status, self._read_pod_logs() + err_hint
 
     def _read_pod_logs(self) -> str:
         """Read all logs from the build pod."""

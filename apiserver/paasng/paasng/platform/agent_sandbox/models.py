@@ -22,6 +22,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -64,8 +65,7 @@ class SandboxManager(models.Manager):
             AllocationContext(
                 tenant_id=application.tenant_id,
                 region=application.region,
-                # Use agent_sandbox usage to allocate dedicated cluster for sandbox
-                usage="agent_sandbox",
+                usage=ClusterUsage.AGENT_SANDBOX,
                 # agent_sandbox 不区分环境
                 environment="",
             )
@@ -127,7 +127,7 @@ class Sandbox(UuidAuditedModel):
         unique_together = ("tenant_id", "application_id", "name")
 
 
-class ImageBuild(UuidAuditedModel):
+class ImageBuildRecord(UuidAuditedModel):
     """镜像构建记录，由第三方 sysapi client 发起，通过 Kaniko 等方式异步构建镜像。"""
 
     app_code = models.CharField(max_length=20, help_text="发起构建的应用 code，通常是 sysapi client 的 bk_app_code")
@@ -140,7 +140,6 @@ class ImageBuild(UuidAuditedModel):
         max_length=1024, default="", blank=True, help_text="预处理后上传到对象存储的源码包路径"
     )
     status = models.CharField(max_length=16, default=ImageBuildStatus.PENDING.value)
-    build_logs = models.TextField(default="", blank=True, help_text="构建容器的标准输出日志")
     started_at = models.DateTimeField(null=True, help_text="构建开始时间")
     completed_at = models.DateTimeField(null=True, help_text="构建完成时间")
     tenant_id = tenant_id_field_factory()
@@ -151,13 +150,13 @@ class ImageBuild(UuidAuditedModel):
     def __str__(self):
         return f"{self.uuid}-{self.image_name}:{self.image_tag}-{self.status}"
 
-    def start_build(self):
+    def mark_as_building(self):
         """将构建状态标记为"构建中"并记录开始时间。"""
         self.status = ImageBuildStatus.BUILDING.value
         self.started_at = timezone.now()
         self.save(update_fields=["status", "started_at", "updated"])
 
-    def finish_build(self, status: ImageBuildStatus, build_logs: str = ""):
+    def mark_as_completed(self, status: ImageBuildStatus, build_logs: str = ""):
         """将构建标记为终态（成功或失败），记录完成时间和日志。
 
         :param status: 终态，SUCCESSFUL 或 FAILED。
@@ -165,10 +164,21 @@ class ImageBuild(UuidAuditedModel):
         """
         self.status = status.value
         self.completed_at = timezone.now()
-        self.build_logs = build_logs
-        self.save(update_fields=["status", "build_logs", "completed_at", "updated"])
+        self.save(update_fields=["status", "completed_at", "updated"])
+        ImageBuildLog.objects.update_or_create(
+            build=self,
+            defaults={"content": build_logs, "tenant_id": self.tenant_id},
+        )
 
     @property
     def output_image(self) -> str:
         """完整的镜像输出地址"""
         return f"{settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST}/{settings.AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE}/{self.app_code}/{self.image_name}:{self.image_tag}"
+
+
+class ImageBuildLog(UuidAuditedModel):
+    """镜像构建日志，与 ImageBuildRecord 一对一关联"""
+
+    build = models.OneToOneField(ImageBuildRecord, db_constraint=False, on_delete=models.CASCADE, related_name="log")
+    content = models.TextField(default="", blank=True, help_text="构建容器的标准输出日志")
+    tenant_id = tenant_id_field_factory()

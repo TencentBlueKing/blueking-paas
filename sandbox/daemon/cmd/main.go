@@ -140,6 +140,8 @@ func (em *entrypointManager) Close() {
 }
 
 // runPreStartScript executes the pre-start script synchronously before the entrypoint.
+// It is designed for one-time initialization tasks that must complete before the main
+// server starts, such as installing dependencies, generating configuration files.
 // Returns nil if the script does not exist (skip) or executes successfully.
 func runPreStartScript(scriptPath string, timeout time.Duration) error {
 	if _, err := os.Stat(scriptPath); errors.Is(err, os.ErrNotExist) {

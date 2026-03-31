@@ -39,5 +39,9 @@ class SandboxExecError(SandboxError):
     """Raised when executing a command in the sandbox fails."""
 
 
+class SandboxServiceNotReady(SandboxError):
+    """Raised when the sandbox daemon service is not ready (e.g., 502 Bad Gateway)."""
+
+
 class SandboxDaemonAPIError(Exception):
     """Raised when the sandbox daemon API returns an error."""

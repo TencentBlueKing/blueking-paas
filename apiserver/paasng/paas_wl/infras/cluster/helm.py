@@ -44,11 +44,12 @@ class HelmClient:
 
     def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
         """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
-        for rel in self.list_releases(namespace):
-            if rel.chart.name == name:
-                return rel
-
-        return None
+        secrets = (
+            KSecret(self.client).ops_batch.list(labels={"owner": "helm", "name": name}, namespace=namespace).items
+        )
+        latest = self._filter_latest_version(secrets)
+        releases = self._parse_secrets_to_releases(latest, skip_invalid=True)
+        return releases[0] if releases else None
 
     @staticmethod
     def _filter_latest_version(secrets: List[ResourceInstance]) -> List[ResourceInstance]:
@@ -70,9 +71,13 @@ class HelmClient:
         return list(secret_map.values())
 
     @staticmethod
-    def _parse_secrets_to_releases(secrets: List[ResourceInstance]) -> List[HelmRelease]:
+    def _parse_secrets_to_releases(secrets: List[ResourceInstance], skip_invalid: bool = False) -> List[HelmRelease]:
         """将存储 Helm Release 信息的 Secret 解析成 HelmRelease 对象"""
-        return [HelmReleaseParser(s).parse() for s in secrets if s.type == HELM_RELEASE_SECRET_TYPE]
+        return [
+            HelmReleaseParser(s).parse(skip_invalid=skip_invalid)
+            for s in secrets
+            if s.type == HELM_RELEASE_SECRET_TYPE
+        ]
 
 
 class HelmReleaseParser:
@@ -84,14 +89,24 @@ class HelmReleaseParser:
         """
         self.secret = secret
 
-    def parse(self) -> HelmRelease:
+    def parse(self, skip_invalid: bool = False) -> HelmRelease:
         """
         解析 Helm Release 信息
+
+        :param skip_invalid: 如果为 True, 将跳过(置空)非法的 resources, 否则抛出异常
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))
         release_info = release["info"]
         chart_metadata = release["chart"]["metadata"]
+
+        try:
+            resources = [res for res in yaml.safe_load_all(release.get("manifest", "")) if res]
+        except yaml.YAMLError:
+            if skip_invalid:
+                resources = []
+            else:
+                raise
 
         return HelmRelease(
             name=release["name"],
@@ -109,6 +124,6 @@ class HelmReleaseParser:
                 created_at=arrow.get(release_info["last_deployed"]).datetime,
             ),
             values=release.get("config", {}),
-            resources=[res for res in yaml.safe_load_all(release.get("manifest", "")) if res],
+            resources=resources,
             secret_name=self.secret.metadata.name,
         )

@@ -93,7 +93,7 @@ class Mount(TimestampedModel):
     tenant_id = tenant_id_field_factory()
 
     @property
-    def get_source_name(self):
+    def source_name(self):
         if self.source_type == VolumeSourceType.ConfigMap and self.source_config.configMap:
             return self.source_config.configMap.name
         elif self.source_type == VolumeSourceType.PersistentStorage and self.source_config.persistentStorage:
@@ -102,3 +102,42 @@ class Mount(TimestampedModel):
 
     class Meta:
         unique_together = ("module_id", "mount_path", "environment_name")
+
+
+class MountDeploymentSnapshot(TimestampedModel):
+    """挂载配置的部署快照
+
+    记录某个 module 在某个环境上一次成功部署的 volume source 集合.
+    用于下次部署时 diff, 决定哪些资源需要 create/update/delete.
+
+    snapshot_data 示例:
+    [
+        {"source_type": "ConfigMap", "source_name": "configmap-1"},
+        {"source_type": "PersistentStorage", "source_name": "persistentstorage-1"},
+    ]
+    """
+
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    environment_name = models.CharField(
+        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
+    )
+    snapshot_data = models.JSONField(default=list)
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("module_id", "environment_name")
+
+    def diff(self, desired: list[dict]) -> list[dict]:
+        """与 desired 做 diff, 返回需要删除的 source 列表 (存在于 snapshot 但不存在于 desired)
+
+
+        :param desired: 期望的 source 列表, 其中包含 source_type 和 source_name 字段
+        :return: 需要删除的 source 列表, 即存在于 snapshot 但不存在于 desired
+        """
+        desired_keys = {(item["source_type"], item["source_name"]) for item in desired}
+        old_keys = {(item["source_type"], item["source_name"]) for item in self.snapshot_data}
+        to_delete_keys = old_keys - desired_keys
+        return [
+            {"source_type": source_type, "source_name": source_name} for source_type, source_name in to_delete_keys
+        ]

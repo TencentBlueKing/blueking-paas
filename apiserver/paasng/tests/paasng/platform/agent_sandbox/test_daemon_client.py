@@ -21,7 +21,7 @@ import pytest
 import requests
 
 from paasng.platform.agent_sandbox.daemon_client import DEFAULT_REQUEST_TIMEOUT, ExecuteResult, SandboxDaemonClient
-from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError
+from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxServiceNotReady
 
 
 class TestSandboxDaemonClient:
@@ -171,6 +171,18 @@ class TestSandboxDaemonClient:
         with (
             mock.patch.object(client._session, "request", side_effect=http_error),
             pytest.raises(SandboxDaemonAPIError, match="HTTP error 500"),
+        ):
+            client.execute("echo hello")
+
+    def test_request_502_raises_service_not_ready(self, client: SandboxDaemonClient):
+        """Test that 502 Bad Gateway raises SandboxServiceNotReady."""
+        mock_response = mock.MagicMock()
+        mock_response.status_code = 502
+
+        http_error = requests.HTTPError(response=mock_response)
+        with (
+            mock.patch.object(client._session, "request", side_effect=http_error),
+            pytest.raises(SandboxServiceNotReady, match="not ready"),
         ):
             client.execute("echo hello")
 

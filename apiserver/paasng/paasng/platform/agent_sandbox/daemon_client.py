@@ -24,7 +24,7 @@ from attrs import define
 
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 
-from .exceptions import SandboxDaemonAPIError
+from .exceptions import SandboxDaemonAPIError, SandboxServiceNotReady
 
 # Default timeout for HTTP requests (in seconds)
 DEFAULT_REQUEST_TIMEOUT = 60
@@ -171,6 +171,8 @@ class SandboxDaemonClient:
         except requests.Timeout as exc:
             raise SandboxDaemonAPIError(f"Request {path} timed out: {exc}")
         except requests.HTTPError as exc:
+            if exc.response.status_code == 502:
+                raise SandboxServiceNotReady("sandbox daemon service is not ready")
             raise SandboxDaemonAPIError(
                 f"HTTP error {exc.response.status_code} on {path}: {exc.response.json().get('message')}"
             )

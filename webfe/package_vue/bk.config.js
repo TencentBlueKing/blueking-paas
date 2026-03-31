@@ -42,6 +42,7 @@ module.exports = {
     if (!['true', 'false'].includes(enableHTTPS)) {
       throw new Error('BK_HTTPS must be "true" or "false"');
     }
+
     return {
       // dev配置项
       devServer: {

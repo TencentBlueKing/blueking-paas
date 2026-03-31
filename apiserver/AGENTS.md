@@ -18,8 +18,11 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 * In API tests, add docstrings and type hints for fixtures, especially setup fixtures.
 * Preserve in-function guidance comments in test fixtures during refactors (for example setup/teardown hint comments).
 
-### Running our tests
+## Common workflows
 
+### Running tests
+
+* ALWAYS use `--reuse-db` flag
 * Run all tests: `pytest --reuse-db -s --maxfail=1 tests/`
 * Run some tests: `pytest --reuse-db -s --maxfail=1 tests/filename.py`
 * ALWAYS prefer specifying test files for efficiency.
@@ -39,5 +42,5 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 ### Creating new REST APIs
 
 - Use below files as references:
-    - serializers: @paasng/paasng/platform/bkapp_model/serializers/serializers.py
-    - views: @paasng/paasng/platform/bkapp_model/views.py
+    - serializers: paasng/paasng/platform/bkapp_model/serializers/serializers.py
+    - views: paasng/paasng/platform/bkapp_model/views.py

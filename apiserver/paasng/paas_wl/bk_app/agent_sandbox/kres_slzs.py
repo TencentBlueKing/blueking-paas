@@ -21,6 +21,7 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.agent_sandbox.constants import (
+    DAEMON_BIND_PORT,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
 )
@@ -64,6 +65,25 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
             "resources": DEFAULT_RESOURCES,
             "env": env,
             "imagePullPolicy": "IfNotPresent",
+            # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre-start.sh 最长耗时 (300s)
+            # NOTE: 沙箱中可能配置了 pre-start.sh，此时 daemon 服务需要等待 pre-start.sh 执行完成后才会就绪
+            "startupProbe": {
+                "tcpSocket": {
+                    "port": DAEMON_BIND_PORT,
+                },
+                "periodSeconds": 1,
+                "failureThreshold": 300,
+            },
+            # readinessProbe: startup 成功后接管，每 10s 探测一次，连续 2 次失败（~20s）标记为 Not Ready
+            "readinessProbe": {
+                "tcpSocket": {
+                    "port": DAEMON_BIND_PORT,
+                },
+                # 接管后立即探测
+                "initialDelaySeconds": 0,
+                "periodSeconds": 10,
+                "failureThreshold": 2,
+            },
         }
         if obj.workdir:
             main_container["workingDir"] = obj.workdir

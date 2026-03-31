@@ -929,8 +929,6 @@ export default {
             );
           }
         }
-      } else {
-        return '--';
       }
       return description || '--';
     },

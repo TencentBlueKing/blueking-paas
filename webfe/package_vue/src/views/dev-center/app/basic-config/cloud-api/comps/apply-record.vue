@@ -126,7 +126,7 @@
                 </template>
               </template>
               <template v-else>
-                {{ row.gateway_name}}
+                {{ row.gateway_name }}
               </template>
             </template>
           </bk-table-column>

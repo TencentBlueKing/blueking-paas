@@ -110,8 +110,8 @@
             v-if="!isMcpService"
             :label="isComponentApi ? $t('系统') : $t('网关')"
             min-width="100"
-            :prop="isComponentApi ? 'system_name' : 'api_name'"
-            :column-key="isComponentApi ? 'system_name' : 'api_name'"
+            :prop="isComponentApi ? 'system_name' : 'gateway_name'"
+            :column-key="isComponentApi ? 'system_name' : 'gateway_name'"
             :filters="isTableEmpty ? null : nameFilters"
             :filter-multiple="true"
           >
@@ -373,7 +373,7 @@ export default {
       this.tableKey = +new Date();
     },
     nameFilterValues() {
-      this.filterApiList(this.isComponentApi ? 'system_name' : 'api_name');
+      this.filterApiList(this.isComponentApi ? 'system_name' : 'gateway_name');
     },
     statusFilterValues() {
       this.filterApiList('permission_status');
@@ -416,7 +416,7 @@ export default {
       let target;
       const fieldName = Object.keys(filters)[0];
       switch (fieldName) {
-        case 'api_name':
+        case 'gateway_name':
         case 'system_name':
           target = 'nameFilterValues';
           break;
@@ -434,7 +434,7 @@ export default {
     handleTableFilterOptionMissing() {
       if (!this.$refs.permRef?.$refs?.tableHeader) return;
       const filterPanelsRef = this.$refs.permRef?.$refs?.tableHeader?.filterPanels || {};
-      const filterKeys = ['api_name', 'system_name'];
+      const filterKeys = ['gateway_name', 'system_name'];
 
       Object.keys(filterPanelsRef).forEach((key) => {
         const { selected, column } = filterPanelsRef[key] || {};
@@ -660,7 +660,7 @@ export default {
         this.apiList = Object.freeze(apiData);
         const nameSet = new Set(this.nameFilters.map((item) => item.value));
         this.apiList.forEach((item) => {
-          const name = item[this.isComponentApi ? 'system_name' : 'api_name'];
+          const name = item[this.isComponentApi ? 'system_name' : 'gateway_name'];
           if (!nameSet.has(name)) {
             nameSet.add(name);
             this.nameFilters.push({
@@ -690,7 +690,7 @@ export default {
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('权限续期');
       this.renewalDialog.rows = [item];
-      this.renewalDialog.name = this.isComponentApi ? item.system_name : item.api_name;
+      this.renewalDialog.name = this.isComponentApi ? item.system_name : item.gateway_name;
     },
 
     resetSelectedAPIList() {
@@ -805,14 +805,14 @@ export default {
         const curFilterList = this.getFilterAllList(
           this.allData,
           this.nameFilterValues,
-          this.isComponentApi ? 'system_name' : 'api_name'
+          this.isComponentApi ? 'system_name' : 'gateway_name'
         );
         this.filterAllList = this.getFilterAllList(curFilterList, this.statusFilterValues, 'permission_status');
       } else {
         // 当前筛选条件重置，但存在另外一组筛选条件
         if (!filterFields.length) {
           if (key === 'permission_status' && this.nameFilterValues.length) {
-            const fieldKey = this.isComponentApi ? 'system_name' : 'api_name';
+            const fieldKey = this.isComponentApi ? 'system_name' : 'gateway_name';
             this.filterAllList = this.getFilterAllList(this.allData, this.nameFilterValues, fieldKey);
           } else if (key !== 'permission_status' && this.statusFilterValues.length) {
             this.filterAllList = this.getFilterAllList(this.allData, this.statusFilterValues, 'permission_status');

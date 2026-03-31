@@ -50,3 +50,6 @@ class ClientAction(StrStructuredEnum):
 
     # 目前仅供 AIDev 平台使用， 用于为 AI Agent 应用授权访问平台网关下的 Agent Sandbox 相关 API 的权限。
     GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))
+
+    # 目前仅供 AIDev 平台使用，用于构建 Agent Sandbox 镜像
+    BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))

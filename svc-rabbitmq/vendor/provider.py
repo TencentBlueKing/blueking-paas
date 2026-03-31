@@ -179,15 +179,15 @@ class Provider(BaseProvider):
     def resolve_cluster_pk(self, cluster: Cluster) -> int | None:
         """resolve ORM cluster primary key for policy plugins."""
         if mgmt_api := (cluster.management_api or "").rstrip("/"):
-            for orm in ClusterModel.objects.filter(enable=True):
-                if (orm.management_api or "").rstrip("/") == mgmt_api:
-                    return orm.pk
-        orm_cluster = ClusterModel.objects.filter(
+            for db_cluster in ClusterModel.objects.filter(enable=True):
+                if (db_cluster.management_api or "").rstrip("/") == mgmt_api:
+                    return db_cluster.pk
+        db_cluster = ClusterModel.objects.filter(
             enable=True,
             host=cluster.host,
             port=cluster.port,
         ).first()
-        return orm_cluster.pk if orm_cluster else None
+        return db_cluster.pk if db_cluster else None
 
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""

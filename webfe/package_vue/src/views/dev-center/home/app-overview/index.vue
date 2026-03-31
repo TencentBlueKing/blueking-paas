@@ -162,13 +162,13 @@ const CHART_CONFIG = {
 // 应用类型配置
 const APP_TYPE_CONFIG = {
   order: ['default', 'cloud_native', 'engineless_app'],
-  colorMap: { cloud_native: '#2DCB56', default: '#3A84FF', engineless_app: '#FF9C01' },
+  colorMap: { cloud_native: '#85CCA8', default: '#3E96C2', engineless_app: '#FFA66B' },
 };
 
 // 应用状态配置
 const APP_STATUS_CONFIG = {
   order: ['normal', 'not_deployed', 'offline'],
-  colorMap: { normal: '#2DCB56', not_deployed: '#FF9C01', offline: '#DCDEE5' },
+  colorMap: { normal: '#85CCA8', not_deployed: '#FFA66B', offline: '#DCDEE5' },
 };
 
 export default {

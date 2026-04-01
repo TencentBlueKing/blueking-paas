@@ -22,7 +22,6 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -62,13 +61,7 @@ class SandboxManager(models.Manager):
 
         # 分配可调度集群
         cluster = ClusterAllocator(
-            AllocationContext(
-                tenant_id=application.tenant_id,
-                region=application.region,
-                usage=ClusterUsage.AGENT_SANDBOX,
-                # agent_sandbox 不区分环境
-                environment="",
-            )
+            AllocationContext.create_for_agent_sandbox(application.tenant_id, application.region)
         ).get_default()
 
         target = cluster.name

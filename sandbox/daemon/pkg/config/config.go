@@ -22,10 +22,12 @@ type Config struct {
 	Token string `env:"TOKEN"`
 
 	// LogLevel 日志级别
-	LogLevel string `env:"LOG_LEVEL" envDefault:"warn"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
 	// DaemonLogFilePath daemon 日志文件路径
 	DaemonLogFilePath string `env:"DAEMON_LOG_FILE_PATH" envDefault:"/tmp/sandbox-daemon.log"`
 
+	// DefaultEntrypointPath 默认的 entrypoint 脚本路径, 当 os.Args[1:] 为空时作为 fallback
+	DefaultEntrypointPath string `env:"DEFAULT_ENTRYPOINT_PATH" envDefault:"/app/bin/entrypoint.sh"`
 	// EntrypointLogFilePath entrypoint 日志文件路径
 	EntrypointLogFilePath string `env:"ENTRYPOINT_LOG_FILE_PATH" envDefault:"/tmp/sandbox-entrypoint.log"`
 	// EntrypointShutdownTimeout 关闭 entrypoint 的超时时间
@@ -34,6 +36,11 @@ type Config struct {
 	SigtermShutdownTimeout time.Duration `env:"SIGTERM_SHUTDOWN_TIMEOUT" envDefault:"5s"`
 	// UserHomeAsWorkDir 是否使用用户 home 目录作为工作目录
 	UserHomeAsWorkDir bool `env:"USER_HOME_AS_WORKDIR"`
+
+	// PreStartScriptPath pre_start 脚本路径, 在 entrypoint 启动之前同步执行
+	PreStartScriptPath string `env:"PRE_START_SCRIPT_PATH" envDefault:"/app/bin/pre_start.sh"`
+	// PreStartTimeout pre_start 脚本执行超时时间
+	PreStartTimeout time.Duration `env:"PRE_START_TIMEOUT" envDefault:"300s"`
 
 	// MaxExecTimeout 命令行执行的最大超时时间
 	MaxExecTimeout time.Duration `env:"MAX_EXEC_TIMEOUT" envDefault:"360s"`

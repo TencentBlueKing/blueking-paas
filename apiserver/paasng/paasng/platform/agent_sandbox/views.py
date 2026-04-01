@@ -30,7 +30,7 @@ from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServi
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError
+from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError, SandboxServiceNotReady
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.sandbox import (
@@ -121,6 +121,8 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             get_sandbox_client(sandbox).create_folder(path=data["path"], mode=data["mode"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to create folder in sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -136,6 +138,8 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             get_sandbox_client(sandbox).upload_file(file=data["file"].read(), remote_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to upload file to sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -151,6 +155,8 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             get_sandbox_client(sandbox).delete_file(path=data["path"], recursive=data["recursive"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to delete file in sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -166,6 +172,8 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             content = get_sandbox_client(sandbox).download_file(remote_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to download file from sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -199,6 +207,8 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
                 env_vars=data["env_vars"],
                 timeout=data["timeout"],
             )
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to execute command in sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
@@ -218,6 +228,8 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             result = get_sandbox_client(sandbox).code_run(content=data["content"], language=data["language"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
             logger.exception("Failed to run code in sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED

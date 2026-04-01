@@ -19,6 +19,7 @@ import pytest
 from django.utils.translation import override
 from rest_framework.exceptions import ValidationError
 
+from paasng.core.tenant.utils import stub_app_tenant_info
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.sourcectl.models import SPStat
 from paasng.utils.i18n import gettext_lazy
@@ -35,7 +36,6 @@ pytestmark = pytest.mark.django_db
             {
                 "spec_version": 2,
                 "app_version": "0.0.1",
-                "tenant": {"app_tenant_mode": "global", "app_tenant_id": "", "tenant_id": "default"},
                 "app": {"bk_app_code": "foo", "bk_app_name": "阿尔法", "bk_app_name_en": "alpha"},
                 "modules": {"default": {"is_default": True, "language": "python"}},
             },
@@ -45,13 +45,14 @@ pytestmark = pytest.mark.django_db
     ],
 )
 def test_get_app_description(meta_info, is_valid, name_in_desc):
+    app_tenant_info = stub_app_tenant_info()
     stat = SPStat(name="name", version="v1", size=1, meta_info=meta_info, sha256_signature="signature")
     if not is_valid:
         with pytest.raises(ValidationError):
-            get_app_description(stat)
+            get_app_description(stat, app_tenant_info)
         return
 
-    app_desc = get_app_description(stat)
+    app_desc = get_app_description(stat, app_tenant_info)
     with override("zh-cn"):
         assert app_desc.name_zh_cn == name_in_desc
     with override("en"):

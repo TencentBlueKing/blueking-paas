@@ -327,7 +327,7 @@ class BkPluginAppQuerySet:
             .prefetch_related("bk_plugin_profile")
         )
         if app_tenant_mode:
-            applications = applications.filter(tenant_mode=app_tenant_mode)
+            applications = applications.filter(app_tenant_mode=app_tenant_mode)
         if distributor_code_name:
             applications = applications.filter(distributors__code_name=distributor_code_name)
         if tag_id:

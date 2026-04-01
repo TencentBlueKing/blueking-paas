@@ -24,7 +24,7 @@ from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 from django.conf import settings
 
-from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, HelmChartDeployStatus
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterUsage, HelmChartDeployStatus
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -189,7 +189,7 @@ class AllocationContext:
     region: str
     environment: str
     username: str | None = None
-    usage: str | None = None
+    usage: ClusterUsage | None = None
 
     @classmethod
     def create_for_future_system_apps(cls):

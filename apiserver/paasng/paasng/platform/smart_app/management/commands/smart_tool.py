@@ -115,23 +115,18 @@ class Command(BaseCommand):
 
             self.stdout.write("S-Mart package found (SHA-256 signature match), proceeding with re-upload.")
 
-        # Step 1. create application, module
-        original_app_desc = get_app_description(stat)
-        validate_app_desc(original_app_desc)
-
-        handler = get_desc_handler(stat.meta_info)
-
-        # 如果参数中没有指定租户信息，则根据是否开启多租户获取默认值
+        # 前置计算租户信息，get_app_description 和 get_desc_handler 都需要
         if not raw_tenant_mode and not raw_tenant_id:
             app_tenant_info = global_app_tenant_info() if settings.ENABLE_MULTI_TENANT_MODE else stub_app_tenant_info()
         else:
             app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
 
-        stat.meta_info["tenant"] = {
-            "app_tenant_mode": app_tenant_info.app_tenant_mode,
-            "app_tenant_id": app_tenant_info.app_tenant_id,
-            "tenant_id": app_tenant_info.tenant_id,
-        }
+        # Step 1. create application, module
+        original_app_desc = get_app_description(stat, app_tenant_info)
+        validate_app_desc(original_app_desc)
+
+        handler = get_desc_handler(stat.meta_info)
+
         with atomic():
             # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
             application = handler.handle_app(operator)

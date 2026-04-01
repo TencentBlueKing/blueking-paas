@@ -244,7 +244,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         try:
             params = self.render_params(self.remote_config.provision_params_tmpl)
-            if self.get_service().supports_idempotent_provision():
+            if self.get_service().supports_idempotent_provision() and self.remote_config.prefer_idempotent_provision:
                 resp = self.remote_client.idempotent_provision_instance(
                     str(self.db_obj.service_id), str(self.db_obj.plan_id), params=params
                 )

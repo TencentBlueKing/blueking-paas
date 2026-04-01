@@ -41,6 +41,8 @@ class RemoteSvcConfig:
     provision_params_tmpl: Dict
     jwt_auth_conf: Dict
     prefer_async_delete: bool = True
+    # 是否使用幂等创建实例接口
+    prefer_idempotent_provision: bool = False
     is_ready: bool = True
 
     @classmethod

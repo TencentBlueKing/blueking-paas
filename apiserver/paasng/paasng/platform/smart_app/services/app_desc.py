@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import TYPE_CHECKING
 
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
@@ -28,16 +29,30 @@ from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.exceptions import GenAppCodeError
 from paasng.platform.sourcectl.models import SPStat
 
+if TYPE_CHECKING:
+    from paasng.core.tenant.utils import AppTenantInfo
+
 logger = logging.getLogger(__name__)
 
 
-def get_app_description(stat: SPStat) -> ApplicationDesc:
+def get_app_description(stat: SPStat, app_tenant_info: "AppTenantInfo") -> ApplicationDesc:
     """Get application description object from source package stats
 
+    NOTE: 该函数会将 app_tenant_info 注入到 stat.meta_info["tenant"] 中，调用方后续可直接
+    使用 stat.meta_info（如传给 get_desc_handler）而无需再次注入。
+
+    :param stat: Source package stats, its meta_info 会被修改以包含 tenant 信息。
+    :param app_tenant_info: 待注入的租户信息。
     :raises: ValidationError when meta info is invalid or empty
     """
     if not stat.meta_info:
         raise ValidationError(_("找不到任何有效的应用描述信息"))
+
+    stat.meta_info["tenant"] = {
+        "app_tenant_mode": app_tenant_info.app_tenant_mode,
+        "app_tenant_id": app_tenant_info.app_tenant_id,
+        "tenant_id": app_tenant_info.tenant_id,
+    }
 
     try:
         desc = get_desc_handler(stat.meta_info).app_desc

@@ -40,6 +40,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     DeployStatus,
 )
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
+from paas_wl.bk_app.cnative.specs.mounts import cleanup_volume_source_by_snapshot
 from paas_wl.bk_app.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paasng.platform.applications.models import ModuleEnvironment
@@ -248,6 +249,10 @@ class DeployStatusHandler(CallbackHandler):
                 logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
             state_mgr.update(release_status=job_status)
             state_mgr.finish(job_status, err_detail=dp.message or "", write_to_stream=True)
+
+        # 部署成功之后, 清理孤儿挂载资源并更新 snapshot
+        if dp.status == DeployStatus.READY:
+            cleanup_volume_source_by_snapshot(dp.environment)
 
         # 在部署流程结束后，发送信号触发操作审计等后续步骤。告警规则的创建统一在 post_appenv_deploy 信号中触发
         post_cnative_env_deploy.send(dp.environment, deploy=dp)

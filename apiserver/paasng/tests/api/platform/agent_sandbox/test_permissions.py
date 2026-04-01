@@ -28,8 +28,6 @@ from paasng.infras.sysapi_client.models import ClientPrivateToken, SysAPIClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
-client_with_no_perm = APIClient()
-
 
 @pytest.fixture()
 def bk_ai_agent_app(bk_app):

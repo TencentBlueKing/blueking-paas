@@ -202,6 +202,33 @@ def _generate_temp_file_(suffix="") -> Iterator[Path]:
 generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)
 
 
+def find_content_root(extract_dir: Path) -> Path:
+    """Locate the content root directory after extracting an archive.
+
+    Archives may be packed in two common layouts:
+
+    1. Wrapped — a single top-level directory containing everything::
+
+         extract_dir/
+           myproject/          <-- return this
+             Dockerfile
+             app.py
+
+    2. Flat — files sit directly in the extract directory::
+
+         extract_dir/          <-- return this
+           Dockerfile
+           app.py
+
+    This function normalises both layouts so that callers always get
+    the directory where the actual content files live.
+    """
+    entries = list(extract_dir.iterdir())
+    if len(entries) == 1 and entries[0].is_dir():
+        return entries[0]
+    return extract_dir
+
+
 def get_all_intermediate_dirs(path: str) -> List[str]:
     """
     >>> get_all_intermediate_dirs("")

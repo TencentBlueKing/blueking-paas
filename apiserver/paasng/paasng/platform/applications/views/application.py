@@ -52,7 +52,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCo
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType, AppStatus
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter, UserMarkedApplication
 from paasng.platform.applications.pagination import ApplicationListPagination
@@ -359,6 +359,32 @@ class ApplicationListViewSet(viewsets.ViewSet):
         data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
         serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取不同类型和状态的应用数量",
+        responses={200: slzs.ApplicationStatisticsListResultSLZ()},
+    )
+    def list_statistics(self, request):
+        """获取不同类型和状态的应用数量"""
+
+        total_applications = UserApplicationFilter(request.user).filter()
+        app_type_counts = total_applications.values("type").annotate(count=Count("type"))
+        # 应用状态是由 @property 装饰的方法, 不能直接通过 ORM 的方式统计数量
+        app_status_counts = [
+            {"status": status, "count": total_applications.filter_by_app_status(status).count()}
+            for status, _ in AppStatus.get_choices()
+        ]
+        total = total_applications.count()
+
+        data = {
+            "app_type_counts": app_type_counts,
+            "app_status_counts": app_status_counts,
+            "total": total,
+        }
+
+        serializer = slzs.ApplicationStatisticsListResultSLZ(data)
         return Response(serializer.data)
 
 

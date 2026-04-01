@@ -239,7 +239,7 @@ export default {
           return item.name;
         case 'gateway':
         default:
-          return item.api_name;
+          return item.gateway_name;
       }
     },
 

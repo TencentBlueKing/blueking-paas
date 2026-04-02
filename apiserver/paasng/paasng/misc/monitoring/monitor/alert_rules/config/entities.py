@@ -23,6 +23,13 @@ class AlertCode(StrStructuredEnum):
     HIGH_MEM_USAGE = "high_mem_usage"
     POD_RESTART = "pod_restart"
     OOM_KILLED = "oom_killed"
-    HIGH_RABBITMQ_QUEUE_MESSAGES = "high_rabbitmq_queue_messages"
+    HIGH_RABBITMQ_QUEUE_MESSAGES = "high_rabbitmq_queue_messages"  # 队列消息数超过阈值时触发
+    RABBITMQ_INSTANCE_DOWN = "rabbitmq_instance_down"  # 实例不可用(alive != 1)时触发
+    HIGH_RABBITMQ_DLX_QUEUE_MESSAGES = "high_rabbitmq_dlx_queue_messages"  # 死信队列(DLX)消息数超过阈值时触发
+    HIGH_RABBITMQ_QUEUES_USAGE = "high_rabbitmq_queues_usage"  # 队列数使用率(queues/limits)超过阈值时触发
+    HIGH_RABBITMQ_CONNECTIONS_USAGE = (
+        "high_rabbitmq_connections_usage"  # 连接数使用率(connections/limits)超过阈值时触发
+    )
+    HIGH_RABBITMQ_QUEUE_USAGE = "high_rabbitmq_queue_usage"  # 队列消息使用率(queue_usage)超过阈值时触发
     GCS_MYSQL_SLOW_QUERY = "gcs_mysql_slow_query"
     HIGH_BKREPO_QUOTA_USAGE = "high_bkrepo_quota_usage"

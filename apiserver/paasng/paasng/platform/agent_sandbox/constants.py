@@ -13,6 +13,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from datetime import timedelta
+
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
@@ -27,3 +29,7 @@ class SandboxStatus(StrStructuredEnum):
     # Abnormal status
     ERR_CREATING = EnumField("err_creating", label="unable to create")
     ERR_DELETING = EnumField("err_deleting", label="unable to delete")
+
+
+# 默认创建后 3 小时删除
+SANDBOX_DEFAULT_EXPIRE_AFTER = timedelta(hours=3)

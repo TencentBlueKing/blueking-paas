@@ -17,8 +17,6 @@
 
 """清理过期的沙箱实例"""
 
-import logging
-
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -26,22 +24,27 @@ from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import delete_sandbox
 
-logger = logging.getLogger(__name__)
-
 
 class Command(BaseCommand):
+    """
+    Q: 为什么设置了一次最多删除 50 个？
+    A: 让删除操作对资源的消耗相对更平稳，也避免定时执行该命令时出现上一次没有删完就又开始了一次的情况
+    """
+
     help = "清理已过期的沙箱实例"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run", dest="dry_run", action="store_true", help="仅显示将被删除的沙箱，不实际执行删除操作"
         )
-        parser.add_argument("--limit", dest="limit", type=int, default=100, help="一次最多删除的沙箱数量，默认100")
+        parser.add_argument("--limit", dest="limit", type=int, default=50, help="一次最多删除的沙箱数量，默认50")
 
     def handle(self, dry_run, limit, *args, **options):
         now = timezone.now()
-        base_query = Sandbox.objects.filter(expired_at__isnull=False, expired_at__lte=now).exclude(
-            status__in=[SandboxStatus.DELETED.value, SandboxStatus.ERR_DELETING.value]
+        base_query = (
+            Sandbox.objects.filter(expired_at__isnull=False, expired_at__lte=now)
+            .exclude(status__in=[SandboxStatus.DELETED.value, SandboxStatus.ERR_DELETING.value])
+            .select_related("application")
         )
 
         total_all = base_query.count()
@@ -61,20 +64,10 @@ class Command(BaseCommand):
                 )
             return
 
-        deleted_count = 0
-        error_count = 0
+        for idx, sandbox in enumerate(query):
+            delete_sandbox(sandbox)
+            self.stdout.write(
+                f"已删除 {idx + 1}/{total} uuid={sandbox.uuid} name={sandbox.name} app_code={sandbox.application.code}"
+            )
 
-        for idx, sandbox in enumerate(query, start=1):
-            try:
-                logger.info(f"开始删除过期沙箱: {sandbox.uuid} ({sandbox.name})")
-                delete_sandbox(sandbox)
-                deleted_count += 1
-                self.stdout.write(
-                    f"[{idx}/{total}] [OK] 已删除沙箱: {sandbox.uuid} (应用: {sandbox.application.code}, 名称: {sandbox.name})"
-                )
-            except Exception as e:
-                error_count += 1
-                logger.exception(f"删除沙箱 {sandbox.uuid} 失败")
-                self.stdout.write(f"[FAIL] 删除失败: {sandbox.uuid} - {e}")
-
-        self.stdout.write(f"\n清理完成: 成功删除 {deleted_count} 个，失败 {error_count} 个")
+        self.stdout.write(f"\n清理完成: 删除 {total} 个")

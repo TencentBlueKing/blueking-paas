@@ -113,7 +113,7 @@ class Sandbox(UuidAuditedModel):
     started_at = models.DateTimeField("启动时间", null=True)
     stopped_at = models.DateTimeField("停止时间", null=True)
     deleted_at = models.DateTimeField("删除时间", null=True)
-    expired_at = models.DateTimeField("过期时间(预计删除时间)", null=True)
+    expired_at = models.DateTimeField("过期时间(预计删除时间)", null=True, db_index=True)
 
     creator = BkUserField()
     tenant_id = tenant_id_field_factory()

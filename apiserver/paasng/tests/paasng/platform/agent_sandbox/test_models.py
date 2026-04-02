@@ -15,7 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists
@@ -29,11 +32,14 @@ class TestSandboxModel:
 
     def test_sandbox_create_basic(self, bk_app, bk_user):
         """Test basic sandbox creation."""
+
+        expire_after = timedelta(hours=2)
         sandbox = Sandbox.objects.new(
             application=bk_app,
             creator=bk_user.pk,
             snapshot="python:3.11-alpine",
             name="test-sandbox",
+            expire_after=expire_after,
         )
 
         assert sandbox.name == "test-sandbox"
@@ -41,6 +47,7 @@ class TestSandboxModel:
         assert sandbox.status == SandboxStatus.PENDING.value
         assert sandbox.daemon_token is not None
         assert len(sandbox.daemon_token) == 32
+        assert sandbox.expired_at - (timezone.now() + expire_after) < timedelta(seconds=3)
 
     def test_sandbox_create_duplicate_name(self, bk_app, bk_user):
         """Test that creating sandbox with duplicate name raises error."""

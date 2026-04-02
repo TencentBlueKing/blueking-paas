@@ -26,18 +26,30 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
+    """
+    Q: 和 init_alert_rules.py 的区别是什么？
+    A: init_alert_rules.py 是全量初始化告警规则，不做幂等性检查。supplement_alert_rules.py(本命令) 是增量创建缺失/新加的告警规则
+       调用的是 manager.create_rules()，会先检查 DB 中是否已存在对应规则，避免重复创建。
+    """
+
     help = "Supplement alert rules for applications by app_code"
 
     def add_arguments(self, parser):
-        parser.add_argument("--apps", nargs="+", required=True, help="specified app code list")
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--all", action="store_true", help="run for all active applications")
+        group.add_argument("--apps", nargs="+", help="specified app code list")
 
     def handle(self, *args, **options):
-        app_codes = options["apps"]
+        app_codes = options.get("apps")
 
-        app_qs = Application.objects.filter(is_active=True, is_deleted=False, code__in=app_codes)
-        invalid_app_codes = set(app_codes) - set(app_qs.values_list("code", flat=True))
-        for code in invalid_app_codes:
-            self.stdout.write(self.style.ERROR(f"Supplement alert rules for {code} failed: app is invalid or offline"))
+        app_qs = Application.objects.filter(is_active=True, is_deleted=False)
+        if app_codes:
+            app_qs = app_qs.filter(code__in=app_codes)
+            invalid_app_codes = set(app_codes) - set(app_qs.values_list("code", flat=True))
+            for code in invalid_app_codes:
+                self.stdout.write(
+                    self.style.ERROR(f"Supplement alert rules for {code} failed: app is invalid or offline")
+                )
 
         for app in app_qs:
             self.stdout.write(f"Supplementing alert rules for app: {app.code}")

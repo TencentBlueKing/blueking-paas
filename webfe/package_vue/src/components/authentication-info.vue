@@ -403,7 +403,7 @@
     <bk-dialog
       v-model="verifyVisible"
       :mask-close="false"
-      width="475"
+      width="500"
       @after-leave="handleCancel"
     >
       <div slot="footer">
@@ -420,7 +420,7 @@
           {{ $t('取消') }}
         </bk-button>
       </div>
-      <p>{{ $t('验证码已发送至您的企业微信，请注意查收！') }}</p>
+      <p v-dompurify-html="$t('验证码已发送至<b>短信</b>及<b>企业微信</b>（应用提醒 > 消息提醒），请注意查收！')"></p>
       <p class="mt15 flex-row align-items-center">
         <b>{{ $t('验证码：') }}</b>
         <bk-input

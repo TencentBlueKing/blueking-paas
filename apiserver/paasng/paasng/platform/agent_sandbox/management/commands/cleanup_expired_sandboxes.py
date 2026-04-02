@@ -27,8 +27,8 @@ from paasng.platform.agent_sandbox.sandbox import delete_sandbox
 
 class Command(BaseCommand):
     """
-    Q: 为什么设置了一次最多删除 50 个？
-    A: 让删除操作对资源的消耗相对更平稳，也避免定时执行该命令时出现上一次没有删完就又开始了一次的情况
+    Q: 为什么设置了一次最多删除 n 个？
+    A: 让删除操作对资源的消耗相对更平稳，也尽量避免定时执行该命令时出现上一次没有删完就又开始了一次的情况
     """
 
     help = "清理已过期的沙箱实例"

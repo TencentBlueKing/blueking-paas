@@ -20,3 +20,11 @@ from django.apps import AppConfig
 
 class LogAppConfig(AppConfig):
     name = "paasng.accessories.log"
+    verbose_name = "日志配置管理"
+
+    def ready(self):
+        from django.db.models.signals import post_migrate
+
+        from .init_config import init_default_tenant_log_config
+
+        post_migrate.connect(init_default_tenant_log_config, sender=self)

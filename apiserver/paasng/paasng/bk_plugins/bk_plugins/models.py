@@ -311,6 +311,7 @@ class BkPluginAppQuerySet:
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
         tag_id: Optional[int] = None,
+        app_tenant_mode: Optional[str] = None,
     ) -> QuerySet:
         """filter queryset by given term
 
@@ -325,6 +326,8 @@ class BkPluginAppQuerySet:
             .filter_queryset(applications, search_term=search_term, has_deployed=has_deployed, order_by=order_by)
             .prefetch_related("bk_plugin_profile")
         )
+        if app_tenant_mode:
+            applications = applications.filter(app_tenant_mode=app_tenant_mode)
         if distributor_code_name:
             applications = applications.filter(distributors__code_name=distributor_code_name)
         if tag_id:

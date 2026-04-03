@@ -194,3 +194,24 @@ class CustomCollectorConfig(UuidAuditedModel):
 
     class Meta:
         unique_together = ("module", "name_en")
+
+
+class TenantLogConfig(UuidAuditedModel):
+    """租户日志配置
+
+    每个租户必须有一条配置记录才能使用日志平台方案
+    默认租户的配置会在系统初始化时自动创建（基于 settings.BKLOG_CONFIG）
+    """
+
+    tenant_id = tenant_id_field_factory(unique=True)
+
+    storage_cluster_id = models.IntegerField(_("日志平台存储集群 ID"), help_text="指定该租户日志存储的 ES 集群")
+    retention = models.IntegerField(_("日志保存时间（天）"), default=14)
+    es_shards = models.IntegerField(_("ES 索引分片数"), default=1)
+    storage_replicas = models.IntegerField(_("存储副本数"), default=1)
+
+    time_zone = models.IntegerField(
+        _("时区"),
+        default=8,
+        help_text="日志时间字段解析时区，如 8 代表 UTC+8",
+    )

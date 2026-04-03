@@ -43,6 +43,7 @@ from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxCreateError,
     SandboxCreateTimeout,
     SandboxDaemonAPIError,
     SandboxError,
@@ -178,6 +179,9 @@ class AgentSandboxResManager:
         except ReadTargetStatusTimeout as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxCreateTimeout(str(exc)) from exc
+        except SandboxCreateError:
+            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
+            raise
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
@@ -232,12 +236,33 @@ class AgentSandboxResManager:
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:
-            kres.KPod(client).wait_for_status(
+            pod_phase = kres.KPod(client).wait_for_status(
                 name=pod_name,
-                target_statuses={PodPhase.RUNNING.value},
+                target_statuses={PodPhase.RUNNING.value, PodPhase.FAILED.value},
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
             )
+            if pod_phase == PodPhase.FAILED.value:
+                logs = self._get_pod_logs(client, pod_name)
+                raise SandboxCreateError("sandbox pod failed to start", logs=logs)
+
+    def _get_pod_logs(self, client, pod_name: str, tail_lines: int = 500) -> str:
+        """Get logs from a pod for failed to start.
+
+        :param client: The Kubernetes API client.
+        :param pod_name: The name of the pod.
+        :returns: The logs content.
+        """
+        try:
+            resp = kres.KPod(client).get_log(
+                name=pod_name,
+                namespace=self.kres_app.namespace,
+                tail_lines=tail_lines,
+            )
+            return resp.data.decode("utf-8", errors="replace")
+        except ApiException:
+            logger.exception("failed to get logs from failed pod %s", pod_name)
+            return ""
 
     def _cleanup_sandbox_on_create_error(self, pod_name: str, sandbox_created: bool) -> None:
         if not sandbox_created:

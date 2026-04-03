@@ -21,6 +21,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.log.constants import LogTimeChoices
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.es_log.time_range import SmartTimeRange
 
 from .models import BkPluginDistributor, BkPluginProfile, BkPluginTag
@@ -38,7 +39,7 @@ class ListBkPluginsSLZ(serializers.Serializer):
     tag_id = serializers.IntegerField(
         help_text="按插件分类ID过滤, -1 代表过滤没有分类的插件", default=None, required=False
     )
-    app_tenant_mode = serializers.CharField(help_text="按应用租户模式过滤", default=None, required=False)
+    app_tenant_mode = serializers.ChoiceField(choices=AppTenantMode.get_choices(), default=None, required=False)
 
 
 class ListDetailedBkPluginsExtraSLZ(serializers.Serializer):

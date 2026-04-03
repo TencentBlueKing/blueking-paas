@@ -29,9 +29,7 @@ from rest_framework.response import Response
 from paas_wl.utils.blobstore import make_blob_store
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import detect_spec_version
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
@@ -52,6 +50,7 @@ from .serializers import (
     ToolPackageStashInputSLZ,
     ToolPackageStashOutputSLZ,
 )
+from .validators import validate_app_desc
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +82,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未在根目录下找到 app_desc.yaml 文件"))
 
             try:
-                app_code = self._extract_app_code(stat.meta_info)
-                self._validate_market(stat.meta_info)
+                app_code = validate_app_desc(stat.meta_info)
             except DescriptionValidationError as e:
                 raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(str(e))
 
@@ -214,43 +212,6 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         download_url = store.generate_presigned_url(key=key, expires_in=3600)
 
         return Response(data={"download_url": download_url})
-
-    @staticmethod
-    def _extract_app_code(meta_info: dict) -> str:
-        """Extract app_code from meta_info, supporting both v2 and v3 spec versions.
-
-        :raises DescriptionValidationError: When app_code is missing in meta info.
-        """
-        app_data = meta_info.get("app", {})
-        if not app_data:
-            raise DescriptionValidationError({"app": "app_desc.yaml 中缺少 app 字段"})
-
-        try:
-            spec_version = detect_spec_version(meta_info)
-        except ValueError:
-            raise DescriptionValidationError({"spec_version": "无法识别的 spec_version"})
-
-        match spec_version:
-            case AppSpecVersion.VER_2:
-                app_code = app_data.get("bk_app_code")
-            case AppSpecVersion.VER_3:
-                app_code = app_data.get("bkAppCode")
-            case _:
-                raise DescriptionValidationError({"spec_version": "无法识别的 spec_version"})
-
-        if not app_code:
-            raise DescriptionValidationError({"app_code": "app_desc.yaml 中缺少应用 ID"})
-        return app_code
-
-    @staticmethod
-    def _validate_market(meta_info: dict):
-        """Validate that market info exists in meta_info.
-
-        :raises DescriptionValidationError: When market info is missing.
-        """
-        app_data = meta_info["app"]
-        if app_data.get("market") is None:
-            raise DescriptionValidationError({"market": "内容不能为空"})
 
     @staticmethod
     def _get_store_namespace(app_code: str) -> str:

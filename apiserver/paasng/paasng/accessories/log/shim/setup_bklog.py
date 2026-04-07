@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from functools import cached_property
 from typing import Union
 
 from django.conf import settings
@@ -55,7 +56,8 @@ class BKLogConfigProvider:
         self.module = module
         self.tenant_id = module.application.tenant_id
 
-    def _get_config(self):
+    @cached_property
+    def config(self):
         """获取租户的日志配置
 
         兼容策略：
@@ -72,27 +74,27 @@ class BKLogConfigProvider:
     @property
     def timezone(self) -> int:
         """获取时区"""
-        return self._get_config().time_zone
+        return self.config.time_zone
 
     @property
     def storage_cluster_id(self) -> int:
         """获取存储集群 ID（从 TenantLogConfig）"""
-        return self._get_config().storage_cluster_id
+        return self.config.storage_cluster_id
 
     @property
     def retention(self) -> int:
         """获取日志保存时间（从 TenantLogConfig）"""
-        return self._get_config().retention
+        return self.config.retention
 
     @property
     def es_shards(self) -> int:
         """获取 ES 索引分片数（从 TenantLogConfig）"""
-        return self._get_config().es_shards
+        return self.config.es_shards
 
     @property
     def storage_replicas(self) -> int:
         """获取存储副本数（从 TenantLogConfig）"""
-        return self._get_config().storage_replicas
+        return self.config.storage_replicas
 
 
 def _add_wildcard_suffix(path: str) -> str:

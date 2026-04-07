@@ -19,6 +19,7 @@ import logging
 from datetime import datetime
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.utils import ProgrammingError
 from django.utils.timezone import get_default_timezone
@@ -27,6 +28,13 @@ from paasng.accessories.log.models import TenantLogConfig
 from paasng.core.tenant.user import get_init_tenant_id
 
 logger = logging.getLogger(__name__)
+
+REQUIRED_BKLOG_CONFIG_KEYS = (
+    "STORAGE_CLUSTER_ID",
+    "RETENTION",
+    "ES_SHARDS",
+    "STORAGE_REPLICAS",
+)
 
 
 def init_default_tenant_log_config(**kwargs):
@@ -58,17 +66,29 @@ def init_default_tenant_log_config(**kwargs):
                 default_tz = get_default_timezone()
                 timezone = int(default_tz.utcoffset(datetime.now()).total_seconds() // 60 // 60)
 
-            try:
-                config = TenantLogConfig.objects.create(
-                    tenant_id=default_tenant_id,
-                    storage_cluster_id=bklog_config["STORAGE_CLUSTER_ID"],
-                    retention=bklog_config["RETENTION"],
-                    es_shards=bklog_config["ES_SHARDS"],
-                    storage_replicas=bklog_config["STORAGE_REPLICAS"],
-                    time_zone=timezone,
+            missing_keys = [key for key in REQUIRED_BKLOG_CONFIG_KEYS if key not in bklog_config]
+            if missing_keys:
+                logger.error(
+                    "Missing required BKLOG_CONFIG keys: %s",
+                    ", ".join(missing_keys),
                 )
-            except KeyError as e:
-                logger.exception("Missing required BKLOG_CONFIG key: %s", e.args[0])
+                return
+
+            create_kwargs = {
+                "tenant_id": default_tenant_id,
+                "time_zone": timezone,
+                "storage_cluster_id": bklog_config["STORAGE_CLUSTER_ID"],
+                "retention": bklog_config["RETENTION"],
+                "es_shards": bklog_config["ES_SHARDS"],
+                "storage_replicas": bklog_config["STORAGE_REPLICAS"],
+            }
+
+            try:
+                config = TenantLogConfig(**create_kwargs)
+                config.full_clean()
+                config.save()
+            except ValidationError:
+                logger.exception("Invalid BKLOG_CONFIG for default tenant %s", default_tenant_id)
                 return
             logger.info(
                 "Created TenantLogConfig for default tenant %s: storage_cluster_id=%s",

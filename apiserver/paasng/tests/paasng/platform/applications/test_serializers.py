@@ -18,6 +18,7 @@
 from unittest import mock
 
 import pytest
+from django.test.utils import override_settings
 from rest_framework import serializers
 
 from paasng.platform.applications.exceptions import AppFieldValidationError
@@ -65,6 +66,21 @@ class TestAppIDField:
     def test_update_random_is_forbidden(self, bk_app, random_name):
         slz = AppCodeSLZ(data={"code": random_name}, instance=bk_app)
         assert slz.is_valid() is False
+
+    @override_settings(FORBIDDEN_APP_CODE_PREFIXES=[])
+    def test_forbidden_prefix_empty_allows_all(self):
+        slz = AppCodeSLZ(data={"code": "bk-foo"})
+        assert slz.is_valid() is True
+
+    @override_settings(FORBIDDEN_APP_CODE_PREFIXES=["bk-"])
+    def test_forbidden_prefix_rejects(self):
+        slz = AppCodeSLZ(data={"code": "bk-foo"})
+        assert slz.is_valid() is False
+
+    @override_settings(FORBIDDEN_APP_CODE_PREFIXES=["bk-"])
+    def test_forbidden_prefix_allows_non_matching(self):
+        slz = AppCodeSLZ(data={"code": "foo-bk"})
+        assert slz.is_valid() is True
 
 
 class AppIDSMartSLZ(serializers.Serializer):

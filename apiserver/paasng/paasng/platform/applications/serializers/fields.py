@@ -30,7 +30,12 @@ from paasng.platform.applications.exceptions import AppFieldValidationError
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import prepare_use_application_name
 from paasng.utils.serializers import NickNameField, SafePathField
-from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator
+from paasng.utils.validators import (
+    RE_APP_CODE,
+    DnsSafeNameValidator,
+    ForbiddenAppCodePrefixValidator,
+    ReservedWordValidator,
+)
 
 from .validators import AppIDUniqueValidator
 
@@ -38,17 +43,21 @@ from .validators import AppIDUniqueValidator
 class AppIDField(serializers.RegexField):
     """Field for validating application ID"""
 
-    def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
+    def __init__(self, regex=RE_APP_CODE, check_forbidden_prefix=True, *args, **kwargs):
+        validators: list = [
+            ReservedWordValidator(_("应用 ID")),
+            DnsSafeNameValidator(_("应用 ID")),
+        ]
+        if check_forbidden_prefix:
+            validators.append(ForbiddenAppCodePrefixValidator(_("应用 ID")))
+        validators.append(AppIDUniqueValidator())
+
         preset_kwargs = dict(
             max_length=16,
             min_length=3,
             required=True,
             help_text="应用 ID",
-            validators=[
-                ReservedWordValidator(_("应用 ID")),
-                DnsSafeNameValidator(_("应用 ID")),
-                AppIDUniqueValidator(),
-            ],
+            validators=validators,
             error_messages={
                 "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。")
             },

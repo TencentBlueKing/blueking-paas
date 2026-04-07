@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,25 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-# ================================
-# Constants for "K8s Pod Sandbox"
-# ================================
+from django.urls import path
 
-# The default termination grace period seconds for sandbox pod
-DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
-# The default resource specification for sandbox pod
-DEFAULT_RESOURCES = {
-    "limits": {"cpu": "4000m", "memory": "1024Mi"},
-    "requests": {"cpu": "50m", "memory": "128Mi"},
-}
+from .views import ImageBuildViewSet
 
-
-# The command for sandbox daemon
-DAEMON_BINARY_PATH = "/usr/local/bin/daemon"
-DAEMON_COMMAND = [DAEMON_BINARY_PATH]
-# The bind port for sandbox daemon
-DAEMON_BIND_PORT = 30000
-
-# The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
-# "agent-sandbox-router" (length > 16) will not conflict with app_code
-AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX = "agent-sandbox-router"
+urlpatterns = [
+    path(
+        "",
+        ImageBuildViewSet.as_view({"post": "create", "get": "list"}),
+        name="image_build.list_create",
+    ),
+    path(
+        "<str:build_id>/",
+        ImageBuildViewSet.as_view({"get": "retrieve"}),
+        name="image_build.retrieve",
+    ),
+]

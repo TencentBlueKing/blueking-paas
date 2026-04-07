@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,25 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-# ================================
-# Constants for "K8s Pod Sandbox"
-# ================================
+from pathlib import Path
 
-# The default termination grace period seconds for sandbox pod
-DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
-# The default resource specification for sandbox pod
-DEFAULT_RESOURCES = {
-    "limits": {"cpu": "4000m", "memory": "1024Mi"},
-    "requests": {"cpu": "50m", "memory": "128Mi"},
-}
+from paasng.platform.sourcectl.utils import find_content_root
 
 
-# The command for sandbox daemon
-DAEMON_BINARY_PATH = "/usr/local/bin/daemon"
-DAEMON_COMMAND = [DAEMON_BINARY_PATH]
-# The bind port for sandbox daemon
-DAEMON_BIND_PORT = 30000
+class TestFindContentRoot:
+    def test_single_top_level_dir(self, tmp_path: Path):
+        """When archive extracts to a single directory, return that directory."""
+        inner = tmp_path / "myproject"
+        inner.mkdir()
+        (inner / "app.py").write_text("print('hi')")
+        assert find_content_root(tmp_path) == inner
 
-# The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
-# "agent-sandbox-router" (length > 16) will not conflict with app_code
-AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX = "agent-sandbox-router"
+    def test_multiple_entries(self, tmp_path: Path):
+        """When archive extracts to multiple entries, return the extract dir itself."""
+        (tmp_path / "app.py").write_text("print('hi')")
+        (tmp_path / "Dockerfile").write_text("FROM python:3.11")
+        assert find_content_root(tmp_path) == tmp_path

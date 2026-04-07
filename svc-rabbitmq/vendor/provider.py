@@ -53,6 +53,55 @@ class ProviderPlugin:
         pass
 
 
+class HAProviderPlugin(ProviderPlugin):
+    """高可用策略插件, 更具使用的 RabbitMQ 版本选择合适的 HA 策略
+
+    - RabbitMQ >= 3.8.0: 直接在 vhost 上设置 default_queue_type=quorum, 使用 Quorum Queues 实现高可用
+    - RabbitMQ < 3.8.0: 使用 Classic Mirrored Queues (ha-mode=all)
+    """
+
+    # Quorum 队列是在 RabbitMQ 3.8.0 中引入的
+    QUORUM_MIN_VERSION = Version("3.8.0")
+
+    # Policy name applied to the vhost for HA
+    HA_POLICY_NAME = "bk-ha-policy"
+
+    def _get_mirror_policy(self) -> dict:
+        """Build policy definition for classic mirrored queues (< 3.8.0)."""
+        return {
+            "pattern": ".*",
+            "priority": 0,
+            "apply-to": "queues",
+            "definition": {
+                "ha-mode": "all",
+                "ha-sync-mode": "automatic",
+            },
+        }
+
+    def on_create(self):
+        if not getattr(settings, "RABBITMQ_HA_POLICY_ENABLED", True):
+            logger.info("HA policy is disabled by settings, skipping")
+            return
+
+        version = Version(self.cluster.version)
+        if version >= self.QUORUM_MIN_VERSION:
+            # RabbitMQ 3.8+: 直接在虚拟主机上设置 default_queue_type, 因为 queue-type 不再是有效的用户策略定义键.
+            logger.info(
+                "RabbitMQ version %s >= 3.8.0, setting vhost default_queue_type=quorum for vhost %s",
+                self.cluster.version,
+                self.virtual_host,
+            )
+            self.client.virtual_host.create(self.virtual_host, default_queue_type="quorum")
+        else:
+            logger.info(
+                "RabbitMQ version %s < 3.8.0, using classic mirror HA policy for vhost %s",
+                self.cluster.version,
+                self.virtual_host,
+            )
+            policy = self._get_mirror_policy()
+            self.client.user_policy.create(self.virtual_host, self.HA_POLICY_NAME, policy)
+
+
 class UserPolicyProviderPlugin(ProviderPlugin):
     """用户策略插件"""
 
@@ -104,6 +153,14 @@ class DeadLetterRoutingProviderPlugin(ProviderPlugin):
 
     min_version = Version("2.8.0")
 
+    # Quorum queues were introduced in RabbitMQ 3.8.0
+    QUORUM_MIN_VERSION = Version("3.8.0")
+
+    def _should_use_quorum(self) -> bool:
+        """Check if the cluster version supports quorum queues."""
+        version = Version(self.cluster.version)
+        return version >= self.QUORUM_MIN_VERSION
+
     def on_create(self):
         version = Version(self.cluster.version)
         if version < self.min_version:
@@ -122,7 +179,21 @@ class DeadLetterRoutingProviderPlugin(ProviderPlugin):
 
         queue = context.setdefault("dlx-queue", settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE)
         durable = context.setdefault("dlx-queue-durable", settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE_DURABLE)
-        client.queue.declare(virtual_host=virtual_host, queue=queue, durable=durable)
+
+        # For RabbitMQ >= 3.8.0, explicitly declare the dead letter queue as quorum type
+        # to ensure high availability. The Management HTTP API does not automatically
+        # inherit the vhost's default_queue_type setting.
+        queue_arguments = {}
+        if self._should_use_quorum():
+            queue_arguments["x-queue-type"] = "quorum"
+            # Quorum queues are always durable, force durable=True
+            durable = True
+            logger.info(
+                "Declaring dead letter queue %s as quorum type for vhost %s",
+                queue,
+                virtual_host,
+            )
+        client.queue.declare(virtual_host=virtual_host, queue=queue, durable=durable, arguments=queue_arguments)
 
         routing_key = context.setdefault("dlx-routing-key", settings.RABBITMQ_DEFAULT_DEAD_LETTER_ROUTING_KEY)
         client.queue.bind(queue=queue, exchange=exchange, virtual_host=virtual_host, routing_key=routing_key)
@@ -143,6 +214,7 @@ class AdminAutoPermission(ProviderPlugin):
 
 PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
     AdminAutoPermission,
+    HAProviderPlugin,
     UserPolicyProviderPlugin,
     LimitPolicyProviderPlugin,
     DeadLetterRoutingProviderPlugin,

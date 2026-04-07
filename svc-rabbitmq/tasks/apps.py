@@ -16,3 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
+import logging
+
+from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
+
+
+class TasksConfig(AppConfig):
+    name = "tasks"
+
+    def call_ready(self):
+        from . import monitor, scheduler, tasks
+
+        tasks.ready()
+        scheduler.ready()
+        monitor.ready()
+
+    def ready(self):
+        try:
+            self.call_ready()
+        except Exception:
+            logger.exception()

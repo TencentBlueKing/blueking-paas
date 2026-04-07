@@ -59,12 +59,7 @@ class BKLogConfigProvider:
 
     @cached_property
     def config(self):
-        """获取租户的日志配置
-
-        兼容策略：
-        - 默认租户：从 TenantLogConfig 获取（已初始化）
-        - 其他租户：从 TenantLogConfig 获取，不存在则报错
-        """
+        """获取租户的日志配置"""
 
         try:
             return TenantLogConfig.objects.get(tenant_id=self.tenant_id)

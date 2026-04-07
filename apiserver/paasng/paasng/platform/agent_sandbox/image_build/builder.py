@@ -22,7 +22,6 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from six import ensure_text
 
-from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
@@ -90,15 +89,7 @@ class KanikoBuildExecutor:
 
     def _make_client(self):
         """Allocate the sandbox cluster and return a Kubernetes API client."""
-        cluster = ClusterAllocator(
-            AllocationContext(
-                tenant_id=self.build.tenant_id,
-                region=settings.DEFAULT_REGION_NAME,
-                usage=ClusterUsage.AGENT_SANDBOX,
-                # agent_sandbox 不区分环境
-                environment="",
-            )
-        ).get_default()
+        cluster = ClusterAllocator(AllocationContext.create_for_agent_sandbox(self.build.tenant_id)).get_default()
         return get_client_by_cluster_name(cluster.name)
 
     def _ensure_namespace(self):

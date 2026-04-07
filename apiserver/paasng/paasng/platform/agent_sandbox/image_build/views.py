@@ -22,6 +22,7 @@ from rest_framework import status, viewsets
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -61,7 +62,7 @@ class ImageBuildViewSet(viewsets.ViewSet):
             image_tag=data["image_tag"],
             dockerfile_path=data["dockerfile_path"],
             docker_build_args=data["docker_build_args"],
-            tenant_id=request.app.tenant_id,
+            tenant_id=request.app.tenant_id or get_init_tenant_id(),
         )
 
         run_image_build.delay(str(build.uuid))

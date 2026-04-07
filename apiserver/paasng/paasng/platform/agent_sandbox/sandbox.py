@@ -19,6 +19,7 @@ import copy
 import logging
 import re
 import shlex
+from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
@@ -39,7 +40,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SANDBOX_DEFAULT_EXPIRE_AFTER, SandboxStatus
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
@@ -68,6 +69,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
+    expire_after: timedelta | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -79,6 +81,8 @@ def create_sandbox(
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
     """
+    effective_expire_after = SANDBOX_DEFAULT_EXPIRE_AFTER if expire_after is None else expire_after
+
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
@@ -87,6 +91,7 @@ def create_sandbox(
         env_vars=env_vars,
         creator=creator,
         workspace=workspace,
+        expire_after=effective_expire_after,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)

@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import timedelta
 from typing import Any
 from unittest import mock
 
@@ -64,6 +65,35 @@ class TestAgentSandboxViewSetCreate:
         assert "name" in data
         assert "snapshot" in data
         assert "status" in data
+
+    def test_create_sandbox_with_expire_after(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
+        """Verify expire_after is parsed and passed to create_sandbox as timedelta."""
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch(
+            "paasng.platform.agent_sandbox.views.create_sandbox",
+            return_value=sandbox_obj,
+        ) as mocked_create:
+            resp = api_client.post(
+                create_url,
+                data={"name": "test-sandbox", "expire_after": "6h"},
+                format="json",
+            )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert mocked_create.call_args.kwargs["expire_after"] == timedelta(hours=6)
+
+    def test_create_sandbox_with_invalid_expire_after(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify invalid expire_after returns validation error."""
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        resp = api_client.post(
+            create_url,
+            data={"name": "test-sandbox", "expire_after": "invalid"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_create_sandbox_already_exists(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify sandbox creation returns proper error when sandbox already exists.

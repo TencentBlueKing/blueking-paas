@@ -15,10 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import timedelta
+
 from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
+from paasng.utils.datetime import get_time_delta
 
+from .constants import SANDBOX_DEFAULT_EXPIRE_AFTER
 from .models import Sandbox
 
 
@@ -56,6 +60,27 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="快照镜像的入口命令列表",
     )
     workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
+    expire_after = serializers.CharField(
+        label="多久后过期",
+        required=False,
+        help_text="沙箱保留时长，支持 s/m/h/d/w，如 30m、3h、7d；不提供则使用默认值",
+    )
+
+    def validate_expire_after(self, value: str) -> timedelta:
+        try:
+            delta = get_time_delta(value)
+        except (TypeError, ValueError, IndexError):
+            raise serializers.ValidationError("expire_after must be a valid duration string like 30m, 3h, or 7d")
+
+        if delta <= timedelta(0):
+            raise serializers.ValidationError("expire_after must be greater than 0")
+        if delta > timedelta(hours=24):
+            raise serializers.ValidationError("expire_after must be less than or equal to 24 hours")
+        return delta
+
+    def validate(self, attrs):
+        attrs.setdefault("expire_after", SANDBOX_DEFAULT_EXPIRE_AFTER)
+        return attrs
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
@@ -63,17 +88,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Sandbox
-        fields = (
-            "uuid",
-            "name",
-            "snapshot",
-            "target",
-            "env_vars",
-            "cpu",
-            "memory",
-            "status",
-            "created",
-        )
+        fields = ("uuid", "name", "snapshot", "target", "env_vars", "cpu", "memory", "status", "created", "expired_at")
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):

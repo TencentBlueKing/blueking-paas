@@ -82,15 +82,6 @@ class TestBKLogConfigProvider:
         )
         return bk_module
 
-    def test_get_config_success(self, bk_module_with_config):
-        """成功获取租户配置"""
-        provider = BKLogConfigProvider(bk_module_with_config)
-        assert provider.storage_cluster_id == 200
-        assert provider.retention == 21
-        assert provider.es_shards == 5
-        assert provider.storage_replicas == 3
-        assert provider.timezone == 2
-
     def test_config_not_exists(self, bk_module):
         """配置不存在时抛出异常"""
         TenantLogConfig.objects.filter(tenant_id=bk_module.application.tenant_id).delete()

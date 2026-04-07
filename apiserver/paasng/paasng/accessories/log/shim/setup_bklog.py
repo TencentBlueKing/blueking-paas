@@ -30,6 +30,7 @@ from paasng.accessories.log.models import (
     ElasticSearchConfig,
     ElasticSearchParams,
     ProcessLogQueryConfig,
+    TenantLogConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
@@ -64,7 +65,6 @@ class BKLogConfigProvider:
         - 默认租户：从 TenantLogConfig 获取（已初始化）
         - 其他租户：从 TenantLogConfig 获取，不存在则报错
         """
-        from paasng.accessories.log.models import TenantLogConfig
 
         try:
             return TenantLogConfig.objects.get(tenant_id=self.tenant_id)

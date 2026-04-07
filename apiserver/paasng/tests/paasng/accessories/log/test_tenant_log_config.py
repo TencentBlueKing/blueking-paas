@@ -64,6 +64,24 @@ class TestInitDefaultTenantLogConfig:
             assert "miss" in caplog.text.lower()
             assert not TenantLogConfig.objects.filter(tenant_id=default_tenant_id).exists()
 
+    def test_error_log_if_invalid_config_value(self, settings, caplog):
+        with override_settings(
+            BKLOG_CONFIG={
+                "STORAGE_CLUSTER_ID": None,
+                "RETENTION": 30,
+                "ES_SHARDS": 3,
+                "STORAGE_REPLICAS": 2,
+                "TIME_ZONE": 1,
+            }
+        ):
+            default_tenant_id = get_init_tenant_id()
+            TenantLogConfig.objects.filter(tenant_id=default_tenant_id).delete()
+
+            init_default_tenant_log_config()
+
+            assert "invalid bklog_config" in caplog.text.lower()
+            assert not TenantLogConfig.objects.filter(tenant_id=default_tenant_id).exists()
+
 
 class TestBKLogConfigProvider:
     """测试 BKLogConfigProvider"""

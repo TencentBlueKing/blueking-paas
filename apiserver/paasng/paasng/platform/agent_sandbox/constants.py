@@ -31,5 +31,5 @@ class SandboxStatus(StrStructuredEnum):
     ERR_DELETING = EnumField("err_deleting", label="unable to delete")
 
 
-# 默认创建后 3 小时删除
-SANDBOX_DEFAULT_EXPIRE_AFTER = timedelta(hours=3)
+# 默认创建 30 分钟后过期(删除)
+SANDBOX_DEFAULT_EXPIRE_AFTER = timedelta(minutes=30)

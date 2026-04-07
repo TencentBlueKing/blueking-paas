@@ -267,7 +267,6 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         # Write back to database
         self.db_obj.service_instance_id = instance_id
         self.db_obj.save(update_fields=["service_instance_id"])
-        self.db_obj.refresh_from_db()  # refresh and format service_instance_id to UUID object
 
         # Update instance config
         if service_obj.supports_inst_config():

@@ -69,6 +69,24 @@ class ReservedWordValidator:
 
 
 @deconstructible
+class ForbiddenAppCodePrefixValidator:
+    """Validator that rejects app codes starting with any of the configured forbidden prefixes.
+
+    The forbidden prefix list is read from ``settings.APP_CODE_FORBIDDEN_PREFIXES``.
+    When the list is empty, no restriction is applied.
+    """
+
+    def __init__(self, resource_type: str = ""):
+        self.resource_type = resource_type
+
+    def __call__(self, value):
+        value = force_str(value)
+        for prefix in settings.FORBIDDEN_APP_CODE_PREFIXES:
+            if value.startswith(prefix):
+                raise ValidationError(f"{self.resource_type} 不能以 '{prefix}' 开头")
+
+
+@deconstructible
 class Base64Validator:
     def __call__(self, value):
         try:

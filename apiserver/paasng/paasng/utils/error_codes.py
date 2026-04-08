@@ -240,6 +240,9 @@ class ErrorCodes:
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
 
+    CANNOT_CREATE_AUTH_CODE = ErrorCode(_("生成 APP 创建授权码失败"))
+    CANNOT_DELETE_USED_AUTH_CODE = ErrorCode(_("已使用的授权码不能被删除"))
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

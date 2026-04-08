@@ -67,6 +67,7 @@ class Command(BaseCommand):
 
         for module_name in module_names:
             for run_env in run_envs:
+                # sleep 1s, 减小对监控接口的压力
                 time.sleep(1)
                 try:
                     manager.create_rules(module_name, run_env)

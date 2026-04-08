@@ -47,6 +47,7 @@ class TestSandboxModel:
         assert sandbox.status == SandboxStatus.PENDING.value
         assert sandbox.daemon_token is not None
         assert len(sandbox.daemon_token) == 32
+        # 时间比较允许微量误差
         assert sandbox.expired_at - (timezone.now() + expire_after) < timedelta(seconds=3)
 
     def test_sandbox_create_duplicate_name(self, bk_app, bk_user):

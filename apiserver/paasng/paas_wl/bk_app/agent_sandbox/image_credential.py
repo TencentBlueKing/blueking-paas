@@ -53,10 +53,7 @@ def generate_dockerconfig_b64() -> str:
     return b64encode(json.dumps(config))
 
 
-def ensure_image_credential(
-    client: "DynamicClient",
-    namespace: str,
-) -> str:
+def ensure_image_credential(client: "DynamicClient", namespace: str) -> str:
     """确保镜像拉取凭证在指定集群和命名空间中存在。
 
     :param client: K8s API 客户端。

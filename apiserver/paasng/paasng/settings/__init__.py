@@ -1599,6 +1599,35 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
     ],
 )
 
+# ---------------------------------------------
+# Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等
+# ---------------------------------------------
+# 镜像仓库的域名
+AGENT_SANDBOX_DOCKER_REGISTRY_HOST = settings.get("AGENT_SANDBOX_DOCKER_REGISTRY_HOST", APP_DOCKER_REGISTRY_HOST)
+# 镜像仓库的命名空间
+AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE = settings.get("AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE", "bkpaas-sandbox")
+# 是否跳过校验镜像仓库的证书
+AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY", APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+)
+# 镜像仓库账号
+AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME", APP_DOCKER_REGISTRY_USERNAME
+)
+# 镜像仓库密码
+AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD", APP_DOCKER_REGISTRY_PASSWORD
+)
+
+# ---------------------------------------------
+# Agent Sandbox 制品存储配置，用于存储构建过程中的中间制品和 daemon 二进制
+# ---------------------------------------------
+# 用于存储 Agent Sandbox 相关中间制品的 bucket
+AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkpaas3-sandbox-packages")
+# 存放 sandbox daemon 二进制的 bucket 和 key
+AGENT_SANDBOX_DAEMON_BUCKET = settings.get("AGENT_SANDBOX_DAEMON_BUCKET", SERVICE_LOGO_BUCKET)
+AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/daemon")
+
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限

@@ -45,3 +45,7 @@ class SandboxServiceNotReady(SandboxError):
 
 class SandboxDaemonAPIError(Exception):
     """Raised when the sandbox daemon API returns an error."""
+
+
+class ImageBuildSourceError(SandboxError):
+    """Raised when preparing image build source fails (e.g. missing Dockerfile)."""

@@ -24,7 +24,7 @@ from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 from django.conf import settings
 
-from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, HelmChartDeployStatus
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterUsage, HelmChartDeployStatus
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -189,7 +189,7 @@ class AllocationContext:
     region: str
     environment: str
     username: str | None = None
-    usage: str | None = None
+    usage: ClusterUsage | None = None
 
     @classmethod
     def create_for_future_system_apps(cls):
@@ -210,6 +210,22 @@ class AllocationContext:
         """
         tenant_id = OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
         return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
+
+    @classmethod
+    def create_for_agent_sandbox(cls, tenant_id: str, region: str | None = None) -> "AllocationContext":
+        """Create an allocation context for agent sandbox cluster.
+
+        :param tenant_id: The tenant ID for the sandbox.
+        :param region: Optional region, defaults to settings.DEFAULT_REGION_NAME.
+        :returns: AllocationContext configured for AGENT_SANDBOX usage.
+        """
+        return cls(
+            tenant_id=tenant_id,
+            region=region or settings.DEFAULT_REGION_NAME,
+            usage=ClusterUsage.AGENT_SANDBOX,
+            # agent_sandbox 不区分环境
+            environment="",
+        )
 
     @classmethod
     def from_module_env(cls, module_env: ModuleEnvironment) -> "AllocationContext":

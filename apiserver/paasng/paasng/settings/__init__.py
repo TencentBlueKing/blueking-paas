@@ -1636,9 +1636,6 @@ FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVE
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
 
-# FORBIDDEN_APP_CODE_PREFIXES 包含与应用代码相关的敏感前缀，配置后，平台将不允许用户使用这些前缀创建应用
-FORBIDDEN_APP_CODE_PREFIXES = settings.get("FORBIDDEN_APP_CODE_PREFIXES", [])
-
 # 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)
 # apiserver 的版本号

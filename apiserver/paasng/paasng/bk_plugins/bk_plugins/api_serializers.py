@@ -41,7 +41,7 @@ class PluginTemplateSLZ(serializers.Serializer):
 class PluginSyncRequestSLZ(serializers.Serializer):
     """同步插件信息至第三方系统的请求体格式"""
 
-    id = AppIDField(check_forbidden_prefix=False)
+    id = AppIDField()
     name = I18NExtend(AppNameField())
     template = PluginTemplateSLZ()
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")

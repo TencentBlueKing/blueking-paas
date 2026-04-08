@@ -27,6 +27,7 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
+from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
     AgentSandboxKresApp,
@@ -172,7 +173,10 @@ class AgentSandboxResManager:
         try:
             with self.kres_app.get_kube_api_client() as client:
                 NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
-
+                ensure_image_credential(
+                    client=client,
+                    namespace=self.kres_app.namespace,
+                )
             agent_sandbox_kmodel.create(sandbox)
             sandbox_created = True
             self._wait_for_running(sandbox.name)

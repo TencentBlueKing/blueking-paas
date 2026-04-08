@@ -31,7 +31,9 @@ class ImageBuildCreateInputSLZ(serializers.Serializer):
     docker_build_args = serializers.DictField(
         label="Docker 构建参数", child=serializers.CharField(), required=False, default=dict
     )
-    preload = serializers.BooleanField(label="构建完成后是否将镜像预拉取到目标沙箱集群", required=False, default=False)
+    prefetch = serializers.BooleanField(
+        label="构建完成后是否将镜像预拉取到目标沙箱集群", required=False, default=False
+    )
 
 
 class ImageBuildCreateOutputSLZ(serializers.Serializer):

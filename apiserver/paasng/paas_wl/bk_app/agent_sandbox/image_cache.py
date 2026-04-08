@@ -16,11 +16,13 @@
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from paas_wl.infras.resources.base import crd
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 # kube-fledged 默认使用的命名空间
 KUBEFLEDGED_NAMESPACE = "kube-fledged"
@@ -49,14 +51,14 @@ class ImageCache:
 
     ImageCache 与具体的 PaaS 应用无关，固定创建在集群的 kube-fledged 命名空间。
 
-    :param cluster_name: 目标集群名称，镜像将被预拉取到该集群的节点上。
+    :param client: K8s API 客户端，用于操作目标集群。
     :param name: ImageCache 资源名称。
     :param images: 需要预拉取的镜像列表。
     :param image_pull_secrets: 拉取镜像所需的 Secret 名称列表（位于 kube-fledged 命名空间）。
     :param status: 从集群获取的状态信息，仅在 get 操作后填充。
     """
 
-    cluster_name: str
+    client: "DynamicClient"
     name: str
     images: List[str] = field(default_factory=list)
     image_pull_secrets: List[str] = field(default_factory=list)
@@ -65,28 +67,23 @@ class ImageCache:
     @cached_property
     def resource(self):
         """获取 ImageCache CRD 资源操作对象。"""
-        return crd.ImageCache(get_client_by_cluster_name(self.cluster_name), api_version=KUBEFLEDGED_API_VERSION)
+        return crd.ImageCache(self.client, api_version=KUBEFLEDGED_API_VERSION)
 
     def upsert(self):
-        """在目标集群中创建或更新 ImageCache 资源。"""
+        """在目标集群中创建或更新 ImageCache 资源。
+        IMPORTANT: 更新时，一旦镜像列表发生变化，移除掉的镜像将会被 kube-fledged controller 直接强制删除，无论是否正在被使用 !!!
+        """
         self.resource.create_or_update(
             name=self.name,
             namespace=KUBEFLEDGED_NAMESPACE,
             body=self._to_manifest(),
-            update_method="replace",
-            auto_add_version=True,
+            update_method="patch",
+            content_type="application/merge-patch+json",
         )
 
-    def delete(self, raise_if_non_exists: bool = False):
-        """从目标集群中删除 ImageCache 资源。
-
-        :param raise_if_non_exists: 若资源不存在是否抛出异常，默认为 False。
-        """
-        self.resource.delete(
-            name=self.name,
-            namespace=KUBEFLEDGED_NAMESPACE,
-            raise_if_non_exists=raise_if_non_exists,
-        )
+    def delete(self):
+        """从目标集群中删除 ImageCache 资源。"""
+        self.resource.delete(name=self.name, namespace=KUBEFLEDGED_NAMESPACE)
 
     def get(self) -> Optional["ImageCache"]:
         """从目标集群中获取 ImageCache 资源。
@@ -119,7 +116,7 @@ class ImageCache:
 
         return ImageCache(
             name=self.name,
-            cluster_name=self.cluster_name,
+            client=self.client,
             images=images,
             image_pull_secrets=image_pull_secrets,
             status=status,

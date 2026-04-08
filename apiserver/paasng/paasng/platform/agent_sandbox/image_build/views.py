@@ -65,7 +65,7 @@ class ImageBuildViewSet(viewsets.ViewSet):
             tenant_id=request.app.tenant_id or get_init_tenant_id(),
         )
 
-        run_image_build.delay(str(build.uuid))
+        run_image_build.delay(str(build.uuid), prefetch=data["prefetch"])
 
         return Response(ImageBuildCreateOutputSLZ(build).data, status=status.HTTP_201_CREATED)
 

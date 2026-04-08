@@ -46,7 +46,7 @@ class SandboxManager(models.Manager):
         env_vars: dict | None = None,
         name: str | None = None,
         workspace: str | None = None,
-        expire_after: timedelta = timedelta(seconds=SANDBOX_DEFAULT_TTL_SECONDS),
+        ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
@@ -81,7 +81,7 @@ class SandboxManager(models.Manager):
             creator=creator,
             tenant_id=application.tenant_id,
             daemon_token=get_random_string(32),
-            expired_at=timezone.now() + expire_after,
+            expired_at=timezone.now() + timedelta(seconds=ttl_seconds),
         )
 
 

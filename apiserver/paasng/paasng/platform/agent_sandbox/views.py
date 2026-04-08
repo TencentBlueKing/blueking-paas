@@ -85,7 +85,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
                 snapshot=data.get("snapshot"),
                 snapshot_entrypoint=data.get("snapshot_entrypoint"),
                 workspace=data.get("workspace"),
-                ttl_time=data["ttl_time"],
+                ttl_seconds=data["ttl_seconds"],
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS

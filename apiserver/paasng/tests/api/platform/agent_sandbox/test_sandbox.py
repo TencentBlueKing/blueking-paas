@@ -65,8 +65,8 @@ class TestAgentSandboxViewSetCreate:
         assert "snapshot" in data
         assert "status" in data
 
-    def test_create_sandbox_with_ttl_time(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
-        """Verify ttl_time is passed to create_sandbox as seconds."""
+    def test_create_sandbox_with_ttl_seconds(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
+        """Verify ttl_seconds is passed to create_sandbox as seconds."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
@@ -75,20 +75,20 @@ class TestAgentSandboxViewSetCreate:
         ) as mocked_create:
             resp = api_client.post(
                 create_url,
-                data={"name": "test-sandbox", "ttl_time": 600},
+                data={"name": "test-sandbox", "ttl_seconds": 600},
                 format="json",
             )
 
         assert resp.status_code == status.HTTP_201_CREATED
-        assert mocked_create.call_args.kwargs["ttl_time"] == 600
+        assert mocked_create.call_args.kwargs["ttl_seconds"] == 600
 
-    def test_create_sandbox_with_invalid_ttl_time(self, api_client: APIClient, bk_app: Any) -> None:
-        """Verify invalid ttl_time returns validation error."""
+    def test_create_sandbox_with_invalid_ttl_seconds(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify invalid ttl_seconds returns validation error."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         resp = api_client.post(
             create_url,
-            data={"name": "test-sandbox", "ttl_time": 0},
+            data={"name": "test-sandbox", "ttl_seconds": 0},
             format="json",
         )
 

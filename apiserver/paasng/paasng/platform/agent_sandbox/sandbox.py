@@ -19,7 +19,6 @@ import copy
 import logging
 import re
 import shlex
-from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
@@ -69,7 +68,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
-    ttl_time: int | None = None,
+    ttl_seconds: int | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -80,8 +79,9 @@ def create_sandbox(
     :param snapshot: The snapshot name, optional.
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
+    :param ttl_seconds: The sandbox ttl in seconds, optional.
     """
-    effective_ttl_time = ttl_time or SANDBOX_DEFAULT_TTL_SECONDS
+    ttl_seconds = ttl_seconds or SANDBOX_DEFAULT_TTL_SECONDS
 
     sandbox_obj = Sandbox.objects.new(
         application=application,
@@ -91,7 +91,7 @@ def create_sandbox(
         env_vars=env_vars,
         creator=creator,
         workspace=workspace,
-        expire_after=timedelta(seconds=effective_ttl_time),
+        ttl_seconds=ttl_seconds,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)

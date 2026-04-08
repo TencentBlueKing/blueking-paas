@@ -57,7 +57,7 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="快照镜像的入口命令列表",
     )
     workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
-    ttl_time = serializers.IntegerField(
+    ttl_seconds = serializers.IntegerField(
         label="存活时长（秒）",
         required=False,
         default=SANDBOX_DEFAULT_TTL_SECONDS,
@@ -65,10 +65,10 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="沙箱存活时长（秒），不提供则默认 1800（30 分钟）",
     )
 
-    def validate_ttl_time(self, value: int) -> int:
+    def validate_ttl_seconds(self, value: int) -> int:
         if value > SANDBOX_MAX_TTL_SECONDS:
             raise serializers.ValidationError(
-                f"ttl_time must be less than or equal to {SANDBOX_MAX_TTL_SECONDS} seconds"
+                f"ttl_seconds must be less than or equal to {SANDBOX_MAX_TTL_SECONDS} seconds"
             )
         return value
 

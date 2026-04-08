@@ -54,11 +54,6 @@ const (
 	// TerminationGracePeriodDelaySeconds is the extra grace period reserved for app cleanup
 	// after preStop sleep is finished.
 	TerminationGracePeriodDelaySeconds = int64(2)
-
-	// MinPreStopSleepSeconds is the minimum preStop sleep duration in seconds.
-	// If the calculated sleep duration is less than this value, the preStop hook will not be injected
-	// because it's too small to be meaningful.
-	MinPreStopSleepSeconds = int64(1)
 )
 
 // log is for logging in this package.
@@ -157,7 +152,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					Tolerations:      common.BuildTolerations(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
 					AutomountServiceAccountToken:  lo.ToPtr(false),
-					TerminationGracePeriodSeconds: buildTerminationGracePeriodSeconds(proc),
+					TerminationGracePeriodSeconds: buildTerminationGracePeriodSeconds(proc.GracefulShutdownSeconds),
 				},
 			},
 		},
@@ -208,7 +203,7 @@ func buildContainers(
 		Env:             envs,
 		Command:         kubeutil.ReplaceCommandEnvVariables(command),
 		Args:            kubeutil.ReplaceCommandEnvVariables(args),
-		Lifecycle:       buildContainerLifecycle(proc),
+		Lifecycle:       buildContainerLifecycle(proc.GracefulShutdownSeconds),
 	}
 
 	if len(proc.Services) > 0 {
@@ -230,20 +225,15 @@ func buildContainers(
 }
 
 // buildContainerLifecycle returns the container lifecycle config.
-// It injects a preStop sleep hook only when GracefulShutdownSeconds is set
-// and is not smaller than MinPreStopSleepSeconds.
+// It injects a preStop sleep hook only when GracefulShutdownSeconds is set.
 // The sleep duration equals GracefulShutdownSeconds.
-func buildContainerLifecycle(proc paasv1alpha2.Process) *corev1.Lifecycle {
-	if proc.GracefulShutdownSeconds == nil {
+func buildContainerLifecycle(gracefulShutdownSeconds *int64) *corev1.Lifecycle {
+	if gracefulShutdownSeconds == nil {
 		return nil
 	}
 
 	// preStop sleep duration equals GracefulShutdownSeconds directly.
-	sleepSeconds := *proc.GracefulShutdownSeconds
-	if sleepSeconds < MinPreStopSleepSeconds {
-		return nil
-	}
-
+	sleepSeconds := *gracefulShutdownSeconds
 	return &corev1.Lifecycle{
 		PreStop: &corev1.LifecycleHandler{
 			Exec: &corev1.ExecAction{
@@ -254,16 +244,15 @@ func buildContainerLifecycle(proc paasv1alpha2.Process) *corev1.Lifecycle {
 }
 
 // buildTerminationGracePeriodSeconds returns TerminationGracePeriodSeconds for PodSpec.
-// It follows the same threshold as preStop injection:
-//   - return nil when GracefulShutdownSeconds is unset or < MinPreStopSleepSeconds,
+//   - return nil when GracefulShutdownSeconds is unset,
 //     so Kubernetes default terminationGracePeriodSeconds is used.
 //   - return gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds otherwise.
-func buildTerminationGracePeriodSeconds(proc paasv1alpha2.Process) *int64 {
-	if proc.GracefulShutdownSeconds == nil || *proc.GracefulShutdownSeconds < MinPreStopSleepSeconds {
+func buildTerminationGracePeriodSeconds(gracefulShutdownSeconds *int64) *int64 {
+	if gracefulShutdownSeconds == nil {
 		return nil
 	}
 
-	terminationGracePeriodSeconds := *proc.GracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
+	terminationGracePeriodSeconds := *gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
 	return lo.ToPtr(terminationGracePeriodSeconds)
 }
 

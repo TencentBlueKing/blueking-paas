@@ -261,11 +261,12 @@ type Process struct {
 
 	// GracefulShutdownSeconds defines the graceful shutdown window in seconds.
 	// When set, the operator injects a preStop hook to sleep for this duration
-	// and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+	// and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds.
 	// When unset, no preStop hook is injected and Kubernetes default
 	// terminationGracePeriodSeconds is used.
+	// The value must be >= 1 when set.
 	// +optional
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	GracefulShutdownSeconds *int64 `json:"gracefulShutdownSeconds,omitempty"`
 
 	// Components is a list of component

@@ -353,11 +353,12 @@ spec:
                       description: |-
                         GracefulShutdownSeconds defines the graceful shutdown window in seconds.
                         When set, the operator injects a preStop hook to sleep for this duration
-                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds.
                         When unset, no preStop hook is injected and Kubernetes default
                         terminationGracePeriodSeconds is used.
+                        The value must be >= 1 when set.
                       format: int64
-                      minimum: 0
+                      minimum: 1
                       type: integer
                     image:
                       description: Container image name
@@ -1664,11 +1665,12 @@ spec:
                       description: |-
                         GracefulShutdownSeconds defines the graceful shutdown window in seconds.
                         When set, the operator injects a preStop hook to sleep for this duration
-                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + 2.
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds.
                         When unset, no preStop hook is injected and Kubernetes default
                         terminationGracePeriodSeconds is used.
+                        The value must be >= 1 when set.
                       format: int64
-                      minimum: 0
+                      minimum: 1
                       type: integer
                     name:
                       description: Name of process

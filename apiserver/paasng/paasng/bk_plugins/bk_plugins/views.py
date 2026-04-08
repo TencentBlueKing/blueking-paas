@@ -79,6 +79,7 @@ class FilterPluginsMixin:
             has_deployed=data["has_deployed"],
             distributor_code_name=data["distributor_code_name"],
             tag_id=data["tag_id"],
+            app_tenant_mode=data["app_tenant_mode"],
         )
         paginator = LimitOffsetPagination()
         applications = paginator.paginate_queryset(applications, request, self)

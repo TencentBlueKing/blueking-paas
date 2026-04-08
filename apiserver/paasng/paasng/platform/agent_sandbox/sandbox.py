@@ -68,7 +68,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
-    ttl_seconds: int | None = None,
+    ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -81,8 +81,6 @@ def create_sandbox(
     :param workspace: The workspace path, optional.
     :param ttl_seconds: The sandbox ttl in seconds, optional.
     """
-    ttl_seconds = ttl_seconds or SANDBOX_DEFAULT_TTL_SECONDS
-
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,

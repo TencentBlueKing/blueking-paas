@@ -61,16 +61,9 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         label="存活时长（秒）",
         required=False,
         default=SANDBOX_DEFAULT_TTL_SECONDS,
-        min_value=1,
-        help_text="沙箱存活时长（秒），不提供则默认 1800（30 分钟）",
+        max_value=SANDBOX_MAX_TTL_SECONDS,
+        help_text="沙箱存活时长（秒）",
     )
-
-    def validate_ttl_seconds(self, value: int) -> int:
-        if value > SANDBOX_MAX_TTL_SECONDS:
-            raise serializers.ValidationError(
-                f"ttl_seconds must be less than or equal to {SANDBOX_MAX_TTL_SECONDS} seconds"
-            )
-        return value
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):

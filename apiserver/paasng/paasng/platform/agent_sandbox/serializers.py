@@ -61,6 +61,7 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         label="存活时长（秒）",
         required=False,
         default=SANDBOX_DEFAULT_TTL_SECONDS,
+        min_value=0,
         max_value=SANDBOX_MAX_TTL_SECONDS,
         help_text="沙箱存活时长（秒）",
     )

@@ -30,7 +30,7 @@ from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.applications.models import Application
 from paasng.utils.models import BkUserField, UuidAuditedModel
 
-from .constants import SANDBOX_DEFAULT_EXPIRE_AFTER, SandboxStatus
+from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from .exceptions import SandboxAlreadyExists
 
 
@@ -46,7 +46,7 @@ class SandboxManager(models.Manager):
         env_vars: dict | None = None,
         name: str | None = None,
         workspace: str | None = None,
-        expire_after: timedelta = SANDBOX_DEFAULT_EXPIRE_AFTER,
+        expire_after: timedelta = timedelta(seconds=SANDBOX_DEFAULT_TTL_SECONDS),
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}

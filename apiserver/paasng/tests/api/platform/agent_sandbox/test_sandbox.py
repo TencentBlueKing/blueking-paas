@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from datetime import timedelta
 from typing import Any
 from unittest import mock
 
@@ -66,8 +65,8 @@ class TestAgentSandboxViewSetCreate:
         assert "snapshot" in data
         assert "status" in data
 
-    def test_create_sandbox_with_expire_after(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
-        """Verify expire_after is parsed and passed to create_sandbox as timedelta."""
+    def test_create_sandbox_with_ttl_time(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
+        """Verify ttl_time is passed to create_sandbox as seconds."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
@@ -76,20 +75,20 @@ class TestAgentSandboxViewSetCreate:
         ) as mocked_create:
             resp = api_client.post(
                 create_url,
-                data={"name": "test-sandbox", "expire_after": "6h"},
+                data={"name": "test-sandbox", "ttl_time": 600},
                 format="json",
             )
 
         assert resp.status_code == status.HTTP_201_CREATED
-        assert mocked_create.call_args.kwargs["expire_after"] == timedelta(hours=6)
+        assert mocked_create.call_args.kwargs["ttl_time"] == 600
 
-    def test_create_sandbox_with_invalid_expire_after(self, api_client: APIClient, bk_app: Any) -> None:
-        """Verify invalid expire_after returns validation error."""
+    def test_create_sandbox_with_invalid_ttl_time(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify invalid ttl_time returns validation error."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         resp = api_client.post(
             create_url,
-            data={"name": "test-sandbox", "expire_after": "invalid"},
+            data={"name": "test-sandbox", "ttl_time": 0},
             format="json",
         )
 

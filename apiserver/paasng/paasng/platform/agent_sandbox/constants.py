@@ -13,8 +13,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from datetime import timedelta
-
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
@@ -31,5 +29,8 @@ class SandboxStatus(StrStructuredEnum):
     ERR_DELETING = EnumField("err_deleting", label="unable to delete")
 
 
-# 默认创建 30 分钟后过期(删除)
-SANDBOX_DEFAULT_EXPIRE_AFTER = timedelta(minutes=30)
+# 沙箱默认的 TTL（Time To Live）时长
+SANDBOX_DEFAULT_TTL_SECONDS = 30 * 60
+
+# 沙箱 TTL 最大值
+SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60

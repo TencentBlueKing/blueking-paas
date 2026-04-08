@@ -15,14 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from datetime import timedelta
-
 from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
-from paasng.utils.datetime import get_time_delta
 
-from .constants import SANDBOX_DEFAULT_EXPIRE_AFTER
+from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
 from .models import Sandbox
 
 
@@ -60,27 +57,20 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="快照镜像的入口命令列表",
     )
     workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
-    expire_after = serializers.CharField(
-        label="多久后过期",
+    ttl_time = serializers.IntegerField(
+        label="存活时长（秒）",
         required=False,
-        help_text="沙箱保留时长，支持 s/m/h/d/w，如 30m、3h、7d；不提供则使用默认值",
+        default=SANDBOX_DEFAULT_TTL_SECONDS,
+        min_value=1,
+        help_text="沙箱存活时长（秒），不提供则默认 1800（30 分钟）",
     )
 
-    def validate_expire_after(self, value: str) -> timedelta:
-        try:
-            delta = get_time_delta(value)
-        except (TypeError, ValueError, IndexError):
-            raise serializers.ValidationError("expire_after must be a valid duration string like 30m, 3h, or 7d")
-
-        if delta <= timedelta(0):
-            raise serializers.ValidationError("expire_after must be greater than 0")
-        if delta > timedelta(hours=24):
-            raise serializers.ValidationError("expire_after must be less than or equal to 24 hours")
-        return delta
-
-    def validate(self, attrs):
-        attrs.setdefault("expire_after", SANDBOX_DEFAULT_EXPIRE_AFTER)
-        return attrs
+    def validate_ttl_time(self, value: int) -> int:
+        if value > SANDBOX_MAX_TTL_SECONDS:
+            raise serializers.ValidationError(
+                f"ttl_time must be less than or equal to {SANDBOX_MAX_TTL_SECONDS} seconds"
+            )
+        return value
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):

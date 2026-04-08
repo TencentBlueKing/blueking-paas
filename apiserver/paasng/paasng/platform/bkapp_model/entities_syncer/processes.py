@@ -15,16 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from __future__ import annotations
-
 from typing import Any, Dict, Iterable, List
 
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.entities import Process  # noqa: TC001
-from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig  # noqa: TC001
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.modules.models import Module  # noqa: TC001
+from paasng.platform.modules.models import Module
 from paasng.utils.structure import NOTSET, NotSetType
 
 from .result import CommonSyncResult

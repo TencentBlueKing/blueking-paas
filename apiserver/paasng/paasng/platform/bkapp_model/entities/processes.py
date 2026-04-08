@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from __future__ import annotations
-
 import shlex
 from typing import List, Optional
 
@@ -25,10 +23,10 @@ from pydantic import Field
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
-from .components import Component  # noqa: TC001
-from .probes import ProbeSet  # noqa: TC001
-from .proc_service import ProcService  # noqa: TC001
-from .scaling_config import AutoscalingConfig  # noqa: TC001
+from .components import Component
+from .probes import ProbeSet
+from .proc_service import ProcService
+from .scaling_config import AutoscalingConfig
 
 
 class Process(AllowNotsetModel):

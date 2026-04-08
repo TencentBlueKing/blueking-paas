@@ -15,9 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from django.db import models
@@ -32,8 +30,8 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     BkAppProcess,
     BkAppResource,
     BkAppSpec,
+    ObjectMetadata,
 )
-from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.utils.basic import to_error_string
@@ -42,9 +40,7 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
-
-if TYPE_CHECKING:
-    from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import Module
 
 
 class AppModelResourceManager(models.Manager):

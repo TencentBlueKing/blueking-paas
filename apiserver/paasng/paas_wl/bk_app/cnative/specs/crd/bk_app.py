@@ -20,9 +20,7 @@
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
-from __future__ import annotations
-
-import datetime  # noqa: TC003
+import datetime
 import json
 from typing import Any, Dict, List, Literal, Union
 
@@ -37,7 +35,7 @@ from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.structure import register
 
-from .metadata import ObjectMetadata  # noqa: TC001
+from .metadata import ObjectMetadata
 
 
 class MetaV1Condition(BaseModel):

@@ -35,6 +35,9 @@ from .utils import gen_addons_cert_mount_path, generate_password
 
 logger = logging.getLogger(__name__)
 
+# Quorum queues were introduced in RabbitMQ 3.8.0
+QUORUM_MIN_VERSION = Version("3.8.0")
+
 
 @dataclass
 class ProviderPlugin:
@@ -54,14 +57,11 @@ class ProviderPlugin:
 
 
 class HAProviderPlugin(ProviderPlugin):
-    """高可用策略插件, 更具使用的 RabbitMQ 版本选择合适的 HA 策略
+    """高可用策略插件, 根据使用的 RabbitMQ 版本选择合适的 HA 策略
 
     - RabbitMQ >= 3.8.0: 直接在 vhost 上设置 default_queue_type=quorum, 使用 Quorum Queues 实现高可用
     - RabbitMQ < 3.8.0: 使用 Classic Mirrored Queues (ha-mode=all)
     """
-
-    # Quorum 队列是在 RabbitMQ 3.8.0 中引入的
-    QUORUM_MIN_VERSION = Version("3.8.0")
 
     # Policy name applied to the vhost for HA
     HA_POLICY_NAME = "bk-ha-policy"
@@ -84,7 +84,7 @@ class HAProviderPlugin(ProviderPlugin):
             return
 
         version = Version(self.cluster.version)
-        if version >= self.QUORUM_MIN_VERSION:
+        if version >= QUORUM_MIN_VERSION:
             # RabbitMQ 3.8+: 直接在虚拟主机上设置 default_queue_type, 因为 queue-type 不再是有效的用户策略定义键.
             logger.info(
                 "RabbitMQ version %s >= 3.8.0, setting vhost default_queue_type=quorum for vhost %s",
@@ -153,13 +153,10 @@ class DeadLetterRoutingProviderPlugin(ProviderPlugin):
 
     min_version = Version("2.8.0")
 
-    # Quorum queues were introduced in RabbitMQ 3.8.0
-    QUORUM_MIN_VERSION = Version("3.8.0")
-
     def _should_use_quorum(self) -> bool:
         """Check if the cluster version supports quorum queues."""
         version = Version(self.cluster.version)
-        return version >= self.QUORUM_MIN_VERSION
+        return version >= QUORUM_MIN_VERSION
 
     def on_create(self):
         version = Version(self.cluster.version)
@@ -249,17 +246,26 @@ class Provider(BaseProvider):
         return "-".join(parts)
 
     def resolve_cluster_pk(self, cluster: Cluster) -> int | None:
-        """resolve ORM cluster primary key for policy plugins."""
-        if mgmt_api := (cluster.management_api or "").rstrip("/"):
-            for db_cluster in ClusterModel.objects.filter(enable=True):
-                if (db_cluster.management_api or "").rstrip("/") == mgmt_api:
-                    return db_cluster.pk
-        db_cluster = ClusterModel.objects.filter(
-            enable=True,
-            host=cluster.host,
-            port=cluster.port,
-        ).first()
-        return db_cluster.pk if db_cluster else None
+        """根据集群配置解析出对应的 ClusterModel 主键
+
+        运行时的 Cluster 数据类时从 providor JSON 反序列化而来, 不携带数据库主键,
+        但是 UserPolicyProviderPlugin 和 LimitPolicyProviderPlugin 需要 cluster_pk 来查询对应的策略配置
+        """
+        enabled_clusters = ClusterModel.objects.filter(enable=True)
+        mgmt_api = (cluster.management_api or "").rstrip("/")
+
+        if not mgmt_api:
+            logger.warning(
+                "cluster management_api is empty, cannot resolve cluster_pk accurately, fallback to host/port matching"
+            )
+            db_cluster = enabled_clusters.filter(host=cluster.host, port=cluster.port).first()
+            return db_cluster.pk if db_cluster else None
+
+        for db_cluster in enabled_clusters:
+            if (db_cluster.management_api or "").rstrip("/") == mgmt_api:
+                return db_cluster.pk
+
+        return None
 
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""

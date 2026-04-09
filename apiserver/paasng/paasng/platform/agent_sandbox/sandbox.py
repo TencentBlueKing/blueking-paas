@@ -39,7 +39,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
@@ -68,6 +68,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
+    ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -78,6 +79,7 @@ def create_sandbox(
     :param snapshot: The snapshot name, optional.
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
+    :param ttl_seconds: The sandbox ttl in seconds, optional.
     """
     sandbox_obj = Sandbox.objects.new(
         application=application,
@@ -87,6 +89,7 @@ def create_sandbox(
         env_vars=env_vars,
         creator=creator,
         workspace=workspace,
+        ttl_seconds=ttl_seconds,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)

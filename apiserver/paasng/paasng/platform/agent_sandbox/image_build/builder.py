@@ -15,13 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
 import logging
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from six import ensure_text
 
+from paas_wl.bk_app.agent_sandbox.image_credential import generate_dockerconfig_b64
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
@@ -107,7 +107,7 @@ class KanikoBuildExecutor:
             "DOCKERFILE_PATH": self.build.dockerfile_path,
             "CACHE_REPO": f"{output_image_info.domain}/{output_image_info.name}/dockerbuild-cache",
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
-            "DOCKER_CONFIG_JSON": self._get_docker_config_json(),
+            "DOCKER_CONFIG_JSON": generate_dockerconfig_b64(),
             "SKIP_TLS_VERIFY_REGISTRIES": (
                 settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST
                 if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY
@@ -132,23 +132,6 @@ class KanikoBuildExecutor:
                 signature_type=SignatureType.DOWNLOAD,
             )
         return self.build.source_url
-
-    def _get_docker_config_json(self) -> str:
-        return b64encode(
-            json.dumps(
-                {
-                    "auths": {
-                        settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST: {
-                            "username": settings.AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME,
-                            "password": settings.AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD,
-                            "auth": b64encode(
-                                f"{settings.AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME}:{settings.AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD}"
-                            ),
-                        }
-                    }
-                }
-            )
-        )
 
     def _create_build_pod(self):
         """Create the Kaniko build Pod in the sandbox cluster."""

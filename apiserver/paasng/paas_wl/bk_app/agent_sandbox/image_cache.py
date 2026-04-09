@@ -62,7 +62,7 @@ class ImageCache:
     name: str
     images: List[str] = field(default_factory=list)
     image_pull_secrets: List[str] = field(default_factory=list)
-    status: Optional[ImageCacheStatus] = None
+    status: ImageCacheStatus | None = None
 
     @cached_property
     def resource(self):

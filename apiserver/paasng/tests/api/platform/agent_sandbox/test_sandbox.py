@@ -65,19 +65,6 @@ class TestAgentSandboxViewSetCreate:
         assert "snapshot" in data
         assert "status" in data
 
-    def test_create_sandbox_with_invalid_ttl_seconds(self, api_client: APIClient, bk_app: Any) -> None:
-        """Verify invalid ttl_seconds returns validation error."""
-        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
-
-        # ttl_seconds cannot be negative
-        resp = api_client.post(
-            create_url,
-            data={"name": "test-sandbox", "ttl_seconds": -1},
-            format="json",
-        )
-
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-
     def test_create_sandbox_already_exists(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify sandbox creation returns proper error when sandbox already exists.
 

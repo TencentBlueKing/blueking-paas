@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.agent_sandbox.image_cache import ImageCacheStatus
-from paasng.platform.agent_sandbox.image_build.image_cache import prefetch_sandbox_image
+from paasng.platform.agent_sandbox.image_build.image_cache import pre_pull_sandbox_image
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -55,10 +55,10 @@ class StubImageCache:
         return self
 
 
-def test_prefetch_sandbox_image(build: ImageBuildRecord):
-    """Test successful image prefetch flow."""
+def test_pre_pull_sandbox_image(build: ImageBuildRecord):
+    """Test successful image pre-pull flow."""
     stub_image_cache = StubImageCache(
-        name=f"prefetch-{build.uuid.hex}",
+        name=f"pre-pull-{build.uuid.hex}",
         client=mock.MagicMock(),
     )
 
@@ -70,7 +70,7 @@ def test_prefetch_sandbox_image(build: ImageBuildRecord):
         ),
         mock.patch("time.sleep"),
     ):
-        prefetch_sandbox_image(str(build.uuid))
+        pre_pull_sandbox_image(str(build.uuid))
 
     assert stub_image_cache._upsert_called is True
     assert stub_image_cache._delete_called is True

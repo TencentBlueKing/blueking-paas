@@ -16,5 +16,5 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-class ImagePrefetchError(Exception):
-    """Exception raised when image prefetch failed."""
+class ImagePrePullError(Exception):
+    """Exception raised when image pre-pull failed."""

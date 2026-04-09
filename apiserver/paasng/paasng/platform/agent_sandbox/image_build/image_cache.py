@@ -25,13 +25,13 @@ from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME,
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paasng.platform.agent_sandbox.image_build.exceptions import ImagePrefetchError
+from paasng.platform.agent_sandbox.image_build.exceptions import ImagePrePullError
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
 logger = logging.getLogger(__name__)
 
-# Default timeout for image prefetching: 10 minutes
-_DEFAULT_PREFETCH_TIMEOUT = 10 * 60
+# Default timeout for image pre-pull: 10 minutes
+_DEFAULT_PRE_PULL_TIMEOUT = 10 * 60
 
 
 def _wait_for_image_cache(image_cache: ImageCache, timeout: float):
@@ -39,7 +39,7 @@ def _wait_for_image_cache(image_cache: ImageCache, timeout: float):
 
     :param image_cache: The ImageCache instance to monitor.
     :param timeout: Maximum time to wait in seconds.
-    :raises ImagePrefetchError: If the image prefetch fails, times out, or ImageCache is not found.
+    :raises ImagePrePullError: If the image pre-pull fails, times out, or ImageCache is not found.
     """
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -48,7 +48,7 @@ def _wait_for_image_cache(image_cache: ImageCache, timeout: float):
 
         cache_info = image_cache.get()
         if cache_info is None:
-            raise ImagePrefetchError(
+            raise ImagePrePullError(
                 f"ImageCache {image_cache.name} not found — it may have been deleted or failed to create."
             )
 
@@ -59,12 +59,12 @@ def _wait_for_image_cache(image_cache: ImageCache, timeout: float):
         if status.status == "Succeeded":
             return
 
-    raise ImagePrefetchError(f"ImageCache {image_cache.name} pull exceeded {timeout} seconds")
+    raise ImagePrePullError(f"ImageCache {image_cache.name} pull exceeded {timeout} seconds")
 
 
 @shared_task()
-def prefetch_sandbox_image(build_id: str, timeout: float = _DEFAULT_PREFETCH_TIMEOUT):
-    """Prefetch the sandbox image to cluster nodes using kube-fledged ImageCache.
+def pre_pull_sandbox_image(build_id: str, timeout: float = _DEFAULT_PRE_PULL_TIMEOUT):
+    """Pre-pull the sandbox image to cluster nodes using kube-fledged ImageCache.
 
     This function:
     1. Gets the cluster for the tenant from build.tenant_id
@@ -74,7 +74,7 @@ def prefetch_sandbox_image(build_id: str, timeout: float = _DEFAULT_PREFETCH_TIM
     5. Deletes the ImageCache after successful pre-pull
 
     :param build_id: The UUID of the ImageBuildRecord.
-    :param timeout: Maximum time to wait for image prefetching in seconds.
+    :param timeout: Maximum time to wait for image pre-pull in seconds.
     """
 
     try:
@@ -88,7 +88,7 @@ def prefetch_sandbox_image(build_id: str, timeout: float = _DEFAULT_PREFETCH_TIM
     client = get_client_by_cluster_name(cluster.name)
 
     # Generate a unique name for the ImageCache
-    cache_name = f"prefetch-{build.uuid.hex}"
+    cache_name = f"pre-pull-{build.uuid.hex}"
 
     # Ensure image pull secret in kube-fledged namespace
     ensure_image_credential(client=client, namespace=KUBEFLEDGED_NAMESPACE)
@@ -105,7 +105,7 @@ def prefetch_sandbox_image(build_id: str, timeout: float = _DEFAULT_PREFETCH_TIM
         image_cache.upsert()
         _wait_for_image_cache(image_cache, timeout)
     except Exception:
-        logger.exception("Failed to prefetch image %s", build.output_image)
+        logger.exception("Failed to pre-pull image %s", build.output_image)
     finally:
         # 立即删除 ImageCache CRD，实现"仅预加载、不托管"的效果。
         #

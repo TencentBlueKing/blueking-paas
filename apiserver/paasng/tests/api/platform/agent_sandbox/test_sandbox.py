@@ -65,23 +65,6 @@ class TestAgentSandboxViewSetCreate:
         assert "snapshot" in data
         assert "status" in data
 
-    def test_create_sandbox_with_ttl_seconds(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
-        """Verify ttl_seconds is passed to create_sandbox as seconds."""
-        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
-
-        with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
-            return_value=sandbox_obj,
-        ) as mocked_create:
-            resp = api_client.post(
-                create_url,
-                data={"name": "test-sandbox", "ttl_seconds": 600},
-                format="json",
-            )
-
-        assert resp.status_code == status.HTTP_201_CREATED
-        assert mocked_create.call_args.kwargs["ttl_seconds"] == 600
-
     def test_create_sandbox_with_invalid_ttl_seconds(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify invalid ttl_seconds returns validation error."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})

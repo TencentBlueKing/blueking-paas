@@ -86,9 +86,10 @@ class TestAgentSandboxViewSetCreate:
         """Verify invalid ttl_seconds returns validation error."""
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
+        # ttl_seconds cannot be negative
         resp = api_client.post(
             create_url,
-            data={"name": "test-sandbox", "ttl_seconds": 0},
+            data={"name": "test-sandbox", "ttl_seconds": -1},
             format="json",
         )
 

@@ -21,6 +21,7 @@ from celery import shared_task
 
 from paasng.platform.agent_sandbox.image_build.builder import KanikoBuildExecutor
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
+from paasng.platform.agent_sandbox.image_build.image_cache import pre_pull_sandbox_image
 from paasng.platform.agent_sandbox.image_build.source_prepare import prepare_source
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
 
@@ -28,25 +29,36 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task()
-def run_image_build(build_id: str):
-    """异步执行镜像构建任务。"""
+def run_image_build(build_id: str, pre_pull: bool = False):
+    """异步执行镜像构建任务。
+
+    :param build_id: ImageBuildRecord 的 UUID
+    :param pre_pull: 构建成功后是否将镜像预拉取到目标沙箱集群
+    """
     try:
         build = ImageBuildRecord.objects.get(uuid=build_id)
     except ImageBuildRecord.DoesNotExist:
         logger.exception("ImageBuildRecord %s not found", build_id)
         return
 
+    # 1. ImageBuildRecord 状态标记为构建中
     build.mark_as_building()
 
-    # 预处理构建包，注入 sandbox daemon 二进制
+    # 2. 预处理构建包，注入 sandbox daemon 二进制
     try:
         prepare_source(build)
-    except Exception:
-        logger.exception("Source preparation failed for build %s", build_id)
+    except Exception as e:  # noqa: BLE001
         build.mark_as_completed(
             ImageBuildStatus.FAILED,
-            build_logs="Source preparation failed",
+            build_logs=f"Source preparation failed: {e}",
         )
         return
 
+    # 3. 通过 kaniko 方案，构建镜像并完成推送(构建状态会记录到 ImageBuildRecord 中)
     KanikoBuildExecutor(build).execute()
+
+    # 4. 构建成功后，根据 pre_pull 参数决定是否预拉取镜像。
+    # 预加载的目的是为了加速沙箱启动，失败并不会影响沙箱启动(沙箱启动时，会按照 IfNotPresent 策略尝试拉取)。
+    build.refresh_from_db()
+    if build.status == ImageBuildStatus.SUCCESSFUL and pre_pull:
+        pre_pull_sandbox_image.delay(build_id)

@@ -200,7 +200,7 @@ class TenantLogConfig(UuidAuditedModel):
     """租户日志配置
 
     每个租户必须有一条配置记录才能使用日志平台方案
-    默认租户的配置会在系统初始化时自动创建（基于 settings.BKLOG_CONFIG）
+    可以使用 `python manage.py create_tenant_log_config` 命令创建此配置
     """
 
     tenant_id = tenant_id_field_factory(unique=True)

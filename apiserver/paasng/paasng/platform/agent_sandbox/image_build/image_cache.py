@@ -120,6 +120,9 @@ def pre_pull_sandbox_image(build_id: str, timeout: float = _DEFAULT_PRE_PULL_TIM
         #
         # 注意：直接删除整个 ImageCache CRD 不会触发镜像清理，因为 controller
         # 只会在"更新时移除镜像"的场景下执行强制删除。详见 upsert() 方法注释。
+
+        # 后续：如果运营过程中，节点上的沙箱镜像占用过大，需要及时清理，则可以按 FIFO 策略轮转 ImageCache
+        # 的 images(比如最多维持 5 个镜像)，利用更新机制来主动淘汰旧镜像。此时，不再直接删除 ImageCache
         try:
             image_cache.delete()
         except Exception:

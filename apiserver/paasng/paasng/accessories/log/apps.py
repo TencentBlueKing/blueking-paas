@@ -20,11 +20,3 @@ from django.apps import AppConfig
 
 class LogAppConfig(AppConfig):
     name = "paasng.accessories.log"
-
-    def ready(self):
-        from django.db.models.signals import post_migrate
-
-        from .init_config import init_default_tenant_log_config
-
-        # 迁移完成后初始化默认租户日志配置
-        post_migrate.connect(init_default_tenant_log_config, sender=self)

@@ -19,6 +19,7 @@ from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from paasng.accessories.log.models import TenantLogConfig
+from paasng.core.tenant.user import get_init_tenant_id
 
 
 class Command(BaseCommand):
@@ -32,12 +33,19 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
-        parser.add_argument("--tenant-id", required=True, help="tenant id")
+        tenant_group = parser.add_mutually_exclusive_group(required=True)
+        tenant_group.add_argument("--tenant-id", help="tenant id")
+        tenant_group.add_argument(
+            "--default-tenant",
+            action="store_true",
+            default=False,
+            help="为默认租户创建配置，不可与 --tenant-id 同时指定",
+        )
         parser.add_argument(
             "--update",
             action="store_true",
             default=False,
-            help="update existing TenantLogConfig when tenant already has one",
+            help="允许更新相同 tenant_id 已存在的配置",
         )
         parser.add_argument("--storage-cluster-id", required=True, type=int, help="日志平台存储集群 ID")
         parser.add_argument("--retention", type=int, default=14, help="日志保存时间（天），默认 14")
@@ -46,7 +54,7 @@ class Command(BaseCommand):
         parser.add_argument("--time-zone", type=int, default=8, help="时区，如 8 表示 UTC+8，默认 8")
 
     def handle(self, *args, **options):
-        tenant_id = options["tenant_id"]
+        tenant_id = get_init_tenant_id() if options["default_tenant"] else options["tenant_id"]
         config_data = {field: options[field] for field in self.config_fields}
         allow_update = options["update"]
         existing = TenantLogConfig.objects.filter(tenant_id=tenant_id).first()

@@ -16,71 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.test.utils import override_settings
+from django.core.management import CommandError, call_command
 
 from paasng.accessories.log.exceptions import TenantLogConfigNotFoundError
-from paasng.accessories.log.init_config import init_default_tenant_log_config
 from paasng.accessories.log.models import TenantLogConfig
 from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider
 from paasng.core.tenant.user import get_init_tenant_id
 
 pytestmark = pytest.mark.django_db
-
-
-class TestInitDefaultTenantLogConfig:
-    """测试初始化默认租户日志配置"""
-
-    def test_create_from_settings(self, settings):
-        """从 settings.BKLOG_CONFIG 创建配置"""
-        with override_settings(
-            BKLOG_CONFIG={
-                "STORAGE_CLUSTER_ID": 100,
-                "RETENTION": 30,
-                "ES_SHARDS": 3,
-                "STORAGE_REPLICAS": 2,
-                "TIME_ZONE": 1,
-            }
-        ):
-            default_tenant_id = get_init_tenant_id()
-            TenantLogConfig.objects.filter(tenant_id=default_tenant_id).delete()
-
-            init_default_tenant_log_config()
-
-            config = TenantLogConfig.objects.get(tenant_id=default_tenant_id)
-            assert config.storage_cluster_id == 100
-            assert config.retention == 30
-            assert config.es_shards == 3
-            assert config.storage_replicas == 2
-            assert config.time_zone == 1
-
-    def test_error_log_if_missing_config(self, settings, caplog):
-        with override_settings(BKLOG_CONFIG={}):
-            default_tenant_id = get_init_tenant_id()
-            TenantLogConfig.objects.filter(tenant_id=default_tenant_id).delete()
-
-            init_default_tenant_log_config()
-
-            assert "error" in caplog.text.lower()
-            assert "miss" in caplog.text.lower()
-            assert not TenantLogConfig.objects.filter(tenant_id=default_tenant_id).exists()
-
-    def test_error_log_if_invalid_config_value(self, settings, caplog):
-        with override_settings(
-            BKLOG_CONFIG={
-                "STORAGE_CLUSTER_ID": None,
-                "RETENTION": 30,
-                "ES_SHARDS": 3,
-                "STORAGE_REPLICAS": 2,
-                "TIME_ZONE": 1,
-            }
-        ):
-            default_tenant_id = get_init_tenant_id()
-            TenantLogConfig.objects.filter(tenant_id=default_tenant_id).delete()
-
-            init_default_tenant_log_config()
-
-            assert "invalid bklog_config" in caplog.text.lower()
-            assert not TenantLogConfig.objects.filter(tenant_id=default_tenant_id).exists()
 
 
 class TestBKLogConfigProvider:
@@ -107,3 +50,39 @@ class TestBKLogConfigProvider:
         provider = BKLogConfigProvider(bk_module)
         with pytest.raises(TenantLogConfigNotFoundError):
             _ = provider.storage_cluster_id
+
+
+class TestCreateTenantLogConfigCommand:
+    """测试 create_tenant_log_config 命令"""
+
+    def test_rejects_mutually_exclusive_tenant_options(self) -> None:
+        """`--tenant-id` 与 `--default-tenant` 不能同时指定"""
+        with pytest.raises(CommandError):
+            call_command(
+                "create_tenant_log_config",
+                "--tenant-id=foo",
+                "--default-tenant",
+                "--storage-cluster-id=1",
+            )
+
+    def test_create_config_for_default_tenant(self) -> None:
+        """仅指定 `--default-tenant` 时应为初始化租户创建配置"""
+        tenant_id = get_init_tenant_id()
+        TenantLogConfig.objects.filter(tenant_id=tenant_id).delete()
+
+        call_command(
+            "create_tenant_log_config",
+            "--default-tenant",
+            "--storage-cluster-id=200",
+            "--retention=21",
+            "--es-shards=5",
+            "--storage-replicas=3",
+            "--time-zone=2",
+        )
+
+        config = TenantLogConfig.objects.get(tenant_id=tenant_id)
+        assert config.storage_cluster_id == 200
+        assert config.retention == 21
+        assert config.es_shards == 5
+        assert config.storage_replicas == 3
+        assert config.time_zone == 2

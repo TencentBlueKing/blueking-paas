@@ -149,7 +149,7 @@ class ServiceCreateSLZ(serializers.Serializer):
         #  创建 S-Mart 应用时，使用 service_name 来指定增强服务， 故禁止本地增强服务和远程增强服务重名
         remote_svc_names = [e.get("name") for e in settings.SERVICE_REMOTE_ENDPOINTS]
         if name in remote_svc_names:
-            raise ValidationError(_("{} 不符合规范: 与远程增强服务 id 冲突").format(name))
+            raise ValidationError(_("{} 不符合规范: 与远程增强服务 ID 冲突").format(name))
 
         return name
 

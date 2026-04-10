@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
+from datetime import timedelta
 
 from blue_krill.models.fields import EncryptField
 from django.conf import settings
@@ -29,7 +30,7 @@ from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.applications.models import Application
 from paasng.utils.models import BkUserField, UuidAuditedModel
 
-from .constants import SandboxStatus
+from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from .exceptions import SandboxAlreadyExists
 
 
@@ -45,6 +46,7 @@ class SandboxManager(models.Manager):
         env_vars: dict | None = None,
         name: str | None = None,
         workspace: str | None = None,
+        ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
@@ -79,6 +81,7 @@ class SandboxManager(models.Manager):
             creator=creator,
             tenant_id=application.tenant_id,
             daemon_token=get_random_string(32),
+            expired_at=timezone.now() + timedelta(seconds=ttl_seconds),
         )
 
 
@@ -110,6 +113,7 @@ class Sandbox(UuidAuditedModel):
     started_at = models.DateTimeField("启动时间", null=True)
     stopped_at = models.DateTimeField("停止时间", null=True)
     deleted_at = models.DateTimeField("删除时间", null=True)
+    expired_at = models.DateTimeField("过期时间(预计删除时间)", null=True, db_index=True)
 
     creator = BkUserField()
     tenant_id = tenant_id_field_factory()

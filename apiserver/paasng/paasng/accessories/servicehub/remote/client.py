@@ -41,6 +41,8 @@ class RemoteSvcConfig:
     provision_params_tmpl: Dict
     jwt_auth_conf: Dict
     prefer_async_delete: bool = True
+    # 是否使用幂等创建实例接口
+    prefer_idempotent_provision: bool = False
     is_ready: bool = True
 
     @classmethod
@@ -86,6 +88,7 @@ class RemoteSvcConfig:
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
+        self.idempotent_create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
         self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定
@@ -208,6 +211,20 @@ class RemoteServiceClient:
         :return: <instance dict>
         """
         url = self.config.create_instance_url.format(service_id=service_id, instance_id=instance_id)
+        payload = {"plan_id": plan_id, "params": params}
+        with wrap_request_exc(self):
+            resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
+            self.validate_resp(resp)
+            return resp.json()
+
+    def idempotent_provision_instance(self, service_id: str, plan_id: str, params: Dict) -> Dict:
+        """Idempotently provision a new instance,
+        `params['engine_app_name']` treated as the idempotency key, so it's required
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.idempotent_create_instance_url.format(service_id=service_id)
         payload = {"plan_id": plan_id, "params": params}
         with wrap_request_exc(self):
             resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)

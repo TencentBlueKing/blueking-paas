@@ -2330,6 +2330,10 @@ msgstr ""
 "letters, numbers, hyphens (-) or underscores (_), must start with a letter "
 "and end with a letter or number."
 
+#: paasng/plat_mgt/infras/services/serializers/services.py:152
+msgid "{} 不符合规范: 与远程增强服务 id 冲突"
+msgstr "{} does not meet requirements: Conflicts with a remote service name."
+
 #: paasng/plat_admin/admin42/utils/__init__.py:35
 #, python-brace-format
 msgid "由于: {reason}, 该功能暂不支持"

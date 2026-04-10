@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 import re
 
+from django.conf import settings
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_serializer_method
@@ -144,6 +145,11 @@ class ServiceCreateSLZ(serializers.Serializer):
                     "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
                 ).format(name)
             )
+
+        #  创建 S-Mart 应用时，使用 service_name 来指定增强服务， 故禁止本地增强服务和远程增强服务重名
+        remote_svc_names = [e.get("name") for e in settings.SERVICE_REMOTE_ENDPOINTS]
+        if name in remote_svc_names:
+            raise ValidationError(_("{} 不符合规范: 与远程增强服务 ID 冲突").format(name))
 
         return name
 

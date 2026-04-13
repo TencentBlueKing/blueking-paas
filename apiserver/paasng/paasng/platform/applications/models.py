@@ -769,3 +769,24 @@ class SMartAppExtraInfo(models.Model):
     def get_base_image_id(self) -> str:
         """获取基础镜像 id"""
         return self.artifact_metadata.base_image_id
+
+
+class AppCodeAuthCode(TimestampedModel):
+    """用于创建具有保留 ID 前缀的应用程序的授权码.
+
+    当平台配置有保留前缀（例如 "bk-"、"canway-"）时, 用户必须提供有效的授权码才能创建 ID 以这些前缀开头的应用程序.
+    """
+
+    auth_code = models.CharField(max_length=8, verbose_name="授权码", help_text="8 位随机授权码")
+    app_code = models.CharField(
+        max_length=20, unique=True, verbose_name="应用 Code", help_text="必须以保留前缀开头的 app_code"
+    )
+    is_used = models.BooleanField(default=False, verbose_name="是否已使用")
+
+    created = models.DateTimeField(auto_now_add=True)
+    creator = BkUserField()
+
+    tenant_id = tenant_id_field_factory()
+
+    def __str__(self):
+        return f"{self.app_code} - {self.auth_code} - {'used' if self.is_used else 'unused'}"

@@ -75,6 +75,7 @@ class OperationTarget(StrStructuredEnum):
     ACCESS_CONTROL = EnumField("access_control", label=_("用户限制"))
     ACCESS_TOKEN = EnumField("access_token", label=_("访问令牌"))
     PROC_COMPONENT = EnumField("proc_component", label=_("进程组件"))
+    AUTH_CODE = EnumField("auth_code", label=_("创建应用授权码"))
 
     # 以下是仅用于 Admin42 的操作对象
     CLUSTER = EnumField("cluster", label=_("集群"))

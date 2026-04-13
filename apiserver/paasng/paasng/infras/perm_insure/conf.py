@@ -73,6 +73,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "RegionViewSet.retrieve",
     "TenantViewSet.list",
     "TagViewSet",
+    "ReservedPrefixViewSet",
     "MixDocumentSearch",
     "BkDocsSearchViewset",
     "IWikiSearchViewset",

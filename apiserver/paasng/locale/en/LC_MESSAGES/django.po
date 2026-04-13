@@ -2330,6 +2330,10 @@ msgstr ""
 "letters, numbers, hyphens (-) or underscores (_), must start with a letter "
 "and end with a letter or number."
 
+#: paasng/plat_mgt/infras/services/serializers/services.py:151
+msgid "{} 不符合规范: 禁止存在相同的增强服务 ID"
+msgstr "{} dose not meet requirements: Duplicate Enhanced Service IDs are prohibited"
+
 #: paasng/plat_admin/admin42/utils/__init__.py:35
 #, python-brace-format
 msgid "由于: {reason}, 该功能暂不支持"

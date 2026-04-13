@@ -777,7 +777,7 @@ class AppCodeAuthCode(TimestampedModel):
     当平台配置有保留前缀（例如 "bk-"、"canway-"）时, 用户必须提供有效的授权码才能创建 ID 以这些前缀开头的应用程序.
     """
 
-    auth_code = models.CharField(max_length=8, verbose_name="授权码", help_text="8 位随机授权码")
+    auth_code = models.CharField(max_length=8, unique=True, verbose_name="授权码", help_text="8 位随机授权码")
     app_code = models.CharField(
         max_length=20, unique=True, verbose_name="应用 Code", help_text="必须以保留前缀开头的 app_code"
     )

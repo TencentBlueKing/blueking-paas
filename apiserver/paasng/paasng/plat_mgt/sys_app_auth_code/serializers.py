@@ -26,12 +26,10 @@ class GenAuthCodeInputSLZ(serializers.Serializer):
 
     app_code = serializers.CharField(max_length=20, required=True, help_text="应用 ID")
 
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        app_code = attrs["app_code"]
-        if AppCodeAuthCode.objects.filter(app_code=app_code).exists():
+    def validate_app_code(self, value):
+        if AppCodeAuthCode.objects.filter(app_code=value).exists():
             raise serializers.ValidationError(_("应用 ID 已存在授权码"))
-        return attrs
+        return value
 
 
 class AuthCodeOutputSLZ(serializers.Serializer):

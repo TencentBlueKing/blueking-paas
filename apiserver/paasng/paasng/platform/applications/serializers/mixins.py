@@ -53,6 +53,7 @@ class AppBasicInfoMixin(serializers.Serializer):
         required=False,
         allow_blank=True,
         max_length=8,
+        min_length=8,
     )
 
     def to_internal_value(self, data):
@@ -79,7 +80,7 @@ class AppBasicInfoMixin(serializers.Serializer):
         code = attrs["code"]
         auth_code = attrs.pop("auth_code", None)
 
-        matched_prefix = any(code.startswith(prefix) for prefix in settings.FORBIDDEN_APP_CODE_PREFIXES)
+        matched_prefix = any(code.startswith(prefix) for prefix in settings.SYS_APP_CODE_PREFIXES)
         if not matched_prefix:
             return attrs
 

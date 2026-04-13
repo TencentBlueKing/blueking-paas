@@ -798,8 +798,8 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get("PAAS_LEGACY_DB_ENCRYPT_KEY")
 
 
-# FORBIDDEN_APP_CODE_PREFIXES 包含与应用代码相关的敏感前缀，配置后，平台将不允许用户使用这些前缀创建应用
-FORBIDDEN_APP_CODE_PREFIXES = settings.get("FORBIDDEN_APP_CODE_PREFIXES", [])
+# SYS_APP_CODE_PREFIXES 包含与应用代码相关的敏感前缀，配置后，平台将不允许用户使用这些前缀创建应用
+SYS_APP_CODE_PREFIXES = settings.get("SYS_APP_CODE_PREFIXES", [])
 
 # ---------------
 # 对象存储配置

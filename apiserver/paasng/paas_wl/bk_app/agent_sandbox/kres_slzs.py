@@ -25,6 +25,7 @@ from paas_wl.bk_app.agent_sandbox.constants import (
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
 )
+from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
 
 if TYPE_CHECKING:
@@ -91,6 +92,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         return {
             "restartPolicy": "Never",
             "terminationGracePeriodSeconds": DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
+            "imagePullSecrets": [{"name": IMAGE_CREDENTIAL_NAME}],
             "containers": [main_container],
         }
 

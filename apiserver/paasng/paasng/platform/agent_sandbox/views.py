@@ -30,7 +30,12 @@ from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServi
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError, SandboxServiceNotReady
+from paasng.platform.agent_sandbox.exceptions import (
+    SandboxAlreadyExists,
+    SandboxCreateError,
+    SandboxError,
+    SandboxServiceNotReady,
+)
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.sandbox import (
@@ -85,9 +90,12 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
                 snapshot=data.get("snapshot"),
                 snapshot_entrypoint=data.get("snapshot_entrypoint"),
                 workspace=data.get("workspace"),
+                ttl_seconds=data["ttl_seconds"],
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
+        except SandboxCreateError as e:
+            raise error_codes.AGENT_SANDBOX_CREATE_FAILED.set_data({"logs": e.logs})
         except SandboxError:
             logger.exception("Failed to create agent sandbox")
             raise error_codes.AGENT_SANDBOX_CREATE_FAILED

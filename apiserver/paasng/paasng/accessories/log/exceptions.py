@@ -54,3 +54,11 @@ class BkLogApiError(BkLogGatewayServiceError):
     """When calling the bk_log api, bk_log returns an error message,
     which needs to be captured and displayed to the user on the page
     """
+
+
+class TenantLogConfigNotFoundError(Exception):
+    """该租户日志配置不存在"""
+
+    def __init__(self, tenant_id: str):
+        self.message = f"TenantLogConfig not found for tenant_id: {tenant_id}"
+        super().__init__(self.message)

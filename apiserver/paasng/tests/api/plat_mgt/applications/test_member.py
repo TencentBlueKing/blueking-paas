@@ -88,7 +88,7 @@ class TestApplicationMemberViewSet:
             assert self._assert_user_in_role(bk_app, 2, username)
 
             mock_apply_async.assert_called_once_with(
-                args=[bk_app.code, username],
+                args=(bk_app.code, username),
                 countdown=2 * 60 * 60,
             )
 

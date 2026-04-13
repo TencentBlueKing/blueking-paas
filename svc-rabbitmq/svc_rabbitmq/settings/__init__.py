@@ -35,7 +35,7 @@ class PatchFeatures:
 
     @cached_property
     def minimum_database_version(self):
-        if self.connection.mysql_is_mariadb:  # noqa
+        if self.connection.mysql_is_mariadb:
             return (10, 4)
         else:
             return (5, 7)
@@ -43,7 +43,7 @@ class PatchFeatures:
 
 # Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
 # 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
-DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
+DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version
 
 pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
@@ -176,7 +176,7 @@ LOGGING = {
     "disable_existing_loggers": True,
     "formatters": {
         "verbose": {
-            "format": "%(name)s %(levelname)s [%(asctime)s] %(name)s(ln:%(lineno)d): %(message)s",  # noqa
+            "format": "%(name)s %(levelname)s [%(asctime)s] %(name)s(ln:%(lineno)d): %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
         "simple": {"format": "%(levelname)s %(message)s"},
@@ -254,6 +254,7 @@ RABBITMQ_DEFAULT_DEAD_LETTER_EXCHANGE_DURABLE = env.bool("RABBITMQ_DEFAULT_DEAD_
 RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE = env.str("RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE", "dlx.queue")
 RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE_DURABLE = env.bool("RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE_DURABLE", False)
 RABBITMQ_MANAGEMENT_API_CACHE_SECONDS = env.int("RABBITMQ_MANAGEMENT_API_CACHE_SECONDS", 3)
+RABBITMQ_HA_POLICY_ENABLED = env.bool("RABBITMQ_HA_POLICY_ENABLED", True)
 
 MODEL_TAG_CLUSTER = "cluster"
 

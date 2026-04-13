@@ -107,7 +107,7 @@ export default {
     apiBaseUrl() {
       // 多租户模式
       if (this.isMultiTenantDisplayMode) {
-        return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
+        return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
       }
       // 上云版
       const baseUrl = window.BK_API_URL_TMPL;

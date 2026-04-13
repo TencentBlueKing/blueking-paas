@@ -705,6 +705,26 @@ msgstr "Is Built-in Collection Item"
 msgid "是否启用"
 msgstr "Is Enabled"
 
+#: paasng/accessories/log/models.py:208
+msgid "日志平台存储集群 ID"
+msgstr "Blueking log platform Storage Cluster ID"
+
+#: paasng/accessories/log/models.py:209
+msgid "日志保存时间（天）"
+msgstr "Log Retention Period (Days)"
+
+#: paasng/accessories/log/models.py:210
+msgid "ES 索引分片数"
+msgstr "Number of ES Index Shards"
+
+#: paasng/accessories/log/models.py:211
+msgid "存储副本数"
+msgstr "Number of Storage Replicas"
+
+#: paasng/accessories/log/models.py:214
+msgid "时区"
+msgstr "Time Zone"
+
 #: paasng/accessories/log/serializers.py:156
 #, python-brace-format
 msgid "最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"

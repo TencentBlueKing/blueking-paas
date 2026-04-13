@@ -707,7 +707,7 @@ msgstr "Is Enabled"
 
 #: paasng/accessories/log/models.py:208
 msgid "日志平台存储集群 ID"
-msgstr "Log Platform Storage Cluster ID"
+msgstr "Blueking log platform Storage Cluster ID"
 
 #: paasng/accessories/log/models.py:209
 msgid "日志保存时间（天）"

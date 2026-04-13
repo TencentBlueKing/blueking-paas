@@ -29,20 +29,6 @@ pytestmark = pytest.mark.django_db
 class TestBKLogConfigProvider:
     """测试 BKLogConfigProvider"""
 
-    @pytest.fixture()
-    def bk_module_with_config(self, bk_module):
-        """创建租户日志配置并关联到 bk_module"""
-        TenantLogConfig.objects.filter(tenant_id=bk_module.application.tenant_id).delete()
-        TenantLogConfig.objects.create(
-            tenant_id=bk_module.application.tenant_id,
-            storage_cluster_id=200,
-            retention=21,
-            es_shards=5,
-            storage_replicas=3,
-            time_zone=2,
-        )
-        return bk_module
-
     def test_config_not_exists(self, bk_module):
         """配置不存在时抛出异常"""
         TenantLogConfig.objects.filter(tenant_id=bk_module.application.tenant_id).delete()

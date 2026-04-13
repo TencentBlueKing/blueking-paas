@@ -205,6 +205,7 @@ class TenantLogConfig(UuidAuditedModel):
 
     tenant_id = tenant_id_field_factory(unique=True)
 
+    # ------------------- 以下字段严格匹配 bk_log 平台 ------------------ #
     storage_cluster_id = models.IntegerField(_("日志平台存储集群 ID"), help_text="指定该租户日志存储的 ES 集群")
     retention = models.IntegerField(_("日志保存时间（天）"))
     es_shards = models.IntegerField(_("ES 索引分片数"))

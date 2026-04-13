@@ -55,7 +55,7 @@ DEFAULT_RULE_CONFIGS = {
         "threshold_expr": ">= 2000",  # 超过 2000 条
     },
     AlertCode.RABBITMQ_INSTANCE_DOWN.value: {
-        "display_name": _("RabbitMQ 实例不可用"),
+        "display_name": _("RabbitMQ 实例状态异常"),
         "metric_label_names": ["vhost"],
         "threshold_expr": "!= 1",  # 实例状态异常
     },

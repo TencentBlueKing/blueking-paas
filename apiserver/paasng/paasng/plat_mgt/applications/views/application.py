@@ -37,6 +37,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager, fetch_role_members
+from paasng.infras.oauth2.api import BkOauthClient
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
@@ -340,6 +341,13 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
         # 删除权限中心相关数据
         delete_builtin_user_groups(app_code)
         delete_grade_manager(app_code)
+
+        # 删除 bkAuth 上的应用信息 (同时会删除 AppSecret)
+        try:
+            BkOauthClient().delete_client(app_code)
+        except Exception:
+            logger.exception("Failed to delete application %s from bkAuth", app_code)
+            raise error_codes.CANNOT_HARD_DELETE_APP.f(_("bkAuth 中信息删除失败"))
 
         # 从 PaaS 3.0 中删除相关信息
         to_del_app.hard_delete()

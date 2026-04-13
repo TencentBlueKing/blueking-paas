@@ -106,6 +106,13 @@ class BkOauthClient:
             resp = requests.post(url, json=data, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             self._validate_resp(resp)
 
+    def delete_client(self, bk_app_code: str):
+        """删除 OAuth 应用, 同时会删除对应的 bk_app_secret"""
+        url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}"
+        with wrap_request_exc():
+            resp = requests.delete(url, headers=self.headers, timeout=DEFAULT_TIMEOUT)
+            self._validate_resp(resp)
+
     def create_app_secret(self, bk_app_code: str):
         """同一个App最多拥有 2 个 bk_app_secret, 一般只有一个，两个主要是用于更换时，老的不会失效，除非管理方主动删除
         BkAuth API 会限制仅能创建 2 个 secret

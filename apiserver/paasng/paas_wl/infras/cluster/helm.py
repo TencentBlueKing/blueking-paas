@@ -40,7 +40,7 @@ class HelmClient:
     def list_releases(self, namespace: str | None = None) -> List[HelmRelease]:
         """获取所有 Helm Release 信息（当前部署的最新版本）"""
         secrets = KSecret(self.client).ops_batch.list(labels={"owner": "helm"}, namespace=namespace).items
-        return self._parse_secrets_to_releases(self._filter_latest_version(secrets), include_resources=False)
+        return self._parse_secrets_to_releases(self._filter_latest_version(secrets))
 
     def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
         """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
@@ -48,7 +48,7 @@ class HelmClient:
             KSecret(self.client).ops_batch.list(labels={"owner": "helm", "name": name}, namespace=namespace).items
         )
         latest = self._filter_latest_version(secrets)
-        releases = self._parse_secrets_to_releases(latest)
+        releases = self._parse_secrets_to_releases(latest, skip_invalid=True)
         return releases[0] if releases else None
 
     @staticmethod
@@ -71,12 +71,10 @@ class HelmClient:
         return list(secret_map.values())
 
     @staticmethod
-    def _parse_secrets_to_releases(
-        secrets: List[ResourceInstance], include_resources: bool = True
-    ) -> List[HelmRelease]:
+    def _parse_secrets_to_releases(secrets: List[ResourceInstance], skip_invalid: bool = False) -> List[HelmRelease]:
         """将存储 Helm Release 信息的 Secret 解析成 HelmRelease 对象"""
         return [
-            HelmReleaseParser(s).parse(include_resources=include_resources)
+            HelmReleaseParser(s).parse(skip_invalid=skip_invalid)
             for s in secrets
             if s.type == HELM_RELEASE_SECRET_TYPE
         ]
@@ -91,15 +89,24 @@ class HelmReleaseParser:
         """
         self.secret = secret
 
-    def parse(self, include_resources: bool = True) -> HelmRelease:
+    def parse(self, skip_invalid: bool = False) -> HelmRelease:
         """
         解析 Helm Release 信息
-        :param include_resources: 是否包含 Release 关联的 Kubernetes 资源信息
+
+        :param skip_invalid: 如果为 True, 将跳过(置空)非法的 resources, 否则抛出异常
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))
         release_info = release["info"]
         chart_metadata = release["chart"]["metadata"]
+
+        try:
+            resources = [res for res in yaml.safe_load_all(release.get("manifest", "")) if res]
+        except yaml.YAMLError:
+            if skip_invalid:
+                resources = []
+            else:
+                raise
 
         return HelmRelease(
             name=release["name"],
@@ -117,8 +124,6 @@ class HelmReleaseParser:
                 created_at=arrow.get(release_info["last_deployed"]).datetime,
             ),
             values=release.get("config", {}),
-            resources=[res for res in yaml.safe_load_all(release.get("manifest", "")) if res]
-            if include_resources
-            else [],
+            resources=resources,
             secret_name=self.secret.metadata.name,
         )

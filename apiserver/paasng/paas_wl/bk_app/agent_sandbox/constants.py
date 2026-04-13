@@ -28,7 +28,8 @@ DEFAULT_RESOURCES = {
 
 
 # The command for sandbox daemon
-DAEMON_COMMAND = ["/usr/local/bin/daemon"]
+DAEMON_BINARY_PATH = "/usr/local/bin/daemon"
+DAEMON_COMMAND = [DAEMON_BINARY_PATH]
 # The bind port for sandbox daemon
 DAEMON_BIND_PORT = 30000
 

@@ -211,6 +211,22 @@ class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
     total = serializers.IntegerField(help_text="应用评估报告总数量")
 
 
+class ApplicationTypeCountSLZ(serializers.Serializer):
+    type = serializers.CharField(help_text="应用类型")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationStatusCountSLZ(serializers.Serializer):
+    status = serializers.ChoiceField(choices=AppStatus.get_choices(), help_text="应用状态")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationStatisticsListResultSLZ(serializers.Serializer):
+    app_type_counts = ApplicationTypeCountSLZ(many=True, help_text="应用类型及数量")
+    app_status_counts = ApplicationStatusCountSLZ(many=True, help_text="应用状态及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
+
+
 class EnvironmentDeployInfoSLZ(serializers.Serializer):
     deployed = serializers.BooleanField(help_text="是否部署")
     url = serializers.URLField(help_text="访问地址")

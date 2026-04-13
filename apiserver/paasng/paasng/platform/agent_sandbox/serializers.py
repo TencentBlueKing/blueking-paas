@@ -19,6 +19,7 @@ from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
 
+from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
 from .models import Sandbox
 
 
@@ -56,6 +57,14 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="快照镜像的入口命令列表",
     )
     workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
+    ttl_seconds = serializers.IntegerField(
+        label="存活时长（秒）",
+        required=False,
+        default=SANDBOX_DEFAULT_TTL_SECONDS,
+        min_value=0,
+        max_value=SANDBOX_MAX_TTL_SECONDS,
+        help_text="沙箱存活时长（秒）",
+    )
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
@@ -63,17 +72,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Sandbox
-        fields = (
-            "uuid",
-            "name",
-            "snapshot",
-            "target",
-            "env_vars",
-            "cpu",
-            "memory",
-            "status",
-            "created",
-        )
+        fields = ("uuid", "name", "snapshot", "target", "env_vars", "cpu", "memory", "status", "created", "expired_at")
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):

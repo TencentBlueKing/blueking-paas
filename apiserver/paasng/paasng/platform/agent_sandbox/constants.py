@@ -27,3 +27,10 @@ class SandboxStatus(StrStructuredEnum):
     # Abnormal status
     ERR_CREATING = EnumField("err_creating", label="unable to create")
     ERR_DELETING = EnumField("err_deleting", label="unable to delete")
+
+
+# 沙箱默认的 TTL（Time To Live）时长
+SANDBOX_DEFAULT_TTL_SECONDS = 30 * 60
+
+# 沙箱 TTL 最大值
+SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60

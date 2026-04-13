@@ -34,7 +34,7 @@ from svn.common import SvnException
 from svn.local import LocalClient as OrigLocalClient
 from svn.remote import RemoteClient as OrigRemoteClient
 
-from paasng.platform.sourcectl.exceptions import ReadFileNotFoundError
+from paasng.platform.sourcectl.exceptions import PathTraversalError, ReadFileNotFoundError
 from paasng.platform.sourcectl.svn.exceptions import AlreadyInitializedSvnRepo, CannotInitNonEmptyTrunk
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, get_all_intermediate_dirs
 
@@ -331,11 +331,12 @@ class SvnRepositoryClient:
             # 1. svn update
             for update_rel_path in update_list or []:
                 # 仅更新文件到最新版本
-                lclient.update(str(working_dir / update_rel_path))
+                update_file = self._validate_path_within_dir(pathlib.Path(working_dir), update_rel_path)
+                lclient.update(str(update_file))
 
             # 2. svn add
             for origin_rel_path, add_rel_path, is_force_add in add_list or []:
-                add_file = working_dir / add_rel_path
+                add_file = self._validate_path_within_dir(pathlib.Path(working_dir), add_rel_path)
                 add_file_dir = add_file.parent
 
                 intermediate_dirs = get_all_intermediate_dirs(str(add_rel_path))
@@ -357,7 +358,7 @@ class SvnRepositoryClient:
 
             # 4. svn delete
             for del_rel_path in delete_list or []:
-                delete_file = working_dir / del_rel_path
+                delete_file = self._validate_path_within_dir(pathlib.Path(working_dir), del_rel_path)
                 lclient.update(str(delete_file), silent=True)
                 if delete_file.exists():
                     lclient.delete(str(delete_file))
@@ -376,6 +377,22 @@ class SvnRepositoryClient:
         except SvnException:
             raise ValueError('No revision info found for "%s"' % rel_path)
         return result
+
+    @staticmethod
+    def _validate_path_within_dir(base_dir: pathlib.Path, rel_path: str) -> pathlib.Path:
+        """Validate that the resolved path does not escape the base directory.
+
+        :param base_dir: The base directory that all paths must be within.
+        :param rel_path: The relative path to validate.
+        :return: The resolved absolute path if valid.
+        :raises ValueError: If the resolved path is outside the base directory.
+        """
+        full_path = (base_dir / rel_path).resolve()
+        try:
+            full_path.relative_to(base_dir)
+        except ValueError:
+            raise PathTraversalError(f"Resolved path {full_path} escapes the base directory {base_dir}")
+        return full_path
 
     def __str__(self):
         return "SvnRepositoryClient: %s" % self.repo_url

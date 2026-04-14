@@ -25,7 +25,7 @@ from paasng.platform.applications.models import ReservedPrefixAuthCode
 pytestmark = pytest.mark.django_db
 
 
-class TestAuthCodeManageViewSet:
+class TestReservedPrefixAuthCodeViewSet:
     """保留前缀授权码管理 API 测试"""
 
     @pytest.fixture(autouse=True)

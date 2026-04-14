@@ -17,17 +17,17 @@
 
 from django.urls import re_path
 
-from .views import AuthCodeManageViewSet
+from .views import ReservedPrefixAuthCodeViewSet
 
 urlpatterns = [
     re_path(
         r"^api/plat_mgt/reserved_prefix/$",
-        AuthCodeManageViewSet.as_view({"get": "list", "post": "create"}),
+        ReservedPrefixAuthCodeViewSet.as_view({"get": "list", "post": "create"}),
         name="plat_mgt.reserved_prefix.list",
     ),
     re_path(
         r"^api/plat_mgt/reserved_prefix/(?P<id>[^/]+)/$",
-        AuthCodeManageViewSet.as_view({"delete": "destroy"}),
+        ReservedPrefixAuthCodeViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.reserved_prefix.destroy",
     ),
 ]

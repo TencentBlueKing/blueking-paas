@@ -40,7 +40,7 @@ RESERVED_PREFIX_AUTH_CODE_CHARS = string.ascii_uppercase + string.digits
 RESERVED_PREFIX_AUTH_CODE_LENGTH = 8
 
 
-class AuthCodeManageViewSet(viewsets.GenericViewSet):
+class ReservedPrefixAuthCodeViewSet(viewsets.GenericViewSet):
     """保留前缀授权码管理接口"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]

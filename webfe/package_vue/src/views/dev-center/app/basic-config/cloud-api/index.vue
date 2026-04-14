@@ -141,7 +141,6 @@
           </p>
           <div
             :class="['access-token-url', { error: !tokenUrl }]"
-            v-copy="tokenUrl"
           >
             <span v-if="tokenUrl">{{ tokenUrl }}</span>
             <span v-else>{{ errorObject?.message }}</span>
@@ -331,10 +330,7 @@ export default {
           this.errorObject = this.formatErrorString(res.message);
         }
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         setTimeout(() => {
           this.nextBtnLoading = false;
@@ -468,7 +464,6 @@ export default {
 .header-wrapper {
   text-align: left;
   height: 28px;
-  font-family: MicrosoftYaHei;
   font-size: 20px;
   color: #313238;
   line-height: 28px;
@@ -493,7 +488,6 @@ export default {
     min-height: 40px;
     background: #e1ecff;
     border-radius: 2px;
-    font-family: MicrosoftYaHei;
     font-size: 14px;
     color: #313238;
     line-height: 22px;

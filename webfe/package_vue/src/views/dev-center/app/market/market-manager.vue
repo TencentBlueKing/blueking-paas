@@ -282,24 +282,9 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <!-- 多租户展示 -->
-              <template v-if="isMultiTenantDisplayMode && baseInfo.contactArr.length">
-                <div class="form-text">
-                  <span
-                    v-for="(user, index) in baseInfo.contactArr"
-                    :key="user"
-                  >
-                    <bk-user-display-name :user-id="user"></bk-user-display-name>
-                    <span v-if="baseInfo.contactArr.length > index + 1">;&nbsp;</span>
-                  </span>
-                </div>
-              </template>
-              <p
-                v-else
-                class="form-text"
-              >
-                {{ baseInfo.contactArr.join('; ') || '--' }}
-              </p>
+              <div class="form-text">
+                <UserDisplay :value="baseInfo.contactArr" separator="; " />
+              </div>
             </bk-form-item>
             <bk-form-item
               v-if="GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
@@ -360,6 +345,7 @@ import userSelectorDialog from '@/components/user-selector';
 import RenderMemberItem from './render-member-display';
 import BkOrgSelector from '@blueking/bk-org-selector/vue2';
 import visibleRange from './visible-range';
+import UserDisplay from '@/components/user/user-display.vue';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
 import { cloneDeep } from 'lodash';
 import { mapGetters } from 'vuex';
@@ -372,6 +358,7 @@ export default {
     RenderMemberItem,
     visibleRange,
     BkOrgSelector,
+    UserDisplay,
   },
   mixins: [appBaseMixin],
   data() {

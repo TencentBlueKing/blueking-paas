@@ -125,11 +125,7 @@
             prop="operator"
           >
             <template slot-scope="{ row }">
-              <bk-user-display-name
-                :user-id="row.operator"
-                v-if="isMultiTenantDisplayMode"
-              ></bk-user-display-name>
-              <span v-else>{{ row.operator }}</span>
+              <UserDisplay :value="row.operator" />
             </template>
           </bk-table-column>
           <bk-table-column
@@ -144,7 +140,7 @@
           >
             <template slot-scope="{ row }">
               <bk-button
-                v-if="row.detail_type"
+                v-if="row.detail_type && !(row.target === 'cloud_api' && typeof row.data_after.data === 'object')"
                 style="margin-right: 12px"
                 theme="primary"
                 text
@@ -218,9 +214,9 @@ import { createTimeShortcuts } from '@/common/date';
 import user from '@/components/user';
 import diff from './comps/diff.vue';
 import cloudApiDetail from './comps/cloud-api-detail.vue';
+import UserDisplay from '@/components/user/user-display.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import yamljs from 'js-yaml';
-import { mapGetters } from 'vuex';
 
 export default {
   name: 'OperationRecord',
@@ -228,6 +224,7 @@ export default {
     user,
     diff,
     cloudApiDetail,
+    UserDisplay,
   },
   mixins: [appBaseMixin],
   data() {
@@ -276,7 +273,6 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['isMultiTenantDisplayMode']),
     appCode() {
       return this.$route.params.id;
     },

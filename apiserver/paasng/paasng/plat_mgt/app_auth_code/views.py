@@ -30,24 +30,24 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
-from paasng.platform.applications.models import AppCodeAuthCode
+from paasng.platform.applications.models import ReservedPrefixAuthCode
 from paasng.utils.error_codes import error_codes
 
 from .serializers import AuthCodeListInputSLZ, AuthCodeOutputSLZ, GenAuthCodeInputSLZ
 
 # 授权码字符生成范围和长度
-SYS_APP_AUTH_CODE_CHARS = string.ascii_uppercase + string.digits
-SYS_APP_AUTH_CODE_LENGTH = 8
+RESERVED_PREFIX_AUTH_CODE_CHARS = string.ascii_uppercase + string.digits
+RESERVED_PREFIX_AUTH_CODE_LENGTH = 8
 
 
 class AuthCodeManageViewSet(viewsets.GenericViewSet):
-    """系统应用授权码管理接口"""
+    """保留前缀授权码管理接口"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
-    queryset = AppCodeAuthCode.objects.all().order_by("-created")
+    queryset = ReservedPrefixAuthCode.objects.all().order_by("-created")
 
     @swagger_auto_schema(
-        tags=["平台管理-系统应用授权码"],
+        tags=["平台管理-保留前缀授权码"],
         operation_description="获取授权码列表",
         responses={status.HTTP_200_OK: ""},
     )
@@ -64,7 +64,7 @@ class AuthCodeManageViewSet(viewsets.GenericViewSet):
         return Response(AuthCodeOutputSLZ(queryset, many=True).data)
 
     @swagger_auto_schema(
-        tags=["平台管理-系统应用授权码"],
+        tags=["平台管理-保留前缀授权码"],
         operation_description="生成授权码",
         responses={status.HTTP_201_CREATED: ""},
     )
@@ -74,20 +74,20 @@ class AuthCodeManageViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         app_code = slz.validated_data["app_code"]
 
-        auth_code = get_random_string(SYS_APP_AUTH_CODE_LENGTH, SYS_APP_AUTH_CODE_CHARS)
+        auth_code = get_random_string(RESERVED_PREFIX_AUTH_CODE_LENGTH, RESERVED_PREFIX_AUTH_CODE_CHARS)
         try:
-            AppCodeAuthCode.objects.create(
+            ReservedPrefixAuthCode.objects.create(
                 app_code=app_code,
                 auth_code=auth_code,
                 creator=request.user.pk,
             )
         except IntegrityError:
-            raise error_codes.CANNOT_CREATE_SYS_APP_AUTH_CODE.f(_("应用 ID 已存在授权码"))
+            raise error_codes.CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE.f(_("应用 ID 已存在授权码"))
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
-            target=OperationTarget.SYS_APP_AUTH_CODE,
+            target=OperationTarget.RESERVED_PREFIX_AUTH_CODE,
             app_code=app_code,
             data_after=DataDetail(data={"app_code": app_code, "auth_code": auth_code}),
         )
@@ -95,16 +95,16 @@ class AuthCodeManageViewSet(viewsets.GenericViewSet):
         return Response({"auth_code": auth_code}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        tags=["平台管理-系统应用授权码"],
+        tags=["平台管理-保留前缀授权码"],
         operation_description="删除授权码",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, id):
         """删除授权码"""
-        auth_code = get_object_or_404(AppCodeAuthCode, id=id)
+        auth_code = get_object_or_404(ReservedPrefixAuthCode, id=id)
 
         if auth_code.is_used:
-            raise error_codes.CANNOT_DELETE_USED_SYS_APP_AUTH_CODE.f(_("已使用的系统应用授权码不能被删除"))
+            raise error_codes.CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE.f(_("已使用的保留前缀授权码不能被删除"))
 
         data_before = {"app_code": auth_code.app_code, "auth_code": auth_code.auth_code}
 
@@ -113,7 +113,7 @@ class AuthCodeManageViewSet(viewsets.GenericViewSet):
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
-            target=OperationTarget.SYS_APP_AUTH_CODE,
+            target=OperationTarget.RESERVED_PREFIX_AUTH_CODE,
             app_code=auth_code.app_code,
             data_before=DataDetail(data=data_before),
         )

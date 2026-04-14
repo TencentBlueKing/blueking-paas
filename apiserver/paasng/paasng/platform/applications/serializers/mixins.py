@@ -30,7 +30,7 @@ from paasng.core.tenant.utils import AppTenantInfo, stub_app_tenant_info, valida
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.applications.models import AppCodeAuthCode
+from paasng.platform.applications.models import ReservedPrefixAuthCode
 from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.utils.i18n.serializers import I18NExtend, i18n
@@ -49,7 +49,7 @@ class AppBasicInfoMixin(serializers.Serializer):
         help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
     )
     auth_code = serializers.CharField(
-        help_text="创建应用授权码, 当应用 ID 使用保留前缀时必传",
+        help_text="保留前缀授权码, 当应用 ID 使用保留前缀时必传",
         required=False,
         allow_blank=True,
         max_length=8,
@@ -80,17 +80,17 @@ class AppBasicInfoMixin(serializers.Serializer):
         code = attrs["code"]
         auth_code = attrs.pop("auth_code", None)
 
-        matched_prefix = any(code.startswith(prefix) for prefix in settings.SYS_APP_CODE_PREFIXES)
+        matched_prefix = any(code.startswith(prefix) for prefix in settings.RESERVED_APP_CODE_PREFIXES)
         if not matched_prefix:
             return attrs
 
         if not auth_code:
-            raise ValidationError({"auth_code": _("应用 ID 使用了保留前缀，必须提供创建应用授权码")})
+            raise ValidationError({"auth_code": _("应用 ID 使用了保留前缀，必须提供保留前缀授权码")})
 
         try:
-            auth_code_obj = AppCodeAuthCode.objects.get(auth_code=auth_code, app_code=code)
-        except AppCodeAuthCode.DoesNotExist:
-            raise ValidationError({"auth_code": _("无效的授权码，请确认授权码与应用 ID 是否匹配")})
+            auth_code_obj = ReservedPrefixAuthCode.objects.get(auth_code=auth_code, app_code=code)
+        except ReservedPrefixAuthCode.DoesNotExist:
+            raise ValidationError({"auth_code": _("无效的保留前缀授权码，请确认授权码与应用 ID 是否匹配")})
 
         auth_code_obj.is_used = True
         auth_code_obj.save(update_fields=["is_used"])

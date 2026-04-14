@@ -771,7 +771,7 @@ class SMartAppExtraInfo(models.Model):
         return self.artifact_metadata.base_image_id
 
 
-class AppCodeAuthCode(TimestampedModel):
+class ReservedPrefixAuthCode(TimestampedModel):
     """用于创建具有保留 ID 前缀的应用程序的授权码.
 
     当平台配置有保留前缀（例如 "bk-"、"canway-"）时, 用户必须提供有效的授权码才能创建 ID 以这些前缀开头的应用程序.

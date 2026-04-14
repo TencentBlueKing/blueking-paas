@@ -73,7 +73,6 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "RegionViewSet.retrieve",
     "TenantViewSet.list",
     "TagViewSet",
-    "SysAppCodePrefixViewSet",
     "MixDocumentSearch",
     "BkDocsSearchViewset",
     "IWikiSearchViewset",
@@ -93,6 +92,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "SMartBuilderViewSet",
     "ProcessComponentViewSet",
     "AssistantView",
+    "ReservedAppCodePrefixViewSet",
     #
     # == Django views start
     #

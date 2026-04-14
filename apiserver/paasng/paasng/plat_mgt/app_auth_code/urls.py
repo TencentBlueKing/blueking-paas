@@ -21,13 +21,13 @@ from .views import AuthCodeManageViewSet
 
 urlpatterns = [
     re_path(
-        r"^api/plat_mgt/sys_app_auth_code/$",
+        r"^api/plat_mgt/app_auth_code/$",
         AuthCodeManageViewSet.as_view({"get": "list", "post": "create"}),
-        name="plat_mgt.sys_app_auth_code.list",
+        name="plat_mgt.app_auth_code.list",
     ),
     re_path(
-        r"^api/plat_mgt/sys_app_auth_code/(?P<id>[^/]+)/$",
+        r"^api/plat_mgt/app_auth_code/(?P<id>[^/]+)/$",
         AuthCodeManageViewSet.as_view({"delete": "destroy"}),
-        name="plat_mgt.sys_app_auth_code.detail",
+        name="plat_mgt.app_auth_code.detail",
     ),
 ]

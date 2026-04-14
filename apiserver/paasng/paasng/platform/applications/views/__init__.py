@@ -23,7 +23,7 @@ from .application import (
     ApplicationResProtectionsViewSet,
     ApplicationViewSet,
 )
-from .creation import ApplicationCreateViewSet, SysAppCodePrefixViewSet
+from .creation import ApplicationCreateViewSet, ReservedAppCodePrefixViewSet
 from .marks import ApplicationDeploymentModuleOrderViewSet, ApplicationMarkedViewSet
 from .member import ApplicationMembersViewSet
 from .sys_api import LightAppViewSet, SysAppViewSet
@@ -40,6 +40,6 @@ __all__ = [
     "ApplicationResProtectionsViewSet",
     "ApplicationViewSet",
     "LightAppViewSet",
-    "SysAppCodePrefixViewSet",
+    "ReservedAppCodePrefixViewSet",
     "SysAppViewSet",
 ]

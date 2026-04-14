@@ -25,6 +25,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
+from django.utils.translation import gettext_lazy as _
 
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
@@ -69,10 +70,10 @@ class ReservedWordValidator:
 
 
 @deconstructible
-class SysAppCodePrefixValidator:
+class ReservedAppCodePrefixValidator:
     """Validator that rejects app codes starting with any of the configured forbidden prefixes.
 
-    The sys-app prefix list is read from ``settings.SYS_APP_CODE_PREFIXES``.
+    The reserved prefix list is read from ``settings.RESERVED_APP_CODE_PREFIXES``.
     When the list is empty, no restriction is applied.
     """
 
@@ -81,9 +82,9 @@ class SysAppCodePrefixValidator:
 
     def __call__(self, value):
         value = force_str(value)
-        for prefix in settings.SYS_APP_CODE_PREFIXES:
+        for prefix in settings.RESERVED_APP_CODE_PREFIXES:
             if value.startswith(prefix):
-                raise ValidationError(f"{self.resource_type} 不能以 '{prefix}' 开头")
+                raise ValidationError(_("{self.resource_type} 不能以 '{prefix}' 开头"))
 
 
 @deconstructible

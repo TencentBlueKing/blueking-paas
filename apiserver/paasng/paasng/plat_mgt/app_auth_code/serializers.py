@@ -18,7 +18,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.applications.models import AppCodeAuthCode
+from paasng.platform.applications.models import ReservedPrefixAuthCode
 
 
 class GenAuthCodeInputSLZ(serializers.Serializer):
@@ -27,7 +27,7 @@ class GenAuthCodeInputSLZ(serializers.Serializer):
     app_code = serializers.CharField(max_length=20, required=True, help_text="应用 ID")
 
     def validate_app_code(self, value):
-        if AppCodeAuthCode.objects.filter(app_code=value).exists():
+        if ReservedPrefixAuthCode.objects.filter(app_code=value).exists():
             raise serializers.ValidationError(_("应用 ID 已存在授权码"))
         return value
 

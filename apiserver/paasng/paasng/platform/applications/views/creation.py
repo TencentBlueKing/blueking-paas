@@ -412,8 +412,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
 
-class SysAppCodePrefixViewSet(viewsets.GenericViewSet):
-    """获取保留系统应用前缀列表的接口, 用于床架应用时提示用户哪些前缀需要授权"""
+class ReservedAppCodePrefixViewSet(viewsets.GenericViewSet):
+    """获取应用 ID 保留前缀列表的接口, 用于创建应用时提示用户哪些前缀需要授权"""
 
     permission_classes = [IsAuthenticated]
 
@@ -424,4 +424,4 @@ class SysAppCodePrefixViewSet(viewsets.GenericViewSet):
     )
     def list(self, request):
         """获取保留前缀列表"""
-        return Response({"reserved_prefixes": list(settings.SYS_APP_CODE_PREFIXES)})
+        return Response({"reserved_prefixes": list(settings.RESERVED_APP_CODE_PREFIXES)})

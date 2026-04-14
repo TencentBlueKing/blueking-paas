@@ -75,10 +75,7 @@
           :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
-            <span v-if="isMultiTenantDisplayMode">
-              <bk-user-display-name :user-id="row.operator"></bk-user-display-name>
-            </span>
-            <span v-else>{{ row.operator || '--' }}</span>
+            <UserDisplay :value="row.operator" />
           </template>
         </bk-table-column>
         <bk-table-column
@@ -98,10 +95,13 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import { mapGetters } from 'vuex';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
   name: 'SourceCodeInfo',
+  components: {
+    UserDisplay,
+  },
   mixins: [appBaseMixin],
   data() {
     return {
@@ -117,9 +117,6 @@ export default {
         order_by: '',
       },
     };
-  },
-  computed: {
-    ...mapGetters(['isMultiTenantDisplayMode']),
   },
   created() {
     this.getPackageList();

@@ -66,8 +66,8 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
             "resources": DEFAULT_RESOURCES,
             "env": env,
             "imagePullPolicy": "IfNotPresent",
-            # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre-start.sh 最长耗时 (300s)
-            # NOTE: 沙箱中可能配置了 pre-start.sh，此时 daemon 服务需要等待 pre-start.sh 执行完成后才会就绪
+            # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre_start.sh 最长耗时 (沙箱 daemon 服务默认设置 PRE_START_TIMEOUT=300s)
+            # NOTE: 沙箱中可能配置了 pre_start.sh，此时 daemon 服务需要等待 pre_start.sh 执行完成后才会就绪
             "startupProbe": {
                 "tcpSocket": {
                     "port": DAEMON_BIND_PORT,

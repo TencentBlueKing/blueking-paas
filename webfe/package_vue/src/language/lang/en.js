@@ -662,7 +662,7 @@ export default {
   密码: 'Password',
   '您将进行密码重置操作！': 'You are about to reset your password!',
   忘记密码: 'Forgot password',
-  '验证码已发送至您的企业微信，请注意查收！': 'The verification code has been sent to your enterprise WeChat, please pay attention to check it!',
+  '验证码已发送至<b>短信</b>及<b>企业微信</b>（应用提醒 > 消息提醒），请注意查收！': 'The verification code has been sent to <b>SMS</b> and <b>Enterprise WeChat</b> (APP Reminder > Message Reminder), please check it!',
   请输入验证码: 'Please enter verification code',
   重新获取: 'Reacquire',
   重置密码: 'Reset Password',

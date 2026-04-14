@@ -145,7 +145,8 @@ class AgentSandboxResManager:
     """
 
     # The timeout for creating a sandbox, in seconds
-    create_timeout = 30
+    # 探测沙箱 daemon 服务就绪的最大超时时间，不宜超过 daemon 实际配置的 PRE_START_TIMEOUT 时间
+    create_timeout = 120
 
     def __init__(self, app: Application, target: str):
         self.app = app

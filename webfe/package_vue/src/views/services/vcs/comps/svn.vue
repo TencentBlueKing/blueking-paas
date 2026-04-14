@@ -44,9 +44,10 @@
                   @cancel="closePassword"
                   width="380">
                   <div slot="content">
-                    <p class="title">
-                      {{ $t('验证码已发送至您的企业微信，请注意查收！') }}
-                    </p>
+                    <p
+                      class="title"
+                      v-dompurify-html="$t('验证码已发送至<b>短信</b>及<b>企业微信</b>（应用提醒 > 消息提醒），请注意查收！')"
+                    ></p>
                     <p style="margin: 18px 0 20px 0;">
                       <span class="password">
                         <input

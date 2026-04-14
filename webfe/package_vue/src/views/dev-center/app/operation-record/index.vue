@@ -140,7 +140,7 @@
           >
             <template slot-scope="{ row }">
               <bk-button
-                v-if="row.detail_type"
+                v-if="row.detail_type && !(row.target === 'cloud_api' && typeof row.data_after.data === 'object')"
                 style="margin-right: 12px"
                 theme="primary"
                 text

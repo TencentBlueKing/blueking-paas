@@ -124,8 +124,9 @@ class SandboxExecInputSLZ(serializers.Serializer):
         help_text="命令执行目录，不提供时使用沙箱默认工作目录",
     )
     env_vars = SandboxEnvVarsField(label="环境变量", required=False, default=dict, help_text="命令执行环境变量")
+    # timeout 需要小于蓝鲸网关的默认最大超时时间 300s
     timeout = serializers.IntegerField(
-        label="超时（秒）", required=False, default=60, min_value=1, help_text="执行超时时间"
+        label="超时（秒）", required=False, default=296, min_value=1, help_text="执行超时时间"
     )
 
     def validate_cmd(self, value):

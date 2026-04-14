@@ -139,10 +139,7 @@
         >
           <div class="header-user is-left ps-head-last">
             <!-- 多租户展示 -->
-            <span v-if="isMultiTenantDisplayMode">
-              <bk-user-display-name :user-id="user.username"></bk-user-display-name>
-            </span>
-            <template v-else>{{ user.chineseName || user.username }}</template>
+            <UserDisplay :value="user.username" :fallback="user.chineseName || user.username" />
             <i class="bk-icon icon-down-shape" />
           </div>
           <template #content>
@@ -175,12 +172,14 @@ import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
 import logoSvg from '@static/images/logo.svg';
 import globalInput from './global-search/search-input.vue';
+import UserDisplay from '@/components/user/user-display.vue';
 import { mapState, mapGetters } from 'vuex';
 
 export default {
   components: {
     logVersion,
     globalInput,
+    UserDisplay,
   },
   mixins: [psHeaderInfo, selectEventMixin],
   props: [],

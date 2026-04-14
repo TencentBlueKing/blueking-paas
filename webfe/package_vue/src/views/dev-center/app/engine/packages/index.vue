@@ -120,10 +120,7 @@
           :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
-            <span v-if="isMultiTenantDisplayMode">
-              <bk-user-display-name :user-id="row.operator"></bk-user-display-name>
-            </span>
-            <span v-else>{{ row.operator || '--' }}</span>
+            <UserDisplay :value="row.operator" />
           </template>
         </bk-table-column>
         <bk-table-column
@@ -279,13 +276,14 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import appTopBar from '@/components/paas-app-bar';
 import uploader from '@/components/uploader';
 import KeyValueRow from '@/components/key-value-row';
-import { mapGetters } from 'vuex';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
   components: {
     appTopBar,
     uploader,
     KeyValueRow,
+    UserDisplay,
   },
   mixins: [appBaseMixin],
   data() {
@@ -312,7 +310,6 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['isMultiTenantDisplayMode']),
     uploadHeader() {
       return {
         name: 'X-CSRFToken',

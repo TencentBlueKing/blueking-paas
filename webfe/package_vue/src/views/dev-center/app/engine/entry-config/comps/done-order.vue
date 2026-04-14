@@ -47,23 +47,23 @@
                 class="detail-box"
               >
                 <li>
-                  <span class="key"> {{ $t('申请人IP：') }} </span>
+                  <span class="key"> {{ `${$t('申请人IP')}：` }} </span>
                   <pre class="value">{{ subProps.ip || '--' }}</pre>
                 </li>
                 <li>
-                  <span class="key"> {{ $t('审批人：') }} </span>
-                  <pre class="value">{{ subProps.auditor.username || '--' }}</pre>
+                  <span class="key"> {{ `${$t('审批人')}：` }} </span>
+                  <pre class="value"><UserDisplay :value="subProps.auditor.username"></UserDisplay></pre>
                 </li>
                 <li>
-                  <span class="key"> {{ $t('业务接口人：') }} </span>
+                  <span class="key"> {{ `${$t('业务接口人')}：` }} </span>
                   <pre class="value">{{ subProps.business_interface_user || '--' }}</pre>
                 </li>
                 <li>
-                  <span class="key"> {{ $t('添加原因：') }} </span>
+                  <span class="key"> {{ `${$t('添加原因')}：` }} </span>
                   <pre class="value">{{ subProps.reason || '--' }}</pre>
                 </li>
                 <li>
-                  <span class="key"> {{ $t('有效时间：') }} </span>
+                  <span class="key">{{ `${$t('有效时间')}：` }}</span>
                   <pre class="value">{{ subProps.expires || '--' }}</pre>
                 </li>
               </ul>
@@ -126,7 +126,10 @@
 <script>
 import appBaseInfoMixin from '@/mixins/app-base-mixin';
 import { bus } from '@/common/bus';
+import UserDisplay from '@/components/user/user-display.vue';
+
 export default {
+  components: { UserDisplay },
   mixins: [appBaseInfoMixin],
   data() {
     return {

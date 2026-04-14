@@ -85,11 +85,7 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
-              <bk-user-display-name
-                v-if="isMultiTenantDisplayMode"
-                :user-id="row.applied_by"
-              ></bk-user-display-name>
-              <span v-else>{{ row.applied_by }}</span>
+              <UserDisplay :value="row.applied_by"></UserDisplay>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -136,16 +132,7 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <template v-if="isMultiTenantDisplayMode">
-                <span
-                  v-for="userId in row.handled_by"
-                  :key="userId"
-                >
-                  <bk-user-display-name :user-id="userId"></bk-user-display-name>
-                  <span>，</span>
-                </span>
-              </template>
-              <template v-else>{{ getHandleBy(row.handled_by) }}</template>
+              <UserDisplay :value="row.handled_by"></UserDisplay>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -230,7 +217,11 @@
               class="value"
               :style="field.isTextarea ? 'line-height: 22px; padding-top: 10px' : ''"
             >
-              {{ field.value || '--' }}
+              <UserDisplay
+                v-if="field.isUserDisplay"
+                :value="field.value"
+              ></UserDisplay>
+              <template v-else>{{ field.value || '--' }}</template>
               <bk-button
                 v-if="
                   field.isApplyStatus && isMcpService && curRecord.apply_status === 'pending' && curRecord?.approval_url
@@ -316,8 +307,10 @@
 import moment from 'moment';
 import { mapState, mapGetters } from 'vuex';
 import { copy } from '@/common/tools';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
+  components: { UserDisplay },
   props: {
     typeList: {
       type: Array,
@@ -525,6 +518,7 @@ export default {
           label: this.$t('申请人'),
           value: this.curRecord.applied_by,
           show: true,
+          isUserDisplay: true,
         },
       ];
       // 授权维度（非组件API才显示）
@@ -560,8 +554,9 @@ export default {
         },
         {
           label: this.$t('审批人'),
-          value: this.getHandleBy(this.curRecord.handled_by),
+          value: this.curRecord.handled_by,
           show: true,
+          isUserDisplay: true,
         },
         {
           label: this.$t('审批时间'),

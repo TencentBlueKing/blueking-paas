@@ -45,7 +45,7 @@
                 v-bk-overflow-tips
               >
                 <span v-if="isMultiTenantDisplayMode">
-                  <bk-user-display-name :user-id="item.operator"></bk-user-display-name>
+                  <UserDisplay :value="item.operator" />
                   {{ formattedOperate(item.operate) }}
                 </span>
                 <template v-else>{{ item.operate }}</template>
@@ -64,11 +64,15 @@
 
 <script>
 import { mapState, mapGetters } from 'vuex';
+import UserDisplay from '@/components/user/user-display.vue';
 
 // 操作记录筛选的 localStorage 键名
 const SHOW_ONLY_MY_OPERATIONS_PREFERENCE = 'show_only_my_operations_preference';
 export default {
   name: 'RecentOperationRecords',
+  components: {
+    UserDisplay,
+  },
   props: {
     contentHeight: {
       type: Number,

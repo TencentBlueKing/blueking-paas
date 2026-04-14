@@ -62,6 +62,7 @@ def sync_processes(
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,
+            "graceful_shutdown_seconds": process.graceful_shutdown_seconds,
             "components": process.components,
         }
         if not use_proc_command:

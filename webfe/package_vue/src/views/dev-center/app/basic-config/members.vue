@@ -92,11 +92,7 @@
                     @error="handleAvatarError($event, row)"
                   />
                 </span>
-                <bk-user-display-name
-                  :user-id="row.user.username"
-                  v-if="isMultiTenantDisplayMode"
-                ></bk-user-display-name>
-                <span v-else>{{ row.user.username }}</span>
+                <UserDisplay :value="row.user.username" />
               </div>
             </template>
           </bk-table-column>
@@ -197,19 +193,11 @@
       >
         <span>{{ $t('删除成员') }}</span>
         &nbsp;
-        <bk-user-display-name
-          :user-id="selectedMember.name"
-          v-if="isMultiTenantDisplayMode"
-        ></bk-user-display-name>
-        <span v-else>{{ selectedMember.name }}</span>
+        <UserDisplay :value="selectedMember.name" />
       </div>
       <div>
         {{ $t('用户') }}
-        <bk-user-display-name
-          :user-id="selectedMember.name"
-          v-if="isMultiTenantDisplayMode"
-        ></bk-user-display-name>
-        <span v-else>{{ selectedMember.name }}</span>
+        <UserDisplay :value="selectedMember.name" />
         {{ $t('将失去此应用的对应权限，是否确定删除？') }}
       </div>
     </bk-dialog>
@@ -237,6 +225,7 @@ import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import CustomRadioCapsule from '@/components/custom-radio-capsule';
+import UserDisplay from '@/components/user/user-display.vue';
 import { mapState, mapGetters } from 'vuex';
 import { paginationFun } from '@/common/utils';
 import MembersSideslider from './members-sideslider.vue';
@@ -258,6 +247,7 @@ export default {
     user,
     CustomRadioCapsule,
     MembersSideslider,
+    UserDisplay,
   },
   mixins: [appBaseMixin],
   data() {

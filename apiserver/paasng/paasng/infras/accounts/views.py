@@ -102,6 +102,7 @@ class UserVerificationGenerationView(APIView):
         user_tenant_id = get_tenant(request.user).id
         bk_notify = BkNotificationService(user_tenant_id)
         try:
+            bk_notify.send_sms([request.user.username], message)
             bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
         except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION

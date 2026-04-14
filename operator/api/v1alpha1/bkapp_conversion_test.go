@@ -31,6 +31,7 @@ import (
 
 var _ = Describe("test conversion back and forth", func() {
 	It("v1alpha1 -> hub -> v1alpha1", func() {
+		webGracefulShutdownSeconds := int64(30)
 		v1alpha1bkapp := &BkApp{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       KindBkApp,
@@ -103,6 +104,7 @@ var _ = Describe("test conversion back and forth", func() {
 								FailureThreshold:    3,
 							},
 						},
+						GracefulShutdownSeconds: &webGracefulShutdownSeconds,
 					},
 					{
 						Name:     "worker",
@@ -198,10 +200,16 @@ var _ = Describe("test conversion back and forth", func() {
 		).To(Equal(v1alpha1bkappFromConverted.Annotations[AddonsAnnoKey]))
 		// 信息不丢失的情况下，转回 v1alpha1 后 Spec 会增加 Addons
 		v1alpha1bkapp.Spec.Addons = []paasv1alpha2.Addon{{Name: "add-on1"}}
+		Expect(v1alpha1bkappFromConverted.Spec.Processes[0].GracefulShutdownSeconds).NotTo(BeNil())
+		Expect(
+			*v1alpha1bkappFromConverted.Spec.Processes[0].GracefulShutdownSeconds,
+		).To(Equal(webGracefulShutdownSeconds))
+		Expect(v1alpha1bkappFromConverted.Spec.Processes[1].GracefulShutdownSeconds).To(BeNil())
 		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
 	})
 
 	It("hub -> v1alpha1 -> hub", func() {
+		webGracefulShutdownSeconds := int64(45)
 		v1alpha2bkapp := paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       paasv1alpha2.KindBkApp,
@@ -274,6 +282,7 @@ var _ = Describe("test conversion back and forth", func() {
 								FailureThreshold:    3,
 							},
 						},
+						GracefulShutdownSeconds: &webGracefulShutdownSeconds,
 					},
 					{
 						Name:         "worker",
@@ -368,6 +377,11 @@ var _ = Describe("test conversion back and forth", func() {
 		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkappFromConverted))
 
 		// Make sure the conversion is lossless.
+		Expect(v1alpha2bkappFromConverted.Spec.Processes[0].GracefulShutdownSeconds).NotTo(BeNil())
+		Expect(
+			*v1alpha2bkappFromConverted.Spec.Processes[0].GracefulShutdownSeconds,
+		).To(Equal(webGracefulShutdownSeconds))
+		Expect(v1alpha2bkappFromConverted.Spec.Processes[1].GracefulShutdownSeconds).To(BeNil())
 		Expect(v1alpha2bkapp.Spec).To(Equal(v1alpha2bkappFromConverted.Spec))
 		Expect(v1alpha2bkapp.Status).To(Equal(v1alpha2bkappFromConverted.Status))
 	})

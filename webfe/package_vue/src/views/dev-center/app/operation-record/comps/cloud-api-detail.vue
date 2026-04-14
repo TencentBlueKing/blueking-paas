@@ -3,7 +3,7 @@
     <div class="item">
       <div class="key">{{ $t('申请人') }}：</div>
       <div class="value">
-        {{ curRecord.applied_by }}
+        <UserDisplay :value="curRecord.applied_by"></UserDisplay>
       </div>
     </div>
     <div
@@ -19,7 +19,7 @@
     </div>
     <div class="item">
       <div class="key">
-        {{ $t('有效时间：') }}
+        {{ `${$t('有效时间')}：` }}
       </div>
       <div class="value">
         {{ curRecord.expire_days === 0 ? $t('永久') : Math.ceil(curRecord.expire_days / 30) + $t('个月') }}
@@ -43,10 +43,10 @@
     </div>
     <div class="item">
       <div class="key">
-        {{ $t('审批人：') }}
+        {{ `${$t('审批人')}：` }}
       </div>
       <div class="value">
-        {{ getHandleBy(curRecord.handled_by) || '--' }}
+        <UserDisplay :value="curRecord.handled_by"></UserDisplay>
       </div>
     </div>
     <div class="item">
@@ -187,8 +187,13 @@
 </template>
 
 <script>
+import UserDisplay from '@/components/user/user-display.vue';
+
 export default {
   name: 'CloudApiDetail',
+  components: {
+    UserDisplay,
+  },
   props: {
     curRecord: {
       type: Object,
@@ -208,15 +213,6 @@ export default {
     },
     isEnglish() {
       return this.$store.state.localLanguage === 'en';
-    },
-  },
-  methods: {
-    getHandleBy(payload) {
-      const list = payload?.filter((item) => !!item) || [];
-      if (list.length < 1) {
-        return '--';
-      }
-      return list.join('，');
     },
   },
 };

@@ -43,10 +43,10 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <bk-user-display-name
-              v-if="column.prop === 'user' && isMultiTenantDisplayMode"
-              :user-id="row[column.prop]"
-            ></bk-user-display-name>
+            <UserDisplay
+              v-if="column.prop === 'user'"
+              :value="row[column.prop]"
+            />
             <bk-switcher
               v-else-if="column.prop === 'is_effect'"
               v-model="row[column.prop]"
@@ -170,11 +170,7 @@
         <p>
           <span>{{ $t('确认删除用户') }}</span>
           &nbsp;
-          <bk-user-display-name
-            v-if="isMultiTenantDisplayMode"
-            :user-id="delDialogConfig.row.user"
-          ></bk-user-display-name>
-          <span v-else>{{ delDialogConfig.row.user }}</span>
+          <UserDisplay :value="delDialogConfig.row.user" />
           &nbsp;
           <span>{{ `${$t('的特性')}？` }}</span>
         </p>
@@ -191,6 +187,7 @@
 <script>
 import paginationMixin from '../pagination-mixin.js';
 import User from '@/components/user';
+import UserDisplay from '@/components/user/user-display.vue';
 import { mapState, mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
@@ -198,6 +195,7 @@ export default {
   mixins: [paginationMixin],
   components: {
     User,
+    UserDisplay,
   },
   data() {
     return {

@@ -75,14 +75,13 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
                 "periodSeconds": 1,
                 "failureThreshold": 300,
             },
-            # readinessProbe: startup 成功后接管，每 10s 探测一次，连续 2 次失败（~20s）标记为 Not Ready
+            # readinessProbe: startup 成功后接管，每 2s 探测一次，连续 2 次失败（~20s）标记为 Not Ready
             "readinessProbe": {
                 "tcpSocket": {
                     "port": DAEMON_BIND_PORT,
                 },
-                # 接管后立即探测
                 "initialDelaySeconds": 0,
-                "periodSeconds": 10,
+                "periodSeconds": 2,
                 "failureThreshold": 2,
             },
         }

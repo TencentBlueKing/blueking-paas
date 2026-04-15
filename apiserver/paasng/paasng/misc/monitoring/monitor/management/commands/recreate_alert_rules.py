@@ -26,7 +26,7 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    help = "覆盖创建监控侧告警策略， 会覆盖掉原有的同名告警策略，再需要更新告警策略时使用"
+    help = "覆盖创建监控侧告警策略， 会覆盖掉原有的同名告警策略，在需要更新告警策略时使用"
 
     def add_arguments(self, parser):
         group = parser.add_mutually_exclusive_group(required=True)

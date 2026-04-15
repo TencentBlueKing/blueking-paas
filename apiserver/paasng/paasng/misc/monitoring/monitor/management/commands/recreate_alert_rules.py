@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import time
-from typing import List
 
 from django.core.management.base import BaseCommand
 
@@ -27,12 +26,7 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    """覆盖重建告警策略.
-
-    当告警策略模板配置有误需要修正后重新下发时使用, 会以 overwrite=True 覆盖 bkmonitor 中已有的同名告警规则.
-    """
-
-    help = "Recreate (overwrite) alert rules for applications"
+    help = "覆盖创建监控侧告警策略， 会覆盖掉原有的同名告警策略，再需要更新告警策略时使用"
 
     def add_arguments(self, parser):
         group = parser.add_mutually_exclusive_group(required=True)
@@ -40,16 +34,20 @@ class Command(BaseCommand):
         group.add_argument("--apps", nargs="+", help="specified app code list")
 
     def handle(self, *args, **options):
-        app_codes: List[str] | None = options.get("apps")
+        app_codes: list[str] | None = options.get("apps")
 
         app_qs = Application.objects.filter(is_active=True, is_deleted=False)
         if app_codes:
             app_qs = app_qs.filter(code__in=app_codes)
             invalid_app_codes = set(app_codes) - set(app_qs.values_list("code", flat=True))
-            for code in invalid_app_codes:
+            # 如果有无效的 app_codes，报错并退出执行
+            if invalid_app_codes:
                 self.stdout.write(
-                    self.style.ERROR(f"Recreate alert rules for {code} failed: app is invalid or offline")
+                    self.style.ERROR(
+                        f"Found invalid app codes: {', '.join(invalid_app_codes)}. Please check the app codes and try again."
+                    )
                 )
+                return
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力

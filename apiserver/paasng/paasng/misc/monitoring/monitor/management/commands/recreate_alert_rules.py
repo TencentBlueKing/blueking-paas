@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import time
-from typing import List, Optional
+from typing import List
 
 from django.core.management.base import BaseCommand
 
@@ -29,7 +29,7 @@ from paasng.platform.applications.models import Application
 class Command(BaseCommand):
     """覆盖重建告警策略.
 
-    当告警策略模板配置有误需要修正后重新下发时使用, 会以 overwrite=True 覆盖 bkmonitor 中已有的同名告警规则
+    当告警策略模板配置有误需要修正后重新下发时使用, 会以 overwrite=True 覆盖 bkmonitor 中已有的同名告警规则.
     """
 
     help = "Recreate (overwrite) alert rules for applications"
@@ -39,54 +39,27 @@ class Command(BaseCommand):
         group.add_argument("--all", action="store_true", help="run for all active applications")
         group.add_argument("--apps", nargs="+", help="specified app code list")
 
-        parser.add_argument(
-            "--alert-codes",
-            nargs="+",
-            default=None,
-            help="指定覆盖的告警策略(e.g. high_rabbitmq_queue_messages rabbitmq_instance_down), 不指定则重新初始化所有告警策略",
-        )
-        parser.add_argument(
-            "--modules",
-            nargs="+",
-            default=None,
-            help="指定模块名，不指定则所有模块",
-        )
-
     def handle(self, *args, **options):
-        app_codes: list[str] | None = options.get("apps")
-        alert_codes: list[str] | None = options.get("alert_codes")
-        module_names: list[str] | None = options.get("modules")
+        app_codes: List[str] | None = options.get("apps")
 
         app_qs = Application.objects.filter(is_active=True, is_deleted=False)
         if app_codes:
             app_qs = app_qs.filter(code__in=app_codes)
             invalid_app_codes = set(app_codes) - set(app_qs.values_list("code", flat=True))
-            if invalid_app_codes:
-                self.stdout.write(self.style.ERROR(f"Invalid app codes: {invalid_app_codes}, STOP recreate"))
-                return
+            for code in invalid_app_codes:
+                self.stdout.write(
+                    self.style.ERROR(f"Recreate alert rules for {code} failed: app is invalid or offline")
+                )
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力
             self.stdout.write(f"Recreating alert rules for app: {app.code} ...")
             time.sleep(1)
-            self._recreate_rules(app, alert_codes=alert_codes, module_names=module_names)
+            self._recreate_rules(app)
 
-    def _recreate_rules(
-        self,
-        app: Application,
-        alert_codes: Optional[List[str]] = None,
-        module_names: Optional[List[str]] = None,
-    ):
-        # 未指定模块时, 默认只对已部署过的模块执行覆盖重建
-        if not module_names:
-            module_names = list(app.modules.filter(last_deployed_date__isnull=False).values_list("name", flat=True))
-            if not module_names:
-                self.stdout.write(self.style.WARNING(f"No deployed modules found for {app.code}, skip"))
-                return
-
+    def _recreate_rules(self, app: Application):
         try:
-            manager = alert_rule_manager_cls(app)
-            manager.recreate_rules(alert_codes=alert_codes, module_names=module_names)
+            alert_rule_manager_cls(app).init_rules(overwrite=True)
         except (exceptions.AsCodeAPIError, BKMonitorNotSupportedError) as e:
             self.stdout.write(self.style.ERROR(f"Recreate alert rules for {app.code} failed: {e}"))
         else:

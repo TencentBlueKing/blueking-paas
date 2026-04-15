@@ -44,7 +44,7 @@ class Command(BaseCommand):
             if invalid_app_codes:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Found invalid app codes: {', '.join(invalid_app_codes)}. Please check the app codes and try again."
+                        f"Found invalid app codes: {', '.join(sorted(invalid_app_codes))}. Please check the app codes and try again."
                     )
                 )
                 return

@@ -60,11 +60,14 @@ class AsCodeClient:
         }
         self._apply_rule_configs(configs, f"{self.app_code}_notice_group", incremental=False)
 
-    def apply_rule_configs(self, rule_configs: List[RuleConfig]):
-        """下发告警规则"""
+    def apply_rule_configs(self, rule_configs: List[RuleConfig], overwrite: bool = False):
+        """下发告警规则
+
+        :param overwrite: 是否覆盖已有同名配置
+        """
         self._validate(rule_configs)
         configs = self._render_rule_configs(rule_configs)
-        self._apply_rule_configs(configs)
+        self._apply_rule_configs(configs, overwrite=overwrite)
 
     def _validate(self, rule_configs: List[RuleConfig]):
         for config in rule_configs:
@@ -120,12 +123,19 @@ class AsCodeClient:
 
         return configs
 
-    def _apply_rule_configs(self, configs: Dict, config_group: Optional[str] = None, incremental: bool = True):
+    def _apply_rule_configs(
+        self,
+        configs: Dict,
+        config_group: Optional[str] = None,
+        incremental: bool = True,
+        overwrite: bool = False,
+    ):
         """同步告警配置到 bkmonitor
 
         :param configs: 告警规则配置
         :param config_group: 配置分组
         :param incremental: 是否增量更新
+        :param overwrite: 是否覆盖已有同名配置
         """
         space, _ = get_or_create_bk_monitor_space(Application.objects.get(code=self.app_code))
         try:
@@ -134,7 +144,7 @@ class AsCodeClient:
                 configs,
                 int(space.iam_resource_id),
                 config_group or self.app_code,
-                overwrite=False,
+                overwrite=overwrite,
                 incremental=incremental,
             )
         except Exception as e:

@@ -34,6 +34,8 @@ class ManagerProtocol(Protocol):
 
     def init_rules(self): ...
 
+    def recreate_rules(self, alert_codes: list[str] | None = None, module_names: list[str] | None = None): ...
+
     def create_rules(self, module_name: str, run_env: str): ...
 
     def update_notice_group(self): ...
@@ -69,6 +71,42 @@ class AlertRuleManager:
             return
 
         self._apply_rule_configs(rule_configs)
+        self._save_rule_configs(rule_configs)
+
+    def recreate_rules(self, alert_codes: list[str] | None = None, module_names: list[str] | None = None):
+        """覆盖重建 app 的告警规则
+
+        使用场景:
+        - 告警策略模板修改后, 需要覆盖更新已有的告警规则
+
+        :param alert_codes: 指定需要重建的 alert_code 列表, 为空时重建所有支持的告警规则
+        :param module_names: 指定需要重建的模块名列表, 为空时重建所有已部署模块的告警规则
+        """
+        app_scoped_codes = self.supported_alerts.app_scoped_codes
+        module_scoped_codes = self.supported_alerts.module_scoped_codes
+
+        if alert_codes:
+            app_scoped_codes = [c for c in app_scoped_codes if c in alert_codes]
+            module_scoped_codes = [c for c in module_scoped_codes if c in alert_codes]
+
+        rule_configs: List[RuleConfig] = []
+
+        # gen app scoped alert rule configs
+        if app_scoped_codes:
+            rule_configs.extend(self.config_generator.gen_app_scoped_rule_configs(alert_codes=app_scoped_codes))
+
+        # gen module scoped alert rule configs
+        if module_scoped_codes:
+            target_module_names = module_names or list(self.application.modules.values_list("name", flat=True))
+            for module_name in target_module_names:
+                rule_configs.extend(
+                    self.config_generator.gen_module_scoped_rule_configs(module_name, alert_codes=module_scoped_codes)
+                )
+
+        if not rule_configs:
+            return
+
+        self._apply_rule_configs(rule_configs, overwrite=True)
         self._save_rule_configs(rule_configs)
 
     def create_rules(self, module_name: str, run_env: str):
@@ -111,10 +149,10 @@ class AlertRuleManager:
 
         return []
 
-    def _apply_rule_configs(self, rule_configs: List[RuleConfig]):
+    def _apply_rule_configs(self, rule_configs: list[RuleConfig], overwrite: bool = False):
         """通过 MonitorAsCode 方式下发告警规则到 bkmonitor"""
         self.client.apply_notice_group(self.default_receivers)
-        self.client.apply_rule_configs(rule_configs)
+        self.client.apply_rule_configs(rule_configs, overwrite=overwrite)
 
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""
@@ -139,6 +177,8 @@ class NullManager:
     def __init__(self, application: Application): ...
 
     def init_rules(self): ...
+
+    def recreate_rules(self, alert_codes: list[str] | None = None, module_names: list[str] | None = None): ...
 
     def create_rules(self, module_name: str, run_env: str): ...
 

@@ -22,6 +22,7 @@
       size="small"
       class="resource-pool-cls"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+      :row-class-name="getRowClassName"
     >
       <bk-table-column
         :label="$t('实例凭证')"
@@ -35,22 +36,42 @@
           />
         </template>
       </bk-table-column>
-      <bk-table-column :label="`TLS ${$t('配置')}`">
+      <bk-table-column :label="$t('分配方式')">
         <template slot-scope="{ row }">
-          <template v-if="!row.tlsConfig">--</template>
-          <MaskedTextViewer
+          <!-- 按规则分配 -->
+          <div
+            v-if="row.binding_policy && Object.keys(row.binding_policy).length > 0"
+            class="allocation-rules"
+          >
+            <div
+              v-for="(ruleItem, ruleIndex) in formatAllocationRules(row.binding_policy)"
+              :key="ruleIndex"
+              class="rule-item"
+            >
+              <bk-tag
+                v-if="ruleIndex > 0"
+                theme="info"
+              >
+                AND
+              </bk-tag>
+              <bk-tag>{{ ruleItem }}</bk-tag>
+            </div>
+          </div>
+          <!-- 按顺序分配 -->
+          <bk-tag
             v-else
-            :data="row.tlsConfig"
-            :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
-            :plaintext.sync="plaintextStatusMap[`${row.uuid}-tls`]"
-          />
+            ext-cls="order-tag"
+          >
+            FIFO{{ $t('（先进先出）') }}
+          </bk-tag>
         </template>
       </bk-table-column>
       <bk-table-column
         :label="$t('已分配')"
-        prop="name"
-        :width="80"
+        prop="is_allocated"
+        :width="100"
         show-overflow-tooltip
+        sortable
       >
         <template slot-scope="{ row }">
           <span :class="['tag', { yes: row.is_allocated }]">{{ row.is_allocated ? $t('是') : $t('否') }}</span>
@@ -106,6 +127,7 @@
             <bk-button
               theme="primary"
               text
+              :disabled="row.is_allocated"
             >
               {{ $t('删除') }}
             </bk-button>
@@ -119,6 +141,7 @@
       ref="dialogRef"
       :show.sync="dialogConfig.isShow"
       :data="dialogConfig"
+      :service-config="serviceConfig"
       @refresh="getPreCreatedInstances"
     />
   </div>
@@ -157,10 +180,18 @@ export default {
       },
       // 当前方案下的资源池
       instances: [],
+      // 服务配置信息
+      serviceConfig: {},
       // 每行的明文/密文状态 { 'rowId-credentials': true/false, 'rowId-tls': true/false }
       plaintextStatusMap: {},
       // 全部显示/隐藏的状态
       isAllPlaintext: false,
+      // 新克隆实例的高亮 ID
+      highlightedRowId: null,
+      // 克隆前的实例 UUID 列表，用于对比找出新增实例
+      previousUuids: [],
+      // 是否需要高亮新增实例
+      pendingHighlight: false,
     };
   },
   computed: {
@@ -199,6 +230,35 @@ export default {
     formatServiceName() {
       return `${this.data?.service_name?.toLocaleUpperCase()}_`;
     },
+    // 格式化分配规则用于显示
+    formatAllocationRules(bindingPolicy) {
+      const rules = [];
+      const fieldLabelMap = {
+        app_code: this.$t('应用 ID'),
+        module_name: this.$t('模块名称'),
+        env_name: this.$t('环境'),
+      };
+      const envLabelMap = {
+        stag: this.$t('预发布环境'),
+        prod: this.$t('生产环境'),
+      };
+      Object.entries(bindingPolicy).forEach(([key, values]) => {
+        const label = fieldLabelMap[key] || key;
+        if (Array.isArray(values) && values.length > 0) {
+          if (values.length === 1) {
+            // 单个值用 =
+            const displayValue = key === 'env_name' ? envLabelMap[values[0]] || values[0] : values[0];
+            rules.push(`${label} = ${displayValue}`);
+          } else {
+            // 多个值用 IN
+            const displayValues =
+              key === 'env_name' ? values.map((v) => envLabelMap[v] || v).join(', ') : values.join(', ');
+            rules.push(`${label} IN (${displayValues})`);
+          }
+        }
+      });
+      return rules;
+    },
     // 添加实例
     addInstances() {
       this.dialogConfig.isShow = true;
@@ -233,6 +293,7 @@ export default {
           tenantId: this.tenantId,
           planId: this.data?.uuid,
         });
+        this.serviceConfig = ret?.service_config || {};
         this.instances = ret?.pre_created_instances?.map((item) => {
           const tlsConfig = this.formatTlsConfig(item.config?.tls);
           return Object.assign(item, {
@@ -240,6 +301,8 @@ export default {
             tlsConfig,
           });
         });
+        // 检测并高亮新克隆的实例
+        this.highlightClonedInstance();
         // 初始化每个实例的配置项状态为 false
         this.initPlaintextStatus();
         this.$emit('change', this.instances.length);
@@ -278,14 +341,46 @@ export default {
     },
     // 克隆
     handleClone(row) {
+      this.prepareCloneHighlight();
       this.dialogConfig.planId = row?.plan_id;
-      const { plan_id, credentials, config } = row;
+      const { plan_id, credentials, config, binding_policy } = row;
       const params = {
         plan: plan_id,
         credentials,
         config,
+        // 根据 binding_policy 是否存在判断分配方式
+        allocation_type: binding_policy && Object.keys(binding_policy).length > 0 ? 'policy' : 'fifo',
       };
-      this.$refs.dialogRef?.addResourcePool(params, true);
+      // 有规则时添加 binding_policy
+      if (binding_policy && Object.keys(binding_policy).length > 0) {
+        params.binding_policy = binding_policy;
+      }
+      this.$refs.dialogRef?.cloneResourcePool(params);
+    },
+    // 准备克隆高亮：清空上一个高亮，记录当前实例列表
+    prepareCloneHighlight() {
+      this.highlightedRowId = null;
+      this.previousUuids = this.instances.map((item) => item.uuid);
+      this.pendingHighlight = true;
+    },
+    // 检测并高亮新克隆的实例
+    highlightClonedInstance() {
+      if (!this.pendingHighlight || this.previousUuids.length === 0) return;
+
+      const newInstance = this.instances.find((item) => !this.previousUuids.includes(item.uuid));
+      if (newInstance) {
+        this.highlightedRowId = newInstance.uuid;
+        setTimeout(() => {
+          this.highlightedRowId = null;
+        }, 5000);
+      }
+      // 重置状态
+      this.pendingHighlight = false;
+      this.previousUuids = [];
+    },
+    // 获取行的 class
+    getRowClassName({ row }) {
+      return row.uuid === this.highlightedRowId ? 'cloned-highlight-row' : '';
     },
     // 初始化配置项的显示/隐藏状态
     initPlaintextStatus() {
@@ -321,6 +416,20 @@ export default {
       }
     }
   }
+  /deep/ .order-tag.bk-tag {
+    margin-left: 0 !important;
+  }
+}
+// 分配方式样式
+.allocation-rules {
+  padding: 8px 0;
+  .rule-item {
+    display: flex;
+    align-items: center;
+    /deep/ .bk-tag:first-child {
+      margin-left: 0 !important;
+    }
+  }
 }
 .sandbox-destroy-cls {
   .custom {
@@ -333,6 +442,12 @@ export default {
       transform: translateY(-1px);
       color: #ea3636;
     }
+  }
+}
+/deep/ .cloned-highlight-row {
+  background-color: #e1ecff !important;
+  td {
+    background-color: #e1ecff !important;
   }
 }
 </style>

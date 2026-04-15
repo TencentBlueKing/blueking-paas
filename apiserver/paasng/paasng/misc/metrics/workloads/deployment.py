@@ -51,7 +51,7 @@ class UnavailableDeploymentTotalMetric:
 
             try:
                 unavailable_deployments = list_unavailable_deployment(CoreDynamicClient(client))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.warning(f"list unavailable deployments of cluster<{cluster.name}> ")
                 continue
 

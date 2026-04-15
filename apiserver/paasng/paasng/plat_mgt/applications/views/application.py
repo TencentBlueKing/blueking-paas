@@ -37,6 +37,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager, fetch_role_members
+from paasng.infras.oauth2.api import BkOauthClient
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
@@ -98,7 +99,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     )
     def list_tenant_modes(self, request, *args, **kwargs):
         """获取应用租户模式类型列表"""
-        tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
+        tenant_modes = [{"type": tenant_mode, "label": label} for tenant_mode, label in AppTenantMode.get_choices()]
         slz = slzs.TenantModeListOutputSLZ(tenant_modes, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
@@ -109,7 +110,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     )
     def list_app_types(self, request):
         """获取应用类型列表"""
-        app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
+        app_types = [{"type": app_type, "label": label} for app_type, label in ApplicationType.get_choices()]
         slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
@@ -171,6 +172,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
             },
         )
 
+        # NOTE: ApplicationNameUpdateInputSLZ 继承自 UpdateApplicationNameSLZ, 后者在校验 name 字段时, 会直接更新 bk_console 中的应用名称
+        # FIXME: 该逻辑需要重构, 在 serializer 中直接更新 bk_console 中的应用名称不合适, 操作太隐藏, 不好维护
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -338,6 +341,13 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
         # 删除权限中心相关数据
         delete_builtin_user_groups(app_code)
         delete_grade_manager(app_code)
+
+        # 删除 bkAuth 上的应用信息 (同时会删除 AppSecret)
+        try:
+            BkOauthClient().delete_client(app_code)
+        except Exception:
+            logger.exception("Failed to delete application %s from bkAuth", app_code)
+            raise error_codes.CANNOT_HARD_DELETE_APP.f(_("bkAuth 中信息删除失败"))
 
         # 从 PaaS 3.0 中删除相关信息
         to_del_app.hard_delete()

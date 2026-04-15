@@ -28,7 +28,7 @@ class ServerSendEvent:
     id: str
     event: str
     data: dict
-    __slots__ = ["id", "event", "data"]
+    __slots__ = ["data", "event", "id"]
 
     INTERNAL_TERM: ClassVar[str] = "internal"
 

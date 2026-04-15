@@ -27,7 +27,7 @@ register = template.Library()
 
 @register.filter(is_safe=True)
 def to_json(value):
-    return mark_safe(JSONRenderer().render(value).decode("utf-8"))
+    return mark_safe(JSONRenderer().render(value).decode("utf-8"))  # noqa: S308
 
 
 @register.simple_tag(takes_context=True)

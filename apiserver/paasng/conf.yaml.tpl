@@ -462,6 +462,7 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ## - RSVC_BUNDLE_MYSQL_ENDPOINT_URL Mysql 增强服务地址
 ## - RSVC_BUNDLE_BKREPO_ENDPOINT_URL BKRepo 增强服务地址
 ## - RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL RabbitMQ 增强服务地址
+## - RSVC_BUNDLE_EXTRA_SERVICES 额外自定义的增强服务配置项
 ##
 ## 完整增强服务配置示例：
 ## SERVICE_REMOTE_ENDPOINTS:
@@ -482,6 +483,13 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ##    BKRepo: RSVC_BUNDLE_BKREPO_ENDPOINT_URL
 ##    RabbitMQ: RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL
 ## 按照以上映射表，配置您需要的增强服务，若 URL 值不会空，则加载配置时会按照预设模板渲染
+## 3. RSVC_BUNDLE_EXTRA_SERVICES 用以配置不在内置简配项的增强服务, 应至少包括 name 和 endpoint_url, 示例:
+## RSVC_BUNDLE_EXTRA_SERVICES:
+##  - name: gaussdb
+##    endpoint_url: http://svc-gaussdb
+##    provision_params_tmpl:
+##      egress_info: '{cluster_info.egress_info_json}'
+##    ...
 
 # SERVICE_REMOTE_ENDPOINTS: []
 ## Mysql 增强服务地址
@@ -688,17 +696,6 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # ENABLE_BK_LOG_APIGW: True
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 # BK_LOG_APIGW_SERVICE_STAGE: stag
-# 日志保存时间（天数），默认值 14
-# BKLOG_RETENTION: 14
-# Elasticsearch 索引分片数，默认值 1
-# BKLOG_ES_SHARDS: 1
-# 存储副本数，默认值 1
-# BKLOG_STORAGE_REPLICAS: 1
-# 蓝鲸日志平台相关的配置项 （当设置此项时，上述单独的 BKLOG_* 配置项将被覆盖）
-# BKLOG_CONFIG:
-#   RETENTION: 14
-#   ES_SHARDS: 1
-#   STORAGE_REPLICAS: 1
 
 
 ## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------
@@ -843,6 +840,36 @@ DEV_SANDBOX_CODE_EDITOR_IMAGE: "codercom/code-server:4.9.0"
 
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER: ""
+
+# ---- Agent Sandbox 运行时配置 ----
+
+# Agent Sandbox 默认运行镜像
+# AGENT_SANDBOX_DEFAULT_IMAGE: "your-registry/agent-sandbox-runtime:latest"
+
+# Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
+# AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
+
+# ---- Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等 ----
+
+# 镜像仓库的域名，默认值与 APP_DOCKER_REGISTRY_HOST 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_HOST: ""
+# 镜像仓库的命名空间
+# AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE: "bkpaas-sandbox"
+# 是否跳过校验镜像仓库的证书，默认值与 APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY: false
+# 镜像仓库账号，默认值与 APP_DOCKER_REGISTRY_USERNAME 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME: ""
+# 镜像仓库密码，默认值与 APP_DOCKER_REGISTRY_PASSWORD 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD: ""
+
+# ---- Agent Sandbox 制品存储配置，用于存储构建过程中的中间制品和 daemon 二进制 ----
+
+# 用于存储 Agent Sandbox 相关中间制品的 bucket
+# AGENT_SANDBOX_PACKAGE_BUCKET: "bkpaas3-sandbox-packages"
+# 存放 sandbox daemon 二进制的 bucket，默认值与 SERVICE_LOGO_BUCKET 相同
+# AGENT_SANDBOX_DAEMON_BUCKET: ""
+# 存放 sandbox daemon 二进制的 key
+# AGENT_SANDBOX_DAEMON_KEY: "sandbox/daemon"
 
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 
@@ -1002,6 +1029,19 @@ FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
 
 ## 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 # ALLOW_THIRD_APP_SYS_IDS: ""
+
+## -------------------------------- Agent Sandbox 网关权限授权配置 --------------------------------
+
+## 开发者中心网关名称, 如 paasv3, 具体需要和网关上实际注册保持一致
+# APIGW_GRANT_GATEWAY_NAME: ""
+## Agent Sandbox 相关的可授权 API 列表, 如果有新增接口需要开放, 需要同步更新
+# APIGW_GRANT_AGENT_SANDBOX_APIS:
+#   - create_agent_sandbox
+#   - destroy_agent_sandbox
+#   - exec_in_agent_sandbox
+#   - upload_to_agent_sandbox
+#   - download_from_agent_sandbox
+#   - ...
 
 ## 测试用 k8s apiserver 地址
 # FOR_TESTS_APISERVER_URL： 'http://localhost:28080'

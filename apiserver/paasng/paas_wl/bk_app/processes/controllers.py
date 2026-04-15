@@ -47,7 +47,7 @@ def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: dat
         return
 
     if (timezone.now() - spec.updated) < operation_interval:
-        raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))
+        raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))  # noqa: INT001
 
 
 class ProcessesInfo(NamedTuple):

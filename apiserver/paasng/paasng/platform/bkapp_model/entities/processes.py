@@ -43,6 +43,7 @@ class Process(AllowNotsetModel):
     :param res_quota_plan: 资源配额套餐名
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
+    :param graceful_shutdown_seconds: 优雅终止时间
     :param components: 进程组件
     """
 
@@ -60,6 +61,8 @@ class Process(AllowNotsetModel):
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None
+    graceful_shutdown_seconds: Optional[int] = None
+
     components: List[Component] | None = None
 
     def __init__(self, **data):

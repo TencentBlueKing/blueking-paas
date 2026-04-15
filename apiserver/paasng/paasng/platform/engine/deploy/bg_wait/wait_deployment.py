@@ -167,12 +167,12 @@ class WaitProcedurePoller(TaskPoller):
         """Get process list of last polling action"""
         try:
             return self.store.get()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get last processes, error: %s", e)
             return None
 
     def get_status(self, processes: List[PlainProcess]) -> PollingResult:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class DynamicReadyTimeoutPolicy(AbortPolicy):

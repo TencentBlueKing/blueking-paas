@@ -97,10 +97,10 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
     # 蓝盾流水线即使被取消，也不会中断镜像构建流程，因此中断在这种场景下没有意义
     cfg = BuildConfig.objects.filter(module_id=bp.module_id).first()
     if cfg and cfg.use_bk_ci_pipeline:
-        raise DeployInterruptionFailed()
+        raise DeployInterruptionFailed
 
     if not bp.check_interruption_allowed():
-        raise DeployInterruptionFailed()
+        raise DeployInterruptionFailed
 
     bp.set_int_requested_at()
     app = bp.app

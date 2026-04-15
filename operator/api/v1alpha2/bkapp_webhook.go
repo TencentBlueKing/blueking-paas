@@ -522,6 +522,15 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		}
 	}
 
+	// 6. 当 GracefulShutdownSeconds 设置时，必须大于等于 1
+	if proc.GracefulShutdownSeconds != nil && *proc.GracefulShutdownSeconds < 1 {
+		return field.Invalid(
+			pField.Child("gracefulShutdownSeconds"),
+			*proc.GracefulShutdownSeconds,
+			"gracefulShutdownSeconds must be at least 1 when set",
+		)
+	}
+
 	return nil
 }
 

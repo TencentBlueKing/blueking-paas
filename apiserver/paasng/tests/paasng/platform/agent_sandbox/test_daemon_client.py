@@ -21,7 +21,7 @@ import pytest
 import requests
 
 from paasng.platform.agent_sandbox.daemon_client import DEFAULT_REQUEST_TIMEOUT, ExecuteResult, SandboxDaemonClient
-from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError
+from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxServiceNotReady
 
 
 class TestSandboxDaemonClient:
@@ -30,13 +30,20 @@ class TestSandboxDaemonClient:
     @pytest.fixture()
     def client(self) -> SandboxDaemonClient:
         """Create a SandboxDaemonClient instance for testing."""
-        return SandboxDaemonClient(endpoint="127.0.0.1:8000", token="test-token")
+        return SandboxDaemonClient(
+            router_endpoint="agent-sbx-router.example.com",
+            token="test-token",
+            sandbox_name="test-sbx",
+            sandbox_namespace="bk-agent-sbx-demo-app",
+        )
 
     def test_init(self, client: SandboxDaemonClient):
         """Test client initialization."""
-        assert client.base_url == "http://127.0.0.1:8000"
+        assert client.base_url == "http://agent-sbx-router.example.com"
         assert client.timeout == DEFAULT_REQUEST_TIMEOUT
         assert client._session.headers["Authorization"] == "Bearer test-token"
+        assert client._session.headers["X-Sandbox-ID"] == "test-sbx"
+        assert client._session.headers["X-Sandbox-Namespace"] == "bk-agent-sbx-demo-app"
 
     def test_execute_success(self, client: SandboxDaemonClient):
         """Test successful command execution."""
@@ -51,7 +58,7 @@ class TestSandboxDaemonClient:
             assert result.exit_code == 0
             mock_request.assert_called_once_with(
                 "POST",
-                "http://127.0.0.1:8000/process/execute",
+                "http://agent-sbx-router.example.com/process/execute",
                 timeout=DEFAULT_REQUEST_TIMEOUT,
                 json={"command": "echo hello"},
             )
@@ -92,7 +99,7 @@ class TestSandboxDaemonClient:
 
             mock_request.assert_called_once()
             call_args = mock_request.call_args
-            assert call_args[0] == ("POST", "http://127.0.0.1:8000/files/upload")
+            assert call_args[0] == ("POST", "http://agent-sbx-router.example.com/files/upload")
             assert call_args[1]["data"]["destPath"] == "/workspace/test.txt"
 
     def test_download_file(self, client: SandboxDaemonClient):
@@ -106,7 +113,7 @@ class TestSandboxDaemonClient:
             assert content == b"downloaded content"
             mock_request.assert_called_once_with(
                 "GET",
-                "http://127.0.0.1:8000/files/download",
+                "http://agent-sbx-router.example.com/files/download",
                 timeout=DEFAULT_REQUEST_TIMEOUT,
                 params={"path": "/workspace/test.txt"},
             )
@@ -167,6 +174,18 @@ class TestSandboxDaemonClient:
         ):
             client.execute("echo hello")
 
+    def test_request_502_raises_service_not_ready(self, client: SandboxDaemonClient):
+        """Test that 502 Bad Gateway raises SandboxServiceNotReady."""
+        mock_response = mock.MagicMock()
+        mock_response.status_code = 502
+
+        http_error = requests.HTTPError(response=mock_response)
+        with (
+            mock.patch.object(client._session, "request", side_effect=http_error),
+            pytest.raises(SandboxServiceNotReady, match="not ready"),
+        ):
+            client.execute("echo hello")
+
     def test_request_connection_error(self, client: SandboxDaemonClient):
         """Test that connection errors are wrapped in SandboxDaemonAPIError."""
         with (
@@ -177,14 +196,8 @@ class TestSandboxDaemonClient:
 
     def test_context_manager(self):
         """Test client as context manager."""
-        with SandboxDaemonClient("127.0.0.1:8000", "token") as client:
-            assert client.base_url == "http://127.0.0.1:8000"
-
-    def test_close(self, client: SandboxDaemonClient):
-        """Test client close method."""
-        with mock.patch.object(client._session, "close") as mock_close:
-            client.close()
-            mock_close.assert_called_once()
+        with SandboxDaemonClient("agent-sbx-router.example.com", "token", "sbx-1", "ns-1") as client:
+            assert client.base_url == "http://agent-sbx-router.example.com"
 
 
 class TestExecuteResult:

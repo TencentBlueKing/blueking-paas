@@ -75,19 +75,19 @@ def validate_response(resp: Response) -> Response:
         logger.warning(f"get url `{resp.url}` but 401")
         raise APIError("the access_token can not fetch resource")
     elif resp.status_code == 403:
-        logging.warning(f"get url `{resp.url}` but 403")
+        logger.warning(f"get url `{resp.url}` but 403")
         raise APIError("access token forbidden")
     elif resp.status_code == 504:
-        logging.warning(f"get url `{resp.url}` but 504")
+        logger.warning(f"get url `{resp.url}` but 504")
         raise APIError(_("工蜂接口请求超时"))
     elif resp.status_code > 500 and resp.status_code != 504:
-        logging.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
+        logger.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
         raise APIError(_("工蜂接口请求异常"))
     elif not resp.ok:
         message = resp.json()["message"]
         if message == '400 bad request for {:path=>["Path has already been taken"]}':
             raise PluginRepoNameConflict(message)
-        logging.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
+        logger.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
         raise APIError(message)
     return resp
 

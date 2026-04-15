@@ -542,7 +542,8 @@ export default {
       }
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
-        this.gatewayList = res.data;
+        // 新 API 响应格式: 直接返回数据, 无 result 层级
+        this.gatewayList = res;
         this.apiNumber = this.gatewayList.length;
         if (!this.curFeatureAnalytics) {
           this.renderHistogram();

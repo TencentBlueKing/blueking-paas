@@ -141,7 +141,7 @@ class ImageReleaseMgr(DeployStep):
 
             upsert_proc_svc_by_spec_version(app_environment.module, result.spec_version)
         except InitDeployDescHandlerError as e:
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))  # noqa: INT002
         except Exception as e:
             logger.exception("Error while handling s-mart app description file, deployment: %s.", self.deployment)
             raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e

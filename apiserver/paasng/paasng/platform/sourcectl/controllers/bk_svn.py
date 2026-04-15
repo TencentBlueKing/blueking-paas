@@ -65,7 +65,7 @@ class SvnRepoController:
             self.svn_client.rclient.info()
         except Exception as e:
             if "E170001" in str(e):
-                raise BasicAuthError()
+                raise BasicAuthError
             raise
         else:
             return True

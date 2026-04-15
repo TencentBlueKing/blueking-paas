@@ -34,10 +34,10 @@
         show-overflow-tooltip
       >
         <template slot-scope="{ row }">
-          <bk-user-display-name
-            v-if="column.prop === 'operator' && isMultiTenantDisplayMode"
-            :user-id="row[column.prop]"
-          ></bk-user-display-name>
+          <UserDisplay
+            v-if="column.prop === 'operator'"
+            :value="row[column.prop]"
+          />
           <span v-else>{{ row[column.prop] || '--' }}</span>
         </template>
       </bk-table-column>
@@ -158,12 +158,13 @@
 
 <script>
 import DeleteDialog from '@/components/delete-dialog';
-import { mapGetters } from 'vuex';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
   name: 'BuiltInEnvVariable',
   components: {
     DeleteDialog,
+    UserDisplay,
   },
   data() {
     return {
@@ -260,7 +261,6 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['isMultiTenantDisplayMode']),
     isEditVar() {
       return this.varDialogConfig.type === 'edit';
     },

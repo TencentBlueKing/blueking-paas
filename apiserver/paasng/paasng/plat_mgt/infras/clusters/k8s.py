@@ -67,7 +67,7 @@ class K8SWorkloadStateGetter:
             res = kres_client(self.client).get(namespace=namespace, name=name)
         except ResourceMissing:
             state["summary"] = "resource missing"
-        except Exception:
+        except Exception:  # noqa: BLE001
             state["summary"] = "unknown error"
         else:
             state["summary"] = gen_summary_func(res)

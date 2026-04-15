@@ -159,6 +159,14 @@ class Group(OperationGroup):
         path="/api/v2/inner/esb/systems/permissions/apply-records/{record_id}/",
     )
 
+    # 授权网关下的指定 API 权限（无需审批）
+    grant_apigw_permissions = bind_property(
+        Operation,
+        name="grant_apigw_permissions",
+        method="POST",
+        path="/api/v2/sync/gateways/{gateway_name}/permissions/grant/",
+    )
+
 
 class Client(APIGatewayClient):
     """bk-apigateway client"""

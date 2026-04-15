@@ -85,11 +85,7 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
-              <bk-user-display-name
-                v-if="isMultiTenantDisplayMode"
-                :user-id="row.applied_by"
-              ></bk-user-display-name>
-              <span v-else>{{ row.applied_by }}</span>
+              <UserDisplay :value="row.applied_by"></UserDisplay>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -126,7 +122,7 @@
                 </template>
               </template>
               <template v-else>
-                {{ row.api_name }}
+                {{ row.gateway_name }}
               </template>
             </template>
           </bk-table-column>
@@ -136,16 +132,7 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <template v-if="isMultiTenantDisplayMode">
-                <span
-                  v-for="userId in row.handled_by"
-                  :key="userId"
-                >
-                  <bk-user-display-name :user-id="userId"></bk-user-display-name>
-                  <span>，</span>
-                </span>
-              </template>
-              <template v-else>{{ getHandleBy(row.handled_by) }}</template>
+              <UserDisplay :value="row.handled_by"></UserDisplay>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -230,7 +217,11 @@
               class="value"
               :style="field.isTextarea ? 'line-height: 22px; padding-top: 10px' : ''"
             >
-              {{ field.value || '--' }}
+              <UserDisplay
+                v-if="field.isUserDisplay"
+                :value="field.value"
+              ></UserDisplay>
+              <template v-else>{{ field.value || '--' }}</template>
               <bk-button
                 v-if="
                   field.isApplyStatus && isMcpService && curRecord.apply_status === 'pending' && curRecord?.approval_url
@@ -316,8 +307,10 @@
 import moment from 'moment';
 import { mapState, mapGetters } from 'vuex';
 import { copy } from '@/common/tools';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
+  components: { UserDisplay },
   props: {
     typeList: {
       type: Array,
@@ -525,6 +518,7 @@ export default {
           label: this.$t('申请人'),
           value: this.curRecord.applied_by,
           show: true,
+          isUserDisplay: true,
         },
       ];
       // 授权维度（非组件API才显示）
@@ -560,8 +554,9 @@ export default {
         },
         {
           label: this.$t('审批人'),
-          value: this.getHandleBy(this.curRecord.handled_by),
+          value: this.curRecord.handled_by,
           show: true,
+          isUserDisplay: true,
         },
         {
           label: this.$t('审批时间'),
@@ -590,7 +585,7 @@ export default {
             ? this.curRecord.name
             : this.isComponentApi
             ? this.curRecord.system_name
-            : this.curRecord.api_name,
+            : this.curRecord.gateway_name,
           show: true,
         }
       );
@@ -735,11 +730,12 @@ export default {
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
-        const records = this.isMcpService ? this.formatMcpServiceData(res) : res.data?.results || [];
+        // 新 API 响应格式：直接返回数据，无 result 层级
+        const records = this.isMcpService ? this.formatMcpServiceData(res) : res?.results || [];
         records.forEach((item) => {
           item.type = this.typeValue;
         });
-        this.pagination.count = this.isMcpService ? records.length : res.data.count;
+        this.pagination.count = this.isMcpService ? records.length : res.count;
         this.tableList = records;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
@@ -766,7 +762,8 @@ export default {
           appCode: this.appCode,
           recordId: row.id,
         });
-        this.curRecord = Object.assign(this.curRecord, res.data);
+        // 新 API 响应格式：直接返回数据，无 result 层级
+        this.curRecord = Object.assign(this.curRecord, res);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

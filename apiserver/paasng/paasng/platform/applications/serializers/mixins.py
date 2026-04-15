@@ -26,21 +26,46 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
-from paasng.core.tenant.utils import stub_app_tenant_info, validate_app_tenant_info
+from paasng.core.tenant.utils import AppTenantInfo, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 
 @i18n
 class AppBasicInfoMixin(serializers.Serializer):
+    """应用基本信息，用于不带 app_tenant_id 字段的场景。
+
+    通过 context 中的 "user" 获取用户的租户信息，并验证并填充 app_tenant_info 到 validated_data 中。
+    """
+
     code = AppIDField()
     name = I18NExtend(AppNameField())
     app_tenant_mode = serializers.ChoiceField(
         help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
     )
+
+    def to_internal_value(self, data):
+        user = self.context.get("user")
+        if not user:
+            raise RuntimeError('Serializer requires "user" in serializer context')
+
+        try:
+            app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(user, data.get("app_tenant_mode"))
+        except ValidationError as e:
+            raise ValidationError({"app_tenant_mode": e.detail})
+
+        # 在字段级验证前注入，供 AppNameField 做租户范围内唯一性校验
+        self.context["app_tenant_id"] = app_tenant_id
+
+        ret = super().to_internal_value(data)
+        ret["app_tenant_info"] = AppTenantInfo(
+            app_tenant_mode=app_tenant_mode, app_tenant_id=app_tenant_id, tenant_id=tenant.id
+        )
+        return ret
 
 
 class MarketParamsMixin(serializers.Serializer):

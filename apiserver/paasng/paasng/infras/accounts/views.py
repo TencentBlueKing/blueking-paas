@@ -70,7 +70,7 @@ class UserInfoViewSet(APIView):
             "tenant_id": getattr(user, "tenant_id", None),
             "display_name": getattr(user, "display_name", None),
             "chinese_name": user.chinese_name,
-            "avatar_url": user.avatar_url if user.avatar_url else user_logo,
+            "avatar_url": user.avatar_url or user_logo,
             # 从用户管理 API (bk-login/bk-user) 透传的时区字段, 若不存在则使用默认时区
             "time_zone": getattr(user, "time_zone", settings.TIME_ZONE),
         }
@@ -102,6 +102,7 @@ class UserVerificationGenerationView(APIView):
         user_tenant_id = get_tenant(request.user).id
         bk_notify = BkNotificationService(user_tenant_id)
         try:
+            bk_notify.send_sms([request.user.username], message)
             bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
         except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION

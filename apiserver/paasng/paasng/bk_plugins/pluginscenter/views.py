@@ -622,15 +622,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
 
-        type = request.data.get("type", constants.PluginReleaseType.PROD)
+        type_ = request.data.get("type", constants.PluginReleaseType.PROD)
         # 有正在发布的正式版本，则无法再新建新的正式版本
-        if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
+        if type_ == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        slz = serializers.make_create_release_version_slz_class(plugin, type)(
+        slz = serializers.make_create_release_version_slz_class(plugin, type_)(
             data=request.data,
             context={
-                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type), "version", None),
+                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type_), "version", None),
             },
         )
         slz.is_valid(raise_exception=True)
@@ -645,13 +645,13 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             **data,
         )
 
-        release_definition = plugin.pd.get_release_revision_by_type(type)
+        release_definition = plugin.pd.get_release_revision_by_type(type_)
         if release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
             PluginReleaseStrategy.objects.create(release=release, tenant_id=plugin.tenant_id, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
         # 操作记录: 新建 xx 版本
-        if type == constants.PluginReleaseType.PROD:
+        if type_ == constants.PluginReleaseType.PROD:
             subject = constants.SubjectTypes.VERSION
             # 发布正式版本，如果插件的状态不是已发布，则更新为发布中
             if plugin.status != constants.PluginStatus.RELEASED:
@@ -775,11 +775,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz = serializers.PluginReleaseTypeSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
-        type = query_params["type"]
+        type_ = query_params["type"]
 
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
-        release_definition = pd.get_release_revision_by_type(type)
+        release_definition = pd.get_release_revision_by_type(type_)
         if release_definition.revisionType == constants.PluginRevisionType.MASTER:
             versions = [build_master_placeholder()]
         elif release_definition.revisionType == constants.PluginRevisionType.TAG:
@@ -794,7 +794,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             )
 
         semver_choices = None
-        current_release = plugin.all_versions.get_latest_succeeded(type=type)
+        current_release = plugin.all_versions.get_latest_succeeded(type=type_)
         if release_definition.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
             current_version_no = semver.VersionInfo.parse(getattr(current_release, "version", "0.0.0"))
             semver_choices = {
@@ -1022,7 +1022,7 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
         to_role_id = constants.PluginRole(data["id"])
         user_roles = members_api.fetch_user_roles(plugin, username)
         if len(user_roles) == 0:
-            raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(_("插件成员 {} 不存在".format(username)))
+            raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(_("插件成员 {} 不存在".format(username)))  # noqa: INT002
 
         if to_role_id != constants.PluginRole.ADMINISTRATOR:
             self._check_admin_count(plugin, [username])

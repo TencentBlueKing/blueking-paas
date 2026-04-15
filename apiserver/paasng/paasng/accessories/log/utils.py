@@ -130,7 +130,7 @@ def try_get_es_term(query_term: str, mappings: dict) -> str:
         # 补充 "properties"
         # ["json", "levelname"] -> ["json", "properties", "levelname"]
         # [:-1] 的含义是去掉最后一个 "properties"
-        parts = list(chain.from_iterable(zip(parts, ["properties"] * len(parts))))[:-1]
+        parts = list(chain.from_iterable(zip(parts, ["properties"] * len(parts), strict=False)))[:-1]
         try:
             target = reduce(operator.getitem, parts, mappings)
         except KeyError:

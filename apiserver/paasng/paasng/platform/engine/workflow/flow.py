@@ -164,7 +164,10 @@ class DeploymentStateMgr:
         # Update the status of the deployment and the env obj.
         self.update(status=status.value, err_detail=err_detail)
         env_obj = self.deployment.app_environment
-        if status == JobStatus.SUCCESSFUL and env_obj.is_offlined:
+
+        # 进入 release 阶段后, 需要将 is_offlined 标志设置为 False (标记为上线状态).
+        # NOTE: release 阶段任务失败或任务被中断也算上线, 如果仅判断成功状态, 则逻辑无法停止进程或下架应用.
+        if self.phase_type == DeployPhaseTypes.RELEASE and env_obj.is_offlined:
             env_obj.restore_archived()
 
         # End the deploy phase by sending signal, this should cause the clients that are watching

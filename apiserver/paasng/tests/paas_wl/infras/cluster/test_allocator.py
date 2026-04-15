@@ -21,6 +21,7 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.constants import (
     ClusterAllocationPolicyCondType,
     ClusterAllocationPolicyType,
+    ClusterUsage,
 )
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
@@ -162,5 +163,5 @@ class TestClusterAllocator:
         assert ClusterAllocator(ctx).get_default().name == "random-sz0"
 
         ctx.username = None
-        ctx.usage = "agent_sandbox"
+        ctx.usage = ClusterUsage.AGENT_SANDBOX
         assert ClusterAllocator(ctx).get_default().name == "sandbox-cluster"

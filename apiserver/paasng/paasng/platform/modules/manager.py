@@ -140,7 +140,7 @@ class ModuleInitializer:
     @transaction.atomic
     def create_engine_apps(self, env_cluster_names: Dict[str, str] | None = None):
         """Create engine app instances for application"""
-        env_cluster_names = env_cluster_names if env_cluster_names else {}
+        env_cluster_names = env_cluster_names or {}
 
         wl_app_type = (
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT

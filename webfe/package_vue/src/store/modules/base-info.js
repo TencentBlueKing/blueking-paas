@@ -39,6 +39,12 @@ const state = {
     updateTime: '',
     allCount: 0,
   },
+  // 应用统计数据（未开启监控时使用）
+  statisticsData: {
+    app_type_counts: [],
+    app_status_counts: [],
+    total: 0,
+  },
 };
 
 // getters
@@ -54,6 +60,9 @@ const mutations = {
   },
   updateAlarmChartData(state, data) {
     state.alarmChartData = data;
+  },
+  updateStatisticsData(state, data) {
+    state.statisticsData = data;
   },
 };
 
@@ -172,6 +181,14 @@ const actions = {
    */
   getRecentOperationRecords({}, { params }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/lists/latest/?${json2Query(params)}`;
+    return http.get(url, {});
+  },
+
+  /**
+   * 获取统计信息
+   */
+  getStatistics() {
+    const url = `${BACKEND_URL}/api/bkapps/applications/lists/statistics/`;
     return http.get(url, {});
   },
 };

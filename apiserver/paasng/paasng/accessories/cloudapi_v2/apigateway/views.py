@@ -67,7 +67,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取网关列表"""
         validated_data = self._validate(serializers.ListGatewaysInputSLZ, data=request.query_params)
 
-        app, tenant_id = self._get_app_and_tenant()
+        _app, tenant_id = self._get_app_and_tenant()
         data = self._get_client(tenant_id, request).list_gateways(**validated_data)
         return self._response_with_serializer(serializers.ListGatewaysOutputSLZ, data, many=True)
 
@@ -77,7 +77,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def get_gateway(self, request, gateway_name: str, *args, **kwargs):
         """获取单个网关详情"""
-        app, tenant_id = self._get_app_and_tenant()
+        _app, tenant_id = self._get_app_and_tenant()
         data = self._get_client(tenant_id, request).get_gateway(gateway_name=gateway_name)
         return self._response_with_serializer(serializers.GetGatewayOutputSLZ, data)
 
@@ -216,7 +216,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_esb_systems(self, request, *args, **kwargs):
         """查询组件系统列表"""
-        app, tenant_id = self._get_app_and_tenant()
+        _app, tenant_id = self._get_app_and_tenant()
         data = self._get_client(tenant_id, request).list_esb_systems(
             user_auth_type=settings.BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE
         )

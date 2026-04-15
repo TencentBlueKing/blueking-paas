@@ -117,7 +117,7 @@ class LegacyAppManager:
 
     def is_not_supported_migration(self):
         tag, _ = self.app_migration_tag
-        return tag in [LegacyAppTag.NOT_SUPPORT.value]
+        return tag == LegacyAppTag.NOT_SUPPORT.value
 
     def get_logo_url(self):
         if (
@@ -180,11 +180,11 @@ class LegacyAppManager:
     def get_language(self):
         """将桌面的开发语言转换成v3上的开发语言, 两者大小写有些出入"""
         language_lower = self.legacy_app.language.lower()
-        if language_lower in ["python"]:
+        if language_lower == "python":
             return AppLanguage.PYTHON.value
-        elif language_lower in ["php"]:
+        elif language_lower == "php":
             return AppLanguage.PHP.value
-        elif language_lower in ["java"]:
+        elif language_lower == "java":
             return AppLanguage.JAVA.value
         else:
             raise ValueError(language_lower)

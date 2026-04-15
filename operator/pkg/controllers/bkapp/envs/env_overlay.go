@@ -224,6 +224,12 @@ func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
 	return r.fromQuotaPlan(paasv1alpha2.ResQuotaPlanDefault)
 }
 
+// DefaultForPreReleaseHook returns the default resources requirements for creating pre-release hook processes
+// TODO: Consider as a configurable item
+func (r *ProcResourcesGetter) DefaultForPreReleaseHook() corev1.ResourceRequirements {
+	return r.fromQuotaPlan(paasv1alpha2.ResQuotaPlan4C2G)
+}
+
 // GetByProc return the container resources by process name
 //
 // - name: process name

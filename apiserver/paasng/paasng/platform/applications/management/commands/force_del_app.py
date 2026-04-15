@@ -22,6 +22,7 @@ from django.core.management.base import BaseCommand
 
 from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.oauth2.api import BkOauthClient
 from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,16 @@ class Command(BaseCommand):
         for app in to_del_apps:
             delete_builtin_user_groups(app.code)
             delete_grade_manager(app.code)
+
+        # 删除 bkAuth 上的应用信息 (同时会删除 AppSecret)
+        for app in to_del_apps:
+            try:
+                BkOauthClient().delete_client(app.code)
+            except Exception:
+                logger.exception("Failed to delete application %s from bkAuth", app.code)
+                self.stdout.write(
+                    self.style.ERROR(f"{filter_key} 为 {filter_value} 的应用鉴权信息从 bkAuth 中删除失败")
+                )
 
         # 从 PaaS 3.0 中删除相关的信息
         to_del_apps.delete()

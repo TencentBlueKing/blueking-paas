@@ -80,7 +80,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         secret_list = client.get_app_secret_list(application.code)
         if len(secret_list) >= MAX_SECRET_COUNT:
-            raise ValidationError(_(f"密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"))
+            raise ValidationError(_(f"密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"))  # noqa: INT001
 
         client.create_app_secret(code)
 
@@ -130,7 +130,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         secret_list = client.get_app_secret_list(application.code)
         if len(secret_list) <= MIN_SECRET_COUNT:
-            raise ValidationError(_(f"应用至少有 {MAX_SECRET_COUNT} 个密钥"))
+            raise ValidationError(_(f"应用至少有 {MAX_SECRET_COUNT} 个密钥"))  # noqa: INT001
 
         # 检查密钥是否已经被禁用，BKAuth 侧删除密钥并不要求密钥已经是禁用状态，所以需要手动检查
         del_secret = client.get_secret_by_id(application.code, bk_app_secret_id)

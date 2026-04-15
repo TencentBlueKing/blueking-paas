@@ -28,6 +28,6 @@ class Command(BaseCommand):
     help = "Aim to clean all instances which should be cleaned"
 
     def handle(self, *args, **options):
-        print("start to clean instances")
+        print("start to clean instances")  # noqa: T201
         clean_instances()
-        print("cleaned. ")
+        print("cleaned. ")  # noqa: T201

@@ -17,12 +17,14 @@
 
 # 以 sandbox 模式运行模板, 增强 jinja2 的安全性, 防注入漏洞
 
-import os
 import typing as t
 from functools import partial
 
 import jinja2
 from jinja2.sandbox import SandboxedEnvironment
+
+if t.TYPE_CHECKING:
+    import os
 
 
 class NoCallableSandboxedEnvironment(SandboxedEnvironment):

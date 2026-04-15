@@ -34,7 +34,7 @@ def one_line_error(detail):
             if key == "non_field_errors":
                 return first_error
             return f"{key}: {first_error}"
-    except Exception:
+    except Exception:  # noqa: BLE001
         return "参数格式错误"
 
 

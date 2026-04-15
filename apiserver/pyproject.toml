@@ -25,7 +25,7 @@ dependencies = [
   'curlify (==2.2.1)',
   'dataclasses (==0.7) ; python_full_version >= "3.6.2" and python_version < "3.7"',
   'dj-static (==0.0.6)',
-  'django (==4.2.23)',
+  'django (==4.2.30)',
   'django-bootstrap3 (==21.2)',
   'django-cors-headers (==4.5.0)',
   'django-dynamic-fixture (==3.1.2)',

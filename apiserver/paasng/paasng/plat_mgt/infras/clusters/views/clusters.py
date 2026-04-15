@@ -355,7 +355,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         if is_component_ready:
             try:
                 release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("list helm releases error: %s", e)
                 is_component_ready = False
             else:

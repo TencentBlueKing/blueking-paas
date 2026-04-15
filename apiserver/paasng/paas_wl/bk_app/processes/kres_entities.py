@@ -15,14 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import cattr
 from django.core.exceptions import ObjectDoesNotExist
-from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models import Release
 from paas_wl.bk_app.processes.entities import ProbeSet, Resources, Runtime, Status
 from paas_wl.bk_app.processes.kres_slzs import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 from paas_wl.core.app_structure import get_structure
@@ -33,6 +31,11 @@ from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import ResourceField
+
+    from paas_wl.bk_app.applications.models import Release
 
 
 @dataclass
@@ -83,7 +86,7 @@ class Instance(AppEntity):
 
     @classmethod
     def get_shorter_instance_name(cls, instance_name: str) -> str:
-        return instance_name.split("-")[-1]
+        return instance_name.rsplit("-", maxsplit=1)[-1]
 
 
 @dataclass

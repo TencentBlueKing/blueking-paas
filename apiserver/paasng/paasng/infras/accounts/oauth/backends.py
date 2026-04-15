@@ -39,6 +39,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 @define
@@ -250,8 +251,9 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     **{self.COOKIE_KEY: user_credential},
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError(
                 error_message="request to {} failed for {}".format(self.auth_url, e), response_code=400
             )
@@ -269,8 +271,9 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     refresh_token=refresh_token,
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
 
         return self.validate_response(response=resp)
@@ -281,8 +284,9 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                 url=self.validate_url,
                 json={"access_token": access_token},
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             ).json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
 
         return data.get("result")
@@ -305,8 +309,9 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                     **{self.COOKIE_KEY: user_credential},
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError(
                 error_message="request to {} failed for {}".format(self.auth_url, e), response_code=400
             )
@@ -324,8 +329,9 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                     refresh_token=refresh_token,
                 ),
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
 
         return self.validate_response(response=resp)
@@ -336,8 +342,9 @@ class BKSSMBackend(BlueKingApplicationOauthMixin):
                 url=self.validate_url,
                 json={"access_token": access_token},
                 headers=self.app_info_headers,
+                timeout=DEFAULT_TIMEOUT,
             ).json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise BKAppOauthRequestError("request to {} failed for {}".format(self.refresh_url, e))
 
         return data.get("code") == 0

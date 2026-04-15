@@ -18,9 +18,9 @@ from .flow import DeploymentCoordinator, DeploymentStateMgr, DeployProcedure, De
 from .messaging import ServerSendEvent
 
 __all__ = [
-    "DeploymentCoordinator",
-    "DeploymentStateMgr",
     "DeployProcedure",
     "DeployStep",
+    "DeploymentCoordinator",
+    "DeploymentStateMgr",
     "ServerSendEvent",
 ]

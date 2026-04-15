@@ -17,6 +17,9 @@
 
 from rest_framework import serializers
 
+from paasng.platform.applications.models import Application
+
+from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
 from .models import Sandbox
 
 
@@ -54,6 +57,14 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         help_text="快照镜像的入口命令列表",
     )
     workspace = serializers.CharField(label="工作目录", max_length=256, required=False, help_text="沙箱的工作目录路径")
+    ttl_seconds = serializers.IntegerField(
+        label="存活时长（秒）",
+        required=False,
+        default=SANDBOX_DEFAULT_TTL_SECONDS,
+        min_value=0,
+        max_value=SANDBOX_MAX_TTL_SECONDS,
+        help_text="沙箱存活时长（秒）",
+    )
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
@@ -61,17 +72,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Sandbox
-        fields = (
-            "uuid",
-            "name",
-            "snapshot",
-            "target",
-            "env_vars",
-            "cpu",
-            "memory",
-            "status",
-            "created",
-        )
+        fields = ("uuid", "name", "snapshot", "target", "env_vars", "cpu", "memory", "status", "created", "expired_at")
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):
@@ -123,8 +124,9 @@ class SandboxExecInputSLZ(serializers.Serializer):
         help_text="命令执行目录，不提供时使用沙箱默认工作目录",
     )
     env_vars = SandboxEnvVarsField(label="环境变量", required=False, default=dict, help_text="命令执行环境变量")
+    # timeout 需要小于蓝鲸网关的默认最大超时时间 300s
     timeout = serializers.IntegerField(
-        label="超时（秒）", required=False, default=60, min_value=1, help_text="执行超时时间"
+        label="超时（秒）", required=False, default=296, min_value=1, help_text="执行超时时间"
     )
 
     def validate_cmd(self, value):
@@ -174,3 +176,24 @@ class SandboxGetLogsOutputSLZ(serializers.Serializer):
     """The serializer for sandbox logs response."""
 
     logs = serializers.CharField(label="日志内容", allow_blank=True)
+
+
+class GrantAgentSandboxPermissionSLZ(serializers.Serializer):
+    """The serializer for granting Agent Sandbox API permissions."""
+
+    target_app_code = serializers.CharField(
+        label="目标应用 code",
+        help_text="待授权应用的 code",
+    )
+    expire_days = serializers.IntegerField(
+        label="过期时间（天）",
+        required=False,
+        default=0,
+        min_value=0,
+        help_text="过期时间，0 表示永久权限",
+    )
+
+    def validate_target_app_code(self, value: str) -> str:
+        if not Application.objects.filter(code=value, is_ai_agent_app=True).exists():
+            raise serializers.ValidationError(f"应用 '{value}' 不存在或不是 AI Agent 应用")
+        return value

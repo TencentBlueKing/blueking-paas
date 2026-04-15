@@ -169,7 +169,7 @@ class TestCheckSourcePackage:
             pathlib.Path(package_path).write_text("Hello")
             check_source_package(bk_module.get_envs("prod").engine_app, package_path, stream)
 
-            out, err = capsys.readouterr()
+            out, _err = capsys.readouterr()
             assert out == ""
 
     @override_settings(ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB=0)
@@ -179,7 +179,7 @@ class TestCheckSourcePackage:
             pathlib.Path(package_path).write_text("Hello")
             check_source_package(bk_module.get_envs("prod").engine_app, package_path, stream)
 
-            out, err = capsys.readouterr()
+            out, _err = capsys.readouterr()
             assert out
 
 

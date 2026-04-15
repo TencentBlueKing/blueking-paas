@@ -99,7 +99,7 @@ class MetaInfo:
 
         parts = self.version.split(".")
         given_parts = version.split(".")
-        for i, j in zip(parts, given_parts):
+        for i, j in zip(parts, given_parts, strict=False):
             if int(i) > int(j):
                 return True
             if int(i) < int(j):
@@ -856,7 +856,7 @@ class RemoteServiceBinder:
             except ValueError as e:
                 raise BindServicePlanError(str(e))
 
-            plan = cast(RemotePlanObj, plan)
+            plan = cast("RemotePlanObj", plan)
             self._bind_for_env(env, plan)
         return svc_module_attachment
 
@@ -880,7 +880,7 @@ class RemoteServiceBinder:
                 raise BindServicePlanError(f"增强服务{self.service.name}方案未配置")
 
             # Use the first plan
-            plan = cast(RemotePlanObj, plans[0])
+            plan = cast("RemotePlanObj", plans[0])
             self._bind_for_env(env, plan)
         return svc_module_attachment
 

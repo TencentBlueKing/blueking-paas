@@ -93,7 +93,7 @@ class TestLoaderNoInitialClusters:
         api_servers = [{"host": "https://hostname-of-foo:6553"}]
         cluster_creator("default-cluster", api_servers, token_value=token_value)
 
-        config = list(DBConfigLoader().list_configurations_by_name("default-cluster"))[0]
+        config = next(iter(DBConfigLoader().list_configurations_by_name("default-cluster")))
         assert config.api_key.get("authorization") == auth_header_value
 
 

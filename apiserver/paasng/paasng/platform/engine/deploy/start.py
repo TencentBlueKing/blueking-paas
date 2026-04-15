@@ -16,11 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import OperationTypes, ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.building import start_build, start_build_error_callback
 from paasng.platform.engine.deploy.image_release import release_without_build
@@ -30,11 +29,14 @@ from paasng.platform.engine.signals import pre_appenv_deploy
 from paasng.platform.engine.utils.query import get_latest_deploy_options
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import ModuleEnvironment
+    from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 

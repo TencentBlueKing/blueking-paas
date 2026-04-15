@@ -98,11 +98,11 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        # 校验 module 的 source_origin 是否可以修改
+        # 校验 module 的 source_origin 是否可以修改, 目前仅 SMart 和 AI Agent 应用支持修改进程资源配额
         module = get_object_or_404(application.modules, name=module_name)
-        if module.source_origin != SourceOrigin.S_MART.value:
+        if module.source_origin != SourceOrigin.S_MART.value and application.is_ai_agent_app is False:
             return Response(
-                {"detail": _("当前仅支持 SMart 应用修改进程资源配额")},
+                {"detail": _("当前仅支持 SMart 和 AI Agent 应用修改进程资源配额")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -112,7 +112,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 module=module, name=process_name
             )
         except ModuleProcessSpec.DoesNotExist:
-            return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)  # noqa: INT001
         # 构建环境覆盖映射
         env_overlays_map = {o.environment_name: o for o in proc_spec.env_overlays.all()}
         requested_overlays: dict[str, dict] = data["env_overlays"]

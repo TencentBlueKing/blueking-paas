@@ -14,15 +14,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import datetime
 import uuid
-from typing import Dict, Iterable
+from typing import TYPE_CHECKING, Dict, Iterable
 
 from django.conf import settings
 from typing_extensions import TypeAlias
 
 from paas_wl.bk_app.applications.models.config import Config
 from paasng.platform.applications.models import ModuleEnvironment
+
+if TYPE_CHECKING:
+    import datetime
 
 WlAppId: TypeAlias = uuid.UUID
 

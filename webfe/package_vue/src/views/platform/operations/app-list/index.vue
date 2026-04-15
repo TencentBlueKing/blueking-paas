@@ -16,7 +16,7 @@
           :label="$t('所属租户')"
           :count-map="appCountInfo"
           :has-count="!isSoftDeletePage"
-          @change="getPlatformApps"
+          @change="handleTenantChange"
         />
       </div>
       <bk-input
@@ -101,10 +101,10 @@
                 {{ $t(APP_STATUS[row.app_status]) || '--' }}
               </span>
             </div>
-            <bk-user-display-name
-              v-else-if="column.userDisplay && isMultiTenantDisplayMode"
-              :user-id="row[column.prop]"
-            ></bk-user-display-name>
+            <UserDisplay
+              v-else-if="column.userDisplay"
+              :value="row[column.prop]"
+            />
             <span
               v-else
               v-bk-tooltips="{ content: row[column.tooltipsProp], disabled: !column.tooltipsProp }"
@@ -161,7 +161,8 @@
 import TenantSelect from '../../services/service-plan/tenant-select';
 import DeleteDialog from '@/components/delete-dialog';
 import { APP_STATUS } from '@/common/constants';
-import { mapState, mapGetters } from 'vuex';
+import UserDisplay from '@/components/user/user-display.vue';
+import { mapState } from 'vuex';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -171,6 +172,7 @@ export default {
   components: {
     TenantSelect,
     DeleteDialog,
+    UserDisplay,
   },
   props: {
     tenants: {
@@ -221,7 +223,6 @@ export default {
   },
   computed: {
     ...mapState(['localLanguage']),
-    ...mapGetters(['isMultiTenantDisplayMode']),
     tenantSelectList() {
       const tenantList = this.tenants.map((item) => {
         return {
@@ -428,6 +429,11 @@ export default {
     },
     // 搜索
     handleSearch() {
+      this.resetPage();
+      this.getPlatformApps();
+    },
+    // 切换租户
+    handleTenantChange() {
       this.resetPage();
       this.getPlatformApps();
     },

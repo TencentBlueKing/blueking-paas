@@ -62,11 +62,7 @@
               {{ baseInfo[key] ? (baseInfo[key] === 'single' ? $t('单租户') : $t('全租户')) : '--' }}
             </span>
             <template v-else-if="['creator'].includes(key)">
-              <bk-user-display-name
-                :user-id="baseInfo[key]"
-                v-if="isMultiTenantDisplayMode"
-              ></bk-user-display-name>
-              <span v-else>{{ baseInfo[key] }}</span>
+              <UserDisplay :value="baseInfo[key]" />
             </template>
             <template v-else-if="key === 'category'">
               <span>{{ baseInfo[key] || '--' }}</span>
@@ -271,14 +267,12 @@
                   <template v-else-if="key === 'recent_operation'">
                     <template v-if="env[key]">
                       <div
-                        v-if="isMultiTenantDisplayMode"
                         class="text-ellipsis"
                         v-bk-overflow-tips
                       >
-                        <bk-user-display-name :user-id="env[key]?.operator"></bk-user-display-name>
+                        <UserDisplay :value="env[key]?.operator" />
                         <span>&nbsp;{{ env[key]?.message }}</span>
                       </div>
-                      <span v-else>{{ `${env[key]?.operator} ${env[key]?.message}` }}</span>
                     </template>
                     <span v-else>--</span>
                   </template>
@@ -376,12 +370,14 @@ import DetailsRow from '@/components/details-row';
 import { mapState, mapGetters } from 'vuex';
 import { PAAS_APP_TYPE } from '@/common/constants';
 import MoreOperations from './more-operations.vue';
+import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
   name: 'appOverview',
   components: {
     DetailsRow,
     MoreOperations,
+    UserDisplay,
   },
   data() {
     return {

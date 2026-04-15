@@ -90,7 +90,7 @@ class TestBinaryTarClient:
 
 
 @pytest.mark.parametrize(
-    "client_cls, archive_maker",
+    ("client_cls", "archive_maker"),
     [
         (TarClient, gen_tar),
         (ZipClient, gen_zip),
@@ -178,7 +178,7 @@ class TestTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path:
             archive_maker(file_path, symbolic_links=symbolic_links)
             cli: BasePackageClient = client_cls(file_path=file_path)
-            with pytest.raises(ReadFileNotFoundError, match="file .* not found"):
+            with pytest.raises(ReadFileNotFoundError, match=r"file .* not found"):
                 cli.read_file(filename)
 
     @pytest.mark.parametrize(
@@ -248,7 +248,7 @@ class TestBinaryTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path:
             gen_tar(file_path, symbolic_links=symbolic_links)
             cli = BinaryTarClient(file_path=file_path)
-            with pytest.raises(ReadLinkFileOutsideDirectoryError, match=".*is invalid"):
+            with pytest.raises(ReadLinkFileOutsideDirectoryError, match=r".*is invalid"):
                 cli.read_file(filename)
 
     @pytest.mark.parametrize(

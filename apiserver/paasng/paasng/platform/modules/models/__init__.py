@@ -20,10 +20,10 @@ from .module import Module
 from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType
 
 __all__ = [
-    "BuildConfig",
-    "Module",
     "AppBuildPack",
     "AppSlugBuilder",
     "AppSlugRunner",
+    "BuildConfig",
     "BuildPackType",
+    "Module",
 ]

@@ -94,17 +94,15 @@ class AIAgentClient:
             "context": {"executor": operator},
         }
 
+        response = None
         try:
             response = self.client.post(url, json=data, stream=True)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             # 记录详细错误信息
-            error_msg = f"call chat completion error: {str(e)}"
-            logging.exception(
-                f"{error_msg}\n"
-                f"URL: {url}\n"
-                f"Request: {masked_curlify.to_curl(response.request)}\n"
-                f"Response: {response.text}"
-            )
+            error_msg = f"call chat completion error: {e!s}"
+            request_info = masked_curlify.to_curl(response.request) if response is not None else "N/A"
+            response_info = response.text if response is not None else "N/A"
+            logger.exception(f"{error_msg}\nURL: {url}\nRequest: {request_info}\nResponse: {response_info}")
             raise AIAgentServiceError(error_msg) from e
         return response

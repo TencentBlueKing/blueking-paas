@@ -39,7 +39,7 @@ def env_role_protection_check(operation: str, env: ModuleEnvironment, roles: Lis
     if set(roles) & set(protections.values_list("allowed_role", flat=True)):
         return
 
-    raise RoleNotAllowError()
+    raise RoleNotAllowError
 
 
 @transaction.atomic

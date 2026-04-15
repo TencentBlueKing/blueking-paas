@@ -17,6 +17,13 @@
                 @clear="clearSearch">
             </bk-input>
         </div>
+        <div class="ml10" style="width: 160px;">
+            <bk-select v-model="appStatus" placeholder="应用状态" :clearable="true" @change="searchApp">
+                <bk-option id="not_deployed" name="未部署"></bk-option>
+                <bk-option id="normal" name="正常"></bk-option>
+                <bk-option id="offline" name="下架"></bk-option>
+            </bk-select>
+        </div>
     </div>
     <bk-table
         ref="appTable"
@@ -70,6 +77,11 @@
         <bk-table-column label="应用id" prop="code"></bk-table-column>
         <bk-table-column label="应用名称" prop="name"></bk-table-column>
         <bk-table-column label="应用类型" prop="app_type"></bk-table-column>
+        <bk-table-column label="应用状态">
+            <template slot-scope="props">
+                $[ props.row.app_status | appStatus2zh ]
+            </template>
+        </bk-table-column>
         <bk-table-column label="创建时间" prop="created">
             <template slot-scope="props">
                 <span v-bk-tooltips="{content: props.row.created }">$[props.row.created] </span>
@@ -138,18 +150,23 @@ const URLRouter = {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    Vue.filter('appStatus2zh', function (value) {
+        const map = { 'not_deployed': '未部署', 'normal': '正常', 'offline': '下架' }
+        return map[value] || value
+    })
     new Vue({
         el: "#proc-spec-plan-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {
             let prefix = window.location.href
-            let include_inactive = false
-            let filterKey = undefined 
+            let filterKey = undefined
+            let appStatus = undefined
 
             if (prefix.indexOf("?") > 0) {
                 let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
                 filterKey = query[SEARCH_PARAM]
+                appStatus = query["app_status"] || undefined
             }
             const processedAppList = app_data_list.map(app => ({
                 ...app,
@@ -161,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pagination,
                 SEARCH_PARAM,
                 filterKey,
+                appStatus,
                 dialog: {
                     type: 'edit',
                     visible: false,
@@ -186,21 +204,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = prefix
             },
             searchApp() {
-                if (!this.filterKey || this.filterKey.trim() === '') {
-                    this.clearSearch();
-                    return;
+                let query = { offset: 0 }
+                if (this.filterKey && this.filterKey.trim() !== '') {
+                    query[this.SEARCH_PARAM] = this.filterKey
                 }
-                let query = {
-                    [this.SEARCH_PARAM]: this.filterKey, offset:0
+                if (this.appStatus) {
+                    query['app_status'] = this.appStatus
                 }
                 let prefix = window.location.href
-
                 if (prefix.indexOf("?") > 0) {
-                    query = {...querystring.parse(prefix.substr(prefix.indexOf("?") + 1)), ...query}
                     prefix = prefix.substr(0, prefix.indexOf("?"))
                 }
-                query = querystring.stringify(query)
-                window.location.href = `${prefix}?${query}`
+                window.location.href = `${prefix}?${querystring.stringify(query)}`
             },
             async handleExpandChange(row, expandedRows) {
                 const isExpanding = expandedRows.includes(row);

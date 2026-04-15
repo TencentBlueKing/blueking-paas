@@ -64,7 +64,7 @@ class ResourcePoolProvider(BaseProvider):
 
     def __init__(self, config: Dict):
         self.plan = config["__plan__"]
-        self.recyclable = config.get("recyclable", False)
+        self.recyclable = config.get("recyclable", True)
 
     def create(self, params: Dict) -> InstanceData:
         with transaction.atomic():

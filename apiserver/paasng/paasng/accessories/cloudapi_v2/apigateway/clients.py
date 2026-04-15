@@ -31,7 +31,7 @@ STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway", "prod")
 class ApiGatewayClient:
     """网关 API 通过 APIGW 提供的 API"""
 
-    def __init__(self, tenant_id: str, bk_username: str):
+    def __init__(self, tenant_id: str, bk_username: str = ""):
         self.tenant_id = tenant_id
         self.bk_username = bk_username
         client = Client(endpoint=settings.BK_API_URL_TMPL_FOR_APIGW, stage=STAGE)
@@ -303,3 +303,32 @@ class ApiGatewayClient:
             raise ESBServiceError(f"get app esb component permission apply record error: {e}")
 
         return res.get("data", {})
+
+    def grant_apigw_permissions(
+        self,
+        gateway_name: str,
+        target_app_code: str,
+        resource_names: list[str],
+        expire_days: int = 0,
+    ):
+        """授权网关 API 权限（无需审批）
+
+        :param gateway_name: 网关名称
+        :param target_app_code: 待授权应用的 bk_app_code
+        :param resource_names: 资源名称列表. 即网关下的 API 名称列表
+        :param expire_days: 过期时间，单位：天，0 表示永久
+        :return: 成功授权后无返回值
+        """
+        data: dict[str, Any] = {
+            "target_app_code": target_app_code,
+            "grant_dimension": "resource",
+            "resource_names": resource_names,
+            "expire_days": expire_days,
+        }
+
+        try:
+            self.client.grant_apigw_permissions(data=data, path_params={"gateway_name": gateway_name})
+        except (APIGatewayResponseError, ResponseError) as e:
+            if e.response_status_code == 404:
+                raise ApiGatewayServiceError(f"apigw {gateway_name} or api resources not found")
+            raise ApiGatewayServiceError(f"grant apigw {gateway_name} permissions error: {e}")

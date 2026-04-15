@@ -35,12 +35,12 @@ from .fields import (
 from .managers import FieldManager, MultiFieldsManager
 
 __all__ = [
-    "FieldMgrName",
-    "MultiFieldsManager",
     "F_DOMAIN_RESOLUTION",
     "F_HOOKS",
     "F_SVC_DISCOVERY",
     "FieldManager",
+    "FieldMgrName",
+    "MultiFieldsManager",
     "f_overlay_autoscaling",
     "f_overlay_mounts",
     "f_overlay_replicas",

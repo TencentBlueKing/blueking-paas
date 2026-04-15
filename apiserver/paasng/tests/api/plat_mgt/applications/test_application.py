@@ -443,6 +443,7 @@ class TestDeletedApplicationView:
             ) as mock_cascade_delete_legacy_app,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_builtin_user_groups") as mock_del_groups,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_grade_manager") as mock_del_manager,
+            mock.patch("paasng.plat_mgt.applications.views.application.BkOauthClient") as mock_bk_oauth_client,
         ):
             rsp = plat_mgt_api_client.delete(url)
 
@@ -461,3 +462,4 @@ class TestDeletedApplicationView:
             mock_del_groups.assert_called_once_with(app.code)
             mock_del_manager.assert_called_once_with(app.code)
             mock_cascade_delete_legacy_app.assert_called_once_with("code", app.code, False)
+            mock_bk_oauth_client().delete_client.assert_called_once_with(app.code)

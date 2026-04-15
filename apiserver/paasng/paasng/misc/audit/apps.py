@@ -30,7 +30,7 @@ class AuditConfig(AppConfig):
         from . import handlers  # noqa: F401
 
         if not settings.BK_AUDIT_DATA_TOKEN or not settings.BK_AUDIT_ENDPOINT:
-            logging.info("No bkaudit related config is provided, skip registering")
+            logger.info("No bkaudit related config is provided, skip registering")
             return
 
         # TODO bk_audit SDK 默认的注册方法中要求必须定一个 APP_CODE\SECRET 这两个变量，

@@ -135,7 +135,7 @@ def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
     ]
 
     for config_id, params in collector_configs:
-        elastic_search_config, created = ElasticSearchConfig.objects.update_or_create(
+        _elastic_search_config, created = ElasticSearchConfig.objects.update_or_create(
             collector_config_id=config_id,
             backend_type="es",
             defaults={

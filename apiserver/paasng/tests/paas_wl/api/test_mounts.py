@@ -49,7 +49,7 @@ def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
         app_id=mount.module.application.id,
         module_id=mount.module.id,
         env_name=mount.environment_name,
-        source_name=mount.get_source_name,
+        source_name=mount.source_name,
         tenant_id=bk_app.tenant_id,
         data=source_data,
     )
@@ -119,7 +119,7 @@ def mounts(bk_app, bk_module):
             app_id=mount.module.application.id,
             module_id=mount.module.id,
             env_name=mount.environment_name,
-            source_name=mount.get_source_name,
+            source_name=mount.source_name,
             tenant_id=bk_app.tenant_id,
             data=source_data,
         )
@@ -161,7 +161,7 @@ class TestVolumeMountViewSet:
         source = controller.get_by_env(
             app_id=mount.module.application.id,
             env_name=mount.environment_name,
-            source_name=mount.get_source_name,
+            source_name=mount.source_name,
         )
         assert response.status_code == 201
         assert mount.sub_paths == ["configmap_z"]
@@ -182,7 +182,7 @@ class TestVolumeMountViewSet:
         source = controller.get_by_env(
             app_id=mount.module.application.id,
             env_name=mount.environment_name,
-            source_name=mount.get_source_name,
+            source_name=mount.source_name,
         )
         assert response.status_code == 201
         assert mount
@@ -289,7 +289,7 @@ class TestVolumeMountViewSet:
         source = controller.get_by_env(
             app_id=mount_updated.module.application.id,
             env_name=mount_updated.environment_name,
-            source_name=mount_updated.get_source_name,
+            source_name=mount_updated.source_name,
         )
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name

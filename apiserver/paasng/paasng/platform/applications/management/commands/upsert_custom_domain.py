@@ -92,7 +92,7 @@ class Command(BaseCommand):
         if application.type == ApplicationType.CLOUD_NATIVE:
             try:
                 cnative_custom_domain_updated.send(sender=env, env=env)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 raise CommandError(f"Failed to deploy networking for cloud-native app: {e}")
         else:
             try:
@@ -102,7 +102,7 @@ class Command(BaseCommand):
                 raise CommandError("No valid certificate found for enabling HTTPS")
             except IntegrityError:
                 raise CommandError(f"Domain '{domain_name}' is already in use")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 raise CommandError(f"Failed to sync custom domain ingress: {e}")
 
         domain_url = f"{domain.protocol}://{domain.name}{path_prefix}"

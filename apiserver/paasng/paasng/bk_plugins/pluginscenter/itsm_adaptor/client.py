@@ -18,7 +18,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -32,7 +32,9 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.exceptions import (
     ItsmServiceNotExistsError,
 )
 from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
-from paasng.infras.iam.apigw.client import Group as ItsmGroup
+
+if TYPE_CHECKING:
+    from paasng.infras.iam.apigw.client import Group as ItsmGroup
 
 # from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
 

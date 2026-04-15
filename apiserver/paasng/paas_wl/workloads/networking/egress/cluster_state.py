@@ -73,7 +73,7 @@ def filter_nodes_with_labels(nodes: List[ResourceInstance], ignore_labels: Dict[
 
 def get_digest_of_nodes_name(nodes_name: List[str]) -> str:
     """Get the digest of current node name list"""
-    return hashlib.sha1(force_bytes(",".join(nodes_name))).hexdigest()
+    return hashlib.sha1(force_bytes(",".join(nodes_name))).hexdigest()  # noqa: S324
 
 
 def compact_node_data(node_data: dict):

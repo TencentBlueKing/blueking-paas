@@ -52,7 +52,7 @@ class LegacyBaseServiceMigration(BaseMigration):
         # Only local service can be migrated because remote services does not support remote
         # instance data written at this moment.
         if not isinstance(service_obj, LocalServiceObj):
-            if service_name in ["rabbitmq"]:
+            if service_name == "rabbitmq":
                 # 远程增强服务是重新申请新实例, 无法进行数据同步
                 logger.warning(f"support {service_name} to migrate")
             else:

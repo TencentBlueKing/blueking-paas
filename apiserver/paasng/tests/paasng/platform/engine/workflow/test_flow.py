@@ -55,7 +55,7 @@ class TestDeployProcedure:
 
         try:
             with DeployProcedure(stream, None, "doing nothing", phases[0]):
-                raise DeployShouldAbortError("oops")  # noqa: TRY301
+                raise DeployShouldAbortError("oops")
         except DeployShouldAbortError:
             pass
 
@@ -68,7 +68,7 @@ class TestDeployProcedure:
 
         try:
             with DeployProcedure(stream, None, "doing nothing", phases[0]):
-                raise ValueError("oops")  # noqa: TRY301
+                raise ValueError("oops")
         except ValueError:
             pass
 

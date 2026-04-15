@@ -90,7 +90,7 @@ urlpatterns = [
         name="api.analysis.custom_site.metrics.total",
     ),
     re_path(
-        f"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/dimension/{RE_DIMENSION_TYPE}$",  # noqa
+        f"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/dimension/{RE_DIMENSION_TYPE}$",
         views.DimensionMetricsViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.group_by_dimension",
     ),
@@ -111,12 +111,12 @@ urlpatterns = [
         name="api.analysis.custom_site.metrics.event.overview",
     ),
     re_path(
-        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/c/(?P<category>[^/]+)/d/(?P<dimension>[^/]+)/detail",  # noqa
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/c/(?P<category>[^/]+)/d/(?P<dimension>[^/]+)/detail",
         views.CustomEventDetailViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.detail",
     ),
     re_path(
-        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/aggregate_by_interval",  # noqa
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/aggregate_by_interval",
         views.CustomEventTrendViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.aggregate_by_interval",
     ),

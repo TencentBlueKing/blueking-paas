@@ -204,7 +204,7 @@ class Command(BaseCommand):
                 self.stdout.write(e.data, Style.Yellow)
             elif e.event == "message":
                 if isinstance(e.data, str):
-                    message = cast(str, e.data)
+                    message = cast("str", e.data)
                     self.stdout.write(json.loads(message)["line"])
                 else:
                     self.stdout.write(e.data)

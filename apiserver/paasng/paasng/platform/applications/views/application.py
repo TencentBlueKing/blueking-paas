@@ -52,7 +52,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCo
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType, AppStatus
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter, UserMarkedApplication
 from paasng.platform.applications.pagination import ApplicationListPagination
@@ -199,7 +199,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         serializer = slzs.SearchApplicationSLZ(data=request.query_params)
         try:
             serializer.is_valid(raise_exception=True)
-        except Exception:
+        except Exception:  # noqa: BLE001
             # if keyword do not match regex, then return none
             return Response({"count": 0, "results": []})
 
@@ -361,6 +361,32 @@ class ApplicationListViewSet(viewsets.ViewSet):
         serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取不同类型和状态的应用数量",
+        responses={200: slzs.ApplicationStatisticsListResultSLZ()},
+    )
+    def list_statistics(self, request):
+        """获取不同类型和状态的应用数量"""
+
+        total_applications = UserApplicationFilter(request.user).filter()
+        app_type_counts = total_applications.values("type").annotate(count=Count("type"))
+        # 应用状态是由 @property 装饰的方法, 不能直接通过 ORM 的方式统计数量
+        app_status_counts = [
+            {"status": status, "count": total_applications.filter_by_app_status(status).count()}
+            for status, _ in AppStatus.get_choices()
+        ]
+        total = total_applications.count()
+
+        data = {
+            "app_type_counts": app_type_counts,
+            "app_status_counts": app_status_counts,
+            "total": total,
+        }
+
+        serializer = slzs.ApplicationStatisticsListResultSLZ(data)
+        return Response(serializer.data)
+
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View class for a single application."""
@@ -481,6 +507,8 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - param: logo, file, 应用LOGO，不传则不更新
         """
         application = self.get_application()
+        # NOTE: UpdateApplicationSLZ 继承自 UpdateApplicationNameSLZ, 后者在校验 name 字段时, 会直接更新 bk_console 中的应用名称
+        # FIXME: 该逻辑需要重构, 在 serializer 中直接更新 bk_console 中的应用名称不合适, 操作太隐藏, 不好维护
         serializer = slzs.UpdateApplicationSLZ(data=request.data, instance=application)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

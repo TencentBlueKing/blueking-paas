@@ -239,7 +239,7 @@ export default {
           return item.name;
         case 'gateway':
         default:
-          return item.api_name;
+          return item.gateway_name;
       }
     },
 
@@ -273,7 +273,7 @@ export default {
           },
         },
         gateway: {
-          apiId: this.apiId,
+          gatewayName: this.apiName,
           data: {
             ...commonData,
             ...extendedData,

@@ -107,7 +107,7 @@ class Blob(RepositoryResource):
         headers = {"content_type": "application/octect-stream"}
         params = {"digest": digest}
 
-        uuid, location = self._initiate_blob_upload()
+        _uuid, location = self._initiate_blob_upload()
         resp = self.client.put(url=location, headers=headers, params=params, data=data, timeout=self.timeout)
 
         if resp.status_code != 201:

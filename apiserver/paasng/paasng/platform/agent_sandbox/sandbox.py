@@ -20,11 +20,14 @@ import logging
 import re
 import shlex
 
+from django.conf import settings
 from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DEFAULT_IMAGE
+from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
+from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
     AgentSandboxKresApp,
@@ -37,10 +40,11 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxCreateError,
     SandboxCreateTimeout,
     SandboxDaemonAPIError,
     SandboxError,
@@ -66,6 +70,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
+    ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -76,15 +81,17 @@ def create_sandbox(
     :param snapshot: The snapshot name, optional.
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
+    :param ttl_seconds: The sandbox ttl in seconds, optional.
     """
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
-        snapshot=snapshot or DEFAULT_IMAGE,
+        snapshot=snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE,
         snapshot_entrypoint=snapshot_entrypoint,
         env_vars=env_vars,
         creator=creator,
         workspace=workspace,
+        ttl_seconds=ttl_seconds,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)
@@ -138,7 +145,8 @@ class AgentSandboxResManager:
     """
 
     # The timeout for creating a sandbox, in seconds
-    create_timeout = 30
+    # 探测沙箱 daemon 服务就绪的最大超时时间，不宜超过 daemon 实际配置的 PRE_START_TIMEOUT 时间
+    create_timeout = 120
 
     def __init__(self, app: Application, target: str):
         self.app = app
@@ -169,25 +177,33 @@ class AgentSandboxResManager:
         try:
             with self.kres_app.get_kube_api_client() as client:
                 NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
-
+                ensure_image_credential(client=client, namespace=self.kres_app.namespace)
             agent_sandbox_kmodel.create(sandbox)
             sandbox_created = True
             self._wait_for_running(sandbox.name)
         except ReadTargetStatusTimeout as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxCreateTimeout(str(exc)) from exc
+        except SandboxCreateError:
+            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
+            raise
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
 
-        # 下发 NodePort 类型的 service, 关联到 sandbox pod, 以暴露 daemon 服务
-        sandbox_svc = AgentSandboxService.create(sandbox, sandbox_obj.daemon_port)
+        # 下发 ClusterIP 类型的 service, 关联到 sandbox pod, 由 'Agent Sandbox Router' 进行流量转发
+        sandbox_svc = AgentSandboxService.create(sandbox)
         try:
             agent_sandbox_svc_kmodel.create(sandbox_svc)
         except ApiException as exc:
             raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
 
-        return KubernetesPodSandbox(sandbox, sandbox_obj.daemon_endpoint, sandbox_obj.daemon_token)
+        router_endpoint = get_router_endpoint(self.kres_app.target)
+        return KubernetesPodSandbox(
+            entity=sandbox,
+            router_endpoint=router_endpoint,
+            daemon_token=sandbox_obj.daemon_token,
+        )
 
     def destroy_by_name(self, name: str) -> None:
         """Destroy a sandbox by its name"""
@@ -215,16 +231,43 @@ class AgentSandboxResManager:
             )
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
-        return KubernetesPodSandbox(entity, sandbox_obj.daemon_endpoint, sandbox_obj.daemon_token)
+
+        router_endpoint = get_router_endpoint(self.kres_app.target)
+        return KubernetesPodSandbox(
+            entity=entity,
+            router_endpoint=router_endpoint,
+            daemon_token=sandbox_obj.daemon_token,
+        )
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:
-            kres.KPod(client).wait_for_status(
+            pod_phase = kres.KPod(client).wait_for_status(
                 name=pod_name,
-                target_statuses={PodPhase.RUNNING.value},
+                target_statuses={PodPhase.RUNNING.value, PodPhase.FAILED.value},
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
             )
+            if pod_phase == PodPhase.FAILED.value:
+                logs = self._get_pod_logs(client, pod_name)
+                raise SandboxCreateError("sandbox pod failed to start", logs=logs)
+
+    def _get_pod_logs(self, client, pod_name: str, tail_lines: int = 500) -> str:
+        """Get logs from a pod for failed to start.
+
+        :param client: The Kubernetes API client.
+        :param pod_name: The name of the pod.
+        :returns: The logs content.
+        """
+        try:
+            resp = kres.KPod(client).get_log(
+                name=pod_name,
+                namespace=self.kres_app.namespace,
+                tail_lines=tail_lines,
+            )
+            return resp.data.decode("utf-8", errors="replace")
+        except ApiException:
+            logger.exception("failed to get logs from failed pod %s", pod_name)
+            return ""
 
     def _cleanup_sandbox_on_create_error(self, pod_name: str, sandbox_created: bool) -> None:
         if not sandbox_created:
@@ -248,14 +291,17 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     execution and filesystem operations, while still using Kubernetes API for
     Pod lifecycle management (status, logs).
 
+    When requesting a pod, the request is first routed to the Agent Sandbox Router
+    on the sandbox cluster, which then forwards it to the appropriate sandbox daemon.
+
     :param entity: The AgentSandbox entity containing sandbox configuration.
-    :param daemon_endpoint: The daemon service endpoint (e.g., "127.0.0.1:8080").
+    :param router_endpoint: The sandbox router endpoint (e.g., "agent-sandbox-router.example.com").
     :param daemon_token: The authentication token for the daemon service.
     """
 
-    def __init__(self, entity: AgentSandbox, daemon_endpoint: str, daemon_token: str):
+    def __init__(self, entity: AgentSandbox, router_endpoint: str, daemon_token: str):
         self.entity = entity
-        self.daemon_endpoint = daemon_endpoint
+        self.router_endpoint = router_endpoint
         self.daemon_token = daemon_token
         self.kres_app = self.entity.app
         self.namespace = self.kres_app.namespace
@@ -346,8 +392,16 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
 
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""
+
         # TODO: 将 SandboxDaemonClient 缓存为实例属性（lazy init），或者至少在 KubernetesPodSandbox 级别共享同一个 session?
-        return SandboxDaemonClient(self.daemon_endpoint, self.daemon_token)
+        return SandboxDaemonClient(
+            router_endpoint=self.router_endpoint,
+            token=self.daemon_token,
+            sandbox_name=self.entity.name,
+            sandbox_namespace=self.namespace,
+            sandbox_daemon_port=DAEMON_BIND_PORT,
+            router_auth_token=settings.AGENT_SANDBOX_ROUTER_AUTH_TOKEN,
+        )
 
     def get_status(self) -> str:
         """Get the current status of the sandbox.

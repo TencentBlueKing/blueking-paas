@@ -53,6 +53,7 @@ def execute_build_error_callback(context: Context, exc: Exception, *args, **kwar
     :param exc: The exception that was raised
     """
 
+    assert context.args is not None, "Task context args should not be None"
     smart_build_id = context.args[0]
     state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id)
     state_mgr.finish(JobStatus.FAILED, str(exc))

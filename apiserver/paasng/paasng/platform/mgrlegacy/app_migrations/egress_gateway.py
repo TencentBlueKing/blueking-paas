@@ -49,7 +49,7 @@ class EgressGatewayMigration(BaseMigration):
                 )
             except IntegrityError:
                 self.add_log(_("{env} 环境绑定出口IP异常, 详情: 不能重复绑定").format(env=env.environment))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.add_log(_("{env} 环境绑定出口IP异常").format(env=env.environment))
 
     def rollback(self):
@@ -72,7 +72,7 @@ class EgressGatewayMigration(BaseMigration):
                 binding.delete()
             except ObjectDoesNotExist:
                 self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.add_log(_("{env} 环境解绑出口IP异常").format(env=env.environment))
 
     def get_description(self):

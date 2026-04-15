@@ -37,7 +37,7 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     try:
         # 兼容多个 paas 环境对接同一个蓝鲸监控服务的情况, 先尝试获取同名的 space, 如果存在则不调用蓝鲸监控的创建接口
         space = mgr.get_space_detail(gen_bk_monitor_space(application))
-    except Exception:
+    except Exception:  # noqa: BLE001
         space = mgr.create_space(gen_bk_monitor_space(application))
 
     add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.iam_resource_id)

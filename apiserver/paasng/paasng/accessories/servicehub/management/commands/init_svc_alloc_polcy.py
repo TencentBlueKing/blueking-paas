@@ -105,7 +105,7 @@ class Command(BaseCommand):
                     tenant_id=precedence_policy.tenant_id,
                     type=ServiceAllocationPolicyType.RULE_BASED.value,
                 )
-            print(
+            print(  # noqa: T201
                 f"service {service_obj.name}:{service_obj.uuid},tenant_id {tenant_id}, "
                 f"create always match precedence policy and rule based allocation policy"
                 f"delete binding policy, "
@@ -120,7 +120,6 @@ class Command(BaseCommand):
                     tenant_id=binding_policy.tenant_id,
                     type=ServiceAllocationPolicyType.UNIFORM.value,
                 )
-            print(
-                f"service {service_obj.uuid},tenant_id {binding_policy.tenant_id}, "
-                f"create uniform allocation policy"
+            print(  # noqa: T201
+                f"service {service_obj.uuid},tenant_id {binding_policy.tenant_id}, create uniform allocation policy"
             )

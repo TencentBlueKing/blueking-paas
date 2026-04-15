@@ -23,7 +23,7 @@ from rest_framework.validators import UniqueValidator, ValidationError, qs_exist
 
 from paasng.platform.applications.exceptions import AppFieldValidationError
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import prepare_use_application_code, prepare_use_application_name
+from paasng.platform.applications.signals import prepare_use_application_code
 
 
 class AppUniqueValidator(UniqueValidator):
@@ -58,10 +58,10 @@ class AppUniqueValidator(UniqueValidator):
         # Send signal to external data sources
         self.signal_external(value, instance=instance)
 
-    def signal_external(self, value: str, instance: Optional[Application]):
+    def signal_external(self, value: str, instance: Optional[Application], **kwargs):
         """Send signal to external data sources, will raise ValidateError when external validation fails"""
         try:
-            self.signal.send(sender=self.__class__, value=value, instance=instance)
+            self.signal.send(sender=self.__class__, value=value, instance=instance, **kwargs)
         except AppFieldValidationError as e:
             if e.reason == "duplicated":
                 raise ValidationError(self.get_message(value), code="unique")
@@ -69,12 +69,6 @@ class AppUniqueValidator(UniqueValidator):
     def get_message(self, value) -> str:
         """Get user-friendly error message"""
         return _("{} 为 {} 的应用已存在").format(_(self.field_label), value)
-
-
-class AppNameUniqueValidator(AppUniqueValidator):
-    field_name = "name"
-    field_label = "应用名称"
-    signal = prepare_use_application_name
 
 
 class AppIDUniqueValidator(AppUniqueValidator):

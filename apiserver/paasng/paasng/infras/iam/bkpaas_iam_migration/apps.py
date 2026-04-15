@@ -35,8 +35,8 @@ def render_migrate_json():
     iam_tpl.mkdir(exist_ok=True)
 
     j2_env = safe_jinja2.FileEnvironment(str(iam_tpl_path), trim_blocks=True)
-    for dir in iam_tpl_path.iterdir():
-        j2_env.get_template(dir.name).stream(**IAM_CONTEXT).dump(str(iam_tpl / dir.name[:-3]))
+    for template_path in iam_tpl_path.iterdir():
+        j2_env.get_template(template_path.name).stream(**IAM_CONTEXT).dump(str(iam_tpl / template_path.name[:-3]))
 
 
 class BKPaaSIAMMigrationConfig(AppConfig):

@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, Optional
 
 from django.db import models
 from jsonfield import JSONField
@@ -25,7 +24,6 @@ from translated_fields import TranslatedFieldWithFallback
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.entities import v1alpha2
-from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import HookList
@@ -49,13 +47,6 @@ class ApplicationDescription(OwnerTimestampedModel):
     plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
     is_creation = models.BooleanField(verbose_name="whether current description creates an application", default=False)
     tenant_id = tenant_id_field_factory()
-
-    def get_plugin(self, plugin_type: AppDescPluginType) -> Optional[Dict]:
-        """Return the first plugin in given type"""
-        for plugin in self.plugins:
-            if plugin["type"] == plugin_type.value:
-                return plugin
-        return None
 
 
 BkAppSpecField = make_json_field("BkAppSpecField", v1alpha2.BkAppSpec)

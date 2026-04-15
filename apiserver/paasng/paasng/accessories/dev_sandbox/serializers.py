@@ -69,7 +69,7 @@ class SourceCodeVersionInfoSLZ(serializers.Serializer):
     def to_internal_value(self, data: Dict[str, str]) -> VersionInfo:
         try:
             return VersionInfo(**data)
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise ValidationError(_("版本信息格式错误"))
 
 

@@ -44,7 +44,7 @@ with FileLock(str(fn.absolute()) + ".lock"):
     else:
         SEARCH_KEYWORD = generate_random_string(6)
         FAKE_APP_CODE = generate_random_string(6)
-        fn.write_text("|".join([SEARCH_KEYWORD, FAKE_APP_CODE]))
+        fn.write_text(f"{SEARCH_KEYWORD}|{FAKE_APP_CODE}")
 
 
 @atexit.register
@@ -84,7 +84,7 @@ class TestQueryAlertsParams:
         ("create_query_params", "expected_query_string"),
         [
             (
-                lambda: AppQueryAlertsParams(),
+                AppQueryAlertsParams,
                 None,
             ),
             (

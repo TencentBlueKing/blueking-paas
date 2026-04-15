@@ -271,12 +271,12 @@ class BKIAMClient:
             all_groups = {group["name"]: group for group in resp["data"]["results"]}
             return [
                 {**all_groups[expected_group["name"]], "role": role}
-                for expected_group, role in zip(groups, APP_DEFAULT_ROLES)
+                for expected_group, role in zip(groups, APP_DEFAULT_ROLES, strict=False)
             ]
 
         # 按照顺序，填充申请创建得到的各个用户组的 ID
         user_group_ids = resp.get("data", [])
-        for group, user_group_id, role in zip(groups, user_group_ids, APP_DEFAULT_ROLES):
+        for group, user_group_id, role in zip(groups, user_group_ids, APP_DEFAULT_ROLES, strict=False):
             group.update({"id": user_group_id, "role": role})  # type: ignore
         return groups
 

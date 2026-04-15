@@ -62,7 +62,7 @@ def get_default_options():
 
 
 def set_default_options(options: ClientOptionsDict):
-    global _default_options  # noqa: PLW0603
+    global _default_options
     _default_options = options
 
 

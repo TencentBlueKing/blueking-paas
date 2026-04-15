@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, List, Optional, Type
 
 import yaml
 from django.db import transaction
-from django.db.models import Model
 from django.forms.models import model_to_dict
 from pydantic import BaseModel
 
@@ -32,6 +31,8 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.offline import OfflineOperation
 
 if TYPE_CHECKING:
+    from django.db.models import Model
+
     from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)

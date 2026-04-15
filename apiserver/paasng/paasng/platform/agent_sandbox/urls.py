@@ -15,9 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import path
+from django.urls import include, path
 
-from .views import AgentSandboxFSViewSet, AgentSandboxProcessViewSet, AgentSandboxViewSet
+from .views import (
+    AgentSandboxAPIPermissionViewSet,
+    AgentSandboxFSViewSet,
+    AgentSandboxProcessViewSet,
+    AgentSandboxViewSet,
+)
 
 urlpatterns = [
     path(
@@ -68,4 +73,12 @@ urlpatterns = [
         AgentSandboxProcessViewSet.as_view({"get": "logs"}),
         name="agent_sandbox.process.logs",
     ),
+    # System API for granting Agent Sandbox permissions
+    path(
+        "sys/api/agent_sandbox/permissions/grant/",
+        AgentSandboxAPIPermissionViewSet.as_view({"post": "grant_permissions"}),
+        name="agent_sandbox.permissions.grant",
+    ),
+    # Image build system API
+    path("sys/api/agent_sandbox/image_build/", include("paasng.platform.agent_sandbox.image_build.urls")),
 ]

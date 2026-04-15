@@ -390,7 +390,7 @@ class UpdateProcessSLZ(serializers.Serializer):
             return None
         try:
             return cattr.structure(config, AutoscalingConfig)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ValidationError(_("scaling_config 配置格式有误：{}").format(e))
 
 
@@ -448,7 +448,7 @@ class InstanceLogStreamInputSLZ(serializers.Serializer):
         # 验证是否是合法的时间格式
         try:
             parser.parse(since_time)
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise ValidationError({"since_time": "format must be RFC3339Nano"})
         # 验证 since_time 是否是 RFC3339Nano 格式
         rfc3339nano_pattern = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})\.(\d{9})Z$")

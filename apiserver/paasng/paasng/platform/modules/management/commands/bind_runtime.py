@@ -74,7 +74,7 @@ class Command(BaseCommand):
 
         for module in modules:
             binder = ModuleRuntimeBinder(module)
-            print(
+            print(  # noqa: T201
                 f"binding slugbuilder {slugbuilder.name}[{slugbuilder.pk}] "
                 f"and slugrunner {slugrunner.name}[{slugrunner.pk}] "
                 f"to module {module.application.code}[{module.name}]"
@@ -83,6 +83,6 @@ class Command(BaseCommand):
                 binder.bind_image(slugrunner, slugbuilder)
 
             for bp in buildpacks:
-                print(f"binding buildpack {bp.name}[{bp.pk}] to module {module.application.code}[{module.name}]")
+                print(f"binding buildpack {bp.name}[{bp.pk}] to module {module.application.code}[{module.name}]")  # noqa: T201
                 if not dry_run:
                     binder.bind_buildpack(bp)

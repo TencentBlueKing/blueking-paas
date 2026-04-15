@@ -24,6 +24,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.utils.i18n import to_translated_field
 
@@ -104,7 +105,7 @@ class ServiceCreateSLZ(serializers.Serializer):
     description = serializers.CharField(help_text="描述")
     long_description = serializers.CharField(help_text="详细描述")
     instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
-    provider_name = serializers.CharField(help_text="供应商", allow_null=True)
+    provider_name = serializers.CharField(help_text="供应商", required=False, allow_null=True, allow_blank=True)
 
     config = serializers.JSONField(required=False, default=dict)
 
@@ -122,16 +123,20 @@ class ServiceCreateSLZ(serializers.Serializer):
 
         return data
 
-    def validate_provider_name(self, provider_name: str) -> str | None:
-        if provider_name:
-            return provider_name
-
+    def validate(self, attrs):
+        provider_name = attrs.get("provider_name")
         service = self.context.get("service")
+
+        if provider_name:
+            return attrs
+
         if isinstance(service, RemoteServiceObj):
             #  远程增强服务无需 provider_name
-            return provider_name
+            return attrs
 
-        raise ValidationError(_("本地增强服务必须指定 provider_name"))
+        # 默认使用 pool 作为本地增强服务的 provider
+        attrs["provider_name"] = "pool"
+        return attrs
 
     def validate_name(self, name: str) -> str:
         if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):
@@ -139,7 +144,14 @@ class ServiceCreateSLZ(serializers.Serializer):
                 _(
                     "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
                 ).format(name)
-            )  # noqa: E501
+            )
+
+        #  创建 S-Mart 应用时，使用 service_name 来指定增强服务， 故禁止本地增强服务和远程增强服务重名
+        service_id_ctx = getattr(self.context.get("service"), "uuid")
+        for svc in mixed_service_mgr.list():
+            # 更新时，允许和自己重名
+            if svc.name == name and svc.uuid != service_id_ctx:
+                raise ValidationError(_("{} 不符合规范: 禁止存在相同的增强服务 ID").format(name))
 
         return name
 

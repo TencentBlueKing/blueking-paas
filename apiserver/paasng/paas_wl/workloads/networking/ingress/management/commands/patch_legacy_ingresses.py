@@ -83,17 +83,17 @@ class Command(BaseCommand):
         for domain in domains:
             if fnmatch(domain.host, pattern):
                 can_sync = not dry_run
-                print(f"domain {domain.host} match, ready to sync")
+                print(f"domain {domain.host} match, ready to sync")  # noqa: T201
             else:
-                print(f"domain {domain.host} mismatch, abort")
+                print(f"domain {domain.host} mismatch, abort")  # noqa: T201
                 break
 
         if with_create:
             service_name = make_service_name(app, process_type)
-            print(f"will create ingress for process {process_type}: {service_name}")
+            print(f"will create ingress for process {process_type}: {service_name}")  # noqa: T201
 
         if can_sync:
-            print(f"syncing ingress for app {app.name}")
+            print(f"syncing ingress for app {app.name}")  # noqa: T201
             try:
                 mgr.sync(service_name)
             except Exception:

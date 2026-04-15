@@ -80,7 +80,7 @@ class TestServiceMonitorController:
                         selector=ServiceSelector(matchLabels={}),
                         match_namespaces=[app.namespace],
                     )
-                raise AppEntityNotFound()
+                raise AppEntityNotFound
 
             mocked.get.side_effect = get_instance
 

@@ -182,6 +182,8 @@ class BkUserField(models.CharField):
 class SimpleUserIDWrapper(str):
     """A simple user wrapper for convenience"""
 
+    __slots__ = ()
+
     @property
     def username(self):
         return get_user_by_user_id(self, username_only=True).username

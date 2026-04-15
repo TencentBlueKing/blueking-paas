@@ -17,6 +17,20 @@
  */
 
 import i18n from '@/language/i18n';
+import axios from 'axios';
+
+/**
+ * 判断是否为请求取消错误
+ * 兼容新旧版本的 axios 取消请求方式
+ *
+ * @param {Object} error 错误对象
+ * @return {boolean} 是否为取消请求错误
+ */
+export function isRequestCanceled(error) {
+  return axios.isCancel(error)
+    || error?.code === 'ERR_CANCELED'
+    || error?.name === 'CanceledError';
+}
 
 /**
  * 函数柯里化

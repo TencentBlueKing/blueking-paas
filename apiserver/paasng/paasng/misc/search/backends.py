@@ -28,6 +28,7 @@ from django.conf import settings
 from .serializers import DocumentSLZ
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 @dataclass
@@ -80,7 +81,7 @@ class BKDocumentSearcher(BaseSearcher):
 
     def search(self, keyword: str) -> SearchDocResults:
         """Call blueking document API to get matching documents"""
-        resp = requests.get(self.BKDOC_SEARCH_BASE_URL.format(keyword))
+        resp = requests.get(self.BKDOC_SEARCH_BASE_URL.format(keyword), timeout=DEFAULT_TIMEOUT)
         try:
             json_data = get_json_response(resp)
         except ValueError:

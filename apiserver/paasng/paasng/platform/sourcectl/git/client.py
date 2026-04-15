@@ -121,7 +121,7 @@ class GitCloneCommand(GitCommand):
 class GitClient:
     """Git 客户端"""
 
-    COMMIT_INFO_REGEX = re.compile(r"(?P<ts>(\d+))/(?P<msg>[\S\s]*)", re.M)
+    COMMIT_INFO_REGEX = re.compile(r"(?P<ts>(\d+))/(?P<msg>[\S\s]*)", re.MULTILINE)
     META_GIT_DIR = ".git"
     _git_filepath = "git"
     _default_timeout = 600

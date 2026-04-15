@@ -48,7 +48,7 @@ def _loads(dumped: bytes) -> Dict:
         # NOTE: 以前的数据是直接使用 json.dumps 存储的, 为了兼容旧数据, 先尝试使用 json.loads 读取数据
         return json.loads(dumped)
     except json.decoder.JSONDecodeError:
-        return pickle.loads(force_bytes(dumped, encoding="latin-1"))
+        return pickle.loads(force_bytes(dumped, encoding="latin-1"))  # noqa: S301
 
 
 def get_remote_store():

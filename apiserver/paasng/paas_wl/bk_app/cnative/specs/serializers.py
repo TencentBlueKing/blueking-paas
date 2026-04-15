@@ -177,7 +177,7 @@ class MountSLZ(serializers.ModelSerializer):
             source = controller.get_by_env(
                 app_id=obj.module.application.id,
                 env_name=obj.environment_name,
-                source_name=obj.get_source_name,
+                source_name=obj.source_name,
             )
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
@@ -191,7 +191,7 @@ class MountSLZ(serializers.ModelSerializer):
             source = controller.get_by_env(
                 app_id=obj.module.application.id,
                 env_name=obj.environment_name,
-                source_name=obj.get_source_name,
+                source_name=obj.source_name,
             )
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e

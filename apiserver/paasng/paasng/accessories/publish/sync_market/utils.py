@@ -115,13 +115,13 @@ class LegacyDBCascadeDeleter:
 
     def _find_records_referencing(self, table: str, column: str, referenced_id: int):
         """查找引用特定 ID 的记录"""
-        sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"
+        sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"  # noqa: S608
         result = self.session.execute(sql, {"ref_id": referenced_id})
         return [row[0] for row in result]
 
     def _delete_records(self, table: str, column: str, referenced_id: int):
         """删除引用特定 ID 的记录"""
-        sql = f"DELETE FROM {table} WHERE {column} = :ref_id"
+        sql = f"DELETE FROM {table} WHERE {column} = :ref_id"  # noqa: S608
         self.session.execute(sql, {"ref_id": referenced_id})
 
     def _delete_records_recursively(

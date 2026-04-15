@@ -18,17 +18,19 @@
 import base64
 import datetime
 import logging
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Union
 from urllib.parse import urljoin
 
 import arrow
 import requests
 from django.utils.translation import gettext_lazy as _
 
-from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.client import DEFAULT_REPO_REF, BaseGitApiClient
 from paasng.platform.sourcectl.models import CommitInfo, GitProject
+
+if TYPE_CHECKING:
+    from paasng.infras.accounts.models import Oauth2TokenHolder
 
 logger = logging.getLogger(__name__)
 

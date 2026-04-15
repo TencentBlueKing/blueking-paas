@@ -62,7 +62,7 @@ def save_subdomains(app: WlApp, domains: List[AutoGenDomain], protocol: str = Ap
     affected_apps = {obj.app for obj in existed_domains}
 
     for domain in domains:
-        obj, _ = AppDomain.objects.update_or_create(
+        _obj, _ = AppDomain.objects.update_or_create(
             tenant_id=app.tenant_id,
             host=domain.host,
             defaults={

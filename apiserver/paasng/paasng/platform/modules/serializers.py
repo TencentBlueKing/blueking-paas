@@ -234,7 +234,7 @@ class RepositoryWithPermissionSLZ(RepositorySLZ):
     def get_authorized(self, instance):
         try:
             return get_version_service(self.context["module"], self.context["user"]).touch()
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
 

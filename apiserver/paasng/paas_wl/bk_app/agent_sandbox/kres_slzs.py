@@ -17,13 +17,15 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from attrs import define
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.agent_sandbox.constants import (
-    DEFAULT_IMAGE,
+    DAEMON_BIND_PORT,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
 )
+from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
 
 if TYPE_CHECKING:
@@ -35,7 +37,6 @@ class ServicePortPair:
     name: str
     port: int
     target_port: int
-    node_port: int
     protocol: str = "TCP"
 
 
@@ -65,6 +66,24 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
             "resources": DEFAULT_RESOURCES,
             "env": env,
             "imagePullPolicy": "IfNotPresent",
+            # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre_start.sh 最长耗时 (沙箱 daemon 服务默认设置 PRE_START_TIMEOUT=300s)
+            # NOTE: 沙箱中可能配置了 pre_start.sh，此时 daemon 服务需要等待 pre_start.sh 执行完成后才会就绪
+            "startupProbe": {
+                "tcpSocket": {
+                    "port": DAEMON_BIND_PORT,
+                },
+                "periodSeconds": 1,
+                "failureThreshold": 300,
+            },
+            # readinessProbe: startup 成功后接管，每 2s 探测一次，连续 2 次失败（~20s）标记为 Not Ready
+            "readinessProbe": {
+                "tcpSocket": {
+                    "port": DAEMON_BIND_PORT,
+                },
+                "initialDelaySeconds": 0,
+                "periodSeconds": 2,
+                "failureThreshold": 2,
+            },
         }
         if obj.workdir:
             main_container["workingDir"] = obj.workdir
@@ -72,6 +91,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         return {
             "restartPolicy": "Never",
             "terminationGracePeriodSeconds": DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
+            "imagePullSecrets": [{"name": IMAGE_CREDENTIAL_NAME}],
             "containers": [main_container],
         }
 
@@ -96,7 +116,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             name=kube_data.metadata.name,
             sandbox_id=sandbox_id,
             workdir=workdir,
-            image=getattr(main_container, "image", DEFAULT_IMAGE),
+            image=getattr(main_container, "image", settings.AGENT_SANDBOX_DEFAULT_IMAGE),
             env=env,
             args=getattr(main_container, "args", []),
             status=self._get_status(kube_data),
@@ -124,14 +144,13 @@ class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService
                 "labels": labels,
             },
             "spec": {
-                "type": "NodePort",
+                "type": "ClusterIP",
                 "ports": [
                     {
                         "name": port.name,
                         "port": port.port,
                         "targetPort": port.target_port,
                         "protocol": port.protocol,
-                        "nodePort": port.node_port,
                     }
                     for port in obj.ports
                 ],
@@ -152,7 +171,6 @@ class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxSer
                 name=p.name,
                 port=p.port,
                 target_port=p.targetPort,
-                node_port=getattr(p, "nodePort", 0),
             )
             for p in kube_data.spec.ports
         ]

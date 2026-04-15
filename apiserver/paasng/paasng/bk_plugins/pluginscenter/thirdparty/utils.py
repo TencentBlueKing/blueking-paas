@@ -129,7 +129,7 @@ def exception_transformer_decorator(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             return transform_exception(exc)
 
     return wrapper

@@ -66,7 +66,7 @@ class ServerVersionChecker:
             cache.delete(cache_key)
             raise ServerVersionCheckFailed(
                 _(
-                    "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', operator:'{}'".format(
+                    "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', operator:'{}'".format(  # noqa: INT002
                         apiserver_version, operator_version
                     )
                 )

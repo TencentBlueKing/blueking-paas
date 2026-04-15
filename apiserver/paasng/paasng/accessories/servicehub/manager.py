@@ -199,7 +199,7 @@ class MixedServiceMgr:
 
     get_attachment_by_instance_id = _proxied_svc_dispatcher("get_attachment_by_instance_id")
     get_instance_rel_by_instance_id = cast(
-        Callable[..., EngineAppInstanceRel], _proxied_svc_dispatcher("get_instance_rel_by_instance_id")
+        "Callable[..., EngineAppInstanceRel]", _proxied_svc_dispatcher("get_instance_rel_by_instance_id")
     )
     get_provisioned_queryset = _proxied_svc_dispatcher("get_provisioned_queryset")
     get_provisioned_envs = _proxied_svc_dispatcher("get_provisioned_envs")
@@ -214,19 +214,20 @@ class MixedServiceMgr:
     list_by_category = _proxied_chained_generator("list_by_category")
     list_binded: Callable[..., Iterable["ServiceObj"]] = _proxied_chained_generator("list_binded")
     list_all_rels = cast(
-        Callable[..., Generator[EngineAppInstanceRel, None, None]], _proxied_chained_generator("list_all_rels")
+        "Callable[..., Generator[EngineAppInstanceRel, None, None]]", _proxied_chained_generator("list_all_rels")
     )
     list_unprovisioned_rels = cast(
-        Callable[..., Iterator[EngineAppInstanceRel]], _proxied_chained_generator("list_unprovisioned_rels")
+        "Callable[..., Iterator[EngineAppInstanceRel]]", _proxied_chained_generator("list_unprovisioned_rels")
     )
     list_provisioned_rels = cast(
-        Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
+        "Callable[..., Iterable[EngineAppInstanceRel]]", _proxied_chained_generator("list_provisioned_rels")
     )
-    list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
+    list = cast("Callable[..., Iterable[ServiceObj]]", _proxied_chained_generator("list"))
     list_unbound_instance_rels = cast(
-        Callable[..., Iterable[UnboundEngineAppInstanceRel]], _proxied_chained_generator("list_unbound_instance_rels")
+        "Callable[..., Iterable[UnboundEngineAppInstanceRel]]",
+        _proxied_chained_generator("list_unbound_instance_rels"),
     )
-    list_visible = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list_visible"))
+    list_visible = cast("Callable[..., Iterable[ServiceObj]]", _proxied_chained_generator("list_visible"))
 
     # Proxied generator methods end
 
@@ -320,7 +321,7 @@ class MixedPlanMgr:
         store = get_remote_store()
         self.mgr_instances = [LocalPlanMgr(), RemotePlanMgr(store)]
 
-    list = cast(Callable[..., Generator[PlanObj, None, None]], _proxied_chained_generator("list_plans"))
+    list = cast("Callable[..., Generator[PlanObj, None, None]]", _proxied_chained_generator("list_plans"))
     create = _proxied_svc_dispatcher("create_plan")
     update = _proxied_svc_dispatcher("update_plan")
     delete = _proxied_svc_dispatcher("delete_plan")

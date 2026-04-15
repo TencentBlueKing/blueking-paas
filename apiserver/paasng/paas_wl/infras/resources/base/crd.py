@@ -50,3 +50,9 @@ class BKLogConfig(BaseKresource):
     """CRD: BkLogConfig is the Schema for the bklogconfigs API"""
 
     kind = "BkLogConfig"
+
+
+class ImageCache(BaseKresource):
+    """CRD: ImageCache is provided by kube-fledged, used to pre-pull images to nodes in a cluster"""
+
+    kind = "ImageCache"

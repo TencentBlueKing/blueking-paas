@@ -475,4 +475,57 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(web.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"eng-cstate-test": "1"}))
 		})
 	})
+
+	Context("Test graceful shutdown (GracefulShutdownSeconds)", func() {
+		It("not set: use default terminationGracePeriodSeconds and no preStop lifecycle", func() {
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(BeNil())
+			Expect(web.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
+		})
+
+		It("set to 60s: terminationGracePeriodSeconds=62, preStop sleep=60", func() {
+			gracefulShutdownSeconds := int64(60)
+			expectedGracePeriod := gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
+
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(Equal(&expectedGracePeriod))
+
+			lifecycle := web.Spec.Template.Spec.Containers[0].Lifecycle
+			Expect(lifecycle).NotTo(BeNil())
+			Expect(lifecycle.PreStop.Exec.Command).To(Equal([]string{"sleep", "60"}))
+		})
+
+		It("set to 1s: terminationGracePeriodSeconds=3, preStop sleep=1", func() {
+			gracefulShutdownSeconds := int64(1)
+			expectedGracePeriod := gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
+
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(Equal(&expectedGracePeriod))
+
+			lifecycle := web.Spec.Template.Spec.Containers[0].Lifecycle
+			Expect(lifecycle).NotTo(BeNil())
+			Expect(lifecycle.PreStop.Exec.Command).To(Equal([]string{"sleep", "1"}))
+		})
+
+		It("different processes can have different graceful shutdown settings", func() {
+			gracefulShutdownSecondsWeb := int64(30)
+			expectedGracePeriodWeb := gracefulShutdownSecondsWeb + TerminationGracePeriodDelaySeconds
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSecondsWeb
+			// hi process has no GracefulShutdownSeconds
+
+			web, _ := BuildProcDeployment(bkapp, "web")
+			hi, _ := BuildProcDeployment(bkapp, "hi")
+
+			Expect(web.Spec.Template.Spec.TerminationGracePeriodSeconds).To(Equal(&expectedGracePeriodWeb))
+			Expect(web.Spec.Template.Spec.Containers[0].Lifecycle).NotTo(BeNil())
+			Expect(
+				web.Spec.Template.Spec.Containers[0].Lifecycle.PreStop.Exec.Command,
+			).To(Equal([]string{"sleep", "30"}))
+
+			Expect(hi.Spec.Template.Spec.TerminationGracePeriodSeconds).To(BeNil())
+			Expect(hi.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
+		})
+	})
 })

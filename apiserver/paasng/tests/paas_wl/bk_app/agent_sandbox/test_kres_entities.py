@@ -16,8 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.conf import settings
 
-from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND, DEFAULT_IMAGE
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
     AgentSandboxKresApp,
@@ -94,7 +95,7 @@ class TestAgentSandbox:
             name="test-sandbox",
             sandbox_id="abc123",
             workdir="/app",
-            snapshot=DEFAULT_IMAGE,
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
             env={"FOO": "BAR"},
             snapshot_entrypoint=["python", "-m", "http.server"],
         )
@@ -102,7 +103,7 @@ class TestAgentSandbox:
         assert sbx.name == "test-sandbox"
         assert sbx.sandbox_id == "abc123"
         assert sbx.workdir == "/app"
-        assert sbx.image == DEFAULT_IMAGE
+        assert sbx.image == settings.AGENT_SANDBOX_DEFAULT_IMAGE
         assert sbx.env == {"FOO": "BAR"}
         assert sbx.command == DAEMON_COMMAND
         assert sbx.args == ["python", "-m", "http.server"]
@@ -128,19 +129,18 @@ class TestAgentSandboxService:
             name="test-sandbox",
             sandbox_id="abc123",
             workdir=DEFAULT_WORKDIR,
-            snapshot=DEFAULT_IMAGE,
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
         )
 
     def test_create(self, sandbox: AgentSandbox):
         """Test AgentSandboxService.create factory method."""
-        svc = AgentSandboxService.create(sandbox, node_port=30001)
+        svc = AgentSandboxService.create(sandbox)
 
         assert svc.name == sandbox.name
         assert len(svc.ports) == 1
         assert svc.ports[0].name == "daemon"
         assert svc.ports[0].port == DAEMON_BIND_PORT
         assert svc.ports[0].target_port == DAEMON_BIND_PORT
-        assert svc.ports[0].node_port == 30001
 
 
 class TestAgentSandboxKModel:
@@ -164,7 +164,7 @@ class TestAgentSandboxKModel:
             name=random_resource_name(),
             sandbox_id="abc123",
             workdir="/app",
-            snapshot=DEFAULT_IMAGE,
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
             env={"FOO": "BAR"},
         )
         return sbx
@@ -182,8 +182,8 @@ class TestAgentSandboxKModel:
         assert created_sbx.image == sandbox.image
         assert created_sbx.env == sandbox.env
 
-        # test sandbox service
-        svc = AgentSandboxService.create(sandbox, node_port=30001)
+        # test sandbox service (ClusterIP)
+        svc = AgentSandboxService.create(sandbox)
         agent_sandbox_svc_kmodel.create(svc)
 
         created_svc = agent_sandbox_svc_kmodel.get(sbx_app, svc.name)
@@ -192,4 +192,3 @@ class TestAgentSandboxKModel:
         assert created_svc.ports[0].name == svc.ports[0].name
         assert created_svc.ports[0].port == svc.ports[0].port
         assert created_svc.ports[0].target_port == svc.ports[0].target_port
-        assert created_svc.ports[0].node_port == svc.ports[0].node_port

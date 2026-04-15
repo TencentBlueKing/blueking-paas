@@ -39,7 +39,7 @@ def find_by_module(module: Module) -> RepositoryInstance:
         return SvnRepository.objects.get(pk=module.source_repo_id)
     elif names.validate_git(module.source_type):
         return GitRepository.objects.get(pk=module.source_repo_id)
-    elif module.get_source_origin() in [SourceOrigin.IMAGE_REGISTRY]:
+    elif module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
         return DockerRepository.objects.get(pk=module.source_repo_id)
     elif ModuleSpecs(module).deploy_via_package:
         return SourcePackageRepository(module)

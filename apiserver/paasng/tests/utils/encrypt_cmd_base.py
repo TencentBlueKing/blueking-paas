@@ -58,7 +58,7 @@ def assert_fields_encryped(pk, model_class, unencryped_field_dict, encrypt_heade
     for field in model_class._meta.fields:
         if isinstance(field, EncryptField):
             select_dict["raw_" + field.name] = field.name
-    instance = model_class.objects.extra(select=select_dict).get(pk=pk)
+    instance = model_class.objects.extra(select=select_dict).get(pk=pk)  # noqa: S610
     for field in model_class._meta.fields:
         if isinstance(field, EncryptField):
             field_raw_value = getattr(instance, "raw_" + field.name)

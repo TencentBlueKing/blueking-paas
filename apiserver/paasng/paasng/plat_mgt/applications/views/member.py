@@ -177,7 +177,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
 
         # 启动一个延时任务, 两个小时之后删除该临时管理员权限
         remove_temp_admin.apply_async(
-            args=[application.code, username],
+            args=(application.code, username),
             countdown=2 * 60 * 60,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

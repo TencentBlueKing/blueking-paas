@@ -114,7 +114,7 @@ class Permission(ABC, IAMClient):
 
         # perms 结构如 {'view_basic_info': True, 'edit_basic_info': False}
         if perm_ctx.force_raise:
-            perms = {action_id: False for action_id in action_ids}
+            perms = dict.fromkeys(action_ids, False)
         else:
             res_request = self.make_res_request(perm_ctx)
             perms = self.resource_inst_multi_actions_allowed(

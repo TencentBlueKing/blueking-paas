@@ -17,4 +17,4 @@
 
 from .manager import LocalServiceBinder, LocalServiceMgr, LocalServiceObj
 
-__all__ = ["LocalServiceMgr", "LocalServiceBinder", "LocalServiceObj"]
+__all__ = ["LocalServiceBinder", "LocalServiceMgr", "LocalServiceObj"]

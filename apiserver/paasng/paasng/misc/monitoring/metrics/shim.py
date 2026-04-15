@@ -41,7 +41,7 @@ def list_app_proc_metrics(
             instance_name=instance_name,
             resource_types=query_metrics,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise RequestMetricBackendError(f"failed to request Metric backend: {e}")
 
     return instance_result
@@ -57,7 +57,7 @@ def list_app_proc_all_metrics(
     try:
         # 请求所有 instance 的 metrics
         instance_result = mgr.get_all_instances_metrics(time_range=time_range, resource_types=query_metrics)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise RequestMetricBackendError(f"failed to request Metric backend: {e}")
 
     return instance_result

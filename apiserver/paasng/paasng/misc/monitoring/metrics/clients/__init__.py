@@ -22,8 +22,8 @@ from .prometheus import PrometheusMetricClient
 __all__ = [
     "BkMonitorMetricClient",
     "BkPromResult",
-    "PrometheusMetricClient",
     "MetricClient",
     "MetricQuery",
     "MetricSeriesResult",
+    "PrometheusMetricClient",
 ]

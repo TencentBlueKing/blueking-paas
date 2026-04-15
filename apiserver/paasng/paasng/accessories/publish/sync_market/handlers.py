@@ -188,13 +188,19 @@ def validate_app_name_uniquely(sender, value: str, instance: Optional["Applicati
     """Check if name already exists in legacy database, if exists, raise AppFieldValidationError
 
     :param instance: if given, will not raise error when the existed object belongs to given instance
+
+    Supported kwargs:
+        - field_name: the field name to check, either "name" or "name_en", defaults to "name"
+        - app_tenant_id: if given, will narrow the uniqueness check to the same app_tenant_id
     """
+    field_name = kwargs.get("field_name", "name")
+    app_tenant_id = kwargs.get("app_tenant_id")
     code = instance.code if instance else None
 
     with console_db.session_scope() as session:
-        is_unique = AppManger(session).verify_name_is_unique(value, code)
+        is_unique = AppManger(session).verify_name_is_unique(value, code, field_name, app_tenant_id)
     if not is_unique:
-        raise AppFieldValidationError("duplicated", "Application name=%s already exists" % value)
+        raise AppFieldValidationError("duplicated", "Application %s=%s already exists" % (field_name, value))
 
 
 @receiver(before_finishing_application_creation)

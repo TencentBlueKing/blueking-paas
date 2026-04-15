@@ -72,7 +72,7 @@ def clean_histogram_buckets(buckets: FieldBucketData) -> Dict:
 
 
 def format_timestamp(
-    value: Union[str, int, float], input_format: Literal["timestamp[s]", "timestamp[ns]", "datetime"]
+    value: Union[str, float], input_format: Literal["timestamp[s]", "timestamp[ns]", "datetime"]
 ) -> int:
     """format a value to timestamp in seconds
 

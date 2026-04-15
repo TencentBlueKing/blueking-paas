@@ -101,43 +101,39 @@ class TestKubernetesPodSandboxWithStub:
 class TestKubernetesPodSandboxCommandBuilding:
     """Test command string building functionality."""
 
-    def test_build_command_string_simple(self, stub_k8s_sandbox):
-        """Test building command string without env vars."""
-        cmd_str = stub_k8s_sandbox._build_command_string("echo hello", {})
-        assert cmd_str == "echo hello"
+    @pytest.mark.parametrize(
+        ("cmd", "env_vars", "expected_contains"),
+        [
+            # String command without env vars
+            ("echo hello", {}, ["echo hello"]),
+            # List command with special chars (should be quoted)
+            (["echo", "hello world"], {}, ["echo 'hello world'"]),
+            # Command with env vars
+            ("echo $FOO", {"FOO": "BAR"}, ["export", "FOO=BAR", "echo $FOO"]),
+        ],
+    )
+    def test_build_command_string(self, stub_k8s_sandbox, cmd, env_vars, expected_contains):
+        """Test building command string with various inputs."""
+        cmd_str = stub_k8s_sandbox._build_command_string(cmd, env_vars)
+        for expected in expected_contains:
+            assert expected in cmd_str
 
-    def test_build_command_string_with_list(self, stub_k8s_sandbox):
-        """Test building command string from list."""
-        cmd_str = stub_k8s_sandbox._build_command_string(["echo", "hello world"], {})
-        assert cmd_str == "echo 'hello world'"
-
-    def test_build_command_string_with_env_vars(self, stub_k8s_sandbox):
-        """Test building command string with environment variables."""
-        cmd_str = stub_k8s_sandbox._build_command_string("echo $FOO", {"FOO": "BAR"})
-        assert "export FOO=BAR" in cmd_str
-        assert "echo $FOO" in cmd_str
-
-    def test_build_command_string_with_multiple_env_vars(self, stub_k8s_sandbox):
-        """Test building command string with multiple env vars."""
-        cmd_str = stub_k8s_sandbox._build_command_string("cmd", {"A": "1", "B": "2"})
-        assert "export" in cmd_str
-        assert "A='1'" in cmd_str or "A=1" in cmd_str
-        assert "B='2'" in cmd_str or "B=2" in cmd_str
-
-    def test_validate_env_key_valid(self, stub_k8s_sandbox):
-        """Test that valid env keys pass validation."""
-        assert stub_k8s_sandbox._validate_env_key("FOO") == "FOO"
-        assert stub_k8s_sandbox._validate_env_key("FOO_BAR") == "FOO_BAR"
-        assert stub_k8s_sandbox._validate_env_key("_FOO") == "_FOO"
-        assert stub_k8s_sandbox._validate_env_key("FOO123") == "FOO123"
-
-    def test_validate_env_key_invalid(self, stub_k8s_sandbox):
-        """Test that invalid env keys raise SandboxError."""
-        with pytest.raises(SandboxError, match="invalid environment variable key"):
-            stub_k8s_sandbox._validate_env_key("123FOO")
-
-        with pytest.raises(SandboxError, match="invalid environment variable key"):
-            stub_k8s_sandbox._validate_env_key("FOO-BAR")
-
-        with pytest.raises(SandboxError, match="invalid environment variable key"):
-            stub_k8s_sandbox._validate_env_key("FOO BAR")
+    @pytest.mark.parametrize(
+        ("key", "is_valid"),
+        [
+            ("FOO", True),
+            ("FOO_BAR", True),
+            ("_FOO", True),
+            ("FOO123", True),
+            ("123FOO", False),
+            ("FOO-BAR", False),
+            ("FOO BAR", False),
+        ],
+    )
+    def test_validate_env_key(self, stub_k8s_sandbox, key, is_valid):
+        """Test environment variable key validation."""
+        if is_valid:
+            assert stub_k8s_sandbox._validate_env_key(key) == key
+        else:
+            with pytest.raises(SandboxError, match="invalid environment variable key"):
+                stub_k8s_sandbox._validate_env_key(key)

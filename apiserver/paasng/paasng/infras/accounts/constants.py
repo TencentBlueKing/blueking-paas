@@ -81,7 +81,7 @@ class AccountFeatureFlag(ChoicesEnum):
     @classmethod
     def get_default_flags(cls) -> Dict[str, bool]:
         """Get the default user feature flags, client is sage to modify the result because it's a copy"""
-        flags = cast(Dict, cls._defaults)
+        flags = cast("Dict", cls._defaults)
         return flags.copy()
 
     @classmethod

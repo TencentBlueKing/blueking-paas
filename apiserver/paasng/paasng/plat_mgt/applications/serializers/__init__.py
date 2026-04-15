@@ -50,24 +50,24 @@ __all__ = [
     "ApplicationBindClusterUpdateInputSLZ",
     "ApplicationCategoryUpdateInputSLZ",
     "ApplicationDetailOutputSLZ",
-    "ApplicationListFilterInputSLZ",
-    "ApplicationListOutputSLZ",
-    "ApplicationNameUpdateInputSLZ",
-    "ApplicationTypeOutputSLZ",
-    "DeletedApplicationListOutputSLZ",
-    "TenantAppStatisticsOutputSLZ",
-    "TenantModeListOutputSLZ",
     # feature
     "ApplicationFeatureFlagListOutputSLZ",
     "ApplicationFeatureFlagUpdateInputSLZ",
+    "ApplicationListFilterInputSLZ",
+    "ApplicationListOutputSLZ",
     # member
     "ApplicationMembershipCreateInputSLZ",
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
+    "ApplicationNameUpdateInputSLZ",
+    "ApplicationTypeOutputSLZ",
+    "DeletedApplicationListOutputSLZ",
+    "ModuleProcessSpecOutputSLZ",
     # process
     "ProcessSpecInputSLZ",
-    "ModuleProcessSpecOutputSLZ",
+    "ServiceListOutputSLZ",
+    "TenantAppStatisticsOutputSLZ",
+    "TenantModeListOutputSLZ",
     # services
     "UnboundServiceInstanceSLZ",
-    "ServiceListOutputSLZ",
 ]

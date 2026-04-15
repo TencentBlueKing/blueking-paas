@@ -24,7 +24,6 @@ import yaml
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.handlers import AppDescriptionHandler, DescriptionHandler
 from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
@@ -125,7 +124,5 @@ def test_app_data_to_desc(random_name, random_tenant_id):
     desc = get_desc_handler(app_data, random_tenant_id).app_desc
     assert desc.name_zh_cn == random_name
     assert desc.code == random_name
-    plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
-    assert plugin
-    assert plugin["data"] == "0.0.1"
+    assert desc.app_version == "0.0.1"
     assert desc.default_module.language == AppLanguage.PYTHON

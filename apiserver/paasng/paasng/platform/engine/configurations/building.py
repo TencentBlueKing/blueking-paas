@@ -117,7 +117,7 @@ def get_build_args(module: "Module") -> str:
     cfg = BuildConfig.objects.get_or_create_by_module(module)
     build_args = cfg.docker_build_args
     if build_args:
-        # 避免 value 有 "," 导致字符分割是异常, 将内容进行 base64 编码
+        # 避免 value 有 "," 导致字符分割时异常, 将内容进行 base64 编码
         return ",".join([base64.b64encode(f"{k}={v}".encode()).decode() for k, v in build_args.items()])
     return ""
 

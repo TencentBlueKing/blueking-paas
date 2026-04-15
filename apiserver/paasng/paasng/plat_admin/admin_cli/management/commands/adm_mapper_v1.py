@@ -104,7 +104,7 @@ class Command(BaseCommand, CommandBasicMixin):
         update_metadata(wl_app, mapper_version="v2")
         try:
             self._upgrade_env(env)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.print(f"Error upgrading: {e}, restore mapper version to v1.")
             update_metadata(wl_app, mapper_version="v1")
 

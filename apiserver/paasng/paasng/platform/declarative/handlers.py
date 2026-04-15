@@ -141,7 +141,11 @@ class CNativeAppDescriptionHandler:
             app_spec_v3.AppDescriptionSLZ,
             app_desc_json,
             instance,
-            context={"app_version": self.json_data.get("appVersion"), "spec_version": AppSpecVersion.VER_3},
+            context={
+                "app_version": self.json_data.get("appVersion"),
+                "spec_version": AppSpecVersion.VER_3,
+                "app_tenant_id": self.app_tenant.app_tenant_id,
+            },
         )
         return app_desc
 
@@ -188,7 +192,11 @@ class AppDescriptionHandler:
             app_spec_v2.AppDescriptionSLZ,
             app_desc_json,
             instance,
-            context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_2},
+            context={
+                "app_version": self.json_data.get("app_version"),
+                "spec_version": AppSpecVersion.VER_2,
+                "app_tenant_id": self.app_tenant.app_tenant_id,
+            },
         )
         return app_desc
 
@@ -331,7 +339,7 @@ def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
     try:
         spec_version = detect_spec_version(desc_data)
     except ValueError as e:
-        raise UnsupportedSpecVer(f'app spec version "{str(e)}" is not supported')
+        raise UnsupportedSpecVer(f'app spec version "{e!s}" is not supported')
 
     match spec_version:
         case AppSpecVersion.VER_2:

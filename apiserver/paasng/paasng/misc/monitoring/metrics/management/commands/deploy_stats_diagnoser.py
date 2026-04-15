@@ -109,16 +109,16 @@ def report_same_host(process_stats: BatchProcessStats):
                 results.append((proc, cstat))
 
     # Print stats to console
-    print()
-    print("> SAME HOST")
-    print('> ("prod" process\'s pods have been assigned to one single same host)')
-    print()
+    print()  # noqa: T201
+    print("> SAME HOST")  # noqa: T201
+    print('> ("prod" process\'s pods have been assigned to one single same host)')  # noqa: T201
+    print()  # noqa: T201
     cols_tmpl = "{0:<20}{1:<8}{2:<18}{3:<18}{4:<14}{5}"
-    print(cols_tmpl.format("App Code", "Env", "Process", "Cluster", "Num of Pods", "Hosts"))
+    print(cols_tmpl.format("App Code", "Env", "Process", "Cluster", "Num of Pods", "Hosts"))  # noqa: T201
     for proc, cstat in results:
         hosts = ",".join(cstat.assigned_hosts)
         num_of_pods = len(cstat.assigned_hosts)
-        print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cstat.cluster_name, num_of_pods, hosts))
+        print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cstat.cluster_name, num_of_pods, hosts))  # noqa: T201
 
 
 def report_mul_clusters(process_stats: BatchProcessStats):
@@ -130,14 +130,14 @@ def report_mul_clusters(process_stats: BatchProcessStats):
             results.append((proc, cluster_names))
 
     # Print stats to console
-    print()
-    print("> MULTIPLE CLUSTERS")
-    print("> (A single process was deployed on multiple clusters)")
-    print()
+    print()  # noqa: T201
+    print("> MULTIPLE CLUSTERS")  # noqa: T201
+    print("> (A single process was deployed on multiple clusters)")  # noqa: T201
+    print()  # noqa: T201
     cols_tmpl = "{0:<20}{1:<8}{2:<18}{3:<18}"
-    print(cols_tmpl.format("App Code", "Env", "Process", "Clusters"))
+    print(cols_tmpl.format("App Code", "Env", "Process", "Clusters"))  # noqa: T201
     for proc, cluster_names in results:
-        print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cluster_names))
+        print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cluster_names))  # noqa: T201
 
 
 @dataclass
@@ -200,14 +200,14 @@ class NodeStateMismatch:
 def report_node_state_mismatch(records: Iterable[NodeMismatchRecord]):
     """Report nodes with wrong state labels"""
     # Print stats to console
-    print()
-    print("> NODE STATE MISMATCH")
-    print("> (Node's state labels does not match records in database)")
-    print()
+    print()  # noqa: T201
+    print("> NODE STATE MISMATCH")  # noqa: T201
+    print("> (Node's state labels does not match records in database)")  # noqa: T201
+    print()  # noqa: T201
     cols_tmpl = "{0:<20}{1:<32}{2:<40}{3:<40}"
-    print(cols_tmpl.format("Cluster", "Node", "Labels(desired)", "Labels(current)"))
+    print(cols_tmpl.format("Cluster", "Node", "Labels(desired)", "Labels(current)"))  # noqa: T201
     for record in records:
-        print(
+        print(  # noqa: T201
             cols_tmpl.format(
                 record.cluster_name,
                 record.node_name,

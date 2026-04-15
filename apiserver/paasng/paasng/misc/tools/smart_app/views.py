@@ -29,9 +29,7 @@ from rest_framework.response import Response
 from paas_wl.utils.blobstore import make_blob_store
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
@@ -52,6 +50,7 @@ from .serializers import (
     ToolPackageStashInputSLZ,
     ToolPackageStashOutputSLZ,
 )
+from .validators import validate_app_desc
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +82,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未在根目录下找到 app_desc.yaml 文件"))
 
             try:
-                app_desc = get_desc_handler(stat.meta_info).app_desc
-                self._validate_app_desc(app_desc)
+                app_code = validate_app_desc(stat.meta_info)
             except DescriptionValidationError as e:
                 raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(str(e))
 
@@ -92,11 +90,11 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 raise error_codes.MISSING_VERSION_INFO.f(_("app_desc.yaml 中缺少了 app version 信息"))
 
             # Store as prepared package for later build
-            PreparedSourcePackage(request, namespace=self._get_store_namespace(app_desc.code)).store(filepath)
+            PreparedSourcePackage(request, namespace=self._get_store_namespace(app_code)).store(filepath)
 
         return Response(
             ToolPackageStashOutputSLZ(
-                {"app_code": app_desc.code, "signature": stat.sha256_signature},
+                {"app_code": app_code, "signature": stat.sha256_signature},
             ).data
         )
 
@@ -214,12 +212,6 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         download_url = store.generate_presigned_url(key=key, expires_in=3600)
 
         return Response(data={"download_url": download_url})
-
-    @staticmethod
-    def _validate_app_desc(app_desc: ApplicationDesc):
-        """校验应用描述文件"""
-        if app_desc.market is None:
-            raise DescriptionValidationError({"market": "内容不能为空"})
 
     @staticmethod
     def _get_store_namespace(app_code: str) -> str:

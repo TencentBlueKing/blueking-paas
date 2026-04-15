@@ -25,12 +25,13 @@ from paasng.platform.sourcectl.package.utils import parse_url
 from paasng.utils.blobstore import StoreType, download_file_from_blob_store
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 def download_file_via_http(target_url: str, local_path: PathLike):
     """从目标地址下载文件到目标位置"""
 
-    resp = requests.get(target_url, stream=True)
+    resp = requests.get(target_url, stream=True, timeout=DEFAULT_TIMEOUT)
     if not (resp.status_code >= 200 and resp.status_code < 300):
         raise ValueError(f"The status code returned by the download link({target_url}) is {resp.status_code}")
 

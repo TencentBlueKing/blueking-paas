@@ -21,10 +21,11 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
+from paasng.platform.applications.serializers import AppIDSMartField
+from paasng.platform.applications.serializers.mixins import AppBasicInfoMixin
 from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.platform.declarative.constants import DiffType
-from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.i18n.serializers import TranslatedCharField
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -53,15 +54,13 @@ class PackageStashRequestSLZ(serializers.Serializer):
         return package
 
 
-@i18n
-class PackageStashConfirmRequestSLZ(serializers.Serializer):
-    """Handle S-mart application confirm after upload"""
+class PackageStashConfirmRequestSLZ(AppBasicInfoMixin):
+    """Handle S-mart application confirm after upload
+
+    继承自 AppBasicInfoMixin，覆盖 code 字段以支持 S-mart 应用的 ID 格式（允许下划线，最大长度 20）
+    """
 
     code = AppIDSMartField()
-    name = I18NExtend(AppNameField())
-    app_tenant_mode = serializers.ChoiceField(
-        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
-    )
 
 
 class PackageStashResponseSLZ(serializers.Serializer):

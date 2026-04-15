@@ -59,7 +59,7 @@ def add_repo_member(plugin: PluginInstance, username: str, role: PluginRole):
     """A shortcut to add member to repo and transform all exception to APIError"""
     try:
         get_plugin_repo_member_maintainer(plugin).add_member(username, role)
-    except Exception:
+    except Exception:  # noqa: BLE001
         raise error_codes.MAINTAIN_REPO_MEMBERS_ERROR
 
 
@@ -67,5 +67,5 @@ def remove_repo_member(plugin: PluginInstance, username: str):
     """A shortcut to remove member of repo and transform all exception to APIError"""
     try:
         get_plugin_repo_member_maintainer(plugin).remove_member(username)
-    except Exception:
+    except Exception:  # noqa: BLE001
         raise error_codes.MAINTAIN_REPO_MEMBERS_ERROR

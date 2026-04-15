@@ -50,4 +50,4 @@ class ProcessesSnapshotStore:
         val = self.redis_db.get(self.rkey)
         if val is None:
             return None
-        return pickle.loads(val)
+        return pickle.loads(val)  # noqa: S301

@@ -112,6 +112,37 @@ def test_get_service_remote_endpoints(settings):
     assert eps[0]["name"] == "svc_rabbitmq"
 
 
+def test_get_service_remote_endpoints_extra_services_merge_provision_params(settings):
+    """Extra service's provision_params_tmpl should be merged with the template's."""
+    settings.update(
+        {
+            NAME_FOR_SIMPLE_JWT: "xus9fe15",
+            "RSVC_BUNDLE_MYSQL_ENDPOINT_URL": "http://svc-mysql-web/",
+            "RSVC_BUNDLE_EXTRA_SERVICES": [
+                {
+                    "name": "redis_remote",
+                    "endpoint_url": "http://svc-redis-web/",
+                    "provision_params_tmpl": {
+                        "egress_info": "{cluster_info.egress_info_json}",
+                    },
+                    "prefer_async_delete": False,
+                    "is_ready": False,
+                },
+            ],
+        }
+    )
+    eps = get_service_remote_endpoints(settings)
+    # mysql + redis_remote
+    assert len(eps) == 2
+    assert eps[0]["name"] == "mysql_remote"
+
+    redis_ep = eps[1]
+    assert redis_ep["name"] == "redis_remote"
+    assert redis_ep["endpoint_url"] == "http://svc-redis-web/"
+    assert redis_ep["prefer_async_delete"] is False
+    assert redis_ep["is_ready"] is False
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [

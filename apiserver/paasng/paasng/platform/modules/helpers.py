@@ -237,7 +237,7 @@ class ModuleRuntimeManager:
         except AppSlugRunner.DoesNotExist:
             logger.warning("failed to get slug runner, maybe not bind")
             return False
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("failed to get right runner and right label")
             return False
 
@@ -251,7 +251,7 @@ class ModuleRuntimeManager:
             return True
         try:
             return not str2bool(runner.get_label(self.HTTP_SUPPORTED_LABEL))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return True
 
     @property
@@ -264,7 +264,7 @@ class ModuleRuntimeManager:
             return False
         try:
             return str2bool(runner.get_label(self.CNB_LABEL))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     @overload

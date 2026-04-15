@@ -161,8 +161,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						Env:             envVars,
 						Name:            "hook",
 						ImagePullPolicy: bkapp.Spec.Build.ImagePullPolicy,
-						// pre-hook 使用默认资源配置
-						Resources: envs.NewProcResourcesGetter(bkapp).Default(),
+						Resources:       envs.NewProcResourcesGetter(bkapp).DefaultForPreReleaseHook(),
 					},
 				},
 				RestartPolicy: "Never",

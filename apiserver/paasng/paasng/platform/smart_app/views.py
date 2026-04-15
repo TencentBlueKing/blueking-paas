@@ -38,6 +38,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.accessories.servicehub.exceptions import BindServicePlanError
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -101,13 +102,18 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
             request.user, slz.validated_data["app_tenant_mode"]
         )
+        app_tenant_info = AppTenantInfo(
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant.id,
+        )
 
         with generate_temp_dir() as download_dir:
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
 
-            original_app_desc = get_app_description(stat)
+            original_app_desc = get_app_description(stat, app_tenant_info)
             app_desc = self.validate_and_prepare_app_desc(original_app_desc, app_tenant_id)
 
             if not stat.version:
@@ -118,7 +124,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
         logger.debug("[S-Mart] fetching remote services by region.")
         supported_services = list(mixed_service_mgr.list_visible())
-        supported_services = cast(List[ServiceObj], supported_services)
+        supported_services = cast("List[ServiceObj]", supported_services)
 
         return Response(
             data=PackageStashResponseSLZ(
@@ -137,12 +143,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 S-Mart 应用"))
 
-        slz = PackageStashConfirmRequestSLZ(data=request.data)
+        slz = PackageStashConfirmRequestSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
-
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request.user, slz.validated_data["app_tenant_mode"]
-        )
+        validated_data = slz.validated_data
+        app_tenant_info = validated_data["app_tenant_info"]
 
         with generate_temp_dir() as download_dir:
             # Step 1. retrieve package(tarball)
@@ -160,20 +164,14 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
-            original_app_desc = get_app_description(stat)
+            original_app_desc = get_app_description(stat, app_tenant_info)
 
             # 替换成实际待创建的应用信息
             stat.meta_info = update_meta_info(
                 stat.meta_info,
-                app_code=slz.validated_data["code"],
-                app_name=slz.validated_data["name_zh_cn"],
+                app_code=validated_data["code"],
+                app_name=validated_data["name_zh_cn"],
             )
-            # 租户信息放到单独的字段中，不会干扰应用描述文件字段
-            stat.meta_info["tenant"] = {
-                "app_tenant_mode": app_tenant_mode,
-                "app_tenant_id": app_tenant_id,
-                "tenant_id": tenant.id,
-            }
 
             handler = get_desc_handler(stat.meta_info)
             with atomic():
@@ -266,10 +264,15 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         if not application.modules.filter(id=package.module_id).exists():
             raise Http404("Package Not Found.")
 
+        app_tenant_info = AppTenantInfo(
+            app_tenant_mode=application.app_tenant_mode,
+            app_tenant_id=application.app_tenant_id,
+            tenant_id=application.tenant_id,
+        )
         with generate_temp_file() as file_path:
             download_package(package, dest_path=file_path)
             stat = SourcePackageStatReader(file_path).read()
-            app_desc = get_app_description(stat)
+            app_desc = get_app_description(stat, app_tenant_info)
         return Response(data=AppDescriptionSLZ(app_desc).data)
 
     @staticmethod
@@ -310,12 +313,18 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         slz.is_valid(raise_exception=True)
         package_fp = slz.validated_data["package"]
 
+        app_tenant_info = AppTenantInfo(
+            app_tenant_mode=application.app_tenant_mode,
+            app_tenant_id=application.app_tenant_id,
+            tenant_id=application.tenant_id,
+        )
+
         with generate_temp_dir() as download_dir:
             filepath = get_filepath(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
 
-            original_app_description = get_app_description(stat)
+            original_app_description = get_app_description(stat, app_tenant_info)
             app_desc = self.validate_and_prepare_app_desc(original_app_description, application)
 
             if not stat.version:

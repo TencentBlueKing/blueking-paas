@@ -42,15 +42,15 @@ class Command(BaseCommand):
                 timedelta = now - arrow.get(pod.metadata.creationTimestamp).datetime
                 if timedelta.total_seconds() > timeout:
                     # do delete operation
-                    print(f"{pod.metadata.name} had started more than one hour, going to delete it")
+                    print(f"{pod.metadata.name} had started more than one hour, going to delete it")  # noqa: T201
                     timeout_count += 1
 
                     if dry_run:
-                        print("DRY-RUN: cleaned !")
+                        print("DRY-RUN: cleaned !")  # noqa: T201
                         continue
                     # there is no delete method available in scheduler client
                     # use k8s API directly
                     KPod(client).delete(name=pod.metadata.name, namespace=pod.metadata.namespace)
-                    print("cleaned !")
+                    print("cleaned !")  # noqa: T201
 
-            print(f"{cluster_name} has {timeout_count} timeout pods, cleaned\n")
+            print(f"{cluster_name} has {timeout_count} timeout pods, cleaned\n")  # noqa: T201

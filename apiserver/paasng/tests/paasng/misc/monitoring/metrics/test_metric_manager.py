@@ -16,8 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
-from collections import namedtuple
-from typing import List
+from typing import List, NamedTuple
 from unittest.mock import Mock, patch
 
 import pytest
@@ -83,7 +82,9 @@ class TestResourceMetricManager:
 
     def test_exception_gen_series_query(self, metric_client):
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id="")
-        FakeResponse = namedtuple("FakeResponse", "status_code")
+
+        class FakeResponse(NamedTuple):
+            status_code: int
 
         query_range_mock = Mock(side_effect=RequestMetricBackendError(FakeResponse(status_code=400)))
         with patch("paasng.misc.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):

@@ -18,4 +18,4 @@
 from .app_build import mark_as_latest_artifact
 from .app_metadata import WlAppMetadata, get_metadata, update_metadata
 
-__all__ = ["WlAppMetadata", "get_metadata", "update_metadata", "mark_as_latest_artifact"]
+__all__ = ["WlAppMetadata", "get_metadata", "mark_as_latest_artifact", "update_metadata"]

@@ -17,16 +17,57 @@
  */
 
 /**
- * @file 首页告警情况 echarts 图表配置
+ * @file 首页图表 echarts 配置（兼容 echarts 3.x）
  */
 
-export default function (data, color) {
-  // 判断是否为空
+export default function (data, color, options = {}) {
   const allZero = data.every((d) => d.value === 0);
-  const legendIcons = [
-    `image://${require('@static/images/circle-home1.svg')}`,
-    `image://${require('@static/images/circle-home2.svg')}`,
-  ];
+  const { zeroPieColor } = options;
+
+  // 为每项数据设置独立的 label 配置，emphasis 时 value 颜色跟随数据项 color
+  const seriesData = data.map((item) => {
+    const pieColor = (allZero && zeroPieColor) ? zeroPieColor : (item.itemStyle?.color || item.color);
+    return {
+      value: item.value,
+      name: item.name,
+      colorType: item.colorType,
+      color: item.color,
+      itemStyle: { normal: { color: pieColor } },
+      label: {
+        normal: {
+          show: false,
+          position: 'center',
+        },
+        emphasis: {
+          show: true,
+          formatter: `{value|${item.value}}\n{name|${item.name}}`,
+          textStyle: {
+            align: 'center',
+            verticalAlign: 'middle',
+            rich: {
+              value: {
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: item.color || '#313238',
+                align: 'center',
+                lineHeight: 40,
+              },
+              name: {
+                fontSize: 12,
+                color: '#63656E',
+                align: 'center',
+              },
+            },
+          },
+        },
+      },
+      labelLine: {
+        normal: { show: false },
+        emphasis: { show: false },
+      },
+    };
+  });
+
   return {
     tooltip: {
       trigger: 'item',
@@ -41,74 +82,36 @@ export default function (data, color) {
       itemHeight: 10,
       itemWidth: 10,
       selectedMode: false,
-      data: data.map((item, index) => ({
-        name: item.name,
-        icon: allZero ? legendIcons[index] : 'circle',
-        textStyle: {
-          color: '#63656E',
-          fontSize: 12,
-          padding: [3, 0, 0, 0],
-        },
-      })),
+      data: data.map((item) => {
+        const svgCircle = `image://data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='5' fill='${encodeURIComponent(item.color)}'/%3E%3C/svg%3E`;
+        return {
+          name: item.name,
+          icon: svgCircle,
+          textStyle: {
+            color: '#63656E',
+            fontSize: 12,
+            padding: [3, 0, 0, 0],
+          },
+        };
+      }),
       formatter(name) {
         const item = data.find((d) => d.name === name);
         return `${name}：${item.value}`;
       },
     },
-    color: allZero ? ['#B5E0AB'] : color,
+    color: color,
     series: [
       {
         type: 'pie',
         center: ['40%', '50%'],
         radius: ['50', '66'],
         avoidLabelOverlap: false,
-        label: {
-          normal: {
-            show: false,
-            position: 'center',
-            formatter: '',
-          },
-          emphasis: {
-            show: true,
-            formatter: (params) => {
-              const valueTag = params.data.colorType === 'high' ? 'valueHigh' : 'valueLow';
-              return `{${valueTag}|${params.value}}\n{name|${params.name}}`;
-            },
-            textStyle: {
-              align: 'center',
-              verticalAlign: 'middle',
-              rich: {
-                valueHigh: {
-                  fontSize: 28,
-                  fontWeight: 'bold',
-                  color: '#EA3636', // 红色
-                  align: 'center',
-                  lineHeight: 40,
-                },
-                valueLow: {
-                  fontSize: 28,
-                  fontWeight: 'bold',
-                  color: '#313238',
-                  align: 'center',
-                  lineHeight: 40,
-                },
-                name: {
-                  fontSize: 12,
-                  color: '#63656E',
-                  align: 'center',
-                },
-              },
-            },
-          },
-        },
         labelLine: {
-          normal: {
-            show: false,
-          },
+          normal: { show: false },
+          emphasis: { show: false },
         },
-        // 当数据为0时，不进行动画（不缩放）
         hoverAnimation: !allZero,
-        data,
+        data: seriesData,
       },
     ],
   };

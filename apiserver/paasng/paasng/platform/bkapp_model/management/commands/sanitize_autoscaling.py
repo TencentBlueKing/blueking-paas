@@ -45,39 +45,39 @@ class Command(BaseCommand):
         raise RuntimeError("Invalid action")
 
     def handle_update(self):
-        print("Start updating ProcessSpec model...")
+        print("Start updating ProcessSpec model...")  # noqa: T201
         for obj in ProcessSpec.objects.all():
             if c := obj.scaling_config:
                 obj.scaling_config = self.sanitize_config(c)
                 obj.save(update_fields=["scaling_config"])
 
-        print("Start updating ModuleProcessSpec model...")
+        print("Start updating ModuleProcessSpec model...")  # noqa: T201
         for module_spec in ModuleProcessSpec.objects.all():
             if c := module_spec.scaling_config:
                 module_spec.scaling_config = self.sanitize_config(c)
                 module_spec.save(update_fields=["scaling_config"])
 
-        print("Start updating ProcessSpecEnvOverlay model...")
+        print("Start updating ProcessSpecEnvOverlay model...")  # noqa: T201
         for overlay_spec in ProcessSpecEnvOverlay.objects.all():
             if c := overlay_spec.scaling_config:
                 overlay_spec.scaling_config = self.sanitize_config(c)
                 overlay_spec.save(update_fields=["scaling_config"])
 
     def handle_display(self):
-        print("> ProcessSpec model:")
+        print("> ProcessSpec model:")  # noqa: T201
         for obj in ProcessSpec.objects.all():
             if obj.scaling_config:
-                print(obj.scaling_config)
+                print(obj.scaling_config)  # noqa: T201
 
-        print("> ModuleProcessSpec model:")
+        print("> ModuleProcessSpec model:")  # noqa: T201
         for module_spec in ModuleProcessSpec.objects.all():
             if module_spec.scaling_config:
-                print(module_spec.scaling_config)
+                print(module_spec.scaling_config)  # noqa: T201
 
-        print("> ProcessSpecEnvOverlay model:")
+        print("> ProcessSpecEnvOverlay model:")  # noqa: T201
         for overlay_spec in ProcessSpecEnvOverlay.objects.all():
             if overlay_spec.scaling_config:
-                print(overlay_spec.scaling_config)
+                print(overlay_spec.scaling_config)  # noqa: T201
 
     @staticmethod
     def sanitize_config(c: Dict):

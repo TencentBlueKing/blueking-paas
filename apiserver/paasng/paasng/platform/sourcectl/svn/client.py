@@ -231,7 +231,7 @@ class SvnRepositoryClient:
             # Will raise svn: E200009 is file does not exists
             if "svn: E200009" not in str(e):
                 raise
-            raise ReadFileNotFoundError()
+            raise ReadFileNotFoundError
 
     def export(self, subdir, local_path, revision=None):
         """Export contents in a subdir to local_path
@@ -370,7 +370,7 @@ class SvnRepositoryClient:
 
         :returns: a dict with extra info including revision number
         """
-        ver, rel_path = svn_version_types.parse_smart_revision_str(smart_revision)
+        _ver, rel_path = svn_version_types.parse_smart_revision_str(smart_revision)
         try:
             result = self.rclient.info(rel_path=rel_path)
         except SvnException:

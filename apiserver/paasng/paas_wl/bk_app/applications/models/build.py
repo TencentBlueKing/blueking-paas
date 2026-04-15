@@ -156,7 +156,7 @@ class Build(UuidAuditedModel):
         """从 image 字段分割出 repository 属性"""
         if not self.image:
             return None
-        repository, _, tag = self.image.partition(":")
+        repository, _, _tag = self.image.partition(":")
         return repository
 
     @property
@@ -195,7 +195,7 @@ class Build(UuidAuditedModel):
                 password=image_registry.password,
             )
             image = parse_image(self.image, default_registry=image_registry.host)
-            ref = ManifestRef(repo=image.name, reference=cast(str, image.tag), client=registry_client)
+            ref = ManifestRef(repo=image.name, reference=cast("str", image.tag), client=registry_client)
 
             metadata = None
             try:

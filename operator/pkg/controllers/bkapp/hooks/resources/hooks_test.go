@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/config"
 )
 
 var _ = Describe("HookUtils", func() {
@@ -106,10 +105,8 @@ var _ = Describe("HookUtils", func() {
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))
 			// 容器资源配额
 			hookRes := hook.Pod.Spec.Containers[0].Resources
-			Expect(hookRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimit()))
-			Expect(
-				hookRes.Limits.Memory().String(),
-			).To(Equal(config.Global.GetProcDefaultMemLimit()))
+			Expect(hookRes.Limits.Cpu().String()).To(Equal("4"))
+			Expect(hookRes.Limits.Memory().String()).To(Equal("2Gi"))
 
 			// 镜像拉取密钥
 			Expect(

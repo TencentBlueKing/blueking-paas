@@ -273,8 +273,8 @@ class AuthUserAdaptor:
 
         user = self.model(
             username=username,
-            chname=auth_user.chinese_name if auth_user.chinese_name else "",
-            email=auth_user.email if auth_user.email else "",
+            chname=auth_user.chinese_name or "",
+            email=auth_user.email or "",
             is_staff=auth_user.is_staff,
             is_superuser=auth_user.is_superuser,
             last_login=datetime.datetime.now(),
@@ -347,7 +347,7 @@ class AppDeveloperAdaptor:
 
     def _create_developer_by_username(self, username: str) -> "legacy_models.LUser":
         """根据用户名创建一个 console 的 developer 对象"""
-        developer_obj, created = AuthUserAdaptor(self.session).get_or_create(username)
+        developer_obj, _created = AuthUserAdaptor(self.session).get_or_create(username)
         return developer_obj
 
     def _get_developer_objs_by_usernames(self, usernames: set) -> List["legacy_models.LUser"]:
@@ -359,7 +359,7 @@ class AppDeveloperAdaptor:
         found_developers_usernames = [developer.auth_user.username for developer in bk_users]
         need_add_developers = set(usernames) - set(found_developers_usernames)
         for username in need_add_developers:
-            developer_obj, created = AuthUserAdaptor(self.session).get_or_create(username)
+            developer_obj, _created = AuthUserAdaptor(self.session).get_or_create(username)
             bk_users.append(developer_obj)
         return bk_users
 

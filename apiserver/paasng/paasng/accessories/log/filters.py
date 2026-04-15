@@ -177,7 +177,7 @@ class ESFilter:
 
 
 tmpl_converters = {
-    "@json": lambda v: json.loads(v),
+    "@json": json.loads,
     "@jinja": lambda v, context: safe_jinja2.Template(v).render(**context),
 }
 

@@ -30,6 +30,10 @@ class SandboxAlreadyExists(SandboxError):
 class SandboxCreateError(SandboxError):
     """Raised when creating a sandbox fails."""
 
+    def __init__(self, message: str, logs: str | None = None):
+        super().__init__(message)
+        self.logs = logs
+
 
 class SandboxFileError(SandboxError):
     """Raised when file operations in the sandbox fail."""
@@ -39,5 +43,13 @@ class SandboxExecError(SandboxError):
     """Raised when executing a command in the sandbox fails."""
 
 
+class SandboxServiceNotReady(SandboxError):
+    """Raised when the sandbox daemon service is not ready (e.g., 502 Bad Gateway)."""
+
+
 class SandboxDaemonAPIError(Exception):
     """Raised when the sandbox daemon API returns an error."""
+
+
+class ImageBuildSourceError(SandboxError):
+    """Raised when preparing image build source fails (e.g. missing Dockerfile)."""

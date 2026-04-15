@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from functools import partial
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Self, Type
 
 import cattr
 from pydantic import BaseModel
@@ -40,9 +40,6 @@ def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool
 prepare_json_field = register
 
 
-T = TypeVar("T")
-
-
 class NotSetType:
     """A simple type representing an absent value, can be used with pydantic model."""
 
@@ -52,10 +49,10 @@ class NotSetType:
     def __bool__(self) -> bool:
         return False
 
-    def __copy__(self: T) -> T:
+    def __copy__(self) -> Self:
         return self
 
-    def __deepcopy__(self: T, _: Any) -> T:
+    def __deepcopy__(self, _: Any) -> Self:
         return self
 
     def dict(self, *args, **kwargs):

@@ -51,7 +51,7 @@ def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
     label does not exists, so the only way is extracting process_type from resource name.
     """
     try:
-        return name.split(namespace)[-1].split("-")[1]
+        return name.rsplit(namespace, maxsplit=1)[-1].split("-")[1]
     except IndexError:
         return None
 

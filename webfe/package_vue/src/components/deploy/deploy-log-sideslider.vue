@@ -13,7 +13,7 @@
       <div style="float: left">
         <template v-if="isMultiTenantDisplayMode">
           <span>{{ historySideslider.titlePrefix }}</span>
-          <bk-user-display-name :user-id="historySideslider.operator"></bk-user-display-name>
+          <UserDisplay :value="historySideslider.operator" />
           <span>{{ historySideslider.titleSuffix }}</span>
         </template>
         <span v-else>{{ historySideslider.title }}</span>
@@ -85,11 +85,13 @@
 
 <script>
 import deployTimeline from './deploy-timeline';
+import UserDisplay from '@/components/user/user-display.vue';
 import { mapGetters } from 'vuex';
 
 export default {
   components: {
     deployTimeline,
+    UserDisplay,
   },
   props: {
     appCode: {

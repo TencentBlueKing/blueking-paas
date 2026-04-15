@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from attr import define, field
 from six import ensure_text
@@ -27,8 +27,10 @@ from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadT
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
-from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.platform.engine.utils.output import DeployStream, Style
+
+if TYPE_CHECKING:
+    from paas_wl.workloads.release_controller.hooks.models import Command
 
 logger = logging.getLogger(__name__)
 

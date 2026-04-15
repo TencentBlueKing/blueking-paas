@@ -31,6 +31,12 @@ class ClusterType(StrStructuredEnum):
     VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
 
 
+class ClusterUsage(StrStructuredEnum):
+    """集群用途"""
+
+    AGENT_SANDBOX = EnumField("agent_sandbox", label=_("AI Agent 沙箱"))
+
+
 LOG_COLLECTOR_TYPE_BK_LOG = "BK_LOG"
 BK_LOG_DEFAULT_ENABLED = settings.LOG_COLLECTOR_TYPE == LOG_COLLECTOR_TYPE_BK_LOG
 

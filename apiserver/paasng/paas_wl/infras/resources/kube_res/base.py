@@ -221,7 +221,7 @@ class EntityTransformerPicker(Generic[T]):
 
         raise APIServerVersionIncompatible(
             f"No results can be found for {type(self).__name__}, "
-            f"api versions: {str(self.transformer_mappings.keys())}, "
+            f"api versions: {self.transformer_mappings.keys()!s}, "
             f"gvk_config: {gvk_config}"
         )
 

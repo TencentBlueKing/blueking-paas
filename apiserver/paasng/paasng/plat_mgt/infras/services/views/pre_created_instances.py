@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -30,6 +31,7 @@ from paasng.plat_mgt.infras.services.serializers import (
     PreCreatedInstanceOutputSLZ,
     PreCreatedInstanceUpsertSLZ,
 )
+from paasng.utils.error_codes import error_codes
 
 
 class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
@@ -125,6 +127,9 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
+        if instance.is_allocated:
+            raise error_codes.UNSUPPORTED_OPERATION.f(_("该实例已被分配，无法删除"))
+
         data_before = PreCreatedInstanceOutputSLZ(instance).data
         instance.delete()
 

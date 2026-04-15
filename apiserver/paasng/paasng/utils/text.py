@@ -40,7 +40,7 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
 RE_TAG = re.compile("<.*?>")
 
 
-def strip_html_tags(s: str, reserved_tags: Collection[str] | None = None) -> str:  # noqa: B006
+def strip_html_tags(s: str, reserved_tags: Collection[str] | None = None) -> str:
     """Remove all HTML tags in string except those matching `reserved_tags`.
 
     :param reserved_tags: Tags were reserved from removing, default to []
@@ -140,13 +140,13 @@ class BraceOnlyTemplate(string.Template):
 
     delim = delimiter
     # The identifier is copied from `string.Template`
-    id = r"(?a:[_a-z][_a-z0-9]*)"
+    id_pattern = r"(?a:[_a-z][_a-z0-9]*)"
 
     # "named" and "braced" patterns are modified
     pattern = rf"""
         {delim}(?:
             (?P<escaped>{delim})  |   # Escape sequence of two delimiters
-            (?P<named>{id})}}     |   # delimiter and a Python identifier, **modified to ends with a bracket**
+            (?P<named>{id_pattern})}}     |   # delimiter and a Python identifier, **modified to ends with a bracket**
             (?P<braced>\b\B)      |   # delimiter and a braced identifier, **modified to never match anything**
             (?P<invalid>)             # Other ill-formed delimiter exprs
         )

@@ -54,6 +54,31 @@ DEFAULT_RULE_CONFIGS = {
         "metric_label_names": ["vhost"],
         "threshold_expr": ">= 2000",  # 超过 2000 条
     },
+    AlertCode.RABBITMQ_INSTANCE_DOWN.value: {
+        "display_name": _("RabbitMQ 实例状态异常"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": "!= 1",  # 实例状态异常
+    },
+    AlertCode.HIGH_RABBITMQ_DLX_QUEUE_MESSAGES.value: {
+        "display_name": _("DLX 队列消息数过多"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": ">= 50000",  # 超过 50000 条
+    },
+    AlertCode.HIGH_RABBITMQ_QUEUES_USAGE.value: {
+        "display_name": _("RabbitMQ 队列数使用率过高"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": ">= 0.95",  # 使用率 95%
+    },
+    AlertCode.HIGH_RABBITMQ_CONNECTIONS_USAGE.value: {
+        "display_name": _("RabbitMQ 连接数使用率过高"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": ">= 0.95",  # 使用率 95%
+    },
+    AlertCode.HIGH_RABBITMQ_QUEUE_USAGE.value: {
+        "display_name": _("RabbitMQ 队列消息使用率过高"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": "> 0.7",  # 使用率 70%
+    },
     AlertCode.HIGH_BKREPO_QUOTA_USAGE.value: {
         "display_name": _("BKREPO 存储使用量过高"),
         "metric_label_names": ["bkrepo_private_bucket", "bkrepo_public_bucket"],

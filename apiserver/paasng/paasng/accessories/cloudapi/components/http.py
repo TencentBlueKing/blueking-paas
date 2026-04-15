@@ -32,11 +32,13 @@ import requests
 import paasng.utils.masked_curlify as curlify
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 def _http_request(method: str, url: str, **kwargs) -> Tuple[bool, Union[None, dict, list]]:
+    timeout = kwargs.pop("timeout", DEFAULT_TIMEOUT)
     try:
-        resp = requests.request(method, url, **kwargs)
+        resp = requests.request(method, url, timeout=timeout, **kwargs)
     except requests.exceptions.RequestException:
         logger.exception("http request error! method: %s, url: %s, kwargs: %s", method, url, kwargs)
         return False, None

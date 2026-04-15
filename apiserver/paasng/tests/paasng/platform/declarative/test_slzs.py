@@ -34,7 +34,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 def get_app_description(slz_class, app_json: Dict) -> ApplicationDesc:
     """A help tool get parse the application json data, describe at app_desc.yml::app to ApplicationDesc"""
-    desc = validate_desc(slz_class, app_json, instance=None)
+    desc = validate_desc(slz_class, app_json, instance=None, context={"app_tenant_id": ""})
     return desc
 
 

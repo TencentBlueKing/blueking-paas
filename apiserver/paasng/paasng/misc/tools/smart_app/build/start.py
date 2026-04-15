@@ -161,7 +161,7 @@ class SmartBuildTaskRunner:
         blob_store = make_blob_store(self._context.artifact_bucket)
         try:
             return blob_store.get_file_metadata(artifact_key) is not None
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     def _skip_build_with_cached_artifact(self):

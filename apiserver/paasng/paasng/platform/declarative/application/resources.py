@@ -29,7 +29,6 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.basic import AllowOmittedModel
 from paasng.platform.declarative.constants import (
     OMITTED_VALUE,
-    AppDescPluginType,
     AppSpecVersion,
     DiffType,
     OmittedType,
@@ -112,8 +111,7 @@ class ApplicationDesc(BaseModel):
     market: Optional[MarketDesc] = None
     modules: Dict[str, ModuleDesc] = Field(default_factory=dict, description="该应用的模块")
 
-    # Store extra plugins, such as version number of S-Mart application
-    plugins: List[Dict] = Field(default_factory=list)
+    app_version: Optional[str] = Field(None, description="S-Mart 应用版本号")
     # whether the application instance exists
     instance_existed: bool = False
 
@@ -123,10 +121,3 @@ class ApplicationDesc(BaseModel):
             return next(filter(lambda m: m.is_default, self.modules.values()))
         except StopIteration:
             raise RuntimeError(_("当前应用未定义主模块"))
-
-    def get_plugin(self, plugin_type: AppDescPluginType) -> Optional[Dict]:
-        """Return the first plugin in given type"""
-        for plugin in self.plugins:
-            if plugin["type"] == plugin_type:
-                return plugin
-        return None

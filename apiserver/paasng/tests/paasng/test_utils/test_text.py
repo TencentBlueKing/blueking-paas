@@ -146,5 +146,5 @@ class Test__basic_str_format:
         assert basic_str_format("Hello {name}!", {"name": "foo"}) == "Hello foo!"
 
     def test_index_access_should_fail(self):
-        with pytest.raises(ValueError, match="Invalid placeholder .*"):
+        with pytest.raises(ValueError, match=r"Invalid placeholder .*"):
             basic_str_format("Hello {names[0]}!", {"names": "foobar"})

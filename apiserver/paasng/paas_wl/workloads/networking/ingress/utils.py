@@ -44,7 +44,7 @@ def parse_process_type(app: WlApp, service_name: str) -> str:
     :raise ValueError: When given service_name is not parsable.
     """
     if app.type == WlAppType.CLOUD_NATIVE:
-        return service_name.rsplit("--")[-1]
+        return service_name.rsplit("--", maxsplit=1)[-1]
     parts = service_name.split(app.scheduler_safe_name)
     if len(parts) == 1:
         raise ValueError(f'Service name "{service_name}" invalid')
@@ -68,7 +68,7 @@ def guess_default_service_name(app: WlApp) -> str:
     if "web" in get_structure(app):
         return make_service_name(app, "web")
     # Pick a random process type for generating service name
-    return make_service_name(app, list(get_structure(app).keys())[0])
+    return make_service_name(app, next(iter(get_structure(app).keys())))
 
 
 def get_main_process_service_name(app: WlApp) -> str:

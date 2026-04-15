@@ -13,12 +13,13 @@
         </bk-button>
       </div>
     </section>
-    <div class="app-overview-container">
+    <!-- 开启监控 -->
+    <div
+      class="app-overview-container"
+      v-if="platformFeature.MONITORING"
+    >
       <!-- 告警情况 -->
-      <div
-        class="alarm-status card-style chart-box"
-        v-if="platformFeature.MONITORING"
-      >
+      <div class="alarm-status card-style chart-box">
         <div class="card-title chart-title">
           {{ $t('告警情况') }}
         </div>
@@ -31,7 +32,12 @@
           class="default-text"
           v-if="isAlarmLabel"
         >
-          <p :class="['vlaue', { high: alarmDefaultLabel.colorType === 'high' }]">{{ alarmDefaultLabel.value }}</p>
+          <p
+            class="vlaue"
+            :style="{ color: alarmDefaultLabel.color }"
+          >
+            {{ alarmDefaultLabel.value }}
+          </p>
           <p class="name">{{ alarmDefaultLabel.name }}</p>
         </div>
         <div class="date-change-box">
@@ -50,10 +56,6 @@
             ></bk-option>
           </bk-select>
         </div>
-        <!-- <div
-          class="chart-el chart-alert"
-          v-charts="alertChartOption"
-        ></div> -->
       </div>
       <!-- 应用情况 -->
       <div class="app-status card-style chart-box">
@@ -76,20 +78,67 @@
           class="default-text"
           v-if="isAppLabel"
         >
-          <p :class="['vlaue', { high: appDefaultLabel.colorType === 'high' }]">{{ appDefaultLabel.value }}</p>
+          <p
+            class="vlaue"
+            :style="{ color: appDefaultLabel.color }"
+          >
+            {{ appDefaultLabel.value }}
+          </p>
           <p class="name">{{ appDefaultLabel.name }}</p>
         </div>
       </div>
-      <!-- 运维开发分 -->
-      <!-- <div class="ops-dev-score card-style">
-        <p class="card-title">运维开发分</p>
-        <div class="info">
-          <div>
-            <span class="fraction">90</span>
-            <span class="ml5">分</span>
-          </div>
+    </div>
+    <!-- 未开启监控：应用类型、应用状态 -->
+    <div
+      class="app-overview-container"
+      v-else
+    >
+      <!-- 应用类型 -->
+      <div class="app-type card-style chart-box">
+        <div class="card-title chart-title">
+          {{ $t('应用类型') }}
         </div>
-      </div> -->
+        <chart
+          style="width: 450px; height: 200px"
+          id="chart-app-type"
+          class="chart-el"
+        ></chart>
+        <div
+          class="default-text"
+          v-if="isAppTypeLabel"
+        >
+          <p
+            class="vlaue"
+            :style="{ color: appTypeDefaultLabel.color }"
+          >
+            {{ appTypeDefaultLabel.value }}
+          </p>
+          <p class="name">{{ appTypeDefaultLabel.name }}</p>
+        </div>
+      </div>
+      <!-- 应用状态 -->
+      <div class="app-deploy-status card-style chart-box">
+        <div class="card-title chart-title">
+          {{ $t('应用状态') }}
+        </div>
+        <chart
+          style="width: 450px; height: 200px"
+          id="chart-app-deploy-status"
+          class="chart-el"
+        ></chart>
+        <div
+          class="default-text"
+          v-if="isAppDeployStatusLabel"
+        >
+          <p
+            class="vlaue"
+            :style="{ color: appDeployStatusDefaultLabel.color }"
+          >
+            {{ appDeployStatusDefaultLabel.value }}
+          </p>
+          <p class="name">{{ appDeployStatusDefaultLabel.name }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -98,8 +147,29 @@
 import alertChartOption from '@/json/home-page-chart-option';
 import { formatDate } from '@/common/tools';
 import { bus } from '@/common/bus';
+import { mapState } from 'vuex';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import echarts from 'echarts';
+
+// 图表配置映射表
+const CHART_CONFIG = {
+  alarm: { id: 'alarm-status', labelKey: 'isAlarmLabel' },
+  app: { id: 'chart-app-status', labelKey: 'isAppLabel' },
+  appType: { id: 'chart-app-type', labelKey: 'isAppTypeLabel' },
+  appDeployStatus: { id: 'chart-app-deploy-status', labelKey: 'isAppDeployStatusLabel' },
+};
+
+// 应用类型配置
+const APP_TYPE_CONFIG = {
+  order: ['default', 'cloud_native', 'engineless_app'],
+  colorMap: { cloud_native: '#85CCA8', default: '#3E96C2', engineless_app: '#FFA66B' },
+};
+
+// 应用状态配置
+const APP_STATUS_CONFIG = {
+  order: ['normal', 'not_deployed', 'offline'],
+  colorMap: { normal: '#85CCA8', not_deployed: '#FFA66B', offline: '#DCDEE5' },
+};
 
 export default {
   name: 'HomeAppOverview',
@@ -108,10 +178,7 @@ export default {
   },
   data() {
     return {
-      chartAppInfo: {
-        total: 0,
-        issueCount: 0,
-      },
+      chartAppInfo: { total: 0, issueCount: 0 },
       curDate: 1,
       dateList: [
         { label: `1 ${this.$t('天')}`, id: 1 },
@@ -120,143 +187,214 @@ export default {
         { label: `1 ${this.$t('个月')}`, id: 30 },
       ],
       curSelectionTime: this.getSpecifiedDate(1),
-      appChart: null,
-      alarmChart: null,
-      // 应用情况默认值
-      isAppLabel: true,
-      // 告警情况默认显示控制
+      // 图表实例
+      chartInstances: {},
+      // 中心文字显示控制
       isAlarmLabel: true,
+      isAppLabel: true,
+      isAppTypeLabel: true,
+      isAppDeployStatusLabel: true,
     };
   },
   computed: {
-    appChartInfo() {
-      return this.$store.state.baseInfo.appChartData;
-    },
-    alarmChartData() {
-      return this.$store.state.baseInfo.alarmChartData;
-    },
+    ...mapState(['platformFeature']),
+    ...mapState('baseInfo', {
+      appChartInfo: 'appChartData',
+      alarmChartData: 'alarmChartData',
+      statisticsData: 'statisticsData',
+    }),
     homeAlarmData() {
-      const totalCount = this.alarmChartData.count;
-      const slowQueryCount = this.alarmChartData.slowQueryCount;
-      const data = [
-        {
-          value: slowQueryCount,
-          name: this.$t('慢查询告警数'),
-          type: 'alarm',
-          colorType: 'high',
-          color: '#F5876C',
-        },
-        {
-          value: totalCount - slowQueryCount,
-          name: totalCount === 0 || slowQueryCount === 0 ? this.$t('总告警数') : this.$t('其他告警数'),
-          type: 'alarm',
-          colorType: 'low',
-          color: '#FFC685',
-        },
-      ];
-      if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
-        return data.filter((v) => v.colorType === 'low');
+      const { count: totalCount, slowQueryCount } = this.alarmChartData;
+      if (totalCount === 0) {
+        return [{ value: 0, name: this.$t('总告警数'), colorType: 'low', color: '#FFC685' }];
       }
-      return data;
+      if (slowQueryCount === 0) {
+        return [{ value: totalCount, name: this.$t('总告警数'), colorType: 'low', color: '#FFC685' }];
+      }
+      return [
+        { value: slowQueryCount, name: this.$t('慢查询告警数'), colorType: 'high', color: '#F5876C' },
+        { value: totalCount - slowQueryCount, name: this.$t('其他告警数'), colorType: 'low', color: '#FFC685' },
+      ];
     },
-    // 告警情况图表配置
     homeAlertChartOption() {
-      const colors = this.homeAlarmData.map((v) => v.color);
-      return alertChartOption(this.homeAlarmData, colors);
+      return this.buildChartOption(this.homeAlarmData, { zeroPieColor: '#B5E0AB' });
     },
+    alarmDefaultLabel() {
+      return this.getDefaultLabel(this.homeAlarmData);
+    },
+
+    // ============ 应用情况 ============
     appChartData() {
       const totalAppCount = this.chartAppInfo.total;
       const idleAppCount = this.appChartInfo.idleAppCount;
       const data = [
-        {
-          value: idleAppCount,
-          name: this.$t('闲置应用数'),
-          type: 'app',
-          colorType: 'high',
-          color: '#FFA66B',
-        },
+        { value: idleAppCount, name: this.$t('闲置应用数'), colorType: 'high', color: '#FFA66B' },
         {
           value: totalAppCount - idleAppCount,
           name: totalAppCount === 0 || idleAppCount === 0 ? this.$t('总应用数') : this.$t('活跃应用数'),
-          type: 'app',
           colorType: 'low',
           color: '#3E96C2',
         },
       ];
-      if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
-        return data.filter((v) => v.colorType === 'low');
-      }
-      return data;
+      return data.find((v) => v.colorType === 'high' && v.value === 0)
+        ? data.filter((v) => v.colorType === 'low')
+        : data;
     },
-    // 应用情况图表配置
     appChartOption() {
-      const colors = this.appChartData.map((v) => v.color);
-      return alertChartOption(this.appChartData, colors);
-    },
-    platformFeature() {
-      return this.$store.state.platformFeature;
+      return this.buildChartOption(this.appChartData);
     },
     appDefaultLabel() {
-      return this.appChartData.find((v) => v.value > 0) ?? this.appChartData[0];
+      return this.getDefaultLabel(this.appChartData);
     },
-    alarmDefaultLabel() {
-      if (this.homeAlarmData.length > 1) {
-        return this.homeAlarmData.find((v) => v.value > 0) ?? this.homeAlarmData[1];
-      }
-      return this.homeAlarmData[0];
+
+    // ============ 应用类型 ============
+    appTypeChartData() {
+      const nameMap = {
+        cloud_native: this.$t('云原生应用'),
+        default: this.$t('普通应用'),
+        engineless_app: this.$t('外链应用'),
+      };
+      return this.buildStatisticsData(this.statisticsData.app_type_counts, APP_TYPE_CONFIG, nameMap, 'type');
+    },
+    appTypeChartOption() {
+      return this.buildChartOption(this.appTypeChartData);
+    },
+    appTypeDefaultLabel() {
+      return this.getDefaultLabel(this.appTypeChartData);
+    },
+
+    // ============ 应用状态 ============
+    appDeployStatusChartData() {
+      const nameMap = {
+        not_deployed: this.$t('未部署'),
+        normal: this.$t('正常'),
+        offline: this.$t('已下架'),
+      };
+      return this.buildStatisticsData(this.statisticsData.app_status_counts, APP_STATUS_CONFIG, nameMap, 'status');
+    },
+    appDeployStatusChartOption() {
+      return this.buildChartOption(this.appDeployStatusChartData);
+    },
+    appDeployStatusDefaultLabel() {
+      return this.getDefaultLabel(this.appDeployStatusChartData);
     },
   },
   watch: {
     homeAlarmData() {
-      this.setChartFn('alarm');
+      this.initChart('alarm');
     },
-    // 应用
     appChartData() {
-      this.setChartFn('app');
+      this.initChart('app');
+    },
+    appTypeChartData() {
+      this.initChart('appType');
+    },
+    appDeployStatusChartData() {
+      this.initChart('appDeployStatus');
     },
   },
   created() {
     this.getAppsInfoCount();
+    if (!this.platformFeature.MONITORING) {
+      this.getStatistics();
+    }
   },
   mounted() {
-    this.setChartFn('alarm');
-    this.setChartFn('app');
+    const types = this.platformFeature.MONITORING ? ['alarm', 'app'] : ['appType', 'appDeployStatus'];
+    types.forEach((type) => this.initChart(type));
   },
   methods: {
-    setChartFn(type) {
-      if (type === 'app') {
-        // 应用
-        this.chartSet({
-          id: 'chart-app-status',
-          option: this.appChartOption,
-          key: 'appChart',
-          fn: (value) => {
-            this.isAppLabel = value;
-          },
-        });
-      } else {
-        // 告警
-        this.chartSet({
-          id: 'alarm-status',
-          option: this.homeAlertChartOption,
-          key: 'alarmChart',
-          fn: (value) => {
-            this.isAlarmLabel = value;
-          },
-        });
-      }
+    /**
+     * 构建统计数据（应用类型/应用状态通用）
+     * @param {Array} rawData - 接口原始数据
+     * @param {Object} config - 配置 { order, colorMap }
+     * @param {Object} nameMap - 名称映射
+     * @param {String} keyField - 原始数据中的 key 字段名
+     */
+    buildStatisticsData(rawData, config, nameMap, keyField) {
+      const countsMap = {};
+      (rawData || []).forEach((item) => {
+        countsMap[item[keyField]] = item.count;
+      });
+      return config.order.map((key) => {
+        const color = config.colorMap[key] || '#DCDEE5';
+        return {
+          value: countsMap[key] || 0,
+          name: nameMap[key] || key,
+          colorType: 'low',
+          color,
+          itemStyle: { color },
+        };
+      });
     },
-    // 获取总应用数及issue_type应用数
+    /**
+     * 构建图表配置
+     */
+    buildChartOption(chartData, options) {
+      const colors = chartData.map((v) => v.color);
+      return alertChartOption(chartData, colors, options);
+    },
+    /**
+     * 获取默认中心标签（第一个 value > 0 的项，否则取第一项）
+     */
+    getDefaultLabel(chartData) {
+      return chartData.find((v) => v.value > 0) ?? (chartData[0] || { value: 0, name: '' });
+    },
+    /**
+     * 初始化/更新图表
+     */
+    initChart(type) {
+      const config = CHART_CONFIG[type];
+      if (!config) return;
+
+      // 获取对应的 option（computed 属性名约定）
+      const optionMap = {
+        alarm: this.homeAlertChartOption,
+        app: this.appChartOption,
+        appType: this.appTypeChartOption,
+        appDeployStatus: this.appDeployStatusChartOption,
+      };
+
+      this.$nextTick(() => {
+        const el = document.getElementById(config.id);
+        if (!el) return;
+        const chart = this.chartInstances[type] || echarts.init(el);
+        this.chartInstances[type] = chart;
+        chart.setOption(optionMap[type]);
+
+        // 控制中心文字显隐
+        chart.off('mouseover');
+        chart.off('mouseout');
+        chart.off('highlight');
+        chart.off('downplay');
+        chart.on('mouseover', () => {
+          this[config.labelKey] = false;
+        });
+        chart.on('mouseout', () => {
+          this[config.labelKey] = true;
+        });
+        chart.on('highlight', () => {
+          this[config.labelKey] = false;
+        });
+        chart.on('downplay', () => {
+          this[config.labelKey] = true;
+        });
+      });
+    },
     async getAppsInfoCount() {
       try {
         const res = await this.$store.dispatch('baseInfo/getAppsInfoCount');
         this.chartAppInfo = res;
-        // 配置不当
         this.chartAppInfo.issueCount = res.issue_type_counts.find((v) => v.issue_type === 'misconfigured')?.count ?? 0;
-        // 应用数
-        this.$store.commit('baseInfo/updateAppChartData', {
-          allCount: this.chartAppInfo.total,
-        });
+        this.$store.commit('baseInfo/updateAppChartData', { allCount: this.chartAppInfo.total });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    async getStatistics() {
+      try {
+        const res = await this.$store.dispatch('baseInfo/getStatistics');
+        this.$store.commit('baseInfo/updateStatisticsData', res);
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -264,46 +402,17 @@ export default {
     toCreateApp() {
       this.$router.push({ name: 'createApp' });
     },
-    // daysToSubtract 距离当前日期的指定天数
     getSpecifiedDate(daysToSubtract, currentDate = new Date()) {
-      // 确保传入的一个 Date 对象
       if (!(currentDate instanceof Date)) {
         throw new Error('currentDate must be a Date object');
       }
       const resultDate = new Date(currentDate);
-      // 减去指定的天数
       resultDate.setDate(resultDate.getDate() - daysToSubtract);
-      return {
-        start: formatDate(resultDate),
-        end: formatDate(currentDate),
-      };
+      return { start: formatDate(resultDate), end: formatDate(currentDate) };
     },
     handleDateChange(day) {
-      // 通知首页需要时间接口数据更新
       this.curSelectionTime = this.getSpecifiedDate(day);
       bus.$emit('home-date', this.curSelectionTime);
-    },
-    // 设置图表
-    chartSet({ id, option, key, fn }) {
-      this.$nextTick(() => {
-        // 初始化
-        const echart = echarts.init(document.getElementById(id));
-        // 设置配置
-        this[key] = echart;
-        echart.setOption(option);
-        echart.on('mouseover', () => {
-          fn(false);
-        });
-        echart.on('mouseout', () => {
-          fn(true);
-        });
-        echart.on('highlight', () => {
-          fn(false);
-        });
-        echart.on('downplay', () => {
-          fn(true);
-        });
-      });
     },
   },
 };
@@ -354,7 +463,9 @@ export default {
     }
   }
   .alarm-status,
-  .app-status {
+  .app-status,
+  .app-type,
+  .app-deploy-status {
     position: relative;
     flex: 1;
     height: 200px;

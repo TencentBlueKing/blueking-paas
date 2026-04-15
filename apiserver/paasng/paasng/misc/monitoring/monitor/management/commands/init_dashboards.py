@@ -57,7 +57,7 @@ class Command(BaseCommand):
     def _init_dashboards(self, app: Application):
         try:
             bk_dashboard_manager_cls(app).init_builtin_dashboard()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.stdout.write(self.style.ERROR(f"Initialize dashboards for {app.code} failed: {e}"))
         else:
             self.stdout.write(self.style.SUCCESS(f"Initialize dashboards for {app.code} success"))

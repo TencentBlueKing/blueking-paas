@@ -30,7 +30,7 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 
 # Register cattr custom hooks
-cattr.register_unstructure_hook(UUID, lambda val: str(val))  # type: ignore
+cattr.register_unstructure_hook(UUID, str)  # type: ignore
 cattr.register_structure_hook(UUID, lambda val, _: val if isinstance(val, UUID) else UUID(str(val)))
 # End register
 
@@ -72,7 +72,7 @@ def digest_if_length_exceeded(raw_str: str, limit: int):
     if len(raw_str) <= limit:
         return raw_str
 
-    return hashlib.sha1(force_bytes(raw_str)).hexdigest()[:limit]
+    return hashlib.sha1(force_bytes(raw_str)).hexdigest()[:limit]  # noqa: S324
 
 
 def make_subdict(d: Dict, allowed_keys: Collection):

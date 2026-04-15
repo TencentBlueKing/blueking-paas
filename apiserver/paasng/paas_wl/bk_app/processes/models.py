@@ -71,11 +71,11 @@ class ProcessSpecPlan(models.Model):
     class Meta:
         get_latest_by = "created"
 
-    def get_resource_summary(self):
-        return {"limits": self.limits, "requests": self.requests}
-
     def __str__(self):
         return self.name
+
+    def get_resource_summary(self):
+        return {"limits": self.limits, "requests": self.requests}
 
 
 class ProcessSpec(TimestampedModel):

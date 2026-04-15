@@ -151,7 +151,7 @@ def compress_directory(source_path, target_path):
     # Add "GZIP=-n" to disable gzip timestamp
     # see: https://serverfault.com/questions/110208/different-md5sums-for-same-tar-contents
     p = subprocess.Popen(
-        ["tar", "--exclude=.svn", "-czf", str(target_path), "-C", str(source_path), "."],
+        ["/bin/tar", "--exclude=.svn", "-czf", str(target_path), "-C", str(source_path), "."],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env={"GZIP": "-n"},
@@ -168,7 +168,7 @@ def uncompress_directory(source_path, target_path):
     target_path = os.path.abspath(target_path)
     # -m, --touch                don't extract file modified time
     p = subprocess.Popen(
-        ["tar", "-m", "-xf", str(source_path), "-C", str(target_path)],
+        ["/bin/tar", "-m", "-xf", str(source_path), "-C", str(target_path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding="utf-8",
@@ -200,6 +200,33 @@ def _generate_temp_file_(suffix="") -> Iterator[Path]:
 
 
 generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)
+
+
+def find_content_root(extract_dir: Path) -> Path:
+    """Locate the content root directory after extracting an archive.
+
+    Archives may be packed in two common layouts:
+
+    1. Wrapped — a single top-level directory containing everything::
+
+         extract_dir/
+           myproject/          <-- return this
+             Dockerfile
+             app.py
+
+    2. Flat — files sit directly in the extract directory::
+
+         extract_dir/          <-- return this
+           Dockerfile
+           app.py
+
+    This function normalises both layouts so that callers always get
+    the directory where the actual content files live.
+    """
+    entries = list(extract_dir.iterdir())
+    if len(entries) == 1 and entries[0].is_dir():
+        return entries[0]
+    return extract_dir
 
 
 def get_all_intermediate_dirs(path: str) -> List[str]:

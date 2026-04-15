@@ -152,10 +152,8 @@ class AgentSandboxService(KresAppEntity):
         deserializer = AgentSandboxServiceDeserializer
 
     @classmethod
-    def create(cls, sandbox: AgentSandbox, node_port: int) -> "AgentSandboxService":
-        ports = [
-            ServicePortPair(name="daemon", port=DAEMON_BIND_PORT, target_port=DAEMON_BIND_PORT, node_port=node_port)
-        ]
+    def create(cls, sandbox: AgentSandbox) -> "AgentSandboxService":
+        ports = [ServicePortPair(name="daemon", port=DAEMON_BIND_PORT, target_port=DAEMON_BIND_PORT)]
         return cls(app=sandbox.app, name=sandbox.name, ports=ports, sandbox_id=sandbox.sandbox_id)
 
 

@@ -155,7 +155,7 @@ class TestProcessHandler:
 
             # Check deployment resource
             assert kd.called
-            deployment_args, deployment_kwargs = kd.call_args_list[0]
+            _deployment_args, deployment_kwargs = kd.call_args_list[0]
             assert deployment_kwargs.get("name") == f"{region}-{wl_app.name}-web-python-deployment"
             assert deployment_kwargs.get("body")
             assert deployment_kwargs.get("namespace") == wl_app.namespace
@@ -187,7 +187,7 @@ class TestProcessHandler:
 
             # Test deployment patch was performed
             assert kp.called
-            args, kwargs = kp.call_args_list[0]
+            _args, kwargs = kp.call_args_list[0]
             assert kwargs.get("body")["spec"]["replicas"] == 3
 
     def test_shutdown_process(self, wl_app):
@@ -213,7 +213,7 @@ class TestProcessHandler:
 
             # Check deployment resource
             assert kp.called
-            args, kwargs = kp.call_args_list[0]
+            _args, kwargs = kp.call_args_list[0]
             assert kwargs["body"]["spec"]["replicas"] == 0
 
     def test_shutdown_web_processes(self, wl_app, web_process):
@@ -244,5 +244,5 @@ class TestProcessHandler:
 
             # Check deployment resource
             assert kp.called
-            args, kwargs = kp.call_args_list[0]
+            _args, kwargs = kp.call_args_list[0]
             assert kwargs["body"]["spec"]["replicas"] == 0

@@ -40,7 +40,7 @@ class DescriptionValidationError(Exception):
         """Try build a user-friendly error message from detail"""
         if isinstance(detail, dict):
             # Get a random item from dict
-            item = list(detail.items())[0]
+            item = next(iter(detail.items()))
             return f"{item[0]}: {item[1]}"
         elif isinstance(detail, (list, tuple)):
             return detail[0]

@@ -96,6 +96,7 @@ class UpdateApplicationNameSLZ(serializers.Serializer):
         elif get_language() == "en":
             update_fields["name_en"] = data["name_en"]
 
+        # FIXME: 仅校验, 不更新
         try:
             prepare_change_application_name.send(sender=self.__class__, code=self.instance.code, **update_fields)
         except IntegrityError as e:
@@ -207,6 +208,22 @@ class ApplicationEvaluationIssueCountSLZ(serializers.Serializer):
 class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
     collected_at = serializers.DateTimeField(help_text="采集时间")
     issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
+
+
+class ApplicationTypeCountSLZ(serializers.Serializer):
+    type = serializers.CharField(help_text="应用类型")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationStatusCountSLZ(serializers.Serializer):
+    status = serializers.ChoiceField(choices=AppStatus.get_choices(), help_text="应用状态")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationStatisticsListResultSLZ(serializers.Serializer):
+    app_type_counts = ApplicationTypeCountSLZ(many=True, help_text="应用类型及数量")
+    app_status_counts = ApplicationStatusCountSLZ(many=True, help_text="应用状态及数量")
     total = serializers.IntegerField(help_text="应用评估报告总数量")
 
 
@@ -415,7 +432,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if (
-            self.context["request"].method in ["POST"]
+            self.context["request"].method == "POST"
             and self.Meta.model.objects.filter(
                 owner=self.context["request"].user.pk, application__code=attrs["application"].code
             ).exists()

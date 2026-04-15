@@ -162,7 +162,7 @@ class DockerRegistryV2Client:
         url = resp.request.url
         try:
             curl = masked_curlify.to_curl(resp.request)
-        except Exception:
+        except Exception:  # noqa: BLE001
             curl = "<unknown>"
 
         if resp.status_code == 401:
@@ -217,7 +217,7 @@ class URLBuilder:
 
 
 default_client = cast(
-    DockerRegistryV2Client, LazyProxy(lambda: DockerRegistryV2Client.from_api_endpoint(OFFICIAL_ENDPOINT))
+    "DockerRegistryV2Client", LazyProxy(lambda: DockerRegistryV2Client.from_api_endpoint(OFFICIAL_ENDPOINT))
 )
 
 

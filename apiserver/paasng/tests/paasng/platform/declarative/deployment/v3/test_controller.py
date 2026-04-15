@@ -141,7 +141,7 @@ class TestProcessesField:
 
         controller = DeploymentDeclarativeController(bk_deployment)
         with pytest.raises(
-            DescriptionValidationError, match="spec.processes.0.components.0: 组件 not_exists-v1 不存在"
+            DescriptionValidationError, match=r"spec.processes.0.components.0: 组件 not_exists-v1 不存在"
         ):
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
@@ -167,7 +167,7 @@ class TestProcessesField:
         )
 
         controller = DeploymentDeclarativeController(bk_deployment)
-        with pytest.raises(DescriptionValidationError, match="spec.processes.0.components.0: 参数校验失败"):
+        with pytest.raises(DescriptionValidationError, match=r"spec.processes.0.components.0: 参数校验失败"):
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
 
@@ -187,7 +187,7 @@ class TestEnvVariablesField:
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        with pytest.raises(DescriptionValidationError, match="spec.configuration.env"):
+        with pytest.raises(DescriptionValidationError, match=r"spec.configuration.env"):
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
     def test_preset_environ_vars(self, bk_module, bk_deployment):

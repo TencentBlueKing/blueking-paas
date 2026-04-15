@@ -30,7 +30,7 @@
           </div>
           <bk-table-column :label="isComponent ? $t('系统') : $t('网关')">
             <template slot-scope="props">
-              {{ isComponent ? props.row.system_name : props.row.api_name }}
+              {{ isComponent ? props.row.system_name : props.row.gateway_name }}
             </template>
           </bk-table-column>
           <bk-table-column

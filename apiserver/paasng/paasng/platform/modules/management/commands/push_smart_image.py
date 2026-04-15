@@ -68,12 +68,13 @@ class Command(BaseCommand):
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
 
-        image_tarball_path = pathlib.Path(tempfile.mktemp())
+        _file = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
+        image_tarball_path = pathlib.Path(_file.name)
         src_image = parse_image(image)
         try:
             ref = ImageRef.from_image(
                 from_repo=src_image.name,
-                from_reference=cast(str, src_image.tag),
+                from_reference=cast("str", src_image.tag),
                 client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))

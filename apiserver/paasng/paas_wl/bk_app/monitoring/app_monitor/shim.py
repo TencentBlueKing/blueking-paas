@@ -44,7 +44,7 @@ def upsert_app_monitor(
 
     - AppMetricsMonitor 创建后需要在应用部署时才会真正下发到 k8s 集群
     """
-    instance, _ = AppMetricsMonitor.objects.update_or_create(
+    _instance, _ = AppMetricsMonitor.objects.update_or_create(
         defaults={
             "port": port,
             "target_port": target_port,

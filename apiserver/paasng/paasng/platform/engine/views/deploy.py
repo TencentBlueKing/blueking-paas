@@ -159,7 +159,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 coordinator.set_deployment(deployment)
                 # Start a background deploy task
                 DeployTaskRunner(deployment).start()
-        except Exception as exception:
+        except Exception as exception:  # noqa: BLE001
             self._handle_deploy_failed(module, deployment, exception)
 
         assert deployment is not None

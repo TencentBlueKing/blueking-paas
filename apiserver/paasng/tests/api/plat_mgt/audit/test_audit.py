@@ -133,7 +133,7 @@ class TestPlatformOperationAuditViewSet(TestAuditBaseTestCase):
         url = reverse("plat_mgt.audit.platform.list")
         resp = plat_mgt_api_client.get(url, filter_key)
         assert resp.status_code == status.HTTP_200_OK
-        print(resp.data)
+        print(resp.data)  # noqa: T201
         assert resp.data["count"] == expected_count
 
     def test_retrieve(self, plat_mgt_api_client):

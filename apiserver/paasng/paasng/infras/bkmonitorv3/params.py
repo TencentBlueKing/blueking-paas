@@ -59,7 +59,7 @@ class QueryAlertsParams:
             "start_time": int(self.start_time.timestamp()),
             "end_time": int(self.end_time.timestamp()),
             # 监控那边问题，需要转int
-            "bk_biz_ids": [int(id) for id in self.bk_biz_ids],
+            "bk_biz_ids": [int(bk_biz_id) for bk_biz_id in self.bk_biz_ids],
             "page": 1,
             "page_size": 500,
             # 按照 ID 降序

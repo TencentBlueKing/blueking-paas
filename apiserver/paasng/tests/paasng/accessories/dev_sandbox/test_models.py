@@ -32,7 +32,7 @@ def _env_vars_to_dicts(env_vars):
 
 
 def _env_vars_with_sensitive(env_vars: List[Dict[str, str]]):
-    return [{**cast(Dict[str, object], env_var), "is_sensitive": False} for env_var in env_vars]
+    return [{**cast("Dict[str, object]", env_var), "is_sensitive": False} for env_var in env_vars]
 
 
 @pytest.fixture()

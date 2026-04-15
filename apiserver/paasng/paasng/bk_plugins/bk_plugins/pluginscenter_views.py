@@ -40,6 +40,7 @@ from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.iam.helpers import (
     add_role_members,
     delete_role_members,
@@ -102,9 +103,11 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             operator=encoded_operator,
             is_plugin_app=True,
             is_ai_agent_app=is_ai_agent_app,
-            app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
-            app_tenant_id=data["plugin_tenant_id"],
-            tenant_id=data["tenant_id"],
+            app_tenant_info=AppTenantInfo(
+                app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
+                app_tenant_id=data["plugin_tenant_id"],
+                tenant_id=data["tenant_id"],
+            ),
         )
 
         module = create_default_module(
@@ -256,7 +259,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
         manager = DeployPhaseManager(deployment.app_environment)
         try:
             phases = [deployment.deployphase_set.get(type=type_) for type_ in manager.list_phase_types()]
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("failed to get phase info")
             raise error_codes.CANNOT_GET_DEPLOYMENT_PHASES
 

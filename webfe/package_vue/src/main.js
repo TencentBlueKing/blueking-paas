@@ -28,7 +28,7 @@ import store from '@/store';
 import http from '@/api';
 import auth from '@/auth';
 import { bus } from '@/common/bus';
-import { formatErrorMessage } from '@/common/tools';
+import { formatErrorMessage, isRequestCanceled } from '@/common/tools';
 import $ from 'jquery';
 import '@/common/jquery_tools';
 
@@ -115,6 +115,9 @@ Vue.prototype.$paasMessage = function (conf) {
 };
 
 Vue.prototype.catchErrorHandler = function (error) {
+  if (isRequestCanceled(error)) {
+    return;
+  }
   this.$bkMessage({
     theme: 'error',
     message: formatErrorMessage(error),

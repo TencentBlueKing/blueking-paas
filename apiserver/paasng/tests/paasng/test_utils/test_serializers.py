@@ -44,7 +44,7 @@ class TestBase64FileField:
             ("base64,MQ==", nullcontext(b"1")),
             (b"1", nullcontext(b"1")),
             ("MQ==", pytest.raises(ValidationError, match='"MQ==" is not a valid format, please startswith "base64')),
-            ("base64,MQ", pytest.raises(ValidationError, match='"MQ" is not a valid base64, please check it.')),
+            ("base64,MQ", pytest.raises(ValidationError, match=r'"MQ" is not a valid base64, please check it.')),
         ],
     )
     def test_to_internal_value(self, data, ctx):
@@ -61,7 +61,7 @@ class TestBase64FileField:
             ("1", nullcontext("base64,MQ==")),
             (io.StringIO("1"), nullcontext("base64,MQ==")),
             (io.BytesIO(b"1"), nullcontext("base64,MQ==")),
-            ([], pytest.raises(ValueError, match=r"Unsupported value: \[\]")),
+            ([], pytest.raises(TypeError, match=r"Unsupported value: \[\]")),
         ],
     )
     def test_to_representation(self, data, ctx):

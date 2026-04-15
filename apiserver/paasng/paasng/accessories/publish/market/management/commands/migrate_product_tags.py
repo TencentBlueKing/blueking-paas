@@ -43,4 +43,4 @@ class Command(BaseCommand):
                     tenant_id=product.application.tenant_id,
                     defaults={"tag": product.tag},
                 )
-            print(f"app:{product.application.code} tag:{product.tag} 迁移至 ApplicationExtraInfo")
+            print(f"app:{product.application.code} tag:{product.tag} 迁移至 ApplicationExtraInfo")  # noqa: T201

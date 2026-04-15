@@ -70,6 +70,16 @@ _cnative_supported_alert_codes = SupportedAlertCodes(
 if settings.RABBITMQ_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.RABBITMQ_INSTANCE_DOWN.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.RABBITMQ_INSTANCE_DOWN.value)
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_DLX_QUEUE_MESSAGES.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_DLX_QUEUE_MESSAGES.value)
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUES_USAGE.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUES_USAGE.value)
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_CONNECTIONS_USAGE.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_CONNECTIONS_USAGE.value)
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_USAGE.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_USAGE.value)
 
 # bkrepo 增强服务监控
 if settings.BKREPO_MONITOR_CONF.get("enabled", False):

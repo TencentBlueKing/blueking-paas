@@ -115,13 +115,15 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
         module_initializer.create_engine_apps()
 
         module_spec = ModuleSpecs(module)
-        if module_spec.source_origin in [
-            SourceOrigin.IMAGE_REGISTRY,
-            SourceOrigin.CNATIVE_IMAGE,
-            SourceOrigin.S_MART,
-        ] or module_spec.app_specs.type_specs in [
-            ApplicationType.ENGINELESS_APP,
-        ]:
+        if (
+            module_spec.source_origin
+            in [
+                SourceOrigin.IMAGE_REGISTRY,
+                SourceOrigin.CNATIVE_IMAGE,
+                SourceOrigin.S_MART,
+            ]
+            or module_spec.app_specs.type_specs == ApplicationType.ENGINELESS_APP
+        ):
             module.source_init_template = ""
 
         # Set-up the repository data
@@ -213,7 +215,7 @@ def create_legacy_application(code: Optional[str] = None):
     :param code: The application code, default to a random string.
     """
     session = legacy_db.get_scoped_session()
-    app_code = code if code else generate_random_string(length=12)
+    app_code = code or generate_random_string(length=12)
     values = dict(
         code=app_code,
         name=app_code,

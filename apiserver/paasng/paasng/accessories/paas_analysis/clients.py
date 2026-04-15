@@ -32,6 +32,7 @@ from paasng.accessories.paas_analysis.exceptions import PAClientException, PARes
 from paasng.core.core.storages.cache import region as cache_region
 
 logger = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 120
 
 
 @contextmanager
@@ -89,6 +90,7 @@ class PAClient:
                     },
                 },
                 auth=self.auth,
+                timeout=DEFAULT_TIMEOUT,
             )
             self.validate_resp(resp)
             return resp.json()["site"]
@@ -102,6 +104,7 @@ class PAClient:
                 self.base_url + url,
                 json={"site_type": "custom", "extra_info": {"site_name": site_name}},
                 auth=self.auth,
+                timeout=DEFAULT_TIMEOUT,
             )
             self.validate_resp(resp)
             return resp.json()["site"]
@@ -114,7 +117,7 @@ class PAClient:
         """获取展示 PageView 所需的基础配置"""
         url = f"/sites/{site_name}/t/{metric_source_type}/config"
         with wrap_request_exc():
-            resp = requests.get(self.base_url + url, auth=self.auth)
+            resp = requests.get(self.base_url + url, auth=self.auth, timeout=DEFAULT_TIMEOUT)
             self.validate_resp(resp)
             return resp.json()
 
@@ -128,6 +131,7 @@ class PAClient:
                 self.base_url + url,
                 params={"start_time": start_time.isoformat(), "end_time": end_time.isoformat()},
                 auth=self.auth,
+                timeout=DEFAULT_TIMEOUT,
             )
             self.validate_resp(resp)
             return resp.json()
@@ -160,6 +164,7 @@ class PAClient:
                 self.base_url + url,
                 params=params,
                 auth=self.auth,
+                timeout=DEFAULT_TIMEOUT,
             )
             self.validate_resp(resp)
             return resp.json()
@@ -185,6 +190,7 @@ class PAClient:
             self.base_url + url,
             params=params,
             auth=self.auth,
+            timeout=DEFAULT_TIMEOUT,
         )
         with wrap_request_exc():
             self.validate_resp(resp)
@@ -198,7 +204,7 @@ class PAClient:
         """获取展示 CustomEvent 所需的基础配置"""
         url = f"/sites/{site_name}/event/config"
         with wrap_request_exc():
-            resp = requests.get(self.base_url + url, auth=self.auth)
+            resp = requests.get(self.base_url + url, auth=self.auth, timeout=DEFAULT_TIMEOUT)
             self.validate_resp(resp)
             return resp.json()
 
@@ -212,6 +218,7 @@ class PAClient:
                 self.base_url + url,
                 params={"start_time": start_time.isoformat(), "end_time": end_time.isoformat()},
                 auth=self.auth,
+                timeout=DEFAULT_TIMEOUT,
             )
             self.validate_resp(resp)
             return resp.json()
@@ -240,6 +247,7 @@ class PAClient:
             self.base_url + url,
             params=params,
             auth=self.auth,
+            timeout=DEFAULT_TIMEOUT,
         )
         with wrap_request_exc():
             self.validate_resp(resp)
@@ -271,6 +279,7 @@ class PAClient:
             self.base_url + url,
             params=params,
             auth=self.auth,
+            timeout=DEFAULT_TIMEOUT,
         )
         with wrap_request_exc():
             self.validate_resp(resp)
@@ -296,6 +305,7 @@ class PAClient:
             self.base_url + url,
             params=params,
             auth=self.auth,
+            timeout=DEFAULT_TIMEOUT,
         )
         with wrap_request_exc():
             self.validate_resp(resp)

@@ -238,6 +238,7 @@ class ErrorCodes:
     AGENT_SANDBOX_DELETE_FAILED = ErrorCode(_("删除 Agent 沙箱失败"))
     AGENT_SANDBOX_FILE_OPERATION_FAILED = ErrorCode(_("Agent 沙箱文件操作失败"))
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
+    AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

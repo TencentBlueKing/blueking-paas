@@ -73,7 +73,7 @@ class Base64Validator:
     def __call__(self, value):
         try:
             base64.b64decode(value)
-        except Exception:
+        except Exception:  # noqa: BLE001
             raise ValidationError("content is not a base64 encoded obj.")
 
 
@@ -170,7 +170,7 @@ def validate_repo_url(repo_url: str):
     """
     try:
         parsed_url = urlparse(repo_url)
-    except Exception:
+    except Exception:  # noqa: BLE001
         raise ValueError("Invalid url")
 
     if not parsed_url.netloc:

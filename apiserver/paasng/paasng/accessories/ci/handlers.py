@@ -26,11 +26,11 @@ from paasng.accessories.ci.exceptions import NotSupportedRepoType, RepoNotFoundE
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
 from paasng.accessories.ci.models import CIAtomJob
 from paasng.infras.accounts.models import Oauth2TokenHolder
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.signals import post_appenv_deploy
 
 if TYPE_CHECKING:
+    from paasng.platform.applications.models import ModuleEnvironment
     from paasng.platform.engine.models.deployment import Deployment
 
 logger = logging.getLogger(__name__)

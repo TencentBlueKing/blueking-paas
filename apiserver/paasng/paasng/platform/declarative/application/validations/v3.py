@@ -26,7 +26,6 @@ from paasng.platform.applications.serializers import AppIDSMartField, AppNameFie
 from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.bkapp_model.serializers import v1alpha2
 from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc, ModuleDesc
-from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
 from paasng.utils.serializers import Base64FileField
@@ -171,10 +170,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         self._validate_default_module(attrs["modules"])
         self._validate_shared_addons(attrs["modules"])
 
-        # 处理额外字段
-        attrs.setdefault("plugins", [])
-        if self.context.get("app_version"):
-            attrs["plugins"].append({"type": AppDescPluginType.APP_VERSION, "data": self.context.get("app_version")})
+        attrs["app_version"] = self.context.get("app_version")
 
         if self.context.get("spec_version"):
             attrs["spec_version"] = self.context["spec_version"]

@@ -39,7 +39,13 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import (
+    AppFeatureFlag,
+    ApplicationRole,
+    ApplicationType,
+    AppStatus,
+    AvailabilityLevel,
+)
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -355,14 +361,14 @@ class TestApplicationUpdate:
         assert app.extra_info.tag == tag
 
     def test_duplicated(self, api_client, bk_app, bk_user, random_name, tag):
-        G(Application, name=random_name)
+        G(Application, name=random_name, app_tenant_id=bk_app.app_tenant_id)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
             data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
-        assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
+        assert f"{random_name} 的应用已存在" in response.json()["detail"]
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
     @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
@@ -986,6 +992,69 @@ class TestListEvaluation:
         for issue in response.data["issue_type_counts"]:
             assert issue["issue_type"] in ["none", "idle", "misconfigured"]
             assert issue["count"] == 1
+
+
+class TestListApplicationStatistics:
+    @pytest.fixture
+    def setup_apps(self, bk_user):
+        """Create 5 apps with different types and statuses for statistics testing.
+
+        - normal_app: last_deployed_date=now, is_active=True       -> normal
+        - offline_app: last_deployed_date=now, is_active=False     -> offline
+        - cloud_native_app: last_deployed_date=now, is_active=True -> normal
+        - not_deployed_app: last_deployed_date=None                -> not_deployed
+        - engineless_app: external link app                        -> normal
+        """
+        normal_app = create_app(owner_username=bk_user.username)
+        normal_app.type = ApplicationType.DEFAULT
+        normal_app.last_deployed_date = timezone.now()
+        normal_app.is_active = True
+        normal_app.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        cloud_native_app = create_app(owner_username=bk_user.username)
+        cloud_native_app.type = ApplicationType.CLOUD_NATIVE
+        cloud_native_app.last_deployed_date = timezone.now()
+        cloud_native_app.is_active = True
+        cloud_native_app.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        offline_app = create_app(owner_username=bk_user.username)
+        offline_app.type = ApplicationType.DEFAULT
+        offline_app.last_deployed_date = timezone.now()
+        offline_app.is_active = False
+        offline_app.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        not_deployed_app = create_app(owner_username=bk_user.username)
+        not_deployed_app.type = ApplicationType.DEFAULT
+        not_deployed_app.last_deployed_date = None
+        not_deployed_app.is_active = False
+        not_deployed_app.save(update_fields=["type", "last_deployed_date", "is_active"])
+
+        engineless_app = create_app(owner_username=bk_user.username)
+        engineless_app.type = ApplicationType.ENGINELESS_APP
+        engineless_app.save(update_fields=["type"])
+
+        return normal_app, offline_app, not_deployed_app, engineless_app
+
+    def test_list_statistics(self, api_client, setup_apps):
+        response = api_client.get(reverse("api.applications.lists.statistics"))
+        assert response.status_code == 200
+
+        response_data = response.json()
+
+        # Verify total count
+        assert response_data["total"] == 5
+
+        # Verify app_type_counts: 3 DEFAULT + 1 CLOUD_NATIVE + 1 ENGINELESS_APP
+        type_counts = {item["type"]: item["count"] for item in response_data["app_type_counts"]}
+        assert type_counts[ApplicationType.DEFAULT] == 3
+        assert type_counts[ApplicationType.CLOUD_NATIVE] == 1
+        assert type_counts[ApplicationType.ENGINELESS_APP] == 1
+
+        # Verify app_status_counts: 3 normal + 1 offline + 1 not_deployed
+        status_counts = {item["status"]: item["count"] for item in response_data["app_status_counts"]}
+        assert status_counts[AppStatus.NORMAL] == 3
+        assert status_counts[AppStatus.OFFLINE] == 1
+        assert status_counts[AppStatus.NOT_DEPLOYED] == 1
 
 
 class TestDeploymentModuleOrder:

@@ -37,7 +37,7 @@ def sync_developers_to_sentry(application_id):
     application = Application.objects.get(id=application_id)
 
     try:
-        service_obj = cast(LocalServiceObj, mixed_service_mgr.find_by_name(name="sentry"))
+        service_obj = cast("LocalServiceObj", mixed_service_mgr.find_by_name(name="sentry"))
     except ServiceObjNotFound:
         logger.warning("sentry service not found, skip sync developers to sentry")
         return

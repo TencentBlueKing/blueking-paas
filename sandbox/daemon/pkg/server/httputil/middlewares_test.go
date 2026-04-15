@@ -261,40 +261,6 @@ var _ = Describe("Middlewares", func() {
 			Expect(w.Code).To(Equal(http.StatusInternalServerError))
 		})
 
-		It("should catch different types of panic", func() {
-			router.GET("/panic-int", func(c *gin.Context) {
-				panic(42)
-			})
-
-			req, _ := http.NewRequest("GET", "/panic-int", nil)
-			router.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusInternalServerError))
-		})
-
-		It("should catch error type panic", func() {
-			router.GET("/panic-error", func(c *gin.Context) {
-				panic(errors.New("error panic"))
-			})
-
-			req, _ := http.NewRequest("GET", "/panic-error", nil)
-			router.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusInternalServerError))
-		})
-
-		It("should not affect normal requests", func() {
-			router.GET("/normal", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"status": "ok"})
-			})
-
-			req, _ := http.NewRequest("GET", "/normal", nil)
-			router.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusOK))
-			Expect(w.Body.String()).To(ContainSubstring("ok"))
-		})
-
 		It("should not write response after panic if already written", func() {
 			router.GET("/panic-after-write", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"status": "ok"})

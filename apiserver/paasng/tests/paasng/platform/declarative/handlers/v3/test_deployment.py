@@ -141,7 +141,7 @@ class TestCnativeAppDescriptionHandler:
                 yaml.safe_load(yaml_v3_example), procfile_data={"worker": "celery worker"}
             )
 
-            with pytest.raises(DescriptionValidationError, match="Process definitions conflict.*"):
+            with pytest.raises(DescriptionValidationError, match=r"Process definitions conflict.*"):
                 handler.handle(bk_deployment)
 
     def test_with_modules_found(self, bk_deployment, bk_module):
@@ -174,7 +174,7 @@ class TestCnativeAppDescriptionHandler:
                       procCommand: python manage.py runserver
         """
         )
-        with pytest.raises(DescriptionValidationError, match="未找到.*当前已配置"):
+        with pytest.raises(DescriptionValidationError, match=r"未找到.*当前已配置"):
             get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     # Other tests that cover different cases when modules/module field uses different values

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.db.models import Q
@@ -33,7 +34,6 @@ from paasng.infras.accounts.permissions.application import (
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
@@ -58,6 +58,9 @@ from .serializers import (
     ListAlertsSLZ,
     SupportedAlertSLZ,
 )
+
+if TYPE_CHECKING:
+    from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 
 
 class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
@@ -254,5 +257,5 @@ class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
 
         # app_languages 中出现过的语言对应的仪表盘排到前面
         app_languages = set(Module.objects.filter(application=app).values_list("language", flat=True))
-        sorted_data = sorted(serializer.data, key=lambda d: (d["language"] not in app_languages))
+        sorted_data = sorted(serializer.data, key=lambda d: d["language"] not in app_languages)
         return Response(sorted_data)

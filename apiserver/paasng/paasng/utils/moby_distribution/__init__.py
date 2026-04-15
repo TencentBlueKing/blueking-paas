@@ -39,18 +39,18 @@ from paasng.utils.moby_distribution.spec.manifest import (
 )
 
 __all__ = [
-    "DockerRegistryV2Client",
-    "Blob",
-    "ManifestRef",
-    "Tags",
-    "APIEndpoint",
     "OFFICIAL_ENDPOINT",
-    "ManifestSchema1",
-    "ManifestSchema2",
-    "OCIManifestSchema1",
+    "APIEndpoint",
+    "Blob",
+    "DockerRegistryV2Client",
     "ImageJSON",
     "ImageRef",
     "LayerRef",
+    "ManifestRef",
+    "ManifestSchema1",
+    "ManifestSchema2",
+    "OCIManifestSchema1",
+    "Tags",
     "default_client",
     "set_default_client",
 ]

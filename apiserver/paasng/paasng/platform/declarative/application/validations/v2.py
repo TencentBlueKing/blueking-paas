@@ -30,7 +30,6 @@ from paasng.platform.declarative.application.resources import (
     ModuleDesc,
     ServiceSpec,
 )
-from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
@@ -172,9 +171,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         self._validate_default_module(attrs["modules"])
         self._validate_shared_services(attrs["modules"])
 
-        attrs.setdefault("plugins", [])
-        if self.context.get("app_version"):
-            attrs["plugins"].append({"type": AppDescPluginType.APP_VERSION, "data": self.context.get("app_version")})
+        attrs["app_version"] = self.context.get("app_version")
 
         if self.context.get("spec_version"):
             attrs["spec_version"] = self.context["spec_version"]

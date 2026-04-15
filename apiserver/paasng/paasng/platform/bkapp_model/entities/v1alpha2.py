@@ -49,7 +49,7 @@ class BkAppEnvOverlay(AllowNotsetModel):
     res_quotas: List[ResQuotaOverlay] | NotSetType | None = NOTSET
     env_variables: List[EnvVarOverlay] | NotSetType | None = NOTSET
     autoscaling: List[AutoscalingOverlay] | NotSetType | None = NOTSET
-    mounts: Optional[List[MountOverlay]] | NotSetType | None = NOTSET
+    mounts: List[MountOverlay] | NotSetType | None = NOTSET
 
 
 @prepare_json_field

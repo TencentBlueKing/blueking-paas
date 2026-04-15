@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 import logging
 from dataclasses import dataclass
@@ -23,9 +24,9 @@ from enum import Enum
 from typing import Dict, Optional
 
 from django.conf import settings
-from django.utils.functional import cached_property
 from paas_service.base_vendor import BaseProvider, InstanceData
 from paas_service.utils import gen_unique_id, generate_password
+
 from svc_bk_repo.vendor.helper import BKGenericRepoManager, RequestError
 
 logger = logging.getLogger(__name__)
@@ -45,10 +46,14 @@ class Provider(BaseProvider):
 
     SERVICE_NAME = "bkrepo"
 
-    @cached_property
-    def manager(self):
+    def make_manager(self, tenant_id: str) -> BKGenericRepoManager:
+        """Create a new BKGenericRepoManager instance with the given tenant_id."""
         manager = BKGenericRepoManager(
-            endpoint_url=self.endpoint_url, username=self.username, password=self.password, project=self.project
+            endpoint_url=self.endpoint_url,
+            username=self.username,
+            password=self.password,
+            project=self.project,
+            tenant_id=tenant_id,
         )
         return manager
 
@@ -61,30 +66,33 @@ class Provider(BaseProvider):
         app_members: List[str]
         """
         preferred_name = params.get("engine_app_name")
-        association_users = json.loads(params.get("app_developers", '[]'))
+        association_users = json.loads(params.get("app_developers", "[]"))
+        tenant_id = params.get("tenant_id")
         username = repo_suffix = gen_unique_id(preferred_name)
         public_repo = f"public-{repo_suffix}"
         private_repo = f"private-{repo_suffix}"
         password = generate_password()
 
+        manager = self.make_manager(tenant_id=tenant_id)
+
         try:
-            self.manager.create_repo(repo=public_repo, public=True, quota=self.quota)
+            manager.create_repo(repo=public_repo, public=True, quota=self.quota)
         except RequestError as e:
             # 仓库已存在: 251008
             if str(e.code) not in [BKRepoErrorCode.REPO_EXISTS]:
                 raise
 
         try:
-            self.manager.create_repo(repo=private_repo, public=False, quota=self.quota)
+            manager.create_repo(repo=private_repo, public=False, quota=self.quota)
         except RequestError as e:
             # 仓库已存在: 251008
             if str(e.code) not in [BKRepoErrorCode.REPO_EXISTS]:
                 raise
 
-        self.manager.create_user(
+        manager.create_user(
             repo=public_repo, username=username, password=password, association_users=association_users
         )
-        self.manager.create_user(
+        manager.create_user(
             repo=private_repo, username=username, password=password, association_users=association_users
         )
         return InstanceData(
@@ -96,29 +104,34 @@ class Provider(BaseProvider):
                 # 新增区分 `公开` 仓库和 `私有` 仓库的字段
                 "private_bucket": private_repo,
                 "public_bucket": public_repo,
-                "endpoint_url": self.manager.endpoint_url,
-                "project": self.manager.project,
+                "endpoint_url": manager.endpoint_url,
+                "project": manager.project,
             },
             config={
                 "association_users": association_users,
                 "bucket": private_repo,
                 "private_bucket": private_repo,
                 "public_bucket": public_repo,
-                "project": self.manager.project,
+                "project": manager.project,
+                "tenant_id": tenant_id,
             },
         )
 
     def delete(self, instance_data: InstanceData):
         repo = instance_data.credentials["repo"]
         username = instance_data.credentials["username"]
+        tenant_id = instance_data.config["tenant_id"]
 
-        self.manager.delete_user(username=username)
-        self.manager.delete_repo(repo=repo, forced=True)
+        manager = self.make_manager(tenant_id=tenant_id)
+        manager.delete_user(username=username)
+        manager.delete_repo(repo=repo, forced=True)
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         username = instance_data.credentials["username"]
         password = instance_data.credentials["password"]
-        association_users = instance_data.config["association_users"] = json.loads(params.get("app_developers", '[]'))
+        association_users = instance_data.config["association_users"] = json.loads(params.get("app_developers", "[]"))
+        tenant_id = instance_data.config["tenant_id"]
 
-        self.manager.update_user(username=username, password=password, association_users=association_users)
+        manager = self.make_manager(tenant_id=tenant_id)
+        manager.update_user(username=username, password=password, association_users=association_users)
         return instance_data

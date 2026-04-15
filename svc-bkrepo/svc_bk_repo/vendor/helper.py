@@ -31,17 +31,13 @@ from svc_bk_repo.vendor.models import RepoQuota
 
 logger = logging.getLogger(__name__)
 
-OP_TYPE_TENANT_ID = "system"
-# API 请求头中用于指定租户 ID 的字段
-API_HERDER_TENANT_ID = "X-Bk-Tenant-Id"
-
 
 def _validate_resp(response: requests.Response) -> Dict:
     """校验响应体"""
     try:
         logger.info("Equivalent curl command: %s", curlify.to_curl(response.request))
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Failed to generate curl command for request: %s", e)
 
     try:
         data = response.json()
@@ -63,17 +59,19 @@ class BKGenericRepoManager:
         project: str,
         username: str,
         password: str,
+        tenant_id: str,
     ):
         # endpoint can not endswith '/'
         self.endpoint_url = endpoint_url.rstrip("/")
         self.project = project
         self.username = username
         self.password = password
+        self.tenant_id = tenant_id
 
     def get_client(self) -> requests.Session:
         session = requests.session()
         session.auth = HTTPBasicAuth(username=self.username, password=self.password)
-        session.headers.update({API_HERDER_TENANT_ID: OP_TYPE_TENANT_ID})
+        session.headers.update({"X-Bk-Tenant-Id": self.tenant_id})
         return session
 
     def create_user(self, repo: str, username: str, password: str, association_users: List[str]):

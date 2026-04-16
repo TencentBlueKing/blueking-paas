@@ -92,6 +92,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "SMartBuilderViewSet",
     "ProcessComponentViewSet",
     "AssistantView",
+    "ReservedAppCodePrefixViewSet",
     #
     # == Django views start
     #

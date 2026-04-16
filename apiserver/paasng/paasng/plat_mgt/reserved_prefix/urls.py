@@ -15,17 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import re_path
+
+from .views import ReservedPrefixAuthCodeViewSet
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
-    path("", include("paasng.plat_mgt.res_quota_plan.urls")),
-    path("", include("paasng.plat_mgt.templates.urls")),
-    path("", include("paasng.plat_mgt.sourcectl.urls")),
-    path("", include("paasng.plat_mgt.reserved_prefix.urls")),
+    re_path(
+        r"^api/plat_mgt/reserved_prefix/$",
+        ReservedPrefixAuthCodeViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.reserved_prefix.list",
+    ),
+    re_path(
+        r"^api/plat_mgt/reserved_prefix/(?P<id>[^/]+)/$",
+        ReservedPrefixAuthCodeViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.reserved_prefix.destroy",
+    ),
 ]

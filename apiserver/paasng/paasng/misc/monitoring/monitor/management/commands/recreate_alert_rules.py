@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import time
+from argparse import RawTextHelpFormatter
 
 from django.core.management.base import BaseCommand
 
@@ -29,6 +30,13 @@ class Command(BaseCommand):
     help = "覆盖创建监控侧告警策略， 会覆盖掉原有的同名告警策略，在需要更新告警策略时使用"
 
     def add_arguments(self, parser):
+        parser.formatter_class = RawTextHelpFormatter
+        parser.epilog = (
+            "Examples:\n"
+            "python manage.py recreate_alert_rules --apps app1 app2\n"
+            "python manage.py recreate_alert_rules --all"
+        )
+
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("--all", action="store_true", help="run for all active applications")
         group.add_argument("--apps", nargs="+", help="specified app code list")

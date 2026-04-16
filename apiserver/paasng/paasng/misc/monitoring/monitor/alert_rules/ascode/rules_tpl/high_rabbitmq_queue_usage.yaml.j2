@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum({{ rabbitmq_metric_name_prefix }}group3:rabbitmq_instance_queue_usage{vhost="{{ metric_labels['vhost'] }}"})'
+  - metric: 'avg({{ rabbitmq_metric_name_prefix }}group3:rabbitmq_instance_queue_usage{vhost="{{ metric_labels['vhost'] }}"})'
     interval: 60 # 单位 s
 
 detect: # 检测配置

@@ -81,7 +81,7 @@ class ResourcePoolProvider(BaseProvider):
             else:
                 cfg = instance.config
 
-            tls = cfg.get("tls", {})
+            tls = cfg.get("tls") or {}
             provider_name = instance.plan.service.provider_name
             # 如果实例配置中有证书，则在凭证部分中添加挂载证书的路径
             # 证书内容会在部署时候以 Secret 形式挂载到容器中

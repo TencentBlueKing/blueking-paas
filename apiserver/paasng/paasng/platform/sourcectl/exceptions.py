@@ -37,6 +37,10 @@ class ReadLinkFileOutsideDirectoryError(Exception):
     """When trying to read a link file that link to outside the directory of the repository."""
 
 
+class PathTraversalError(Exception):
+    """Raised when a resolved path escapes the expected base directory."""
+
+
 class BasePackageError(Exception):
     """The base error class for package clients."""
 

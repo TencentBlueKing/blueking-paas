@@ -20,7 +20,6 @@ import shutil
 from os import PathLike, path, walk
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from zipfile import ZipFile
 
 import arrow
 from django.utils.functional import cached_property
@@ -39,6 +38,7 @@ from paasng.platform.sourcectl.models import (
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.sourcectl.utils import generate_temp_file
+from paasng.utils.archive import safe_extract_zip
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ class GitHubRepoController(BaseGitRepoController):
 
         with generate_temp_file(suffix=".zip") as zip_file:
             self.api_client.repo_archive(self.project, zip_file, ref=ref)
-            ZipFile(zip_file, "r").extractall(local_path)
+            safe_extract_zip(zip_file, local_path)
 
         # Github 下载的 zip 包比较特殊，外层有格式为 {username}-{proj_name}-{ref} 的目录，需要平铺开
         for root, dirs, _ in walk(str(local_path)):

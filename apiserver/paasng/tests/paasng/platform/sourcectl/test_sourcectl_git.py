@@ -18,6 +18,7 @@
 import datetime
 import logging
 import os
+import zipfile
 
 import pytest
 from dateutil.tz.tz import tzoffset, tzutc
@@ -27,6 +28,7 @@ from paasng.platform.sourcectl.controllers.github import GitHubRepoController
 from paasng.platform.sourcectl.controllers.gitlab import GitlabRepoController
 from paasng.platform.sourcectl.models import AlternativeVersion, VersionInfo
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
+from paasng.utils.archive import UnsafeArchiveError
 from tests.utils import mock
 
 pytestmark = pytest.mark.django_db
@@ -277,6 +279,35 @@ class TestGithubRepoController:
         client.repo_get_raw_file.side_effect = mock_repo_get_raw_file
         controller = GitHubRepoController("", github_repo_url, user_credentials)
         assert controller.read_file("/fake_path", version) == b"file content..."
+
+    def test_export_rejects_path_traversal_zip(self, client, github_repo_url, user_credentials, version):
+        """含 ../ 路径穿越成员的恶意 zip 在 export 时应抛出 UnsafeArchiveError"""
+
+        def mock_repo_archive(project, local_path, ref):
+            # 构造包含路径穿越成员的恶意 zip
+            with zipfile.ZipFile(local_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr("owner-repo-master/readme.txt", "legit")
+                zf.writestr("owner-repo-master/../../../tmp/pwned", "evil")
+
+        client.repo_archive.side_effect = mock_repo_archive
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
+        with generate_temp_dir() as working_dir:  # noqa: SIM117
+            with pytest.raises(UnsafeArchiveError):
+                controller.export(working_dir, version)
+
+    def test_export_rejects_absolute_path_zip(self, client, github_repo_url, user_credentials, version):
+        """含绝对路径成员的恶意 zip 在 export 时应抛出 UnsafeArchiveError"""
+
+        def mock_repo_archive(project, local_path, ref):
+            with zipfile.ZipFile(local_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr("owner-repo-master/readme.txt", "legit")
+                zf.writestr("/etc/cron.d/pwn", "evil")
+
+        client.repo_archive.side_effect = mock_repo_archive
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
+        with generate_temp_dir() as working_dir:  # noqa: SIM117
+            with pytest.raises(UnsafeArchiveError, match="absolute path"):
+                controller.export(working_dir, version)
 
 
 class TestGiteebRepoController:

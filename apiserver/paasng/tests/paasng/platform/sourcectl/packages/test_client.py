@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import tarfile
+import zipfile
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -38,6 +39,7 @@ from paasng.platform.sourcectl.package.client import (
 )
 from paasng.platform.sourcectl.package.uploader import upload_to_blob_store
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
+from paasng.utils.archive import UnsafeArchiveError
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
 from tests.utils.basic import generate_random_string
 
@@ -302,3 +304,47 @@ class TestGenericRemoteClient:
             cli = GenericRemoteClient(obj_url)
             with ctx:
                 assert cli.read_file(filename) == expected
+
+
+class TestZipClientZipSlipProtection:
+    """ZipClient.export 的 Zip Slip（CWE-22 路径穿越）安全测试"""
+
+    def _make_malicious_zip(self, file_path, entries):
+        """直接构造包含恶意成员名的 zip 文件（绕过 gen_zip 的文件系统路径限制）"""
+        with zipfile.ZipFile(str(file_path), "w", zipfile.ZIP_DEFLATED) as zf:
+            for name, content in entries.items():
+                zf.writestr(name, content)
+
+    def test_reject_path_traversal_member(self):
+        """含 ../ 相对路径穿越成员的 zip 在 export 时应抛出 UnsafeArchiveError"""
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            self._make_malicious_zip(file_path, {"../../../tmp/pwned": "evil"})
+            cli = ZipClient(file_path=str(file_path))
+            with pytest.raises(UnsafeArchiveError):
+                cli.export(str(working_dir))
+
+    def test_reject_absolute_path_member(self):
+        """含绝对路径成员的 zip 在 export 时应抛出 UnsafeArchiveError"""
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            self._make_malicious_zip(file_path, {"/etc/cron.d/pwn": "evil"})
+            cli = ZipClient(file_path=str(file_path))
+            with pytest.raises(UnsafeArchiveError, match="absolute path"):
+                cli.export(str(working_dir))
+
+    def test_no_file_written_on_rejection(self):
+        """恶意 zip 被拒绝时，目标目录外不应有文件落盘"""
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            self._make_malicious_zip(file_path, {"../../evil_outside.txt": "evil_content"})
+            cli = ZipClient(file_path=str(file_path))
+            with pytest.raises(UnsafeArchiveError):
+                cli.export(str(working_dir))
+            # working_dir 的上级目录不应出现 evil_outside.txt
+            assert not (Path(working_dir).parent / "evil_outside.txt").exists()
+
+    def test_normal_export_still_works(self):
+        """合法 zip 的 export 行为不受影响"""
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            gen_zip(file_path, contents={"hello.txt": "world"})
+            cli = ZipClient(file_path=str(file_path))
+            cli.export(str(working_dir))
+            assert (Path(working_dir) / "hello.txt").read_text() == "world"

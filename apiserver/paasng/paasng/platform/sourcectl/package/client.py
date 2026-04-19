@@ -35,6 +35,7 @@ from paasng.platform.sourcectl.exceptions import (
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.archive import safe_extract_zip
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
@@ -269,11 +270,12 @@ class ZipClient(BasePackageClient):
         return self.zip_.read(info)
 
     def export(self, local_path: str):
-        self.zip_.extractall(local_path)  # noqa: S202
-
-        # About symbolic links security check, the zip file module does not support symbolic links
-        # at this moment so no extra checking is needed.
-        # See https://bugs.python.org/issue37921 for more details
+        # 使用 safe_extract_zip 替代 extractall，防止 Zip Slip（CWE-22 路径穿越）攻击。
+        # safe_extract_zip 会对每个 zip 成员进行路径校验，拒绝绝对路径、包含 ".." 的穿越路径
+        # 以及解析后落在目标目录之外的路径。
+        # 关于符号链接：zipfile 模块在 extract 时不还原 symlink（将链接目标作为普通文件内容写出），
+        # 但 Zip Slip 与 symlink 无关，路径穿越风险已由 safe_extract_zip 的路径校验防御。
+        safe_extract_zip(self.zip_, local_path)
 
     def close(self):
         self.zip_.close()

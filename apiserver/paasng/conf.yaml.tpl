@@ -696,17 +696,6 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # ENABLE_BK_LOG_APIGW: True
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 # BK_LOG_APIGW_SERVICE_STAGE: stag
-# 日志保存时间（天数），默认值 14
-# BKLOG_RETENTION: 14
-# Elasticsearch 索引分片数，默认值 1
-# BKLOG_ES_SHARDS: 1
-# 存储副本数，默认值 1
-# BKLOG_STORAGE_REPLICAS: 1
-# 蓝鲸日志平台相关的配置项 （当设置此项时，上述单独的 BKLOG_* 配置项将被覆盖）
-# BKLOG_CONFIG:
-#   RETENTION: 14
-#   ES_SHARDS: 1
-#   STORAGE_REPLICAS: 1
 
 
 ## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------
@@ -852,11 +841,35 @@ DEV_SANDBOX_CODE_EDITOR_IMAGE: "codercom/code-server:4.9.0"
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER: ""
 
+# ---- Agent Sandbox 运行时配置 ----
+
 # Agent Sandbox 默认运行镜像
 # AGENT_SANDBOX_DEFAULT_IMAGE: "your-registry/agent-sandbox-runtime:latest"
 
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 # AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
+
+# ---- Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等 ----
+
+# 镜像仓库的域名，默认值与 APP_DOCKER_REGISTRY_HOST 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_HOST: ""
+# 镜像仓库的命名空间
+# AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE: "bkpaas-sandbox"
+# 是否跳过校验镜像仓库的证书，默认值与 APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY: false
+# 镜像仓库账号，默认值与 APP_DOCKER_REGISTRY_USERNAME 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME: ""
+# 镜像仓库密码，默认值与 APP_DOCKER_REGISTRY_PASSWORD 相同
+# AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD: ""
+
+# ---- Agent Sandbox 制品存储配置，用于存储构建过程中的中间制品和 daemon 二进制 ----
+
+# 用于存储 Agent Sandbox 相关中间制品的 bucket
+# AGENT_SANDBOX_PACKAGE_BUCKET: "bkpaas3-sandbox-packages"
+# 存放 sandbox daemon 二进制的 bucket，默认值与 SERVICE_LOGO_BUCKET 相同
+# AGENT_SANDBOX_DAEMON_BUCKET: ""
+# 存放 sandbox daemon 二进制的 key
+# AGENT_SANDBOX_DAEMON_KEY: "sandbox/daemon"
 
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 

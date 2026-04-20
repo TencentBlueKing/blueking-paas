@@ -15,21 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import datetime
 import logging
+from functools import cached_property
 from typing import Union
 
 from django.conf import settings
-from django.utils.timezone import get_default_timezone
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.accessories.log.exceptions import TenantLogConfigNotFoundError
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
     ElasticSearchParams,
     ProcessLogQueryConfig,
+    TenantLogConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
@@ -54,32 +55,41 @@ logger = logging.getLogger(__name__)
 class BKLogConfigProvider:
     def __init__(self, module: Module):
         self.module = module
+        self.tenant_id = module.application.tenant_id
+
+    @cached_property
+    def config(self):
+        """获取租户的日志配置"""
+
+        try:
+            return TenantLogConfig.objects.get(tenant_id=self.tenant_id)
+        except TenantLogConfig.DoesNotExist:
+            raise TenantLogConfigNotFoundError(self.tenant_id)
 
     @property
     def timezone(self) -> int:
-        if timezone := settings.BKLOG_CONFIG.get("TIME_ZONE"):
-            return timezone
-        tz = get_default_timezone()
-        return int(tz.utcoffset(datetime.datetime.now()).total_seconds() // 60 // 60)
+        """获取时区"""
+        return self.config.time_zone
 
     @property
     def storage_cluster_id(self) -> int:
-        return settings.BKLOG_CONFIG["STORAGE_CLUSTER_ID"]
+        """获取存储集群 ID（从 TenantLogConfig）"""
+        return self.config.storage_cluster_id
 
     @property
     def retention(self) -> int:
-        """获取日志存储时间(天)"""
-        return settings.BKLOG_CONFIG["RETENTION"]
+        """获取日志保存时间（从 TenantLogConfig）"""
+        return self.config.retention
 
     @property
     def es_shards(self) -> int:
-        """获取ES索引分片数"""
-        return settings.BKLOG_CONFIG["ES_SHARDS"]
+        """获取 ES 索引分片数（从 TenantLogConfig）"""
+        return self.config.es_shards
 
     @property
     def storage_replicas(self) -> int:
-        """获取存储副本数"""
-        return settings.BKLOG_CONFIG["STORAGE_REPLICAS"]
+        """获取存储副本数（从 TenantLogConfig）"""
+        return self.config.storage_replicas
 
 
 def _add_wildcard_suffix(path: str) -> str:

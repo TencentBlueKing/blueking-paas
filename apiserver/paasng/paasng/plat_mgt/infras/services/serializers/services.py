@@ -24,6 +24,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.utils.i18n import to_translated_field
 
@@ -144,6 +145,13 @@ class ServiceCreateSLZ(serializers.Serializer):
                     "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
                 ).format(name)
             )
+
+        #  创建 S-Mart 应用时，使用 service_name 来指定增强服务， 故禁止本地增强服务和远程增强服务重名
+        service_id_ctx = getattr(self.context.get("service"), "uuid")
+        for svc in mixed_service_mgr.list():
+            # 更新时，允许和自己重名
+            if svc.name == name and svc.uuid != service_id_ctx:
+                raise ValidationError(_("{} 不符合规范: 禁止存在相同的增强服务 ID").format(name))
 
         return name
 

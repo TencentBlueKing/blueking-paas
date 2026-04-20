@@ -1179,26 +1179,6 @@ LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
 ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
-# 蓝鲸日志平台相关的配置项
-BKLOG_TIME_ZONE = settings.get("BKLOG_TIME_ZONE")
-## 日志平台存储集群 ID
-BKLOG_STORAGE_CLUSTER_ID = settings.get("BKLOG_STORAGE_CLUSTER_ID")
-## 日志保存时间（天数），默认值 14
-BKLOG_RETENTION = int(settings.get("BKLOG_RETENTION", 14))
-## Elasticsearch 索引分片数，默认值 1
-BKLOG_ES_SHARDS = int(settings.get("BKLOG_ES_SHARDS", 1))
-## 存储副本数，默认值 1
-BKLOG_STORAGE_REPLICAS = int(settings.get("BKLOG_STORAGE_REPLICAS", 1))
-BKLOG_CONFIG = settings.get(
-    "BKLOG_CONFIG",
-    {
-        "TIME_ZONE": BKLOG_TIME_ZONE,
-        "STORAGE_CLUSTER_ID": BKLOG_STORAGE_CLUSTER_ID,
-        "RETENTION": BKLOG_RETENTION,
-        "ES_SHARDS": BKLOG_ES_SHARDS,
-        "STORAGE_REPLICAS": BKLOG_STORAGE_REPLICAS,
-    },
-)
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get(
@@ -1598,6 +1578,35 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "download_from_agent_sandbox",
     ],
 )
+
+# ---------------------------------------------
+# Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等
+# ---------------------------------------------
+# 镜像仓库的域名
+AGENT_SANDBOX_DOCKER_REGISTRY_HOST = settings.get("AGENT_SANDBOX_DOCKER_REGISTRY_HOST", APP_DOCKER_REGISTRY_HOST)
+# 镜像仓库的命名空间
+AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE = settings.get("AGENT_SANDBOX_DOCKER_REGISTRY_NAMESPACE", "bkpaas-sandbox")
+# 是否跳过校验镜像仓库的证书
+AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY", APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+)
+# 镜像仓库账号
+AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME", APP_DOCKER_REGISTRY_USERNAME
+)
+# 镜像仓库密码
+AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD = settings.get(
+    "AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD", APP_DOCKER_REGISTRY_PASSWORD
+)
+
+# ---------------------------------------------
+# Agent Sandbox 制品存储配置，用于存储构建过程中的中间制品和 daemon 二进制
+# ---------------------------------------------
+# 用于存储 Agent Sandbox 相关中间制品的 bucket
+AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkpaas3-sandbox-packages")
+# 存放 sandbox daemon 二进制的 bucket 和 key
+AGENT_SANDBOX_DAEMON_BUCKET = settings.get("AGENT_SANDBOX_DAEMON_BUCKET", SERVICE_LOGO_BUCKET)
+AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/daemon")
 
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)

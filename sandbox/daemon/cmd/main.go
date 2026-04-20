@@ -139,7 +139,15 @@ func (em *entrypointManager) Close() {
 	}
 }
 
-// runPreStartScript executes the pre-start script via "sh" synchronously before the entrypoint.
+// preferredShell returns "bash" if it exists on the system, otherwise "sh".
+func preferredShell() string {
+	if _, err := exec.LookPath("bash"); err == nil {
+		return "bash"
+	}
+	return "sh"
+}
+
+// runPreStartScript executes the pre-start script synchronously before the entrypoint.
 // It is designed for one-time initialization tasks that must complete before the main
 // server starts, such as installing dependencies, generating configuration files.
 // Returns nil if the script does not exist (skip) or executes successfully.
@@ -154,7 +162,8 @@ func runPreStartScript(scriptPath string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", scriptPath)
+	shell := preferredShell()
+	cmd := exec.CommandContext(ctx, shell, scriptPath)
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -218,7 +227,7 @@ func main() {
 	if len(entrypointArgs) == 0 {
 		if _, err := os.Stat(cfg.DefaultEntrypointPath); err == nil {
 			slog.Info("No entrypoint args provided, using default entrypoint script", "path", cfg.DefaultEntrypointPath)
-			entrypointArgs = []string{"sh", cfg.DefaultEntrypointPath}
+			entrypointArgs = []string{preferredShell(), cfg.DefaultEntrypointPath}
 		}
 	}
 	entrypoint.Start(entrypointArgs)

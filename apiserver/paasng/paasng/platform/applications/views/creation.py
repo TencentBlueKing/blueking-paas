@@ -410,3 +410,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             ).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class ReservedAppCodePrefixViewSet(viewsets.GenericViewSet):
+    """获取应用 ID 保留前缀列表的接口, 用于创建应用时提示用户哪些前缀需要授权"""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="获取保留前缀列表",
+        responses={status.HTTP_200_OK: ""},
+    )
+    def list(self, request):
+        """获取保留前缀列表"""
+        return Response({"reserved_prefixes": list(settings.RESERVED_APP_CODE_PREFIXES)})

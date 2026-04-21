@@ -47,7 +47,7 @@ from paasng.platform.applications.constants import (
     AvailabilityLevel,
 )
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ReservedPrefixAuthCode
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.evaluation.constants import BatchTaskStatus
@@ -293,6 +293,84 @@ class TestApplicationCreateWithoutEngine:
         )
         assert response.status_code == 201
         assert response.json()["application"]["type"] == "engineless_app"
+
+
+class TestApplicationCreateWithReservedPrefix:
+    """Test application creation APIs with reserved prefix"""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
+        pass
+
+    def _build_params(self, url: str, app_code: str, auth_code: str | None = None) -> dict:
+        """build request params based on the endpoint URL."""
+        if url == "/api/bkapps/cloud-native/":
+            data = {
+                "code": app_code,
+                "name": app_code,
+                "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
+                "source_config": {
+                    "source_init_template": "docker",
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            }
+        else:
+            data = {
+                "code": app_code,
+                "name": app_code,
+                "engine_enabled": "false",
+                "market_params": {},
+            }
+
+        if auth_code:
+            data["auth_code"] = auth_code
+        return data
+
+    @pytest.mark.parametrize(
+        "url",
+        ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/", "/api/bkapps/cloud-native/"],
+    )
+    def test_reserved_prefix_missing_auth_code(self, api_client, url):
+        """App code with reserved prefix but no auth_code should be rejected"""
+        random_suffix = generate_random_string(length=6)
+        app_code = f"bk-{random_suffix}"
+        response = api_client.post(url, data=self._build_params(url, app_code))
+
+        assert response.status_code == 400
+        assert response.data["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.parametrize(
+        "url",
+        ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/", "/api/bkapps/cloud-native/"],
+    )
+    def test_reserved_prefix_valid_auth_code(self, api_client, url):
+        """App code with reserved prefix and valid auth_code should succeed"""
+        random_suffix = generate_random_string(length=6)
+        app_code = f"bk-{random_suffix}"
+
+        auth_code = "GOODCD01"
+        ReservedPrefixAuthCode.objects.create(auth_code=auth_code, app_code=app_code, is_used=False)
+
+        response = api_client.post(url, data=self._build_params(url, app_code, auth_code))
+        assert response.status_code == 201
+
+    @pytest.mark.parametrize(
+        "url",
+        ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/", "/api/bkapps/cloud-native/"],
+    )
+    def test_reserved_prefix_invalid_auth_code(self, api_client, url):
+        """App code with reserved prefix and invalid auth_code should be rejected"""
+        random_suffix = generate_random_string(length=6)
+        app_code = f"bk-{random_suffix}"
+        bad_auth_code = "BADCD001"
+
+        ReservedPrefixAuthCode.objects.create(auth_code="GOODCD01", app_code=app_code, is_used=False)
+        response = api_client.post(url, data=self._build_params(url, app_code, bad_auth_code))
+
+        assert response.status_code == 400
+        assert response.data["code"] == "VALIDATION_ERROR"
 
 
 class TestApplicationRetrieve:

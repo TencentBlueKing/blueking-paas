@@ -338,8 +338,8 @@ export default {
       this.reset();
       this.getServicesCategory();
       const { name, logo, instance_tutorial } = this.data;
-      if (this.isEdit) {
-        // 编辑时先禁用编辑器，防止内容变更时自动聚焦和滚动
+      if (this.isEdit || this.type === 'clone') {
+        // 编辑或克隆时先禁用编辑器，防止内容变更时自动聚焦和滚动
         const quill = this.$refs.editor?.quill;
         if (quill) {
           quill.enable(false);
@@ -353,13 +353,15 @@ export default {
             ...(this.data.config || {}),
           },
           instance_tutorial: marked(instance_tutorial),
+          // 克隆时清空 name、display_name，用户需重新输入
+          ...(this.type === 'clone' ? { name: '', display_name: '' } : {}),
         };
         this.setPreviewImage(name, logo);
       }
       this.$nextTick(() => {
         // 打开侧栏时，获取当前侧栏数据
         this.initSidebarFormData(this.formData);
-        if (this.isEdit) {
+        if (this.isEdit || this.type === 'clone') {
           this.resetQuillEditor();
         }
       });

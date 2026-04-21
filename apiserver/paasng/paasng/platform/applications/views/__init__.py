@@ -23,27 +23,23 @@ from .application import (
     ApplicationResProtectionsViewSet,
     ApplicationViewSet,
 )
-from .creation import ApplicationCreateViewSet
+from .creation import ApplicationCreateViewSet, ReservedAppCodePrefixViewSet
 from .marks import ApplicationDeploymentModuleOrderViewSet, ApplicationMarkedViewSet
 from .member import ApplicationMembersViewSet
 from .sys_api import LightAppViewSet, SysAppViewSet
 
 __all__ = [
-    # creation
     "ApplicationCreateViewSet",
-    # marks
     "ApplicationDeploymentModuleOrderViewSet",
-    # application
     "ApplicationExtraInfoViewSet",
     "ApplicationFeatureFlagViewSet",
     "ApplicationListViewSet",
     "ApplicationLogoViewSet",
     "ApplicationMarkedViewSet",
-    # members
     "ApplicationMembersViewSet",
     "ApplicationResProtectionsViewSet",
     "ApplicationViewSet",
-    # sys_api
     "LightAppViewSet",
+    "ReservedAppCodePrefixViewSet",
     "SysAppViewSet",
 ]

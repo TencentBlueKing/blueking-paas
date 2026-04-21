@@ -43,7 +43,7 @@ class TestAlertRuleManager:
         rule_configs, notice_group_config = bk_app_init_rule_configs
         expected_args = [
             ((notice_group_config, f"{bk_app.code}_notice_group"), {"incremental": False}),
-            ((rule_configs,),),
+            ((rule_configs,), {"overwrite": False}),
         ]
         assert mock_import_configs.call_args_list == expected_args
 

@@ -797,6 +797,10 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get("PAAS_LEGACY_DB_ENCRYPT_KEY")
 
+
+# RESERVED_APP_CODE_PREFIXES 包含与应用代码相关的敏感前缀，配置后，平台将不允许用户使用这些前缀创建应用
+RESERVED_APP_CODE_PREFIXES = settings.get("RESERVED_APP_CODE_PREFIXES", ["bk-"])
+
 # ---------------
 # 对象存储配置
 # ---------------

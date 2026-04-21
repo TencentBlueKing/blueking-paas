@@ -150,6 +150,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                     "endpoint_url": bkrepo_ep_url,
                     "provision_params_tmpl": {
                         "app_developers": "{app_developers}",
+                        "tenant_id": "{application.tenant_id}",
                     },
                 },
             )

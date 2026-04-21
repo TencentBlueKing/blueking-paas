@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class ManagerProtocol(Protocol):
     def __init__(self, application: Application): ...
 
-    def init_rules(self): ...
+    def init_rules(self, overwrite: bool = False): ...
 
     def create_rules(self, module_name: str, run_env: str): ...
 
@@ -50,12 +50,14 @@ class AlertRuleManager:
         self.supported_alerts = get_supported_alert_codes(application.type)
         self.client = AsCodeClient(self.app_code)
 
-    def init_rules(self):
+    def init_rules(self, overwrite: bool = False):
         """为 app 初始化告警规则. 其中规则包括了 app scoped 和 app module scoped
 
         使用场景:
         - app 首次创建时, 初始化告警规则
         - app 迁移告警规则(从 bcs 迁移至 bkmonitor)
+
+        :param overwrite: 是否覆盖已有同名告警规则
         """
         # init app scoped alert rule configs
         rule_configs = self.config_generator.gen_app_scoped_rule_configs()
@@ -68,7 +70,7 @@ class AlertRuleManager:
         if not rule_configs:
             return
 
-        self._apply_rule_configs(rule_configs)
+        self._apply_rule_configs(rule_configs, overwrite=overwrite)
         self._save_rule_configs(rule_configs)
 
     def create_rules(self, module_name: str, run_env: str):
@@ -111,10 +113,10 @@ class AlertRuleManager:
 
         return []
 
-    def _apply_rule_configs(self, rule_configs: List[RuleConfig]):
+    def _apply_rule_configs(self, rule_configs: List[RuleConfig], overwrite: bool = False):
         """通过 MonitorAsCode 方式下发告警规则到 bkmonitor"""
         self.client.apply_notice_group(self.default_receivers)
-        self.client.apply_rule_configs(rule_configs)
+        self.client.apply_rule_configs(rule_configs, overwrite=overwrite)
 
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""
@@ -138,7 +140,7 @@ class AlertRuleManager:
 class NullManager:
     def __init__(self, application: Application): ...
 
-    def init_rules(self): ...
+    def init_rules(self, overwrite: bool = False): ...
 
     def create_rules(self, module_name: str, run_env: str): ...
 

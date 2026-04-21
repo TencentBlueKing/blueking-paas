@@ -43,7 +43,7 @@ class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
     is_ai_agent_app = serializers.BooleanField(default=False)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        super().validate(attrs)
+        attrs = super().validate(attrs)
 
         if attrs["engine_enabled"] and not attrs.get("engine_params"):
             raise ValidationError(_("应用引擎参数未提供"))
@@ -143,6 +143,7 @@ class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):
     market_params = MarketParamsMixin()
 
     def validate(self, attrs):
+        attrs = super().validate(attrs)
         if attrs["engine_enabled"]:
             raise ValidationError(_("该接口只支持创建外链应用"))
         return attrs

@@ -17,6 +17,12 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server"
 )
 
+var (
+	// 版本信息，通过 -ldflags 在编译时注入
+	version   = "unknown"
+	buildTime = "unknown"
+)
+
 // entrypointManager manages the lifecycle of an entrypoint command,
 // including starting, logging, and graceful shutdown.
 type entrypointManager struct {
@@ -177,6 +183,11 @@ func runPreStartScript(scriptPath string, timeout time.Duration) error {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		printVersion()
+		return
+	}
+
 	errChan := make(chan error)
 
 	cfg, err := config.Load()
@@ -262,4 +273,10 @@ func initLogs(logWriter io.Writer) {
 	logLevel := config.ParseLogLevel(config.G.LogLevel)
 	handler := config.NewMultiWriterHandler(logLevel, os.Stdout, logWriter)
 	slog.SetDefault(slog.New(handler))
+}
+
+// printVersion 打印版本信息
+func printVersion() {
+	fmt.Printf("version: %s\n", version)
+	fmt.Printf("buildTime: %s\n", buildTime)
 }

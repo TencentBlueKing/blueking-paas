@@ -20,10 +20,7 @@ from typing import Dict, Optional
 
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.handlers import on_app_operation_created, post_save
-from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.operations.constant import OperationType as OpType
-from paasng.misc.operations.models import Operation
 from django.db.models import Max
 
 OPRATION_TRANSFER_MAP: Dict[int, Dict[str, Optional[str]]] = {
@@ -138,6 +135,10 @@ OPRATION_TRANSFER_MAP: Dict[int, Dict[str, Optional[str]]] = {
 
 
 def transfer_operations_to_audit(apps, schema_editor):
+    Operation = apps.get_model("operations", "Operation")
+    AppOperationRecord = apps.get_model("audit", "AppOperationRecord")
+    AppLatestOperationRecord = apps.get_model("audit", "AppLatestOperationRecord")
+
     # 获取每个 application 的最新 created 时间的 Operation 的 ID
     latest_operations_subquery = (
         Operation.objects.values('application').annotate(latest_created=Max('created')).values('latest_created')
@@ -163,8 +164,6 @@ def transfer_operations_to_audit(apps, schema_editor):
         else:
             result_code = ResultCode.SUCCESS
 
-        # 禁用自动同步，否则 AppLatestOperationRecord 中的 latest_operated_at 会更新为最新的操作时间
-        post_save.disconnect(on_app_operation_created)
         new_record = AppOperationRecord.objects.create(
             app_code=op.application.code,
             user=op.user,
@@ -183,7 +182,7 @@ def transfer_operations_to_audit(apps, schema_editor):
             created=op.created,
         )
         AppLatestOperationRecord.objects.update_or_create(
-            application=new_record.application,
+            application=op.application,
             defaults={
                 "operation_id": new_record.pk,
                 "latest_operated_at": op.created,
@@ -199,5 +198,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(transfer_operations_to_audit),
+        migrations.RunPython(transfer_operations_to_audit, migrations.RunPython.noop),
     ]

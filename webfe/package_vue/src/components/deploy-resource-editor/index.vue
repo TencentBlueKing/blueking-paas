@@ -160,7 +160,8 @@ export default defineComponent({
           const yamlValue = getValue();
           try {
             let emitValue = {};
-            const tmpObj = yamljs.load(yamlValue);
+            // 安全模式：使用 JSON_SCHEMA 仅允许基础类型（字符串/数字/布尔/null/数组/对象）
+            const tmpObj = yamljs.load(yamlValue, { schema: yamljs.JSON_SCHEMA });
             emitValue = typeof tmpObj === 'object' ? tmpObj : {};
             editorErr.value = '';
 

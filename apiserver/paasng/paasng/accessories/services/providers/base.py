@@ -81,21 +81,26 @@ class ResourcePoolProvider(BaseProvider):
             else:
                 cfg = instance.config
 
-            tls = cfg.get("tls", {})
+            tls = cfg.get("tls") or {}
+
+            enable_tls = False
             provider_name = instance.plan.service.provider_name
             # 如果实例配置中有证书，则在凭证部分中添加挂载证书的路径
             # 证书内容会在部署时候以 Secret 形式挂载到容器中
             ca, cert, cert_key = tls.get("ca"), tls.get("cert"), tls.get("key")
-            if ca:
-                creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
 
-            if cert and cert_key:
-                creds["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
-                creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+            if tls:
+                enable_tls = bool(ca or cert or cert_key)
+                if ca:
+                    creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
 
-            # 兼容各类 True 的情况
-            if tls.get("insecure_skip_verify") in [True, "true", "True"]:
-                creds["insecure_skip_verify"] = "true"
+                if cert and cert_key:
+                    creds["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+                    creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
+                # 兼容各类 True 的情况
+                if tls.get("insecure_skip_verify") in [True, "true", "True"]:
+                    creds["insecure_skip_verify"] = "true"
 
             return InstanceData(
                 credentials=creds,
@@ -103,7 +108,7 @@ class ResourcePoolProvider(BaseProvider):
                     "__pk__": str(instance.pk),
                     "is_pre_created": True,
                     "provider_name": provider_name,
-                    "enable_tls": bool(ca or cert or cert_key),
+                    "enable_tls": enable_tls,
                     "recyclable": cfg.get("recyclable", False),
                 },
             )

@@ -56,6 +56,8 @@ class BkMonitorBackend(Protocol):
 
     def quick_import_dashboard(self, *args, **kwargs) -> Dict: ...
 
+    def delete_alarm_strategy(self, *args, **kwargs) -> Dict: ...
+
 
 class BKMonitorSpaceManager:
     """BK Monitor Space Management API provider"""
@@ -201,6 +203,36 @@ class BkMonitorClient:
             f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
         )
         return data
+
+    def delete_alarm_strategy(
+        self, strategy_config_id: int, app_code: str | None = None, bk_biz_id: int | None = None
+    ) -> dict:
+        """
+        根据告警策略 ID 删除告警策略
+
+        :param strategy_config_id: 告警策略 ID, 可通过 query_alarm_strategies 接口查询获得
+        :param app_code: app code, 与 bk_biz_id 二选一填写, 优先 bk_biz_id
+        :param bk_biz_id: bk_biz_id, 与 app_code 二选一填写, 优先 bk_biz_id
+        """
+        if not (app_code or bk_biz_id):
+            raise ValueError("app_code and bk_biz_id cannot be both empty")
+        bk_biz_id = bk_biz_id or self.query_space_biz_id([str(app_code)])[0]["bk_biz_id"]
+
+        params = {
+            "id": strategy_config_id,
+            "bk_biz_id": bk_biz_id,
+        }
+
+        try:
+            resp = self.client.delete_alarm_strategy(json=params)
+        except APIGatewayResponseError:
+            # 详细错误信息 bkapi_client_core 会自动记录
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
+
+        if not resp.get("result"):
+            raise BkMonitorApiError(resp["message"])
+
+        return resp.get("data", {})
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

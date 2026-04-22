@@ -40,10 +40,10 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <bk-user-display-name
-              v-if="column.userDisplay && isMultiTenantDisplayMode"
-              :user-id="row[column.prop]"
-            ></bk-user-display-name>
+            <UserDisplay
+              v-if="column.userDisplay"
+              :value="row[column.prop]"
+            />
             <span v-else>{{ row[column.prop] ?? '--' }}</span>
           </template>
         </bk-table-column>
@@ -113,11 +113,7 @@
       @confirm="deletePlatformAdministrator"
     >
       <span>{{ $t('删除后') }}，</span>
-      <bk-user-display-name
-        v-if="isMultiTenantDisplayMode"
-        :user-id="deleteDialogConfig.user"
-      ></bk-user-display-name>
-      <span v-else>{{ deleteDialogConfig.user }}</span>
+      <UserDisplay :value="deleteDialogConfig.user" />
       &nbsp;
       {{ $t('将无法再使用平台管理相关功能。') }}
     </bk-dialog>
@@ -127,6 +123,7 @@
 <script>
 import paginationMixin from '../pagination-mixin.js';
 import User from '@/components/user';
+import UserDisplay from '@/components/user/user-display.vue';
 import { mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
@@ -134,6 +131,7 @@ export default {
   mixins: [paginationMixin],
   components: {
     User,
+    UserDisplay,
   },
   data() {
     return {

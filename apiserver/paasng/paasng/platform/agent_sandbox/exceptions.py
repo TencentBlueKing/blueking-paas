@@ -30,6 +30,10 @@ class SandboxAlreadyExists(SandboxError):
 class SandboxCreateError(SandboxError):
     """Raised when creating a sandbox fails."""
 
+    def __init__(self, message: str, logs: str | None = None):
+        super().__init__(message)
+        self.logs = logs
+
 
 class SandboxFileError(SandboxError):
     """Raised when file operations in the sandbox fail."""

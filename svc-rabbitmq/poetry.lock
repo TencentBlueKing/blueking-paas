@@ -578,14 +578,14 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "django"
-version = "4.2.17"
+version = "4.2.30"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "Django-4.2.17-py3-none-any.whl", hash = "sha256:3a93350214ba25f178d4045c0786c61573e7dbfa3c509b3551374f1e11ba8de0"},
-    {file = "Django-4.2.17.tar.gz", hash = "sha256:6b56d834cc94c8b21a8f4e775064896be3b4a4ca387f2612d4406a5927cd2fdc"},
+    {file = "django-4.2.30-py3-none-any.whl", hash = "sha256:4d07aaf1c62f9984842b67c2874ebbf7056a17be253860299b93ae1881faad65"},
+    {file = "django-4.2.30.tar.gz", hash = "sha256:4ebc7a434e3819db6cf4b399fb5b3f536310a30e8486f08b66886840be84b37c"},
 ]
 
 [package.dependencies]
@@ -2423,4 +2423,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "e9122a50117d1260c9c0a49fc545c2022e537e38663f0c9ff6899fbdf8c35d3a"
+content-hash = "86ba0ecab6c42ec1e47de4e35fbba8f597f6f9a84894e80a3c6a0c3927a04475"

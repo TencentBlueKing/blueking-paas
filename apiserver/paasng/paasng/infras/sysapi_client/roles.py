@@ -83,7 +83,7 @@ class ClientPermChecker:
             ClientAction.READ_DB_CREDENTIAL: True,
             ClientAction.BIND_DB_SERVICE: True,
         }
-        aidev_perms = nobody_perms | {
+        aidev_perms = basic_maintainer_perms | {
             ClientAction.GRANT_APIGW_PERMISSIONS: True,
             ClientAction.BUILD_SANDBOX_IMAGE: True,
         }

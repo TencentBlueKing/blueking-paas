@@ -43,6 +43,11 @@ urlpatterns = [
         name="api.applications.creation.options",
     ),
     re_path(
+        r"^api/bkapps/applications/creation/reserved_prefixes/$",
+        views.ReservedAppCodePrefixViewSet.as_view({"get": "list"}),
+        name="api.applications.creation.reserved_prefixes",
+    ),
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/$",
         views.ApplicationViewSet.as_view({"get": "retrieve", "delete": "destroy", "put": "update"}),
         name="api.applications.detail",

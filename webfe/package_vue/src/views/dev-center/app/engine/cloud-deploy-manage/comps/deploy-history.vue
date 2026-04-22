@@ -163,11 +163,7 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <bk-user-display-name
-              :user-id="row.operator.username"
-              v-if="isMultiTenantDisplayMode"
-            ></bk-user-display-name>
-            <span v-else>{{ row.operator.username }}</span>
+            <UserDisplay :value="row.operator.username" />
           </template>
         </bk-table-column>
         <bk-table-column
@@ -237,6 +233,7 @@
 import user from '@/components/user';
 import deployLogSideslider from '@/components/deploy/deploy-log-sideslider.vue';
 import ResourceEditor from '@/components/deploy-resource-editor';
+import UserDisplay from '@/components/user/user-display.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { DEPLOY_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
@@ -248,6 +245,7 @@ export default {
     user,
     deployLogSideslider,
     ResourceEditor,
+    UserDisplay,
   },
   mixins: [appBaseMixin],
   data() {

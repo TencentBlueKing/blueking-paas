@@ -27,6 +27,7 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
+from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
     AgentSandboxKresApp,
@@ -39,10 +40,11 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxCreateError,
     SandboxCreateTimeout,
     SandboxDaemonAPIError,
     SandboxError,
@@ -68,6 +70,7 @@ def create_sandbox(
     snapshot: str | None = None,
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
+    ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -78,6 +81,7 @@ def create_sandbox(
     :param snapshot: The snapshot name, optional.
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
+    :param ttl_seconds: The sandbox ttl in seconds, optional.
     """
     sandbox_obj = Sandbox.objects.new(
         application=application,
@@ -87,6 +91,7 @@ def create_sandbox(
         env_vars=env_vars,
         creator=creator,
         workspace=workspace,
+        ttl_seconds=ttl_seconds,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)
@@ -140,7 +145,8 @@ class AgentSandboxResManager:
     """
 
     # The timeout for creating a sandbox, in seconds
-    create_timeout = 30
+    # 探测沙箱 daemon 服务就绪的最大超时时间，不宜超过 daemon 实际配置的 PRE_START_TIMEOUT 时间
+    create_timeout = 120
 
     def __init__(self, app: Application, target: str):
         self.app = app
@@ -171,13 +177,16 @@ class AgentSandboxResManager:
         try:
             with self.kres_app.get_kube_api_client() as client:
                 NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
-
+                ensure_image_credential(client=client, namespace=self.kres_app.namespace)
             agent_sandbox_kmodel.create(sandbox)
             sandbox_created = True
             self._wait_for_running(sandbox.name)
         except ReadTargetStatusTimeout as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxCreateTimeout(str(exc)) from exc
+        except SandboxCreateError:
+            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
+            raise
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
@@ -232,12 +241,33 @@ class AgentSandboxResManager:
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:
-            kres.KPod(client).wait_for_status(
+            pod_phase = kres.KPod(client).wait_for_status(
                 name=pod_name,
-                target_statuses={PodPhase.RUNNING.value},
+                target_statuses={PodPhase.RUNNING.value, PodPhase.FAILED.value},
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
             )
+            if pod_phase == PodPhase.FAILED.value:
+                logs = self._get_pod_logs(client, pod_name)
+                raise SandboxCreateError("sandbox pod failed to start", logs=logs)
+
+    def _get_pod_logs(self, client, pod_name: str, tail_lines: int = 500) -> str:
+        """Get logs from a pod for failed to start.
+
+        :param client: The Kubernetes API client.
+        :param pod_name: The name of the pod.
+        :returns: The logs content.
+        """
+        try:
+            resp = kres.KPod(client).get_log(
+                name=pod_name,
+                namespace=self.kres_app.namespace,
+                tail_lines=tail_lines,
+            )
+            return resp.data.decode("utf-8", errors="replace")
+        except ApiException:
+            logger.exception("failed to get logs from failed pod %s", pod_name)
+            return ""
 
     def _cleanup_sandbox_on_create_error(self, pod_name: str, sandbox_created: bool) -> None:
         if not sandbox_created:

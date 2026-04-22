@@ -1,5 +1,8 @@
-VERSION ?= $(shell git describe --always)
-GIT_HASH ?= $(shell git rev-parse HEAD)
+ifdef VERSION
+    VERSION=${VERSION}
+else
+    VERSION=$(shell git describe --always)
+endif
 
 WORKSPACE=$(shell pwd)
 BUILD_TIME=$(shell date +%Y-%m-%dT%I:%M:%S)
@@ -55,6 +58,10 @@ ginkgo: $(GINKGO)  ## install ginkgo tool
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
+.PHONY: docker-dev
+docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像
+	docker build -f ./Dockerfile-Dev -t bkpaas-sandbox-daemon-dev:$(VERSION) --no-cache .
+
 ## Docs
 .PHONY: swag-init
 swag-init: $(SWAG)  ## Generate swagger documentation
@@ -69,4 +76,4 @@ $(SWAG): $(LOCALBIN)
 .PHONY: build
 build: swag-init ## Build the binary
 	mkdir -p ${PACKAGE_PATH}
-	${GO_BUILD} -o ${PACKAGE_PATH}/daemon ${WORKSPACE}/cmd/main.go
+	${GO_BUILD} -ldflags "-X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME)" -o ${PACKAGE_PATH}/daemon ${WORKSPACE}/cmd/main.go

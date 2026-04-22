@@ -797,6 +797,10 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get("PAAS_LEGACY_DB_ENCRYPT_KEY")
 
+
+# RESERVED_APP_CODE_PREFIXES 包含与应用代码相关的敏感前缀，配置后，平台将不允许用户使用这些前缀创建应用
+RESERVED_APP_CODE_PREFIXES = settings.get("RESERVED_APP_CODE_PREFIXES", ["bk-"])
+
 # ---------------
 # 对象存储配置
 # ---------------
@@ -1179,26 +1183,6 @@ LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
 ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
-# 蓝鲸日志平台相关的配置项
-BKLOG_TIME_ZONE = settings.get("BKLOG_TIME_ZONE")
-## 日志平台存储集群 ID
-BKLOG_STORAGE_CLUSTER_ID = settings.get("BKLOG_STORAGE_CLUSTER_ID")
-## 日志保存时间（天数），默认值 14
-BKLOG_RETENTION = int(settings.get("BKLOG_RETENTION", 14))
-## Elasticsearch 索引分片数，默认值 1
-BKLOG_ES_SHARDS = int(settings.get("BKLOG_ES_SHARDS", 1))
-## 存储副本数，默认值 1
-BKLOG_STORAGE_REPLICAS = int(settings.get("BKLOG_STORAGE_REPLICAS", 1))
-BKLOG_CONFIG = settings.get(
-    "BKLOG_CONFIG",
-    {
-        "TIME_ZONE": BKLOG_TIME_ZONE,
-        "STORAGE_CLUSTER_ID": BKLOG_STORAGE_CLUSTER_ID,
-        "RETENTION": BKLOG_RETENTION,
-        "ES_SHARDS": BKLOG_ES_SHARDS,
-        "STORAGE_REPLICAS": BKLOG_STORAGE_REPLICAS,
-    },
-)
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get(

@@ -42,7 +42,7 @@ class Command(BaseCommand):
     help = "Delete bkmonitor alert rule by alert name"
 
     def add_arguments(self, parser):
-        parser.add_argument("apps", nargs="+", help="app code list, eg: app1 app2")
+        parser.add_argument("--apps", nargs="+", help="app code list, eg: app1 app2")
         parser.add_argument("--alert-code", help="bkmonitor alert name")
 
     @staticmethod
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             f"Found {to_delete_alert_rules.count()} alert rules with alert code '{alert_code}' for given {len(applications)} apps"
         )
 
-        self.stdout.write("Start deleting after 3 seconds...")
+        self.stdout.write(self.style.WARNING("Deletion will begin in 3 seconds..."))
         time.sleep(3)
 
         for app in applications:

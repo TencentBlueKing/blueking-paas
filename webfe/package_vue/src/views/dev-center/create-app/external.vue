@@ -23,13 +23,19 @@
             <bk-input
               v-model="formData.code"
               :placeholder="$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
+              :class="{ 'reserved-prefix-warning': isCodePrefixMatched }"
             ></bk-input>
-            <p
+            <div
               class="item-tips mb0"
               slot="tip"
             >
               {{ $t('应用的唯一标识，创建后不可修改') }}
-            </p>
+              <ReservedPrefixTips
+                ref="reservedPrefixTips"
+                :code="formData.code"
+                :reserved-prefixes="reservedPrefixes"
+              />
+            </div>
           </bk-form-item>
           <bk-form-item
             :label="$t('应用名称')"
@@ -135,8 +141,18 @@
 /* eslint-disable max-len */
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters } from 'vuex';
+import ReservedPrefixTips from './comps/reserved-prefix-tips.vue';
 export default {
+  components: {
+    ReservedPrefixTips,
+  },
   mixins: [sidebarDiffMixin],
+  props: {
+    reservedPrefixes: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       loadingImg: require('@static/images/create-app-loading.svg'),
@@ -203,6 +219,10 @@ export default {
   },
   computed: {
     ...mapGetters(['isShowTenant']),
+    isCodePrefixMatched() {
+      if (!this.formData.code || !this.reservedPrefixes.length) return false;
+      return this.reservedPrefixes.some((prefix) => this.formData.code.startsWith(prefix));
+    },
     curUserInfo() {
       return this.$store.state.curUserInfo;
     },
@@ -226,16 +246,24 @@ export default {
 
     // 处理创建应用
     handleCreateApp() {
+      const validates = [this.$refs.baseInfoForm.validate(), this.$refs.appMarketForm.validate()];
+      if (this.$refs.reservedPrefixTips) {
+        validates.push(this.$refs.reservedPrefixTips.validate());
+      }
       // 表单校验
-      Promise.all([this.$refs.baseInfoForm.validate(), this.$refs.appMarketForm.validate()]).then(
+      Promise.all(validates).then(
         () => {
           const params = this.formatParams();
+          const authCode = this.$refs.reservedPrefixTips?.getCode() || '';
+          if (authCode) {
+            params.auth_code = authCode;
+          }
           this.createLoading = true;
           this.submitCreateForm(params);
         },
         (validator) => {
           console.error(validator);
-        },
+        }
       );
     },
     // 提交表单
@@ -296,6 +324,11 @@ export default {
 </script>
 <style lang="scss" scoped>
 @import './default.scss';
+.reserved-prefix-warning {
+  /deep/ .bk-form-input {
+    border-color: #f59500 !important;
+  }
+}
 .establish {
   .external-tip {
     margin: 16px 0;

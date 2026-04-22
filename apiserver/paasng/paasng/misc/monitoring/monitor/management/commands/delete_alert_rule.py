@@ -19,7 +19,7 @@
 import time
 from typing import TypedDict
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams
@@ -39,11 +39,11 @@ class StrategyConfig(TypedDict):
 
 
 class Command(BaseCommand):
-    help = "Delete bkmonitor alert rule by alert name"
+    help = "Delete bkmonitor alert rule by alert_code"
 
     def add_arguments(self, parser):
-        parser.add_argument("--apps", nargs="+", help="app code list, eg: app1 app2")
-        parser.add_argument("--alert-code", help="bkmonitor alert name")
+        parser.add_argument("--apps", nargs="+", required=True, help="app code list, eg: app1 app2")
+        parser.add_argument("--alert-code", help="bkmonitor alert code")
 
     @staticmethod
     def validate_app_codes(app_codes) -> list[Application]:
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         existing_app_codes = set(applications.values_list("code", flat=True))
         invalid_app_codes = set(app_codes) - existing_app_codes
         if invalid_app_codes:
-            raise ValueError(f"Invalid app codes: {', '.join(invalid_app_codes)}")
+            raise CommandError(f"Invalid app codes: {', '.join(invalid_app_codes)}")
         return list(applications)
 
     def print_available_alert_codes(self, applications: list[Application]):

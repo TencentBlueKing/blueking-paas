@@ -94,9 +94,7 @@ class MonitorV3Group(OperationGroup):
 
     # 删除告警策略
     def delete_alarm_strategy(self, *args, **kwargs):
-        raise NotImplementedError(
-            "delete_alarm_strategy is not implemented in ESB, please use bkmonitor client directly"
-        )
+        raise NotImplementedError("delete_alarm_strategy is not implemented in ESB client")
 
 
 class Client(ESBClient):

@@ -101,9 +101,21 @@ class UserVerificationGenerationView(APIView):
 
         user_tenant_id = get_tenant(request.user).id
         bk_notify = BkNotificationService(user_tenant_id)
+
+        sent_any = False
+        try:
+            bk_notify.send_sms([request.user.username], message)
+            sent_any = True
+        except BaseNotifierError:
+            logger.warning(f"failed to send verification code to {request.user.username} via sms")
+
         try:
             bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
+            sent_any = True
         except BaseNotifierError:
+            logger.warning(f"failed to send verification code to {request.user.username} via wecom")
+
+        if not sent_any:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return JsonResponse({}, status=status.HTTP_201_CREATED)

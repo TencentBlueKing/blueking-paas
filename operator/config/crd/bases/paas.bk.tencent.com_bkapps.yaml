@@ -349,6 +349,17 @@ spec:
                     cpu:
                       description: CPU will be used as limits.cpu
                       type: string
+                    gracefulShutdownSeconds:
+                      description: |-
+                        GracefulShutdownSeconds defines the graceful shutdown window in seconds.
+                        When set, the operator injects a preStop hook to sleep for this duration
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds.
+                        When unset, no preStop hook is injected and Kubernetes default
+                        terminationGracePeriodSeconds is used.
+                        The value must be >= 1 when set.
+                      format: int64
+                      minimum: 1
+                      type: integer
                     image:
                       description: Container image name
                       type: string
@@ -1650,6 +1661,17 @@ spec:
                         - version
                         type: object
                       type: array
+                    gracefulShutdownSeconds:
+                      description: |-
+                        GracefulShutdownSeconds defines the graceful shutdown window in seconds.
+                        When set, the operator injects a preStop hook to sleep for this duration
+                        and sets Pod terminationGracePeriodSeconds to gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds.
+                        When unset, no preStop hook is injected and Kubernetes default
+                        terminationGracePeriodSeconds is used.
+                        The value must be >= 1 when set.
+                      format: int64
+                      minimum: 1
+                      type: integer
                     name:
                       description: Name of process
                       type: string

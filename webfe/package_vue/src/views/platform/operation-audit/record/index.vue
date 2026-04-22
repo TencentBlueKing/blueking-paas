@@ -71,10 +71,10 @@
             <span v-else-if="column.prop === 'environment'">
               {{ envMap[row[column.prop]] || '--' }}
             </span>
-            <bk-user-display-name
-              v-else-if="column.prop === 'operator' && isMultiTenantDisplayMode"
-              :user-id="row[column.prop]"
-            ></bk-user-display-name>
+            <UserDisplay
+              v-else-if="column.prop === 'operator'"
+              :value="row[column.prop]"
+            />
             <span v-else>{{ row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
@@ -118,6 +118,7 @@ import { APP_OPERATION, APP_RESULT_CODE } from '@/common/constants';
 import { platformColumns, appColumns } from './column';
 import { mapState, mapGetters } from 'vuex';
 import diff from '@/views/dev-center/app/operation-record/comps/diff.vue';
+import UserDisplay from '@/components/user/user-display.vue';
 import yamljs from 'js-yaml';
 import { createLongTermDatePresets } from '@/common/date';
 
@@ -125,6 +126,7 @@ export default {
   name: 'OperationRecord',
   components: {
     diff,
+    UserDisplay,
   },
   props: {
     type: {
@@ -172,7 +174,7 @@ export default {
   },
   computed: {
     ...mapState(['localLanguage']),
-    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
+    ...mapGetters(['tenantId']),
     isPlatform() {
       return this.type === 'platform';
     },

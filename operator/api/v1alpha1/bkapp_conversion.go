@@ -65,6 +65,9 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 			}
 		}
 
+		// Copy GracefulShutdownSeconds field
+		dstProc.GracefulShutdownSeconds = proc.GracefulShutdownSeconds
+
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)
 	}
@@ -201,6 +204,9 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 				Startup:   proc.Probes.Startup,
 			}
 		}
+
+		// Copy GracefulShutdownSeconds field
+		dstProc.GracefulShutdownSeconds = proc.GracefulShutdownSeconds
 
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)

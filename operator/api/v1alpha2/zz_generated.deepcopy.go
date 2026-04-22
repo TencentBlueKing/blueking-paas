@@ -901,6 +901,11 @@ func (in *Process) DeepCopyInto(out *Process) {
 		*out = new(ProbeSet)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.GracefulShutdownSeconds != nil {
+		in, out := &in.GracefulShutdownSeconds, &out.GracefulShutdownSeconds
+		*out = new(int64)
+		**out = **in
+	}
 	if in.Components != nil {
 		in, out := &in.Components, &out.Components
 		*out = make([]Component, len(*in))

@@ -50,6 +50,10 @@ const (
 
 	// DefaultDeployID is the value that will be used if the DeployID is not set
 	DefaultDeployID = "0"
+
+	// TerminationGracePeriodDelaySeconds is the extra grace period reserved for app cleanup
+	// after preStop sleep is finished.
+	TerminationGracePeriodDelaySeconds = int64(2)
 )
 
 // log is for logging in this package.
@@ -147,7 +151,8 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					NodeSelector:     common.BuildNodeSelector(app),
 					Tolerations:      common.BuildTolerations(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
-					AutomountServiceAccountToken: lo.ToPtr(false),
+					AutomountServiceAccountToken:  lo.ToPtr(false),
+					TerminationGracePeriodSeconds: buildTerminationGracePeriodSeconds(proc.GracefulShutdownSeconds),
 				},
 			},
 		},
@@ -198,6 +203,7 @@ func buildContainers(
 		Env:             envs,
 		Command:         kubeutil.ReplaceCommandEnvVariables(command),
 		Args:            kubeutil.ReplaceCommandEnvVariables(args),
+		Lifecycle:       buildContainerLifecycle(proc.GracefulShutdownSeconds),
 	}
 
 	if len(proc.Services) > 0 {
@@ -216,6 +222,38 @@ func buildContainers(
 		container.StartupProbe = proc.Probes.Startup
 	}
 	return []corev1.Container{container}
+}
+
+// buildContainerLifecycle returns the container lifecycle config.
+// It injects a preStop sleep hook only when GracefulShutdownSeconds is set.
+// The sleep duration equals GracefulShutdownSeconds.
+func buildContainerLifecycle(gracefulShutdownSeconds *int64) *corev1.Lifecycle {
+	if gracefulShutdownSeconds == nil {
+		return nil
+	}
+
+	// preStop sleep duration equals GracefulShutdownSeconds directly.
+	sleepSeconds := *gracefulShutdownSeconds
+	return &corev1.Lifecycle{
+		PreStop: &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"sleep", strconv.FormatInt(sleepSeconds, 10)},
+			},
+		},
+	}
+}
+
+// buildTerminationGracePeriodSeconds returns TerminationGracePeriodSeconds for PodSpec.
+//   - return nil when GracefulShutdownSeconds is unset,
+//     so Kubernetes default terminationGracePeriodSeconds is used.
+//   - return gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds otherwise.
+func buildTerminationGracePeriodSeconds(gracefulShutdownSeconds *int64) *int64 {
+	if gracefulShutdownSeconds == nil {
+		return nil
+	}
+
+	terminationGracePeriodSeconds := *gracefulShutdownSeconds + TerminationGracePeriodDelaySeconds
+	return lo.ToPtr(terminationGracePeriodSeconds)
 }
 
 // BuildImagePullSecrets 返回拉取镜像的 Secrets 列表

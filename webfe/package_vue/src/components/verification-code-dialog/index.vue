@@ -1,7 +1,7 @@
 <template>
   <bk-dialog
     v-model="dialogVisible"
-    width="480"
+    width="500"
     :theme="'primary'"
     :mask-close="false"
     @value-change="handleValueChange"
@@ -21,7 +21,7 @@
       </bk-button>
     </div>
     <div class="dialog-content">
-      <p>{{ $t('验证码已发送至您的企业微信，请注意查收！') }}</p>
+      <p v-dompurify-html="$t('验证码已发送至<b>短信</b>及<b>企业微信</b>（应用提醒 > 消息提醒），请注意查收！')"></p>
       <div class="mt15 flex-row align-items-center">
         <b>{{ $t('验证码：') }}</b>
         <bk-input

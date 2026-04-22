@@ -18,6 +18,7 @@
 """Client for remote services"""
 
 import logging
+import time
 from contextlib import contextmanager
 from dataclasses import MISSING, dataclass
 from typing import Dict, List
@@ -88,7 +89,7 @@ class RemoteSvcConfig:
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
-        self.idempotent_create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/")
+        self.idem_prov = urljoin(self.endpoint_url, "services/{service_id}/instances/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
         self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定
@@ -120,6 +121,7 @@ class RemoteServiceClient:
     REQUEST_LIST_TIMEOUT = 15
     REQUEST_DELETE_TIMEOUT = 30
     REQUEST_CREATE_TIMEOUT = 300
+    POST_RETRY_INTERVAL = 1
 
     def __init__(self, config: RemoteSvcConfig):
         self.config = config
@@ -134,6 +136,25 @@ class RemoteServiceClient:
                 status_code=resp.status_code,
                 response_text=resp.text,
             )
+
+    def _post_until_ready(self, url: str, payload: Dict) -> requests.Response:
+        """Retry POST requests until the async endpoint returns 200/201 or timeout."""
+        deadline = time.monotonic() + self.REQUEST_CREATE_TIMEOUT
+        last_resp = None
+
+        while time.monotonic() < deadline:
+            resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
+            if resp.status_code in {200, 201}:
+                return resp
+            last_resp = resp
+            time.sleep(self.POST_RETRY_INTERVAL)
+
+        if last_resp is not None:
+            self.validate_resp(last_resp)
+
+        raise RemoteClientError(
+            f"POST to {desensitize_url(url)} not ready after retrying for {self.REQUEST_CREATE_TIMEOUT} seconds"
+        )
 
     def get_meta_info(self) -> Dict:
         """Get service's meta info
@@ -224,11 +245,10 @@ class RemoteServiceClient:
         :raises: RemoteClientError
         :return: <instance dict>
         """
-        url = self.config.idempotent_create_instance_url.format(service_id=service_id)
+        url = self.config.idem_prov.format(service_id=service_id)
         payload = {"plan_id": plan_id, "params": params}
         with wrap_request_exc(self):
-            resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
-            self.validate_resp(resp)
+            resp = self._post_until_ready(url, payload)
             return resp.json()
 
     def retrieve_instance(self, instance_id: str) -> Dict:
@@ -308,8 +328,7 @@ class RemoteServiceClient:
     def create_client_side_instance(self, service_id: str, instance_id: str, params: Dict):
         url = self.config.create_client_side_instance_url.format(service_id=service_id, instance_id=instance_id)
         with wrap_request_exc(self):
-            resp = requests.post(url, json=params, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
-            self.validate_resp(resp)
+            resp = self._post_until_ready(url, params)
             return resp.json()
 
     def destroy_client_side_instance(self, instance_id: str):

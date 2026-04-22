@@ -95,5 +95,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     f"Deleted alert rule '{alert_rule['name']}' (id={alert_rule['id']}) for app {app.code}. Gateway response: {resp}"
                 )
+                # 该命令处于测试阶段，等确认 bkmonitor 的告警规则被成功删除后，再删除数据库中的记录，避免误删告警规则后无法恢复
+                # alert_rule.delete()
 
         self.stdout.write("DONE")

@@ -11,6 +11,7 @@
         {{ $t('使用 {n} 前缀的应用 ID 需要输入授权码才能创建', { n: matchedPrefixes.join('、') }) }}
         <a
           class="ml5"
+          :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/app_reserved_prefix'"
           target="_blank"
         >
           {{ $t('查看申请指引') }}

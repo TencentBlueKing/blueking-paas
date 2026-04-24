@@ -30,7 +30,6 @@ dependencies = [
     'django (==4.2.30)',
     'pymysql (==1.1.1)',
     "gunicorn (==23.0.0)",
-    'paas-service (>=2.0.4)',
     'djangorestframework (==3.15.2)',
     'requests (==2.32.3)',
     'gevent (==24.2.1)',
@@ -48,4 +47,5 @@ dependencies = [
     "cattrs (==1.10.0)",
     "attrs (==22.1.0)",
     "grpcio (==1.76.0)",
+    "paas-service (==2.0.4)",
 ]

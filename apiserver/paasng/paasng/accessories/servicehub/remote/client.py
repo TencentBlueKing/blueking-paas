@@ -89,7 +89,7 @@ class RemoteSvcConfig:
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
-        self.idem_prov = urljoin(self.endpoint_url, "services/{service_id}/instances/")
+        self.idem_prov = urljoin(self.endpoint_url, "services/{service_id}/instances/idem_prov/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
         self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定

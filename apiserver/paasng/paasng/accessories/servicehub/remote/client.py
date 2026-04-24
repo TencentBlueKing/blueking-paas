@@ -121,7 +121,6 @@ class RemoteServiceClient:
     REQUEST_LIST_TIMEOUT = 15
     REQUEST_DELETE_TIMEOUT = 30
     REQUEST_CREATE_TIMEOUT = 300
-    POST_RETRY_INTERVAL = 1
 
     def __init__(self, config: RemoteSvcConfig):
         self.config = config
@@ -140,17 +139,17 @@ class RemoteServiceClient:
     def _post_until_ready(self, url: str, payload: Dict) -> requests.Response:
         """Retry POST requests until the async endpoint returns 200/201 or timeout."""
         deadline = time.monotonic() + self.REQUEST_CREATE_TIMEOUT
-        last_resp = None
 
+        poll_interval = 0.5
         while time.monotonic() < deadline:
             resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
+            self.validate_resp(resp)
+            # 200，201 表示资源已就绪，可以返回了
+            # 202，表示请求已接受，但资源未就绪，需要继续轮询
             if resp.status_code in {200, 201}:
                 return resp
-            last_resp = resp
-            time.sleep(self.POST_RETRY_INTERVAL)
-
-        if last_resp is not None:
-            self.validate_resp(last_resp)
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 2, 4)
 
         raise RemoteClientError(
             f"POST to {desensitize_url(url)} not ready after retrying for {self.REQUEST_CREATE_TIMEOUT} seconds"

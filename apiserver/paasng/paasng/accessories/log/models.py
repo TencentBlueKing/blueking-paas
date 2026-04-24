@@ -214,3 +214,11 @@ class TenantLogConfig(UuidAuditedModel):
         _("时区"),
         help_text="日志时间字段解析时区，如 8 代表 UTC+8",
     )
+
+    shared_bk_biz_id = models.IntegerField(
+        _("平台级共享采集项所属业务 ID"),
+        help_text="启用 ENABLE_SHARED_BK_LOG_INDEX 时生效, 共享采集项所挂载的蓝鲸 CMDB 业务 ID (非 space_id)",
+        null=True,
+        blank=True,
+        default=None,
+    )

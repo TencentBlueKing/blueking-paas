@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 from typing import Any, Dict, List, Optional, Protocol, Union
 
 import cattr
@@ -26,6 +27,8 @@ from paasng.infras.bk_log.backend.apigw import Client as APIGWClient
 from paasng.infras.bk_log.backend.esb import get_client_by_username
 from paasng.infras.bk_log.definitions import CustomCollectorConfig, PlainCustomCollectorConfig
 from paasng.infras.bk_log.exceptions import BkLogApiError, BkLogGatewayServiceError, CollectorConfigNotPersisted
+
+logger = logging.getLogger(__name__)
 
 
 class _APIGWOperationStub(Protocol):
@@ -113,13 +116,25 @@ class BkLogManagementClient:
                 )
         return None
 
-    def create_custom_collector_config(self, biz_or_space_id: Union[int, str], config: CustomCollectorConfig):
+    def create_custom_collector_config(
+        self,
+        biz_or_space_id: Union[int, str],
+        config: CustomCollectorConfig,
+        ignore_exists: Optional[bool] = None,
+    ):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
 
         :param int/str biz_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
         :param config: 自定采集项配置
+        :param ignore_exists: 幂等创建开关。为 True 时, 当 (bk_biz_id, collector_config_name_en)
+            已存在, 日志平台不报错, 返回已有采集项(响应 data 里会带 created=False)。
+            留空默认跟随 config.is_platform_index —— 平台级共享采集项同名不同进程会互相竞争,
+            必须幂等创建; 传统按应用隔离的采集项保持原有"冲突即报错"行为。
         :return: 创建的自定采集项配置
         """
+        if ignore_exists is None:
+            ignore_exists = config.is_platform_index
+
         data: Dict[str, Any] = {
             # 日志侧的接口参数未调整, 虽然参数名是 bk_biz_id, 实际上空间ID也通过这个参数传递
             "bk_biz_id": biz_or_space_id,
@@ -151,6 +166,11 @@ class BkLogManagementClient:
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
+        # 仅在 is_platform_index=True 时追加平台级共享索引相关字段
+        data.update(_build_platform_index_payload(config))
+        if ignore_exists:
+            data["ignore_exists"] = True
+
         try:
             resp = self.client.databus_custom_create(data=data)
         except APIGatewayResponseError:
@@ -159,9 +179,19 @@ class BkLogManagementClient:
         if not resp["result"]:
             raise BkLogApiError(resp["message"])
 
-        config.id = resp["data"]["collector_config_id"]
-        config.index_set_id = resp["data"]["index_set_id"]
-        config.bk_data_id = resp["data"]["bk_data_id"]
+        resp_data = resp["data"]
+        # 命中已存在分支时, 打一条 info 日志方便排查
+        if ignore_exists and resp_data.get("created") is False:
+            logger.info(
+                "custom collector config already exists, reuse it. bk_biz_id=%s, name_en=%s, collector_config_id=%s",
+                biz_or_space_id,
+                config.name_en,
+                resp_data.get("collector_config_id"),
+            )
+
+        config.id = resp_data["collector_config_id"]
+        config.index_set_id = resp_data["index_set_id"]
+        config.bk_data_id = resp_data["bk_data_id"]
         return config
 
     def update_custom_collector_config(self, config: CustomCollectorConfig):
@@ -194,6 +224,9 @@ class BkLogManagementClient:
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
+        # 仅在 is_platform_index=True 时追加平台级共享索引相关字段
+        data.update(_build_platform_index_payload(config))
+
         try:
             resp = self.client.databus_custom_update(data=data, path_params={"collector_config_id": config.id})
         except APIGatewayResponseError:
@@ -201,6 +234,21 @@ class BkLogManagementClient:
 
         if not resp["result"]:
             raise BkLogApiError(resp["message"])
+
+
+def _build_platform_index_payload(config: CustomCollectorConfig) -> Dict[str, Any]:
+    """组装平台级共享采集项相关的请求字段
+
+    非平台级采集项返回空字典。visibility / filter 为 None 的前置校验在
+    ``CustomCollectorConfig.__attrs_post_init__`` 里完成, 这里只做直接序列化。
+    """
+    if not config.is_platform_index:
+        return {}
+    return {
+        "is_platform_index": True,
+        "platform_index_visibility": cattr.unstructure(config.platform_index_visibility),
+        "platform_index_filter": cattr.unstructure(config.platform_index_filter),
+    }
 
 
 def make_bk_log_management_client(tenant_id: str) -> BkLogManagementClient:

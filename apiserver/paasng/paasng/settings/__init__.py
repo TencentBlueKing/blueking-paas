@@ -1184,6 +1184,15 @@ ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
 
+# ------------------------------
+# 蓝鲸日志平台 - 平台级共享采集项
+# ------------------------------
+# 开启后进入"平台级共享采集项"链路: 同一租户下所有 SaaS 应用共用同一份 json/stdout 采集项和 ES 索引,
+# 应用级隔离靠查询侧按 __ext.labels.bkapp_paas_bk_tencent_com_code 过滤实现;
+# 不同租户通过 name_en 后缀区分到不同索引。
+# 注: 采集项所属的 CMDB 业务 ID (不同租户可能不同) 由 TenantLogConfig.shared_bk_biz_id 按租户配置;
+# 可见范围取值固定为 constants.BK_LOG_SHARED_INDEX_VISIBILITY。
+ENABLE_SHARED_BK_LOG_INDEX = settings.get("ENABLE_SHARED_BK_LOG_INDEX", False)
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get(
     "ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200", "http_auth": "admin:blueking"}]

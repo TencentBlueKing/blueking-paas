@@ -21,6 +21,10 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import LogCollectorType
 from paasng.accessories.log.shim.setup_bklog import setup_bk_log_custom_collector, setup_default_bk_log_model
+from paasng.accessories.log.shim.setup_bklog_shared import (
+    setup_shared_bk_log_custom_collector,
+    setup_shared_bk_log_model,
+)
 from paasng.accessories.log.shim.setup_elk import setup_saas_elk_model
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
@@ -37,15 +41,23 @@ def get_log_collector_type(env: ModuleEnvironment) -> LogCollectorType:
 
 def setup_env_log_model(env: ModuleEnvironment):
     log_collector_type = get_log_collector_type(env)
-
-    # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置
-    # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig
     cluster = EnvClusterService(env).get_cluster()
-    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        setup_bk_log_custom_collector(env.module)
 
-    if log_collector_type == LogCollectorType.BK_LOG:
-        return setup_default_bk_log_model(env)
+    # ENABLE_SHARED_BK_LOG_INDEX 开关把 bk-log 相关逻辑切换到 "平台级共享采集项"
+    # 路径; 未开启时维持原有 "按 module 独立建项" 路径。开关不影响 ELK 分支。
+    if settings.ENABLE_SHARED_BK_LOG_INDEX:
+        if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+            setup_shared_bk_log_custom_collector(env.module)
+        if log_collector_type == LogCollectorType.BK_LOG:
+            return setup_shared_bk_log_model(env)
+    else:
+        # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置
+        # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig
+        if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+            setup_bk_log_custom_collector(env.module)
+        if log_collector_type == LogCollectorType.BK_LOG:
+            return setup_default_bk_log_model(env)
+
     if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
         raise ValueError("ELK is not supported")
     return setup_saas_elk_model(env)

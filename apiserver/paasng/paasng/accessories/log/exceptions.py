@@ -62,3 +62,14 @@ class TenantLogConfigNotFoundError(Exception):
     def __init__(self, tenant_id: str):
         self.message = f"TenantLogConfig not found for tenant_id: {tenant_id}"
         super().__init__(self.message)
+
+
+class SharedBkBizIdNotConfiguredError(Exception):
+    """租户未配置平台级共享采集项所属的业务 ID"""
+
+    def __init__(self, tenant_id: str):
+        self.message = (
+            f"shared_bk_biz_id is not configured for tenant_id: {tenant_id}, "
+            "please set it via `python manage.py create_tenant_log_config --update --shared-bk-biz-id <biz_id>`"
+        )
+        super().__init__(self.message)

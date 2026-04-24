@@ -18,7 +18,7 @@
 import pytest
 from django.core.management import CommandError, call_command
 
-from paasng.accessories.log.exceptions import TenantLogConfigNotFoundError
+from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
 from paasng.accessories.log.models import TenantLogConfig
 from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider
 from paasng.core.tenant.user import get_init_tenant_id
@@ -40,6 +40,7 @@ class TestBKLogConfigProvider:
             es_shards=5,
             storage_replicas=3,
             time_zone=2,
+            shared_bk_biz_id=42,
         )
         return bk_module
 
@@ -50,6 +51,27 @@ class TestBKLogConfigProvider:
         provider = BKLogConfigProvider(bk_module)
         with pytest.raises(TenantLogConfigNotFoundError):
             _ = provider.storage_cluster_id
+
+    def test_shared_bk_biz_id(self, bk_module_with_config):
+        """获取已配置的 shared_bk_biz_id"""
+        provider = BKLogConfigProvider(bk_module_with_config)
+        assert provider.shared_bk_biz_id == 42
+
+    def test_shared_bk_biz_id_not_configured(self, bk_module):
+        """shared_bk_biz_id 未配置时抛出专用异常"""
+        TenantLogConfig.objects.filter(tenant_id=bk_module.application.tenant_id).delete()
+        TenantLogConfig.objects.create(
+            tenant_id=bk_module.application.tenant_id,
+            storage_cluster_id=200,
+            retention=21,
+            es_shards=5,
+            storage_replicas=3,
+            time_zone=2,
+        )
+
+        provider = BKLogConfigProvider(bk_module)
+        with pytest.raises(SharedBkBizIdNotConfiguredError):
+            _ = provider.shared_bk_biz_id
 
 
 class TestCreateTenantLogConfigCommand:
@@ -78,6 +100,7 @@ class TestCreateTenantLogConfigCommand:
             "--es-shards=5",
             "--storage-replicas=3",
             "--time-zone=2",
+            "--shared-bk-biz-id=88",
         )
 
         config = TenantLogConfig.objects.get(tenant_id=tenant_id)
@@ -86,3 +109,18 @@ class TestCreateTenantLogConfigCommand:
         assert config.es_shards == 5
         assert config.storage_replicas == 3
         assert config.time_zone == 2
+        assert config.shared_bk_biz_id == 88
+
+    def test_create_config_without_shared_bk_biz_id(self) -> None:
+        """不指定 `--shared-bk-biz-id` 时, 字段应保持为 None"""
+        tenant_id = get_init_tenant_id()
+        TenantLogConfig.objects.filter(tenant_id=tenant_id).delete()
+
+        call_command(
+            "create_tenant_log_config",
+            "--default-tenant",
+            "--storage-cluster-id=200",
+        )
+
+        config = TenantLogConfig.objects.get(tenant_id=tenant_id)
+        assert config.shared_bk_biz_id is None

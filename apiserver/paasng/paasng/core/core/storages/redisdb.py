@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pickle
+import json
 
 import redis
 from blue_krill.redis_tools.sentinel import SentinelBackend
@@ -64,10 +64,14 @@ class DefaultRediStore:
         self.expires_in = expires_in
 
     def save(self, data):
-        self.redis_db.setex(self.rkey, value=pickle.dumps(data), time=self.expires_in)
+        self.redis_db.setex(self.rkey, value=json.dumps(data), time=self.expires_in)
 
     def get(self):
         val = self.redis_db.get(self.rkey)
         if val is None:
             return None
-        return pickle.loads(val)  # noqa: S301
+        try:
+            return json.loads(val)
+        except (json.JSONDecodeError, TypeError):
+            # 兼容历史数据: 无法被 json.loads 解析时, 视为缓存未命中 (由 TTL 自然淘汰)
+            return None

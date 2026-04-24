@@ -219,6 +219,28 @@ class TranslatedCharField(serializers.CharField):
         return gettext_lazy(data)
 
 
+class PlainTranslatedCharField(TranslatedCharField):
+    """A variant of TranslatedCharField that renturns a raw `Dict[str, str]` (language code -> translation)
+    from `run_validation` instead of a lazy proxy.
+    """
+
+    def run_validation(self, data=serializers.empty) -> Union[str, Dict[str, str]]:
+        if not isinstance(data, dict):
+            value = super().run_validation(data)
+            return value
+
+        for language_code in self.languages:
+            i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
+            value = data.pop(i18n_field_name, serializers.empty)
+            if value == "" or (self.trim_whitespace and str(value).strip() == ""):
+                if not self.allow_blank:
+                    self.fail("blank")
+                value = ""
+            value = super().run_validation(value)
+            data[language_code] = str(value)
+        return data
+
+
 class FallbackMixin(_Base):
     """A Mixin for drf.Field
     which will get value/attribute from `fallback_field_name` when we can't get value/attribute from `i18n_field_name`

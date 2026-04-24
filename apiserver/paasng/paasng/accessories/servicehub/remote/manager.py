@@ -71,6 +71,7 @@ from paasng.platform.applications.models import Application, ApplicationEnvironm
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils import safe_jinja2
+from paasng.utils.i18n import gettext_lazy as i18n_lazy
 
 if TYPE_CHECKING:
     import datetime
@@ -153,6 +154,14 @@ class RemoteServiceObj(ServiceObj):
             fields["meta_info"] = {"version": None}
         else:
             fields["meta_info"] = {"version": meta_info_data["version"]}
+
+        # store 中以 Dict[str, str] (语言码 -> 译文) 形式存储的国际化字段,
+        # 读取时重新包装为 Promise, 使下游通过 str(obj.display_name) 等方式
+        # 能按当前请求语言懒加载对应译文.
+        for name in ("display_name", "description", "long_description", "instance_tutorial"):
+            value = fields.get(name)
+            if isinstance(value, dict):
+                fields[name] = i18n_lazy(value)
 
         result = cattrs.structure(fields, cls)
         result._data = service

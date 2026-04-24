@@ -20,12 +20,11 @@
 import copy
 import json
 import logging
-import pickle
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set
 
 from django.conf import settings
-from django.utils.encoding import force_bytes, force_str
+from django.utils.encoding import force_str
 
 from paasng.core.core.storages.redisdb import get_default_redis
 
@@ -35,20 +34,6 @@ from .exceptions import ServiceConfigNotFound, ServiceNotFound
 logger = logging.getLogger(__name__)
 
 _g_services_store = None
-
-
-def _dumps(internal_value: Dict) -> str:
-    """dumps a **internal** object to redis savable str"""
-    return force_str(pickle.dumps(internal_value), encoding="latin-1")
-
-
-def _loads(dumped: bytes) -> Dict:
-    """load a dumped str to **internal** object"""
-    try:
-        # NOTE: 以前的数据是直接使用 json.dumps 存储的, 为了兼容旧数据, 先尝试使用 json.loads 读取数据
-        return json.loads(dumped)
-    except json.decoder.JSONDecodeError:
-        return pickle.loads(force_bytes(dumped, encoding="latin-1"))  # noqa: S301
 
 
 def get_remote_store():
@@ -180,13 +165,19 @@ class RedisStore(StoreMixin):
             config_key = self._make_svc_config_key(sid)
 
             legacy_config = redis_client.get(config_key)
-            # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
-            if legacy_config and _loads(legacy_config)["name"] != config["name"]:
-                raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
+            # 如果新的配置项中的服务名与缓存中服务名不一致, 则不更新, 服务的其他配置发生变更可更新.
+            # NOTE: 历史数据可能存在无法被 json 解析的情况, 此时直接覆盖写入新数据即可
+            if legacy_config:
+                try:
+                    legacy = json.loads(legacy_config)
+                except json.JSONDecodeError:
+                    legacy = None
+                if legacy is not None and legacy["name"] != config["name"]:
+                    raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
 
             pipe = redis_client.pipeline()
-            pipe.set(info_key, _dumps(service), self.expires)
-            pipe.set(config_key, _dumps(config), self.expires)
+            pipe.set(info_key, json.dumps(service), self.expires)
+            pipe.set(config_key, json.dumps(config), self.expires)
             pipe.sadd(self.registered_services_key, sid.encode(self.encoding))
             pipe.execute()
 
@@ -195,7 +186,12 @@ class RedisStore(StoreMixin):
         config = self.redis.get(self._make_svc_config_key(uuid))
         if config is None:
             raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
-        return RemoteSvcConfig.from_json(_loads(config))
+        try:
+            data = json.loads(config)
+        except json.JSONDecodeError:
+            # 兼容历史数据: 解析失败时视为配置缺失, 由 TTL 自然淘汰后由上层重新注册
+            raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
+        return RemoteSvcConfig.from_json(data)
 
     def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
@@ -203,7 +199,12 @@ class RedisStore(StoreMixin):
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
-        return _loads(result)
+        try:
+            data = json.loads(result)
+        except json.JSONDecodeError:
+            # 兼容历史数据: 解析失败时视为未命中, 由 TTL 自然淘汰后由上层重新注册
+            raise ServiceNotFound(f"remote service with id={uuid} not found")
+        return data
 
     def all(self) -> List[Dict]:
         """List all services"""
@@ -217,8 +218,13 @@ class RedisStore(StoreMixin):
 
         results = []
         for i in pipe.execute():
-            if i:
-                results.append(_loads(i))
+            if not i:
+                continue
+            try:
+                results.append(json.loads(i))
+            except json.JSONDecodeError:
+                # 兼容历史数据: 解析失败时跳过该条, 待下一轮更新时由 TTL 自然淘汰
+                logger.warning("invalid service data found in redis, skipping")
 
         return results
 

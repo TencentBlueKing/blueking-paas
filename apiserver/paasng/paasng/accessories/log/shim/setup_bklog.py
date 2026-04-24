@@ -24,7 +24,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
-from paasng.accessories.log.exceptions import TenantLogConfigNotFoundError
+from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
@@ -90,6 +90,17 @@ class BKLogConfigProvider:
     def storage_replicas(self) -> int:
         """获取存储副本数（从 TenantLogConfig）"""
         return self.config.storage_replicas
+
+    @property
+    def shared_bk_biz_id(self) -> int:
+        """获取平台级共享采集项所属的 CMDB 业务 ID（从 TenantLogConfig）
+
+        仅在启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享采集项路径调用, 租户未配置时抛出异常
+        """
+        biz_id = self.config.shared_bk_biz_id
+        if biz_id is None:
+            raise SharedBkBizIdNotConfiguredError(self.tenant_id)
+        return biz_id
 
 
 def _add_wildcard_suffix(path: str) -> str:

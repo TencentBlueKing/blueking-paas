@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from attrs import define, field
 
@@ -119,6 +119,38 @@ class PlainCustomCollectorConfig:
 
 
 @define
+class PlatformIndexVisibility:
+    """平台级采集项对其他业务的可见范围
+
+    对应日志平台 create/update 自定义采集项接口的 platform_index_visibility 字段。
+
+    :param type: 可见范围类型。"biz_attr" 按空间标签匹配，"multi_biz" 显式列出业务 ID。
+    :param bk_biz_labels: type="biz_attr" 时使用，形如 {"space_type": ["bksaas"]}
+    :param bk_biz_ids: type="multi_biz" 时使用，显式列出可见业务 ID
+    """
+
+    type: Literal["biz_attr", "multi_biz"]
+    bk_biz_labels: Optional[Dict[str, List[str]]] = None
+    bk_biz_ids: Optional[List[int]] = None
+
+
+@define
+class PlatformIndexFilter:
+    """平台级采集项的隔离维度元数据声明
+
+    对应日志平台 create/update 自定义采集项接口的 platform_index_filter 字段。
+    当前在日志平台侧**只作为元数据标记保存, 不会参与运行时过滤**,
+    PaaS 侧的应用级隔离由 ElasticSearchParams.termTemplate 注入查询 DSL 完成。
+
+    :param field: 用于隔离的字段路径，如 "__ext.labels.bkapp_paas_bk_tencent_com_code"
+    :param value_ref: 字段值的语义引用，仅允许 "space_id" 或 "bk_biz_id"
+    """
+
+    field: str
+    value_ref: Literal["space_id", "bk_biz_id"]
+
+
+@define
 class CustomCollectorConfig:
     """自定采集项配置
 
@@ -130,6 +162,10 @@ class CustomCollectorConfig:
     :param storage_config: 日志存储配置
     :param data_link_id: 数据传输链路，不需要可以不填
     :param description: 描述信息
+
+    :param is_platform_index: 是否为平台级采集项（多业务共享一个物理 ES 索引）
+    :param platform_index_visibility: 平台级采集项对其他业务的可见范围，仅在 is_platform_index=True 时生效
+    :param platform_index_filter: 平台级采集项的隔离维度元数据，仅在 is_platform_index=True 时生效
 
     :param id: 采集项ID
     :param index_set_id: 索引集ID，查询时使用
@@ -145,10 +181,22 @@ class CustomCollectorConfig:
     data_link_id: Optional[int] = None
     description: str = ""
 
+    # 平台级采集项相关字段, 默认关闭, 保证向后兼容
+    is_platform_index: bool = False
+    platform_index_visibility: Optional[PlatformIndexVisibility] = None
+    platform_index_filter: Optional[PlatformIndexFilter] = None
+
     # readonly fields
     id: Optional[int] = None
     index_set_id: Optional[int] = None
     bk_data_id: Optional[int] = None
+
+    def __attrs_post_init__(self):
+        # 平台级采集项必须同时声明可见范围与隔离维度, 否则日志平台创建时会报错; 这里提前 fail fast
+        if self.is_platform_index and (self.platform_index_visibility is None or self.platform_index_filter is None):
+            raise ValueError(
+                "platform_index_visibility and platform_index_filter are required when is_platform_index=True"
+            )
 
 
 @define

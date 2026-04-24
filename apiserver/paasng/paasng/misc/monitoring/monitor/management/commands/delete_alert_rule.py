@@ -86,9 +86,13 @@ class Command(BaseCommand):
         for app in applications:
             client = make_bk_monitor_client(app.tenant_id)
 
-            alert_rules: list[StrategyConfig] = client.query_alarm_strategies(
-                QueryAlarmStrategiesParams(app_code=app.code, alert_code=alert_code)
-            )["strategy_config_list"]
+            try:
+                alert_rules: list[StrategyConfig] = client.query_alarm_strategies(
+                    QueryAlarmStrategiesParams(app_code=app.code, alert_code=alert_code)
+                )["strategy_config_list"]
+            except Exception as e:  # noqa: BLE001
+                self.stdout.write(self.style.ERROR(f"Failed to query alert rules for app {app.code}. Error: {e}"))
+                continue
 
             for alert_rule in alert_rules:
                 resp = client.delete_alarm_strategy(strategy_config_id=alert_rule["id"], app_code=app.code)
@@ -97,6 +101,6 @@ class Command(BaseCommand):
                 )
 
             # 该命令处于测试阶段，等确认 bkmonitor 的告警规则被成功删除后，再删除数据库中的记录，避免误删告警规则后无法恢复
-            AppAlertRule.objects.filter(application=app, alert_code=alert_code).delete()
+            # AppAlertRule.objects.filter(application=app, alert_code=alert_code).delete()
 
         self.stdout.write("DONE")

@@ -24,11 +24,13 @@
       v-if="appType === 'cloud'"
       key="cloud"
       ref="cloud"
+      :reserved-prefixes="reservedPrefixes"
     />
     <create-external-app
       v-else-if="appType === 'external'"
       key="external"
       ref="external"
+      :reserved-prefixes="reservedPrefixes"
     />
   </div>
 </template>
@@ -52,6 +54,7 @@ export default {
   data() {
     return {
       appType: 'cloud',
+      reservedPrefixes: [],
     };
   },
   computed: {
@@ -61,6 +64,7 @@ export default {
   },
   created() {
     this.switchAppType();
+    this.getPrefix();
   },
   methods: {
     async handleToggleType(type) {
@@ -96,6 +100,15 @@ export default {
             this.appType = 'default';
             break;
         }
+      }
+    },
+    // 获取平台保留的应用ID前缀
+    async getPrefix() {
+      try {
+        const res = await this.$store.dispatch('tenantConfig/getReservedPrefixes');
+        this.reservedPrefixes = res?.reserved_prefixes || [];
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
   },

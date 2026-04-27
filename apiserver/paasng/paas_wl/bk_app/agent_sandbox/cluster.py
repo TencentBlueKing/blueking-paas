@@ -32,7 +32,7 @@ def get_router_endpoint(cluster_name: str) -> str:
     to be exposed at:
     - If configure `AGENT_SANDBOX_ROUTER_URL`, return it directly
     - For SUBDOMAIN cluster type: `{prefix}.{default_root_domain}`
-    - For PATH cluster type: `{default_root_domain}/{prefix}`
+    - For SUBPATH cluster type: `{default_root_domain}/{prefix}`
 
     :param cluster_name: The name of the target cluster
     :returns: The router host string (e.g., "agent-sandbox-router.example.com"

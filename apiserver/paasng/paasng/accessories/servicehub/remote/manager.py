@@ -72,6 +72,7 @@ from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils import safe_jinja2
 from paasng.utils.i18n import gettext_lazy as i18n_lazy
+from paasng.utils.i18n.serializers import I18N_STRING_DICT_FLAG
 
 if TYPE_CHECKING:
     import datetime
@@ -155,13 +156,8 @@ class RemoteServiceObj(ServiceObj):
         else:
             fields["meta_info"] = {"version": meta_info_data["version"]}
 
-        # store 中以 Dict[str, str] (语言码 -> 译文) 形式存储的国际化字段,
-        # 读取时重新包装为 Promise, 使下游通过 str(obj.display_name) 等方式
-        # 能按当前请求语言懒加载对应译文.
-        for name in ("display_name", "description", "long_description", "instance_tutorial"):
-            value = fields.get(name)
-            if isinstance(value, dict):
-                fields[name] = i18n_lazy(value)
+        # Restore marked i18n dicts from the store to lazy translated strings.
+        fields = {k: restore_i18n_string_dict(v) for k, v in fields.items()}
 
         result = cattrs.structure(fields, cls)
         result._data = service
@@ -962,3 +958,10 @@ def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) 
     attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
     env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
     return env.application
+
+
+def restore_i18n_string_dict(value: Any) -> Any:
+    if not isinstance(value, dict) or not value.get(I18N_STRING_DICT_FLAG):
+        return value
+
+    return i18n_lazy({k: v for k, v in value.items() if k != I18N_STRING_DICT_FLAG})

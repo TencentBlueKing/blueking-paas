@@ -130,7 +130,8 @@ class RedisStore(StoreMixin):
 
     # Namespace for redis keys, when there are multiple running paas instances. If you modified the core logic of Store
     # class, it's required to update namespace to avoid data conflicts.
-    namespace = "1"
+    # NOTE: When switching to JSON storage, the namespace is upgraded from "1" to "2" to isolate the new and old data.
+    namespace = "2"
     encoding = "utf-8"
     registered_services_key = namespace + "remote:registered:service:uuid"
     expires = settings.REMOTE_SERVICES_UPDATE_INTERVAL_MINUTES * 60 * 10
@@ -165,15 +166,9 @@ class RedisStore(StoreMixin):
             config_key = self._make_svc_config_key(sid)
 
             legacy_config = redis_client.get(config_key)
-            # 如果新的配置项中的服务名与缓存中服务名不一致, 则不更新, 服务的其他配置发生变更可更新.
-            # NOTE: 历史数据可能存在无法被 json 解析的情况, 此时直接覆盖写入新数据即可
-            if legacy_config:
-                try:
-                    legacy = json.loads(legacy_config)
-                except json.JSONDecodeError:
-                    legacy = None
-                if legacy is not None and legacy["name"] != config["name"]:
-                    raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
+            # 如果新的配置项中的服务名与缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
+            if legacy_config and json.loads(legacy_config)["name"] != config["name"]:
+                raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
 
             pipe = redis_client.pipeline()
             pipe.set(info_key, json.dumps(service), self.expires)
@@ -186,25 +181,14 @@ class RedisStore(StoreMixin):
         config = self.redis.get(self._make_svc_config_key(uuid))
         if config is None:
             raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
-        try:
-            data = json.loads(config)
-        except json.JSONDecodeError:
-            # 兼容历史数据: 解析失败时视为配置缺失, 由 TTL 自然淘汰后由上层重新注册
-            raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
-        return RemoteSvcConfig.from_json(data)
+        return RemoteSvcConfig.from_json(json.loads(config))
 
     def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         result = self.redis.get(self._make_svc_info_key(uuid))
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
-
-        try:
-            data = json.loads(result)
-        except json.JSONDecodeError:
-            # 兼容历史数据: 解析失败时视为未命中, 由 TTL 自然淘汰后由上层重新注册
-            raise ServiceNotFound(f"remote service with id={uuid} not found")
-        return data
+        return json.loads(result)
 
     def all(self) -> List[Dict]:
         """List all services"""
@@ -216,17 +200,7 @@ class RedisStore(StoreMixin):
         for k in keys:
             pipe.get(self._make_svc_info_key(k))
 
-        results = []
-        for i in pipe.execute():
-            if not i:
-                continue
-            try:
-                results.append(json.loads(i))
-            except json.JSONDecodeError:
-                # 兼容历史数据: 解析失败时跳过该条, 待下一轮更新时由 TTL 自然淘汰
-                logger.warning("invalid service data found in redis, skipping")
-
-        return results
+        return [json.loads(i) for i in pipe.execute() if i]
 
     def empty(self):
         """Empty this store"""

@@ -110,6 +110,17 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'config',
+    name: 'authorizationCode',
+    label: i18n.t('授权码管理'),
+    iconfontName: 'security',
+    matchRouters: ['authorizationCode'],
+    destRoute: {
+      name: 'authorizationCode',
+    },
+    sublist: [],
+  },
+  {
     groupId: 'user',
     name: 'platformUserManagement',
     label: i18n.t('用户管理'),

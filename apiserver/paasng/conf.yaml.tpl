@@ -849,7 +849,7 @@ DEV_SANDBOX_CLUSTER: ""
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 # AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
 
-# Agent Sandbox Router 的 BaseURL，如果不配置则自动根据集群信息计算得到
+# Agent Sandbox Router 的 Endpoint，如果不配置则自动根据集群信息计算得到
 # 注意如果配置，则要与 Agent Sandbox Router 的 Ingress 配置保持一致
 # AGENT_SANDBOX_ROUTER_ENDPOINT: ""
 

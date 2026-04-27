@@ -42,48 +42,50 @@ class Command(BaseCommand):
     help = "Delete bkmonitor alert rule by alert_code"
 
     def add_arguments(self, parser):
-        parser.add_argument("--apps", nargs="+", required=True, help="app code list, eg: app1 app2")
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--apps", nargs="+", help="app code list, eg: app1 app2")
+        group.add_argument("--all-apps", action="store_true", help="run for all active applications")
+
         parser.add_argument("--alert-code", help="bkmonitor alert code")
 
     @staticmethod
-    def validate_app_codes(app_codes) -> list[Application]:
-        """校验 app code 是否存在"""
-        applications = Application.objects.filter(code__in=app_codes)
+    def get_applications(app_codes: list[str] | None) -> list[Application]:
+        """获取待处理的应用列表"""
+        app_qs = Application.objects.filter(is_active=True, is_deleted=False)
+        if not app_codes:
+            return list(app_qs)
+
+        applications = app_qs.filter(code__in=app_codes)
         existing_app_codes = set(applications.values_list("code", flat=True))
         invalid_app_codes = set(app_codes) - existing_app_codes
         if invalid_app_codes:
-            raise CommandError(f"Invalid app codes: {', '.join(invalid_app_codes)}")
+            raise CommandError(f"Invalid app codes: {', '.join(sorted(invalid_app_codes))}")
         return list(applications)
 
     def print_available_alert_codes(self, applications: list[Application]):
+        """打印指定应用下已有的 alert code, 供用户参考选择"""
         alert_codes = sorted(
             set(AppAlertRule.objects.filter(application__in=applications).values_list("alert_code", flat=True))
         )
-        if not alert_codes:
-            self.stdout.write(self.style.WARNING("No alert codes found for the specified apps."))
-            return
-        self.stdout.write("Available alert codes:\n")
+        self.stdout.write("Available alert codes:\n\n")
         for code in alert_codes:
             self.stdout.write(code)
+        self.stdout.write("\nSpecify an alert code using --alert-code")
 
     def handle(self, *args, **options):
-        applications = self.validate_app_codes(options["apps"])
+        applications = self.get_applications(options.get("apps"))
         alert_code = options.get("alert_code")
 
         if not alert_code:
             self.print_available_alert_codes(applications)
             return
 
-        to_delete_alert_rules = AppAlertRule.objects.filter(application__in=applications, alert_code=alert_code)
-
-        self.stdout.write(
-            f"Found {to_delete_alert_rules.count()} alert rules with alert code '{alert_code}' for given {len(applications)} apps"
-        )
-
         self.stdout.write(self.style.WARNING("Deletion will begin in 3 seconds..."))
         time.sleep(3)
 
-        for app in applications:
+        for index, app in enumerate(applications):
+            self.stdout.write(f"Processing app {index + 1}/{len(applications)}: {app.code}...")
+
             client = make_bk_monitor_client(app.tenant_id)
 
             try:

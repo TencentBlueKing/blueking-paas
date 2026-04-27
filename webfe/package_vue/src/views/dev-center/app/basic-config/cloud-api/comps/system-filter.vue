@@ -1,10 +1,9 @@
 <template lang="html">
   <div
-    ref="filterRef"
     class="paasng-api-sys-filter"
   >
     <div style="height: 100%">
-      <section style="padding: 0 10px">
+      <section class="pr-10 pl-10">
         <label class="title">
           {{ isGateway ? $t('网关列表') : $t('系统列表') }}
           <span class="fr mt2 paasng-badge">{{ curList.length }}</span>
@@ -94,18 +93,6 @@ export default {
     return {
       curList: [],
       searchValue: '',
-      isScrollFixed: false,
-      summaryOffsetLeft: 10,
-      style: {
-        position: 'fixed',
-        top: `40px`,
-        'z-index': 100,
-        padding: '10px',
-        width: '240px',
-        background: '#fff',
-        'box-shadow': '0 2px 6px 0 rgba(0, 0, 0, .2)',
-        'min-height': 'calc(100vh - 175px)',
-      },
       curSelect: '',
       tableEmptyConf: {
         keyword: '',
@@ -137,16 +124,6 @@ export default {
       }
     },
   },
-  mounted() {
-    window.addEventListener('scroll', this.handleScroll);
-
-    window.addEventListener('resize', this.handleResize);
-
-    this.$once('hook:beforeDestroy', () => {
-      window.removeEventListener('scroll', this.handleScroll);
-      window.removeEventListener('resize', this.handleResize);
-    });
-  },
   methods: {
     // 更新虚拟滚动列表数据
     updateVirtualScrollData() {
@@ -171,7 +148,7 @@ export default {
     // 根据query参数选择对应网关
     querySelect() {
       const query = this.$route.query;
-      if (!Object.keys(query).length) {
+      if (!query.apiName) {
         return;
       }
       this.searchValue = query.apiName;
@@ -185,38 +162,10 @@ export default {
       }
     },
 
-    handleResize() {
-      this.computedBoxFixed();
-      this.style['left'] = `${this.summaryOffsetLeft - 10}px`;
-    },
-
     handleSelectSys(payload) {
       this.curSelect = payload.id;
       this.$emit('on-select', payload);
       this.$emit('on-refresh', false);
-    },
-
-    handleScroll() {
-      const box = this.$refs.filterRef;
-      if (box && box.getBoundingClientRect) {
-        const top = box.getBoundingClientRect().top;
-        if (top <= 40) {
-          this.isScrollFixed = true;
-          this.computedBoxFixed();
-          this.style['left'] = `${this.summaryOffsetLeft - 10}px`;
-        } else {
-          this.isScrollFixed = false;
-          this.isResize = false;
-        }
-      }
-    },
-
-    computedBoxFixed() {
-      const box = this.$refs.filterRef;
-      if (box && box.getBoundingClientRect) {
-        const elementRect = box.getBoundingClientRect();
-        this.summaryOffsetLeft = elementRect.x;
-      }
     },
 
     highlight(item) {

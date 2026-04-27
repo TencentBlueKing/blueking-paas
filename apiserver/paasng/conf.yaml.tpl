@@ -851,7 +851,7 @@ DEV_SANDBOX_CLUSTER: ""
 
 # Agent Sandbox Router 的 BaseURL，如果不配置则自动根据集群信息计算得到
 # 注意如果配置，则要与 Agent Sandbox Router 的 Ingress 配置保持一致
-# AGENT_SANDBOX_ROUTER_URL: ""
+# AGENT_SANDBOX_ROUTER_ENDPOINT: ""
 
 # ---- Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等 ----
 

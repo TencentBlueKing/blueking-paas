@@ -30,7 +30,7 @@ def get_router_endpoint(cluster_name: str) -> str:
 
     The endpoint is derived from the cluster's ingress_config: the router is expected
     to be exposed at:
-    - If configure `AGENT_SANDBOX_ROUTER_URL`, return it directly
+    - If configure `AGENT_SANDBOX_ROUTER_ENDPOINT`, return it directly
     - For SUBDOMAIN cluster type: `{prefix}.{default_root_domain}`
     - For SUBPATH cluster type: `{default_root_domain}/{prefix}`
 
@@ -39,8 +39,8 @@ def get_router_endpoint(cluster_name: str) -> str:
     or "example.com/agent-sandbox-router")
     :raises RuntimeError: If the cluster or its ingress config is missing
     """
-    if settings.AGENT_SANDBOX_ROUTER_URL:
-        return settings.AGENT_SANDBOX_ROUTER_URL.rstrip("/")
+    if settings.AGENT_SANDBOX_ROUTER_ENDPOINT:
+        return settings.AGENT_SANDBOX_ROUTER_ENDPOINT.rstrip("/")
 
     try:
         cluster = Cluster.objects.get(name=cluster_name)

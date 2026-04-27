@@ -27,4 +27,5 @@ urlpatterns = [
     path("", include("paasng.plat_mgt.res_quota_plan.urls")),
     path("", include("paasng.plat_mgt.templates.urls")),
     path("", include("paasng.plat_mgt.sourcectl.urls")),
+    path("", include("paasng.plat_mgt.reserved_prefix.urls")),
 ]

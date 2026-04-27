@@ -182,6 +182,7 @@ class BkAppProcess(BaseModel):
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None
+    gracefulShutdownSeconds: int | None = None
     components: List[ProcComponent] | None = None
 
 

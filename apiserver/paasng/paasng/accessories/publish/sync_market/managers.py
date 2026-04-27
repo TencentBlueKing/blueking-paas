@@ -118,12 +118,17 @@ class AppManger(AppAdaptor):
     def verify_name_is_unique(
         self, name: str, code: Optional[str] = None, field_name: str = "name", app_tenant_id: Optional[str] = None
     ) -> bool:
+        # 兼容 model 没有 name_en 字段的情况: 如果没有，则不做校验，直接返回 True
+        if field_name == "name_en" and not hasattr(self.model, "name_en"):
+            return True
+
         qs = self.session.query(self.model)
         if code:
             qs = qs.filter(self.model.code != code)
         if hasattr(self.model, "app_tenant_id"):
             qs = self._narrow_by_tenant(qs, app_tenant_id)
-        if field_name == "name_en" and hasattr(self.model, "name_en"):
+
+        if field_name == "name_en":
             app = qs.filter_by(name_en=name).scalar()
         else:
             app = qs.filter_by(name=name).scalar()

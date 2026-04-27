@@ -281,6 +281,9 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=NOTSET)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
+    gracefulShutdownSeconds = serializers.IntegerField(
+        min_value=0, allow_null=True, default=None, source="graceful_shutdown_seconds"
+    )
     components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
 
 

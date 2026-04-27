@@ -533,6 +533,35 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
+	Context("Test process gracefulShutdownSeconds", func() {
+		It("valid value", func() {
+			gracefulShutdownSeconds := int64(30)
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
+			err := bkapp.ValidateCreate()
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("nil is valid (not set)", func() {
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = nil
+			err := bkapp.ValidateCreate()
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("zero is invalid", func() {
+			gracefulShutdownSeconds := int64(0)
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("gracefulShutdownSeconds"))
+		})
+
+		It("negative is invalid", func() {
+			gracefulShutdownSeconds := int64(-1)
+			bkapp.Spec.Processes[0].GracefulShutdownSeconds = &gracefulShutdownSeconds
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("gracefulShutdownSeconds"))
+		})
+	})
+
 	Context("Test mounts", func() {
 		It("Normal", func() {
 			bkapp.Spec.Mounts = []paasv1alpha2.Mount{

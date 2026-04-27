@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum({{ rabbitmq_metric_name_prefix }}rabbitmq_instance_queues{vhost="{{ metric_labels['vhost'] }}"}) / sum({{ rabbitmq_metric_name_prefix }}rabbitmq_instance_limits{vhost="{{ metric_labels['vhost'] }}"})'
+  - metric: 'max({{ rabbitmq_metric_name_prefix }}group3:rabbitmq_instance_queues{vhost="{{ metric_labels['vhost'] }}"}) / max({{ rabbitmq_metric_name_prefix }}limits:rabbitmq_instance_limits{vhost="{{ metric_labels['vhost'] }}", resource="queue"})'
     interval: 60 # 单位 s
 
 detect: # 检测配置

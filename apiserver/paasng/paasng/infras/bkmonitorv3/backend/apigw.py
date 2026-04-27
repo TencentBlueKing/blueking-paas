@@ -75,6 +75,14 @@ class Group(OperationGroup):
         path="/app/alarm_strategy/search/v3/",
     )
 
+    # 删除告警策略
+    delete_alarm_strategy = bind_property(
+        Operation,
+        name="delete_alarm_strategy",
+        method="POST",
+        path="/app/alarm_strategy/delete/",
+    )
+
     # 统一查询时序数据
     promql_query = bind_property(
         Operation,

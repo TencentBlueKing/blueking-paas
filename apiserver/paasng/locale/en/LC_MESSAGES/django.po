@@ -2224,7 +2224,23 @@ msgstr "Exited due to OOMKilled"
 msgid "队列消息数过多"
 msgstr "Excessive queue messages"
 
-#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:58
+#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:63
+msgid "DLX 队列消息数过多"
+msgstr "Excessive DLX queue messages"
+
+#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:68
+msgid "RabbitMQ 队列数使用率过高"
+msgstr "High RabbitMQ queues usage"
+
+#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:73
+msgid "RabbitMQ 连接数使用率过高"
+msgstr "High RabbitMQ connections usage"
+
+#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:78
+msgid "RabbitMQ 队列消息使用率过高"
+msgstr "High RabbitMQ queue message usage"
+
+#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:83
 msgid "BKREPO 存储使用量过高"
 msgstr "High BKREPO storage usage"
 

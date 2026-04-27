@@ -30,6 +30,7 @@ class Command(BaseCommand):
         "es_shards",
         "storage_replicas",
         "time_zone",
+        "shared_bk_biz_id",
     )
 
     def add_arguments(self, parser):
@@ -52,6 +53,12 @@ class Command(BaseCommand):
         parser.add_argument("--es-shards", type=int, default=1, help="ES 索引分片数，默认 1")
         parser.add_argument("--storage-replicas", type=int, default=1, help="存储副本数，默认 1")
         parser.add_argument("--time-zone", type=int, default=8, help="时区，如 8 表示 UTC+8，默认 8")
+        parser.add_argument(
+            "--shared-bk-biz-id",
+            type=int,
+            default=None,
+            help="平台级共享采集项所属的 CMDB 业务 ID (非 space_id)，仅在启用 ENABLE_SHARED_BK_LOG_INDEX 时需要",
+        )
 
     def handle(self, *args, **options):
         tenant_id = get_init_tenant_id() if options["default_tenant"] else options["tenant_id"]
@@ -81,6 +88,6 @@ class Command(BaseCommand):
                 f"{action} TenantLogConfig for tenant_id={tenant_id}: "
                 f"storage_cluster_id={config.storage_cluster_id}, retention={config.retention}, "
                 f"es_shards={config.es_shards}, storage_replicas={config.storage_replicas}, "
-                f"time_zone={config.time_zone}"
+                f"time_zone={config.time_zone}, shared_bk_biz_id={config.shared_bk_biz_id}"
             )
         )

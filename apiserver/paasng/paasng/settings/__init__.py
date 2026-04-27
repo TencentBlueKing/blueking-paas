@@ -1184,6 +1184,11 @@ ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
 
+# ------------------------------
+# 蓝鲸日志平台 - 平台级共享采集项
+# ------------------------------
+# 开启后，使用 bklog 共享索引功能
+ENABLE_SHARED_BK_LOG_INDEX = settings.get("ENABLE_SHARED_BK_LOG_INDEX", False)
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get(
     "ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200", "http_auth": "admin:blueking"}]

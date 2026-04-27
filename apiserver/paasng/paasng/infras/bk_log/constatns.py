@@ -37,3 +37,12 @@ class FieldType(StrStructuredEnum):
 class BkLogType(StrStructuredEnum):
     JSON = EnumField("json")
     STDOUT = EnumField("stdout")
+
+
+# 平台级共享采集项的 name_en 模板（JSON 日志 / 标准输出日志）
+#
+# 启用 ENABLE_SHARED_BK_LOG_INDEX 后, 同一租户下的所有 SaaS 应用共用这两个
+# 采集项, 共用同一份 ES 索引; 不同租户通过后缀 {tenant_id} 区分, 落到不同的 ES 索引。
+# 应用级隔离靠查询侧按 __ext.labels.bkapp_paas_bk_tencent_com_code 过滤实现。
+PLATFORM_INDEX_NAME_JSON_TEMPLATE = "bkpaas_platform_log_json_{tenant_id}"
+PLATFORM_INDEX_NAME_STDOUT_TEMPLATE = "bkpaas_platform_log_stdout_{tenant_id}"

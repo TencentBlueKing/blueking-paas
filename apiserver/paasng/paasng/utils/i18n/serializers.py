@@ -33,6 +33,8 @@ else:
     _Base = object
 
 
+I18N_STRING_DICT_FLAG = "__i18n_string_dict"
+
 SerializerType = Type[serializers.Serializer]
 DecoratorSign = Callable[[SerializerType], SerializerType]
 
@@ -195,17 +197,13 @@ class TranslatedCharField(serializers.CharField):
             )
         return values
 
-    def run_validation(self, data=serializers.empty) -> Union[str, Promise]:
-        """Usually, `run_validation` will be called after `get_value` function called.
-        And the `data` will be a Dict got by the `get_value` function.
-        This function will return a lazy proxy, which will pick up the translation dynamically.
+    def _run_validation(self, data) -> Union[str, Dict[str, Any]]:
+        """Validate incoming i18n data and return values keyed by language code.
 
-        :param data:
-        :return:
+        Subclasses may wrap the dict result or return it directly.
         """
         if not isinstance(data, dict):
-            value = super().run_validation(data)
-            return value
+            return super().run_validation(data)
 
         for language_code in self.languages:
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
@@ -216,7 +214,38 @@ class TranslatedCharField(serializers.CharField):
                 value = ""
             value = super().run_validation(value)
             data[language_code] = str(value)
-        return gettext_lazy(data)
+        return data
+
+    def run_validation(self, data=serializers.empty) -> Union[str, Promise]:
+        """Usually, `run_validation` will be called after `get_value` function called.
+        And the `data` will be a Dict got by the `get_value` function.
+        This function will return a lazy proxy, which will pick up the translation dynamically.
+        """
+        result = self._run_validation(data)
+        if not isinstance(result, dict):
+            return result
+        return gettext_lazy(result)
+
+
+class I18nDictCharField(TranslatedCharField):
+    """A Translated char field that returns a JSON-serializable i18n dict.
+
+    Use it when validated i18n text needs to be persisted or transmitted instead of
+    being consumed directly as a lazy translated string.
+
+    For example:
+    >>> class DummySLZ(serializers.Serializer):
+    ...     field = I18nDictCharField()
+    ... slz = DummySLZ(data={"field_en": "alpha", "field_zh_cn": "阿尔法"})
+    ... slz.is_valid(raise_exception=True)
+    ... assert slz.validated_data == {"field": {"en": "alpha", "zh-cn": "阿尔法"}}
+    """
+
+    def run_validation(self, data=serializers.empty) -> Union[str, Dict[str, Any]]:
+        result = self._run_validation(data)
+        if isinstance(result, dict):
+            result[I18N_STRING_DICT_FLAG] = True
+        return result
 
 
 class FallbackMixin(_Base):

@@ -71,6 +71,8 @@ from paasng.platform.applications.models import Application, ApplicationEnvironm
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils import safe_jinja2
+from paasng.utils.i18n import gettext_lazy as i18n_lazy
+from paasng.utils.i18n.serializers import I18N_STRING_DICT_FLAG
 
 if TYPE_CHECKING:
     import datetime
@@ -153,6 +155,9 @@ class RemoteServiceObj(ServiceObj):
             fields["meta_info"] = {"version": None}
         else:
             fields["meta_info"] = {"version": meta_info_data["version"]}
+
+        # Restore marked i18n dicts from the store to lazy translated strings.
+        fields = {k: restore_i18n_string_dict(v) for k, v in fields.items()}
 
         result = cattrs.structure(fields, cls)
         result._data = service
@@ -953,3 +958,10 @@ def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) 
     attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
     env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
     return env.application
+
+
+def restore_i18n_string_dict(value: Any) -> Any:
+    if not isinstance(value, dict) or not value.get(I18N_STRING_DICT_FLAG):
+        return value
+
+    return i18n_lazy({k: v for k, v in value.items() if k != I18N_STRING_DICT_FLAG})

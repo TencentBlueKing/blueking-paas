@@ -20,12 +20,11 @@
 import copy
 import json
 import logging
-import pickle
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set
 
 from django.conf import settings
-from django.utils.encoding import force_bytes, force_str
+from django.utils.encoding import force_str
 
 from paasng.core.core.storages.redisdb import get_default_redis
 
@@ -35,20 +34,6 @@ from .exceptions import ServiceConfigNotFound, ServiceNotFound
 logger = logging.getLogger(__name__)
 
 _g_services_store = None
-
-
-def _dumps(internal_value: Dict) -> str:
-    """dumps a **internal** object to redis savable str"""
-    return force_str(pickle.dumps(internal_value), encoding="latin-1")
-
-
-def _loads(dumped: bytes) -> Dict:
-    """load a dumped str to **internal** object"""
-    try:
-        # NOTE: 以前的数据是直接使用 json.dumps 存储的, 为了兼容旧数据, 先尝试使用 json.loads 读取数据
-        return json.loads(dumped)
-    except json.decoder.JSONDecodeError:
-        return pickle.loads(force_bytes(dumped, encoding="latin-1"))  # noqa: S301
 
 
 def get_remote_store():
@@ -145,7 +130,8 @@ class RedisStore(StoreMixin):
 
     # Namespace for redis keys, when there are multiple running paas instances. If you modified the core logic of Store
     # class, it's required to update namespace to avoid data conflicts.
-    namespace = "1"
+    # NOTE: When switching to JSON storage, the namespace is upgraded from "1" to "2" to isolate the new and old data.
+    namespace = "2"
     encoding = "utf-8"
     registered_services_key = namespace + "remote:registered:service:uuid"
     expires = settings.REMOTE_SERVICES_UPDATE_INTERVAL_MINUTES * 60 * 10
@@ -180,13 +166,13 @@ class RedisStore(StoreMixin):
             config_key = self._make_svc_config_key(sid)
 
             legacy_config = redis_client.get(config_key)
-            # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
-            if legacy_config and _loads(legacy_config)["name"] != config["name"]:
+            # 如果新的配置项中的服务名与缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
+            if legacy_config and json.loads(legacy_config)["name"] != config["name"]:
                 raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
 
             pipe = redis_client.pipeline()
-            pipe.set(info_key, _dumps(service), self.expires)
-            pipe.set(config_key, _dumps(config), self.expires)
+            pipe.set(info_key, json.dumps(service), self.expires)
+            pipe.set(config_key, json.dumps(config), self.expires)
             pipe.sadd(self.registered_services_key, sid.encode(self.encoding))
             pipe.execute()
 
@@ -195,15 +181,14 @@ class RedisStore(StoreMixin):
         config = self.redis.get(self._make_svc_config_key(uuid))
         if config is None:
             raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
-        return RemoteSvcConfig.from_json(_loads(config))
+        return RemoteSvcConfig.from_json(json.loads(config))
 
     def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         result = self.redis.get(self._make_svc_info_key(uuid))
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
-
-        return _loads(result)
+        return json.loads(result)
 
     def all(self) -> List[Dict]:
         """List all services"""
@@ -215,12 +200,7 @@ class RedisStore(StoreMixin):
         for k in keys:
             pipe.get(self._make_svc_info_key(k))
 
-        results = []
-        for i in pipe.execute():
-            if i:
-                results.append(_loads(i))
-
-        return results
+        return [json.loads(i) for i in pipe.execute() if i]
 
     def empty(self):
         """Empty this store"""

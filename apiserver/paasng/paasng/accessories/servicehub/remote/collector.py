@@ -28,7 +28,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient, RemoteSvcConfig
 from paasng.accessories.servicehub.remote.exceptions import FetchRemoteSvcError, RemoteClientError
 from paasng.accessories.servicehub.remote.store import RemoteServiceStore
-from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.i18n.serializers import I18nDictCharField
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,7 @@ class RemoteSvcFetcher:
             except ValidationError as e:
                 logger.exception(f"service data from {self.config} validation failed")
                 raise FetchRemoteSvcError(f"svc json data from {self.config} is invalid: {e}") from e
+            # validated_data 中的国际化字段均为 Dict[str, Any], 可直接被 json.dumps 序列化后存入 Redis
             items.append(serializer.validated_data)
         return items
 
@@ -100,11 +101,11 @@ class RemoteServiceSLZ(serializers.Serializer):
 
     category = serializers.IntegerField()
     name = serializers.CharField()
-    display_name = TranslatedCharField()
+    display_name = I18nDictCharField()
     logo = serializers.CharField(allow_blank=True)
-    description = TranslatedCharField(default="", allow_blank=True)
-    long_description = TranslatedCharField(default="", allow_blank=True)
-    instance_tutorial = TranslatedCharField(default="", allow_blank=True)
+    description = I18nDictCharField(default="", allow_blank=True)
+    long_description = I18nDictCharField(default="", allow_blank=True)
+    instance_tutorial = I18nDictCharField(default="", allow_blank=True)
     available_languages = serializers.CharField()
     config = serializers.DictField(required=False, default=dict)
     is_active = serializers.BooleanField(required=False, default=True)

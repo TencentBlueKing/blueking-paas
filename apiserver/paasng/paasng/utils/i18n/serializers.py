@@ -220,9 +220,6 @@ class TranslatedCharField(serializers.CharField):
         """Usually, `run_validation` will be called after `get_value` function called.
         And the `data` will be a Dict got by the `get_value` function.
         This function will return a lazy proxy, which will pick up the translation dynamically.
-
-        :param data:
-        :return:
         """
         result = self._run_validation(data)
         if not isinstance(result, dict):

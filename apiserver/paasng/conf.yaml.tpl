@@ -849,6 +849,9 @@ DEV_SANDBOX_CLUSTER: ""
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 # AGENT_SANDBOX_ROUTER_AUTH_TOKEN: "your-secret-token"
 
+# Agent Sandbox Router 的 BaseURL，如果不配置则自动根据集群信息计算得到，注意要与 router 的 ingress 配置保持一致
+# AGENT_SANDBOX_ROUTER_URL: ""
+
 # ---- Agent Sandbox 镜像仓库配置，业务镜像构建完成后推送到该仓库，例如 skill 镜像等 ----
 
 # 镜像仓库的域名，默认值与 APP_DOCKER_REGISTRY_HOST 相同

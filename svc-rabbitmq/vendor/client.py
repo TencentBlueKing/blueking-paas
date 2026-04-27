@@ -81,6 +81,26 @@ class API(HTTPClient):
         return partial(self.request, path=path, method=method, headers=headers)
 
 
+class VirtualHostHandler(VirtualHost):
+    """Extended VirtualHost handler that supports default_queue_type parameter."""
+
+    path = "vhosts/"
+
+    def create(self, name: str, default_queue_type: str | None = None):
+        """Create a virtual host.
+
+        :param name: The name of the virtual host to create.
+        :param default_queue_type: Default queue type for the vhost (Optional, e.g. 'quorum', 'classic', 'stream')
+        """
+        payload = {}
+        if default_queue_type:
+            payload["default_queue_type"] = default_queue_type
+        self.http_client.put(
+            urljoin(self.path, quote(name)),
+            payload=payload,
+        )
+
+
 class DefinitionsHandler(ManagementHandler):
     path = "definitions/"
 
@@ -228,7 +248,7 @@ class ManagementClient:
         self.health_checks = HealthChecks(self.http_client)
         self.queue = Queue(self.http_client)
         self.user = User(self.http_client)
-        self.virtual_host = VirtualHost(self.http_client)
+        self.virtual_host = VirtualHostHandler(self.http_client)
         self.definitions = DefinitionsHandler(self.http_client)
         self.user_policy = UserPolicyHandler(self.http_client)
         self.limit_policy = LimitPolicyHandler(self.http_client)

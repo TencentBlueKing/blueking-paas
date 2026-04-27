@@ -150,6 +150,48 @@ class TestRemoteEngineAppInstanceRel:
                     assert bool(all(mocked_provision.call_args[0]))
                     assert mocked_provision.call_args[1]["params"]["username"] == rel.db_engine_app.name
 
+    @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.idempotent_provision_instance")
+    def test_provision_with_idempotent_api(
+        self,
+        mocked_idempotent_provision,
+        mocked_provision,
+        get_cluster_egress_info,
+        config,
+        store,
+        bk_module,
+        bk_service,
+        bk_plan_1,
+    ):
+        """Test service instance provision through idempotent API"""
+        get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
+        mocked_idempotent_provision.return_value = {"uuid": str(uuid.uuid4())}
+        config.prefer_idempotent_provision = True
+
+        plans = [bk_plan_1]
+        mgr = RemoteServiceMgr(store=store)
+        bk_service.plans = plans
+        bk_service.meta_info = MetaInfo(version="2.0.4")
+
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0].uuid])
+        mgr.bind_service(bk_service, bk_module)
+
+        with mock.patch.object(mgr, "get") as get_service:
+            get_service.return_value = bk_service
+            env = bk_module.get_envs("stag")
+            rel = next(mgr.list_unprovisioned_rels(env.engine_app))
+            rel.provision()
+
+            assert rel.is_provisioned() is True
+            assert str(rel.db_obj.service_instance_id) == mocked_idempotent_provision.return_value["uuid"]
+            mocked_idempotent_provision.assert_called_once_with(
+                str(rel.db_obj.service_id),
+                str(rel.db_obj.plan_id),
+                params={"username": rel.db_engine_app.name},
+            )
+            mocked_provision.assert_not_called()
+
     @mock.patch("paasng.accessories.servicehub.remote.manager.EnvClusterInfo.get_egress_info")
     def test_render_params(
         self,

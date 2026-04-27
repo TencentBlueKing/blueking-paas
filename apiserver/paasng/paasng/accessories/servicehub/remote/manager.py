@@ -110,6 +110,7 @@ class MetaInfo:
 DEFAULT_META_INFO = MetaInfo(version=None)
 VERSION_WITH_INST_CONFIG = "0.1.0"
 VERSION_WITH_REST_UPSERT = "0.2.0"
+VERSION_WITH_IDEMPOTENT_PROVISION = "2.0.4"
 
 
 @dataclass
@@ -179,6 +180,10 @@ class RemoteServiceObj(ServiceObj):
         """Check if current service supports Feature: RestFul upsert Service/Plan"""
         return self.meta_info.semantic_version_gte(VERSION_WITH_REST_UPSERT)
 
+    def supports_idempotent_provision(self) -> bool:
+        """Check if current service supports idempotent provision, which means provisioning an already provisioned instance will not cause error"""
+        return self.meta_info.semantic_version_gte(VERSION_WITH_IDEMPOTENT_PROVISION)
+
 
 @dataclass
 class EnvClusterInfo:
@@ -237,12 +242,18 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             logger.warning(f"remote service {self.get_service().name} is not ready, skip")
             return
 
-        instance_id = str(uuid.uuid4())
         try:
             params = self.render_params(self.remote_config.provision_params_tmpl)
-            self.remote_client.provision_instance(
-                str(self.db_obj.service_id), str(self.db_obj.plan_id), instance_id, params=params
-            )
+            if self.get_service().supports_idempotent_provision():
+                resp = self.remote_client.idempotent_provision_instance(
+                    str(self.db_obj.service_id), str(self.db_obj.plan_id), params=params
+                )
+                instance_id = resp["uuid"]
+            else:
+                instance_id = str(uuid.uuid4())
+                self.remote_client.provision_instance(
+                    str(self.db_obj.service_id), str(self.db_obj.plan_id), instance_id, params=params
+                )
         except Exception as e:
             logger.exception(f"Error provisioning new instance for {self.db_application.name}")
             raise exceptions.ProvisionInstanceError(

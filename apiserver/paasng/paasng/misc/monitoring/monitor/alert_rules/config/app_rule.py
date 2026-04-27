@@ -70,8 +70,6 @@ _cnative_supported_alert_codes = SupportedAlertCodes(
 if settings.RABBITMQ_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
-    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.RABBITMQ_INSTANCE_DOWN.value)
-    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.RABBITMQ_INSTANCE_DOWN.value)
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_DLX_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_DLX_QUEUE_MESSAGES.value)
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUES_USAGE.value)

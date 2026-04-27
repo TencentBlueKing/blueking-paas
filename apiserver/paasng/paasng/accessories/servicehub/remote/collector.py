@@ -74,8 +74,8 @@ class RemoteSvcFetcher:
             except ValidationError as e:
                 logger.exception(f"service data from {self.config} validation failed")
                 raise FetchRemoteSvcError(f"svc json data from {self.config} is invalid: {e}") from e
-            # validated_data 中的国际化字段均为 Dict[str, str], 可直接被 json.dumps 序列化后存入 Redis
-            items.append(dict(serializer.validated_data))
+            # validated_data 中的国际化字段均为 Dict[str, Any], 可直接被 json.dumps 序列化后存入 Redis
+            items.append(serializer.validated_data)
         return items
 
 

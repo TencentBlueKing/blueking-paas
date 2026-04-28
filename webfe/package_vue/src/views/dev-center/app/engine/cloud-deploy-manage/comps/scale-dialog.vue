@@ -66,7 +66,7 @@
           <bk-input
             v-model="scalingConfig.targetReplicas"
             type="number"
-            :max="5"
+            :max="processPlan.maxReplicas ?? 5"
             :min="0"
             style="width: 216px"
           />

@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
+
 from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.modules.constants import ExposedURLType
 
@@ -27,24 +29,32 @@ def get_router_endpoint(cluster_name: str) -> str:
     domain(first domain) update
 
     The endpoint is derived from the cluster's ingress_config: the router is expected
-    to be exposed at `{prefix}.{default_root_domain}`.
+    to be exposed at:
+    - If configure `AGENT_SANDBOX_ROUTER_ENDPOINT`, return it directly
+    - For SUBDOMAIN cluster type: `{prefix}.{default_root_domain}`
+    - For SUBPATH cluster type: `{default_root_domain}/{prefix}`
 
-    :param cluster_name: The name of the target cluster.
-    :returns: The router host string (e.g., "agent-sandbox-router.example.com").
-    :raises RuntimeError: If the cluster or its ingress config is missing.
+    :param cluster_name: The name of the target cluster
+    :returns: The router host string (e.g., "agent-sandbox-router.example.com"
+    or "example.com/agent-sandbox-router")
+    :raises RuntimeError: If the cluster or its ingress config is missing
     """
+    if settings.AGENT_SANDBOX_ROUTER_ENDPOINT:
+        return settings.AGENT_SANDBOX_ROUTER_ENDPOINT.rstrip("/")
+
     try:
         cluster = Cluster.objects.get(name=cluster_name)
     except Cluster.DoesNotExist:
         raise RuntimeError(f"cluster {cluster_name!r} not found")
 
-    # TODO 适配好集群域名为子路径的情况
     try:
-        root_domain = (
-            cluster.ingress_config.default_root_domain.name
-            if cluster.exposed_url_type == ExposedURLType.SUBDOMAIN
-            else cluster.ingress_config.default_sub_path_domain.name
-        )
+        if cluster.exposed_url_type == ExposedURLType.SUBDOMAIN:
+            root_domain = cluster.ingress_config.default_root_domain.name
+            router_endpoint = f"{AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX}.{root_domain}"
+        else:
+            root_domain = cluster.ingress_config.default_sub_path_domain.name
+            router_endpoint = f"{root_domain}/{AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX}"
     except IndexError:
         raise RuntimeError(f"cluster {cluster_name!r} has no ingress config")
-    return f"{AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX}.{root_domain}"
+
+    return router_endpoint

@@ -126,7 +126,7 @@ class BkLogManagementClient:
 
         :param int/str biz_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
         :param config: 自定采集项配置
-        :param ignore_exists: 是否开启幂等创建
+        :param ignore_exists: 是否开启幂等创建; 默认按 is_platform_index 自动决定
         :return: 创建的自定采集项配置
         """
         if ignore_exists is None:
@@ -163,7 +163,6 @@ class BkLogManagementClient:
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
-        # 仅在 is_platform_index=True 时追加平台级共享索引相关字段
         data.update(_build_platform_index_payload(config))
         if ignore_exists:
             data["ignore_exists"] = True
@@ -177,7 +176,6 @@ class BkLogManagementClient:
             raise BkLogApiError(resp["message"])
 
         resp_data = resp["data"]
-        # 命中已存在分支时, 打一条 info 日志方便排查
         if ignore_exists and resp_data.get("created") is False:
             logger.info(
                 "custom collector config already exists, reuse it. bk_biz_id=%s, name_en=%s, collector_config_id=%s",
@@ -221,7 +219,6 @@ class BkLogManagementClient:
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
-        # 仅在 is_platform_index=True 时追加平台级共享索引相关字段
         data.update(_build_platform_index_payload(config))
 
         try:
@@ -234,11 +231,7 @@ class BkLogManagementClient:
 
 
 def _build_platform_index_payload(config: CustomCollectorConfig) -> Dict[str, Any]:
-    """组装平台级共享采集项相关的请求字段
-
-    非平台级采集项返回空字典。visibility / filter 为 None 的前置校验在
-    ``CustomCollectorConfig.__attrs_post_init__`` 里完成, 这里只做直接序列化。
-    """
+    """组装平台级共享采集项相关的请求字段, 非平台级采集项返回空字典"""
     if not config.is_platform_index:
         return {}
     return {

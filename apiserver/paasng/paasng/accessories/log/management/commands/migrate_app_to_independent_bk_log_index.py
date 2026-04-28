@@ -15,22 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""把指定 App 的日志查询/采集链路从 "平台共享索引" 切回 "按 module 独立建项" 链路
+"""把指定 App 的日志链路从「平台共享索引」切回「按 module 独立建项」
 
-适用场景: 平台级开关 ENABLE_SHARED_BK_LOG_INDEX=True, 但需要个别 App 保留独立索引
+适用场景: ENABLE_SHARED_BK_LOG_INDEX=True 时, 需要个别 App 保留独立索引
 
-执行内容:
-  1. 给该 App 置 AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX=True
-     (这是持久标记, 防止后续日志页查询/插件中心查询/celery 任务等热路径把配置覆盖回共享)
-  2. 遍历该 App 的所有 module/env, 重跑 setup_env_log_model
-     (有标记保护, 此时会路由到独立分支, 重写 ProcessLogQueryConfig/ElasticSearchConfig 指向独立索引,
-      并通过 setup_bk_log_custom_collector 在 bk-log 创建/复用独立采集项)
-  3. 把模块下旧的 "平台共享" CustomCollectorConfig 行置 is_enabled=False
-     (避免下次部署 AppLogConfigController.create_or_patch 同时下发独立 + 共享两组 BkLogConfig CR,
-      造成日志双采集)
+执行三步:
+  1. 给 App 置 USE_INDEPENDENT_BK_LOG_INDEX=True, 防止后续热路径把配置回写为共享
+  2. 重跑每个 env 的 setup_env_log_model, 写入独立的 ProcessLogQueryConfig / 采集项
+  3. 把模块下共享采集项的 CustomCollectorConfig 行禁用, 避免部署时同时下发两组 BkLogConfig CR
 
-不在范围:
-  - 不会主动清理 K8s 里旧的共享 BkLogConfig CR; 建议命令成功后触发该 App 一次重新部署再人工清理
+注意: 不会清理 K8s 里残留的共享 BkLogConfig CR, 建议执行后触发一次重新部署
 
 Examples:
     # dry-run, 仅打印将要执行的动作
@@ -51,6 +45,7 @@ from paasng.infras.bk_log.constatns import (
 )
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 
 
 class Command(BaseCommand):
@@ -91,8 +86,8 @@ class Command(BaseCommand):
             )
 
             for module in application.modules.all():
-                # 先重跑 setup_env_log_model: flag 已置位, 走独立分支, 写入独立的 CustomCollectorConfig 行
-                # 然后再禁用旧的共享行, 顺序不能反 (反过来会被 setup 的 update_or_create 重新启用)
+                # 顺序不能反: 先重跑 setup 写独立采集项, 再禁用共享行;
+                # 反过来 setup 的 update_or_create 会把刚禁用的共享行重新启用
                 for env in module.get_envs():
                     setup_env_log_model(env)
                     self.stdout.write(
@@ -116,7 +111,7 @@ class Command(BaseCommand):
         )
 
     def _print_actions(self, application: Application, prefix: str, style_func):
-        """dry-run 模式打印将要执行的动作, 不修改任何数据"""
+        """dry-run 模式仅打印将要执行的动作, 不触达 DB / 外部 API"""
         self.stdout.write(
             f"{prefix}would set feature flag USE_INDEPENDENT_BK_LOG_INDEX=True for Application<{application.code}>",
             style_func=style_func,
@@ -129,8 +124,7 @@ class Command(BaseCommand):
                     style_func=style_func,
                 )
 
-            shared_names = _shared_collector_name_set(module.tenant_id)
-            shared_qs = CustomCollectorConfig.objects.filter(module=module, name_en__in=shared_names, is_enabled=True)
+            shared_qs = _query_shared_collector_rows(module)
             if shared_qs.exists():
                 self.stdout.write(
                     f"{prefix}would disable {shared_qs.count()} shared CustomCollectorConfig row(s) for "
@@ -138,17 +132,15 @@ class Command(BaseCommand):
                     style_func=style_func,
                 )
 
-    def _disable_shared_collector_rows(self, module) -> int:
-        """把模块下旧的共享采集项行置 is_enabled=False, 返回受影响行数"""
-        shared_names = _shared_collector_name_set(module.tenant_id)
-        return CustomCollectorConfig.objects.filter(module=module, name_en__in=shared_names, is_enabled=True).update(
-            is_enabled=False
-        )
+    def _disable_shared_collector_rows(self, module: Module) -> int:
+        """把模块下共享采集项的 enabled 行置为 False, 返回受影响行数"""
+        return _query_shared_collector_rows(module).update(is_enabled=False)
 
 
-def _shared_collector_name_set(tenant_id: str) -> set:
-    """渲染该租户的共享采集项 name_en 集合 (json + stdout)"""
-    return {
-        PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id),
-        PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id),
+def _query_shared_collector_rows(module: Module):
+    """模块下命中共享采集项 name_en 模板 (json + stdout) 且仍 enabled 的 CustomCollectorConfig 查询集"""
+    shared_names = {
+        PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=module.tenant_id),
+        PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=module.tenant_id),
     }
+    return CustomCollectorConfig.objects.filter(module=module, name_en__in=shared_names, is_enabled=True)

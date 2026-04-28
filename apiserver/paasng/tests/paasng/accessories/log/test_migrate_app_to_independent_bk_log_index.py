@@ -99,100 +99,67 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
 
     @pytest.fixture()
     def patched_setup_env_log_model(self):
-        """命令调用 setup_env_log_model 会触发外部 bk-log API, 单测里 mock 掉"""
+        """mock 掉 setup_env_log_model, 避免命令中真实触达 bk-log API"""
         target = (
             "paasng.accessories.log.management.commands.migrate_app_to_independent_bk_log_index.setup_env_log_model"
         )
         with mock.patch(target) as patched:
             yield patched
 
-    def _make_shared_collector_rows(self, module) -> tuple[CustomCollectorConfig, CustomCollectorConfig]:
-        """模拟该 module 之前在共享路径下产生的 CustomCollectorConfig 行"""
-        tenant_id = module.tenant_id
-        json_row = CustomCollectorConfig.objects.create(
+    @staticmethod
+    def _make_collector_row(module, name_en: str, log_type: str) -> CustomCollectorConfig:
+        return CustomCollectorConfig.objects.create(
             module=module,
-            name_en=PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id),
-            collector_config_id=1001,
-            index_set_id=2001,
-            bk_data_id=3001,
-            log_paths=["/app/v3logs/*"],
-            log_type="json",
-            is_builtin=True,
-            is_enabled=True,
-            tenant_id=tenant_id,
-        )
-        stdout_row = CustomCollectorConfig.objects.create(
-            module=module,
-            name_en=PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id),
-            collector_config_id=1002,
-            index_set_id=2002,
-            bk_data_id=3002,
+            name_en=name_en,
+            collector_config_id=hash(name_en) & 0xFFFF,
+            index_set_id=0,
+            bk_data_id=0,
             log_paths=[],
-            log_type="stdout",
+            log_type=log_type,
             is_builtin=True,
             is_enabled=True,
-            tenant_id=tenant_id,
+            tenant_id=module.tenant_id,
         )
-        return json_row, stdout_row
 
-    def test_app_not_found(self) -> None:
-        """app-code 对应 Application 不存在时报错"""
+    def test_app_not_found(self):
+        """app-code 对应 Application 不存在时, 命令以 CommandError 退出"""
         with pytest.raises(CommandError):
             call_command("migrate_app_to_independent_bk_log_index", "--app-code=nonexistent-app")
 
-    def test_dry_run_does_not_change_anything(self, bk_app, bk_module, patched_setup_env_log_model) -> None:
-        """dry-run 不修改 flag, 不改 CustomCollectorConfig, 不调用 setup_env_log_model"""
-        json_row, stdout_row = self._make_shared_collector_rows(bk_module)
+    def test_dry_run_does_not_change_anything(self, bk_app, bk_module, patched_setup_env_log_model):
+        """dry-run 不写 flag, 不改采集项行, 不调用 setup_env_log_model"""
+        shared_row = self._make_collector_row(
+            bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=bk_module.tenant_id), "json"
+        )
 
         call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}")
 
         assert not bk_app.feature_flag.has_feature(AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX)
-        json_row.refresh_from_db()
-        stdout_row.refresh_from_db()
-        assert json_row.is_enabled is True
-        assert stdout_row.is_enabled is True
+        shared_row.refresh_from_db()
+        assert shared_row.is_enabled is True
         patched_setup_env_log_model.assert_not_called()
 
-    def test_real_run_sets_flag_and_disables_shared_rows(self, bk_app, bk_module, patched_setup_env_log_model) -> None:
-        """--no-dry-run 时置 flag, 重跑每个 env, 并把共享行禁用"""
-        json_row, stdout_row = self._make_shared_collector_rows(bk_module)
-
-        call_command(
-            "migrate_app_to_independent_bk_log_index",
-            f"--app-code={bk_app.code}",
-            "--no-dry-run",
+    def test_real_run(self, bk_app, bk_module, patched_setup_env_log_model):
+        """--no-dry-run: 置 flag、按 env 重跑 setup, 仅禁用 name 命中共享模板的行"""
+        tenant_id = bk_module.tenant_id
+        shared_json = self._make_collector_row(
+            bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id), "json"
         )
+        shared_stdout = self._make_collector_row(
+            bk_module, PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id), "stdout"
+        )
+        # 模拟独立路径下创建的采集项行, 命令不应误伤
+        independent_row = self._make_collector_row(
+            bk_module, f"{bk_app.code.replace('-', '_')}__default__json", "json"
+        )
+
+        call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}", "--no-dry-run")
 
         assert bk_app.feature_flag.has_feature(AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX)
-
-        # 该 App 默认 module 含 stag/prod 两个 env, setup_env_log_model 应被调两次
+        # 默认 module 含 stag/prod 两个 env
         assert patched_setup_env_log_model.call_count == 2
-
-        json_row.refresh_from_db()
-        stdout_row.refresh_from_db()
-        assert json_row.is_enabled is False
-        assert stdout_row.is_enabled is False
-
-    def test_real_run_does_not_touch_independent_rows(self, bk_app, bk_module, patched_setup_env_log_model) -> None:
-        """命令仅禁用 name_en 命中共享模板的行, 不影响独立采集项行"""
-        independent_row = CustomCollectorConfig.objects.create(
-            module=bk_module,
-            name_en=f"{bk_app.code.replace('-', '_')}__default__json",
-            collector_config_id=9001,
-            index_set_id=9002,
-            bk_data_id=9003,
-            log_paths=["/app/v3logs/*"],
-            log_type="json",
-            is_builtin=True,
-            is_enabled=True,
-            tenant_id=bk_module.tenant_id,
-        )
-
-        call_command(
-            "migrate_app_to_independent_bk_log_index",
-            f"--app-code={bk_app.code}",
-            "--no-dry-run",
-        )
-
-        independent_row.refresh_from_db()
+        for row in (shared_json, shared_stdout, independent_row):
+            row.refresh_from_db()
+        assert shared_json.is_enabled is False
+        assert shared_stdout.is_enabled is False
         assert independent_row.is_enabled is True

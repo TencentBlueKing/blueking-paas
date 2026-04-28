@@ -136,11 +136,9 @@ class PlatformIndexVisibility:
 
 @define
 class PlatformIndexFilter:
-    """平台级采集项的隔离维度元数据声明
+    """平台级采集项的隔离维度元数据 (对应日志平台 platform_index_filter 字段)
 
-    对应日志平台 create/update 自定义采集项接口的 platform_index_filter 字段。
-    当前在日志平台侧**只作为元数据标记保存, 不会参与运行时过滤**,
-    PaaS 侧的应用级隔离由 ElasticSearchParams.termTemplate 注入查询 DSL 完成。
+    当前仅作为标记保存, 不参与运行时过滤; PaaS 侧应用级隔离由 ElasticSearchParams.termTemplate 实现。
 
     :param field: 用于隔离的字段路径，如 "__ext.labels.bkapp_paas_bk_tencent_com_code"
     :param value_ref: 字段值的语义引用，仅允许 "space_id" 或 "bk_biz_id"
@@ -181,7 +179,7 @@ class CustomCollectorConfig:
     data_link_id: Optional[int] = None
     description: str = ""
 
-    # 平台级采集项相关字段, 默认关闭, 保证向后兼容
+    # 平台级采集项字段, 默认关闭, 仅启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享路径设置
     is_platform_index: bool = False
     platform_index_visibility: Optional[PlatformIndexVisibility] = None
     platform_index_filter: Optional[PlatformIndexFilter] = None
@@ -192,7 +190,7 @@ class CustomCollectorConfig:
     bk_data_id: Optional[int] = None
 
     def __attrs_post_init__(self):
-        # 平台级采集项必须同时声明可见范围与隔离维度, 否则日志平台创建时会报错; 这里提前 fail fast
+        # 平台级采集项必须同时声明可见范围与隔离维度, 否则日志平台创建会报错, 提前 fail fast
         if self.is_platform_index and (self.platform_index_visibility is None or self.platform_index_filter is None):
             raise ValueError(
                 "platform_index_visibility and platform_index_filter are required when is_platform_index=True"

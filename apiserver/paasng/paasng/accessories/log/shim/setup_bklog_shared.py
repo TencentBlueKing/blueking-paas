@@ -15,20 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""共享日志采集项
+"""平台共享 bk-log 采集项实现, 与 setup_bklog.py 的「按 module 独立建项」路径并列
 
-启用 `ENABLE_SHARED_BK_LOG_INDEX` 时由入口 (shim/__init__.py 的
-`setup_env_log_model`) 切换到本模块, 与 `setup_bklog.py` 代表的
-"按 module 独立建项" 路径并列存在
-
-关键取舍:
-  - 采集项粒度: 同一租户下所有 SaaS 共用一份 json / stdout 采集项, 避免为每个
-    module 单独创建采集项带来的数量爆炸
-  - 索引隔离: 不同租户通过 `name_en` 后缀 `{tenant_id}` 区分到不同索引
-  - 应用隔离: 同一租户内多应用共用同一份物理索引, 靠 `ElasticSearchParams.termTemplate`
-    在查询侧按 `__ext.labels.bkapp_paas_bk_tencent_com_code` 过滤实现
-    (该字段来源于 Pod label `bkapp.paas.bk.tencent.com/code`, 经 bk-log 采集
-    后 `.` / `/` 会被替换为 `_`, 是 bk-log 方案下 app_code 的事实字段路径)
+设计要点:
+  - 采集项: 同一租户下所有 SaaS 共用一份 json / stdout 采集项 (name_en 后缀 tenant_id)
+  - 索引: 同租户共用同一份 ES 索引, 跨租户隔离, 跨 App 隔离靠查询侧 termTemplate 注入
+    `__ext.labels.bkapp_paas_bk_tencent_com_code` (Pod label `bkapp.paas.bk.tencent.com/code` 经 bk-log
+    采集后 `.` / `/` 替换为 `_` 后的事实字段路径)
 """
 
 import logging
@@ -76,11 +69,9 @@ logger = logging.getLogger(__name__)
 
 
 def setup_shared_bk_log_custom_collector(module: Module):
-    """在日志平台创建/复用 json 和 stdout 两种共享采集项, 返回带 collector_config 的 AppLogCollectorConfig 对
+    """共享版 setup_bk_log_custom_collector: 创建/复用租户级共享的 json / stdout 采集项
 
-    对应传统路径的 `setup_bklog.setup_bk_log_custom_collector`, 区别:
-      - 采集项为租户级共享 (同租户所有 module 共用一份, 通过 name_en 区分租户)
-      - 创建走幂等路径 (由 client 根据 `is_platform_index` 自动注入 `ignore_exists`)
+    创建走幂等路径 (client 根据 is_platform_index 自动注入 ignore_exists)
     """
     language: AppLanguage | str
     try:
@@ -101,11 +92,9 @@ def setup_shared_bk_log_custom_collector(module: Module):
 
 
 def setup_shared_bk_log_model(env: ModuleEnvironment):
-    """初始化 env 的日志查询相关模型 (共享索引版本)
+    """共享版 setup_default_bk_log_model: 仅 json / stdout 走共享, ingress 仍用 ELK
 
-    对应传统路径的 `setup_bklog.setup_default_bk_log_model`, 区别集中在
-    `ElasticSearchParams` 的构造上 (见 `_build_es_search_params`)。Ingress
-    仍复用 ELK 采集方案, 平台级共享只影响 json / stdout 两种采集项
+    与独立路径的差异集中在 ElasticSearchParams (索引前缀 + termTemplate), 见 _build_es_search_params
     """
     json_config, stdout_config = setup_shared_bk_log_custom_collector(env.module)
 
@@ -160,18 +149,14 @@ def _upsert_shared_custom_collector_config(module: Module, app_cfg: AppLogCollec
 
 
 def _build_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:
-    """根据 Module 获取完整的 采集项配置 `CustomCollectorConfig`"""
-
+    """构造共享采集项的 CustomCollectorConfig: 复用独立路径的 etl/storage 配置, 仅覆盖 name 和平台级字段"""
     cfg = to_custom_collector_config(module, app_cfg)
     shared_name = _resolve_shared_name_en(module.tenant_id, app_cfg.log_type)
     cfg.name_en = shared_name
     cfg.name_zh_cn = shared_name
     cfg.is_platform_index = True
     cfg.platform_index_visibility = BK_LOG_SHARED_INDEX_VISIBILITY
-
-    # platform_index_filter 目前仅作为发给日志平台的元数据标记, 不参与运行时过滤，目前仅标记作用
     cfg.platform_index_filter = BK_LOG_PLATFORM_INDEX_FILTER
-
     return cfg
 
 
@@ -181,10 +166,10 @@ def _update_or_create_es_search_config(
     shared_bk_biz_id: int,
     message_field: str = "log",
 ):
-    """初始化日志平台采集链路日志查询相关的数据库模型 (共享索引版本)
+    """共享版 update_or_create_es_search_config: 写入指向共享索引的 ES 查询配置
 
     :param int shared_bk_biz_id: 共享采集项所属的 CMDB 业务 ID, 用于构造 ES 索引前缀
-    :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
+    :param str message_field: 日志查询字段, 默认值 log 是日志平台原始日志字段
     """
     assert app_cfg.collector_config
 
@@ -221,9 +206,8 @@ def _update_or_create_es_search_config(
 def _build_es_search_params(name_en: str, shared_bk_biz_id: int, message_field: str) -> ElasticSearchParams:
     """构造共享索引的 ES 查询参数
 
-    共享模式下采集项挂在租户配置的 shared_bk_biz_id 业务下，故索引为 `${shared_bk_biz_id}_bklog_{name_en}_*`
-    通过 `termTemplate` 把 `__ext.labels.bkapp_paas_bk_tencent_com_code = {{ app_code }}`
-    注入查询 DSL, 否则会把同租户其他应用的日志一并带出
+    共享模式下采集项挂在 shared_bk_biz_id 业务下, 索引为 ``${shared_bk_biz_id}_bklog_{name_en}_*``;
+    termTemplate 注入 ``__ext.labels.bkapp_paas_bk_tencent_com_code`` 过滤, 防止带出同租户其他 App 日志
     """
     index_prefix = f"{shared_bk_biz_id}_bklog_"
     return ElasticSearchParams(
@@ -246,4 +230,4 @@ def _resolve_shared_name_en(tenant_id: str, log_type: Literal["json", "stdout"])
         return PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id)
     if log_type == "stdout":
         return PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id)
-    raise NotImplementedError(f"unsupported log_type for shared collector: {log_type}")
+    raise ValueError(f"unsupported log_type for shared collector: {log_type}")

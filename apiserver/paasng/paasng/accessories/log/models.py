@@ -216,8 +216,8 @@ class TenantLogConfig(UuidAuditedModel):
     )
 
     shared_bk_biz_id = models.IntegerField(
-        _("PaaS 平台的业务ID"),
-        help_text="启用 ENABLE_SHARED_BK_LOG_INDEX 时生效, 共享采集项所挂载的蓝鲸业务 ID",
+        _("共享采集项所挂载的 CMDB 业务 ID"),
+        help_text="仅启用 ENABLE_SHARED_BK_LOG_INDEX 时生效",
         null=True,
         default=None,
     )

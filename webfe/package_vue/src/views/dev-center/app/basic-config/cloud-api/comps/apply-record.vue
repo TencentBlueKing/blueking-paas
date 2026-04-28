@@ -627,9 +627,18 @@ export default {
     this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
     this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
     this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
+    this.initTypeFromQuery();
     this.init();
   },
   methods: {
+    // 通过 URL query 参数初始化类型
+    initTypeFromQuery() {
+      const queryType = this.$route.query.type;
+      if (queryType && this.typeList.some((item) => item.id === queryType)) {
+        this.typeValue = queryType;
+      }
+    },
+
     getTypeLabel() {
       const typeMap = {
         gateway: this.$t('网关'),

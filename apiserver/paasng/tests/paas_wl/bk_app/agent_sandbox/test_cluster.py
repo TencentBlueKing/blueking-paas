@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.test import override_settings
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
@@ -31,6 +32,11 @@ class TestGetRouterEndpoint:
         endpoint = get_router_endpoint(CLUSTER_NAME_FOR_TESTING)
         assert endpoint.startswith("agent-sandbox-router.")
         assert "." in endpoint.split("agent-sandbox-router.")[1]
+
+    @override_settings(AGENT_SANDBOX_ROUTER_ENDPOINT="https://router.example.com/")
+    def test_returns_configured_endpoint(self):
+        """Test that configured endpoint takes precedence and strips trailing slash."""
+        assert get_router_endpoint("non-existent-cluster") == "https://router.example.com"
 
     def test_cluster_not_found(self):
         """Test that RuntimeError is raised for non-existent cluster."""

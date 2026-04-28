@@ -36,6 +36,7 @@
       v-else
       :module-id="curModule"
       :process-data="curProcessData"
+      :app-type="appType"
       @update="fetchProcessList"
     />
   </div>
@@ -59,6 +60,7 @@ export default {
       moduleList: [],
       curProcess: '',
       processList: [],
+      appType: '',
     };
   },
   computed: {
@@ -85,6 +87,7 @@ export default {
         // 主模块放在前面
         this.moduleList = ret.modules_info?.sort((a, b) => b.is_default - a.is_default) || [];
         this.curModule = this.moduleList[0]?.name || 'default';
+        this.appType = ret.basic_info?.type || '';
       } catch (err) {
         this.catchErrorHandler(err);
       }

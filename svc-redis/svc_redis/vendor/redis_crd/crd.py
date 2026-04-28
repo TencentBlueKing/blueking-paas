@@ -40,7 +40,7 @@ class ObjectMetadata(BaseModel):
     """Kubernetes Metadata"""
 
     # See https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-    name: str = Field(..., regex=DNS_SAFE_PATTERN, max_length=253)
+    name: str = Field(..., pattern=DNS_SAFE_PATTERN, max_length=253)
     annotations: Dict[str, str] = Field(default_factory=dict)
     generation: int = Field(default=0)
 

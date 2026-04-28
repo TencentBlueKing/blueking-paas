@@ -18,6 +18,7 @@
 """Client for remote services"""
 
 import logging
+import time
 from contextlib import contextmanager
 from dataclasses import MISSING, dataclass
 from typing import Dict, List
@@ -41,6 +42,8 @@ class RemoteSvcConfig:
     provision_params_tmpl: Dict
     jwt_auth_conf: Dict
     prefer_async_delete: bool = True
+    # 是否使用幂等创建实例接口
+    prefer_idempotent_provision: bool = False
     is_ready: bool = True
 
     @classmethod
@@ -86,6 +89,7 @@ class RemoteSvcConfig:
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
+        self.idem_prov = urljoin(self.endpoint_url, "services/{service_id}/instances/idem_prov/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
         self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定
@@ -131,6 +135,25 @@ class RemoteServiceClient:
                 status_code=resp.status_code,
                 response_text=resp.text,
             )
+
+    def _post_until_ready(self, url: str, payload: Dict) -> requests.Response:
+        """Retry POST requests until the async endpoint returns 200/201 or timeout."""
+        deadline = time.monotonic() + self.REQUEST_CREATE_TIMEOUT
+
+        poll_interval = 0.5
+        while time.monotonic() < deadline:
+            resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
+            self.validate_resp(resp)
+            # 200，201 表示资源已就绪，可以返回了
+            # 202，表示请求已接受，但资源未就绪，需要继续轮询
+            if resp.status_code in {200, 201}:
+                return resp
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 2, 4)
+
+        raise RemoteClientError(
+            f"POST to {desensitize_url(url)} not ready after retrying for {self.REQUEST_CREATE_TIMEOUT} seconds"
+        )
 
     def get_meta_info(self) -> Dict:
         """Get service's meta info
@@ -214,6 +237,19 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
+    def idempotent_provision_instance(self, service_id: str, plan_id: str, params: Dict) -> Dict:
+        """Idempotently provision a new instance,
+        `params['engine_app_name']` treated as the idempotency key, so it's required
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.idem_prov.format(service_id=service_id)
+        payload = {"plan_id": plan_id, "params": params}
+        with wrap_request_exc(self):
+            resp = self._post_until_ready(url, payload)
+            return resp.json()
+
     def retrieve_instance(self, instance_id: str) -> Dict:
         """Retrieve a provisioned instance info
 
@@ -291,8 +327,7 @@ class RemoteServiceClient:
     def create_client_side_instance(self, service_id: str, instance_id: str, params: Dict):
         url = self.config.create_client_side_instance_url.format(service_id=service_id, instance_id=instance_id)
         with wrap_request_exc(self):
-            resp = requests.post(url, json=params, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
-            self.validate_resp(resp)
+            resp = self._post_until_ready(url, params)
             return resp.json()
 
     def destroy_client_side_instance(self, instance_id: str):

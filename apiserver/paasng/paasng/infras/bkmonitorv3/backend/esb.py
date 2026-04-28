@@ -92,6 +92,10 @@ class MonitorV3Group(OperationGroup):
         path="/api/c/compapi/v2/monitor_v3/quick_import_dashboard/",
     )
 
+    # 删除告警策略
+    def delete_alarm_strategy(self, *args, **kwargs):
+        raise NotImplementedError("delete_alarm_strategy is not implemented in ESB client")
+
 
 class Client(ESBClient):
     """ESB Components"""

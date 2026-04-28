@@ -98,6 +98,13 @@ const templateConfig = () =>
       window.showDeployTip(error);
     });
 
+const authorizationCode = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/authorization-code')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -198,6 +205,14 @@ export const platformRouters = [
         name: 'builtInEnvVariable',
         meta: {
           title: i18n.t('内置环境变量'),
+        },
+      },
+      {
+        path: 'authorization-code',
+        component: authorizationCode,
+        name: 'authorizationCode',
+        meta: {
+          title: i18n.t('授权码管理'),
         },
       },
       {

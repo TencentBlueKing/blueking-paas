@@ -205,5 +205,25 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/${id}/`;
       return http.delete(url);
     },
+    /** 获取保留前缀 */
+    getReservedPrefixes() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/creation/reserved_prefixes/`;
+      return http.get(url);
+    },
+    /** 生成授权码 */
+    generateAuthorizationCode({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/reserved_prefix/`;
+      return http.post(url, data);
+    },
+    /** 获取授权码列表 */
+    getAuthorizationCodeList() {
+      const url = `${BACKEND_URL}/api/plat_mgt/reserved_prefix/`;
+      return http.get(url);
+    },
+    /** 删除授权码 */
+    deleteAuthorizationCode({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/reserved_prefix/${id}/`;
+      return http.delete(url);
+    },
   },
 };

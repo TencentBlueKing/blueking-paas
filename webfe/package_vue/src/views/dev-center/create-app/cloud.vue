@@ -46,14 +46,17 @@
                   ? $t('由小写字母组成，长度小于 16 个字符')
                   : $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')
               "
-              class="form-input-width"
+              :class="['form-input-width', { 'reserved-prefix-warning': isCodePrefixMatched }]"
             ></bk-input>
-            <p
-              slot="tip"
-              class="input-tips"
-            >
+            <div slot="tip">
               {{ $t('应用的唯一标识，创建后不可修改') }}
-            </p>
+              <!-- 当前填写与保留前缀冲突，提示用户 -->
+              <ReservedPrefixTips
+                ref="reservedPrefixTips"
+                :code="formData.code"
+                :reserved-prefixes="reservedPrefixes"
+              />
+            </div>
           </bk-form-item>
           <bk-form-item
             :required="true"
@@ -766,6 +769,7 @@ import ExamplesDirectory from '@/components/examples-directory';
 import PlatformCodeRepositoryForm from './comps/platform-code-repository-form.vue';
 import CodeSourceSelector from './comps/code-source-selector.vue';
 import UnauthorizedTips from './comps/unauthorized-tips.vue';
+import ReservedPrefixTips from './comps/reserved-prefix-tips.vue';
 
 export default {
   components: {
@@ -780,8 +784,15 @@ export default {
     PlatformCodeRepositoryForm,
     CodeSourceSelector,
     UnauthorizedTips,
+    ReservedPrefixTips,
   },
   mixins: [sidebarDiffMixin],
+  props: {
+    reservedPrefixes: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       formData: {
@@ -1002,6 +1013,10 @@ export default {
   computed: {
     ...mapState(['userFeature', 'platformFeature']),
     ...mapGetters(['tenantId', 'isShowTenant']),
+    isCodePrefixMatched() {
+      if (!this.formData.code || !this.reservedPrefixes.length) return false;
+      return this.reservedPrefixes.some((prefix) => this.formData.code.startsWith(prefix));
+    },
     curSourceControl() {
       return this.sourceControlTypes.find((item) => item.value === this.sourceControlTypeItem);
     },
@@ -1346,6 +1361,8 @@ export default {
     async handleNext() {
       try {
         await this.$refs.formBaseRef.validate();
+        // 校验保留前缀
+        await this.$refs?.reservedPrefixTips?.validate();
         await this.$refs?.formImageRef?.validate();
         await this.$refs?.formSourceRef?.validate();
         await this.$refs?.repoInfo?.valid();
@@ -1447,11 +1464,14 @@ export default {
         await this.$refs.formBaseRef.validate();
       }
       this.formLoading = true;
+      const authCode = this.$refs.reservedPrefixTips?.getCode() || '';
       const params = {
         is_plugin_app: this.isBkPlugin,
         region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
+        // 授权码（前缀冲突时需要）
+        ...(authCode && { auth_code: authCode }),
         // 租户模式
         ...(this.isShowTenant && { app_tenant_mode: this.formData.tenantMode }),
         source_config: {
@@ -1798,4 +1818,9 @@ export default {
 </script>
 <style lang="scss" scoped>
 @import './cloud.scss';
+.reserved-prefix-warning {
+  /deep/ .bk-form-input {
+    border-color: #f59500 !important;
+  }
+}
 </style>

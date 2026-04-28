@@ -24,14 +24,19 @@ from typing import Dict, List, Type
 from django.conf import settings
 from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData
 from paas_service.utils import WRItemList
+from pydantic import ValidationError
 
 from .client import Client
 from .clusters import Cluster
 from .helper import InstanceHelper, Version
+from .models import Cluster as ClusterModel
 from .models import InstanceBill, LimitPolicy, UserPolicy
 from .utils import gen_addons_cert_mount_path, generate_password
 
 logger = logging.getLogger(__name__)
+
+# Quorum queues were introduced in RabbitMQ 3.8.0
+QUORUM_MIN_VERSION = Version("3.8.0")
 
 
 @dataclass
@@ -51,12 +56,63 @@ class ProviderPlugin:
         pass
 
 
+class HAProviderPlugin(ProviderPlugin):
+    """高可用策略插件, 根据使用的 RabbitMQ 版本选择合适的 HA 策略
+
+    - RabbitMQ >= 3.8.0: 直接在 vhost 上设置 default_queue_type=quorum, 使用 Quorum Queues 实现高可用
+    - RabbitMQ < 3.8.0: 使用 Classic Mirrored Queues (ha-mode=all)
+    """
+
+    # Policy name applied to the vhost for HA
+    HA_POLICY_NAME = "bk-ha-policy"
+
+    def _get_mirror_policy(self) -> dict:
+        """Build policy definition for classic mirrored queues (< 3.8.0)."""
+        return {
+            "pattern": ".*",
+            "priority": 0,
+            "apply-to": "queues",
+            "definition": {
+                "ha-mode": "all",
+                "ha-sync-mode": "automatic",
+            },
+        }
+
+    def on_create(self):
+        if not getattr(settings, "RABBITMQ_HA_POLICY_ENABLED", True):
+            logger.info("HA policy is disabled by settings, skipping")
+            return
+
+        version = Version(self.cluster.version)
+        if version >= QUORUM_MIN_VERSION:
+            # RabbitMQ 3.8+: 直接在虚拟主机上设置 default_queue_type, 因为 queue-type 不再是有效的用户策略定义键.
+            logger.info(
+                "RabbitMQ version %s >= 3.8.0, setting vhost default_queue_type=quorum for vhost %s",
+                self.cluster.version,
+                self.virtual_host,
+            )
+            self.client.virtual_host.create(self.virtual_host, default_queue_type="quorum")
+        else:
+            logger.info(
+                "RabbitMQ version %s < 3.8.0, using classic mirror HA policy for vhost %s",
+                self.cluster.version,
+                self.virtual_host,
+            )
+            policy = self._get_mirror_policy()
+            self.client.user_policy.create(self.virtual_host, self.HA_POLICY_NAME, policy)
+
+
 class UserPolicyProviderPlugin(ProviderPlugin):
     """用户策略插件"""
 
     def on_create(self):
+        cluster_pk = self.context.get("cluster_pk")
+        if not cluster_pk:
+            logger.warning("skip user policies because cluster_pk is missing")
+            return
+
         policies = self.context.setdefault("policies", [])
-        for instance in UserPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
+        for instance in UserPolicy.objects.filter(enable=True, cluster_id=cluster_pk):
             policy: "UserPolicy" = instance.resolved
             policies.append(policy.name)
             self.client.user_policy.create(
@@ -81,8 +137,12 @@ class LimitPolicyProviderPlugin(ProviderPlugin):
         if version < self.min_version:
             return
 
+        cluster_pk = self.context.get("cluster_pk")
+        if not cluster_pk:
+            logger.warning("skip limit policies because cluster_pk is missing")
+            return
         limits = self.context.setdefault("limits", [])
-        for instance in LimitPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
+        for instance in LimitPolicy.objects.filter(enable=True, cluster_id=cluster_pk):
             policy: "LimitPolicy" = instance.resolved
             limits.append(policy.name)
             self.client.limit_policy.create(self.virtual_host, policy.limit, policy.value)
@@ -92,6 +152,11 @@ class DeadLetterRoutingProviderPlugin(ProviderPlugin):
     """配置全局死信路由，生效需要策略配合 >= 2.8.0"""
 
     min_version = Version("2.8.0")
+
+    def _should_use_quorum(self) -> bool:
+        """Check if the cluster version supports quorum queues."""
+        version = Version(self.cluster.version)
+        return version >= QUORUM_MIN_VERSION
 
     def on_create(self):
         version = Version(self.cluster.version)
@@ -111,7 +176,21 @@ class DeadLetterRoutingProviderPlugin(ProviderPlugin):
 
         queue = context.setdefault("dlx-queue", settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE)
         durable = context.setdefault("dlx-queue-durable", settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE_DURABLE)
-        client.queue.declare(virtual_host=virtual_host, queue=queue, durable=durable)
+
+        # For RabbitMQ >= 3.8.0, explicitly declare the dead letter queue as quorum type
+        # to ensure high availability. The Management HTTP API does not automatically
+        # inherit the vhost's default_queue_type setting.
+        queue_arguments = {}
+        if self._should_use_quorum():
+            queue_arguments["x-queue-type"] = "quorum"
+            # Quorum queues are always durable, force durable=True
+            durable = True
+            logger.info(
+                "Declaring dead letter queue %s as quorum type for vhost %s",
+                queue,
+                virtual_host,
+            )
+        client.queue.declare(virtual_host=virtual_host, queue=queue, durable=durable, arguments=queue_arguments)
 
         routing_key = context.setdefault("dlx-routing-key", settings.RABBITMQ_DEFAULT_DEAD_LETTER_ROUTING_KEY)
         client.queue.bind(queue=queue, exchange=exchange, virtual_host=virtual_host, routing_key=routing_key)
@@ -132,6 +211,9 @@ class AdminAutoPermission(ProviderPlugin):
 
 PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
     AdminAutoPermission,
+    HAProviderPlugin,
+    UserPolicyProviderPlugin,
+    LimitPolicyProviderPlugin,
     DeadLetterRoutingProviderPlugin,
 ]
 
@@ -163,6 +245,28 @@ class Provider(BaseProvider):
         # {prefix}-{name}-{id}
         return "-".join(parts)
 
+    def resolve_cluster_pk(self, cluster: Cluster) -> int | None:
+        """根据集群配置解析出对应的 ClusterModel 主键
+
+        运行时的 Cluster 数据类时从 providor JSON 反序列化而来, 不携带数据库主键,
+        但是 UserPolicyProviderPlugin 和 LimitPolicyProviderPlugin 需要 cluster_pk 来查询对应的策略配置
+        """
+        enabled_clusters = ClusterModel.objects.filter(enable=True)
+        mgmt_api = (cluster.management_api or "").rstrip("/")
+
+        if not mgmt_api:
+            logger.warning(
+                "cluster management_api is empty, cannot resolve cluster_pk accurately, fallback to host/port matching"
+            )
+            db_cluster = enabled_clusters.filter(host=cluster.host, port=cluster.port).first()
+            return db_cluster.pk if db_cluster else None
+
+        for db_cluster in enabled_clusters:
+            if (db_cluster.management_api or "").rstrip("/") == mgmt_api:
+                return db_cluster.pk
+
+        return None
+
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""
         if not self.clusters:
@@ -177,7 +281,7 @@ class Provider(BaseProvider):
             }
             try:
                 return Cluster(**values)
-            except Exception as e:
+            except ValidationError as e:
                 raise ValueError(f"cluster 配置不正确: {e}")
 
         result = WRItemList.from_json(self.clusters).get()
@@ -185,7 +289,7 @@ class Provider(BaseProvider):
             raise ValueError("clusters 列表配置不正确，无法获取集群配置")
         try:
             return Cluster(**result.values)
-        except Exception as e:
+        except ValidationError as e:
             raise ValueError(f"cluster 配置不正确: {e}")
 
     def create_instance(
@@ -263,6 +367,14 @@ class Provider(BaseProvider):
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
             cluster = self.pick_cluster()
+            context["cluster_pk"] = self.resolve_cluster_pk(cluster)
+            if context["cluster_pk"] is None:
+                logger.warning(
+                    "cluster_pk resolve failed: host=%s port=%s management_api=%s",
+                    cluster.host,
+                    cluster.port,
+                    cluster.management_api,
+                )
 
             try:
                 return self.create_instance(engine_app_name, bill, context, cluster)

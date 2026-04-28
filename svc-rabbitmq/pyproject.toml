@@ -54,3 +54,8 @@ dependencies = [
     'urllib3 (==1.26.20)',
     'pyjwt (==2.4.0)'
 ]
+
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "svc_rabbitmq.settings"
+python_files = ["test_*.py"]

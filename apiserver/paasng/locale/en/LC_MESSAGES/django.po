@@ -2224,10 +2224,6 @@ msgstr "Exited due to OOMKilled"
 msgid "队列消息数过多"
 msgstr "Excessive queue messages"
 
-#: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:58
-msgid "RabbitMQ 实例状态异常"
-msgstr "Abnormal RabbitMQ instance status"
-
 #: paasng/misc/monitoring/monitor/alert_rules/config/constants.py:63
 msgid "DLX 队列消息数过多"
 msgstr "Excessive DLX queue messages"

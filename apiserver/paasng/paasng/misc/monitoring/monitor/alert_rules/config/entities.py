@@ -25,8 +25,6 @@ class AlertCode(StrStructuredEnum):
     OOM_KILLED = "oom_killed"
     # 队列消息数超过阈值时触发
     HIGH_RABBITMQ_QUEUE_MESSAGES = "high_rabbitmq_queue_messages"
-    # 实例不可用(alive != 1)时触发
-    RABBITMQ_INSTANCE_DOWN = "rabbitmq_instance_down"
     # 死信队列(DLX)消息数超过阈值时触发
     HIGH_RABBITMQ_DLX_QUEUE_MESSAGES = "high_rabbitmq_dlx_queue_messages"
     # 队列数使用率(queues/limits)超过阈值时触发

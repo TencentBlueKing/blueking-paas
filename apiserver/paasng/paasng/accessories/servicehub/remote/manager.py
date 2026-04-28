@@ -71,6 +71,8 @@ from paasng.platform.applications.models import Application, ApplicationEnvironm
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils import safe_jinja2
+from paasng.utils.i18n import gettext_lazy as i18n_lazy
+from paasng.utils.i18n.serializers import I18N_STRING_DICT_FLAG
 
 if TYPE_CHECKING:
     import datetime
@@ -110,6 +112,7 @@ class MetaInfo:
 DEFAULT_META_INFO = MetaInfo(version=None)
 VERSION_WITH_INST_CONFIG = "0.1.0"
 VERSION_WITH_REST_UPSERT = "0.2.0"
+VERSION_WITH_IDEMPOTENT_PROVISION = "2.0.4"
 
 
 @dataclass
@@ -153,6 +156,9 @@ class RemoteServiceObj(ServiceObj):
         else:
             fields["meta_info"] = {"version": meta_info_data["version"]}
 
+        # Restore marked i18n dicts from the store to lazy translated strings.
+        fields = {k: restore_i18n_string_dict(v) for k, v in fields.items()}
+
         result = cattrs.structure(fields, cls)
         result._data = service
         result.category_id = service["category"]
@@ -178,6 +184,10 @@ class RemoteServiceObj(ServiceObj):
     def supports_rest_upsert(self) -> bool:
         """Check if current service supports Feature: RestFul upsert Service/Plan"""
         return self.meta_info.semantic_version_gte(VERSION_WITH_REST_UPSERT)
+
+    def supports_idempotent_provision(self) -> bool:
+        """Check if current service supports idempotent provision, which means provisioning an already provisioned instance will not cause error"""
+        return self.meta_info.semantic_version_gte(VERSION_WITH_IDEMPOTENT_PROVISION)
 
 
 @dataclass
@@ -237,12 +247,18 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             logger.warning(f"remote service {self.get_service().name} is not ready, skip")
             return
 
-        instance_id = str(uuid.uuid4())
         try:
             params = self.render_params(self.remote_config.provision_params_tmpl)
-            self.remote_client.provision_instance(
-                str(self.db_obj.service_id), str(self.db_obj.plan_id), instance_id, params=params
-            )
+            if self.get_service().supports_idempotent_provision():
+                resp = self.remote_client.idempotent_provision_instance(
+                    str(self.db_obj.service_id), str(self.db_obj.plan_id), params=params
+                )
+                instance_id = resp["uuid"]
+            else:
+                instance_id = str(uuid.uuid4())
+                self.remote_client.provision_instance(
+                    str(self.db_obj.service_id), str(self.db_obj.plan_id), instance_id, params=params
+                )
         except Exception as e:
             logger.exception(f"Error provisioning new instance for {self.db_application.name}")
             raise exceptions.ProvisionInstanceError(
@@ -942,3 +958,10 @@ def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) 
     attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
     env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
     return env.application
+
+
+def restore_i18n_string_dict(value: Any) -> Any:
+    if not isinstance(value, dict) or not value.get(I18N_STRING_DICT_FLAG):
+        return value
+
+    return i18n_lazy({k: v for k, v in value.items() if k != I18N_STRING_DICT_FLAG})

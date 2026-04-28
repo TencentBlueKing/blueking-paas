@@ -15,8 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pickle
+import json
 from typing import List, Optional, Set, Tuple, TypeVar
+
+import cattrs
 
 from paas_wl.bk_app.processes.processes import PlainProcess
 from paasng.core.core.storages.redisdb import get_default_redis
@@ -43,11 +45,17 @@ class ProcessesSnapshotStore:
 
     def save(self, processes: List[PlainProcess]):
         """Save processes"""
-        self.redis_db.setex(self.rkey, value=pickle.dumps(processes), time=self.data_expires_in)
+        value = json.dumps(cattrs.unstructure(processes))
+        self.redis_db.setex(self.rkey, value=value, time=self.data_expires_in)
 
     def get(self) -> Optional[List[PlainProcess]]:
         """Get processes"""
         val = self.redis_db.get(self.rkey)
         if val is None:
             return None
-        return pickle.loads(val)  # noqa: S301
+        try:
+            raw = json.loads(val)
+        except json.JSONDecodeError:
+            # 兼容历史数据: 无法被 json.loads 解析时, 视为缓存未命中 (由 TTL 自然淘汰)
+            return None
+        return cattrs.structure(raw, List[PlainProcess])

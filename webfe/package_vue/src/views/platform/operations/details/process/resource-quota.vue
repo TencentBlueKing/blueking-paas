@@ -1,18 +1,39 @@
 <template>
   <div class="resource-quota-container card-style">
-    <div class="top-section flex-row align-items-center">
+    <div class="top-section flex-row align-items-start">
       <div class="title g-sub-title flex-shrink-0">{{ $t('资源配额') }}</div>
       <bk-button
-        v-show="!isEdit"
+        v-show="!isEdit && !isNormalApp"
         class="flex-shrink-0 f12"
         :text="true"
-        title="primary"
         @click="handleEdit"
       >
         <i class="paasng-icon paasng-edit-2 f12"></i>
         {{ $t('编辑资源配额') }}
       </bk-button>
     </div>
+    <bk-alert
+      v-if="isNormalApp"
+      type="info"
+      class="alert-cls mt-12"
+    >
+      <span slot="title">
+        <i18n
+          path="普通应用暂不支持在此修改，请前往{link}"
+          tag="span"
+        >
+          <a
+            slot="link"
+            class="ml5"
+            :href="oldPageUrl"
+            target="_blank"
+          >
+            {{ $t('旧版页面') }}
+            <i class="paasng-icon paasng-jump-link"></i>
+          </a>
+        </i18n>
+      </span>
+    </bk-alert>
     <!-- 查看态 -->
     <section
       v-if="!isEdit"
@@ -328,6 +349,10 @@ export default {
       type: Object,
       default: () => {},
     },
+    appType: {
+      type: String,
+      default: '',
+    },
   },
   components: {
     DetailsRow,
@@ -416,6 +441,9 @@ export default {
     appCode() {
       return this.$route.params.code;
     },
+    isNormalApp() {
+      return this.appType === 'default' || this.appType === '';
+    },
     isStagCustom() {
       return this.formData.stag.plan_name === 'custom';
     },
@@ -428,6 +456,9 @@ export default {
         { key: 'stag', label: this.$t('预发布环境') },
         { key: 'prod', label: this.$t('生产环境') },
       ];
+    },
+    oldPageUrl() {
+      return `${BACKEND_URL}/admin42/settings/process_spec_plan/applications/?offset=0&search_term=${this.appCode}`;
     },
   },
   watch: {
@@ -788,9 +819,13 @@ export default {
     }
   }
   .view-mode-section,
-  .edit-mode-section {
+  .edit-mode-section,
+  .alert-cls {
     margin-left: 104px;
     margin-top: 16px;
+  }
+  .alert-cls {
+    margin-right: 104px;
   }
   .c-form-item-row {
     margin-top: 22px;

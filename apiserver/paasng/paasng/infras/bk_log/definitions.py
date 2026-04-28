@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Literal
+from typing import List, Literal
 
 from attrs import define, field
 
@@ -130,8 +130,8 @@ class PlatformIndexVisibility:
     """
 
     type: Literal["biz_attr", "multi_biz"]
-    bk_biz_labels: Dict[str, List[str]] | None = None
-    bk_biz_ids: List[int] | None = None
+    bk_biz_labels: dict[str, list[str]] | None = None
+    bk_biz_ids: list[int] | None = None
 
 
 @define
@@ -161,9 +161,9 @@ class CustomCollectorConfig:
     :param data_link_id: 数据传输链路，不需要可以不填
     :param description: 描述信息
 
-    :param is_platform_index: 是否为平台级采集项（多业务共享一个物理 ES 索引）
-    :param platform_index_visibility: 平台级采集项对其他业务的可见范围，仅在 is_platform_index=True 时生效
-    :param platform_index_filter: 平台级采集项的隔离维度元数据，仅在 is_platform_index=True 时生效
+    :param is_platform_index: 是否为平台级采集项（多 SaaS 共享一个 ES 索引）
+    :param platform_index_visibility: 平台级采集项对其他业务的可见范围，仅在 is_platform_index=True 时有效
+    :param platform_index_filter: 平台级采集项的隔离维度元数据（暂无实际功能，仅标记使用）
 
     :param id: 采集项ID
     :param index_set_id: 索引集ID，查询时使用
@@ -188,13 +188,6 @@ class CustomCollectorConfig:
     id: int | None = None
     index_set_id: int | None = None
     bk_data_id: int | None = None
-
-    def __attrs_post_init__(self):
-        # 平台级采集项必须同时声明可见范围与隔离维度, 否则日志平台创建会报错, 提前 fail fast
-        if self.is_platform_index and (self.platform_index_visibility is None or self.platform_index_filter is None):
-            raise ValueError(
-                "platform_index_visibility and platform_index_filter are required when is_platform_index=True"
-            )
 
 
 @define

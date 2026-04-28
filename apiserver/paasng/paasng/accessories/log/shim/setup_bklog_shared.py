@@ -15,13 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""平台共享 bk-log 采集项实现, 与 setup_bklog.py 的「按 module 独立建项」路径并列
+"""SaaS 共享索引/采集项链路
 
 设计要点:
   - 采集项: 同一租户下所有 SaaS 共用一份 json / stdout 采集项 (name_en 后缀 tenant_id)
   - 索引: 同租户共用同一份 ES 索引, 跨租户隔离, 跨 App 隔离靠查询侧 termTemplate 注入
-    `__ext.labels.bkapp_paas_bk_tencent_com_code` (Pod label `bkapp.paas.bk.tencent.com/code` 经 bk-log
-    采集后 `.` / `/` 替换为 `_` 后的事实字段路径)
+    `__ext.labels.bkapp_paas_bk_tencent_com_code` (源于 Pod label `bkapp.paas.bk.tencent.com/code`)
 """
 
 import logging
@@ -206,8 +205,8 @@ def _update_or_create_es_search_config(
 def _build_es_search_params(name_en: str, shared_bk_biz_id: int, message_field: str) -> ElasticSearchParams:
     """构造共享索引的 ES 查询参数
 
-    共享模式下采集项挂在 shared_bk_biz_id 业务下, 索引为 ``${shared_bk_biz_id}_bklog_{name_en}_*``;
-    termTemplate 注入 ``__ext.labels.bkapp_paas_bk_tencent_com_code`` 过滤, 防止带出同租户其他 App 日志
+    共享索引模式下采集项挂在 shared_bk_biz_id 业务下, 索引为 `${shared_bk_biz_id}_bklog_{name_en}_*`,
+    termTemplate 注入 `__ext.labels.bkapp_paas_bk_tencent_com_code` 来区分不同的 application
     """
     index_prefix = f"{shared_bk_biz_id}_bklog_"
     return ElasticSearchParams(

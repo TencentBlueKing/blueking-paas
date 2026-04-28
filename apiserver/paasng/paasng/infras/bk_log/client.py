@@ -118,9 +118,9 @@ class BkLogManagementClient:
 
     def create_custom_collector_config(
         self,
-        biz_or_space_id: Union[int, str],
+        biz_or_space_id: int | str,
         config: CustomCollectorConfig,
-        ignore_exists: Optional[bool] = None,
+        ignore_exists: bool | None = None,
     ):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
 

@@ -15,9 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""把指定 App 的日志链路从「平台共享索引」切回「按 module 独立建项」
+"""把指定 App 的日志链路从「平台共享索引」切回「独立索引」
 
-适用场景: App 之前 opt-in 了 USE_SHARED_BK_LOG_INDEX, 但现在希望回退到独立索引
+适用场景: App 希望使用独立索引
 
 执行步骤:
   1. 清掉 App 的 USE_SHARED_BK_LOG_INDEX flag, 防止后续热路径再次落到共享分支
@@ -25,7 +25,7 @@
   3. 删除模块下命中共享模板的 CustomCollectorConfig 行 (DB), 避免历史残留持续被部署回写
   4. 删除集群里仍指向共享 data_id 的 BkLogConfig CRD, 避免下次部署前同时存在两组 BkLogConfig
 
-注意: 上游 (蓝鲸日志平台) 的共享采集项是按租户共用的, 这里不会调用日志平台 API 删除上游采集项,
+注意: 上游 (蓝鲸日志平台) 的共享采集项是按租户__共用__的, 所以这里不会调用日志平台 API 删除上游采集项,
 仅清理本 App 的本地引用与 K8s CRD。
 
 Examples:

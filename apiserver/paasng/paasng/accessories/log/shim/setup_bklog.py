@@ -93,10 +93,7 @@ class BKLogConfigProvider:
 
     @property
     def shared_bk_biz_id(self) -> int:
-        """获取平台级共享采集项所属的 CMDB 业务 ID（从 TenantLogConfig）
-
-        仅在启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享采集项路径调用, 租户未配置时抛出异常
-        """
+        """获取共享索引使用的 bk_biz_id （一般为 PaaS 平台在对应租户下的 bk_biz_id）"""
         biz_id = self.config.shared_bk_biz_id
         if biz_id is None:
             raise SharedBkBizIdNotConfiguredError(self.tenant_id)

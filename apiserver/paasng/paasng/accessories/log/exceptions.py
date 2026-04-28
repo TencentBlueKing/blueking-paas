@@ -70,6 +70,6 @@ class SharedBkBizIdNotConfiguredError(Exception):
     def __init__(self, tenant_id: str):
         self.message = (
             f"shared_bk_biz_id is not configured for tenant_id: {tenant_id}, "
-            "please set it via `python manage.py create_tenant_log_config --update --shared-bk-biz-id <biz_id>`"
+            "please set it via `python manage.py create_tenant_log_config --help`"
         )
         super().__init__(self.message)

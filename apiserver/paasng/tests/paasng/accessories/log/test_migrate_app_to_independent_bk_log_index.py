@@ -24,8 +24,8 @@ from django.test import override_settings
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.infras.bk_log.constatns import (
-    PLATFORM_INDEX_NAME_JSON_TEMPLATE,
-    PLATFORM_INDEX_NAME_STDOUT_TEMPLATE,
+    SHARED_INDEX_NAME_JSON_TEMPLATE,
+    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
 )
 from paasng.platform.applications.constants import AppFeatureFlag
 
@@ -152,9 +152,7 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
     ):
         """默认 dry-run: 不写 flag, 不删采集项行, 不调用 setup_env_log_model, 不删 CRD"""
         bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
-        shared_row = self._make_collector_row(
-            bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=bk_module.tenant_id), "json"
-        )
+        shared_row = self._make_collector_row(bk_module, SHARED_INDEX_NAME_JSON_TEMPLATE, "json")
 
         call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}")
 
@@ -167,14 +165,9 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
     @pytest.mark.usefixtures("_with_wl_apps")
     def test_apply(self, bk_app, bk_module, patched_setup_env_log_model, patched_bklog_config_kmodel):
         """--apply: 清 flag、按 env 重跑 setup、物理删除共享行、删除共享 CRD; 不误伤独立行"""
-        tenant_id = bk_module.tenant_id
         bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
-        shared_json = self._make_collector_row(
-            bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id), "json"
-        )
-        shared_stdout = self._make_collector_row(
-            bk_module, PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id), "stdout"
-        )
+        shared_json = self._make_collector_row(bk_module, SHARED_INDEX_NAME_JSON_TEMPLATE, "json")
+        shared_stdout = self._make_collector_row(bk_module, SHARED_INDEX_NAME_STDOUT_TEMPLATE, "stdout")
         # 模拟独立路径下创建的采集项行, 命令不应误伤
         independent_row = self._make_collector_row(
             bk_module, f"{bk_app.code.replace('-', '_')}__default__json", "json"

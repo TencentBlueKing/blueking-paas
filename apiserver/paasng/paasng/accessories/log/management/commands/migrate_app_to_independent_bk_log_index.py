@@ -46,8 +46,8 @@ from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.infras.bk_log.constatns import (
-    PLATFORM_INDEX_NAME_JSON_TEMPLATE,
-    PLATFORM_INDEX_NAME_STDOUT_TEMPLATE,
+    SHARED_INDEX_NAME_JSON_TEMPLATE,
+    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
 )
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -158,20 +158,19 @@ class Command(BaseCommand):
                 )
 
     def _delete_shared_collector_rows(self, module: Module) -> int:
-        """物理删除模块下命中共享采集项 name_en 模板的 CustomCollectorConfig 行, 返回删除行数"""
+        """物理删除模块下命中共享采集项 name_en 的 CustomCollectorConfig 行, 返回删除行数"""
         deleted, _ = _query_shared_collector_rows(module).delete()
         return deleted
 
     def _delete_shared_bklog_crds(self, env: ModuleEnvironment) -> int:
         """删除集群中由共享采集项下发的 BkLogConfig CRD, 返回删除数量
 
-        通过共享采集项的 name_en 模板反向构造 CRD name (与 build_bklog_config_crd 保持一致),
+        通过共享采集项的 name_en 反向构造 CRD name (与 build_bklog_config_crd 保持一致),
         逐个调用 bklog_config_kmodel.delete; 不存在的 CRD 由底层 manager 兜底, 不抛异常。
         """
-        tenant_id = env.module.tenant_id
         shared_names = (
-            PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id),
-            PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id),
+            SHARED_INDEX_NAME_JSON_TEMPLATE,
+            SHARED_INDEX_NAME_STDOUT_TEMPLATE,
         )
         wl_app = env.wl_app
         deleted = 0
@@ -187,9 +186,9 @@ class Command(BaseCommand):
 
 
 def _query_shared_collector_rows(module: Module):
-    """模块下命中共享采集项 name_en 模板 (json + stdout) 的 CustomCollectorConfig 查询集"""
+    """模块下命中共享采集项 name_en (json + stdout) 的 CustomCollectorConfig 查询集"""
     shared_names = {
-        PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=module.tenant_id),
-        PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=module.tenant_id),
+        SHARED_INDEX_NAME_JSON_TEMPLATE,
+        SHARED_INDEX_NAME_STDOUT_TEMPLATE,
     }
     return CustomCollectorConfig.objects.filter(module=module, name_en__in=shared_names)

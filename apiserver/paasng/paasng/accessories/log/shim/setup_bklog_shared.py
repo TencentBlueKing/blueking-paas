@@ -18,8 +18,8 @@
 """SaaS 共享索引/采集项链路
 
 设计要点:
-  - 采集项: 同一租户下所有 SaaS 共用一份 json / stdout 采集项 (name_en 后缀 tenant_id)
-  - 索引: 同租户共用同一份 ES 索引, 跨租户隔离, 跨 App 隔离靠查询侧 termTemplate 注入
+  - 采集项: 所有 SaaS 共用一份 json / stdout 采集项 (固定 name_en)
+  - 索引: 共用同一份 ES 索引, 跨 App 隔离靠查询侧 termTemplate 注入
     `__ext.labels.bkapp_paas_bk_tencent_com_code` (源于 Pod label `bkapp.paas.bk.tencent.com/code`)
 """
 
@@ -50,8 +50,8 @@ from paasng.accessories.log.shim.setup_bklog import (
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
 from paasng.infras.bk_log.client import make_bk_log_management_client
 from paasng.infras.bk_log.constatns import (
-    PLATFORM_INDEX_NAME_JSON_TEMPLATE,
-    PLATFORM_INDEX_NAME_STDOUT_TEMPLATE,
+    SHARED_INDEX_NAME_JSON_TEMPLATE,
+    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
     ETLType,
 )
 from paasng.infras.bk_log.definitions import (
@@ -150,7 +150,7 @@ def _upsert_shared_custom_collector_config(module: Module, app_cfg: AppLogCollec
 def _build_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:
     """构造共享采集项的 CustomCollectorConfig: 复用独立路径的 etl/storage 配置, 仅覆盖 name 和平台级字段"""
     cfg = to_custom_collector_config(module, app_cfg)
-    shared_name = _resolve_shared_name_en(module.tenant_id, app_cfg.log_type)
+    shared_name = _resolve_shared_name_en(app_cfg.log_type)
     cfg.name_en = shared_name
     cfg.name_zh_cn = shared_name
     cfg.is_platform_index = True
@@ -223,10 +223,10 @@ def _build_es_search_params(name_en: str, shared_bk_biz_id: int, message_field: 
     )
 
 
-def _resolve_shared_name_en(tenant_id: str, log_type: Literal["json", "stdout"]) -> str:
-    """按租户渲染共享采集项的 name_en, 不同租户落到不同 ES 索引"""
+def _resolve_shared_name_en(log_type: Literal["json", "stdout"]) -> str:
+    """根据 log_type 返回共享采集项的 name_en"""
     if log_type == "json":
-        return PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id)
+        return SHARED_INDEX_NAME_JSON_TEMPLATE
     if log_type == "stdout":
-        return PLATFORM_INDEX_NAME_STDOUT_TEMPLATE.format(tenant_id=tenant_id)
+        return SHARED_INDEX_NAME_STDOUT_TEMPLATE
     raise ValueError(f"unsupported log_type for shared collector: {log_type}")

@@ -39,6 +39,6 @@ class BkLogType(StrStructuredEnum):
     STDOUT = EnumField("stdout")
 
 
-# 平台共享采集项的 name_en 模板, 同租户共用一份 ES 索引, 跨租户靠后缀 tenant_id 隔离
-PLATFORM_INDEX_NAME_JSON_TEMPLATE = "bkpaas_platform_log_json_{tenant_id}"
-PLATFORM_INDEX_NAME_STDOUT_TEMPLATE = "bkpaas_platform_log_stdout_{tenant_id}"
+# SaaS 共享 bklog 平台的索引名
+SHARED_INDEX_NAME_JSON_TEMPLATE = "bkpaas_platform_log_json"
+SHARED_INDEX_NAME_STDOUT_TEMPLATE = "bkpaas_platform_log_stdout"

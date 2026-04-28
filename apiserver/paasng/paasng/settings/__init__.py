@@ -1184,8 +1184,7 @@ ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
 
-# 启用后, 同租户内的 SaaS 共用一份平台级 bk-log 采集项与 ES 索引;
-# App 需通过 AppFeatureFlag.USE_SHARED_BK_LOG_INDEX 显式 opt-in, 默认仍走独立采集项
+# 启用后, 新创建的 SaaS 默认共用一份平台级 bk-log 采集项
 ENABLE_SHARED_BK_LOG_INDEX = settings.get("ENABLE_SHARED_BK_LOG_INDEX", False)
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get(

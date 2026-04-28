@@ -113,6 +113,10 @@ DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 AGENT_SANDBOX_DEFAULT_IMAGE = settings.get("AGENT_SANDBOX_DEFAULT_IMAGE", "bkpaas/agent-sandbox:latest")
 # Sandbox Router 验证 Token，用于 apiserver 与 router 之间的身份校验，不配置则不校验
 AGENT_SANDBOX_ROUTER_AUTH_TOKEN = settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "")
+# Agent Sandbox Router 的 Endpoint，如果不配置则自动根据集群信息计算得到
+# 如果配置，则要与 Agent Sandbox Router 的 Ingress 配置保持一致
+# 示例:'agent-sandbox-router.example.com', 'example.com/agent-sandbox-router'
+AGENT_SANDBOX_ROUTER_ENDPOINT = settings.get("AGENT_SANDBOX_ROUTER_ENDPOINT")
 
 # ---------------
 # 资源命名配置

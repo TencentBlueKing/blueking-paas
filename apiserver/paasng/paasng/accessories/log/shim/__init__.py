@@ -41,7 +41,7 @@ def setup_env_log_model(env: ModuleEnvironment):
     # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置
     # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig
     cluster = EnvClusterService(env).get_cluster()
-    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR) and settings.ENABLE_BK_MONITOR:
+    if settings.ENABLE_BK_MONITOR and cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         setup_bk_log_custom_collector(env.module)
 
     if log_collector_type == LogCollectorType.BK_LOG:

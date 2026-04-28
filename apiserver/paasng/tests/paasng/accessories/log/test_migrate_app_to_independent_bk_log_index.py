@@ -29,7 +29,7 @@ from paasng.infras.bk_log.constatns import (
 )
 from paasng.platform.applications.constants import AppFeatureFlag
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
@@ -53,7 +53,7 @@ def patched_shim_internals():
 
 
 class TestSetupEnvLogModelRouting:
-    """覆盖 setup_env_log_model 在共享开关 / App 豁免 flag 不同组合下的路由"""
+    """覆盖 setup_env_log_model 在共享开关 / App opt-in flag 不同组合下的路由"""
 
     @pytest.fixture(autouse=True)
     def _enable_bk_log_for_app(self, bk_app, settings):
@@ -71,8 +71,20 @@ class TestSetupEnvLogModelRouting:
         patched_shim_internals["shared_collector"].assert_not_called()
         patched_shim_internals["shared_model"].assert_not_called()
 
-    def test_shared_enabled_without_flag_routes_to_shared(self, bk_stag_env, patched_shim_internals):
-        """共享开关打开 + App 未豁免, 走共享路径"""
+    def test_shared_enabled_without_flag_routes_to_independent(self, bk_stag_env, patched_shim_internals):
+        """共享开关打开 + App 未 opt-in, 默认仍走独立路径"""
+        with override_settings(ENABLE_SHARED_BK_LOG_INDEX=True):
+            setup_env_log_model(bk_stag_env)
+
+        patched_shim_internals["default_collector"].assert_called_once()
+        patched_shim_internals["default_model"].assert_called_once()
+        patched_shim_internals["shared_collector"].assert_not_called()
+        patched_shim_internals["shared_model"].assert_not_called()
+
+    def test_shared_enabled_with_flag_routes_to_shared(self, bk_app, bk_stag_env, patched_shim_internals):
+        """共享开关打开 + App 已 opt-in USE_SHARED_BK_LOG_INDEX, 走共享路径"""
+        bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
+
         with override_settings(ENABLE_SHARED_BK_LOG_INDEX=True):
             setup_env_log_model(bk_stag_env)
 
@@ -81,11 +93,11 @@ class TestSetupEnvLogModelRouting:
         patched_shim_internals["default_collector"].assert_not_called()
         patched_shim_internals["default_model"].assert_not_called()
 
-    def test_shared_enabled_with_flag_routes_to_independent(self, bk_app, bk_stag_env, patched_shim_internals):
-        """共享开关打开 + App 已置 USE_INDEPENDENT_BK_LOG_INDEX, 仍走独立路径"""
-        bk_app.feature_flag.set_feature(AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX, True)
+    def test_shared_disabled_with_flag_routes_to_independent(self, bk_app, bk_stag_env, patched_shim_internals):
+        """全局开关关闭即使 App opt-in 也强制走独立路径 (兜底 kill switch)"""
+        bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
 
-        with override_settings(ENABLE_SHARED_BK_LOG_INDEX=True):
+        with override_settings(ENABLE_SHARED_BK_LOG_INDEX=False):
             setup_env_log_model(bk_stag_env)
 
         patched_shim_internals["default_collector"].assert_called_once()
@@ -102,6 +114,15 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
         """mock 掉 setup_env_log_model, 避免命令中真实触达 bk-log API"""
         target = (
             "paasng.accessories.log.management.commands.migrate_app_to_independent_bk_log_index.setup_env_log_model"
+        )
+        with mock.patch(target) as patched:
+            yield patched
+
+    @pytest.fixture()
+    def patched_bklog_config_kmodel(self):
+        """mock bklog_config_kmodel, 模拟 K8s 中存在的共享 BkLogConfig CRD"""
+        target = (
+            "paasng.accessories.log.management.commands.migrate_app_to_independent_bk_log_index.bklog_config_kmodel"
         )
         with mock.patch(target) as patched:
             yield patched
@@ -126,22 +147,28 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
         with pytest.raises(CommandError):
             call_command("migrate_app_to_independent_bk_log_index", "--app-code=nonexistent-app")
 
-    def test_dry_run_does_not_change_anything(self, bk_app, bk_module, patched_setup_env_log_model):
-        """dry-run 不写 flag, 不改采集项行, 不调用 setup_env_log_model"""
+    def test_dry_run_does_not_change_anything(
+        self, bk_app, bk_module, patched_setup_env_log_model, patched_bklog_config_kmodel
+    ):
+        """默认 dry-run: 不写 flag, 不删采集项行, 不调用 setup_env_log_model, 不删 CRD"""
+        bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
         shared_row = self._make_collector_row(
             bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=bk_module.tenant_id), "json"
         )
 
         call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}")
 
-        assert not bk_app.feature_flag.has_feature(AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX)
-        shared_row.refresh_from_db()
-        assert shared_row.is_enabled is True
+        assert bk_app.feature_flag.has_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX)
+        # dry-run 不应改 DB / K8s
+        assert CustomCollectorConfig.objects.filter(pk=shared_row.pk).exists()
         patched_setup_env_log_model.assert_not_called()
+        patched_bklog_config_kmodel.delete.assert_not_called()
 
-    def test_real_run(self, bk_app, bk_module, patched_setup_env_log_model):
-        """--no-dry-run: 置 flag、按 env 重跑 setup, 仅禁用 name 命中共享模板的行"""
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_apply(self, bk_app, bk_module, patched_setup_env_log_model, patched_bklog_config_kmodel):
+        """--apply: 清 flag、按 env 重跑 setup、物理删除共享行、删除共享 CRD; 不误伤独立行"""
         tenant_id = bk_module.tenant_id
+        bk_app.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, True)
         shared_json = self._make_collector_row(
             bk_module, PLATFORM_INDEX_NAME_JSON_TEMPLATE.format(tenant_id=tenant_id), "json"
         )
@@ -153,13 +180,17 @@ class TestMigrateAppToIndependentBkLogIndexCommand:
             bk_module, f"{bk_app.code.replace('-', '_')}__default__json", "json"
         )
 
-        call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}", "--no-dry-run")
+        # 模拟 K8s 里两个共享 CRD 都存在 (json + stdout) 在每个 env 都能 get 到
+        patched_bklog_config_kmodel.get.return_value = mock.Mock()
 
-        assert bk_app.feature_flag.has_feature(AppFeatureFlag.USE_INDEPENDENT_BK_LOG_INDEX)
-        # 默认 module 含 stag/prod 两个 env
+        call_command("migrate_app_to_independent_bk_log_index", f"--app-code={bk_app.code}", "--apply")
+
+        assert not bk_app.feature_flag.has_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX)
+        # 默认 module 含 stag/prod 两个 env, 重跑 setup 各一次
         assert patched_setup_env_log_model.call_count == 2
-        for row in (shared_json, shared_stdout, independent_row):
-            row.refresh_from_db()
-        assert shared_json.is_enabled is False
-        assert shared_stdout.is_enabled is False
-        assert independent_row.is_enabled is True
+        # 共享行被物理删除, 独立行保留
+        assert not CustomCollectorConfig.objects.filter(pk=shared_json.pk).exists()
+        assert not CustomCollectorConfig.objects.filter(pk=shared_stdout.pk).exists()
+        assert CustomCollectorConfig.objects.filter(pk=independent_row.pk).exists()
+        # 2 envs * 2 collector types(json/stdout) = 4 次 CRD 删除
+        assert patched_bklog_config_kmodel.delete.call_count == 4

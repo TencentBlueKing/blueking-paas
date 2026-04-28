@@ -102,10 +102,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
         label="修改环境变量，已迁移到插件开发者中心的应用不允许修改环境变量", default=True
     )
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
-    # 当平台开启 ENABLE_SHARED_BK_LOG_INDEX 时, 该 flag=True 的 App 仍走原来 "按 module 独立建项" 链路
-    USE_INDEPENDENT_BK_LOG_INDEX = FeatureFlagField(
-        label=_("使用独立的 bk-log 采集项与索引(豁免共享索引)"), default=False
-    )
+    # 仅在平台开启 ENABLE_SHARED_BK_LOG_INDEX 后生效: App 显式 opt-in 后走「平台共享采集项」链路
+    # 默认 False 保持「按 module 独立建项」的历史行为, 已存在 App 不受平台共享开关影响
+    USE_SHARED_BK_LOG_INDEX = FeatureFlagField(label=_("使用平台共享 bk-log 采集项与索引"), default=False)
 
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 

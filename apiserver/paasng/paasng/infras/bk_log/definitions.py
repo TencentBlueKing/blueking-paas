@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal
 
 from attrs import define, field
 
@@ -42,8 +42,8 @@ class ETLField:
     field_index: int
     field_name: str
     field_type: FieldType
-    alias_name: Optional[str] = None
-    description: Optional[str] = ""
+    alias_name: str | None = None
+    description: str | None = ""
     is_delete: bool = False
     is_dimension: bool = True
     is_time: bool = False
@@ -63,8 +63,8 @@ class ETLParams:
     """
 
     retain_original_text: bool = True
-    separator: Optional[str] = None
-    separator_regexp: Optional[str] = None
+    separator: str | None = None
+    separator_regexp: str | None = None
     retain_extra_json: bool = False
 
 
@@ -113,9 +113,9 @@ class PlainCustomCollectorConfig:
     custom_type: Literal["log"] = "log"
 
     # readonly fields
-    id: Optional[int] = None
-    index_set_id: Optional[int] = None
-    bk_data_id: Optional[int] = None
+    id: int | None = None
+    index_set_id: int | None = None
+    bk_data_id: int | None = None
 
 
 @define
@@ -130,8 +130,8 @@ class PlatformIndexVisibility:
     """
 
     type: Literal["biz_attr", "multi_biz"]
-    bk_biz_labels: Optional[Dict[str, List[str]]] = None
-    bk_biz_ids: Optional[List[int]] = None
+    bk_biz_labels: Dict[str, List[str]] | None = None
+    bk_biz_ids: List[int] | None = None
 
 
 @define
@@ -174,20 +174,20 @@ class CustomCollectorConfig:
     name_zh_cn: str
     custom_type: Literal["log"] = "log"
     category_id: str = "application_check"
-    etl_config: Optional[ETLConfig] = None
-    storage_config: Optional[StorageConfig] = None
-    data_link_id: Optional[int] = None
+    etl_config: ETLConfig | None = None
+    storage_config: StorageConfig | None = None
+    data_link_id: int | None = None
     description: str = ""
 
     # 平台级采集项字段, 默认关闭, 仅启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享路径设置
     is_platform_index: bool = False
-    platform_index_visibility: Optional[PlatformIndexVisibility] = None
-    platform_index_filter: Optional[PlatformIndexFilter] = None
+    platform_index_visibility: PlatformIndexVisibility | None = None
+    platform_index_filter: PlatformIndexFilter | None = None
 
     # readonly fields
-    id: Optional[int] = None
-    index_set_id: Optional[int] = None
-    bk_data_id: Optional[int] = None
+    id: int | None = None
+    index_set_id: int | None = None
+    bk_data_id: int | None = None
 
     def __attrs_post_init__(self):
         # 平台级采集项必须同时声明可见范围与隔离维度, 否则日志平台创建会报错, 提前 fail fast
@@ -211,9 +211,9 @@ class AppLogCollectorConfig:
     """
 
     log_paths: List[str] = field(factory=list)
-    time_field: Optional[str] = None
-    time_format: Optional[str] = None
+    time_field: str | None = None
+    time_format: str | None = None
     log_type: Literal["stdout", "json"] = "json"
     etl_type: ETLType = ETLType.TEXT
 
-    collector_config: Optional[CustomCollectorConfig] = None
+    collector_config: CustomCollectorConfig | None = None

@@ -32,17 +32,14 @@ from paasng.platform.mgrlegacy.exceptions import (
     PreCheckMigrationFailed,
     RollbackFailed,
 )
+from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationContext, MigrationRegister
 from paasng.platform.mgrlegacy.serializers import CNativeMigrationProcessSLZ
-from paasng.platform.mgrlegacy.task_data import MIGRATE_TO_CNATIVE_CLASSES_LIST
-
-try:
-    from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
-    from paasng.platform.mgrlegacy.task_data_te import MIGRATION_CLASSES_LIST, THIRD_APP_MIGRATION_CLASSES_LIST
-except ImportError:
-    from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
-    from paasng.platform.mgrlegacy.task_data import MIGRATION_CLASSES_LIST, THIRD_APP_MIGRATION_CLASSES_LIST
-
+from paasng.platform.mgrlegacy.task_data import (
+    MIGRATE_TO_CNATIVE_CLASSES_LIST,
+    MIGRATION_CLASSES_LIST,
+    THIRD_APP_MIGRATION_CLASSES_LIST,
+)
 
 logger = logging.getLogger(__name__)
 

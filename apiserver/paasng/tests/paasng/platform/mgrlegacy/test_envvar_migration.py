@@ -22,12 +22,8 @@ from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, 
 from paasng.platform.mgrlegacy.app_migrations.basic import BaseObjectMigration, MainInfoMigration
 from paasng.platform.mgrlegacy.app_migrations.envs_base import BaseEnvironmentVariableMigration
 from paasng.platform.mgrlegacy.app_migrations.product import ProductMigration
+from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
 from tests.paasng.platform.mgrlegacy.test_migration import BaseMigrationTest
-
-try:
-    from paasng.platform.mgrlegacy.app_migrations.sourcectl_te import SourceControlMigration
-except ImportError:
-    from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

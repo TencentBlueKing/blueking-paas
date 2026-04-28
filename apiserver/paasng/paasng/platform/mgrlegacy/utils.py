@@ -29,12 +29,8 @@ from paasng.core.region.models import get_region
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import LegacyAppTag, MigrationStatus
+from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 from paasng.platform.mgrlegacy.models import MigrationProcess
-
-try:
-    from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
-except ImportError:
-    from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
 logger = logging.getLogger(__name__)
 

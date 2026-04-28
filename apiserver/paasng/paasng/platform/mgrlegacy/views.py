@@ -37,29 +37,22 @@ from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
+from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ, RegionClusterStateSLZ
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.handlers import turn_on_bk_log_feature
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
-from paasng.platform.mgrlegacy.models import WlAppBackupRel
-
-try:
-    from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
-except ImportError:
-    from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
-
-from paas_wl.utils.error_codes import error_codes as wl_error_codes
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
-from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
-from paasng.platform.applications.handlers import turn_on_bk_log_feature
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
+from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess, WlAppBackupRel
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
     ChecklistInfoSLZ,

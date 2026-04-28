@@ -39,11 +39,8 @@ logger = logging.getLogger(__name__)
 
 class MigrationProcessManager(models.Manager):
     def get_or_create_migration_process_for_legacy(self, legacy_app_id, owner, session):
-        try:
-            from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy  # type: ignore
-        except ImportError:
-            from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
         from paasng.accessories.publish.sync_market.managers import AppManger
+        from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
         legacy_app = AppManger(session).get_by_app_id(legacy_app_id)
         legacy_app_proxy = LegacyAppProxy(legacy_app=legacy_app, session=session)
@@ -303,10 +300,7 @@ class MigrationContext:
     """Migration context"""
 
     def __init__(self, legacy_app, session, app=None, owner=None, migration_process=None):
-        try:
-            from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy  # type: ignore
-        except ImportError:
-            from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
+        from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
         self.session = session
         self.legacy_app = legacy_app

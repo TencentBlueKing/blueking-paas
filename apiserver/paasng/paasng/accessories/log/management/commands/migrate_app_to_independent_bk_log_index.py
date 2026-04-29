@@ -28,11 +28,11 @@
 仅清理本 App 的本地引用与 K8s CRD。
 
 Examples:
-    # 默认 dry-run, 仅打印将要执行的动作
+    # 实际执行迁移
     python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1
 
-    # 实际执行迁移
-    python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --apply
+    # dry-run, 仅打印将要执行的动作
+    python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --dry-run
 """
 
 import logging
@@ -60,27 +60,27 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--app-code", dest="app_code", required=True, help="应用 Code")
         parser.add_argument(
-            "--apply",
-            dest="apply",
+            "--dry-run",
+            dest="dry_run",
             action="store_true",
             default=False,
-            help="实际执行迁移; 不带该参数时仅打印将要执行的动作 (dry-run)",
+            help="仅打印将要执行的动作, 不实际写 DB / 调用 K8s API",
         )
 
-    def handle(self, app_code: str, apply: bool, *args, **options):
+    def handle(self, app_code: str, dry_run: bool, *args, **options):
         try:
             application = Application.objects.get(code=app_code)
         except Application.DoesNotExist:
             raise CommandError(f"Application not found: code={app_code}")
 
-        style_func = self.style.SUCCESS if apply else self.style.NOTICE
-        prefix = "" if apply else "[dry-run] "
+        style_func = self.style.NOTICE if dry_run else self.style.SUCCESS
+        prefix = "[dry-run] " if dry_run else ""
         self.stdout.write(
             f"{prefix}migrate Application<{app_code}> to independent bk-log index path",
             style_func=style_func,
         )
 
-        if not apply:
+        if dry_run:
             self._print_actions(application, prefix, style_func)
             return
 
@@ -123,12 +123,12 @@ class Command(BaseCommand):
             shared_qs = _query_shared_collector_rows(module)
             shared_count = shared_qs.count()
             for env in module.get_envs():
-                if shared_count:
-                    self.stdout.write(
-                        f"{prefix}would delete up to {shared_count} shared BkLogConfig CRD(s) in cluster for "
-                        f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>",
-                        style_func=style_func,
-                    )
+                # apply 模式会无条件尝试清理共享 CRD（可能存在 DB 已被删但集群残留的情况）
+                self.stdout.write(
+                    f"{prefix}would delete up to 2 shared BkLogConfig CRD(s) in cluster for "
+                    f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>",
+                    style_func=style_func,
+                )
 
             if shared_count:
                 self.stdout.write(
@@ -173,9 +173,5 @@ class Command(BaseCommand):
 
 
 def _query_shared_collector_rows(module: Module):
-    """模块下命中共享采集项 name_en (json + stdout) 的 CustomCollectorConfig 查询集"""
-    shared_names = {
-        SHARED_INDEX_NAME_JSON_TEMPLATE,
-        SHARED_INDEX_NAME_STDOUT_TEMPLATE,
-    }
-    return CustomCollectorConfig.objects.filter(module=module, name_en__in=shared_names)
+    """模块下内置采集项的 CustomCollectorConfig 查询集"""
+    return CustomCollectorConfig.objects.filter(module=module, is_builtin=True)

@@ -15,15 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from unittest import mock
+
 import pytest
 from django.core.management import CommandError, call_command
 from django.test import override_settings
 
 from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
 from paasng.accessories.log.models import CustomCollectorConfig, TenantLogConfig
-from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider, should_use_shared_bk_log_index
+from paasng.accessories.log.shim.setup_bklog import (
+    BKLogConfigProvider,
+    _upsert_shared_custom_collector_config,
+    should_use_shared_bk_log_index,
+)
 from paasng.core.tenant.user import get_init_tenant_id
-from paasng.infras.bk_log.constatns import SHARED_INDEX_NAME_JSON_TEMPLATE
+from paasng.infras.bk_log.constatns import SHARED_INDEX_NAME_JSON_TEMPLATE, ETLType
+from paasng.infras.bk_log.definitions import AppLogCollectorConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -164,3 +171,33 @@ class TestCreateTenantLogConfigCommand:
 
         config = TenantLogConfig.objects.get(tenant_id=tenant_id)
         assert config.shared_bk_biz_id is None
+
+
+class TestSharedCollectorConfigSetup:
+    """测试共享采集项创建逻辑"""
+
+    def test_upsert_shared_collector_uses_shared_bk_biz_id(self, bk_module):
+        """共享采集项必须使用 tenant 的 shared_bk_biz_id，而不是应用监控空间 ID"""
+        TenantLogConfig.objects.update_or_create(
+            tenant_id=bk_module.application.tenant_id,
+            defaults={
+                "storage_cluster_id": 200,
+                "retention": 21,
+                "es_shards": 5,
+                "storage_replicas": 3,
+                "time_zone": 8,
+                "shared_bk_biz_id": 9527,
+            },
+        )
+
+        app_cfg = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
+
+        with mock.patch(
+            "paasng.accessories.log.shim.setup_bklog.get_or_create_custom_collector_config"
+        ) as mocked_get_or_create:
+            mocked_get_or_create.return_value = mock.sentinel.collector
+
+            result = _upsert_shared_custom_collector_config(bk_module, app_cfg)
+
+        assert result is mock.sentinel.collector
+        assert mocked_get_or_create.call_args.kwargs["biz_or_space_id"] == 9527

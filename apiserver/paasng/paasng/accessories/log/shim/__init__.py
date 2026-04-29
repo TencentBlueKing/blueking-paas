@@ -67,9 +67,7 @@ def _should_use_bk_log_collector(env: ModuleEnvironment, cluster_has_bk_log: boo
 
 
 def _should_use_shared_bk_log_index(env: ModuleEnvironment) -> bool:
-    return settings.ENABLE_SHARED_BK_LOG_INDEX and env.application.feature_flag.has_feature(
-        AppFeatureFlag.USE_SHARED_BK_LOG_INDEX
-    )
+    return env.application.feature_flag.has_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX)
 
 
 def _setup_bk_log_custom_collector(env: ModuleEnvironment, use_shared_bk_log_index: bool):

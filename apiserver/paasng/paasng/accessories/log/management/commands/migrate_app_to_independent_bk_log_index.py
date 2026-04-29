@@ -44,10 +44,7 @@ from paas_wl.bk_app.monitoring.bklog.kres_entities import bklog_config_kmodel
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim.setup_bklog import setup_default_bk_log_model
-from paasng.infras.bk_log.constatns import (
-    SHARED_INDEX_NAME_JSON_TEMPLATE,
-    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
-)
+from paasng.accessories.log.shim.setup_bklog_shared import SHARED_INDEX_NAMES
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -155,13 +152,9 @@ class Command(BaseCommand):
         通过共享采集项的 name_en 反向构造 CRD name (与 build_bklog_config_crd 保持一致),
         逐个调用 bklog_config_kmodel.delete; 不存在的 CRD 由底层 manager 兜底, 不抛异常。
         """
-        shared_names = (
-            SHARED_INDEX_NAME_JSON_TEMPLATE,
-            SHARED_INDEX_NAME_STDOUT_TEMPLATE,
-        )
         wl_app = env.wl_app
         deleted = 0
-        for name_en in shared_names:
+        for name_en in SHARED_INDEX_NAMES:
             crd_name = name_en.replace("_", "-")
             try:
                 existed = bklog_config_kmodel.get(app=wl_app, name=crd_name)
@@ -173,5 +166,5 @@ class Command(BaseCommand):
 
 
 def _query_shared_collector_rows(module: Module):
-    """模块下内置采集项的 CustomCollectorConfig 查询集"""
-    return CustomCollectorConfig.objects.filter(module=module, is_builtin=True)
+    """模块下共享采集项的 CustomCollectorConfig 查询集"""
+    return CustomCollectorConfig.objects.filter(module=module, is_builtin=True, name_en__in=SHARED_INDEX_NAMES)

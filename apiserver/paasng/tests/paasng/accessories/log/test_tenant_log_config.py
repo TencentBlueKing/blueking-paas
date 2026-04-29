@@ -22,9 +22,12 @@ from django.core.management import CommandError, call_command
 from django.test import override_settings
 
 from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
+from paasng.accessories.log.management.commands.migrate_app_to_independent_bk_log_index import (
+    _query_shared_collector_rows,
+)
 from paasng.accessories.log.models import CustomCollectorConfig, TenantLogConfig
-from paasng.accessories.log.shim.setup_bklog import (
-    BKLogConfigProvider,
+from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider
+from paasng.accessories.log.shim.setup_bklog_shared import (
     _upsert_shared_custom_collector_config,
     should_use_shared_bk_log_index,
 )
@@ -104,6 +107,15 @@ class TestShouldUseSharedBkLogIndex:
         self._create_builtin_collector(bk_module, "foo_app__default__json")
 
         assert should_use_shared_bk_log_index(bk_module) is False
+
+    def test_query_shared_collector_rows_only_returns_shared_collectors(self, bk_module):
+        """迁移命令只应清理共享采集项, 不能匹配独立采集项"""
+        self._create_builtin_collector(bk_module, SHARED_INDEX_NAME_JSON_TEMPLATE)
+        self._create_builtin_collector(bk_module, "foo_app__default__json")
+
+        assert set(_query_shared_collector_rows(bk_module).values_list("name_en", flat=True)) == {
+            SHARED_INDEX_NAME_JSON_TEMPLATE
+        }
 
     def _create_builtin_collector(self, bk_module, name_en: str):
         """创建模块内置采集项"""

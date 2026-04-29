@@ -20,9 +20,8 @@ from django.conf import settings
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import LogCollectorType
-from paasng.accessories.log.shim.setup_bklog import (
-    setup_bk_log_custom_collector,
-    setup_default_bk_log_model,
+from paasng.accessories.log.shim.setup_bklog import setup_bk_log_custom_collector, setup_default_bk_log_model
+from paasng.accessories.log.shim.setup_bklog_shared import (
     setup_shared_bk_log_custom_collector,
     setup_shared_bk_log_model,
     should_use_shared_bk_log_index,

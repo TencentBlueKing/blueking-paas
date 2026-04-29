@@ -35,8 +35,6 @@ Examples:
     python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --dry-run
 """
 
-import logging
-
 from django.core.management.base import BaseCommand, CommandError
 from django.db.transaction import atomic
 
@@ -47,8 +45,6 @@ from paasng.accessories.log.shim.setup_bklog import setup_default_bk_log_model
 from paasng.accessories.log.shim.setup_bklog_shared import SHARED_INDEX_NAMES
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -70,101 +66,79 @@ class Command(BaseCommand):
         except Application.DoesNotExist:
             raise CommandError(f"Application not found: code={app_code}")
 
-        style_func = self.style.NOTICE if dry_run else self.style.SUCCESS
         prefix = "[dry-run] " if dry_run else ""
-        self.stdout.write(
-            f"{prefix}migrate Application<{app_code}> to independent bk-log index path",
-            style_func=style_func,
-        )
-
-        if dry_run:
-            self._print_actions(application, prefix, style_func)
-            return
+        self.stdout.write(f"{prefix}migrate Application<{app_code}> to independent bk-log index path")
 
         for module in application.modules.all():
+            envs = list(module.get_envs())
+            if dry_run:
+                self._print_dry_run_actions(application, module, envs, prefix)
+                continue
+
             with atomic():
-                # 先删共享 DB 行, 再直接重跑独立链路; 后续 setup_env_log_model 会根据独立 name_en 继续保持独立链路.
-                deleted_rows = self._delete_shared_collector_rows(module)
+                deleted_rows = _delete_shared_collector_rows(module)
                 if deleted_rows:
                     self.stdout.write(
                         f"deleted {deleted_rows} shared CustomCollectorConfig row(s) for "
-                        f"Application<{app_code}> Module<{module.name}>",
-                        style_func=style_func,
+                        f"Application<{app_code}> Module<{module.name}>"
                     )
 
-                for env in module.get_envs():
+                for env in envs:
                     setup_default_bk_log_model(env)
                     self.stdout.write(
                         f"re-setup independent bk-log model for "
-                        f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>",
-                        style_func=style_func,
+                        f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>"
                     )
 
-            for env in module.get_envs():
-                deleted_crds = self._delete_shared_bklog_crds(env)
+            for env in envs:
+                deleted_crds = _delete_shared_bklog_crds(env)
                 if deleted_crds:
                     self.stdout.write(
                         f"deleted {deleted_crds} shared BkLogConfig CRD(s) in cluster for "
-                        f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>",
-                        style_func=style_func,
+                        f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>"
                     )
 
-        self.stdout.write(
-            "Migration done. Please trigger a redeploy of the application to apply the new BkLogConfig CRDs.",
-            style_func=style_func,
-        )
+        if not dry_run:
+            self.stdout.write(
+                "Migration done. Please trigger a redeploy of the application to apply the new BkLogConfig CRDs."
+            )
 
-    def _print_actions(self, application: Application, prefix: str, style_func):
-        """dry-run: 仅打印将要执行的动作, 不触达 DB / K8s API"""
-        for module in application.modules.all():
-            shared_qs = _query_shared_collector_rows(module)
-            shared_count = shared_qs.count()
-            for env in module.get_envs():
-                # apply 模式会无条件尝试清理共享 CRD（可能存在 DB 已被删但集群残留的情况）
-                self.stdout.write(
-                    f"{prefix}would delete up to 2 shared BkLogConfig CRD(s) in cluster for "
-                    f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>",
-                    style_func=style_func,
-                )
+    def _print_dry_run_actions(
+        self, application: Application, module: Module, envs: list[ModuleEnvironment], prefix: str
+    ):
+        shared_count = CustomCollectorConfig.objects.filter(module=module, is_builtin=True).count()
+        if shared_count:
+            self.stdout.write(
+                f"{prefix}would delete {shared_count} shared CustomCollectorConfig row(s) for "
+                f"Application<{application.code}> Module<{module.name}>"
+            )
 
-            if shared_count:
-                self.stdout.write(
-                    f"{prefix}would delete {shared_count} shared CustomCollectorConfig row(s) for "
-                    f"Application<{application.code}> Module<{module.name}>",
-                    style_func=style_func,
-                )
-
-            for env in module.get_envs():
-                self.stdout.write(
-                    f"{prefix}would re-setup independent bk-log model for "
-                    f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>",
-                    style_func=style_func,
-                )
-
-    def _delete_shared_collector_rows(self, module: Module) -> int:
-        """物理删除模块下命中共享采集项 name_en 的 CustomCollectorConfig 行, 返回删除行数"""
-        deleted, _ = _query_shared_collector_rows(module).delete()
-        return deleted
-
-    def _delete_shared_bklog_crds(self, env: ModuleEnvironment) -> int:
-        """删除集群中由共享采集项下发的 BkLogConfig CRD, 返回删除数量
-
-        通过共享采集项的 name_en 反向构造 CRD name (与 build_bklog_config_crd 保持一致),
-        逐个调用 bklog_config_kmodel.delete; 不存在的 CRD 由底层 manager 兜底, 不抛异常。
-        """
-        wl_app = env.wl_app
-        deleted = 0
-        for name_en in SHARED_INDEX_NAMES:
-            crd_name = name_en.replace("_", "-")
-            try:
-                existed = bklog_config_kmodel.get(app=wl_app, name=crd_name)
-            except AppEntityNotFound:
-                continue
-            bklog_config_kmodel.delete(existed)
-            deleted += 1
-        return deleted
+        for env in envs:
+            self.stdout.write(
+                f"{prefix}would re-setup independent bk-log model for "
+                f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>"
+            )
+            self.stdout.write(
+                f"{prefix}would delete up to {len(SHARED_INDEX_NAMES)} shared BkLogConfig CRD(s) in cluster for "
+                f"Application<{application.code}> Module<{module.name}> Env<{env.environment}>"
+            )
 
 
-def _query_shared_collector_rows(module: Module):
-    """模块下共享采集项的 CustomCollectorConfig 查询集"""
-    return CustomCollectorConfig.objects.filter(module=module, is_builtin=True, name_en__in=SHARED_INDEX_NAMES)
+def _delete_shared_collector_rows(module: Module) -> int:
+    """物理删除模块下命中共享采集项 name_en 的 CustomCollectorConfig 行"""
+    deleted, _ = CustomCollectorConfig.objects.filter(module=module, is_builtin=True).delete()
+    return deleted
+
+
+def _delete_shared_bklog_crds(env: ModuleEnvironment) -> int:
+    """删除集群中由共享采集项下发的 BkLogConfig CRD"""
+    deleted = 0
+    for name_en in SHARED_INDEX_NAMES:
+        crd_name = name_en.replace("_", "-")
+        try:
+            existed = bklog_config_kmodel.get(app=env.wl_app, name=crd_name)
+        except AppEntityNotFound:
+            continue
+        bklog_config_kmodel.delete(existed)
+        deleted += 1
+    return deleted

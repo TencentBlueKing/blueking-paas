@@ -29,13 +29,13 @@
 
 Examples:
     # 切到独立索引
-    python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --index-mode independent
+    python manage.py set_bk_log_index_mode --app-code app-code-1 --index-mode independent
 
     # 切到共享索引
-    python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --index-mode shared
+    python manage.py set_bk_log_index_mode --app-code app-code-1 --index-mode shared
 
     # dry-run, 仅打印将要执行的动作
-    python manage.py migrate_app_to_independent_bk_log_index --app-code app-code-1 --index-mode shared --dry-run
+    python manage.py set_bk_log_index_mode --app-code app-code-1 --index-mode shared --dry-run
 """
 
 from typing import Literal

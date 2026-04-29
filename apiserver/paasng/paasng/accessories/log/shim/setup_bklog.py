@@ -17,17 +17,13 @@
 
 import logging
 from functools import cached_property
-from typing import Literal, Union
+from typing import Union
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.accessories.log.constants import (
-    BK_LOG_PLATFORM_INDEX_FILTER,
-    BK_LOG_SHARED_INDEX_VISIBILITY,
-    DEFAULT_LOG_CONFIG_PLACEHOLDER,
-)
+from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
@@ -38,12 +34,7 @@ from paasng.accessories.log.models import (
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
-from paasng.infras.bk_log.constatns import (
-    SHARED_INDEX_NAME_JSON_TEMPLATE,
-    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
-    ETLType,
-    FieldType,
-)
+from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
     CustomCollectorConfig,
@@ -59,27 +50,6 @@ from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
-
-SHARED_INDEX_NAMES = {
-    SHARED_INDEX_NAME_JSON_TEMPLATE,
-    SHARED_INDEX_NAME_STDOUT_TEMPLATE,
-}
-
-
-def should_use_shared_bk_log_index(module: Module) -> bool:
-    """判断是否使用共享索引
-
-    对应 module 的采集项:
-    - 已存在，根据 name_en 是否为共享索引的名称
-    - 不存在时，根据全局开关 ENABLE_SHARED_BK_LOG_INDEX 决定是否使用共享索引
-    """
-    builtin_names = set(
-        CustomCollectorConfigModel.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
-    )
-    if builtin_names:
-        return bool(builtin_names & SHARED_INDEX_NAMES)
-
-    return settings.ENABLE_SHARED_BK_LOG_INDEX
 
 
 class BKLogConfigProvider:
@@ -301,40 +271,6 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     _setup_ingress_log_config(env)
 
 
-def setup_shared_bk_log_model(env: ModuleEnvironment):
-    """初始化平台共享索引日志平台采集方案的数据库模型
-
-    结构化日志和标准输出日志使用租户级共享 bk-log 采集项, 访问日志仍然使用 ELK.
-    """
-    json_config, stdout_config = setup_shared_bk_log_custom_collector(env.module)
-
-    shared_bk_biz_id = BKLogConfigProvider(env.module).shared_bk_biz_id
-    update_or_create_shared_es_search_config(env, json_config, shared_bk_biz_id, message_field="message")
-    update_or_create_shared_es_search_config(env, stdout_config, shared_bk_biz_id)
-
-    _setup_ingress_log_config(env)
-
-
-def setup_shared_bk_log_custom_collector(module: Module):
-    """创建/复用租户级共享的 json/stdout 采集项."""
-    language: AppLanguage | str
-    try:
-        language = AppLanguage(module.language)
-    except ValueError:
-        # Dockerfile 等无语言设置的应用
-        language = ""
-
-    if language == AppLanguage.PYTHON:
-        json_config = build_python_json_collector_config()
-    else:
-        json_config = build_normal_json_collector_config()
-    stdout_config = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
-
-    for app_cfg in (json_config, stdout_config):
-        app_cfg.collector_config = _upsert_shared_custom_collector_config(module, app_cfg)
-    return json_config, stdout_config
-
-
 def build_custom_collector_config_name(module: Module, type: str) -> str:
     """构造应用唯一的自定义采集项英文名称，重要，5-50 个字符，仅包含字母数字下划线
 
@@ -443,96 +379,3 @@ def to_custom_collector_config(
         cfg.index_set_id = db_obj.index_set_id
         cfg.bk_data_id = db_obj.bk_data_id
     return cfg
-
-
-def _upsert_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:
-    """调用日志平台创建/复用共享采集项, 并把结果同步到 PaaS 侧 DB."""
-    cfg = _build_shared_custom_collector_config(module, app_cfg)
-    shared_bk_biz_id = BKLogConfigProvider(module).shared_bk_biz_id
-
-    return get_or_create_custom_collector_config(
-        module=module,
-        collector_config=cfg,
-        log_paths=app_cfg.log_paths,
-        log_type=app_cfg.log_type,
-        biz_or_space_id=shared_bk_biz_id,
-    )
-
-
-def _build_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:
-    """构造共享采集项的 CustomCollectorConfig."""
-    cfg = to_custom_collector_config(module, app_cfg, reuse_existing=False)
-    shared_name = _resolve_shared_name_en(app_cfg.log_type)
-    cfg.name_en = shared_name
-    cfg.name_zh_cn = shared_name
-    cfg.is_platform_index = True
-    cfg.platform_index_visibility = BK_LOG_SHARED_INDEX_VISIBILITY
-    cfg.platform_index_filter = BK_LOG_PLATFORM_INDEX_FILTER
-    return cfg
-
-
-def update_or_create_shared_es_search_config(
-    env: ModuleEnvironment,
-    app_cfg: AppLogCollectorConfig,
-    shared_bk_biz_id: int,
-    message_field: str = "log",
-):
-    """写入指向共享索引的 ES 查询配置."""
-    assert app_cfg.collector_config
-
-    search_params = _build_shared_es_search_params(
-        name_en=app_cfg.collector_config.name_en,
-        shared_bk_biz_id=shared_bk_biz_id,
-        message_field=message_field,
-    )
-    defaults = {
-        "backend_type": "bkLog",
-        "bk_log_config": {"scenarioID": "log"},
-        "search_params": search_params,
-        "tenant_id": env.tenant_id,
-    }
-
-    search_config, _ = ElasticSearchConfig.objects.update_or_create(
-        collector_config_id=app_cfg.collector_config.id,
-        defaults=defaults,
-    )
-
-    config, _ = ProcessLogQueryConfig.objects.get_or_create(
-        env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER, defaults={"tenant_id": env.tenant_id}
-    )
-    config.tenant_id = env.tenant_id
-    if app_cfg.log_type == "stdout":
-        config.stdout = search_config
-    elif app_cfg.log_type == "json":
-        config.json = search_config
-    else:
-        raise NotImplementedError
-    config.save()
-
-
-def _build_shared_es_search_params(name_en: str, shared_bk_biz_id: int, message_field: str) -> ElasticSearchParams:
-    """构造共享索引的 ES 查询参数."""
-    index_prefix = f"{shared_bk_biz_id}_bklog_"
-    return ElasticSearchParams(
-        indexPattern=f"{index_prefix}{name_en}_*",
-        # time 是日志平台默认的时间字段
-        timeField="time",
-        timeFormat="timestamp[ns]",
-        messageField=message_field,
-        termTemplate={
-            "__ext.labels.bkapp_paas_bk_tencent_com_code": "{{ app_code }}",
-        },
-        builtinFilters={},
-        builtinExcludes={},
-        filedMatcher="message|levelname|pathname|funcName|otelSpanID"
-        r"|otelServiceName|otelTraceID|requestID|environment|process_id|stream|__ext_json\..*",
-    )
-
-
-def _resolve_shared_name_en(log_type: Literal["json", "stdout"]) -> str:
-    """根据 log_type 返回共享采集项的 name_en."""
-    if log_type == "json":
-        return SHARED_INDEX_NAME_JSON_TEMPLATE
-    if log_type == "stdout":
-        return SHARED_INDEX_NAME_STDOUT_TEMPLATE
-    raise ValueError(f"unsupported log_type for shared collector: {log_type}")

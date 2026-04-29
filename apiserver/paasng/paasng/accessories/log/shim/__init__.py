@@ -44,7 +44,7 @@ def get_log_collector_type(env: ModuleEnvironment) -> LogCollectorType:
 def setup_env_log_model(env: ModuleEnvironment):
     cluster = EnvClusterService(env).get_cluster()
     cluster_has_bk_log = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
-    use_shared_bk_log_index = _should_use_shared_bk_log_index(env)
+    use_shared_bk_log_index = should_use_shared_bk_log_index(env.module)
 
     # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置。
     # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig。
@@ -65,10 +65,6 @@ def _should_use_bk_log_collector(env: ModuleEnvironment, cluster_has_bk_log: boo
         and env.application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
         and cluster_has_bk_log
     )
-
-
-def _should_use_shared_bk_log_index(env: ModuleEnvironment) -> bool:
-    return should_use_shared_bk_log_index(env.module)
 
 
 def _setup_bk_log_custom_collector(env: ModuleEnvironment, use_shared_bk_log_index: bool):

@@ -193,7 +193,7 @@ class TestSharedCollectorConfigSetup:
         app_cfg = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
 
         with mock.patch(
-            "paasng.accessories.log.shim.setup_bklog.get_or_create_custom_collector_config"
+            "paasng.accessories.log.shim.setup_bklog_shared.get_or_create_custom_collector_config"
         ) as mocked_get_or_create:
             mocked_get_or_create.return_value = mock.sentinel.collector
 

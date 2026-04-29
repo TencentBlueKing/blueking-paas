@@ -57,7 +57,7 @@ class Command(BaseCommand):
             "--shared-bk-biz-id",
             type=int,
             default=None,
-            help="平台级共享采集项所属的 CMDB 业务 ID (非 space_id)，仅在启用 ENABLE_SHARED_BK_LOG_INDEX 时需要",
+            help="平台级共享采集项所属的 bk_biz_id，仅在启用 ENABLE_SHARED_BK_LOG_INDEX 时需要",
         )
 
     def handle(self, *args, **options):

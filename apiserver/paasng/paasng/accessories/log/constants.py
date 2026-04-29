@@ -28,13 +28,13 @@ DEFAULT_LOG_BATCH_SIZE = 200
 # 日志平台最多也只返回 10,000 条数据，且不可修改
 MAX_RESULT_WINDOW = 10000
 
-# 平台共享采集项对所有 bksaas 空间可见 (ENABLE_SHARED_BK_LOG_INDEX 启用时生效)
+# 设置共享索引可见范围
 BK_LOG_SHARED_INDEX_VISIBILITY = PlatformIndexVisibility(
     type="biz_attr",
     bk_biz_labels={"space_type": ["bksaas"]},
 )
 
-# 平台共享采集项的隔离维度元数据, 仅作为标记发送给日志平台, 不参与运行时过滤
+# 平台共享采集项隔离维度元数据，目前无实际作用
 # field 由 Pod Label `bkapp.paas.bk.tencent.com/code` (BKAPP_CODE_ANNO_KEY) 注入
 BK_LOG_PLATFORM_INDEX_FILTER = PlatformIndexFilter(
     field="__ext.labels.bkapp_paas_bk_tencent_com_code",

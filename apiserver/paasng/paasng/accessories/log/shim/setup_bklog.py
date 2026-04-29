@@ -20,7 +20,6 @@ from functools import cached_property
 from typing import Literal, Union
 
 from django.conf import settings
-from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -39,7 +38,6 @@ from paasng.accessories.log.models import (
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
-from paasng.infras.bk_log.client import make_bk_log_management_client
 from paasng.infras.bk_log.constatns import (
     SHARED_INDEX_NAME_JSON_TEMPLATE,
     SHARED_INDEX_NAME_STDOUT_TEMPLATE,
@@ -57,7 +55,6 @@ from paasng.infras.bk_log.definitions import (
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
@@ -70,9 +67,11 @@ SHARED_INDEX_NAMES = {
 
 
 def should_use_shared_bk_log_index(module: Module) -> bool:
-    """判断模块日志链路是否使用平台共享索引.
+    """判断是否使用共享索引
 
-    已存在内置采集项时, 以采集项 name_en 为准; 没有历史采集项时, 才使用全局开关决定新建策略.
+    对应 module 的采集项:
+    - 已存在，根据 name_en 是否为共享索引的名称
+    - 不存在时，根据全局开关 ENABLE_SHARED_BK_LOG_INDEX 决定是否使用共享索引
     """
     builtin_names = set(
         CustomCollectorConfigModel.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
@@ -449,28 +448,15 @@ def to_custom_collector_config(
 def _upsert_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:
     """调用日志平台创建/复用共享采集项, 并把结果同步到 PaaS 侧 DB."""
     cfg = _build_shared_custom_collector_config(module, app_cfg)
-    tenant_id = get_tenant_id_for_app(module.application.code)
-    client = make_bk_log_management_client(tenant_id)
     shared_bk_biz_id = BKLogConfigProvider(module).shared_bk_biz_id
 
-    with atomic():
-        cfg = client.create_custom_collector_config(biz_or_space_id=shared_bk_biz_id, config=cfg, ignore_exists=True)
-
-        CustomCollectorConfigModel.objects.update_or_create(
-            module=module,
-            name_en=cfg.name_en,
-            defaults={
-                "collector_config_id": cfg.id,
-                "index_set_id": cfg.index_set_id,
-                "bk_data_id": cfg.bk_data_id,
-                "log_paths": app_cfg.log_paths,
-                "log_type": app_cfg.log_type,
-                "is_builtin": True,
-                "is_enabled": True,
-                "tenant_id": module.tenant_id,
-            },
-        )
-    return cfg
+    return get_or_create_custom_collector_config(
+        module=module,
+        collector_config=cfg,
+        log_paths=app_cfg.log_paths,
+        log_type=app_cfg.log_type,
+        biz_or_space_id=shared_bk_biz_id,
+    )
 
 
 def _build_shared_custom_collector_config(module: Module, app_cfg: AppLogCollectorConfig) -> CustomCollectorConfig:

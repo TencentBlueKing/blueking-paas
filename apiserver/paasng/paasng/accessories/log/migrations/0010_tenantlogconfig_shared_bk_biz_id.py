@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
                 default=None,
                 help_text="仅启用 ENABLE_SHARED_BK_LOG_INDEX 时生效",
                 null=True,
-                verbose_name="共享采集项所挂载的 CMDB 业务 ID",
+                verbose_name="共享采集项所挂载的 bk_biz_id",
             ),
         ),
     ]

@@ -20,10 +20,9 @@
 适用场景: App 希望使用独立索引
 
 执行步骤:
-  1. 清掉 App 的 USE_SHARED_BK_LOG_INDEX flag, 防止后续热路径再次落到共享分支
-  2. 重跑每个 env 的 setup_env_log_model, 写入独立的 ProcessLogQueryConfig / 采集项
-  3. 删除模块下命中共享模板的 CustomCollectorConfig 行 (DB), 避免历史残留持续被部署回写
-  4. 删除集群里仍指向共享 data_id 的 BkLogConfig CRD, 避免下次部署前同时存在两组 BkLogConfig
+  1. 删除模块下命中共享模板的 CustomCollectorConfig 行 (DB), 避免历史残留持续被部署回写
+  2. 重跑每个 env 的独立 bk-log setup, 写入独立的 ProcessLogQueryConfig / 采集项
+  3. 删除集群里仍指向共享 data_id 的 BkLogConfig CRD, 避免下次部署前同时存在两组 BkLogConfig
 
 注意: 上游 (蓝鲸日志平台) 的共享采集项是按租户__共用__的, 所以这里不会调用日志平台 API 删除上游采集项,
 仅清理本 App 的本地引用与 K8s CRD。
@@ -44,12 +43,11 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.monitoring.bklog.kres_entities import bklog_config_kmodel
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.log.models import CustomCollectorConfig
-from paasng.accessories.log.shim import setup_env_log_model
+from paasng.accessories.log.shim.setup_bklog import setup_default_bk_log_model
 from paasng.infras.bk_log.constatns import (
     SHARED_INDEX_NAME_JSON_TEMPLATE,
     SHARED_INDEX_NAME_STDOUT_TEMPLATE,
 )
-from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -86,25 +84,9 @@ class Command(BaseCommand):
             self._print_actions(application, prefix, style_func)
             return
 
-        with atomic():
-            application.feature_flag.set_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX, False)
-            self.stdout.write(
-                f"unset feature flag USE_SHARED_BK_LOG_INDEX for Application<{app_code}>",
-                style_func=style_func,
-            )
-
-            for module in application.modules.all():
-                # 顺序: 先按 env 清理共享 CRD, 再删 DB 行, 最后重跑 setup 写入独立 DB 行;
-                # 这样下次部署 AppLogConfigController 看到的就是新的独立行, 不会与共享 CRD 串台
-                for env in module.get_envs():
-                    deleted_crds = self._delete_shared_bklog_crds(env)
-                    if deleted_crds:
-                        self.stdout.write(
-                            f"deleted {deleted_crds} shared BkLogConfig CRD(s) in cluster for "
-                            f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>",
-                            style_func=style_func,
-                        )
-
+        for module in application.modules.all():
+            with atomic():
+                # 先删共享 DB 行, 再直接重跑独立链路; 后续 setup_env_log_model 会根据独立 name_en 继续保持独立链路.
                 deleted_rows = self._delete_shared_collector_rows(module)
                 if deleted_rows:
                     self.stdout.write(
@@ -114,9 +96,18 @@ class Command(BaseCommand):
                     )
 
                 for env in module.get_envs():
-                    setup_env_log_model(env)
+                    setup_default_bk_log_model(env)
                     self.stdout.write(
                         f"re-setup independent bk-log model for "
+                        f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>",
+                        style_func=style_func,
+                    )
+
+            for env in module.get_envs():
+                deleted_crds = self._delete_shared_bklog_crds(env)
+                if deleted_crds:
+                    self.stdout.write(
+                        f"deleted {deleted_crds} shared BkLogConfig CRD(s) in cluster for "
                         f"Application<{app_code}> Module<{module.name}> Env<{env.environment}>",
                         style_func=style_func,
                     )
@@ -128,10 +119,6 @@ class Command(BaseCommand):
 
     def _print_actions(self, application: Application, prefix: str, style_func):
         """dry-run: 仅打印将要执行的动作, 不触达 DB / K8s API"""
-        self.stdout.write(
-            f"{prefix}would unset feature flag USE_SHARED_BK_LOG_INDEX for Application<{application.code}>",
-            style_func=style_func,
-        )
         for module in application.modules.all():
             shared_qs = _query_shared_collector_rows(module)
             shared_count = shared_qs.count()

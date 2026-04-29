@@ -17,11 +17,13 @@
 
 import pytest
 from django.core.management import CommandError, call_command
+from django.test import override_settings
 
 from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
-from paasng.accessories.log.models import TenantLogConfig
-from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider
+from paasng.accessories.log.models import CustomCollectorConfig, TenantLogConfig
+from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider, should_use_shared_bk_log_index
 from paasng.core.tenant.user import get_init_tenant_id
+from paasng.infras.bk_log.constatns import SHARED_INDEX_NAME_JSON_TEMPLATE
 
 pytestmark = pytest.mark.django_db
 
@@ -72,6 +74,44 @@ class TestBKLogConfigProvider:
         provider = BKLogConfigProvider(bk_module)
         with pytest.raises(SharedBkBizIdNotConfiguredError):
             _ = provider.shared_bk_biz_id
+
+
+class TestShouldUseSharedBkLogIndex:
+    """测试共享索引链路判定"""
+
+    @override_settings(ENABLE_SHARED_BK_LOG_INDEX=True)
+    def test_new_collector_uses_global_setting(self, bk_module):
+        """没有历史内置采集项时, 使用全局开关决定是否创建共享索引"""
+        assert should_use_shared_bk_log_index(bk_module) is True
+
+    @override_settings(ENABLE_SHARED_BK_LOG_INDEX=False)
+    def test_existing_shared_collector_ignores_global_setting(self, bk_module):
+        """已有共享采集项时, 即使全局开关关闭也继续走共享链路"""
+        self._create_builtin_collector(bk_module, SHARED_INDEX_NAME_JSON_TEMPLATE)
+
+        assert should_use_shared_bk_log_index(bk_module) is True
+
+    @override_settings(ENABLE_SHARED_BK_LOG_INDEX=True)
+    def test_existing_independent_collector_ignores_global_setting(self, bk_module):
+        """已有独立采集项时, 即使全局开关开启也继续走独立链路"""
+        self._create_builtin_collector(bk_module, "foo_app__default__json")
+
+        assert should_use_shared_bk_log_index(bk_module) is False
+
+    def _create_builtin_collector(self, bk_module, name_en: str):
+        """创建模块内置采集项"""
+        return CustomCollectorConfig.objects.create(
+            module=bk_module,
+            name_en=name_en,
+            collector_config_id=10001,
+            index_set_id=20001,
+            bk_data_id=30001,
+            log_paths=[],
+            log_type="json",
+            is_builtin=True,
+            is_enabled=True,
+            tenant_id=bk_module.tenant_id,
+        )
 
 
 class TestCreateTenantLogConfigCommand:

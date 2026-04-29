@@ -20,10 +20,12 @@ from django.conf import settings
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import LogCollectorType
-from paasng.accessories.log.shim.setup_bklog import setup_bk_log_custom_collector, setup_default_bk_log_model
-from paasng.accessories.log.shim.setup_bklog_shared import (
+from paasng.accessories.log.shim.setup_bklog import (
+    setup_bk_log_custom_collector,
+    setup_default_bk_log_model,
     setup_shared_bk_log_custom_collector,
     setup_shared_bk_log_model,
+    should_use_shared_bk_log_index,
 )
 from paasng.accessories.log.shim.setup_elk import setup_saas_elk_model
 from paasng.platform.applications.constants import AppFeatureFlag
@@ -67,7 +69,7 @@ def _should_use_bk_log_collector(env: ModuleEnvironment, cluster_has_bk_log: boo
 
 
 def _should_use_shared_bk_log_index(env: ModuleEnvironment) -> bool:
-    return env.application.feature_flag.has_feature(AppFeatureFlag.USE_SHARED_BK_LOG_INDEX)
+    return should_use_shared_bk_log_index(env.module)
 
 
 def _setup_bk_log_custom_collector(env: ModuleEnvironment, use_shared_bk_log_index: bool):

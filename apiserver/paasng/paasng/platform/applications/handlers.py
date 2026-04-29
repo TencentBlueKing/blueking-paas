@@ -71,9 +71,6 @@ def turn_on_bk_log_feature_for_app(sender, application: Application, **kwargs):
     """将符合灰度条件的应用采集/查询日志的链路切换至日志平台"""
     turn_on_bk_log_feature(application)
 
-    # 开启平台共享索引功能
-    turn_on_shared_bk_log_index_feature(application)
-
 
 @receiver(post_create_application)
 def extra_setup_tasks(sender, application: Application, **kwargs):
@@ -222,10 +219,3 @@ def turn_on_bk_log_feature(application: Application):
 
     logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
     application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
-
-
-def turn_on_shared_bk_log_index_feature(application: Application):
-    """根据 ENABLE_SHARED_BK_LOG_INDEX 开启平台共享索引功能"""
-    if not settings.ENABLE_SHARED_BK_LOG_INDEX:
-        return
-    application.feature_flag.set_feature(AppFeatureFlagConst.USE_SHARED_BK_LOG_INDEX, True)

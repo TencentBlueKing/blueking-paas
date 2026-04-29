@@ -126,7 +126,9 @@ class Command(BaseCommand):
 
 def _delete_shared_collector_rows(module: Module) -> int:
     """物理删除模块下命中共享采集项 name_en 的 CustomCollectorConfig 行"""
-    deleted, _ = CustomCollectorConfig.objects.filter(module=module, is_builtin=True).delete()
+    deleted, _ = CustomCollectorConfig.objects.filter(
+        module=module, is_builtin=True, name_en__in=SHARED_INDEX_NAMES
+    ).delete()
     return deleted
 
 

@@ -72,6 +72,8 @@ class Command(BaseCommand):
         try:
             config = existing or TenantLogConfig(tenant_id=tenant_id)
             for field, value in config_data.items():
+                if value is None:
+                    continue
                 setattr(config, field, value)
             action = "Updated" if existing else "Created"
 

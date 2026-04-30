@@ -20,6 +20,7 @@
 提供 `safe_extract_zip` 函数, 用于安全地解压 ZIP 文件, 防止 Zip Slip (CWE-22) 漏洞.
 """
 
+import contextlib
 import logging
 import os
 from pathlib import Path
@@ -45,26 +46,20 @@ def safe_extract_zip(zip_file: Union[str, Path, ZipFile], local_path: Union[str,
     :raises UnsafeArchiveError: 如果归档文件中包含不安全的成员路径
     """
     base = Path(local_path).resolve()
-
-    # 确保 base 目录存在
     base.mkdir(parents=True, exist_ok=True)
 
-    should_close = False
-    if isinstance(zip_file, ZipFile):
-        zf = zip_file
-    else:
-        zf = ZipFile(str(zip_file), "r")
-        should_close = True
+    with contextlib.ExitStack() as stack:
+        if isinstance(zip_file, ZipFile):
+            zf = zip_file
+        else:
+            zf = stack.enter_context(ZipFile(str(zip_file), "r"))
 
-    try:
-        for info in zf.infolist():
+        members = zf.infolist()
+        for info in members:
             _validate_zip_info(info, base)
         # 所有成员校验通过, 执行解压
-        for info in zf.infolist():
+        for info in members:
             zf.extract(info, path=str(base))
-    finally:
-        if should_close:
-            zf.close()
 
 
 def _validate_zip_info(info: ZipInfo, base: Path) -> None:
@@ -74,16 +69,22 @@ def _validate_zip_info(info: ZipInfo, base: Path) -> None:
     :param base: 解压目录的绝对路径 (已 resolve)
     :raises UnsafeArchiveError: 如果成员路径不安全
     """
-    name = info.filename
+    # 统一路径分隔符为 "/"
+    name = info.filename.replace("\\", "/")
 
-    # 不允许绝对路径
+    # 拒绝空成员名
+    if not name or name in (".", "./"):
+        logger.warning("Zip archive contains an empty member name, extraction denied")
+        raise UnsafeArchiveError("Zip member has an empty name, which is not allowed")
+
+    # 拒绝绝对路径
     if os.path.isabs(name):
         logger.warning("Zip archive contains a member with absolute path: %s, extraction denied", name)
         raise UnsafeArchiveError(f"Zip member '{name}' has an absolute path, which is not allowed")
 
     # 归一化后校验最终路径是否在 base 目录下
-    target_path = (base / name).resolve()
-    if not target_path.is_relative_to(base):
+    target_path = os.path.realpath(os.path.join(base, name))
+    if os.path.commonpath([base, target_path]) != str(base):
         logger.warning(
             "Zip archive contains a path traversal member: %s (resolves to %s), extraction denied", name, target_path
         )

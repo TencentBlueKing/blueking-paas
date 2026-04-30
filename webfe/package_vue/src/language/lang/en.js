@@ -605,6 +605,8 @@ export default {
   '实时日志获取中...': 'Getting real-time logs...',
   '实例数：': 'Instances: ',
   无法使用控制台功能: 'Unable to use WebConsole',
+  '实例当前未处于运行状态，无法登录。': 'The instance is not currently running, login is unavailable.',
+  '实例尚未创建成功或宿主机异常，暂无法获取日志。': 'The instance has not been successfully created or the host is abnormal, logs are temporarily unavailable.',
   '文档：': 'Doc: ',
   请填写实例数: 'Please fill in the number of instances',
   请填写大于0的整数: 'Please fill in an integer greater than 0',

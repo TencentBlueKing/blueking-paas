@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from attrs import define, field
 
@@ -42,8 +42,8 @@ class ETLField:
     field_index: int
     field_name: str
     field_type: FieldType
-    alias_name: str | None = None
-    description: str | None = ""
+    alias_name: Optional[str] = None
+    description: Optional[str] = ""
     is_delete: bool = False
     is_dimension: bool = True
     is_time: bool = False
@@ -63,8 +63,8 @@ class ETLParams:
     """
 
     retain_original_text: bool = True
-    separator: str | None = None
-    separator_regexp: str | None = None
+    separator: Optional[str] = None
+    separator_regexp: Optional[str] = None
     retain_extra_json: bool = False
 
 
@@ -113,9 +113,9 @@ class PlainCustomCollectorConfig:
     custom_type: Literal["log"] = "log"
 
     # readonly fields
-    id: int | None = None
-    index_set_id: int | None = None
-    bk_data_id: int | None = None
+    id: Optional[int] = None
+    index_set_id: Optional[int] = None
+    bk_data_id: Optional[int] = None
 
 
 @define
@@ -174,9 +174,9 @@ class CustomCollectorConfig:
     name_zh_cn: str
     custom_type: Literal["log"] = "log"
     category_id: str = "application_check"
-    etl_config: ETLConfig | None = None
-    storage_config: StorageConfig | None = None
-    data_link_id: int | None = None
+    etl_config: Optional[ETLConfig] = None
+    storage_config: Optional[StorageConfig] = None
+    data_link_id: Optional[int] = None
     description: str = ""
 
     # 平台级采集项字段, 默认关闭, 仅启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享路径设置
@@ -185,9 +185,9 @@ class CustomCollectorConfig:
     platform_index_filter: PlatformIndexFilter | None = None
 
     # readonly fields
-    id: int | None = None
-    index_set_id: int | None = None
-    bk_data_id: int | None = None
+    id: Optional[int] = None
+    index_set_id: Optional[int] = None
+    bk_data_id: Optional[int] = None
 
 
 @define
@@ -204,9 +204,9 @@ class AppLogCollectorConfig:
     """
 
     log_paths: List[str] = field(factory=list)
-    time_field: str | None = None
-    time_format: str | None = None
+    time_field: Optional[str] = None
+    time_format: Optional[str] = None
     log_type: Literal["stdout", "json"] = "json"
     etl_type: ETLType = ETLType.TEXT
 
-    collector_config: CustomCollectorConfig | None = None
+    collector_config: Optional[CustomCollectorConfig] = None

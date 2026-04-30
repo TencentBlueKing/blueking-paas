@@ -114,7 +114,9 @@ def update_or_create_custom_collector_config(
     with atomic():
         if not collector_config.id:
             collector_config = client.create_custom_collector_config(
-                biz_or_space_id=biz_or_space_id, config=collector_config
+                biz_or_space_id=biz_or_space_id,
+                config=collector_config,
+                ignore_exists=collector_config.is_platform_index,
             )
         else:
             client.update_custom_collector_config(collector_config)

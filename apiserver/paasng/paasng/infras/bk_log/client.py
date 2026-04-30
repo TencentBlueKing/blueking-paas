@@ -120,17 +120,15 @@ class BkLogManagementClient:
         self,
         biz_or_space_id: int | str,
         config: CustomCollectorConfig,
-        ignore_exists: bool | None = None,
+        ignore_exists: bool = False,
     ):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
 
         :param int/str biz_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
         :param config: 自定采集项配置
-        :param ignore_exists: 是否开启幂等创建; 默认按 is_platform_index 自动决定
+        :param ignore_exists: 是否开启幂等创建
         :return: 创建的自定采集项配置
         """
-        if ignore_exists is None:
-            ignore_exists = config.is_platform_index
 
         data: Dict[str, Any] = {
             # 日志侧的接口参数未调整, 虽然参数名是 bk_biz_id, 实际上空间ID也通过这个参数传递

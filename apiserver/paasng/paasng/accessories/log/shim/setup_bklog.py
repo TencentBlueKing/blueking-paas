@@ -24,7 +24,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
-from paasng.accessories.log.exceptions import TenantLogConfigNotFoundError
+from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, TenantLogConfigNotFoundError
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
@@ -91,6 +91,14 @@ class BKLogConfigProvider:
         """获取存储副本数（从 TenantLogConfig）"""
         return self.config.storage_replicas
 
+    @property
+    def shared_bk_biz_id(self) -> int:
+        """获取共享索引使用的 bk_biz_id （一般为 PaaS 平台在对应租户下的 bk_biz_id）"""
+        biz_id = self.config.shared_bk_biz_id
+        if biz_id is None:
+            raise SharedBkBizIdNotConfiguredError(self.tenant_id)
+        return biz_id
+
 
 def _add_wildcard_suffix(path: str) -> str:
     """add '/*' suffix to path
@@ -135,6 +143,24 @@ def build_normal_json_collector_config():
         log_type="json",
         etl_type=ETLType.JSON,
     )
+
+
+def _setup_ingress_log_config(env: ModuleEnvironment):
+    """配置访问日志查询, Ingress 日志仍然使用平台 ELK 采集链路."""
+    cluster_uuid = EnvClusterService(env).get_cluster().uuid
+    setup_platform_elk_config(cluster_uuid, env.tenant_id)
+    try:
+        ingress_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
+    except ElasticSearchConfig.DoesNotExist:
+        # 未配置时，需要记录异常日志方便排查
+        logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")
+        raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
+
+    config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
+    config.ingress = ingress_config
+    config.save()
 
 
 def update_or_create_es_search_config(
@@ -242,21 +268,7 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, json_config, message_field="message")
     update_or_create_es_search_config(env, stdout_config)
 
-    # Ingress 仍然使用 elk 的采集方案
-    cluster_uuid = EnvClusterService(env).get_cluster().uuid
-    setup_platform_elk_config(cluster_uuid, env.tenant_id)
-    try:
-        ingress_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
-        )
-    except ElasticSearchConfig.DoesNotExist:
-        # 未配置时，需要记录异常日志方便排查
-        logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")
-        raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
-
-    config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
-    config.ingress = ingress_config
-    config.save()
+    _setup_ingress_log_config(env)
 
 
 def build_custom_collector_config_name(module: Module, type: str) -> str:
@@ -273,7 +285,9 @@ def build_custom_collector_config_name(module: Module, type: str) -> str:
     return f"{app_code}__{module_name}__{type}".replace("-", "_")
 
 
-def to_custom_collector_config(module: Module, collector_config: AppLogCollectorConfig) -> CustomCollectorConfig:
+def to_custom_collector_config(
+    module: Module, collector_config: AppLogCollectorConfig, reuse_existing: bool = True
+) -> CustomCollectorConfig:
     """将 AppLogCollectorConfig 转换成 CustomCollectorConfig
 
     仅用于系统内置的自定义采集项
@@ -334,14 +348,17 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         raise NotImplementedError
 
     db_obj = None
-    try:
-        # 当内置采集项已创建, 则采集项名称不可修改(只能用数据库中存储的名称)
-        db_obj = CustomCollectorConfigModel.objects.get(
-            module=module, log_type=collector_config.log_type, is_builtin=True
-        )
-        name = db_obj.name_en
-    except CustomCollectorConfigModel.DoesNotExist:
-        logger.debug("CustomCollectorConfig does not exits, skip fill persistence fields")
+    if reuse_existing:
+        try:
+            # 当内置采集项已创建, 则采集项名称不可修改(只能用数据库中存储的名称)
+            db_obj = CustomCollectorConfigModel.objects.get(
+                module=module, log_type=collector_config.log_type, is_builtin=True
+            )
+            name = db_obj.name_en
+        except CustomCollectorConfigModel.DoesNotExist:
+            logger.debug("CustomCollectorConfig does not exits, skip fill persistence fields")
+            name = build_custom_collector_config_name(module, type=collector_config.log_type)
+    else:
         name = build_custom_collector_config_name(module, type=collector_config.log_type)
 
     bklog_provider = BKLogConfigProvider(module)

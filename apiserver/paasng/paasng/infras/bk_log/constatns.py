@@ -37,3 +37,8 @@ class FieldType(StrStructuredEnum):
 class BkLogType(StrStructuredEnum):
     JSON = EnumField("json")
     STDOUT = EnumField("stdout")
+
+
+# SaaS 共享 bklog 平台的索引名
+SHARED_INDEX_NAME_JSON_TEMPLATE = "bkpaas_platform_log_json"
+SHARED_INDEX_NAME_STDOUT_TEMPLATE = "bkpaas_platform_log_stdout"

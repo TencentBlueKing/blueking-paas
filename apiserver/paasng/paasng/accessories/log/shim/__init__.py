@@ -21,31 +21,59 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import LogCollectorType
 from paasng.accessories.log.shim.setup_bklog import setup_bk_log_custom_collector, setup_default_bk_log_model
+from paasng.accessories.log.shim.setup_bklog_shared import (
+    setup_shared_bk_log_custom_collector,
+    setup_shared_bk_log_model,
+    should_use_shared_bk_log_index,
+)
 from paasng.accessories.log.shim.setup_elk import setup_saas_elk_model
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
 
 
 def get_log_collector_type(env: ModuleEnvironment) -> LogCollectorType:
-    application = env.application
-    if settings.ENABLE_BK_MONITOR and application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        cluster = EnvClusterService(env).get_cluster()
-        if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-            return LogCollectorType.BK_LOG
+    cluster = EnvClusterService(env).get_cluster()
+    if _should_use_bk_log_collector(
+        env,
+        cluster_has_bk_log=cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR),
+    ):
+        return LogCollectorType.BK_LOG
     return LogCollectorType.ELK
 
 
 def setup_env_log_model(env: ModuleEnvironment):
-    log_collector_type = get_log_collector_type(env)
-
-    # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置
-    # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig
     cluster = EnvClusterService(env).get_cluster()
-    if settings.ENABLE_BK_MONITOR and cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        setup_bk_log_custom_collector(env.module)
+    cluster_has_bk_log = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
+    use_shared_bk_log_index = should_use_shared_bk_log_index(env.module)
 
-    if log_collector_type == LogCollectorType.BK_LOG:
-        return setup_default_bk_log_model(env)
+    # 如果集群支持蓝鲸日志平台方案, 则创建内置自定义采集项配置。
+    # 创建自定义采集项配置后, 应用部署时将会下发 BkLogConfig。
+    if settings.ENABLE_BK_MONITOR and cluster_has_bk_log:
+        _setup_bk_log_custom_collector(env, use_shared_bk_log_index)
+
+    if _should_use_bk_log_collector(env, cluster_has_bk_log):
+        return _setup_bk_log_model(env, use_shared_bk_log_index)
+
     if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
         raise ValueError("ELK is not supported")
     return setup_saas_elk_model(env)
+
+
+def _should_use_bk_log_collector(env: ModuleEnvironment, cluster_has_bk_log: bool) -> bool:
+    return (
+        settings.ENABLE_BK_MONITOR
+        and env.application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
+        and cluster_has_bk_log
+    )
+
+
+def _setup_bk_log_custom_collector(env: ModuleEnvironment, use_shared_bk_log_index: bool):
+    if use_shared_bk_log_index:
+        return setup_shared_bk_log_custom_collector(env.module)
+    return setup_bk_log_custom_collector(env.module)
+
+
+def _setup_bk_log_model(env: ModuleEnvironment, use_shared_bk_log_index: bool):
+    if use_shared_bk_log_index:
+        return setup_shared_bk_log_model(env)
+    return setup_default_bk_log_model(env)

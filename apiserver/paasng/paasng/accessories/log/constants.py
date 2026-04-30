@@ -17,6 +17,8 @@
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
+from paasng.infras.bk_log.definitions import PlatformIndexFilter, PlatformIndexVisibility
+
 # 如果日志配置是所有进程通用的, process_type 填充为 "-"
 DEFAULT_LOG_CONFIG_PLACEHOLDER = "-"
 # 默认查询日志的分片大小
@@ -25,6 +27,19 @@ DEFAULT_LOG_BATCH_SIZE = 200
 # ES 查询的最大窗口，可在 ES 中配置，但不建议调大，容易导致 ES oom
 # 日志平台最多也只返回 10,000 条数据，且不可修改
 MAX_RESULT_WINDOW = 10000
+
+# 设置共享索引可见范围
+BK_LOG_SHARED_INDEX_VISIBILITY = PlatformIndexVisibility(
+    type="biz_attr",
+    bk_biz_labels={"space_type": ["bksaas"]},
+)
+
+# 平台共享采集项隔离维度元数据，目前无实际作用
+# field 由 Pod Label `bkapp.paas.bk.tencent.com/code` (BKAPP_CODE_ANNO_KEY) 注入
+BK_LOG_PLATFORM_INDEX_FILTER = PlatformIndexFilter(
+    field="__ext.labels.bkapp_paas_bk_tencent_com_code",
+    value_ref="space_id",
+)
 
 
 class LogTimeChoices(StrStructuredEnum):

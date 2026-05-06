@@ -37,11 +37,6 @@ urlpatterns = [
         views.UserVerificationValidationView.as_view(),
         name="api.accounts.verification.validation",
     ),
-    re_path(
-        r"^api/accounts/oauth/token/$",
-        views.OauthTokenViewSet.as_view({"get": "fetch_paasv3cli_token"}),
-        name="api.accounts.oauth.token",
-    ),
     re_path(r"^api/oauth/backends/$", views.Oauth2BackendsViewSet.as_view({"get": "list"})),
     re_path(
         r"^api/oauth/backends/(?P<backend>[^/]+)/(?P<pk>[^/]+)/$",

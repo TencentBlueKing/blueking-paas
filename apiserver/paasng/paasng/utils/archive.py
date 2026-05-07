@@ -33,13 +33,15 @@ logger = logging.getLogger(__name__)
 class UnsafeArchiveError(Exception):
     """当归档文件中包含可能逃逸目标目录的成员时抛出.
 
-    包括但不限于: 绝对路径, 包含 `..` 的相对路径穿越,
-    解析后落在目标目录之外的路径, 指向目录外部的符号链接等
+    包括但不限于: 绝对路径, 包含 `..` 的相对路径穿越, 解析后落在目标目录之外的路径.
     """
 
 
 def safe_extract_zip(zip_file: Union[str, Path, ZipFile], local_path: Union[str, os.PathLike]) -> None:
     """安全解压 zip 归档文件到指定目录, 在写出每个成员之前进行路径检查, 防止 Zip Slip 漏洞.
+
+    # NOTE: bpo-6972 后 ZipFile.extract 已会静默剥离绝对路径 `/`, `..`, 此处校验为纵深防御,
+    # 且策略是 fail-fast (整包拒绝) 而非标准库的 silent-sanitize.
 
     :param zip_file: ZIP 文件路径或已打开的 ZipFile 对象
     :param local_path: 解压目标目录

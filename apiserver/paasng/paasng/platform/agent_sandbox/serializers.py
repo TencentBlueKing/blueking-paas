@@ -15,12 +15,51 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import re
+
+from django.conf import settings
 from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
 
 from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
-from .models import Sandbox
+from .models import Sandbox, Volume
+
+
+
+class SandboxVolumeMountInputSLZ(serializers.Serializer):
+    """Single shared volume mount request item.
+
+    - ``volume_id`` references a previously created Volume; the platform resolves
+      the CFS subPath from the Volume record.
+    - ``mount_path`` is the target directory inside the container; subPath and
+      readOnly are decided by the platform and not exposed to users.
+    """
+
+    volume_id = serializers.UUIDField(label="共享卷 ID", help_text="已创建的 Volume 的 UUID")
+    mount_path = serializers.CharField(
+        label="容器内挂载路径",
+        max_length=256,
+        help_text="必须是以 / 开头的合法绝对路径，不可为根目录或落入系统保留目录",
+    )
+
+    def validate_volume_id(self, value):
+        """将 UUID 对象转为字符串，确保存入 JSONField 时可序列化。"""
+        return str(value)
+
+    def validate_mount_path(self, value: str) -> str:
+        if not value.startswith("/"):
+            raise serializers.ValidationError("mount_path 必须为以 / 开头的绝对路径")
+        if ".." in value.split("/"):
+            raise serializers.ValidationError("mount_path 不允许包含 '..' 路径段")
+        # 合并连续斜杠，防止 //proc 等绕过黑名单
+        normalized = re.sub(r"/+", "/", value).rstrip("/") or "/"
+        if normalized == "/":
+            raise serializers.ValidationError("mount_path 不允许为根目录")
+        for deny in settings.AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES:
+            if normalized == deny or normalized.startswith(deny + "/"):
+                raise serializers.ValidationError(f"mount_path 不允许挂载到系统保留目录：{deny}")
+        return normalized
 
 
 class SandboxEnvVarsField(serializers.JSONField):
@@ -65,6 +104,33 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         max_value=SANDBOX_MAX_TTL_SECONDS,
         help_text="沙箱存活时长（秒）",
     )
+    volume_mounts = serializers.ListField(
+        child=SandboxVolumeMountInputSLZ(),
+        label="共享挂载",
+        required=False,
+        default=list,
+        help_text="共享文件挂载配置列表，不提供则不挂载任何共享卷。",
+    )
+
+    def validate_volume_mounts(self, value: list[dict]) -> list[dict]:
+        if not value:
+            return value
+        # 1) volume_id 不得重复
+        volume_ids = [item["volume_id"] for item in value]
+        if len(set(str(vid) for vid in volume_ids)) != len(volume_ids):
+            raise serializers.ValidationError("volume_mounts 中 volume_id 不能重复")
+        # 2) mount_path 不得互相相同或彼此为前缀（避免挂载点覆盖）
+        paths = [item["mount_path"] for item in value]
+        if len(set(paths)) != len(paths):
+            raise serializers.ValidationError("volume_mounts 中 mount_path 不能重复")
+        sorted_paths = sorted(paths)
+        for i, p in enumerate(sorted_paths):
+            for q in sorted_paths[i + 1:]:
+                if q.startswith(p.rstrip("/") + "/"):
+                    raise serializers.ValidationError(
+                        f"volume_mounts 中 mount_path 不能互为父目录：{p} vs {q}"
+                    )
+        return value
 
 
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
@@ -72,7 +138,31 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Sandbox
-        fields = ("uuid", "name", "snapshot", "target", "env_vars", "cpu", "memory", "status", "created", "expired_at")
+        fields = ("uuid", "name", "snapshot", "target", "env_vars", "volume_mounts", "cpu", "memory", "status", "created", "expired_at")
+
+
+class VolumeCreateInputSLZ(serializers.Serializer):
+    """The serializer for creating a shared volume."""
+
+    name = serializers.CharField(label="卷名称", max_length=64, help_text="应用内唯一标识")
+    display_name = serializers.CharField(label="显示名称", max_length=128, required=False, default="", allow_blank=True)
+
+
+class VolumeOutputSLZ(serializers.ModelSerializer):
+    """The serializer for volume output."""
+
+    cfs_instance_id = serializers.SerializerMethodField()
+    cfs_path = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Volume
+        fields = ("uuid", "name", "display_name", "application_id", "cfs_instance_id", "cfs_path", "created")
+
+    def get_cfs_instance_id(self, obj) -> str:
+        return settings.AGENT_SANDBOX_CFS_FSID
+
+    def get_cfs_path(self, obj) -> str:
+        return obj.cfs_path
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):

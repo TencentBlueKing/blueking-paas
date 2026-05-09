@@ -36,3 +36,13 @@ DAEMON_BIND_PORT = 30000
 # The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
 # "agent-sandbox-router" (length > 16) will not conflict with app_code
 AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX = "agent-sandbox-router"
+
+
+# ================================
+# Shared Volume (CFS inline)
+# ================================
+
+
+# The fixed name used for the single CSI inline volume inside the sandbox Pod spec.
+# Multiple logical mount points share this single volume and are distinguished by subPath.
+SHARED_VOLUME_NAME_IN_POD = "cfs"

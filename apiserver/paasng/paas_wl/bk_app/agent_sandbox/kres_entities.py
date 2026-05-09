@@ -32,6 +32,26 @@ from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_
 from paas_wl.infras.resources.kube_res.base import KresAppEntity, KresAppEntityManager
 
 
+@dataclass(frozen=True)
+class VolumeMount:
+    """A resolved shared volume mount for the sandbox Pod.
+
+    This structure is the output of the business layer after looking up a Volume
+    record by its ID and deriving the CFS subPath. The K8s resource layer only
+    consumes this structure; it is agnostic to the Volume model or app code.
+
+    :param volume_id: The UUID of the Volume, preserved for observability.
+    :param mount_path: Absolute path where the volume is mounted inside the container.
+    :param sub_path: The subPath inside the CFS volume to mount.
+    :param read_only: Whether the mount is read-only.
+    """
+
+    volume_id: str
+    mount_path: str
+    sub_path: str
+    read_only: bool
+
+
 @define
 class AgentSandboxKresApp:
     """The KresApp definition for AgentSandbox.
@@ -80,6 +100,8 @@ class AgentSandbox(KresAppEntity):
     :param args: The arguments to pass to the command (/usr/local/bin/daemon).
     :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
+    :param volume_mounts: The shared volume mounts for the sandbox Pod. Not persisted;
+        only used during Pod spec construction.
     """
 
     sandbox_id: str
@@ -89,6 +111,7 @@ class AgentSandbox(KresAppEntity):
     command: list[str] = field(default_factory=list)
     args: list[str] = field(default_factory=list)
     status: str = "Pending"
+    volume_mounts: list[VolumeMount] = field(default_factory=list)
 
     def __post_init__(self):
         # 此处强制覆盖
@@ -109,6 +132,7 @@ class AgentSandbox(KresAppEntity):
         snapshot: str,
         snapshot_entrypoint: list[str] | None = None,
         env: dict[str, str] | None = None,
+        volume_mounts: list[VolumeMount] | None = None,
     ) -> "AgentSandbox":
         """Create an AgentSandbox instance.
 
@@ -119,6 +143,8 @@ class AgentSandbox(KresAppEntity):
         :param snapshot: The snapshot to use for the sandbox.
         :param snapshot_entrypoint: The snapshot_entrypoint to be used as args for the command.
         :param env: The environment variables to set in the sandbox.
+        :param volume_mounts: The shared volume mounts to attach, already resolved
+            (subPath / readOnly decided by the business layer).
         :return: A new AgentSandbox instance.
         """
         return cls(
@@ -129,6 +155,7 @@ class AgentSandbox(KresAppEntity):
             image=snapshot,
             env=env or {},
             args=snapshot_entrypoint or [],
+            volume_mounts=list(volume_mounts or []),
         )
 
 

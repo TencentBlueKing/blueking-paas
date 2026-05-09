@@ -118,6 +118,17 @@ AGENT_SANDBOX_ROUTER_AUTH_TOKEN = settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN"
 # 示例:'agent-sandbox-router.example.com', 'example.com/agent-sandbox-router'
 AGENT_SANDBOX_ROUTER_ENDPOINT = settings.get("AGENT_SANDBOX_ROUTER_ENDPOINT")
 
+# Agent Sandbox 共享存储（CFS + CSI inline 方式）
+# 未配置关键字段（FSID/HOST）时保持关闭，避免 Pod 因配置缺失而起不来
+AGENT_SANDBOX_VOLUME_ENABLED = settings.get("AGENT_SANDBOX_VOLUME_ENABLED", False)
+# CSI driver 名称，默认腾讯云 TKE 的 CFS 驱动
+AGENT_SANDBOX_CFS_DRIVER = settings.get("AGENT_SANDBOX_CFS_DRIVER", "com.tencent.cloud.csi.cfs")
+# CFS 文件系统 ID / 挂载目标地址 / 根路径 / 协议版本，来自 CFS 控制台
+AGENT_SANDBOX_CFS_FSID = settings.get("AGENT_SANDBOX_CFS_FSID", "")
+AGENT_SANDBOX_CFS_HOST = settings.get("AGENT_SANDBOX_CFS_HOST", "")
+AGENT_SANDBOX_CFS_PATH = settings.get("AGENT_SANDBOX_CFS_PATH", "/")
+AGENT_SANDBOX_CFS_VERS = settings.get("AGENT_SANDBOX_CFS_VERS", "3")
+
 # ---------------
 # 资源命名配置
 # ---------------

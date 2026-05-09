@@ -34,6 +34,26 @@ from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
 from .exceptions import SandboxAlreadyExists
 
 
+class Volume(UuidAuditedModel):
+    """共享存储卷，一个 Volume 对应 CFS 上 app/{uuid.hex} 子目录。"""
+
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="agent_sandbox_volumes"
+    )
+    name = models.CharField(verbose_name="卷名称", max_length=64, help_text="应用内唯一标识")
+    display_name = models.CharField(verbose_name="显示名称", max_length=128, blank=True, default="")
+    deleted_at = models.DateTimeField("删除时间", null=True)
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("tenant_id", "application_id", "name")
+
+    @property
+    def cfs_path(self) -> str:
+        """CFS 上的 subPath，格式为 app/{uuid_hex}/。"""
+        return f"app/{self.uuid.hex}"
+
+
 class SandboxManager(models.Manager):
     """沙箱 Manager 类"""
 
@@ -47,6 +67,7 @@ class SandboxManager(models.Manager):
         name: str | None = None,
         workspace: str | None = None,
         ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
+        volume_mounts: list[dict] | None = None,
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
@@ -77,6 +98,7 @@ class SandboxManager(models.Manager):
             workspace=workspace,
             target=target,
             env_vars=env_vars,
+            volume_mounts=volume_mounts or [],
             status=SandboxStatus.PENDING.value,
             creator=creator,
             tenant_id=application.tenant_id,
@@ -103,6 +125,11 @@ class Sandbox(UuidAuditedModel):
 
     target = models.CharField(verbose_name="目标区域", max_length=32, help_text="沙箱所属目标区域（集群）")
     env_vars = models.JSONField(verbose_name="环境变量", default=dict)
+    volume_mounts = models.JSONField(
+        verbose_name="挂载配置",
+        default=list,
+        help_text='已解析的共享卷挂载列表，格式 [{"volume_id": str, "mount_path": str}]',
+    )
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
 

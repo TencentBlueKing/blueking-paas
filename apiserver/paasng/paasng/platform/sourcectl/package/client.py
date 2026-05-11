@@ -337,7 +337,9 @@ class GenericRemoteClient(GenericLocalClient):
     """操作远程 tar 包的 通用 client"""
 
     def __init__(self, url: str, relative_path: str = "./"):
-        self.filepath = Path(tempfile.mktemp())
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            self.filepath = Path(f.name)
+
         download_file_via_url(url, local_path=self.filepath)
 
         try:

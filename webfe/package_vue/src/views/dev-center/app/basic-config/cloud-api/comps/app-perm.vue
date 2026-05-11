@@ -63,6 +63,7 @@
           :show-pagination-info="true"
           :header-border="false"
           :outer-border="false"
+          row-key="id"
           @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -82,6 +83,7 @@
             label="id"
             type="selection"
             :selectable="selectable"
+            :reserve-selection="true"
             width="60"
           ></bk-table-column>
           <bk-table-column

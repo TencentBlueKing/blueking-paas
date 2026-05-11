@@ -117,6 +117,7 @@
             label="id"
             type="selection"
             :selectable="selectable"
+            :reserve-selection="true"
             width="60"
           ></bk-table-column>
           <bk-table-column

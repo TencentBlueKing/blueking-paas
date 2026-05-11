@@ -24,6 +24,7 @@
       :size="'small'"
       :pagination="pagination"
       :shift-multi-checked="true"
+      row-key="mcp_server.id"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
       @page-change="handlePageChange"
       @page-limit-change="handlePageLimitChange"
@@ -42,6 +43,7 @@
         type="selection"
         width="60"
         :selectable="selectable"
+        :reserve-selection="true"
       ></bk-table-column>
       <bk-table-column
         v-for="column in columns"

@@ -17,7 +17,6 @@
 
 import logging
 import re
-import subprocess
 from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, Tuple
 
@@ -26,7 +25,6 @@ import requests.adapters
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
-from django.utils.encoding import force_str
 from django.utils.module_loading import import_string
 from typing_extensions import Protocol
 
@@ -57,33 +55,6 @@ class ChoicesEnum(Enum):
         if isinstance(value, Enum):
             value = value.value
         return dict(cls.get_choices()).get(value, value)
-
-
-RE_SHA256SUM = re.compile(r"[0-9a-f]{64}")
-
-
-def sha256_checksum(file_path):
-    """Calculate sha256sum of file"""
-    possible_names = ["sha256sum", "gsha256sum"]
-    for sha256_bin in possible_names:
-        p = subprocess.Popen(
-            [sha256_bin, str(file_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding="utf-8",
-        )
-        stdout, stderr = p.communicate()
-        # PY3 compatibility
-        stdout, stderr = force_str(stdout), force_str(stderr)
-        if "command not found" in stderr:
-            continue
-
-        searched_obj = RE_SHA256SUM.search(stdout)
-        if searched_obj:
-            return searched_obj.group()
-    raise RuntimeError(
-        ("Can not calculate sha256sum of file %s, no available command found(sha256sum|gsha256sum)") % file_path
-    )
 
 
 def get_username_by_bkpaas_user_id(bkpaas_user_id):

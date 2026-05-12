@@ -24,6 +24,7 @@
       :size="'small'"
       :pagination="pagination"
       :shift-multi-checked="true"
+      row-key="mcp_server.id"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
       @page-change="handlePageChange"
       @page-limit-change="handlePageLimitChange"
@@ -42,6 +43,7 @@
         type="selection"
         width="60"
         :selectable="selectable"
+        :reserve-selection="true"
       ></bk-table-column>
       <bk-table-column
         v-for="column in columns"
@@ -143,6 +145,7 @@ import { paginationFun } from '@/common/utils';
 import { MCP_SERVER_STATUS } from '@/common/constants';
 import { debounce } from 'lodash';
 import { copy } from '@/common/tools';
+import { updateHeaderCheckboxState } from './table-utils';
 
 export default {
   name: 'McpServer',
@@ -321,6 +324,7 @@ export default {
       this.pagination.current = page;
       const filteredData = this.getFilteredData();
       this.setTableData(filteredData, page, this.pagination.limit);
+      this.syncHeaderCheckbox();
     },
 
     // 页容量变化
@@ -329,11 +333,26 @@ export default {
       this.pagination.limit = limit;
       const filteredData = this.getFilteredData();
       this.setTableData(filteredData, this.pagination.current, limit);
+      this.syncHeaderCheckbox();
     },
 
     // 选择变化
     handleSelectionChange(selection) {
       this.selectionList = selection;
+      this.syncHeaderCheckbox();
+    },
+
+    // 同步表头勾选框状态
+    syncHeaderCheckbox() {
+      this.$nextTick(() => {
+        updateHeaderCheckboxState({
+          tableRef: this.$refs.mcpServerTable,
+          tableData: this.mcpServerList,
+          selectedList: this.selectionList,
+          selectable: this.selectable,
+          rowKey: 'mcp_server.id',
+        });
+      });
     },
 
     // 表头筛选

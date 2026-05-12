@@ -63,6 +63,7 @@
           :show-pagination-info="true"
           :header-border="false"
           :outer-border="false"
+          row-key="id"
           @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -82,6 +83,7 @@
             label="id"
             type="selection"
             :selectable="selectable"
+            :reserve-selection="true"
             width="60"
           ></bk-table-column>
           <bk-table-column
@@ -230,6 +232,7 @@ import RenewalDialog from './batch-renewal-dialog';
 import BatchDialog from './batch-apply-dialog';
 import PaasngAlert from './paasng-alert';
 import { formatRenewFun, formatApplyFun } from '@/common/cloud-api';
+import { updateHeaderCheckboxState } from './table-utils';
 
 export default {
   name: '',
@@ -519,16 +522,11 @@ export default {
      * @param {number} page 当前页
      */
     pageChange(page = 1) {
-      this.allChecked = false;
-      this.indeterminate = false;
-      this.tableList.forEach((api) => {
-        if (api.hasOwnProperty('checked')) {
-          api.checked = false;
-        }
-      });
       this.pagination.current = page;
       const data = this.getDataByPage(page);
       this.tableList.splice(0, this.tableList.length, ...data);
+      // 翻页后更新表头勾选框状态
+      this.syncHeaderCheckbox();
     },
 
     /**
@@ -559,13 +557,6 @@ export default {
     },
 
     limitChange(currentLimit, prevLimit) {
-      this.allChecked = false;
-      this.indeterminate = false;
-      this.tableList.forEach((api) => {
-        if (api.hasOwnProperty('checked')) {
-          api.checked = false;
-        }
-      });
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.pageChange(this.pagination.current);
@@ -755,6 +746,19 @@ export default {
     // 表格change事件
     handleSelectionChange(selected) {
       this.selectedList = selected;
+      this.syncHeaderCheckbox();
+    },
+
+    // 同步表头勾选框状态
+    syncHeaderCheckbox() {
+      this.$nextTick(() => {
+        updateHeaderCheckboxState({
+          tableRef: this.$refs.permRef,
+          tableData: this.tableList,
+          selectedList: this.selectedList,
+          selectable: this.selectable,
+        });
+      });
     },
 
     // 申请

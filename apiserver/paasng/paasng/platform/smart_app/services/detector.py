@@ -45,9 +45,16 @@ from paasng.utils.file import path_may_escape
 logger = logging.getLogger(__name__)
 
 
+# The pattern for checking each part of the relative path, it should be a safe name without
+# special characters, and it should not start with '-'.
+SAFE_REL_PATH_PART_RE = re.compile(r"^(?:[A-Za-z]:|(?!-)[A-Za-z0-9_.-]+)$")
+
+
 def relative_path_of_app_desc(filepath: str) -> Optional[str]:
     """Get the relative path of the app description file, if the given path is not
     a app description file, return None.
+
+    A valid relative path should only be composed of safe parts, see SAFE_REL_PATH_PART_RE.
     """
     # The pattern acts as a delimiter to help split the relative path of the app
     # description file. It uses a lookbehind to match the path delimiter before the
@@ -59,7 +66,13 @@ def relative_path_of_app_desc(filepath: str) -> Optional[str]:
     desc_pattern = re.compile(r"(^(?<=[/\\\\])?|(?<=[/\\\\]))app_desc\.ya?ml$")
     parts = desc_pattern.split(filepath)
     if len(parts) > 1:
-        return parts[0]
+        p = parts[0]
+        # Check if the path only contains allowed characters.
+        parts = re.split(r"[\\/]", p)
+        if not all(SAFE_REL_PATH_PART_RE.fullmatch(part) for part in parts if part):
+            logger.warning("Unsafe relative path detected: %s", p)
+            return None
+        return p
     return None
 
 

@@ -43,6 +43,8 @@ class Test__relative_path_of_app_desc:
             # Legacy app_desc file names are not supported
             ("app.yaml", None),
             ("app.yml", None),
+            # A path with unsafe characters should be rejected
+            ("pa$$th/t*!o/app_desc.yaml", None),
         ],
     )
     def test_detect(self, filepath, expected):

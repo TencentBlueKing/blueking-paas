@@ -16,6 +16,7 @@
 """file and path related utilities."""
 
 import os
+from pathlib import Path
 
 from paasng.utils.text import generate_random_string
 
@@ -32,3 +33,25 @@ def path_may_escape(input_path: str) -> bool:
         return True
     sim_root = f"/var/folders/{generate_random_string(12)}/T"
     return os.path.commonpath([os.path.abspath(os.path.join(sim_root, input_path)), sim_root]) != sim_root
+
+
+def safe_resolve_subpath(base_dir: Path, sub_path: str) -> Path:
+    """Resolve a sub-path within base_dir, raising ValueError if it escapes.
+
+    Use this to validate any untrusted relative path (e.g. from archive manifests,
+    user-supplied input) before reading or writing files.
+
+    NOTE: This function calls ``Path.resolve()`` on both *base_dir* and the joined path,
+    which expands symlinks for segments that exist on disk.  It works best when *base_dir*
+    is a freshly-created temporary directory (no intermediate symlinks); if *base_dir*
+    itself contains symlinks the resolved prefix may differ and cause a false rejection.
+
+    :param base_dir: The trusted base directory (should be symlink-free for best results).
+    :param sub_path: An untrusted relative path from user-supplied data.
+    :raises ValueError: If the resolved path escapes base_dir.
+    """
+    resolved = (base_dir / sub_path).resolve()
+    base_resolved = base_dir.resolve()
+    if not resolved.is_relative_to(base_resolved):
+        raise ValueError(f"Unsafe path '{sub_path}' resolves outside '{base_dir}'")
+    return resolved

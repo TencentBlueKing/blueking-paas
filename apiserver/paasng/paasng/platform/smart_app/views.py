@@ -175,7 +175,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
             handler = get_desc_handler(stat.meta_info)
             with atomic():
-                # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
+                # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度,
+                # 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
                 try:
                     application = handler.handle_app(request.user)
                 except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
@@ -345,7 +346,6 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             ).data
         )
 
-    @atomic
     @swagger_auto_schema(tags=["源码包管理", "S-Mart"])
     def commit(self, request, code, signature):
         """保存暂存的源码包, 并应用源码包内的应用描述信息."""
@@ -383,21 +383,23 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 "tenant_id": application.tenant_id,
             }
             handler = get_desc_handler(stat.meta_info)
-            try:
-                application = handler.handle_app(request.user)
-            except (ControllerError, DescriptionValidationError) as e:
-                logger.exception("Failed to update app info！")
-                raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
+            with atomic():
+                try:
+                    application = handler.handle_app(request.user)
+                except (ControllerError, DescriptionValidationError) as e:
+                    logger.exception("Failed to update app info！")
+                    raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
 
             # Step 3. patch package, store it and bind to module.
             try:
-                dispatch_package_to_modules(
-                    application,
-                    tarball_filepath=filepath,
-                    stat=stat,
-                    operator=request.user,
-                    modules=set(handler.app_desc.modules.keys()),
-                )
+                with atomic():
+                    dispatch_package_to_modules(
+                        application,
+                        tarball_filepath=filepath,
+                        stat=stat,
+                        operator=request.user,
+                        modules=set(handler.app_desc.modules.keys()),
+                    )
             except DescriptionValidationError as e:
                 logger.exception("Handling S-Mart Package Exceptions!")
                 raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)

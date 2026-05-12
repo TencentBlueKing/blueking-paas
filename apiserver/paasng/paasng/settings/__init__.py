@@ -1331,6 +1331,13 @@ if SMART_CNB_DEFAULT_IMAGE_ID not in SMART_CNB_IMAGE_CONF:
         "tag": "v1.0.4",
     }
 
+# 确保 S-Mart CNB 镜像名称以 SMART_DOCKER_REGISTRY_NAMESPACE 开头
+smart_cnb_image_name_prefix = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/"
+for image_conf in SMART_CNB_IMAGE_CONF.values():
+    image_name = image_conf.get("name", "")
+    if not image_name.startswith(smart_cnb_image_name_prefix):
+        image_conf["name"] = f"{smart_cnb_image_name_prefix}{image_name}"
+
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 

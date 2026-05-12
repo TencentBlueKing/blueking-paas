@@ -642,10 +642,10 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ## 可以通过 SMART_CNB_IMAGE_CONF 来配置多个基础镜像。 未显式设置 default 时, 平台会使用默认配置
 # SMART_CNB_IMAGE_CONF:
 #   default:
-#     name: bkpaas/run-heroku-bionic
+#     name: bkpaas/docker/run-heroku-bionic
 #     tag: v1.0.2
 #   ts4:
-#     name: bkpaas/run-ts4
+#     name: bkpaas/docker/run-ts4
 #     tag: v1.0.2
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------

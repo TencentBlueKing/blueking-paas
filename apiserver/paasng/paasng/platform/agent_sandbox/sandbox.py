@@ -211,6 +211,8 @@ class AgentSandboxResManager:
         :param sandbox_obj: The sandbox object from db.
         :return: The sandbox client.
         """
+
+        # TODO: 考虑增加一张关联表，记录 volume 被哪些沙箱使用了， 同时用于审计
         volume_mounts = _build_volume_mounts(sandbox_obj.application, sandbox_obj.volume_mounts or None)
 
         env: dict[str, str] = {

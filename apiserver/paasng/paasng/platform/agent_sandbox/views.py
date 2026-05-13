@@ -112,6 +112,16 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         volume.save(update_fields=["deleted_at", "updated"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        responses={status.HTTP_200_OK: VolumeOutputSLZ(many=True)},
+    )
+    def list(self, request, code):
+        """查询应用的可用共享存储卷列表。"""
+        application = self.get_application()
+        volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
+        return Response(VolumeOutputSLZ(volumes, many=True).data)
+
 
 class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):
     """Agent Sandbox 相关接口"""

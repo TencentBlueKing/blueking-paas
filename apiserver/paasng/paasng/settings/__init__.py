@@ -1609,7 +1609,8 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "upload_to_agent_sandbox",
         "download_from_agent_sandbox",
         "create_agent_sandbox_volume",
-        "delete_agent_sandbox_volume"
+        "delete_agent_sandbox_volume",
+        "list_agent_sandbox_volumes"
     ],
 )
 

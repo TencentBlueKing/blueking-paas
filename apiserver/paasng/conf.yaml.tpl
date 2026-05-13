@@ -1092,6 +1092,7 @@ FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
 #   - download_from_agent_sandbox
 #   - create_agent_sandbox_volume
 #   - delete_agent_sandbox_volume
+#   - list_agent_sandbox_volumes
 #   - ...
 
 ## 测试用 k8s apiserver 地址

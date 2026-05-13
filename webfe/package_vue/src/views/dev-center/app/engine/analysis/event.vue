@@ -219,7 +219,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
 import moment from 'moment';
@@ -228,8 +229,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import RenderSideslider from './comps/access-guide-sideslider';
 import chartOption from '@/json/analysis-chart-option';
-// eslint-disable-next-line
-    import { export_json_to_excel } from '@/common/Export2Excel'
+import { exportJsonToExcel } from '@/common/Export2Excel';
 import { formatDate } from '@/common/tools';
 
 export default {
@@ -529,7 +529,7 @@ export default {
         const props = this.fieldList.map(item => item.prop);
         const data = this.formatJson(props, res.resources);
         const fileName = this.engineEnabled ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}` : `${appCode}_custom_event_statistics_${this.dimensionType}`;
-        export_json_to_excel(fields, data, fileName);
+        await exportJsonToExcel(fields, data, fileName);
       } catch (e) {
         if (e.detail && e.detail !== this.$t('未找到。')) {
           this.$paasMessage({

@@ -2458,17 +2458,17 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "markdown"
-version = "3.6"
+version = "3.8.1"
 description = "Python implementation of John Gruber's Markdown."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "Markdown-3.6-py3-none-any.whl", hash = "sha256:48f276f4d8cfb8ce6527c8f79e2ee29708508bf4d40aa410fbc3b4ee832c850f"},
-    {file = "Markdown-3.6.tar.gz", hash = "sha256:ed4f41f6daecbeeb96e576ce414c41d2d876daa9a16cb35fa8ed8c2ddfad0224"},
+    {file = "markdown-3.8.1-py3-none-any.whl", hash = "sha256:46cc0c0f1e5211ab2e9d453582f0b28a1bfaf058a9f7d5c50386b99b588d8811"},
+    {file = "markdown-3.8.1.tar.gz", hash = "sha256:a2e2f01cead4828ee74ecca9623045f62216aef2212a7685d6eb9163f590b8c1"},
 ]
 
 [package.extras]
-docs = ["mdx-gh-links (>=0.2)", "mkdocs (>=1.5)", "mkdocs-gen-files", "mkdocs-literate-nav", "mkdocs-nature (>=0.6)", "mkdocs-section-index", "mkdocstrings[python]"]
+docs = ["mdx_gh_links (>=0.2)", "mkdocs (>=1.6)", "mkdocs-gen-files", "mkdocs-literate-nav", "mkdocs-nature (>=0.6)", "mkdocs-section-index", "mkdocstrings[python]"]
 testing = ["coverage", "pyyaml"]
 
 [package.source]
@@ -5216,4 +5216,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "44e8496e676d8fa9c7e2d0086d4247a83b814c69e1d518acc9cae13a1f00918c"
+content-hash = "acc4bea3ae19635c54ac550c5cbe36a875a83987429202b9bd9ffca293603732"

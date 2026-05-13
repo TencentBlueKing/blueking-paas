@@ -59,7 +59,7 @@
     "core-js": "^3.3.3",
     "cross-env": "^7.0.3",
     "jquery.json-viewer": "^1.1.0",
-    "jsoneditor": "^9.4.0",
+    "jsoneditor": "^9.5.6",
     "moment": "^2.29.1",
     "simplemde": "^1.11.2",
     "toastr": "^2.1.4",

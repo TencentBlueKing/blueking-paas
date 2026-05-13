@@ -405,6 +405,7 @@ except ImportError:
 
 
 @receiver(application_logo_updated)
+@run_required_db_console_config
 def sync_logo(sender, application: Application, **kwargs):
     """Sync application's logo when updated"""
     if not application.has_customized_logo():

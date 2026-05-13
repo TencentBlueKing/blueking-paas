@@ -60,12 +60,12 @@ def patch_ssl_verification(skip_verify: bool):
         try:
             # 替换requests的方法
             requests.request = patched_request
-            requests.Session.request = patched_session_request
+            requests.Session.request = patched_session_request  # type: ignore[assignment]
             yield
         finally:
             # 恢复原始的requests方法
             requests.request = original_request
-            requests.Session.request = original_session_request
+            requests.Session.request = original_session_request  # type: ignore[assignment]
     else:
         yield
 

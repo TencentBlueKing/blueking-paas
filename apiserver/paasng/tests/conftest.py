@@ -187,6 +187,10 @@ def _auto_init_legacy_app(request):
     yield
 
     # Clean the legacy app data after test
+    # Skip cleanup if legacy database is not configured
+    if not getattr(settings, "PAAS_LEGACY_DBCONF", None):
+        return
+
     with legacy_db.session_scope() as session:
         AppManger(session).delete_by_code(legacy_app_code)
 

@@ -5238,4 +5238,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "d7747220defb52051e0ac65b97572708b0806ae50bd4d3bb0e5e087c64d7e332"
+content-hash = "634b603212af2e32de569424bd3d2fd99b973d68669bc57d4e53af76a155643c"

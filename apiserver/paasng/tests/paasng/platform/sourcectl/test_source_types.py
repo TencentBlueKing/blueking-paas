@@ -207,7 +207,10 @@ class TestSourceTypes:
         assert source_types.get("my_dummy_1") is not None
 
     def test_find_by_type(self, source_types):
-        assert source_types.find_by_type(DummySourceTypeSpec) is not None
+        dummy_spec = source_types.get("my_dummy_1")
+        assert dummy_spec is not None
+        assert source_types.find_by_type(type(dummy_spec)) is not None
+
         with pytest.raises(ValueError, match=r".*not exists in source_types"):
             source_types.find_by_type(int)
 

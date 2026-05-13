@@ -43,29 +43,29 @@ def patch_ssl_verification(skip_verify: bool):
     if skip_verify:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         logger.warning("SSL certificate verification is disabled. This should only be used with trusted registries.")
-        
+
         # 保存原始的requests方法
         original_request = requests.request
         original_session_request = requests.Session.request
-        
+
         # 创建新的request方法，强制设置verify=False
         def patched_request(*args, **kwargs):
             kwargs['verify'] = False
             return original_request(*args, **kwargs)
-        
+
         def patched_session_request(self, *args, **kwargs):
             kwargs['verify'] = False
             return original_session_request(self, *args, **kwargs)
-        
+
         try:
             # 替换requests的方法
             requests.request = patched_request
-            requests.Session.request = patched_session_request
+            requests.Session.request = patched_session_request  # type: ignore[assignment]
             yield
         finally:
             # 恢复原始的requests方法
             requests.request = original_request
-            requests.Session.request = original_session_request
+            requests.Session.request = original_session_request  # type: ignore[assignment]
     else:
         yield
 

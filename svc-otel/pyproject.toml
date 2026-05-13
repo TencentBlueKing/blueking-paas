@@ -22,7 +22,7 @@ prometheus-client = "0.14.1"
 bkapi-client-core = ">=1.1.0,<2.0.0"
 django-environ = "0.8.1"
 urllib3 = "1.26.20"
-pyjwt = "2.4.0"
+pyjwt = "2.12.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "*"

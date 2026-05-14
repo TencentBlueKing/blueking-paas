@@ -1,5 +1,5 @@
 # -------------- unittest container --------------
-FROM golang:1.22.8-alpine3.20
+FROM golang:1.25.10-alpine3.23
 
 WORKDIR /workspace
 

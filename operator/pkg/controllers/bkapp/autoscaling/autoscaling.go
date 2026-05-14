@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package autoscaling provides autoscaling reconciler
 package autoscaling
 
 import (

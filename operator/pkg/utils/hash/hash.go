@@ -15,6 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
+// Package hash provides a function to hash objects
 package hash
 
 import (

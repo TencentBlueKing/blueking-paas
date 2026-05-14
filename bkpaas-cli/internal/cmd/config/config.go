@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package config provide command to manage bkpaas-cli config
 package config
 
 import (
@@ -28,7 +29,7 @@ var configLongDesc = `
 Display bkpaas-cli config files using subcommands like "bkpaas-cli config view"
 
 The loading order follows these rules:
-	
+
   1.  ${BKPAAS_CLI_CONFIG} environment variable.
   2.  Use ${HOME}/.blueking-paas/config.yaml.
 `

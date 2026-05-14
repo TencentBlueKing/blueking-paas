@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package config provides bkpaas-cli config definition
 package config
 
 import (

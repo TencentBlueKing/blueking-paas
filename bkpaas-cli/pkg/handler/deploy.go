@@ -44,6 +44,7 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 	}
 }
 
+// BaseDeployer ...
 type BaseDeployer struct{}
 
 // GetResult 获取部署结果

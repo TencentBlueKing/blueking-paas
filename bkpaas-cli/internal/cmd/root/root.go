@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package root is the root command of bkpaas-cli
 package root
 
 import (

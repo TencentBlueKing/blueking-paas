@@ -123,7 +123,7 @@ def _drop_legacy_db(request, django_db_keepdb: bool):
         mysql_config = asdict(transfer_django_db_settings(settings.PAAS_LEGACY_DBCONF))
         db = mysql_config.pop("database")
         connection = pymysql.connect(charset="utf8", **mysql_config)
-        with suppress(Exception), connection.cursor() as cursor:
+        with suppress(Exception), connection.cursor() as cursor:  # type: ignore[attr-defined]
             cursor.execute(f"drop database {db}")
 
 

@@ -42,6 +42,7 @@
     "echarts": "^3.6.1",
     "enhanced-resolve": "^5.10.0",
     "eventsource-polyfill": "^0.9.6",
+    "exceljs": "^4.4.0",
     "express": "^4.15.3",
     "file-saver": "~2.0.2",
     "font-awesome": "^4.7.0",
@@ -53,7 +54,7 @@
     "js-calendar": "^1.2.3",
     "js-yaml": "^4.1.0",
     "less": "^2.7.2",
-    "lodash": "^4.17.4",
+    "lodash": "^4.18.1",
     "markdown-it": "^13.0.2",
     "marked": "^4.0.10",
     "moment": "^2.18.1",
@@ -99,7 +100,6 @@
     "vue-simple-upload-component": "^0.5.5",
     "vuex": "^3.6.2",
     "wangeditor": "^3.0.3",
-    "exceljs": "^4.4.0",
     "xss": "^1.0.3"
   },
   "devDependencies": {

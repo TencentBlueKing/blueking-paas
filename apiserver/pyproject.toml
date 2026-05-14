@@ -127,9 +127,9 @@ import-linter = "1.12.0"
 requests-mock = "*"
 
 [[tool.poetry.source]]
+default = true
 name = "tencent-mirror"
 url = "https://mirrors.tencent.com/pypi/simple/"
-priority = "primary"
 
 [tool.mypy]
 ignore_missing_imports = true

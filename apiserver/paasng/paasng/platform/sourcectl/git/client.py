@@ -29,12 +29,17 @@ from blue_krill.data_types.url import MutableURL
 from django.utils.encoding import force_str
 
 from paasng.platform.sourcectl.exceptions import RequestTimeOutError
+from paasng.utils.validators import validate_repo_url
 
 logger = logging.getLogger(__name__)
 
 
 class GitCommandExecutionError(Exception):
     """执行 git 命令时发生错误"""
+
+
+class GitURLValidationError(GitCommandExecutionError):
+    """Git 仓库 URL 安全校验失败"""
 
 
 @dataclass
@@ -50,22 +55,34 @@ class Ref:
 
 
 class GitCommand:
+    """Git 命令封装。
+
+    :param args: Git 子命令选项参数，位于 ``--`` 之前。
+    :param positional_args: 位置参数（URL、路径、分支名等），位于 ``--`` 之后，自动以 ``--`` 隔离。
+    """
+
     def __init__(
         self,
         git_filepath: str,
         command: str,
-        args: Optional[List[str]] = None,
+        args: List[str] | None = None,
+        positional_args: List[str] | None = None,
         cwd: str = "",
         envs: Optional[Dict] = None,
     ):
         self.git_filepath = git_filepath
         self.command = command
         self.args = args or []
+        self.positional_args = positional_args or []
         self.cwd = cwd
         self.envs = envs or {}
 
     def to_cmd(self, obscure: bool = False) -> List[str]:
-        return [self.git_filepath, self.command, *self.args]
+        cmd = [self.git_filepath, self.command, *self.args]
+        if self.positional_args:
+            cmd.append("--")
+            cmd.extend(self.positional_args)
+        return cmd
 
     def get_sensitive_texts(self) -> List[str]:
         """Get sensitive texts in the current command, the texts must not be displayed
@@ -93,13 +110,14 @@ class GitCloneCommand(GitCommand):
         SYNOPSIS
                git clone [--bare] [--] <repository> [<target_directory>]
         """
-        super().__init__(git_filepath, "clone", args, cwd, envs)
+        super().__init__(git_filepath=git_filepath, command="clone", args=args, cwd=cwd, envs=envs)
         self.repository = repository
         self.target_directory = target_directory
 
     def to_cmd(self, obscure: bool = False) -> List[str]:
         """"""
         cmd = super().to_cmd(obscure=obscure)
+        cmd.append("--")
         cmd.extend([str(self.repository.obscure()) if obscure else str(self.repository), self.target_directory])
         return cmd
 
@@ -128,22 +146,26 @@ class GitClient:
 
     def checkout(self, path: Path, target: str) -> str:
         """切换分支或tag"""
-        command = GitCommand(git_filepath=self._git_filepath, command="checkout", args=[target], cwd=str(path))
+        command = GitCommand(
+            git_filepath=self._git_filepath, command="checkout", positional_args=[target], cwd=str(path)
+        )
         return self.run(command)
 
     def clone(
         self,
         url: Union[str, MutableURL],
         path: Path,
-        envs: Optional[dict] = None,
-        depth: Optional[int] = None,
-        branch: Optional[str] = None,
+        envs: Dict | None = None,
+        depth: int | None = None,
+        branch: str | None = None,
     ) -> str:
         """克隆仓库
 
         :param url: 仓库地址
         :param path: 存储路径
         :param envs: 环境变量
+        :param depth: 克隆深度
+        :param branch: 克隆分支
         :return: 返回 clone 结果
         """
         args = []
@@ -182,8 +204,7 @@ class GitClient:
     def list_remote(self, url: Union[str, MutableURL]) -> List[Tuple[str, str]]:
         """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。该命令不依赖本地文件系统。
 
-        :param path: 项目路径
-        :param remote: 远端名称，默认为 origin
+        :param url: 仓库地址
         :return: 命令执行结果，包含 (commit_id, ref) 的列表
         """
         results = []
@@ -206,12 +227,20 @@ class GitClient:
     def list_remote_raw(self, url: Union[str, MutableURL]) -> str:
         """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。返回命令原始执行结果。
 
-        :param path: 项目路径
-        :param remote: 远端名称，默认为 origin
+        :param url: 仓库地址
         :return: 命令原始执行结果
         """
+        # 在执行 Git 操作前校验 URL 安全性，防止历史脏数据绕过
+        url_str = str(url)
+        try:
+            validate_repo_url(url_str)
+        except ValueError as e:
+            raise GitURLValidationError(str(e))
+
         # The "cwd" is pointless for running this command, always use current dir.
-        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
+        command = GitCommand(
+            git_filepath=self._git_filepath, command="ls-remote", positional_args=[url_str], cwd=os.getcwd()
+        )
         return self.run(command)
 
     def list_refs(self, path: Path) -> Generator[Ref, None, None]:

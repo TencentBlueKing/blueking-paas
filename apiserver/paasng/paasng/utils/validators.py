@@ -121,6 +121,8 @@ def str2bool(value):
 PROC_TYPE_PATTERN = re.compile(r"^[a-z0-9]([-a-z0-9])*$")
 PROC_TYPE_MAX_LENGTH = 12
 
+SUPPORTED_REPO_URL_SCHEMES = {"http", "https", "git", "svn", "ssh"}
+
 
 def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """Validate proc type format
@@ -168,18 +170,24 @@ def validate_repo_url(repo_url: str):
     :param repo_url: repo url
     :raise: ValueError if repo url is invalid
     """
+    if repo_url.startswith("-"):
+        raise ValueError("Invalid url: repo url can not start with '-'")
+
     try:
         parsed_url = urlparse(repo_url)
     except Exception:  # noqa: BLE001
         raise ValueError("Invalid url")
 
-    if not parsed_url.netloc:
-        parsed_url = urlparse(f"https://{repo_url}")
-        if not parsed_url.netloc:
-            raise ValueError("Invalid url")
+    if not parsed_url.scheme or not parsed_url.netloc:
+        raise ValueError("Invalid url")
 
-    if parsed_url.scheme not in ["http", "https", "git", "svn"]:
-        raise ValueError("Invalid url: only support http/https/git/svn scheme")
+    if parsed_url.scheme not in SUPPORTED_REPO_URL_SCHEMES:
+        raise ValueError("Invalid url: only support http/https/git/svn/ssh scheme")
 
-    if parsed_url.port and parsed_url.port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
-        raise ValueError(f"Invalid url: the port number {parsed_url.port} is forbidden")
+    try:
+        port = parsed_url.port
+    except ValueError:
+        raise ValueError("Invalid url")
+
+    if port and port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid url: the port number {port} is forbidden")

@@ -36,6 +36,7 @@ from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePol
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
 from paasng.utils.dictx import get_items
+from paasng.utils.file import safe_resolve_subpath
 from paasng.utils.moby_distribution import ImageJSON, ImageRef, LayerRef
 from paasng.utils.text import remove_prefix
 
@@ -129,8 +130,9 @@ def dispatch_slug_image_to_registry(
 
     source_dir = get_source_dir_from_desc(stat.meta_info, module.name)
 
-    layer_path = workplace / stat.relative_path / source_dir / "layer.tar.gz"
-    procfile_path = workplace / stat.relative_path / source_dir / f"{module.name}.Procfile.tar.gz"
+    base_path = workplace / stat.relative_path
+    layer_path = safe_resolve_subpath(base_path, f"{source_dir}/layer.tar.gz")
+    procfile_path = safe_resolve_subpath(base_path, f"{source_dir}/{module.name}.Procfile.tar.gz")
 
     mgr = SMartImageManager(module)
     base_image = mgr.get_slugrunner_image_info()
@@ -183,7 +185,7 @@ def dispatch_cnb_image_to_registry(
 
     image_tar = smart_app_extra.get_image_tar(module.name)
 
-    image_tarball = workplace / image_tar
+    image_tarball = safe_resolve_subpath(workplace, image_tar)
     with generate_temp_dir() as image_tmp_folder:
         uncompress_directory(source_path=image_tarball, target_path=image_tmp_folder)
 
@@ -201,14 +203,15 @@ def dispatch_cnb_image_to_registry(
         # merge image json at first.
         # cnb_layers_image_json.config contains Env, default Entrypoint.
         base_image_json = image_ref.image_json
-        cnb_layers_image_json = ImageJSON(**json.loads((image_tmp_folder / tarball_manifest.config).read_text()))
+        config_path = safe_resolve_subpath(image_tmp_folder, tarball_manifest.config)
+        cnb_layers_image_json = ImageJSON(**json.loads(config_path.read_text()))
         base_image_json.config = cnb_layers_image_json.config
         image_ref._initial_config = base_image_json.json(
             exclude_unset=True, exclude_defaults=True, separators=(",", ":")
         )
 
         for layer_path in tarball_manifest.layers:
-            image_ref.add_layer(LayerRef(local_path=image_tmp_folder / layer_path))
+            image_ref.add_layer(LayerRef(local_path=safe_resolve_subpath(image_tmp_folder, layer_path)))
         logger.debug("Start pushing Image.")
 
         manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
@@ -305,16 +308,27 @@ def _construct_exported_image_manifest(image_tmp_folder: Path) -> DockerExported
     文件中指向了 manifest 的 digest 信息, 因此需要进行转换才能生成符合 DockerExportedImageManifest 协议的数据
     """
     if (manifest_file := image_tmp_folder / "manifest.json") and manifest_file.exists():
-        return DockerExportedImageManifest(**json.loads(manifest_file.read_text())[0])
+        parsed = DockerExportedImageManifest(**json.loads(manifest_file.read_text())[0])
+        # Validate config and layer paths don't escape the image directory
+        safe_resolve_subpath(image_tmp_folder, parsed.config)
+        for layer_path in parsed.layers:
+            safe_resolve_subpath(image_tmp_folder, layer_path)
+        return parsed
 
     # 没有 manifest.json 时, 解析 index.json 文件
     index_json = json.loads((image_tmp_folder / "index.json").read_text())
     manifest_digest = index_json["manifests"][0]["digest"]
-    manifest_file = image_tmp_folder / f"blobs/{manifest_digest.replace(':', '/')}"
+    manifest_file = safe_resolve_subpath(image_tmp_folder, f"blobs/{manifest_digest.replace(':', '/')}")
 
     manifest = json.loads(manifest_file.read_text())
     config_digest = manifest["config"]["digest"]
 
     config = f"blobs/{config_digest.replace(':', '/')}"
-    layers = [f"blobs/{layer['digest'].replace(':', '/')}" for layer in manifest["layers"]]
+    # Validate config and layer paths don't escape the image directory
+    safe_resolve_subpath(image_tmp_folder, config)
+    layers = []
+    for layer in manifest["layers"]:
+        layer_path = f"blobs/{layer['digest'].replace(':', '/')}"
+        safe_resolve_subpath(image_tmp_folder, layer_path)
+        layers.append(layer_path)
     return DockerExportedImageManifest(Config=config, Layers=layers)

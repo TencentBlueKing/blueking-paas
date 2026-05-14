@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import io
 import tarfile
 from contextlib import ExitStack
 from pathlib import Path
@@ -264,6 +265,28 @@ class TestBinaryTarClientsShouldNotReadOutside:
             cli = BinaryTarClient(file_path)
             with pytest.raises(ReadLinkFileOutsideDirectoryError):
                 cli.export(str(working_dir))
+
+    @pytest.mark.parametrize(
+        "option_like_filename",
+        [
+            "--checkpoint-action=exec=sh -c 'id'",
+            "--to-stdout",
+        ],
+    )
+    def test_read_file_with_option_like_filename(self, option_like_filename, tmp_path):
+        """Ensure filenames starting with '--' are extracted as regular files."""
+        content = b"safe content"
+        tarball_path = tmp_path / "test.tar.gz"
+
+        # Create tarball using tarfile directly to support '--' prefixed filenames
+        with tarfile.open(tarball_path, "w:gz") as tf:
+            info = tarfile.TarInfo(name=option_like_filename)
+            info.size = len(content)
+            tf.addfile(info, io.BytesIO(content))
+
+        cli = BinaryTarClient(file_path=tarball_path)
+        result = cli.read_file(option_like_filename)
+        assert result == content
 
 
 @pytest.mark.parametrize("archive_maker", [gen_tar, gen_zip])

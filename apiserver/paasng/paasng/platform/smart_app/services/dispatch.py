@@ -37,6 +37,7 @@ from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.file import safe_resolve_subpath
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ def dispatch_package_to_modules(
 
         if _PARALLEL_PATCHING:
             with ThreadPoolExecutor() as executor:
-                results = executor.map(handler, *zip(*tasks))
+                results = executor.map(handler, *zip(*tasks, strict=False))
             return list(results)
         else:
             # Execute Sequentially
@@ -112,8 +113,9 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
 
     source_dir = get_source_dir_from_desc(stat.meta_info, module.name)
 
-    layer_path = workplace / stat.relative_path / source_dir / "layer.tar.gz"
-    procfile_path = workplace / stat.relative_path / source_dir / f"{module.name}.Procfile.tar.gz"
+    base_path = workplace / stat.relative_path
+    layer_path = safe_resolve_subpath(base_path, f"{source_dir}/layer.tar.gz")
+    procfile_path = safe_resolve_subpath(base_path, f"{source_dir}/{module.name}.Procfile.tar.gz")
 
     mgr = SMartImageManager(module)
     base_image = mgr.get_slugrunner_image_info()
@@ -173,14 +175,15 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
         # merge image json at first.
         # cnb_layers_image_json.config contains Env, default Entrypoint.
         base_image_json = image_ref.image_json
-        cnb_layers_image_json = ImageJSON(**json.loads((image_tmp_folder / tarball_manifest.config).read_text()))
+        config_path = safe_resolve_subpath(image_tmp_folder, tarball_manifest.config)
+        cnb_layers_image_json = ImageJSON(**json.loads(config_path.read_text()))
         base_image_json.config = cnb_layers_image_json.config
         image_ref._initial_config = base_image_json.json(
             exclude_unset=True, exclude_defaults=True, separators=(",", ":")
         )
 
         for layer_path in tarball_manifest.layers:
-            image_ref.add_layer(LayerRef(local_path=image_tmp_folder / layer_path))
+            image_ref.add_layer(LayerRef(local_path=safe_resolve_subpath(image_tmp_folder, layer_path)))
         logger.debug("Start pushing Image.")
 
         manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)

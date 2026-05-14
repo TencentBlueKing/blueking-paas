@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package envx provides environment variable functions
 package envx
 
 import "os"

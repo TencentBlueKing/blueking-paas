@@ -1662,18 +1662,18 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "drf-yasg"
-version = "1.21.11"
+version = "1.21.8"
 description = "Automated generation of real Swagger/OpenAPI 2.0 schemas from Django Rest Framework code."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.6"
 files = [
-    {file = "drf_yasg-1.21.11-py3-none-any.whl", hash = "sha256:ec741f313b3b5f0b5fc8c1e1b6ed323c34f1f492a41fe7cc7421d8c6de9753e4"},
-    {file = "drf_yasg-1.21.11.tar.gz", hash = "sha256:0190b3de884aa593a39c75e6daba2ae69f285f0691de1eb0e3f4c6307faa1817"},
+    {file = "drf-yasg-1.21.8.tar.gz", hash = "sha256:cbb7f81c3d140f2207392b4bc5dde65384eeb58e1b7eea1a6d641dec2f7352a9"},
+    {file = "drf_yasg-1.21.8-py3-none-any.whl", hash = "sha256:a410b235e7cc2c0f6b9d4f671e8efe6f2d27cba398fbd16064e16ef814998444"},
 ]
 
 [package.dependencies]
-django = ">=4.0"
-djangorestframework = ">=3.13"
+django = ">=2.2.16"
+djangorestframework = ">=3.10.3"
 inflection = ">=0.3.1"
 packaging = ">=21.0"
 pytz = ">=2021.1"
@@ -5260,4 +5260,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "5ce9e68ab8ebccce49e8f3761dd16e8469f48124f33d8f022555563ded73ae82"
+content-hash = "d1b1ef311cac949ac5ef89c2c6943d9704a21c5399187c0decd4759413b6d299"

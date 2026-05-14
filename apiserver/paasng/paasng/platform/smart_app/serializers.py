@@ -26,6 +26,7 @@ from paasng.platform.applications.serializers.mixins import AppBasicInfoMixin
 from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.platform.declarative.constants import DiffType
 from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.views import validate_safe_filename
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -47,9 +48,10 @@ class PackageStashRequestSLZ(serializers.Serializer):
     )
 
     def validate_package(self, package):
-        if not re.fullmatch("[a-zA-Z0-9-_. ]+", package.name):
+        validate_safe_filename(package.name)
+        if not re.fullmatch("[a-zA-Z0-9-_.]+", package.name):
             raise serializers.ValidationError(
-                {"invalid": _("格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)")}
+                {"invalid": _("格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)和点(.)")}
             )
         return package
 

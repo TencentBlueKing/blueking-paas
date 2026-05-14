@@ -62,8 +62,9 @@ class BaseSvnAuthClient:
         raise NotImplementedError
 
 
+# FIXME: 该服务数年前已下线，后续确认能否整个删除
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
-    SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
+    SVN_SECRET = ""
     SVN_OPERATE_ERROR_NOTIFIER = settings.ADMIN_USERNAME
     DUMMY = True
     TIMEOUT = 60

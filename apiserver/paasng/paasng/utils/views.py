@@ -17,7 +17,7 @@
 
 import functools
 import logging
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Callable, Dict, Optional, Union
 
 from blue_krill.web.drf_utils import stringify_validation_error
@@ -220,18 +220,76 @@ class BkStandardApiJSONRenderer(JSONRenderer):
         return result
 
 
-def get_filepath(fp, parent_dir: Union[str, Path]) -> Path:
-    """Get uploaded file's local path
+def validate_safe_filename(name: str) -> str:
+    """校验上传文件名是否安全，防止路径穿越。
 
-    :param parent_dir: when the fp object only exists in memory, it will be exported to `parent_dir`
+    要求文件名：
+    - 非空字符串；
+    - 不为 ``.`` 或 ``..``；
+    - 不包含 POSIX/Windows 路径分隔符 (``/``、``\\``)；
+    - 不为 POSIX 或 Windows 绝对路径。
+
+    校验失败时抛出 ``rest_framework.exceptions.ValidationError``。
+
+    :param name: 待校验的文件名
+    :return: 校验通过的文件名
     """
-    parent_path = Path(str(parent_dir))
-    if hasattr(fp, "name") and hasattr(fp, "read"):
-        path = parent_path / fp.name
-        with open(path, "wb") as fh:
-            fh.write(fp.read())
-        return path
-    raise TypeError("Invalid File Type")
+    if not isinstance(name, str) or not name:
+        raise ValidationError(_("文件名不能为空"))
+
+    if name in {".", ".."}:
+        raise ValidationError(_("文件名非法"))
+
+    if "/" in name or "\\" in name:
+        raise ValidationError(_("文件名不能包含路径分隔符"))
+
+    # 拒绝 POSIX/Windows 绝对路径（如 "/tmp/x"、"C:\\x"）
+    if PurePosixPath(name).is_absolute() or PureWindowsPath(name).is_absolute():
+        raise ValidationError(_("文件名不能为绝对路径"))
+
+    return name
+
+
+# 文件分块写入的缓冲大小（字节）
+_FILE_CHUNK_SIZE = 64 * 1024
+
+
+def save_uploaded_file(fp, parent_dir: Union[str, Path]) -> Path:
+    """Save uploaded file to local path
+
+    将上传文件对象写入到 ``parent_dir`` 目录内，并返回写入后的目标路径。函数会强制
+    校验上传文件名，并保证目标路径解析后仍位于 ``parent_dir`` 之内，防止路径穿越攻击。
+
+    :param fp: 上传文件对象，需要具有 ``name`` 属性以及 ``read``/``chunks`` 之一
+    :param parent_dir: 目标父目录，文件将写入到此目录内
+    :return: 写入后的目标文件路径
+    :raises TypeError: 上传文件对象不支持读取
+    :raises ValidationError: 文件名非法或目标路径越界
+    """
+    if not (hasattr(fp, "name") and hasattr(fp, "read")):
+        raise TypeError("Invalid File Type")
+
+    name = validate_safe_filename(getattr(fp, "name", "") or "")
+
+    parent_path = Path(str(parent_dir)).resolve()
+    target = (parent_path / name).resolve()
+    # 兜底校验：解析后的目标路径必须仍位于 parent_path 内
+    if not target.is_relative_to(parent_path):
+        raise ValidationError(_("文件名非法"))
+
+    # 优先使用分块读取以降低大文件内存占用；不支持时退化为固定大小缓冲循环读取
+    chunks_method = getattr(fp, "chunks", None)
+    with open(target, "wb") as fh:
+        if callable(chunks_method):
+            for chunk in chunks_method():
+                fh.write(chunk)
+        else:
+            while True:
+                chunk = fp.read(_FILE_CHUNK_SIZE)
+                if not chunk:
+                    break
+                fh.write(chunk)
+    return target
 
 
 def unwrap_partial(func):

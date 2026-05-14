@@ -6,14 +6,14 @@ authors = ["blueking <blueking@tencent.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-django = "4.2.17"
+django = "4.2.30"
 pymysql = "1.1.1"
 gunicorn = "22.0.0"
 paas-service = "2.0.0"
 djangorestframework = "3.15.2"
 requests = "2.32.3"
 gevent = "24.2.1"
-cryptography = "43.0.3"
+cryptography = "46.0.6"
 jsonfield = "3.1.0"
 whitenoise = "5.3.0"
 sentry_sdk = "0.19.4"
@@ -22,7 +22,7 @@ prometheus-client = "0.14.1"
 bkapi-client-core = ">=1.1.0,<2.0.0"
 django-environ = "0.8.1"
 urllib3 = "1.26.20"
-pyjwt = "2.4.0"
+pyjwt = "2.12.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "*"

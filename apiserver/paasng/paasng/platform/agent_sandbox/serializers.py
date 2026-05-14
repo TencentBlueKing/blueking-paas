@@ -151,18 +151,18 @@ class VolumeCreateInputSLZ(serializers.Serializer):
 class VolumeOutputSLZ(serializers.ModelSerializer):
     """The serializer for volume output."""
 
-    cfs_instance_id = serializers.SerializerMethodField()
-    cfs_path = serializers.SerializerMethodField()
+    storage_instance_id = serializers.SerializerMethodField()
+    storage_path = serializers.SerializerMethodField()
 
     class Meta:
         model = Volume
-        fields = ("uuid", "name", "display_name", "application_id", "cfs_instance_id", "cfs_path", "created")
+        fields = ("uuid", "name", "display_name", "application_id", "storage_instance_id", "storage_path", "created")
 
-    def get_cfs_instance_id(self, obj) -> str:
+    def get_storage_instance_id(self, obj) -> str:
         return settings.AGENT_SANDBOX_CFS_FSID
 
-    def get_cfs_path(self, obj) -> str:
-        return obj.cfs_path
+    def get_storage_path(self, obj) -> str:
+        return obj.storage_path
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):

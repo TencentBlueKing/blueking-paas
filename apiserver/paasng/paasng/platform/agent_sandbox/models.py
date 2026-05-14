@@ -49,8 +49,8 @@ class Volume(UuidAuditedModel):
         unique_together = ("tenant_id", "application_id", "name")
 
     @property
-    def cfs_path(self) -> str:
-        """CFS 上的 subPath，格式为 app/{uuid_hex}/。"""
+    def storage_path(self) -> str:
+        """共享存储上的 subPath，格式为 app/{uuid_hex}。"""
         return f"app/{self.uuid.hex}"
 
 

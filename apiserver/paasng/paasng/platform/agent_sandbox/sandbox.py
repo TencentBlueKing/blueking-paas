@@ -100,7 +100,7 @@ def _build_volume_mounts(
             VolumeMount(
                 volume_id=str(volume.uuid),
                 mount_path=item["mount_path"],
-                sub_path=volume.cfs_path,
+                sub_path=volume.storage_path,
                 read_only=False,
             )
         )

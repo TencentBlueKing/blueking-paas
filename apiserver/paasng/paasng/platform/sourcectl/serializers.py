@@ -25,6 +25,7 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
+from paasng.platform.sourcectl.validators import validate_download_url
 from paasng.utils.serializers import DecryptableJSONField, SourceControlField, UserNameField, VerificationCodeField
 from paasng.utils.validators import validate_image_repo, validate_repo_url
 
@@ -198,6 +199,10 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     package_url = serializers.URLField(help_text="源码包下载路径")
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
     allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
+
+    def validate_package_url(self, value: str) -> str:
+        validate_download_url(value)
+        return value
 
 
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):

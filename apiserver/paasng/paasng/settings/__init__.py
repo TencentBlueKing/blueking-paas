@@ -158,7 +158,6 @@ INSTALLED_APPS = [
     "paasng.accessories.ci",
     "paasng.platform.bkapp_model",
     "paasng.platform.engine",
-    "paasng.platform.engine.streaming",
     "paasng.platform.evaluation",
     "paasng.accessories.publish.market",
     "paasng.accessories.publish.sync_market",
@@ -1626,6 +1625,11 @@ FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVE
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
+
+# SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 用于源码包 URL 上传接口（upload_via_url）的地址白名单配置
+# 仅允许主机名匹配该列表中的地址才能访问，同时仅允许 http/https 协议和 80/443 标准端口
+# 默认为空列表，表示不放通任何地址
+SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: list[str] = settings.get("SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS", [])
 
 # 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)

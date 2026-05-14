@@ -29,6 +29,8 @@ AI_AGENT_TEMPLATE_PREFIX = "bk-ai"
 
 
 class EventType(ChoicesEnum):
+    """这些事件类型用来区分由部署等行为产生的流式信息。"""
+
     INIT = "init"
     CLOSE = "close"
     MSG = "msg"

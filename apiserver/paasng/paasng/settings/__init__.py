@@ -1373,6 +1373,20 @@ DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
 
+# 源码包上传接口（upload_via_url）的包地址白名单配置
+#
+# 仅当请求携带的源码包地址的主机地址匹配本列表中的任一主机地址时，请求才能正常进行。
+# 配置项中的主机地址可带或不带端口号，不带端口时表示允许该协议的默认端口访问（80/443），仅支持 http/https 协议
+#
+# 举例来说，配置 ["example.com"] 后：
+#   - http://example.com:80/path/to/package：通过（显式指定了默认端口）
+#   - https://example.com/path/to/package：通过（端口省略）
+#   - http://example.com:8080/path/to/package：不通过
+#
+# 默认为空列表，表示不放通任何地址
+SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: list[str] = settings.get("SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS", [])
+
+
 # -----------------
 # 插件开发中心配置项
 # -----------------
@@ -1625,11 +1639,6 @@ FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVE
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
-
-# SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 用于源码包 URL 上传接口（upload_via_url）的地址白名单配置
-# 仅允许主机名匹配该列表中的地址才能访问，同时仅允许 http/https 协议和 80/443 标准端口
-# 默认为空列表，表示不放通任何地址
-SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: list[str] = settings.get("SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS", [])
 
 # 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)

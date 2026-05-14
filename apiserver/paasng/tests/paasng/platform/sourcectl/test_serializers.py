@@ -43,8 +43,9 @@ class TestSourcePackageUploadViaUrlSLZ:
             "http://example.com/pkg.tar.gz",
             "https://example.com:443/pkg.tar.gz",
             "http://example.com:80/pkg.tar.gz",
+            # Check case-insensitivity and default port handling
+            "http://ExamPle.com:80/pkg.tar.gz",
         ],
-        ids=["https-default", "http-default", "https-explicit-443", "http-explicit-80"],
     )
     def test_whitelisted_host_standard_port_passes(self, settings, url):
         settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
@@ -57,50 +58,47 @@ class TestSourcePackageUploadViaUrlSLZ:
             slz = SourcePackageUploadViaUrlSLZ(data=_make_data(f"https://{host}/pkg.tar.gz"))
             assert slz.is_valid(), slz.errors
 
-    def test_host_matching_is_case_insensitive(self, settings):
-        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["Example.COM"]
-        slz = SourcePackageUploadViaUrlSLZ(data=_make_data("https://example.com/pkg.tar.gz"))
+    @pytest.mark.parametrize(
+        ("allowed_host", "url"),
+        [
+            ("example.com:8443", "https://example.com:8443/pkg.tar.gz"),
+            ("example.com:8080", "http://example.com:8080/pkg.tar.gz"),
+        ],
+    )
+    def test_whitelisted_host_with_explicit_port_passes(self, settings, allowed_host, url):
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = [allowed_host]
+        slz = SourcePackageUploadViaUrlSLZ(data=_make_data(url))
         assert slz.is_valid(), slz.errors
 
     @pytest.mark.parametrize(
         "url",
         [
+            # bad hosts
             "https://evil.com/pkg.tar.gz",
             "http://192.168.1.1/pkg.tar.gz",
-            "http://10.0.0.1/pkg.tar.gz",
             "http://127.0.0.1/pkg.tar.gz",
             "http://localhost/pkg.tar.gz",
+            # bad schemes
+            "ftp://example.com/pkg.tar.gz",
+            "file:///etc/server.conf",
+            "gopher://example.com/file",
         ],
-        ids=["unknown-host", "private-192", "private-10", "loopback", "localhost"],
     )
-    def test_non_whitelisted_host_rejected(self, settings, url):
+    def test_misc_host_rejected(self, settings, url):
         settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["allowed.example.com"]
         slz = SourcePackageUploadViaUrlSLZ(data=_make_data(url))
         assert not slz.is_valid()
         assert "package_url" in slz.errors
 
     @pytest.mark.parametrize(
-        "port",
-        [8080, 8443, 22],
-        ids=["8080", "8443", "ssh-22"],
-    )
-    def test_nonstandard_port_rejected(self, settings, port):
-        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
-        slz = SourcePackageUploadViaUrlSLZ(data=_make_data(f"https://example.com:{port}/pkg.tar.gz"))
-        assert not slz.is_valid()
-        assert "package_url" in slz.errors
-
-    @pytest.mark.parametrize(
-        "url",
+        ("allowed_host", "url"),
         [
-            "ftp://example.com/pkg.tar.gz",
-            "file:///etc/passwd",
-            "gopher://example.com/file",
+            ("example.com", "http://example.com:8080/pkg.tar.gz"),
+            ("example.com:8443", "https://example.com/pkg.tar.gz"),
         ],
-        ids=["ftp", "file", "gopher"],
     )
-    def test_disallowed_scheme_rejected(self, settings, url):
-        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+    def test_host_and_port_mismatch_rejected(self, settings, allowed_host, url):
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = [allowed_host]
         slz = SourcePackageUploadViaUrlSLZ(data=_make_data(url))
         assert not slz.is_valid()
         assert "package_url" in slz.errors

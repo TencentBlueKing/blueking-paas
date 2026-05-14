@@ -103,7 +103,8 @@ class Command(BaseCommand):
 
         with patch_ssl_verification(skip_verify):
             from_image = parse_image(image)
-            image_tarball_path = pathlib.Path(tempfile.mktemp())
+            _file = tempfile.NamedTemporaryFile(delete=False) # noqa: SIM115
+            image_tarball_path = pathlib.Path(_file.name)
             try:
                 ref = ImageRef.from_image(
                     from_repo=from_image.name,

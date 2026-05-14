@@ -17,7 +17,7 @@
 ## to the current version of the project delivered to anyone in the future.
 ##
 
-set -eo pipefail
+set  -eo pipefail
 
 call_steps() {
     steps="$*"

@@ -1,6 +1,6 @@
 module github.com/TencentBlueKing/blueking-paas/client
 
-go 1.24.0
+go 1.25.10
 
 require (
 	github.com/MakeNowJust/heredoc/v2 v2.0.1

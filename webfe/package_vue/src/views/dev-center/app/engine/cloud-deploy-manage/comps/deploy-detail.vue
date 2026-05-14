@@ -203,7 +203,11 @@
               <bk-button
                 class="mr10"
                 :text="true"
-                title="primary"
+                :disabled="instance.rich_status !== 'Running'"
+                v-bk-tooltips="{
+                  content: $t('实例当前未处于运行状态，无法登录。'),
+                  disabled: instance.rich_status === 'Running',
+                }"
                 @click="showInstanceConsole(instance, row)"
               >
                 WebConsole
@@ -211,10 +215,21 @@
               <bk-button
                 class="mr10"
                 :text="true"
-                title="primary"
+                :disabled="!isLogAvailable(instance)"
+                v-bk-tooltips="{
+                  content: $t('实例尚未创建成功或宿主机异常，暂无法获取日志。'),
+                  disabled: isLogAvailable(instance),
+                }"
                 @click="showInstanceLog(instance, row)"
               >
                 {{ $t('日志') }}
+              </bk-button>
+              <bk-button
+                class="mr10"
+                text
+                @click="showInstanceEvents(instance, row.name, $index)"
+              >
+                {{ $t('事件') }}
               </bk-button>
               <bk-popover
                 class="table-more-popover-cls"
@@ -228,12 +243,6 @@
                   class="more-content"
                   style="white-space: normal"
                 >
-                  <div
-                    class="option"
-                    @click="showInstanceEvents(instance, row.name, $index)"
-                  >
-                    {{ $t('查看事件') }}
-                  </div>
                   <div
                     class="option"
                     @click="showRestartPopup('instance', instance, $index)"
@@ -1403,6 +1412,16 @@ export default {
           process.status = 'Running';
         }
       }
+    },
+
+    /**
+     * 判断实例是否可以查看日志
+     * @param {Object} instance 实例对象
+     * @returns {Boolean}
+     */
+    isLogAvailable(instance) {
+      const allowedStatuses = ['Running', 'CrashLoopBackOff', 'Error', 'Completed', 'Succeeded'];
+      return allowedStatuses.includes(instance.rich_status);
     },
 
     /**

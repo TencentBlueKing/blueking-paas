@@ -31,6 +31,7 @@ type MinimalApplications struct {
 	Apps  []AppBasicInfo
 }
 
+// Length ...
 func (a MinimalApplications) Length() int {
 	return a.Total
 }

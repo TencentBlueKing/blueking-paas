@@ -201,7 +201,7 @@ class RedisStore(StoreMixin):
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
-        item = json.loads(result)(result)
+        item = json.loads(result)
         if not self._svc_supports_region(item, region):
             raise RuntimeError("service does not contains a plan in given region")
         return item

@@ -419,6 +419,8 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 #   - http://example.com:8080/path/to/package：不通过
 #
 # 默认为空列表，表示不放通任何地址
+# 
+# 注：若配置了 BK_REPO_URL，其主机地址会被自动添加到该列表中，无需手动重复配置
 # SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: []
 
 ## ------------------------------------ 引擎相关配置项 ------------------------------------

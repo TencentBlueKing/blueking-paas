@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import random
+import secrets
 import string
 import typing
 from typing import Type
@@ -45,8 +46,8 @@ def generate_password(length=10):
 
     # 生成至少 大小写数字, 且包含至少一位数字的密码
     """
-    password_chars = [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
-    password_chars.append(random.choice(string.digits))
+    password_chars = [secrets.choice(string.ascii_letters + string.digits) for _ in range(length)]
+    password_chars.append(secrets.choice(string.digits))
     random.shuffle(password_chars)
     return "".join(password_chars)
 

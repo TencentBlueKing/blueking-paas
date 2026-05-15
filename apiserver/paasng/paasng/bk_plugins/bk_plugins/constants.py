@@ -17,6 +17,8 @@
 
 from blue_krill.data_types.enum import EnumField, IntStructuredEnum
 
+from paasng.utils.basic import ChoicesEnum
+
 
 class PluginTagIdType(IntStructuredEnum):
     UNTAGGED = EnumField(-1, label="未分类")
@@ -24,3 +26,14 @@ class PluginTagIdType(IntStructuredEnum):
 
 # AI Agent 插件应用的模板 ID 以 bk-ai 开头
 AI_AGENT_TEMPLATE_PREFIX = "bk-ai"
+
+
+class EventType(ChoicesEnum):
+    """这些事件类型用来区分由部署等行为产生的流式信息。"""
+
+    INIT = "init"
+    CLOSE = "close"
+    MSG = "msg"
+    TITLE = "title"
+
+    _choices_labels = [(INIT, "初始化"), (CLOSE, "关闭通道"), (MSG, "消息"), (TITLE, "标题")]

@@ -286,7 +286,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import RenderSideslider from './access-guide-sideslider';
 import chartOption from '@/json/analysis-chart-option';
-import { exportJsonToExcel } from '@/common/Export2Excel';
+import { exportJsonToExcel } from '@/common/export2-excel';
 import { formatDate } from '@/common/tools';
 
 export default {

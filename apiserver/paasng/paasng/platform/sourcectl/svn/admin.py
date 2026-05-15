@@ -68,7 +68,7 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
     SVN_OPERATE_ERROR_NOTIFIER = settings.ADMIN_USERNAME
     DUMMY = True
     TIMEOUT = 60
-    SSL_VERIFY = False
+    SSL_VERIFY = True
 
     BASE_SVN_ADD_USER = "{admin_url}svn_add/user/"
     BASE_SVN_MOD_COMMON = "{admin_url}svn_mod/common/"

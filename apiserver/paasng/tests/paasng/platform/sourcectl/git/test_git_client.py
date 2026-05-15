@@ -30,8 +30,8 @@ from paasng.platform.sourcectl.git.client import GitClient, GitCloneCommand, Git
 class TestGitCommand:
     """测试 GitCommand 参数隔离机制"""
 
-    def test_to_cmd_without_positional_args(self):
-        """无位置参数时不应插入 --"""
+    def test_to_cmd_without_end_of_options_args(self):
+        """无 end-of-options 参数时不应插入 --"""
         command = GitCommand(git_filepath="git", command="show-ref")
         assert command.to_cmd() == ["git", "show-ref"]
 
@@ -40,14 +40,16 @@ class TestGitCommand:
         command = GitCommand(git_filepath="git", command="show", args=["-s", "--format=%ct/%B"])
         assert command.to_cmd() == ["git", "show", "-s", "--format=%ct/%B"]
 
-    def test_to_cmd_with_positional_args(self):
-        """有位置参数时应自动插入 --"""
-        command = GitCommand(git_filepath="git", command="ls-remote", positional_args=["http://example.com/repo.git"])
+    def test_to_cmd_with_end_of_options_args(self):
+        """有 end-of-options 参数时应自动插入 --"""
+        command = GitCommand(
+            git_filepath="git", command="ls-remote", end_of_options_args=["http://example.com/repo.git"]
+        )
         assert command.to_cmd() == ["git", "ls-remote", "--", "http://example.com/repo.git"]
 
     def test_to_cmd_with_mixed_args(self):
-        """选项参数在 -- 之前，位置参数在 -- 之后"""
-        command = GitCommand(git_filepath="git", command="checkout", args=["-b"], positional_args=["new-branch"])
+        """选项参数在 -- 之前，end-of-options 参数在 -- 之后"""
+        command = GitCommand(git_filepath="git", command="checkout", args=["-b"], end_of_options_args=["new-branch"])
         assert command.to_cmd() == ["git", "checkout", "-b", "--", "new-branch"]
 
 

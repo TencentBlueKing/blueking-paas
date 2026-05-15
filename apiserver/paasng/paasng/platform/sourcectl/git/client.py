@@ -58,7 +58,9 @@ class GitCommand:
     """Git 命令封装。
 
     :param args: Git 子命令选项参数，位于 ``--`` 之前。
-    :param positional_args: 位置参数（URL、路径、分支名等），位于 ``--`` 之后，自动以 ``--`` 隔离。
+    :param end_of_options_args: ``--`` 之后的参数（URL、路径、分支名等），
+        这些参数不会被 git 解释为选项，即使它们以 ``-`` 开头。
+        构建命令时会自动在前面插入 ``--`` 分隔符。
     """
 
     def __init__(
@@ -66,22 +68,22 @@ class GitCommand:
         git_filepath: str,
         command: str,
         args: List[str] | None = None,
-        positional_args: List[str] | None = None,
+        end_of_options_args: List[str] | None = None,
         cwd: str = "",
         envs: Optional[Dict] = None,
     ):
         self.git_filepath = git_filepath
         self.command = command
         self.args = args or []
-        self.positional_args = positional_args or []
+        self.end_of_options_args = end_of_options_args or []
         self.cwd = cwd
         self.envs = envs or {}
 
     def to_cmd(self, obscure: bool = False) -> List[str]:
         cmd = [self.git_filepath, self.command, *self.args]
-        if self.positional_args:
+        if self.end_of_options_args:
             cmd.append("--")
-            cmd.extend(self.positional_args)
+            cmd.extend(self.end_of_options_args)
         return cmd
 
     def get_sensitive_texts(self) -> List[str]:
@@ -147,7 +149,7 @@ class GitClient:
     def checkout(self, path: Path, target: str) -> str:
         """切换分支或tag"""
         command = GitCommand(
-            git_filepath=self._git_filepath, command="checkout", positional_args=[target], cwd=str(path)
+            git_filepath=self._git_filepath, command="checkout", end_of_options_args=[target], cwd=str(path)
         )
         return self.run(command)
 
@@ -239,7 +241,7 @@ class GitClient:
 
         # The "cwd" is pointless for running this command, always use current dir.
         command = GitCommand(
-            git_filepath=self._git_filepath, command="ls-remote", positional_args=[url_str], cwd=os.getcwd()
+            git_filepath=self._git_filepath, command="ls-remote", end_of_options_args=[url_str], cwd=os.getcwd()
         )
         return self.run(command)
 

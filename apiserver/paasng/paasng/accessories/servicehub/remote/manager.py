@@ -64,6 +64,8 @@ from paasng.platform.applications.models import Application, ApplicationEnvironm
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils import safe_jinja2
+from paasng.utils.i18n import gettext_lazy as i18n_lazy
+from paasng.utils.i18n.serializers import I18N_STRING_DICT_FLAG
 
 if TYPE_CHECKING:
     import datetime
@@ -92,7 +94,7 @@ class MetaInfo:
 
         parts = self.version.split(".")
         given_parts = version.split(".")
-        for i, j in zip(parts, given_parts):
+        for i, j in zip(parts, given_parts, strict=False):
             if int(i) > int(j):
                 return True
             if int(i) < int(j):
@@ -145,6 +147,9 @@ class RemoteServiceObj(ServiceObj):
             fields["meta_info"] = DEFAULT_META_INFO
         else:
             fields["meta_info"] = MetaInfo(version=meta_info_data["version"])
+
+        # Restore marked i18n dicts from the store to lazy translated strings.
+        fields = {k: restore_i18n_string_dict(v) for k, v in fields.items()}
 
         result = cls(**fields)
         result._data = service
@@ -776,7 +781,7 @@ class RemoteServiceBinder:
         :param environment: The environment name.
         :return: A plan object, None if no matching plan can be found.
         """
-        plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
+        plans = sorted(plans, key=lambda i: "restricted_envs" in i.properties, reverse=True)
 
         for plan in plans:
             if "restricted_envs" not in plan.properties or environment in plan.properties["restricted_envs"]:
@@ -833,3 +838,10 @@ def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) 
     attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
     env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
     return env.application
+
+
+def restore_i18n_string_dict(value: Any) -> Any:
+    if not isinstance(value, dict) or not value.get(I18N_STRING_DICT_FLAG):
+        return value
+
+    return i18n_lazy({k: v for k, v in value.items() if k != I18N_STRING_DICT_FLAG})

@@ -129,8 +129,6 @@ ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher
 
 DEBUG = settings.get("DEBUG", False)
 
-SESSION_COOKIE_HTTPONLY = False
-
 RUNNING_TESTS = "test" in sys.argv or "pytest" in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 INSTALLED_APPS = [

@@ -672,7 +672,9 @@ class TestCreateCloudNativeApp:
                 # 使用非法的源码来源
                 "source_config": {
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
-                    "source_repo_url": image_repository,
+                    "source_repo_url": "https://github.com/strm/helloworld-http.git",
+                    "source_dir": "",
+                    "source_init_template": "",
                 },
             },
         )

@@ -16,17 +16,20 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
+from io import BytesIO
 
 import pytest
 from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
+from paasng.utils.validators import SafeFilenameValidator, validate_safe_filename
 from paasng.utils.views import (
     ERROR_CODE_NUM_HEADER,
     BkStandardApiJSONRenderer,
     HookChain,
     one_line_error,
+    save_uploaded_file,
 )
 
 
@@ -113,3 +116,150 @@ def make_permission():
     class Permission(BasePermission): ...
 
     return Permission
+
+
+class _FakeUploadedFile:
+    """用于测试的最小化 UploadedFile 替代品，仅暴露 name 和 read 接口。"""
+
+    def __init__(self, name: str, content: bytes = b""):
+        self.name = name
+        self._buf = BytesIO(content)
+
+    def read(self, size: int = -1) -> bytes:
+        return self._buf.read(size) if size != -1 else self._buf.read()
+
+
+class TestValidateSafeFilename:
+    @pytest.mark.parametrize("name", ["package.tar.gz", "a.tgz", "name with space.tar"])
+    def test_valid(self, name):
+        assert validate_safe_filename(name) == name
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "",
+            ".",
+            "..",
+            "../evil.tar.gz",
+            "../../evil.tar.gz",
+            "dir/package.tar.gz",
+            "..\\evil.tar.gz",
+            "dir\\package.tar.gz",
+            "/tmp/evil.tar.gz",
+            "/etc/passwd",
+            "C:\\tmp\\evil.tar.gz",
+        ],
+    )
+    def test_invalid(self, name):
+        with pytest.raises(ValidationError):
+            validate_safe_filename(name)
+
+
+class TestSaveUploadedFile:
+    def test_normal_filename_writes_inside_parent(self, tmp_path):
+        fp = _FakeUploadedFile("package.tar.gz", b"hello")
+        target = save_uploaded_file(fp, tmp_path)
+
+        assert target == (tmp_path / "package.tar.gz").resolve()
+        assert target.read_bytes() == b"hello"
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "../../evil.tar.gz",
+            "/tmp/evil.tar.gz",
+            "..\\evil.tar.gz",
+            "C:\\tmp\\evil.tar.gz",
+            "dir/package.tar.gz",
+            "",
+            ".",
+            "..",
+        ],
+    )
+    def test_reject_unsafe_filenames(self, tmp_path, name):
+        fp = _FakeUploadedFile(name, b"payload")
+        with pytest.raises(ValidationError):
+            save_uploaded_file(fp, tmp_path)
+
+        # 父目录之外不应留下任何被写入的文件
+        assert list(tmp_path.iterdir()) == []
+
+    def test_invalid_file_object_raises_type_error(self, tmp_path):
+        class _NoRead:
+            name = "x.tar"
+
+        with pytest.raises(TypeError):
+            save_uploaded_file(_NoRead(), tmp_path)
+
+    def test_chunks_method_is_used_when_available(self, tmp_path):
+        class _Chunked:
+            name = "package.tar.gz"
+
+            def __init__(self):
+                self.chunks_called = False
+
+            def chunks(self):
+                self.chunks_called = True
+                yield b"hel"
+                yield b"lo"
+
+            def read(self, size=-1):
+                raise AssertionError("read should not be called when chunks() is available")
+
+        fp = _Chunked()
+        target = save_uploaded_file(fp, tmp_path)
+        assert fp.chunks_called is True
+        assert target.read_bytes() == b"hello"
+
+
+class TestSafeFilenameValidator:
+    """SafeFilenameValidator 接收 UploadedFile 对象，从 .name 取文件名并校验安全性"""
+
+    @pytest.mark.parametrize("name", ["package.tar.gz", "a.tgz", "name with space.tar"])
+    def test_valid(self, name):
+        fp = _FakeUploadedFile(name)
+        SafeFilenameValidator()(fp)  # 不应抛出异常
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "",
+            ".",
+            "..",
+            "../evil.tar.gz",
+            "../../evil.tar.gz",
+            "dir/package.tar.gz",
+            "..\\evil.tar.gz",
+            "dir\\package.tar.gz",
+            "/tmp/evil.tar.gz",
+            "/etc/passwd",
+            "C:\\tmp\\evil.tar.gz",
+        ],
+    )
+    def test_invalid(self, name):
+        fp = _FakeUploadedFile(name)
+        with pytest.raises(ValidationError):
+            SafeFilenameValidator()(fp)
+
+    @pytest.mark.parametrize("name", ["package.tar.gz", "my_app-1.0.tgz", "A.zip"])
+    def test_name_pattern_valid(self, name):
+        """带 name_pattern 时，符合正则的文件名应通过校验"""
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message="格式错误")
+        fp = _FakeUploadedFile(name)
+        validator(fp)  # 不应抛出异常
+
+    @pytest.mark.parametrize("name", ["name with space.tar", "包含中文.tar.gz", "file@name.zip"])
+    def test_name_pattern_rejects_disallowed_chars(self, name):
+        """带 name_pattern 时，不符合正则的文件名应被拒绝"""
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message="格式错误")
+        fp = _FakeUploadedFile(name)
+        with pytest.raises(ValidationError):
+            validator(fp)
+
+    def test_name_pattern_error_message(self):
+        """正则不匹配时应返回指定的错误提示信息"""
+        msg = "只能包含字母、数字和半角连接符"
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message=msg)
+        fp = _FakeUploadedFile("bad file.tar")
+        with pytest.raises(ValidationError, match=msg):
+            validator(fp)

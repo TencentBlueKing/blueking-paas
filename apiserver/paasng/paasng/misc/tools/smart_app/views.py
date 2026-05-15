@@ -36,7 +36,7 @@ from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import get_filepath
+from paasng.utils.views import save_uploaded_file
 
 from .build import SmartBuildCoordinator, SmartBuildTaskRunner, create_smart_build_record
 from .filters import SmartBuildRecordFilterBackend
@@ -72,7 +72,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
 
         with generate_temp_dir() as tmp_dir:
-            filepath = get_filepath(slz.validated_data["package"], str(tmp_dir))
+            filepath = save_uploaded_file(slz.validated_data["package"], str(tmp_dir))
             stat = SourcePackageStatReader(filepath).read()
 
             if not stat.meta_info:

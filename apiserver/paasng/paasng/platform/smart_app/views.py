@@ -68,7 +68,7 @@ from paasng.platform.sourcectl.serializers import SourcePackageSLZ
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.utils.error_codes import error_codes
 from paasng.utils.moby_distribution.registry.exceptions import RequestError as RequestRegistryError
-from paasng.utils.views import get_filepath
+from paasng.utils.views import save_uploaded_file
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         )
 
         with generate_temp_dir() as download_dir:
-            filepath = get_filepath(package_fp, str(download_dir))
+            filepath = save_uploaded_file(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
 
@@ -321,7 +321,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         )
 
         with generate_temp_dir() as download_dir:
-            filepath = get_filepath(package_fp, download_dir)
+            filepath = save_uploaded_file(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
 

@@ -15,9 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import re
-
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.core.tenant.constants import AppTenantMode
@@ -26,6 +23,7 @@ from paasng.platform.applications.serializers.mixins import AppBasicInfoMixin
 from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.platform.declarative.constants import DiffType
 from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.validators import SafeFilenameValidator
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -41,17 +39,18 @@ class AppDescriptionSLZ(serializers.Serializer):
 class PackageStashRequestSLZ(serializers.Serializer):
     """Handle S-mart application uploads"""
 
-    package = serializers.FileField(help_text="应用源码包")
+    package = serializers.FileField(
+        help_text="应用源码包",
+        validators=[
+            SafeFilenameValidator(
+                name_pattern=r"[a-zA-Z0-9\-_.]+",
+                name_pattern_message="格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)和点(.)",
+            )
+        ],
+    )
     app_tenant_mode = serializers.ChoiceField(
         help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
     )
-
-    def validate_package(self, package):
-        if not re.fullmatch("[a-zA-Z0-9-_. ]+", package.name):
-            raise serializers.ValidationError(
-                {"invalid": _("格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)")}
-            )
-        return package
 
 
 class PackageStashConfirmRequestSLZ(AppBasicInfoMixin):

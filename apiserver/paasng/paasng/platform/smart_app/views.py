@@ -58,7 +58,7 @@ from paasng.platform.sourcectl.package.downloader import download_package
 from paasng.platform.sourcectl.serializers import SourcePackageSLZ
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import get_filepath
+from paasng.utils.views import save_uploaded_file
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         package_fp = slz.validated_data["package"]
 
         with generate_temp_dir() as download_dir:
-            filepath = get_filepath(package_fp, str(download_dir))
+            filepath = save_uploaded_file(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
             app_desc = get_app_description(stat)
@@ -255,7 +255,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         package_fp = slz.validated_data["package"]
 
         with generate_temp_dir() as download_dir:
-            filepath = get_filepath(package_fp, download_dir)
+            filepath = save_uploaded_file(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
             app_desc = get_app_description(stat)

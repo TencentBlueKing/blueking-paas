@@ -1064,10 +1064,6 @@ export default {
                 return `${i18n.t('最小副本数不可大于最大副本数')}`;
               },
               trigger: 'blur',
-              message() {
-                return `${i18n.t('缩容下限不可大于扩容上限')}`;
-              },
-              trigger: 'blur',
             },
           ],
         };

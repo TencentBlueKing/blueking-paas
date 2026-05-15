@@ -24,6 +24,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import StringArrayField
+from paasng.utils.validators import SafeFilenameValidator
 
 from .constants import SourceCodeOriginType
 
@@ -31,7 +32,7 @@ from .constants import SourceCodeOriginType
 class ToolPackageStashInputSLZ(serializers.Serializer):
     """Upload source package SLZ"""
 
-    package = serializers.FileField(help_text="待构建的应用源码包")
+    package = serializers.FileField(help_text="待构建的应用源码包", validators=[SafeFilenameValidator()])
 
 
 class BaseSmartBuildSLZ(serializers.Serializer):

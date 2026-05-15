@@ -174,8 +174,6 @@ class BinaryTarClient(BasePackageClient):
         :param working_dir: working directory
         :raise ReadLinkFileOutsideDirectoryError: Raised if unexpected errors occur.
         """
-        uncompress_directory(source_path=self.filepath, target_path=local_path)
-
         # Use the "data_filter" from tarfile to check the security of symbolic links.
         # We use this approach because it appears to be the easiest method. Other methods,
         # such as calling the "tar -tvf" command to list the members and check them individually,
@@ -190,6 +188,8 @@ class BinaryTarClient(BasePackageClient):
                     tarfile.LinkOutsideDestinationError,  # type: ignore
                 ) as e:
                     raise ReadLinkFileOutsideDirectoryError(str(e))
+
+        uncompress_directory(source_path=self.filepath, target_path=local_path)
 
     def close(self):
         """Nothing need to close."""

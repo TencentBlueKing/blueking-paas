@@ -24,7 +24,33 @@ from unittest.mock import patch
 import pytest
 from blue_krill.data_types.url import MutableURL
 
-from paasng.platform.sourcectl.git.client import GitClient, GitCloneCommand, GitCommand
+from paasng.platform.sourcectl.git.client import GitClient, GitCloneCommand, GitCommand, GitURLValidationError
+
+
+class TestGitCommand:
+    """测试 GitCommand 参数隔离机制"""
+
+    def test_to_cmd_without_end_of_options_args(self):
+        """无 end-of-options 参数时不应插入 --"""
+        command = GitCommand(git_filepath="git", command="show-ref")
+        assert command.to_cmd() == ["git", "show-ref"]
+
+    def test_to_cmd_with_options_only(self):
+        """仅有选项参数时不应插入 --"""
+        command = GitCommand(git_filepath="git", command="show", args=["-s", "--format=%ct/%B"])
+        assert command.to_cmd() == ["git", "show", "-s", "--format=%ct/%B"]
+
+    def test_to_cmd_with_end_of_options_args(self):
+        """有 end-of-options 参数时应自动插入 --"""
+        command = GitCommand(
+            git_filepath="git", command="ls-remote", end_of_options_args=["http://example.com/repo.git"]
+        )
+        assert command.to_cmd() == ["git", "ls-remote", "--", "http://example.com/repo.git"]
+
+    def test_to_cmd_with_mixed_args(self):
+        """选项参数在 -- 之前，end-of-options 参数在 -- 之后"""
+        command = GitCommand(git_filepath="git", command="checkout", args=["-b"], end_of_options_args=["new-branch"])
+        assert command.to_cmd() == ["git", "checkout", "-b", "--", "new-branch"]
 
 
 class TestGitCloneCommand:
@@ -38,11 +64,13 @@ class TestGitCloneCommand:
         )
 
     def test_to_command(self, command):
+        """clone 命令应在选项和仓库 URL 之间插入 --"""
         assert command.to_cmd() == [
             "/path/to/git",
             "clone",
             "--bar",
             "baz",
+            "--",
             "http://username:password@hostname",
             ".",
         ]
@@ -53,6 +81,7 @@ class TestGitCloneCommand:
             "clone",
             "--bar",
             "baz",
+            "--",
             "http://username:********@hostname",
             ".",
         ]
@@ -64,25 +93,21 @@ class TestGitClient:
         return GitClient()
 
     def test_checkout(self, client):
+        """checkout 的分支名应位于 -- 之后"""
         with patch.object(client, "run") as mock_run:
             client.checkout(Path("."), "master")
             command = mock_run.call_args[0][0]
             assert isinstance(command, GitCommand)
-            assert command.to_cmd() == ["git", "checkout", "master"]
+            assert command.to_cmd() == ["git", "checkout", "--", "master"]
 
-    @pytest.mark.parametrize(
-        "expected",
-        [
-            ["git", "clone", "http://username:password@hostname", "."],
-        ],
-    )
-    def test_clone(self, client, expected):
+    def test_clone(self, client):
+        """clone 的仓库 URL 和目标目录应位于 -- 之后"""
         with patch.object(client, "run") as mock_run:
             client.clone("http://username:password@hostname", Path("."))
             command = mock_run.call_args[0][0]
 
             assert isinstance(command, GitCloneCommand)
-            assert command.to_cmd() == expected
+            assert command.to_cmd() == ["git", "clone", "--", "http://username:password@hostname", "."]
 
     @pytest.mark.parametrize(
         ("refs", "expected"),
@@ -136,6 +161,20 @@ class TestGitClient:
         with patch.object(client, "run") as mock_run:
             mock_run.return_value = cmd_result
             assert client.list_remote("http://example.com/foo.git") == expected
+
+    def test_list_remote_command_has_separator(self, client):
+        """ls-remote 的 URL 应位于 -- 之后"""
+        with patch.object(client, "run") as mock_run:
+            mock_run.return_value = ""
+            client.list_remote("http://example.com/foo.git")
+            command = mock_run.call_args[0][0]
+            assert isinstance(command, GitCommand)
+            assert command.to_cmd() == ["git", "ls-remote", "--", "http://example.com/foo.git"]
+
+    def test_list_remote_rejects_dash_url(self, client):
+        """以 - 开头的 URL 应被 URL 校验拒绝"""
+        with pytest.raises(GitURLValidationError):
+            client.list_remote("-c core.sshCommand=evil")
 
     def test_list_remote_with_warning_and_invalid(self, client):
         # The command output a warning message sometimes

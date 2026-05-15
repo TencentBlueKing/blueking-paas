@@ -20,10 +20,13 @@ from copy import deepcopy
 from unittest import mock
 
 import pytest
+from django.utils.translation import override
 
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.remote import collector
 from paasng.accessories.servicehub.remote.exceptions import ServiceConfigNotFound, ServiceNotFound
+from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
+from paasng.utils.i18n.serializers import I18N_STRING_DICT_FLAG
 from tests.paasng.accessories.servicehub import data_mocks
 from tests.utils.api import mock_json_response
 
@@ -51,6 +54,19 @@ class TestRemoteStore:
         uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
         obj = store.get(uuid)
         assert obj is not None
+
+    def test_i18n_fields_after_store_roundtrip(self, store):
+        service_data = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]
+        raw_service = store.get(service_data["uuid"])
+
+        assert raw_service["display_name"][I18N_STRING_DICT_FLAG] is True
+
+        with override("zh-cn"):
+            service = RemoteServiceObj.from_data(raw_service)
+            assert str(service.display_name) == service_data["display_name_zh_cn"]
+        with override("en"):
+            service = RemoteServiceObj.from_data(raw_service)
+            assert str(service.display_name) == service_data["display_name_en"]
 
     def test_list_all(self, store):
         assert len(store.filter()) == 2

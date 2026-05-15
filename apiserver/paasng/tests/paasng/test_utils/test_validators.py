@@ -55,7 +55,7 @@ class Test__validate_repo_url:
         ["mysql://127.0.0.1", "postgres://127.0.0.1"],
     )
     def test_invalid_protocol(self, repo_url):
-        with pytest.raises(ValueError, match="Invalid url: only support http/https/git/svn scheme"):
+        with pytest.raises(ValueError, match="Invalid url: only support http/https/git/svn/ssh scheme"):
             validate_repo_url(repo_url)
 
     @pytest.mark.parametrize(
@@ -69,10 +69,25 @@ class Test__validate_repo_url:
 
     @pytest.mark.parametrize(
         "repo_url",
-        ["/www.example.com", "//127.0.0.1"],
+        [
+            "/www.example.com",
+            "//127.0.0.1",
+            "https://",
+            "https://example.com:bad/bkapps.git",
+            "git@example.com:org/repo.git",
+            "example.com:org/repo.git",
+        ],
     )
     def test_invalid_url(self, repo_url):
         with pytest.raises(ValueError, match="Invalid url"):
+            validate_repo_url(repo_url)
+
+    @pytest.mark.parametrize(
+        "repo_url",
+        ["-c core.sshCommand=evil", "--upload-pack=evil"],
+    )
+    def test_invalid_url_startswith_dash(self, repo_url):
+        with pytest.raises(ValueError, match="Invalid url: repo url can not start with '-'"):
             validate_repo_url(repo_url)
 
     @pytest.mark.parametrize(
@@ -82,6 +97,8 @@ class Test__validate_repo_url:
             "https://127.0.0.1/bkapps.git",
             "git://127.0.0.1",
             "svn://127.0.0.1",
+            "ssh://git@example.com/org/repo.git",
+            "ssh://git@example.com:2222/org/repo.git",
         ],
     )
     def test_valid_url(self, repo_url):

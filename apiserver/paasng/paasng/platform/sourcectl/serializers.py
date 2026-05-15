@@ -25,8 +25,9 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
+from paasng.platform.sourcectl.validators import validate_download_url
 from paasng.utils.serializers import DecryptableJSONField, SourceControlField, UserNameField, VerificationCodeField
-from paasng.utils.validators import validate_image_repo, validate_repo_url
+from paasng.utils.validators import SafeFilenameValidator, validate_image_repo, validate_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +200,19 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
     allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
 
+    def validate_package_url(self, value: str) -> str:
+        validate_download_url(value)
+        return value
+
 
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):
-    package = serializers.FileField(help_text="源码包文件")
+    package = serializers.FileField(
+        help_text="源码包文件",
+        validators=[
+            SafeFilenameValidator(
+                name_pattern=r"[a-zA-Z0-9\-_.]+",
+                name_pattern_message="格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)和点(.)",
+            )
+        ],
+    )
     allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)

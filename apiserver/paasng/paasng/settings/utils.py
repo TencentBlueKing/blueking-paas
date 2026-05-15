@@ -21,6 +21,7 @@ import re
 import socket
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
+from urllib.parse import urlparse
 
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from blue_krill.secure.dj_environ import SecureEnv
@@ -281,3 +282,20 @@ def cache_from_redis_url(url: str) -> Dict[str, Any]:
         cache_cfg_options["CONNECTION_POOL_KWARGS"] = connection_pool_kwargs
 
     return cache_cfg
+
+
+def extract_host_from_url(url: str) -> Optional[str]:
+    """从 URL 中提取主机地址（含端口，如有）。
+
+    :param url: 带协议的完整 URL 地址
+    :return: 主机地址字符串，如 "bkrepo.example.com:8080"；URL 无效时返回 None
+    """
+    if not url:
+        return None
+
+    parsed = urlparse(url)
+    if not parsed.hostname:
+        return None
+    if parsed.port:
+        return f"{parsed.hostname}:{parsed.port}"
+    return parsed.hostname

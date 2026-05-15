@@ -321,7 +321,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     @staticmethod
     def _validate_source_repo_url(source_repo_url, source_origin):
         try:
-            if source_origin == SourceOrigin.CNATIVE_IMAGE:
+            if source_origin in [SourceOrigin.IMAGE_REGISTRY, SourceOrigin.CNATIVE_IMAGE]:
                 validate_image_repo(source_repo_url)
             else:
                 validate_repo_url(source_repo_url)

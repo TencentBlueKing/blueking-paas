@@ -57,7 +57,7 @@ class TestRemoteStore:
 
     def test_i18n_fields_after_store_roundtrip(self, store):
         service_data = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]
-        raw_service = store.get(service_data["uuid"])
+        raw_service = store.get(service_data["uuid"], region="r1")
 
         assert raw_service["display_name"][I18N_STRING_DICT_FLAG] is True
 

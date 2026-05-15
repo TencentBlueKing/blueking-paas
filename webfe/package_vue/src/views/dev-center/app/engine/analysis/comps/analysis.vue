@@ -278,15 +278,15 @@
   </section>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import RenderSideslider from './access-guide-sideslider';
 import chartOption from '@/json/analysis-chart-option';
-// eslint-disable-next-line
-    import { export_json_to_excel } from '@/common/Export2Excel'
+import { exportJsonToExcel } from '@/common/Export2Excel';
 import { formatDate } from '@/common/tools';
 
 export default {
@@ -633,7 +633,7 @@ export default {
         };
 
         const fileName = this.engineEnabled ? `${appCode}_${this.curModuleId}${getCurTabText()}${this.dimensionType}` : `${appCode}${getCurTabText()}${this.dimensionType}`;
-        export_json_to_excel(fields, data, fileName);
+        await exportJsonToExcel(fields, data, fileName);
       } catch (e) {
         if (e.detail && e.detail !== this.$t('未找到。')) {
           this.$paasMessage({

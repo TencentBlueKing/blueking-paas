@@ -60,6 +60,7 @@ from moby_distribution.registry.utils import parse_image
 
 from .utils import (
     cache_from_redis_url,
+    extract_host_from_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
@@ -1365,6 +1366,12 @@ DOCKER_REGISTRY_CONFIG = settings.get(
 #
 # 默认为空列表，表示不放通任何地址
 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: list[str] = settings.get("SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS", [])
+
+# 若配置了 BK_REPO_URL，自动将其主机地址添加到 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 中，
+# 因为源码包上传场景中， bk-repo 是最常用的可靠来源地址
+if _bk_repo_host := extract_host_from_url(BK_REPO_URL):  # noqa: SIM102
+    if _bk_repo_host not in SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS:
+        SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS.append(_bk_repo_host)
 
 
 # -----------------

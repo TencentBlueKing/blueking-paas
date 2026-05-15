@@ -158,7 +158,6 @@ INSTALLED_APPS = [
     "paasng.accessories.ci",
     "paasng.platform.bkapp_model",
     "paasng.platform.engine",
-    "paasng.platform.engine.streaming",
     "paasng.platform.evaluation",
     "paasng.accessories.publish.market",
     "paasng.accessories.publish.sync_market",
@@ -1362,6 +1361,20 @@ BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
+
+# 源码包上传接口（upload_via_url）的包地址白名单配置
+#
+# 仅当请求携带的源码包地址的主机地址匹配本列表中的任一主机地址时，请求才能正常进行。
+# 配置项中的主机地址可带或不带端口号，不带端口时表示允许该协议的默认端口访问（80/443），仅支持 http/https 协议
+#
+# 举例来说，配置 ["example.com"] 后：
+#   - http://example.com:80/path/to/package：通过（显式指定了默认端口）
+#   - https://example.com/path/to/package：通过（端口省略）
+#   - http://example.com:8080/path/to/package：不通过
+#
+# 默认为空列表，表示不放通任何地址
+SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: list[str] = settings.get("SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS", [])
+
 
 # -----------------
 # 插件开发中心配置项

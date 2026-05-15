@@ -37,7 +37,7 @@ ignore_imports =
 name=the layers for paasng.engine mod
 type=layers
 layers =
-    deploy | streaming
+    deploy
     workflow | processes
     phases_steps
     utils

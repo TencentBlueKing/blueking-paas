@@ -17,11 +17,12 @@
 
 import random
 import re
+import secrets
 import string
 import uuid
 from typing import Collection
 
-UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789"
+UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 
 # From oauthlib.common
@@ -31,10 +32,9 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
     OAuth (1 and 2) does not specify the format of tokens except that they
     should be strings of random characters. Tokens should not be guessable
     and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
+    why secrets.choice is used instead of the default random.choice method.
     """
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
+    return "".join(secrets.choice(chars) for x in range(length))
 
 
 RE_TAG = re.compile("<.*?>")

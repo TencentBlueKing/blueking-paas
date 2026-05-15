@@ -106,7 +106,10 @@ class TestModuleSourcePackageViewSet:
             gen_tar(file_path, contents)
             yield file_path
 
-    def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path):
+    def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path, settings):
+        # Set the allowed hosts otherwise the validation will fail
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+
         bk_module.source_origin = SourceOrigin.BK_LESS_CODE
         bk_module.save()
         url = "/api/bkapps/applications/{code}/modules/{module_name}/source_package/link/".format(

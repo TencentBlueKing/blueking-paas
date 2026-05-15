@@ -35,6 +35,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.bk_plugins.bk_plugins import api_serializers, serializers
 from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
+from paasng.bk_plugins.bk_plugins.constants import EventType
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
@@ -59,7 +60,6 @@ from paasng.platform.engine.logs import get_all_logs
 from paasng.platform.engine.models import ConfigVar, Deployment
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.phases_steps.steps import get_sorted_steps
-from paasng.platform.engine.streaming.constants import EventType
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view

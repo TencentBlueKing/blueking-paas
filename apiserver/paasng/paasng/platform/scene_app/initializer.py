@@ -71,7 +71,7 @@ class SceneAPPInitializer:
             desc_filepath = source_dir / self.tmpl_name / "app_desc.yaml"
             try:
                 with open(desc_filepath, "r") as fr:
-                    meta_info = yaml.full_load(fr.read())
+                    meta_info = yaml.safe_load(fr.read())
             except (IOError, yaml.YAMLError):
                 logger.exception(_("加载应用描述文件失败"))
                 raise DescriptionValidationError(_("应用描述文件不存在或内容不是有效 YAML 格式"))

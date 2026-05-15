@@ -24,7 +24,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
 
 import arrow
-import cattrs
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
@@ -152,7 +151,7 @@ class RemoteServiceObj(ServiceObj):
         # Restore marked i18n dicts from the store to lazy translated strings.
         fields = {k: restore_i18n_string_dict(v) for k, v in fields.items()}
 
-        result = cattrs.structure(fields, cls)
+        result = cls(**fields)
         result._data = service
         result.category_id = service["category"]
         return result

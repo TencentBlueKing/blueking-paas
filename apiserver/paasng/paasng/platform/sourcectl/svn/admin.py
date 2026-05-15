@@ -62,12 +62,13 @@ class BaseSvnAuthClient:
         raise NotImplementedError
 
 
+# FIXME: 该服务数年前已下线，后续确认能否整个删除
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
-    SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
+    SVN_SECRET = ""
     SVN_OPERATE_ERROR_NOTIFIER = settings.ADMIN_USERNAME
     DUMMY = True
     TIMEOUT = 60
-    SSL_VERIFY = False
+    SSL_VERIFY = True
 
     BASE_SVN_ADD_USER = "{admin_url}svn_add/user/"
     BASE_SVN_MOD_COMMON = "{admin_url}svn_mod/common/"

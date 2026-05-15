@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Collector for remote services
-"""
+"""Collector for remote services"""
+
 import logging
 from collections import namedtuple
 from typing import Dict, Generator, List, Optional
@@ -29,7 +29,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient, RemoteSvcConfig
 from paasng.accessories.servicehub.remote.exceptions import FetchRemoteSvcError, RemoteClientError
 from paasng.accessories.servicehub.remote.store import RemoteServiceStore
-from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.i18n.serializers import I18nDictCharField, I18NExtend, i18n
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ class RemoteSvcFetcher:
             except ValidationError as e:
                 logger.exception(f"service data from {self.config} validation failed")
                 raise FetchRemoteSvcError(f"svc json data from {self.config} is invalid: {e}") from e
+            # validated_data 中的国际化字段均为 Dict[str, Any], 可直接被 json.dumps 序列化后存入 Redis
             items.append(serializer.validated_data)
         return items
 
@@ -88,7 +89,7 @@ class MetaInfoSLZ(serializers.Serializer):
 
 class RemoteSpecDefinitionSLZ(serializers.Serializer):
     name = serializers.CharField()
-    display_name = TranslatedCharField()
+    display_name = I18nDictCharField()
     description = serializers.CharField(allow_blank=True)
     recommended_value = serializers.CharField(allow_blank=True, allow_null=True, default=None)
 
@@ -108,11 +109,11 @@ class RemoteServiceSLZ(serializers.Serializer):
 
     category = serializers.IntegerField()
     name = serializers.CharField()
-    display_name = TranslatedCharField()
+    display_name = I18nDictCharField()
     logo = serializers.CharField(allow_blank=True)
-    description = TranslatedCharField(default="", allow_blank=True)
-    long_description = TranslatedCharField(default="", allow_blank=True)
-    instance_tutorial = TranslatedCharField(default="", allow_blank=True)
+    description = I18nDictCharField(default="", allow_blank=True)
+    long_description = I18nDictCharField(default="", allow_blank=True)
+    instance_tutorial = I18nDictCharField(default="", allow_blank=True)
     available_languages = serializers.CharField()
     config = serializers.DictField(required=False, default=dict)
     is_active = serializers.BooleanField(required=False, default=True)
@@ -152,7 +153,7 @@ def fetch_all_remote_services() -> Generator[FetchResult, None, None]:
     try:
         remote_svc_configs = settings.SERVICE_REMOTE_ENDPOINTS
     except AttributeError:
-        raise ImproperlyConfigured("Can't initialize remote services, " "SERVICE_REMOTE_ENDPOINTS is not configured")
+        raise ImproperlyConfigured("Can't initialize remote services, SERVICE_REMOTE_ENDPOINTS is not configured")
     if not isinstance(remote_svc_configs, list):
         raise ImproperlyConfigured("SERVICE_REMOTE_ENDPOINTS must be list type")
 

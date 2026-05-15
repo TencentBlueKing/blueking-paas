@@ -24,7 +24,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import StringArrayField
-from paasng.utils.views import validate_safe_filename
+from paasng.utils.validators import SafeFilenameValidator
 
 from .constants import SourceCodeOriginType
 
@@ -32,12 +32,7 @@ from .constants import SourceCodeOriginType
 class ToolPackageStashInputSLZ(serializers.Serializer):
     """Upload source package SLZ"""
 
-    package = serializers.FileField(help_text="待构建的应用源码包")
-
-    def validate_package(self, package):
-        # 安全校验：拒绝带路径语义的上传文件名，防止路径穿越
-        validate_safe_filename(package.name)
-        return package
+    package = serializers.FileField(help_text="待构建的应用源码包", validators=[SafeFilenameValidator()])
 
 
 class BaseSmartBuildSLZ(serializers.Serializer):

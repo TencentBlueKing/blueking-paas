@@ -23,13 +23,13 @@ from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
+from paasng.utils.validators import SafeFilenameValidator, validate_safe_filename
 from paasng.utils.views import (
     ERROR_CODE_NUM_HEADER,
     BkStandardApiJSONRenderer,
     HookChain,
     one_line_error,
     save_uploaded_file,
-    validate_safe_filename,
 )
 
 
@@ -210,3 +210,56 @@ class TestSaveUploadedFile:
         target = save_uploaded_file(fp, tmp_path)
         assert fp.chunks_called is True
         assert target.read_bytes() == b"hello"
+
+
+class TestSafeFilenameValidator:
+    """SafeFilenameValidator 接收 UploadedFile 对象，从 .name 取文件名并校验安全性"""
+
+    @pytest.mark.parametrize("name", ["package.tar.gz", "a.tgz", "name with space.tar"])
+    def test_valid(self, name):
+        fp = _FakeUploadedFile(name)
+        SafeFilenameValidator()(fp)  # 不应抛出异常
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "",
+            ".",
+            "..",
+            "../evil.tar.gz",
+            "../../evil.tar.gz",
+            "dir/package.tar.gz",
+            "..\\evil.tar.gz",
+            "dir\\package.tar.gz",
+            "/tmp/evil.tar.gz",
+            "/etc/passwd",
+            "C:\\tmp\\evil.tar.gz",
+        ],
+    )
+    def test_invalid(self, name):
+        fp = _FakeUploadedFile(name)
+        with pytest.raises(ValidationError):
+            SafeFilenameValidator()(fp)
+
+    @pytest.mark.parametrize("name", ["package.tar.gz", "my_app-1.0.tgz", "A.zip"])
+    def test_name_pattern_valid(self, name):
+        """带 name_pattern 时，符合正则的文件名应通过校验"""
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message="格式错误")
+        fp = _FakeUploadedFile(name)
+        validator(fp)  # 不应抛出异常
+
+    @pytest.mark.parametrize("name", ["name with space.tar", "包含中文.tar.gz", "file@name.zip"])
+    def test_name_pattern_rejects_disallowed_chars(self, name):
+        """带 name_pattern 时，不符合正则的文件名应被拒绝"""
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message="格式错误")
+        fp = _FakeUploadedFile(name)
+        with pytest.raises(ValidationError):
+            validator(fp)
+
+    def test_name_pattern_error_message(self):
+        """正则不匹配时应返回指定的错误提示信息"""
+        msg = "只能包含字母、数字和半角连接符"
+        validator = SafeFilenameValidator(name_pattern=r"[a-zA-Z0-9\-_.]+", name_pattern_message=msg)
+        fp = _FakeUploadedFile("bad file.tar")
+        with pytest.raises(ValidationError, match=msg):
+            validator(fp)

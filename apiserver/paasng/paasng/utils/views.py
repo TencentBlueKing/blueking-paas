@@ -17,7 +17,7 @@
 
 import functools
 import logging
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
 
 from blue_krill.web.drf_utils import stringify_validation_error
@@ -30,6 +30,8 @@ from rest_framework.negotiation import BaseContentNegotiation
 from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import exception_handler, set_rollback
+
+from paasng.utils.validators import validate_safe_filename
 
 logger = logging.getLogger(__name__)
 
@@ -220,36 +222,6 @@ class BkStandardApiJSONRenderer(JSONRenderer):
         return result
 
 
-def validate_safe_filename(name: str) -> str:
-    """校验上传文件名是否安全，防止路径穿越。
-
-    要求文件名：
-    - 非空字符串；
-    - 不为 ``.`` 或 ``..``；
-    - 不包含 POSIX/Windows 路径分隔符 (``/``、``\\``)；
-    - 不为 POSIX 或 Windows 绝对路径。
-
-    校验失败时抛出 ``rest_framework.exceptions.ValidationError``。
-
-    :param name: 待校验的文件名
-    :return: 校验通过的文件名
-    """
-    if not isinstance(name, str) or not name:
-        raise ValidationError(_("文件名不能为空"))
-
-    if name in {".", ".."}:
-        raise ValidationError(_("文件名非法"))
-
-    if "/" in name or "\\" in name:
-        raise ValidationError(_("文件名不能包含路径分隔符"))
-
-    # 拒绝 POSIX/Windows 绝对路径（如 "/tmp/x"、"C:\\x"）
-    if PurePosixPath(name).is_absolute() or PureWindowsPath(name).is_absolute():
-        raise ValidationError(_("文件名不能为绝对路径"))
-
-    return name
-
-
 # 文件分块写入的缓冲大小（字节）
 _FILE_CHUNK_SIZE = 64 * 1024
 
@@ -284,8 +256,7 @@ def save_uploaded_file(fp, parent_dir: Union[str, Path]) -> Path:
             for chunk in chunks_method():
                 fh.write(chunk)
         else:
-            while True:
-                chunk = fp.read(_FILE_CHUNK_SIZE)
+            while chunk := fp.read(_FILE_CHUNK_SIZE):
                 if not chunk:
                     break
                 fh.write(chunk)

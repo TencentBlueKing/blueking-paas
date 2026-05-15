@@ -32,6 +32,8 @@ from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import exception_handler, set_rollback
 
+from paasng.utils.validators import validate_safe_filename
+
 logger = logging.getLogger(__name__)
 
 
@@ -221,18 +223,45 @@ class BkStandardApiJSONRenderer(JSONRenderer):
         return result
 
 
-def get_filepath(fp, parent_dir: Union[str, Path]) -> Path:
-    """Get uploaded file's local path
+# 文件分块写入的缓冲大小（字节）
+_FILE_CHUNK_SIZE = 64 * 1024
 
-    :param parent_dir: when the fp object only exists in memory, it will be exported to `parent_dir`
+
+def save_uploaded_file(fp, parent_dir: Union[str, Path]) -> Path:
+    """Save uploaded file to local path
+
+    将上传文件对象写入到 ``parent_dir`` 目录内，并返回写入后的目标路径。函数会强制
+    校验上传文件名，并保证目标路径解析后仍位于 ``parent_dir`` 之内，防止路径穿越攻击。
+
+    :param fp: 上传文件对象，需要具有 ``name`` 属性以及 ``read``/``chunks`` 之一
+    :param parent_dir: 目标父目录，文件将写入到此目录内
+    :return: 写入后的目标文件路径
+    :raises TypeError: 上传文件对象不支持读取
+    :raises ValidationError: 文件名非法或目标路径越界
     """
-    parent_path = Path(str(parent_dir))
-    if hasattr(fp, "name") and hasattr(fp, "read"):
-        path = parent_path / fp.name
-        with open(path, "wb") as fh:
-            fh.write(fp.read())
-        return path
-    raise TypeError("Invalid File Type")
+    if not (hasattr(fp, "name") and hasattr(fp, "read")):
+        raise TypeError("Invalid File Type")
+
+    name = validate_safe_filename(getattr(fp, "name", "") or "")
+
+    parent_path = Path(str(parent_dir)).resolve()
+    target = (parent_path / name).resolve()
+    # 兜底校验：解析后的目标路径必须仍位于 parent_path 内
+    if not target.is_relative_to(parent_path):
+        raise ValidationError(_("文件名非法"))
+
+    # 优先使用分块读取以降低大文件内存占用；不支持时退化为固定大小缓冲循环读取
+    chunks_method = getattr(fp, "chunks", None)
+    with open(target, "wb") as fh:
+        if callable(chunks_method):
+            for chunk in chunks_method():
+                fh.write(chunk)
+        else:
+            while chunk := fp.read(_FILE_CHUNK_SIZE):
+                if not chunk:
+                    break
+                fh.write(chunk)
+    return target
 
 
 def unwrap_partial(func):

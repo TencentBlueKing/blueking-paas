@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""A simple SVN client by wrapping svn command line tool
-"""
+"""A simple SVN client by wrapping svn command line tool"""
+
 import contextlib
 import inspect
 import json
@@ -61,13 +61,14 @@ class BaseSvnAuthClient:
         raise NotImplementedError
 
 
+# FIXME: 该服务数年前已下线，后续确认能否整个删除
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
     REGION: str
-    SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
-    SVN_OPERATE_ERROR_NOTIFIER = "admin"
+    SVN_SECRET = ""
+    SVN_OPERATE_ERROR_NOTIFIER = ""
     DUMMY = True
     TIMEOUT = 60
-    SSL_VERIFY = False
+    SSL_VERIFY = True
 
     BASE_SVN_ADD_USER = "{admin_url}svn_add/user/"
     BASE_SVN_MOD_COMMON = "{admin_url}svn_mod/common/"

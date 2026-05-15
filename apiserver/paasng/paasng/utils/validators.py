@@ -25,10 +25,18 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
-from past.builtins import basestring
+from django.utils.translation import gettext as _
 from moby_distribution.registry.utils import parse_image
+from past.builtins import basestring
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from paasng.core.region.models import Region, RegionList, filter_region_by_name
+from paasng.utils.file import path_may_escape
+
+# k8s 广泛使用的命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
+# 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+DNS_SAFE_PATTERN = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+DNS_MAX_LENGTH = 63
 
 RE_APP_CODE = re.compile(r"^[a-z0-9-]{1,16}$")
 RE_APP_SEARCH = re.compile("[\u4300-\u9fa5\\w_\\-\\d]{1,20}")
@@ -142,6 +150,8 @@ def str2bool(value):
 PROC_TYPE_PATTERN = re.compile(r"^[a-z0-9]([-a-z0-9])*$")
 PROC_TYPE_MAX_LENGTH = 12
 
+SUPPORTED_REPO_URL_SCHEMES = {"http", "https", "git", "svn", "ssh"}
+
 
 def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """Validate proc type format
@@ -151,12 +161,10 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """
     for proc_type in procfile:
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(
-                f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
-            )
+            raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize procfile data and return
@@ -191,18 +199,79 @@ def validate_repo_url(repo_url: str):
     :param repo_url: repo url
     :raise: ValueError if repo url is invalid
     """
+    if repo_url.startswith("-"):
+        raise ValueError("Invalid url: repo url can not start with '-'")
+
     try:
         parsed_url = urlparse(repo_url)
     except Exception:
         raise ValueError("Invalid url")
 
-    if not parsed_url.netloc:
-        parsed_url = urlparse(f"https://{repo_url}")
-        if not parsed_url.netloc:
-            raise ValueError("Invalid url")
+    if not parsed_url.scheme or not parsed_url.netloc:
+        raise ValueError("Invalid url")
 
-    if parsed_url.scheme not in ["http", "https", "git", "svn"]:
-        raise ValueError("Invalid url: only support http/https/git/svn scheme")
+    if parsed_url.scheme not in SUPPORTED_REPO_URL_SCHEMES:
+        raise ValueError("Invalid url: only support http/https/git/svn/ssh scheme")
 
-    if parsed_url.port and parsed_url.port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
-        raise ValueError(f"Invalid url: the port number {parsed_url.port} is forbidden")
+    try:
+        port = parsed_url.port
+    except ValueError:
+        raise ValueError("Invalid url")
+
+    if port and port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid url: the port number {port} is forbidden")
+
+
+def validate_safe_filename(name: str) -> str:
+    """校验上传文件名是否安全，防止路径穿越。
+
+    要求文件名：
+    - 非空字符串；
+    - 不为 ``.`` 或 ``..``；
+    - 不包含 POSIX/Windows 路径分隔符 (``/``、``\\``)；
+    - 不为绝对路径，也不会逃逸出根目录。
+
+    校验失败时抛出 ``rest_framework.exceptions.ValidationError``。
+
+    :param name: 待校验的文件名
+    :return: 校验通过的文件名
+    """
+
+    if not isinstance(name, str) or not name:
+        raise DRFValidationError(_("文件名不能为空"))
+
+    if name in {".", ".."}:
+        raise DRFValidationError(_("文件名非法"))
+
+    if "/" in name or "\\" in name:
+        raise DRFValidationError(_("文件名不能包含路径分隔符"))
+
+    # 复用 path_may_escape 检测绝对路径和路径穿越
+    if path_may_escape(name):
+        raise DRFValidationError(_("文件名不能为绝对路径"))
+
+    return name
+
+
+@deconstructible
+class SafeFilenameValidator:
+    """DRF 自定义 FileField Validator，校验上传文件名是否安全。
+
+    用于在 ``FileField(validators=[SafeFilenameValidator()])`` 中声明式挂载，
+    从 ``UploadedFile.name`` 取出文件名后调用 ``validate_safe_filename`` 进行校验。
+
+    :param name_pattern: 可选的文件名正则表达式，用于进一步限制文件名字符集。
+        例如 ``r"[a-zA-Z0-9-_.]+"`` 只允许字母、数字、连接符、下划线和点。
+    :param name_pattern_message: 正则不匹配时的错误提示信息。
+    """
+
+    def __init__(self, name_pattern: str | None = None, name_pattern_message: str = ""):
+        self.name_pattern = name_pattern
+        self.name_pattern_message = name_pattern_message
+
+    def __call__(self, value):
+        name = value.name
+        validate_safe_filename(name)
+
+        if self.name_pattern and not re.fullmatch(self.name_pattern, name):
+            raise DRFValidationError(self.name_pattern_message)

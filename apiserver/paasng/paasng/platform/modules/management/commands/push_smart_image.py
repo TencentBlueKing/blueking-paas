@@ -22,6 +22,7 @@ import shutil
 import tempfile
 from typing import cast
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from paasng.platform.modules.constants import AppImageType
@@ -62,8 +63,30 @@ class Command(BaseCommand):
         )
         parser.add_argument("--base-image-id", dest="base_image_id", default="default", help="dest cnb base image id")
         parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
+        parser.add_argument(
+            "--src-username",
+            dest="src_username",
+            default=settings.SMART_SRC_DOCKER_REGISTRY_USERNAME,
+            help="username for source registry (optional; config SMART_SRC_DOCKER_USERNAME)",
+        )
+        parser.add_argument(
+            "--src-password",
+            dest="src_password",
+            default=settings.SMART_SRC_DOCKER_REGISTRY_PASSWORD,
+            help="password for source registry (optional; config SMART_SRC_DOCKER_PASSWORD)",
+        )
 
-    def handle(self, image: str, type_: str, base_image_id: str, dry_run: bool, *args, **options):
+    def handle(
+        self,
+        image: str,
+        type_: str,
+        base_image_id: str,
+        dry_run: bool,
+        src_username: str | None,
+        src_password: str | None,
+        *args,
+        **options,
+    ):
         if dry_run:
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
@@ -75,7 +98,9 @@ class Command(BaseCommand):
             ref = ImageRef.from_image(
                 from_repo=src_image.name,
                 from_reference=cast("str", src_image.tag),
-                client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
+                client=DockerRegistryV2Client.from_api_endpoint(
+                    APIEndpoint(url=src_image.domain), username=src_username, password=src_password
+                ),
             )
             ref.save(dest=str(image_tarball_path))
         except Exception:

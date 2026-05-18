@@ -49,16 +49,20 @@ class SandboxVolumeMountInputSLZ(serializers.Serializer):
 
     def validate_mount_path(self, value: str) -> str:
         if not value.startswith("/"):
-            raise serializers.ValidationError("mount_path 必须为以 / 开头的绝对路径")
+            raise serializers.ValidationError("mount_path must be an absolute path starting with '/'")
+
         if ".." in value.split("/"):
-            raise serializers.ValidationError("mount_path 不允许包含 '..' 路径段")
+            raise serializers.ValidationError("mount_path must not contain '..' path segments")
+
         # 合并连续斜杠，防止 //proc 等绕过黑名单
         normalized = re.sub(r"/+", "/", value).rstrip("/") or "/"
         if normalized == "/":
-            raise serializers.ValidationError("mount_path 不允许为根目录")
+            raise serializers.ValidationError("mount_path must not be the root directory")
+
         for deny in settings.AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES:
             if normalized == deny or normalized.startswith(deny + "/"):
-                raise serializers.ValidationError(f"mount_path 不允许挂载到系统保留目录：{deny}")
+                raise serializers.ValidationError(f"mount_path must not mount to reserved system directory: {deny}")
+
         return normalized
 
 
@@ -115,21 +119,24 @@ class SandboxCreateInputSLZ(serializers.Serializer):
     def validate_volume_mounts(self, value: list[dict]) -> list[dict]:
         if not value:
             return value
-        # 1) volume_id 不得重复
+        # 1) volume_id must not be duplicated
         volume_ids = [item["volume_id"] for item in value]
         if len(set(str(vid) for vid in volume_ids)) != len(volume_ids):
-            raise serializers.ValidationError("volume_mounts 中 volume_id 不能重复")
-        # 2) mount_path 不得互相相同或彼此为前缀（避免挂载点覆盖）
+            raise serializers.ValidationError("volume_id must not be duplicated in volume_mounts")
+
+        # 2) mount_path must not be the same or be a prefix of another (avoid mount point overlap)
         paths = [item["mount_path"] for item in value]
         if len(set(paths)) != len(paths):
-            raise serializers.ValidationError("volume_mounts 中 mount_path 不能重复")
+            raise serializers.ValidationError("mount_path must not be duplicated in volume_mounts")
+
         sorted_paths = sorted(paths)
         for i, p in enumerate(sorted_paths):
             for q in sorted_paths[i + 1:]:
                 if q.startswith(p.rstrip("/") + "/"):
                     raise serializers.ValidationError(
-                        f"volume_mounts 中 mount_path 不能互为父目录：{p} vs {q}"
+                        f"mount_path must not be nested: {p} vs {q}"
                     )
+
         return value
 
 

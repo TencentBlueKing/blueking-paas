@@ -57,6 +57,7 @@ from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +89,6 @@ def _build_volume_mounts(
             deleted_at__isnull=True,
         )
     }
-
-    from paasng.utils.error_codes import error_codes
 
     result: list[VolumeMount] = []
     for item in raw:

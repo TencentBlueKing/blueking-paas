@@ -28,7 +28,11 @@ from paasng.platform.modules.models import Module
 
 
 def get_or_create_custom_collector_config(
-    module: Module, collector_config: CustomCollectorConfig, log_paths: List[str], log_type: Literal["stdout", "json"]
+    module: Module,
+    collector_config: CustomCollectorConfig,
+    log_paths: List[str],
+    log_type: Literal["stdout", "json"],
+    biz_or_space_id: int | str | None = None,
 ) -> CustomCollectorConfig:
     """调用日志平台的接口, 查询或创建自定义采集项
     :param module: module
@@ -37,15 +41,23 @@ def get_or_create_custom_collector_config(
     :param log_type: 日志类型
     :return: CustomCollectorConfigModel
     """
-    monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+    if biz_or_space_id is None:
+        monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+        biz_or_space_id = monitor_space.iam_resource_id
+
     tenant_id = get_tenant_id_for_app(module.application.code)
     client = make_bk_log_management_client(tenant_id)
     collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
-        biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en
+        biz_or_space_id=biz_or_space_id, collector_config_name_en=collector_config.name_en
     )
     if not collector_config_in_bk_log:
         return update_or_create_custom_collector_config(
-            module, collector_config, log_paths, log_type, skip_query_bk_log=True
+            module,
+            collector_config,
+            log_paths,
+            log_type,
+            skip_query_bk_log=True,
+            biz_or_space_id=biz_or_space_id,
         )
 
     collector_config.id = collector_config_in_bk_log.id
@@ -60,6 +72,7 @@ def get_or_create_custom_collector_config(
             "bk_data_id": collector_config.bk_data_id,
             "log_paths": log_paths,
             "log_type": log_type,
+            "is_builtin": True,
             "tenant_id": module.tenant_id,
         },
     )
@@ -72,6 +85,7 @@ def update_or_create_custom_collector_config(
     log_paths: List[str],
     log_type: Literal["stdout", "json"],
     skip_query_bk_log: bool = False,
+    biz_or_space_id: int | str | None = None,
 ) -> CustomCollectorConfig:
     """调用日志平台的接口, 创建或更新自定义采集项
 
@@ -82,12 +96,15 @@ def update_or_create_custom_collector_config(
     :param skip_query_bk_log: 跳过查询日志平台自定义采集项是否存在, 该参数仅提供给 get_or_create_custom_collector_config 使用.
     :return: CustomCollectorConfigModel
     """
-    monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+    if biz_or_space_id is None:
+        monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+        biz_or_space_id = monitor_space.iam_resource_id
+
     tenant_id = get_tenant_id_for_app(module.application.code)
     client = make_bk_log_management_client(tenant_id)
     if not collector_config.id and not skip_query_bk_log:
         collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
-            biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en
+            biz_or_space_id=biz_or_space_id, collector_config_name_en=collector_config.name_en
         )
         if collector_config_in_bk_log:
             collector_config.id = collector_config_in_bk_log.id
@@ -97,7 +114,9 @@ def update_or_create_custom_collector_config(
     with atomic():
         if not collector_config.id:
             collector_config = client.create_custom_collector_config(
-                biz_or_space_id=monitor_space.iam_resource_id, config=collector_config
+                biz_or_space_id=biz_or_space_id,
+                config=collector_config,
+                ignore_exists=collector_config.is_platform_index,
             )
         else:
             client.update_custom_collector_config(collector_config)

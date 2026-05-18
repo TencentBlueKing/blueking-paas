@@ -240,6 +240,12 @@ class ErrorCodes:
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
 
+    # Agent sandbox volume
+    AGENT_SANDBOX_VOLUME_NOT_FOUND = ErrorCode(_("Volume 不存在"), status_code=404)
+    AGENT_SANDBOX_VOLUME_ALREADY_EXISTS = ErrorCode(_("Volume 已存在"), status_code=409)
+    AGENT_SANDBOX_VOLUME_CREATE_FAILED = ErrorCode(_("Volume 创建失败"))
+    AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"))
+
     CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("生成保留前缀授权码失败"))
     CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("已使用的保留前缀授权码不能被删除"))
 

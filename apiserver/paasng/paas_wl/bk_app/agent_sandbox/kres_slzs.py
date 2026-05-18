@@ -24,6 +24,7 @@ from paas_wl.bk_app.agent_sandbox.constants import (
     DAEMON_BIND_PORT,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
+    SHARED_VOLUME_NAME_IN_POD,
 )
 from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
@@ -88,12 +89,54 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         if obj.workdir:
             main_container["workingDir"] = obj.workdir
 
-        return {
+        # 共享挂载：1 个 CSI inline volume + N 个 volumeMounts（通过 subPath 区分）
+        volumes: list[dict] = []
+        if obj.volume_mounts:
+            volumes.append(
+                {
+                    "name": SHARED_VOLUME_NAME_IN_POD,
+                    "csi": _build_csi_volume_source(),
+                }
+            )
+            main_container["volumeMounts"] = [
+                {
+                    "name": SHARED_VOLUME_NAME_IN_POD,
+                    "mountPath": vm.mount_path,
+                    "subPath": vm.sub_path,
+                    "readOnly": vm.read_only,
+                }
+                for vm in obj.volume_mounts
+            ]
+
+        pod_spec: Dict[str, Any] = {
             "restartPolicy": "Never",
             "terminationGracePeriodSeconds": DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
             "imagePullSecrets": [{"name": IMAGE_CREDENTIAL_NAME}],
             "containers": [main_container],
         }
+        if volumes:
+            pod_spec["volumes"] = volumes
+        return pod_spec
+
+
+def _build_csi_volume_source() -> Dict[str, Any]:
+    """Build the ``csi`` source block for the shared inline volume.
+
+    The driver and volumeAttributes are driven by settings so that future
+    deployments can swap CFS for other RWX-capable CSI drivers (e.g. CephFS,
+    NFS) without code changes. For drivers beyond Tencent Cloud CFS, additional
+    branches can be added here once their volumeAttributes schema is known.
+    """
+    driver = settings.AGENT_SANDBOX_CFS_DRIVER
+    return {
+        "driver": driver,
+        "volumeAttributes": {
+            "fsid": settings.AGENT_SANDBOX_CFS_FSID,
+            "host": settings.AGENT_SANDBOX_CFS_HOST,
+            "path": settings.AGENT_SANDBOX_CFS_PATH,
+            "vers": settings.AGENT_SANDBOX_CFS_VERS,
+        },
+    }
 
 
 class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentSandboxKresApp"]):

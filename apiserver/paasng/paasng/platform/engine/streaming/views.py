@@ -16,19 +16,19 @@
 # to the current version of the project delivered to anyone in the future.
 
 from contextlib import closing
-from typing import List
 
 from blue_krill.redis_tools.messaging import StreamChannelSubscriber
-from django.http import JsonResponse, StreamingHttpResponse
-from django.shortcuts import render
-from django.views.generic import View
+from django.http import StreamingHttpResponse
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.workflow import ServerSendEvent
 from paasng.utils.error_codes import error_codes
 from paasng.utils.rate_limit.constants import UserAction
@@ -38,20 +38,41 @@ from paasng.utils.views import EventStreamRender
 from .serializers import HistoryEventsQuerySLZ, StreamEventSLZ
 
 
-# TODO: Remove this view because it does not have any usage
 class StreamViewSet(ViewSet):
-    renderer_classes = [JSONRenderer, EventStreamRender]
+    """提供一个通用的事件流接口，供构建日志等场景使用。
 
-    def get_subscriber(self, channel_id):
+    INFO: 虽然 streaming 的 API 最开始被设计为通用的底层接口，但目前仅被构建日志所使用，所以这个接口可以被等同
+    于一个获取构建/部署日志的接口。另外，为了安全，本 API 直接针对 channel_id -> Deployment -> App -> Check
+    Permission 的链路做了鉴权，以避免随机碰撞访问。
+    """
+
+    renderer_classes = [JSONRenderer, EventStreamRender]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def get_subscriber(self, request, channel_id):
+        # Do permission check to avoid user viewing logs of others by passing a random channel_id
+        self._check_channel_perm_as_deploy(request, channel_id)
+
         subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
         channel_state = subscriber.get_channel_state()
         if channel_state == "none":
             raise error_codes.CHANNEL_NOT_FOUND
         return subscriber
 
+    def _check_channel_perm_as_deploy(self, request, channel_id):
+        """将 channel_id 作为一个有效的 Deployment ID，并进行权限校验"""
+        try:
+            deployment = Deployment.objects.get(pk=channel_id)
+        except Deployment.DoesNotExist:
+            # 阻挡所有非有效 Deployment 的 channel_id
+            raise error_codes.CANNOT_GET_DEPLOYMENT
+
+        app = deployment.app_environment.module.application
+        self.check_object_permissions(request, app)
+
     @rate_limits_by_user(UserAction.FETCH_DEPLOY_LOG, window_size=60, threshold=10)
     def streaming(self, request, channel_id):
-        subscriber = self.get_subscriber(channel_id)
+        subscriber = self.get_subscriber(request, channel_id)
 
         def resp():
             with closing(subscriber):
@@ -73,25 +94,10 @@ class StreamViewSet(ViewSet):
         slz = HistoryEventsQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
-        subscriber = self.get_subscriber(channel_id)
+        subscriber = self.get_subscriber(request, channel_id)
 
         with closing(subscriber):
             last_event_id = slz.validated_data["last_event_id"]
             events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
 
         return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")
-
-
-class StreamDebuggerView(View):
-    def get(self, request):
-        return render(request, "streaming/debugger.html")
-
-
-class VoidViewset(viewsets.ViewSet):
-    permission_classes: List = []
-
-    def patch_no_content(self, request):
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def patch_with_content(self, request):
-        return JsonResponse(status=status.HTTP_204_NO_CONTENT, data={})

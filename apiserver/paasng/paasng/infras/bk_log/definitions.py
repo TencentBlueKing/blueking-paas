@@ -119,6 +119,36 @@ class PlainCustomCollectorConfig:
 
 
 @define
+class PlatformIndexVisibility:
+    """平台级采集项对其他业务的可见范围
+
+    对应日志平台 create/update 自定义采集项接口的 platform_index_visibility 字段。
+
+    :param type: 可见范围类型。"biz_attr" 按空间标签匹配，"multi_biz" 显式列出业务 ID。
+    :param bk_biz_labels: type="biz_attr" 时使用，形如 {"space_type": ["bksaas"]}
+    :param bk_biz_ids: type="multi_biz" 时使用，显式列出可见业务 ID
+    """
+
+    type: Literal["biz_attr", "multi_biz"]
+    bk_biz_labels: dict[str, list[str]] | None = None
+    bk_biz_ids: list[int] | None = None
+
+
+@define
+class PlatformIndexFilter:
+    """平台级采集项的隔离维度元数据 (对应日志平台 platform_index_filter 字段)
+
+    当前仅作为标记保存, 不参与运行时过滤; PaaS 侧应用级隔离由 ElasticSearchParams.termTemplate 实现。
+
+    :param field: 用于隔离的字段路径，如 "__ext.labels.bkapp_paas_bk_tencent_com_code"
+    :param value_ref: 字段值的语义引用，仅允许 "space_id" 或 "bk_biz_id"
+    """
+
+    field: str
+    value_ref: Literal["space_id", "bk_biz_id"]
+
+
+@define
 class CustomCollectorConfig:
     """自定采集项配置
 
@@ -130,6 +160,10 @@ class CustomCollectorConfig:
     :param storage_config: 日志存储配置
     :param data_link_id: 数据传输链路，不需要可以不填
     :param description: 描述信息
+
+    :param is_platform_index: 是否为平台级采集项（多 SaaS 共享一个 ES 索引）
+    :param platform_index_visibility: 平台级采集项对其他业务的可见范围，仅在 is_platform_index=True 时有效
+    :param platform_index_filter: 平台级采集项的隔离维度元数据（暂无实际功能，仅标记使用）
 
     :param id: 采集项ID
     :param index_set_id: 索引集ID，查询时使用
@@ -144,6 +178,11 @@ class CustomCollectorConfig:
     storage_config: Optional[StorageConfig] = None
     data_link_id: Optional[int] = None
     description: str = ""
+
+    # 平台级采集项字段, 默认关闭, 仅启用 ENABLE_SHARED_BK_LOG_INDEX 时由共享路径设置
+    is_platform_index: bool = False
+    platform_index_visibility: PlatformIndexVisibility | None = None
+    platform_index_filter: PlatformIndexFilter | None = None
 
     # readonly fields
     id: Optional[int] = None

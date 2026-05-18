@@ -60,15 +60,6 @@ class Test__validate_repo_url:
 
     @pytest.mark.parametrize(
         "repo_url",
-        ["http://127.0.0.1:22/bkapps.git", "https://127.0.0.1:23/bkapps.git"],
-    )
-    def test_invalid_port(self, repo_url, settings):
-        settings.FORBIDDEN_REPO_PORTS = [22, 23]
-        with pytest.raises(ValueError, match=r"Invalid url: the port number \d+ is forbidden"):
-            validate_repo_url(repo_url)
-
-    @pytest.mark.parametrize(
-        "repo_url",
         [
             "/www.example.com",
             "//127.0.0.1",
@@ -90,6 +81,43 @@ class Test__validate_repo_url:
         with pytest.raises(ValueError, match="Invalid url: repo url can not start with '-'"):
             validate_repo_url(repo_url)
 
+    def test_allowed_hosts_none_allows_any_host(self, settings):
+        settings.APP_SOURCE_REPO_URL_ALLOWED_HOSTS = None
+        validate_repo_url("http://127.0.0.1:22/bkapps.git")
+
+    def test_empty_allowed_hosts_rejects(self, settings):
+        settings.APP_SOURCE_REPO_URL_ALLOWED_HOSTS = []
+        with pytest.raises(ValueError, match=r"Invalid url: the host 'example.com' is not allowed"):
+            validate_repo_url("https://example.com/bkapps.git")
+
+    @pytest.mark.parametrize(
+        ("allowed_hosts", "repo_url"),
+        [
+            (["example.com"], "https://example.com/bkapps.git"),
+            (["example.com"], "https://example.com:443/bkapps.git"),
+            (["example.com:8443"], "https://example.com:8443/bkapps.git"),
+            (["example.com"], "git://example.com/bkapps.git"),
+            (["example.com:2222"], "ssh://git@example.com:2222/org/repo.git"),
+            (["example.com"], "svn://example.com/bkapps"),
+        ],
+    )
+    def test_allowed_hosts_passes(self, allowed_hosts, repo_url, settings):
+        settings.APP_SOURCE_REPO_URL_ALLOWED_HOSTS = allowed_hosts
+        validate_repo_url(repo_url)
+
+    @pytest.mark.parametrize(
+        ("allowed_hosts", "repo_url"),
+        [
+            (["example.com"], "https://example.com:8443/bkapps.git"),
+            (["example.com:8443"], "https://example.com/bkapps.git"),
+            (["example.com"], "https://evil.com/bkapps.git"),
+        ],
+    )
+    def test_allowed_hosts_rejects_mismatch(self, allowed_hosts, repo_url, settings):
+        settings.APP_SOURCE_REPO_URL_ALLOWED_HOSTS = allowed_hosts
+        with pytest.raises(ValueError, match=r"Invalid url: the host '.+' is not allowed"):
+            validate_repo_url(repo_url)
+
     @pytest.mark.parametrize(
         "repo_url",
         [
@@ -106,14 +134,43 @@ class Test__validate_repo_url:
 
 
 class Test__validate_image_repo:
+    def test_allowed_hosts_none_allows_any_host(self, settings):
+        settings.APP_IMAGE_REPO_URL_ALLOWED_HOSTS = None
+        validate_image_repo("mirror.tencent.com:22/bkpaas")
+
+    def test_empty_allowed_hosts_rejects(self, settings):
+        settings.APP_IMAGE_REPO_URL_ALLOWED_HOSTS = []
+        with pytest.raises(ValueError, match=r"Invalid image repo: the host 'mirror.tencent.com' is not allowed"):
+            validate_image_repo("mirror.tencent.com/bkpaas")
+
     @pytest.mark.parametrize(
-        "image_repo",
-        ["mirror.tencent.com:22/bkpaas", "mirror.tencent.com:23/bkapps"],
+        ("allowed_hosts", "image_repo"),
+        [
+            (["mirror.tencent.com"], "mirror.tencent.com/bkapps"),
+            (["mirror.tencent.com:443"], "mirror.tencent.com:443/bkapps"),
+            (["docker.io"], "nginx"),
+        ],
     )
-    def test_invalid_port(self, image_repo, settings):
-        settings.FORBIDDEN_REPO_PORTS = [22, 23]
-        with pytest.raises(ValueError, match=r"Invalid image repo: the port number \d+ is forbidden"):
+    def test_allowed_hosts_passes(self, allowed_hosts, image_repo, settings):
+        settings.APP_IMAGE_REPO_URL_ALLOWED_HOSTS = allowed_hosts
+        validate_image_repo(image_repo)
+
+    @pytest.mark.parametrize(
+        ("allowed_hosts", "image_repo"),
+        [
+            (["mirror.tencent.com"], "mirror.tencent.com:443/bkapps"),
+            (["mirror.tencent.com:443"], "mirror.tencent.com/bkapps"),
+            (["mirror.tencent.com"], "nginx"),
+        ],
+    )
+    def test_allowed_hosts_rejects_mismatch(self, allowed_hosts, image_repo, settings):
+        settings.APP_IMAGE_REPO_URL_ALLOWED_HOSTS = allowed_hosts
+        with pytest.raises(ValueError, match=r"Invalid image repo: the host '.+' is not allowed"):
             validate_image_repo(image_repo)
+
+    def test_invalid_port(self):
+        with pytest.raises(ValueError, match="Invalid image repo"):
+            validate_image_repo("mirror.tencent.com:bad/bkapps")
 
     @pytest.mark.parametrize(
         "image_repo",

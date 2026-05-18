@@ -1381,6 +1381,26 @@ if _bk_repo_host := extract_host_from_url(BK_REPO_URL):  # noqa: SIM102
     if _bk_repo_host not in SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS:
         SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS.append(_bk_repo_host)
 
+# 应用镜像仓库地址白名单配置。
+#
+# 应用模块使用镜像仓库地址时，仅允许使用主机匹配本列表任一条目的地址。
+# 配置项中的主机地址可带或不带端口号；镜像仓库地址不包含协议，因此带端口时必须与白名单条目精确匹配。
+# 未显式填写 registry 主机的镜像地址（如 nginx）会按 docker.io 处理；如需允许此类短镜像名，请配置 docker.io。
+#
+# 默认值为 None，与 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 不同，表示不限制主机，允许用户配置任意地址。
+# 配置为空列表 [] 时，表示不放通任何地址。
+APP_IMAGE_REPO_URL_ALLOWED_HOSTS: list[str] | None = settings.get("APP_IMAGE_REPO_URL_ALLOWED_HOSTS", None)
+
+# 应用普通源码仓库地址白名单配置。
+#
+# 应用模块使用普通源码仓库地址时，仅允许使用主机匹配本列表任一条目的地址。
+# 配置项中的主机地址可带或不带端口号，不带端口时表示允许该协议的默认端口访问，
+# 支持 http/https/git/svn/ssh 协议。
+#
+# 默认值为 None，与 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 不同，表示不限制主机，允许用户配置任意地址。
+# 配置为空列表 [] 时，表示不放通任何地址。
+APP_SOURCE_REPO_URL_ALLOWED_HOSTS: list[str] | None = settings.get("APP_SOURCE_REPO_URL_ALLOWED_HOSTS", None)
+
 
 # -----------------
 # 插件开发中心配置项
@@ -1631,9 +1651,6 @@ AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/dae
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限
 FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", True)
-
-# FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
-FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
 
 # 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)

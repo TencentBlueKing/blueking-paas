@@ -15,15 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from urllib.parse import urlparse
-
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.sourcectl.source_types import docker_registry_config
-
-_ALLOWED_SCHEMES = {"http", "https"}
-_DEFAULT_PORT_BY_SCHEME = {"http": 80, "https": 443}
+from paasng.utils.validators import UnsupportedURLScheme, match_allowed_hosts, parse_url_host
 
 
 def validate_image_url(url: str) -> str:
@@ -54,27 +50,12 @@ def validate_download_url(url: str) -> None:
         raise ValidationError("源码包 URL 上传功能未开启，请联系管理员")
 
     try:
-        parsed = urlparse(url)
+        host_info = parse_url_host(url, ("http", "https"))
+    except UnsupportedURLScheme as e:
+        raise ValidationError(f"不允许的协议 '{e.scheme}'，仅支持 http 和 https")
     except ValueError:
         raise ValidationError("URL 格式不合法")
 
-    scheme, hostname, port = parsed.scheme.lower(), parsed.hostname, parsed.port
-    if scheme not in _ALLOWED_SCHEMES:
-        raise ValidationError(f"不允许的协议 '{scheme}'，仅支持 http 和 https")
-    if not hostname:
-        raise ValidationError("URL 必须包含有效的主机名")
-
-    # Always check 2 forms of host: with and without port number, this can avoid bypassing
-    # whitelist by omitting standard ports.
-    default_port = _DEFAULT_PORT_BY_SCHEME.get(scheme)
-    if port:
-        to_check_hosts = [f"{hostname}:{port}"]
-        if port == default_port:
-            to_check_hosts.append(hostname)
-    else:
-        to_check_hosts = [hostname, f"{hostname}:{default_port}"]
-
     # 校验主机名
-    allowed_hosts_lower = [h.lower() for h in allowed_hosts]
-    if not any(n.lower() in allowed_hosts_lower for n in to_check_hosts):
-        raise ValidationError(f"主机 '{hostname}' 不在允许的白名单中")
+    if not match_allowed_hosts(host_info.hostname, host_info.port, allowed_hosts, scheme=host_info.scheme):
+        raise ValidationError(f"主机 '{host_info.hostname}' 不在允许的白名单中")

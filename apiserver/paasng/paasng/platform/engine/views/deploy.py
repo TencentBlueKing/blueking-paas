@@ -177,7 +177,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         version_name = params["version_name"]
 
         if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision="")
+            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision=version_name)
 
         if build is not None:
             # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo

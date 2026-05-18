@@ -15,30 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.apps import AppConfig
 
 
-class ETLType(StrStructuredEnum):
-    DELIMITER = EnumField("bk_log_delimiter")
-    REGEXP = EnumField("bk_log_regexp")
-    JSON = EnumField("bk_log_json")
-    TEXT = EnumField("bk_log_text")
-
-
-class FieldType(StrStructuredEnum):
-    INT = EnumField("int")
-    LONG = EnumField("long")
-    DOUBLE = EnumField("double")
-    STRING = EnumField("string")
-    OBJECT = EnumField("object")
-    NESTED = EnumField("nested")
-
-
-class BkLogType(StrStructuredEnum):
-    JSON = EnumField("json")
-    STDOUT = EnumField("stdout")
-
-
-# SaaS 共享 bklog 平台的索引名
-SHARED_INDEX_NAME_JSON_TEMPLATE = "bkpaas_platform_log_json"
-SHARED_INDEX_NAME_STDOUT_TEMPLATE = "bkpaas_platform_log_stdout"
+class StreamingConfig(AppConfig):
+    name = "paasng.platform.engine.streaming"

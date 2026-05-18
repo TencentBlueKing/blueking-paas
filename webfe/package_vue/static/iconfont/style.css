@@ -1,11 +1,11 @@
 @font-face {
 	font-family: "paasng";
-	src: url("fonts/iconcool.eot?#iefix") format("embedded-opentype"),
-		url("fonts/iconcool.woff") format("woff"),
-		url("fonts/iconcool.ttf") format("truetype"),
-		url("fonts/iconcool.svg#iconcool") format("svg");
-	font-weight: normal;
-	font-style: normal;
+	src: url("fonts/iconcool.svg#iconcool") format("svg"),
+url("fonts/iconcool.ttf") format("truetype"),
+url("fonts/iconcool.woff") format("woff"),
+url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
+    font-weight: normal;
+    font-style: normal;
 }
 
 .paasng-icon {
@@ -1108,6 +1108,9 @@
 }
 .paasng-caozuojilu:before {
 	content: "\e285";
+}
+.paasng-kelong:before {
+	content: "\e2a4";
 }
 .paasng-daimaku:before {
 	content: "\e289";

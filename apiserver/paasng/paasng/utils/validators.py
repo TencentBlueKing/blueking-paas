@@ -17,7 +17,7 @@
 
 import base64
 import re
-from typing import Dict
+from typing import Collection, Dict, Mapping, NamedTuple, Sequence
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -124,7 +124,106 @@ def str2bool(value):
 PROC_TYPE_PATTERN = re.compile(r"^[a-z0-9]([-a-z0-9])*$")
 PROC_TYPE_MAX_LENGTH = 12
 
-SUPPORTED_REPO_URL_SCHEMES = {"http", "https", "git", "svn", "ssh"}
+# match_allowed_hosts() 依赖此映射，将省略端口与显式默认端口视为同一个主机。
+# validate_download_url() 与 validate_repo_url() 在校验带协议 URL 的主机白名单时会使用该行为。
+DEFAULT_PORT_BY_SCHEME = {"http": 80, "https": 443, "git": 9418, "svn": 3690, "ssh": 22}
+SUPPORTED_REPO_URL_SCHEMES = ("http", "https", "git", "svn", "ssh")
+
+
+class URLHostInfo(NamedTuple):
+    scheme: str
+    hostname: str
+    port: int | None
+
+
+class UnsupportedURLScheme(ValueError):
+    """URL 使用了不允许的协议。"""
+
+    def __init__(self, scheme: str, allowed_schemes: Collection[str]):
+        self.scheme = scheme
+        self.allowed_schemes = tuple(allowed_schemes)
+        super().__init__(f"Invalid url: only support {'/'.join(self.allowed_schemes)} scheme")
+
+
+def parse_url_host(url: str, allowed_schemes: Collection[str]) -> URLHostInfo:
+    """解析 URL 并返回标准化后的主机信息。
+
+    该函数为白名单校验集中处理 URL 主机解析与基础格式校验。若调用方直接使用
+    ``urlparse()``，还需要在各处重复检查协议、主机、协议是否允许，以及端口是否
+    为合法整数。将这些规则收敛到这里，可以避免不同校验函数之间的行为漂移。
+    """
+    try:
+        parsed_url = urlparse(url)
+    except Exception:  # noqa: BLE001
+        raise ValueError("Invalid url")
+
+    scheme, hostname = parsed_url.scheme.lower(), parsed_url.hostname
+    if not scheme or not hostname:
+        raise ValueError("Invalid url")
+
+    if scheme not in allowed_schemes:
+        raise UnsupportedURLScheme(scheme=scheme, allowed_schemes=allowed_schemes)
+
+    try:
+        port = parsed_url.port
+    except ValueError:
+        raise ValueError("Invalid url")
+
+    return URLHostInfo(scheme=scheme, hostname=hostname, port=port)
+
+
+def parse_domain_host(domain: str) -> URLHostInfo:
+    """从不包含协议的域名字符串中解析主机信息。"""
+    parsed_domain = urlparse(f"//{domain}")
+    hostname = parsed_domain.hostname
+    if not hostname:
+        raise ValueError("Invalid host")
+
+    try:
+        port = parsed_domain.port
+    except ValueError:
+        raise ValueError("Invalid host")
+
+    return URLHostInfo(scheme="", hostname=hostname, port=port)
+
+
+def match_allowed_hosts(
+    hostname: str,
+    port: int | None,
+    allowed_hosts: Sequence[str] | None,
+    scheme: str = "",
+    default_port_by_scheme: Mapping[str, int] | None = None,
+) -> bool:
+    """检查主机与可选端口是否命中白名单。
+
+    ``allowed_hosts`` 为 None 时表示不限制主机；空列表表示不放通任何主机。
+
+    :param hostname: 已解析的主机名，不包含端口。
+    :param port: 已解析的端口。``None`` 表示 URL 或域名中省略了端口。
+    :param allowed_hosts: 主机白名单条目，可包含端口。``None`` 表示允许任意主机。
+    :param scheme: URL 协议，用于查询默认端口；不含协议的域名场景保持为空字符串。
+    :param default_port_by_scheme: 可选的协议到默认端口映射，供自定义协议场景覆盖。
+    :return: 主机是否命中白名单。
+    """
+    if allowed_hosts is None:
+        return True
+    if not allowed_hosts:
+        return False
+
+    default_port_by_scheme = default_port_by_scheme or DEFAULT_PORT_BY_SCHEME
+    default_port = default_port_by_scheme.get(scheme)
+
+    if port:
+        to_check_hosts = [f"{hostname}:{port}"]
+        if port == default_port:
+            to_check_hosts.append(hostname)
+    else:
+        to_check_hosts = [hostname]
+        if default_port:
+            to_check_hosts.append(f"{hostname}:{default_port}")
+
+    allowed_hosts_lower = [h.lower() for h in allowed_hosts]
+    return any(host.lower() in allowed_hosts_lower for host in to_check_hosts)
 
 
 def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
@@ -146,54 +245,36 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
 
 
 def validate_image_repo(image_repo: str):
-    """Validate image repo port security.
+    """校验镜像仓库地址的主机。
 
-    :param image_repo: image repo
-    :raise: ValueError if image repo is invalid
+    :param image_repo: 镜像仓库地址
+    :raise: ValueError: 当镜像仓库地址不合法时抛出
     """
     repo_domain = parse_image(image_repo, default_registry="docker.io").domain
-
-    if ":" not in repo_domain:
-        return
-
-    repo_port = repo_domain.rsplit(":")[-1]
-
     try:
-        port = int(repo_port)
+        host_info = parse_domain_host(repo_domain)
     except ValueError:
-        raise ValueError(f"Invalid image repo: the port {repo_port} is not an integer")
+        raise ValueError("Invalid image repo")
+    allowed_hosts = getattr(settings, "APP_IMAGE_REPO_URL_ALLOWED_HOSTS", None)
 
-    if port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
-        raise ValueError(f"Invalid image repo: the port number {port} is forbidden")
+    if not match_allowed_hosts(host_info.hostname, host_info.port, allowed_hosts):
+        raise ValueError(f"Invalid image repo: the host '{host_info.hostname}' is not allowed")
 
 
 def validate_repo_url(repo_url: str):
-    """Validate repo url format, protocol, and port security.
+    """校验源码仓库 URL 的格式、协议与主机。
 
-    :param repo_url: repo url
-    :raise: ValueError if repo url is invalid
+    :param repo_url: 源码仓库 URL
+    :raise: ValueError: 当源码仓库 URL 不合法时抛出
     """
     if repo_url.startswith("-"):
         raise ValueError("Invalid url: repo url can not start with '-'")
 
-    try:
-        parsed_url = urlparse(repo_url)
-    except Exception:  # noqa: BLE001
-        raise ValueError("Invalid url")
+    host_info = parse_url_host(repo_url, SUPPORTED_REPO_URL_SCHEMES)
 
-    if not parsed_url.scheme or not parsed_url.netloc:
-        raise ValueError("Invalid url")
-
-    if parsed_url.scheme not in SUPPORTED_REPO_URL_SCHEMES:
-        raise ValueError("Invalid url: only support http/https/git/svn/ssh scheme")
-
-    try:
-        port = parsed_url.port
-    except ValueError:
-        raise ValueError("Invalid url")
-
-    if port and port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
-        raise ValueError(f"Invalid url: the port number {port} is forbidden")
+    allowed_hosts = getattr(settings, "APP_SOURCE_REPO_URL_ALLOWED_HOSTS", None)
+    if not match_allowed_hosts(host_info.hostname, host_info.port, allowed_hosts, scheme=host_info.scheme):
+        raise ValueError(f"Invalid url: the host '{host_info.hostname}' is not allowed")
 
 
 def validate_safe_filename(name: str) -> str:

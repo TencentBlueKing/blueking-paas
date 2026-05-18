@@ -423,6 +423,26 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 # 注：若配置了 BK_REPO_URL，其主机地址会被自动添加到该列表中，无需手动重复配置
 # SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: []
 
+## 应用镜像仓库地址白名单配置
+#
+# 应用模块使用镜像仓库地址时，仅允许使用主机匹配本列表任一条目的地址。
+# 配置项中的主机地址可带或不带端口号；镜像仓库地址不包含协议，因此带端口时必须与白名单条目精确匹配。
+# 未显式填写 registry 主机的镜像地址（如 nginx）会按 docker.io 处理；如需允许此类短镜像名，请配置 docker.io。
+#
+# 默认值为 None，与 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 不同，表示不限制主机，允许用户配置任意地址。
+# 配置为空列表 [] 时，表示不放通任何地址。
+# APP_IMAGE_REPO_URL_ALLOWED_HOSTS: null
+
+## 应用普通源码仓库地址白名单配置
+#
+# 应用模块使用普通源码仓库地址时，仅允许使用主机匹配本列表任一条目的地址。
+# 配置项中的主机地址可带或不带端口号，不带端口时表示允许该协议的默认端口访问，
+# 支持 http/https/git/svn/ssh 协议。
+#
+# 默认值为 None，与 SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS 不同，表示不限制主机，允许用户配置任意地址。
+# 配置为空列表 [] 时，表示不放通任何地址。
+# APP_SOURCE_REPO_URL_ALLOWED_HOSTS: null
+
 ## ------------------------------------ 引擎相关配置项 ------------------------------------
 
 # 用于服务间鉴权的 JWT key，该配置可替代 PAAS_SERVICE_JWT_CLIENTS
@@ -1024,11 +1044,6 @@ DEV_SANDBOX_CLUSTER: ""
 #         - bkmonitor-api
 #         - example-auth-token
 #       host: http://bkmonitor-query.example.com
-
-## ------------------------------------ 安全配置 ------------------------------------
-
-# FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
-FORBIDDEN_REPO_PORTS = [21, 22, 23]
 
 ## ------------------------------------ 前端加密传输配置 ------------------------------------
 

@@ -35,6 +35,7 @@ from paasng.platform.sourcectl.exceptions import (
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.archive import safe_extract_zip
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
@@ -144,7 +145,7 @@ class BinaryTarClient(BasePackageClient):
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
-                ["/bin/tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), filename],
+                ["/bin/tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), "--", filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
@@ -174,8 +175,6 @@ class BinaryTarClient(BasePackageClient):
         :param working_dir: working directory
         :raise ReadLinkFileOutsideDirectoryError: Raised if unexpected errors occur.
         """
-        uncompress_directory(source_path=self.filepath, target_path=local_path)
-
         # Use the "data_filter" from tarfile to check the security of symbolic links.
         # We use this approach because it appears to be the easiest method. Other methods,
         # such as calling the "tar -tvf" command to list the members and check them individually,
@@ -190,6 +189,8 @@ class BinaryTarClient(BasePackageClient):
                     tarfile.LinkOutsideDestinationError,  # type: ignore
                 ) as e:
                     raise ReadLinkFileOutsideDirectoryError(str(e))
+
+        uncompress_directory(source_path=self.filepath, target_path=local_path)
 
     def close(self):
         """Nothing need to close."""
@@ -269,11 +270,9 @@ class ZipClient(BasePackageClient):
         return self.zip_.read(info)
 
     def export(self, local_path: str):
-        self.zip_.extractall(local_path)  # noqa: S202
-
-        # About symbolic links security check, the zip file module does not support symbolic links
-        # at this moment so no extra checking is needed.
-        # See https://bugs.python.org/issue37921 for more details
+        # 使用 safe_extract_zip 来解压 zip 包, 以防止 Zip Slip 漏洞,
+        # safe_extract_zip 会对每个 zip 成员进行路径校验, 如果发现不安全的成员路径会抛出 UnsafeArchiveError 异常
+        safe_extract_zip(self.zip_, local_path)
 
     def close(self):
         self.zip_.close()

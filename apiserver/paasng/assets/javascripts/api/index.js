@@ -165,7 +165,7 @@ async function getPromise (method, url, data, userConfig = {}) {
         } catch (httpError) {
             // http status 错误
             // 避免 cancel request 时出现 error message
-            if (httpError && httpError.message && httpError.message.type === 'cancel') {
+            if (axios.isCancel(httpError)) {
                 return
             }
             Object.assign(config, httpError.config)
@@ -315,18 +315,15 @@ function initConfig (method, url, userConfig) {
 }
 
 /**
- * 生成 http 请求的 cancelToken，用于取消尚未完成的请求
+ * 生成 http 请求的 AbortController，用于取消尚未完成的请求
  *
- * @return {Object} {cancelToken: axios 实例使用的 cancelToken, cancelExcutor: 取消http请求的可执行函数}
+ * @return {Object} {signal: AbortSignal, cancelExcutor: 取消http请求的可执行函数}
  */
 function getCancelToken () {
-    let cancelExcutor
-    const cancelToken = new axios.CancelToken(excutor => {
-        cancelExcutor = excutor
-    })
+    const controller = new AbortController()
     return {
-        cancelToken,
-        cancelExcutor
+        signal: controller.signal,
+        cancelExcutor: () => controller.abort()
     }
 }
 

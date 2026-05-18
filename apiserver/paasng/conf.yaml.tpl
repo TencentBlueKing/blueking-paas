@@ -408,6 +408,20 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 #   DEFAULT_REGISTRY: https://hub.docker.com
 #   ALLOW_THIRD_PARTY_REGISTRY: false
 
+## 源码包上传接口（upload_via_url）的包地址白名单配置
+#
+# 仅当请求携带的源码包地址的主机地址匹配本列表中的任一主机地址时，请求才能正常进行。
+# 配置项中的主机地址可带或不带端口号，不带端口时表示允许该协议的默认端口访问（80/443），仅支持 http/https 协议
+#
+# 举例来说，配置 ["example.com"] 后：
+#   - http://example.com:80/path/to/package：通过（显式指定了默认端口）
+#   - https://example.com/path/to/package：通过（端口省略）
+#   - http://example.com:8080/path/to/package：不通过
+#
+# 默认为空列表，表示不放通任何地址
+# 
+# 注：若配置了 BK_REPO_URL，其主机地址会被自动添加到该列表中，无需手动重复配置
+# SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS: []
 
 ## ------------------------------------ 引擎相关配置项 ------------------------------------
 
@@ -642,10 +656,10 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ## 可以通过 SMART_CNB_IMAGE_CONF 来配置多个基础镜像。 未显式设置 default 时, 平台会使用默认配置
 # SMART_CNB_IMAGE_CONF:
 #   default:
-#     name: bkpaas/run-heroku-bionic
+#     name: bkpaas/docker/run-heroku-bionic
 #     tag: v1.0.2
 #   ts4:
-#     name: bkpaas/run-ts4
+#     name: bkpaas/docker/run-ts4
 #     tag: v1.0.2
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------

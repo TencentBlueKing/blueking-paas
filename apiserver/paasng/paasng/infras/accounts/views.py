@@ -31,7 +31,6 @@ from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts import serializers
 from paasng.infras.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
-from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.infras.accounts.oauth.exceptions import BKAppOauthError
 from paasng.infras.accounts.oauth.utils import get_available_backends, get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -147,18 +146,6 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
-
-    def fetch_paasv3cli_token(self, request):
-        """获取代表 paasv3cli 和用户身份的 AccessToken, 暂不考虑 refresh token"""
-        backend = get_bkapp_oauth_backend_cls().from_paasv3cli()
-        try:
-            return Response(
-                data=backend.fetch_token(
-                    username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
-                )
-            )
-        except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
 
     def fetch_app_token(self, request, app_code: str, env_name: str):
         """获取代表指定应用和用户身份的 AccessToken"""

@@ -59,7 +59,8 @@ def init_tenant_log_config(apps, schema_editor):
     tenant_log_config = apps.get_model("log", "TenantLogConfig")
     storage_cluster_id = BKLOG_CONFIG.get("STORAGE_CLUSTER_ID")
 
-    if storage_cluster_id is None:
+    # 未配置或环境变量为空字符串时跳过，避免写入 IntegerField 失败
+    if storage_cluster_id in (None, ""):
         return
 
     tenant_log_config.objects.get_or_create(

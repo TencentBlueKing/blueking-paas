@@ -20,6 +20,8 @@ from pathlib import PurePosixPath
 
 from django.conf import settings
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -37,6 +39,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxServiceNotReady,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
+from paasng.platform.agent_sandbox.models import Volume
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.sandbox import (
     create_sandbox,
@@ -56,12 +59,68 @@ from paasng.platform.agent_sandbox.serializers import (
     SandboxGetLogsOutputSLZ,
     SandboxProcessOutputSLZ,
     SandboxUploadFileInputSLZ,
+    VolumeCreateInputSLZ,
+    VolumeOutputSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
+
+
+class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """Volume 共享存储卷相关接口"""
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=VolumeCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: VolumeOutputSLZ()},
+    )
+    def create(self, request, code):
+        """创建共享存储卷。"""
+        application = self.get_application()
+        slz = VolumeCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        if Volume.objects.filter(application=application, name=data["name"], deleted_at__isnull=True).exists():
+            raise error_codes.AGENT_SANDBOX_VOLUME_ALREADY_EXISTS
+
+        try:
+            volume = Volume.objects.create(
+                application=application,
+                name=data["name"],
+                display_name=data.get("display_name", ""),
+                tenant_id=application.tenant_id,
+            )
+        except Exception:
+            logger.exception("Failed to create volume for app %s", application.code)
+            raise error_codes.AGENT_SANDBOX_VOLUME_CREATE_FAILED
+        return Response(VolumeOutputSLZ(volume).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def destroy(self, request, code, volume_id):
+        """软删除共享存储卷。"""
+        application = self.get_application()
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        # TODO: 检查是否有沙箱正在使用该 Volume，有则阻止删除
+        # TODO: CFS 数据清理流程
+        volume.deleted_at = timezone.now()
+        volume.save(update_fields=["deleted_at", "updated"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        responses={status.HTTP_200_OK: VolumeOutputSLZ(many=True)},
+    )
+    def list(self, request, code):
+        """查询应用的可用共享存储卷列表。"""
+        application = self.get_application()
+        volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
+        return Response(VolumeOutputSLZ(volumes, many=True).data)
 
 
 class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):
@@ -91,6 +150,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
                 snapshot_entrypoint=data.get("snapshot_entrypoint"),
                 workspace=data.get("workspace"),
                 ttl_seconds=data["ttl_seconds"],
+                volume_mounts=data.get("volume_mounts"),
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS

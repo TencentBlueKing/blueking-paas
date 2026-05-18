@@ -15,16 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import uuid
 from contextlib import suppress
 from typing import Iterator
 from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
 from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxError
-from paasng.platform.agent_sandbox.models import Sandbox
-from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager, create_sandbox, delete_sandbox
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.sandbox import (
+    AgentSandboxResManager,
+    _build_volume_mounts,
+    create_sandbox,
+    delete_sandbox,
+)
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -89,6 +96,30 @@ class TestCreateSandbox:
         assert sandbox.snapshot == "custom-image:latest"
         assert sandbox.snapshot_entrypoint == ["python", "-m", "http.server"]
 
+    def test_create_with_multiple_volume_mounts(self, bk_app, bk_user, settings, mock_sandbox_provision):
+        """Test sandbox creation with multiple volume mounts."""
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        vol1 = Volume.objects.create(application=bk_app, name="vol-a", tenant_id=bk_app.tenant_id)
+        vol2 = Volume.objects.create(application=bk_app, name="vol-b", tenant_id=bk_app.tenant_id)
+        mounts_input = [
+            {"volume_id": str(vol1.uuid), "mount_path": "/workspace/data"},
+            {"volume_id": str(vol2.uuid), "mount_path": "/workspace/models"},
+        ]
+
+        sandbox = create_sandbox(
+            application=bk_app,
+            creator=bk_user.pk,
+            name="multi-volumes",
+            volume_mounts=mounts_input,
+        )
+
+        sandbox.refresh_from_db()
+        assert sandbox.status == SandboxStatus.RUNNING.value
+        assert len(sandbox.volume_mounts) == 2
+        assert sandbox.volume_mounts[0]["volume_id"] == str(vol1.uuid)
+        assert sandbox.volume_mounts[1]["volume_id"] == str(vol2.uuid)
+
 
 # TODO: 利用实际的集群资源来测试沙箱的删除
 class TestDeleteSandbox:
@@ -125,3 +156,80 @@ class TestDeleteSandbox:
         sandbox.refresh_from_db()
         assert sandbox.status == SandboxStatus.ERR_DELETING.value
         assert sandbox.deleted_at is None
+
+
+class TestBuildVolumeMounts:
+    """Unit tests for _build_shared_volume_mounts with Volume DB lookup."""
+
+    def test_looks_up_volume_and_builds_mount(self, bk_app, settings):
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        volume = Volume.objects.create(
+            application=bk_app,
+            name="test-vol",
+            tenant_id=bk_app.tenant_id,
+        )
+
+        result = _build_volume_mounts(
+            bk_app,
+            [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
+        )
+        assert len(result) == 1
+        mount = result[0]
+        assert mount.volume_id == str(volume.uuid)
+        assert mount.mount_path == "/workspace/shared"
+        assert mount.sub_path == f"app/{volume.uuid.hex}"
+        assert mount.read_only is False
+
+    def test_raises_when_volume_not_found(self, bk_app, settings):
+        from paasng.utils.error_codes import error_codes
+
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        fake_uuid = uuid.uuid4()
+        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
+            _build_volume_mounts(
+                bk_app,
+                [{"volume_id": fake_uuid, "mount_path": "/workspace/shared"}],
+            )
+
+    def test_skips_soft_deleted_volumes(self, bk_app, settings):
+        from django.utils import timezone
+
+        from paasng.utils.error_codes import error_codes
+
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        volume = Volume.objects.create(
+            application=bk_app,
+            name="deleted-vol",
+            tenant_id=bk_app.tenant_id,
+            deleted_at=timezone.now(),
+        )
+
+        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
+            _build_volume_mounts(
+                bk_app,
+                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
+            )
+
+    def test_multiple_volumes_preserve_order(self, bk_app, settings):
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        vol1 = Volume.objects.create(
+            application=bk_app, name="vol-1", tenant_id=bk_app.tenant_id
+        )
+        vol2 = Volume.objects.create(
+            application=bk_app, name="vol-2", tenant_id=bk_app.tenant_id
+        )
+
+        result = _build_volume_mounts(
+            bk_app,
+            [
+                {"volume_id": vol2.uuid, "mount_path": "/opt/data"},
+                {"volume_id": vol1.uuid, "mount_path": "/workspace/shared"},
+            ],
+        )
+        assert len(result) == 2
+        assert result[0].volume_id == str(vol2.uuid)
+        assert result[1].volume_id == str(vol1.uuid)

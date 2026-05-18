@@ -1608,6 +1608,9 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "exec_in_agent_sandbox",
         "upload_to_agent_sandbox",
         "download_from_agent_sandbox",
+        "create_agent_sandbox_volume",
+        "delete_agent_sandbox_volume",
+        "list_agent_sandbox_volumes"
     ],
 )
 
@@ -1639,6 +1642,14 @@ AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkp
 # 存放 sandbox daemon 二进制的 bucket 和 key
 AGENT_SANDBOX_DAEMON_BUCKET = settings.get("AGENT_SANDBOX_DAEMON_BUCKET", SERVICE_LOGO_BUCKET)
 AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/daemon")
+
+# mount_path 黑名单：沙箱容器内不允许用户挂载共享卷的路径前缀列表
+# 参考 Daytona "不可挂 /proc /sys /etc" 的约束并进一步收紧。
+# 沙箱镜像由平台管控，挂载到这些目录可能覆盖 daemon 或基础工具链。
+AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES = settings.get(
+    "AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES",
+    ["/proc", "/sys", "/dev", "/boot", "/etc", "/var", "/usr", "/lib", "/lib64", "/bin", "/sbin", "/root", "/tmp"],
+)
 
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)

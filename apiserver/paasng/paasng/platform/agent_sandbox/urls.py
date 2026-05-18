@@ -22,9 +22,21 @@ from .views import (
     AgentSandboxFSViewSet,
     AgentSandboxProcessViewSet,
     AgentSandboxViewSet,
+    VolumeViewSet,
 )
 
 urlpatterns = [
+    # Volume URLs
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/",
+        VolumeViewSet.as_view({"post": "create", "get": "list"}),
+        name="agent_sandbox.volume",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>",
+        VolumeViewSet.as_view({"delete": "destroy"}),
+        name="agent_sandbox.volume.destroy",
+    ),
     path(
         "api/agent_sandbox/applications/<slug:code>/sandboxes/",
         AgentSandboxViewSet.as_view({"post": "create"}),

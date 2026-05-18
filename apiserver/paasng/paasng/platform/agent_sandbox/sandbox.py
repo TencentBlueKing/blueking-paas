@@ -19,6 +19,7 @@ import copy
 import logging
 import re
 import shlex
+import uuid
 
 from django.conf import settings
 from django.utils import timezone
@@ -32,6 +33,7 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandbox,
     AgentSandboxKresApp,
     AgentSandboxService,
+    VolumeMount,
     agent_sandbox_kmodel,
     agent_sandbox_svc_kmodel,
 )
@@ -52,14 +54,56 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxFileError,
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
-from paasng.platform.agent_sandbox.models import Sandbox
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
 
 ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _build_volume_mounts(
+    application: Application, raw: list[dict] | None
+) -> list[VolumeMount]:
+    """Resolve user-supplied volume_mounts into concrete Pod spec entries.
+
+    Looks up each ``volume_id`` in the database to obtain the CFS subPath.
+    Returns an empty list when the feature is disabled or no mounts are requested.
+
+    :param application: The application that owns the Volumes.
+    :param raw: The validated list of raw dicts from the request serializer.
+        Each item: ``{"volume_id": UUID, "mount_path": str}``.
+    """
+    if not raw or not settings.AGENT_SANDBOX_VOLUME_ENABLED:
+        return []
+
+    volume_ids = [uuid.UUID(str(item["volume_id"])) for item in raw]
+    volumes = {
+        str(v.uuid): v
+        for v in Volume.objects.filter(
+            uuid__in=volume_ids,
+            application=application,
+            deleted_at__isnull=True,
+        )
+    }
+
+    result: list[VolumeMount] = []
+    for item in raw:
+        volume = volumes.get(str(item["volume_id"]))
+        if volume is None:
+            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
+        result.append(
+            VolumeMount(
+                volume_id=str(volume.uuid),
+                mount_path=item["mount_path"],
+                sub_path=volume.storage_path,
+                read_only=False,
+            )
+        )
+    return result
 
 
 def create_sandbox(
@@ -71,6 +115,7 @@ def create_sandbox(
     snapshot_entrypoint: list | None = None,
     workspace: str | None = None,
     ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
+    volume_mounts: list[dict] | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -82,6 +127,9 @@ def create_sandbox(
     :param snapshot_entrypoint: The snapshot entrypoint command list, optional.
     :param workspace: The workspace path, optional.
     :param ttl_seconds: The sandbox ttl in seconds, optional.
+    :param volume_mounts: The validated list of shared volume mount requests
+        (each item: ``{"volume_id": UUID, "mount_path": str}``). Persisted to
+        the Sandbox DB record and resolved into Pod spec mounts during provision.
     """
     sandbox_obj = Sandbox.objects.new(
         application=application,
@@ -92,6 +140,7 @@ def create_sandbox(
         creator=creator,
         workspace=workspace,
         ttl_seconds=ttl_seconds,
+        volume_mounts=volume_mounts,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)
@@ -152,12 +201,19 @@ class AgentSandboxResManager:
         self.app = app
         self.kres_app = AgentSandboxKresApp(paas_app_id=app.code, tenant_id=app.tenant_id, target=target)
 
-    def provision(self, sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
+    def provision(
+        self,
+        sandbox_obj: Sandbox,
+    ) -> "KubernetesPodSandbox":
         """Provision a sandbox by a sandbox record in database.
 
         :param sandbox_obj: The sandbox object from db.
         :return: The sandbox client.
         """
+
+        # TODO: 考虑增加一张关联表，记录 volume 被哪些沙箱使用了， 同时用于审计
+        volume_mounts = _build_volume_mounts(sandbox_obj.application, sandbox_obj.volume_mounts or None)
+
         env: dict[str, str] = {
             **copy.deepcopy(sandbox_obj.env_vars),
             "TOKEN": sandbox_obj.daemon_token,
@@ -172,6 +228,7 @@ class AgentSandboxResManager:
             snapshot=sandbox_obj.snapshot,
             snapshot_entrypoint=sandbox_obj.snapshot_entrypoint,
             env=env,
+            volume_mounts=volume_mounts,
         )
         sandbox_created = False
         try:

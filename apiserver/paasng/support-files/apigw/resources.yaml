@@ -1744,3 +1744,547 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /agent_sandbox/applications/{app_code}/sandboxes/:
+    post:
+      operationId: create_agent_sandbox
+      description: 创建 Agent 沙箱
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: ''
+                env_vars:
+                  type: object
+                  default: ''
+                  properties:
+                    DEBUG:
+                      type: string
+                      default: ''
+                    OPENAI_API_KEY:
+                      type: string
+                      default: ''
+                snapshot:
+                  type: string
+                  default: ''
+                workspace:
+                  type: string
+                  default: ''
+                ttl_seconds:
+                  type: number
+                  default: ''
+                volume_mounts:
+                  type: array
+                  items:
+                    type: object
+                    default: ''
+                    properties:
+                      volume_id:
+                        type: string
+                        default: ''
+                      mount_path:
+                        type: string
+                        default: ''
+                  default: ''
+                snapshot_entrypoint:
+                  type: array
+                  default: ''
+        required: false
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/applications/{app_code}/sandboxes/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /agent_sandbox/sandboxes/{sandbox_id}:
+    delete:
+      operationId: destroy_agent_sandbox
+      description: 销毁 Agent 沙箱
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: app code, 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名, 默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境, stag 或 prod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version_name
+              - version_type
+              properties:
+                revision:
+                  type: string
+                  description: Commit ID
+                version_name:
+                  type: string
+                  description: 要部署的分支名
+                version_type:
+                  type: string
+                  description: '版本类型, 如 branch '
+                advanced_options:
+                  type: object
+                  properties:
+                    build_only:
+                      type: string
+                      default: 'false'
+                      description: 是否仅构建, 不发布
+                    image_pull_policy:
+                      type: string
+                      default: IfNotPresent
+                      description: 镜像拉取策略
+                  description: 高级部署选项
+        required: false
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/sandboxes/{sandbox_id}
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /agent_sandbox/sandboxes/{sandbox_id}/processes/exec:
+    post:
+      operationId: exec_in_agent_sandbox
+      description: 沙箱中执行命令
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: app code, 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名, 默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境, stag 或 prod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version_name
+              - version_type
+              properties:
+                revision:
+                  type: string
+                  description: Commit ID
+                version_name:
+                  type: string
+                  description: 要部署的分支名
+                version_type:
+                  type: string
+                  description: '版本类型, 如 branch '
+                advanced_options:
+                  type: object
+                  properties:
+                    build_only:
+                      type: string
+                      default: 'false'
+                      description: 是否仅构建, 不发布
+                    image_pull_policy:
+                      type: string
+                      default: IfNotPresent
+                      description: 镜像拉取策略
+                  description: 高级部署选项
+        required: false
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/sandboxes/{sandbox_id}/processes/exec
+          matchSubpath: false
+          timeout: 300
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /agent_sandbox/sandboxes/{sandbox_id}/files/download:
+    get:
+      operationId: download_from_agent_sandbox
+      description: 沙箱中下载文件
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: app code, 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名, 默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境, stag 或 prod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version_name
+              - version_type
+              properties:
+                revision:
+                  type: string
+                  description: Commit ID
+                version_name:
+                  type: string
+                  description: 要部署的分支名
+                version_type:
+                  type: string
+                  description: '版本类型, 如 branch '
+                advanced_options:
+                  type: object
+                  properties:
+                    build_only:
+                      type: string
+                      default: 'false'
+                      description: 是否仅构建, 不发布
+                    image_pull_policy:
+                      type: string
+                      default: IfNotPresent
+                      description: 镜像拉取策略
+                  description: 高级部署选项
+        required: false
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/sandboxes/{sandbox_id}/files/download
+          matchSubpath: false
+          timeout: 300
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /agent_sandbox/sandboxes/{sandbox_id}/files/upload:
+    post:
+      operationId: upload_to_agent_sandbox
+      description: 沙箱中上传文件
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: app code, 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名, 默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境, stag 或 prod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version_name
+              - version_type
+              properties:
+                revision:
+                  type: string
+                  description: Commit ID
+                version_name:
+                  type: string
+                  description: 要部署的分支名
+                version_type:
+                  type: string
+                  description: '版本类型, 如 branch '
+                advanced_options:
+                  type: object
+                  properties:
+                    build_only:
+                      type: string
+                      default: 'false'
+                      description: 是否仅构建, 不发布
+                    image_pull_policy:
+                      type: string
+                      default: IfNotPresent
+                      description: 镜像拉取策略
+                  description: 高级部署选项
+        required: false
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/sandboxes/{sandbox_id}/files/upload
+          matchSubpath: false
+          timeout: 300
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /system/agent_sandbox/image_build/:
+    post:
+      operationId: build_sandbox_image
+      description: 构建沙箱镜像
+      tags:
+      - Agent沙箱相关接口
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/sys/api/agent_sandbox/image_build/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /system/agent_sandbox/image_build/{build_id}/:
+    get:
+      operationId: get_sandbox_image_by_build_id
+      description: 通过构建 id，查询构建镜像信息
+      tags:
+      - Agent沙箱相关接口
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/sys/api/agent_sandbox/image_build/{build_id}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /system/agent_sandbox/permissions/grant/:
+    post:
+      operationId: grant_agent_sandbox_api_permissions
+      description: 授权沙箱接口
+      tags:
+      - Agent沙箱相关接口
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/sys/api/agent_sandbox/permissions/grant/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/:
+    post:
+      operationId: create_agent_sandbox_volume
+      description: 创建 Agent 沙箱使用的 Volume
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  default: volume 名称，应用下唯一
+                display_name:
+                  type: string
+                  default: 展示名称
+        required: true
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+    get:
+      operationId: list_agent_sandbox_volumes
+      description: 查询应用下可用的沙箱容器 volume
+      tags:
+      - Agent沙箱相关接口
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}:
+    delete:
+      operationId: delete_agent_sandbox_volume
+      description: 删除 Agent 沙箱使用的 Volume
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true

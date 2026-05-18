@@ -38,6 +38,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.platform.engine.processes.urls")),
     re_path(r"^", include("paasng.accessories.ci.urls")),
     re_path(r"^", include("paasng.platform.bkapp_model.urls")),
+    re_path(r"^", include("paasng.platform.engine.streaming.urls")),
     re_path(r"^", include("paasng.platform.sourcectl.urls")),
     re_path(r"^", include("paasng.accessories.servicehub.urls")),
     re_path(r"^", include("paasng.accessories.cloudapi.urls")),

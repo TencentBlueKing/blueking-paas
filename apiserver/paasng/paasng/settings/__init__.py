@@ -153,6 +153,7 @@ INSTALLED_APPS = [
     "paasng.accessories.ci",
     "paasng.platform.bkapp_model",
     "paasng.platform.engine",
+    "paasng.platform.engine.streaming",
     "paasng.platform.evaluation",
     "paasng.accessories.publish.market",
     "paasng.accessories.publish.sync_market",

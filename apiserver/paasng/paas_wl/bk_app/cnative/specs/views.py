@@ -73,9 +73,12 @@ class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(responses={"200": AppModelRevisionSerializer})
     def retrieve(self, request, code, module_name, environment, revision_id):
-        """获取某个已部署资源版本的详细信息，通常用于查看“部署历史”时，获取详细的 YAML 内容。"""
+        """获取某个已部署资源版本的详细信息，通常用于查看"部署历史"时，获取详细的 YAML 内容。"""
+        # 通过 URL 路径解析模块，触发 check_object_permissions 以强制执行 BASIC_DEVELOP 权限校验，
+        # 并将 ORM 查询限定在该模块范围内，防止越权访问其他应用的 revision。
+        module = self.get_module_via_path()
         try:
-            revision = AppModelRevision.objects.get(pk=revision_id)
+            revision = AppModelRevision.objects.get(pk=revision_id, module_id=module.id)
         except AppModelRevision.DoesNotExist:
             raise error_codes.GET_DEPLOYMENT_FAILED.f(f"app model revision id {revision_id} not found")
         return Response(AppModelRevisionSerializer(revision).data)

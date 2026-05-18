@@ -57,10 +57,12 @@ def get_time_zone() -> int:
 
 def init_tenant_log_config(apps, schema_editor):
     tenant_log_config = apps.get_model("log", "TenantLogConfig")
-    storage_cluster_id = BKLOG_CONFIG.get("STORAGE_CLUSTER_ID")
-
-    # storage_cluster_id 应为非零整数
-    if not storage_cluster_id or not isinstance(storage_cluster_id, int):
+    # STORAGE_CLUSTER_ID 为非零整数
+    try:
+        storage_cluster_id = int(BKLOG_CONFIG.get("STORAGE_CLUSTER_ID"))
+    except (TypeError, ValueError):
+        return
+    if not storage_cluster_id:
         return
 
     tenant_log_config.objects.get_or_create(

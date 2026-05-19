@@ -17,57 +17,113 @@
 
 """清理过期的沙箱实例"""
 
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
 from django.utils import timezone
 
 from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import delete_sandbox
 
+DEFAULT_CLEANUP_CONCURRENCY = 20
+
+
+def expired_sandbox_queryset(now):
+    return (
+        Sandbox.objects.filter(expired_at__isnull=False, expired_at__lte=now)
+        .exclude(status__in=[SandboxStatus.DELETED.value, SandboxStatus.ERR_DELETING.value])
+        .select_related("application")
+        .order_by("expired_at")
+    )
+
+
+@dataclass
+class _DeleteResult:
+    success: bool
+    sandbox: Sandbox
+    error: SandboxError | None = None
+
+
+def _delete_expired_sandbox(sandbox_uuid: uuid.UUID) -> _DeleteResult:
+    close_old_connections()
+    sandbox = Sandbox.objects.select_related("application").get(uuid=sandbox_uuid)
+    try:
+        delete_sandbox(sandbox)
+    except SandboxError as exc:
+        return _DeleteResult(success=False, sandbox=sandbox, error=exc)
+    return _DeleteResult(success=True, sandbox=sandbox)
+
 
 class Command(BaseCommand):
-    """
-    Q: 为什么设置了一次最多删除 n 个？
-    A: 让删除操作对资源的消耗相对更平稳，也尽量避免定时执行该命令时出现上一次没有删完就又开始了一次的情况
-    """
-
     help = "清理已过期的沙箱实例"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run", dest="dry_run", action="store_true", help="仅显示将被删除的沙箱，不实际执行删除操作"
         )
-        parser.add_argument("--limit", dest="limit", type=int, default=50, help="一次最多删除的沙箱数量，默认50")
-
-    def handle(self, dry_run, limit, *args, **options):
-        now = timezone.now()
-        base_query = (
-            Sandbox.objects.filter(expired_at__isnull=False, expired_at__lte=now)
-            .exclude(status__in=[SandboxStatus.DELETED.value, SandboxStatus.ERR_DELETING.value])
-            .select_related("application")
+        parser.add_argument(
+            "--concurrency",
+            dest="concurrency",
+            type=int,
+            default=DEFAULT_CLEANUP_CONCURRENCY,
+            help=f"并发删除的沙箱数量，默认 {DEFAULT_CLEANUP_CONCURRENCY}",
         )
 
-        total_all = base_query.count()
-        query = base_query.order_by("expired_at")[:limit]
-        total = query.count()
+    def handle(self, dry_run, concurrency, *args, **options):
+        if concurrency < 1:
+            self.stderr.write(self.style.ERROR("concurrency 必须大于 0"))
+            return
 
-        self.stdout.write(f"共找到 {total_all} 个过期沙箱，本次处理 {total} 个")
+        now = timezone.now()
+        sandboxes = expired_sandbox_queryset(now)
+        total = sandboxes.count()
+
+        self.stdout.write(f"共找到 {total} 个过期沙箱待清理")
 
         if total == 0:
             return
 
         if dry_run:
             self.stdout.write(self.style.WARNING("dry-run 模式：仅显示，不实际删除"))
-            for sandbox in query:
+            for sandbox in sandboxes:
                 self.stdout.write(
-                    f"uuid={sandbox.uuid} name={sandbox.name} app_code={sandbox.application.code} expired_at={sandbox.expired_at:%Y-%m-%d %H:%M:%S}"
+                    f"uuid={sandbox.uuid} name={sandbox.name} app_code={sandbox.application.code} "
+                    f"expired_at={sandbox.expired_at:%Y-%m-%d %H:%M:%S}"
                 )
             return
 
-        for idx, sandbox in enumerate(query):
-            delete_sandbox(sandbox)
-            self.stdout.write(
-                f"已删除 {idx + 1}/{total} uuid={sandbox.uuid} name={sandbox.name} app_code={sandbox.application.code}"
-            )
+        sandbox_uuids = list(sandboxes.values_list("uuid", flat=True))
+        deleted_count = 0
+        failed_count = 0
+        output_lock = threading.Lock()
+        workers = min(concurrency, len(sandbox_uuids))
 
-        self.stdout.write(f"\n清理完成: 删除 {total} 个")
+        self.stdout.write(f"并发数: {workers}")
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_delete_expired_sandbox, sbx_uuid) for sbx_uuid in sandbox_uuids]
+            for future in as_completed(futures):
+                result = future.result()
+                with output_lock:
+                    if result.success:
+                        deleted_count += 1
+                        self.stdout.write(
+                            f"已删除 {deleted_count}/{total} uuid={result.sandbox.uuid} "
+                            f"name={result.sandbox.name} app_code={result.sandbox.application.code}"
+                        )
+                    else:
+                        failed_count += 1
+                        self.stdout.write(
+                            self.style.ERROR(
+                                f"删除失败 uuid={result.sandbox.uuid} name={result.sandbox.name} "
+                                f"app_code={result.sandbox.application.code}: {result.error}"
+                            )
+                        )
+
+        self.stdout.write(f"\n清理完成: 删除 {deleted_count} 个, 失败 {failed_count} 个")

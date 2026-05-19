@@ -24,7 +24,7 @@ import pytest
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
 from paasng.platform.agent_sandbox.constants import SandboxStatus
-from paasng.platform.agent_sandbox.exceptions import SandboxError
+from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
@@ -52,11 +52,23 @@ def mock_sandbox_provision() -> Iterator[mock.MagicMock]:
         yield mock_provision
 
 
+@pytest.fixture()
+def mock_image_validator() -> Iterator[mock.MagicMock]:
+    """Fixture that mocks check_snapshot_image_exists for sandbox creation tests.
+
+    :returns: The mock object for check_snapshot_image_exists.
+    """
+    with mock.patch(
+        "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists"
+    ) as mock_check:
+        yield mock_check
+
+
 # TODO: 利用实际的集群资源来测试沙箱的创建
 class TestCreateSandbox:
     """Test sandbox creation functionality."""
 
-    def test_create_success(self, bk_app, bk_user, mock_sandbox_provision):
+    def test_create_success(self, bk_app, bk_user, mock_sandbox_provision, mock_image_validator):
         """Test successful sandbox creation updates status to RUNNING."""
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="demo", env_vars={"FOO": "BAR"})
 
@@ -65,8 +77,9 @@ class TestCreateSandbox:
         assert sandbox.started_at is not None
         assert sandbox.env_vars == {"FOO": "BAR"}
         mock_sandbox_provision.assert_called_once()
+        mock_image_validator.assert_not_called()
 
-    def test_create_resource_failed(self, bk_app, bk_user):
+    def test_create_resource_failed(self, bk_app, bk_user, mock_image_validator):
         """Test that failed resource creation sets status to ERR_CREATING."""
         with (
             suppress(SandboxError),
@@ -82,7 +95,7 @@ class TestCreateSandbox:
         assert sandbox.status == SandboxStatus.ERR_CREATING.value
         assert sandbox.started_at is None
 
-    @pytest.mark.usefixtures("mock_sandbox_provision")
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
     def test_create_with_snapshot(self, bk_app, bk_user):
         """Test sandbox creation with custom snapshot."""
         sandbox = create_sandbox(
@@ -126,7 +139,7 @@ class TestDeleteSandbox:
     """Test sandbox deletion functionality."""
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
-    def test_delete_success(self, bk_app, bk_user):
+    def test_delete_success(self, bk_app, bk_user, mock_image_validator):
         """Test successful sandbox deletion updates status to DELETED."""
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="to-delete")
 
@@ -139,7 +152,7 @@ class TestDeleteSandbox:
             mock_destroy.assert_called_once_with("to-delete")
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
-    def test_delete_resource_failed(self, bk_app, bk_user):
+    def test_delete_resource_failed(self, bk_app, bk_user, mock_image_validator):
         """Test that failed resource deletion sets status to ERR_DELETING."""
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="delete-fail")
 
@@ -156,7 +169,6 @@ class TestDeleteSandbox:
         sandbox.refresh_from_db()
         assert sandbox.status == SandboxStatus.ERR_DELETING.value
         assert sandbox.deleted_at is None
-
 
 class TestBuildVolumeMounts:
     """Unit tests for _build_shared_volume_mounts with Volume DB lookup."""
@@ -233,3 +245,34 @@ class TestBuildVolumeMounts:
         assert len(result) == 2
         assert result[0].volume_id == str(vol2.uuid)
         assert result[1].volume_id == str(vol1.uuid)
+
+
+class TestImageValidation:
+    """Test snapshot image existence validation during sandbox creation."""
+
+    def test_create_raises_image_not_found(self, bk_app, bk_user):
+        """Test that create_sandbox raises SandboxImageValidateError when image doesn't exist."""
+        with mock.patch(
+            "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists",
+            side_effect=SandboxImageValidateError("image not found"),
+        ):
+            with pytest.raises(SandboxImageValidateError, match="image not found"):
+                create_sandbox(
+                    application=bk_app,
+                    creator=bk_user.pk,
+                    name="bad-image",
+                    snapshot="nonexistent:v1",
+                )
+
+        # No sandbox record should be created
+        assert not Sandbox.objects.filter(application=bk_app, name="bad-image").exists()
+
+    def test_create_skips_validation_for_default_image(self, bk_app, bk_user, mock_sandbox_provision):
+        """Test that check_snapshot_image_exists is not called when using the default image."""
+        with mock.patch(
+            "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists"
+        ) as mock_check:
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="default-image")
+
+        # Should NOT be called when using the default image
+        mock_check.assert_not_called()

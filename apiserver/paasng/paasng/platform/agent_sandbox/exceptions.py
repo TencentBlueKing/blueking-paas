@@ -51,5 +51,9 @@ class SandboxDaemonAPIError(Exception):
     """Raised when the sandbox daemon API returns an error."""
 
 
+class SandboxImageValidateError(SandboxError):
+    """Raised when snapshot image validation fails (e.g., not found, external registry, unsupported format)."""
+
+
 class ImageBuildSourceError(SandboxError):
     """Raised when preparing image build source fails (e.g. missing Dockerfile)."""

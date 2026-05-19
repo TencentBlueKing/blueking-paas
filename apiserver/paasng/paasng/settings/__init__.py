@@ -784,10 +784,6 @@ MAX_MODULES_COUNT_PER_APPLICATION = settings.get("MAX_MODULES_COUNT_PER_APPLICAT
 MAX_PROCESSES_PER_MODULE = settings.get("MAX_PROCESSES_PER_MODULE", default=16, cast="@int")
 # 自动清理多余镜像功能-单个模块下最多保留的历史镜像数量
 MAX_RESERVED_IMAGES_PER_MODULE = settings.get("MAX_RESERVED_IMAGES_PER_MODULE", default=10, cast="@int")
-# 是否开启每次部署后 自动清理多余镜像功能
-AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY = settings.get(
-    "AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY", default=False, cast="@bool"
-)
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var="PAAS_LEGACY_DATABASE_URL", env_var_prefix="PAAS_LEGACY_", for_tests=RUNNING_TESTS
@@ -1630,7 +1626,7 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "download_from_agent_sandbox",
         "create_agent_sandbox_volume",
         "delete_agent_sandbox_volume",
-        "list_agent_sandbox_volumes"
+        "list_agent_sandbox_volumes",
     ],
 )
 

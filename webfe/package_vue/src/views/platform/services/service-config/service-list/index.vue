@@ -55,21 +55,24 @@
             <!-- 中间内容区域 -->
             <div class="content">
               <div class="title">
-                <div
-                  class="text"
-                  v-bk-overflow-tips
-                >
-                  {{ item.display_name }}
-                  <span class="short-name">({{ item.name }})</span>
+                <div class="text">
+                  <p class="text" v-bk-overflow-tips>{{ item.display_name }}</p>
+                  <p class="short-name">{{ item.name }}</p>
                 </div>
                 <div class="icon-wrapper">
                   <i
-                    class="paasng-icon paasng-edit-2"
+                    v-if="key === 'local'"
+                    class="paasng-icon paasng-kelong"
+                    v-bk-tooltips="$t('克隆')"
+                    @click.stop="cloneService(item)"
+                  ></i>
+                  <i
+                    class="paasng-icon paasng-edit-2 ml5"
                     @click.stop="showSideslider(item, 'edit')"
                   ></i>
                   <i
                     v-if="key === 'local'"
-                    class="paasng-icon paasng-bold-close"
+                    class="paasng-icon paasng-delete ml5"
                     @click.stop="deleteService(item)"
                   ></i>
                 </div>
@@ -251,6 +254,10 @@ export default {
         },
       });
     },
+    // 克隆服务
+    cloneService(row) {
+      this.showSideslider(row, 'clone');
+    },
   },
 };
 </script>
@@ -261,10 +268,10 @@ export default {
   overflow: auto;
   padding: 12px;
   flex-shrink: 0;
-  width: 280px;
+  width: 304px;
   .custom-service-loader {
     .loader-item {
-      height: 56px;
+      height: 80px;
       margin-bottom: 8px;
       background-color: #fff;
     }
@@ -306,8 +313,8 @@ export default {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
-    height: 56px;
+    gap: 12px;
+    height: 80px;
     padding: 8px;
     margin-bottom: 8px;
     background: #fff;
@@ -320,17 +327,11 @@ export default {
       font-size: 12px;
       i {
         display: none;
+        color: #979BA5;
       }
       i:hover {
         cursor: pointer;
         color: #3a84ff;
-      }
-      .paasng-edit-2 {
-        transform: translateY(-2px);
-      }
-      .paasng-bold-close {
-        margin-left: 5px;
-        font-size: 16px;
       }
     }
     &.active {
@@ -368,28 +369,33 @@ export default {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
+      width: 64px;
+      height: 64px;
       background: #f5f7fa;
-      border-radius: 2px;
+      border-radius: 4px;
+      overflow: hidden;
       .logo {
-        width: 24px;
-        height: 24px;
+        width: 100%;
+        height: 64px;
         display: block;
       }
     }
 
     .content {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
       overflow: hidden;
     }
 
     .title {
       display: flex;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 12px;
       color: #313238;
-      line-height: 22px;
+      line-height: 20px;
       .text {
         min-width: 0;
         flex: 1;
@@ -398,7 +404,7 @@ export default {
         white-space: nowrap;
       }
       .short-name {
-        font-size: 12px;
+        font-weight: 400;
         color: #979ba5;
       }
     }

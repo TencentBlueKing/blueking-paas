@@ -36,6 +36,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxCreateError,
     SandboxError,
+    SandboxImageValidateError,
     SandboxServiceNotReady,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
@@ -154,6 +155,8 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
+        except SandboxImageValidateError as e:
+            raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
         except SandboxCreateError as e:
             raise error_codes.AGENT_SANDBOX_CREATE_FAILED.set_data({"logs": e.logs})
         except SandboxError:

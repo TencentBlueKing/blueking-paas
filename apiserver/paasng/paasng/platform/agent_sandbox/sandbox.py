@@ -55,6 +55,7 @@ from paasng.platform.agent_sandbox.exceptions import (
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -131,10 +132,17 @@ def create_sandbox(
         (each item: ``{"volume_id": UUID, "mount_path": str}``). Persisted to
         the Sandbox DB record and resolved into Pod spec mounts during provision.
     """
+    # Pre-validate that the snapshot image exists in the registry before creating resources.
+    # This avoids a long timeout when the pod tries to pull a non-existent image.
+    # Skip validation for the default image — it is platform-maintained and expected to exist.
+    snapshot_image = snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE
+    if snapshot:
+        check_snapshot_image_exists(snapshot_image)
+
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
-        snapshot=snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE,
+        snapshot=snapshot_image,
         snapshot_entrypoint=snapshot_entrypoint,
         env_vars=env_vars,
         creator=creator,

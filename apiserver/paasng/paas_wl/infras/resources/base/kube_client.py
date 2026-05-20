@@ -16,6 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import os
+import tempfile
+import threading
 from collections import defaultdict
 from typing import Any, Dict
 
@@ -99,6 +102,9 @@ class CoreDynamicClient(DynamicClient):
     """为官方 SDK 里的 DynamicClient 追加新功能"""
 
     def __init__(self, client, cache_file=None, discoverer=None):
+        if cache_file is None:
+            name = f"osrcp-{threading.get_ident()}.json"
+            cache_file = os.path.join(tempfile.gettempdir(), name)
         super().__init__(client, cache_file, discoverer=discoverer or LazyDiscoverer)
 
     def serialize_body(self, body: Any) -> Dict[str, Any]:

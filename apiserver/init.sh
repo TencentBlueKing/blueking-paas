@@ -390,10 +390,16 @@ ensure-legacy-image() {
 
 # 用于将镜像从外部仓库(如 hub.bktencent.com)推送到 bkrepo
 ensure-smart-image() {
+    echo "Ensuring smart image..."
+    echo "Pushing smart image" ${PAAS_APP_IMAGE}
     python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+
+    echo "Pushing smart image" ${PAAS_HEROKU_RUNNER_IMAGE}
     python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+
     if [[ -n "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" ]]; then
-        python manage.py push_smart_image --image "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+        echo "Pushing smart image" ${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}
+        python manage.py push_smart_image --image "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" --type cnb --base-image-id heroku-24 --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
     else
         echo "Skipping heroku-24 runner image push because PAAS_HEROKU_NOBLE_RUNNER_IMAGE is empty"
     fi

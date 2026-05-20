@@ -84,6 +84,7 @@ ensure-apigw() {
     --api-name "${api_name}"
 }
 
+# 初始化 apt buildpack
 ensure-apt-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -105,6 +106,7 @@ ensure-apt-buildpack() {
     --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar"
 }
 
+# 初始化 python buildpack
 ensure-python-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -135,6 +137,7 @@ ensure-python-buildpack() {
     "PIP_INDEX_HOST=${pip_index_host}"
 }
 
+# 初始化 nodejs buildpack
 ensure-nodejs-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -162,6 +165,7 @@ ensure-nodejs-buildpack() {
     "NPM_REGISTRY=${npm_registry}"
 }
 
+# 初始化 golang buildpack
 ensure-golang-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -186,6 +190,7 @@ ensure-golang-buildpack() {
     "GOPROXY=${PAAS_BUILDPACK_GOLANG_GOPROXY}"
 }
 
+# 初始化 heroku-24 版本专用的 apt buildpack
 ensure-noble-apt-buildpack() {
     buildpack_name="$1"
 
@@ -204,6 +209,7 @@ ensure-noble-apt-buildpack() {
     --address "${noble_apt_buildpack_address}"
 }
 
+# 初始化 heroku-24 版本专用的 golang buildpack
 ensure-noble-golang-buildpack() {
     vendor_url="$1"
     buildpack_name="$2"
@@ -225,6 +231,7 @@ ensure-noble-golang-buildpack() {
     "GO_BUCKET_URL=${vendor_url}/runtimes/golang"
 }
 
+# 初始化 heroku-24 版本专用的 python buildpack
 ensure-noble-python-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -254,6 +261,7 @@ ensure-noble-python-buildpack() {
     "PIP_INDEX_HOST=${noble_python_pip_index_host}"
 }
 
+# 初始化 heroku-24 版本专用的 nodejs buildpack
 ensure-noble-nodejs-buildpack() {
     vendor_url="$1"
     buildpack_name="$2"
@@ -277,6 +285,7 @@ ensure-noble-nodejs-buildpack() {
     "NODE_BINARY_MIRROR_URL=${vendor_url}/runtimes/nodejs/node/release/linux-x64"
 }
 
+# 初始化 heroku-24 版本专用的 buildpacks
 ensure-noble-buildpacks() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
@@ -292,6 +301,7 @@ ensure-noble-buildpacks() {
     ensure-noble-nodejs-buildpack "${vendor_url}" "${nodejs_buildpack_name}"
 }
 
+# 初始化普通应用 & 云原生应用（heroku-18）基础镜像
 ensure-blueking-image() {
     apt_buildpack_name="$1"
     python_buildpack_name="$2"
@@ -331,6 +341,7 @@ ensure-blueking-image() {
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${golang_buildpack_name}"
 }
 
+# 初始化 heroku-24 基础镜像
 ensure-noble-image() {
     apt_buildpack_name="$1"
     golang_buildpack_name="$2"

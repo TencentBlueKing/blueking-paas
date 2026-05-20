@@ -23,7 +23,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError
+from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError, SandboxImageValidateError
 from paasng.platform.agent_sandbox.models import Sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -98,6 +98,27 @@ class TestAgentSandboxViewSetCreate:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "AGENT_SANDBOX_CREATE_FAILED"
+
+    def test_create_sandbox_image_not_found(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify sandbox creation returns proper error when snapshot image doesn't exist.
+
+        :param api_client: The API client fixture.
+        :param bk_app: The application fixture.
+        """
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch(
+            "paasng.platform.agent_sandbox.views.create_sandbox",
+            side_effect=SandboxImageValidateError("image not found"),
+        ):
+            resp = api_client.post(
+                create_url,
+                data={"name": "bad-image-sandbox", "snapshot": "nonexistent:v1"},
+                format="json",
+            )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "AGENT_SANDBOX_IMAGE_NOT_FOUND"
 
 
 @pytest.mark.usefixtures("_mock_verified_app_permission")

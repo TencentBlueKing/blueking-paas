@@ -248,8 +248,8 @@ ensure-noble-python-buildpack() {
     --name "${buildpack_name}" \
     --display_name_zh_cn "blueking/python" \
     --display_name_en "blueking/python" \
-    --description_zh_cn "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_ZH_CN:-"蓝鲸 Python 云原生构建包（3.11.12 / 3.12.10 / 3.13.3）"}" \
-    --description_en "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_EN:-"Blueking Python Cloud Native Buildpack (3.11.12 / 3.12.10 / 3.13.3)"}" \
+    --description_zh_cn "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_ZH_CN:-"蓝鲸 Python 云原生构建包（3.11.14 / 3.12.12 / 3.13.11）"}" \
+    --description_en "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_EN:-"Blueking Python Cloud Native Buildpack (3.11.14 / 3.12.12 / 3.13.11)"}" \
     --tag "${noble_python_buildpack_version}" \
     --language Python \
     --type "${PAAS_NOBLE_PYTHON_BUILDPACK_TYPE:-oci-embedded}" \
@@ -323,6 +323,8 @@ ensure-blueking-image() {
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}"
 
+    # 目前还是维持 heroku-18 版本镜像为默认（如果没有其他默认镜像），兼容目前数量较多的低版本 Python 应用
+    # FIXME 后续需要推动 Python 开发框架、SaaS 等往 3.11+ 迁移，届时即可将 heroku-24 设为默认
     cnb_image_name="blueking-cloudnative"
     python manage.py manage_image \
     --type "cnb" \
@@ -334,7 +336,8 @@ ensure-blueking-image() {
     --description_zh_cn "${PAAS_CNB_IMAGE_DESC_ZH_CN:-"基于 Ubuntu，支持多构建工具组合构建"}" \
     --description_en "${PAAS_CNB_IMAGE_DESC_EN:-"Ubuntu-based, multi-buildpack combination build support"}" \
     --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
-    --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
+    --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1 \
+    --default
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}"
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${nodejs_buildpack_name}"

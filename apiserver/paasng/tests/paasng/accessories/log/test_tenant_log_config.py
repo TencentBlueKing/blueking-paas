@@ -177,7 +177,7 @@ class TestCreateTenantLogConfigCommand:
 
 
 class TestSharedEsSearchParams:
-    # 共享索引下需要手动配置 app, module 隔离，env 隔离无需自动添加
+    # 共享索引下需要配置 app, module 隔离。env 隔离条件无需自动配置
     def test_term_template_includes_app_and_module_isolation(self):
         params = _build_shared_es_search_params("bkpaas_platform_log_json", 9527, "log")
 

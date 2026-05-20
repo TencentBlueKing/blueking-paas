@@ -50,6 +50,10 @@ SHARED_INDEX_NAME_BY_LOG_TYPE: dict[Literal["json", "stdout"], str] = {
 }
 SHARED_INDEX_NAMES = set(SHARED_INDEX_NAME_BY_LOG_TYPE.values())
 
+# 共享索引下通过 termTemplate 做 app, module 隔离
+SHARED_INDEX_TERM_APP_CODE = "__ext.labels.bkapp_paas_bk_tencent_com_code"
+SHARED_INDEX_TERM_MODULE_NAME = "__ext.labels.bkapp_paas_bk_tencent_com_module_name"
+
 
 def should_use_shared_bk_log_index(module: Module) -> bool:
     """判断是否使用共享索引
@@ -171,7 +175,8 @@ def _build_shared_es_search_params(name_en: str, shared_bk_biz_id: int, message_
         timeFormat="timestamp[ns]",
         messageField=message_field,
         termTemplate={
-            "__ext.labels.bkapp_paas_bk_tencent_com_code": "{{ app_code }}",
+            SHARED_INDEX_TERM_APP_CODE: "{{ app_code }}",
+            SHARED_INDEX_TERM_MODULE_NAME: "{{ module_name }}",
         },
         builtinFilters={},
         builtinExcludes={},

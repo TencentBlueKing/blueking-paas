@@ -25,6 +25,9 @@ from paasng.accessories.log.exceptions import SharedBkBizIdNotConfiguredError, T
 from paasng.accessories.log.models import CustomCollectorConfig, TenantLogConfig
 from paasng.accessories.log.shim.setup_bklog import BKLogConfigProvider
 from paasng.accessories.log.shim.setup_bklog_shared import (
+    SHARED_INDEX_TERM_APP_CODE,
+    SHARED_INDEX_TERM_MODULE_NAME,
+    _build_shared_es_search_params,
     _upsert_shared_custom_collector_config,
     should_use_shared_bk_log_index,
 )
@@ -171,6 +174,17 @@ class TestCreateTenantLogConfigCommand:
 
         config = TenantLogConfig.objects.get(tenant_id=tenant_id)
         assert config.shared_bk_biz_id is None
+
+
+class TestSharedEsSearchParams:
+    # 共享索引下需要手动配置 app, module 隔离，env 隔离无需自动添加
+    def test_term_template_includes_app_and_module_isolation(self):
+        params = _build_shared_es_search_params("bkpaas_platform_log_json", 9527, "log")
+
+        assert params.termTemplate == {
+            SHARED_INDEX_TERM_APP_CODE: "{{ app_code }}",
+            SHARED_INDEX_TERM_MODULE_NAME: "{{ module_name }}",
+        }
 
 
 class TestSharedCollectorConfigSetup:

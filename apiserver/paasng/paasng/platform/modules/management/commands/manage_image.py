@@ -52,6 +52,12 @@ class Command(BaseCommand):
             default=[],
             nargs="*",
         )
+        parser.add_argument(
+            "--default",
+            dest="is_default",
+            action="store_true",
+            help="设置该镜像为默认运行时（仅在不存在已有默认镜像时生效，避免覆盖）",
+        )
 
     @transaction.atomic
     def handle(
@@ -62,6 +68,7 @@ class Command(BaseCommand):
         slugbuilder,
         slugrunner,
         is_hidden,
+        is_default,
         display_name_zh_cn,
         display_name_en,
         description_zh_cn,
@@ -83,6 +90,7 @@ class Command(BaseCommand):
             description_zh_cn,
             description_en,
             is_hidden,
+            is_default,
             parse_assignment_list(environments),
             parse_assignment_list(labels),
         )
@@ -96,6 +104,7 @@ class Command(BaseCommand):
             description_zh_cn,
             description_en,
             is_hidden,
+            is_default,
             parse_assignment_list(environments),
             parse_assignment_list(labels),
         )
@@ -111,6 +120,7 @@ class Command(BaseCommand):
         description_zh_cn,
         description_en,
         is_hidden,
+        is_default,
         environments,
         labels,
     ):
@@ -120,23 +130,40 @@ class Command(BaseCommand):
         else:
             image, tag = before, after
 
+        defaults = {
+            "is_hidden": is_hidden,
+            "display_name_zh_cn": display_name_zh_cn,
+            "display_name_en": display_name_en,
+            "image": image,
+            "type": type_,
+            "tag": tag,
+            "description_zh_cn": description_zh_cn,
+            "description_en": description_en,
+            "environments": environments,
+            "labels": labels,
+        }
+
+        # 处理 --default 参数：仅在不存在已有默认镜像时生效
+        if is_default:
+            existing_default = model.objects.filter(is_default=True).exclude(name=name).first()
+            if existing_default:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"default {model.__name__} [{existing_default.name}] exists，skip set {name} as default"
+                    )
+                )
+            else:
+                defaults["is_default"] = True
+
         obj, created = model.objects.update_or_create(
             name=name,
-            defaults={
-                "is_hidden": is_hidden,
-                "display_name_zh_cn": display_name_zh_cn,
-                "display_name_en": display_name_en,
-                "image": image,
-                "type": type_,
-                "tag": tag,
-                "description_zh_cn": description_zh_cn,
-                "description_en": description_en,
-                "environments": environments,
-                "labels": labels,
-            },
+            defaults=defaults,
         )
 
         if created:
             self.stdout.write(f"created {model.__name__}[{obj.pk}] {name}")
         else:
             self.stdout.write(f"updated {model.__name__}[{obj.pk}] {name}")
+
+        if is_default and obj.is_default:
+            self.stdout.write(self.style.SUCCESS(f"set {model.__name__}[{name}] as default"))

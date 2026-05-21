@@ -55,6 +55,11 @@
                 <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
             </template>
         </bk-table-column>
+        <bk-table-column label="运行时栈" prop="stack" width="120">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.stack || '-' ]</span>
+            </template>
+        </bk-table-column>
         <bk-table-column label="Builder 绑定情况" width="120">
             <template slot-scope="props">
                 <span class="bind-info" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="handleExpandRow(props.row)">已绑定 $[props.row.slugbuilders.length] 个
@@ -192,6 +197,11 @@
                     <bk-col :span="8">
                         <bk-form-item label="版本" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="运行时栈">
+                            <bk-input v-model="dialog.form.stack" :readonly="dialog.type === 'detail'" placeholder="如：heroku-18/24"></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="8">
@@ -503,6 +513,7 @@
                         key: '',
                         value: '',
                         description: '',
+                        stack: '',
                     }
                     this.envList = [];
                     this.$nextTick(() => {

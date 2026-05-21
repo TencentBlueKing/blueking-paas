@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 import os
 import pathlib
 import shutil
@@ -29,8 +28,6 @@ from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.utils.moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
 from paasng.utils.moby_distribution.registry.utils import parse_image
 from paasng.utils.validators import str2bool
-
-logger = logging.getLogger(__name__)
 
 
 def get_dest_image(image_type: str, base_image_id: str) -> dict[str, str]:
@@ -65,7 +62,7 @@ class Command(BaseCommand):
 
     def handle(self, image: str, type_: str, base_image_id: str, dry_run: bool, *args, **options):
         if dry_run:
-            logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
+            self.stdout.write(self.style.WARNING("Skipped the step of pushing S-Mart base image to bkrepo!"))
             return
 
         _file = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
@@ -78,6 +75,7 @@ class Command(BaseCommand):
                 client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))
+            self.stdout.write(f"Saved <image {image}, base image id {base_image_id}> to {image_tarball_path}")
         except Exception:
             if image_tarball_path.exists():
                 image_tarball_path.unlink()
@@ -94,6 +92,10 @@ class Command(BaseCommand):
                 client=bksmart_settings.registry.get_client(),
             )
             ref.push()
+            self.stdout.write(
+                f"Pushed <image {image}, base image id {base_image_id}> "
+                + f"to {dest_image['repo']}:{dest_image['reference']}"
+            )
         finally:
             os.unlink(image_tarball_path)
             shutil.rmtree(workplace)

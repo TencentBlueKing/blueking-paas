@@ -31,6 +31,7 @@ class Command(BaseCommand):
         parser.add_argument("--image", dest="image", help="slugbuilder name")
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
+        parser.add_argument("--stack", default="", help="buildpack 的运行时栈标识，如 heroku-24")
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def get_slugbuilder(self, image: str) -> AppSlugBuilder:
@@ -38,20 +39,29 @@ class Command(BaseCommand):
         return AppSlugBuilder.objects.get(name=image)
 
     def get_buildpacks(
-        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str]
+        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str], stack: str = ""
     ) -> typing.Iterable[AppBuildPack]:
-        """根据条件获取 buildpack queryset"""
+        """根据条件获取 buildpack queryset
+
+        :param buildpack_ids: buildpack id 列表，按 id 查询时不应用 stack 过滤
+        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 过滤
+        :param stack: 运行时栈标识，仅在按 name 查询时生效
+        """
         qs = AppBuildPack.objects.all()
         if buildpack_ids:
             qs = qs.filter(pk__in=buildpack_ids)
         if buildpack_names:
-            qs = qs.filter(name__in=buildpack_names)
+            qs = qs.filter(name__in=buildpack_names, stack=stack)
         return qs
 
     @transaction.atomic
-    def handle(self, image, buildpack_ids, buildpack_names, dry_run, **kwargs):
+    def handle(self, image, buildpack_ids, buildpack_names, stack, dry_run, **kwargs):
         slugbuilder = self.get_slugbuilder(image)
-        buildpacks = self.get_buildpacks(buildpack_ids, buildpack_names)
+        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names, stack))
+        if not buildpacks:
+            self.stderr.write(self.style.WARNING("未找到匹配的 buildpack，请检查参数是否正确"))
+            return
+
         binder = SlugbuilderBinder(slugbuilder)
 
         for bp in buildpacks:

@@ -44,6 +44,7 @@ class Command(BaseCommand):
             nargs="*",
         )
         parser.add_argument("--hidden", dest="is_hidden", help="is_hidden", action="store_true")
+        parser.add_argument("--stack", default="", help="运行时栈标识，如 heroku-24")
 
     @transaction.atomic
     def handle(
@@ -59,10 +60,12 @@ class Command(BaseCommand):
         language,
         type_,
         address,
+        stack,
         **kwargs,
     ):
         obj, created = AppBuildPack.objects.update_or_create(
             name=name,
+            stack=stack,
             defaults={
                 "display_name_zh_cn": display_name_zh_cn,
                 "display_name_en": display_name_en,

@@ -86,6 +86,13 @@ class AppBuildPack(TimestampedModel):
     environments = JSONField(verbose_name="环境变量", default=dict, blank=True)
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
     is_hidden = models.BooleanField(verbose_name="是否隐藏", default=False)
+    stack = models.CharField(
+        verbose_name="运行时栈",
+        max_length=64,
+        default="",
+        blank=True,
+        help_text="该 buildpack 适用的运行时栈标识，如 heroku-24；为空表示默认栈",
+    )
     description = TranslatedFieldWithFallback(models.CharField(verbose_name="描述", max_length=1024, blank=True))
 
     objects = BuildpackManager()

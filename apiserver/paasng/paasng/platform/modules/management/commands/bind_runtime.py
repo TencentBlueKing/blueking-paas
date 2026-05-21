@@ -31,6 +31,7 @@ class Command(BaseCommand):
         parser.add_argument("--image", dest="image", help="image name")
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
+        parser.add_argument("--stack", dest="stack", default="", help="buildpack stack (e.g. heroku-24)")
         parser.add_argument("--module", dest="module_names", help="module name", nargs="*")
         parser.add_argument("--app-code", dest="app_codes", help="application code", nargs="*")
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
@@ -44,14 +45,19 @@ class Command(BaseCommand):
         return AppSlugRunner.objects.get(name=image)
 
     def get_buildpacks(
-        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str]
+        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str], stack: str = ""
     ) -> typing.Iterable[AppBuildPack]:
-        """根据条件获取 buildpack queryset"""
+        """根据条件获取 buildpack queryset
+
+        :param buildpack_ids: buildpack id 列表，按 id 查询时不应用 stack 过滤
+        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 过滤
+        :param stack: 运行时栈标识，仅在按 name 查询时生效
+        """
         qs = AppBuildPack.objects.all()
         if buildpack_ids:
             qs = qs.filter(pk__in=buildpack_ids)
         if buildpack_names:
-            qs = qs.filter(name__in=buildpack_names)
+            qs = qs.filter(name__in=buildpack_names, stack=stack)
         return qs
 
     def get_modules(
@@ -66,11 +72,11 @@ class Command(BaseCommand):
         return qs
 
     @transaction.atomic
-    def handle(self, image, module_names, app_codes, buildpack_ids, buildpack_names, dry_run, **kwargs):
+    def handle(self, image, module_names, app_codes, buildpack_ids, buildpack_names, dry_run, stack, **kwargs):
         modules = self.get_modules(module_names, app_codes)
         slugbuilder = self.get_slugbuilder(image)
         slugrunner = self.get_slugrunner(image)
-        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names))
+        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names, stack=stack))
 
         for module in modules:
             binder = ModuleRuntimeBinder(module)

@@ -31,6 +31,7 @@ class BuildPackCreateInputSLZ(serializers.ModelSerializer):
     version = serializers.CharField(required=True, max_length=32)
     env_vars = serializers.JSONField(required=False, default={}, source="environments", help_text="环境变量")
     is_hidden = serializers.BooleanField(required=False, default=False)
+    stack = serializers.CharField(required=False, default="", max_length=64, help_text="运行时栈标识，如 heroku-24")
 
     class Meta:
         model = AppBuildPack

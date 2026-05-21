@@ -199,6 +199,7 @@ ensure-noble-apt-buildpack() {
 
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
+    --stack heroku-24 \
     --display_name_zh_cn "apt" \
     --display_name_en "apt" \
     --description_zh_cn "${PAAS_NOBLE_APT_BUILDPACK_DESC_ZH_CN:-"为进一步的构建和运行时安装 apt 包"}" \
@@ -219,6 +220,7 @@ ensure-noble-golang-buildpack() {
 
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
+    --stack heroku-24 \
     --display_name_zh_cn "blueking/go" \
     --display_name_en "blueking/go" \
     --description_zh_cn "${PAAS_NOBLE_GO_BUILDPACK_DESC_ZH_CN:-"默认 Go 版本为 1.24，最大支持版本 1.25.4"}" \
@@ -246,6 +248,7 @@ ensure-noble-python-buildpack() {
 
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
+    --stack heroku-24 \
     --display_name_zh_cn "blueking/python" \
     --display_name_en "blueking/python" \
     --description_zh_cn "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_ZH_CN:-"蓝鲸 Python 云原生构建包（3.11.14 / 3.12.12 / 3.13.11）"}" \
@@ -272,6 +275,7 @@ ensure-noble-nodejs-buildpack() {
 
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
+    --stack heroku-24 \
     --display_name_zh_cn "blueking/nodejs" \
     --display_name_en "blueking/nodejs" \
     --description_zh_cn "${PAAS_NOBLE_NODEJS_BUILDPACK_DESC_ZH_CN:-"蓝鲸 NodeJS 云原生构建包（v304）"}" \
@@ -363,10 +367,10 @@ ensure-noble-image() {
     --description_en "${PAAS_NOBLE_CNB_IMAGE_DESC_EN:-"Ubuntu-based, multi-buildpack combination build support"}" \
     --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
     --label secureEncrypted=1 supportHttp=true isCloudNativeBuilder=true cnative_app=1
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${apt_buildpack_name}"
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${golang_buildpack_name}"
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${python_buildpack_name}"
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${nodejs_buildpack_name}"
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${apt_buildpack_name}" --stack heroku-24
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${golang_buildpack_name}" --stack heroku-24
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${python_buildpack_name}" --stack heroku-24
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${nodejs_buildpack_name}" --stack heroku-24
 }
 
 ensure-legacy-image() {
@@ -441,10 +445,10 @@ ensure-runtimes() {
 
     if [[ -n "${PAAS_HEROKU_NOBLE_BUILDER_IMAGE}" && -n "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" ]]; then
         # heroku-24 noble buildpacks
-        noble_apt_buildpack_name=bk-noble-buildpack-apt
-        noble_golang_buildpack_name=bk-noble-buildpack-go
-        noble_python_buildpack_name=bk-noble-buildpack-python
-        noble_nodejs_buildpack_name=bk-noble-buildpack-nodejs
+        noble_apt_buildpack_name=bk-buildpack-apt
+        noble_golang_buildpack_name=bk-buildpack-go
+        noble_python_buildpack_name=bk-buildpack-python
+        noble_nodejs_buildpack_name=bk-buildpack-nodejs
         ensure-noble-buildpacks "${bkrepo_endpoint}" "${bkrepo_project}" "${vendor_url}" "${noble_apt_buildpack_name}" "${noble_golang_buildpack_name}" "${noble_python_buildpack_name}" "${noble_nodejs_buildpack_name}"
 
         # heroku-24 noble image

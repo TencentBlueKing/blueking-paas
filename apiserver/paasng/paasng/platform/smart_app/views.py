@@ -192,13 +192,14 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
             # Step 3. dispatch package as Image to registry
             try:
-                dispatch_package_to_modules(
-                    application,
-                    tarball_filepath=filepath,
-                    stat=stat,
-                    operator=request.user,
-                    modules=set(handler.app_desc.modules.keys()),
-                )
+                with atomic():
+                    dispatch_package_to_modules(
+                        application,
+                        tarball_filepath=filepath,
+                        stat=stat,
+                        operator=request.user,
+                        modules=set(handler.app_desc.modules.keys()),
+                    )
             except DescriptionValidationError as e:
                 logger.exception("Handling S-Mart Package Exceptions!")
                 raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
@@ -391,13 +392,14 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
             # Step 3. patch package, store it and bind to module.
             try:
-                dispatch_package_to_modules(
-                    application,
-                    tarball_filepath=filepath,
-                    stat=stat,
-                    operator=request.user,
-                    modules=set(handler.app_desc.modules.keys()),
-                )
+                with atomic():
+                    dispatch_package_to_modules(
+                        application,
+                        tarball_filepath=filepath,
+                        stat=stat,
+                        operator=request.user,
+                        modules=set(handler.app_desc.modules.keys()),
+                    )
             except DescriptionValidationError as e:
                 logger.exception("Handling S-Mart Package Exceptions!")
                 raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)

@@ -2,14 +2,20 @@
   <div class="observability-config">
     <div class="top-title mb20">
       <h4>{{ $t('日志采集') }}</h4>
-      <p class="tips" v-if="isLogCollectionSupported">
+      <p
+        class="tips"
+        v-if="isLogCollectionSupported"
+      >
         {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加自定义日志采集规则。') }}
       </p>
     </div>
     <!-- 采集规则 -->
-    <section class="collection-rules" v-bkloading="{ isLoading: isLogCollectionLodaing }">
+    <section
+      class="collection-rules"
+      v-bkloading="{ isLoading: isLogCollectionLodaing }"
+    >
       <bk-button
-        v-if="isLogCollectionSupported"
+        v-if="isLogCollectionSupported && !hasSharedIndexRow"
         theme="primary"
         class="mb16"
         @click="handleAddCollectionRule"
@@ -37,9 +43,7 @@
             :label="$t('采集规则名称')"
             :show-overflow-tooltip="true"
           >
-            <div
-              slot-scope="{ row }"
-            >
+            <div slot-scope="{ row }">
               {{ row.name_en }}
             </div>
           </bk-table-column>
@@ -71,6 +75,7 @@
           >
             <template slot-scope="{ row }">
               <bk-button
+                v-if="!isSharedIndexRow(row)"
                 class="mr10"
                 theme="primary"
                 text
@@ -109,7 +114,12 @@
           <div class="empty-content">
             <div class="title">{{ $t('暂未配置日志采集规则') }}</div>
             <div class="sub-title">{{ $t('当前模块任意环境部署成功后，将会给模块配置默认的日志采集规则') }}</div>
-            <bk-button :text="true" title="primary" size="small" @click="handleToDeploy">
+            <bk-button
+              :text="true"
+              title="primary"
+              size="small"
+              @click="handleToDeploy"
+            >
               {{ $t('去部署') }}
             </bk-button>
           </div>
@@ -119,7 +129,11 @@
         v-else
         mode="partial"
         :title="$t('暂无自定义日志采集等高级功能')"
-        :functional-desc="$t('平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。')"
+        :functional-desc="
+          $t(
+            '平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。',
+          )
+        "
         :guide-title="$t('如需要该功能，需要部署：')"
         :guide-desc-list="[$t('1. 蓝鲸监控：监控日志套餐')]"
         @gotoMore="gotoMore"
@@ -161,7 +175,10 @@
           :error-display-type="'normal'"
         >
           <!-- 编辑禁用 -->
-          <bk-select v-model="formData.ruleId" :disabled="!collectionRulesConfig.isCreate">
+          <bk-select
+            v-model="formData.ruleId"
+            :disabled="!collectionRulesConfig.isCreate"
+          >
             <bk-option
               v-bkloading="{ isLoading: isRuleLoading }"
               v-for="option in collectionRules"
@@ -173,7 +190,10 @@
               slot="extension"
               class="select-extension-cls"
             >
-              <div class="add-rules" @click="handleToLink(customCollectorData)">
+              <div
+                class="add-rules"
+                @click="handleToLink(customCollectorData)"
+              >
                 <i class="bk-icon icon-plus-circle"></i>
                 {{ $t('新增采集规则') }}
               </div>
@@ -199,7 +219,12 @@
           <bk-radio-group v-model="formData.logType">
             <!-- 编辑状态，禁止切换采集对象 -->
             <bk-radio :value="'json'">{{ $t('容器内文件') }}</bk-radio>
-            <bk-radio :value="'stdout'" :disabled="true">{{ $t('标准输出') }}</bk-radio>
+            <bk-radio
+              :value="'stdout'"
+              :disabled="true"
+            >
+              {{ $t('标准输出') }}
+            </bk-radio>
           </bk-radio-group>
         </bk-form-item>
         <!-- 日志采集路径 -->
@@ -224,7 +249,7 @@
               ></i>
               <i
                 class="icon paasng-icon paasng-minus-circle-shape ml10"
-                :class="{ 'disabled': formData.logPaths.length < 2 }"
+                :class="{ disabled: formData.logPaths.length < 2 }"
                 @click="deletePath(index)"
               ></i>
             </template>
@@ -239,6 +264,7 @@
 import i18n from '@/language/i18n.js';
 import alarmStrategy from './alarm-strategy.vue';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
+import { mapState } from 'vuex';
 export default {
   components: { alarmStrategy, FunctionalDependency },
   data() {
@@ -304,17 +330,15 @@ export default {
     };
   },
   computed: {
+    ...mapState(['curAppInfo', 'curAppModule']),
     appCode() {
       return this.$route.params.id;
-    },
-    curAppModule() {
-      return this.$store.state.curAppModule;
     },
     curModuleId() {
       return this.curAppModule?.name;
     },
-    curAppInfo() {
-      return this.$store.state.curAppInfo || {};
+    hasSharedIndexRow() {
+      return this.logCollectionList.some((row) => this.isSharedIndexRow(row));
     },
   },
   created() {
@@ -328,7 +352,6 @@ export default {
         const list = await this.$store.dispatch('observability/getLogCollectionRuleList', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          // appCode: 'test-fastapi',
         });
         this.logCollectionList = list || [];
       } catch (e) {
@@ -343,8 +366,8 @@ export default {
 
     // 新增/编辑采集信息
     async editorCollectionRule() {
-      const paths = this.formData.logPaths.map(v => v.value);
-      const collector = this.collectionRules.find(v => v.collector_config_id === this.formData.ruleId);
+      const paths = this.formData.logPaths.map((v) => v.value);
+      const collector = this.collectionRules.find((v) => v.collector_config_id === this.formData.ruleId);
       const params = {
         name_en: collector.name_en,
         collector_config_id: collector.collector_config_id,
@@ -433,7 +456,7 @@ export default {
     // 编辑采集规则
     handleCollectionRuleEdit(data) {
       // 采集路径
-      const paths = data.log_paths.map(v => ({ value: v }));
+      const paths = data.log_paths.map((v) => ({ value: v }));
       if (!paths.length) {
         paths.push({ value: '' });
       }
@@ -465,23 +488,35 @@ export default {
       this.$bkInfo({
         extCls: 'delete-collection-rule',
         title: this.$t('是否删除采集规则？'),
-        subHeader: h('div', {
-          style: {
-            textAlign: 'center',
+        subHeader: h(
+          'div',
+          {
+            style: {
+              textAlign: 'center',
+            },
           },
-        }, [
-          h('div', {
-            style: {
-              color: '#313238',
-            },
-          }, `${i18n.t('采集规则')}：${data.name_en}`),
-          h('div', {
-            style: {
-              marginTop: '8px',
-              color: '#63656E',
-            },
-          }, i18n.t('删除后，将不再采集相关日志。')),
-        ]),
+          [
+            h(
+              'div',
+              {
+                style: {
+                  color: '#313238',
+                },
+              },
+              `${i18n.t('采集规则')}：${data.name_en}`,
+            ),
+            h(
+              'div',
+              {
+                style: {
+                  marginTop: '8px',
+                  color: '#63656E',
+                },
+              },
+              i18n.t('删除后，将不再采集相关日志。'),
+            ),
+          ],
+        ),
         confirmFn: () => {
           this.deleteCollectionRule(data.name_en);
         },
@@ -490,11 +525,14 @@ export default {
 
     // 确定、表单校验
     hanleConfirm() {
-      this.$refs.validateForm.validate().then(() => {
-        this.editorCollectionRule();
-      }, (validator) => {
-        console.error(validator.content);
-      });
+      this.$refs.validateForm.validate().then(
+        () => {
+          this.editorCollectionRule();
+        },
+        (validator) => {
+          console.error(validator.content);
+        },
+      );
     },
 
     // form表单数据重置
@@ -506,9 +544,7 @@ export default {
         this.formData = {
           ruleId: '',
           logType: 'json',
-          logPaths: [
-            { value: '' },
-          ],
+          logPaths: [{ value: '' }],
         };
       }, 300);
     },
@@ -522,6 +558,11 @@ export default {
     handleLimitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
+    },
+
+    // 是否为共享索引的采集规则（共享索引跳转到 bklog 平台也无法使用检索）
+    isSharedIndexRow(row) {
+      return ['bkpaas_platform_log_stdout', 'bkpaas_platform_log_json'].includes(row.name_en);
     },
 
     handleToLink(row) {
@@ -581,7 +622,7 @@ export default {
     align-items: center;
     i {
       font-size: 14px;
-      color: #C4C6CC;
+      color: #c4c6cc;
       cursor: pointer;
 
       &.disabled {
@@ -620,12 +661,12 @@ export default {
     .line {
       width: 1px;
       height: 16px;
-      background: #DCDEE5;
+      background: #dcdee5;
       margin-right: 10px;
     }
     .paasng-refresh-line {
       padding: 4px;
-      color: #979BA5;
+      color: #979ba5;
       font-size: 14px;
       cursor: pointer;
       transform: translateY(0);
@@ -640,14 +681,14 @@ export default {
     text-align: center;
     .title {
       font-size: 14px;
-      color: #63656E;
+      color: #63656e;
       line-height: 24px;
     }
 
     .sub-title {
       margin: 8px 0;
       font-size: 12px;
-      color: #979BA5;
+      color: #979ba5;
       line-height: 20px;
     }
   }

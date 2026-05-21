@@ -20,7 +20,7 @@ import logging
 from django.conf import settings
 
 from paasng.utils.moby_distribution.registry.client import DockerRegistryV2Client
-from paasng.utils.moby_distribution.registry.resources.manifests import ManifestRef
+from paasng.utils.moby_distribution.registry.resources.tags import Tags
 from paasng.utils.moby_distribution.registry.utils import parse_image
 from paasng.utils.moby_distribution.spec.endpoint import APIEndpoint
 
@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 def check_snapshot_image_exists(snapshot: str) -> None:
     """Check if the snapshot image exists in the registry.
 
-    Uses Docker Registry HTTP API V2 to verify the image manifest exists.
+    Uses Docker Registry HTTP API V2 to verify the image tag exists in the repository.
+    This approach queries the tag list which is independent of manifest media type,
+    so it works for both Docker V2 and OCI format images.
     Raises SandboxImageValidateError if image validation fails.
 
     :param snapshot: The snapshot image name (e.g., "my-registry/my-image:v1").
@@ -60,15 +62,15 @@ def check_snapshot_image_exists(snapshot: str) -> None:
         )
         if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY:
             client.session.verify = False
-        manifest = ManifestRef(repo=repo, reference=reference, client=client, timeout=10)
-        result = manifest.get_metadata()
+        tags = Tags(repo=repo, client=client, timeout=10).list()
+        exists = reference in tags
     except Exception as e:
         raise SandboxImageValidateError(
             f"Failed to check existence of snapshot image '{snapshot}' in registry "
             f"'{settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST}': {e}"
         ) from e
 
-    if result is None:
+    if not exists:
         raise SandboxImageValidateError(
             f"Snapshot image '{snapshot}' does not exist in registry "
             f"'{settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST}'"

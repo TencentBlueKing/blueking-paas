@@ -102,8 +102,9 @@ class CoreDynamicClient(DynamicClient):
     """为官方 SDK 里的 DynamicClient 追加新功能"""
 
     def __init__(self, client, cache_file=None, discoverer=None):
+        # safe cache_file read and write under multi-threading environment
         if cache_file is None:
-            name = f"osrcp-{threading.get_ident()}.json"
+            name = f"osrcp-{os.getpid()}-{threading.get_ident()}.json"
             cache_file = os.path.join(tempfile.gettempdir(), name)
         super().__init__(client, cache_file, discoverer=discoverer or LazyDiscoverer)
 

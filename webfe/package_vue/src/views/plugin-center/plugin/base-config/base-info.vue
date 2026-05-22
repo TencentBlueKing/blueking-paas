@@ -160,13 +160,15 @@
           class="plugin-operation-wrapper"
           v-else
         >
-          <bk-button
-            theme="danger"
-            :disabled="isArchivedStatus && !offlineStatus"
-            @click="showRemovePlugin"
-          >
-            {{ $t('下架插件') }}
-          </bk-button>
+          <span v-bk-tooltips="{ content: $t('CodeCC 工具暂不支持下架'), disabled: !isCodecc }">
+            <bk-button
+              theme="danger"
+              :disabled="(isArchivedStatus && !offlineStatus) || isCodecc"
+              @click="showRemovePlugin"
+            >
+              {{ $t('下架插件') }}
+            </bk-button>
+          </span>
           <i class="paasng-icon paasng-paas-remind-fill"></i>
           <span
             v-if="isArchivedStatus && !offlineStatus"
@@ -182,7 +184,7 @@
     </paas-content-loader>
 
     <bk-dialog
-      v-model="delPluginDialog.visiable"
+      v-model="delPluginDialog.visible"
       width="540"
       :title="$t(`确认下架插件【{id}】？`, { id: pluginInfo.id })"
       :theme="'primary'"
@@ -221,7 +223,7 @@
         <bk-button
           theme="default"
           class="ml10"
-          @click="delPluginDialog.visiable = false"
+          @click="delPluginDialog.visible = false"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -239,7 +241,7 @@ import pluginBaseInfo from './comps/base-info-item.vue';
 import pluginMarketInfo from './comps/market-info-item.vue';
 import publisherInfo from './comps/publisher-info.vue';
 import codeccBaseInfo from './comps/codecc-base-info.vue';
-// import 'BKSelectMinCss';
+
 export default {
   components: {
     authenticationInfo,
@@ -255,14 +257,6 @@ export default {
     return {
       // 插件开发
       isLoading: true,
-      isFormEdited: {
-        nameInput: false,
-        dataVolumeInput: false,
-        classifyInput: false,
-        profileInput: false,
-        descriptionInput: false,
-        contactsInput: false,
-      },
       // 当前显示数据
       pluginInfo: {},
       // 服务器返回数据
@@ -275,7 +269,7 @@ export default {
       // 市场信息只读
       formRemovePluginId: '',
       delPluginDialog: {
-        visiable: false,
+        visible: false,
         isLoading: false,
       },
       titleArr: [this.$t('可选的插件使用方'), this.$t('已授权给以下使用方')],
@@ -301,9 +295,6 @@ export default {
     formRemoveValidated() {
       return this.pluginInfo.id === this.formRemovePluginId;
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     isArchivedStatus() {
       return this.curPluginInfo.status === 'archived';
     },
@@ -311,7 +302,7 @@ export default {
       return this.curPluginInfo.can_reactivate;
     },
     isCodecc() {
-      return this.curPluginInfo.has_test_version;
+      return this.pdId === 'bk-code-cc-new';
     },
   },
   async created() {
@@ -320,8 +311,8 @@ export default {
   },
   methods: {
     async init() {
-      const ininRequest = [this.getMarketInfo(), this.getPluginBaseInfo()];
-      await Promise.all(ininRequest);
+      const initRequest = [this.getMarketInfo(), this.getPluginBaseInfo()];
+      await Promise.all(initRequest);
       if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
         this.getPluginAll();
         this.getAuthorizedUse();
@@ -333,7 +324,7 @@ export default {
       this.isLoading = false;
     },
 
-    formattParams() {
+    formatParams() {
       const data = {
         pdId: this.pdId,
         pluginId: this.pluginId,
@@ -343,33 +334,27 @@ export default {
 
     // 基本信息
     async getPluginBaseInfo() {
-      const data = this.formattParams();
+      const data = this.formatParams();
       try {
         const res = await this.$store.dispatch('plugin/getPluginBaseInfo', data);
         this.pluginInfo = res;
         // 取消的还原数据
         this.resPluginInfo.name_zh_cn = res.name_zh_cn;
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
     // 市场信息
     async getMarketInfo() {
-      const data = this.formattParams();
+      const data = this.formatParams();
       try {
         const res = await this.$store.dispatch('plugin/getMarketInfo', data);
         this.marketInfo = res;
-        const contactformat = !res.contact ? [] : res.contact.split(',');
-        this.$set(this.marketInfo, 'contactArr', contactformat);
+        const contactFormat = !res.contact ? [] : res.contact.split(',');
+        this.$set(this.marketInfo, 'contactArr', contactFormat);
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -409,10 +394,7 @@ export default {
           message: this.$t('logo上传成功！'),
         });
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message,
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -421,11 +403,11 @@ export default {
     },
 
     showRemovePlugin() {
-      this.delPluginDialog.visiable = true;
+      this.delPluginDialog.visible = true;
     },
 
     hookAfterClose() {
-      this.delPluginDialog.visiable = false;
+      this.delPluginDialog.visible = false;
       this.formRemovePluginId = '';
     },
 
@@ -446,10 +428,7 @@ export default {
           name: 'plugin',
         });
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         this.delPluginDialog.isLoading = false;
       }
@@ -476,10 +455,7 @@ export default {
           this.PluginDataAllFirst = false;
         }
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -497,10 +473,7 @@ export default {
         const res = await this.$store.dispatch('plugin/getProfileData', { pluginId: this.pluginId });
         this.apiGwName = res.api_gw_name;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -520,10 +493,7 @@ export default {
             message: this.$t('授权成功！'),
           });
         } catch (e) {
-          this.$paasMessage({
-            theme: 'error',
-            message: e.detail || e.message || this.$t('接口异常'),
-          });
+          this.catchErrorHandler(e);
         }
       } else {
         this.$paasMessage({
@@ -542,10 +512,7 @@ export default {
           this.TargetDataFirst = false;
         }
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -587,10 +554,7 @@ export default {
             await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pdId });
             return true;
           } catch (e) {
-            this.$paasMessage({
-              theme: 'error',
-              message: e.detail || e.message || this.$t('接口异常'),
-            });
+            this.catchErrorHandler(e);
             return false;
           }
         },

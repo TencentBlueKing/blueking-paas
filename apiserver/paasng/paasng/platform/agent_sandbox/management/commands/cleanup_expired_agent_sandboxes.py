@@ -26,6 +26,8 @@ from django.core.management.base import BaseCommand
 from django.db import close_old_connections
 from django.utils import timezone
 
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
 from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
@@ -48,6 +50,24 @@ class _DeleteResult:
     success: bool
     sandbox: Sandbox
     error: SandboxError | None = None
+
+
+def _stdout_log_line(message: str) -> str:
+    ts = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
+    return f"[{ts}] {message}"
+
+
+def _warmup_kube_discovery_cache(targets: set[str]) -> None:
+    """按集群预热 kubernetes dynamic client 的 discovery 磁盘缓存。
+
+    LazyDiscoverer 会按 API Server host 共享同一份 on-disk cache；线程池冷启动时
+    并发读写该文件可能产生竞态。在并行删除前串行预热可避免该问题。
+    """
+    for target in sorted(targets):
+        if not target:
+            continue
+        client = get_client_by_cluster_name(target)
+        CoreDynamicClient(client)
 
 
 def _delete_expired_sandbox(sandbox_uuid: uuid.UUID) -> _DeleteResult:
@@ -99,10 +119,15 @@ class Command(BaseCommand):
             return
 
         sandbox_uuids = list(sandboxes.values_list("uuid", flat=True))
+        targets = set(sandboxes.values_list("target", flat=True).distinct())
         deleted_count = 0
         failed_count = 0
         output_lock = threading.Lock()
         workers = min(concurrency, len(sandbox_uuids))
+
+        if targets:
+            self.stdout.write(f"预热 {len(targets)} 个集群的 K8s discovery 缓存: {', '.join(sorted(targets))}")
+            _warmup_kube_discovery_cache(targets)
 
         self.stdout.write(f"并发数: {workers}")
 
@@ -114,15 +139,19 @@ class Command(BaseCommand):
                     if result.success:
                         deleted_count += 1
                         self.stdout.write(
-                            f"已删除 {deleted_count}/{total} uuid={result.sandbox.uuid} "
-                            f"name={result.sandbox.name} app_code={result.sandbox.application.code}"
+                            _stdout_log_line(
+                                f"已删除 {deleted_count}/{total} uuid={result.sandbox.uuid} "
+                                f"name={result.sandbox.name} app_code={result.sandbox.application.code}"
+                            )
                         )
                     else:
                         failed_count += 1
                         self.stdout.write(
                             self.style.ERROR(
-                                f"删除失败 uuid={result.sandbox.uuid} name={result.sandbox.name} "
-                                f"app_code={result.sandbox.application.code}: {result.error}"
+                                _stdout_log_line(
+                                    f"删除失败 uuid={result.sandbox.uuid} name={result.sandbox.name} "
+                                    f"app_code={result.sandbox.application.code}: {result.error}"
+                                )
                             )
                         )
 

@@ -17,7 +17,6 @@
 
 """清理过期的沙箱实例"""
 
-import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -122,7 +121,6 @@ class Command(BaseCommand):
         targets = set(sandboxes.values_list("target", flat=True).distinct())
         deleted_count = 0
         failed_count = 0
-        output_lock = threading.Lock()
         workers = min(concurrency, len(sandbox_uuids))
 
         if targets:
@@ -135,24 +133,23 @@ class Command(BaseCommand):
             futures = [executor.submit(_delete_expired_sandbox, sbx_uuid) for sbx_uuid in sandbox_uuids]
             for future in as_completed(futures):
                 result = future.result()
-                with output_lock:
-                    if result.success:
-                        deleted_count += 1
-                        self.stdout.write(
+                if result.success:
+                    deleted_count += 1
+                    self.stdout.write(
+                        _stdout_log_line(
+                            f"已删除 {deleted_count}/{total} uuid={result.sandbox.uuid} "
+                            f"name={result.sandbox.name} app_code={result.sandbox.application.code}"
+                        )
+                    )
+                else:
+                    failed_count += 1
+                    self.stdout.write(
+                        self.style.ERROR(
                             _stdout_log_line(
-                                f"已删除 {deleted_count}/{total} uuid={result.sandbox.uuid} "
-                                f"name={result.sandbox.name} app_code={result.sandbox.application.code}"
+                                f"删除失败 uuid={result.sandbox.uuid} name={result.sandbox.name} "
+                                f"app_code={result.sandbox.application.code}: {result.error}"
                             )
                         )
-                    else:
-                        failed_count += 1
-                        self.stdout.write(
-                            self.style.ERROR(
-                                _stdout_log_line(
-                                    f"删除失败 uuid={result.sandbox.uuid} name={result.sandbox.name} "
-                                    f"app_code={result.sandbox.application.code}: {result.error}"
-                                )
-                            )
-                        )
+                    )
 
         self.stdout.write(f"\n清理完成: 删除 {deleted_count} 个, 失败 {failed_count} 个")

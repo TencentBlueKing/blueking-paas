@@ -57,10 +57,10 @@ def _stdout_log_line(message: str) -> str:
 
 
 def _warmup_kube_discovery_cache(targets: set[str]) -> None:
-    """按集群预热 kubernetes dynamic client 的 discovery 磁盘缓存。
-
-    LazyDiscoverer 会按 API Server host 共享同一份 on-disk cache；线程池冷启动时
-    并发读写该文件可能产生竞态。在并行删除前串行预热可避免该问题。
+    """
+    预热（初始化）kubernetes dynamic client 的 discovery 磁盘缓存。
+    避免并发初始化缓存时同时读写该文件。
+    Ref: https://github.com/kubernetes-client/python/issues/2037
     """
     for target in sorted(targets):
         if not target:

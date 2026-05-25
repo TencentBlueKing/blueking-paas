@@ -56,13 +56,13 @@ def _stdout_log_line(message: str) -> str:
     return f"[{ts}] {message}"
 
 
-def _warmup_kube_discovery_cache(targets: set[str]) -> None:
+def _warmup_kube_discovery_cache(cluster_names: set[str]) -> None:
     """
     预热（初始化）kubernetes dynamic client 的 discovery 磁盘缓存。
     避免并发初始化缓存时同时读写该文件。
     Ref: https://github.com/kubernetes-client/python/issues/2037
     """
-    for target in sorted(targets):
+    for target in sorted(cluster_names):
         if not target:
             continue
         client = get_client_by_cluster_name(target)

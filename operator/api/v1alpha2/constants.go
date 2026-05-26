@@ -117,6 +117,8 @@ const (
 	ImageCredentialsRefAnnoKey = "bkapp.paas.bk.tencent.com/image-credentials"
 	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名
 	DeployIDAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
+	// DeployInterruptedAnnoKey 注解中存储部署中断 ID 的键名
+	DeployInterruptedAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-interrupted"
 	// PaaSAnalysisSiteIDAnnoKey 注解中存储 PA site id 的键名
 	PaaSAnalysisSiteIDAnnoKey = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 )

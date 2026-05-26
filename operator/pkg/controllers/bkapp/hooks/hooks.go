@@ -49,6 +49,9 @@ import (
 // HookPodsHistoryLimit 最大保留的 Hook Pod 数量（单种类型）
 const HookPodsHistoryLimit = 3
 
+// HookReasonInterrupted 表示当前轮次的 PreRelease 已被用户主动中断
+const HookReasonInterrupted = "Interrupted"
+
 // NewHookReconciler will return a HookReconciler with given k8s client
 func NewHookReconciler(client client.Client) *HookReconciler {
 	return &HookReconciler{Client: client}
@@ -63,6 +66,12 @@ type HookReconciler struct {
 // Reconcile ...
 func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
 	log := logf.FromContext(ctx)
+
+	// 处理当前部署被用户中断的信号
+	if isCurrentDeployInterrupted(bkapp) {
+		return r.handleInterrupted(ctx, bkapp)
+	}
+
 	current := r.getCurrentState(ctx, bkapp)
 
 	log.V(1).Info("handling pre-release-hook reconciliation")
@@ -336,6 +345,74 @@ func (r *HookReconciler) cleanupFinishedHooks(
 		}
 	}
 	return nil
+}
+
+// handleInterrupted 处理 "当前部署被用户主动中断" 场景.
+// 注意: 内存中修改的 bkapp.Status 会由 BkAppReconciler.updateStatus 在本轮调和结束时统一写回.
+func (r *HookReconciler) handleInterrupted(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
+	log := logf.FromContext(ctx)
+
+	hookCond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+	if hookCond != nil && hookCond.Status == metav1.ConditionTrue {
+		log.V(1).Info("PreRelease hook already finished, ignoring interrupt signal")
+		return r.Result
+	}
+
+	r.markPreReleaseHookInterrupted(bkapp, hookCond)
+
+	if err := r.deletePreReleaseHookPod(ctx, bkapp); err != nil {
+		// 删除失败不阻塞中断流程, 仅记录日志
+		log.Error(err, "failed to delete interrupted pre-release hook pod")
+	}
+
+	return r.Result.End()
+}
+
+func (r *HookReconciler) markPreReleaseHookInterrupted(
+	bkapp *paasv1alpha2.BkApp,
+	hookCond *metav1.Condition,
+) {
+	var observedGeneration int64
+	if hookCond != nil {
+		observedGeneration = hookCond.ObservedGeneration
+	} else {
+		observedGeneration = bkapp.Generation
+	}
+	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+		Type:               paasv1alpha2.HooksFinished,
+		Status:             metav1.ConditionFalse,
+		Reason:             HookReasonInterrupted,
+		Message:            "PreRelease hook was interrupted by user",
+		ObservedGeneration: observedGeneration,
+	})
+	// 将 PreRelease 阶段状态标记为 Failed 收敛, 并保留中断原因, 便于排查
+	bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+		Type:    paasv1alpha2.HookPreRelease,
+		Phase:   paasv1alpha2.HealthUnhealthy,
+		Reason:  HookReasonInterrupted,
+		Message: "PreRelease hook was interrupted by user",
+	})
+	bkapp.Status.Phase = paasv1alpha2.AppFailed
+	r.updateAppProgressingStatus(bkapp, metav1.ConditionFalse)
+}
+
+func (r *HookReconciler) deletePreReleaseHookPod(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
+	pod := &corev1.Pod{}
+	key := types.NamespacedName{Namespace: bkapp.Namespace, Name: names.PreReleaseHook(bkapp)}
+	if err := r.Client.Get(ctx, key, pod); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	return client.IgnoreNotFound(r.Client.Delete(ctx, pod))
+}
+
+func isCurrentDeployInterrupted(bkapp *paasv1alpha2.BkApp) bool {
+	// 仅当 DeployInterruptedAnnoKey 与 DeployIDAnnoKey 同时存在且值相等时, 才认为是对当前部署的有效中断信号.
+	interruptedID := bkapp.Annotations[paasv1alpha2.DeployInterruptedAnnoKey]
+	if interruptedID == "" {
+		return false
+	}
+	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
+	return currentDeployID != "" && currentDeployID == interruptedID
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

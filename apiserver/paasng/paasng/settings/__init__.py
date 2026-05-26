@@ -257,6 +257,8 @@ MIDDLEWARE = [
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
+    # 请求异常时向 OTel Span 写入堆栈、源码片段与局部变量
+    "paasng.misc.tracing.middlewares.OpenTelemetryExceptionSpanMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 

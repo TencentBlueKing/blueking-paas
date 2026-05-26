@@ -19,8 +19,10 @@ from bkpaas_auth.models import User
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_build.bg_build import interrupt_build_proc
+from paasng.platform.engine.deploy.bg_command.bkapp_hook_interrupt import interrupt_cnative_pre_release
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
@@ -64,3 +66,14 @@ def interrupt_deployment(deployment: Deployment, user: User):
             # This exception means that build has not been started yet, transform
             # the error message.
             raise DeployInterruptionFailed("任务正处于预备执行状态，无法中断，请稍候重试")
+
+    if _is_cnative_pre_release_phase(deployment):
+        interrupt_cnative_pre_release(deployment)
+
+
+def _is_cnative_pre_release_phase(deployment: Deployment) -> bool:
+    """Return whether the deployment may have a cloud-native pre-release hook to interrupt."""
+    if deployment.app_environment.application.type != ApplicationType.CLOUD_NATIVE:
+        return False
+
+    return deployment.bkapp_release_id is not None

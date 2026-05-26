@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import time
 
 from six import ensure_text
 
@@ -34,6 +35,9 @@ logger = logging.getLogger(__name__)
 # This timeout should be consistent with the default application
 # defined at `paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT`
 _WAIT_FOR_READINESS_TIMEOUT = 300
+
+# 检查中断的间隔时间
+_INTERRUPT_CHECK_INTERVAL = 10
 
 
 def generate_pre_release_hook_name(bkapp_name: str, deploy_id: int) -> str:
@@ -80,7 +84,13 @@ class PreReleaseDummyExecutor(DeployStep):
             return PodPhase.FAILED
 
         try:
+            next_check_at = time.monotonic()
             for line in handler.fetch_logs(follow=True):
+                interrupted, next_check_at = self._check_release_interrupted(next_check_at)
+                if interrupted:
+                    self.stream.write_message(Style.Warning("Pre-release interrupted"))
+                    return PodPhase.FAILED
+
                 self.stream.write_message(ensure_text(line))
         except Exception:
             logger.exception(f"A critical error happened during fetch logs from hook({hook_name})")
@@ -91,9 +101,24 @@ class PreReleaseDummyExecutor(DeployStep):
         except ReadTargetStatusTimeout:
             return PodPhase.RUNNING
 
+    def _check_release_interrupted(self, next_check_at: float) -> tuple[bool, float]:
+        """检查 Pre-release 是否被中断"""
+        if time.monotonic() <= next_check_at:
+            return False, next_check_at
+
+        self.deployment.refresh_from_db(fields=["release_int_requested_at"])
+        has_release_interrupted = self.deployment.has_requested_int
+        next_check_at = time.monotonic() + _INTERRUPT_CHECK_INTERVAL
+
+        return has_release_interrupted, next_check_at
+
     def _mark_step_stop(self, status: PodPhase):
+        is_interrupted = status == PodPhase.FAILED and self.deployment.has_requested_int
+
         if status == PodPhase.SUCCEEDED:
             self.stream.write_message(Style.Warning("Pre-release execution succeed"))
+        elif is_interrupted:
+            self.stream.write_message(Style.Warning("Pre-release interrupted"))
         elif status == PodPhase.FAILED:
             self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))
         else:
@@ -106,5 +131,9 @@ class PreReleaseDummyExecutor(DeployStep):
 
         if status == PodPhase.SUCCEEDED:
             step.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
-        elif status == PodPhase.FAILED:
+            return
+        if is_interrupted:
+            step.mark_and_write_to_stream(self.stream, JobStatus.INTERRUPTED, {"message": "Pre-release interrupted"})
+            return
+        if status == PodPhase.FAILED:
             step.mark_and_write_to_stream(self.stream, JobStatus.FAILED)

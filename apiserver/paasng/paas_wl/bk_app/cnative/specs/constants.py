@@ -28,6 +28,8 @@ ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
 TENANT_GUARD_ANNO_KEY = "bkapp.paas.bk.tencent.com/tenant-guard"
 # workloads 注入到 annotations 的部署ID字段
 BKPAAS_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
+# workloads 注入到 annotations 的中断部署 ID 字段
+BKPAAS_DEPLOY_INTERRUPTED_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-interrupted"
 # workloads 注入到 annotations 的增强服务信息字段
 BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"
 # 注解中存储 region 的键名

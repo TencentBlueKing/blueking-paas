@@ -412,16 +412,11 @@ export default {
             trigger: 'blur',
           },
           {
-            max: 16,
-            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
-            trigger: 'blur',
-          },
-          {
             validator(val) {
-              const reg = /^[a-z][a-z0-9-]*$/;
+              const reg = /^[a-z][a-z0-9_-]{2,15}$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
+            message: this.$t('只允许小写字母、数字、连字符(-)和下划线(_)，以字母开头，长度3-16个字符'),
             trigger: 'blur',
           },
         ],

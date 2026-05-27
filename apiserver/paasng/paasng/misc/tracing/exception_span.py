@@ -42,7 +42,7 @@ SOURCE_CONTEXT_CTX = 5
 CHAIN_DEPTH_LIMIT = 2
 # exception.message 总长度上限
 MESSAGE_MAX_LEN = 512 * 1024
-# 自定义事件名，避开 SDK 标准的 `exception`
+# 保存错误堆栈详情的 event 名称，避开 SDK 标准的 `exception`
 DIAGNOSTIC_EVENT_NAME = "exception.diagnostic"
 
 
@@ -73,6 +73,7 @@ def project_root() -> Path:
 
 
 def resolve_filepath(filepath: str) -> Path:
+    # Windows 路径转 POSIX 路径
     path = Path(filepath.replace("\\", "/"))
     try:
         return path.resolve()

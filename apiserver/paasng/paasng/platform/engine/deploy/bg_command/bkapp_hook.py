@@ -113,6 +113,8 @@ class PreReleaseDummyExecutor(DeployStep):
         return has_release_interrupted, next_check_at
 
     def _mark_step_stop(self, status: PodPhase):
+        # wait_for_logs_readiness 超时等路径不会经过日志循环的刷新, 需要手动刷新
+        self.deployment.refresh_from_db(fields=["release_int_requested_at"])
         is_interrupted = status == PodPhase.FAILED and self.deployment.has_requested_int
 
         if status == PodPhase.SUCCEEDED:

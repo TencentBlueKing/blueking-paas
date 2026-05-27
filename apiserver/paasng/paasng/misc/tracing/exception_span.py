@@ -19,6 +19,7 @@
 
 import linecache
 import logging
+import reprlib
 import sys
 from dataclasses import dataclass
 from functools import lru_cache
@@ -32,18 +33,14 @@ from paasng.utils.masked_curlify import DEFAULT_SCRUBBED_FIELDS, MASKED_CONTENT
 
 logger = logging.getLogger(__name__)
 
-# 每帧 LOCALS 变量最多展示数
-LOCALS_PREVIEW_LIMIT = 16
-# 单个变量 repr 最大长度，超出尾部截断
-LOCAL_VALUE_MAX_LEN = 1024
-# SOURCE 片段在崩溃行上下展开的行数
-SOURCE_CONTEXT_CTX = 5
-# 链式异常最多展开层数（不含根异常）
-CHAIN_DEPTH_LIMIT = 2
-# exception.message 总长度上限
-MESSAGE_MAX_LEN = 512 * 1024
-# 保存错误堆栈详情的 event 名称，避开 SDK 标准的 `exception`
-DIAGNOSTIC_EVENT_NAME = "exception.diagnostic"
+from .constants import (
+    CHAIN_DEPTH_LIMIT,
+    DIAGNOSTIC_EVENT_NAME,
+    LOCAL_VALUE_MAX_LEN,
+    LOCALS_PREVIEW_LIMIT,
+    MESSAGE_MAX_LEN,
+    SOURCE_CONTEXT_CTX,
+)
 
 
 @dataclass(frozen=True)
@@ -59,7 +56,7 @@ class Frame:
     # 已含 ">" 标记、行号与缩进的源码片段
     source_snippet: str
     # (name, masked_value_repr) 列表，按 name 升序
-    locals: list[tuple[str, str]]
+    local_vars: list[tuple[str, str]]
 
 
 # ----------------------------- path / source helpers -----------------------------
@@ -135,13 +132,15 @@ def is_sensitive_key(key: str) -> bool:
     return any(part in lk for part in DEFAULT_SCRUBBED_FIELDS)
 
 
+R = reprlib.Repr()
+R.maxlong = LOCAL_VALUE_MAX_LEN
+
+
 def safe_repr(value: Any) -> str:
     try:
-        text = repr(value)
+        text = R.repr(value)
     except Exception:  # noqa: BLE001
         return "<Unserializable>"
-    if len(text) > LOCAL_VALUE_MAX_LEN:
-        return text[:LOCAL_VALUE_MAX_LEN] + "..."
     return text
 
 
@@ -174,7 +173,7 @@ def iter_frames(tb: TracebackType | None) -> Iterator[Frame]:
             display_path=display_path(filepath),
             lineno=lineno,
             source_snippet=build_source_snippet(filepath, lineno),
-            locals=sanitize_locals(frame.f_locals),
+            local_vars=sanitize_locals(frame.f_locals),
         )
         cursor = cursor.tb_next
         index += 1
@@ -207,10 +206,10 @@ def format_frame(frame: Frame, display_index: int, total: int) -> str:
         body.append("  (source unavailable)")
 
     body.append("LOCALS:")
-    if frame.locals:
-        for name, value in frame.locals[:LOCALS_PREVIEW_LIMIT]:
+    if frame.local_vars:
+        for name, value in frame.local_vars[:LOCALS_PREVIEW_LIMIT]:
             body.append(f"  {name} = {value}")
-        remaining = len(frame.locals) - LOCALS_PREVIEW_LIMIT
+        remaining = len(frame.local_vars) - LOCALS_PREVIEW_LIMIT
         if remaining > 0:
             body.append(f"  ... ({remaining} more)")
     else:

@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import socket
+
 from django.conf import settings
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -32,12 +34,15 @@ def setup_trace_config():
 
     # Note: Since v1.35, the Jaeger supports OTLP natively. Please use the OTLP exporter instead.
     # pypi ref: https://pypi.org/project/opentelemetry-exporter-jaeger/
+    host_ip = socket.gethostbyname(socket.gethostname())
+
     trace.set_tracer_provider(
         tracer_provider=TracerProvider(
             resource=Resource.create(
                 {
                     "service.name": settings.OTEL_SERVICE_NAME,
                     "bk.data.token": settings.OTEL_BK_DATA_TOKEN,
+                    "net.host.ip": host_ip,
                 },
             ),
             sampler=_KNOWN_SAMPLERS[settings.OTEL_SAMPLER],  # type: ignore

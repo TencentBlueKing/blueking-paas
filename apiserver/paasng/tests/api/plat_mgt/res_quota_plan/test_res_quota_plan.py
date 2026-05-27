@@ -148,7 +148,7 @@ class TestResourceQuotaPlanViewSet:
         assert len(memory_options) > 0
         assert all("value" in opt and "label" in opt for opt in memory_options)
 
-    def test_list_impact(self, plat_mgt_api_client, created_plan, monkeypatch):
+    def test_list_used_by(self, plat_mgt_api_client, created_plan, monkeypatch):
         """测试获取资源配额方案影响范围"""
 
         def get_used_by_processes(self):
@@ -160,25 +160,25 @@ class TestResourceQuotaPlanViewSet:
 
         monkeypatch.setattr(ResQuotaPlan, "get_used_by_processes", get_used_by_processes)
 
-        url = reverse("plat_mgt.res_quota_plans.list_impact", kwargs={"pk": created_plan.id})
+        url = reverse("plat_mgt.res_quota_plans.list_used_by", kwargs={"pk": created_plan.id})
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == 200
-        assert response.data == {
-            "application_count": 2,
-            "applications": [
-                {
-                    "app_code": "app-a",
-                    "modules": [
-                        {"module_name": "default", "processes": ["web"]},
-                        {"module_name": "worker", "processes": ["worker"]},
-                    ],
-                },
-                {
-                    "app_code": "app-b",
-                    "modules": [
-                        {"module_name": "default", "processes": ["web"]},
-                    ],
-                },
-            ],
-        }
+        assert response.data["count"] == 2
+        assert response.data["next"] is None
+        assert response.data["previous"] is None
+        assert response.data["results"] == [
+            {
+                "app_code": "app-a",
+                "modules": [
+                    {"module_name": "default", "processes": ["web"]},
+                    {"module_name": "worker", "processes": ["worker"]},
+                ],
+            },
+            {
+                "app_code": "app-b",
+                "modules": [
+                    {"module_name": "default", "processes": ["web"]},
+                ],
+            },
+        ]

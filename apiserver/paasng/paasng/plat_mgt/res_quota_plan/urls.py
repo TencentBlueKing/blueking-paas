@@ -27,9 +27,9 @@ urlpatterns = [
         name="plat_mgt.res_quota_plans.list_quantity_options",
     ),
     re_path(
-        r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/impact/$",
-        ResourceQuotaPlanViewSet.as_view({"get": "list_impact"}),
-        name="plat_mgt.res_quota_plans.list_impact",
+        r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/used_by/$",
+        ResourceQuotaPlanViewSet.as_view({"get": "list_used_by"}),
+        name="plat_mgt.res_quota_plans.list_used_by",
     ),
     re_path(
         r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/$",

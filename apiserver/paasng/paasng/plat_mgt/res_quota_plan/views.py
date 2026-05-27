@@ -31,7 +31,7 @@ from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryRes
 from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.utils.error_codes import error_codes
 
-from .serializers import ResQuotaPlanImpactOutputSLZ, ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
+from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ, ResQuotaPlanUsedByApplicationSLZ
 
 
 class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
@@ -115,16 +115,15 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],
         operation_description="获取资源配额方案影响的应用和模块列表",
-        responses={status.HTTP_200_OK: ResQuotaPlanImpactOutputSLZ()},
+        responses={status.HTTP_200_OK: ResQuotaPlanUsedByApplicationSLZ()},
     )
-    def list_impact(self, request, pk):
+    def list_used_by(self, request, pk):
         """获取资源配额方案影响的应用和模块列表"""
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
         used_by_processes = plan_obj.get_used_by_processes()
 
         applications_map: dict[str, dict] = {}
-        affected_modules: set[tuple[str, str]] = set()
 
         for process in sorted(
             used_by_processes,
@@ -143,7 +142,6 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
                 {"module_name": module_name, "processes": []},
             )
 
-            affected_modules.add((app_code, module_name))
             module_data["processes"].append(process_name)
 
         applications = []
@@ -151,11 +149,8 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
             app_data["modules"] = list(app_data["modules"].values())
             applications.append(app_data)
 
-        result = {
-            "application_count": len(applications),
-            "applications": applications,
-        }
-        return Response(ResQuotaPlanImpactOutputSLZ(result).data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(applications)
+        return self.get_paginated_response(ResQuotaPlanUsedByApplicationSLZ(page, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

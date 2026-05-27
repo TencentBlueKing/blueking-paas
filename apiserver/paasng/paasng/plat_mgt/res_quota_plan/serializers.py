@@ -39,6 +39,27 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
     is_builtin = serializers.BooleanField()
 
 
+class ResQuotaPlanImpactModuleSLZ(serializers.Serializer):
+    """Module affected by resource quota plan."""
+
+    module_name = serializers.CharField()
+    processes = serializers.ListField(child=serializers.CharField())
+
+
+class ResQuotaPlanImpactApplicationSLZ(serializers.Serializer):
+    """Application affected by resource quota plan."""
+
+    app_code = serializers.CharField()
+    modules = ResQuotaPlanImpactModuleSLZ(many=True)
+
+
+class ResQuotaPlanImpactOutputSLZ(serializers.Serializer):
+    """Impact scope of resource quota plan."""
+
+    application_count = serializers.IntegerField()
+    applications = ResQuotaPlanImpactApplicationSLZ(many=True)
+
+
 class ResourceQuotaSLZ(serializers.Serializer):
     """资源配额序列化器 (用于 limits 和 requests)"""
 

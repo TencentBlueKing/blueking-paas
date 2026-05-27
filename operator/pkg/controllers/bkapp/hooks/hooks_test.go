@@ -195,6 +195,22 @@ var _ = Describe("Test HookReconciler", func() {
 			err = r.Client.Get(ctx, client.ObjectKeyFromObject(hook.Pod), pod)
 			Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		})
+
+		It("interrupt should be ignored when bkapp has no pre-release hook", func() {
+			bkapp.Spec.Hooks = nil
+			bkapp.SetAnnotations(map[string]string{
+				paasv1alpha2.DeployIDAnnoKey:          "1",
+				paasv1alpha2.DeployInterruptedAnnoKey: "1",
+			})
+			r := NewHookReconciler(builder.WithObjects(bkapp).Build())
+			ret := r.Reconcile(ctx, bkapp)
+
+			Expect(ret.Error()).NotTo(HaveOccurred())
+			Expect(bkapp.Status.Phase).NotTo(Equal(paasv1alpha2.AppFailed))
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Reason).NotTo(Equal(HookReasonInterrupted))
+		})
 	})
 
 	Describe("test CheckAndUpdatePreReleaseHookStatus", func() {

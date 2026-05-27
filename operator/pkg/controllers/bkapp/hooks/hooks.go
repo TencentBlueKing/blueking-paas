@@ -68,7 +68,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log := logf.FromContext(ctx)
 
 	// 处理当前部署被用户中断的信号
-	if isCurrentDeployInterrupted(bkapp) {
+	if isCurrentDeployInterrupted(bkapp) && hasPreReleaseHook(bkapp) {
 		return r.handleInterrupted(ctx, bkapp)
 	}
 
@@ -413,6 +413,11 @@ func isCurrentDeployInterrupted(bkapp *paasv1alpha2.BkApp) bool {
 	}
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	return currentDeployID != "" && currentDeployID == interruptedID
+}
+
+// hasPreReleaseHook 判断当前 BkApp 是否配置了 pre-release hook.
+func hasPreReleaseHook(bkapp *paasv1alpha2.BkApp) bool {
+	return bkapp.Spec.Hooks != nil && bkapp.Spec.Hooks.PreRelease != nil
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

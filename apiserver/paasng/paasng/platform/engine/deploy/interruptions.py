@@ -26,6 +26,7 @@ from paasng.platform.engine.deploy.bg_command.bkapp_hook_interrupt import interr
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
+from paasng.platform.modules.constants import DeployHookType
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,15 @@ def interrupt_deployment(deployment: Deployment, user: User):
 
 
 def _is_cnative_pre_release_phase(deployment: Deployment) -> bool:
-    """Return whether the deployment may have a cloud-native pre-release hook to interrupt."""
-    if deployment.app_environment.application.type != ApplicationType.CLOUD_NATIVE:
+    """Return whether the deployment is currently in the cloud-native pre-release phase
+    that is interruptible.
+    """
+    env = deployment.app_environment
+    if env.application.type != ApplicationType.CLOUD_NATIVE:
         return False
 
-    return deployment.bkapp_release_id is not None
+    if deployment.bkapp_release_id is None:
+        return False
+
+    pre_release_hook = env.module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+    return bool(pre_release_hook and pre_release_hook.enabled)

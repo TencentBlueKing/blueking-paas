@@ -77,7 +77,6 @@ class TestInterruptCNativePreRelease:
         kpod.delete.assert_called_once_with(
             name=generate_pre_release_hook_name(bkapp_name, bk_deployment.bkapp_release_id),
             namespace=wl_app.namespace,
-            raise_if_non_exists=True,
         )
 
     def test_interrupt_best_effort(self, bk_deployment, mocked_k8s):

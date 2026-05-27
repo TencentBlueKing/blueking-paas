@@ -61,6 +61,6 @@ def interrupt_cnative_pre_release(deployment: Deployment) -> None:
         # Step 2: best-effort 删除 PreRelease Hook Pod
         pod_name = generate_pre_release_hook_name(bkapp_name, deployment.bkapp_release_id)
         try:
-            KPod(client).delete(name=pod_name, namespace=wl_app.namespace, raise_if_non_exists=True)
+            KPod(client).delete(name=pod_name, namespace=wl_app.namespace)
         except Exception:
             logger.exception("Failed to delete pre-release hook pod %s", pod_name)

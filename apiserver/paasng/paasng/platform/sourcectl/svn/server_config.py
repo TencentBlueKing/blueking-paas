@@ -33,7 +33,6 @@ class BkSvnServerConfig:
     su_name: str
     su_pass: str
     need_security: bool
-    admin_url: str
     auth_mgr_cls: Optional[str] = None
 
     def get_base_path(self) -> str:

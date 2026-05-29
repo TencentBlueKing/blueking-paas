@@ -406,8 +406,8 @@ func (r *HookReconciler) deletePreReleaseHookPod(ctx context.Context, bkapp *paa
 }
 
 func isCurrentDeployInterrupted(bkapp *paasv1alpha2.BkApp) bool {
-	// 仅当 DeployInterruptedAnnoKey 与 DeployIDAnnoKey 同时存在且值相等时, 才认为是对当前部署的有效中断信号.
-	interruptedID := bkapp.Annotations[paasv1alpha2.DeployInterruptedAnnoKey]
+	// 仅当 InterruptedDeployIDAnnoKey 与 DeployIDAnnoKey 同时存在且值相等时, 才认为是对当前部署的有效中断信号.
+	interruptedID := bkapp.Annotations[paasv1alpha2.InterruptedDeployIDAnnoKey]
 	if interruptedID == "" {
 		return false
 	}

@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_INTERRUPTED_ANNO_KEY
+from paas_wl.bk_app.cnative.specs.constants import INTERRUPTED_DEPLOY_ID_ANNO_KEY
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.resources.base.kres import PatchType
 from paasng.platform.engine.deploy.bg_command.bkapp_hook import generate_pre_release_hook_name
@@ -70,7 +70,7 @@ class TestInterruptCNativePreRelease:
         bkapp.patch.assert_called_once_with(
             name=bkapp_name,
             namespace=wl_app.namespace,
-            body={"metadata": {"annotations": {BKPAAS_DEPLOY_INTERRUPTED_ANNO_KEY: deploy_id}}},
+            body={"metadata": {"annotations": {INTERRUPTED_DEPLOY_ID_ANNO_KEY: deploy_id}}},
             ptype=PatchType.MERGE,
         )
         # 2. 删除 hook pod

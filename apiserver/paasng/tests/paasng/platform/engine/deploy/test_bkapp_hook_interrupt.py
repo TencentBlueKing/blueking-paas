@@ -38,13 +38,12 @@ class TestInterruptCNativePreRelease:
         bk_deployment.save(update_fields=["bkapp_release_id", "updated"])
 
     @pytest.fixture()
-    def mocked_k8s(self):
-        """patch get_client_by_app / crd.BkApp, 返回 bkapp_instance"""
-        fake_client = mock.MagicMock()
+    def mocked_bkapp(self):
+        """patch get_client_by_app 与 crd.BkApp, 返回 BkApp 实例 mock"""
 
         @contextmanager
         def fake_get_client(_wl_app):
-            yield fake_client
+            yield mock.MagicMock()
 
         with (
             mock.patch(
@@ -55,28 +54,28 @@ class TestInterruptCNativePreRelease:
         ):
             yield m_bkapp_cls.return_value
 
-    def test_interrupt(self, bk_deployment, mocked_k8s):
+    def test_interrupt(self, bk_deployment, mocked_bkapp):
         env = bk_deployment.app_environment
         wl_app = env.wl_app
         bkapp_name = generate_bkapp_name(env)
         deploy_id = str(bk_deployment.bkapp_release_id)
 
         interrupt_cnative_pre_release(bk_deployment)
-        mocked_k8s.patch.assert_called_once_with(
+        mocked_bkapp.patch.assert_called_once_with(
             name=bkapp_name,
             namespace=wl_app.namespace,
             body={"metadata": {"annotations": {INTERRUPTED_DEPLOY_ID_ANNO_KEY: deploy_id}}},
             ptype=PatchType.MERGE,
         )
 
-    def test_interrupt_best_effort(self, bk_deployment, mocked_k8s):
-        """两步都抛异常时, 不应向上抛出, 且都会记录日志"""
-        mocked_k8s.patch.side_effect = RuntimeError("patch failed")
+    def test_interrupt_best_effort(self, bk_deployment, mocked_bkapp):
+        """patch BkApp 抛异常时, 不应向上抛出, 且会记录日志"""
+        mocked_bkapp.patch.side_effect = RuntimeError("patch failed")
 
         with mock.patch(
             "paasng.platform.engine.deploy.bg_command.bkapp_hook_interrupt.logger.exception"
         ) as mocked_log:
             interrupt_cnative_pre_release(bk_deployment)
 
-        assert mocked_k8s.patch.called
+        assert mocked_bkapp.patch.called
         assert mocked_log.call_count == 1

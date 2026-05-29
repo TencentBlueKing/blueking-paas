@@ -42,7 +42,7 @@ def setup_trace_config():
                 {
                     "service.name": settings.OTEL_SERVICE_NAME,
                     "bk.data.token": settings.OTEL_BK_DATA_TOKEN,
-                    "host_ip": host_ip,
+                    "net.host.ip": host_ip,
                 },
             ),
             sampler=_KNOWN_SAMPLERS[settings.OTEL_SAMPLER],  # type: ignore

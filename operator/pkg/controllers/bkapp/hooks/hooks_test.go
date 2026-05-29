@@ -185,11 +185,11 @@ var _ = Describe("Test HookReconciler", func() {
 
 			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
 			Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthUnhealthy))
-			Expect(hookStatus.Reason).To(Equal(HookReasonInterrupted))
+			Expect(hookStatus.Reason).To(Equal(HookReasonUserInterrupted))
 
 			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
 			Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condHooks.Reason).To(Equal(HookReasonInterrupted))
+			Expect(condHooks.Reason).To(Equal(HookReasonUserInterrupted))
 
 			pod := &corev1.Pod{}
 			err = r.Client.Get(ctx, client.ObjectKeyFromObject(hook.Pod), pod)
@@ -209,7 +209,7 @@ var _ = Describe("Test HookReconciler", func() {
 			Expect(bkapp.Status.Phase).NotTo(Equal(paasv1alpha2.AppFailed))
 			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
 			Expect(cond).NotTo(BeNil())
-			Expect(cond.Reason).NotTo(Equal(HookReasonInterrupted))
+			Expect(cond.Reason).NotTo(Equal(HookReasonUserInterrupted))
 		})
 	})
 

@@ -49,8 +49,8 @@ import (
 // HookPodsHistoryLimit 最大保留的 Hook Pod 数量（单种类型）
 const HookPodsHistoryLimit = 3
 
-// HookReasonInterrupted 表示当前轮次的 PreRelease 已被用户主动中断
-const HookReasonInterrupted = "Interrupted"
+// HookReasonUserInterrupted  表示当前轮次的 PreRelease 已被用户主动中断
+const HookReasonUserInterrupted = "UserInterrupted"
 
 // NewHookReconciler will return a HookReconciler with given k8s client
 func NewHookReconciler(client client.Client) *HookReconciler {
@@ -381,7 +381,7 @@ func (r *HookReconciler) markPreReleaseHookInterrupted(
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionFalse,
-		Reason:             HookReasonInterrupted,
+		Reason:             HookReasonUserInterrupted,
 		Message:            "PreRelease hook was interrupted by user",
 		ObservedGeneration: observedGeneration,
 	})
@@ -389,7 +389,7 @@ func (r *HookReconciler) markPreReleaseHookInterrupted(
 	bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
 		Type:    paasv1alpha2.HookPreRelease,
 		Phase:   paasv1alpha2.HealthUnhealthy,
-		Reason:  HookReasonInterrupted,
+		Reason:  HookReasonUserInterrupted,
 		Message: "PreRelease hook was interrupted by user",
 	})
 	bkapp.Status.Phase = paasv1alpha2.AppFailed

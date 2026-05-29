@@ -36,7 +36,7 @@ BKPAAS_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
 #        用于向 operator 发出实时中断信号
 # 读取方: operator 在调和 BkApp 时, 仅当本注解的值与 BKPAAS_DEPLOY_ID_ANNO_KEY 的值同时存在且相等时,
 #        认为"当前正在进行的这次部署已被用户主动中断"
-INTERRUPTED_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-interrupted"
+INTERRUPTED_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/interrupted-deploy-id"
 
 # workloads 注入到 annotations 的增强服务信息字段
 BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"

@@ -23,9 +23,8 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.resources.base import crd
-from paas_wl.infras.resources.base.kres import KPod, PatchType
+from paas_wl.infras.resources.base.kres import PatchType
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paasng.platform.engine.deploy.bg_command.bkapp_hook import generate_pre_release_hook_name
 from paasng.platform.engine.models.deployment import Deployment
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ def interrupt_cnative_pre_release(deployment: Deployment) -> None:
     deploy_id = str(deployment.bkapp_release_id)
 
     with get_client_by_app(wl_app) as client:
-        # Step 1: 写入 deploy-interrupted annotation, 通知 operator 协调中断的部署
+        # 写入 deploy-interrupted annotation, 通知 operator 协调中断的部署
         body = {"metadata": {"annotations": {INTERRUPTED_DEPLOY_ID_ANNO_KEY: deploy_id}}}
         try:
             crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).patch(
@@ -57,10 +56,3 @@ def interrupt_cnative_pre_release(deployment: Deployment) -> None:
                 bkapp_name,
                 deploy_id,
             )
-
-        # Step 2: best-effort 删除 PreRelease Hook Pod
-        pod_name = generate_pre_release_hook_name(bkapp_name, deployment.bkapp_release_id)
-        try:
-            KPod(client).delete(name=pod_name, namespace=wl_app.namespace)
-        except Exception:
-            logger.exception("Failed to delete pre-release hook pod %s", pod_name)

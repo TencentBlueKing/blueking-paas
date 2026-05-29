@@ -27,3 +27,18 @@ import (
 func GetLastDeployStatus(bkapp *paasv1alpha2.BkApp) string {
 	return bkapp.GetAnnotations()[paasv1alpha2.LastDeployStatusAnnoKey]
 }
+
+// IsDeployInterrupted returns true when the BkApp has an interrupt signal for the given deploy ID.
+func IsDeployInterrupted(bkapp *paasv1alpha2.BkApp, deployID string) bool {
+	if deployID == "" {
+		return false
+	}
+
+	interruptedID := bkapp.GetAnnotations()[paasv1alpha2.InterruptedDeployIDAnnoKey]
+	return interruptedID != "" && interruptedID == deployID
+}
+
+// IsCurrentDeployInterrupted returns true when the current deploy has been interrupted.
+func IsCurrentDeployInterrupted(bkapp *paasv1alpha2.BkApp) bool {
+	return IsDeployInterrupted(bkapp, bkapp.GetAnnotations()[paasv1alpha2.DeployIDAnnoKey])
+}

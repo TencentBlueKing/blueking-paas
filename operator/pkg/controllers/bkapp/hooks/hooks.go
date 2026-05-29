@@ -44,6 +44,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/svcdisc"
 	"bk.tencent.com/paas-app-operator/pkg/health"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
+	platdeploy "bk.tencent.com/paas-app-operator/pkg/platform/deploy"
 )
 
 // HookPodsHistoryLimit 最大保留的 Hook Pod 数量（单种类型）
@@ -68,7 +69,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log := logf.FromContext(ctx)
 
 	// 处理当前部署被用户中断的信号
-	if isCurrentDeployInterrupted(bkapp) && hasPreReleaseHook(bkapp) {
+	if platdeploy.IsCurrentDeployInterrupted(bkapp) && hasPreReleaseHook(bkapp) {
 		return r.handleInterrupted(ctx, bkapp)
 	}
 
@@ -403,16 +404,6 @@ func (r *HookReconciler) deletePreReleaseHookPod(ctx context.Context, bkapp *paa
 		return client.IgnoreNotFound(err)
 	}
 	return client.IgnoreNotFound(r.Client.Delete(ctx, pod))
-}
-
-func isCurrentDeployInterrupted(bkapp *paasv1alpha2.BkApp) bool {
-	// 仅当 InterruptedDeployIDAnnoKey 与 DeployIDAnnoKey 同时存在且值相等时, 才认为是对当前部署的有效中断信号.
-	interruptedID := bkapp.Annotations[paasv1alpha2.InterruptedDeployIDAnnoKey]
-	if interruptedID == "" {
-		return false
-	}
-	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
-	return currentDeployID != "" && currentDeployID == interruptedID
 }
 
 // hasPreReleaseHook 判断当前 BkApp 是否配置了 pre-release hook.

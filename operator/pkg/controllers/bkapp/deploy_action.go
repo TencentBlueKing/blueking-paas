@@ -121,8 +121,7 @@ func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bka
 
 	// 兜底: 平台侧已经写入实时中断信号 (InterruptedDeployIDAnnoKey 指向上次的 DeployId),
 	// 但还没有写入 LastDeployStatusAnnoKey, 通过中断信号的匹配识别上次部署已经被中断
-	interruptedID := bkapp.Annotations[paasv1alpha2.InterruptedDeployIDAnnoKey]
-	if interruptedID != "" && interruptedID == bkapp.Status.DeployId {
+	if platdeploy.IsDeployInterrupted(bkapp, bkapp.Status.DeployId) {
 		return nil
 	}
 

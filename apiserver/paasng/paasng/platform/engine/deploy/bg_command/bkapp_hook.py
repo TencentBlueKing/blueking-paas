@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-import time
 
 from six import ensure_text
 
@@ -84,13 +83,7 @@ class PreReleaseDummyExecutor(DeployStep):
             return PodPhase.FAILED
 
         try:
-            next_check_at = time.monotonic()
             for line in handler.fetch_logs(follow=True):
-                interrupted, next_check_at = self._check_release_interrupted(next_check_at)
-                if interrupted:
-                    self.stream.write_message(Style.Warning("Pre-release interrupted"))
-                    return PodPhase.FAILED
-
                 self.stream.write_message(ensure_text(line))
         except Exception:
             logger.exception(f"A critical error happened during fetch logs from hook({hook_name})")
@@ -101,19 +94,7 @@ class PreReleaseDummyExecutor(DeployStep):
         except ReadTargetStatusTimeout:
             return PodPhase.RUNNING
 
-    def _check_release_interrupted(self, next_check_at: float) -> tuple[bool, float]:
-        """检查 Pre-release 是否被中断"""
-        if time.monotonic() <= next_check_at:
-            return False, next_check_at
-
-        self.deployment.refresh_from_db(fields=["release_int_requested_at"])
-        has_release_interrupted = self.deployment.has_requested_int
-        next_check_at = time.monotonic() + _INTERRUPT_CHECK_INTERVAL
-
-        return has_release_interrupted, next_check_at
-
     def _mark_step_stop(self, status: PodPhase):
-        # wait_for_logs_readiness 超时等路径不会经过日志循环的刷新, 需要手动刷新
         self.deployment.refresh_from_db(fields=["release_int_requested_at"])
         is_interrupted = status == PodPhase.FAILED and self.deployment.has_requested_int
 

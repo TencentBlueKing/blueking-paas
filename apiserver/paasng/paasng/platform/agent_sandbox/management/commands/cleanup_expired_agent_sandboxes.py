@@ -32,7 +32,7 @@ from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import delete_sandbox
 
-DEFAULT_CLEANUP_CONCURRENCY = 20
+DEFAULT_CLEANUP_CONCURRENCY = 4
 
 
 def expired_sandbox_queryset(now):

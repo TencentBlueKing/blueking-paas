@@ -18,7 +18,7 @@
 import logging
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    BKPAAS_DEPLOY_INTERRUPTED_ANNO_KEY,
+    INTERRUPTED_DEPLOY_ID_ANNO_KEY,
     ApiVersion,
 )
 from paas_wl.core.resource import generate_bkapp_name
@@ -43,7 +43,7 @@ def interrupt_cnative_pre_release(deployment: Deployment) -> None:
 
     with get_client_by_app(wl_app) as client:
         # Step 1: 写入 deploy-interrupted annotation, 通知 operator 协调中断的部署
-        body = {"metadata": {"annotations": {BKPAAS_DEPLOY_INTERRUPTED_ANNO_KEY: deploy_id}}}
+        body = {"metadata": {"annotations": {INTERRUPTED_DEPLOY_ID_ANNO_KEY: deploy_id}}}
         try:
             crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).patch(
                 name=bkapp_name,

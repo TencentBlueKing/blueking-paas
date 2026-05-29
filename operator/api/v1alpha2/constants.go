@@ -117,8 +117,10 @@ const (
 	ImageCredentialsRefAnnoKey = "bkapp.paas.bk.tencent.com/image-credentials"
 	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名
 	DeployIDAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
-	// DeployInterruptedAnnoKey 注解中存储部署中断 ID 的键名
-	DeployInterruptedAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-interrupted"
+	// InterruptedDeployIDAnnoKey 注解中存储 "最近一次被平台请求中断的部署 ID" 的键名
+	// 取值为该次部署的 deploy_id (字符串), 与 DeployIDAnnoKey 同源. 调和时, 仅当本注解的值
+	// 与 DeployIDAnnoKey 的值同时存在且相等, 才认为"当前部署已被中断"。
+	InterruptedDeployIDAnnoKey = "bkapp.paas.bk.tencent.com/interrupted-deploy-id"
 	// PaaSAnalysisSiteIDAnnoKey 注解中存储 PA site id 的键名
 	PaaSAnalysisSiteIDAnnoKey = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 )

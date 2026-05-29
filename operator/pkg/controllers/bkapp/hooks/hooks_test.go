@@ -162,8 +162,8 @@ var _ = Describe("Test HookReconciler", func() {
 
 		It("interrupt current deploy with running hook", func() {
 			bkapp.SetAnnotations(map[string]string{
-				paasv1alpha2.DeployIDAnnoKey:          "1",
-				paasv1alpha2.DeployInterruptedAnnoKey: "1",
+				paasv1alpha2.DeployIDAnnoKey:            "1",
+				paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
 			})
 			bkapp.Status.DeployId = "1"
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
@@ -199,8 +199,8 @@ var _ = Describe("Test HookReconciler", func() {
 		It("interrupt should be ignored when bkapp has no pre-release hook", func() {
 			bkapp.Spec.Hooks = nil
 			bkapp.SetAnnotations(map[string]string{
-				paasv1alpha2.DeployIDAnnoKey:          "1",
-				paasv1alpha2.DeployInterruptedAnnoKey: "1",
+				paasv1alpha2.DeployIDAnnoKey:            "1",
+				paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
 			})
 			r := NewHookReconciler(builder.WithObjects(bkapp).Build())
 			ret := r.Reconcile(ctx, bkapp)

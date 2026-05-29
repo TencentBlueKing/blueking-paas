@@ -215,8 +215,8 @@ var _ = Describe("Test DeployActionReconciler", func() {
 		It("deploy ID changed with running hook when previous deploy matches interrupt signal", func() {
 			bkapp.SetAnnotations(
 				map[string]string{
-					paasv1alpha2.DeployIDAnnoKey:          "2",
-					paasv1alpha2.DeployInterruptedAnnoKey: "1",
+					paasv1alpha2.DeployIDAnnoKey:            "2",
+					paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
 				},
 			)
 			bkapp.Status.DeployId = "1"

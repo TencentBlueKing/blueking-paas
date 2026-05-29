@@ -35,9 +35,6 @@ logger = logging.getLogger(__name__)
 # defined at `paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT`
 _WAIT_FOR_READINESS_TIMEOUT = 300
 
-# 检查中断的间隔时间
-_INTERRUPT_CHECK_INTERVAL = 10
-
 
 def generate_pre_release_hook_name(bkapp_name: str, deploy_id: int) -> str:
     """获取钩子 pod 名称. 需要和 operator 中的保持一致"""

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.infras.accounts.views import OauthTokenViewSet
+from paasng.infras.accounts.views import OauthTokenViewSet, SysOauthTokenViewSet
 from paasng.utils.basic import re_path
 
 from . import views
@@ -180,6 +180,15 @@ urlpatterns += [
         r"^api/bkapps/applications/(?P<app_code>[^/]+)/oauth/token/(?P<env_name>test|prod|lesscode)/validate$",
         OauthTokenViewSet.as_view({"post": "validate_app_token"}),
         name="api.applications.oauth.token.validate",
+    ),
+]
+
+# 系统态签发应用 AccessToken（仅限 AIDev 系统角色）
+urlpatterns += [
+    re_path(
+        r"^sys/api/bkapps/applications/(?P<app_code>[^/]+)/oauth/token/(?P<env_name>test|prod)/$",
+        SysOauthTokenViewSet.as_view({"get": "fetch_app_token"}),
+        name="sys.api.applications.oauth.token",
     ),
 ]
 

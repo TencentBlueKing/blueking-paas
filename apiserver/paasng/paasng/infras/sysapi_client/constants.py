@@ -53,3 +53,6 @@ class ClientAction(StrStructuredEnum):
 
     # 目前仅供 AIDev 平台使用，用于构建 Agent Sandbox 镜像
     BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))
+
+    # 目前仅供 AIDev 平台使用，用于为指定应用签发 OAuth Token
+    FETCH_APP_OAUTH_TOKEN = EnumField("sysapi:fetch:app-oauth-token", label=_("签发应用 OAuth Token"))

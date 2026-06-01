@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.2
-  title: "Set as the official gateway, and add the get_service_instance_by_module API."
-  comment: "Set as the official gateway, and add the get_service_instance_by_module API."
+  version: 1.4.3
+  title: "Add sys API for fetching app OAuth access token (AIDev)"
+  comment: "Add sys API for fetching app OAuth access token (AIDev)"
 
 
 stage:

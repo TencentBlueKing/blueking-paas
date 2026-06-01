@@ -467,13 +467,15 @@ ensure-init-data() {
     python manage.py create_authed_app_user --bk_app_code=bk_log_search --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_monitorv3 --role=50
     # role=60:基础管理，可以调用操作类系统 API
-    python manage.py create_authed_app_user --bk_app_code=bk_aidev --role=60
     python manage.py create_authed_app_user --bk_app_code=bk_apigateway --role=60
     python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
     # role=70:轻应用管理，可以调用轻应用相关系统 API
     python manage.py create_authed_app_user --bk_app_code=bk_sops --role=70
     # role=80:lesscode 系统专用角色
     python manage.py create_authed_app_user --bk_app_code=bk_lesscode --role=80
+    # role=90:AIDEV 系统专用角色
+    python manage.py create_authed_app_user --bk_app_code=bk_aidev --role=90
+
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
     # 将开发者中心注册到通知中心
     python manage.py register_to_bk_notice

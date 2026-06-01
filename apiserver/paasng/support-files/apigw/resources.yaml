@@ -2288,3 +2288,26 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /system/bkapps/applications/{app_code}/oauth/token/{env_name}/:
+    get:
+      operationId: sys_fetch_app_access_token
+      description: 以系统身份获取指定应用和用户的 AccessToken（仅限 AIDev 系统角色调用）
+      tags:
+      - Oauth
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/oauth/token/{env_name}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:

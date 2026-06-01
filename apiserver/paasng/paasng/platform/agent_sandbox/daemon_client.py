@@ -24,7 +24,7 @@ from attrs import define
 
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
 
-from .exceptions import SandboxDaemonAPIError, SandboxServiceNotReady
+from .exceptions import SandboxDaemonAPIError, SandboxExecTimeout, SandboxServiceNotReady
 
 # Default timeout for HTTP requests (in seconds)
 DEFAULT_REQUEST_TIMEOUT = 60
@@ -169,10 +169,14 @@ class SandboxDaemonClient:
             resp.raise_for_status()
 
         except requests.Timeout as exc:
-            raise SandboxDaemonAPIError(f"Request {path} timed out: {exc}")
+            # 请求级超时: daemon 未在 req_timeout 内返回 (如网络阻塞、Router 转发超时)
+            raise SandboxExecTimeout(f"Command execution timed out: {exc}")
         except requests.HTTPError as exc:
             if exc.response.status_code == 502:
                 raise SandboxServiceNotReady("sandbox daemon service is not ready")
+            # daemon 在命令执行超时时返回 HTTP 408 (RequestTimeoutResponse)
+            if exc.response.status_code == 408:
+                raise SandboxExecTimeout(f"Command execution timed out on {path}")
             raise SandboxDaemonAPIError(
                 f"HTTP error {exc.response.status_code} on {path}: {exc.response.json().get('message')}"
             )

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -82,13 +82,13 @@ class TestUtils:
     def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
-        assert (
-            slug_tmpl.name == f"slug-builder--{wl_app.module_name}"
-        ), "slugbuilder_template 的 name 与app的 name 不一致"
+        assert slug_tmpl.name == f"slug-builder--{wl_app.module_name}", (
+            "slugbuilder_template 的 name 与app的 name 不一致"
+        )
         assert slug_tmpl.namespace == wl_app.namespace, "slugbuilder_template 的namespace 与 app 的 namespace 不一致"
-        assert (
-            slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE
-        ), "slugbuilder_template 的镜像与默认镜像不一致"
+        assert slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE, (
+            "slugbuilder_template 的镜像与默认镜像不一致"
+        )
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的 ConfigVars 与生成的环境变量不一致"
 
         assert slug_tmpl.schedule.cluster_name == "foo-cluster"

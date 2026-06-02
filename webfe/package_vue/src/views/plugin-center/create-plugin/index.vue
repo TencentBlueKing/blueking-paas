@@ -198,9 +198,27 @@
           </bk-form-item>
         </bk-form>
       </section>
+
+      <bk-alert
+        v-if="isAiPlugin"
+        type="warning"
+        class="mt16"
+      >
+        <div slot="title">
+          {{ $t('如需创建 AI 插件，请前往 AIDEV 平台。') }}
+          <a
+            class="link"
+            :href="`https://bkaidev.${GLOBAL.WOA_DOMAIN}/`"
+            target="_blank"
+          >
+            {{ $t('去创建') }}
+          </a>
+        </div>
+      </bk-alert>
+
       <!-- 更多信息根据接口字段动态生成、AI插件特殊处理 -->
       <section
-        v-if="Object.keys(extraFields).length || isAiPlugin"
+        v-if="Object.keys(extraFields).length"
         :class="['info-container', 'card-style', 'mt16', { mb75: isSticky }]"
       >
         <div class="base-info-tit">
@@ -217,7 +235,10 @@
               :property="'spaceId'"
               :rules="requiredRules"
             >
-              <bk-select v-model="bkAiSpaces.spaceId" searchable>
+              <bk-select
+                v-model="bkAiSpaces.spaceId"
+                searchable
+              >
                 <bk-option
                   v-for="option in bkAiSpaces.spacesList"
                   :key="option.space_id"
@@ -241,7 +262,11 @@
         </bk-form>
       </section>
 
-      <div :class="['create-button-warp', { sticky: isSticky }]">
+      <!-- 不支持 AI 插件 -->
+      <div
+        v-if="!isAiPlugin"
+        :class="['create-button-warp', { sticky: isSticky }]"
+      >
         <bk-button
           :theme="'primary'"
           :title="$t('提交')"

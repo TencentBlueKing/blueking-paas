@@ -30,7 +30,6 @@ def server_config_factory():
             "su_name": "r1_user",
             "su_pass": "r1_pass",
             "need_security": False,
-            "admin_url": "127.0.0.1:3690/r1_admin",
         }
 
     return _factory

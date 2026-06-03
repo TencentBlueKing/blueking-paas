@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
 import typing
@@ -84,7 +83,7 @@ def rabbit_cluster_collector():
         "rabbitmq cluster alive status",
         labels=CheckClusterAlive.Result.as_label_keys() + ["name"],
     )
-    results: 'typing.Dict[str, CheckClusterAlive.Result]' = tasks.cluster_alive.get_cron_result() or {}
+    results: "typing.Dict[str, CheckClusterAlive.Result]" = tasks.cluster_alive.get_cron_result() or {}
     for name, result in results.items():
         if result is None or result.ok is None:
             value = -1
@@ -101,8 +100,8 @@ def instance_alive_collector():
     alive = GaugeMetricFamily(
         "rabbitmq_instance_alive", "rabbitmq instance alive status", labels=CheckInstanceAlive.Result.as_label_keys()
     )
-    results: 'typing.Dict[str, CheckInstanceAlive.Result]' = tasks.instance_alive.get_cron_result() or {}
-    for instance, result in results.items():
+    results: "typing.Dict[str, CheckInstanceAlive.Result]" = tasks.instance_alive.get_cron_result() or {}
+    for _instance, result in results.values():
         if result is None or result.ok is None:
             value = -1
         elif result.ok:
@@ -141,8 +140,8 @@ def instance_queue_collector():
         labels=CheckInstanceQueueStatus.Result.as_label_keys() + ["queue"],
     )
 
-    results: 'typing.Dict[str, CheckInstanceQueueStatus.Result]' = tasks.instance_queue.get_cron_result() or {}
-    for instance, result in results.items():
+    results: "typing.Dict[str, CheckInstanceQueueStatus.Result]" = tasks.instance_queue.get_cron_result() or {}
+    for _instance, result in results.values():
         labels = result.as_label_values()
         queues.add_metric(labels, len(result.queues))
 
@@ -167,7 +166,7 @@ def instance_dlx_queue_collector():
         labels=CheckInstanceDLXQueueStatus.Result.as_label_keys() + ["queue"],
     )
 
-    results: 'typing.Dict[str, CheckInstanceDLXQueueStatus.Result]' = tasks.instance_dlx_queue.get_cron_result() or {}
+    results: "typing.Dict[str, CheckInstanceDLXQueueStatus.Result]" = tasks.instance_dlx_queue.get_cron_result() or {}
     for instance, result in results.items():
         if result is None:
             logger.debug("dlx queue of instance %s not found, skipped", instance)
@@ -186,9 +185,9 @@ def instance_connections_collector():
         labels=CronCheckInstanceConnectionStatus.ConnectionStatus.as_label_keys() + ["state"],
     )
 
-    results: 'typing.Dict[str, CronCheckInstanceConnectionStatus.ConnectionStatus]'
+    results: "typing.Dict[str, CronCheckInstanceConnectionStatus.ConnectionStatus]"
     results = tasks.connection_status.get_cron_result() or {}
-    for instance, result in results.items():
+    for _instance, result in results.values():
         labels = result.as_label_values()
         connections.add_metric(labels + ["running"], result.running)
         connections.add_metric(labels + ["idle"], result.idle)
@@ -204,8 +203,8 @@ def instance_limit_policy_collector():
     limits = GaugeMetricFamily(
         "rabbitmq_instance_limits", "limits of vhost", labels=CheckInstanceLimits.Result.as_label_keys() + ["resource"]
     )
-    results: 'typing.Dict[str, CheckInstanceLimits.Result]' = tasks.instance_limits.get_cron_result() or {}
-    for instance, result in results.items():
+    results: "typing.Dict[str, CheckInstanceLimits.Result]" = tasks.instance_limits.get_cron_result() or {}
+    for _instance, result in results.values():
         if not result:
             continue
         labels = result.as_label_values()

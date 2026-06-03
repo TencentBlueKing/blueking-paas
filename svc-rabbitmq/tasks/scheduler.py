@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import atexit
 import logging
 import os
@@ -36,7 +35,7 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _global_process_pool_creator() -> 'pool.Pool':
+def _global_process_pool_creator() -> "pool.Pool":
     return pool.Pool(
         processes=settings.MAX_TASK_WORKERS,
         maxtasksperchild=settings.MAX_TASK_PRE_WORKER,
@@ -50,11 +49,11 @@ def _sub_process_poll_initializer():
     start_threading_scheduler()
 
 
-def process_pool_creator() -> 'pool.Pool':
+def process_pool_creator() -> "pool.Pool":
     return pool.Pool(processes=settings.MAX_TASK_WORKERS, maxtasksperchild=settings.MAX_TASK_PRE_WORKER)
 
 
-def threading_pool_creator() -> 'pool.ThreadPool':
+def threading_pool_creator() -> "pool.ThreadPool":
     return pool.ThreadPool(processes=settings.MAX_TASK_WORKERS)
 
 
@@ -64,7 +63,7 @@ def start_threading_scheduler():
 
 
 class SchedulerMonitor(threading.Thread):
-    def __init__(self, scheduler: 'Scheduler', done: 'threading.Condition', cron_interval: 'int'):
+    def __init__(self, scheduler: "Scheduler", done: "threading.Condition", cron_interval: "int"):
         self._scheduler = scheduler
         self._done = done
         self._cron_interval = cron_interval
@@ -75,7 +74,7 @@ class SchedulerMonitor(threading.Thread):
         with self._done:
             return self._done.wait(self._cron_interval)
 
-    def stats(self) -> 'typing.Dict':
+    def stats(self) -> "typing.Dict":
         return {
             "cron_triggered": self._cron_triggered,
         }
@@ -108,7 +107,7 @@ class Scheduler:
             cls._global.stop()
 
     @classmethod
-    def get(cls) -> 'Scheduler':
+    def get(cls) -> "Scheduler":
         if cls._global is None:
             raise RuntimeError("scheduler not ready")
         return cls._global
@@ -122,7 +121,7 @@ class Scheduler:
         self.uuid = uuid4().hex
         self._done = threading.Condition()
         self._pool_creator = pool_creator
-        self._pool: 'pool.Pool' = None
+        self._pool: "pool.Pool" = None
         self._is_master = is_master
         self._monitor = SchedulerMonitor(self, self._done, settings.CRON_TASK_CHECK_INTERVAL)
 
@@ -130,9 +129,9 @@ class Scheduler:
     def pid(self):
         return os.getpid()
 
-    def stats(self) -> 'typing.Dict':
+    def stats(self) -> "typing.Dict":
         stats = self._monitor.stats()
-        task_queue: 'queue.Queue' = self._pool._taskqueue
+        task_queue: "queue.Queue" = self._pool._taskqueue
         stats.update(
             {
                 "tasks": task_queue.qsize(),

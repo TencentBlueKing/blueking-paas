@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -168,16 +168,16 @@ func init() {
 
 	accessControlTemplate, err = template.New("acl").Parse(dedent.Dedent(`
         # Blow content was configured by access-control plugin, do not edit
-        
+
         set $bkapp_app_code '{{ .Region }}-{{ .WlAppName }}';
         set $bkapp_bk_app_code '{{ .AppCode }}';
         set $bkapp_region '{{ .Region }}';
         set $bkapp_env_name '{{ .Environment }}';
-        
+
         set $acc_redis_server_name '{{ .RedisConfigKey }}';
-        
+
         access_by_lua_file $module_access_path/main.lua;
-        
+
         # content of access-control plugin ends`))
 	if err != nil {
 		panic(errors.Wrap(err, "failed to new access control template"))
@@ -186,10 +186,10 @@ func init() {
 	paasAnalysisTemplate, err = template.New("pa").
 		Parse(dedent.Dedent(`
         # Blow content was configured by paas-analysis plugin, do not edit
-        
+
         set $bkpa_site_id {{ .PaaSAnalysisSiteID }};
         header_filter_by_lua_file $module_root/paas_analysis/main.lua;
-        
+
         # content of paas-analysis plugin ends`))
 	if err != nil {
 		panic(errors.Wrap(err, "failed to new paas-analysis template"))
@@ -203,7 +203,7 @@ func init() {
         set $bkapp_bk_app_code '{{ .AppCode }}';
         set $bkapp_env_name '{{ .Environment }}';
         set $bkapp_app_tenant_id '{{ .AppTenantID }}';
-        
+
         access_by_lua_file $tenant_guard_path/main.lua;
 
         # content of tenant-guard plugin ends`))

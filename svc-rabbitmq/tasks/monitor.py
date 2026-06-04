@@ -101,7 +101,7 @@ def instance_alive_collector():
         "rabbitmq_instance_alive", "rabbitmq instance alive status", labels=CheckInstanceAlive.Result.as_label_keys()
     )
     results: "typing.Dict[str, CheckInstanceAlive.Result]" = tasks.instance_alive.get_cron_result() or {}
-    for _instance, result in results.values():
+    for result in results.values():
         if result is None or result.ok is None:
             value = -1
         elif result.ok:
@@ -141,7 +141,7 @@ def instance_queue_collector():
     )
 
     results: "typing.Dict[str, CheckInstanceQueueStatus.Result]" = tasks.instance_queue.get_cron_result() or {}
-    for _instance, result in results.values():
+    for result in results.values():
         labels = result.as_label_values()
         queues.add_metric(labels, len(result.queues))
 
@@ -187,7 +187,7 @@ def instance_connections_collector():
 
     results: "typing.Dict[str, CronCheckInstanceConnectionStatus.ConnectionStatus]"
     results = tasks.connection_status.get_cron_result() or {}
-    for _instance, result in results.values():
+    for result in results.values():
         labels = result.as_label_values()
         connections.add_metric(labels + ["running"], result.running)
         connections.add_metric(labels + ["idle"], result.idle)
@@ -204,7 +204,7 @@ def instance_limit_policy_collector():
         "rabbitmq_instance_limits", "limits of vhost", labels=CheckInstanceLimits.Result.as_label_keys() + ["resource"]
     )
     results: "typing.Dict[str, CheckInstanceLimits.Result]" = tasks.instance_limits.get_cron_result() or {}
-    for _instance, result in results.values():
+    for result in results.values():
         if not result:
             continue
         labels = result.as_label_values()

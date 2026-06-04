@@ -95,7 +95,7 @@ class ClusterRandomStrategy(ClusterSelectStrategy):
         return assessments
 
 
-Assessment = typing.NamedTuple("Assessment", ["score", "cluster"])
+Assessment = typing.NamedTuple("Assessment", [("score", int), ("cluster", Cluster)])
 DefaultClusterStrategy = ClusterRandomStrategy
 
 
@@ -197,3 +197,6 @@ class Version:
 
     def __lt__(self, other: "Version"):
         return self.parts < other.parts
+
+    def __hash__(self):
+        return hash(self.parts)

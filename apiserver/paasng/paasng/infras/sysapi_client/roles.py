@@ -67,7 +67,7 @@ class ClientPermChecker:
             ClientAction.BIND_DB_SERVICE: False,
             ClientAction.GRANT_APIGW_PERMISSIONS: False,
             ClientAction.BUILD_SANDBOX_IMAGE: False,
-            ClientAction.FETCH_APP_OAUTH_TOKEN: False,
+            ClientAction.FETCH_AI_AGENT_APP_USER_TOKEN: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -87,7 +87,7 @@ class ClientPermChecker:
         aidev_perms = basic_maintainer_perms | {
             ClientAction.GRANT_APIGW_PERMISSIONS: True,
             ClientAction.BUILD_SANDBOX_IMAGE: True,
-            ClientAction.FETCH_APP_OAUTH_TOKEN: True,
+            ClientAction.FETCH_AI_AGENT_APP_USER_TOKEN: True,
         }
 
         return {

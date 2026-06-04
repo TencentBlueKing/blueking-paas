@@ -172,6 +172,8 @@ class ErrorCodes:
 
     # 蓝鲸插件（bk_plugin）相关
     APP_IS_NOT_BK_PLUGIN = ErrorCode(_("应用不是“蓝鲸插件”类型"))
+    # AI Agent 应用相关
+    APP_IS_NOT_AI_AGENT = ErrorCode(_("应用不是 AI Agent 应用"))
     UNABLE_TO_SET_DISTRIBUTORS = ErrorCode(_("无法设置插件使用方，请稍候重试"))
     DISTRIBUTOR_NOT_FOUND = ErrorCode(_("插件使用方不存在"))
     UNABLE_TO_GRANT_DISTRIBUTOR = ErrorCode(_("无法授权插件使用方，请稍候重试"))

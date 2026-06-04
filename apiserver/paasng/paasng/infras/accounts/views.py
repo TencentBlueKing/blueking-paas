@@ -37,13 +37,11 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
-from paasng.infras.accounts.utils import ForceAllowAuthedApp, create_app_oauth_backend, get_user_avatar
+from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.notifier.client import BkNotificationService
 from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -328,45 +326,3 @@ class RegionSpecsViewSet(viewsets.ViewSet):
         regions = list(get_all_regions().values())
         all_spec_slz = AllRegionSpecsSLZ(regions)
         return Response(all_spec_slz.serialize())
-
-
-@ForceAllowAuthedApp.mark_view_set
-class SysOauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """以系统身份为指定应用签发 OAuth AccessToken，仅限 AIDev 系统角色调用。
-
-    AIDev 平台通过 API 网关调用此接口，携带目标用户凭证（bk_ticket/bk_token），
-    为任意应用签发指定用户的 AccessToken，绕过用户态的应用成员权限校验。
-    """
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.FETCH_APP_OAUTH_TOKEN)]
-
-    def fetch_app_token(self, request, app_code: str, env_name: str):
-        """以系统身份获取指定应用和用户的 AccessToken"""
-        # 该接口以系统 API 客户端角色（AIDev）鉴权，刻意绕过用户态的应用成员权限校验，
-        # 因此使用 get_application_without_perm 获取应用，不能用带成员鉴权的 get_application。
-        application = self.get_application_without_perm()
-        try:
-            backend = create_app_oauth_backend(application, env_name=env_name)
-        except BkOauthClientDoesNotExist:
-            raise error_codes.CLIENT_CREDENTIALS_MISSING
-
-        try:
-            data = backend.fetch_token(
-                username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
-            )
-        except BKAppOauthError as e:
-            return Response(status=e.response_code, data={"message": e.error_message})
-
-        sys_client = getattr(request, "sysapi_client", None)
-        sys_client_name = sys_client.name if sys_client else "unknown"
-        add_app_audit_record(
-            app_code=app_code,
-            tenant_id=application.tenant_id,
-            user=request.user.pk,
-            action_id=AppAction.BASIC_DEVELOP,
-            operation=OperationEnum.CREATE,
-            target=OperationTarget.ACCESS_TOKEN,
-            attribute=f"sys_client:{sys_client_name}",
-            data_after=DataDetail(data=data),
-        )
-        return Response(data=data)

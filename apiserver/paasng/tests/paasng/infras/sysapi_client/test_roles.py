@@ -31,11 +31,11 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.BASIC_READER, ClientAction.BIND_DB_SERVICE) is False
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.BIND_DB_SERVICE) is True
 
-    def test_aidev_can_fetch_app_oauth_token(self):
+    def test_aidev_can_fetch_ai_agent_app_user_token(self):
         perm_checker = ClientPermChecker()
-        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.FETCH_APP_OAUTH_TOKEN) is True
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.FETCH_AI_AGENT_APP_USER_TOKEN) is True
 
-    def test_non_aidev_cannot_fetch_app_oauth_token(self):
+    def test_non_aidev_cannot_fetch_ai_agent_app_user_token(self):
         perm_checker = ClientPermChecker()
         for role in [
             ClientRole.NOBODY,
@@ -44,4 +44,4 @@ class TestClientPermChecker:
             ClientRole.LIGHT_APP_MAINTAINER,
             ClientRole.LESSCODE,
         ]:
-            assert perm_checker.role_can_do(role, ClientAction.FETCH_APP_OAUTH_TOKEN) is False
+            assert perm_checker.role_can_do(role, ClientAction.FETCH_AI_AGENT_APP_USER_TOKEN) is False

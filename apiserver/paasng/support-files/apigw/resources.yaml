@@ -2288,10 +2288,10 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
-  /system/bkapps/applications/{app_code}/oauth/token/{env_name}/:
+  /system/bkapps/ai_agent_apps/{app_code}/user_token/{env_name}/:
     get:
-      operationId: sys_fetch_app_access_token
-      description: 以系统身份获取指定应用和用户的 AccessToken（仅限 AIDev 系统角色调用）
+      operationId: sys_fetch_ai_agent_app_user_token
+      description: 以系统身份获取指定 AI Agent 应用和用户的用户态 AccessToken（仅限 AIDev 系统角色调用）
       tags:
       - Oauth
       x-bk-apigateway-resource:
@@ -2302,7 +2302,7 @@ paths:
         backend:
           name: default
           method: get
-          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/oauth/token/{env_name}/
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/ai_agent_apps/{app_code}/user_token/{env_name}/
           matchSubpath: false
           timeout: 0
         pluginConfigs: []

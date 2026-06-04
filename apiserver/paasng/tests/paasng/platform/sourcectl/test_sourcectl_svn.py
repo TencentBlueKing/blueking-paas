@@ -136,14 +136,8 @@ class TestRepositorySLZ:
         assert serializer.data["trunk_url"] == "svn://svn-server/dirname/trunk"
 
 
-@mock.patch("paasng.platform.sourcectl.svn.admin.IeodSvnAuthClient.request")
 class TestSvnAuth:
-    def test_create_app(self, auth_client_request, bk_app):
-        def side_effect(url, params, **kwargs):
-            return params
-
-        auth_client_request.side_effect = side_effect
-
+    def test_create_app(self, bk_app):
         mock_mod_authz = Mock(return_value={})
         authorization_manager = get_svn_authorization_manager(bk_app)
         with patch.object(authorization_manager.svn_client, "mod_authz", mock_mod_authz):
@@ -161,12 +155,7 @@ class TestSvnAuth:
             ("baz", ApplicationRole.ADMINISTRATOR, True),
         ],
     )
-    def test_update_developers(self, auth_client_request, bk_app, bk_user, username, role, added):
-        def side_effect(url, params, **kwargs):
-            return params
-
-        auth_client_request.side_effect = side_effect
-
+    def test_update_developers(self, bk_app, bk_user, username, role, added):
         mock_add_group = Mock(return_value={})
         authorization_manager = get_svn_authorization_manager(bk_app)
         with patch.object(authorization_manager.svn_client, "add_group", mock_add_group):

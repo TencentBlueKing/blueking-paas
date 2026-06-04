@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from django.conf import settings
@@ -30,6 +29,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
 from svc_bk_repo.vendor.helper import BKGenericRepoManager
@@ -57,7 +57,7 @@ class BKRepoIndexView(TemplateView):
     name = "首页"
 
     def get_context_data(self, **kwargs):
-        instance = get_object_or_404(ServiceInstance, pk=self.kwargs['instance_id'])
+        instance = get_object_or_404(ServiceInstance, pk=self.kwargs["instance_id"])
 
         plan_config = instance.plan.get_config()
         manager = BKGenericRepoManager(**plan_config)
@@ -69,8 +69,8 @@ class BKRepoIndexView(TemplateView):
         private_quota = manager.get_repo_quota(private_bucket)
         public_quota = manager.get_repo_quota(public_bucket)
 
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         kwargs["private_bucket"] = private_bucket
         kwargs["private_quota"] = private_quota
@@ -114,9 +114,9 @@ class BKRepoManageView(APIView):
             return Response({"message": "未配置容量配额, 无需扩容."})
         except ExtendQuotaMaxSizeExceeded:
             human_max_size = humanize_bytes(settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED)
-            return Response({"message": f'最大扩容容量不能超过 {human_max_size}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": f"最大扩容容量不能超过 {human_max_size}"}, status=status.HTTP_400_BAD_REQUEST)
         except ExtendQuotaUsageTooLow:
             return Response({"message": "空闲容量大于 50%, 不支持自助扩容"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return Response({"message": "未知异常, 请稍后重试"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": f"{bucket} 的容量已修改成 {humanize_bytes(max_size_bytes)}"})

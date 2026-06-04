@@ -3103,4 +3103,5 @@ export default {
   是否切换为代码仓库: 'Switch to Code Repository?',
   '一旦修改为代码仓库部署后，不能再改回源码包部署。': 'Once changed to code repository deployment, it cannot be reverted to source package deployment.',
   复制审批链接: 'Copy Approval Link',
+  '如需创建 AI 插件，请前往 AIDEV 平台。': 'If you need to create an AI plugin, please go to the AIDEV platform.',
 };

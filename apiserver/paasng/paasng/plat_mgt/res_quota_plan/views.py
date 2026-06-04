@@ -31,7 +31,7 @@ from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryRes
 from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.utils.error_codes import error_codes
 
-from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
+from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ, ResQuotaPlanUsedByApplicationSLZ
 
 
 class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
@@ -86,9 +86,6 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
 
-        if plan_obj.is_builtin:
-            return Response({"detail": _("系统内置方案不允许修改")}, status=status.HTTP_403_FORBIDDEN)
-
         slz = ResQuotaPlanInputSLZ(data=request.data, instance=plan_obj)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -98,7 +95,9 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         plan_obj.name = data["name"]
         plan_obj.limits = data["limits"]
         plan_obj.requests = data["requests"]
-        plan_obj.is_active = data.get("is_active", plan_obj.is_active)
+        # 内置方案不可修改启用性
+        if not plan_obj.is_builtin:
+            plan_obj.is_active = data.get("is_active", plan_obj.is_active)
         plan_obj.save()
 
         data_after = ResQuotaPlanInputSLZ(plan_obj).data
@@ -112,6 +111,46 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         )
 
         return Response(status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.res_quota_plans"],
+        operation_description="获取资源配额方案影响的应用和模块列表",
+        responses={status.HTTP_200_OK: ResQuotaPlanUsedByApplicationSLZ()},
+    )
+    def list_used_by(self, request, pk):
+        """获取资源配额方案影响的应用和模块列表"""
+
+        plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
+        used_by_processes = plan_obj.get_used_by_processes()
+
+        applications_map: dict[str, dict] = {}
+
+        for process in sorted(
+            used_by_processes,
+            key=lambda item: (item["app_code"], item["module_name"], item["process_name"]),
+        ):
+            app_code = process["app_code"]
+            module_name = process["module_name"]
+            process_name = process["process_name"]
+
+            app_data = applications_map.setdefault(
+                app_code,
+                {"app_code": app_code, "modules": {}},
+            )
+            module_data = app_data["modules"].setdefault(
+                module_name,
+                {"module_name": module_name, "processes": []},
+            )
+
+            module_data["processes"].append(process_name)
+
+        applications = []
+        for app_data in applications_map.values():
+            app_data["modules"] = list(app_data["modules"].values())
+            applications.append(app_data)
+
+        page = self.paginate_queryset(applications)
+        return self.get_paginated_response(ResQuotaPlanUsedByApplicationSLZ(page, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

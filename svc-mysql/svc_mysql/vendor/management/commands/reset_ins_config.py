@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from typing import Optional
 
@@ -24,7 +23,7 @@ from paas_service.models import ServiceInstance
 
 
 class Command(BaseCommand):
-    help = '批量修改已分配 mysql 实例配置信息'
+    help = "批量修改已分配 mysql 实例配置信息"
 
     def add_arguments(self, parser):
         parser.add_argument("--host", dest="host", help="实例 host，不填则不更新", default=None)
@@ -50,9 +49,11 @@ class Command(BaseCommand):
             if password:
                 updated_credentials["password"] = password
 
-            if not dry_run:
+            if not dry_run:  # noqa: SIM102
                 if updated_credentials != credentials:
                     obj.credentials = json.dumps(updated_credentials)
                     obj.save(update_fields=["credentials"])
 
-            self.stdout.write(self.style.NOTICE(f'实例配置变化：\n before:{credentials} \n after:{updated_credentials} \n'))
+            self.stdout.write(
+                self.style.NOTICE(f"实例配置变化：\n before:{credentials} \n after:{updated_credentials} \n")
+            )

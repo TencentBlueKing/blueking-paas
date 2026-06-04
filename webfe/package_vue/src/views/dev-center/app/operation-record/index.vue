@@ -325,7 +325,7 @@ export default {
         };
         // 操作人
         if (this.operatorList.length) {
-          params.operator = this.operatorList.join();
+          params.operator = this.operatorList.join(',');
         }
         const res = await this.$store.dispatch('baseInfo/getRecords', {
           appCode: this.appCode,
@@ -462,6 +462,7 @@ export default {
       this.dateParams = {};
       this.operatorList = [];
       this.$refs.recordTable?.clearFilter();
+      this.getRecords(1);
     },
     updateTableEmptyConfig() {
       if (this.operatorList.length || Object.keys(this.filterParams).length) {

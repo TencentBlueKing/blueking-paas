@@ -602,7 +602,6 @@ def dummy_svn_spec():
                 "su_name": "test-username",
                 "su_pass": "test-password",
                 "need_security": False,
-                "admin_url": "127.0.0.1:3790",
                 "auth_mgr_cls": "paasng.platform.sourcectl.svn.admin.DummyAppAuthorization",
             },
         },

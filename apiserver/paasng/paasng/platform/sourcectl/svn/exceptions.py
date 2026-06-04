@@ -22,11 +22,3 @@ class AlreadyInitializedSvnRepo(Exception):
 
 class CannotInitNonEmptyTrunk(Exception):
     pass
-
-
-class RelatedServiceError(Exception):
-    pass
-
-
-class SVNServiceError(RelatedServiceError):
-    pass

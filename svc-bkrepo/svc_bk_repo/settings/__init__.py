@@ -169,9 +169,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 
-LANGUAGE_CODE = "zh-hans"
+LANGUAGE_CODE = "zh-cn"
 
-LANGUAGES = [("zh-hans", "简体中文"), ("en", "English")]
+LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 
 TIME_ZONE = "UTC"
 

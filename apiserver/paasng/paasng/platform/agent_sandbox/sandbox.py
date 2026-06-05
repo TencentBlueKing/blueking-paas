@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -54,8 +54,8 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxFileError,
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
-from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -66,9 +66,7 @@ logger = logging.getLogger(__name__)
 ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
-def _build_volume_mounts(
-    application: Application, raw: list[dict] | None
-) -> list[VolumeMount]:
+def _build_volume_mounts(application: Application, raw: list[dict] | None) -> list[VolumeMount]:
     """Resolve user-supplied volume_mounts into concrete Pod spec entries.
 
     Looks up each ``volume_id`` in the database to obtain the CFS subPath.

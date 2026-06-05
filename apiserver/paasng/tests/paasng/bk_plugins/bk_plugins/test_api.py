@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -81,19 +81,14 @@ class TestCreatePluginAPI:
     @pytest.fixture(autouse=True)
     def _setup_mocks(self):
         """设置必要的 mock"""
-        with mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.create_application"
-        ) as mock_create_app, mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.create_default_module"
-        ) as mock_create_module, mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.init_module_in_view"
-        ) as mock_init_module, mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.create_market_config"
-        ) as mock_create_market, mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.post_create_application.send"
-        ) as mock_signal, mock.patch(
-            "paasng.bk_plugins.bk_plugins.pluginscenter_views.make_bk_plugin"
-        ) as mock_make_plugin:
+        with (
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_application") as mock_create_app,
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_default_module") as mock_create_module,
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.init_module_in_view") as mock_init_module,
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_market_config") as mock_create_market,
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.post_create_application.send") as mock_signal,
+            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.make_bk_plugin") as mock_make_plugin,
+        ):
             # 设置 mock 返回值
             mock_app = mock.MagicMock()
             mock_app.code = "test-plugin"

@@ -83,29 +83,27 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "blue-krill"
-version = "2.0.7"
+version = "3.0.0"
 description = "Tools and common packages for blueking PaaS platform."
 optional = false
-python-versions = ">=3.8,<3.12"
+python-versions = ">=3.11, <3.13"
 groups = ["main"]
 files = [
-    {file = "blue_krill-2.0.7-py3-none-any.whl", hash = "sha256:3b7cbd86a8ed1721fe853981d48b19485115f4db8f6b69d3cf33f34b7299b8e3"},
-    {file = "blue_krill-2.0.7.tar.gz", hash = "sha256:7d0e42762033e63881ec7ab978f04558d17f1971ac132ef55812cbc7733561d5"},
+    {file = "blue_krill-3.0.0-py3-none-any.whl", hash = "sha256:628bac47e2000d9bf34481df388c4a80fd1e35fc162e46b272dba56d298501c9"},
+    {file = "blue_krill-3.0.0.tar.gz", hash = "sha256:c5a396b98261f5143fec391d4809b4938380f67cda9ebbd5070e87c00b4fdf6d"},
 ]
 
 [package.dependencies]
 bk-crypto-python-sdk = ">=2.0.0,<3.0.0"
 click = "*"
 cryptography = ">=3.0.0"
-curlify = ">=2.2.1,<3.0.0"
+curlify = ">=2.2.1,<4.0.0"
 django-environ = ">=0.8.1"
 pydantic = "*"
-pyjwt = ">=1.7.1"
+pyjwt = ">=2.12.0,<3"
 python-editor = ">=1.0.4,<2.0.0"
 requests = "*"
-six = "*"
 toml = "*"
-urllib3 = ">=1.26.16,<2.0.0"
 watchdog = "*"
 
 [package.source]
@@ -512,18 +510,18 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "django"
-version = "4.2.30"
+version = "5.2.15"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "django-4.2.30-py3-none-any.whl", hash = "sha256:4d07aaf1c62f9984842b67c2874ebbf7056a17be253860299b93ae1881faad65"},
-    {file = "django-4.2.30.tar.gz", hash = "sha256:4ebc7a434e3819db6cf4b399fb5b3f536310a30e8486f08b66886840be84b37c"},
+    {file = "django-5.2.15-py3-none-any.whl", hash = "sha256:0eb4a9bb1853a35b0286dbc6d916bd352c8c2687195a7f2d6f80cefd840e4970"},
+    {file = "django-5.2.15.tar.gz", hash = "sha256:5154a9bf84ac01dde011e367f355c07dbb329532e06810dcf3ef2af269e236e7"},
 ]
 
 [package.dependencies]
-asgiref = ">=3.6.0,<4"
+asgiref = ">=3.8.1"
 sqlparse = ">=0.3.1"
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
@@ -538,20 +536,20 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "django-environ"
-version = "0.8.1"
+version = "0.13.0"
 description = "A package that allows you to utilize 12factor inspired environment variables to configure your Django application."
 optional = false
-python-versions = ">=3.4,<4"
+python-versions = ">=3.9,<4"
 groups = ["main"]
 files = [
-    {file = "django-environ-0.8.1.tar.gz", hash = "sha256:6f0bc902b43891656b20486938cba0861dc62892784a44919170719572a534cb"},
-    {file = "django_environ-0.8.1-py2.py3-none-any.whl", hash = "sha256:42593bee519a527602a467c7b682aee1a051c2597f98c45f4f4f44169ecdb6e5"},
+    {file = "django_environ-0.13.0-py3-none-any.whl", hash = "sha256:37799d14cd78222c6fd8298e48bfe17965ff8e586091ad66a463e52e0e7b799e"},
+    {file = "django_environ-0.13.0.tar.gz", hash = "sha256:6c401e4c219442c2c4588c2116d5292b5484a6f69163ed09cd41f3943bfb645f"},
 ]
 
 [package.extras]
-develop = ["coverage[toml] (>=5.0a4)", "furo (>=2021.8.17b43,<2021.9.dev0)", "pytest (>=4.6.11)", "sphinx (>=3.5.0)", "sphinx-notfound-page"]
-docs = ["furo (>=2021.8.17b43,<2021.9.dev0)", "sphinx (>=3.5.0)", "sphinx-notfound-page"]
-testing = ["coverage[toml] (>=5.0a4)", "pytest (>=4.6.11)"]
+develop = ["coverage[toml] (>=5.0a4)", "furo (>=2024.8.6)", "pytest (>=4.6.11)", "setuptools (>=71.0.0)", "sphinx (>=5.0)", "sphinx-copybutton", "sphinx-notfound-page"]
+docs = ["furo (>=2024.8.6)", "sphinx (>=5.0)", "sphinx-copybutton", "sphinx-notfound-page"]
+testing = ["coverage[toml] (>=5.0a4)", "pytest (>=4.6.11)", "setuptools (>=71.0.0)"]
 
 [package.source]
 type = "legacy"
@@ -1011,24 +1009,24 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "paas-service"
-version = "2.0.3"
+version = "3.0.0"
 description = "A Django application for developing BK-PaaS add-on services."
 optional = false
-python-versions = ">=3.8,<3.12"
+python-versions = ">=3.11,<3.13"
 groups = ["main"]
 files = [
-    {file = "paas_service-2.0.3-py3-none-any.whl", hash = "sha256:33d78e392cc6e57d215f5b63c1af6d9f2f956a4f487cbde79c52146fe31be08c"},
-    {file = "paas_service-2.0.3.tar.gz", hash = "sha256:d988672a3df820530b83124144653a673474e59809face0b64947ef35306f1c4"},
+    {file = "paas_service-3.0.0-py3-none-any.whl", hash = "sha256:53fe6c0e3cc0ce405645c09802a2947d4a2bd99d156ca0dba3638ccc2b01515b"},
+    {file = "paas_service-3.0.0.tar.gz", hash = "sha256:e8a641b77473d786f786bcf389296f2a4918d4e659dc2cc5cc3d1cb699cea2db"},
 ]
 
 [package.dependencies]
-blue-krill = ">=2.0.7,<3.0.0"
-django = ">=4.2.16,<5.0.0"
+blue-krill = ">=3.0.0,<4.0.0"
+django = ">=5.2.14,<6.0.0"
 django-translated-fields = "*"
 djangorestframework = ">=3.15.2,<4.0.0"
 jsonfield = "*"
 pydantic = "2.9.2"
-pyjwt = ">=2.4.0,<3.0.0"
+pyjwt = ">=2.12.0,<3.0.0"
 
 [package.source]
 type = "legacy"
@@ -1675,7 +1673,7 @@ version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
@@ -2143,4 +2141,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "5af5572e1eff197ad4b30ba6356f3ae48b924b041711d12d3d5c1feb85c842ef"
+content-hash = "77ff2fe1f23f0f43aaafaacf39078b731f4b8f52e62715a3b361046ce603d861"

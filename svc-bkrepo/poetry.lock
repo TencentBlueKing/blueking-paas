@@ -116,18 +116,18 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "bkpaas-auth"
-version = "3.0.0"
+version = "3.2.0"
 description = "User authentication django app for blueking internal projects"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = ">=3.10,<4.0"
 groups = ["main"]
 files = [
-    {file = "bkpaas_auth-3.0.0-py3-none-any.whl", hash = "sha256:cbad6348510b856147c3647413aab7da49345ec6f7276c435c10556209571606"},
-    {file = "bkpaas_auth-3.0.0.tar.gz", hash = "sha256:85786155fd8f379cd0ee3330b33d704718cc31d178cecb1bb6a6c5ccf348f782"},
+    {file = "bkpaas_auth-3.2.0-py3-none-any.whl", hash = "sha256:8efcf363188d5f2308dbe550ac47d33bff57157bf216ca9b603c84a3bb306956"},
+    {file = "bkpaas_auth-3.2.0.tar.gz", hash = "sha256:c9f292c3686c187f45dc98b0c6cfcd9a1cdb952c3adb3b69b7f38e59a7f2e1e0"},
 ]
 
 [package.dependencies]
-django = ">=4.2,<5.0"
+django = ">=4.2,<6.0"
 requests = "*"
 six = "*"
 
@@ -138,29 +138,27 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "blue-krill"
-version = "2.1.5"
+version = "3.0.0"
 description = "Tools and common packages for blueking PaaS platform."
 optional = false
-python-versions = ">=3.9,<3.12"
+python-versions = ">=3.11, <3.13"
 groups = ["main"]
 files = [
-    {file = "blue_krill-2.1.5-py3-none-any.whl", hash = "sha256:ed626eb867f6069a702cee029a1e37ed3d41a1dd7a474509a997c25d53abd85a"},
-    {file = "blue_krill-2.1.5.tar.gz", hash = "sha256:fc7e82a8b56d8739c70388a10acdde1ff76ed0d8ec2e7c3fb7d4cc87109dacdc"},
+    {file = "blue_krill-3.0.0-py3-none-any.whl", hash = "sha256:628bac47e2000d9bf34481df388c4a80fd1e35fc162e46b272dba56d298501c9"},
+    {file = "blue_krill-3.0.0.tar.gz", hash = "sha256:c5a396b98261f5143fec391d4809b4938380f67cda9ebbd5070e87c00b4fdf6d"},
 ]
 
 [package.dependencies]
 bk-crypto-python-sdk = ">=2.0.0,<3.0.0"
 click = "*"
 cryptography = ">=3.0.0"
-curlify = ">=2.2.1,<3.0.0"
+curlify = ">=2.2.1,<4.0.0"
 django-environ = ">=0.8.1"
 pydantic = "*"
-pyjwt = ">=1.7.1"
+pyjwt = ">=2.12.0,<3"
 python-editor = ">=1.0.4,<2.0.0"
 requests = "*"
-six = "*"
 toml = "*"
-urllib3 = ">=1.26.16,<2.0.0"
 watchdog = "*"
 
 [package.source]
@@ -567,18 +565,18 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "django"
-version = "4.2.30"
+version = "5.2.15"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "django-4.2.30-py3-none-any.whl", hash = "sha256:4d07aaf1c62f9984842b67c2874ebbf7056a17be253860299b93ae1881faad65"},
-    {file = "django-4.2.30.tar.gz", hash = "sha256:4ebc7a434e3819db6cf4b399fb5b3f536310a30e8486f08b66886840be84b37c"},
+    {file = "django-5.2.15-py3-none-any.whl", hash = "sha256:0eb4a9bb1853a35b0286dbc6d916bd352c8c2687195a7f2d6f80cefd840e4970"},
+    {file = "django-5.2.15.tar.gz", hash = "sha256:5154a9bf84ac01dde011e367f355c07dbb329532e06810dcf3ef2af269e236e7"},
 ]
 
 [package.dependencies]
-asgiref = ">=3.6.0,<4"
+asgiref = ">=3.8.1"
 sqlparse = ">=0.3.1"
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
@@ -1088,24 +1086,24 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "paas-service"
-version = "2.0.3"
+version = "3.0.0"
 description = "A Django application for developing BK-PaaS add-on services."
 optional = false
-python-versions = ">=3.8,<3.12"
+python-versions = ">=3.11,<3.13"
 groups = ["main"]
 files = [
-    {file = "paas_service-2.0.3-py3-none-any.whl", hash = "sha256:33d78e392cc6e57d215f5b63c1af6d9f2f956a4f487cbde79c52146fe31be08c"},
-    {file = "paas_service-2.0.3.tar.gz", hash = "sha256:d988672a3df820530b83124144653a673474e59809face0b64947ef35306f1c4"},
+    {file = "paas_service-3.0.0-py3-none-any.whl", hash = "sha256:53fe6c0e3cc0ce405645c09802a2947d4a2bd99d156ca0dba3638ccc2b01515b"},
+    {file = "paas_service-3.0.0.tar.gz", hash = "sha256:e8a641b77473d786f786bcf389296f2a4918d4e659dc2cc5cc3d1cb699cea2db"},
 ]
 
 [package.dependencies]
-blue-krill = ">=2.0.7,<3.0.0"
-django = ">=4.2.16,<5.0.0"
+blue-krill = ">=3.0.0,<4.0.0"
+django = ">=5.2.14,<6.0.0"
 django-translated-fields = "*"
 djangorestframework = ">=3.15.2,<4.0.0"
 jsonfield = "*"
 pydantic = "2.9.2"
-pyjwt = ">=2.4.0,<3.0.0"
+pyjwt = ">=2.12.0,<3.0.0"
 
 [package.source]
 type = "legacy"
@@ -2243,4 +2241,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "aad10c0c26e79f44ff4a7caed8dd8e149ccc3860347d4dccbb1bd73d213dd847"
+content-hash = "27a773f0f889fff9ec7fdba27a46028bff0222d11163323910bfdd10ce797c02"

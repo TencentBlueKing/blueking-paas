@@ -44,8 +44,8 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
+          :condition="searchValue"
+          :is-error="isTableError"
           :empty-title="$t('暂无增强服务')"
           @reacquire="getServices"
           @clear-filter="searchValue = ''"
@@ -320,10 +320,7 @@ export default {
         visible: false,
         row: {},
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -392,7 +389,6 @@ export default {
       this.filteredData = searchTerm
         ? this.serviceList.filter((item) => item.moduleName.toLowerCase()?.includes(searchTerm))
         : [...this.serviceList];
-      this.updateTableEmptyConfig();
     }, 300),
     // 获取增强服务数据
     async getServices() {
@@ -549,10 +545,7 @@ export default {
       this.unrecycledSidebar.visible = true;
     },
     setTableAbnormalState(isAbnormal) {
-      this.tableEmptyConf.isAbnormal = isAbnormal;
-    },
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.searchValue ? 'placeholder' : '';
+      this.isTableError = isAbnormal;
     },
     // 是否分配是否禁用
     isButtonDisabled(row) {

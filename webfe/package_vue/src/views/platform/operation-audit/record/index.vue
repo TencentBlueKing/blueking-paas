@@ -43,8 +43,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ searchValues, dateParams }"
+            :is-error="isTableError"
             :empty-title="$t('暂无应用')"
             @reacquire="resetPaginationAndRefresh"
             @clear-filter="clearFilterKey"
@@ -166,10 +166,7 @@ export default {
       filterOptions: {},
       // 操作对象映射
       targetMap: {},
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -270,7 +267,6 @@ export default {
         this.records = ret.results || [];
         this.pagination.count = ret.count;
         this.setTableAbnormal(false);
-        this.updateTableEmptyConfig();
       } catch (e) {
         this.setTableAbnormal(true);
         this.catchErrorHandler(e);
@@ -375,7 +371,7 @@ export default {
     },
     // 设置表格异常状态
     setTableAbnormal(isAbnormal = true) {
-      this.tableEmptyConf.isAbnormal = isAbnormal;
+      this.isTableError = isAbnormal;
     },
     // 清空搜索筛选条件
     clearFilterKey() {
@@ -383,13 +379,6 @@ export default {
       this.dateParams = {};
       this.$refs?.datePickerRef?.handleClear();
       this.$refs.tableRef?.clearFilter();
-    },
-    updateTableEmptyConfig() {
-      if (this.searchValues?.length || Object.keys(this.dateParams)?.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
   },
 };

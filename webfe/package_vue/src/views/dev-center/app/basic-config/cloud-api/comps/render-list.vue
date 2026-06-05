@@ -107,8 +107,8 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="searchValue"
+              :is-error="isTableError"
               @reacquire="fetchList(id)"
               @clear-filter="clearFilterKey"
             />
@@ -454,10 +454,7 @@ export default {
         isApply: false,
         isRenew: false,
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       filterStatus: [],
       filterData: [],
       selectedList: [],
@@ -715,7 +712,6 @@ export default {
       const start = this.pagination.limit * (this.pagination.current - 1);
       const end = start + this.pagination.limit;
       this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-      this.updateTableEmptyConfig();
     }, 350),
 
     /**
@@ -823,10 +819,9 @@ export default {
         this.filterStatus = [];
         this.initPageConf();
         this.tableList = this.getDataByPage();
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.loading = false;
@@ -940,10 +935,6 @@ export default {
         clearFilter(tableHeader);
       }
       this.fetchList(this.id);
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.searchValue;
     },
 
     // 勾选是否禁用

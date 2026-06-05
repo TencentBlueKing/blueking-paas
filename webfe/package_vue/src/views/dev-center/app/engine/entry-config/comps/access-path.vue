@@ -51,8 +51,8 @@
           >
             <div slot="empty">
               <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
+                :condition="keyword"
+                :is-error="isTableError"
                 @reacquire="fetchPathExemptList(true)"
                 @clear-filter="clearFilterKey"
               />
@@ -293,10 +293,7 @@ export default {
         isLoading: false,
       },
       isUseUserPermission: true,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -484,10 +481,9 @@ export default {
         const res = await this.$store.dispatch('user/getExemptList', params);
         this.pagination.count = res.count;
         this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -667,10 +663,6 @@ export default {
 
     clearFilterKey() {
       this.keyword = '';
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.keyword;
     },
   },
 };

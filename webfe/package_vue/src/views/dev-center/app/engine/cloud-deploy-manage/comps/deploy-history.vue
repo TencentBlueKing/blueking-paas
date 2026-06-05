@@ -58,8 +58,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ personnelSelectorList, filterEnv }"
+            :is-error="isTableError"
             @reacquire="getDeployHistory"
             @clear-filter="handleClearFilter"
           />
@@ -260,10 +260,7 @@ export default {
         count: 0,
         limit: 10,
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       personnelSelectorList: [],
       // 部署日志
       logSidesliderData: {},
@@ -423,10 +420,9 @@ export default {
         this.pagination.count = res.count;
 
         this.oldHistoryList = cloneDeep(res.results);
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message,
@@ -559,14 +555,6 @@ export default {
         clearFilter(tableHeader);
       }
       this.getDeployHistory();
-    },
-
-    updateTableEmptyConfig() {
-      if (this.personnelSelectorList.length || this.filterEnv.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
   },
 };

@@ -45,8 +45,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ search: searchValue, filters: tableFilterMap }"
+            :is-error="isTableError"
             :empty-title="$t('暂无应用')"
             @reacquire="getPlatformApps"
             @clear-filter="clearFilterKey"
@@ -208,10 +208,7 @@ export default {
       tableFilterMap: {
         order_by: '-created',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       deleteDialogConfig: {
         visible: false,
         loading: false,
@@ -474,13 +471,12 @@ export default {
         const res = await this.$store.dispatch(`tenantOperations/${actionName}`, { queryParams });
         this.appList = this.processAppList(res.results || []);
         this.pagination.count = res.count;
-        this.tableEmptyConf.isAbnormal = false;
-        this.updateTableEmptyConfig();
+        this.isTableError = false;
       } catch (e) {
         if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
           return;
         }
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isTableLoading = false;
@@ -571,14 +567,6 @@ export default {
       this.searchValue = '';
       this.curTenantId = 'all';
       this.$refs.tableRef?.clearFilter();
-    },
-    updateTableEmptyConfig() {
-      const filteredData = this.filterUndefinedProperties(this.tableFilterMap);
-      if (this.searchValue || Object.keys(filteredData)?.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
   },
 };

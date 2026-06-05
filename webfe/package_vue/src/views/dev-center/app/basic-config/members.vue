@@ -62,8 +62,8 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ searchValues, selectedRole: selectedRole !== 'all' }"
+              :is-error="isTableError"
               @reacquire="fetchMemberList"
               @clear-filter="clearFilterKey"
             />
@@ -279,10 +279,7 @@ export default {
         limit: 10,
       },
       enableToAddRole: false,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       // 多租户人员搜索
       searchValues: [],
       isTableLoading: false,
@@ -398,10 +395,9 @@ export default {
         this.filteredData = [...this.memberList]; // 过滤数据
         this.pagination.count = results.length;
         this.updateFilterCounts();
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.loading = false;
@@ -617,7 +613,6 @@ export default {
       if (!searchValues?.length && (!selectedRole || selectedRole === 'all')) {
         this.filteredData = [...this.memberList];
         this.pagination.count = this.filteredData.length;
-        this.updateTableEmptyConfig();
         return;
       }
       const searchSet = new Set(searchValues || []);
@@ -648,20 +643,12 @@ export default {
 
       // 更新分页和空状态
       this.pagination.count = this.filteredData.length;
-      this.updateTableEmptyConfig();
     },
     // 重置过滤、搜索条件
     clearFilterKey() {
       this.searchValues = [];
       this.selectedRole = 'all';
       this.handleSearch();
-    },
-    updateTableEmptyConfig() {
-      if (this.searchValues.length || this.selectedRole !== 'all') {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
     // 查看权限模型
     viewPermissionModel() {

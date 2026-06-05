@@ -290,9 +290,9 @@
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
                       <table-empty
+                        :condition="logParams.keyword"
                         :is-content-text="false"
-                        :keyword="tableEmptyConf.keyword"
-                        :abnormal="tableEmptyConf.isAbnormal"
+                        :is-error="isTableError"
                         @reacquire="getLogList"
                         @clear-filter="clearFilterKey"
                       />
@@ -411,10 +411,7 @@ export default {
       },
       fieldSelectedList: [],
       isFilter: false,
-      tableEmptyConf: {
-        isAbnormal: false,
-        keyword: '',
-      },
+      isTableError: false,
       isExceedMaxResultWindow: false,
       logsTotal: 0,
       notLogTips: [
@@ -812,11 +809,10 @@ export default {
         if (!this.fieldSelectedList.length) {
           this.fieldSelectedList = [...this.staticFileds];
         }
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (res) {
         // 表格异常状态
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.logList = [];
         this.pagination.count = 0;
       } finally {
@@ -979,10 +975,6 @@ export default {
 
     clearFilterKey() {
       this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.logParams.keyword;
     },
 
     formatTime(time) {

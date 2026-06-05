@@ -46,8 +46,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ search: filterKey, filters: { filterLanguage, filterPdName, filterStatus } }"
+            :is-error="isTableError"
             @reacquire="fetchPluginsList"
             @clear-filter="clearFilterKey"
           />
@@ -243,10 +243,7 @@ export default {
         pending: 'pending',
         initial: 'initial',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       orderBy: '-updated',
     };
   },
@@ -300,11 +297,10 @@ export default {
         });
         this.pluginList = res.results;
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
         // 显示异常
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -473,14 +469,6 @@ export default {
         clearFilter(tableHeader);
       }
       this.fetchPluginsList();
-    },
-
-    updateTableEmptyConfig() {
-      if (this.filterKey || this.filterLanguage.length || this.filterPdName.length || this.filterStatus.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
 
     // 插件列表过滤参数变化

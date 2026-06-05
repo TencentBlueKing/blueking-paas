@@ -20,17 +20,18 @@
       </div>
       <span v-else />
       <template v-if="curType !== 'empty' && isContentText">
+        <!-- 异常状态：提供刷新入口 -->
         <span
-          v-if="abnormal"
+          v-if="resolvedIsError"
           class="refresh-tips"
           @click="toRefresh"
         >
           {{ $t('刷新') }}
         </span>
-        <!-- 恒定条件不展示清空交互-->
+        <!-- 搜索为空状态：提供清空筛选入口（恒定条件不展示） -->
         <template v-else>
           <div
-            v-if="keyword !== '$CONSTANT'"
+            v-if="resolvedShowClear"
             class="search-empty-tips"
           >
             {{ $t('可以尝试 调整关键词 或') }}
@@ -48,67 +49,128 @@
 </template>
 
 <script>
+// 表格空状态统一展示组件支持三种场景：
+// 1. empty —— 数据为空（默认暂无数据）
+// 2. search-empty —— 搜索/筛选后无结果
+// 3. 接口请求异常
+
 import i18n from '@/language/i18n';
+
 export default {
   props: {
-    keyword: {
-      type: String,
-      default: '',
-    },
-    // 是否为暂无数据
+    // 是否强制展示暂无数据状态
     empty: {
       type: Boolean,
       default: false,
     },
-    // 暂无数据
+    // 空状态展示的标题文案，默认 "暂无数据"
     emptyTitle: {
       type: String,
       default: i18n.t('暂无数据'),
     },
-    // 是否显示title
+    // 是否显示 title 区域
     isEmptyTitle: {
       type: Boolean,
       default: true,
     },
-    // 是否为异常
-    abnormal: {
+    // 是否为接口异常状态
+    isError: {
       type: Boolean,
       default: false,
     },
+    // 搜索/筛选条件值，用于判断是否存在有效筛选条件
+    condition: {
+      type: [String, Number, Boolean, Object, Array],
+      default: '',
+    },
+    // 是否显示「清空搜索条件」入口，undefined 时根据 condition 自动判断
+    showClear: {
+      type: Boolean,
+      default: undefined,
+    },
+    // 是否显示操作引导区域（搜索提示 / 刷新按钮）
     isContentText: {
       type: Boolean,
       default: true,
     },
+    // 附加说明文案，显示在 title 下方
     explanation: {
       type: String,
       default: '',
     },
   },
+
   computed: {
+    // 接口异常标记
+    resolvedIsError() {
+      return this.isError;
+    },
+
+    // 是否存在有效的筛选条件
+    resolvedHasCondition() {
+      return this.hasActiveFilter(this.condition);
+    },
+
+    // 是否展示「清空搜索条件」交互
+    resolvedShowClear() {
+      if (typeof this.showClear === 'boolean') {
+        return this.showClear;
+      }
+      return this.resolvedHasCondition;
+    },
+
+    // 当前 bk-exception 组件所需的 type 值
     curType() {
-      if (this.abnormal) {
+      if (this.resolvedIsError) {
         return '500';
-      } if (!this.empty && this.keyword) {
+      }
+      if (this.empty) {
+        return 'empty';
+      }
+      if (this.resolvedHasCondition) {
         return 'search-empty';
       }
       return 'empty';
     },
+
+    // 当前展示的标题文案
     curTitle() {
-      if (this.abnormal) {
+      if (this.resolvedIsError) {
         return this.$t('数据获取异常');
-      } if (!this.empty && this.keyword) {
+      }
+      if (this.empty) {
+        return this.emptyTitle;
+      }
+      if (this.resolvedHasCondition) {
         return this.$t('搜索结果为空');
       }
       return this.emptyTitle;
     },
   },
+
   methods: {
+    // 通知父组件清空筛选条件
     handlerClearFilter() {
       this.$emit('clear-filter');
     },
+
     toRefresh() {
       this.$emit('clear-filter');
       this.$emit('reacquire');
+    },
+
+    // 递归检测 value 中是否存在有效筛选值，支持 string、number、boolean、array、object 等类型
+    hasActiveFilter(value) {
+      if (Array.isArray(value)) {
+        return value.some((item) => this.hasActiveFilter(item));
+      }
+      if (value && typeof value === 'object') {
+        return Object.keys(value).some((key) => this.hasActiveFilter(value[key]));
+      }
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      return Boolean(value);
     },
   },
 };

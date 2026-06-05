@@ -112,8 +112,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ search: keyword, filters: { filterStatus, filterCreator } }"
+            :is-error="isTableError"
             @reacquire="getVersionList"
             @clear-filter="clearFilterKey"
           />
@@ -355,10 +355,7 @@ export default {
       pluginDefaultInfo: {
         exposed_link: '',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       // 插件访问入口禁用
       isAccessDisabled: false,
       accessDisabledTips: '',
@@ -543,10 +540,9 @@ export default {
         });
         this.versionList = res.results;
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$bkMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
@@ -702,14 +698,6 @@ export default {
       if (this.isPluginAccessEntry) {
         window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
       }
-    },
-
-    updateTableEmptyConfig() {
-      if (this.keyword || this.filterStatus.length || this.filterCreator.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
 
     handlerChangeRouter(key) {

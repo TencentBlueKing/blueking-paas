@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from prometheus_client.core import GaugeMetricFamily
+
 from vendor.client import Client
 
 
@@ -34,7 +34,7 @@ class ClusterMinimalMetricsCollector:
             "rabbitmq overview objects",
             labels=["cluster", "type"],
         )
-        for k, v in overview['object_totals'].items():
+        for k, v in overview["object_totals"].items():
             family.add_metric([self.cluster_id, k], v)
         yield family
 
@@ -44,7 +44,7 @@ class ClusterMinimalMetricsCollector:
             "number of messages in queue",
             labels=["cluster", "type"],
         )
-        queue_totals = overview['queue_totals']
+        queue_totals = overview["queue_totals"]
         for k in ["messages", "messages_ready", "messages_unacknowledged"]:
             if k in queue_totals:
                 family.add_metric([self.cluster_id, k], queue_totals[k])

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
 import typing
@@ -34,7 +33,7 @@ logger = logging.getLogger(__name__)
 class Command(InstancesBasedCommand):
     help = "Evict connection in federation cluster"
 
-    def add_arguments(self, parser: 'CommandParser'):
+    def add_arguments(self, parser: "CommandParser"):
         super().add_arguments(parser)
 
         parser.add_argument("-t", "--timeout", type=int, default=1800, help="migrate timeout")
@@ -53,10 +52,7 @@ class Command(InstancesBasedCommand):
         parser.add_argument("--dry-run", default=False, action="store_true", help="dry run mode")
 
     def has_consumer_channel(self, channels: typing.List[Channel]):
-        for ch in channels:
-            if ch.is_consumer():
-                return True
-        return False
+        return any(ch.is_consumer() for ch in channels)
 
     def consumer_channels_idle(self, channels: typing.List[Channel], max_idle: timedelta):
         idle = True
@@ -73,16 +69,17 @@ class Command(InstancesBasedCommand):
                 continue
 
     def close_connection(self, client: Client, connection: Connection, dry_run: bool, reason: str, *args, **kwargs):
-        print(f"going to close connection {connection}")
+        self.stdout.write(f"going to close connection {connection}")
         if dry_run:
             return True
 
         try:
             client.connection.close(connection.name, reason)
-            return True
-        except Exception as err:
-            print(f"close connection {connection} failed: {err}")
+        except Exception as err:  # noqa: BLE001
+            self.stderr.write(f"close connection {connection} failed: {err}")
             return False
+        else:
+            return True
 
     def run_once(
         self,
@@ -95,17 +92,17 @@ class Command(InstancesBasedCommand):
     ):
         vhost_set = self.get_vhost_set(*args, **kwargs)
         if vhost_set:
-            print(f"evicting connections in vhosts: {', '.join(vhost_set)}")
+            self.stdout.write(f"evicting connections in vhosts: {', '.join(vhost_set)}")
 
         safe_peer_host_set = set()
         if safe_peer_host:
             safe_peer_host_set.update(safe_peer_host)
-            print(f"safe peer hosts: {', '.join(safe_peer_host_set)}")
+            self.stdout.write(f"safe peer hosts: {', '.join(safe_peer_host_set)}")
 
         peer_host_set = set()
         if peer_host:
             peer_host_set.update(peer_host)
-            print(f"evicting connections for peer hosts: {', '.join(peer_host_set)}")
+            self.stdout.write(f"evicting connections for peer hosts: {', '.join(peer_host_set)}")
 
         rest_connections: typing.List[Connection] = []
 
@@ -122,21 +119,21 @@ class Command(InstancesBasedCommand):
 
             try:
                 chs = client.connection.channels(connection.name)
-            except Exception as err:
-                print(f"list channels for connection {connection} failed: {err}, check in next time")
+            except Exception as err:  # noqa: BLE001
+                self.stderr.write(f"list channels for connection {connection} failed: {err}, check in next time")
                 rest_connections.append(connection)
                 continue
 
             channels = [Channel(**i) for i in chs]
 
             if not self.has_consumer_channel(channels):
-                print(f"connection {connection} is for publisher")
+                self.stdout.write(f"connection {connection} is for publisher")
             elif not self.consumer_channels_idle(channels, timedelta(seconds=max_idle_seconds)):
-                print(f"connection {connection} is activating, skipped")
+                self.stdout.write(f"connection {connection} is activating, skipped")
                 rest_connections.append(connection)
                 continue
             else:
-                print(f"idle connection {connection} is for consumer")
+                self.stdout.write(f"idle connection {connection} is for consumer")
 
             if not self.close_connection(client, connection, *args, **kwargs):
                 rest_connections.append(connection)
@@ -150,22 +147,22 @@ class Command(InstancesBasedCommand):
         start_at = time.time()
         while start_at + timeout > time.time():
             time.sleep(interval)
-            print("checking connections")
+            self.stdout.write("checking connections")
 
             try:
                 rest_connections = self.run_once(client, *args, **kwargs)
-            except Exception as err:
-                print(f"handle error: {err}, retring")
+            except Exception as err:  # noqa: BLE001
+                self.stderr.write(f"handle error: {err}, retring")
                 continue
 
             if not rest_connections:
-                print("all connections are closed")
+                self.stdout.write("all connections are closed")
                 return
 
-            print(f"got {len(rest_connections)} connections, going to sleep")
+            self.stdout.write(f"got {len(rest_connections)} connections, going to sleep")
 
         if force:
-            print("force closing all connections")
+            self.stdout.write("force closing all connections")
             for c in rest_connections:
                 self.close_connection(client, c, *args, **kwargs)
 
@@ -173,4 +170,4 @@ class Command(InstancesBasedCommand):
         try:
             self.run(*args, **kwargs)
         except KeyboardInterrupt:
-            print("exit")
+            self.stdout.write("exit")

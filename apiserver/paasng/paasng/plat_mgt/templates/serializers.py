@@ -62,6 +62,7 @@ class TemplateDetailOutputSLZ(serializers.Serializer):
     repo_type = serializers.CharField(help_text="代码仓库类型")
     repo_url = serializers.CharField(help_text="代码仓库地址")
     source_dir = serializers.CharField(help_text="模板代码所在目录")
+    supported_runtime_types = serializers.JSONField(help_text="支持的运行时类型")
     # 配置信息
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置")
     required_buildpacks = serializers.JSONField(help_text="必须的构建工具")
@@ -93,6 +94,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
     source_dir = SourceDirField(help_text="模板代码所在目录")
+    supported_runtime_types = serializers.JSONField(help_text="支持的运行时类型", default=list)
 
     # 配置信息
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)
@@ -112,6 +114,11 @@ class TemplateBaseInputSLZ(serializers.Serializer):
         repo_types = [item[0] for item in get_sourcectl_types().get_choices()]
         if value and value not in repo_types:
             raise ValidationError(_("不支持的代码仓库类型"))
+        return value
+
+    def validata_supported_runtime_types(self, value: list):
+        if not isinstance(value, list):
+            raise ValidationError(_("支持的运行时类型必须为 List[str] 格式"))
         return value
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:

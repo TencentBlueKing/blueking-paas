@@ -58,6 +58,7 @@ class Template(AuditedModel):
     # 模板代码渲染方式，可选值：django_template / cookiecutter
     render_method = models.CharField(verbose_name=_("模板渲染方式"), max_length=32, default="django_template")
     runtime_type = models.CharField(verbose_name=_("运行时类型"), max_length=32, default=RuntimeType.BUILDPACK)
+    supported_runtime_types = models.JSONField(verbose_name=_("支持的运行时类型"), blank=True, default=list)
     is_hidden = models.BooleanField(
         verbose_name=_("是否隐藏"), help_text=_("被隐藏的模板不会出现在创建应用时的列表中"), default=False
     )

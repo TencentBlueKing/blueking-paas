@@ -62,7 +62,7 @@ class Provider(BaseProvider):
         self.db_operator_template.setdefault(
             "CREATE_DATABASE",
             # default create database sql;
-            "CREATE DATABASE IF NOT EXISTS `{engine.name}` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;",
+            "CREATE DATABASE IF NOT EXISTS `{engine.name}` DEFAULT CHARACTER SET {charset} COLLATE {collation};",
         )
         self.db_operator_template.setdefault(
             "DROP_DATABASE",
@@ -134,10 +134,34 @@ class Provider(BaseProvider):
                 name=db_name,
                 ssl_options=mgr.get_django_ssl_options(),
             )
-            create_db_sql = self.db_operator_template["CREATE_DATABASE"].format(engine=engine)
+
+            template = self.db_operator_template["CREATE_DATABASE"]
+
+            # 模板中含 charset/collation 关键字时, 探测 MySQL 字符集能力
+            need_override = "charset" in template or "collation" in template
+            if need_override:
+                try:
+                    rows = authorizer.execute("SHOW CHARACTER SET LIKE 'utf8mb4'")
+                    charset, collation = ("utf8mb4", "utf8mb4_general_ci") if rows else ("utf8", "utf8_general_ci")
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to detect charset for MySQL instance %s:%s, fallback to uft8.",
+                        server.host,
+                        server.port,
+                    )
+                    charset, collation = "utf8", "utf8_general_ci"
+                create_db_sql = template.format(engine=engine, charset=charset, collation=collation)
+            else:
+                create_db_sql = template.format(engine=engine)
+
             engine.execute(create_db_sql)
 
-            logger.info("create mysql addons instance %s success", db_name)
+            if need_override:
+                logger.info(
+                    "create mysql addons instance %s success, charset=%s, collation=%s", db_name, charset, collation
+                )
+            else:
+                logger.info("create mysql addons instance %s success", db_name)
 
         credentials = {
             "host": server.host,

@@ -29,6 +29,7 @@ from paasng.platform.engine.deploy.bg_build.utils import (
     prepare_slugbuilder_template,
     update_env_vars_with_metadata,
 )
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 urllib3.disable_warnings()
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -80,7 +81,7 @@ class TestUtils:
         )
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的 ConfigVars 与生成的环境变量不一致"
 
-        assert slug_tmpl.schedule.cluster_name == "foo-cluster"
+        assert slug_tmpl.schedule.cluster_name == CLUSTER_NAME_FOR_TESTING
         assert slug_tmpl.schedule.tolerations == []
         assert slug_tmpl.schedule.node_selector == {}
 

@@ -283,7 +283,6 @@ export default {
       }
     },
     initDate() {
-      dayjs.locale(this.localLanguage);
       const end = new Date();
       const start = new Date();
 

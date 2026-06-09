@@ -446,7 +446,6 @@ export default {
     },
   },
   created() {
-    dayjs.locale(this.localLanguage);
     this.siteName = 'default';
     this.engineEnabled = this.curAppInfo.web_config.engine_enabled;
   },

@@ -18,9 +18,17 @@
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import cookie from 'cookie';
 import 'dayjs/locale/zh-cn';
 import 'dayjs/locale/en';
 
 dayjs.extend(relativeTime);
+
+export function setDayjsLocale(language) {
+  const locale = language === 'en' ? 'en' : 'zh-cn';
+  dayjs.locale(locale);
+}
+
+setDayjsLocale(cookie.parse(document.cookie).blueking_language || 'zh-cn');
 
 export default dayjs;

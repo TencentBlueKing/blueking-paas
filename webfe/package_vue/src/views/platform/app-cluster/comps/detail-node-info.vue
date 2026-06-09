@@ -187,9 +187,6 @@ export default {
     ...mapState(['localLanguage']),
   },
   created() {
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
     this.getNodesState();
   },
   methods: {

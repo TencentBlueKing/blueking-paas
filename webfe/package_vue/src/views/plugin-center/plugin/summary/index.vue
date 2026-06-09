@@ -298,7 +298,6 @@ export default {
         this.getBuiltinDashboards();
         this.getAppDashboardInfo();
       }
-      dayjs.locale(this.localLanguage);
       this.getStoreOverview();
       this.fetchPluginTypeList();
     },

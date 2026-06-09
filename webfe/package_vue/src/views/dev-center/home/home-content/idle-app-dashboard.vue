@@ -274,9 +274,6 @@ export default {
   },
   created() {
     this.getIdleAppList();
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
   },
   methods: {
     // 获取闲置应用看板数据

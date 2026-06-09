@@ -1483,7 +1483,6 @@ export default {
   },
   created() {
     // dayjs日期中英文显示
-    dayjs.locale(this.localLanguage);
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
     // 部署阶段时轮询查procee定时器

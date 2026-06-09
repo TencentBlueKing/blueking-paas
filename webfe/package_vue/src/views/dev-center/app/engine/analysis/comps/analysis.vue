@@ -510,7 +510,6 @@ export default {
     },
   },
   created() {
-    dayjs.locale(this.localLanguage);
     this.siteName = 'default';
   },
   mounted() {

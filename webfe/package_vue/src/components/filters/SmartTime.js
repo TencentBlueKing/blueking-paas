@@ -18,18 +18,9 @@
 
 import Vue from 'vue';
 import dayjs from '@/common/dayjs';
-import cookie from 'cookie';
 
 // 时间格式过滤器
 Vue.filter('time-smart', function (value, type) {
-  let language = cookie.parse(document.cookie).blueking_language || 'zh-cn';
-
-  if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(language)) {
-    language = 'zh-cn';
-  }
-  // dayjs日期中文显示
-  dayjs.locale(language);
-
   let formatTime;
   const curYear = new Date().getFullYear();
   switch (type) {

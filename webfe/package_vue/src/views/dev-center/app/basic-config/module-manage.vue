@@ -1007,9 +1007,6 @@ export default {
       }
     },
   },
-  created() {
-    dayjs.locale(this.localLanguage);
-  },
   mounted() {
     this.init();
   },

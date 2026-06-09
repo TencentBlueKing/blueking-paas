@@ -556,9 +556,6 @@ export default {
       deep: true,
     },
   },
-  created() {
-    dayjs.locale(this.localLanguage);
-  },
   mounted() {
     this.init();
     this.initDate();

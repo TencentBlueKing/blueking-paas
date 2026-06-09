@@ -341,9 +341,6 @@ export default {
     this.getTenantAppStatistics();
     this.getAppTypes();
     this.getCategoryTypes();
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
   },
   methods: {
     // 页码重置

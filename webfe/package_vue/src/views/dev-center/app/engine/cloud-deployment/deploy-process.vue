@@ -1279,7 +1279,6 @@ export default {
       this.init();
     }
     if (this.isReadOnlyMode) {
-      this.configureDayjsLocale();
       // 查看模式获取最近一条操作记录
       this.getDeploymentOperations();
     }
@@ -1287,11 +1286,6 @@ export default {
     await this.getQuotaPlans();
   },
   methods: {
-    configureDayjsLocale() {
-      if (this.localLanguage !== 'en') {
-        dayjs.locale('zh-cn');
-      }
-    },
     async init() {
       try {
         this.isLoading = true;

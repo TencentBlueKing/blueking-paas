@@ -162,7 +162,6 @@ export default {
       isLoading: false,
       formatTime,
       dayjs,
-      relativeTime,
       expandRowKeys: [],
       slowQueryCount: 0,
       selectionTime: {},

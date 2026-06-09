@@ -1093,7 +1093,6 @@ export default {
   },
   created() {
     // dayjs日期中英文显示
-    dayjs.locale(this.localLanguage);
     this.init();
     // 切换路由前清空定时器
     this.$router.beforeEach((to, from, next) => {

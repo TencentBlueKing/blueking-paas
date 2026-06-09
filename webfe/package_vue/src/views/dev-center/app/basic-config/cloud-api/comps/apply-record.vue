@@ -612,7 +612,6 @@ export default {
     },
   },
   created() {
-    dayjs.locale(this.localLanguage);
     this.isFilter = false;
   },
   mounted() {

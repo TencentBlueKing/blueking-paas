@@ -555,9 +555,6 @@ import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
-dayjs.locale('zh-cn');
-// let maxReplicasNum = 0;
-
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
 const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
@@ -784,7 +781,6 @@ export default {
     deploymentInfo: {
       handler(value) {
         this.deployData = value;
-        // this.handleDeployInstanceData();
         this.formatProcesses(this.deployData);
       },
       immediate: true,
@@ -805,7 +801,6 @@ export default {
     },
   },
   mounted() {
-    dayjs.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
     // if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
     //   this.watchServerPush();

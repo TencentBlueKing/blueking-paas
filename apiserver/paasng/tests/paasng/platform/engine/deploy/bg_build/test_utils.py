@@ -15,9 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from types import SimpleNamespace
 from typing import Dict
-from unittest import mock
 
 import pytest
 import urllib3
@@ -70,15 +68,6 @@ class TestUtils:
         slug_path = generate_slug_path(build_proc)
         assert f"{wl_app.region}/home/{wl_app.name}:{build_proc.branch}:{build_proc.revision}/push" == slug_path
 
-    # `get_schedule_config` requires a valid cluster, mock it at this moment
-    @mock.patch(
-        "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config",
-        return_value=SimpleNamespace(
-            cluster_name="foo-cluster",
-            node_selector={},
-            tolerations=[],
-        ),
-    )
     def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)

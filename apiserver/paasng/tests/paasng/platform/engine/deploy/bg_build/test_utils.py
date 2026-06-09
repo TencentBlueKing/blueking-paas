@@ -68,7 +68,7 @@ class TestUtils:
         slug_path = generate_slug_path(build_proc)
         assert f"{wl_app.region}/home/{wl_app.name}:{build_proc.branch}:{build_proc.revision}/push" == slug_path
 
-    def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
+    def test_prepare_slugbuilder_template_without_metadata(self, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
         assert slug_tmpl.name == f"slug-builder--{wl_app.module_name}", (

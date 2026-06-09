@@ -541,7 +541,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
@@ -555,11 +555,11 @@ import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
-moment.locale('zh-cn');
+dayjs.locale('zh-cn');
 // let maxReplicasNum = 0;
 
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -805,7 +805,7 @@ export default {
     },
   },
   mounted() {
-    moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
+    dayjs.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
     // if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
     //   this.watchServerPush();
@@ -899,7 +899,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
           item.isOperate = false;
         });
         allProcesses.push(process);
@@ -1167,7 +1167,7 @@ export default {
         const chartData = [];
         xAxisData = [];
         item.results.forEach((itemData) => {
-          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
+          xAxisData.push(dayjs(itemData[0] * 1000).format('MM-DD HH:mm'));
           // 内存由Byte转MB
           if (type === 'mem') {
             const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
@@ -1354,7 +1354,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.type === instanceData.process_type) {
           // 新增

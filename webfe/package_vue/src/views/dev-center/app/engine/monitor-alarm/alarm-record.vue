@@ -282,12 +282,13 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/markLine';
 import 'echarts/lib/component/markPoint';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
+
 import chartOption from '@/json/alarm-record-chart-option';
 import i18n from '@/language/i18n';
 
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment()
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs()
   .subtract(1, 'days')
   .format('YYYY-MM-DD HH:mm:ss');
 
@@ -747,7 +748,7 @@ export default {
       payload.forEach((item) => {
         const { values } = item;
         values.forEach((val) => {
-          xAxisData.push(moment(val[0] * 1000).format('MM-DD HH:mm:ss'));
+          xAxisData.push(dayjs(val[0] * 1000).format('MM-DD HH:mm:ss'));
           chartData.push(val[1]);
         });
         const curValues = values.find(val => val[0] === curTime / 1000) || values[0];
@@ -783,7 +784,7 @@ export default {
               {
                 name: '',
                 coord: [
-                  moment(curTime).format('MM-DD HH:mm:ss'),
+                  dayjs(curTime).format('MM-DD HH:mm:ss'),
                   curValues[1].toFixed(2),
                 ],
                 label: {

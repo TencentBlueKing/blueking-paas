@@ -455,8 +455,14 @@
       </div>
       <div class="logscroll">
         <div class="instance-textarea">
-          <div class="textarea">
-            <div class="inner">
+          <div
+            class="textarea"
+            ref="logTextarea"
+          >
+            <div
+              class="inner"
+              ref="logTextareaInner"
+            >
               <p
                 v-for="(item, itemIndex) in logDetail"
                 :key="itemIndex"
@@ -702,21 +708,21 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import chartOption from '@/json/instance-chart-option';
 import appBaseMixin from '@/mixins/app-base-mixin';
-import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
 import processLog from '@/components/process-log-dialog/log.vue';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 import { downloadTxt } from '@/common/tools';
+import { mapState } from 'vuex';
 
 let maxReplicasNum = 0;
 
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -841,9 +847,6 @@ export default {
       // 进程操作相关变量
       loading: true,
       isAppOfflined: false,
-      deploymentReady: false,
-      pendingProcessList: [],
-      processInterval: undefined,
       timer: 0,
       processPlan: {
         processType: 'unkonwn',
@@ -877,7 +880,6 @@ export default {
       logDetail: [],
       isLogShow: false,
       isRealTimeOpen: false,
-      curOpenLogIndex: -1,
       curProcessType: '',
       curProcessKey: '',
       logInterval: undefined,
@@ -888,9 +890,6 @@ export default {
         title: '',
       },
       tooltipTimer: 0,
-      curChartInstance: {
-        name: '',
-      },
       cpuLine: chartOption.cpu,
       memoryLine: chartOption.memory,
       isChartLoading: true,
@@ -984,23 +983,9 @@ export default {
     };
   },
   computed: {
-    envName() {
-      return this.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境');
-    },
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
-    envEventData() {
-      return this.$store.state.envEventData;
-    },
+    ...mapState(['platformFeature', 'localLanguage', 'envEventData']),
     shrinkLimit() {
       return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
-    },
-    isCloudNative() {
-      return this.curAppInfo.application?.type === 'cloud_native';
     },
     // 滑框的宽度
     computedWidth() {
@@ -1107,8 +1092,8 @@ export default {
     },
   },
   created() {
-    // moment日期中英文显示
-    moment.locale(this.localLanguage);
+    // dayjs日期中英文显示
+    dayjs.locale(this.localLanguage);
     this.init();
     // 切换路由前清空定时器
     this.$router.beforeEach((to, from, next) => {
@@ -1135,7 +1120,7 @@ export default {
           }
           this.getProcessList();
         },
-        (res) => {
+        () => {
           this.allProcesses = [];
           this.$emit('data-ready', this.environment);
         }
@@ -1365,7 +1350,7 @@ export default {
         const chartData = [];
         xAxisData = [];
         item.results.forEach((itemData) => {
-          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
+          xAxisData.push(dayjs(itemData[0] * 1000).format('MM-DD HH:mm'));
           // 内存由Byte转MB
           if (type === 'mem') {
             const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
@@ -1486,106 +1471,6 @@ export default {
         conf.cpuRef?.hideLoading();
         conf.memRef?.hideLoading();
       }
-    },
-
-    /**
-     * 从接口获取Metric 数据
-     * @param {Object} conf 配置参数
-     */
-    async getInstanceMetric(conf) {
-      this.isChartLoading = true;
-      try {
-        const params = {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          env: this.environment,
-          process_type: conf.processes.name,
-          instance_name: conf.instance.name,
-          time_range_str: this.curChartTimeRange,
-        };
-        const res = await this.$store.dispatch('processes/getInstanceMetrics', params);
-        res.result.forEach((item) => {
-          this.renderChart(item.results, item.type_name, conf[`${item.type_name}Ref`]);
-        });
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-        this.clearChart();
-      } finally {
-        this.isChartLoading = false;
-        conf.cpuRef.hideLoading();
-        conf.memRef.hideLoading();
-      }
-    },
-
-    /**
-     * 图表初始化
-     * @param  {Object} instanceData 数据
-     * @param  {String} type 类型
-     * @param  {Object} ref 图表对象
-     */
-    renderChart(instanceData, type, ref) {
-      const series = [];
-      let xAxisData = [];
-      instanceData.forEach((item) => {
-        const chartData = [];
-        xAxisData = [];
-        item.results.forEach((itemData) => {
-          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
-          // 内存由Byte转MB
-          if (type === 'mem') {
-            const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
-            chartData.push(dataMB);
-          } else {
-            chartData.push(itemData[1]);
-          }
-        });
-
-        if (item.type_name === 'current') {
-          series.push({
-            name: item.display_name,
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0.2,
-              },
-            },
-            data: chartData,
-          });
-        } else {
-          series.push({
-            name: item.display_name,
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            lineStyle: {
-              normal: {
-                width: 2,
-                type: 'dotted',
-              },
-            },
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
-            },
-            data: chartData,
-          });
-        }
-      });
-
-      ref.mergeOptions({
-        xAxis: [
-          {
-            data: xAxisData,
-          },
-        ],
-        series,
-      });
     },
 
     /**
@@ -1727,7 +1612,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
         });
 
         // 如果有当前展开项
@@ -1850,7 +1735,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增
@@ -2008,13 +1893,6 @@ export default {
             maskColor: 'rgba(255, 255, 255, 0.8)',
           });
 
-        // this.getInstanceMetric({
-        //     cpuRef: cpuRef,
-        //     memRef: memRef,
-        //     instance: instance,
-        //     processes: processes
-        // })
-
         this.fetchMetric({
           cpuRef,
           memRef,
@@ -2089,7 +1967,6 @@ export default {
           metrics: this.scalingConfig.metrics,
         },
       };
-      this.pendingProcessList.push(processType);
 
       try {
         await this.$store.dispatch('processes/updateProcess', {
@@ -2195,7 +2072,6 @@ export default {
     closeLogDetail() {
       clearInterval(this.logInterval);
       this.isLogShow = false;
-      this.curOpenLogIndex = -1;
     },
 
     // 实时滚动开关
@@ -2243,8 +2119,6 @@ export default {
           .then((res) => {
             const logInfo = res;
             // 实时日志数等于上一次请求则无新日志产生 不追加
-            // if(logInfo.count == countNum) return;
-            // countNum = logInfo.count;
             // 不能用数量, 也不能用lastItemId判定(es查询出来排序可能两次之间会变, 但是lastItemId不变-时间精度只到s)
             if (logInfo.count > 0) {
               logInfo.results.forEach((item) => {
@@ -2256,8 +2130,12 @@ export default {
                 }
               });
               setTimeout(() => {
-                const currentHeight = $('.textarea .inner').height() + 100;
-                $('.textarea').scrollTop(currentHeight);
+                const innerEl = this.$refs.logTextareaInner;
+                const textareaEl = this.$refs.logTextarea;
+                if (innerEl && textareaEl) {
+                  const currentHeight = innerEl.clientHeight + 100;
+                  textareaEl.scrollTop = currentHeight;
+                }
               }, 0);
             }
           });

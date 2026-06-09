@@ -116,7 +116,7 @@ import RenderSideslider from '../engine/analysis/comps/access-guide-sideslider.v
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import { formatDate } from '@/common/tools';
 import MetricsDataItem from './comps/metrics-data-item.vue';
 export default {
@@ -210,8 +210,8 @@ export default {
       const start = this.dateRange.startTime;
       const end = this.dateRange.endTime;
 
-      const endSeconds = moment(end).valueOf();
-      const oneEndSeconds = moment(start).add(1, 'days').valueOf();
+      const endSeconds = dayjs(end).valueOf();
+      const oneEndSeconds = dayjs(start).add(1, 'days').valueOf();
       const isInDay = oneEndSeconds > endSeconds;
 
       switch (this.defaultRange) {
@@ -283,12 +283,12 @@ export default {
       }
     },
     initDate() {
-      moment.locale(this.localLanguage);
+      dayjs.locale(this.localLanguage);
       const end = new Date();
       const start = new Date();
 
-      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
       this.curTime = this.shortcuts[0];
     },
     // 获取最新动态
@@ -298,7 +298,7 @@ export default {
         .then((response) => {
           this.operationsList = [];
           for (const item of response.results) {
-            item.at_friendly = moment(item.at).startOf('minute').fromNow();
+            item.at_friendly = dayjs(item.at).startOf('minute').fromNow();
             this.operationsList.push(item);
           }
         });
@@ -317,7 +317,7 @@ export default {
       const chartData = this.chartDataCache;
 
       chartData.forEach((item) => {
-        xAxisData.push(moment(item.time).format(this.dateFormat));
+        xAxisData.push(dayjs(item.time).format(this.dateFormat));
         uv.push(item.uv);
         pv.push(item.pv);
       });

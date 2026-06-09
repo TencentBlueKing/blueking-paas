@@ -205,10 +205,11 @@
 </template>
 
 <script>
-    import moment from 'moment';
+    import dayjs from '@/common/dayjs';
 
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
+
+    const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const initStartDate = dayjs().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
 
     let timeRangeCache = '';
     let timeShortCutText = '';

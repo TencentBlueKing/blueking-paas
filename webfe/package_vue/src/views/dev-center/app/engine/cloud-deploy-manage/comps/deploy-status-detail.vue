@@ -212,7 +212,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from './deploy-timeline';
 import deployLog from './deploy-log';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import _ from 'lodash';
 export default {
   components: {
@@ -987,7 +987,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
         });
         allProcesses.push(process);
       });
@@ -1082,7 +1082,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增

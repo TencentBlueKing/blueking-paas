@@ -685,7 +685,7 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>import dayjs from '@/common/dayjs';
 import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
 import gitExtend from '@/components/ui/git-extend';
 import repoInfo from '@/components/ui/repo-info.vue';
@@ -1008,7 +1008,7 @@ export default {
     },
   },
   created() {
-    moment.locale(this.localLanguage);
+    dayjs.locale(this.localLanguage);
   },
   mounted() {
     this.init();
@@ -1590,7 +1590,7 @@ export default {
         moduleName: this.curAppModule.name,
       }).then((res) => {
         this.gatewayInfos[env] = {
-          created: moment(res.rcs_binding_data.created).startOf('minute')
+          created: dayjs(res.rcs_binding_data.created).startOf('minute')
             .fromNow(),
           node_ip_addresses: res.rcs_binding_data.state.node_ip_addresses,
         };
@@ -1621,7 +1621,7 @@ export default {
         moduleName: this.curAppModule.name,
       }).then((res) => {
         this.gatewayInfos[env] = {
-          created: moment(res.rcs_binding_data.created).startOf('minute')
+          created: dayjs(res.rcs_binding_data.created).startOf('minute')
             .fromNow(),
           node_ip_addresses: res.rcs_binding_data.state.node_ip_addresses,
         };

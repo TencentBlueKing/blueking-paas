@@ -176,7 +176,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import chartOption from '@/json/plugin-overview-options';
 import { formatDate } from '@/common/tools';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import CodeQuality from './code-quality.vue';
 import BaseInfo from './base-info.vue';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
@@ -298,7 +298,7 @@ export default {
         this.getBuiltinDashboards();
         this.getAppDashboardInfo();
       }
-      moment.locale(this.localLanguage);
+      dayjs.locale(this.localLanguage);
       this.getStoreOverview();
       this.fetchPluginTypeList();
     },
@@ -309,8 +309,8 @@ export default {
       start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
       this.initDateTimeRange = [start, end];
 
-      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
     },
 
     // 获取仪表盘数据
@@ -451,7 +451,7 @@ export default {
       const chartData = this.chartDataCache;
 
       chartData.forEach((item) => {
-        xAxisData.push(moment(item.day).format('MM-DD'));
+        xAxisData.push(dayjs(item.day).format('MM-DD'));
         uv.push(item.commit_user_count);
         pv.push(item.commit_count);
       });

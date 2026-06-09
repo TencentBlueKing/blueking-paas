@@ -1134,7 +1134,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from '../deploy-timeline';
 import deployLog from '../deploy-log';
@@ -1482,8 +1482,8 @@ export default {
     },
   },
   created() {
-    // moment日期中英文显示
-    moment.locale(this.localLanguage);
+    // dayjs日期中英文显示
+    dayjs.locale(this.localLanguage);
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
     // 部署阶段时轮询查procee定时器
@@ -2771,7 +2771,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
         });
 
         // 如果有当前展开项
@@ -2855,7 +2855,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增

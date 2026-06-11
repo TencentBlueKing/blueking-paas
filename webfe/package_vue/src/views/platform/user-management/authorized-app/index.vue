@@ -386,12 +386,6 @@ export default {
   .card-style {
     padding: 16px;
   }
-  /deep/ .bk-table-header .custom-header-cell {
-    color: inherit;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-underline-position: under;
-  }
 }
 /deep/ .edit-add-dialog-cls {
   .edit-add-title {

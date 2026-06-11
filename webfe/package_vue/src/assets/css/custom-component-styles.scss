@@ -84,3 +84,13 @@
   }
 }
 /*bk-info end*/
+
+/*bk-table header 自定义表头提示样式 start*/
+.bk-table-header .custom-header-cell {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-position: under;
+  text-decoration-color: #979ba5;
+}
+/*bk-table header 自定义表头提示样式 end*/

@@ -40,6 +40,7 @@ class TemplateSLZ(serializers.Serializer):
     tags = serializers.JSONField()
     repo_url = serializers.CharField()
     language = serializers.CharField()
+    supported_runtime_types = serializers.ListField(child=serializers.CharField())
 
 
 class TemplateRenderOutputSLZ(serializers.Serializer):

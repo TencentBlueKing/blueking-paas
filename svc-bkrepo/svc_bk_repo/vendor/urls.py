@@ -23,6 +23,11 @@ urlpatterns = [
     re_path(r"healthz/$", views.HealthzView.as_view()),
     re_path(r"web/instances/(?P<instance_id>[^/]+)/$", views.BKRepoIndexView.as_view(), name="instance.index"),
     re_path(
+        r"web/instances/(?P<instance_id>[^/]+)/auto-expand/$",
+        views.BKRepoAutoExpandView.as_view(),
+        name="instance.auto_expand",
+    ),
+    re_path(
         r"web/instances/(?P<instance_id>[^/]+)/(?P<bucket>[^/]+)/$",
         views.BKRepoManageView.as_view(),
         name="instance.manage",

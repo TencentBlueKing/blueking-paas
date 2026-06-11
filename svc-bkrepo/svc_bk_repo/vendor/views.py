@@ -34,7 +34,7 @@ from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
 from svc_bk_repo.vendor.helper import BKGenericRepoManager
 from svc_bk_repo.vendor.render import humanize_bytes
-from svc_bk_repo.vendor.serializers import ServiceInstanceForManageSLZ
+from svc_bk_repo.vendor.serializers import AutoExpandConfigSLZ, ServiceInstanceForManageSLZ
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,13 @@ class BKRepoIndexView(TemplateView):
         kwargs["csrftoken"] = get_token(self.request)
         kwargs["uid"] = self.request.user.username
 
+        kwargs["auto_expand"] = instance.config.get(
+            "auto_expand",
+            {
+                "private": {"enabled": False, "threshold": 50},
+                "public": {"enabled": False, "threshold": 50},
+            },
+        )
         return kwargs
 
 
@@ -120,3 +127,19 @@ class BKRepoManageView(APIView):
         except Exception:  # noqa: BLE001
             return Response({"message": "未知异常, 请稍后重试"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": f"{bucket} 的容量已修改成 {humanize_bytes(max_size_bytes)}"})
+
+
+class BKRepoAutoExpandView(APIView):
+    @method_decorator(instance_authorized_require)
+    def patch(self, request, instance_id):
+        """保存自动扩容设置"""
+        instance = get_object_or_404(ServiceInstance, uuid=instance_id)
+        slz = AutoExpandConfigSLZ(data=request.data.get("auto_expand", {}))
+        slz.is_valid(raise_exception=True)
+
+        # 持久化到 instance.config
+        instance.config["auto_expand"] = slz.validated_data
+        instance.save(update_fields=["config"])
+
+        logger.info(f"Instance {instance_id} auto-expand config updated: {instance.config['auto_expand']}")
+        return Response({"message": "自动扩容设置已保存"})

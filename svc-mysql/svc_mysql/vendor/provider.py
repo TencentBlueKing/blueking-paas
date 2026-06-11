@@ -137,8 +137,8 @@ class Provider(BaseProvider):
 
             template = self.db_operator_template["CREATE_DATABASE"]
 
-            # 如果模板中需要 动态 charset / collation, 将探测 MySQL 实例支持的字符集
-            # utf8mb4 优化, 如果不支持将回退到 utf8mb3
+            # 如果模板中需要动态 charset / collation, 将探测 MySQL 实例支持的字符集
+            # utf8mb4 优先, 如果不支持将回退到 utf8mb3
             if self._template_needs_charset(template):
                 charset, collation = self._detect_charset_capability(authorizer)
                 create_db_sql = template.format(engine=engine, charset=charset, collation=collation)

@@ -2,10 +2,17 @@
   <div class="alarm-strategy mt25">
     <div class="top-title mb20">
       <h4>{{ $t('告警策略') }}</h4>
-      <p class="tips" v-if="platformFeature.MONITORING">
+      <p
+        v-if="platformFeature.MONITORING"
+        class="tips"
+      >
         {{ $t('告警策略对应用下所有模块都生效，如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
         <!-- 未部署不展示 -->
-        <a v-if="strategyLink" :href="strategyLink" target="_blank">
+        <a
+          v-if="strategyLink"
+          :href="strategyLink"
+          target="_blank"
+        >
           <i class="paasng-icon paasng-jump-link"></i>
           {{ $t('配置告警策略') }}
         </a>
@@ -31,7 +38,10 @@
           :show-overflow-tooltip="true"
         >
           <template slot-scope="{ row }">
-            <a :href="row.detail_link" target="_blank">
+            <a
+              :href="row.detail_link"
+              target="_blank"
+            >
               {{ row.name }}
             </a>
           </template>
@@ -53,9 +63,7 @@
             <span v-else>--</span>
           </template>
         </bk-table-column>
-        <bk-table-column
-          :label="$t('阈值')"
-        >
+        <bk-table-column :label="$t('阈值')">
           <template slot-scope="{ row }">
             {{ row.maxThresholdConfig && row.maxThresholdConfig.text }}
           </template>
@@ -70,18 +78,14 @@
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column
-          :label="$t('级别')"
-        >
+        <bk-table-column :label="$t('级别')">
           <template slot-scope="{ row }">
             <span :class="['level-border', `level${row.levelText?.id}`]">
               {{ row.levelText && $t(row.levelText.text) }}
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column
-          :label="$t('通知组')"
-        >
+        <bk-table-column :label="$t('通知组')">
           <template slot-scope="{ row }">
             <div
               v-if="row.noticeGroupNames?.length"
@@ -103,9 +107,9 @@
           prop="is_enabled"
         >
           <template slot-scope="{ row }">
-            <span :class="['tag', row.is_enabled ? 'enable' : 'deactivate']">
+            <bk-tag :theme="row.is_enabled ? 'success' : 'default'">
               {{ row.is_enabled ? $t('启用') : $t('停用') }}
-            </span>
+            </bk-tag>
           </template>
         </bk-table-column>
       </bk-table>
@@ -116,7 +120,12 @@
         <div class="empty-content">
           <div class="title">{{ $t('暂未启用告警策略') }}</div>
           <div class="sub-title">{{ $t('在应用部署成功后，才会配置相应环境的告警策略') }}</div>
-          <bk-button :text="true" title="primary" size="small" @click="handleToDeploy">
+          <bk-button
+            :text="true"
+            title="primary"
+            size="small"
+            @click="handleToDeploy"
+          >
             {{ $t('去部署') }}
           </bk-button>
         </div>
@@ -181,58 +190,62 @@ export default {
         const userGroupList = res.user_group_list || [];
         const strategyConfigLink = res.strategy_config_link || '';
 
-        strategyList.length && strategyList.forEach((v) => {
-          // 用户组处理
-          v.noticeGroupNames = v.notice_group_ids.map((id) => {
-            // eslint-disable-next-line camelcase
-            const foundItem = userGroupList.find(userItem => +userItem.user_group_id === id);
-            return foundItem ? foundItem.user_group_name : null;
-          });
-
-          // 触发条件处理
-          if (v.detects.length) {
-            const config = v.detects[0].trigger_config;
-            v.cycle = config.count;
-            v.algorithm = config.check_window;
-          }
-          // 阈值&级别处理
-          if (v.items.length) {
-            // 最大阈值
-            let maxThreshold = -1;
-            // 最大阈值config
-            let maxThresholdConfig = {};
-            // 级别
-            let level = {};
-
-            v.items.forEach((item) => {
-              // 算法 1: N
-              const { algorithms } = item;
-              algorithms.forEach((algorithmItem) => {
-                // 级别转换
-                level = { id: algorithmItem.level, text: LEVEL_MAP[algorithmItem.level - 1] };
-
-                // type 为 Threshold 才展示阈值
-                if (algorithmItem.type === 'Threshold') {
-                  // 算法配置 [[{配置}]]
-                  const { config } = algorithmItem;
-                  config.forEach((innerArray) => {
-                    innerArray.forEach((obj) => {
-                      if (obj.threshold && obj.threshold > maxThreshold) {
-                        maxThreshold = innerArray[0].threshold;
-                        // eslint-disable-next-line prefer-destructuring
-                        maxThresholdConfig = innerArray[0];
-                      }
-                    });
-                  });
-                }
-              });
+        strategyList.length &&
+          strategyList.forEach((v) => {
+            // 用户组处理
+            v.noticeGroupNames = v.notice_group_ids.map((id) => {
+              // eslint-disable-next-line camelcase
+              const foundItem = userGroupList.find((userItem) => +userItem.user_group_id === id);
+              return foundItem ? foundItem.user_group_name : null;
             });
 
-            maxThresholdConfig.text = maxThreshold === -1 ? '--' : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
-            v.maxThresholdConfig = maxThresholdConfig;
-            v.levelText = level;
-          }
-        });
+            // 触发条件处理
+            if (v.detects.length) {
+              const config = v.detects[0].trigger_config;
+              v.cycle = config.count;
+              v.algorithm = config.check_window;
+            }
+            // 阈值&级别处理
+            if (v.items.length) {
+              // 最大阈值
+              let maxThreshold = -1;
+              // 最大阈值config
+              let maxThresholdConfig = {};
+              // 级别
+              let level = {};
+
+              v.items.forEach((item) => {
+                // 算法 1: N
+                const { algorithms } = item;
+                algorithms.forEach((algorithmItem) => {
+                  // 级别转换
+                  level = { id: algorithmItem.level, text: LEVEL_MAP[algorithmItem.level - 1] };
+
+                  // type 为 Threshold 才展示阈值
+                  if (algorithmItem.type === 'Threshold') {
+                    // 算法配置 [[{配置}]]
+                    const { config } = algorithmItem;
+                    config.forEach((innerArray) => {
+                      innerArray.forEach((obj) => {
+                        if (obj.threshold && obj.threshold > maxThreshold) {
+                          maxThreshold = innerArray[0].threshold;
+                          // eslint-disable-next-line prefer-destructuring
+                          maxThresholdConfig = innerArray[0];
+                        }
+                      });
+                    });
+                  }
+                });
+              });
+
+              maxThresholdConfig.text =
+                maxThreshold === -1
+                  ? '--'
+                  : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
+              v.maxThresholdConfig = maxThresholdConfig;
+              v.levelText = level;
+            }
+          });
         this.alarmStrategyList = strategyList;
         // eslint-disable-next-line camelcase
         this.strategyLink = strategyConfigLink;
@@ -241,7 +254,7 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally  {
+      } finally {
         this.isLoading = false;
       }
     },
@@ -292,34 +305,17 @@ export default {
     }
   }
 
-  .tag {
-    display: inline-block;
-    height: 22px;
-    line-height: 22px;
-    padding: 0 4px;
-    border-radius: 2px;
-
-    &.deactivate {
-      color: #979BA5;
-      background: #F0F1F5;
-    }
-    &.enable {
-      color: #14A568;
-      background: #E4FAF0;
-    }
-  }
-
   .level-border {
     padding-left: 4px;
 
     &.level1 {
-      border-left: 4px solid #EA3636;
+      border-left: 4px solid #ea3636;
     }
     &.level2 {
-      border-left: 4px solid #FF9C01;
+      border-left: 4px solid #ff9c01;
     }
     &.level3 {
-      border-left: 4px solid #3A84FF;
+      border-left: 4px solid #3a84ff;
     }
   }
 }
@@ -338,14 +334,14 @@ export default {
     text-align: center;
     .title {
       font-size: 14px;
-      color: #63656E;
+      color: #63656e;
       line-height: 24px;
     }
 
     .sub-title {
       margin: 8px 0;
       font-size: 12px;
-      color: #979BA5;
+      color: #979ba5;
       line-height: 20px;
     }
   }

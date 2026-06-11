@@ -579,13 +579,6 @@ export default {
   }
   .table-wrapper {
     margin-top: 16px;
-    /deep/ .bk-table-header {
-      .custom-header-cell {
-        text-decoration: underline;
-        text-decoration-style: dashed;
-        text-underline-position: under;
-      }
-    }
     .app-logo {
       width: 32px;
       height: 32px;

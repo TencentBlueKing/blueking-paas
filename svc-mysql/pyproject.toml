@@ -27,10 +27,10 @@ dynamic = ["classifiers"]
 authors = [{name = "blueking", email = "blueking@tencent.com"}]
 requires-python = '>=3.11,<3.12'
 dependencies = [
-    'django (==4.2.30)',
+    'django (>=5.2.0)',
     'pymysql (==1.1.1)',
     "gunicorn (==23.0.0)",
-    "paas-service (==2.0.3)",
+    "paas-service (==3.0.0)",
     'djangorestframework (==3.15.2)',
     'requests (==2.32.3)',
     'gevent (==24.2.1)',
@@ -38,10 +38,10 @@ dependencies = [
     'jsonfield (==3.1.0)',
     'whitenoise (==5.3.0)',
     'sentry_sdk (==0.19.4)',
-    'blue-krill (==2.0.7)',
+    'blue-krill (==3.0.0)',
     'prometheus-client (==0.14.1)',
     "pydantic (==2.9.2)",
-    'django-environ (==0.8.1)',
+    'django-environ (==0.13.0)',
     'urllib3 (==1.26.20)',
     'pyjwt (==2.12.0)'
 ]

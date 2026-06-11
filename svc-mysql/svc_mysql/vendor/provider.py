@@ -17,6 +17,7 @@
 
 import json
 import logging
+import string
 from dataclasses import dataclass, field
 from typing import Dict, List
 
@@ -209,8 +210,12 @@ class Provider(BaseProvider):
         raise NotImplementedError
 
     def _template_needs_charset(self, template: str) -> bool:
-        """判断模板是否要求动态 charset / collation 替换"""
-        return "charset" in template or "collation" in template
+        """判断模板是否包含 {charset} 或 {collation} 占位符"""
+        field_names = {
+            field_name for _, field_name, _, _ in string.Formatter().parse(template) if field_name is not None
+        }
+
+        return "charset" in field_names or "collation" in field_names
 
     def _detect_charset_capability(self, authorizer: MySQLAuthorizer) -> tuple[str, str]:
         """探测 MySQL 字符集能力"""

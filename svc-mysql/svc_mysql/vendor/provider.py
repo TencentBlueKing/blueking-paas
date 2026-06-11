@@ -137,26 +137,16 @@ class Provider(BaseProvider):
 
             template = self.db_operator_template["CREATE_DATABASE"]
 
-            # 模板中含 charset/collation 关键字时, 探测 MySQL 字符集能力
-            need_override = "charset" in template or "collation" in template
-            if need_override:
-                try:
-                    rows = authorizer.execute("SHOW CHARACTER SET LIKE 'utf8mb4'")
-                    charset, collation = ("utf8mb4", "utf8mb4_general_ci") if rows else ("utf8", "utf8_general_ci")
-                except Exception:  # noqa: BLE001
-                    logger.warning(
-                        "Failed to detect charset for MySQL instance %s:%s, fallback to uft8.",
-                        server.host,
-                        server.port,
-                    )
-                    charset, collation = "utf8", "utf8_general_ci"
+            # 如果模板中需要 动态 charset / collation, 将探测 MySQL 实例支持的字符集
+            # utf8mb4 优化, 如果不支持将回退到 utf8mb3
+            if self._template_needs_charset(template):
+                charset, collation = self._detect_charset_capability(authorizer)
                 create_db_sql = template.format(engine=engine, charset=charset, collation=collation)
             else:
                 create_db_sql = template.format(engine=engine)
-
             engine.execute(create_db_sql)
 
-            if need_override:
+            if self._template_needs_charset(template):
                 logger.info(
                     "create mysql addons instance %s success, charset=%s, collation=%s", db_name, charset, collation
                 )
@@ -217,3 +207,18 @@ class Provider(BaseProvider):
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError
+
+    def _template_needs_charset(self, template: str) -> bool:
+        """判断模板是否要求动态 charset / collation 替换"""
+        return "charset" in template or "collation" in template
+
+    def _detect_charset_capability(self, authorizer: MySQLAuthorizer) -> tuple[str, str]:
+        """探测 MySQL 字符集能力"""
+        try:
+            rows = authorizer.execute("SHOW CHARACTER SET LIKE 'utf8mb4'")
+            charset, collation = ("utf8mb4", "utf8mb4_general_ci") if rows else ("utf8", "utf8_general_ci")
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to detect charset, fallback to utf8.")
+            return ("utf8", "utf8_general_ci")
+
+        return (charset, collation)

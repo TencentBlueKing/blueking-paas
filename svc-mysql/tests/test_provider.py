@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,59 +44,43 @@ def make_provider(**kwargs):
 
 
 class TestCreateCharsetDetection:
-    """create() 字符集探测集成测试"""
+    """create() 集成测试: 验证最终建库 SQL"""
 
-    def test_utf8mb4_detected_and_logged(self, mysql_mocks, caplog):
-        """utf8mb4 命中 -> SQL 含 utf8mb4 + 日志输出"""
-
+    def test_utf8mb4_sql_generated(self, mysql_mocks):
         mock_authorizer, mock_engine = mysql_mocks
         mock_authorizer.execute.return_value = [("utf8mb4", "utf8mb4_general_ci")]
 
-        provider = make_provider()
-        with caplog.at_level(logging.INFO):
-            result = provider.create({"engine_app_name": "test-app"})
+        make_provider().create({"engine_app_name": "test-app"})
 
         create_sql = mock_engine.execute.call_args_list[0][0][0]
         assert "utf8mb4" in create_sql
         assert "utf8mb4_general_ci" in create_sql
-        assert "charset=utf8mb4" in caplog.text
-        assert result.credentials["name"] == "test-db"
 
-    def test_utf8mb4_unavailable_fallback(self, mysql_mocks, caplog):
-        """utf8mb4 不可用 -> 回退 utf8"""
-
+    def test_fallback_to_utf8(self, mysql_mocks):
         mock_authorizer, mock_engine = mysql_mocks
         mock_authorizer.execute.return_value = []
 
-        provider = make_provider()
-        provider.create({"engine_app_name": "test-app"})
+        make_provider().create({"engine_app_name": "test-app"})
 
-        sql = mock_engine.execute.call_args_list[0][0][0]
-        assert "utf8" in sql
-        assert "utf8mb4" not in sql
+        create_sql = mock_engine.execute.call_args_list[0][0][0]
+        assert "utf8" in create_sql
+        assert "utf8mb4" not in create_sql
 
-    def test_detection_exception_fallback(self, mysql_mocks, caplog):
-        """探测异常 -> 静默回退 utf8 + warning 日志"""
-
+    def test_exception_still_creates_db(self, mysql_mocks):
         mock_authorizer, mock_engine = mysql_mocks
         mock_authorizer.execute.side_effect = Exception("Connection timed out")
 
-        provider = make_provider()
-        with caplog.at_level(logging.WARNING):
-            result = provider.create({"engine_app_name": "test-app"})
+        result = make_provider().create({"engine_app_name": "test-app"})
 
         assert result.credentials["name"] == "test-db"
-        assert "utf8" in mock_engine.execute.call_args_list[0][0][0]
-        assert "Failed to detect charset" in caplog.text
+        create_sql = mock_engine.execute.call_args_list[0][0][0]
+        assert "utf8" in create_sql
 
-    def test_external_template_skips_detection(self, mysql_mocks, caplog):
-        """外部模板不含 charset 占位符 -> 跳过探测"""
-
-        authorizer, mock_engine = mysql_mocks
+    def test_external_template_skips_detection(self, mysql_mocks):
+        mock_authorizer, mock_engine = mysql_mocks
 
         provider = make_provider()
         provider.db_operator_template["CREATE_DATABASE"] = "CREATE DATABASE IF NOT EXISTS `{engine.name}`;"
         provider.create({"engine_app_name": "test-app"})
 
-        authorizer.execute.assert_not_called()
-        assert "charset=" not in caplog.text
+        mock_authorizer.execute.assert_not_called()

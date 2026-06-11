@@ -1,0 +1,16 @@
+apiserver/paasng/paasng/platform/agent_sandbox/serializers.py
+  h_190e3af8dc7b5f 163
+apiserver/paasng/paasng/platform/agent_sandbox/models.py
+  h_190e3af8dc7b5f 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "342f1b897148d2fd5c033f8a7f04a81b952ae1ee",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

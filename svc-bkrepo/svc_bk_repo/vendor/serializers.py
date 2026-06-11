@@ -30,3 +30,13 @@ class ServiceInstanceForManageSLZ(serializers.ModelSerializer):
     class Meta(object):
         model = ServiceInstance
         fields = "__all__"
+
+
+class AutoExpandBucketConfigSLZ(serializers.Serializer):
+    enabled = serializers.BooleanField(default=False)
+    threshold = serializers.IntegerField(default=50, min_value=50, max_value=95)
+
+
+class AutoExpandConfigSLZ(serializers.Serializer):
+    private = AutoExpandBucketConfigSLZ()
+    public = AutoExpandBucketConfigSLZ()

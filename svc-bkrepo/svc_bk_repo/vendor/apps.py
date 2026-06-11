@@ -20,3 +20,8 @@ from django.apps import AppConfig
 
 class VendorConfig(AppConfig):
     name = "svc_bk_repo.vendor"
+
+    def ready(self):
+        from svc_bk_repo.shared.scheduler import start_scheduler
+
+        start_scheduler()

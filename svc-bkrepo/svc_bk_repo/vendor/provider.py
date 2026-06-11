@@ -112,6 +112,11 @@ class Provider(BaseProvider):
                 "public_bucket": public_repo,
                 "project": manager.project,
                 "tenant_id": tenant_id,
+                # 是否开启自动扩容
+                "auto_expand": {
+                    "private": {"enabled": False, "threshold": 50},
+                    "public": {"enabled": False, "threshold": 50},
+                },
             },
         )
 

@@ -17,6 +17,7 @@
 
 import json
 import logging
+import string
 from dataclasses import dataclass, field
 from typing import Dict, List
 
@@ -62,7 +63,7 @@ class Provider(BaseProvider):
         self.db_operator_template.setdefault(
             "CREATE_DATABASE",
             # default create database sql;
-            "CREATE DATABASE IF NOT EXISTS `{engine.name}` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;",
+            "CREATE DATABASE IF NOT EXISTS `{engine.name}` DEFAULT CHARACTER SET {charset} COLLATE {collation};",
         )
         self.db_operator_template.setdefault(
             "DROP_DATABASE",
@@ -134,10 +135,25 @@ class Provider(BaseProvider):
                 name=db_name,
                 ssl_options=mgr.get_django_ssl_options(),
             )
-            create_db_sql = self.db_operator_template["CREATE_DATABASE"].format(engine=engine)
+
+            template = self.db_operator_template["CREATE_DATABASE"]
+
+            # 如果模板中需要动态 charset / collation, 将探测 MySQL 实例支持的字符集
+            # utf8mb4 优先, 如果不支持将回退到 utf8mb3
+            need_charset = self._template_needs_charset(template)
+            if need_charset:
+                charset, collation = self._detect_charset_capability(authorizer)
+                create_db_sql = template.format(engine=engine, charset=charset, collation=collation)
+            else:
+                create_db_sql = template.format(engine=engine)
             engine.execute(create_db_sql)
 
-            logger.info("create mysql addons instance %s success", db_name)
+            if need_charset:
+                logger.info(
+                    "create mysql addons instance %s success, charset=%s, collation=%s", db_name, charset, collation
+                )
+            else:
+                logger.info("create mysql addons instance %s success", db_name)
 
         credentials = {
             "host": server.host,
@@ -193,3 +209,26 @@ class Provider(BaseProvider):
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError
+
+    def _template_needs_charset(self, template: str) -> bool:
+        """判断模板是否包含 {charset} 或 {collation} 占位符"""
+        field_names = {
+            field_name for _, field_name, _, _ in string.Formatter().parse(template) if field_name is not None
+        }
+
+        return "charset" in field_names or "collation" in field_names
+
+    def _detect_charset_capability(self, authorizer: MySQLAuthorizer) -> tuple[str, str]:
+        """探测 MySQL 字符集能力"""
+        try:
+            rows = authorizer.execute("SHOW CHARACTER SET LIKE 'utf8mb4'")
+            charset, collation = ("utf8mb4", "utf8mb4_general_ci") if rows else ("utf8", "utf8_general_ci")
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to detect charset for MySQL instance %s:%s, fallback to utf8.",
+                authorizer.host,
+                authorizer.port,
+            )
+            charset, collation = ("utf8", "utf8_general_ci")
+
+        return (charset, collation)

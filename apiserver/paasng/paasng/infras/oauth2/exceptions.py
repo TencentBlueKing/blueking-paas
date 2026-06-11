@@ -34,3 +34,11 @@ class BkOauthApiResponseError(BkOauthApiException):
 
 class BkOauthClientDoesNotExist(Exception):
     """Bk Oauth client not exist"""
+
+
+class BkOauthClientCodeConflictError(BkOauthApiException):
+    """Bk Oauth client code conflict"""
+
+    def __init__(self, bk_app_code: str):
+        self.bk_app_code = bk_app_code
+        super().__init__(f"App code '{bk_app_code}' already exists in bkAuth")

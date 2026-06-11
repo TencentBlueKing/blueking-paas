@@ -116,7 +116,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
             raise ValidationError(_("不支持的代码仓库类型"))
         return value
 
-    def validata_supported_runtime_types(self, value: list):
+    def validate_supported_runtime_types(self, value: list):
         if not isinstance(value, list):
             raise ValidationError(_("支持的运行时类型必须为 List[str] 格式"))
         return value

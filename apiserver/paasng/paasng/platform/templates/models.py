@@ -57,6 +57,11 @@ class Template(AuditedModel):
     source_dir = models.CharField(verbose_name=_("模板代码所在目录"), max_length=256, blank=True, default="./")
     # 模板代码渲染方式，可选值：django_template / cookiecutter
     render_method = models.CharField(verbose_name=_("模板渲染方式"), max_length=32, default="django_template")
+    # runtime_type: 模板默认的构建方式（创建模块时若未指定 build_method 则用此值）
+    # supported_runtime_types: 模板支持的构建方式列表（用于前端限制可选范围）
+    # 示例:
+    #   - runtime_type="buildpack", supported_runtime_types=["buildpack"]              -> 仅支持 buildpack
+    #   - runtime_type="buildpack", supported_runtime_types=["buildpack","dockerfile"] -> 同时支持两种
     runtime_type = models.CharField(verbose_name=_("运行时类型"), max_length=32, default=RuntimeType.BUILDPACK)
     supported_runtime_types = models.JSONField(verbose_name=_("支持的运行时类型"), blank=True, default=list)
     is_hidden = models.BooleanField(

@@ -112,7 +112,6 @@
     source_dir: './template'
     render_method: 'cookiecutter'
     runtime_type: buildpack
-    runtime_type: buildpack
     supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template

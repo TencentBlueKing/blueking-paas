@@ -20,6 +20,7 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import { pluginRouter } from './plugin';
 import { platformRouters } from './platform';
+import { installNavigationCompat } from './navigation-compat';
 import store from '@/store';
 
 const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/index').then(module => module).catch((error) => {
@@ -375,6 +376,8 @@ const permission403 = () => import(/* webpackChunkName: 'permission403' */'@/vie
 });
 
 Vue.use(Router);
+
+installNavigationCompat(Router);
 
 const router = new Router({
   mode: 'history',
@@ -1158,11 +1161,12 @@ router.beforeEach(async (to, from, next) => {
       store.state.userFeature[featureKey] ? next() : next({ name: '404' });
     };
     if (to.path.startsWith('/plugin-center')) {
-      checkUserFeature('ALLOW_PLUGIN_CENTER');
+      await checkUserFeature('ALLOW_PLUGIN_CENTER');
     } else if (to.path.startsWith('/plat-mgt')) {
-      checkUserFeature('PLATFORM_MANAGEMENT');
+      await checkUserFeature('PLATFORM_MANAGEMENT');
+    } else {
+      next();
     }
-    next();
   }
 });
 

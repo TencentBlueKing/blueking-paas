@@ -12,7 +12,7 @@
           />
           <!-- 普通应用 -->
           <paas-app-nav
-            v-else
+            v-else-if="type"
             :is-migration-entry-shown="isMigrationEntryShown"
             @show-migration-dialog="showMigrationDialog"
           />
@@ -136,7 +136,7 @@ export default {
       // 非应用引擎 应用 时所要显示的子级导航
       subNavIds: [10, 12, 13, 14],
       engineEnabled: false,
-      type: 'default',
+      type: null,
       appMigrationDialogConfig: {
         visible: false,
         data: {},
@@ -196,9 +196,6 @@ export default {
         curAppInfo = store.state.appInfo[appCode];
         store.commit('updateCurAppByCode', { appCode, moduleId });
       }
-      next((vm) => {
-        vm.type = curAppInfo.application.type;
-      });
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {
         to.params.moduleId = curAppInfo.application.modules.find((module) => module.is_default).name;
@@ -208,7 +205,7 @@ export default {
           query: to.query,
         });
       } else {
-        next(true);
+        next((vm) => Object.assign(vm, { type: curAppInfo.application.type }));
       }
     } catch (e) {
       next({

@@ -39,18 +39,12 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
     is_builtin = serializers.BooleanField()
 
 
-class ResQuotaPlanUsedByModuleSLZ(serializers.Serializer):
-    """Module that uses the resource quota plan."""
-
-    module_name = serializers.CharField()
-    processes = serializers.ListField(child=serializers.CharField())
-
-
-class ResQuotaPlanUsedByApplicationSLZ(serializers.Serializer):
-    """Application that uses the resource quota plan."""
+class ResQuotaPlanUsedByProcessSLZ(serializers.Serializer):
+    """Process Instance that uses the resource quota plan."""
 
     app_code = serializers.CharField()
-    modules = ResQuotaPlanUsedByModuleSLZ(many=True)
+    module_name = serializers.CharField()
+    process_name = serializers.CharField()
 
 
 class ResourceQuotaSLZ(serializers.Serializer):

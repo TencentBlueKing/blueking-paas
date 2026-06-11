@@ -302,7 +302,7 @@ export default {
     // 详情
     toAppBaseInfo(appItem) {
       this.$router.push({
-        name: 'appBaseInfo',
+        name: 'appBasicInfo',
         params: {
           id: appItem.code,
         },

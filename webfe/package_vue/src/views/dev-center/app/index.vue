@@ -59,7 +59,7 @@
                   {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
                   <router-link
                     class="toRolePage"
-                    :to="{ name: 'appRoles', params: { id: appCode } }"
+                    :to="{ name: 'appMembers', params: { id: appCode } }"
                   >
                     {{ $t('成员管理') }}
                   </router-link>

@@ -165,18 +165,19 @@ export default {
     },
     async changePlugin(data) {
       // 如果去往当前的路由没有权限则去往概览页
-      const parmas = this.getTarget(data.id, data.pd_id);
+      const params = this.getTarget(data.id, data.pd_id);
       this.hideSelectData();
-      this.$router.push(parmas);
       // 如果当前为插件版本、测试阶段/测试报告，返回概览页
       if (['pluginVersionRelease', 'pluginTestReport'].includes(this.$route.name)) {
-        this.$router.replace({
+        this.$router.push({
           name: 'pluginSummary',
-          query: {
+          params: {
             id: data.id,
             pluginTypeId: data.pd_id,
           },
         });
+      } else {
+        this.$router.push(params);
       }
     },
     searchPlugin: debounce(function () {

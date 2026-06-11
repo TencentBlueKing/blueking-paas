@@ -58,6 +58,7 @@ class TestDefaultBuildProcessExecutor:
             ),
             mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"),
             mock.patch("paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"),
         ):
             bpe.execute(BuildMetadata(image=""))
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"

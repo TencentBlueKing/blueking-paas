@@ -15,7 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from types import SimpleNamespace
 from typing import Dict
+from unittest import mock
 
 import pytest
 import urllib3
@@ -29,7 +31,6 @@ from paasng.platform.engine.deploy.bg_build.utils import (
     prepare_slugbuilder_template,
     update_env_vars_with_metadata,
 )
-from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 urllib3.disable_warnings()
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -69,7 +70,16 @@ class TestUtils:
         slug_path = generate_slug_path(build_proc)
         assert f"{wl_app.region}/home/{wl_app.name}:{build_proc.branch}:{build_proc.revision}/push" == slug_path
 
-    def test_prepare_slugbuilder_template_without_metadata(self, wl_app, build_proc):
+    # `get_schedule_config` requires a valid cluster, mock it at this moment
+    @mock.patch(
+        "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config",
+        return_value=SimpleNamespace(
+            cluster_name="foo-cluster",
+            node_selector={},
+            tolerations=[],
+        ),
+    )
+    def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
         assert slug_tmpl.name == f"slug-builder--{wl_app.module_name}", (
@@ -81,7 +91,7 @@ class TestUtils:
         )
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的 ConfigVars 与生成的环境变量不一致"
 
-        assert slug_tmpl.schedule.cluster_name == CLUSTER_NAME_FOR_TESTING
+        assert slug_tmpl.schedule.cluster_name == "foo-cluster"
         assert slug_tmpl.schedule.tolerations == []
         assert slug_tmpl.schedule.node_selector == {}
 

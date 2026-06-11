@@ -27,9 +27,8 @@ from django.conf import settings
 
 from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
-from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.infras.resources.kube_res.base import Schedule
-from paas_wl.infras.resources.utils.basic import get_full_tolerations, get_slugbuilder_resources
+from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
+from paas_wl.infras.resources.utils.basic import get_slugbuilder_resources
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.kres_entities import ImageCredentials
@@ -190,14 +189,6 @@ def prepare_slugbuilder_template(
 
     env_vars = render_vars_dict(env_vars, VarsRenderContext(process_type="sys-builder"))
 
-    # slug-builder 不需要 egress IP 约束，只使用集群默认调度配置
-    cluster = get_cluster_by_app(app)
-    slug_schedule = Schedule(
-        cluster_name=cluster.name,
-        node_selector=cluster.default_node_selector or {},
-        tolerations=get_full_tolerations(app),
-    )
-
     return SlugBuilderTemplate(
         name=generate_builder_name(app),
         namespace=app.namespace,
@@ -207,7 +198,7 @@ def prepare_slugbuilder_template(
             image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}],
             resources=get_slugbuilder_resources(app),
         ),
-        schedule=slug_schedule,
+        schedule=get_schedule_config(app),
     )
 
 

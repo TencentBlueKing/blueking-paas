@@ -345,13 +345,15 @@ export default {
           // 列表页直接刷新
           window.location.reload();
         } else {
-          await this.$router.push({
+          const failure = await this.$router.push({
             name: 'cloudAppSummary',
             params: {
               id: this.data.code,
             },
           });
-          window.location.reload();
+          if (!failure || failure.name === 'NavigationDuplicated') {
+            window.location.reload();
+          }
         }
       }
     },

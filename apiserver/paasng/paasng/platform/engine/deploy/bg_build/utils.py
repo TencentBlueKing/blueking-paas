@@ -198,7 +198,7 @@ def prepare_slugbuilder_template(
             image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}],
             resources=get_slugbuilder_resources(app),
         ),
-        schedule=get_schedule_config(app),
+        schedule=get_schedule_config(app, use_full_node_selector=False),
     )
 
 

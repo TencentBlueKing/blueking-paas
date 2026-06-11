@@ -16,8 +16,14 @@
 
 from django.db import migrations
 
-def add_some_res_quota_plans(apps, schema_editor):
-    """add some resource quota plans"""
+def add_default_builtin_res_quota_plans(apps, schema_editor):
+    """添加默认的内置资源配额方案 (系统预置)
+
+    这些方案是平台提供的默认资源配额方案, 用于快速配置进程资源:
+    - 1C1G: 1核CPU/1G内存
+    - 2C1G: 2核CPU/1G内存
+    - 2C2G: 2核CPU/2G内存
+    """
     ResQuotaPlan = apps.get_model("bkapp_model", "ResQuotaPlan")
 
     need_add_plans = [
@@ -60,5 +66,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(add_some_res_quota_plans, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(add_default_builtin_res_quota_plans, reverse_code=migrations.RunPython.noop),
     ]

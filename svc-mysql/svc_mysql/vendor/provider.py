@@ -140,14 +140,15 @@ class Provider(BaseProvider):
 
             # 如果模板中需要动态 charset / collation, 将探测 MySQL 实例支持的字符集
             # utf8mb4 优先, 如果不支持将回退到 utf8mb3
-            if self._template_needs_charset(template):
+            need_charset = self._template_needs_charset(template)
+            if need_charset:
                 charset, collation = self._detect_charset_capability(authorizer)
                 create_db_sql = template.format(engine=engine, charset=charset, collation=collation)
             else:
                 create_db_sql = template.format(engine=engine)
             engine.execute(create_db_sql)
 
-            if self._template_needs_charset(template):
+            if need_charset:
                 logger.info(
                     "create mysql addons instance %s success, charset=%s, collation=%s", db_name, charset, collation
                 )
@@ -223,7 +224,11 @@ class Provider(BaseProvider):
             rows = authorizer.execute("SHOW CHARACTER SET LIKE 'utf8mb4'")
             charset, collation = ("utf8mb4", "utf8mb4_general_ci") if rows else ("utf8", "utf8_general_ci")
         except Exception:  # noqa: BLE001
-            logger.warning("Failed to detect charset, fallback to utf8.")
-            return ("utf8", "utf8_general_ci")
+            logger.warning(
+                "Failed to detect charset for MySQL instance %s:%s, fallback to utf8.",
+                authorizer.host,
+                authorizer.port,
+            )
+            charset, collation = ("utf8", "utf8_general_ci")
 
         return (charset, collation)

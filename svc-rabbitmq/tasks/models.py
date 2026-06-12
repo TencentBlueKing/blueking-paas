@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import traceback
 import typing
@@ -44,9 +43,9 @@ class TaskExecuteException(Exception):
 
 
 class CronTaskContext:
-    def __init__(self, task: 'CronTask'):
+    def __init__(self, task: "CronTask"):
         self.task = task
-        self.exception: 'Exception' = None
+        self.exception: "Exception" = None
         self.start_at = None
         self.end_at = None
 
@@ -64,7 +63,7 @@ class CronTaskContext:
         self.exception = TaskExecuteException("".join(messages))
         return True
 
-    def call(self, func) -> 'CronTaskResult':
+    def call(self, func) -> "CronTaskResult":
         result = None
         with self:
             if not callable(func):
@@ -81,10 +80,10 @@ class CronTaskContext:
 
 @dataclass
 class CronTaskResult:
-    task: 'CronTask'
-    result: 'typing.Any'
-    exception: 'Exception'
-    duration: 'timedelta'
+    task: "CronTask"
+    result: "typing.Any"
+    exception: "Exception"
+    duration: "timedelta"
 
     def __call__(self, *args, **kwargs):
         if self.exception is not None:
@@ -94,14 +93,14 @@ class CronTaskResult:
 
 @dataclass
 class CachedCronTaskResult:
-    raw: 'CronTaskResult'
-    missing: 'bool' = False
-    cache_key: 'str' = None
+    raw: "CronTaskResult"
+    missing: "bool" = False
+    cache_key: "str" = None
 
     cache_name = "default"
 
     @property
-    def cache(self) -> 'LocMemCache':
+    def cache(self) -> "LocMemCache":
         return caches[self.cache_name]
 
     def flush(self):
@@ -126,14 +125,14 @@ def _default_pre_call(task):
     return task.callable
 
 
-def _default_post_call(result: 'CronTaskResult'):
+def _default_post_call(result: "CronTaskResult"):
     cache_result = CachedCronTaskResult(result)
     cache_result.flush()
     return cache_result
 
 
 class CronTaskManager(models.Manager):
-    def prepared_tasks(self) -> 'typing.List[CronTask]':
+    def prepared_tasks(self) -> "typing.List[CronTask]":
         tasks = []
         with atomic(self.db):
             for t in self.exclude(next_run_time=None).filter(next_run_time__lte=get_now(), enabled=True):
@@ -159,7 +158,7 @@ class CronTask(models.Model):
     objects = CronTaskManager()
 
     class Meta:
-        ordering = ('next_run_time', 'name')
+        ordering = ("next_run_time", "name")
 
     def __str__(self):
         return f"{self.name}[{self.id}]"
@@ -170,7 +169,7 @@ class CronTask(models.Model):
             return None
         return self.get_result()
 
-    def apply(self) -> 'CronTaskResult':
+    def apply(self) -> "CronTaskResult":
         pre_call = self.pre_call or _default_pre_call
         post_call = self.post_call or _default_post_call
 

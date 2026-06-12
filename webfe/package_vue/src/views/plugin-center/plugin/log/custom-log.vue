@@ -243,9 +243,9 @@
                     <div class="ps-no-result">
                       <div class="text">
                         <table-empty
+                          :condition="logParams.keyword"
                           :is-content-text="false"
-                          :keyword="tableEmptyConf.keyword"
-                          :abnormal="tableEmptyConf.isAbnormal"
+                          :is-error="isTableError"
                           @reacquire="getPluginLogList"
                           @clear-filter="clearFilterKey"
                         />
@@ -381,10 +381,7 @@ export default {
           url: this.GLOBAL.DOC.LOG_QUERY_EMPTY,
         },
       ],
-      tableEmptyConf: {
-        isAbnormal: false,
-        keyword: '',
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -765,10 +762,9 @@ export default {
 
         this.pagination.count = res.total;
         this.pagination.current = page;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (res) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.logList.splice(0, this.logList.length, ...[]);
         this.pagination.count = 0;
       } finally {
@@ -927,10 +923,6 @@ export default {
 
     clearFilterKey() {
       this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.logParams.keyword;
     },
   },
 };

@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -20,6 +20,7 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import { pluginRouter } from './plugin';
 import { platformRouters } from './platform';
+import { installNavigationCompat } from './navigation-compat';
 import store from '@/store';
 
 const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/index').then(module => module).catch((error) => {
@@ -375,6 +376,8 @@ const permission403 = () => import(/* webpackChunkName: 'permission403' */'@/vie
 });
 
 Vue.use(Router);
+
+installNavigationCompat(Router);
 
 const router = new Router({
   mode: 'history',
@@ -744,6 +747,13 @@ const router = new Router({
             },
             {
               path: 'module-info',
+              redirect: to => ({
+                name: 'moduleInfo',
+                params: to.params,
+                query: to.query,
+              }),
+            },
+            {
               path: 'info',
               component: moduleInfo,
               name: 'moduleInfo',
@@ -827,9 +837,11 @@ const router = new Router({
           path: ':id/deployments',
           component: cloudAppDeployManage,
           name: 'cloudAppDeployManage',
-          redirect: {
-            name: 'cloudAppDeployForProcess',
-          },
+          redirect: to => ({
+            name: 'cloudAppDeployManageStag',
+            params: to.params,
+            query: to.query,
+          }),
           children: [
             {
               path: 'stag',
@@ -1123,7 +1135,7 @@ const router = new Router({
     },
     {
       path: '/developer-center/apps/:id/create/gitee/success',
-      name: 'createGithubAppSucc',
+      name: 'createGiteeAppSucc',
       component: createGitAppSucc,
     },
     {
@@ -1148,7 +1160,7 @@ router.beforeEach(async (to, from, next) => {
   sessionStorage.setItem('NOTICE', true);
   if (window.location.href.indexOf(window.GLOBAL_CONFIG.V3_OA_DOMAIN) !== -1) {
     const url = window.location.href.replace(window.GLOBAL_CONFIG.V3_OA_DOMAIN, window.GLOBAL_CONFIG.V3_WOA_DOMAIN);
-    window.location.replace(url);
+    return window.location.replace(url);
   } else {
     const checkUserFeature = async (featureKey) => {
       // 可能为页面刷新重新调用获取功能开关
@@ -1158,11 +1170,12 @@ router.beforeEach(async (to, from, next) => {
       store.state.userFeature[featureKey] ? next() : next({ name: '404' });
     };
     if (to.path.startsWith('/plugin-center')) {
-      checkUserFeature('ALLOW_PLUGIN_CENTER');
+      await checkUserFeature('ALLOW_PLUGIN_CENTER');
     } else if (to.path.startsWith('/plat-mgt')) {
-      checkUserFeature('PLATFORM_MANAGEMENT');
+      await checkUserFeature('PLATFORM_MANAGEMENT');
+    } else {
+      next();
     }
-    next();
   }
 });
 

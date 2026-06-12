@@ -133,7 +133,7 @@ export default {
 
     toAppBaseInfo(appItem) {
       this.$router.push({
-        name: 'appBaseInfo',
+        name: 'appBasicInfo',
         params: {
           id: appItem.code,
         },

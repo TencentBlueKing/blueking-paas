@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import logging
 import os
@@ -41,7 +39,7 @@ class PatchFeatures:
 
     @cached_property
     def minimum_database_version(self):
-        if self.connection.mysql_is_mariadb:  # noqa
+        if self.connection.mysql_is_mariadb:
             return (10, 4)
         else:
             return (5, 7)
@@ -49,7 +47,7 @@ class PatchFeatures:
 
 # Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
 # 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
-DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
+DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version
 
 pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
@@ -205,7 +203,7 @@ def get_logging_config(log_level="DEBUG"):
         "disable_existing_loggers": False,
         "formatters": {
             "verbose": {
-                "format": "%(levelname)s [%(asctime)s] %(name)s(ln:%(lineno)d): %(message)s",  # noqa
+                "format": "%(levelname)s [%(asctime)s] %(name)s(ln:%(lineno)d): %(message)s",
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
             "simple": {"format": "%(levelname)s %(message)s"},

@@ -51,8 +51,8 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
+          :condition="{ personnelSelectorList, choosedEnv: choosedEnv !== 'all' }"
+          :is-error="isTableError"
           @reacquire="getDeployHistory"
           @clear-filter="clearFilter"
         />
@@ -262,10 +262,7 @@ export default {
         isShow: false,
       },
       errorTips: {},
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       logExportUrl: '',
     };
   },
@@ -426,10 +423,9 @@ export default {
             this.handleShowLog(recordItem);
           }
         }
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message,
@@ -542,14 +538,6 @@ export default {
       this.choosedEnv = 'all';
       this.personnelSelectorList = [];
       this.getDeployHistory();
-    },
-
-    updateTableEmptyConfig() {
-      if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
     handleExportLog() {
       window.open(this.logExportUrl, '_blank')

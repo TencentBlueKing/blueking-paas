@@ -71,8 +71,9 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ search: searchValue, filters: { tableFilter: isFilterCriteria(), constant: true } }"
+              :show-clear="!!(searchValue || isFilterCriteria())"
+              :is-error="isTableError"
               @reacquire="fetchList"
               @clear-filter="clearFilterKey"
             />
@@ -278,10 +279,7 @@ export default {
       is_up: true,
       nameFilters: [],
       tableKey: -1,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       allFilterData: {},
       selectedList: [],
       // 申请权限弹窗数据
@@ -367,9 +365,6 @@ export default {
         const end = start + this.pagination.limit;
         this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
         this.isFilter = false;
-      }
-      if (newVal === '') {
-        this.updateTableEmptyConfig();
       }
     },
     allData() {
@@ -460,7 +455,6 @@ export default {
         const [name, value] = item;
         this.allFilterData[name] = value;
       });
-      this.updateTableEmptyConfig();
     },
 
     handleSelect(value, option) {
@@ -603,7 +597,6 @@ export default {
       const start = this.pagination.limit * (this.pagination.current - 1);
       const end = start + this.pagination.limit;
       this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-      this.updateTableEmptyConfig();
     },
 
     init() {
@@ -666,10 +659,9 @@ export default {
         this.indeterminate = false;
         this.allChecked = false;
         this.tableKey = +new Date();
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.loading = false;
@@ -715,16 +707,6 @@ export default {
       this.allFilterData = {};
       this.$refs.permRef?.clearFilter();
       this.fetchList();
-    },
-
-    updateTableEmptyConfig() {
-      const isTableFilter = this.isFilterCriteria();
-
-      if (this.searchValue || isTableFilter) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '$CONSTANT';
     },
 
     // 表头是否存在筛选条件

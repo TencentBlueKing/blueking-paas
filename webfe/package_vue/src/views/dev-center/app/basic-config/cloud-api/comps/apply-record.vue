@@ -74,8 +74,9 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ searchSelectValue, statusValue, constant: true }"
+              :show-clear="!!(searchSelectValue.length || statusValue)"
+              :is-error="isTableError"
               @reacquire="fetchList"
               @clear-filter="clearFilterKey"
             />
@@ -406,10 +407,7 @@ export default {
         startTime: '',
         endTime: '',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       searchSelectValue: [],
       searchData: {},
     };
@@ -746,10 +744,9 @@ export default {
         });
         this.pagination.count = this.isMcpService ? records.length : res.count;
         this.tableList = records;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.loading = false;
@@ -785,15 +782,6 @@ export default {
       this.searchSelectValue = [];
       this.$refs.tableRef.clearFilter();
       this.resetPagination();
-    },
-
-    updateTableEmptyConfig() {
-      if (this.searchSelectValue.length || this.statusValue) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      // 恒定条件不展示清空交互
-      this.tableEmptyConf.keyword = '$CONSTANT';
     },
     handleRemoteMethod(val) {
       return new Promise(async (resolve) => {

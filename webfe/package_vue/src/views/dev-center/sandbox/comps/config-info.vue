@@ -82,7 +82,7 @@
       <!-- 环境变量-空状态 -->
       <table-empty
         v-if="!displayEnvVars?.length"
-        :keyword="searchValue ? 'placeholder' : ''"
+        :condition="searchValue"
         @clear-filter="searchValue = ''"
       />
       <ul v-else>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -24,7 +24,6 @@ from paasng.platform.applications.models import Application
 
 from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
 from .models import Sandbox, Volume
-
 
 
 class SandboxVolumeMountInputSLZ(serializers.Serializer):
@@ -121,7 +120,7 @@ class SandboxCreateInputSLZ(serializers.Serializer):
             return value
         # 1) volume_id must not be duplicated
         volume_ids = [item["volume_id"] for item in value]
-        if len(set(str(vid) for vid in volume_ids)) != len(volume_ids):
+        if len({str(vid) for vid in volume_ids}) != len(volume_ids):
             raise serializers.ValidationError("volume_id must not be duplicated in volume_mounts")
 
         # 2) mount_path must not be the same or be a prefix of another (avoid mount point overlap)
@@ -131,11 +130,9 @@ class SandboxCreateInputSLZ(serializers.Serializer):
 
         sorted_paths = sorted(paths)
         for i, p in enumerate(sorted_paths):
-            for q in sorted_paths[i + 1:]:
+            for q in sorted_paths[i + 1 :]:
                 if q.startswith(p.rstrip("/") + "/"):
-                    raise serializers.ValidationError(
-                        f"mount_path must not be nested: {p} vs {q}"
-                    )
+                    raise serializers.ValidationError(f"mount_path must not be nested: {p} vs {q}")
 
         return value
 
@@ -145,14 +142,28 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Sandbox
-        fields = ("uuid", "name", "snapshot", "target", "env_vars", "volume_mounts", "cpu", "memory", "status", "created", "expired_at")
+        fields = (
+            "uuid",
+            "name",
+            "snapshot",
+            "target",
+            "env_vars",
+            "volume_mounts",
+            "cpu",
+            "memory",
+            "status",
+            "created",
+            "expired_at",
+        )
 
 
 class VolumeCreateInputSLZ(serializers.Serializer):
     """The serializer for creating a shared volume."""
 
     name = serializers.CharField(label="卷名称", max_length=64, help_text="应用内唯一标识")
-    display_name = serializers.CharField(label="显示名称", max_length=128, required=False, default="", allow_blank=True)
+    display_name = serializers.CharField(
+        label="显示名称", max_length=128, required=False, default="", allow_blank=True
+    )
 
 
 class VolumeOutputSLZ(serializers.ModelSerializer):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -19,19 +19,13 @@
 
 import contextlib
 import inspect
-import json
 import logging
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Type
 
-import requests
-from django.conf import settings
 from django.utils.module_loading import import_string
-from django.utils.translation import gettext as _
 
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-
-from .exceptions import SVNServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -60,194 +54,6 @@ class BaseSvnAuthClient:
 
     def del_authz(self, repo_path, user_or_group, type_id):
         raise NotImplementedError
-
-
-# FIXME: 该服务数年前已下线，后续确认能否整个删除
-class BaseRealSvnAuthClient(BaseSvnAuthClient):
-    SVN_SECRET = ""
-    SVN_OPERATE_ERROR_NOTIFIER = settings.ADMIN_USERNAME
-    DUMMY = True
-    TIMEOUT = 60
-    SSL_VERIFY = True
-
-    BASE_SVN_ADD_USER = "{admin_url}svn_add/user/"
-    BASE_SVN_MOD_COMMON = "{admin_url}svn_mod/common/"
-    BASE_SVN_MOD_GROUP = "{admin_url}svn_mod/group/"
-    BASE_SVN_MOD_AUTHZ = "{admin_url}svn_mod/authz/"
-    BASE_SVN_ADD_DIR = "{admin_url}svn_add/app_dir/"
-    BASE_SVN_DEL_AUTHZ = "{admin_url}svn_del/authz/"
-
-    def __init__(self):
-        admin_url = self.get_admin_url()
-        if not admin_url:
-            return
-        if not admin_url.endswith("/"):
-            admin_url += "/"
-
-        self.SVN_ADD_USER = self.BASE_SVN_ADD_USER.format(admin_url=admin_url)  # svn用户添加
-        self.SVN_MOD_COMMON = self.BASE_SVN_MOD_COMMON.format(admin_url=admin_url)  # svn目录普通用户权限添加
-        self.SVN_MOD_GROUP = self.BASE_SVN_MOD_GROUP.format(admin_url=admin_url)  # svn目录小组权限添加
-        self.SVN_MOD_AUTHZ = self.BASE_SVN_MOD_AUTHZ.format(admin_url=admin_url)  # svnapp目录权限添加
-        self.SVN_ADD_DIR = self.BASE_SVN_ADD_DIR.format(admin_url=admin_url)  # svn app目录添加
-        self.SVN_DEL_AUTHZ = self.BASE_SVN_DEL_AUTHZ.format(admin_url=admin_url)  # svn 权限删除
-
-    @staticmethod
-    def get_admin_url() -> Optional[str]:
-        try:
-            return get_bksvn_config().admin_url
-        except RuntimeError:
-            logger.warning("No bk svn sourcectl was configured")
-            return None
-
-    def request(self, url, params, **kwargs):
-        # 带上权限信息
-        params.update({"dummy": self.DUMMY, "secret": self.SVN_SECRET})
-
-        response = requests.get(url, params=params, timeout=self.TIMEOUT, verify=self.SSL_VERIFY, **kwargs)
-
-        # 检查状态码
-        if not (200 <= response.status_code < 300):
-            logger.critical(response.content)
-            message = _("SVN注册服务异常, 状态码: %s") % response.status_code
-            raise SVNServiceError(message)
-
-        result = json.loads(response.content)
-
-        # 解析返回结果
-        if not result[0]:
-            raise SVNServiceError(result[1])
-
-        return result[1]
-
-    def add_user(self, account, password=""):
-        """
-        svn用户添加
-        @param account: 用户名
-        @return: (True, [account, passwd]) 或 (False, error_msg)
-        @note: 对应替换create_svn_acct脚本，使用函数：developer_center.views.apply_svn_account
-        测试点：申请开发者、app注册
-        """
-        kwargs = {
-            "username": account,
-            "passwd": password,
-        }
-        result = self.request(url=self.SVN_ADD_USER, params=kwargs)
-
-        # 解析返回内容
-        account, password = result.split("=")
-
-        return {"account": account.strip(), "password": password.strip()}
-
-    def reset_user(self, account, password=""):
-        """svn重置账户密码"""
-        return self.add_user(account, password)
-
-    def add_dir(self, app_code, is_create_trunk=True):
-        """
-        app注册创建svn目录
-        @param app_code: app编码
-        @param is_create_trunk: 是否创建trunk目录，初始化代码则不需要创建
-        @return: (True, right_msg) 或 (False, error_msg)
-        @note: 对应替换modsvn脚本，使用函数：developer_center.views._create_db_and_svn
-        测试点：app注册
-        """
-        kwargs = {
-            "app_code": app_code,
-            "is_create_trunk": is_create_trunk,
-        }
-
-        result = self.request(url=self.SVN_ADD_DIR, params=kwargs)
-        return result
-
-    def add_group(self, code, developers):
-        """
-        appsvn目录小组添加（初始化开发者、添加、删除开发者都走这个接口）
-        @param code: app编码
-        @param developers: app开发者
-        @return: (True, right_msg) 或 (False, error_msg)
-        @note: 对应替换modsvn脚本，使用函数：
-        developer_center.views._create_db_and_svn
-        developer_center.views._modify_db_info
-        developer_center.utils.add_user_power_svn
-        developer_center.utils.mod_user_power_svn
-        测试点：app注册，app开发者修改
-        """
-        app_dev_list = developers.split(";")
-        group_users = ",".join(app_dev_list)
-        kwargs = {
-            "group_name": code,
-            "group_users": group_users,
-        }
-        result = self.request(url=self.SVN_MOD_GROUP, params=kwargs)
-        return result
-
-    def mod_authz(self, repo_path, is_code_private, group_name=None):
-        """
-        appsvn目录权限添加
-        @param repo_path: 仓库
-        @param is_code_private: 是否敏感
-        @param group_name: 用户组
-        @return: (True, right_msg) 或 (False, error_msg)
-        @note: 对应替换modsvn脚本，使用函数：
-        developer_center.views._create_db_and_svn
-        developer_center.views._modify_db_info
-        测试点：app注册，app开发者修改
-        """
-        # 所有 module 共用同一个 group
-        group_name = group_name or repo_path
-        kwargs = {
-            "repos": repo_path,
-            "priv": int(is_code_private),
-            "group": group_name,
-        }
-        result = self.request(self.SVN_MOD_AUTHZ, params=kwargs)
-        return result
-
-    def mod_authz_common(self, repo_path, authz="r", group_or_user_name="svn_t", type_id="user"):
-        """
-        appsvn目录其他权限修改
-        @param repo_path: repos 路径
-        @param group_or_user_name: 小组名
-        @param authz: 权限
-        @param type_id: group/user
-        @return: (True, right_msg) 或 (False, error_msg)
-        @note: 对应替换modsvn脚本，使用函数：
-        developer_center.views._create_db_and_svn
-        developer_center.views._modify_db_info
-        测试点：app注册，app开发者修改
-        """
-        kwargs = {
-            "repos": repo_path,
-            "type_id": type_id,
-            "user_or_group": group_or_user_name,
-            "authz": authz,
-        }
-
-        self.request(self.SVN_MOD_COMMON, params=kwargs)
-
-    def del_authz(self, repo_path, user_or_group, type_id):
-        """
-        appsvn目录权限删除
-        @param repo_path: repo_path 路径
-        @param user_or_group: 小组或用户
-        @param type_id: user/group
-        @return: (True, right_msg) 或 (False, error_msg)
-        @note: 对应替换modsvn脚本，使用函数：
-        developer_center.views.app_delete
-        测试点：删除app
-        """
-        kwargs = {
-            "repos": repo_path,
-            "user_or_group": user_or_group,
-            "type_id": type_id,
-        }
-        self.request(self.SVN_DEL_AUTHZ, kwargs)
-
-
-class IeodSvnAuthClient(BaseRealSvnAuthClient):
-    """SVN用户账号注册及授权（互娱内部版）"""
-
-    BASE_SVN_ADD_DIR = "{admin_url}svn_add/app_dir_trunk/"
 
 
 class SvnApplicationAuthorization:
@@ -369,10 +175,6 @@ class SvnAuthClient4Developer(BaseSvnAuthClient):
     @classmethod
     def del_authz(cls, repo_path, user_or_group, type_id):
         return cls.mock(repos=repo_path, user_or_group=user_or_group, type_id=type_id)
-
-
-class IeodSvnApplicationAuthorization(SvnApplicationAuthorization):
-    svn_client_cls = IeodSvnAuthClient
 
 
 class DummyAppAuthorization(SvnApplicationAuthorization):

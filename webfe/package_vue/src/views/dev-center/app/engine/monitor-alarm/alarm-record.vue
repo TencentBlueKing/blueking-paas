@@ -88,8 +88,9 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
+          :condition="{ search: keyword, filters: { curEnv, time: initDateTimeRange.some(Boolean) } }"
+          :show-clear="!!(keyword || curEnv)"
+          :is-error="isTableError"
           @reacquire="getCurrentFun"
           @clear-filter="clearFilter"
         />
@@ -453,10 +454,7 @@ export default {
       metricsThreshold: '',
       metricsLoading: false,
       pageRequestQueue: ['list'],
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       curSourceValue: 'BK',
       curTableSources: 'BK',
       sourceList: [
@@ -631,10 +629,9 @@ export default {
           this.alarmRecordList.length,
           ...(res.results || []),
         );
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -672,10 +669,9 @@ export default {
         // 全量数据前端分页
         this.pagination.count = alarmList.length;
         this.bkAlarmRecordList = alarmList || [];
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -1043,18 +1039,6 @@ export default {
       this.keyword = '';
       this.curEnv = '';
       this.getCurrentFun();
-    },
-
-    updateTableEmptyConfig() {
-      const time = this.initDateTimeRange.some(Boolean);
-      if (this.keyword || this.curEnv) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      } if (time) {
-        this.tableEmptyConf.keyword = '$CONSTANT';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
   },
 };

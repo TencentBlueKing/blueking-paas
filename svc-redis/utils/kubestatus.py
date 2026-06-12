@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -91,7 +91,7 @@ def parse_container_status(instance: Union[ResourceInstance, ResourceField]) -> 
     return parse_dynamic_instance(instance, kmodels.V1ContainerStatus)
 
 
-def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901, PLR0911, PLR0912
+def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: PLR0911
     """Check if the pod is healthy
 
     For a Pod, healthy is meaning that the Pod is successfully complete or is Ready

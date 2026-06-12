@@ -109,8 +109,8 @@
             >
               <div slot="empty">
                 <table-empty
-                  :keyword="tableEmptyConf.keyword"
-                  :abnormal="tableEmptyConf.isAbnormal"
+                  :condition="keyword"
+                  :is-error="isTableError"
                   @reacquire="fetchIpList(true)"
                   @clear-filter="clearFilterKey"
                 />
@@ -647,10 +647,7 @@ export default {
       },
       curFile: {},
       isFileTypeError: false,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -1245,10 +1242,9 @@ export default {
         const res = await this.$store.dispatch('ip/getIpList', params);
         this.pagination.count = res.count;
         this.IPPermissionList.splice(0, this.IPPermissionList.length, ...(res.results || []));
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -1513,10 +1509,6 @@ export default {
 
     clearFilterKey() {
       this.keyword = '';
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.keyword;
     },
   },
 };

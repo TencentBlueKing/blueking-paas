@@ -130,8 +130,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ search: filterKey, filters: tableFilters }"
+            :is-error="isTableError"
             :empty-title="$t('暂无应用')"
             @reacquire="fetchAppList"
             @clear-filter="clearFilterKey"
@@ -593,10 +593,7 @@ export default {
       type: 'default',
       curAppType: '',
       curAppTypeActive: 'all',
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       curFilterValue: '应用ID',
       filterList: [
         { text: '应用ID', value: 'code' },
@@ -803,10 +800,9 @@ export default {
         this.pagination.count = res.count;
         this.pagination.current = page;
         this.appExtraData = res.extra_data;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isFirstLoading = false;
@@ -887,14 +883,6 @@ export default {
       return url;
     },
 
-    // 是否存在筛选条件
-    updateTableEmptyConfig() {
-      if (this.filterKey || this.tableFilters.region || this.tableFilters.tenant) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
-    },
     handleFilterApp(item, isRequest = true) {
       this.curFilterValue = item.text;
       this.sortValue = item.value;

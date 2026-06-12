@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -256,7 +256,7 @@ class LightAppViewSet(viewsets.ViewSet):
         app_logo_storage.save(logo_name, logo_file)
         bucket = settings.APP_LOGO_BUCKET
         try:
-            from paasng.platform.applications.handlers import initialize_app_logo_metadata  # noqa: PLC0415
+            from paasng.platform.applications.handlers import initialize_app_logo_metadata
 
             initialize_app_logo_metadata(Application._meta.get_field("logo").storage, bucket, logo_name)
         except Exception:

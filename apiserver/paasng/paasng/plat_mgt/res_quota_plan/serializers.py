@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -37,6 +37,14 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
     requests = serializers.DictField()
     is_active = serializers.BooleanField()
     is_builtin = serializers.BooleanField()
+
+
+class ResQuotaPlanUsedByProcessSLZ(serializers.Serializer):
+    """Process Instance that uses the resource quota plan."""
+
+    app_code = serializers.CharField()
+    module_name = serializers.CharField()
+    process_name = serializers.CharField()
 
 
 class ResourceQuotaSLZ(serializers.Serializer):

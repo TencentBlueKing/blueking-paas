@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -61,7 +60,7 @@ class Channel(BaseFancyModel):
     def is_consumer(self):
         return self.consumer_count > 0
 
-    def is_idle(self, ignore_consumer: bool = False, max_idle: Optional[timedelta] = None):
+    def is_idle(self, ignore_consumer: bool = False, max_idle: Optional[timedelta] = None):  # noqa: PLR0911
         if not ignore_consumer and self.consumer_count > 0:
             return False
 
@@ -90,7 +89,7 @@ class Channel(BaseFancyModel):
         if message_stats.confirm_details and message_stats.confirm_details.rate > 0:
             return False
 
-        if message_stats.publish_details and message_stats.publish_details.rate > 0:
+        if message_stats.publish_details and message_stats.publish_details.rate > 0:  # noqa: SIM103
             return False
 
         return True
@@ -130,8 +129,10 @@ class Connection(BaseFancyModel):
         if self.recv_oct_details and self.recv_oct_details.rate > 0:
             return True
 
-        if self.send_oct_details and self.send_oct_details.rate > 0:
+        if self.send_oct_details and self.send_oct_details.rate > 0:  # noqa: SIM103
             return True
+
+        return False
 
     def __str__(self):
         return f"{self.vhost}({self.name})"

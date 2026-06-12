@@ -819,6 +819,7 @@ export default {
     }
     return {
       btnLoadingGif: require('@static/images/btn_loading.gif'),
+      unregisterRouteGuard: null,
       processConfigDialog: {
         isLoading: false,
         visiable: false,
@@ -1111,7 +1112,7 @@ export default {
     moment.locale(this.localLanguage);
     this.init();
     // 切换路由前清空定时器
-    this.$router.beforeEach((to, from, next) => {
+    this.unregisterRouteGuard = this.$router.beforeEach((to, from, next) => {
       this.closeServerPush();
       next();
     });
@@ -1119,6 +1120,10 @@ export default {
     this.getAutoScalFlag();
   },
   beforeDestroy() {
+    if (this.unregisterRouteGuard) {
+      this.unregisterRouteGuard();
+      this.unregisterRouteGuard = null;
+    }
     this.closeServerPush();
     this.closeLogDetail();
   },

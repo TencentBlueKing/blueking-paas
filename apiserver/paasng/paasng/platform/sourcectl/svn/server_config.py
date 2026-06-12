@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -33,7 +33,6 @@ class BkSvnServerConfig:
     su_name: str
     su_pass: str
     need_security: bool
-    admin_url: str
     auth_mgr_cls: Optional[str] = None
 
     def get_base_path(self) -> str:

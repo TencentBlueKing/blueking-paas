@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from contextlib import contextmanager
 from copy import deepcopy
@@ -35,7 +34,7 @@ class Tag(AuditedModel):
     class Meta(object):
         abstract = True
 
-    instance: 'models.Model'
+    instance: "models.Model"
     key = models.CharField("名称", max_length=64)
     value = models.CharField("值", max_length=128)
 
@@ -68,9 +67,9 @@ class LinkableModel(AuditedModel):
     link_type = models.IntegerField(
         "连接方式", default=LinkType.empty.value, choices=[(i.value, i.name) for i in LinkType]
     )
-    linked = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, default=None)
+    linked = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, default=None)
 
-    def resolve_extend(self, other: 'LinkableModel'):
+    def resolve_extend(self, other: "LinkableModel"):
         """处理继承连接合并细节"""
         for field in self._meta.fields:
             attname = field.attname
@@ -103,7 +102,7 @@ class PolicyTarget(Enum):
 class UserPolicy(LinkableModel):
     """集群下创建 vhost 默认策略，和具体 vhost 无关"""
 
-    resolve_link: Callable[[], 'UserPolicy']
+    resolve_link: Callable[[], "UserPolicy"]
 
     name = models.CharField("名称", max_length=64, null=True)
     enable = models.BooleanField("是否启用", default=True)
@@ -116,10 +115,10 @@ class UserPolicy(LinkableModel):
     cluster_id = models.IntegerField("集群id", blank=True, default=None)
 
     @cached_property
-    def cluster(self) -> 'Cluster':
+    def cluster(self) -> "Cluster":
         return Cluster.objects.filter(pk=self.cluster_id)
 
-    def resolve_extend(self, other: 'UserPolicy'):
+    def resolve_extend(self, other: "UserPolicy"):
         definitions = self.definitions or {}
         definitions.update(other.definitions or {})
         super().resolve_extend(other)
@@ -153,7 +152,7 @@ class LimitType(Enum):
 class LimitPolicy(LinkableModel):
     """集群下创建 vhost 限制机制，和具体 vhost 无关"""
 
-    resolve_link: Callable[[], 'LimitPolicy']
+    resolve_link: Callable[[], "LimitPolicy"]
 
     name = models.CharField("名称", max_length=64, null=True)
     enable = models.BooleanField("是否启用", default=True)
@@ -164,7 +163,7 @@ class LimitPolicy(LinkableModel):
     cluster_id = models.IntegerField("集群id", blank=True, default=None)
 
     @cached_property
-    def cluster(self) -> 'Cluster':
+    def cluster(self) -> "Cluster":
         return Cluster.objects.filter(pk=self.cluster_id)
 
     def __str__(self):
@@ -187,11 +186,11 @@ class InstanceBill(UuidAuditedModel):
     def get_context(self):
         return json.loads(self.context or "{}")
 
-    def set_context(self, context: 'dict'):
+    def set_context(self, context: "dict"):
         self.context = json.dumps(context)
 
     @contextmanager
-    def log_context(self) -> 'dict':
+    def log_context(self) -> "dict":
         context = self.get_context()
         try:
             yield context

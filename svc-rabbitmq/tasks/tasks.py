@@ -1,26 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
-import typing
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from uuid import UUID
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.conf import settings
 from django.core.management import call_command
@@ -32,6 +30,9 @@ from vendor.models import Cluster
 
 from .helper import Task
 
+if TYPE_CHECKING:
+    from uuid import UUID
+
 logger = logging.getLogger(__name__)
 
 inf = float("+inf")
@@ -39,7 +40,7 @@ inf = float("+inf")
 
 @dataclass
 class ClusterResult:
-    cluster_id: 'int'
+    cluster_id: "int"
 
     def as_label_values(self):
         return [str(self.cluster_id)]
@@ -51,8 +52,8 @@ class ClusterResult:
 
 @dataclass
 class InstanceResult(ClusterResult):
-    instance_id: 'UUID'
-    vhost: 'str'
+    instance_id: "UUID"
+    vhost: "str"
 
     def as_label_values(self):
         labels = super().as_label_values()
@@ -66,7 +67,7 @@ class InstanceResult(ClusterResult):
 
 class CronCheckClustersAlive(Task):
     @classmethod
-    def apply(cls) -> 'typing.Dict[str, CheckClusterAlive.Result]':
+    def apply(cls) -> "Dict[str, CheckClusterAlive.Result]":
         """check all cluster is alive"""
         logger.info("checking clusters if is alive")
         result = {}
@@ -78,18 +79,18 @@ class CronCheckClustersAlive(Task):
 class CheckClusterAlive(Task):
     @dataclass
     class Result(ClusterResult):
-        ok: 'bool'
+        ok: "bool"
 
     @classmethod
-    def apply(cls, cluster: 'Cluster', virtual_host: 'str' = "/") -> 'CheckClusterAlive.Result':
+    def apply(cls, cluster: "Cluster", virtual_host: "str" = "/") -> "CheckClusterAlive.Result":
         """check cluster is alive in vhost"""
         logger.debug("checking cluster %s if is alive", cluster)
         client = Client.from_cluster(cluster)
         ok = None
         try:
             ok = client.alive(virtual_host)
-        except Exception as err:
-            logger.exception(err)
+        except Exception:
+            logger.exception("check cluster %s alive failed", cluster)
 
         return cls.Result(cluster_id=cluster.pk, ok=ok)
 
@@ -97,10 +98,10 @@ class CheckClusterAlive(Task):
 class CheckInstanceAlive(Task):
     @dataclass
     class Result(InstanceResult):
-        ok: 'bool'
+        ok: "bool"
 
     @classmethod
-    def apply(cls, instance: 'ServiceInstance') -> 'CheckInstanceAlive.Result':
+    def apply(cls, instance: "ServiceInstance") -> "CheckInstanceAlive.Result":
         """check instance vhost if is available"""
         logger.debug("checking rabbitmq instance %s if is alive", instance)
         helper = InstanceHelper(instance)
@@ -111,8 +112,8 @@ class CheckInstanceAlive(Task):
 
 
 class CheckInstancesCronTask(Task):
-    task: 'Task'
-    name: 'str'
+    task: "Task"
+    name: "str"
 
     @classmethod
     def apply(cls):
@@ -145,20 +146,20 @@ class Healthz(Task):
 class CheckQueueStatusMixin:
     @dataclass
     class QueueStatus:
-        name: 'str'
-        max_length: 'float'
-        message_ttl: 'float'
-        has_dlx_exchange: 'bool'
-        messages: 'int'
-        messages_ready: 'int'
-        messages_unacknowledged: 'int'
-        consumers: 'int'
-        memory: 'int'
-        message_bytes: 'int'
-        message_bytes_paged_out: 'int'
+        name: "str"
+        max_length: "float"
+        message_ttl: "float"
+        has_dlx_exchange: "bool"
+        messages: "int"
+        messages_ready: "int"
+        messages_unacknowledged: "int"
+        consumers: "int"
+        memory: "int"
+        message_bytes: "int"
+        message_bytes_paged_out: "int"
 
     @classmethod
-    def get_queue_attribute(cls, name: 'str', policy: 'dict', arguments: 'dict', default):
+    def get_queue_attribute(cls, name: "str", policy: "dict", arguments: "dict", default):
         if name in policy:
             return policy[name]
 
@@ -169,7 +170,7 @@ class CheckQueueStatusMixin:
         return default
 
     @classmethod
-    def get_queue_status(cls, queue) -> 'CheckQueueStatusMixin.QueueStatus':
+    def get_queue_status(cls, queue) -> "CheckQueueStatusMixin.QueueStatus":
         arguments = queue.get("arguments", {})
         policy = queue.get("effective_policy_definition", {})
         defaults = {
@@ -194,10 +195,10 @@ class CheckQueueStatusMixin:
 class CheckInstanceQueueStatus(CheckQueueStatusMixin, Task):
     @dataclass
     class Result(InstanceResult):
-        queues: 'typing.List[CheckInstanceQueueStatus.QueueStatus]'
+        queues: "List[CheckInstanceQueueStatus.QueueStatus]"
 
     @classmethod
-    def apply(cls, instance: 'ServiceInstance') -> 'CheckInstanceQueueStatus.Result':
+    def apply(cls, instance: "ServiceInstance") -> "CheckInstanceQueueStatus.Result":
         logger.debug("checking rabbitmq instance %s queue status", instance)
 
         helper = InstanceHelper(instance)
@@ -224,14 +225,14 @@ class CronCheckInstancesQueueStatus(CheckInstancesCronTask):
 class CheckInstanceDLXQueueStatus(CheckQueueStatusMixin, Task):
     @dataclass
     class Result(InstanceResult):
-        status: 'CheckInstanceDLXQueueStatus.QueueStatus'
+        status: "CheckInstanceDLXQueueStatus.QueueStatus"
 
     @classmethod
     def apply(
         cls,
-        instance: 'ServiceInstance',
-        name: 'str' = settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE,
-    ) -> 'typing.Optional[CheckInstanceDLXQueueStatus.Result]':
+        instance: "ServiceInstance",
+        name: "str" = settings.RABBITMQ_DEFAULT_DEAD_LETTER_QUEUE,
+    ) -> "Optional[CheckInstanceDLXQueueStatus.Result]":
         helper = InstanceHelper(instance)
         cluster = helper.get_cluster()
         credentials = helper.get_credentials()
@@ -252,15 +253,15 @@ class CronCheckInstanceDLXQueueStatus(CheckInstancesCronTask):
 class CheckClusterConnectionStatus(Task):
     @dataclass
     class ConnectionStatus(ClusterResult):
-        vhost: 'str'
-        running: 'int'
-        idle: 'int'
-        blocking: 'int'
-        blocked: 'int'
-        others: 'int'
+        vhost: "str"
+        running: "int"
+        idle: "int"
+        blocking: "int"
+        blocked: "int"
+        others: "int"
 
     @classmethod
-    def apply(cls, cluster: 'Cluster') -> 'typing.List[CronCheckInstanceConnectionStatus.ConnectionStatus]':
+    def apply(cls, cluster: "Cluster") -> "List[CronCheckInstanceConnectionStatus.ConnectionStatus]":
         logger.debug("checking rabbitmq connections status for cluster %s", cluster.name)
         connections = defaultdict(Counter)
         client = Client.from_cluster(cluster)
@@ -285,11 +286,11 @@ class CheckClusterConnectionStatus(Task):
 class CronCheckInstanceConnectionStatus(Task):
     @dataclass
     class ConnectionStatus(InstanceResult):
-        running: 'int'
-        idle: 'int'
-        blocking: 'int'
-        blocked: 'int'
-        others: 'int'
+        running: "int"
+        idle: "int"
+        blocking: "int"
+        blocked: "int"
+        others: "int"
 
     @classmethod
     def apply(cls):
@@ -329,27 +330,33 @@ class CronCheckInstanceConnectionStatus(Task):
 class CheckInstanceLimits(Task):
     @dataclass
     class Result(InstanceResult):
-        connections: 'float'
-        queues: 'float'
+        connections: "float"
+        queues: "float"
 
     @classmethod
-    def apply(cls, instance: 'ServiceInstance') -> 'CheckInstanceLimits.Result':
+    def apply(cls, instance: "ServiceInstance") -> "CheckInstanceLimits.Result":
         logger.debug("checking rabbitmq instance %s if is alive", instance)
         helper = InstanceHelper(instance)
         cluster = helper.get_cluster()
         credentials = helper.get_credentials()
         client = Client.from_cluster(cluster)
+        vhost = credentials.vhost
+        connections, queues = inf, inf
 
-        for policy in client.limit_policy.get(credentials.vhost):
-            if policy["vhost"] == credentials.vhost:
+        for policy in client.limit_policy.get(vhost):
+            if policy["vhost"] == vhost:
                 value = policy["value"]
-                return cls.Result(
-                    instance_id=instance.pk,
-                    cluster_id=cluster.id,
-                    vhost=credentials.vhost,
-                    connections=value.get("max-connections", inf),
-                    queues=value.get("max-queues", inf),
-                )
+                connections = value.get("max-connections", inf)
+                queues = value.get("max-queues", inf)
+                break
+
+        return cls.Result(
+            instance_id=instance.pk,
+            cluster_id=cluster.id,
+            vhost=vhost,
+            connections=connections,
+            queues=queues,
+        )
 
 
 class CronCheckInstanceLimits(CheckInstancesCronTask):

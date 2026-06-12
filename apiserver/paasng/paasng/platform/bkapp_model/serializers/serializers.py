@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -322,16 +322,11 @@ class ModuleDeployHookSLZ(serializers.Serializer):
         help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一",
         required=False,
         allow_null=True,
+        allow_blank=True,
     )
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
     enabled = serializers.BooleanField(allow_null=True, default=False)
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if not data.get("proc_command") and hasattr(instance, "get_proc_command"):
-            data["proc_command"] = instance.get_proc_command()
-        return data
 
 
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):

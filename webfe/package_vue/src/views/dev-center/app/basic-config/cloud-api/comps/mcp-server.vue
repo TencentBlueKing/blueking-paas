@@ -33,8 +33,8 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
+          :condition="{ search: searchQuery, filters: { headerFilterField } }"
+          :is-error="isTableError"
           @reacquire="fetchList(id)"
           @clear-filter="clearFilterKey"
         />
@@ -178,10 +178,7 @@ export default {
         title: '',
         rows: [],
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       MCP_SERVER_STATUS,
       statusFilters: Object.keys(MCP_SERVER_STATUS).map((key) => ({
         text: this.$t(MCP_SERVER_STATUS[key]),
@@ -245,7 +242,6 @@ export default {
       const { pageData = [] } = paginationFun(data, page, limit);
       this.mcpServerList = pageData;
       this.pagination.count = data?.length || 0;
-      this.updateTableEmptyConfig();
     },
 
     // 获取 MCP Server 列表（前端分页）
@@ -270,9 +266,9 @@ export default {
         this.setTableData(mcpServers, this.pagination.current, this.pagination.limit);
         // 全量数据
         this.allMcpServerList = mcpServers;
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
@@ -282,14 +278,6 @@ export default {
     selectable(row) {
       // 申请中、已申请不可选禁用
       return !['pending', 'approved'].includes(row.permission?.status);
-    },
-
-    updateTableEmptyConfig() {
-      if (this.searchQuery || this.headerFilterField) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
 
     clearFilterKey() {

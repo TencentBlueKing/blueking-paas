@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -56,9 +56,9 @@ class TestGetExposedUrlType:
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
         bk_module.save()
         assert get_exposed_url_type(bk_module.application.code, bk_module.name) == ExposedURLType.SUBDOMAIN
-        assert (
-            get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN
-        ), "test default module"
+        assert get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN, (
+            "test default module"
+        )
 
 
 def test_default_preallocated_urls_empty(bk_stag_env):

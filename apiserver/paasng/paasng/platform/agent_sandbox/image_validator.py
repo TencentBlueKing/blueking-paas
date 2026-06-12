@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -72,6 +72,5 @@ def check_snapshot_image_exists(snapshot: str) -> None:
 
     if not exists:
         raise SandboxImageValidateError(
-            f"Snapshot image '{snapshot}' does not exist in registry "
-            f"'{settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST}'"
+            f"Snapshot image '{snapshot}' does not exist in registry '{settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST}'"
         )

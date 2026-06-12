@@ -47,8 +47,8 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ operatorList, filterParams }"
+              :is-error="isTableError"
               @reacquire="getRecords"
               @clear-filter="clearFilterKey"
             />
@@ -257,10 +257,7 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       filterParams: {},
       dateParams: {},
       sidesliderTitleTips: '',
@@ -325,7 +322,7 @@ export default {
         };
         // 操作人
         if (this.operatorList.length) {
-          params.operator = this.operatorList.join();
+          params.operator = this.operatorList.join(',');
         }
         const res = await this.$store.dispatch('baseInfo/getRecords', {
           appCode: this.appCode,
@@ -333,10 +330,9 @@ export default {
         });
         this.records = res.results;
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isTableLoading = false;
@@ -462,13 +458,7 @@ export default {
       this.dateParams = {};
       this.operatorList = [];
       this.$refs.recordTable?.clearFilter();
-    },
-    updateTableEmptyConfig() {
-      if (this.operatorList.length || Object.keys(this.filterParams).length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
+      this.getRecords(1);
     },
   },
 };

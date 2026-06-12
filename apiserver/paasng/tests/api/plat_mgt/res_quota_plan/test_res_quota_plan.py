@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -103,22 +103,6 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.put(update_url, data=update_data)
         assert response.status_code == 400
 
-    def test_update_builtin_plan_forbidden(self, plat_mgt_api_client, sample_plan_data):
-        """测试内置方案不允许修改"""
-        builtin_plan = ResQuotaPlan.objects.create(
-            name="builtin-plan",
-            limits={"cpu": "4000m", "memory": "2048Mi"},
-            requests={"cpu": "1000m", "memory": "512Mi"},
-            is_builtin=True,
-        )
-
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin_plan.id})
-        update_data = sample_plan_data.copy()
-        update_data["name"] = "updated-builtin"
-
-        response = plat_mgt_api_client.put(url, data=update_data)
-        assert response.status_code == 403
-
     @pytest.mark.parametrize(
         ("limits", "requests", "expected_status"),
         [
@@ -163,3 +147,40 @@ class TestResourceQuotaPlanViewSet:
         memory_options = response.data["memory_resource_quantity"]
         assert len(memory_options) > 0
         assert all("value" in opt and "label" in opt for opt in memory_options)
+
+    def test_list_used_by(self, plat_mgt_api_client, created_plan, monkeypatch):
+        """测试获取资源配额方案影响范围"""
+
+        def get_used_by_processes(self):
+            return [
+                {"app_code": "app-a", "module_name": "worker", "process_name": "worker"},
+                {"app_code": "app-a", "module_name": "default", "process_name": "web"},
+                {"app_code": "app-b", "module_name": "default", "process_name": "web"},
+            ]
+
+        monkeypatch.setattr(ResQuotaPlan, "get_used_by_processes", get_used_by_processes)
+
+        url = reverse("plat_mgt.res_quota_plans.list_used_by", kwargs={"pk": created_plan.id})
+        response = plat_mgt_api_client.get(url)
+
+        assert response.status_code == 200
+        assert response.data["count"] == 3
+        assert response.data["next"] is None
+        assert response.data["previous"] is None
+        assert response.data["results"] == [
+            {
+                "app_code": "app-a",
+                "module_name": "default",
+                "process_name": "web",
+            },
+            {
+                "app_code": "app-a",
+                "module_name": "worker",
+                "process_name": "worker",
+            },
+            {
+                "app_code": "app-b",
+                "module_name": "default",
+                "process_name": "web",
+            },
+        ]

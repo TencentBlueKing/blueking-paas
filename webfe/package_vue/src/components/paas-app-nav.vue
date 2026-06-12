@@ -530,7 +530,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appBaseInfo',
+            name: 'appBasicInfo',
             params: {
               id: this.curAppInfo.application.code,
             },

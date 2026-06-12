@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -31,7 +31,7 @@ from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryRes
 from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.utils.error_codes import error_codes
 
-from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
+from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ, ResQuotaPlanUsedByProcessSLZ
 
 
 class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
@@ -86,9 +86,6 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
 
-        if plan_obj.is_builtin:
-            return Response({"detail": _("系统内置方案不允许修改")}, status=status.HTTP_403_FORBIDDEN)
-
         slz = ResQuotaPlanInputSLZ(data=request.data, instance=plan_obj)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -98,7 +95,9 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         plan_obj.name = data["name"]
         plan_obj.limits = data["limits"]
         plan_obj.requests = data["requests"]
-        plan_obj.is_active = data.get("is_active", plan_obj.is_active)
+        # 内置方案不可修改启用性
+        if not plan_obj.is_builtin:
+            plan_obj.is_active = data.get("is_active", plan_obj.is_active)
         plan_obj.save()
 
         data_after = ResQuotaPlanInputSLZ(plan_obj).data
@@ -112,6 +111,33 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         )
 
         return Response(status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.res_quota_plans"],
+        operation_description="获取资源配额方案影响的应用和模块列表",
+        responses={status.HTTP_200_OK: ResQuotaPlanUsedByProcessSLZ()},
+    )
+    def list_used_by(self, request, pk):
+        """获取资源配额方案影响的应用和模块列表"""
+
+        plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
+        used_by_processes = plan_obj.get_used_by_processes()
+
+        process_list = []
+        for process in sorted(
+            used_by_processes,
+            key=lambda item: (item["app_code"], item["module_name"], item["process_name"]),
+        ):
+            process_list.append(
+                {
+                    "app_code": process["app_code"],
+                    "module_name": process["module_name"],
+                    "process_name": process["process_name"],
+                }
+            )
+
+        page = self.paginate_queryset(process_list)
+        return self.get_paginated_response(ResQuotaPlanUsedByProcessSLZ(page, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

@@ -164,21 +164,23 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == 200
-        assert response.data["count"] == 2
+        assert response.data["count"] == 3
         assert response.data["next"] is None
         assert response.data["previous"] is None
         assert response.data["results"] == [
             {
                 "app_code": "app-a",
-                "modules": [
-                    {"module_name": "default", "processes": ["web"]},
-                    {"module_name": "worker", "processes": ["worker"]},
-                ],
+                "module_name": "default",
+                "process_name": "web",
+            },
+            {
+                "app_code": "app-a",
+                "module_name": "worker",
+                "process_name": "worker",
             },
             {
                 "app_code": "app-b",
-                "modules": [
-                    {"module_name": "default", "processes": ["web"]},
-                ],
+                "module_name": "default",
+                "process_name": "web",
             },
         ]

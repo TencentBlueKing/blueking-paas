@@ -2366,7 +2366,7 @@ export default {
         // 未设置插件分类
         case 'FILL_PLUGIN_TAG_INFO':
           this.$router.push({
-            name: 'appBaseInfo',
+            name: 'appBasicInfo',
             params: {
               id: this.appCode,
               pluginTypeActive: true,

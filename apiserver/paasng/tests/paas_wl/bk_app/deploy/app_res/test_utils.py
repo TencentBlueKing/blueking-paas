@@ -25,7 +25,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestGetScheduleConfig:
     def test_basic(self, wl_app):
-        """默认 use_full_node_selector=True, node_selector 应包含 app config 的值"""
+        """默认 only_cluster_default=False, node_selector 应包含 app config 的值"""
 
         config = wl_app.config_set.latest()
         config.node_selector = {"app": "test"}
@@ -35,7 +35,7 @@ class TestGetScheduleConfig:
         assert schedule.node_selector == {"app": "test"}
 
     def test_skip_full_selector(self, wl_app):
-        """use_full_node_selector=False 时只用集群 default_node_selector"""
+        """only_cluster_default=True 时只用集群 default_node_selector"""
 
         cluster = get_cluster_by_app(wl_app)
         cluster.default_node_selector = {"cluster": "default"}
@@ -45,15 +45,15 @@ class TestGetScheduleConfig:
         config.node_selector = {"app": "test"}
         config.save()
 
-        schedule = get_schedule_config(wl_app, use_full_node_selector=False)
+        schedule = get_schedule_config(wl_app, only_cluster_default=True)
         assert schedule.node_selector == {"cluster": "default"}
 
     def test_tolerations_always_included(self, wl_app):
-        """tolerations 不受 use_full_node_selector 影响, 总是包含"""
+        """tolerations 不受 only_cluster_default 影响, 总是包含"""
 
         config = wl_app.config_set.latest()
         config.tolerations = [{"key": "app", "operator": "Equal", "value": "v", "effect": "NoExecute"}]
         config.save()
 
         assert get_schedule_config(wl_app).tolerations[0]["key"] == "app"
-        assert get_schedule_config(wl_app, use_full_node_selector=False).tolerations[0]["key"] == "app"
+        assert get_schedule_config(wl_app, only_cluster_default=True).tolerations[0]["key"] == "app"

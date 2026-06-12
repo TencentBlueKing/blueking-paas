@@ -393,11 +393,15 @@ def _mock_wl_services_in_creation():
         ),
         mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
         mock.patch("paasng.platform.modules.manager.EnvClusterService") as fake_module_cluster,
+        mock.patch(
+            "paasng.platform.modules.manager.get_bound_env_exposed_url_type"
+        ) as fake_get_bound_env_exposed_url_type,
         mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
         mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
         mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
     ):
         fake_module_cluster.return_value.get_cluster.return_value.exposed_url_type = ExposedURLType.SUBPATH.value
+        fake_get_bound_env_exposed_url_type.return_value = ExposedURLType.SUBPATH
         fake_log().get_cluster().has_feature_flag.return_value = False
         fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
         mock_filter.return_value = mock_cluster_es_config_queryset

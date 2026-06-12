@@ -421,6 +421,11 @@ class TestApplicationUpdate:
             allocation_policy=AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
             tenant_id=random_tenant_id,
         )
+        # 将测试集群的 available_tenant_ids 更新，使其对随机租户也可用
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        if random_tenant_id not in cluster.available_tenant_ids:
+            cluster.available_tenant_ids.append(random_tenant_id)
+            cluster.save(update_fields=["available_tenant_ids"])
 
     @pytest.fixture
     def tag(self):
@@ -847,6 +852,13 @@ class TestCreateApplicationWithTenantParams:
                     "allocation_policy": AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
                 },
             )
+
+        # 将测试集群的 available_tenant_ids 更新，使其对非默认租户也可用
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        for tenant_id in ["foo_tenant", OP_TYPE_TENANT_ID]:
+            if tenant_id not in cluster.available_tenant_ids:
+                cluster.available_tenant_ids.append(tenant_id)
+        cluster.save(update_fields=["available_tenant_ids"])
 
     # cases start: when multi-tenant mode is disabled
 

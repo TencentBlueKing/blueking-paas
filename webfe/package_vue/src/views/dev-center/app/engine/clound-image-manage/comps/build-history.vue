@@ -117,7 +117,7 @@
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import deployLogSideslider from '@/components/deploy/deploy-log-sideslider.vue';
 import { cloneDeep } from 'lodash';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 export default {
   name: 'ClundBuildHistory',
   components: {

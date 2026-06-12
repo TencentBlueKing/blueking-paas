@@ -247,7 +247,7 @@
   </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import deployNetwork from './deploy-network';
 import { cloneDeep } from 'lodash';
 export default {
@@ -436,7 +436,7 @@ export default {
         moduleName: this.curAppModule.name,
       }).then((res) => {
         this.gatewayInfos[env] = {
-          created: moment(res.rcs_binding_data.created).startOf('minute')
+          created: dayjs(res.rcs_binding_data.created).startOf('minute')
             .fromNow(),
           node_ip_addresses: res.rcs_binding_data.state.node_ip_addresses,
         };
@@ -521,7 +521,7 @@ export default {
         moduleName: this.curAppModule.name,
       }).then((res) => {
         this.gatewayInfos[env] = {
-          created: moment(res.rcs_binding_data.created).startOf('minute')
+          created: dayjs(res.rcs_binding_data.created).startOf('minute')
             .fromNow(),
           node_ip_addresses: res.rcs_binding_data.state.node_ip_addresses,
         };

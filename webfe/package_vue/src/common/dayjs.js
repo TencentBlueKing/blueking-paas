@@ -16,32 +16,19 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-import Vue from 'vue';
-import dayjs from '@/common/dayjs';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import cookie from 'cookie';
+import 'dayjs/locale/zh-cn';
+import 'dayjs/locale/en';
 
-// 时间格式过滤器
-Vue.filter('time-smart', function (value, type) {
-  let formatTime;
-  const curYear = new Date().getFullYear();
-  switch (type) {
-    case 'fromNow':
-      // 距离当前时间多久
-      formatTime = dayjs(value).startOf('minute').fromNow();
-      break;
-    case 'smartShorten':
-      // 当年日期显示：07-25 16:16
-      if (dayjs(value).format('YYYY') === curYear) {
-        formatTime = dayjs(value).format('MM-DD HH:mm');
-      } else {
-        formatTime = dayjs(value).format('YYYY-MM-DD HH:mm');
-      }
-      break;
-    default:
-      break;
-  }
-  return formatTime;
-});
+dayjs.extend(relativeTime);
 
-const SmartTime = Vue.filter('time-smart');
+export function setDayjsLocale(language) {
+  const locale = language === 'en' ? 'en' : 'zh-cn';
+  dayjs.locale(locale);
+}
 
-export default SmartTime;
+setDayjsLocale(cookie.parse(document.cookie).blueking_language || 'zh-cn');
+
+export default dayjs;

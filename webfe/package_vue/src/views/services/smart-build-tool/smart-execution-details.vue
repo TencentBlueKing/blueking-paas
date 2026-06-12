@@ -28,7 +28,7 @@ import BuildLog from './comps/build-log.vue';
 import StatusBar from './comps/status-bar.vue';
 import { calculateTimeDiff } from './utils/time-formatter';
 import { fileDownload } from '@/common/utils';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 
 export default {
   components: {

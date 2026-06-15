@@ -160,9 +160,9 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
 class VolumeCreateInputSLZ(serializers.Serializer):
     """The serializer for creating a shared volume."""
 
-    name = serializers.CharField(label="卷名称", max_length=64, help_text="应用内唯一标识")
+    name = serializers.CharField(label="卷名称", max_length=256, help_text="应用内唯一标识")
     display_name = serializers.CharField(
-        label="显示名称", max_length=128, required=False, default="", allow_blank=True
+        label="显示名称", max_length=256, required=False, default="", allow_blank=True
     )
 
 

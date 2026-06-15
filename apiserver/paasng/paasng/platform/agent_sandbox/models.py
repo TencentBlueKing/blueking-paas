@@ -40,8 +40,8 @@ class Volume(UuidAuditedModel):
     application = models.ForeignKey(
         Application, on_delete=models.CASCADE, db_constraint=False, related_name="agent_sandbox_volumes"
     )
-    name = models.CharField(verbose_name="卷名称", max_length=64, help_text="应用内唯一标识")
-    display_name = models.CharField(verbose_name="显示名称", max_length=128, blank=True, default="")
+    name = models.CharField(verbose_name="卷名称", max_length=256, help_text="应用内唯一标识")
+    display_name = models.CharField(verbose_name="显示名称", max_length=256, blank=True, default="")
     deleted_at = models.DateTimeField("删除时间", null=True)
     tenant_id = tenant_id_field_factory()
 

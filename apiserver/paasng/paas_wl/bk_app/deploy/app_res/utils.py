@@ -33,10 +33,16 @@ if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
 
 
-def get_schedule_config(app: "WlApp") -> "Schedule":
-    """Get the schedule config of an app."""
+def get_schedule_config(app: "WlApp", only_cluster_default: bool = False) -> "Schedule":
+    """Get the schedule config of an app.
+
+    :param app: The app to get the schedule config for.
+    :param only_cluster_default: If True, only use cluster's default_node_selector,
+        excluding app-specific config and dynamic labels (e.g. egress IP bindings).
+    """
+    cluster = get_cluster_by_app(app)
     return Schedule(
-        cluster_name=get_cluster_by_app(app).name,
-        node_selector=get_full_node_selector(app),
+        cluster_name=cluster.name,
+        node_selector=cluster.default_node_selector if only_cluster_default else get_full_node_selector(app),
         tolerations=get_full_tolerations(app),
     )

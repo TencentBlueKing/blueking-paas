@@ -22,6 +22,7 @@ from django.conf import settings
 from svc_bk_repo.monitoring.models import RepoQuotaStatistics
 from svc_bk_repo.shared.scheduler import scheduler
 from svc_bk_repo.vendor.actions import extend_quota
+from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
 from svc_bk_repo.vendor.helper import get_repo_manager
 
 logger = logging.getLogger(__name__)
@@ -60,10 +61,23 @@ def _try_auto_expand(stat: RepoQuotaStatistics, manager):
         logger.warning("Auto expand skip: %s already at max allowed size", stat.repo_name)
         return
 
-    new_size = extend_quota(
-        manager,
-        bucket=stat.repo_name,
-        extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
-        max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
-    )
+    try:
+        new_size = extend_quota(
+            manager,
+            bucket=stat.repo_name,
+            extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+            max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
+            required_usage_rate=config["threshold"],
+        )
+    except (ExtendQuotaUsageTooLow, NoNeedToExtendQuota):
+        logger.info("Auto expand skipped for %s: real-time check says no need", stat.repo_name)
+        return
+    except ExtendQuotaMaxSizeExceeded:
+        logger.info("Auto expand skipped for %s: real-time check says usage too low", stat.repo_name)
+        return
+
+    # 扩容成功后同步更新统计记录的 max_size, 避免因旧数据导致下个周期重复触发
+    stat.max_size = new_size
+    stat.save(update_fields=["max_size"])
+
     logger.info("Auto expanded %s (instance=%s) -> %s bytes", stat.repo_name, stat.instance.uuid, new_size)

@@ -19,6 +19,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from paas_service.models import ServiceInstance
+from paas_service.utils import get_paas_app_info
 
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.helper import BKGenericRepoManager
@@ -50,7 +51,7 @@ class Command(BaseCommand):
             help="扩容上限, 单位 GB (默认: 10)",
         )
 
-    def handle(self, instance_id, bucket_type, extra_size, max_allowed, *args, **options):
+    def handle(self, instance_id: str, bucket_type: str, extra_size: int, max_allowed: int, *args, **options):
         # GB -> bytes
         # 参考: vendor.render.ABBREVS
         #   ABBREVS = ((1 << 50, "PB"), (1 << 40, "TB"), (1 << 30, "GB"), (1 << 20, "MB"), (1 << 10, "KB"), (1, "bytes"))
@@ -71,7 +72,18 @@ class Command(BaseCommand):
         else:
             bucket = credentials["public_bucket"]
 
-        self.stdout.write(f"开始扩容: instance={instance_id}, bucket={bucket}")
+        # 展示业务侧信息, 方便定位
+        try:
+            app_info = get_paas_app_info(instance)
+            app_code = app_info["app_code"]
+            model_name = app_info["model_name"]
+            environment = app_info["environment"]
+            self.stdout.write(
+                f"正在为实例 {instance_id} (关联应用: {app_code} / {model_name} / {environment}) 扩容 {bucket_type} 仓库配额..."
+            )
+        except Exception:  # noqa: BLE001
+            self.stdout.write(f"正在为实例 {instance_id} 扩容 {bucket_type} 仓库配额...")
+
         quota_before = manager.get_repo_quota(bucket)
         self.stdout.write(
             f"当前容量: {humanize_bytes(quota_before.used)} / {humanize_bytes(quota_before.max_size)} ({quota_before.quota_used_rate:.1f}%)"

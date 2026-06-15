@@ -211,5 +211,29 @@ var _ = Describe("Test DeployActionReconciler", func() {
 
 			expectDeployActionInitialized(ret, bkapp, "2")
 		})
+
+		It("deploy ID changed with running hook when previous deploy matches interrupt signal", func() {
+			bkapp.SetAnnotations(
+				map[string]string{
+					paasv1alpha2.DeployIDAnnoKey:            "2",
+					paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
+				},
+			)
+			bkapp.Status.DeployId = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
+			Expect(hook.Pod).NotTo(BeNil())
+
+			client := builder.WithObjects(bkapp, hook.Pod).Build()
+			ret := NewDeployActionReconciler(client).Reconcile(context.Background(), bkapp)
+
+			expectDeployActionInitialized(ret, bkapp, "2")
+		})
 	})
 })

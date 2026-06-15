@@ -92,8 +92,13 @@ class PreReleaseDummyExecutor(DeployStep):
             return PodPhase.RUNNING
 
     def _mark_step_stop(self, status: PodPhase):
+        self.deployment.refresh_from_db(fields=["release_int_requested_at"])
+        is_interrupted = status != PodPhase.SUCCEEDED and self.deployment.has_requested_int
+
         if status == PodPhase.SUCCEEDED:
             self.stream.write_message(Style.Warning("Pre-release execution succeed"))
+        elif is_interrupted:
+            self.stream.write_message(Style.Warning("Pre-release interrupted"))
         elif status == PodPhase.FAILED:
             self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))
         else:
@@ -106,5 +111,9 @@ class PreReleaseDummyExecutor(DeployStep):
 
         if status == PodPhase.SUCCEEDED:
             step.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
-        elif status == PodPhase.FAILED:
+            return
+        if is_interrupted:
+            step.mark_and_write_to_stream(self.stream, JobStatus.INTERRUPTED, {"message": "Pre-release interrupted"})
+            return
+        if status == PodPhase.FAILED:
             step.mark_and_write_to_stream(self.stream, JobStatus.FAILED)

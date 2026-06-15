@@ -31,6 +31,7 @@ from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -39,6 +40,7 @@ from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +107,11 @@ def create_application(
         app_tenant_id=app_tenant_info.app_tenant_id,
         tenant_id=app_tenant_info.tenant_id,
     )
-    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
+    try:
+        create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
+    except BkOauthClientCodeConflictError:
+        logger.warning(f"OAuth2 client code conflict for application {application.code}")
+        raise error_codes.CANNOT_CREATE_APP_BKAUTH_CONFLICT.f(code=application.code)
 
     return application
 

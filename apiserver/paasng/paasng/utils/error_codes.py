@@ -47,6 +47,9 @@ class ErrorCodes:
     CLIENT_CREDENTIALS_MISSING = ErrorCode(_("应用身份凭证缺失"))
     # 应用创建 & 删除
     CANNOT_CREATE_APP = ErrorCode(_("应用创建失败"))
+    CANNOT_CREATE_APP_BKAUTH_CONFLICT = ErrorCode(
+        _("应用 ID（{code}）冲突，该 ID 已存在于 bkAuth 系统中"), status_code=409
+    )
     CANNOT_INIT_APP_TEMPLATE = ErrorCode(_("初始化应用源码模板失败"))
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))

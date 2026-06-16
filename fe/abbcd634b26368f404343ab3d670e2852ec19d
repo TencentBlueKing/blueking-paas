@@ -1,0 +1,11 @@
+apiserver/paasng/paasng/platform/agent_sandbox/models.py
+  h_190e3af8dc7b5f 34-36,38-39,149-154
+apiserver/paasng/paas_wl/bk_app/agent_sandbox/constants.py
+  h_190e3af8dc7b5f 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "feabbcd634b26368f404343ab3d670e2852ec19d",
+  "prompts": {}
+}

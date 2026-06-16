@@ -22,7 +22,7 @@
 DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
 # The default resource specification for sandbox pod
 DEFAULT_RESOURCES = {
-    "limits": {"cpu": "4000m", "memory": "1024Mi"},
+    "limits": {"cpu": "4000m", "memory": "4096Mi"},
     "requests": {"cpu": "50m", "memory": "128Mi"},
 }
 

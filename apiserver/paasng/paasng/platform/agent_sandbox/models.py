@@ -16,6 +16,7 @@
 
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 
 from blue_krill.models.fields import EncryptField
 from django.conf import settings
@@ -30,7 +31,12 @@ from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.applications.models import Application
 from paasng.utils.models import BkUserField, UuidAuditedModel
 
-from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
+from .constants import (
+    DEFAULT_SANDBOX_CPU,
+    DEFAULT_SANDBOX_MEMORY,
+    SANDBOX_DEFAULT_TTL_SECONDS,
+    SandboxStatus,
+)
 from .exceptions import SandboxAlreadyExists
 
 
@@ -68,6 +74,8 @@ class SandboxManager(models.Manager):
         workspace: str | None = None,
         ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
         volume_mounts: list[dict] | None = None,
+        cpu: Decimal | None = None,
+        memory: Decimal | None = None,
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
@@ -89,6 +97,13 @@ class SandboxManager(models.Manager):
 
         target = cluster.name
 
+        # cpu / memory 未显式提供时, 走 Sandbox 模型字段默认值（平台默认规格）
+        extra_resource_fields: dict = {}
+        if cpu is not None:
+            extra_resource_fields["cpu"] = cpu
+        if memory is not None:
+            extra_resource_fields["memory"] = memory
+
         return self.create(
             uuid=sandbox_id,
             application=application,
@@ -104,6 +119,7 @@ class SandboxManager(models.Manager):
             tenant_id=application.tenant_id,
             daemon_token=get_random_string(32),
             expired_at=timezone.now() + timedelta(seconds=ttl_seconds),
+            **extra_resource_fields,
         )
 
 
@@ -130,8 +146,12 @@ class Sandbox(UuidAuditedModel):
         default=list,
         help_text='已解析的共享卷挂载列表，格式 [{"volume_id": str, "mount_path": str}]',
     )
-    cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
-    memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
+    cpu = models.DecimalField(
+        verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default=DEFAULT_SANDBOX_CPU
+    )
+    memory = models.DecimalField(
+        verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default=DEFAULT_SANDBOX_MEMORY
+    )
 
     daemon_token = EncryptField(help_text="daemon 服务的访问 token")
 
@@ -149,6 +169,33 @@ class Sandbox(UuidAuditedModel):
 
     class Meta:
         unique_together = ("tenant_id", "application_id", "name")
+
+
+class SandboxAppendConfig(UuidAuditedModel):
+    """沙箱的 app 级附加配置，由平台运维通过命令行（manage.py shell 或
+    upsert_sandbox_config command）维护。每个 app 至多一条，后续新增的沙箱可配置项
+    均可追加到本表。各字段相互独立、按需填写，未填写的字段在创建沙箱时回退到平台默认值。
+
+    当前已支持的配置项：
+    - cpu / memory：沙箱资源上限，未配置时回退到 DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY。
+    """
+
+    application = models.OneToOneField(
+        Application,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="sandbox_append_config",
+    )
+    cpu = models.DecimalField(
+        verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    memory = models.DecimalField(
+        verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        verbose_name = "沙箱附加配置"
 
 
 class ImageBuildRecord(UuidAuditedModel):

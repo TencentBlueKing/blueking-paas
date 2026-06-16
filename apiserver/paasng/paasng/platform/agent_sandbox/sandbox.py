@@ -20,6 +20,7 @@ import logging
 import re
 import shlex
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.utils import timezone
@@ -42,7 +43,12 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
-from paasng.platform.agent_sandbox.constants import SANDBOX_DEFAULT_TTL_SECONDS, SandboxStatus
+from paasng.platform.agent_sandbox.constants import (
+    DEFAULT_SANDBOX_CPU,
+    DEFAULT_SANDBOX_MEMORY,
+    SANDBOX_DEFAULT_TTL_SECONDS,
+    SandboxStatus,
+)
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
@@ -55,7 +61,7 @@ from paasng.platform.agent_sandbox.exceptions import (
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
-from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppendConfig, Volume
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -105,6 +111,23 @@ def _build_volume_mounts(application: Application, raw: list[dict] | None) -> li
     return result
 
 
+def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decimal]:
+    """Resolve the CPU/memory limits for an application's sandboxes.
+
+    Resource limits are not provided by end users. They are decided by an optional
+    per-app config maintained by platform operators; apps without a config (or with a
+    config that leaves cpu/memory unset) fall back to the platform default for that field.
+
+    :param application: The application that the sandbox belongs to.
+    :returns: A ``(cpu, memory)`` tuple, where ``cpu`` is in cores and
+        ``memory`` is in GB.
+    """
+    config = SandboxAppendConfig.objects.filter(application=application).first()
+    cpu = config.cpu if config and config.cpu is not None else DEFAULT_SANDBOX_CPU
+    memory = config.memory if config and config.memory is not None else DEFAULT_SANDBOX_MEMORY
+    return cpu, memory
+
+
 def create_sandbox(
     application: Application,
     creator: str,
@@ -137,6 +160,9 @@ def create_sandbox(
     if snapshot:
         check_snapshot_image_exists(snapshot_image)
 
+    # 资源限制不由用户指定, 而是按 app 级配置回退平台默认值解析
+    cpu, memory = resolve_sandbox_resources(application)
+
     sandbox_obj = Sandbox.objects.new(
         application=application,
         name=name,
@@ -147,6 +173,8 @@ def create_sandbox(
         workspace=workspace,
         ttl_seconds=ttl_seconds,
         volume_mounts=volume_mounts,
+        cpu=cpu,
+        memory=memory,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)
@@ -235,6 +263,8 @@ class AgentSandboxResManager:
             snapshot_entrypoint=sandbox_obj.snapshot_entrypoint,
             env=env,
             volume_mounts=volume_mounts,
+            cpu=sandbox_obj.cpu,
+            memory=sandbox_obj.memory,
         )
         sandbox_created = False
         try:

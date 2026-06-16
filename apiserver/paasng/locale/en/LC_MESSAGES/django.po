@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-12 17:13+0800\n"
+"POT-Creation-Date: 2026-06-15 14:25+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -235,20 +235,20 @@ msgstr "Image credentials not found"
 #: paas_wl/bk_app/cnative/specs/views.py:132
 msgid "镜像仓库不存在，请检查仓库地址是否正确"
 msgstr ""
-"Image repository not exist, please check whether the repository address is "
-"correct."
+"Image repository does not exist, please check whether the repository address "
+"is correct."
 
 #: paas_wl/bk_app/cnative/specs/views.py:134
 msgid "镜像仓库权限不足, 请检查是否配置镜像凭证"
 msgstr ""
-"Image repository has no permission, please check whether the image "
-"credentials are configured."
+"Insufficient permissions for the image repository, please check whether the "
+"image credentials are configured."
 
 #: paas_wl/bk_app/cnative/specs/views.py:136
 msgid "镜像仓库凭证错误, 请检查镜像凭证配置是否正确"
 msgstr ""
-"Image repository credential verification failed, please check the credential "
-"is correctly."
+"Image repository credential verification failed, please check the credentials "
+"are correct."
 
 #: paas_wl/bk_app/cnative/specs/views.py:138
 msgid "镜像仓库请求超时, 请检查网络连接"
@@ -429,7 +429,7 @@ msgstr "Unable to update main entrance"
 
 #: paas_wl/utils/error_codes.py:35 paasng/utils/error_codes.py:65
 msgid "操作进程失败"
-msgstr "Operation process failure"
+msgstr "Process operation failed"
 
 #: paas_wl/utils/error_codes.py:36 paasng/utils/error_codes.py:67
 msgid "进程操作过于频繁，请稍后再试"
@@ -544,12 +544,12 @@ msgstr "The credential is already in use by an application."
 #: paas_wl/workloads/networking/egress/views.py:66
 msgid "新建出口 IP 绑定功能已禁用，如有需要请联系管理员"
 msgstr ""
-"Creation of egress IP binding is disabled; please contact the administrator "
+"Creation of egress IP binding is disabled. Please contact the administrator "
 "if needed"
 
 #: paas_wl/workloads/networking/entrance/serializers.py:46
 msgid "域名格式错误"
-msgstr "Parameter format error"
+msgstr "Domain format error"
 
 #: paas_wl/workloads/networking/entrance/serializers.py:57
 msgid "该域名与路径组合已被其他应用或模块使用"
@@ -781,7 +781,7 @@ msgstr "Platform Built-in Log Collection Rules"
 
 #: paasng/accessories/log/views/logs.py:69
 msgid "无可用日志索引, 请稍后重试"
-msgstr " Logging  failed, please try again later"
+msgstr "No available log index, please try again later"
 
 #: paasng/accessories/log/views/logs.py:81
 #, python-brace-format
@@ -969,11 +969,11 @@ msgstr "Query log"
 
 #: paasng/accessories/smart_advisor/utils.py:53
 msgid "去 FAQ 查询试试"
-msgstr " FAQ"
+msgstr "Try FAQ query"
 
 #: paasng/accessories/smart_advisor/utils.py:60
 msgid "暂时无法找到解决方案，请前往“标准输出日志”检查是否有异常"
-msgstr "Temporarily unable to find a solution, you can try:"
+msgstr "Temporarily unable to find a solution, please check the standard output log for exceptions"
 
 #: paasng/accessories/smart_advisor/utils.py:81
 msgid "已找到解决方案"
@@ -1192,7 +1192,7 @@ msgstr "Failed to query step details"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:40
 msgid "插件不支持重新上架"
-msgstr "Plugin does not support abort publish operation"
+msgstr "Plugin does not support reactivation"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:41
 msgid "下架失败"
@@ -1280,11 +1280,11 @@ msgstr "Edit plugin info"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:50
 msgid "可见范围管理"
-msgstr "visibility range manage"
+msgstr "Visibility range management"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:51
 msgid "插件配置管理"
-msgstr "ConfManage"
+msgstr "Plugin configuration management"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:52
 #: paasng/infras/iam/permissions/resources/application.py:47
@@ -1293,7 +1293,7 @@ msgstr "Member management"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:53
 msgid "删除插件"
-msgstr "archive plugin"
+msgstr "Delete plugin"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:79
 msgid "蓝鲸插件"
@@ -1902,10 +1902,8 @@ msgid "lesscode 系统专用角色"
 msgstr "Dedicated role for the lesscode system"
 
 #: paasng/infras/sysapi_client/constants.py:30
-#, fuzzy
-#| msgid "lesscode 系统专用角色"
 msgid "AIDev 系统专用角色"
-msgstr "Dedicated role for the lesscode system"
+msgstr "Dedicated role for the AIDev system"
 
 #: paasng/infras/sysapi_client/constants.py:37
 msgid "读取应用信息"
@@ -1917,7 +1915,7 @@ msgstr "Manage application information"
 
 #: paasng/infras/sysapi_client/constants.py:39
 msgid "读取增强服务信息"
-msgstr "Failed to read Add-ons Instance information"
+msgstr "Read Add-ons instance information"
 
 #: paasng/infras/sysapi_client/constants.py:42
 msgid "管理应用访问控制"
@@ -1936,10 +1934,8 @@ msgid "绑定 DB 服务"
 msgstr "Bind DB service"
 
 #: paasng/infras/sysapi_client/constants.py:52
-#, fuzzy
-#| msgid "续期网关 API 权限"
 msgid "授权网关 API 权限"
-msgstr "Renewal Gateway API Permissions"
+msgstr "Authorize Gateway API Permissions"
 
 #: paasng/infras/sysapi_client/constants.py:55
 msgid "构建沙箱镜像"
@@ -2055,7 +2051,7 @@ msgstr "Reserved prefix auth code"
 
 #: paasng/misc/audit/constants.py:81
 msgid "集群"
-msgstr "Standard cluster"
+msgstr "Cluster"
 
 #: paasng/misc/audit/constants.py:82
 msgid "集群组件"
@@ -2360,22 +2356,16 @@ msgid "关闭用户访问限制"
 msgstr "disable user access restrictions"
 
 #: paasng/misc/tools/smart_app/constants.py:25
-#, fuzzy
-#| msgid "源码配置"
 msgid "源码包"
-msgstr "Source code configuration"
+msgstr "Source code package"
 
 #: paasng/misc/tools/smart_app/constants.py:26
-#, fuzzy
-#| msgid "代码仓库类型"
 msgid "代码仓库"
-msgstr "Code Repository Address"
+msgstr "Code Repository"
 
 #: paasng/misc/tools/smart_app/models/phase.py:31
-#, fuzzy
-#| msgid "构建阶段"
 msgid "构建阶段类型"
-msgstr "Build Phase"
+msgstr "Build Phase Type"
 
 #: paasng/misc/tools/smart_app/models/phase.py:35
 msgid "关联的构建记录"
@@ -2391,31 +2381,25 @@ msgstr "phase start time"
 #: paasng/platform/engine/models/phases.py:61
 #: paasng/platform/engine/models/steps.py:148
 msgid "阶段完成时间"
-msgstr "phase Completion time"
+msgstr "phase completion time"
 
 #: paasng/misc/tools/smart_app/models/step.py:30
 #: paasng/platform/engine/models/steps.py:60
 #: paasng/platform/engine/models/steps.py:142
 msgid "步骤名称"
-msgstr "step name"
+msgstr "Step name"
 
 #: paasng/misc/tools/smart_app/models/step.py:34
-#, fuzzy
-#| msgid "构建阶段"
 msgid "关联的构建阶段"
-msgstr "Build Phase"
+msgstr "Associated build stage"
 
 #: paasng/misc/tools/smart_app/models/step.py:40
-#, fuzzy
-#| msgid "阶段开始时间"
 msgid "步骤开始时间"
-msgstr "phase start time"
+msgstr "Step start time"
 
 #: paasng/misc/tools/smart_app/models/step.py:41
-#, fuzzy
-#| msgid "阶段完成时间"
 msgid "步骤完成时间"
-msgstr "phase Completion time"
+msgstr "Step completion time"
 
 #: paasng/misc/tools/smart_app/views.py:79
 msgid "解压后未找到 app_desc.yaml 文件"
@@ -2520,10 +2504,8 @@ msgid "PaaS 2.0 中信息删除失败"
 msgstr "Information deletion failed in PaaS 2.0"
 
 #: paasng/plat_mgt/applications/views/application.py:350
-#, fuzzy
-#| msgid "PaaS 2.0 中信息删除失败"
 msgid "bkAuth 中信息删除失败"
-msgstr "Information deletion failed in PaaS 2.0"
+msgstr "Information deletion failed in bkAuth"
 
 #: paasng/plat_mgt/applications/views/member.py:163
 msgid "不允许添加不同租户的成员"
@@ -2531,13 +2513,14 @@ msgstr "Adding members from a different tenant is not allowed"
 
 #: paasng/plat_mgt/applications/views/process.py:105
 msgid "当前仅支持 SMart 和 AI Agent 应用修改进程资源配额"
-msgstr "Process resource quota modification only supported for S-Mart and AI Agent apps"
+msgstr ""
+"Process resource quota modification only supported for S-Mart and AI Agent "
+"apps"
 
 #: paasng/plat_mgt/applications/views/process.py:115
-#, fuzzy, python-brace-format
-#| msgid "模块 {ref_module_name} 不存在"
+#, python-brace-format
 msgid "进程 {process_name} 不存在"
-msgstr "Module {ref_module_name} does not exist"
+msgstr "Process {process_name} does not exist"
 
 #: paasng/plat_mgt/applications/views/services.py:153
 msgid "共享模块不能分配增强服务实例"
@@ -2712,11 +2695,11 @@ msgstr "Configuration exception, please contact the administrator"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:243
 msgid "指定集群不存在"
-msgstr "Cluster not exist"
+msgstr "Specified cluster does not exist"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:247
 msgid "指定集群组件不存在"
-msgstr "Cluster component not exist"
+msgstr "Specified cluster component does not exist"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:274
 msgid "获取组件版本信息失败，请确认操作人是否有权限"
@@ -2752,51 +2735,45 @@ msgstr ""
 msgid "该实例已被分配，无法删除"
 msgstr "This instance has been allocated, cannot be deleted"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:71
-#: paasng/plat_mgt/res_quota_plan/serializers.py:142
+#: paasng/plat_mgt/res_quota_plan/serializers.py:65
+#: paasng/plat_mgt/res_quota_plan/serializers.py:136
 msgid "格式不正确, 必须为正整数加 'm'"
 msgstr "Invalid format: must be a positive integer followed by 'm'"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:75
-#: paasng/plat_mgt/res_quota_plan/serializers.py:89
+#: paasng/plat_mgt/res_quota_plan/serializers.py:69
+#: paasng/plat_mgt/res_quota_plan/serializers.py:83
 #, python-format
 msgid "不能超过最大值 %s"
 msgstr "Cannot exceed maximum value %s"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:85
-#: paasng/plat_mgt/res_quota_plan/serializers.py:130
+#: paasng/plat_mgt/res_quota_plan/serializers.py:79
+#: paasng/plat_mgt/res_quota_plan/serializers.py:124
 msgid "格式不正确, 必须为正整数加 'Mi' 或 'Gi'"
 msgstr "Invalid format: must be a positive integer followed by 'Mi' or 'Gi'"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:101
-#, fuzzy
-#| msgid "名称已存在，请使用其他名称"
+#: paasng/plat_mgt/res_quota_plan/serializers.py:95
 msgid "资源配额方案名称已存在，请使用其他名称"
-msgstr "name already exists, please use another name"
+msgstr "Resource quota plan name already exists, please use a different name."
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:103
+#: paasng/plat_mgt/res_quota_plan/serializers.py:97
 msgid "名称只能包含数字和英文字符"
 msgstr "Name can only contain numbers and letters"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:116
+#: paasng/plat_mgt/res_quota_plan/serializers.py:110
 msgid "cpu requests 不能超过 cpu limits"
 msgstr "cpu requests cannot exceed cpu limits"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:121
+#: paasng/plat_mgt/res_quota_plan/serializers.py:115
 msgid "memory requests 不能超过 memory limits"
 msgstr "memory requests cannot exceed memory limits"
 
-#: paasng/plat_mgt/res_quota_plan/views.py:165
-#, fuzzy
-#| msgid "不允许删除"
+#: paasng/plat_mgt/res_quota_plan/views.py:152
 msgid "系统内置方案不允许删除"
-msgstr "Not allowed to delete"
+msgstr "System built-in plans cannot be deleted."
 
-#: paasng/plat_mgt/res_quota_plan/views.py:168
-#, fuzzy
-#| msgid "该凭证已被应用使用"
+#: paasng/plat_mgt/res_quota_plan/views.py:155
 msgid "该方案已被应用进程引用"
-msgstr "The credential is already in use by an application."
+msgstr "The plan is already in use by an application."
 
 #: paasng/plat_mgt/reserved_prefix/serializers.py:31
 #: paasng/plat_mgt/reserved_prefix/views.py:85
@@ -2922,10 +2899,8 @@ msgid "超时时间: {timeout}s"
 msgstr "Timeout: {timeout}s"
 
 #: paasng/platform/applications/constants.py:37
-#, fuzzy
-#| msgid "部署"
 msgid "未部署"
-msgstr "deploy"
+msgstr "Not deployed"
 
 #: paasng/platform/applications/constants.py:38
 msgid "正常"
@@ -3012,10 +2987,8 @@ msgstr ""
 "half-width hyphens (-) and underscores (_), length between 3-20."
 
 #: paasng/platform/applications/serializers/fields.py:228
-#, fuzzy
-#| msgid "{} 为 {} 的应用已存在"
 msgid "应用名称({}) 为 {} 的应用已存在"
-msgstr "{} for {} already exists"
+msgstr "An application name ({}) for {} already exists."
 
 #: paasng/platform/applications/serializers/fields.py:235
 #, python-brace-format
@@ -3048,7 +3021,9 @@ msgstr "APP ID uses a reserved prefix: a reserved prefix auth code is required"
 
 #: paasng/platform/applications/serializers/mixins.py:93
 msgid "无效的保留前缀授权码，请确认授权码与应用 ID 是否匹配"
-msgstr "Invalid reserved prefix auth code: please verify the auth code matches the APP ID"
+msgstr ""
+"Invalid reserved prefix auth code: please verify the auth code matches the "
+"APP ID"
 
 #: paasng/platform/applications/serializers/mixins.py:127
 #, python-brace-format
@@ -3691,10 +3666,14 @@ msgstr ""
 "contact the APP administrator"
 
 #: paasng/platform/engine/workflow/srv_version.py:69
+#, python-brace-format
 msgid ""
 "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', "
 "operator:'{}'"
 msgstr ""
+"The platform is not properly deployed and cannot perform this operation. "
+"Please contact the administrator. Component version mismatch: apiserver:'{}', "
+"operator:'{}'"
 
 #: paasng/platform/evaluation/constants.py:25
 msgid "运行中"
@@ -3885,7 +3864,7 @@ msgstr "This type of APP migration is not currently supported"
 #: paasng/platform/mgrlegacy/legacy_proxy.py:87
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:116
 msgid "目前仅支持Python应用迁移"
-msgstr "Previously only supported Python APP migration"
+msgstr "Currently only Python APP migration is supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:120
 msgid "该项目没有trunk分支，请先添加trunk分支"
@@ -4446,7 +4425,7 @@ msgstr "The same strategy exists"
 
 #: paasng/security/access_control/views.py:410
 msgid "已经在审核中,请勿重复申请"
-msgstr "Already under review, please do not repeat your APP"
+msgstr "Already under review, please do not submit duplicate requests"
 
 #: paasng/security/access_control/views.py:415
 msgid "提交申请成功"
@@ -4484,7 +4463,7 @@ msgstr "Empty response after successful operation"
 
 #: paasng/utils/error_codes.py:24
 msgid "用户不存在"
-msgstr "userProfile does not exist"
+msgstr "User does not exist"
 
 #: paasng/utils/error_codes.py:27
 msgid "用户特性不存在"
@@ -4569,7 +4548,7 @@ msgstr "Failed to access protected resources"
 
 #: paasng/utils/error_codes.py:56
 msgid "无法彻底删除应用"
-msgstr "cannot delete cluster"
+msgstr "Unable to permanently delete the application"
 
 #: paasng/utils/error_codes.py:58
 msgid "模块创建失败"
@@ -4589,7 +4568,7 @@ msgstr "The number of modules created has reached the quota limit"
 
 #: paasng/utils/error_codes.py:63
 msgid "删除资源配额方案失败"
-msgstr "Delete resource quota plan failed"
+msgstr "Failed to delete resource quota plan"
 
 #: paasng/utils/error_codes.py:66
 msgid "获取进程信息失败"
@@ -4735,7 +4714,7 @@ msgstr "Failed to bind runtime"
 
 #: paasng/utils/error_codes.py:110
 msgid "日志平台-「自定义上报」配置不存在"
-msgstr "Log platform - ‘Custom Reporting’ configuration does not exist"
+msgstr "Log platform - 'Custom Reporting' configuration does not exist"
 
 #: paasng/utils/error_codes.py:111
 msgid "删除日志采集规则失败"
@@ -4787,7 +4766,7 @@ msgstr "Failed to check downline information"
 
 #: paasng/utils/error_codes.py:126
 msgid "下线失败"
-msgstr "Failed to get offline"
+msgstr "Failed to go offline"
 
 #: paasng/utils/error_codes.py:128
 msgid "未满足应用市场服务开启条件"
@@ -4835,7 +4814,7 @@ msgstr "Exceptions to the access statistics interface"
 
 #: paasng/utils/error_codes.py:144
 msgid "更新统计功能状态失败"
-msgstr "Failure to update the status of the statistics function"
+msgstr "Failed to update statistics function status"
 
 #: paasng/utils/error_codes.py:146
 msgid "不是yaml文件"
@@ -4878,31 +4857,26 @@ msgid "找不到指定的应用包"
 msgstr "Specified app package not found"
 
 #: paasng/utils/error_codes.py:159
-#, fuzzy
-#| msgid "部署失败，已有部署任务进行中，请刷新查看"
 msgid "构建失败，已有构建任务进行中，请刷新查看"
 msgstr ""
-"Deployment failed, existing deployment in progress, please refresh to see"
+"Build failed. Another build task is currently in progress. Please refresh to "
+"check."
 
 #: paasng/utils/error_codes.py:160
 msgid "找不到指定的 S-Mart 包构建记录"
 msgstr "Specified S-Mart package build record not found"
 
 #: paasng/utils/error_codes.py:161
-#, fuzzy
-#| msgid "构建失败"
 msgid "中止构建失败"
-msgstr "Build failed"
+msgstr "Failed to abort the build"
 
 #: paasng/utils/error_codes.py:162
 msgid "制品不存在"
 msgstr "Artifact not found"
 
 #: paasng/utils/error_codes.py:163
-#, fuzzy
-#| msgid "无法获取源码信息"
 msgid "无法获取 S-Mart 构建的阶段信息"
-msgstr "Unable to get source code information"
+msgstr "Unable to retrieve S-Mart build phase information."
 
 #: paasng/utils/error_codes.py:165
 msgid "无法获取用户凭证"
@@ -4938,22 +4912,16 @@ msgid "无法设置插件使用方，请稍候重试"
 msgstr "Unable to set plug-in user, please wait and try again"
 
 #: paasng/utils/error_codes.py:179
-#, fuzzy
-#| msgid "插件使用方"
 msgid "插件使用方不存在"
-msgstr "Plugin Distributor"
+msgstr "Plugin distributor does not exist."
 
 #: paasng/utils/error_codes.py:180
-#, fuzzy
-#| msgid "无法设置插件使用方，请稍候重试"
 msgid "无法授权插件使用方，请稍候重试"
-msgstr "Unable to set plug-in user, please wait and try again"
+msgstr "Unable to authorize plugin distributor. Please try again later."
 
 #: paasng/utils/error_codes.py:181
-#, fuzzy
-#| msgid "无法设置插件使用方，请稍候重试"
 msgid "无法撤销插件使用方，请稍候重试"
-msgstr "Unable to set plug-in user, please wait and try again"
+msgstr "Unable to revoke plug-in user, please wait and try again"
 
 #: paasng/utils/error_codes.py:183
 msgid "指定的应用模板不存在或不可用"
@@ -5022,15 +4990,15 @@ msgstr "Failed to import application model"
 
 #: paasng/utils/error_codes.py:225
 msgid "无法创建应用集群"
-msgstr "cannot create cluster"
+msgstr "Unable to create application cluster"
 
 #: paasng/utils/error_codes.py:226
 msgid "无法更新应用集群"
-msgstr "cannot update cluster"
+msgstr "Unable to update application cluster"
 
 #: paasng/utils/error_codes.py:227
 msgid "无法删除应用集群"
-msgstr "cannot delete cluster"
+msgstr "Unable to delete application cluster"
 
 #: paasng/utils/error_codes.py:229
 msgid "无法更新集群组件"
@@ -5057,14 +5025,10 @@ msgid "开发沙箱 API 请求异常"
 msgstr "dev sandbox API request exception"
 
 #: paasng/utils/error_codes.py:239
-#, fuzzy
-#| msgid "创建开发沙箱失败"
 msgid "创建 Agent 沙箱失败"
 msgstr "failed to create dev sandbox"
 
 #: paasng/utils/error_codes.py:240
-#, fuzzy
-#| msgid "开发沙箱已存在"
 msgid "Agent 沙箱已存在"
 msgstr "dev sandbox already exists"
 
@@ -5077,10 +5041,8 @@ msgid "Agent 沙箱文件操作失败"
 msgstr "Agent sandbox file operation failed"
 
 #: paasng/utils/error_codes.py:243
-#, fuzzy
-#| msgid "进程操作失败"
 msgid "Agent 沙箱进程操作失败"
-msgstr "Process operation failed"
+msgstr "Agent sandbox process operation failed."
 
 #: paasng/utils/error_codes.py:244
 msgid "Agent 沙箱进程执行超时"
@@ -5103,16 +5065,12 @@ msgid "Volume 已存在"
 msgstr "Volume already exists"
 
 #: paasng/utils/error_codes.py:251
-#, fuzzy
-#| msgid "成员创建失败"
 msgid "Volume 创建失败"
-msgstr "Member creation failed"
+msgstr "Failed to create volume."
 
 #: paasng/utils/error_codes.py:252
-#, fuzzy
-#| msgid "应用删除失败"
 msgid "Volume 删除失败"
-msgstr "APP deletion failed"
+msgstr "Failed to delete volume"
 
 #: paasng/utils/error_codes.py:254
 msgid "生成保留前缀授权码失败"
@@ -5179,10 +5137,8 @@ msgstr ""
 "The data nesting level is too deep, with a maximum level of {max_depth}"
 
 #: paasng/utils/validators.py:296
-#, fuzzy
-#| msgid "内容不能为空"
 msgid "文件名不能为空"
-msgstr "content cannot be empty"
+msgstr "File name cannot be empty."
 
 #: paasng/utils/validators.py:299 paasng/utils/views.py:250
 msgid "文件名非法"

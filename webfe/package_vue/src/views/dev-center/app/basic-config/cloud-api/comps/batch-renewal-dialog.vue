@@ -54,7 +54,7 @@
           >
             <template slot-scope="props">
               <span style="color: #ffb400">
-                {{ applyNewTime }}
+                {{ getExpiredTimeAfterRenewal(props.row) }}
               </span>
             </template>
           </bk-table-column>
@@ -87,7 +87,7 @@
     <template slot="footer">
       <bk-button
         theme="primary"
-        :disabled="formData.reason === ''"
+        :disabled="!renewalRows.length"
         :loading="loading"
         @click="handleConfirm"
       >
@@ -95,7 +95,7 @@
       </bk-button>
       <bk-button
         style="margin-left: 10px"
-        @click="handleCancel"
+        @click="visible = false"
       >
         {{ $t('取消') }}
       </bk-button>
@@ -103,6 +103,7 @@
   </bk-dialog>
 </template>
 <script>
+import { mapState } from 'vuex';
 import { formatDate } from '@/common/tools';
 import PaasngAlert from './paasng-alert';
 import i18n from '@/language/i18n';
@@ -145,28 +146,25 @@ export default {
         expired: 12,
       },
       renewKey: -1,
-      applyNewTime: 0,
     };
   },
   computed: {
-    // 可申请
-    applyRows() {
-      return this.rows.filter((item) => !item.applyDisabled);
-    },
+    ...mapState(['localLanguage']),
     // 可续期
     renewalRows() {
       return this.rows.filter((item) => !item.renewDisabled);
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
+    // 不可续期
+    unavailableRows() {
+      return this.rows.filter((item) => item.renewDisabled);
     },
     dialogTips() {
-      if (!this.applyRows.length) {
+      if (!this.unavailableRows.length) {
         return this.$t('您将续期 <i>{n1}</i> 个权限；', { n1: this.renewalRows.length });
       }
       return this.$t(
-        '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限已过期、权限永久有效等情况不支持续期',
-        { n1: this.renewalRows.length, n2: this.applyRows.length }
+        '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限永久有效等情况不支持续期',
+        { n1: this.renewalRows.length, n2: this.unavailableRows.length }
       );
     },
   },
@@ -175,16 +173,13 @@ export default {
       handler(value) {
         this.visible = !!value;
         if (this.visible) {
-          const timestamp = new Date().getTime() + this.formData.expired * 30 * 24 * 60 * 60 * 1000;
-          this.applyNewTime = formatDate(timestamp);
+          this.curTime = new Date().getTime();
           this.renewKey = +new Date();
         }
       },
       immediate: true,
     },
-    'formData.expired'(value) {
-      const timestamp = new Date().getTime() + value * 30 * 24 * 60 * 60 * 1000;
-      this.applyNewTime = formatDate(timestamp);
+    'formData.expired'() {
       this.renewKey = +new Date();
     },
   },
@@ -192,6 +187,9 @@ export default {
     this.curTime = new Date().getTime();
   },
   methods: {
+    /**
+     * 提交续期申请：仅提交可续期的权限，网关 API 与组件 API 使用不同的 ID 字段。
+     */
     async handleConfirm() {
       this.loading = true;
       try {
@@ -216,6 +214,9 @@ export default {
       }
     },
 
+    /**
+     * 获取续期前的过期时间，expires_in 为基于当前时间的剩余秒数。
+     */
     getExpiredTime(payload) {
       if (!payload.expires_in) {
         return '--';
@@ -224,6 +225,28 @@ export default {
       return formatDate(timestamp);
     },
 
+    /**
+     * 获取续期后的过期时间：未过期权限基于原过期时间续期，已过期权限基于当前时间续期。
+     */
+    getExpiredTimeAfterRenewal(payload) {
+      if (payload.renewDisabled) {
+        return '--';
+      }
+      if (this.formData.expired === 0) {
+        return this.$t('永久');
+      }
+      const renewalDuration = this.formData.expired * 30 * 24 * 60 * 60 * 1000;
+      const expiresIn = Number(payload.expires_in);
+      const baseTime =
+        payload.permission_status === 'expired' || !expiresIn || expiresIn <= 0
+          ? this.curTime
+          : this.curTime + expiresIn * 1000;
+      return formatDate(baseTime + renewalDuration);
+    },
+
+    /**
+     * 将剩余秒数转换为剩余天数文案。
+     */
     computedExpires(currentExpires) {
       if (!currentExpires) {
         return '--';
@@ -231,6 +254,9 @@ export default {
       return `${Math.ceil(currentExpires / (24 * 3600))}${this.$t('天')}`;
     },
 
+    /**
+     * 将续期后的剩余秒数转换为剩余天数文案。
+     */
     computedExpiresAfterRenewal(currentExpires) {
       if (!currentExpires) {
         return `${this.formData.expired * 30}${this.$t('天')}`;
@@ -238,10 +264,9 @@ export default {
       return `${Math.ceil(currentExpires / (24 * 3600)) + this.formData.expired * 30}${this.$t('天')}`;
     },
 
-    handleCancel() {
-      this.visible = false;
-    },
-
+    /**
+     * 弹窗关闭后重置表单状态，并通知父组件清理弹窗数据。
+     */
     handleAfterLeave() {
       this.formData.expired = 6;
       this.$emit('update:show', false);

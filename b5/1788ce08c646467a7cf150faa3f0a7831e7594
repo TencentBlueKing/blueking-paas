@@ -1,0 +1,16 @@
+apiserver/paasng/paasng/platform/agent_sandbox/models.py
+  h_190e3af8dc7b5f 144-145
+apiserver/paasng/paas_wl/bk_app/agent_sandbox/constants.py
+  h_190e3af8dc7b5f 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b51788ce08c646467a7cf150faa3f0a7831e7594",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

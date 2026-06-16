@@ -3,7 +3,8 @@
     <paas-content-loader
       :is-loading="isLoading"
       :is-transition="false"
-      placeholder="event-list-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
     >
       <section class="module-select">
         <bk-select

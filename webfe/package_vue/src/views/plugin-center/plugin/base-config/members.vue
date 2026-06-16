@@ -5,7 +5,8 @@
       class="app-container container"
       style="width: 100%"
       :is-loading="loading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :is-transform="false"
     >
       <section>

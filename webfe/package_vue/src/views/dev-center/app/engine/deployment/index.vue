@@ -9,6 +9,7 @@
     <paas-content-loader
       :is-loading="isLoading"
       :placeholder="loaderPlaceholder"
+      :loader-props="loaderProps"
       :offset-top="30"
       class="app-container middle overview"
     >
@@ -103,9 +104,12 @@ export default {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
       } if (this.routeName === 'appDeployForHistory') {
-        return 'deploy-history-loading';
+        return 'table-loading';
       }
       return 'deploy-top-loading';
+    },
+    loaderProps() {
+      return this.loaderPlaceholder === 'table-loading' ? { operationCount: 1 } : {};
     },
   },
   watch: {

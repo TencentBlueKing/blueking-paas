@@ -1,7 +1,8 @@
 <template>
   <paas-content-loader
     :is-loading="isLoading"
-    placeholder="deploy-inner-history-loading"
+    placeholder="table-loading"
+    :loader-props="{ operationCount: 1 }"
     :offset-top="0"
     :offset-left="-8"
     class="deploy-history m20"

@@ -109,3 +109,4 @@ class TmplSLZ(serializers.Serializer):
     description = TranslatedCharField()
     language = serializers.CharField()
     market_ready = serializers.BooleanField()
+    supported_runtime_types = serializers.ListField(child=serializers.CharField())

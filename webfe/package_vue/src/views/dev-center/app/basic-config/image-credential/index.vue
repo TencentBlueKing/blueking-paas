@@ -10,7 +10,8 @@
     <paas-content-loader
       class="app-container image-content"
       :is-loading="isLoading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
     >
       <div class="middle ps-main">
         <bk-button

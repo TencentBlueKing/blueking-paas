@@ -14,6 +14,7 @@
     <section :class="[{ 'enhanced-service-main-cls': !isTab }, { 'cloud-native-app': isCloudNativeApp }]">
       <paas-content-loader
         :placeholder="loaderPlaceholder"
+        :loader-props="loaderProps"
         :offset-top="30"
         class="app-container middle overview"
         :class="{ 'enhanced-service': !isTab }"
@@ -160,9 +161,12 @@ export default {
         return 'deploy-loading';
       }
       if (this.routeName === 'appDeployForHistory') {
-        return 'deploy-history-loading';
+        return 'table-loading';
       }
       return 'deploy-top-loading';
+    },
+    loaderProps() {
+      return this.loaderPlaceholder === 'table-loading' ? { operationCount: 1 } : {};
     },
     routerRefs() {
       const curPenel = this.panels.find((e) => e.name === this.active);

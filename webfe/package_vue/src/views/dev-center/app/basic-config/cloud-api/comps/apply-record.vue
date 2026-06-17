@@ -54,7 +54,7 @@
     <paas-content-loader
       :is-loading="loading"
       :offset-top="0"
-      placeholder="cloud-api-inner-loading"
+      placeholder="table-loading"
       :height="300"
     >
       <div>

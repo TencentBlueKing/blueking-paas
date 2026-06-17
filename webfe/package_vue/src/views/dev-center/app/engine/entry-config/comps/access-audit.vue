@@ -3,7 +3,8 @@
     class="approve-container">
     <paas-content-loader
       :is-loading="loaderLoading"
-      placeholder="order-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="25"
       class="order-approve-wrapper"
     >
@@ -103,4 +104,3 @@ export default {
         margin: 10px 24px 0px;
       }
   </style>
-

@@ -103,43 +103,6 @@
               ></bk-input>
             </bk-form-item>
           </template>
-          <!-- 镜像仓库不需要展示构建方式 -->
-          <bk-form-item
-            :required="true"
-            error-display-type="normal"
-            ext-cls="form-item-cls mt20"
-            :label="$t('构建方式')"
-            v-if="isBkDefaultCode && formData.buildMethod !== 'image'"
-          >
-            <div class="mt5">
-              <bk-radio-group
-                v-model="formData.buildMethod"
-                class="construction-manner"
-                @change="handleChangeBuildMethod"
-              >
-                <bk-radio :value="'buildpack'">
-                  {{ $t('蓝鲸 Buildpack') }}
-                  <span
-                    class="tips"
-                    @click.stop
-                  >
-                    <bk-icon type="info-circle" />
-                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
-                  </span>
-                </bk-radio>
-                <bk-radio :value="'dockerfile'">
-                  Dockerfile
-                  <span
-                    class="tips"
-                    @click.stop
-                  >
-                    <bk-icon type="info-circle" />
-                    {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
-                  </span>
-                </bk-radio>
-              </bk-radio-group>
-            </div>
-          </bk-form-item>
         </bk-form>
 
         <bk-steps
@@ -225,7 +188,6 @@
             <!-- 代码仓库 -->
             <section v-if="isBkDefaultCode">
               <bk-form
-                v-if="formData.buildMethod === 'buildpack'"
                 ref="formModuleRef"
                 :model="formData"
                 :rules="rules"
@@ -441,6 +403,49 @@
                     @change="changeSourceControl"
                   />
                 </bk-form-item>
+
+                <!-- 已有代码仓库-构建方式 -->
+                <bk-form-item
+                  :required="true"
+                  error-display-type="normal"
+                  ext-cls="form-item-cls mt20 mb20"
+                  :label="$t('构建方式')"
+                >
+                  <div class="mt5">
+                    <bk-radio-group
+                      v-model="formData.buildMethod"
+                      class="construction-manner"
+                      @change="handleChangeBuildMethod"
+                    >
+                      <bk-radio :value="'buildpack'">
+                        {{ $t('蓝鲸 Buildpack') }}
+                        <span
+                          class="tips"
+                          @click.stop
+                        >
+                          <bk-icon type="info-circle" />
+                          {{
+                            $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能')
+                          }}
+                        </span>
+                      </bk-radio>
+                      <bk-radio
+                        :value="'dockerfile'"
+                        :disabled="!isDockerfileAllowed"
+                      >
+                        Dockerfile
+                        <span
+                          class="tips"
+                          @click.stop
+                        >
+                          <bk-icon type="info-circle" />
+                          {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
+                        </span>
+                      </bk-radio>
+                    </bk-radio-group>
+                  </div>
+                </bk-form-item>
+
                 <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
                   <git-extend
                     ref="extend"
@@ -1107,6 +1112,22 @@ export default {
     isCreatedByPlatform() {
       return this.codeRepositoryConfig.type === 'platform';
     },
+    // 当前模板支持的构建方式类型
+    supportedRuntimeTypes() {
+      const currentTemplate = this.getCurrentTemplate();
+      if (currentTemplate?.supported_runtime_types) {
+        // 如果当前选择的构建方式不在支持的列表中，自动重置为默认值
+        if (!currentTemplate.supported_runtime_types.includes(this.formData.buildMethod)) {
+          this.formData.buildMethod = 'buildpack';
+        }
+        return currentTemplate.supported_runtime_types;
+      }
+      return ['buildpack'];
+    },
+    // 判断是否允许选择 Dockerfile 构建方式
+    isDockerfileAllowed() {
+      return this.supportedRuntimeTypes.includes('dockerfile');
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
@@ -1238,6 +1259,19 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    // 获取当前选中的模板信息（供 computed 使用）
+    getCurrentTemplate() {
+      // 优先从插件模板中查找
+      if (this.isBkPlugin && this.curPluginTemplate) {
+        return this.pluginTmpls.find((v) => v.name === this.curPluginTemplate);
+      }
+      // 从语言模板中查找
+      if (this.languagesList && this.formData.sourceInitTemplate) {
+        return this.languagesList.find((item) => item.name === this.formData.sourceInitTemplate);
+      }
+      return null;
     },
 
     // 获取代码源仓库信息

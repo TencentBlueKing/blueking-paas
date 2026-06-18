@@ -227,7 +227,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
@@ -340,8 +340,8 @@ export default {
         const start = this.dateRange.startTime;
         const end = this.dateRange.endTime;
 
-        const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
+        const endSeconds = dayjs(end).valueOf();
+        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -378,13 +378,13 @@ export default {
       if (this.dateRange.startTime && this.dateRange.endTime) {
         const start = this.dateRange.startTime;
         const end = this.dateRange.endTime;
-        const now = moment().format('YYYY-MM-DD');
+        const now = dayjs().format('YYYY-MM-DD');
 
-        const startSeconds = moment(start).valueOf();
-        const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
-        const threeEndSeconds = moment(start).add(3, 'days').valueOf(); // 三天后
-        const sevenEndSeconds = moment(now).add(-7, 'days').valueOf(); // 七天后
+        const startSeconds = dayjs(start).valueOf();
+        const endSeconds = dayjs(end).valueOf();
+        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
+        const threeEndSeconds = dayjs(start).add(3, 'days').valueOf(); // 三天后
+        const sevenEndSeconds = dayjs(now).add(-7, 'days').valueOf(); // 七天后
 
         // 精度规则:
         // if 时间选择器选择访问 < 1d
@@ -446,8 +446,6 @@ export default {
     },
   },
   created() {
-    moment.locale(this.localLanguage);
-    window.moment = moment;
     this.siteName = 'default';
     this.engineEnabled = this.curAppInfo.web_config.engine_enabled;
   },
@@ -457,8 +455,8 @@ export default {
     start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
     this.initDateTimeRange = [start, end];
 
-    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+    this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
     this.init();
   },
   methods: {
@@ -536,7 +534,9 @@ export default {
         const fields = this.fieldList.map((item) => item.name);
         const props = this.fieldList.map((item) => item.prop);
         const data = this.formatJson(props, res.resources);
-        const fileName = this.engineEnabled ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}` : `${appCode}_custom_event_statistics_${this.dimensionType}`;
+        const fileName = this.engineEnabled
+          ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}`
+          : `${appCode}_custom_event_statistics_${this.dimensionType}`;
         await exportJsonToExcel(fields, data, fileName);
       } catch (e) {
         if (e.detail && e.detail !== this.$t('未找到。')) {
@@ -779,7 +779,7 @@ export default {
       const chartData = this.chartDataCache;
 
       chartData.forEach((item) => {
-        xAxisData.push(moment(item.time).format(this.dateFormat));
+        xAxisData.push(dayjs(item.time).format(this.dateFormat));
         ue.push(item.ue);
         ev.push(item.ev);
       });
@@ -896,11 +896,6 @@ export default {
     },
 
     handleRangeChange(type) {
-      // const end = moment().subtract(0, 'days').format('YYYY-MM-DD')
-      // let start = moment().subtract(1, 'days').format('YYYY-MM-DD')
-      // if (type === 'week') {
-      //     start = moment().subtract(7, 'days').format('YYYY-MM-DD')
-      // }
       if (!this.allowRanges.includes(type)) {
         return false;
       }

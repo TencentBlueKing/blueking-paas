@@ -316,7 +316,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
@@ -328,8 +328,8 @@ const xssOptions = {
   },
 };
 const logXss = new xss.FilterXSS(xssOptions);
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -932,7 +932,7 @@ export default {
     },
 
     formatTime(time) {
-      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
+      return time ? dayjs.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     // 获取清洗规则, 添加对应link

@@ -1755,7 +1755,7 @@ export default {
        * 如何判断进程当前是否为操作中（繁忙状态）？
        * 主要根据 process_packages 里面的 target_status 判断：
        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与实际期望副本数 replicas 一致，而且 failed 为 0 时正常，否则为操作中
        */
       if (process.targetStatus === 'stop') {
         process.operateIconTitle = this.$t('启动进程');
@@ -1768,7 +1768,7 @@ export default {
       } else if (process.targetStatus === 'start') {
         process.operateIconTitle = this.$t('停止进程');
         process.operateIconTitleCopy = this.$t('停止进程');
-        if (process.available_instance_count === process.targetReplicas && process.failed === 0) {
+        if (process.available_instance_count === process.desired_replicas && process.failed === 0) {
           process.status = 'Stopped';
         } else {
           process.status = 'Running';

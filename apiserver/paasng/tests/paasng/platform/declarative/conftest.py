@@ -22,7 +22,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationPolicy
-from paas_wl.infras.cluster.models import ClusterAllocationPolicy
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from tests.utils.basic import generate_random_string
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.mocks.cluster import cluster_ingress_config
@@ -71,3 +71,8 @@ def _setup_random_tenant_cluster_allocation_policy(random_tenant_id):
         allocation_policy=AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
         tenant_id=random_tenant_id,
     )
+    # 将测试集群的 available_tenant_ids 更新，使其对随机租户也可用
+    cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+    if random_tenant_id not in cluster.available_tenant_ids:
+        cluster.available_tenant_ids.append(random_tenant_id)
+        cluster.save(update_fields=["available_tenant_ids"])

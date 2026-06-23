@@ -18,7 +18,7 @@
 from typing import TYPE_CHECKING, Dict
 
 from paas_wl.infras.cluster.allocator import ClusterAllocator
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.applications.constants import AppEnvironment
@@ -28,23 +28,9 @@ if TYPE_CHECKING:
     from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
-def get_exposed_url_type(application: "Application", cluster_name: str | None = None) -> ExposedURLType:
-    """
-    Get the exposed url type
-
-    :param application: The application
-    :param cluster_name: The name of cluster. If not given, use default cluster of the application
-    """
-    if cluster_name:
-        cluster = Cluster.objects.get(name=cluster_name)
-    else:
-        ctx = AllocationContext(
-            tenant_id=application.tenant_id,
-            region=application.region,
-            environment=AppEnvironment.PRODUCTION,
-        )
-        cluster = ClusterAllocator(ctx).get_default()
-
+def get_bound_env_exposed_url_type(env: "ModuleEnvironment") -> ExposedURLType:
+    """Get the exposed url type from the cluster actually bound to the module environment."""
+    cluster = EnvClusterService(env).get_cluster()
     return ExposedURLType(cluster.exposed_url_type)
 
 
@@ -67,7 +53,7 @@ class EnvClusterService:
         if cluster_name := wl_app.latest_config.cluster:
             return cluster_name
 
-        ctx = AllocationContext.from_module_env(self.env)
+        ctx = self._build_allocation_context()
         return ClusterAllocator(ctx).get_default().name
 
     def bind_cluster(self, cluster_name: str | None, operator: str | None = None):
@@ -80,11 +66,7 @@ class EnvClusterService:
         if cluster_name:
             cluster = Cluster.objects.get(name=cluster_name)
         else:
-            ctx = AllocationContext.from_module_env(self.env)
-            # 支持带操作人的集群分配
-            if operator:
-                ctx.username = operator
-
+            ctx = self._build_allocation_context(operator)
             cluster = ClusterAllocator(ctx).get_default()
 
         # bind cluster to wl_app
@@ -94,6 +76,22 @@ class EnvClusterService:
             ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST,
         )
         cfg.save()
+
+    def _build_allocation_context(self, operator: str | None = None) -> AllocationContext:
+        """Build an allocation context for current env."""
+        ctx = AllocationContext.from_module_env(self.env)
+        ctx.usage = self._get_cluster_usage()
+        if operator:
+            ctx.username = operator
+        return ctx
+
+    def _get_cluster_usage(self) -> ClusterUsage | None:
+        """Get the cluster usage for current env."""
+        if self.env.application.is_ai_agent_app and self.env.module.is_default:
+            return ClusterUsage.AI_AGENT
+
+        # 其他情况暂时不考虑 usage 的情况，agent_sandbox 不使用这里的逻辑
+        return None
 
 
 def get_app_prod_env_cluster(app: "Application") -> Cluster:

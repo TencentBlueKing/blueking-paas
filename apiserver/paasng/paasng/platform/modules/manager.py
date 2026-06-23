@@ -33,7 +33,7 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
+from paas_wl.infras.cluster.shim import EnvClusterService, get_bound_env_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
@@ -146,6 +146,7 @@ class ModuleInitializer:
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
         )
 
+        prod_env: ModuleEnvironment | None = None
         for environment in self.default_environments:
             name = self.make_engine_app_name(environment)
             engine_app = self._get_or_create_engine_app(name, wl_app_type)
@@ -156,6 +157,9 @@ class ModuleInitializer:
                 environment=environment,
                 tenant_id=self.application.tenant_id,
             )
+            if environment == AppEnvironment.PRODUCTION:
+                prod_env = env
+
             # 为部署环境绑定集群，支持以模块创建者的身份选择可用集群
             username = get_username_by_bkpaas_user_id(self.module.creator)
             EnvClusterService(env).bind_cluster(env_cluster_names.get(environment), operator=username)
@@ -164,10 +168,9 @@ class ModuleInitializer:
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
 
-        # Also set the module's exposed_url_type by the cluster
-        self.module.exposed_url_type = get_exposed_url_type(
-            application=self.application, cluster_name=env_cluster_names.get(AppEnvironment.PRODUCTION)
-        ).value
+        # Also set the module's exposed_url_type by the cluster bound to the prod environment.
+        assert prod_env is not None, "prod_env is None"
+        self.module.exposed_url_type = get_bound_env_exposed_url_type(prod_env).value
         self.module.save(update_fields=["exposed_url_type"])
 
     def initialize_vcs_with_template(

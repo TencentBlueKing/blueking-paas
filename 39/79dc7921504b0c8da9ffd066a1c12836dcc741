@@ -1,0 +1,14 @@
+apiserver/paasng/paas_wl/bk_app/agent_sandbox/kres_slzs.py
+  h_190e3af8dc7b5f 22,136-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "3979dc7921504b0c8da9ffd066a1c12836dcc741",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

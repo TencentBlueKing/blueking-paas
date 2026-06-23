@@ -118,7 +118,7 @@
             <span
               v-bk-tooltips="{
                 content: $t(row.applyTips),
-                disabled: !row.applyDisabled,
+                disabled: !row.applyDisabled || !row.applyTips,
               }"
             >
               {{ $t('申请') }}
@@ -257,15 +257,13 @@ export default {
         const disabledTips = {
           pending: this.$t('权限申请中'),
           approved: this.$t('已有权限，无需申请'),
+          owned: this.$t('已有权限，无需申请'),
         };
-        const mcpServers = results.map((item) => {
-          return {
-            ...item,
-            // 判断当前权限是否可以申请
-            applyDisabled: ['pending', 'approved'].includes(item?.permission?.status),
-            applyTips: disabledTips[item?.permission?.status] || '',
-          };
-        });
+        const mcpServers = results.map(item => ({
+          ...item,
+          applyDisabled: item?.permission?.action !== 'apply',
+          applyTips: disabledTips[item?.permission?.status] || '',
+        }));
         this.setTableData(mcpServers, this.pagination.current, this.pagination.limit);
         // 全量数据
         this.allMcpServerList = mcpServers;
@@ -279,8 +277,7 @@ export default {
     },
 
     selectable(row) {
-      // 申请中、已申请不可选禁用
-      return !['pending', 'approved'].includes(row.permission?.status);
+      return row.permission?.action === 'apply';
     },
 
     clearFilterKey() {
@@ -434,7 +431,8 @@ export default {
       background: #ffdddd;
       border-color: #ea3636;
     }
-    &.approved {
+    &.approved,
+    &.owned {
       background: #cbf0da;
       border-color: #2caf5e;
     }

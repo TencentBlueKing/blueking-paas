@@ -1368,13 +1368,6 @@ export default {
     font-size: 12px;
     color: #979ba5;
   }
-  /deep/ .bk-table-header .custom-header-cell {
-    color: inherit;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-underline-position: under;
-    text-decoration-color: #979ba5;
-  }
 }
 .activeTag:hover {
   color: #3a84ff;

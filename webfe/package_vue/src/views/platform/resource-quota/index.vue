@@ -305,14 +305,3 @@ export default {
   },
 };
 </script>
-
-<style lang="scss" scoped>
-.resource-quota-container {
-  /deep/ .bk-table-header .custom-header-cell {
-    color: inherit;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-underline-position: under;
-  }
-}
-</style>

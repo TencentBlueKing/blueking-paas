@@ -69,6 +69,13 @@
               {{ row.is_builtin ? $t('平台内置') : $t('自定义') }}
             </template>
           </bk-table-column>
+          <bk-table-column :render-header="renderHeader">
+            <template slot-scope="{ row }">
+              <bk-tag :theme="isSharedIndexRow(row) ? 'success' : 'default'">
+                {{ isSharedIndexRow(row) ? $t('是') : $t('否') }}
+              </bk-tag>
+            </template>
+          </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
             width="180"
@@ -131,7 +138,7 @@
         :title="$t('暂无自定义日志采集等高级功能')"
         :functional-desc="
           $t(
-            '平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。',
+            '平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。'
           )
         "
         :guide-title="$t('如需要该功能，需要部署：')"
@@ -503,7 +510,7 @@ export default {
                   color: '#313238',
                 },
               },
-              `${i18n.t('采集规则')}：${data.name_en}`,
+              `${i18n.t('采集规则')}：${data.name_en}`
             ),
             h(
               'div',
@@ -513,9 +520,9 @@ export default {
                   color: '#63656E',
                 },
               },
-              i18n.t('删除后，将不再采集相关日志。'),
+              i18n.t('删除后，将不再采集相关日志。')
             ),
-          ],
+          ]
         ),
         confirmFn: () => {
           this.deleteCollectionRule(data.name_en);
@@ -531,7 +538,7 @@ export default {
         },
         (validator) => {
           console.error(validator.content);
-        },
+        }
       );
     },
 
@@ -563,6 +570,23 @@ export default {
     // 是否为共享索引的采集规则（共享索引跳转到 bklog 平台也无法使用检索）
     isSharedIndexRow(row) {
       return ['bkpaas_platform_log_stdout', 'bkpaas_platform_log_json'].includes(row.name_en);
+    },
+
+    renderHeader() {
+      const directive = {
+        name: 'bkTooltips',
+        content: this.$t('公共采集项由平台统一接入日志平台，不支持在日志平台进行单独的检索、配置。'),
+        width: 300,
+        placement: 'top',
+      };
+      return (
+        <span
+          class="custom-header-cell"
+          v-bk-tooltips={directive}
+        >
+          {this.$t('公共采集项')}
+        </span>
+      );
     },
 
     handleToLink(row) {

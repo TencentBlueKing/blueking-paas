@@ -23,7 +23,7 @@ from svc_bk_repo.monitoring.models import RepoQuotaStatistics
 from svc_bk_repo.shared.scheduler import scheduler
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
-from svc_bk_repo.vendor.helper import get_repo_manager
+from svc_bk_repo.vendor.helper import BKGenericRepoManager, get_repo_manager
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def auto_expand_check():
     logger.info("Auto-expand check finished.")
 
 
-def _try_auto_expand(stat: RepoQuotaStatistics, manager):
+def _try_auto_expand(stat: RepoQuotaStatistics, manager: BKGenericRepoManager):
     """基于已采集的统计数据判断是否自动扩容, 并在满足条件时触发扩容"""
     bucket_type = "private" if stat.repo_name == stat.instance.get_credentials()["private_bucket"] else "public"
     config = stat.instance.config.get("auto_expand", {}).get(bucket_type)

@@ -136,7 +136,10 @@
         <div class="action-type">自动扩容</div>
         <div class="action-detail">
             <p class="tip mb10" style="font-size: 13px; color: #888;">
-                开启后，使用率达到阈值时自动扩容，每次增加 1GB，不另行通知
+                开启后，当仓库使用率超过设定的阈值（50%~95%）时，将自动触发扩容，每次增加 1GB，最大不超过 10GB。
+            </p>
+            <p class="tip mb10" style="font-size: 13px; color: #888;">
+                扩容过程由系统自动完成，不另行通知
             </p>
 
             <div style="margin-bottom: 8px;">

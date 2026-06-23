@@ -317,7 +317,7 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import chartOption from '@/json/process-chart-option';
 import envChartOption from '@/json/analysis-chart-option';
 import appBaseMixin from '@/mixins/app-base-mixin';
@@ -446,8 +446,8 @@ export default {
         const start = this.dateRange.startTime;
         const end = this.dateRange.endTime;
 
-        const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
+        const endSeconds = dayjs(end).valueOf();
+        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -556,9 +556,6 @@ export default {
       deep: true,
     },
   },
-  created() {
-    moment.locale(this.localLanguage);
-  },
   mounted() {
     this.init();
     this.initDate();
@@ -580,8 +577,8 @@ export default {
     initDate() {
       const end = new Date();
       const start = new Date();
-      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
       this.curTime = this.dateShortCut[0];
     },
     initTopText() {
@@ -602,7 +599,7 @@ export default {
         .then((response) => {
           this.operationsList = [];
           for (const item of response.results) {
-            item.at_friendly = moment(item.at).startOf('minute').fromNow();
+            item.at_friendly = dayjs(item.at).startOf('minute').fromNow();
             this.operationsList.push(item);
           }
         });
@@ -796,7 +793,7 @@ export default {
         const chartData = [];
         xAxisData = [];
         item.results.forEach((itemData) => {
-          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
+          xAxisData.push(dayjs(itemData[0] * 1000).format('MM-DD HH:mm'));
           // 内存由Byte转MB
           if (type === 'mem') {
             const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
@@ -1025,7 +1022,7 @@ export default {
       const chartData = this.chartDataCache[env];
 
       chartData.forEach((item) => {
-        xAxisData.push(moment(item.time).format(this.dateFormat));
+        xAxisData.push(dayjs(item.time).format(this.dateFormat));
         uv.push(item.uv);
         pv.push(item.pv);
       });
@@ -1116,7 +1113,7 @@ export default {
       return `${appDeployInfo.deployment.operator} ${this.$t('于')} ${this.smartTime(
         appDeployInfo.deployment.deploy_time,
         'smartShorten'
-      )} 
+      )}
                 ${appDeployInfo.is_deployed ? this.$t('部署') : this.$t('下架')}`;
     },
 

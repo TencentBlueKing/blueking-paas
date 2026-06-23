@@ -152,9 +152,8 @@
 <script>
 import { formatDate, formatTime } from '@/common/tools';
 import { bus } from '@/common/bus';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
+
 export default {
   name: 'HomeAlarmRecords',
   data() {
@@ -163,7 +162,6 @@ export default {
       isLoading: false,
       formatTime,
       dayjs,
-      relativeTime,
       expandRowKeys: [],
       slowQueryCount: 0,
       selectionTime: {},
@@ -176,7 +174,6 @@ export default {
     },
   },
   created() {
-    dayjs.extend(relativeTime);
     bus.$on('home-date', (time) => {
       this.selectionTime = time;
       this.queryAllAppAlerts();

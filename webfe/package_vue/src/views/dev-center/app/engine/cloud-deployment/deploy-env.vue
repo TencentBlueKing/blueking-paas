@@ -2,13 +2,14 @@
   <div class="env-container">
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="deploy-env-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 2, operationWidth: 180 }"
       :is-transition="false"
       :offset-top="0"
       :offset-left="0"
       class="middle"
     >
-      <section v-show="!isLoading">
+      <section>
         <bk-alert type="info">
           <span slot="title">
             {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}

@@ -6,7 +6,8 @@
       :is-transition="false"
       :offset-top="0"
       :offset-left="0"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
     >
       <div class="ps-main">
         <bk-alert

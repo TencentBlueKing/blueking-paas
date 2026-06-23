@@ -17,6 +17,8 @@
     processes: {}
     tags: []
     repo_url: ''
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template
   pk: 2
@@ -38,6 +40,8 @@
     processes: {}
     tags: []
     repo_url: ''
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template
   pk: 3
@@ -59,6 +63,8 @@
       web: npm run server
     tags: []
     repo_url: ''
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template
   pk: 4
@@ -79,6 +85,8 @@
     processes: {}
     tags: []
     repo_url: ''
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: true
 - model: templates.template
   pk: 5
@@ -104,6 +112,7 @@
     source_dir: './template'
     render_method: 'cookiecutter'
     runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template
   pk: 6
@@ -126,6 +135,8 @@
     tags: []
     repo_url: ''
     render_method: 'jinja2_double_square_bracket'
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false
 - model: templates.template
   pk: 7
@@ -149,6 +160,8 @@
     repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
     source_dir: './templates/python'
     render_method: 'cookiecutter'
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: true
 - model: templates.template
   pk: 8
@@ -172,6 +185,8 @@
     repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
     source_dir: './templates/golang'
     render_method: 'cookiecutter'
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: true
 - model: templates.template
   pk: 9
@@ -196,4 +211,6 @@
     repo_url: 'https://github.com/TencentBlueKing/bk-aidev-agent'
     source_dir: './template'
     render_method: 'cookiecutter'
+    runtime_type: buildpack
+    supported_runtime_types: [buildpack]
     is_hidden: false

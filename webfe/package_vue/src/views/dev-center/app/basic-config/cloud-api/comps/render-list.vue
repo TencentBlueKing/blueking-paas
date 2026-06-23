@@ -85,7 +85,7 @@
     </div>
     <paas-content-loader
       :is-loading="loading"
-      placeholder="cloud-api-inner-loading"
+      placeholder="table-loading"
       :height="300"
     >
       <div class="spacing-x2">

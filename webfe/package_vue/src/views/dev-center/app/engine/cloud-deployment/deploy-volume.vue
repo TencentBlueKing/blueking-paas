@@ -2,7 +2,8 @@
   <div class="volume-container">
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="deploy-volume-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :is-transition="false"
       :offset-top="0"
       :offset-left="0"

@@ -701,6 +701,7 @@ def _init_tmpls():
             "processes": {"web": "python manage.py runserver"},
             "tags": [],
             "repo_url": "http://github.com/blueking/dummy_tmpl",
+            "supported_runtime_types": ["buildpack"],
         },
     )
 
@@ -720,6 +721,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "repo_url": "http://github.com/blueking/php_legacy_tmpl",
+            "supported_runtime_types": ["buildpack"],
         },
     )
 
@@ -739,6 +741,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "repo_url": "http://github.com/blueking/django_legacy_tmpl",
+            "supported_runtime_types": ["buildpack"],
         },
     )
 
@@ -757,6 +760,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "runtime_type": RuntimeType.DOCKERFILE,
+            "supported_runtime_types": ["buildpack"],
         },
     )
     Template.objects.get_or_create(
@@ -775,6 +779,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "runtime_type": RuntimeType.BUILDPACK,
+            "supported_runtime_types": ["buildpack"],
         },
     )
     Template.objects.get_or_create(
@@ -793,6 +798,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "runtime_type": RuntimeType.BUILDPACK,
+            "supported_runtime_types": ["buildpack"],
         },
     )
     Template.objects.get_or_create(
@@ -811,6 +817,7 @@ def _init_tmpls():
             "processes": {},
             "tags": [],
             "runtime_type": RuntimeType.BUILDPACK,
+            "supported_runtime_types": ["buildpack"],
         },
     )
 

@@ -84,17 +84,20 @@
               {{ $t('复制审批链接') }}
             </bk-button>
           </span>
-          <span v-else-if="['name', 'description'].includes(column.prop)">
-            <a
-              v-if="row.mcp_server?.doc_link && column.prop === 'name'"
-              :href="row.mcp_server?.doc_link"
-              target="_blank"
-              v-dompurify-html="highlight(row.mcp_server?.name || '--')"
-            ></a>
-            <span
-              v-else
-              v-dompurify-html="highlight(row.mcp_server?.[column.prop] || '--')"
-            ></span>
+          <a
+            v-else-if="column.prop === 'name' && row.mcp_server?.doc_link"
+            :href="row.mcp_server?.doc_link"
+            target="_blank"
+            class="text-ellipsis"
+            v-dompurify-html="highlight(getDisplayName(row))"
+          ></a>
+          <div
+            v-else-if="column.prop === 'name'"
+            class="text-ellipsis"
+            v-dompurify-html="highlight(getDisplayName(row))"
+          ></div>
+          <span v-else-if="column.prop === 'description'">
+            <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>
           </span>
           <template v-else>
             {{ row.mcp_server?.[column.prop] || '--' }}
@@ -141,7 +144,7 @@
 
 <script>
 import BatchDialog from './batch-apply-dialog';
-import { paginationFun } from '@/common/utils';
+import { filterListByKeywordInFields, paginationFun } from '@/common/utils';
 import { MCP_SERVER_STATUS } from '@/common/constants';
 import { debounce } from 'lodash';
 import { copy } from '@/common/tools';
@@ -288,23 +291,18 @@ export default {
 
     // 获取过滤后的数据（根据搜索条件）
     getFilteredData() {
-      console.log('this.headerFilterField', this.headerFilterField);
-      if (!this.searchQuery && !this.headerFilterField) {
-        return this.allMcpServerList;
+      const keywordFilteredData = filterListByKeywordInFields(this.allMcpServerList, this.searchQuery, [
+        'mcp_server.title',
+        'mcp_server.name',
+        'mcp_server.description',
+      ]);
+
+      if (!this.headerFilterField) {
+        return keywordFilteredData;
       }
-      const keyword = this.searchQuery.toLowerCase();
-      return this.allMcpServerList.filter((item) => {
-        console.log('item', item);
-        const name = item.mcp_server?.name?.toLowerCase() || '';
-        const description = item.mcp_server?.description?.toLowerCase() || '';
-        const status = item.permission?.status || '';
-        // 关键字搜索条件
-        const keywordMatch = !this.searchQuery || name.includes(keyword) || description.includes(keyword);
-        // 状态筛选条件
-        const statusMatch = !this.headerFilterField || status === this.headerFilterField;
-        // 同时满足关键字搜索和状态筛选条件
-        return keywordMatch && statusMatch;
-      });
+
+      // 表头状态过滤
+      return keywordFilteredData.filter((item) => item.permission?.status === this.headerFilterField);
     },
 
     // 分页处理
@@ -401,6 +399,12 @@ export default {
       copy(url, this);
     },
 
+    // 获取展示名称：title (name)
+    getDisplayName(row) {
+      const mcp = row.mcp_server || {};
+      return `${mcp.title || '--'} (${mcp.name || '--'})`;
+    },
+
     // 搜索关键词高亮
     highlight(text) {
       const keyword = this.searchQuery;
@@ -434,6 +438,9 @@ export default {
       background: #cbf0da;
       border-color: #2caf5e;
     }
+  }
+  .text-ellipsis {
+    display: block;
   }
 }
 </style>

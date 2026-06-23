@@ -48,6 +48,7 @@ def create_test_template_data(**overrides):
         "repo_url": "http://test.com/test/test",
         "render_method": "django_template",
         "runtime_type": "buildpack",
+        "supported_runtime_types": ["buildpack"],
         "is_display": False,
     }
     default_data.update(overrides)

@@ -194,11 +194,11 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>import dayjs from '@/common/dayjs';
 import i18n from '@/language/i18n.js';
 
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
   .format('YYYY-MM-DD HH:mm:ss');
 const dateTextMap = {
   '5m': '最近5分钟',

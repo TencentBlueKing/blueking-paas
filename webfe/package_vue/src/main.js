@@ -33,7 +33,6 @@ import $ from 'jquery';
 import '@/common/jquery_tools';
 
 import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
-import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/utils/dompurify';
@@ -135,7 +134,6 @@ Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 
 Vue.prototype.smartTime = SmartTime;
 window.Clipboard = Clipboard;
-window.moment = moment;
 window.showDeployTip = function () {
   Vue.prototype.$paasMessage({
     theme: 'error',

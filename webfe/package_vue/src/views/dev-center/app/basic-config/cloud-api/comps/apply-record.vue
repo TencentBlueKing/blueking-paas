@@ -54,7 +54,7 @@
     <paas-content-loader
       :is-loading="loading"
       :offset-top="0"
-      placeholder="cloud-api-inner-loading"
+      placeholder="table-loading"
       :height="300"
     >
       <div>
@@ -305,7 +305,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import { mapState, mapGetters } from 'vuex';
 import { copy } from '@/common/tools';
 import UserDisplay from '@/components/user/user-display.vue';
@@ -596,8 +596,8 @@ export default {
       const start = new Date();
       start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
       this.initDateTimeRange = [start, end];
-      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
       this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
       this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
       this.init();
@@ -612,8 +612,6 @@ export default {
     },
   },
   created() {
-    moment.locale(this.localLanguage);
-    window.moment = moment;
     this.isFilter = false;
   },
   mounted() {
@@ -621,8 +619,8 @@ export default {
     const start = new Date();
     start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
     this.initDateTimeRange = [start, end];
-    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+    this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
     this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
     this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
     this.initTypeFromQuery();

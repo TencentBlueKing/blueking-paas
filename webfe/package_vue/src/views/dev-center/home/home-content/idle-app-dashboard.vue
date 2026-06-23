@@ -246,9 +246,7 @@
 
 <script>
 import TagBox from '../comps/tag-box';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
 import { bus } from '@/common/bus';
 
 export default {
@@ -276,10 +274,6 @@ export default {
   },
   created() {
     this.getIdleAppList();
-    dayjs.extend(relativeTime);
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
   },
   methods: {
     // 获取闲置应用看板数据

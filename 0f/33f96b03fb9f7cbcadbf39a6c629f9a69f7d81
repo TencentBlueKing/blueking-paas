@@ -1,0 +1,14 @@
+apiserver/paasng/tests/paasng/accessories/servicehub/binding_policy/test_selector.py
+  h_190e3af8dc7b5f 31,225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "0f33f96b03fb9f7cbcadbf39a6c629f9a69f7d81",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

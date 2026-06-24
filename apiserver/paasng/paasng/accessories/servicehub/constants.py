@@ -84,6 +84,12 @@ class PrecedencePolicyCondType(StrStructuredEnum):
     ALWAYS_MATCH = EnumField("always_match", label="AlwaysMatch")
 
 
+class ServiceUsage(StrStructuredEnum):
+    """增强服务用途，搭配 PrecedencePolicyCondType.USAGE_IN 使用"""
+
+    AI_AGENT = EnumField("ai_agent", label="AI Agent")
+
+
 class ServiceAllocationPolicyType(StrStructuredEnum):
     """服务分配策略类型"""
 

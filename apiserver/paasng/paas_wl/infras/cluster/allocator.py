@@ -18,7 +18,7 @@
 from functools import partialmethod
 from typing import List
 
-from django.db.models import Case, QuerySet, When
+from django.db.models import Case, Q, QuerySet, When
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy
@@ -80,14 +80,11 @@ class ClusterAllocator:
         else:
             raise ValueError(f"unknown cluster allocation policy type: {policy.type}")
 
-        if not cluster_names:
+        clusters = self._list_available_clusters_by_names(cluster_names)
+        if not clusters.exists():
             raise ValueError(f"no cluster found for policy: {policy}")
 
-        # 由于分配策略认定 cluster_names 中的第一个是默认集群，因此需要特殊排序
-        # ref: https://rednafi.com/python/sort_by_a_custom_sequence_in_django/
-        order = Case(*(When(name=name, then=pos) for pos, name in enumerate(cluster_names)))
-        # 查询并按自定义规则排序
-        return Cluster.objects.filter(name__in=cluster_names).order_by(order)
+        return clusters
 
     def _get_cluster_names_from_policy(self, policy: AllocationPolicy) -> List[str] | None:
         """根据策略获取集群名称列表"""
@@ -98,3 +95,16 @@ class ClusterAllocator:
             return policy.env_clusters.get(self.ctx.environment)
 
         return policy.clusters
+
+    def _list_available_clusters_by_names(self, cluster_names: List[str] | None) -> QuerySet[Cluster]:
+        """根据集群名列表获取当前租户可用的集群"""
+        if not cluster_names:
+            return Cluster.objects.none()
+
+        # 由于分配策略认定 cluster_names 中的第一个是默认集群，因此需要特殊排序
+        # ref: https://rednafi.com/python/sort-by-a-custom-sequence-in-django/
+        order = Case(*(When(name=name, then=pos) for pos, name in enumerate(cluster_names)))
+        return Cluster.objects.filter(
+            Q(tenant_id=self.ctx.tenant_id) | Q(available_tenant_ids__contains=self.ctx.tenant_id),
+            name__in=cluster_names,
+        ).order_by(order)

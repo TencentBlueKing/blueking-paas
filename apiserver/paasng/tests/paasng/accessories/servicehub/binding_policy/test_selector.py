@@ -19,6 +19,7 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
@@ -191,6 +192,38 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.CLUSTER_IN,
                     cond_data={"cluster_names": [cluster_name]},
+                    plans=[plan2.uuid],
+                    priority=1,
+                ),
+                ServiceBindingPrecedencePolicyDTO(
+                    cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
+                    cond_data={},
+                    plans=[plan1.uuid],
+                    priority=0,
+                ),
+            ]
+        )
+
+
+class TestPlanSelectorSelectWithPrecedenceUsageIn:
+    def test_static_with_usage_in_matches(self, service_obj, bk_prod_env, plan1, plan2):
+        bk_prod_env.application.is_ai_agent_app = True
+        bk_prod_env.application.save(update_fields=["is_ai_agent_app"])
+        self._setup_static_precedence_policies(service_obj, plan1, plan2)
+
+        assert PlanSelector().select(service_obj, bk_prod_env) == plan2
+
+    def test_static_with_usage_in_not_matches(self, service_obj, bk_prod_env, plan1, plan2):
+        self._setup_static_precedence_policies(service_obj, plan1, plan2)
+
+        assert PlanSelector().select(service_obj, bk_prod_env) == plan1
+
+    def _setup_static_precedence_policies(self, service_obj, plan1, plan2):
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+            [
+                ServiceBindingPrecedencePolicyDTO(
+                    cond_type=PrecedencePolicyCondType.USAGE_IN,
+                    cond_data={"usages": [ClusterUsage.AGENT_SANDBOX.value]},
                     plans=[plan2.uuid],
                     priority=1,
                 ),

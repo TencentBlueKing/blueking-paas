@@ -72,10 +72,10 @@ class PrecedencePolicyCondType(StrStructuredEnum):
     """The type of precedence policy condition"""
 
     # 按应用所属地域匹配：当 env.application.region 在 cond_data["regions"] 中时命中
-    REGION_IN = EnumField("region_in", label="Region.in")
+    REGION_IN = EnumField("region_in", label="Region.In")
 
     # 按应用环境绑定集群匹配：当环境当前绑定的部署集群名在 cond_data["cluster_names"] 中时命中（一般是 k8s 集群）
-    CLUSTER_IN = EnumField("cluster_in", label="Cluster.in")
+    CLUSTER_IN = EnumField("cluster_in", label="Cluster.In")
 
     # 按应用所属使用类型匹配：目前主要支持 AIAgent 应用命中
     USAGE_IN = EnumField("usage_in", label="Usage.In")

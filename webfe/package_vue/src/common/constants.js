@@ -431,6 +431,7 @@ export const COMPONENT_STATUS = {
  */
 export const MCP_SERVER_STATUS = {
   approved: '已申请',
+  owned: '已申请',
   rejected: '已拒绝',
   pending: '申请中',
   need_apply: '未申请',

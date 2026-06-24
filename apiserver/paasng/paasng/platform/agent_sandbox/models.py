@@ -171,10 +171,8 @@ class Sandbox(UuidAuditedModel):
         unique_together = ("tenant_id", "application_id", "name")
 
 
-class SandboxAppendConfig(UuidAuditedModel):
-    """沙箱的 app 级附加配置，由平台运维通过命令行（manage.py shell 或
-    upsert_sandbox_config command）维护。每个 app 至多一条，后续新增的沙箱可配置项
-    均可追加到本表。各字段相互独立、按需填写，未填写的字段在创建沙箱时回退到平台默认值。
+class SandboxAppSettings(UuidAuditedModel):
+    """沙箱的 app 级配置，各字段相互独立、按需填写，未填写的字段在创建沙箱时回退到平台默认值。
 
     当前已支持的配置项：
     - cpu / memory：沙箱资源上限，未配置时回退到 DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY。
@@ -184,7 +182,7 @@ class SandboxAppendConfig(UuidAuditedModel):
         Application,
         on_delete=models.CASCADE,
         db_constraint=False,
-        related_name="sandbox_append_config",
+        related_name="sandbox_app_settings",
     )
     cpu = models.DecimalField(
         verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True
@@ -195,7 +193,7 @@ class SandboxAppendConfig(UuidAuditedModel):
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        verbose_name = "沙箱附加配置"
+        verbose_name = "沙箱应用配置"
 
 
 class ImageBuildRecord(UuidAuditedModel):

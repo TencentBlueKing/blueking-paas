@@ -21,7 +21,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from paasng.platform.agent_sandbox.models import SandboxAppendConfig
+from paasng.platform.agent_sandbox.models import SandboxAppSettings
 
 pytestmark = pytest.mark.django_db
 
@@ -32,7 +32,7 @@ class TestUpsertSandboxConfigCommand:
     def test_create_config(self, bk_app):
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="4", memory="2")
 
-        config = SandboxAppendConfig.objects.get(application=bk_app)
+        config = SandboxAppSettings.objects.get(application=bk_app)
         assert config.cpu == Decimal("4")
         assert config.memory == Decimal("2")
         assert config.tenant_id == bk_app.tenant_id
@@ -41,43 +41,43 @@ class TestUpsertSandboxConfigCommand:
         # 只传 cpu 时，memory 保持为空（创建沙箱时回退默认）
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="4")
 
-        config = SandboxAppendConfig.objects.get(application=bk_app)
+        config = SandboxAppSettings.objects.get(application=bk_app)
         assert config.cpu == Decimal("4")
         assert config.memory is None
 
     def test_partial_update_keeps_other_field(self, bk_app):
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app, cpu=Decimal("2"), memory=Decimal("1"), tenant_id=bk_app.tenant_id
         )
         # 只更新 memory，cpu 应保持原值不被覆盖
         call_command("upsert_sandbox_config", app_code=bk_app.code, memory="3")
 
-        config = SandboxAppendConfig.objects.get(application=bk_app)
+        config = SandboxAppSettings.objects.get(application=bk_app)
         assert config.cpu == Decimal("2")
         assert config.memory == Decimal("3")
 
     def test_update_existing_config(self, bk_app):
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app, cpu=Decimal("2"), memory=Decimal("1"), tenant_id=bk_app.tenant_id
         )
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="3", memory="2")
 
-        config = SandboxAppendConfig.objects.get(application=bk_app)
+        config = SandboxAppSettings.objects.get(application=bk_app)
         assert config.cpu == Decimal("3")
         assert config.memory == Decimal("2")
 
     def test_reset_config(self, bk_app):
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app, cpu=Decimal("4"), memory=Decimal("2"), tenant_id=bk_app.tenant_id
         )
         call_command("upsert_sandbox_config", app_code=bk_app.code, reset=True)
 
-        assert not SandboxAppendConfig.objects.filter(application=bk_app).exists()
+        assert not SandboxAppSettings.objects.filter(application=bk_app).exists()
 
     def test_reset_on_missing_config_is_noop(self, bk_app):
         # 未配置时 reset 不报错
         call_command("upsert_sandbox_config", app_code=bk_app.code, reset=True)
-        assert not SandboxAppendConfig.objects.filter(application=bk_app).exists()
+        assert not SandboxAppSettings.objects.filter(application=bk_app).exists()
 
     def test_app_not_found(self):
         with pytest.raises(CommandError, match="does not exist"):

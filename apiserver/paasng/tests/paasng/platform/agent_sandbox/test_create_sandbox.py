@@ -29,7 +29,7 @@ from paasng.platform.agent_sandbox.constants import (
     SandboxStatus,
 )
 from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
-from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppendConfig, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
     _build_volume_mounts,
@@ -148,7 +148,7 @@ class TestResolveSandboxResources:
 
     def test_use_app_level_config(self, bk_app):
         """Per-app config overrides the platform default."""
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app,
             cpu=Decimal("4"),
             memory=Decimal("2"),
@@ -160,7 +160,7 @@ class TestResolveSandboxResources:
 
     def test_partial_config_falls_back_per_field(self, bk_app):
         """Config exists but only sets cpu -> memory falls back to platform default."""
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app,
             cpu=Decimal("4"),
             memory=None,
@@ -182,7 +182,7 @@ class TestCreateSandboxResources:
 
     @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
     def test_create_uses_app_level_config(self, bk_app, bk_user):
-        SandboxAppendConfig.objects.create(
+        SandboxAppSettings.objects.create(
             application=bk_app,
             cpu=Decimal("4"),
             memory=Decimal("2"),

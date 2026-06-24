@@ -61,7 +61,7 @@ from paasng.platform.agent_sandbox.exceptions import (
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
-from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppendConfig, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -122,7 +122,7 @@ def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decima
     :returns: A ``(cpu, memory)`` tuple, where ``cpu`` is in cores and
         ``memory`` is in GB.
     """
-    config = SandboxAppendConfig.objects.filter(application=application).first()
+    config = SandboxAppSettings.objects.filter(application=application).first()
     cpu = config.cpu if config and config.cpu is not None else DEFAULT_SANDBOX_CPU
     memory = config.memory if config and config.memory is not None else DEFAULT_SANDBOX_MEMORY
     return cpu, memory

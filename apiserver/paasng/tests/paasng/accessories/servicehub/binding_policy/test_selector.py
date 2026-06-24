@@ -19,7 +19,6 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
@@ -29,7 +28,7 @@ from paasng.accessories.servicehub.binding_policy.selector import (
     PossiblePlansResultType,
     get_plan_by_env,
 )
-from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
+from paasng.accessories.servicehub.constants import PrecedencePolicyCondType, ServiceUsage
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -223,7 +222,7 @@ class TestPlanSelectorSelectWithPrecedenceUsageIn:
             [
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.USAGE_IN,
-                    cond_data={"usages": [ClusterUsage.AGENT_SANDBOX.value]},
+                    cond_data={"usages": [ServiceUsage.AI_AGENT.value]},
                     plans=[plan2.uuid],
                     priority=1,
                 ),

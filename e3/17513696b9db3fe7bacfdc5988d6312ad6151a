@@ -1,5 +1,7 @@
 apiserver/paasng/paas_wl/bk_app/agent_sandbox/kres_slzs.py
   h_190e3af8dc7b5f 22,136-137
+apiserver/paasng/paas_wl/bk_app/agent_sandbox/constants.py
+  h_190e3af8dc7b5f 24
 ---
 {
   "schema_version": "authorship/3.0.0",

@@ -89,6 +89,8 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
             OUTPUT_IMAGE=output_image,
             CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
             CNB_REGISTRY_AUTH=json.dumps(ImageCredentials.load_from_app(app).build_app_registry_auth()),
+            # 构建调试: 注入 CNB_EXIT_DELAY 让容器在构建完成后保活
+            CNB_EXIT_DELAY=settings.BUILD_DEBUG_EXIT_DELAY,
         )
     else:
         # build application as slug

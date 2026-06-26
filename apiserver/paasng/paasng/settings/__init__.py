@@ -1338,6 +1338,9 @@ for image_conf in SMART_CNB_IMAGE_CONF.values():
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 
+# 构建调试: 构建容器在成功/失败后保留的时长, 默认 30 分钟
+BUILD_DEBUG_EXIT_DELAY = settings.get("BUILD_DEBUG_EXIT_DELAY", "30m")
+
 # ------------------
 # App 应用镜像仓库配置
 # ------------------

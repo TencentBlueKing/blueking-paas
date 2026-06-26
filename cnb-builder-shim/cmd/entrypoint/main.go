@@ -60,19 +60,47 @@ func main() {
 	flag.Parse()
 	logger := logging.Default()
 
+	// Run the build, returns exit code
+	code := run(logger)
+
+	// Build debug: write markers and keep container alive before exit
+	if shouldKeepAlive() {
+		writeMarkers(logger, code)
+		preExit(logger)
+	}
+	os.Exit(code)
+}
+
+// run executes the full build pipeline and returns an exit code.
+func run(logger logr.Logger) int {
 	ctx := context.Background()
 	if err := makeBuildInitCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Setup Build Environ Failed")
-		preExit(logger)
-		os.Exit(1)
+		return 1
 	}
 	if err := makeLifecycleDriverCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Build failed")
-		preExit(logger)
-		os.Exit(1)
+		return 1
 	}
+	return 0
+}
 
-	preExit(logger)
+func shouldKeepAlive() bool {
+	duration, err := time.ParseDuration(*exitDelay)
+	if err != nil {
+		return false
+	}
+	return duration > 0
+}
+
+// writeMarkers writes the build-done marker and result markers based on exit code.
+func writeMarkers(logger logr.Logger, code int) {
+	utils.WriteBuildDone(logger)
+	if code == 0 {
+		utils.WriteBuildResultSuccess(logger)
+	} else {
+		utils.WriteBuildResultFailed(logger)
+	}
 }
 
 func makeBuildInitCmd(ctx context.Context) *exec.Cmd {

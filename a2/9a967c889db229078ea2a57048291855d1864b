@@ -1,0 +1,16 @@
+apiserver/paasng/paas_wl/infras/cluster/constants.py
+  h_190e3af8dc7b5f 39
+apiserver/paasng/paas_wl/infras/cluster/shim.py
+  h_190e3af8dc7b5f 93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a29a967c889db229078ea2a57048291855d1864b",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

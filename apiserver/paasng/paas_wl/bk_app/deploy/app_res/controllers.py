@@ -57,6 +57,8 @@ from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultSer
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
 if TYPE_CHECKING:
+    import kubernetes.client.models as km
+
     from paas_wl.bk_app.applications.models import WlApp
     from paas_wl.infras.resources.base.base import EnhancedApiClient
     from paasng.platform.engine.configurations.building import SlugBuilderTemplate
@@ -343,8 +345,15 @@ class BuildHandler(PodScheduleHandler):
         except ResourceMissing:
             logger.info("build slug<%s/%s> does not exist, will create one", template.namespace, template.name)
         else:
-            # ignore the other pods
-            if slug_pod.status.phase == PodPhase.RUNNING:
+            # 构建调试模式: 旧 debug Pod 无条件强制删除
+            if slug_pod.metadata.labels and slug_pod.metadata.labels.get("build-debug") == "true":
+                logger.info(
+                    "Found existing debug Pod<%s/%s>, force delete it for new deployment.",
+                    template.namespace,
+                    pod_name,
+                )
+                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+            elif slug_pod.status.phase == PodPhase.RUNNING:
                 # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
                 if not self.check_pod_timeout(slug_pod):
                     raise ResourceDuplicate(
@@ -356,29 +365,53 @@ class BuildHandler(PodScheduleHandler):
                     pod_name,
                     settings.MAX_SLUG_SECONDS,
                 )
-
-            self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+            else:
+                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
 
         env_list = []
         for key, value in template.runtime.envs.items():
             env_list.append(dict(name=str(key), value=str(value)))
 
+        # 构建调试模式: 注入 Startup Probe + Readiness Probe
+        container_spec: Dict = {
+            "env": env_list,
+            "image": template.runtime.image,
+            "name": pod_name,
+            "imagePullPolicy": template.runtime.image_pull_policy,
+            "resources": template.runtime.resources,
+        }
+
+        if template.build_debug:
+            container_spec.update(
+                {
+                    "startupProbe": {
+                        "exec": {"command": ["test", "-f", "/tmp/build-done"]},
+                        "initialDelaySeconds": 30,
+                        "periodSeconds": 3,
+                        "failureThreshold": 290,  # 30 + 290*3 = 900s = 15min, 对接 BUILD_PROCESS_TIMEOUT
+                    },
+                    "readinessProbe": {
+                        "exec": {"command": ["test", "-f", "/tmp/build-result-success"]},
+                        "initialDelaySeconds": 0,
+                        "periodSeconds": 3,
+                    },
+                }
+            )
+
+        # 构建调试模式: 添加 build-debug label
+        labels = {"pod_selector": pod_name, "category": "slug-builder"}
+        if template.build_debug:
+            labels["build-debug"] = "true"
+
         slug_pod_body: Dict = {
             "metadata": {
                 "name": pod_name,
                 "namespace": template.namespace,
-                "labels": {"pod_selector": pod_name, "category": "slug-builder"},
+                "labels": labels,
             },
             "spec": {
-                "containers": [
-                    {
-                        "env": env_list,
-                        "image": template.runtime.image,
-                        "name": pod_name,
-                        "imagePullPolicy": template.runtime.image_pull_policy,
-                        "resources": template.runtime.resources,
-                    },
-                ],
+                "containers": [container_spec],
                 "restartPolicy": "Never",
                 "nodeSelector": template.schedule.node_selector,
                 "imagePullSecrets": template.runtime.image_pull_secrets,
@@ -463,6 +496,53 @@ class BuildHandler(PodScheduleHandler):
         :param name: builder name of engine app
         """
         return name
+
+    def get_pod(self, namespace: str, name: str) -> "Optional[km.V1Pod]":
+        """Get the builder Pod object, returns None if not found.
+
+        :param name: the builder name
+        """
+        pod_name = self.normalize_builder_name(name)
+        try:
+            return parse_pod(KPod(self.client).get(pod_name, namespace=namespace))
+        except ResourceMissing:
+            return None
+
+    def check_probe_and_pod(self, namespace: str, name: str) -> str:
+        """Check the builder Pod status by combining Pod Phase and container probe states.
+
+        Detection order (Phase first, then probes):
+        1. If Pod is in terminal phase (Succeeded/Failed), return "pod_ended"
+        2. If Pod is Running, check containerStatus.started and containerStatus.ready
+
+        :param namespace: Pod namespace
+        :param name: builder name
+        :returns: one of "pod_ended", "building", "succeeded", "failed"
+        :raises: ResourceMissing if Pod not found
+        """
+        pod_name = self.normalize_builder_name(name)
+        pod = parse_pod(KPod(self.client).get(pod_name, namespace=namespace))
+        phase = pod.status.phase
+
+        # Phase 优先: terminal 状态意味着 Pod 已经结束
+        if phase in (PodPhase.SUCCEEDED, PodPhase.FAILED):
+            return "pod_ended"
+
+        # Pod 正在运行, 检查容器探针状态
+        container_statuses = pod.status.container_statuses or []
+        if not container_statuses:
+            return "building"
+
+        c_status = container_statuses[0]
+        started = getattr(c_status, "started", False)
+        ready = getattr(c_status, "ready", False)
+
+        if not started:
+            return "building"
+        elif ready:
+            return "succeeded"
+        else:
+            return "failed"
 
 
 class CommandHandler(PodScheduleHandler):

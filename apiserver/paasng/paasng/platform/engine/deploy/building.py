@@ -277,6 +277,11 @@ class ApplicationBuilder(BaseBuilder):
         # 注入构建环境所需环境变量
         extra_envs = {**extra_envs, **build_info.environments}
 
+        # 构建调试: 开启时注入 CNB_EXIT_DELAY 让容器在构建完成后保活
+        build_debug = self.deployment.advanced_options.build_debug
+        if build_debug and build_info.use_cnb:
+            extra_envs["CNB_EXIT_DELAY"] = settings.BUILD_DEBUG_EXIT_DELAY
+
         # Use the default image when it's None, which means no images are bound to the app
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 

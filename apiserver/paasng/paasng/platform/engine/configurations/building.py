@@ -100,12 +100,14 @@ class SlugBuilderTemplate:
     :param namespace: the namespace of the Pod
     :param runtime: Runtime Info of the Pod, including image, pullSecrets, command, args and so on.
     :param schedule: Schedule Rule of the Pod, including tolerations and node_selector.
+    :param build_debug: Whether to enable build debug mode, which keeps the builder Pod alive after build.
     """
 
     name: str
     namespace: str
     runtime: ContainerRuntimeSpec
     schedule: Schedule
+    build_debug: bool = False
 
 
 def get_dockerfile_path(module: "Module") -> str:

@@ -132,6 +132,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 
+        # TODO: 硬编码, 之后前端就绪改为从 request.data 读取
+        params["advanced_options"]["build_debug"] = True
+
         # 选择历史构建的镜像时需要传递 build_id
         build = None
         if build_id := params["advanced_options"].get("build_id"):

@@ -19,6 +19,7 @@ import datetime
 import logging
 import os
 import time
+from enum import StrEnum
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
@@ -64,6 +65,83 @@ if TYPE_CHECKING:
     from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
+
+
+class BuildProbeStatus(StrEnum):
+    """构建探针检测状态, 用于 check_probe_and_pod 返回值."""
+
+    POD_ENDED = "pod_ended"
+    BUILDING = "building"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+# Probe polling interval in seconds for build debug mode
+_PROBE_POLL_INTERVAL = 5
+
+
+class BuildProbePoller:
+    """轮询 Pod 探针状态直到构建完成.
+
+    封装了超时兜底、时序误判重检等逻辑，将轮询职责从 DefaultBuildProcessExecutor 中分离。
+    ResourceMissing 被视为 Pod 已结束，返回 None。
+    """
+
+    def __init__(self, handler: "BuildHandler", namespace: str, name: str):
+        self.handler = handler
+        self.namespace = namespace
+        self.name = name
+
+    def poll_until_ready(self) -> BuildProbeStatus | None:
+        """轮询直到构建完成或超时.
+
+        :returns: BuildProbeStatus 或 None (超时 / Pod 已结束 / ResourceMissing)
+        """
+        deadline = time.monotonic() + settings.BUILD_PROCESS_TIMEOUT
+
+        while time.monotonic() < deadline:
+            time.sleep(_PROBE_POLL_INTERVAL)
+
+            try:
+                status = self.handler.check_probe_and_pod(self.namespace, self.name)
+            except ResourceMissing:
+                logger.info("Builder Pod<%s/%s> not found, treating as ended.", self.namespace, self.name)
+                return None
+            except ValueError:
+                logger.exception("Failed to parse pod status for Pod<%s/%s>, retrying.", self.namespace, self.name)
+                continue
+
+            if status == BuildProbeStatus.POD_ENDED:
+                logger.info("Builder Pod<%s/%s> has ended, exiting log stream.", self.namespace, self.name)
+                return None
+
+            if status == BuildProbeStatus.SUCCEEDED:
+                return BuildProbeStatus.SUCCEEDED
+
+            if status == BuildProbeStatus.FAILED:
+                # started=True but ready=False: 等待一个探针周期后重检, 消除时序误判
+                logger.info(
+                    "Builder Pod<%s/%s> startup probe passed but readiness not ready, waiting one probe cycle.",
+                    self.namespace,
+                    self.name,
+                )
+                time.sleep(_PROBE_POLL_INTERVAL)
+                try:
+                    retry_status = self.handler.check_probe_and_pod(self.namespace, self.name)
+                except (ResourceMissing, ValueError):
+                    return BuildProbeStatus.FAILED
+                return retry_status if retry_status == BuildProbeStatus.SUCCEEDED else BuildProbeStatus.FAILED
+
+            # BUILDING: 继续轮询
+
+        logger.warning(
+            "Builder Pod<%s/%s> probe polling timed out after %s seconds.",
+            self.namespace,
+            self.name,
+            settings.BUILD_PROCESS_TIMEOUT,
+        )
+        return None
+
 
 # Set the default timeout
 set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
@@ -346,7 +424,7 @@ class BuildHandler(PodScheduleHandler):
             logger.info("build slug<%s/%s> does not exist, will create one", template.namespace, template.name)
         else:
             # 构建调试模式: 旧 debug Pod 无条件强制删除
-            if slug_pod.metadata.labels and slug_pod.metadata.labels.get("build-debug") == "true":
+            if (slug_pod.metadata.labels or {}).get("build-debug") == "true":
                 logger.info(
                     "Found existing debug Pod<%s/%s>, force delete it for new deployment.",
                     template.namespace,
@@ -510,17 +588,17 @@ class BuildHandler(PodScheduleHandler):
         except ResourceMissing:
             return None
 
-    def check_probe_and_pod(self, namespace: str, name: str) -> str:
-        """Check the builder Pod status by combining Pod Phase and container probe states.
+    def check_probe_and_pod(self, namespace: str, name: str) -> BuildProbeStatus:
+        """通过容器状态和容器探针来检查构建进程的状态
 
-        Detection order (Phase first, then probes):
-        1. If Pod is in terminal phase (Succeeded/Failed), return "pod_ended"
-        2. If Pod is Running, check containerStatus.started and containerStatus.ready
+        检测顺序 (先是检查状态, 再检查探针):
+        1. 如果 Pod 处于终止阶段 (成功/失败), 则返回 POD_ENDED
+        2. 如果 Pod 正在运行, 检查 containerStatus.started 和 containerStatus.ready 探针
 
         :param namespace: Pod namespace
-        :param name: builder name
-        :returns: one of "pod_ended", "building", "succeeded", "failed"
-        :raises: ResourceMissing if Pod not found
+        :param name: builder 名称
+        :returns: BuildProbeStatus 枚举
+        :raises: 如果 Pod 没有找到将 raise ResourceMissing
         """
         pod_name = self.normalize_builder_name(name)
         pod = parse_pod(KPod(self.client).get(pod_name, namespace=namespace))
@@ -528,29 +606,29 @@ class BuildHandler(PodScheduleHandler):
 
         # Phase 优先: terminal 状态意味着 Pod 已经结束
         if phase in (PodPhase.SUCCEEDED, PodPhase.FAILED):
-            return "pod_ended"
+            return BuildProbeStatus.POD_ENDED
 
         # Pod 正在运行, 检查容器探针状态
         container_statuses = pod.status.container_statuses or []
         if not container_statuses:
-            return "building"
+            return BuildProbeStatus.BUILDING
 
         c_status = container_statuses[0]
         started = getattr(c_status, "started", False)
         ready = getattr(c_status, "ready", False)
 
         if not started:
-            return "building"
+            return BuildProbeStatus.BUILDING
         elif ready:
-            return "succeeded"
+            return BuildProbeStatus.SUCCEEDED
         else:
-            return "failed"
+            return BuildProbeStatus.FAILED
 
     def set_build_finished_at(self, namespace: str, name: str):
-        """Patch the builder Pod with build_finished_at annotation for debug window tracking.
+        """Patch build_finished_at 注解到 builder Pod, 以进行调试窗口的追踪
 
         :param namespace: Pod namespace
-        :param name: builder name
+        :param name: builder 名称
         """
         pod_name = self.normalize_builder_name(name)
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -559,6 +637,24 @@ class BuildHandler(PodScheduleHandler):
             KPod(self.client).patch(pod_name, namespace=namespace, body=patch_body)
         except Exception:
             logger.exception("Failed to patch build_finished_at annotation on Pod<%s/%s>", namespace, pod_name)
+
+    @staticmethod
+    def is_debug_window_available(pod, timeout_seconds: int) -> bool:
+        """检查调试的构建 Pod 是否还可用 (未过期), 基于 "build_finished_at" 注解, 如果没有注解或无法解析, 视为未过期可用
+
+        :param pod: Pod 对象 (必须有 metadata.annotations).
+        :param timeout_seconds: 调试窗口持续时间 (单位为 秒)
+        :returns: 如果构建窗口可用返回 True
+        """
+        annotations = pod.metadata.annotations or {}
+        finished_at_raw = annotations.get("build_finished_at")
+        if not finished_at_raw:
+            return True
+        try:
+            return arrow.now() < arrow.get(finished_at_raw).shift(seconds=timeout_seconds)
+        except Exception:
+            logger.exception("Failed to parse build_finished_at annotation, treating as available")
+            return True
 
 
 class CommandHandler(PodScheduleHandler):

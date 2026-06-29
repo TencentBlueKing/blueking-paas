@@ -26,6 +26,7 @@ class BuildMetadata:
     :param image_repository: 镜像仓库
     :param use_cnb: 是否使用 cnb 构建
     :param use_dockerfile: 是否使用 Dockerfile 构建
+    :param build_debug: 是否开启构建调试 (仅 CNB 构建有效)
     :param buildpacks: buildpacks 字符串
     :param bkapp_revision_id: 与本次构建关联的 BkApp Revision id
     :param extra_envs: 额外的环境变量
@@ -35,6 +36,7 @@ class BuildMetadata:
     image_repository: str | None = None
     use_dockerfile: bool = False
     use_cnb: bool = False
+    build_debug: bool = False
     buildpacks: str | None = None
     bkapp_revision_id: int | None = None
     extra_envs: dict = field(factory=dict)

@@ -19,7 +19,6 @@ import logging
 from dataclasses import asdict
 from typing import Dict, Optional
 
-import arrow
 from bkpaas_auth.core.encoder import user_id_encoder
 from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
@@ -138,9 +137,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-
-        # TODO: 硬编码, 之后前端就绪改为从 request.data 读取
-        params["advanced_options"]["build_debug"] = True
 
         # 构建调试: 验证构建方式是否支持
         if params["advanced_options"].get("build_debug"):
@@ -347,7 +343,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
             )
 
-        available = not self._is_debug_window_expired(pod)
+        available = BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT)
         return Response(
             {"enabled": True, "available": available, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
         )
@@ -360,7 +356,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if pod is None or pod.status.phase != "Running":
             raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试容器已不可用"))
 
-        if self._is_debug_window_expired(pod):
+        # 检查构建调试窗口是否已过期
+        if not BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT):
             raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试窗口已过期"))
 
         cluster = get_cluster_by_app(wl_app)
@@ -404,23 +401,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         builder_name = generate_builder_name(wl_app)
         pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
         return wl_app, builder_name, pod
-
-    def _is_debug_window_expired(self, pod) -> bool:
-        """检查构建调试窗口是否已过期 (基于 build_finished_at annotation).
-
-        :returns: True 表示已过期
-        """
-        annotations = pod.metadata.annotations or {}
-        finished_at_raw = annotations.get("build_finished_at")
-        if not finished_at_raw:
-            # annotation 尚未写入 (构建中), 视为未过期
-            return False
-        try:
-            finished_at = arrow.get(finished_at_raw)
-            return arrow.now() >= finished_at.shift(seconds=BUILD_DEBUG_TIMEOUT)
-        except Exception:
-            logger.exception("Failed to parse build_finished_at annotation")
-            return False
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

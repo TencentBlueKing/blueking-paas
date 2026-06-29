@@ -308,6 +308,7 @@ class ApplicationBuilder(BaseBuilder):
             buildpacks=build_process.buildpacks_as_build_env(),
             extra_envs=extra_envs,
             bkapp_revision_id=bkapp_revision_id,
+            build_debug=self.deployment.advanced_options.build_debug and build_info.use_cnb,
         )
 
         start_bg_build_process.delay(

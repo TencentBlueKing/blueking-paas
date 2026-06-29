@@ -156,6 +156,9 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
             if not attrs.get("bkapp_spec"):
                 raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
             build_cfg = attrs["bkapp_spec"]["build_config"]
+            # AI Agent 应用不支持 custom_image（纯镜像托管）
+            if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+                raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
             validate_build_method(build_cfg.build_method, source_config["source_origin"])
 
         return attrs

@@ -46,7 +46,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.configurations.building import get_use_bk_ci_pipeline
+from paasng.platform.engine.configurations.building import BUILD_DEBUG_TIMEOUT, get_use_bk_ci_pipeline
 from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
@@ -341,26 +341,13 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not advanced or not advanced.build_debug:
             return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
 
-        wl_app = deployment.app_environment.wl_app
-        handler = BuildHandler.new_by_app(wl_app)
-        builder_name = generate_builder_name(wl_app)
-        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
-
+        wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
             return Response(
                 {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
             )
 
-        # Check debug window expiry via annotation
-        available = True
-        annotations = pod.metadata.annotations or {}
-        expires_at_raw = annotations.get("build_debug_expires_at")
-        if expires_at_raw:
-            try:
-                available = arrow.now() < arrow.get(expires_at_raw)
-            except Exception:
-                logger.exception("Failed to parse build_debug_expires_at annotation")
-
+        available = not self._is_debug_window_expired(pod)
         return Response(
             {"enabled": True, "available": available, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
         )
@@ -369,27 +356,12 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def create_build_debug_console(self, request, code, module_name, uuid):
         """创建构建调试容器的 WebConsole 会话"""
         deployment = _get_deployment(self.get_module_via_path(), uuid)
-        advanced = deployment.advanced_options
-        if not advanced or not advanced.build_debug:
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("该部署未开启构建调试"))
-
-        wl_app = deployment.app_environment.wl_app
-        handler = BuildHandler.new_by_app(wl_app)
-        builder_name = generate_builder_name(wl_app)
-        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
-
+        wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
             raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试容器已不可用"))
 
-        # Check expiry
-        annotations = pod.metadata.annotations or {}
-        expires_at_raw = annotations.get("build_debug_expires_at")
-        if expires_at_raw:
-            try:
-                if arrow.now() >= arrow.get(expires_at_raw):
-                    raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试窗口已过期"))
-            except arrow.parser.ParserError:
-                logger.exception("Failed to parse build_debug_expires_at annotation")
+        if self._is_debug_window_expired(pod):
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试窗口已过期"))
 
         cluster = get_cluster_by_app(wl_app)
         tenant_id = deployment.app_environment.application.tenant_id
@@ -417,6 +389,38 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "web_console_url": data.get("web_console_url"),
             }
         )
+
+    def _get_debug_builder_pod(self, deployment: Deployment):
+        """获取构建调试 Pod, 返回 (wl_app, builder_name, pod).
+
+        :raises: APIError 若部署未开启构建调试
+        """
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.build_debug:
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("该部署未开启构建调试"))
+
+        wl_app = deployment.app_environment.wl_app
+        handler = BuildHandler.new_by_app(wl_app)
+        builder_name = generate_builder_name(wl_app)
+        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
+        return wl_app, builder_name, pod
+
+    def _is_debug_window_expired(self, pod) -> bool:
+        """检查构建调试窗口是否已过期 (基于 build_finished_at annotation).
+
+        :returns: True 表示已过期
+        """
+        annotations = pod.metadata.annotations or {}
+        finished_at_raw = annotations.get("build_finished_at")
+        if not finished_at_raw:
+            # annotation 尚未写入 (构建中), 视为未过期
+            return False
+        try:
+            finished_at = arrow.get(finished_at_raw)
+            return arrow.now() >= finished_at.shift(seconds=BUILD_DEBUG_TIMEOUT)
+        except Exception:
+            logger.exception("Failed to parse build_finished_at annotation")
+            return False
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

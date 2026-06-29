@@ -18,16 +18,12 @@
 from datetime import timezone as dt_timezone
 
 import arrow
-from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from paas_wl.infras.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
-from paasng.utils.datetime import get_time_delta
-
-# debug Pod 超时时间 (秒), 对齐 BUILD_DEBUG_EXIT_DELAY (如 "30m")
-BUILD_DEBUG_TIMEOUT = int(get_time_delta(settings.BUILD_DEBUG_EXIT_DELAY).total_seconds())
+from paasng.platform.engine.configurations.building import BUILD_DEBUG_TIMEOUT
 
 
 class Command(BaseCommand):

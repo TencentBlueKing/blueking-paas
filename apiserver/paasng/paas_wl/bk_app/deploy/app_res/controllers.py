@@ -352,7 +352,6 @@ class BuildHandler(PodScheduleHandler):
                     template.namespace,
                     pod_name,
                 )
-                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
             elif slug_pod.status.phase == PodPhase.RUNNING:
                 # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
                 if not self.check_pod_timeout(slug_pod):
@@ -365,9 +364,12 @@ class BuildHandler(PodScheduleHandler):
                     pod_name,
                     settings.MAX_SLUG_SECONDS,
                 )
-                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
             else:
-                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+                logger.info(
+                    "Found existing finished Pod<%s/%s>, delete it and re-create one.", template.namespace, pod_name
+                )
+
+            self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
 
         env_list = []
         for key, value in template.runtime.envs.items():

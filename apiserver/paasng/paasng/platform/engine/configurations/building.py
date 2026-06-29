@@ -19,10 +19,13 @@ import base64
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from django.conf import settings
+
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
+from paasng.utils.datetime import get_time_delta
 
 if TYPE_CHECKING:
     from paasng.platform.engine.models import EngineApp
@@ -108,6 +111,10 @@ class SlugBuilderTemplate:
     runtime: ContainerRuntimeSpec
     schedule: Schedule
     build_debug: bool = False
+
+
+# 构建调试窗口超时时间 (秒), 对齐 BUILD_DEBUG_EXIT_DELAY (如 "30m")
+BUILD_DEBUG_TIMEOUT = int(get_time_delta(settings.BUILD_DEBUG_EXIT_DELAY).total_seconds())
 
 
 def get_dockerfile_path(module: "Module") -> str:

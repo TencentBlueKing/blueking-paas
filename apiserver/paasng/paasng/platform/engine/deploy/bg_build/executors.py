@@ -237,18 +237,25 @@ class DefaultBuildProcessExecutor(DeployStep):
     def _poll_probe_until_ready(self) -> str | None:
         """轮询 Pod 探针状态直到构建完成.
 
-        :returns: "succeeded", "failed", or None (pod_ended / fallback)
+        以 BUILD_PROCESS_TIMEOUT 作为兜底超时, 防止 Pod 卡在非终态时无限轮询.
+        ResourceMissing 视为 pod_ended (Pod 已被外部删除).
+
+        :returns: "succeeded", "failed", or None (pod_ended / timeout / fallback)
         """
         handler = self.build_handler
         ns, name = self.wl_app.namespace, self._builder_name
+        deadline = time.monotonic() + settings.BUILD_PROCESS_TIMEOUT
 
-        while True:
+        while time.monotonic() < deadline:
             time.sleep(_PROBE_POLL_INTERVAL)
 
             try:
                 status = handler.check_probe_and_pod(ns, name)
-            except (ResourceMissing, ValueError):
-                logger.exception("Failed to check probe status for Pod<%s/%s>", ns, name)
+            except ResourceMissing:
+                logger.info("Builder Pod<%s/%s> not found, treating as pod_ended.", ns, name)
+                return None
+            except ValueError:
+                logger.exception("Failed to parse pod status for Pod<%s/%s>, retrying.", ns, name)
                 continue
 
             if status == "pod_ended":
@@ -273,6 +280,11 @@ class DefaultBuildProcessExecutor(DeployStep):
                 return "succeeded" if retry_status == "succeeded" else "failed"
 
             # status == "building": 继续轮询
+
+        logger.warning(
+            "Builder Pod<%s/%s> probe polling timed out after %s seconds.", ns, name, settings.BUILD_PROCESS_TIMEOUT
+        )
+        return None
 
     def _handle_build_result(self, build_result: str | None):
         """根据探针结果处理后续流程."""

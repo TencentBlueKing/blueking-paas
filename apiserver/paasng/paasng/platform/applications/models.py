@@ -354,6 +354,11 @@ class Application(OwnerTimestampedModel):
         verbose_name="是否为 AI Agent 插件应用",
         default=False,
     )
+    is_ai_agent_sandbox_app = models.BooleanField(
+        verbose_name="是否为 AI Agent 沙箱插件应用",
+        default=False,
+        help_text="需要长期运行且安全隔离的沙箱类插件应用",
+    )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()

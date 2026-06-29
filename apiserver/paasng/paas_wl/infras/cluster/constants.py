@@ -36,6 +36,7 @@ class ClusterUsage(StrStructuredEnum):
 
     AGENT_SANDBOX = EnumField("agent_sandbox", label=_("AI Agent 沙箱"))
     AI_AGENT = EnumField("ai_agent", label=_("AI Agent 应用"))
+    AI_AGENT_ISOLATED = EnumField("ai_agent_isolated", label=_("长期运行隔离沙箱"))
 
 
 LOG_COLLECTOR_TYPE_BK_LOG = "BK_LOG"

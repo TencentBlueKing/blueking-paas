@@ -424,7 +424,7 @@ class BuildHandler(PodScheduleHandler):
             logger.info("build slug<%s/%s> does not exist, will create one", template.namespace, template.name)
         else:
             # 构建调试模式: 旧 debug Pod 无条件强制删除
-            if (slug_pod.metadata.labels or {}).get("build-debug") == "true":
+            if (getattr(slug_pod.metadata, "labels", None) or {}).get("build-debug") == "true":
                 logger.info(
                     "Found existing debug Pod<%s/%s>, force delete it for new deployment.",
                     template.namespace,

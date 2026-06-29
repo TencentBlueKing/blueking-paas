@@ -42,6 +42,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.engine.configurations.building import get_use_bk_ci_pipeline
 from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
@@ -69,6 +70,7 @@ from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
@@ -134,6 +136,13 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # TODO: 硬编码, 之后前端就绪改为从 request.data 读取
         params["advanced_options"]["build_debug"] = True
+
+        # 构建调试: 验证构建方式是否支持
+        if params["advanced_options"].get("build_debug"):
+            if get_use_bk_ci_pipeline(module):
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("蓝盾流水线构建不支持构建调试"))
+            if not ModuleRuntimeManager(module).is_cnb_runtime:
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("当前构建方式不支持构建调试, 仅支持 CNB 构建"))
 
         # 选择历史构建的镜像时需要传递 build_id
         build = None

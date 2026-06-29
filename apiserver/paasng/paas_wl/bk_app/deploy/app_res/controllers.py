@@ -544,6 +544,20 @@ class BuildHandler(PodScheduleHandler):
         else:
             return "failed"
 
+    def set_build_finished_at(self, namespace: str, name: str):
+        """Patch the builder Pod with build_finished_at annotation for debug window tracking.
+
+        :param namespace: Pod namespace
+        :param name: builder name
+        """
+        pod_name = self.normalize_builder_name(name)
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        patch_body = {"metadata": {"annotations": {"build_finished_at": now}}}
+        try:
+            KPod(self.client).patch(pod_name, namespace=namespace, body=patch_body)
+        except Exception:
+            logger.exception("Failed to patch build_finished_at annotation on Pod<%s/%s>", namespace, pod_name)
+
 
 class CommandHandler(PodScheduleHandler):
     """Handler for running command"""

@@ -228,6 +228,10 @@ class DefaultBuildProcessExecutor(DeployStep):
             time.sleep(3)  # 等待管道缓冲排空
             log_thread.join(timeout=5)
 
+        # 记录构建完成时间, 用于后续调试窗口判定和超时清理
+        if build_result in ("succeeded", "failed"):
+            self.build_handler.set_build_finished_at(self.wl_app.namespace, self._builder_name)
+
         self._handle_build_result(build_result)
 
     def _poll_probe_until_ready(self) -> str | None:

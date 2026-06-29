@@ -220,6 +220,7 @@
                     </div>
                   </div>
                 </bk-form-item>
+                <!-- 蓝鲸开发框架 -->
                 <section v-show="isBkDevOps">
                   <bk-form-item
                     error-display-type="normal"
@@ -257,6 +258,7 @@
                     </bk-radio-group>
                   </div>
                 </section>
+                <!-- 蓝鲸插件 -->
                 <div
                   v-show="isBkPlugin"
                   class="plugin-container"
@@ -1116,10 +1118,6 @@ export default {
     supportedRuntimeTypes() {
       const currentTemplate = this.getCurrentTemplate();
       if (currentTemplate?.supported_runtime_types) {
-        // 如果当前选择的构建方式不在支持的列表中，自动重置为默认值
-        if (!currentTemplate.supported_runtime_types.includes(this.formData.buildMethod)) {
-          this.formData.buildMethod = 'buildpack';
-        }
         return currentTemplate.supported_runtime_types;
       }
       return ['buildpack'];
@@ -1176,6 +1174,12 @@ export default {
     },
     'platformFeature.REGION_DISPLAY'() {
       this.getPluginTmpls();
+    },
+    supportedRuntimeTypes: {
+      handler(value) {
+        this.syncBuildMethodWithSupportedRuntimeTypes(value);
+      },
+      immediate: true,
     },
   },
   mounted() {
@@ -1272,6 +1276,16 @@ export default {
         return this.languagesList.find((item) => item.name === this.formData.sourceInitTemplate);
       }
       return null;
+    },
+
+    // 当前模板不支持已选构建方式时，自动回退到 Buildpack
+    syncBuildMethodWithSupportedRuntimeTypes(runtimeTypes = this.supportedRuntimeTypes) {
+      if (this.formData.sourceOrigin !== 'soundCode') {
+        return;
+      }
+      if (!runtimeTypes.includes(this.formData.buildMethod)) {
+        this.formData.buildMethod = 'buildpack';
+      }
     },
 
     // 获取代码源仓库信息

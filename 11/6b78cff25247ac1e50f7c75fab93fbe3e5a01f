@@ -1,0 +1,16 @@
+apiserver/paasng/paasng/platform/applications/views/creation.py
+  h_190e3af8dc7b5f 214,223,225
+apiserver/paasng/tests/api/apigw/test_ai_agent.py
+  h_190e3af8dc7b5f 27,98-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "116b78cff25247ac1e50f7c75fab93fbe3e5a01f",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

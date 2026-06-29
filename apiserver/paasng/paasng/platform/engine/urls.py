@@ -127,6 +127,16 @@ urlpatterns = [
         name="api.deploy.result",
     ),
     re_path(
+        make_app_pattern(r"/deployments/%s/build_debug/$" % PVAR_UUID, include_envs=False),
+        views.DeploymentViewSet.as_view({"get": "get_build_debug"}),
+        name="api.deploy.build_debug",
+    ),
+    re_path(
+        make_app_pattern(r"/deployments/%s/build_debug/console/$" % PVAR_UUID, include_envs=False),
+        views.DeploymentViewSet.as_view({"post": "create_build_debug_console"}),
+        name="api.deploy.build_debug.console",
+    ),
+    re_path(
         make_app_pattern(r"/deployments/%s/logs/export/$" % PVAR_UUID, include_envs=False),
         views.DeploymentViewSet.as_view({"get": "export_deployment_log"}),
         name="api.deploy.export_log",

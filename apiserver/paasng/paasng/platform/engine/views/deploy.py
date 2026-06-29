@@ -19,6 +19,7 @@ import logging
 from dataclasses import asdict
 from typing import Dict, Optional
 
+import arrow
 from bkpaas_auth.core.encoder import user_id_encoder
 from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
@@ -33,6 +34,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.models import Build
+from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paasng.accessories.smart_advisor.utils import get_failure_hint
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.helpers import fetch_user_roles
@@ -44,6 +48,7 @@ from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import get_use_bk_ci_pipeline
 from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
+from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -327,6 +332,91 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except DeployInterruptionFailed as e:
             raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(str(e))
         return Response({})
+
+    @swagger_auto_schema(tags=["部署阶段"])
+    def get_build_debug(self, request, code, module_name, uuid):
+        """获取构建调试入口状态"""
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.build_debug:
+            return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
+
+        wl_app = deployment.app_environment.wl_app
+        handler = BuildHandler.new_by_app(wl_app)
+        builder_name = generate_builder_name(wl_app)
+        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
+
+        if pod is None or pod.status.phase != "Running":
+            return Response(
+                {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+            )
+
+        # Check debug window expiry via annotation
+        available = True
+        annotations = pod.metadata.annotations or {}
+        expires_at_raw = annotations.get("build_debug_expires_at")
+        if expires_at_raw:
+            try:
+                available = arrow.now() < arrow.get(expires_at_raw)
+            except Exception:
+                logger.exception("Failed to parse build_debug_expires_at annotation")
+
+        return Response(
+            {"enabled": True, "available": available, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+        )
+
+    @swagger_auto_schema(tags=["部署阶段"])
+    def create_build_debug_console(self, request, code, module_name, uuid):
+        """创建构建调试容器的 WebConsole 会话"""
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.build_debug:
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("该部署未开启构建调试"))
+
+        wl_app = deployment.app_environment.wl_app
+        handler = BuildHandler.new_by_app(wl_app)
+        builder_name = generate_builder_name(wl_app)
+        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
+
+        if pod is None or pod.status.phase != "Running":
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试容器已不可用"))
+
+        # Check expiry
+        annotations = pod.metadata.annotations or {}
+        expires_at_raw = annotations.get("build_debug_expires_at")
+        if expires_at_raw:
+            try:
+                if arrow.now() >= arrow.get(expires_at_raw):
+                    raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试窗口已过期"))
+            except arrow.parser.ParserError:
+                logger.exception("Failed to parse build_debug_expires_at annotation")
+
+        cluster = get_cluster_by_app(wl_app)
+        tenant_id = deployment.app_environment.application.tenant_id
+        result = bcs_client_cls(tenant_id).create_web_console_sessions(
+            json={
+                "namespace": wl_app.namespace,
+                "pod_name": builder_name,
+                "container_name": builder_name,
+                "command": "bash",
+                "operator": request.user.username,
+            },
+            path_params={
+                "cluster_id": cluster.bcs_cluster_id,
+                "project_id_or_code": cluster.bcs_project_id,
+                "version": "v4",
+            },
+        )
+        data = result.get("data") or {}
+        return Response(
+            {
+                "code": result.get("code"),
+                "message": result.get("message"),
+                "request_id": result.get("request_id"),
+                "session_id": data.get("session_id"),
+                "web_console_url": data.get("web_console_url"),
+            }
+        )
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

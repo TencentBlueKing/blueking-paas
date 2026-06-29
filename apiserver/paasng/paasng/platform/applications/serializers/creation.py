@@ -125,8 +125,8 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
     构建方式（两者解耦，任意 AI Agent 应用均可使用 git 仓库部署）。
     """
 
-    is_ai_agent_sandbox_app = serializers.BooleanField(
-        default=False, help_text="是否为需要长期运行且安全隔离的 AI Agent 沙箱插件应用"
+    is_isolated = serializers.BooleanField(
+        default=False, help_text="是否部署到隔离环境（如 gvisor 集群）"
     )
     # 以下参数为选填，不传则走原有固定模板包流程（向后兼容）
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))

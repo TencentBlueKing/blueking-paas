@@ -228,7 +228,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             params,
             env_cluster_names={},
             is_ai_agent_app=params["is_ai_agent_app"],
-            is_ai_agent_sandbox_app=params["is_ai_agent_sandbox_app"],
+            is_isolated=params["is_isolated"],
         )
 
     def _init_cloud_native_app_from_source(
@@ -238,7 +238,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         *,
         env_cluster_names: Dict[str, str],
         is_ai_agent_app: bool = False,
-        is_ai_agent_sandbox_app: bool = False,
+        is_isolated: bool = False,
     ) -> Response:
         """基于 source_config + bkapp_spec 创建云原生应用的公共流程。
 
@@ -262,7 +262,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             operator=request.user.pk,
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=is_ai_agent_app,
-            is_ai_agent_sandbox_app=is_ai_agent_sandbox_app,
+            is_isolated=is_isolated,
             app_tenant_info=params["app_tenant_info"],
         )
         module = create_default_module(application, **module_src_cfg)
@@ -399,7 +399,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             app_type=params["type"],
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
-            is_ai_agent_sandbox_app=params.get("is_ai_agent_sandbox_app", False),
+            is_isolated=params.get("is_isolated", False),
             operator=request_user.pk,
             app_tenant_info=params["app_tenant_info"],
         )

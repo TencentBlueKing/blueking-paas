@@ -204,6 +204,7 @@
     preset_services_config:
       mysql: {}
       otel: {}
+      rabbitmq: {}
     blob_url: ''
     required_buildpacks: []
     processes: {}

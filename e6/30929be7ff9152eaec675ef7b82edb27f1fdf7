@@ -1,0 +1,14 @@
+apiserver/paasng/paasng/platform/applications/views/creation.py
+  h_190e3af8dc7b5f 277-281,288,293-377,454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "e630929be7ff9152eaec675ef7b82edb27f1fdf7",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

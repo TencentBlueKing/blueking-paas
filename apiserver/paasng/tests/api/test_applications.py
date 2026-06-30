@@ -398,6 +398,17 @@ class TestApplicationRetrieve:
         assert app_data["code"] == bk_app.code
         assert app_data["preferred_prod_url"] == market_config_custom_domain.custom_domain_url
 
+    def test_retrieve_without_permission(self, api_client, bk_app, another_user):
+        """测试无权限用户访问应用详情时返回用户组申请链接"""
+        api_client.force_authenticate(user=another_user)
+        url = reverse("api.applications.detail", kwargs=dict(code=bk_app.code))
+        response = api_client.get(url)
+
+        assert response.status_code == 403
+        assert "apply_url_for_admin" in response.data
+        assert "apply_url_for_dev" in response.data
+        assert "apply_url_for_ops" in response.data
+
 
 class TestApplicationUpdate:
     """Test update application API"""

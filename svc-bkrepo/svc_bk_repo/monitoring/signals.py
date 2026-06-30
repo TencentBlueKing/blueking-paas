@@ -15,12 +15,26 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.apps import AppConfig
+import logging
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from svc_bk_repo.monitoring.metrics import auto_expand_counter
+from svc_bk_repo.monitoring.models import AutoExpandEvent
+
+logger = logging.getLogger(__name__)
 
 
-class MonitoringConfig(AppConfig):
-    name = "svc_bk_repo.monitoring"
+@receiver(post_save, sender=AutoExpandEvent)
+def report_auto_expand_metric(sender, instance, created, **kwargs):
+    """自动扩容事件写入 DB 后, 上报 Prometheus Counter"""
 
-    def ready(self):
-        # 注册 signal handler
-        from svc_bk_repo.monitoring import signals  # noqa: F401
+    if not created:
+        return
+    auto_expand_counter.labels(
+        service_id=str(instance.instance.service_id),
+        instance_id=str(instance.instance_id),
+        repo_name=instance.repo_name,
+    ).inc()
+    logger.debug("Auto-expand metric reported: instance=%s repo=%s", instance.instance_id, instance.repo_name)

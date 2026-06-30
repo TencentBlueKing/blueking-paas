@@ -82,6 +82,11 @@ class BKRepoIndexView(TemplateView):
         kwargs["csrftoken"] = get_token(self.request)
         kwargs["uid"] = self.request.user.username
 
+        kwargs["auto_expand_enabled"] = settings.BKREPO_AUTO_EXPAND_ENABLED
+        kwargs["auto_expand_threshold"] = settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD
+        kwargs["expand_step"] = humanize_bytes(settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES)
+        kwargs["expand_max"] = humanize_bytes(settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED)
+
         return kwargs
 
 

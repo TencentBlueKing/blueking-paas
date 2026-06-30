@@ -17,9 +17,17 @@
 
 import datetime
 
+from prometheus_client import Counter
 from prometheus_client.core import CollectorRegistry, GaugeMetricFamily
 
 global_registry = CollectorRegistry()
+
+# 自动扩容上报监控
+auto_expand_counter = Counter(
+    "bkrepo_auto_expand_events_total",
+    "Total number of auto-expand events, incremented on each successful expand",
+    ["service_id", "instance_id", "repo_name"],
+)
 
 
 class BKRepoMetricsCollector:

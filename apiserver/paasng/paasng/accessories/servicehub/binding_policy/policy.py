@@ -18,11 +18,11 @@ from typing import Any, Self
 
 from attrs import define
 
-from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
     ServiceBindingPolicyType,
+    ServiceUsage,
 )
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import ServiceObj
@@ -136,9 +136,9 @@ class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
 def get_env_usage(env: ModuleEnvironment) -> str | None:
     """Get the usage from the module environment."""
     if env.application.is_ai_agent_app:
-        return ClusterUsage.AGENT_SANDBOX.value
+        return ServiceUsage.AI_AGENT.value
     if env.module_id and env.module.get_source_origin() == SourceOrigin.AI_AGENT:
-        return ClusterUsage.AGENT_SANDBOX.value
+        return ServiceUsage.AI_AGENT.value
     return None
 
 

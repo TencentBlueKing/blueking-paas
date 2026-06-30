@@ -102,6 +102,10 @@ class AgentSandbox(KresAppEntity):
     :param status: The current status of the sandbox.
     :param volume_mounts: The shared volume mounts for the sandbox Pod. Not persisted;
         only used during Pod spec construction.
+    :param cpu: The CPU limit in cores. Used to build resources.limits during Pod spec
+        construction. Defaults to the platform default (2 cores).
+    :param memory: The memory limit in GB. Used to build resources.limits during Pod spec
+        construction. Defaults to the platform default (1 GB).
     """
 
     sandbox_id: str
@@ -112,6 +116,8 @@ class AgentSandbox(KresAppEntity):
     args: list[str] = field(default_factory=list)
     status: str = "Pending"
     volume_mounts: list[VolumeMount] = field(default_factory=list)
+    cpu: float = 2
+    memory: float = 1
 
     def __post_init__(self):
         # 此处强制覆盖
@@ -133,6 +139,8 @@ class AgentSandbox(KresAppEntity):
         snapshot_entrypoint: list[str] | None = None,
         env: dict[str, str] | None = None,
         volume_mounts: list[VolumeMount] | None = None,
+        cpu: float | None = None,
+        memory: float | None = None,
     ) -> "AgentSandbox":
         """Create an AgentSandbox instance.
 
@@ -145,8 +153,16 @@ class AgentSandbox(KresAppEntity):
         :param env: The environment variables to set in the sandbox.
         :param volume_mounts: The shared volume mounts to attach, already resolved
             (subPath / readOnly decided by the business layer).
+        :param cpu: The CPU limit in cores. Defaults to the dataclass default when not provided.
+        :param memory: The memory limit in GB. Defaults to the dataclass default when not provided.
         :return: A new AgentSandbox instance.
         """
+        extra_resource_fields: dict = {}
+        if cpu is not None:
+            extra_resource_fields["cpu"] = float(cpu)
+        if memory is not None:
+            extra_resource_fields["memory"] = float(memory)
+
         return cls(
             app=app,
             name=name,
@@ -156,6 +172,7 @@ class AgentSandbox(KresAppEntity):
             env=env or {},
             args=snapshot_entrypoint or [],
             volume_mounts=list(volume_mounts or []),
+            **extra_resource_fields,
         )
 
 

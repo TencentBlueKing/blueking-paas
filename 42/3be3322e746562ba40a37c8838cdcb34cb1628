@@ -1,0 +1,14 @@
+apiserver/paasng/paasng/platform/agent_sandbox/image_build/tasks.py
+  h_190e3af8dc7b5f 58-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "423be3322e746562ba40a37c8838cdcb34cb1628",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

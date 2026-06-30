@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import functools
 import logging
 import math
 from typing import Dict, List, Optional
@@ -23,7 +22,6 @@ from typing import Dict, List, Optional
 import curlify
 import requests
 from blue_krill.storages.blobstore.bkrepo import safe_urljoin
-from paas_service.models import Plan
 from requests.auth import HTTPBasicAuth
 
 from svc_bk_repo.vendor.exceptions import RequestError
@@ -163,12 +161,3 @@ class BKGenericRepoManager:
         client = self.get_client()
         url = safe_urljoin(self.endpoint_url, f"/repository/api/repo/quota/{self.project}/{repo}")
         _validate_resp(client.post(url, data={"quota": quota}))
-
-
-@functools.lru_cache()
-def get_repo_manager(plan_id: str):
-    """根据 Plan ID 获取对应的 BKGenericRepoManager 实例"""
-    plan = Plan.objects.get(pk=plan_id)
-    plan_config = plan.get_config()
-    manager = BKGenericRepoManager(**plan_config)
-    return manager

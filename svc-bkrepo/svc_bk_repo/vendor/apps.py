@@ -20,11 +20,3 @@ from django.apps import AppConfig
 
 class VendorConfig(AppConfig):
     name = "svc_bk_repo.vendor"
-
-    def ready(self):
-        # 统一调度器启动入口: 在此显示导入所有需要注册定时任务的模块.
-        import svc_bk_repo.monitoring.jobs
-        import svc_bk_repo.vendor.jobs  # noqa: F401
-        from svc_bk_repo.shared.scheduler import start_scheduler
-
-        start_scheduler()

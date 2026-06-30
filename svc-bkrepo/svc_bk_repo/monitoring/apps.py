@@ -20,3 +20,8 @@ from django.apps import AppConfig
 
 class MonitoringConfig(AppConfig):
     name = "svc_bk_repo.monitoring"
+
+    def ready(self):
+        from .jobs import start_scheduler
+
+        start_scheduler()

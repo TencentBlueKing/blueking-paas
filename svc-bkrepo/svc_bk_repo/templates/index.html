@@ -132,44 +132,6 @@
                 </p>
             </div>
         </div>
-        <div class="action" style="margin-top: 20px;">
-        <div class="action-type">自动扩容</div>
-        <div class="action-detail">
-            <p class="tip mb10" style="font-size: 13px; color: #888;">
-                开启后，当仓库使用率超过设定的阈值（50%~95%）时，将自动触发扩容，每次增加 1GB，最大不超过 10GB。
-            </p>
-            <p class="tip mb10" style="font-size: 13px; color: #888;">
-                扩容过程由系统自动完成，不另行通知
-            </p>
-
-            <div style="margin-bottom: 8px;">
-                <label class="bk-form-checkbox bk-form-checkbox-default mr10">
-                    <input type="checkbox" v-model="auto_expand.public.enabled">
-                    公有仓库
-                </label>
-                <span v-show="auto_expand.public.enabled" style="margin-left: 10px;">
-                    阈值
-                    <input type="number" v-model="auto_expand.public.threshold"
-                        min="50" max="95" style="width: 55px; text-align: center;">
-                    %
-                </span>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <label class="bk-form-checkbox bk-form-checkbox-default mr10">
-                    <input type="checkbox" v-model="auto_expand.private.enabled">
-                    私有仓库
-                </label>
-                <span v-show="auto_expand.private.enabled" style="margin-left: 10px;">
-                    阈值
-                    <input type="number" v-model="auto_expand.private.threshold"
-                        min="50" max="95" style="width: 55px; text-align: center;">
-                    %
-                </span>
-            </div>
-
-            <a class="bk-button bk-primary" @click="save_auto_expand">保存设置</a>
-        </div>
     </template>
 </div>
 <!-- content end -->
@@ -187,16 +149,6 @@
             data: function () {
                     return {
                         uid: uid,
-                        auto_expand: {
-                            private: {
-                                enabled: {{ auto_expand.private.enabled|lower }},
-                                threshold: {{ auto_expand.private.threshold }}
-                            },
-                            public: {
-                                enabled: {{ auto_expand.public.enabled|lower }},
-                                threshold: {{ auto_expand.public.threshold }}
-                            }
-                        }
                     }
             },
             methods: {
@@ -224,24 +176,6 @@
                                 message: e.response.data.message
                             })
                         }
-                    }
-                },
-                save_auto_expand: async function () {
-                    let url = `{% url 'instance.auto_expand' instance.uuid %}`;
-                    try {
-                        let response = await axios.patch(url,
-                            { auto_expand: this.auto_expand },
-                            {
-                                withCredentials: true,
-                                headers: { "X-CSRFToken": "{{ csrftoken }}" }
-                            }
-                        );
-                        this.$bkMessage({ message: response.data.message });
-                    } catch (e) {
-                        this.$bkMessage({
-                            theme: 'error',
-                            message: e.response.data?.message || '保存失败'
-                        });
                     }
                 },
             }

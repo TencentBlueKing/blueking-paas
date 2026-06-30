@@ -60,7 +60,6 @@ class AppIDField(serializers.RegexField):
 class AppIDSMartField(serializers.RegexField):
     """Field for validating S-mart applications's ID, the differences to `AppIDField`:
 
-    - max length increased from 16 to 20
     - allow using underscore("_")
     """
 

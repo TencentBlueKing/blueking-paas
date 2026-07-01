@@ -24,7 +24,7 @@ from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, BuildProbePoller, BuildProbeStatus
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
-from paas_wl.infras.resources.base.kres import KPod
+from paas_wl.infras.resources.base.kres import KPod, PatchType
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
@@ -90,7 +90,7 @@ class TestCheckProbeAndPod:
             pod_name,
             namespace=wl_app.namespace,
             body={"status": {"phase": phase, "conditions": []}},
-            ptype="merge",
+            ptype=PatchType.MERGE,
         )
 
         result = build_handler.check_probe_and_pod(wl_app.namespace, pod_name)
@@ -113,7 +113,7 @@ class TestCheckProbeAndPod:
             pod_name,
             namespace=wl_app.namespace,
             body={"status": {"phase": "Running", "conditions": [], "containerStatuses": container_statuses}},
-            ptype="merge",
+            ptype=PatchType.MERGE,
         )
 
         result = build_handler.check_probe_and_pod(wl_app.namespace, pod_name)
@@ -142,7 +142,7 @@ class TestCheckProbeAndPod:
                     "containerStatuses": [{"name": pod_name, "started": True, "ready": ready}],
                 }
             },
-            ptype="merge",
+            ptype=PatchType.MERGE,
         )
 
         result = build_handler.check_probe_and_pod(wl_app.namespace, pod_name)

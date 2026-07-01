@@ -333,6 +333,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_build_debug(self, request, code, module_name, uuid):
         """获取构建调试入口状态"""
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
+        if deployment != latest:
+            return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
         advanced = deployment.advanced_options
         if not advanced or not advanced.build_debug:
             return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
@@ -352,13 +355,16 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def create_build_debug_console(self, request, code, module_name, uuid):
         """创建构建调试容器的 WebConsole 会话"""
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
+        if deployment != latest:
+            raise error_codes.BUILD_DEBUG_STALE_DEPLOYMENT.f(_("已有新的部署开始，当前构建调试入口已失效"))
         wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试容器已不可用"))
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试容器已不可用"))
 
         # 检查构建调试窗口是否已过期
         if not BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT):
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("构建调试窗口已过期"))
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试窗口已过期"))
 
         cluster = get_cluster_by_app(wl_app)
         tenant_id = deployment.app_environment.application.tenant_id

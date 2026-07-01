@@ -36,4 +36,4 @@ class TasksConfig(AppConfig):
         try:
             self.call_ready()
         except Exception:
-            logger.exception()
+            logger.exception("failed to run tasks ready hook")

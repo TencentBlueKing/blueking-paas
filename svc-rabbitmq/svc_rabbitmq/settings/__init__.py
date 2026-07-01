@@ -15,13 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import os
 
 import environ
 import pymysql
+import sentry_sdk
 import urllib3
 from django.db.backends.mysql.features import DatabaseFeatures
 from django.utils.functional import cached_property
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 # Patch the SSL module for compatibility with legacy CA credentials.
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
@@ -77,11 +81,23 @@ INSTALLED_APPS = [
 ]
 
 SENTRY_DSN = env.str("SENTRY_DSN", "")
+# 接入 sentry
+# All of this is already happening by default!
+sentry_logging = LoggingIntegration(
+    level=logging.INFO,
+    # Capture info and above as breadcrumbs
+    # Send errors as events
+    event_level=logging.ERROR,
+)
+
 if SENTRY_DSN:
-    INSTALLED_APPS.append("raven.contrib.django.raven_compat")
-    RAVEN_CONFIG = {
-        "dsn": SENTRY_DSN,
-    }
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), sentry_logging],
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+    )
 
 MIDDLEWARE = [
     # "django.middleware.security.SecurityMiddleware",
@@ -160,8 +176,6 @@ LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 TIME_ZONE = env.str("TIME_ZONE", "UTC")
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 

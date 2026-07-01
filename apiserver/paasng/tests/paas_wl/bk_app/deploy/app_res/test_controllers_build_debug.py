@@ -82,7 +82,7 @@ class TestCheckProbeAndPod:
     @pytest.mark.parametrize("phase", ["Succeeded", "Failed"])
     def test_pod_terminal_phase_returns_pod_ended(self, build_handler, k8s_client, wl_app, phase):
         """Pod 处于终止阶段 (Succeeded/Failed) 应返回 POD_ENDED."""
-        pod_name = generate_builder_name(build_handler.client._wl_app)
+        pod_name = generate_builder_name(wl_app)
         body = construct_foo_pod(pod_name, restart_policy="Never")
         KPod(k8s_client).create_or_update(pod_name, namespace=wl_app.namespace, body=body)
         KPod(k8s_client).patch_subres(
@@ -105,7 +105,7 @@ class TestCheckProbeAndPod:
     )
     def test_pod_running_returns_building(self, build_handler, k8s_client, wl_app, container_statuses):
         """Pod Running 但容器未就绪时应返回 BUILDING."""
-        pod_name = generate_builder_name(build_handler.client._wl_app)
+        pod_name = generate_builder_name(wl_app)
         body = construct_foo_pod(pod_name, restart_policy="Never")
         KPod(k8s_client).create_or_update(pod_name, namespace=wl_app.namespace, body=body)
         KPod(k8s_client).patch_subres(
@@ -128,7 +128,7 @@ class TestCheckProbeAndPod:
     )
     def test_pod_running_started(self, build_handler, k8s_client, wl_app, ready, expected):
         """容器已启动时, ready 决定 SUCCEEDED 或 FAILED (构建失败保活)."""
-        pod_name = generate_builder_name(build_handler.client._wl_app)
+        pod_name = generate_builder_name(wl_app)
         body = construct_foo_pod(pod_name, restart_policy="Never")
         KPod(k8s_client).create_or_update(pod_name, namespace=wl_app.namespace, body=body)
         KPod(k8s_client).patch_subres(

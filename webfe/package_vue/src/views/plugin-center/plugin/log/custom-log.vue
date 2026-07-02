@@ -243,9 +243,9 @@
                     <div class="ps-no-result">
                       <div class="text">
                         <table-empty
+                          :condition="logParams.keyword"
                           :is-content-text="false"
-                          :keyword="tableEmptyConf.keyword"
-                          :abnormal="tableEmptyConf.isAbnormal"
+                          :is-error="isTableError"
                           @reacquire="getPluginLogList"
                           @clear-filter="clearFilterKey"
                         />
@@ -295,7 +295,7 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>import dayjs from '@/common/dayjs';
 import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
@@ -307,8 +307,8 @@ const xssOptions = {
   },
 };
 const logXss = new xss.FilterXSS(xssOptions);
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
   .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
@@ -381,10 +381,7 @@ export default {
           url: this.GLOBAL.DOC.LOG_QUERY_EMPTY,
         },
       ],
-      tableEmptyConf: {
-        isAbnormal: false,
-        keyword: '',
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -765,10 +762,9 @@ export default {
 
         this.pagination.count = res.total;
         this.pagination.current = page;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (res) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.logList.splice(0, this.logList.length, ...[]);
         this.pagination.count = 0;
       } finally {
@@ -927,10 +923,6 @@ export default {
 
     clearFilterKey() {
       this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.logParams.keyword;
     },
   },
 };

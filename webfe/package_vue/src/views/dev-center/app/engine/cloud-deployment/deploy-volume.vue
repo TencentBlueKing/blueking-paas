@@ -2,7 +2,8 @@
   <div class="volume-container">
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="deploy-volume-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :is-transition="false"
       :offset-top="0"
       :offset-left="0"
@@ -1366,13 +1367,6 @@ export default {
   .tip {
     font-size: 12px;
     color: #979ba5;
-  }
-  /deep/ .bk-table-header .custom-header-cell {
-    color: inherit;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-underline-position: under;
-    text-decoration-color: #979ba5;
   }
 }
 .activeTag:hover {

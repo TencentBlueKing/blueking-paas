@@ -2,7 +2,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -33,7 +33,6 @@ import $ from 'jquery';
 import '@/common/jquery_tools';
 
 import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
-import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/utils/dompurify';
@@ -135,7 +134,6 @@ Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 
 Vue.prototype.smartTime = SmartTime;
 window.Clipboard = Clipboard;
-window.moment = moment;
 window.showDeployTip = function () {
   Vue.prototype.$paasMessage({
     theme: 'error',

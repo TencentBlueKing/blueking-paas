@@ -2,7 +2,8 @@
   <div>
     <paas-content-loader
       :is-loading="isPermissionChecking"
-      placeholder="user-limit-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="0"
       class="access-user"
     >
@@ -131,8 +132,8 @@
             >
               <div slot="empty">
                 <table-empty
-                  :keyword="tableEmptyConf.keyword"
-                  :abnormal="tableEmptyConf.isAbnormal"
+                  :condition="keyword"
+                  :is-error="isTableError"
                   @reacquire="fetchUserPermissionList(true)"
                   @clear-filter="clearFilterKey"
                 />
@@ -626,10 +627,7 @@ export default {
       },
       curFile: {},
       isFileTypeError: false,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       userPanels: [{ name: 'whiteList', label: this.$t('白名单') }],
       active: 'whiteList',
     };
@@ -1220,10 +1218,9 @@ export default {
         const res = await this.$store.dispatch('user/getUserPermissionList', params);
         this.pagination.count = res.count;
         this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -1498,10 +1495,6 @@ export default {
 
     clearFilterKey() {
       this.keyword = '';
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.keyword;
     },
   },
 };

@@ -4,7 +4,8 @@
     <paas-content-loader
       class="app-container"
       :is-loading="loading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :is-transform="false"
     >
       <div class="plugin-deploy-wrapper card-style">

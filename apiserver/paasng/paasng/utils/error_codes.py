@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -47,6 +47,9 @@ class ErrorCodes:
     CLIENT_CREDENTIALS_MISSING = ErrorCode(_("应用身份凭证缺失"))
     # 应用创建 & 删除
     CANNOT_CREATE_APP = ErrorCode(_("应用创建失败"))
+    CANNOT_CREATE_APP_BKAUTH_CONFLICT = ErrorCode(
+        _("应用 ID（{code}）冲突，该 ID 已存在于 bkAuth 系统中"), status_code=409
+    )
     CANNOT_INIT_APP_TEMPLATE = ErrorCode(_("初始化应用源码模板失败"))
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))
@@ -238,6 +241,7 @@ class ErrorCodes:
     AGENT_SANDBOX_DELETE_FAILED = ErrorCode(_("删除 Agent 沙箱失败"))
     AGENT_SANDBOX_FILE_OPERATION_FAILED = ErrorCode(_("Agent 沙箱文件操作失败"))
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
+    AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT = ErrorCode(_("Agent 沙箱进程执行超时"), status_code=408)
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
     AGENT_SANDBOX_IMAGE_VALIDATE_FAILED = ErrorCode(_("Agent 沙箱快照镜像验证失败"), status_code=400)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -17,20 +17,25 @@
 
 import uuid
 from contextlib import suppress
+from decimal import Decimal
 from typing import Iterator
 from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import (
+    DEFAULT_SANDBOX_CPU,
+    DEFAULT_SANDBOX_MEMORY,
+    SandboxStatus,
+)
 from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
-from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
     _build_volume_mounts,
     create_sandbox,
     delete_sandbox,
+    resolve_sandbox_resources,
 )
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -58,9 +63,7 @@ def mock_image_validator() -> Iterator[mock.MagicMock]:
 
     :returns: The mock object for check_snapshot_image_exists.
     """
-    with mock.patch(
-        "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists"
-    ) as mock_check:
+    with mock.patch("paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists") as mock_check:
         yield mock_check
 
 
@@ -134,6 +137,62 @@ class TestCreateSandbox:
         assert sandbox.volume_mounts[1]["volume_id"] == str(vol2.uuid)
 
 
+class TestResolveSandboxResources:
+    """Test per-app sandbox resource resolution."""
+
+    def test_fallback_to_platform_default(self, bk_app):
+        """No per-app config -> platform default."""
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == DEFAULT_SANDBOX_CPU
+        assert memory == DEFAULT_SANDBOX_MEMORY
+
+    def test_use_app_level_config(self, bk_app):
+        """Per-app config overrides the platform default."""
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=Decimal("2"),
+            tenant_id=bk_app.tenant_id,
+        )
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == Decimal("4")
+        assert memory == Decimal("2")
+
+    def test_partial_config_falls_back_per_field(self, bk_app):
+        """Config exists but only sets cpu -> memory falls back to platform default."""
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=None,
+            tenant_id=bk_app.tenant_id,
+        )
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == Decimal("4")
+        assert memory == DEFAULT_SANDBOX_MEMORY
+
+
+class TestCreateSandboxResources:
+    """Test that created sandbox records carry the resolved cpu/memory."""
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    def test_create_uses_platform_default(self, bk_app, bk_user):
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="default-res")
+        assert sandbox.cpu == DEFAULT_SANDBOX_CPU
+        assert sandbox.memory == DEFAULT_SANDBOX_MEMORY
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    def test_create_uses_app_level_config(self, bk_app, bk_user):
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=Decimal("2"),
+            tenant_id=bk_app.tenant_id,
+        )
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="custom-res")
+        assert sandbox.cpu == Decimal("4")
+        assert sandbox.memory == Decimal("2")
+
+
 # TODO: 利用实际的集群资源来测试沙箱的删除
 class TestDeleteSandbox:
     """Test sandbox deletion functionality."""
@@ -169,6 +228,7 @@ class TestDeleteSandbox:
         sandbox.refresh_from_db()
         assert sandbox.status == SandboxStatus.ERR_DELETING.value
         assert sandbox.deleted_at is None
+
 
 class TestBuildVolumeMounts:
     """Unit tests for _build_shared_volume_mounts with Volume DB lookup."""
@@ -228,12 +288,8 @@ class TestBuildVolumeMounts:
     def test_multiple_volumes_preserve_order(self, bk_app, settings):
         settings.AGENT_SANDBOX_VOLUME_ENABLED = True
 
-        vol1 = Volume.objects.create(
-            application=bk_app, name="vol-1", tenant_id=bk_app.tenant_id
-        )
-        vol2 = Volume.objects.create(
-            application=bk_app, name="vol-2", tenant_id=bk_app.tenant_id
-        )
+        vol1 = Volume.objects.create(application=bk_app, name="vol-1", tenant_id=bk_app.tenant_id)
+        vol2 = Volume.objects.create(application=bk_app, name="vol-2", tenant_id=bk_app.tenant_id)
 
         result = _build_volume_mounts(
             bk_app,
@@ -252,26 +308,26 @@ class TestImageValidation:
 
     def test_create_raises_image_not_found(self, bk_app, bk_user):
         """Test that create_sandbox raises SandboxImageValidateError when image doesn't exist."""
-        with mock.patch(
-            "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists",
-            side_effect=SandboxImageValidateError("image not found"),
+        with (
+            mock.patch(
+                "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists",
+                side_effect=SandboxImageValidateError("image not found"),
+            ),
+            pytest.raises(SandboxImageValidateError, match="image not found"),
         ):
-            with pytest.raises(SandboxImageValidateError, match="image not found"):
-                create_sandbox(
-                    application=bk_app,
-                    creator=bk_user.pk,
-                    name="bad-image",
-                    snapshot="nonexistent:v1",
-                )
+            create_sandbox(
+                application=bk_app,
+                creator=bk_user.pk,
+                name="bad-image",
+                snapshot="nonexistent:v1",
+            )
 
         # No sandbox record should be created
         assert not Sandbox.objects.filter(application=bk_app, name="bad-image").exists()
 
     def test_create_skips_validation_for_default_image(self, bk_app, bk_user, mock_sandbox_provision):
         """Test that check_snapshot_image_exists is not called when using the default image."""
-        with mock.patch(
-            "paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists"
-        ) as mock_check:
+        with mock.patch("paasng.platform.agent_sandbox.sandbox.check_snapshot_image_exists") as mock_check:
             create_sandbox(application=bk_app, creator=bk_user.pk, name="default-image")
 
         # Should NOT be called when using the default image

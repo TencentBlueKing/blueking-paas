@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -36,6 +36,7 @@ from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.handlers import application_logo_updated
@@ -56,6 +57,7 @@ from paasng.platform.declarative.models import ApplicationDescription
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.manager import Module, initialize_smart_module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +105,13 @@ class AppDeclarativeController:
             app_tenant_id=self.app_tenant_conf.app_tenant_id,
             tenant_id=self.app_tenant_conf.tenant_id,
         )
-        create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
+
+        try:
+            create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
+        except BkOauthClientCodeConflictError:
+            logger.warning(f"OAuth2 client code conflict for application {application.code}")
+            raise error_codes.CANNOT_CREATE_APP_BKAUTH_CONFLICT.f(code=application.code)
+
         self.sync_modules(application, desc.modules)
         default_module = application.get_default_module()
 

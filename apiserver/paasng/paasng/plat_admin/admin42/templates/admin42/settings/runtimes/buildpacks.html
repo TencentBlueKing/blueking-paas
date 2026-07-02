@@ -199,12 +199,12 @@
                             <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="8">
+                    <bk-col :span="10">
                         <bk-form-item label="运行时栈">
                             <bk-input v-model="dialog.form.stack" :readonly="dialog.type === 'detail'" placeholder="如：heroku-18/24"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="8">
+                    <bk-col :span="6">
                         <bk-form-item label="是否隐藏">
                             <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
                         </bk-form-item>

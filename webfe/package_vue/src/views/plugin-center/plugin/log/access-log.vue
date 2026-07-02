@@ -19,13 +19,14 @@
     >
       <ul class="filter-list">
         <li
-          v-for="(filter) of tableFormatFilters"
+          v-for="filter of tableFormatFilters"
           :key="filter.value"
         >
           <span
             v-bk-tooltips="`${filter.key}：${filter.value}`"
             class="filter-value"
-          >{{ filter.key }}: <i>{{ filter.value }}</i></span>
+            >{{ filter.key }}: <i>{{ filter.value }}</i></span
+          >
         </li>
       </ul>
       <span
@@ -66,7 +67,7 @@
         <template v-else>
           <div
             class="bk-table-empty-block"
-            style="margin-top: -40px;"
+            style="margin-top: -40px"
           >
             <span class="bk-table-empty-text">
               <table-empty empty />
@@ -82,17 +83,17 @@
         <div
           v-bkloading="{ isLoading: isChartLoading }"
           class="chart-box mb20"
-          style="width: 100%;"
+          style="width: 100%"
         >
           <div
             v-charts="chartData"
-            style="width: 100%; height: 150px;"
+            style="width: 100%; height: 150px"
           />
           <img
             v-if="!hasChartData"
             class="chart-placeholder"
             :src="chartDefaultSvg"
-          >
+          />
         </div>
 
         <!-- 查询结果 start -->
@@ -111,8 +112,8 @@
           >
             <div slot="empty">
               <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
+                :condition="{ search: logParams.keyword }"
+                :is-error="isTableError"
                 @reacquire="getLogList"
                 @clear-filter="clearFilterKey"
               />
@@ -122,22 +123,14 @@
               width="30"
             >
               <template slot-scope="props">
-                <div
-                  class="log-wrapper"
-                >
+                <div class="log-wrapper">
                   <div
                     v-for="(log, index) in logKeyList"
                     :key="index"
                     class="log-item-info"
                   >
-                    <div
-                      class="left-title"
-                    >
-                      {{ log }}:
-                    </div>
-                    <div
-                      class="left-val"
-                    >
+                    <div class="left-title">{{ log }}:</div>
+                    <div class="left-val">
                       {{ props.row[log] }}
                     </div>
                   </div>
@@ -179,7 +172,8 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import dayjs from '@/common/dayjs';
 import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
@@ -191,9 +185,8 @@ const xssOptions = {
   },
 };
 const logXss = new xss.FilterXSS(xssOptions);
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
 export default {
   components: {
@@ -251,10 +244,7 @@ export default {
       logs: [],
       logKeyList: [],
       existFieldList: EXIST_LOG_KEY,
-      tableEmptyConf: {
-        isAbnormal: false,
-        keyword: '',
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -357,8 +347,8 @@ export default {
   },
   methods: {
     /**
-             * 初始化入口
-             */
+     * 初始化入口
+     */
     init() {
       this.isLoading = true;
       this.loadData();
@@ -383,8 +373,8 @@ export default {
     },
 
     /**
-             * 选择自定义时间，并确定
-             */
+     * 选择自定义时间，并确定
+     */
     handlePickSuccess(params) {
       this.logParams = params;
       this.resetStreamLog();
@@ -392,8 +382,8 @@ export default {
     },
 
     /**
-             * 清空查询参数
-             */
+     * 清空查询参数
+     */
     removeFilterParams() {
       if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
         this.$refs.bkSearcher.removeAllParams();
@@ -416,8 +406,8 @@ export default {
     },
 
     /**
-             * 构建过滤参数
-             */
+     * 构建过滤参数
+     */
     getFilterParams() {
       const params = {
         query: {
@@ -470,8 +460,8 @@ export default {
     },
 
     /**
-             * 加载所有数据
-             */
+     * 加载所有数据
+     */
     loadData(isLoadFilter = true) {
       this.tableSortTypes = {};
       this.$refs.accessLogFilter.setAutoLoad();
@@ -481,8 +471,8 @@ export default {
     },
 
     /**
-             * 重围搜索参数
-             */
+     * 重围搜索参数
+     */
     resetParams() {
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.lastScrollId = '';
@@ -514,9 +504,9 @@ export default {
     },
 
     /**
-             * 关键字高亮
-             * @param {String} text 匹配字符串
-             */
+     * 关键字高亮
+     * @param {String} text 匹配字符串
+     */
     setKeywordHight(text) {
       const keywords = this.logParams.keyword.split(';');
       if (keywords.length) {
@@ -534,8 +524,8 @@ export default {
     },
 
     /**
-             * 获取图表数据
-             */
+     * 获取图表数据
+     */
     async getChartData() {
       const params = this.getParams();
       const filter = this.getFilterParams();
@@ -563,9 +553,9 @@ export default {
     },
 
     /**
-             * 修改页数目回调
-             * @param  {Number} pageSize 每页数目
-             */
+     * 修改页数目回调
+     * @param  {Number} pageSize 每页数目
+     */
     handlePageSizeChange(pageSize) {
       this.pagination.current = 1;
       this.pagination.limit = pageSize;
@@ -594,9 +584,9 @@ export default {
     },
 
     /**
-             * 获取日志数据
-             * @param  {Number} page 第几页数据
-             */
+     * 获取日志数据
+     * @param  {Number} page 第几页数据
+     */
     async getLogList(page = 1) {
       const curPage = page || this.pagination.current;
       const params = this.getParams();
@@ -624,7 +614,7 @@ export default {
             }
             return false;
           });
-          this.fieldList = this.fieldList.filter(item => item);
+          this.fieldList = this.fieldList.filter((item) => item);
         }
         data.forEach((item) => {
           item.message = this.highlight(logXss.process(item.message));
@@ -640,10 +630,9 @@ export default {
         this.logList.splice(0, this.logList.length, ...data);
         this.pagination.count = res.total;
         this.pagination.current = page;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (res) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.pagination.count = 0;
       } finally {
         setTimeout(() => {
@@ -754,449 +743,446 @@ export default {
     clearFilterKey() {
       this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
     },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.logParams.keyword;
-    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    @import '~@/assets/css/mixins/ellipsis.scss';
+@import '~@/assets/css/mixins/ellipsis.scss';
 
-    .result {
-        position: relative;
+.result {
+  position: relative;
+}
+
+.log-filter-box input[type='checkbox'] {
+  appearance: none;
+}
+
+.logSelectPanel {
+  display: inline-block;
+  width: 112px;
+}
+
+.log-filter-box {
+  padding: 15px 0 20px 0;
+
+  .flex {
+    display: flex;
+  }
+
+  .form-item {
+    display: flex;
+    .bk-label {
+      line-height: 32px;
+    }
+    .bk-form-content {
+      flex: 1;
+      position: relative;
+    }
+  }
+
+  /deep/ .bk-date-picker.long {
+    width: 100%;
+  }
+}
+
+.query-text {
+  padding: 0 30px 0 10px;
+  width: 304px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 2px;
+  border: solid 1px #c4c6cc;
+  font-size: 12px;
+  float: left;
+  color: #666;
+}
+
+.query-date {
+  position: relative;
+  width: 269px;
+  height: 36px;
+  float: left;
+}
+
+.query-date .query-text {
+  width: 227px;
+  padding: 0 30px 0 10px;
+  cursor: pointer;
+  background: url(~@static/images/query-date-icon.png) 270px center no-repeat;
+  font-size: 13px;
+}
+
+.query-date:after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 34px;
+  background: #ccc;
+  top: 1px;
+  left: 407px;
+}
+
+.chart-box {
+  min-height: 150px;
+  background: #fafbfd;
+
+  .chart-placeholder {
+    background: #fafbfd;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.result {
+  margin: 20px 0;
+}
+
+.ps-log-table {
+  &:before {
+    display: none;
+  }
+  width: 100%;
+  box-sizing: border-box;
+
+  th {
+    border-top: none;
+    border-right: none;
+  }
+  td {
+    font-size: 12px;
+    color: #63656e;
+  }
+}
+
+.ps-toggle-btn {
+  margin-right: 4px;
+  cursor: pointer;
+  color: #c4c6cc;
+  font-size: 12px;
+}
+
+.log-message {
+  line-height: 20px;
+  font-size: 13px;
+
+  pre {
+    position: relative;
+    max-height: 40px;
+
+    @include multiline-ellipsis;
+  }
+}
+
+.detail-box {
+  padding: 5px 0;
+  background-color: #fafbfd;
+
+  li {
+    display: flex;
+    padding: 0 10px;
+    margin-top: 4px;
+  }
+
+  .key {
+    display: block;
+    min-width: 130px;
+    line-height: 18px;
+    text-align: right;
+    padding-right: 10px;
+    white-space: nowrap;
+    margin-top: -3px;
+  }
+
+  .value {
+    line-height: 18px;
+    display: block;
+    flex: 1;
+    font-family: 'Helvetica Neue', Helvetica, Tahoma, Arial, 'Microsoft Yahei', 'PingFang SC', STHeiTi, sans-serif;
+  }
+}
+
+.ps-search-btn {
+  margin: 13px 0 0 12px;
+  width: 126px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.page-wrapper {
+  margin-top: 15px;
+  text-align: right;
+
+  .bk-page {
+    float: right;
+  }
+}
+
+.clear-keyword-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  cursor: pointer;
+}
+
+.default-time-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 1px;
+  padding: 0 10px;
+  width: 290px;
+  height: 30px;
+  background: #fff;
+  z-index: 1;
+  box-sizing: border-box;
+  line-height: 30px;
+  cursor: pointer;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.time-th {
+  width: 200px;
+}
+
+.ps-checkbox-default {
+  height: 16px;
+  margin-top: 8px;
+}
+
+.log-main {
+  display: flex;
+  margin-top: 20px;
+
+  .log-fields {
+    width: 210px;
+    min-width: 210px;
+    background: #f5f6fa;
+    border-radius: 2px;
+    padding: 15px 10px 15px 20px;
+
+    .title {
+      font-size: 14px;
+      color: #313238;
+      margin-bottom: 18px;
     }
 
-    .log-filter-box input[type="checkbox"] {
-        appearance: none;
-    }
+    .field-list {
+      max-height: 1200px;
+      overflow: auto;
+      /deep/ .bk-form-checkbox {
+        display: block;
+        margin-bottom: 15px;
 
-    .logSelectPanel {
-        display: inline-block;
-        width: 112px;
-    }
-
-    .log-filter-box {
-        padding: 15px 0 20px 0;
-
-        .flex{
-            display: flex;
+        & + .bk-form-checkbox {
+          margin-left: 0;
         }
-
-        .form-item {
-            display: flex;
-            .bk-label {
-                line-height: 32px;
-            }
-            .bk-form-content {
-                flex: 1;
-                position: relative;
-            }
-        }
-
-        /deep/ .bk-date-picker.long {
-            width: 100%;
-        }
+      }
     }
+  }
 
-    .query-text {
-        padding: 0 30px 0 10px;
-        width: 304px;
-        height: 32px;
-        line-height: 32px;
-        border-radius: 2px;
-        border: solid 1px #c4c6cc;
-        font-size: 12px;
-        float: left;
-        color: #666;
-    }
+  .log-content {
+    flex: 1;
+    padding-left: 10px;
+  }
+}
+.table-filters {
+  margin: 10px 0 0 0;
+  display: flex;
+  align-items: center;
 
-    .query-date {
-        position: relative;
-        width: 269px;
-        height: 36px;
-        float: left;
-    }
+  .clear-filters-btn {
+    cursor: pointer;
+  }
 
-    .query-date .query-text {
-        width: 227px;
-        padding: 0 30px 0 10px;
-        cursor: pointer;
-        background: url(~@static/images/query-date-icon.png) 270px center no-repeat;
-        font-size: 13px;
-    }
+  .filter-list {
+    > li {
+      background: #f0f1f5;
+      border-radius: 2px;
+      padding: 0 6px 0 6px;
+      color: #63656e;
+      font-size: 12px;
+      display: inline-block;
+      margin-right: 10px;
 
-    .query-date:after {
-        content: "";
-        position: absolute;
-        width: 1px;
-        height: 34px;
-        background: #ccc;
-        top: 1px;
-        left: 407px;
-    }
-
-    .chart-box {
-        min-height: 150px;
-        background: #FAFBFD;
-
-        .chart-placeholder {
-            background: #fafbfd;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-        }
-    }
-
-    .result {
-        margin: 20px 0;
-    }
-
-    .ps-log-table {
-        &:before {
-            display: none;
-        }
-        width: 100%;
-        box-sizing: border-box;
-
-        th {
-            border-top: none;
-            border-right: none;
-        }
-        td {
-            font-size: 12px;
-            color: #63656E;
-        }
-    }
-
-    .ps-toggle-btn {
-        margin-right: 4px;
-        cursor: pointer;
-        color: #C4C6CC;
-        font-size: 12px;
-    }
-
-    .log-message {
-        line-height: 20px;
-        font-size: 13px;
-
-        pre {
-            position: relative;
-            max-height: 40px;
-
-            @include multiline-ellipsis;
-        }
-    }
-
-    .detail-box {
-        padding: 5px 0;
-        background-color: #fafbfd;
-
-        li {
-            display: flex;
-            padding: 0 10px;
-            margin-top: 4px;
-        }
-
-        .key {
-            display: block;
-            min-width: 130px;
-            line-height: 18px;
-            text-align: right;
-            padding-right: 10px;
-            white-space: nowrap;
-            margin-top: -3px;
-        }
-
-        .value {
-            line-height: 18px;
-            display: block;
-            flex: 1;
-            font-family: "Helvetica Neue", Helvetica, Tahoma, Arial, "Microsoft Yahei", "PingFang SC", STHeiTi, sans-serif;
-        }
-    }
-
-    .ps-search-btn {
-        margin: 13px 0 0 12px;
-        width: 126px;
-        line-height: 18px;
-        vertical-align: middle;
-    }
-
-    .page-wrapper {
-        margin-top: 15px;
-        text-align: right;
-
-        .bk-page {
-            float: right;
-        }
-    }
-
-    .clear-keyword-btn {
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        cursor: pointer;
-    }
-
-    .default-time-text {
-        position: absolute;
-        left: 0;
-        top: 0;
-        margin: 1px;
-        padding: 0 10px;
-        width: 290px;
-        height: 30px;
-        background: #fff;
-        z-index: 1;
-        box-sizing: border-box;
-        line-height: 30px;
-        cursor: pointer;
-        pointer-events: none;
-        font-size: 12px;
-    }
-
-    .time-th {
-        width: 200px;
-    }
-
-    .ps-checkbox-default {
-        height: 16px;
-        margin-top: 8px;
-    }
-
-    .log-main {
-        display: flex;
-        margin-top: 20px;
-
-        .log-fields {
-            width: 210px;
-            min-width: 210px;
-            background: #F5F6FA;
-            border-radius: 2px;
-            padding: 15px 10px 15px 20px;
-
-            .title {
-                font-size: 14px;
-                color: #313238;
-                margin-bottom: 18px;
-            }
-
-            .field-list {
-                max-height: 1200px;
-                overflow: auto;
-                /deep/ .bk-form-checkbox {
-                    display: block;
-                    margin-bottom: 15px;
-
-                    & + .bk-form-checkbox {
-                        margin-left: 0;
-                    }
-                }
-            }
-        }
-
-        .log-content {
-            flex: 1;
-            padding-left: 10px;
-        }
-    }
-    .table-filters {
-        margin: 10px 0 0 0;
-        display: flex;
-        align-items: center;
-
-        .clear-filters-btn {
-            cursor: pointer;
-        }
-
-        .filter-list {
-            > li {
-                background: #F0F1F5;
-                border-radius: 2px;
-                padding: 0 6px 0 6px;
-                color: #63656E;
-                font-size: 12px;
-                display: inline-block;
-                margin-right: 10px;
-
-                .filter-value {
-                    max-width: 300px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    display: inline-block;
-                    line-height: 26px;
-                    vertical-align: middle;
-
-                    i {
-                        font-style: normal;
-                    }
-                }
-
-                .paasng-icon {
-                    font-size: 20px;
-                    vertical-align: middle;
-                    cursor: pointer;
-                }
-            }
-        }
-    }
-
-    .ps-log-header {
-        background: #313238;
-        border-bottom: 1px solid #000;
-        padding: 10px 20px;
-        margin-top: 20px;
-        border-radius: 2px 2px 0 0;
-
-        .text {
-            margin-left: 5px;
-            color: #fff;
-            display: inline-block;
-            vertical-align: middle;
-            font-size: 12px;
-        }
-    }
-    .ps-log-container {
-        background: #313238;
-        border-radius: 0 0 2px 2px;
-        padding: 20px;
-        color: red;
-        font-size: 12px;
-        line-height: 18px;
-        overflow: auto;
-        min-height: 300px;
-        position: relative;
-        margin-bottom: -40px;
-
-        &::-webkit-scrollbar {
-            width: 4px;
-            background-color: lighten(transparent, 80%);
-        }
-        &::-webkit-scrollbar-thumb {
-            height: 5px;
-            border-radius: 2px;
-            background-color: #63656e;
-        }
-
-        .ps-no-result {
-            width: 80%;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .stream-log {
-            display: flex;
-            margin-bottom: 8px;
-            font-family: Consolas, "source code pro", "Bitstream Vera Sans Mono", Consolas, Courier, monospace, "微软雅黑", "Arial";
-
-            .pod-name {
-                min-width: 95px;
-                text-align: right;
-                margin-right: 15px;
-                color: #979BA5;
-                cursor: pointer;
-
-                &:hover {
-                    color: #3a84ff;
-                }
-            }
-            .message {
-                flex: 1;
-            }
-        }
-    }
-    .scroll-loading {
-        height: 40px;
+      .filter-value {
+        max-width: 300px;
         overflow: hidden;
-        border-radius: 2px;
-        margin-bottom: 10px;
-    }
-    .no-data {
-        padding: 8px;
-        text-align: center;
-        background: #1d1e22;
-        margin-bottom: 10px;
-        border-radius: 2px;
-    }
-    .table-wrapper {
-        width: auto;
-        overflow: auto;
-    }
-    .tooltip-icon {
-        cursor: pointer;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        line-height: 26px;
         vertical-align: middle;
-    }
-    .not-found {
-        padding: 25px 0 10px 0;
-        color: #333;
-        font-size: 12px;
-    }
-    .caret-wrapper {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        width: 20px;
-        height: 20px;
-        flex: 20px 0 0;
+
+        i {
+          font-style: normal;
+        }
+      }
+
+      .paasng-icon {
+        font-size: 20px;
         vertical-align: middle;
         cursor: pointer;
-        overflow: visible;
-        position: relative;
-        position: absolute;
-        right: 0;
-
-        &.asc .sort-caret.ascending {
-            border-bottom-color: #63656e;
-        }
-
-        &.desc .sort-caret.descending {
-            border-top-color: #63656e;
-        }
-
-        .sort-caret {
-            width: 0;
-            height: 0;
-            border: 5px solid transparent;
-            position: absolute;
-
-            &.ascending {
-                border-bottom-color: #c0c4cc;
-                top: -1px;
-            }
-
-            &.descending {
-                border-top-color: #c0c4cc;
-                bottom: -1px;
-            }
-        }
+      }
     }
-    .log-wrapper {
-        padding: 5px 0;
-        background-color: #fafbfd;
-        .log-item-info {
-            display: flex;
-            line-height: 18px;
-            .left-title {
-                width: 130px;
-                text-align: right;
-            }
-            .left-val {
-                flex: 1;
-                padding-left: 10px;
-            }
-        }
+  }
+}
+
+.ps-log-header {
+  background: #313238;
+  border-bottom: 1px solid #000;
+  padding: 10px 20px;
+  margin-top: 20px;
+  border-radius: 2px 2px 0 0;
+
+  .text {
+    margin-left: 5px;
+    color: #fff;
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 12px;
+  }
+}
+.ps-log-container {
+  background: #313238;
+  border-radius: 0 0 2px 2px;
+  padding: 20px;
+  color: red;
+  font-size: 12px;
+  line-height: 18px;
+  overflow: auto;
+  min-height: 300px;
+  position: relative;
+  margin-bottom: -40px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+    background-color: lighten(transparent, 80%);
+  }
+  &::-webkit-scrollbar-thumb {
+    height: 5px;
+    border-radius: 2px;
+    background-color: #63656e;
+  }
+
+  .ps-no-result {
+    width: 80%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .stream-log {
+    display: flex;
+    margin-bottom: 8px;
+    font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
+      'Arial';
+
+    .pod-name {
+      min-width: 95px;
+      text-align: right;
+      margin-right: 15px;
+      color: #979ba5;
+      cursor: pointer;
+
+      &:hover {
+        color: #3a84ff;
+      }
     }
+    .message {
+      flex: 1;
+    }
+  }
+}
+.scroll-loading {
+  height: 40px;
+  overflow: hidden;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+.no-data {
+  padding: 8px;
+  text-align: center;
+  background: #1d1e22;
+  margin-bottom: 10px;
+  border-radius: 2px;
+}
+.table-wrapper {
+  width: auto;
+  overflow: auto;
+}
+.tooltip-icon {
+  cursor: pointer;
+  vertical-align: middle;
+}
+.not-found {
+  padding: 25px 0 10px 0;
+  color: #333;
+  font-size: 12px;
+}
+.caret-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 20px 0 0;
+  vertical-align: middle;
+  cursor: pointer;
+  overflow: visible;
+  position: relative;
+  position: absolute;
+  right: 0;
+
+  &.asc .sort-caret.ascending {
+    border-bottom-color: #63656e;
+  }
+
+  &.desc .sort-caret.descending {
+    border-top-color: #63656e;
+  }
+
+  .sort-caret {
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    position: absolute;
+
+    &.ascending {
+      border-bottom-color: #c0c4cc;
+      top: -1px;
+    }
+
+    &.descending {
+      border-top-color: #c0c4cc;
+      bottom: -1px;
+    }
+  }
+}
+.log-wrapper {
+  padding: 5px 0;
+  background-color: #fafbfd;
+  .log-item-info {
+    display: flex;
+    line-height: 18px;
+    .left-title {
+      width: 130px;
+      text-align: right;
+    }
+    .left-val {
+      flex: 1;
+      padding-left: 10px;
+    }
+  }
+}
 </style>
 <style>
-    .table-wrapper.log-table .bk-table .bk-table-body td.bk-table-expanded-cell {
-        padding: 0;
-    }
+.table-wrapper.log-table .bk-table .bk-table-body td.bk-table-expanded-cell {
+  padding: 0;
+}
 </style>

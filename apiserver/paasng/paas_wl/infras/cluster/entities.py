@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -194,7 +194,7 @@ class AllocationContext:
     @classmethod
     def create_for_future_system_apps(cls):
         """Create a special context that is often used when the platform attempts to retrieve
-        the cluster for an system application that has not been deployed.
+        the cluster for a system application that has not been deployed.
 
         NOTE: The values used in this context are based on assumptions and past experiences,
         which could result in an incorrect cluster when the applications are deployed in the future.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -22,6 +22,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -36,6 +37,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxCreateError,
     SandboxError,
+    SandboxExecTimeout,
     SandboxImageValidateError,
     SandboxServiceNotReady,
 )
@@ -278,6 +280,10 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
                 env_vars=data["env_vars"],
                 timeout=data["timeout"],
             )
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT.f(
+                _("超时时间: {timeout}s").format(timeout=data["timeout"])
+            )
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
@@ -299,6 +305,8 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
 
         try:
             result = get_sandbox_client(sandbox).code_run(content=data["content"], language=data["language"])
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
         except SandboxError:
@@ -321,6 +329,8 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
                 tail_lines=data.get("tail_lines"),
                 timestamps=data["timestamps"],
             )
+        except SandboxExecTimeout:
+            raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
         except SandboxError:
             logger.exception("Failed to get logs from sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED

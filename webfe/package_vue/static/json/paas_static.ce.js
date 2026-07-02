@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -147,7 +147,7 @@ export const PLATFORM_CONFIG = {
     DOC: {
         // 产品文档，导航右上角展示的文档总入口
         PRODUCT_DOC: PAAS_DOCS_URL_PREFIX + '/UserGuide/Overview/README.md',
-    
+
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
 
@@ -257,7 +257,7 @@ export const PLATFORM_CONFIG = {
 
         // 部署前置命令
         DEPLOY_ORDER: DOCS_URL_PREFIX + '/topics/paas/release_hooks',
-        
+
         //应用进程与Profile
         PROCFILE_DOC: DOCS_URL_PREFIX + '/topics/paas/process_procfile',
 
@@ -266,7 +266,7 @@ export const PLATFORM_CONFIG = {
 
         // 使用Arm架构的机器如何构建x86平台镜像
         ARCHITECTURE_PLATFORM_IMAGE: DOCS_URL_PREFIX + '/topics/paas/deploy_flow#%E4%BD%BF%E7%94%A8-arm-%E6%9E%B6%E6%9E%84%E7%9A%84%E6%9C%BA%E5%99%A8%E5%A6%82%E4%BD%95%E6%9E%84%E5%BB%BA-x86-%E5%B9%B3%E5%8F%B0%E9%95%9C%E5%83%8F',
-        
+
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -46,7 +46,12 @@ def sbx_app() -> AgentSandboxKresApp:
     )
 
 
-def _make_sandbox(sbx_app, *, volume_mounts=None) -> AgentSandbox:
+def _make_sandbox(sbx_app, *, volume_mounts=None, cpu=None, memory=None) -> AgentSandbox:
+    kwargs = {}
+    if cpu is not None:
+        kwargs["cpu"] = cpu
+    if memory is not None:
+        kwargs["memory"] = memory
     return AgentSandbox.create(
         sbx_app,
         name="test-sandbox",
@@ -55,6 +60,7 @@ def _make_sandbox(sbx_app, *, volume_mounts=None) -> AgentSandbox:
         snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
         env={"FOO": "BAR"},
         volume_mounts=volume_mounts,
+        **kwargs,
     )
 
 
@@ -167,3 +173,34 @@ class TestConstructPodSpecVolumes:
             "path": "/data",
             "vers": "4",
         }
+
+
+class TestConstructPodSpecResources:
+    """Verify resources.limits are derived from the sandbox cpu/memory while
+    requests keep the platform default values."""
+
+    def test_default_resources(self, sbx_app):
+        # 未显式指定时走 AgentSandbox 的默认值 (2 核 / 1 GB)
+        sbx = _make_sandbox(sbx_app)
+        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+
+        resources = spec["containers"][0]["resources"]
+        assert resources["limits"] == {"cpu": "2000m", "memory": "1024Mi"}
+        assert resources["requests"] == {"cpu": "50m", "memory": "128Mi"}
+
+    def test_custom_resources(self, sbx_app):
+        sbx = _make_sandbox(sbx_app, cpu=3, memory=2)
+        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+
+        resources = spec["containers"][0]["resources"]
+        assert resources["limits"] == {"cpu": "3000m", "memory": "2048Mi"}
+        # requests 始终保持平台默认值
+        assert resources["requests"] == {"cpu": "50m", "memory": "128Mi"}
+
+    def test_limits_not_below_requests(self, sbx_app):
+        # 即使配置极小的值, limits 也不会低于 requests
+        sbx = _make_sandbox(sbx_app, cpu=0, memory=0)
+        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+
+        resources = spec["containers"][0]["resources"]
+        assert resources["limits"] == {"cpu": "50m", "memory": "128Mi"}

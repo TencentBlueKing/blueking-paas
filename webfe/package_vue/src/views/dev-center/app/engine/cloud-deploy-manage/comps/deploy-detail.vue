@@ -541,7 +541,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
@@ -555,11 +555,8 @@ import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
-moment.locale('zh-cn');
-// let maxReplicasNum = 0;
-
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -784,7 +781,6 @@ export default {
     deploymentInfo: {
       handler(value) {
         this.deployData = value;
-        // this.handleDeployInstanceData();
         this.formatProcesses(this.deployData);
       },
       immediate: true,
@@ -805,7 +801,6 @@ export default {
     },
   },
   mounted() {
-    moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
     // if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
     //   this.watchServerPush();
@@ -883,7 +878,7 @@ export default {
           status: 'Stopped',
           cmd: processInfo.command,
           desired_replicas: processInfo.replicas,
-          available_instance_count: processInfo.target_status === 'stop' ? 0 : processInfo.target_replicas,
+          available_instance_count: processInfo.target_status === 'stop' ? 0 : processInfo.replicas,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
           cpuLimit: processInfo.resource_limit?.cpu,
@@ -899,7 +894,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
           item.isOperate = false;
         });
         allProcesses.push(process);
@@ -1167,7 +1162,7 @@ export default {
         const chartData = [];
         xAxisData = [];
         item.results.forEach((itemData) => {
-          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
+          xAxisData.push(dayjs(itemData[0] * 1000).format('MM-DD HH:mm'));
           // 内存由Byte转MB
           if (type === 'mem') {
             const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
@@ -1338,7 +1333,7 @@ export default {
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
           if (process.name === processData.type) {
-            // process.available_instance_count = processData.success;
+            process.available_instance_count = processData.replicas;
             process.desired_replicas = processData.replicas;
             process.failed = processData.failed;
             this.updateProcessStatus(process);
@@ -1354,7 +1349,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.type === instanceData.process_type) {
           // 新增
@@ -1393,7 +1388,7 @@ export default {
        * 如何判断进程当前是否为操作中（繁忙状态）？
        * 主要根据 process_packages 里面的 target_status 判断：
        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与实际期望副本数 replicas 一致，而且 failed 为 0 时正常，否则为操作中
        */
       if (process.targetStatus === 'stop') {
         process.operateIconTitle = this.$t('启动进程');
@@ -1406,7 +1401,7 @@ export default {
       } else if (process.targetStatus === 'start') {
         process.operateIconTitle = this.$t('停止进程');
         process.operateIconTitleCopy = this.$t('停止进程');
-        if (process.available_instance_count === process.targetReplicas && process.failed === 0) {
+        if (process.available_instance_count === process.desired_replicas && process.failed === 0) {
           process.status = 'Stopped';
         } else {
           process.status = 'Running';

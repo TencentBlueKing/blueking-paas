@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
 import typing
@@ -25,6 +24,7 @@ from operator import itemgetter
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 from paas_service.models import ServiceInstance
+
 from vendor.client import Client
 from vendor.helper import InstanceHelper
 from vendor.models import Cluster
@@ -35,13 +35,8 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def output(msg):
-    print(msg)
-    logger.info(msg)
-
-
 class Command(BaseCommand):
-    def add_arguments(self, parser: 'ArgumentParser'):
+    def add_arguments(self, parser: "ArgumentParser"):
         parser.add_argument("-c", "--cluster", required=True, type=int, help="instance cluster id")
         parser.add_argument("-i", "--instances", nargs="+", help="instance id")
         parser.add_argument("-V", "--vhost", nargs="+", help="virtual host name")
@@ -83,7 +78,7 @@ class Command(BaseCommand):
         if virtual_host_set and connection["vhost"] not in virtual_host_set:
             return False
 
-        if peer_host_set and connection["peer_host"] not in peer_host_set:
+        if peer_host_set and connection["peer_host"] not in peer_host_set:  # noqa: SIM103
             return False
 
         return True
@@ -97,7 +92,7 @@ class Command(BaseCommand):
             return True
 
         connected_at = self.convert_connected_at(connection)
-        if connected_at + max_duration > now:
+        if connected_at + max_duration > now:  # noqa: SIM103
             return True
 
         return False
@@ -110,11 +105,11 @@ class Command(BaseCommand):
             return False
         try:
             return self.connection_channels_are_idle(client, max_duration, now, connection, ignore_consumer)
-        except Exception as err:
-            output(f"checking connection {connection['name']} channels failed, skip: {err}")
+        except Exception as err:  # noqa: BLE001
+            self.stderr.write(f"checking connection {connection['name']} channels failed, skip: {err}")
             return False
 
-    def channel_is_activated(self, channel, ignore_consumer):
+    def channel_is_activated(self, channel, ignore_consumer):  # noqa: PLR0911
         if not ignore_consumer and channel["consumer_count"] > 0:
             return True
 
@@ -137,7 +132,7 @@ class Command(BaseCommand):
         if "confirm_details" in message_stats and message_stats["confirm_details"]["rate"] > 0:
             return True
 
-        if "publish_details" in message_stats and message_stats["publish_details"]["rate"] > 0:
+        if "publish_details" in message_stats and message_stats["publish_details"]["rate"] > 0:  # noqa: SIM103
             return True
 
         return False
@@ -177,14 +172,16 @@ class Command(BaseCommand):
             connections.append(c)
 
         connections.sort(key=itemgetter("connected_at"))
-        output(f"going to close {len(connections)} connections(max duration: {max_duration})")
+        self.stdout.write(f"going to close {len(connections)} connections(max duration: {max_duration})")
         for c in connections:
             connected_at = self.convert_connected_at(c)
-            output(f"closing connection {c['name']} of vhost {c['vhost']} which connected at {connected_at}")
+            self.stdout.write(
+                f"closing connection {c['name']} of vhost {c['vhost']} which connected at {connected_at}"
+            )
             if not dry_run:
                 try:
                     client.connection.close(c["name"], reason)
-                except Exception as err:
-                    output(f"close connection {c['name']} of vhost {c['vhost']} failed: {err}")
+                except Exception as err:  # noqa: BLE001
+                    self.stderr.write(f"close connection {c['name']} of vhost {c['vhost']} failed: {err}")
                 else:
                     time.sleep(sleep)

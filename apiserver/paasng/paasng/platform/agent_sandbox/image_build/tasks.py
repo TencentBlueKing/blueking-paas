@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -55,7 +55,17 @@ def run_image_build(build_id: str, pre_pull: bool = False):
         return
 
     # 3. 通过 kaniko 方案，构建镜像并完成推送(构建状态会记录到 ImageBuildRecord 中)
-    KanikoBuildExecutor(build).execute()
+    try:
+        KanikoBuildExecutor(build).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Image build %s failed unexpectedly", build_id)
+        build.refresh_from_db()
+        # 避免覆盖 execute() 内部已写入的终态
+        if build.status == ImageBuildStatus.BUILDING.value:
+            build.mark_as_completed(
+                ImageBuildStatus.FAILED,
+                build_logs=f"Build failed unexpectedly: {e}",
+            )
 
     # 4. 构建成功后，根据 pre_pull 参数决定是否预拉取镜像。
     # 预加载的目的是为了加速沙箱启动，失败并不会影响沙箱启动(沙箱启动时，会按照 IfNotPresent 策略尝试拉取)。

@@ -57,14 +57,14 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ search: searchValue, filters: tableFilterMap }"
+              :is-error="isTableError"
               :empty-title="$t('暂无打包历史')"
               @reacquire="getBuildRecords"
               @clear-filter="clearFilterKey"
             />
             <bk-button
-              v-if="!tableEmptyConf.keyword"
+              v-if="!hasTableCondition"
               text
               theme="primary"
               @click="handleShowSidebar"
@@ -165,10 +165,7 @@ export default {
       },
       // 表头过滤
       tableFilterMap: {},
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       // 侧边栏配置
       smartSideConfig: {
         visible: false,
@@ -195,6 +192,10 @@ export default {
         text,
         value,
       }));
+    },
+    hasTableCondition() {
+      const filteredData = filterUndefinedProperties(this.tableFilterMap);
+      return Boolean(this.searchValue || Object.keys(filteredData).length);
     },
     columns() {
       return [
@@ -319,10 +320,9 @@ export default {
           timeConsuming: calculateTimeDiff(item.start_time, item.end_time),
         }));
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isTableLoading = false;
@@ -392,14 +392,6 @@ export default {
         row,
       };
     },
-    updateTableEmptyConfig() {
-      const filteredData = filterUndefinedProperties(this.tableFilterMap);
-      if (this.searchValue || Object.keys(filteredData)?.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
-    },
   },
 };
 </script>
@@ -412,13 +404,6 @@ export default {
   .tool-table-container {
     background-color: #fff;
     padding: 12px 16px;
-  }
-  /deep/ .bk-table-header {
-    .custom-header-cell {
-      text-decoration: underline;
-      text-decoration-style: dashed;
-      text-underline-position: under;
-    }
   }
 }
 </style>

@@ -177,8 +177,8 @@
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="filterKey"
+              :is-error="isTableError"
               @reacquire="fetchMonitorList"
               @clear-filter="clearFilterKey"
             />
@@ -205,10 +205,11 @@
 </template>
 
 <script>
-    import moment from 'moment';
+    import dayjs from '@/common/dayjs';
 
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
+
+    const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const initStartDate = dayjs().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
 
     let timeRangeCache = '';
     let timeShortCutText = '';
@@ -327,10 +328,7 @@
                 timerDisplay: this.$t('最近1天'),
                 isDatePickerOpen: false,
                 curDateType: 'custom',
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
+                isTableError: false,
             };
         },
         watch: {
@@ -524,7 +522,6 @@
                 }
 
                 this.curPageData = this.curSearchData.slice(startIndex, endIndex);
-                this.updateTableEmptyConfig();
             },
 
             async fetchMonitorList (page = 1) {
@@ -543,10 +540,9 @@
                     this.dataList.splice(0, this.dataList.length, ...(res.results || []));
                     this.initPageConf();
                     this.curPageData = this.getDataByPage(this.pageConf.current);
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
+                    this.isTableError = false;
                 } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
+                    this.isTableError = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -559,10 +555,6 @@
             clearFilterKey () {
                 this.filterKey = '';
             },
-
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.filterKey;
-            }
         }
     };
 </script>

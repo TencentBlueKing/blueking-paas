@@ -76,7 +76,7 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="searchValue"
+            :condition="searchValue"
             @clear-filter="searchValue = ''"
           />
         </div>

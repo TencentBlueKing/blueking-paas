@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -31,8 +31,7 @@ from paas_wl.bk_app.applications.api import CreatedAppInfo, create_app_ignore_du
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.core.resource import generate_bkapp_name
-from paas_wl.infras.cluster.entities import AllocationContext
-from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.shim.setup_elk import ClusterElasticSearchConfig
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -393,12 +392,16 @@ def _mock_wl_services_in_creation():
             "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
         ),
         mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
-        mock.patch("paasng.platform.modules.manager.EnvClusterService"),
-        mock.patch("paasng.platform.modules.manager.get_exposed_url_type", return_value=ExposedURLType.SUBPATH),
+        mock.patch("paasng.platform.modules.manager.EnvClusterService") as fake_module_cluster,
+        mock.patch(
+            "paasng.platform.modules.manager.get_bound_env_exposed_url_type"
+        ) as fake_get_bound_env_exposed_url_type,
         mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
         mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
         mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
     ):
+        fake_module_cluster.return_value.get_cluster.return_value.exposed_url_type = ExposedURLType.SUBPATH.value
+        fake_get_bound_env_exposed_url_type.return_value = ExposedURLType.SUBPATH
         fake_log().get_cluster().has_feature_flag.return_value = False
         fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
         mock_filter.return_value = mock_cluster_es_config_queryset
@@ -617,8 +620,7 @@ def create_engine_apps(app: Application, module: Module, environments: List[str]
             tenant_id=app.tenant_id,
         )
         if not cluster_name:
-            ctx = AllocationContext.from_module_env(env)
-            cluster_name = ClusterAllocator(ctx).get_default().name
+            cluster_name = EnvClusterService(env).get_cluster_name()
 
         EnvClusterService(env).bind_cluster(cluster_name)
         setup_env_log_model(env)

@@ -33,8 +33,8 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
+          :condition="{ search: searchQuery, filters: { headerFilterField } }"
+          :is-error="isTableError"
           @reacquire="fetchList(id)"
           @clear-filter="clearFilterKey"
         />
@@ -84,17 +84,20 @@
               {{ $t('复制审批链接') }}
             </bk-button>
           </span>
-          <span v-else-if="['name', 'description'].includes(column.prop)">
-            <a
-              v-if="row.mcp_server?.doc_link && column.prop === 'name'"
-              :href="row.mcp_server?.doc_link"
-              target="_blank"
-              v-dompurify-html="highlight(row.mcp_server?.name || '--')"
-            ></a>
-            <span
-              v-else
-              v-dompurify-html="highlight(row.mcp_server?.[column.prop] || '--')"
-            ></span>
+          <a
+            v-else-if="column.prop === 'name' && row.mcp_server?.doc_link"
+            :href="row.mcp_server?.doc_link"
+            target="_blank"
+            class="text-ellipsis"
+            v-dompurify-html="highlight(getDisplayName(row))"
+          ></a>
+          <div
+            v-else-if="column.prop === 'name'"
+            class="text-ellipsis"
+            v-dompurify-html="highlight(getDisplayName(row))"
+          ></div>
+          <span v-else-if="column.prop === 'description'">
+            <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>
           </span>
           <template v-else>
             {{ row.mcp_server?.[column.prop] || '--' }}
@@ -115,7 +118,7 @@
             <span
               v-bk-tooltips="{
                 content: $t(row.applyTips),
-                disabled: !row.applyDisabled,
+                disabled: !row.applyDisabled || !row.applyTips,
               }"
             >
               {{ $t('申请') }}
@@ -141,7 +144,7 @@
 
 <script>
 import BatchDialog from './batch-apply-dialog';
-import { paginationFun } from '@/common/utils';
+import { filterListByKeywordInFields, paginationFun } from '@/common/utils';
 import { MCP_SERVER_STATUS } from '@/common/constants';
 import { debounce } from 'lodash';
 import { copy } from '@/common/tools';
@@ -178,10 +181,7 @@ export default {
         title: '',
         rows: [],
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       MCP_SERVER_STATUS,
       statusFilters: Object.keys(MCP_SERVER_STATUS).map((key) => ({
         text: this.$t(MCP_SERVER_STATUS[key]),
@@ -245,7 +245,6 @@ export default {
       const { pageData = [] } = paginationFun(data, page, limit);
       this.mcpServerList = pageData;
       this.pagination.count = data?.length || 0;
-      this.updateTableEmptyConfig();
     },
 
     // 获取 MCP Server 列表（前端分页）
@@ -258,21 +257,19 @@ export default {
         const disabledTips = {
           pending: this.$t('权限申请中'),
           approved: this.$t('已有权限，无需申请'),
+          owned: this.$t('已有权限，无需申请'),
         };
-        const mcpServers = results.map((item) => {
-          return {
-            ...item,
-            // 判断当前权限是否可以申请
-            applyDisabled: ['pending', 'approved'].includes(item?.permission?.status),
-            applyTips: disabledTips[item?.permission?.status] || '',
-          };
-        });
+        const mcpServers = results.map(item => ({
+          ...item,
+          applyDisabled: item?.permission?.action !== 'apply',
+          applyTips: disabledTips[item?.permission?.status] || '',
+        }));
         this.setTableData(mcpServers, this.pagination.current, this.pagination.limit);
         // 全量数据
         this.allMcpServerList = mcpServers;
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
@@ -280,16 +277,7 @@ export default {
     },
 
     selectable(row) {
-      // 申请中、已申请不可选禁用
-      return !['pending', 'approved'].includes(row.permission?.status);
-    },
-
-    updateTableEmptyConfig() {
-      if (this.searchQuery || this.headerFilterField) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
+      return row.permission?.action === 'apply';
     },
 
     clearFilterKey() {
@@ -300,23 +288,18 @@ export default {
 
     // 获取过滤后的数据（根据搜索条件）
     getFilteredData() {
-      console.log('this.headerFilterField', this.headerFilterField);
-      if (!this.searchQuery && !this.headerFilterField) {
-        return this.allMcpServerList;
+      const keywordFilteredData = filterListByKeywordInFields(this.allMcpServerList, this.searchQuery, [
+        'mcp_server.title',
+        'mcp_server.name',
+        'mcp_server.description',
+      ]);
+
+      if (!this.headerFilterField) {
+        return keywordFilteredData;
       }
-      const keyword = this.searchQuery.toLowerCase();
-      return this.allMcpServerList.filter((item) => {
-        console.log('item', item);
-        const name = item.mcp_server?.name?.toLowerCase() || '';
-        const description = item.mcp_server?.description?.toLowerCase() || '';
-        const status = item.permission?.status || '';
-        // 关键字搜索条件
-        const keywordMatch = !this.searchQuery || name.includes(keyword) || description.includes(keyword);
-        // 状态筛选条件
-        const statusMatch = !this.headerFilterField || status === this.headerFilterField;
-        // 同时满足关键字搜索和状态筛选条件
-        return keywordMatch && statusMatch;
-      });
+
+      // 表头状态过滤
+      return keywordFilteredData.filter((item) => item.permission?.status === this.headerFilterField);
     },
 
     // 分页处理
@@ -413,6 +396,12 @@ export default {
       copy(url, this);
     },
 
+    // 获取展示名称：title (name)
+    getDisplayName(row) {
+      const mcp = row.mcp_server || {};
+      return `${mcp.title || '--'} (${mcp.name || '--'})`;
+    },
+
     // 搜索关键词高亮
     highlight(text) {
       const keyword = this.searchQuery;
@@ -442,10 +431,14 @@ export default {
       background: #ffdddd;
       border-color: #ea3636;
     }
-    &.approved {
+    &.approved,
+    &.owned {
       background: #cbf0da;
       border-color: #2caf5e;
     }
+  }
+  .text-ellipsis {
+    display: block;
   }
 }
 </style>

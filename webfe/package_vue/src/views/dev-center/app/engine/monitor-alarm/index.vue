@@ -46,7 +46,8 @@
     </cloud-app-top-bar>
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="alarm-record-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="10"
       class="app-container middle alarm-middle card-style"
     >

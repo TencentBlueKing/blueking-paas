@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -21,7 +21,7 @@ import pytest
 import requests
 
 from paasng.platform.agent_sandbox.daemon_client import DEFAULT_REQUEST_TIMEOUT, ExecuteResult, SandboxDaemonClient
-from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxServiceNotReady
+from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxExecTimeout, SandboxServiceNotReady
 
 
 class TestSandboxDaemonClient:
@@ -154,10 +154,10 @@ class TestSandboxDaemonClient:
             assert call_kwargs["json"]["mode"] == "0755"
 
     def test_request_timeout_error(self, client: SandboxDaemonClient):
-        """Test that timeout errors are wrapped in SandboxDaemonAPIError."""
+        """Test that timeout errors are wrapped in SandboxExecTimeout."""
         with (
             mock.patch.object(client._session, "request", side_effect=requests.Timeout("timeout")),
-            pytest.raises(SandboxDaemonAPIError, match="timed out"),
+            pytest.raises(SandboxExecTimeout, match="timed out"),
         ):
             client.execute("echo hello")
 
@@ -185,6 +185,19 @@ class TestSandboxDaemonClient:
             pytest.raises(SandboxServiceNotReady, match="not ready"),
         ):
             client.execute("echo hello")
+
+    def test_request_http_408_raises_exec_timeout(self, client: SandboxDaemonClient):
+        """Test that HTTP 408 (daemon-side command timeout) raises SandboxExecTimeout."""
+        mock_response = mock.MagicMock()
+        mock_response.status_code = 408
+
+        http_error = requests.HTTPError(response=mock_response)
+        with (
+            mock.patch.object(client._session, "request", side_effect=http_error),
+            pytest.raises(SandboxExecTimeout, match="timed out"),
+        ):
+            # 任意长时间命令，不会实际执行
+            client.execute("sleep 600")
 
     def test_request_connection_error(self, client: SandboxDaemonClient):
         """Test that connection errors are wrapped in SandboxDaemonAPIError."""

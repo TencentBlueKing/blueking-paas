@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -164,21 +164,23 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == 200
-        assert response.data["count"] == 2
+        assert response.data["count"] == 3
         assert response.data["next"] is None
         assert response.data["previous"] is None
         assert response.data["results"] == [
             {
                 "app_code": "app-a",
-                "modules": [
-                    {"module_name": "default", "processes": ["web"]},
-                    {"module_name": "worker", "processes": ["worker"]},
-                ],
+                "module_name": "default",
+                "process_name": "web",
+            },
+            {
+                "app_code": "app-a",
+                "module_name": "worker",
+                "process_name": "worker",
             },
             {
                 "app_code": "app-b",
-                "modules": [
-                    {"module_name": "default", "processes": ["web"]},
-                ],
+                "module_name": "default",
+                "process_name": "web",
             },
         ]

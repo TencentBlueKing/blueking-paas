@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.conf import settings
+
 from vendor.client import Client
 from vendor.command import FederationBaseCommand
 from vendor.exceptions import ResourceNotFound
@@ -68,7 +68,7 @@ class Command(FederationBaseCommand):
         self.test_vhost(upstream_client, vhost)
 
         if ignore_idle_vhost and not upstream_client.connection.list():
-            print(f"vhost {vhost} is idle, skipped")
+            self.stdout.write(f"vhost {vhost} is idle, skipped")
             return
 
         # 临时用户
@@ -117,7 +117,7 @@ class Command(FederationBaseCommand):
         vhosts = self.get_available_vhosts(cluster, upstream, vhost, exclude_vhost)
 
         for i in vhosts:
-            print(f"handling vhost: {i}")
+            self.stdout.write(f"handling vhost: {i}")
             try:
                 self.set_upstream(
                     cluster=cluster,
@@ -132,4 +132,4 @@ class Command(FederationBaseCommand):
                 if not on_error_resume:
                     raise
 
-                print(err)
+                self.stderr.write(err)

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import time
 import typing
 from typing import Any, Dict, Iterable, Text
@@ -57,7 +56,7 @@ class Command(InstancesBasedCommand):
         return qs
 
     def patch_policies(
-        self, virtual_host: Text, client: 'Client', names: Iterable[Text], policies: Dict[Text, UserPolicy]
+        self, virtual_host: Text, client: "Client", names: Iterable[Text], policies: Dict[Text, UserPolicy]
     ):
         """Update policies, add a new policy if no exists, otherwise update it"""
         for i in names:
@@ -68,7 +67,7 @@ class Command(InstancesBasedCommand):
                 params,
             )
 
-    def delete_policies(self, virtual_host: Text, client: 'Client', names: Iterable[Text]):
+    def delete_policies(self, virtual_host: Text, client: "Client", names: Iterable[Text]):
         """Delete policies in the rabbitmq cluster"""
         for i in names:
             client.user_policy.delete(virtual_host, i)
@@ -102,7 +101,7 @@ class Command(InstancesBasedCommand):
 
             if add:
                 names = enabled_policies.keys() - policies.keys()
-                print(f"policies will be add: {names}")
+                self.stdout.write(f"policies will be add: {names}")
                 if not dry_run:
                     self.patch_policies(vhost, client, names, enabled_policies)
 
@@ -111,12 +110,12 @@ class Command(InstancesBasedCommand):
                 for n in enabled_policies.keys() & policies.keys():
                     if not self.compare_policies(enabled_policies[n].dict(), policies[n]):
                         names.append(n)
-                print(f"policies will be update: {names}")
+                self.stdout.write(f"policies will be update: {names}")
                 if not dry_run:
                     self.patch_policies(vhost, client, names, enabled_policies)
 
             if delete:
                 names = disabled_policies & policies.keys()
-                print(f"policies will be delete: {names}")
+                self.stdout.write(f"policies will be delete: {names}")
                 if not dry_run:
                     self.delete_policies(vhost, client, names)

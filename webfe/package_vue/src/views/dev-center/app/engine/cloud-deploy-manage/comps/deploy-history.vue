@@ -3,7 +3,8 @@
     <paas-content-loader
       :is-loading="isLoading"
       :is-transition="false"
-      placeholder="event-list-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 2, operationWidth: 180 }"
       :class="{ 'deploy-history-loader': isLoading }"
     >
       <section class="search-wrapper">
@@ -58,8 +59,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ personnelSelectorList, filterEnv }"
+            :is-error="isTableError"
             @reacquire="getDeployHistory"
             @clear-filter="handleClearFilter"
           />
@@ -92,19 +93,13 @@
           :show-overflow-tooltip="false"
         >
           <template slot-scope="{ row }">
-            <bk-popover class="branch-popover-cls">
-              <span class="branch-name">{{ row.name }}</span>
-              <div slot="content">
-                <p class="flex">
-                  <span class="label">{{ $t('部署分支：') }}</span>
-                  <span class="value">{{ row.name }}</span>
-                </p>
-                <p class="flex">
-                  <span class="label">{{ $t('仓库地址：') }}</span>
-                  <span class="value">{{ row.url }}</span>
-                </p>
-              </div>
-            </bk-popover>
+            <span
+              v-bk-tooltips="getBranchTooltips(row)"
+              class="text-ellipsis"
+              v-dashed
+            >
+              {{ row.name || '--' }}
+            </span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -260,10 +255,7 @@ export default {
         count: 0,
         limit: 10,
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       personnelSelectorList: [],
       // 部署日志
       logSidesliderData: {},
@@ -367,6 +359,16 @@ export default {
       return result;
     },
 
+    getBranchTooltips(row) {
+      const branchText = `${this.$t('部署分支：')}${row.name || '--'}`;
+      const repoText = `${this.$t('仓库地址：')}${row.url || '--'}`;
+      return {
+        allowHTML: true,
+        boundary: 'window',
+        content: `${branchText}<br>${repoText}`,
+      };
+    },
+
     /**
      * 获取部署历史记录
      */
@@ -423,10 +425,9 @@ export default {
         this.pagination.count = res.count;
 
         this.oldHistoryList = cloneDeep(res.results);
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message,
@@ -560,14 +561,6 @@ export default {
       }
       this.getDeployHistory();
     },
-
-    updateTableEmptyConfig() {
-      if (this.personnelSelectorList.length || this.filterEnv.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
-    },
   },
 };
 </script>
@@ -578,20 +571,6 @@ export default {
   padding: 24px;
   box-shadow: 0 2px 4px 0 #1919290d;
   border-radius: 2px;
-
-  .branch-popover-cls {
-    max-width: 100%;
-    /deep/ .bk-tooltip-ref {
-      max-width: 100%;
-      .branch-name {
-        display: inline-block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-      }
-    }
-  }
 
   .deploy-history-loader {
     height: 520px;

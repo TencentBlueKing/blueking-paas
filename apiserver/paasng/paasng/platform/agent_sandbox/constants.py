@@ -1,6 +1,6 @@
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -13,6 +13,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from decimal import Decimal
+
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
@@ -34,3 +36,8 @@ SANDBOX_DEFAULT_TTL_SECONDS = 30 * 60
 
 # 沙箱 TTL 最大值
 SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60
+
+# 沙箱资源限制的平台默认值（Sandbox.cpu / Sandbox.memory 字段默认值直接引用本常量，保持唯一来源）
+# 单位: cpu 为核, memory 为 GB
+DEFAULT_SANDBOX_CPU = Decimal("4")
+DEFAULT_SANDBOX_MEMORY = Decimal("2")

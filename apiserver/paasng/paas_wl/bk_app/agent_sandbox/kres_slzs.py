@@ -1,6 +1,6 @@
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from attrs import define
 from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
+from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.bk_app.agent_sandbox.constants import (
     DAEMON_BIND_PORT,
@@ -64,7 +65,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
             "image": obj.image,
             "command": obj.command,
             "args": obj.args,
-            "resources": DEFAULT_RESOURCES,
+            "resources": _build_resources(obj.cpu, obj.memory),
             "env": env,
             "imagePullPolicy": "IfNotPresent",
             # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre_start.sh 最长耗时 (沙箱 daemon 服务默认设置 PRE_START_TIMEOUT=300s)
@@ -117,6 +118,28 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         if volumes:
             pod_spec["volumes"] = volumes
         return pod_spec
+
+
+def _build_resources(cpu: float, memory: float) -> Dict[str, Dict[str, str]]:
+    """Build the container ``resources`` block for a sandbox Pod.
+
+    The ``limits`` are derived from the per-sandbox cpu/memory values (resolved from the
+    app-level config or the platform default), while ``requests`` keep the platform
+    default values. ``limits`` are guaranteed to be no less than ``requests``.
+
+    :param cpu: The CPU limit in cores (e.g. 2 means 2000m).
+    :param memory: The memory limit in GB (e.g. 1 means 1024Mi).
+    :returns: A dict with ``limits`` and ``requests`` sub-blocks.
+    """
+    requests = DEFAULT_RESOURCES["requests"]
+
+    cpu_milli = max(int(round(cpu * 1000)), int(parse_quantity(requests["cpu"]) * 1000))
+    memory_mi = max(int(round(memory * 1024)), int(parse_quantity(requests["memory"]) / (1024 * 1024)))
+
+    return {
+        "limits": {"cpu": f"{cpu_milli}m", "memory": f"{memory_mi}Mi"},
+        "requests": dict(requests),
+    }
 
 
 def _build_csi_volume_source() -> Dict[str, Any]:

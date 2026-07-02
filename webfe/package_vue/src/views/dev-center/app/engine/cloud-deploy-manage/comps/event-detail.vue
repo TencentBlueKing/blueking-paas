@@ -69,7 +69,7 @@
 
 <script>
 import { paginationFun } from '@/common/utils';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 export default {
   name: 'EventDetail',
   model: {

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -398,6 +398,17 @@ class TestApplicationRetrieve:
         assert app_data["code"] == bk_app.code
         assert app_data["preferred_prod_url"] == market_config_custom_domain.custom_domain_url
 
+    def test_retrieve_without_permission(self, api_client, bk_app, another_user):
+        """测试无权限用户访问应用详情时返回用户组申请链接"""
+        api_client.force_authenticate(user=another_user)
+        url = reverse("api.applications.detail", kwargs=dict(code=bk_app.code))
+        response = api_client.get(url)
+
+        assert response.status_code == 403
+        assert "apply_url_for_admin" in response.data
+        assert "apply_url_for_dev" in response.data
+        assert "apply_url_for_ops" in response.data
+
 
 class TestApplicationUpdate:
     """Test update application API"""
@@ -421,6 +432,11 @@ class TestApplicationUpdate:
             allocation_policy=AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
             tenant_id=random_tenant_id,
         )
+        # 将测试集群的 available_tenant_ids 更新，使其对随机租户也可用
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        if random_tenant_id not in cluster.available_tenant_ids:
+            cluster.available_tenant_ids.append(random_tenant_id)
+            cluster.save(update_fields=["available_tenant_ids"])
 
     @pytest.fixture
     def tag(self):
@@ -847,6 +863,13 @@ class TestCreateApplicationWithTenantParams:
                     "allocation_policy": AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
                 },
             )
+
+        # 将测试集群的 available_tenant_ids 更新，使其对非默认租户也可用
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        for tenant_id in ["foo_tenant", OP_TYPE_TENANT_ID]:
+            if tenant_id not in cluster.available_tenant_ids:
+                cluster.available_tenant_ids.append(tenant_id)
+        cluster.save(update_fields=["available_tenant_ids"])
 
     # cases start: when multi-tenant mode is disabled
 

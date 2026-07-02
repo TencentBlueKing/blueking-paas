@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -152,6 +152,35 @@ export function processNavData(data) {
     navItems: processer.navItems,
     navCategories: processer.navCategories,
   };
+}
+
+/**
+ * 根据关键字过滤列表数据，支持通过 'a.b.c' 路径匹配嵌套字段
+ *
+ * @param {Array} data - 待过滤列表
+ * @param {String} keyword - 搜索关键字
+ * @param {Array<String>} fields - 参与匹配的字段路径
+ * @returns {Array} 过滤后的列表
+ */
+export function filterListByKeywordInFields(data = [], keyword = '', fields = []) {
+  if (!keyword) {
+    return data;
+  }
+
+  const normalizedKeyword = keyword.toLowerCase();
+  return data.filter(item => fields.some((field) => {
+    const value = getNestedValue(item, field);
+    return String(value || '')
+      .toLowerCase()
+      .includes(normalizedKeyword);
+  }));
+}
+
+function getNestedValue(obj, path) {
+  if (!path.includes('.')) {
+    return obj[path];
+  }
+  return path.split('.').reduce((acc, key) => acc?.[key], obj);
 }
 
 /**
@@ -397,4 +426,3 @@ export function convertMemoryToBytes(value) {
   }
   return 0;
 }
-

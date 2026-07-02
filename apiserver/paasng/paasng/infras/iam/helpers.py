@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -199,6 +199,9 @@ def delete_grade_manager(app_code: str):
 
 def user_group_apply_url(app_code: str) -> dict:
     """应用用户组权限申请链接"""
+    admin_user_group_id = ApplicationUserGroup.objects.get(
+        app_code=app_code, role=ApplicationRole.ADMINISTRATOR
+    ).user_group_id
     ops_user_group_id = ApplicationUserGroup.objects.get(
         app_code=app_code, role=ApplicationRole.OPERATOR
     ).user_group_id
@@ -206,6 +209,7 @@ def user_group_apply_url(app_code: str) -> dict:
         app_code=app_code, role=ApplicationRole.DEVELOPER
     ).user_group_id
     return {
+        "apply_url_for_admin": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=admin_user_group_id),
         "apply_url_for_ops": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=ops_user_group_id),
         "apply_url_for_dev": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
     }

@@ -155,9 +155,7 @@
 <script>
 import DetailsRow from '@/components/details-row';
 import { mapState } from 'vuex';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
 
 export default {
   name: 'NodeInfo',
@@ -189,10 +187,6 @@ export default {
     ...mapState(['localLanguage']),
   },
   created() {
-    dayjs.extend(relativeTime);
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
     this.getNodesState();
   },
   methods: {

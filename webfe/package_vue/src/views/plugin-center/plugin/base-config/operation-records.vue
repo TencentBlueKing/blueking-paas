@@ -4,7 +4,8 @@
     <paas-content-loader
       class="app-container"
       :is-loading="isLoading"
-      placeholder="deploy-inner-history-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 2, operationWidth: 180 }"
       :is-transform="false"
     >
       <div class="record-main card-style">
@@ -46,8 +47,8 @@
           >
             <div slot="empty">
               <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
+                :condition="{ operatorList, filterParams }"
+                :is-error="isTableError"
                 @reacquire="getPluginOperations"
                 @clear-filter="clearFilterKey"
               />
@@ -132,10 +133,7 @@ export default {
           return date && date.valueOf() > Date.now() - 86400;
         },
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -185,10 +183,9 @@ export default {
         });
         this.operationRecords = res.results;
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
@@ -233,13 +230,6 @@ export default {
       this.dateParams = {};
       this.operatorList = [];
       this.$refs.records?.clearFilter();
-    },
-    updateTableEmptyConfig() {
-      if (this.operatorList.length || Object.keys(this.filterParams).length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
   },
 };

@@ -27,7 +27,10 @@
     >
       <div slot="empty">
         <table-empty
-          :keyword="hasFilterCondition"
+          :condition="{
+            tenantFilters: currentTenantFilters,
+            status: tableHeaderFilterValue !== 'all' ? tableHeaderFilterValue : '',
+          }"
           @clear-filter="clearFilterKey"
         />
       </div>
@@ -157,13 +160,6 @@ export default {
       }
       // 表格最大高度与容器高度一致
       return this.containerHeight;
-    },
-    hasFilterCondition() {
-      if (this.currentTenantFilters.length > 0 || this.tableHeaderFilterValue !== 'all') {
-        // 存在筛选条件，默认为 placeholder
-        return 'placeholder';
-      }
-      return '';
     },
   },
   created() {

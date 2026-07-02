@@ -54,7 +54,7 @@
     <paas-content-loader
       :is-loading="loading"
       :offset-top="0"
-      placeholder="cloud-api-inner-loading"
+      placeholder="table-loading"
       :height="300"
     >
       <div>
@@ -74,8 +74,9 @@
         >
           <div slot="empty">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
+              :condition="{ searchSelectValue, statusValue, constant: true }"
+              :show-clear="!!(searchSelectValue.length || statusValue)"
+              :is-error="isTableError"
               @reacquire="fetchList"
               @clear-filter="clearFilterKey"
             />
@@ -304,7 +305,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import { mapState, mapGetters } from 'vuex';
 import { copy } from '@/common/tools';
 import UserDisplay from '@/components/user/user-display.vue';
@@ -406,10 +407,7 @@ export default {
         startTime: '',
         endTime: '',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       searchSelectValue: [],
       searchData: {},
     };
@@ -598,8 +596,8 @@ export default {
       const start = new Date();
       start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
       this.initDateTimeRange = [start, end];
-      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
       this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
       this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
       this.init();
@@ -614,8 +612,6 @@ export default {
     },
   },
   created() {
-    moment.locale(this.localLanguage);
-    window.moment = moment;
     this.isFilter = false;
   },
   mounted() {
@@ -623,8 +619,8 @@ export default {
     const start = new Date();
     start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
     this.initDateTimeRange = [start, end];
-    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.dateRange.startTime = dayjs(start).format('YYYY-MM-DD');
+    this.dateRange.endTime = dayjs(end).format('YYYY-MM-DD');
     this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
     this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
     this.initTypeFromQuery();
@@ -746,10 +742,9 @@ export default {
         });
         this.pagination.count = this.isMcpService ? records.length : res.count;
         this.tableList = records;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.loading = false;
@@ -785,15 +780,6 @@ export default {
       this.searchSelectValue = [];
       this.$refs.tableRef.clearFilter();
       this.resetPagination();
-    },
-
-    updateTableEmptyConfig() {
-      if (this.searchSelectValue.length || this.statusValue) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      // 恒定条件不展示清空交互
-      this.tableEmptyConf.keyword = '$CONSTANT';
     },
     handleRemoteMethod(val) {
       return new Promise(async (resolve) => {

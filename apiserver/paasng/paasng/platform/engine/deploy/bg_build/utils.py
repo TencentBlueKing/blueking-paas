@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -198,7 +198,7 @@ def prepare_slugbuilder_template(
             image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}],
             resources=get_slugbuilder_resources(app),
         ),
-        schedule=get_schedule_config(app),
+        schedule=get_schedule_config(app, only_cluster_default=True),
     )
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -17,17 +17,22 @@
 
 import tempfile
 from pathlib import Path
+from typing import Dict
 from unittest import mock
 
 import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
+from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.infras.oauth2.utils import create_oauth2_client
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.engine.models import EngineApp
-from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.constants import ExposedURLType, SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
@@ -38,7 +43,7 @@ from tests.utils.helpers import register_iam_after_create_application
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
-@pytest.fixture()
+@pytest.fixture
 def raw_module(bk_user) -> Module:
     """Raw application and module objects without initializing"""
     application = G(
@@ -63,6 +68,131 @@ class TestModuleInitializer:
         assert EngineApp.objects.count() == 2
         assert ApplicationEnvironment.objects.count() == 2
         assert raw_module.envs.get(environment="stag").get_engine_app() is not None
+
+    @pytest.fixture()
+    def ai_agent_cluster_policy(self, raw_module) -> Dict[str, Cluster]:
+        app_tenant_id = raw_module.application.tenant_id
+        default_cluster = G(
+            Cluster,
+            name="default-cluster",
+            tenant_id=app_tenant_id,
+            exposed_url_type=ExposedURLType.SUBPATH.value,
+        )
+        ai_agent_cluster = G(
+            Cluster,
+            name="ai-agent-cluster",
+            tenant_id=app_tenant_id,
+            exposed_url_type=ExposedURLType.SUBDOMAIN.value,
+        )
+        override_cluster = G(
+            Cluster,
+            name="override-cluster",
+            tenant_id=app_tenant_id,
+            exposed_url_type=ExposedURLType.SUBDOMAIN.value,
+        )
+        stag_override_cluster = G(
+            Cluster,
+            name="stag-override-cluster",
+            tenant_id=app_tenant_id,
+            exposed_url_type=ExposedURLType.SUBPATH.value,
+        )
+
+        ClusterAllocationPolicy.objects.update_or_create(
+            tenant_id=app_tenant_id,
+            defaults={
+                "type": ClusterAllocationPolicyType.RULE_BASED,
+                "allocation_precedence_policies": [
+                    AllocationPrecedencePolicy(
+                        matcher={ClusterAllocationPolicyCondType.USAGE_IS: "ai_agent"},
+                        policy=AllocationPolicy(
+                            env_specific=True,
+                            env_clusters={
+                                AppEnvironment.STAGING: [ai_agent_cluster.name],
+                                AppEnvironment.PRODUCTION: [ai_agent_cluster.name],
+                            },
+                        ),
+                    ),
+                    AllocationPrecedencePolicy(
+                        matcher={},
+                        policy=AllocationPolicy(env_specific=False, clusters=[default_cluster.name]),
+                    ),
+                ],
+                "allocation_policy": None,
+            },
+        )
+        return {
+            "default": default_cluster,
+            "ai_agent": ai_agent_cluster,
+            "override": override_cluster,
+            "stag_override": stag_override_cluster,
+        }
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_create_engine_apps_with_ai_agent_usage_policy(self, raw_module, ai_agent_cluster_policy):
+        raw_module.application.is_ai_agent_app = True
+        raw_module.application.save(update_fields=["is_ai_agent_app"])
+
+        ModuleInitializer(raw_module).create_engine_apps()
+
+        for env_name in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+            wl_app = raw_module.envs.get(environment=env_name).wl_app
+            assert wl_app.latest_config.cluster == ai_agent_cluster_policy["ai_agent"].name
+
+        raw_module.refresh_from_db()
+        assert raw_module.exposed_url_type == ai_agent_cluster_policy["ai_agent"].exposed_url_type
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_create_engine_apps_with_normal_app_uses_default_policy(self, raw_module, ai_agent_cluster_policy):
+        ModuleInitializer(raw_module).create_engine_apps()
+
+        for env_name in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+            wl_app = raw_module.envs.get(environment=env_name).wl_app
+            assert wl_app.latest_config.cluster == ai_agent_cluster_policy["default"].name
+
+        raw_module.refresh_from_db()
+        assert raw_module.exposed_url_type == ai_agent_cluster_policy["default"].exposed_url_type
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_create_engine_apps_with_ai_agent_non_default_module_uses_default_policy(
+        self, raw_module, ai_agent_cluster_policy
+    ):
+        raw_module.application.is_ai_agent_app = True
+        raw_module.application.save(update_fields=["is_ai_agent_app"])
+        raw_module.is_default = False
+        raw_module.save(update_fields=["is_default"])
+
+        ModuleInitializer(raw_module).create_engine_apps()
+
+        for env_name in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+            wl_app = raw_module.envs.get(environment=env_name).wl_app
+            assert wl_app.latest_config.cluster == ai_agent_cluster_policy["default"].name
+
+        raw_module.refresh_from_db()
+        assert raw_module.exposed_url_type == ai_agent_cluster_policy["default"].exposed_url_type
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_create_engine_apps_with_explicit_cluster_overrides_ai_agent_policy(
+        self,
+        raw_module,
+        ai_agent_cluster_policy,
+    ):
+        raw_module.application.is_ai_agent_app = True
+        raw_module.application.save(update_fields=["is_ai_agent_app"])
+
+        ModuleInitializer(raw_module).create_engine_apps(
+            env_cluster_names={
+                AppEnvironment.STAGING: ai_agent_cluster_policy["stag_override"].name,
+                AppEnvironment.PRODUCTION: ai_agent_cluster_policy["override"].name,
+            }
+        )
+
+        stag_wl_app = raw_module.envs.get(environment=AppEnvironment.STAGING).wl_app
+        assert stag_wl_app.latest_config.cluster == ai_agent_cluster_policy["stag_override"].name
+        prod_wl_app = raw_module.envs.get(environment=AppEnvironment.PRODUCTION).wl_app
+        assert prod_wl_app.latest_config.cluster == ai_agent_cluster_policy["override"].name
+
+        raw_module.refresh_from_db()
+        assert raw_module.exposed_url_type == ai_agent_cluster_policy["override"].exposed_url_type
 
     @pytest.mark.parametrize(
         ("services_in_template", "is_default", "bind_call_cnt"),

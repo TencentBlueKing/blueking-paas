@@ -59,8 +59,8 @@
         <div slot="empty">
           <table-empty
             v-if="searchValue"
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="searchValue"
+            :is-error="isTableError"
             @reacquire="getImageList"
             @clear-filter="handleClearFilter"
           />
@@ -169,10 +169,7 @@ export default {
         count: 0,
         limit: 10,
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -233,10 +230,9 @@ export default {
           size: humanize.filesize(image.size),
         }));
         this.pagination.count = res.count;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
@@ -308,14 +304,6 @@ export default {
     /** 清空筛选条件 */
     handleClearFilter() {
       this.searchValue = '';
-    },
-
-    updateTableEmptyConfig() {
-      if (this.searchValue) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
     },
 
     // 部署历史

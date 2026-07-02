@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -18,6 +18,7 @@
 from django.utils.crypto import get_random_string
 
 from paasng.infras.oauth2.api import BkAppSecret, BkOauthClient
+from paasng.infras.oauth2.exceptions import BkOauthApiResponseError, BkOauthClientCodeConflictError
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 
 
@@ -31,7 +32,13 @@ def get_random_secret_key():
 
 def create_oauth2_client(bk_app_code: str, app_tenant_mode: str, app_tenant_id: str) -> bool:
     """Create oauth2 client for application"""
-    return BkOauthClient().create_client(bk_app_code, app_tenant_mode, app_tenant_id)
+    try:
+        return BkOauthClient().create_client(bk_app_code, app_tenant_mode, app_tenant_id)
+    except BkOauthApiResponseError as e:
+        # bkAuth 返回 409 表示该 app_code 已存在
+        if e.status_code == 409:
+            raise BkOauthClientCodeConflictError(bk_app_code=bk_app_code)
+        raise
 
 
 def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:

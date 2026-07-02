@@ -5,7 +5,8 @@
       class="app-container container"
       style="width: 100%"
       :is-loading="loading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :is-transform="false"
     >
       <section>
@@ -42,8 +43,8 @@
           >
             <div slot="empty">
               <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
+                :condition="keyword"
+                :is-error="isTableError"
                 @reacquire="fetchMemberList"
                 @clear-filter="clearFilterKey"
               />
@@ -297,10 +298,7 @@ export default {
       keyword: '',
       isTableLoading: false,
       isDelLoading: false,
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
     };
   },
   computed: {
@@ -378,10 +376,9 @@ export default {
         });
         this.memberList = res || [];
         this.setTableData(this.memberList, this.pagination.current, this.pagination.limit);
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (e) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.$paasMessage({
           theme: 'error',
           message: e.detail || this.$t('接口异常'),
@@ -607,9 +604,6 @@ export default {
     },
     clearFilterKey() {
       this.keyword = '';
-    },
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.keyword;
     },
   },
 };

@@ -1,6 +1,6 @@
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -19,11 +19,14 @@ from bkpaas_auth.models import User
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_build.bg_build import interrupt_build_proc
+from paasng.platform.engine.deploy.bg_command.bkapp_hook_interrupt import interrupt_cnative_pre_release
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
+from paasng.platform.modules.constants import DeployHookType
 
 logger = logging.getLogger(__name__)
 
@@ -64,3 +67,21 @@ def interrupt_deployment(deployment: Deployment, user: User):
             # This exception means that build has not been started yet, transform
             # the error message.
             raise DeployInterruptionFailed("任务正处于预备执行状态，无法中断，请稍候重试")
+
+    if _is_cnative_pre_release_phase(deployment):
+        interrupt_cnative_pre_release(deployment)
+
+
+def _is_cnative_pre_release_phase(deployment: Deployment) -> bool:
+    """Return whether the deployment is currently in the cloud-native pre-release phase
+    that is interruptible.
+    """
+    env = deployment.app_environment
+    if env.application.type != ApplicationType.CLOUD_NATIVE:
+        return False
+
+    if deployment.bkapp_release_id is None:
+        return False
+
+    pre_release_hook = env.module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+    return bool(pre_release_hook and pre_release_hook.enabled)

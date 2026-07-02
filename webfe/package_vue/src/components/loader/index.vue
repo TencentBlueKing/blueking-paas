@@ -12,13 +12,15 @@
       ]"
       :style="{ 'background-color': backgroundColor }"
     >
-      <template v-if="placeholder">
+      <template v-if="isLoaderShow && loaderComponent">
         <component
-          :is="placeholder"
+          :key="loaderRenderKey"
+          :is="loaderComponent"
           :style="{ 'padding-top': `${offsetTop}px`, 'margin-left': `${offsetLeft}px`, 'transform-origin': 'left' }"
           :base-width="baseWidth"
           :content-width="contentWidth"
           :is-transform="isTransform"
+          v-bind="resolvedLoaderProps"
         />
       </template>
     </div>
@@ -27,143 +29,9 @@
 </template>
 
 <script>
-import ByUserLoading from './loading/by-user';
-import LogLoading from './loading/log';
-import ProcessLoading from './loading/process';
-import IndexLoading from './loading/index';
-import ChartLoading from './loading/chart';
-import AppsLoading from './loading/apps';
-import SummaryLoading from './loading/summary';
-import DeployLoading from './loading/deploy';
-import DeployTopLoading from './loading/deploy-top';
-import DeployInnerLoading from './loading/deploy-inner';
-import EnvLoading from './loading/env';
-import EntryLoading from './loading/entry';
-import DataStoreLoading from './loading/data-store';
-import DataInnerLoading from './loading/data-inner';
-import UserLimitLoading from './loading/user-limit';
-import ModuleManageLoading from './loading/module-manage';
-import OrderLoading from './loading/order';
-import AnalysisLoading from './loading/analysis';
-import MarketLoading from './loading/market';
-import AlarmRecordLoading from './loading/alarm-record';
-import DeployHistoryLoading from './loading/deploy-history';
-import DeployConfigLoading from './loading/deploy-config';
-import DeployInnerHistoryLoading from './loading/deploy-inner-history';
-import BaseInfoLoading from './loading/base-info';
-import RolesLoading from './loading/roles';
-import SearchLoading from './loading/search';
-import CodeLoading from './loading/code';
-import CodeReviewLoading from './loading/code-review';
-import MarketMobileLoading from './loading/market-mobile';
-import MarketInfoLoading from './loading/market-info';
-import MarketVisitLoading from './loading/market-visit';
-import CloudApiLoading from './loading/cloud-api';
-import CloudApiInnerLoading from './loading/cloud-api-inner';
-import MigrationLoading from './loading/migration';
-import DevopsLoading from './loading/devops';
-import ServiceLoading from './loading/service';
-import ServiceInnerLoading from './loading/service-inner';
-import ExemptLoading from './loading/exempt';
-import PackagesLoading from './loading/packages';
-import DocuManagerLoading from './loading/docu-manager';
-import DataInnerSharedLoading from './loading/data-inner-shared';
-import CloudApiInnerIndexLoading from './loading/cloud-api-index-inner';
-import CloudApiIndexLoading from './loading/cloud-api-index';
-import DeployYamlLoading from './loading/deploy-yaml';
-import DeployResourceLoading from './loading/deploy-resource';
-import DeployEnvLoading from './loading/deploy-env';
-import DeployVolumeLoading from './loading/deploy-volume';
-import DeployProcessLoading from './loading/deploy-process';
-import DeployHookLoading from './loading/deploy-hook.vue';
-import SummaryPluginLoading from './loading/summary-plugin.vue';
-import PluginNewVersionLoading from './loading/plugin-new-version.vue';
-import PluginMarketInfoLoading from './loading/plugin-market-info.vue';
-import PluinListLoading from './loading/pluin-list.vue';
-import CreatePluginLoading from './loading/create-plugin.vue';
-import PluginProcessLoading from './loading/plugin-process.vue';
-import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
-import EventListLoading from './loading/event-list.vue';
-import BuildConfigLoading from './loading/clound-build-config.vue';
-import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
-import ImageManageLoading from './loading/image-manage.vue';
-import ProcessServiceLoading from './loading/process-service.vue';
-import PluinVersionListLoading from './loading/pluin-version-list.vue';
-import PersistentStorageLoading from './loading/persistent-storage.vue';
-import VisibleRangeLoading from './loading/visible-range.vue';
-import SandboxLoading from './loading/sandbox.vue';
-import DashboardLoading from './loading/dashboard.vue';
-import PlatformConfigLoading from './loading/platform-config.vue';
+import loadingMap from './loading-map';
+
 export default {
-  components: {
-    ByUserLoading,
-    ProcessLoading,
-    LogLoading,
-    IndexLoading,
-    ChartLoading,
-    AppsLoading,
-    SummaryLoading,
-    DeployLoading,
-    DeployTopLoading,
-    DeployInnerLoading,
-    DeployInnerHistoryLoading,
-    EnvLoading,
-    EntryLoading,
-    DataStoreLoading,
-    DataInnerLoading,
-    UserLimitLoading,
-    ModuleManageLoading,
-    OrderLoading,
-    AnalysisLoading,
-    MarketLoading,
-    AlarmRecordLoading,
-    DeployHistoryLoading,
-    DeployConfigLoading,
-    BaseInfoLoading,
-    RolesLoading,
-    SearchLoading,
-    CodeLoading,
-    CodeReviewLoading,
-    MarketMobileLoading,
-    CloudApiLoading,
-    CloudApiInnerLoading,
-    MigrationLoading,
-    DevopsLoading,
-    ServiceLoading,
-    ServiceInnerLoading,
-    ExemptLoading,
-    MarketInfoLoading,
-    MarketVisitLoading,
-    PackagesLoading,
-    DocuManagerLoading,
-    DataInnerSharedLoading,
-    CloudApiInnerIndexLoading,
-    CloudApiIndexLoading,
-    DeployYamlLoading,
-    DeployResourceLoading,
-    DeployEnvLoading,
-    DeployVolumeLoading,
-    DeployProcessLoading,
-    DeployHookLoading,
-    SummaryPluginLoading,
-    PluginNewVersionLoading,
-    PluginMarketInfoLoading,
-    PluinListLoading,
-    CreatePluginLoading,
-    PluginProcessLoading,
-    PluginBaseInfoLoading,
-    EventListLoading,
-    BuildConfigLoading,
-    DeployModuleInfoLoading,
-    ImageManageLoading,
-    ProcessServiceLoading,
-    PluinVersionListLoading,
-    PersistentStorageLoading,
-    VisibleRangeLoading,
-    SandboxLoading,
-    DashboardLoading,
-    PlatformConfigLoading,
-  },
   props: {
     isLoading: {
       type: Boolean,
@@ -209,7 +77,11 @@ export default {
     },
     customStyle: {
       type: Object,
-      default: () => {},
+      default: () => ({}),
+    },
+    loaderProps: {
+      type: Object,
+      default: () => ({}),
     },
   },
   data() {
@@ -220,25 +92,45 @@ export default {
       contentWidth: 1180,
       curPlaceholder: '',
       isPlugin: false,
+      closeLoadingTimer: null,
+      hideLoaderTimer: null,
     };
   },
   computed: {
-    styleObject() {
-      if (this.isMinHeight) {
-        return {
-          ...this.customStyle,
-        };
+    loaderDefinition() {
+      if (!this.placeholder) {
+        return null;
       }
+      return loadingMap[this.placeholder] || { component: this.placeholder };
+    },
+    loaderComponent() {
+      if (!this.loaderDefinition) {
+        return null;
+      }
+      return this.loaderDefinition.component || this.loaderDefinition;
+    },
+    resolvedLoaderProps() {
+      const presetProps = this.loaderDefinition && this.loaderDefinition.props ? this.loaderDefinition.props : {};
+      return {
+        ...presetProps,
+        ...this.loaderProps,
+      };
+    },
+    loaderRenderKey() {
+      return `${this.placeholder || 'loader'}-${this.baseWidth}-${this.contentWidth}`;
+    },
+    styleObject() {
       return { ...this.customStyle };
     },
   },
   watch: {
     isLoading(newVal, oldVal) {
-      // true转false时，让loading动画再运行一段时间，防止过快而闪烁
+      this.clearLoadingTimers();
+
       if (oldVal && !newVal) {
-        setTimeout(() => {
+        this.closeLoadingTimer = setTimeout(() => {
           this.localLoading = this.isLoading;
-          setTimeout(() => {
+          this.hideLoaderTimer = setTimeout(() => {
             this.isLoaderShow = this.isLoading;
           }, 200);
         }, this.delay);
@@ -254,31 +146,45 @@ export default {
       immediate: true,
     },
   },
+  created() {
+    this.initContentWidth();
+  },
   mounted() {
     if (this.isPlugin) {
       this.baseWidth = 1680;
       this.contentWidth = 2450;
     } else {
       this.initContentWidth();
-
-      window.onresize = () => {
-        this.initContentWidth();
-      };
+      window.addEventListener('resize', this.initContentWidth);
     }
   },
+  beforeDestroy() {
+    this.clearLoadingTimers();
+    window.removeEventListener('resize', this.initContentWidth);
+  },
   methods: {
+    clearLoadingTimers() {
+      clearTimeout(this.closeLoadingTimer);
+      clearTimeout(this.hideLoaderTimer);
+      this.closeLoadingTimer = null;
+      this.hideLoaderTimer = null;
+    },
     initContentWidth() {
       const winWidth = window.innerWidth;
       if (winWidth < 1440) {
+        this.baseWidth = 1180;
         this.contentWidth = 980;
       } else if (winWidth < 1680) {
+        this.baseWidth = 1180;
         this.contentWidth = 1080;
       } else if (winWidth < 1920) {
+        this.baseWidth = 1180;
         this.contentWidth = 1180;
       } else {
         this.baseWidth = 1440;
         this.contentWidth = 1440;
       }
+      this.contentWidth = Math.max(this.contentWidth, this.baseWidth);
     },
   },
 };

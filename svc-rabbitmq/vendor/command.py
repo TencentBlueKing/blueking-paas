@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import hashlib
 import logging
 from typing import TYPE_CHECKING, Iterable, Set, cast
 
 from django.core.management.base import BaseCommand
 from paas_service.models import ServiceInstance
+
 from vendor.client import Client
 from vendor.helper import InstanceHelper
 from vendor.models import Cluster
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class ClusterBaseCommand(BaseCommand):
-    def add_arguments(self, parser: 'CommandParser'):
+    def add_arguments(self, parser: "CommandParser"):
         parser.add_argument("-c", "--cluster", required=True, type=int, help="cluster id")
 
         super().add_arguments(parser)
@@ -46,7 +46,7 @@ class ClusterBaseCommand(BaseCommand):
 
 
 class InstancesBasedCommand(ClusterBaseCommand):
-    def add_arguments(self, parser: 'CommandParser'):
+    def add_arguments(self, parser: "CommandParser"):
         parser.add_argument("-i", "--instances", nargs="+", help="instance id")
         parser.add_argument("-V", "--vhost", nargs="+", default=[], help="virtual host name")
 
@@ -96,8 +96,8 @@ class FederationBaseCommand(ClusterBaseCommand):
         cluster_client = Client.from_cluster(cluster)
         upstream_client = Client.from_cluster(upstream)
 
-        cluster_vhosts = cast(Set[str], {i["name"] for i in cluster_client.virtual_host.list()})
-        upstream_vhosts = cast(Set[str], {i["name"] for i in upstream_client.virtual_host.list()})
+        cluster_vhosts = cast("Set[str]", {i["name"] for i in cluster_client.virtual_host.list()})
+        upstream_vhosts = cast("Set[str]", {i["name"] for i in upstream_client.virtual_host.list()})
 
         vhosts = upstream_vhosts & cluster_vhosts
         vhosts = vhosts | set(specified)
@@ -105,10 +105,12 @@ class FederationBaseCommand(ClusterBaseCommand):
         return vhosts
 
     def get_username(self, cluster: Cluster, upstream: Cluster, name: str, vhost: str):
-        hexdigest = hashlib.sha1(f"{cluster.pk}:{cluster.name}-{vhost}".encode("utf-8")).hexdigest()
+        # TODO: 需要修改为 sha256?
+        hexdigest = hashlib.sha1(f"{cluster.pk}:{cluster.name}-{vhost}".encode("utf-8")).hexdigest()  # noqa: S324
         return f"{name}-{hexdigest[:12]}"
 
     def get_password(self, cluster: Cluster, upstream: Cluster, name: str, vhost: str):
-        return hashlib.sha1(
+        # TODO: 需要修改为 sha256?
+        return hashlib.sha1(  # noqa: S324
             f"{cluster.pk}:{cluster.name}-{upstream.pk}:{upstream.name}-{name}-{vhost}".encode("utf-8"),
         ).hexdigest()

@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -21,7 +21,7 @@
 */
 import http from '@/api';
 import bartOptions from '@/json/bar_chart_default';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 
 // store
 const state = {
@@ -51,7 +51,7 @@ const mutations = {
     }];
     const timestamps = data.timestamps.map((item) => {
       // 时间处理
-      item = moment.unix(item).format('YYYY-MM-DD HH:mm:ss');
+      item = dayjs.unix(item).format('YYYY-MM-DD HH:mm:ss');
       return item.substring(5);
     });
     chartOptions.xAxis.data = timestamps;

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Copyright (C) Tencent. All rights reserved.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -28,6 +28,16 @@ ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
 TENANT_GUARD_ANNO_KEY = "bkapp.paas.bk.tencent.com/tenant-guard"
 # workloads 注入到 annotations 的部署ID字段
 BKPAAS_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
+
+# 标记 "最近一次被平台请求中断的部署" 的注解键名, 主要用于中断 operator 的部署
+#
+# 取值: 被请求中断的那次部署的 deploy_id (字符串), 与 BKPAAS_DEPLOY_ID_ANNO_KEY 同源
+# 写入方: apiserver 在用户主动中断部署, 把当前部署的 deploy_id patch 到此注解,
+#        用于向 operator 发出实时中断信号
+# 读取方: operator 在调和 BkApp 时, 仅当本注解的值与 BKPAAS_DEPLOY_ID_ANNO_KEY 的值同时存在且相等时,
+#        认为"当前正在进行的这次部署已被用户主动中断"
+INTERRUPTED_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/interrupted-deploy-id"
+
 # workloads 注入到 annotations 的增强服务信息字段
 BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"
 # 注解中存储 region 的键名

@@ -24,7 +24,7 @@
 import http from '@/api';
 import { json2Query, buildPath } from '@/common/tools';
 import bartOptions from '@/json/bar_chart_default';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 
 export default {
   namespaced: true,
@@ -64,7 +64,7 @@ export default {
       ];
       const timestamps = data.timestamps.map((item) => {
         // 时间处理
-        item = moment.unix(item).format('YYYY/MM/DD hh:mm:ss');
+        item = dayjs.unix(item).format('YYYY/MM/DD HH:mm:ss');
         return item.substring(5);
       });
       chartOptions.xAxis.data = timestamps;

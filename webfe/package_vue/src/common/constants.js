@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -431,6 +431,7 @@ export const COMPONENT_STATUS = {
  */
 export const MCP_SERVER_STATUS = {
   approved: '已申请',
+  owned: '已申请',
   rejected: '已拒绝',
   pending: '申请中',
   need_apply: '未申请',

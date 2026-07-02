@@ -63,7 +63,7 @@
         <template v-else>
           <div class="empty-wrapper">
             <table-empty
-              :keyword="tableEmptyConf.keyword"
+              :condition="searchValue"
               @clear-filter="clearFilter"
             />
           </div>
@@ -94,9 +94,6 @@ export default {
       curList: [],
       searchValue: '',
       curSelect: '',
-      tableEmptyConf: {
-        keyword: '',
-      },
     };
   },
   computed: {
@@ -142,7 +139,6 @@ export default {
         return (item.name && !!item.name.match(regex)) || (item.description && !!item.description.match(regex));
       });
       this.updateVirtualScrollData();
-      this.updateTableEmptyConfig();
     },
 
     // 根据query参数选择对应网关
@@ -192,10 +188,6 @@ export default {
       this.isFilter = false;
       this.curList = this.list;
       this.updateVirtualScrollData();
-    },
-
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.searchValue;
     },
   },
 };

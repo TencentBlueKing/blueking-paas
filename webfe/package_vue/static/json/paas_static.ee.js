@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -269,7 +269,7 @@ export const PLATFORM_CONFIG = {
 
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
-        
+
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: PAAS_DOCS_URL_PREFIX + '/UserGuide/ProductFeatures/SystemManagement/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 

@@ -45,8 +45,8 @@
       >
         <div slot="empty">
           <table-empty
-            :keyword="tableEmptyConf.keyword"
-            :abnormal="tableEmptyConf.isAbnormal"
+            :condition="{ search: searchValue, filters: tableFilterMap }"
+            :is-error="isTableError"
             :empty-title="$t('暂无应用')"
             @reacquire="getPlatformApps"
             @clear-filter="clearFilterKey"
@@ -163,9 +163,7 @@ import DeleteDialog from '@/components/delete-dialog';
 import { APP_STATUS } from '@/common/constants';
 import UserDisplay from '@/components/user/user-display.vue';
 import { mapState } from 'vuex';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
 
 export default {
   name: 'PlatformAppList',
@@ -208,10 +206,7 @@ export default {
       tableFilterMap: {
         order_by: '-created',
       },
-      tableEmptyConf: {
-        keyword: '',
-        isAbnormal: false,
-      },
+      isTableError: false,
       deleteDialogConfig: {
         visible: false,
         loading: false,
@@ -346,10 +341,6 @@ export default {
     this.getTenantAppStatistics();
     this.getAppTypes();
     this.getCategoryTypes();
-    dayjs.extend(relativeTime);
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
   },
   methods: {
     // 页码重置
@@ -474,13 +465,12 @@ export default {
         const res = await this.$store.dispatch(`tenantOperations/${actionName}`, { queryParams });
         this.appList = this.processAppList(res.results || []);
         this.pagination.count = res.count;
-        this.tableEmptyConf.isAbnormal = false;
-        this.updateTableEmptyConfig();
+        this.isTableError = false;
       } catch (e) {
         if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
           return;
         }
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
         this.isTableLoading = false;
@@ -572,14 +562,6 @@ export default {
       this.curTenantId = 'all';
       this.$refs.tableRef?.clearFilter();
     },
-    updateTableEmptyConfig() {
-      const filteredData = this.filterUndefinedProperties(this.tableFilterMap);
-      if (this.searchValue || Object.keys(filteredData)?.length) {
-        this.tableEmptyConf.keyword = 'placeholder';
-        return;
-      }
-      this.tableEmptyConf.keyword = '';
-    },
   },
 };
 </script>
@@ -591,13 +573,6 @@ export default {
   }
   .table-wrapper {
     margin-top: 16px;
-    /deep/ .bk-table-header {
-      .custom-header-cell {
-        text-decoration: underline;
-        text-decoration-style: dashed;
-        text-underline-position: under;
-      }
-    }
     .app-logo {
       width: 32px;
       height: 32px;

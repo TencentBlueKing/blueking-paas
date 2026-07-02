@@ -258,9 +258,9 @@
                     <div class="ps-no-result">
                       <div class="text">
                         <table-empty
+                          :condition="logParams.keyword"
                           :is-content-text="false"
-                          :keyword="tableEmptyConf.keyword"
-                          :abnormal="tableEmptyConf.isAbnormal"
+                          :is-error="isTableError"
                           @reacquire="getLogList"
                           @clear-filter="clearFilterKey"
                         />
@@ -316,7 +316,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
@@ -328,8 +328,8 @@ const xssOptions = {
   },
 };
 const logXss = new xss.FilterXSS(xssOptions);
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -398,10 +398,7 @@ export default {
           url: this.GLOBAL.DOC.LOG_QUERY_EMPTY,
         },
       ],
-      tableEmptyConf: {
-        isAbnormal: false,
-        keyword: '',
-      },
+      isTableError: false,
       isExceedMaxResultWindow: false,
       logsTotal: 0,
     };
@@ -776,10 +773,9 @@ export default {
         this.logList.splice(0, this.logList.length, ...data);
         this.pagination.count = this.isExceedMaxResultWindow ? res.max_result_window : res.total;
         this.pagination.current = page;
-        this.updateTableEmptyConfig();
-        this.tableEmptyConf.isAbnormal = false;
+        this.isTableError = false;
       } catch (res) {
-        this.tableEmptyConf.isAbnormal = true;
+        this.isTableError = true;
         this.logList.splice(0, this.logList.length, ...[]);
         this.pagination.count = 0;
       } finally {
@@ -935,12 +931,8 @@ export default {
       this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
     },
 
-    updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.logParams.keyword;
-    },
-
     formatTime(time) {
-      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
+      return time ? dayjs.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     // 获取清洗规则, 添加对应link

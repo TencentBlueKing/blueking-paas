@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
- * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) Tencent. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
@@ -3217,5 +3217,7 @@ export default {
   是否切换为代码仓库: '是否切换为代码仓库',
   '一旦修改为代码仓库部署后，不能再改回源码包部署。': '一旦修改为代码仓库部署后，不能再改回源码包部署。',
   复制审批链接: '复制审批链接',
-  '如需创建 AI 插件，请前往 AIDEV 平台。': '如需创建 AI 插件，请前往 AIDEV 平台。'
+  '如需创建 AI 插件，请前往 AIDEV 平台。': '如需创建 AI 插件，请前往 AIDEV 平台。',
+  公共采集项: '公共采集项',
+  '公共采集项由平台统一接入日志平台，不支持在日志平台进行单独的检索、配置。': '公共采集项由平台统一接入日志平台，不支持在日志平台进行单独的检索、配置。',
 };

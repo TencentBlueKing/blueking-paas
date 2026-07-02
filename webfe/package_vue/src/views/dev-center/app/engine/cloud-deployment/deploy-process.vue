@@ -941,9 +941,7 @@ import metricViewMode from './comps/metric/view-mode.vue';
 import processService from './comps/process-config/process-service.vue';
 import portMapTable from './comps/process-config/port-map-table.vue';
 import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
 
 export default {
   components: {
@@ -1281,7 +1279,6 @@ export default {
       this.init();
     }
     if (this.isReadOnlyMode) {
-      this.configureDayjsLocale();
       // 查看模式获取最近一条操作记录
       this.getDeploymentOperations();
     }
@@ -1289,12 +1286,6 @@ export default {
     await this.getQuotaPlans();
   },
   methods: {
-    configureDayjsLocale() {
-      dayjs.extend(relativeTime);
-      if (this.localLanguage !== 'en') {
-        dayjs.locale('zh-cn');
-      }
-    },
     async init() {
       try {
         this.isLoading = true;

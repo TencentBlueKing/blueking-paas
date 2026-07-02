@@ -4,7 +4,8 @@
     <paas-content-loader
       class="app-container"
       :is-loading="isLoading"
-      placeholder="deploy-inner-history-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 2, operationWidth: 180 }"
       :is-transform="false"
     >
       <div class="record-main card-style">

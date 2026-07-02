@@ -19,7 +19,6 @@
 /**
  * @file echarts 图表配置
  */
-// import moment from 'moment'
 import i18n from '@/language/i18n';
 export default {
   stat: {

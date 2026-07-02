@@ -163,9 +163,7 @@ import DeleteDialog from '@/components/delete-dialog';
 import { APP_STATUS } from '@/common/constants';
 import UserDisplay from '@/components/user/user-display.vue';
 import { mapState } from 'vuex';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import dayjs from '@/common/dayjs';
 
 export default {
   name: 'PlatformAppList',
@@ -343,10 +341,6 @@ export default {
     this.getTenantAppStatistics();
     this.getAppTypes();
     this.getCategoryTypes();
-    dayjs.extend(relativeTime);
-    if (this.localLanguage !== 'en') {
-      dayjs.locale('zh-cn');
-    }
   },
   methods: {
     // 页码重置
@@ -579,13 +573,6 @@ export default {
   }
   .table-wrapper {
     margin-top: 16px;
-    /deep/ .bk-table-header {
-      .custom-header-cell {
-        text-decoration: underline;
-        text-decoration-style: dashed;
-        text-underline-position: under;
-      }
-    }
     .app-logo {
       width: 32px;
       height: 32px;

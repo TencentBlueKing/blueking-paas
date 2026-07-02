@@ -3,7 +3,8 @@
     <paas-content-loader
       :is-loading="isLoading"
       :is-transition="false"
-      placeholder="event-list-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
     >
       <section class="module-select">
         <bk-select
@@ -117,7 +118,7 @@
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import deployLogSideslider from '@/components/deploy/deploy-log-sideslider.vue';
 import { cloneDeep } from 'lodash';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 export default {
   name: 'ClundBuildHistory',
   components: {

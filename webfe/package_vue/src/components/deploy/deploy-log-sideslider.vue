@@ -10,7 +10,10 @@
       slot="header"
       class="deploy-header"
     >
-      <div style="float: left">
+      <div
+        class="text-ellipsis"
+        v-bk-overflow-tips
+      >
         <template v-if="isMultiTenantDisplayMode">
           <span>{{ historySideslider.titlePrefix }}</span>
           <UserDisplay :value="historySideslider.operator" />
@@ -18,15 +21,13 @@
         </template>
         <span v-else>{{ historySideslider.title }}</span>
       </div>
-      <div style="float: right">
-        <bk-button
-          class="mr10"
-          size="small"
-          @click="handleExportLog"
-        >
-          {{ $t('下载日志') }}
-        </bk-button>
-      </div>
+      <bk-button
+        class="flex-shrink-0"
+        size="small"
+        @click="handleExportLog"
+      >
+        {{ $t('下载日志') }}
+      </bk-button>
     </div>
     <div
       slot="content"
@@ -369,9 +370,9 @@ export default {
 
 <style lang="scss" scoped>
 .deploy-header {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .deploy-history-sideslider :deep(.bk-sideslider-content) {
   overflow: unset;

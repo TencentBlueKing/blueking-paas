@@ -22,10 +22,12 @@ from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
     ServiceBindingPolicyType,
+    ServiceUsage,
 )
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.constants import SourceOrigin
 
 
 def binding_policy_factory(type_: str, data: dict[str, Any]) -> "BindingPolicy":
@@ -85,6 +87,8 @@ def precedence_policy_factory(
             return RegionInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
         case PrecedencePolicyCondType.CLUSTER_IN.value:
             return ClusterInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
+        case PrecedencePolicyCondType.USAGE_IN.value:
+            return UsageInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
         case PrecedencePolicyCondType.ALWAYS_MATCH.value:
             return AlwaysMatchPrecedencePolicy(binding_policy=binding_policy)
         case _:
@@ -127,6 +131,27 @@ class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
     def match(self, env: ModuleEnvironment) -> bool:
         cluster_name = EnvClusterService(env).get_cluster_name()
         return cluster_name in self.cond_data["cluster_names"]
+
+
+def get_env_usage(env: ModuleEnvironment) -> str | None:
+    """Get the usage from the module environment."""
+    if env.application.is_ai_agent_app:
+        return ServiceUsage.AI_AGENT.value
+    if env.module_id and env.module.get_source_origin() == SourceOrigin.AI_AGENT:
+        return ServiceUsage.AI_AGENT.value
+    return None
+
+
+@define
+class UsageInPrecedencePolicy(BindingPrecedencePolicy):
+    """The precedence policy that checks the usage is in a list."""
+
+    cond_data: dict[str, Any]
+    binding_policy: BindingPolicy
+
+    def match(self, env: ModuleEnvironment) -> bool:
+        usage = get_env_usage(env)
+        return usage is not None and usage in self.cond_data["usages"]
 
 
 @define

@@ -3,7 +3,8 @@
     <paas-plugin-title />
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="20"
       class="app-container overview-middle ignored-container"
     >

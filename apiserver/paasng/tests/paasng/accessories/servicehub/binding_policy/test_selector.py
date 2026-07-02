@@ -28,7 +28,7 @@ from paasng.accessories.servicehub.binding_policy.selector import (
     PossiblePlansResultType,
     get_plan_by_env,
 )
-from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
+from paasng.accessories.servicehub.constants import PrecedencePolicyCondType, ServiceUsage
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -191,6 +191,38 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.CLUSTER_IN,
                     cond_data={"cluster_names": [cluster_name]},
+                    plans=[plan2.uuid],
+                    priority=1,
+                ),
+                ServiceBindingPrecedencePolicyDTO(
+                    cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
+                    cond_data={},
+                    plans=[plan1.uuid],
+                    priority=0,
+                ),
+            ]
+        )
+
+
+class TestPlanSelectorSelectWithPrecedenceUsageIn:
+    def test_static_with_usage_in_matches(self, service_obj, bk_prod_env, plan1, plan2):
+        bk_prod_env.application.is_ai_agent_app = True
+        bk_prod_env.application.save(update_fields=["is_ai_agent_app"])
+        self._setup_static_precedence_policies(service_obj, plan1, plan2)
+
+        assert PlanSelector().select(service_obj, bk_prod_env) == plan2
+
+    def test_static_with_usage_in_not_matches(self, service_obj, bk_prod_env, plan1, plan2):
+        self._setup_static_precedence_policies(service_obj, plan1, plan2)
+
+        assert PlanSelector().select(service_obj, bk_prod_env) == plan1
+
+    def _setup_static_precedence_policies(self, service_obj, plan1, plan2):
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+            [
+                ServiceBindingPrecedencePolicyDTO(
+                    cond_type=PrecedencePolicyCondType.USAGE_IN,
+                    cond_data={"usages": [ServiceUsage.AI_AGENT.value]},
                     plans=[plan2.uuid],
                     priority=1,
                 ),

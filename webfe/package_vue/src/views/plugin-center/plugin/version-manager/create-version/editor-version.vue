@@ -267,7 +267,7 @@
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import { formatTime } from '@/common/tools';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 
 export default {
   mixins: [pluginBaseMixin],

@@ -85,7 +85,7 @@
     </div>
     <paas-content-loader
       :is-loading="loading"
-      placeholder="cloud-api-inner-loading"
+      placeholder="table-loading"
       :height="300"
     >
       <div class="spacing-x2">
@@ -175,68 +175,9 @@
               {{ getComputedExpires(props.row) }}
             </template>
           </bk-table-column>
-          <template v-if="allData.length > 0">
-            <bk-table-column
-              :label="$t('状态')"
-              prop="permission_status"
-              column-key="permission_status"
-              :filters="statusFilters"
-              :filter-multiple="true"
-              :min-width="110"
-              :show-overflow-tooltip="true"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="props">
-                <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('已申请') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('无限制') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span
-                    style="color: #c4c6cc; margin-top: 1px"
-                    class="paasng-icon paasng-info-line"
-                  />
-                  {{ $t('未申请') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已过期') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已拒绝') }}
-                </template>
-                <template v-else>
-                  <round-loading ext-cls="applying" />
-                  <bk-popover placement="top">
-                    {{ $t('申请中') }}
-                    <div slot="content">
-                      <template v-if="isComponentApi && GLOBAL.HELPER.href">
-                        {{ $t('请联系') }}
-                        <a
-                          :href="GLOBAL.HELPER.href"
-                          style="margin: 0 5px; border-bottom: 1px solid #3a84ff; cursor: pointer"
-                        >
-                          {{ GLOBAL.HELPER.name }}
-                        </a>
-                        {{ $t('审批') }}
-                      </template>
-                      <template v-else>
-                        {{ $t('请联系{n}负责人审批：', { n: $t('网关') }) }} {{ maintainers.join('，') }}
-                      </template>
-                    </div>
-                  </bk-popover>
-                </template>
-              </template>
-            </bk-table-column>
-          </template>
           <bk-table-column
-            v-else
             :label="$t('状态')"
+            v-bind="statusColumnBindings"
             :min-width="110"
             :show-overflow-tooltip="true"
             :render-header="$renderHeader"
@@ -251,7 +192,10 @@
                 {{ $t('无限制') }}
               </template>
               <template v-else-if="props.row.permission_status === 'need_apply'">
-                <span class="paasng-icon paasng-reject" />
+                <span
+                  :class="needApplyStatusIconClass"
+                  :style="needApplyStatusIconStyle"
+                />
                 {{ $t('未申请') }}
               </template>
               <template v-else-if="props.row.permission_status === 'expired'">
@@ -363,7 +307,8 @@
 </template>
 
 <script>
-import _ from 'lodash';
+import { mapState } from 'vuex';
+import { debounce, uniq } from 'lodash';
 import BatchDialog from './batch-apply-dialog';
 import RenewalDialog from './batch-renewal-dialog';
 import GatewayDialog from './apply-by-gateway-dialog';
@@ -372,7 +317,7 @@ import { formatApplyFun, formatRenewFun } from '@/common/cloud-api';
 import { updateHeaderCheckboxState } from './table-utils';
 
 export default {
-  name: '',
+  name: 'CloudApiRenderList',
   components: {
     BatchDialog,
     RenewalDialog,
@@ -426,7 +371,6 @@ export default {
         rows: [],
       },
 
-      isShowBatchRenewalDialog: false,
       isShowGatewayDialog: false,
       levelMap: {
         normal: this.$t('普通'),
@@ -458,9 +402,13 @@ export default {
       filterStatus: [],
       filterData: [],
       selectedList: [],
+      listRequestId: 0,
+      applyByGatewayRequestId: 0,
     };
   },
   computed: {
+    ...mapState(['localLanguage']),
+    // 是否为组件 API 类型（非网关 API）
     isComponentApi() {
       return this.apiType === 'component';
     },
@@ -470,77 +418,65 @@ export default {
     curFetchDispatchMethod() {
       return this.isComponentApi ? 'getComponents' : 'getResources';
     },
-    // 是否允许批量申请
+    // 是否禁用批量申请按钮
     isApplyDisabled() {
       return !this.selectedList.some((item) => item.applyDisabled === false);
     },
-    // 是否允许批量续期
+    // 是否禁用批量续期按钮
     isRenewalDisabled() {
       return !this.selectedList.some((item) => item.renewDisabled === false);
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
+    statusColumnBindings() {
+      if (this.allData.length > 0) {
+        return {
+          prop: 'permission_status',
+          'column-key': 'permission_status',
+          filters: this.statusFilters,
+          'filter-multiple': true,
+        };
+      }
+      return {};
+    },
+    // 未申请状态图标的 CSS 类名
+    needApplyStatusIconClass() {
+      if (this.allData.length > 0) {
+        return 'paasng-icon paasng-info-line';
+      }
+      return 'paasng-icon paasng-reject';
+    },
+    needApplyStatusIconStyle() {
+      if (this.allData.length > 0) {
+        return { color: '#c4c6cc', marginTop: '1px' };
+      }
+      return {};
     },
   },
   watch: {
-    'listFilter.isApply'(value) {
-      if (value) {
-        if (this.listFilter.isRenew) {
-          this.allData = this.apiList.filter((item) => ['apply', 'renew'].includes(item.permission_action));
-        } else {
-          this.allData = this.apiList.filter((item) => item.permission_action === 'apply');
-        }
-      } else {
-        if (this.listFilter.isRenew) {
-          this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
-        } else {
-          this.allData = this.apiList;
-        }
-      }
-      this.pagination.count = this.allData.length;
-      this.pagination.current = 1;
-      const start = this.pagination.limit * (this.pagination.current - 1);
-      const end = start + this.pagination.limit;
-      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+    // 「仅显示可申请」勾选变化
+    'listFilter.isApply'() {
+      this.updatePermissionActionFilter();
     },
 
-    'listFilter.isRenew'(value) {
-      if (value) {
-        if (this.listFilter.isApply) {
-          this.allData = this.apiList.filter((item) => ['apply', 'renew'].includes(item.permission_action));
-        } else {
-          this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
-        }
-      } else {
-        if (this.listFilter.isApply) {
-          this.allData = this.apiList.filter((item) => item.permission_action === 'apply');
-        } else {
-          this.allData = this.apiList;
-        }
-      }
-      this.pagination.count = this.allData.length;
-      this.pagination.current = 1;
-      const start = this.pagination.limit * (this.pagination.current - 1);
-      const end = start + this.pagination.limit;
-      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+    // 「仅显示可续期」勾选变化
+    'listFilter.isRenew'() {
+      this.updatePermissionActionFilter();
     },
 
     searchValue(newVal, oldVal) {
       if (newVal === '' && oldVal !== '' && this.isFilter) {
         this.allData = this.apiList;
-        this.pagination.count = this.apiList.length;
-        this.pagination.current = 1;
-        const start = this.pagination.limit * (this.pagination.current - 1);
-        const end = start + this.pagination.limit;
-        this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+        this.resetPaginationByData();
+        this.updateTableListByPage();
         this.isFilter = false;
       }
     },
+    // 监听网关/系统 ID 变化，刷新表格数据并重置状态
     id: {
       handler(value) {
         // 强制刷新表格，为了重置表格过滤条件
         this.tableKey = +new Date();
         this.searchValue = '';
+        this.resetTableState();
         this.judgeIsApplyByGateway = Object.assign(
           {},
           {
@@ -587,6 +523,13 @@ export default {
     };
   },
   methods: {
+    /**
+     * 计算权限到期剩余天数
+     * @param {Object} payload - API 数据对象
+     * @param {number|undefined} payload.expires_in - 到期剩余秒数
+     * @param {string} payload.permission_status - 权限状态
+     * @returns {string} 剩余天数文本，「永久」或「--」
+     */
     getComputedExpires(payload) {
       if (!payload.expires_in) {
         if (payload.permission_status === 'owned') {
@@ -606,25 +549,28 @@ export default {
       } else {
         this.filterData = this.allData.filter((item) => this.filterStatus.includes(item.permission_status));
       }
-      this.pagination.current = 1;
-      this.pagination.count = this.filterData.length;
-      this.tableList = this.filterData.slice(
-        (this.pagination.current - 1) * this.pagination.limit,
-        this.pagination.current * this.pagination.limit
-      );
+      this.resetPaginationByData(this.filterData);
+      this.updateTableListByPage();
     },
 
-    handleClickOutside() {
+    /**
+     * 点击高级筛选区域外部时关闭筛选面板
+     * @param {Event} event - 点击事件对象
+     */
+    handleClickOutside(event) {
       if (
-        arguments[0].target.className.indexOf('advanced-filter') !== -1 ||
-        arguments[0].target.className.indexOf('paasng-angle-double-down') !== -1 ||
-        arguments[0].target.className.indexOf('paasng-angle-double-up') !== -1
+        event.target.className.indexOf('advanced-filter') !== -1 ||
+        event.target.className.indexOf('paasng-angle-double-down') !== -1 ||
+        event.target.className.indexOf('paasng-angle-double-up') !== -1
       ) {
         return;
       }
       this.ifopen = false;
     },
 
+    /**
+     * 申请权限成功后的回调：关闭弹窗，重置勾选状态，刷新列表
+     */
     handleSuccessApply() {
       this.applyDialog.visiable = false;
       this.allChecked = false;
@@ -632,6 +578,9 @@ export default {
       this.fetchList(this.id);
     },
 
+    /**
+     * 按网关申请成功后的回调：关闭弹窗，更新网关申请状态，刷新列表
+     */
     handleApiSuccessApply() {
       this.isShowGatewayDialog = false;
       this.judgeIsApplyByGateway.allow_apply_by_gateway = false;
@@ -641,6 +590,9 @@ export default {
       this.fetchList(this.id);
     },
 
+    /**
+     * 续期成功后的回调：关闭弹窗，重置勾选状态，刷新列表
+     */
     handleSuccessRenewal() {
       this.renewalDialog.visiable = false;
       this.allChecked = false;
@@ -648,6 +600,9 @@ export default {
       this.fetchList(this.id);
     },
 
+    /**
+     * 申请弹窗关闭后的回调：重置申请弹窗数据
+     */
     handleAfterLeave() {
       this.applyDialog = Object.assign(
         {},
@@ -659,6 +614,9 @@ export default {
       );
     },
 
+    /**
+     * 续期弹窗关闭后的回调：重置续期弹窗数据
+     */
     handleRenewalAfterLeave() {
       this.renewalDialog = Object.assign(
         {},
@@ -670,11 +628,32 @@ export default {
       );
     },
 
-    afterApplyDialogClose() {
-      this.applyDialog.name = '';
+    /**
+     * 根据高级筛选选项（仅显示可申请/可续期）过滤 API 列表
+     */
+    updatePermissionActionFilter() {
+      const { isApply, isRenew } = this.listFilter;
+      const actions = [];
+
+      if (isApply) {
+        actions.push('apply');
+      }
+      if (isRenew) {
+        actions.push('renew');
+      }
+
+      this.allData = actions.length
+        ? this.apiList.filter((item) => actions.includes(item.permission_action))
+        : this.apiList;
+      this.resetPaginationByData();
+      this.updateTableListByPage();
     },
 
-    handleSearch: _.debounce(function () {
+    /**
+     * 关键字搜索 API（防抖 350ms）
+     * 支持逗号分隔多个关键词搜索，匹配 API 名称和描述
+     */
+    handleSearch: debounce(function () {
       if (this.searchValue === '') {
         return;
       }
@@ -682,7 +661,6 @@ export default {
       // 多个API过滤
       if (this.searchValue.indexOf(',') !== -1) {
         let searchArr = this.searchValue.split(',');
-        searchArr = _.uniq(searchArr);
         let filterArr = [];
         for (let i = 0; i < searchArr.length; i++) {
           if (searchArr[i] === '') {
@@ -696,7 +674,7 @@ export default {
           filterArr.push(...val);
         }
         // 结果去重
-        filterArr = _.uniq(filterArr);
+        filterArr = uniq(filterArr);
         this.allData = filterArr;
       } else {
         this.allData = [
@@ -705,13 +683,8 @@ export default {
           ),
         ];
       }
-      this.pagination.count = this.allData.length;
-
-      this.pagination.current = 1;
-
-      const start = this.pagination.limit * (this.pagination.current - 1);
-      const end = start + this.pagination.limit;
-      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+      this.resetPaginationByData();
+      this.updateTableListByPage();
     }, 350),
 
     /**
@@ -730,9 +703,80 @@ export default {
      * 初始化弹层翻页条
      */
     initPageConf() {
+      this.resetPaginationByData();
+    },
+
+    /**
+     * 根据数据重置分页器（回到第一页）
+     * @param {Array} data - 数据源，默认为 allData
+     */
+    resetPaginationByData(data = this.allData) {
       this.pagination.current = 1;
-      const total = this.allData.length;
-      this.pagination.count = total;
+      this.pagination.count = data.length;
+    },
+
+    /**
+     * 根据页码更新当前页的表格数据
+     * @param {number} page - 页码，默认为当前页
+     */
+    updateTableListByPage(page = this.pagination.current) {
+      this.tableList.splice(0, this.tableList.length, ...this.getDataByPage(page));
+    },
+
+    /**
+     * 重置表格所有状态
+     */
+    resetTableState() {
+      this.apiList = [];
+      this.allData = [];
+      this.tableList = [];
+      this.filterData = [];
+      this.filterStatus = [];
+      this.selectedList = [];
+      this.pagination.current = 1;
+      this.pagination.count = 0;
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.isFilter = false;
+      this.isTableError = false;
+    },
+
+    /**
+     * 生成当前网关/系统的唯一选择标识 key
+     * 组件 API：直接使用 id
+     * 网关 API：使用 id:name 组合
+     * @param {string|number} id - 网关/系统 ID
+     * @param {string} name - 网关名称
+     * @returns {string} 唯一标识 key
+     */
+    getSelectionKey(id = this.id, name = this.name) {
+      return this.isComponentApi ? String(id) : `${String(id)}:${name}`;
+    },
+
+    /**
+     * 创建请求上下文，用于避免慢请求覆盖快请求的结果
+     * @param {string} requestIdKey - 请求 ID 对应的 data 属性名
+     * @param {string|number} id - 网关/系统 ID
+     * @returns {{id: number, gatewayName: string, selectionKey: string}} 请求上下文
+     */
+    createRequestContext(requestIdKey, id = this.id) {
+      this[requestIdKey] += 1;
+      const gatewayName = this.name;
+      return {
+        id: this[requestIdKey],
+        gatewayName,
+        selectionKey: this.getSelectionKey(id, gatewayName),
+      };
+    },
+
+    /**
+     * 判断是否为最新一次请求，防止慢网络下旧请求返回覆盖新数据
+     * @param {string} requestIdKey - 请求 ID 对应的 data 属性名
+     * @param {{id: number, selectionKey: string}} requestContext - 请求上下文
+     * @returns {boolean} 是否为最新请求
+     */
+    isLatestRequest(requestIdKey, requestContext) {
+      return requestContext.id === this[requestIdKey] && requestContext.selectionKey === this.getSelectionKey();
     },
 
     /**
@@ -742,8 +786,7 @@ export default {
      */
     pageChange(page = 1) {
       this.pagination.current = page;
-      const data = this.getDataByPage(page);
-      this.tableList.splice(0, this.tableList.length, ...data);
+      this.updateTableListByPage(page);
       // 翻页后更新表头勾选框状态
       this.syncHeaderCheckbox();
     },
@@ -757,21 +800,13 @@ export default {
      */
     getDataByPage(page) {
       if (!page) {
-        this.pagination.current = page = 1;
+        this.pagination.current = 1;
       }
-      let startIndex = (page - 1) * this.pagination.limit;
-      let endIndex = page * this.pagination.limit;
-      if (startIndex < 0) {
-        startIndex = 0;
-      }
-      if (endIndex > this.allData.length) {
-        endIndex = this.allData.length;
-      }
-      // 当前状态数据
-      if (this.filterStatus.length) {
-        return this.filterData.slice(startIndex, endIndex);
-      }
-      return this.allData.slice(startIndex, endIndex);
+      const currentPage = page || 1;
+      const data = this.filterStatus.length ? this.filterData : this.allData;
+      const startIndex = Math.max((currentPage - 1) * this.pagination.limit, 0);
+      const endIndex = Math.min(currentPage * this.pagination.limit, data.length);
+      return data.slice(startIndex, endIndex);
     },
 
     limitChange(currentLimit) {
@@ -780,7 +815,12 @@ export default {
       this.pageChange(this.pagination.current);
     },
 
+    /**
+     * 获取 API 列表数据
+     * @param {string|number} payload - 网关/系统 ID
+     */
     async fetchList(payload) {
+      const requestContext = this.createRequestContext('listRequestId', payload);
       this.allChecked = false;
       this.indeterminate = false;
       this.loading = true;
@@ -791,9 +831,12 @@ export default {
         if (this.isComponentApi) {
           params.systemId = payload;
         } else {
-          params.gatewayName = this.name;
+          params.gatewayName = requestContext.gatewayName;
         }
         const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
+        if (!this.isLatestRequest('listRequestId', requestContext)) {
+          return;
+        }
         // 新 API 响应格式：直接返回数据，无 result 层级
         // this.apiList = Object.freeze(res.sort(this.compare('name')))
         // 网关 api, 申请/续期处理
@@ -821,9 +864,15 @@ export default {
         this.tableList = this.getDataByPage();
         this.isTableError = false;
       } catch (e) {
+        if (!this.isLatestRequest('listRequestId', requestContext)) {
+          return;
+        }
         this.isTableError = true;
         this.catchErrorHandler(e);
       } finally {
+        if (!this.isLatestRequest('listRequestId', requestContext)) {
+          return;
+        }
         this.loading = false;
         if (this.requestQueue.length > 0) {
           this.requestQueue.shift();
@@ -832,30 +881,51 @@ export default {
       }
     },
 
-    async fetchIsApplyByGateway(payload) {
+    /**
+     * 获取当前网关是否允许按网关申请的标志位
+     */
+    async fetchIsApplyByGateway() {
+      const requestContext = this.createRequestContext('applyByGatewayRequestId');
       try {
         const params = {
           appCode: this.appCode,
-          gatewayName: this.name,
+          gatewayName: requestContext.gatewayName,
         };
         // 新 API 响应格式: 直接返回数据, 无 result 层级
         const res = await this.$store.dispatch('cloudApi/getAllowApplyByApi', params);
+        if (!this.isLatestRequest('applyByGatewayRequestId', requestContext)) {
+          return;
+        }
         this.judgeIsApplyByGateway = res;
       } catch (e) {
+        if (!this.isLatestRequest('applyByGatewayRequestId', requestContext)) {
+          return;
+        }
         console.warn(e);
       } finally {
+        if (!this.isLatestRequest('applyByGatewayRequestId', requestContext)) {
+          return;
+        }
         if (this.requestQueue.length > 0) {
           this.requestQueue.shift();
         }
       }
     },
 
+    /**
+     * 单个 API 申请权限
+     * @param {Object} item - API 数据行
+     */
     handleApply(item) {
       this.applyDialog.visiable = true;
       this.applyDialog.title = this.$t('申请权限');
       this.applyDialog.rows = [item];
     },
 
+    /**
+     * 单个 API 权限续期
+     * @param {Object} item - API 数据行
+     */
     handleRenwal(item) {
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('权限续期');
@@ -866,6 +936,9 @@ export default {
       this.isShowGatewayDialog = true;
     },
 
+    /**
+     * 批量权限续期
+     */
     handleBatchRenwal() {
       if (!this.selectedList.length) {
         return;
@@ -875,6 +948,9 @@ export default {
       this.renewalDialog.rows = [...this.selectedList];
     },
 
+    /**
+     * 批量申请权限
+     */
     handleBatchApply() {
       if (!this.selectedList.length) {
         return;
@@ -884,6 +960,11 @@ export default {
       this.applyDialog.rows = [...this.selectedList];
     },
 
+    /**
+     * 搜索关键字高亮匹配，用 <marked> 标签包裹匹配文本
+     * @param {{name: string}} row - API 数据行
+     * @returns {string} 高亮后的 HTML 字符串
+     */
     highlight({ name }) {
       if (this.isFilter && this.searchValue.trim()) {
         // 分割、过滤空字符、去除两端空格，最后转义特殊字符
@@ -903,16 +984,20 @@ export default {
       return name;
     },
 
+    /**
+     * 搜索时对描述字段进行关键字高亮匹配
+     * @param {{description: string}} row - API 数据行
+     * @returns {string} 高亮后的 HTML 字符串，空描述返回 '--'
+     */
     highlightDesc({ description }) {
       if (description !== '' && this.isFilter) {
-        const descriptionArr = this.searchValue.split(',');
-        for (let i = 0; i < descriptionArr.length; i++) {
-          if (descriptionArr[i] !== '') {
-            description = description.replace(
-              new RegExp(descriptionArr[i], 'g'),
-              `<marked>${descriptionArr[i]}</marked>`
-            );
-          }
+        const keywords = this.searchValue
+          .split(',')
+          .filter((keyword) => keyword.trim() !== '')
+          .map((keyword) => keyword.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+        if (keywords.length) {
+          const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
+          description = description.replace(regex, (matched) => `<marked>${matched}</marked>`);
         }
       }
       return description || '--';
@@ -937,18 +1022,25 @@ export default {
       this.fetchList(this.id);
     },
 
-    // 勾选是否禁用
+    /**
+     * 判断当前行是否可勾选（申请和续期均不可用则禁用勾选）
+     */
     selectable(row) {
       return !row.applyDisabled || !row.renewDisabled;
     },
 
-    // 表格change事件
+    /**
+     * 表格勾选状态变更回调
+     * @param {Array} selected - 当前勾选的行数据
+     */
     handleSelectionChange(selected) {
       this.selectedList = selected;
       this.syncHeaderCheckbox();
     },
 
-    // 同步表头勾选框状态
+    /**
+     * 同步表头全选/半选复选框状态
+     */
     syncHeaderCheckbox() {
       this.$nextTick(() => {
         updateHeaderCheckboxState({
@@ -1077,7 +1169,6 @@ div.choose-panel {
   & span {
     display: inline-block;
     width: 100%;
-    display: inline-block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

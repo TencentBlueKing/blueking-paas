@@ -89,7 +89,7 @@
 </template>
 
 <script>
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import CardItem from './card-item.vue';

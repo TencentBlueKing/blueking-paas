@@ -1134,7 +1134,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from '../deploy-timeline';
 import deployLog from '../deploy-log';
@@ -1482,8 +1482,7 @@ export default {
     },
   },
   created() {
-    // moment日期中英文显示
-    moment.locale(this.localLanguage);
+    // dayjs日期中英文显示
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
     // 部署阶段时轮询查procee定时器
@@ -2771,7 +2770,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
         });
 
         // 如果有当前展开项
@@ -2808,7 +2807,7 @@ export default {
        * 如何判断进程当前是否为操作中（繁忙状态）？
        * 主要根据 process_packages 里面的 target_status 判断：
        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与实际期望副本数 replicas 一致，而且 failed 为 0 时正常，否则为操作中
        */
       if (process.targetStatus === 'stop') {
         // process.operateIconTitle = '启动进程'
@@ -2821,7 +2820,7 @@ export default {
       } else if (process.targetStatus === 'start') {
         // process.operateIconTitle = '停止进程'
         // process.operateIconTitleCopy = '停止进程'
-        if (process.available_instance_count === process.targetReplicas && process.failed === 0) {
+        if (process.available_instance_count === process.desired_replicas && process.failed === 0) {
           process.status = 'Stopped';
         } else {
           process.status = 'Running';
@@ -2855,7 +2854,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增

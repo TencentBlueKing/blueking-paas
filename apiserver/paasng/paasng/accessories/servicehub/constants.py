@@ -71,14 +71,23 @@ class ServiceBindingPolicyType(StrStructuredEnum):
 class PrecedencePolicyCondType(StrStructuredEnum):
     """The type of precedence policy condition"""
 
-    # Test if the region is in the given list
-    REGION_IN = EnumField("region_in", label="Region.in")
+    # 按应用所属地域匹配：当 env.application.region 在 cond_data["regions"] 中时命中
+    REGION_IN = EnumField("region_in", label="Region.In")
 
-    # Test if the cluster is in the given list
-    CLUSTER_IN = EnumField("cluster_in", label="Cluster.in")
+    # 按应用环境绑定集群匹配：当环境当前绑定的部署集群名在 cond_data["cluster_names"] 中时命中（一般是 k8s 集群）
+    CLUSTER_IN = EnumField("cluster_in", label="Cluster.In")
 
-    # Always match
+    # 按应用所属使用类型匹配：目前 AIAgent 类型应用在 cond_data["usages"] 有 ai_agent 值时命中
+    USAGE_IN = EnumField("usage_in", label="Usage.In")
+
+    # 无条件命中：通常作为最低优先级兜底规则，保证前面的条件都不匹配时仍有策略可用
     ALWAYS_MATCH = EnumField("always_match", label="AlwaysMatch")
+
+
+class ServiceUsage(StrStructuredEnum):
+    """增强服务用途，搭配 PrecedencePolicyCondType.USAGE_IN 使用"""
+
+    AI_AGENT = EnumField("ai_agent", label="AI Agent")
 
 
 class ServiceAllocationPolicyType(StrStructuredEnum):

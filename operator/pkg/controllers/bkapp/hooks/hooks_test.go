@@ -30,6 +30,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -158,6 +159,96 @@ var _ = Describe("Test HookReconciler", func() {
 				BeNil(),
 			),
 		)
+
+		It("interrupt current deploy with running hook", func() {
+			bkapp.SetAnnotations(map[string]string{
+				paasv1alpha2.DeployIDAnnoKey:            "1",
+				paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
+			})
+			bkapp.Status.DeployId = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
+			Expect(hook.Pod).NotTo(BeNil())
+
+			r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
+			ret := r.Reconcile(ctx, bkapp)
+
+			Expect(ret.Error()).NotTo(HaveOccurred())
+			Expect(ret.IsFinished).To(BeTrue())
+			Expect(bkapp.Status.Phase).To(Equal(paasv1alpha2.AppFailed))
+
+			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+			Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthUnhealthy))
+			Expect(hookStatus.Reason).To(Equal(HookReasonUserInterrupted))
+
+			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+			Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
+			Expect(condHooks.Reason).To(Equal(HookReasonUserInterrupted))
+
+			pod := &corev1.Pod{}
+			err = r.Client.Get(ctx, client.ObjectKeyFromObject(hook.Pod), pod)
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("interrupt should be ignored when interrupted deploy id does not match current deploy id", func() {
+			bkapp.SetAnnotations(map[string]string{
+				paasv1alpha2.DeployIDAnnoKey:            "1",
+				paasv1alpha2.InterruptedDeployIDAnnoKey: "2",
+			})
+			bkapp.Status.DeployId = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
+			Expect(hook.Pod).NotTo(BeNil())
+			hook.Pod.Status.Phase = corev1.PodRunning
+			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
+			hook.Pod.SetCreationTimestamp(*hook.Pod.Status.StartTime)
+
+			r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
+			ret := r.Reconcile(ctx, bkapp)
+
+			Expect(ret.Error()).NotTo(HaveOccurred())
+			Expect(ret.ShouldAbort()).To(BeTrue())
+			Expect(ret.Duration()).To(Equal(hookres.HookExecuteTimeoutThreshold))
+			Expect(bkapp.Status.Phase).NotTo(Equal(paasv1alpha2.AppFailed))
+
+			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+			Expect(hookStatus.Reason).NotTo(Equal(HookReasonUserInterrupted))
+
+			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+			Expect(condHooks).To(BeNil())
+
+			pod := &corev1.Pod{}
+			err = r.Client.Get(ctx, client.ObjectKeyFromObject(hook.Pod), pod)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("interrupt should be ignored when bkapp has no pre-release hook", func() {
+			bkapp.Spec.Hooks = nil
+			bkapp.SetAnnotations(map[string]string{
+				paasv1alpha2.DeployIDAnnoKey:            "1",
+				paasv1alpha2.InterruptedDeployIDAnnoKey: "1",
+			})
+			r := NewHookReconciler(builder.WithObjects(bkapp).Build())
+			ret := r.Reconcile(ctx, bkapp)
+
+			Expect(ret.Error()).NotTo(HaveOccurred())
+			Expect(bkapp.Status.Phase).NotTo(Equal(paasv1alpha2.AppFailed))
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Reason).NotTo(Equal(HookReasonUserInterrupted))
+		})
 	})
 
 	Describe("test CheckAndUpdatePreReleaseHookStatus", func() {

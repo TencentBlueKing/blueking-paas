@@ -17,32 +17,23 @@
  */
 
 import Vue from 'vue';
-import moment from 'moment';
-import cookie from 'cookie';
+import dayjs from '@/common/dayjs';
 
 // 时间格式过滤器
 Vue.filter('time-smart', function (value, type) {
-  let language = cookie.parse(document.cookie).blueking_language || 'zh-cn';
-
-  if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(language)) {
-    language = 'zh-cn';
-  }
-  // moment日期中文显示
-  moment.locale(language);
-
   let formatTime;
   const curYear = new Date().getFullYear();
   switch (type) {
     case 'fromNow':
       // 距离当前时间多久
-      formatTime = moment(value).startOf('minute').fromNow();
+      formatTime = dayjs(value).startOf('minute').fromNow();
       break;
     case 'smartShorten':
       // 当年日期显示：07-25 16:16
-      if (moment(value).format('YYYY') === curYear) {
-        formatTime = moment(value).format('MM-DD HH:mm');
+      if (dayjs(value).format('YYYY') === curYear) {
+        formatTime = dayjs(value).format('MM-DD HH:mm');
       } else {
-        formatTime = moment(value).format('YYYY-MM-DD HH:mm');
+        formatTime = dayjs(value).format('YYYY-MM-DD HH:mm');
       }
       break;
     default:

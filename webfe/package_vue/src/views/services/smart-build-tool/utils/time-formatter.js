@@ -1,7 +1,7 @@
 /**
  * 用于统一处理构建过程中的时间显示格式
  */
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 
 /**
  * 格式化持续时间显示（保留一位小数）

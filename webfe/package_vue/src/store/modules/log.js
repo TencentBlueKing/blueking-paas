@@ -21,7 +21,7 @@
 */
 import http from '@/api';
 import bartOptions from '@/json/bar_chart_default';
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 
 // store
 const state = {
@@ -51,7 +51,7 @@ const mutations = {
     }];
     const timestamps = data.timestamps.map((item) => {
       // 时间处理
-      item = moment.unix(item).format('YYYY-MM-DD HH:mm:ss');
+      item = dayjs.unix(item).format('YYYY-MM-DD HH:mm:ss');
       return item.substring(5);
     });
     chartOptions.xAxis.data = timestamps;

@@ -23,7 +23,8 @@
     </div>
     <paas-content-loader
       :is-loading="isPageLoading"
-      placeholder="packages-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="30"
       :class="['middle overview', { 'app-container': !isCloudNativeApp }]"
     >

@@ -277,15 +277,3 @@ export default {
   },
 };
 </script>
-
-<style lang="scss" scoped>
-.repository-config-container {
-  /deep/ .bk-table-header {
-    .custom-header-cell {
-      text-decoration: underline;
-      text-decoration-style: dashed;
-      text-underline-position: under;
-    }
-  }
-}
-</style>

@@ -17,19 +17,25 @@
 
 import uuid
 from contextlib import suppress
+from decimal import Decimal
 from typing import Iterator
 from unittest import mock
 
 import pytest
 
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import (
+    DEFAULT_SANDBOX_CPU,
+    DEFAULT_SANDBOX_MEMORY,
+    SandboxStatus,
+)
 from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
-from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
     _build_volume_mounts,
     create_sandbox,
     delete_sandbox,
+    resolve_sandbox_resources,
 )
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -129,6 +135,62 @@ class TestCreateSandbox:
         assert len(sandbox.volume_mounts) == 2
         assert sandbox.volume_mounts[0]["volume_id"] == str(vol1.uuid)
         assert sandbox.volume_mounts[1]["volume_id"] == str(vol2.uuid)
+
+
+class TestResolveSandboxResources:
+    """Test per-app sandbox resource resolution."""
+
+    def test_fallback_to_platform_default(self, bk_app):
+        """No per-app config -> platform default."""
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == DEFAULT_SANDBOX_CPU
+        assert memory == DEFAULT_SANDBOX_MEMORY
+
+    def test_use_app_level_config(self, bk_app):
+        """Per-app config overrides the platform default."""
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=Decimal("2"),
+            tenant_id=bk_app.tenant_id,
+        )
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == Decimal("4")
+        assert memory == Decimal("2")
+
+    def test_partial_config_falls_back_per_field(self, bk_app):
+        """Config exists but only sets cpu -> memory falls back to platform default."""
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=None,
+            tenant_id=bk_app.tenant_id,
+        )
+        cpu, memory = resolve_sandbox_resources(bk_app)
+        assert cpu == Decimal("4")
+        assert memory == DEFAULT_SANDBOX_MEMORY
+
+
+class TestCreateSandboxResources:
+    """Test that created sandbox records carry the resolved cpu/memory."""
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    def test_create_uses_platform_default(self, bk_app, bk_user):
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="default-res")
+        assert sandbox.cpu == DEFAULT_SANDBOX_CPU
+        assert sandbox.memory == DEFAULT_SANDBOX_MEMORY
+
+    @pytest.mark.usefixtures("mock_sandbox_provision", "mock_image_validator")
+    def test_create_uses_app_level_config(self, bk_app, bk_user):
+        SandboxAppSettings.objects.create(
+            application=bk_app,
+            cpu=Decimal("4"),
+            memory=Decimal("2"),
+            tenant_id=bk_app.tenant_id,
+        )
+        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="custom-res")
+        assert sandbox.cpu == Decimal("4")
+        assert sandbox.memory == Decimal("2")
 
 
 # TODO: 利用实际的集群资源来测试沙箱的删除

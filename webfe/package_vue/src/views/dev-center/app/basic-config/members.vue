@@ -3,7 +3,8 @@
     <paas-content-loader
       :class="contentClass"
       :is-loading="loading"
-      placeholder="roles-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 2 }"
     >
       <div class="header">
         <div class="flex-row align-items-center">

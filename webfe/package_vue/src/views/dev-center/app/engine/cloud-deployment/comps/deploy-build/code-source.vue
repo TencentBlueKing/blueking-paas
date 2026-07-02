@@ -262,7 +262,7 @@ import codeInspection from './code-inspection.vue';
 import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
 import { fileDownload } from '@/common/utils';
 import appBaseMixin from '@/mixins/app-base-mixin';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 import { mapState } from 'vuex';
 import { encryptString } from '@/common/crypto';
 

@@ -173,7 +173,7 @@
 </template>
 
 <script>
-import moment from 'moment';
+import dayjs from '@/common/dayjs';
 import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
@@ -185,8 +185,8 @@ const xssOptions = {
   },
 };
 const logXss = new xss.FilterXSS(xssOptions);
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
 export default {
   components: {

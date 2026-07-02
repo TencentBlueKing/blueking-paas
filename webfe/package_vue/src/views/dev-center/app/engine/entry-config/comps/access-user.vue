@@ -2,7 +2,8 @@
   <div>
     <paas-content-loader
       :is-loading="isPermissionChecking"
-      placeholder="user-limit-loading"
+      placeholder="table-loading"
+      :loader-props="{ operationCount: 1 }"
       :offset-top="0"
       class="access-user"
     >

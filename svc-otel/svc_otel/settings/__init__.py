@@ -34,7 +34,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 
-# Django 5.2+ 不再官方支持吃 MySQL 5.7, 以下 Patch 用于兼容存量 MySQL 5.7 DB:
+# Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量 MySQL 5.7 DB:
 #   1. 绕过 minimum_database_version 启动检查
 #   2. 回退 RENAME COLUMN 为 CHANGE COLUMN（RENAME COLUMN 仅 MySQL 8.0.4+ 支持）
 class PatchFeatures:

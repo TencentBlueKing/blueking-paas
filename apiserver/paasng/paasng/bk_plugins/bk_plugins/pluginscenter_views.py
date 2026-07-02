@@ -367,7 +367,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
     def sync_members(self, request, code):
-        """同步插件成员"""
+        """同步插件成员（全量）"""
         application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
@@ -396,6 +396,51 @@ class PluginMembersViewSet(viewsets.ViewSet):
         for username, roles in need_to_clean.items():
             for role in roles:
                 delete_role_members(app_code=application.code, role=role, usernames=[username])
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(data={})
+
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
+    def add_members(self, request, code):
+        """添加插件成员"""
+        application = get_object_or_404(Application, code=code)
+
+        slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        need_to_add: Dict[ApplicationRole, List[str]] = defaultdict(list)
+        for member in data:
+            role = ApplicationRole(member["role"]["id"])
+            username = member["username"]
+            need_to_add[role].append(username)
+
+        for role, usernames in need_to_add.items():
+            add_role_members(app_code=application.code, role=role, usernames=usernames)
+
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(data={})
+
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
+    def delete_members(self, request, code):
+        """移除插件成员"""
+        application = get_object_or_404(Application, code=code)
+
+        slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        need_to_delete: Dict[str, List[ApplicationRole]] = defaultdict(list)
+        for member in data:
+            role = ApplicationRole(member["role"]["id"])
+            username = member["username"]
+            need_to_delete[username].append(role)
+
+        for username, roles in need_to_delete.items():
+            for role in roles:
+                delete_role_members(app_code=application.code, role=role, usernames=[username])
+
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})

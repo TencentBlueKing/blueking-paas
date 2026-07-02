@@ -1399,6 +1399,50 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: sync members for plugin applicaiton
+    put:
+      operationId: shim_plugins_center_add_members
+      description: 插件应用添加成员
+      tags:
+      - 蓝鲸应用插件
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: put
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/members/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: add members for plugin application
+    delete:
+      operationId: shim_plugins_center_delete_members
+      description: 插件应用移除成员
+      tags:
+      - 蓝鲸应用插件
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/members/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: delete members for plugin application
   /sys/shim/plugins_center/bk_plugins/{code}/configuration/:
     post:
       operationId: shim_plugins_center_sync_configurations

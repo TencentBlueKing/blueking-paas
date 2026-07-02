@@ -54,9 +54,11 @@ def application_perm_class(action: AppAction) -> Type[BasePermission]:
             If the object type is not supported, return `false`.
             """
             if isinstance(obj, Application):
-                return user_has_app_action_perm(request.user, obj, action)
+                check_application_perm(request.user, obj, action)
+                return True
             elif isinstance(obj, Module):
-                return user_has_app_action_perm(request.user, obj.application, action)
+                check_application_perm(request.user, obj.application, action)
+                return True
             else:
                 raise TypeError(f"Permission check on incorrect type: {type(obj)}")
 
@@ -85,9 +87,11 @@ def app_view_actions_perm(
                 raise ValueError('No app action found for view action "%s".' % view.action)
 
             if isinstance(obj, Application):
-                return user_has_app_action_perm(request.user, obj, action)
+                check_application_perm(request.user, obj, action)
+                return True
             elif isinstance(obj, Module):
-                return user_has_app_action_perm(request.user, obj.application, action)
+                check_application_perm(request.user, obj.application, action)
+                return True
             else:
                 raise TypeError(f"Permission check on incorrect type: {type(obj)}")
 
@@ -114,8 +118,6 @@ def can_exempt_application_perm(user, application: Application) -> bool:
 def user_has_app_action_perm(user, application: Application, action: AppAction) -> bool:
     """
     检查指定用户是否对应用的某个操作具有权限
-
-    # TODO 如果后续需要支持 无权限跳转权限中心申请，可以设置 raise_exception = True，PermissionDeniedError 会包含 apply_url 信息
     """
     if can_exempt_application_perm(user, application):
         return True

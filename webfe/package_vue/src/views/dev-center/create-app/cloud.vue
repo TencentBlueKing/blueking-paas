@@ -43,8 +43,8 @@
               v-model="formData.code"
               :placeholder="
                 isBkLesscode
-                  ? $t('由小写字母组成，长度小于 16 个字符')
-                  : $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')
+                  ? $t('由小写字母组成，长度小于 20 个字符')
+                  : $t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头')
               "
               :class="['form-input-width', { 'reserved-prefix-warning': isCodePrefixMatched }]"
             ></bk-input>
@@ -896,19 +896,19 @@ export default {
             trigger: 'blur',
           },
           {
-            max: 16,
-            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            max: 20,
+            message: this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头'),
             trigger: 'blur',
           },
           {
             validator: (val) => {
-              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{2,16}$/;
+              const reg = this.isBkLesscode ? /^[a-z]{1,20}$/ : /^[a-z][a-z0-9-]{2,19}$/;
               return reg.test(val);
             },
             message: () =>
               this.isBkLesscode
-                ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符')
-                : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+                ? this.$t('格式不正确，由小写字母组成，长度小于 20 个字符')
+                : this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头'),
             trigger: 'blur',
           },
         ],

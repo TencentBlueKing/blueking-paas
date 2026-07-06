@@ -413,10 +413,10 @@ export default {
           },
           {
             validator(val) {
-              const reg = /^[a-z][a-z0-9_-]{2,15}$/;
+              const reg = /^[a-z][a-z0-9_-]{2,19}$/;
               return reg.test(val);
             },
-            message: this.$t('只允许小写字母、数字、连字符(-)和下划线(_)，以字母开头，长度3-16个字符'),
+            message: this.$t('只允许小写字母、数字、连字符(-)和下划线(_)，以字母开头，长度3-20个字符'),
             trigger: 'blur',
           },
         ],

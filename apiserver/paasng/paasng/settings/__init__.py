@@ -304,7 +304,6 @@ LANGUAGES = (
 )
 TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 # 国际化 cookie 信息必须跟整个蓝鲸体系保存一致

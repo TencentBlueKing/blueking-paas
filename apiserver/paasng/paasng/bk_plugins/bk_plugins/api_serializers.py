@@ -163,6 +163,18 @@ class PluginMemberSLZ(serializers.Serializer):
         ref_name = "PluginMemberSLZ__bk_plugins"
 
 
+class PluginRoleMembersSLZ(serializers.Serializer):
+    usernames = serializers.ListField(
+        child=serializers.CharField(help_text="用户名"),
+        allow_empty=False,
+        help_text="需要操作的用户名列表",
+    )
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginRoleMembersSLZ__bk_plugins"
+
+
 class PluginConfigSLZ(serializers.Serializer):
     """插件配置-环境变量的结构"""
 

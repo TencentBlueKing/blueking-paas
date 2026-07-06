@@ -400,46 +400,39 @@ class PluginMembersViewSet(viewsets.ViewSet):
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})
 
-    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
-    def add_members(self, request, code):
-        """添加插件成员"""
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
+    def add_role_members(self, request, code, role):
+        """添加插件的角色下成员"""
         application = get_object_or_404(Application, code=code)
+        try:
+            role_enum = ApplicationRole(int(role))
+        except (ValueError, TypeError):
+            error_codes.CREATE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
 
-        slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
+        slz = api_serializers.PluginRoleMembersSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
+        usernames = slz.validated_data["usernames"]
 
-        need_to_add: Dict[ApplicationRole, List[str]] = defaultdict(list)
-        for member in data:
-            role = ApplicationRole(member["role"]["id"])
-            username = member["username"]
-            need_to_add[role].append(username)
-
-        for role, usernames in need_to_add.items():
-            add_role_members(app_code=application.code, role=role, usernames=usernames)
+        add_role_members(app_code=application.code, role=role_enum, usernames=usernames)
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})
 
-    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
-    def delete_members(self, request, code):
-        """移除插件成员"""
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
+    def delete_role_members(self, request, code, role):
+        """移除插件的角色下成员"""
         application = get_object_or_404(Application, code=code)
+        try:
+            role_enum = ApplicationRole(int(role))
+        except (ValueError, TypeError):
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
 
-        slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
+        slz = api_serializers.PluginRoleMembersSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
+        usernames = slz.validated_data["usernames"]
 
-        need_to_delete: Dict[str, List[ApplicationRole]] = defaultdict(list)
-        for member in data:
-            role = ApplicationRole(member["role"]["id"])
-            username = member["username"]
-            need_to_delete[username].append(role)
-
-        for username, roles in need_to_delete.items():
-            for role in roles:
-                delete_role_members(app_code=application.code, role=role, usernames=[username])
+        delete_role_members(app_code=application.code, role=role_enum, usernames=usernames)
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)

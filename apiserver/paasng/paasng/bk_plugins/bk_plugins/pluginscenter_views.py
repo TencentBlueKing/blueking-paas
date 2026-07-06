@@ -402,7 +402,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
     def add_role_members(self, request, code, role):
-        """添加插件的角色成员"""
+        """插件应用按角色添加成员"""
         application = get_object_or_404(Application, code=code)
         try:
             role_enum = ApplicationRole(int(role))
@@ -421,7 +421,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
     def delete_role_members(self, request, code, role):
-        """移除插件的角色成员"""
+        """插件应用按角色删除成员"""
         application = get_object_or_404(Application, code=code)
         try:
             role_enum = ApplicationRole(int(role))

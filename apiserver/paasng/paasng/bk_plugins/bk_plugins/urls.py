@@ -96,7 +96,7 @@ urlpatterns = [
         name="sys.api.plugins_center.bk_plugins.members.sync",
     ),
     re_path(
-        r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/(?P<role>[^/]+)/members/$",
+        r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/roles/(?P<role>[^/]+)/members/$",
         pluginscenter_views.PluginMembersViewSet.as_view(
             {"post": "add_role_members", "delete": "delete_role_members"}
         ),

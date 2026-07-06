@@ -1399,9 +1399,10 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: sync members for plugin applicaiton
-    put:
-      operationId: shim_plugins_center_add_members
-      description: 插件应用添加成员
+  /sys/shim/plugins_center/bk_plugins/{code}/roles/{role}/members/:
+    post:
+      operationId: shim_plugins_center_add_role_members
+      description: 插件应用按角色添加成员
       tags:
       - 蓝鲸应用插件
       x-bk-apigateway-resource:
@@ -1411,8 +1412,8 @@ paths:
         enableWebsocket: false
         backend:
           name: default
-          method: put
-          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/members/
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/roles/{role}/members/
           matchSubpath: false
           timeout: 0
         pluginConfigs: []
@@ -1420,10 +1421,10 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: add members for plugin application
+        descriptionEn: add role members for plugin application
     delete:
-      operationId: shim_plugins_center_delete_members
-      description: 插件应用移除成员
+      operationId: shim_plugins_center_delete_role_members
+      description: 插件应用按角色移除成员
       tags:
       - 蓝鲸应用插件
       x-bk-apigateway-resource:
@@ -1434,7 +1435,7 @@ paths:
         backend:
           name: default
           method: delete
-          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/members/
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/plugins_center/bk_plugins/{code}/roles/{role}/members/
           matchSubpath: false
           timeout: 0
         pluginConfigs: []
@@ -1442,7 +1443,7 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: delete members for plugin application
+        descriptionEn: delete role members for plugin application
   /sys/shim/plugins_center/bk_plugins/{code}/configuration/:
     post:
       operationId: shim_plugins_center_sync_configurations

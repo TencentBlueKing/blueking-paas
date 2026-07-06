@@ -15,19 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import os
 
 import environ
 import pymysql
+import sentry_sdk
 import urllib3
 from django.db.backends.mysql.features import DatabaseFeatures
+from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 # Patch the SSL module for compatibility with legacy CA credentials.
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 
+# Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量 MySQL 5.7 DB:
+#   1. 绕过 minimum_database_version 启动检查
+#   2. 回退 RENAME COLUMN 为 CHANGE COLUMN（RENAME COLUMN 仅 MySQL 8.0.4+ 支持）
 class PatchFeatures:
     """Patched Django Features"""
 
@@ -39,9 +47,19 @@ class PatchFeatures:
             return (5, 7)
 
 
-# Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
-# 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
 DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version
+
+_original_sql_rename_column = DatabaseSchemaEditor.sql_rename_column.fget
+
+
+def _patched_sql_rename_column(self):
+    if not self.connection.mysql_is_mariadb and self.connection.mysql_version < (8, 0, 4):
+        return "ALTER TABLE %(table)s CHANGE %(old_column)s %(new_column)s %(type)s"
+    return _original_sql_rename_column(self)
+
+
+DatabaseSchemaEditor.sql_rename_column = property(_patched_sql_rename_column)
+
 
 pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
@@ -77,11 +95,23 @@ INSTALLED_APPS = [
 ]
 
 SENTRY_DSN = env.str("SENTRY_DSN", "")
+# 接入 sentry
+# All of this is already happening by default!
+sentry_logging = LoggingIntegration(
+    level=logging.INFO,
+    # Capture info and above as breadcrumbs
+    # Send errors as events
+    event_level=logging.ERROR,
+)
+
 if SENTRY_DSN:
-    INSTALLED_APPS.append("raven.contrib.django.raven_compat")
-    RAVEN_CONFIG = {
-        "dsn": SENTRY_DSN,
-    }
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), sentry_logging],
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+    )
 
 MIDDLEWARE = [
     # "django.middleware.security.SecurityMiddleware",
@@ -160,8 +190,6 @@ LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 TIME_ZONE = env.str("TIME_ZONE", "UTC")
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 

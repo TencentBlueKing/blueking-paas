@@ -373,7 +373,11 @@
                       slot="tip"
                       class="g-tip"
                     >
-                      {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
+                      {{
+                        $t('将自动创建该私有仓库并完成模板代码初始化{t}，当前用户默认为仓库管理员。', {
+                          t: isEmptyTemplate ? $t('（默认使用 Dockerfile 构建，创建成功后可修改）') : '',
+                        })
+                      }}
                     </p>
                   </bk-form-item>
                   <!-- 未授权提示 -->
@@ -1829,6 +1833,10 @@ export default {
         this.formData.sourceInitTemplate = '';
         this.formData.buildMethod = 'dockerfile';
         return;
+      }
+      // 切回蓝鲸开发框架时，恢复默认选中项（解决来回切换后 select 空置的问题）
+      if (this.isBkDevOps && this.languagesList?.length > 0 && !this.formData.sourceInitTemplate) {
+        this.formData.sourceInitTemplate = this.languagesList[0].name;
       }
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP || payload === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         this.sourceOrigin = payload;

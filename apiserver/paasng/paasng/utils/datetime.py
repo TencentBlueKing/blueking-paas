@@ -18,9 +18,9 @@
 import datetime
 import logging
 import math
+from datetime import timezone as tz
 
 import arrow
-import pytz
 from django.utils import timezone
 
 logger = logging.getLogger("root")
@@ -103,7 +103,7 @@ def trans_ts_to_local(ts):
     try:
         fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
         new_ts = datetime.datetime.strptime(ts, fmt)
-        utc_ts = new_ts.replace(tzinfo=pytz.utc)
+        utc_ts = new_ts.replace(tzinfo=tz.utc)
 
         current_tz = timezone.get_current_timezone()
         local_ts = utc_ts.astimezone(current_tz)
@@ -121,7 +121,7 @@ def time_to_epoch_millis(t, is_end=False):
     utc datetime to epoch_millis
     """
 
-    ts = (t - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
+    ts = (t - datetime.datetime(1970, 1, 1, tzinfo=tz.utc)).total_seconds()
 
     if is_end:
         # add 999 for more accuracy, like 23:59:59.999
@@ -142,7 +142,7 @@ def strftime_ms(ms, fmt="%Y-%m-%d %H:%M:%S") -> str:
     seconds = ms / 1000.0
 
     current_tz = timezone.get_current_timezone()
-    dt = datetime.datetime.fromtimestamp(seconds, pytz.utc)
+    dt = datetime.datetime.fromtimestamp(seconds, tz.utc)
     local_dt = dt.astimezone(current_tz)
 
     return local_dt.strftime(fmt)

@@ -174,8 +174,8 @@ class BkAppProcess(BaseModel):
     name: str
     # `None` value means the replicas is not specified.
     replicas: int | None = 1
-    command: List[str] | None = Field(default_factory=list)
-    args: List[str] | None = Field(default_factory=list)
+    command: List[str] | None = Field(default_factory=list)  # type: ignore[assignment]
+    args: List[str] | None = Field(default_factory=list)  # type: ignore[assignment]
     # FIXME: deprecated targetPort, will be removed in the future
     targetPort: int | None = None
     resQuotaPlan: str | None = None
@@ -189,8 +189,8 @@ class BkAppProcess(BaseModel):
 class Hook(BaseModel):
     """A hook object"""
 
-    command: List[str] | None = Field(default_factory=list)
-    args: List[str] | None = Field(default_factory=list)
+    command: List[str] | None = Field(default_factory=list)  # type: ignore[assignment]
+    args: List[str] | None = Field(default_factory=list)  # type: ignore[assignment]
 
 
 class BkAppHooks(BaseModel):
@@ -335,7 +335,7 @@ class BkAppAddon(BaseModel):
     """
 
     name: str
-    specs: List[BkAppAddonSpec] | None = Field(default_factory=list)
+    specs: List[BkAppAddonSpec] | None = Field(default_factory=list)  # type: ignore[assignment]
     sharedFromModule: str | None = None
 
 

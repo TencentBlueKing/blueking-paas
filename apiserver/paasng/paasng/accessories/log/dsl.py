@@ -32,7 +32,7 @@ class SearchQueryItem(BaseModel):
     :param exclude: 精确过滤(根据 field 过滤 的场景)
     """
 
-    query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")
+    query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")  # type: ignore[assignment]
     terms: Dict[str, List[str]] = Field({}, description="多值精准匹配")
     exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 ES DSL")
 

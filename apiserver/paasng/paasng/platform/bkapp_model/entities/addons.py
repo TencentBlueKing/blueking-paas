@@ -37,5 +37,5 @@ class Addon(BaseModel):
     """
 
     name: str
-    specs: Optional[List[AddonSpec]] = Field(default_factory=list)
+    specs: Optional[List[AddonSpec]] = Field(default_factory=list)  # type: ignore[assignment]
     shared_from_module: Optional[str] = None

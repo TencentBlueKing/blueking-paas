@@ -265,7 +265,7 @@ AUTH_USER_MODEL = "bkpaas_auth.User"
 AUTHENTICATION_BACKENDS = ["bkpaas_auth.backends.UniversalAuthBackend", "bkpaas_auth.backends.APIGatewayAuthBackend"]
 
 # FIXME: Enable this will cause 500 Error, will fix later
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STORAGES["staticfiles"]["BACKEND"] = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "paasng.urls"
 

@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
@@ -125,9 +125,7 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
     构建方式（两者解耦，任意 AI Agent 应用均可使用 git 仓库部署）。
     """
 
-    is_isolated = serializers.BooleanField(
-        default=False, help_text="是否部署到隔离环境（如 gvisor 集群）"
-    )
+    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境（如 gvisor 集群）")
     # 以下参数为选填，不传则走原有固定模板包流程（向后兼容）
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
     bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
@@ -142,6 +140,10 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
                 "is_plugin_app": True,
                 "type": ApplicationType.CLOUD_NATIVE.value,
                 "engine_enabled": True,
+                # 对外仍以 is_isolated 布尔表达，内部转换为部署策略枚举
+                "deploy_policy": (
+                    DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
+                ),
             }
         )
 

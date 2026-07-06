@@ -21,7 +21,7 @@ from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, DeployPolicy
 from paasng.platform.modules.constants import ExposedURLType
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class EnvClusterService:
         application = self.env.application
         # 仅默认模块按 usage 分配集群
         if application.is_ai_agent_app and self.env.module.is_default:
-            if application.is_isolated:
+            if application.deploy_policy == DeployPolicy.ISOLATED:
                 return ClusterUsage.AI_AGENT_ISOLATED
             else:
                 return ClusterUsage.AI_AGENT

@@ -38,7 +38,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import (
     AIAgentAppCreateInputSLZ,
@@ -228,7 +228,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             params,
             env_cluster_names={},
             is_ai_agent_app=params["is_ai_agent_app"],
-            is_isolated=params["is_isolated"],
+            deploy_policy=params["deploy_policy"],
         )
 
     def _init_cloud_native_app_from_source(
@@ -238,7 +238,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         *,
         env_cluster_names: Dict[str, str],
         is_ai_agent_app: bool = False,
-        is_isolated: bool = False,
+        deploy_policy: str = DeployPolicy.DEFAULT.value,
     ) -> Response:
         """基于 source_config + bkapp_spec 创建云原生应用的公共流程。
 
@@ -246,7 +246,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         差异（应用标记、集群分配策略）通过参数注入；LessCode 等特例由调用方在调用前处理。
         :param env_cluster_names: 指定 stag, prod 分别使用的集群名称，若不指定则走默认集群分配策略
         :param is_ai_agent_app: 是否为 AI Agent 应用
-        :param is_isolated: 是否为隔离部署的 AI Agent 应用
+        :param deploy_policy: 应用部署策略（隔离性/安全性维度）
         """
         src_cfg = params["source_config"]
         source_origin = SourceOrigin(src_cfg["source_origin"])
@@ -265,7 +265,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             operator=request.user.pk,
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=is_ai_agent_app,
-            is_isolated=is_isolated,
+            deploy_policy=deploy_policy,
             app_tenant_info=params["app_tenant_info"],
         )
         module = create_default_module(application, **module_src_cfg)
@@ -402,7 +402,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             app_type=params["type"],
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
-            is_isolated=params.get("is_isolated", False),
+            deploy_policy=params.get("deploy_policy", DeployPolicy.DEFAULT.value),
             operator=request_user.pk,
             app_tenant_info=params["app_tenant_info"],
         )

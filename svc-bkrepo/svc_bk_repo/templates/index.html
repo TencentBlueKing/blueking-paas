@@ -112,29 +112,19 @@
     <template>
         <h4 class="dev_module_title mt50">常用操作</h4>
 
+        {% if auto_expand_enabled %}
         <!-- 自动扩容状态（平台配置，仅展示） -->
         <div class="action" style="margin-bottom: 20px;">
             <div class="action-type">
                 自动扩容
             </div>
             <div class="action-detail">
-                {% if auto_expand_enabled %}
-                <p style="color: #2dcb56; font-size: 14px; margin-bottom: 8px;">
-                    <i class="bk-icon" style="font-weight: bold;">&#10003;</i> 平台已开启自动扩容
-                </p>
                 <p class="tip mt5" style="font-size: 13px; color: #888; line-height: 24px;">
                     当仓库使用率达到 {{ auto_expand_threshold }}% 时，系统将自动扩容 {{ expand_step }}，最大不超过 {{ expand_max }}
                 </p>
-                {% else %}
-                <p style="color: #ff9c01; font-size: 14px; margin-bottom: 8px;">
-                    <i class="bk-icon" style="font-weight: bold;">&#9888;</i> 平台自动扩容未开启
-                </p>
-                <p class="tip mt5" style="font-size: 13px; color: #888; line-height: 24px;">
-                    如需扩容，可使用下方自助扩容功能
-                </p>
-                {% endif %}
             </div>
         </div>
+        {% endif %}
 
         <!-- 自助扩容（用户操作） -->
         <div class="action">

@@ -354,6 +354,11 @@ class Application(OwnerTimestampedModel):
         verbose_name="是否为 AI Agent 插件应用",
         default=False,
     )
+    is_isolated = models.BooleanField(
+        verbose_name="是否隔离部署",
+        default=False,
+        help_text="应用需部署到网络/容器隔离环境（如 gvisor 集群）",
+    )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()

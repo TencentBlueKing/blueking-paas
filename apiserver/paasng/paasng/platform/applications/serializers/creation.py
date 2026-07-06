@@ -118,7 +118,19 @@ class LessCodeAppCreateInputSLZ(AppBasicInfoMixin):
 
 
 class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
-    """创建 AI Agent 应用"""
+    """创建 AI Agent 应用
+
+    默认使用固定模板包（bk-ai-plugin-python）+ buildpack 部署。若传入 source_config，则
+    改为使用 git 仓库源码部署，并可通过 bkapp_spec.build_config 选择 buildpack / dockerfile
+    构建方式（两者解耦，任意 AI Agent 应用均可使用 git 仓库部署）。
+    """
+
+    is_isolated = serializers.BooleanField(
+        default=False, help_text="是否部署到隔离环境（如 gvisor 集群）"
+    )
+    # 以下参数为选填，不传则走原有固定模板包流程（向后兼容）
+    source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
+    bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
@@ -134,6 +146,22 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
         )
 
         return data
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        attrs = super().validate(attrs)
+
+        # 仅当使用 git 仓库部署时，才校验构建方式与源码来源的兼容性
+        source_config = attrs.get("source_config")
+        if source_config:
+            if not attrs.get("bkapp_spec"):
+                raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
+            build_cfg = attrs["bkapp_spec"]["build_config"]
+            # AI Agent 应用不支持 custom_image（纯镜像托管）
+            if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+                raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
+            validate_build_method(build_cfg.build_method, source_config["source_origin"])
+
+        return attrs
 
 
 class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):

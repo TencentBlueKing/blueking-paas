@@ -40,7 +40,7 @@ class AppIDField(serializers.RegexField):
 
     def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
         preset_kwargs = dict(
-            max_length=16,
+            max_length=20,
             min_length=3,
             required=True,
             help_text="应用 ID",
@@ -50,7 +50,7 @@ class AppIDField(serializers.RegexField):
                 AppIDUniqueValidator(),
             ],
             error_messages={
-                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。")
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-20 之间。")
             },
         )
         preset_kwargs.update(kwargs)
@@ -60,7 +60,6 @@ class AppIDField(serializers.RegexField):
 class AppIDSMartField(serializers.RegexField):
     """Field for validating S-mart applications's ID, the differences to `AppIDField`:
 
-    - max length increased from 16 to 20
     - allow using underscore("_")
     """
 

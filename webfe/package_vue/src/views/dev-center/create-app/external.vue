@@ -22,7 +22,7 @@
           >
             <bk-input
               v-model="formData.code"
-              :placeholder="$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
+              :placeholder="$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               :class="{ 'reserved-prefix-warning': isCodePrefixMatched }"
             ></bk-input>
             <div
@@ -176,8 +176,8 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^[a-z][a-z0-9-]{2,15}$/,
-            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            regex: /^[a-z][a-z0-9-]{2,19}$/,
+            message: this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头'),
             trigger: 'blur',
           },
         ],

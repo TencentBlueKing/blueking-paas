@@ -89,10 +89,10 @@ class EnvClusterService:
         """Get the cluster usage for current env."""
         application = self.env.application
         # 仅默认模块按 usage 分配集群
-        if self.env.module.is_default:
-            if application.is_ai_agent_app and application.is_isolated:
+        if application.is_ai_agent_app and self.env.module.is_default:
+            if application.is_isolated:
                 return ClusterUsage.AI_AGENT_ISOLATED
-            if application.is_ai_agent_app:
+            else:
                 return ClusterUsage.AI_AGENT
 
         # 其他情况暂时不考虑 usage 的情况，agent_sandbox 不使用这里的逻辑

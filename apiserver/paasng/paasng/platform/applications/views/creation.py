@@ -244,6 +244,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         被 create_cloud_native 与 create_ai_agent_app 的 git 仓库分支共用。
         差异（应用标记、集群分配策略）通过参数注入；LessCode 等特例由调用方在调用前处理。
+        :param env_cluster_names: 指定 stag, prod 分别使用的集群名称，若不指定则走默认集群分配策略
+        :param is_ai_agent_app: 是否为 AI Agent 应用
+        :param is_isolated: 是否为隔离部署的 AI Agent 应用
         """
         src_cfg = params["source_config"]
         source_origin = SourceOrigin(src_cfg["source_origin"])

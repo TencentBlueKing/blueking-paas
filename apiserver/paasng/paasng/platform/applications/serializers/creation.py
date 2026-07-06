@@ -140,7 +140,7 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
                 "is_plugin_app": True,
                 "type": ApplicationType.CLOUD_NATIVE.value,
                 "engine_enabled": True,
-                # 对外仍以 is_isolated 布尔表达，内部转换为部署策略枚举
+                # 对外仍以 is_isolated 布尔表达，不改变接口入参，内部转换为部署策略枚举
                 "deploy_policy": (
                     DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
                 ),

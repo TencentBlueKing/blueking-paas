@@ -36,7 +36,7 @@ class DeployPolicy(StrStructuredEnum):
 
     DEFAULT = EnumField("default", label=_("默认"))
     # 需部署到网络/容器隔离环境（如 gvisor 集群），提供更高隔离性的安全保障
-    ISOLATED = EnumField("isolated", label=_("隔离部署"))
+    ISOLATED = EnumField("isolated", label=_("安全合规隔离"))
 
 
 class AppStatus(StrStructuredEnum):

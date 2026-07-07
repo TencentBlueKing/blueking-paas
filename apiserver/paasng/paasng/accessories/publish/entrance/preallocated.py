@@ -25,6 +25,7 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
+from paas_wl.workloads.networking.entrance.shim import get_builtin_addrs
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -109,6 +110,39 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
                 key="DEFAULT_PREALLOCATED_URLS",
                 value=addrs_value,
                 description=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+            )
+        ]
+    )
+
+
+@env_vars_providers.register_env
+def _ai_agent_prod_url(env: ModuleEnvironment) -> EnvVariableList:
+    """为 AI Agent 应用注入主模块生产环境访问地址."""
+    application = env.module.application
+    if not application.is_ai_agent_app:
+        return EnvVariableList()
+
+    prod_env = application.get_default_module().envs.filter(environment=AppEnvName.PROD).first()
+    if not prod_env:
+        logger.warning("AI Agent app %s has no prod env, skip injecting prod url", application.code)
+        return EnvVariableList()
+
+    # get_builtin_addrs 内部已处理: 已部署返回实际地址, 未部署返回预分配地址
+    _is_living, addresses = get_builtin_addrs(prod_env)
+    if not addresses:
+        logger.warning(
+            "Fail to resolve prod url for AI Agent app %s: no address available",
+            application.code,
+        )
+        return EnvVariableList()
+
+    url = addresses[0].url
+    return EnvVariableList(
+        [
+            EnvVariableObj.with_sys_prefix(
+                key="AI_AGENT_PROD_URL",
+                value=url,
+                description=_("AI Agent 应用主模块生产环境访问地址"),
             )
         ]
     )

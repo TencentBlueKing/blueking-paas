@@ -49,8 +49,8 @@ class Process(AllowNotsetModel):
 
     name: str
 
-    command: Optional[List[str]] = Field(default_factory=list)  # type: ignore[assignment]
-    args: Optional[List[str]] = Field(default_factory=list)  # type: ignore[assignment]
+    command: Optional[List[str]] = Field(default_factory=list)
+    args: Optional[List[str]] = Field(default_factory=list)
     proc_command: Optional[str] = None
 
     services: Optional[List[ProcService]] = None

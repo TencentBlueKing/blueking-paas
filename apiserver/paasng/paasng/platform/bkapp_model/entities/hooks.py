@@ -26,8 +26,8 @@ from .utils import set_alias_field
 class HookCmd(BaseModel):
     """The HookCmd describes a hook command."""
 
-    command: Optional[List[str]] = Field(default_factory=list)  # type: ignore[assignment]
-    args: Optional[List[str]] = Field(default_factory=list)  # type: ignore[assignment]
+    command: Optional[List[str]] = Field(default_factory=list)
+    args: Optional[List[str]] = Field(default_factory=list)
 
     def __init__(self, **data):
         # FIXME 处理 proc_command 与 command/args 的关系

@@ -3,6 +3,23 @@
 from django.db import migrations, models
 
 
+def backfill_deploy_policy(apps, schema_editor):
+    """将 is_isolated 的历史值回填到 deploy_policy，避免数据丢失。"""
+    Application = apps.get_model("applications", "Application")
+    Application.objects.filter(is_isolated=True).update(deploy_policy="isolated")
+    Application.objects.filter(is_isolated=False).update(deploy_policy="default")
+
+
+def reverse_deploy_policy(apps, schema_editor):
+    """回退时把 deploy_policy='isolated' 的记录还原为 is_isolated=True。
+
+    反向执行时 Django 会先重建 is_isolated 列（默认 False），此时 deploy_policy
+    列仍然存在，两列共存，可以对照写回。
+    """
+    Application = apps.get_model("applications", "Application")
+    Application.objects.filter(deploy_policy="isolated").update(is_isolated=True)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,13 +27,17 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='application',
-            name='is_isolated',
-        ),
         migrations.AddField(
             model_name='application',
             name='deploy_policy',
             field=models.CharField(default='default', help_text='应用部署策略（隔离性/安全性维度），如 isolated 表示需部署到网络/容器隔离环境（如 gvisor 集群）', max_length=32, verbose_name='部署策略'),
+        ),
+        migrations.RunPython(
+            backfill_deploy_policy,
+            reverse_deploy_policy,
+        ),
+        migrations.RemoveField(
+            model_name='application',
+            name='is_isolated',
         ),
     ]

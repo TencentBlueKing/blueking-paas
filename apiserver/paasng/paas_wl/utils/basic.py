@@ -27,6 +27,7 @@ import requests.adapters
 from blue_krill.cubing_case import shortcuts
 from django.utils.encoding import force_bytes
 from pydantic import ValidationError as PDValidationError
+from pydantic.error_wrappers import display_errors
 
 # Register cattr custom hooks
 cattr.register_unstructure_hook(UUID, str)  # type: ignore
@@ -115,4 +116,4 @@ def convert_key_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
 def to_error_string(exc: PDValidationError) -> str:
     """Transform a pydantic Exception object to a one-line string"""
     # TODO: Improve error message format
-    return str(exc).replace("\n", " ")
+    return display_errors(exc.errors()).replace("\n", " ")

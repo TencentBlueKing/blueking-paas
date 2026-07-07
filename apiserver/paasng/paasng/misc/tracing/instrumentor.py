@@ -98,7 +98,7 @@ class BKAppInstrumentor(BaseInstrumentor):
 
     def _instrument(self, **kwargs):
         LoggingInstrumentor().instrument()
-        RequestsInstrumentor().instrument(span_callback=requests_callback)
+        RequestsInstrumentor().instrument(response_hook=requests_callback)
         DjangoInstrumentor().instrument(response_hook=django_response_hook)
         RedisInstrumentor().instrument()
         CeleryInstrumentor().instrument()

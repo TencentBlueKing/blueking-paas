@@ -227,6 +227,7 @@ class ErrorCodes:
     CANNOT_DELETE_CLUSTER = ErrorCode(_("无法删除应用集群"))
     # 集群组件
     CANNOT_UPSERT_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
+    CANNOT_GET_CLUSTER_STATUS = ErrorCode(_("无法获取集群状态"))
 
     # dev sandbox
     DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))

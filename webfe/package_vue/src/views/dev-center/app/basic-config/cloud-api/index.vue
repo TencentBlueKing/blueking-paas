@@ -139,18 +139,17 @@
           >
             {{ localLanguage === 'en' ? 'Access_token' : '令牌（access_token）' }}
           </p>
-          <div
-            :class="['access-token-url', { error: !tokenUrl }]"
-          >
+          <div :class="['access-token-url', { error: !tokenUrl }]">
             <span v-if="tokenUrl">{{ tokenUrl }}</span>
             <span v-else>{{ errorObject?.message }}</span>
-            <div
-              class="copy"
+            <bk-button
               v-if="tokenUrl"
+              text
+              v-copy="tokenUrl"
             >
               <i class="paasng-icon paasng-general-copy" />
               {{ $t('复制') }}
-            </div>
+            </bk-button>
           </div>
         </div>
       </section>
@@ -496,11 +495,6 @@ export default {
       background: #ffeded;
       color: #63656e;
       margin-top: 24px;
-    }
-
-    .copy {
-      color: #3a84ff;
-      cursor: pointer;
     }
   }
 }

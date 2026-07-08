@@ -127,6 +127,10 @@ SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 BK_CRYPTO_TYPE = settings.get("BK_CRYPTO_TYPE", "CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
 
+# 平台全局「运行环境敏感变量加密」总开关，默认关闭。仅当此开关与应用级 feature flag
+# (AppFeatureFlag.ENCRYPT_SENSITIVE_ENV_VARS) 同时开启时，云原生应用部署才会对敏感环境变量密文注入。
+ENABLE_ENCRYPT_SENSITIVE_ENV_VARS = settings.get("ENABLE_ENCRYPT_SENSITIVE_ENV_VARS", False)
+
 DEBUG = settings.get("DEBUG", False)
 
 RUNNING_TESTS = "test" in sys.argv or "pytest" in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ

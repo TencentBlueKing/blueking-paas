@@ -22,6 +22,7 @@ import uuid
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from bkstorages.backends.bkrepo import RequestError
+from blue_krill.models.fields import EncryptField
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
@@ -35,7 +36,13 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AppStatus
+from paasng.platform.applications.constants import (
+    AppEnvironment,
+    AppFeatureFlag,
+    ApplicationRole,
+    ApplicationType,
+    AppStatus,
+)
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
@@ -795,3 +802,29 @@ class ReservedPrefixAuthCode(TimestampedModel):
 
     def __str__(self):
         return f"{self.app_code} - {self.auth_code} - {'used' if self.is_used else 'unused'}"
+
+
+class AppRuntimeEncryptionKey(TimestampedModel):
+    """每应用每环境的运行时加密密钥。
+
+    用于在部署云原生应用时对敏感环境变量做「运行环境加密」：平台用该密钥重新加密敏感变量的值,
+    并随容器下发同一把密钥(BKPAAS_ENCRYPT_SECRET_KEY),应用侧(SDK) 用它解密取回原值。
+
+    此密钥与平台数据库落库加密所用的全局密钥(BKKRILL_ENCRYPT_SECRET_KEY) 是独立的两层,
+    仅 key 本身用全局密钥保护落库。密钥格式随平台 BK_CRYPTO_TYPE(Fernet / SM4CTR) 而定。
+    """
+
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="runtime_encryption_keys"
+    )
+    environment = models.CharField(verbose_name="环境", choices=AppEnvironment.get_choices(), max_length=16)
+    # 运行时密钥本体，用平台全局密钥加密落库
+    key = EncryptField(verbose_name="运行时密钥")
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("application", "environment")
+
+    def __str__(self):
+        return f"{self.application.code} - {self.environment}"

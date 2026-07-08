@@ -22,10 +22,11 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.core.env import env_is_running
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
-from paas_wl.workloads.networking.entrance.shim import get_builtin_addrs
+from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -127,8 +128,12 @@ def _ai_agent_prod_url(env: ModuleEnvironment) -> EnvVariableList:
         logger.warning("AI Agent app %s has no prod env, skip injecting prod url", application.code)
         return EnvVariableList()
 
-    # get_builtin_addrs 内部已处理: 已部署返回实际地址, 未部署返回预分配地址
-    _is_living, addresses = get_builtin_addrs(prod_env)
+    # 已部署: 包含内置地址 + 自定义域名; 未部署: 回退预分配地址
+    # 将使用 BaseEnvAddresses._sort 进行排序
+    if env_is_running(prod_env):
+        addresses = LiveEnvAddresses(prod_env).list()
+    else:
+        addresses = PreAllocatedEnvAddresses(prod_env).list()
     if not addresses:
         logger.warning(
             "Fail to resolve prod url for AI Agent app %s: no address available",

@@ -19,8 +19,9 @@ from unittest import mock
 
 import pytest
 
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, get_default_feature_flags
-from tests.utils.helpers import override_region_configs
+from tests.utils.helpers import create_app, override_region_configs
 
 
 class TestGetDefaultFeatureFlags:
@@ -41,6 +42,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPT_SENSITIVE_ENV_VARS": False,
                 },
             ),
             (
@@ -57,6 +59,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPT_SENSITIVE_ENV_VARS": False,
                 },
             ),
             (
@@ -73,6 +76,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPT_SENSITIVE_ENV_VARS": False,
                 },
             ),
             (
@@ -89,6 +93,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPT_SENSITIVE_ENV_VARS": False,
                 },
             ),
             (
@@ -112,6 +117,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": True,
+                    "ENCRYPT_SENSITIVE_ENV_VARS": False,
                 },
             ),
         ],
@@ -126,3 +132,19 @@ class TestGetDefaultFeatureFlags:
             mock.patch.object(Application, "engine_enabled", mock.PropertyMock(return_value=engine_enabled)),
         ):
             assert get_default_feature_flags(bk_app) == default_feature_flags
+
+
+class TestSyncEncryptFeatureOnCreate:
+    """新建应用的应用级加密开关默认与平台全局开关保持一致"""
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_global_on_new_app_inherits_enabled(self, settings):
+        settings.ENABLE_ENCRYPT_SENSITIVE_ENV_VARS = True
+        app = create_app()
+        assert app.feature_flag.has_feature(AppFeatureFlag.ENCRYPT_SENSITIVE_ENV_VARS) is True
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_global_off_new_app_stays_disabled(self, settings):
+        settings.ENABLE_ENCRYPT_SENSITIVE_ENV_VARS = False
+        app = create_app()
+        assert app.feature_flag.has_feature(AppFeatureFlag.ENCRYPT_SENSITIVE_ENV_VARS) is False

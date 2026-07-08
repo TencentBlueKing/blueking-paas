@@ -2,7 +2,7 @@
 version = "1.0.0"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.15"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "*"
@@ -25,23 +25,23 @@ description = ""
 # classifieres is dynamic because we want to create Python classifiers automatically
 dynamic = ["classifiers"]
 authors = [{name = "blueking", email = "blueking@tencent.com"}]
-requires-python = '>=3.11,<3.12'
+requires-python = '>=3.11,<3.15'
 dependencies = [
-    'django (==4.2.30)',
+    'django (==5.2.15)',
     'pymysql (==1.1.1)',
     "gunicorn (==23.0.0)",
-    "paas-service (==2.0.3)",
-    'djangorestframework (==3.15.2)',
+    "paas-service (==3.1.0)",
+    'djangorestframework (==3.17.1)',
     'requests (==2.32.3)',
-    'gevent (==24.2.1)',
+    'gevent (==26.5.0)',
     'cryptography (==46.0.6)',
-    'jsonfield (==3.1.0)',
-    'whitenoise (==5.3.0)',
+    'jsonfield (==3.2.0)',
+    'whitenoise (==6.12.0)',
     'sentry_sdk (==0.19.4)',
-    'blue-krill (==2.0.7)',
+    'blue-krill (==3.1.1)',
     'prometheus-client (==0.14.1)',
-    "pydantic (==2.9.2)",
-    'django-environ (==0.8.1)',
+    "pydantic (==2.11.10)",
+    'django-environ (==0.14.0)',
     'urllib3 (==1.26.20)',
     'pyjwt (==2.12.0)'
 ]

@@ -66,6 +66,13 @@ class TestAppIDField:
         slz = AppCodeSLZ(data={"code": random_name}, instance=bk_app)
         assert slz.is_valid() is False
 
+    def test_max_length_is_20(self):
+        slz = AppCodeSLZ(data={"code": "s" * 20})
+        assert slz.is_valid() is True
+
+        slz = AppCodeSLZ(data={"code": "s" * 21})
+        assert slz.is_valid() is False
+
 
 class AppIDSMartSLZ(serializers.Serializer):
     id = AppIDSMartField()

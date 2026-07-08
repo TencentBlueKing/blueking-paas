@@ -24,6 +24,7 @@ import yaml
 from django.conf import settings
 
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -93,6 +94,74 @@ class TestAIAgentViewSet:
         assert response.json()["application"]["type"] == ApplicationType.CLOUD_NATIVE
         assert response.json()["application"]["is_ai_agent_app"] is True
         assert response.json()["application"]["is_plugin_app"] is True
+
+    @pytest.mark.usefixtures("_init_tmpls")
+    @pytest.mark.usefixtures("mock_initialize_vcs_with_template")
+    @pytest.mark.parametrize(
+        ("build_method", "extra_build_config", "is_isolated"),
+        [
+            # 使用 git 仓库 + dockerfile 构建
+            ("dockerfile", {"dockerfile_path": "Dockerfile"}, False),
+            # 使用 git 仓库 + buildpack 构建
+            ("buildpack", {}, False),
+            # 使用 git 仓库 + dockerfile 构建，标记为隔离部署
+            ("dockerfile", {"dockerfile_path": "Dockerfile"}, True),
+        ],
+    )
+    def test_create_ai_agent_app_via_git(
+        self,
+        bk_user,
+        api_client,
+        mock_wl_services_in_creation,
+        bk_app_code,
+        bk_app_name,
+        build_method,
+        extra_build_config,
+        is_isolated,
+    ):
+        """传入 source_config 时，AI Agent 应用走 git 仓库部署（支持 buildpack / dockerfile）"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_isolated": is_isolated,
+                "bkapp_spec": {"build_config": {"build_method": build_method, **extra_build_config}},
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
+        app_data = response.json()["application"]
+        assert app_data["type"] == ApplicationType.CLOUD_NATIVE
+        assert app_data["is_ai_agent_app"] is True
+        assert app_data["is_plugin_app"] is True
+        assert app_data["modules"][0]["web_config"]["build_method"] == build_method
+
+        # 校验隔离部署标记正确落库
+        application = Application.objects.get(code=bk_app_code)
+        assert application.is_ai_agent_app is True
+        assert application.is_isolated is is_isolated
+
+    def test_create_ai_agent_app_via_git_without_bkapp_spec(self, api_client, bk_app_code, bk_app_name):
+        """传入 source_config 但缺少 bkapp_spec 时，应校验失败"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
 
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path, settings):
         # Set the allowed hosts otherwise the validation will fail

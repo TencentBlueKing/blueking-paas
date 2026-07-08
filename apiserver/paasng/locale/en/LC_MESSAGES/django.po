@@ -2989,10 +2989,10 @@ msgstr "APP ID"
 
 #: paasng/platform/applications/serializers/fields.py:53
 msgid ""
-"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。"
+"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-20 之间。"
 msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
-"half-corner ligatures (-), length between 3-16."
+"half-corner ligatures (-), length between 3-20."
 
 #: paasng/platform/applications/serializers/fields.py:79
 msgid ""

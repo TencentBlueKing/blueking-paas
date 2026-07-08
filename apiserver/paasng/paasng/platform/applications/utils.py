@@ -83,6 +83,7 @@ def create_application(
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
+    is_isolated: bool = False,
     app_tenant_info: AppTenantInfo | None = None,
 ):
     """创建 Application 模型"""
@@ -103,6 +104,7 @@ def create_application(
         name_en=name_en,
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
+        is_isolated=is_isolated,
         app_tenant_mode=app_tenant_info.app_tenant_mode.value,
         app_tenant_id=app_tenant_info.app_tenant_id,
         tenant_id=app_tenant_info.tenant_id,

@@ -117,92 +117,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
 
-        src_cfg = params["source_config"]
-        source_origin = SourceOrigin(src_cfg["source_origin"])
-        module_src_cfg: Dict[str, Any] = {"source_origin": source_origin}
-
-        # 如果指定模板信息，则需要提取并保存
-        if tmpl_name := src_cfg["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name)
-            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
-
+        source_origin = SourceOrigin(params["source_config"]["source_origin"])
         # LessCode 应用需要调用 API 在 LessCode 平台创建应用
         if source_origin == SourceOrigin.BK_LESS_CODE:
             # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
             self._create_app_on_lesscode_platform(request, params["code"], params["name_zh_cn"])
 
-        application = create_application(
-            code=params["code"],
-            name=params["name_zh_cn"],
-            name_en=params["name_en"],
-            app_type=ApplicationType.CLOUD_NATIVE.value,
-            operator=request.user.pk,
-            is_plugin_app=params["is_plugin_app"],
-            app_tenant_info=params["app_tenant_info"],
-        )
-        module = create_default_module(application, **module_src_cfg)
-
-        # 初始化应用镜像凭证信息
-        if image_credential := params["bkapp_spec"]["build_config"].image_credential:
-            try:
-                AppUserCredential.objects.create(
-                    application_id=application.id, tenant_id=application.tenant_id, **image_credential
-                )
-            except DbIntegrityError:
-                raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
-
+        # 集群分配：读取高级选项中用户指定的集群（未指定则走策略分配）
         env_cluster_names: Dict[str, str] = {}
         if advanced_options := params.get("advanced_options"):
             env_cluster_names = advanced_options.get("env_cluster_names", {})
 
-        repo_type = src_cfg.get("source_control_type")
-        repo_url = src_cfg.get("source_repo_url")
-        repo_group = src_cfg.get("repo_group")
-        repo_name = src_cfg.get("repo_name")
-        username = request.user.username
-        # 由平台创建代码仓库
-        auto_repo_url = None
-        if src_cfg.get("auto_create_repo"):
-            # 不传仓库名称，则使用平台账号创建仓库
-            if not repo_name:
-                auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
-            else:
-                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
-
-            repo_url = auto_repo_url
-
-        user_id = request.user.pk
-        with delete_repo_on_error(user_id, repo_type, auto_repo_url):
-            source_init_result = init_module_in_view(
-                module,
-                repo_type=repo_type,
-                repo_url=repo_url,
-                repo_auth_info=src_cfg.get("source_repo_auth_info"),
-                source_dir=src_cfg.get("source_dir", ""),
-                env_cluster_names=env_cluster_names,
-                bkapp_spec=params["bkapp_spec"],
-                write_template_to_repo=src_cfg.get("write_template_to_repo"),
-            ).source_init_result
-
-            post_create_application.send(sender=self.__class__, application=application)
-
-            create_market_config(
-                application=application,
-                # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
-                source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
-                # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
-                prefer_https=self._get_cluster_entrance_https_enabled(
-                    application,
-                    env_cluster_names.get(AppEnvironment.PRODUCTION),
-                    ExposedURLType(module.exposed_url_type),
-                ),
-            )
-        return Response(
-            data=ApplicationCreateOutputSLZ(
-                {"application": application, "source_init_result": source_init_result}
-            ).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return self._init_cloud_native_app_from_source(request, params, env_cluster_names=env_cluster_names)
 
     @swagger_auto_schema(
         tags=["platform.applications.creation"],
@@ -274,6 +200,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
 
+        # 若传入 git 源码配置，则走 git 仓库部署（支持 buildpack / dockerfile）
+        if params.get("source_config"):
+            return self._init_ai_agent_app_via_git(request, params)
+
+        # 否则使用固定模板包 + buildpack 部署
         source_origin = SourceOrigin.AI_AGENT
         engine_params = {
             "source_origin": source_origin,
@@ -284,6 +215,114 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         env_cluster_names: Dict[str, str] = {}
 
         return self._init_application(request.user, params, engine_params, source_origin, env_cluster_names)
+
+    def _init_ai_agent_app_via_git(self, request, params: Dict) -> Response:
+        """
+        使用 git 仓库源码部署创建 AI Agent 应用，支持 buildpack / dockerfile 构建。
+
+        集群使用默认集群（不支持指定集群）。
+        """
+        # AI Agent 应用不支持指定集群，使用默认集群（env_cluster_names 传空）
+        return self._init_cloud_native_app_from_source(
+            request,
+            params,
+            env_cluster_names={},
+            is_ai_agent_app=params["is_ai_agent_app"],
+            is_isolated=params["is_isolated"],
+        )
+
+    def _init_cloud_native_app_from_source(
+        self,
+        request,
+        params: Dict,
+        *,
+        env_cluster_names: Dict[str, str],
+        is_ai_agent_app: bool = False,
+        is_isolated: bool = False,
+    ) -> Response:
+        """基于 source_config + bkapp_spec 创建云原生应用的公共流程。
+
+        被 create_cloud_native 与 create_ai_agent_app 的 git 仓库分支共用。
+        差异（应用标记、集群分配策略）通过参数注入；LessCode 等特例由调用方在调用前处理。
+        """
+        src_cfg = params["source_config"]
+        source_origin = SourceOrigin(src_cfg["source_origin"])
+        module_src_cfg: Dict[str, Any] = {"source_origin": source_origin}
+
+        # 如果指定模板信息，则需要提取并保存
+        if tmpl_name := src_cfg["source_init_template"]:
+            tmpl = Template.objects.get(name=tmpl_name)
+            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
+
+        application = create_application(
+            code=params["code"],
+            name=params["name_zh_cn"],
+            name_en=params["name_en"],
+            app_type=ApplicationType.CLOUD_NATIVE.value,
+            operator=request.user.pk,
+            is_plugin_app=params["is_plugin_app"],
+            is_ai_agent_app=is_ai_agent_app,
+            is_isolated=is_isolated,
+            app_tenant_info=params["app_tenant_info"],
+        )
+        module = create_default_module(application, **module_src_cfg)
+
+        # 初始化应用镜像凭证信息
+        if image_credential := params["bkapp_spec"]["build_config"].image_credential:
+            try:
+                AppUserCredential.objects.create(
+                    application_id=application.id, tenant_id=application.tenant_id, **image_credential
+                )
+            except DbIntegrityError:
+                raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
+
+        repo_type = src_cfg.get("source_control_type")
+        repo_url = src_cfg.get("source_repo_url")
+        repo_group = src_cfg.get("repo_group")
+        repo_name = src_cfg.get("repo_name")
+        username = request.user.username
+        # 由平台创建代码仓库
+        auto_repo_url = None
+        if src_cfg.get("auto_create_repo"):
+            # 不传仓库名称，则使用平台账号创建仓库
+            if not repo_name:
+                auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
+            else:
+                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
+            repo_url = auto_repo_url
+
+        user_id = request.user.pk
+        with delete_repo_on_error(user_id, repo_type, auto_repo_url):
+            source_init_result = init_module_in_view(
+                module,
+                repo_type=repo_type,
+                repo_url=repo_url,
+                repo_auth_info=src_cfg.get("source_repo_auth_info"),
+                source_dir=src_cfg.get("source_dir", ""),
+                env_cluster_names=env_cluster_names,
+                bkapp_spec=params["bkapp_spec"],
+                write_template_to_repo=src_cfg.get("write_template_to_repo"),
+            ).source_init_result
+
+            post_create_application.send(sender=self.__class__, application=application)
+
+            create_market_config(
+                application=application,
+                # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
+                source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
+                # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
+                prefer_https=self._get_cluster_entrance_https_enabled(
+                    application,
+                    env_cluster_names.get(AppEnvironment.PRODUCTION),
+                    ExposedURLType(module.exposed_url_type),
+                ),
+            )
+        return Response(
+            data=ApplicationCreateOutputSLZ(
+                {"application": application, "source_init_result": source_init_result}
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @swagger_auto_schema(
         tags=["platform.applications.creation"],
@@ -360,6 +399,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             app_type=params["type"],
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
+            is_isolated=params.get("is_isolated", False),
             operator=request_user.pk,
             app_tenant_info=params["app_tenant_info"],
         )

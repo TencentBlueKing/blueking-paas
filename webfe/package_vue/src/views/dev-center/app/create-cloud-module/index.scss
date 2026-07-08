@@ -185,38 +185,6 @@ p.app-name {
   left: -600px;
 }
 
-.form-group {
-  display: flex;
-  &-flex {
-    width: 520px;
-    margin-top: 10px;
-  }
-  &-radio {
-    display: flex;
-    align-items: center;
-    margin-top: 3px;
-  }
-  &-flex-radio {
-    width: 283px;
-    margin-top: 10px;
-  }
-  .form-label {
-    margin-right: 10px;
-    color: #63656e;
-    font-weight: 400;
-    text-align: right;
-    width: 90px;
-    &::after {
-      height: 8px;
-      line-height: 1;
-      content: '*';
-      color: #ea3636;
-      font-size: 12px;
-      display: inline-block;
-      vertical-align: middle;
-    }
-  }
-}
 .form-input-width {
   width: 650px;
 }
@@ -539,59 +507,8 @@ input::-webkit-input-placeholder {
   }
 }
 
-.code-depot {
-  display: flex;
-  margin: 20px 0;
-  .form-label {
-    flex-shrink: 0;
-    color: #63656e;
-    line-height: 32px;
-    font-size: 14px;
-    padding-top: 10px;
-    width: 100px;
-    text-align: right;
-    font-weight: 400;
-    padding-right: 18px;
-  }
-  &-item {
-    width: 145px;
-    height: 88px;
-    background: #f0f1f5;
-    border-radius: 2px;
-    text-align: center;
-    position: relative;
-    cursor: pointer;
-    img {
-      width: 40px;
-      height: 36px;
-      margin: 12px 0 6px 0;
-    }
-  }
-  .on {
-    border: solid 2px #3a84ff;
-    padding: 0 16px 0 14px;
-    background-color: #fff;
-    color: #3a84ff;
-
-    @include border-active-logo;
-  }
-}
-
 .en-label.wrap .form-label {
   width: 90px;
-}
-
-.form-group-dir {
-  display: flex;
-  &-flex {
-    width: 520px;
-    margin-top: 10px;
-  }
-  &-radio {
-    display: flex;
-    align-items: center;
-    margin-top: 3px;
-  }
 }
 
 .ps-region-list {
@@ -691,14 +608,6 @@ input::-webkit-input-placeholder {
 .build-params-form {
   margin-top: 10px;
   margin-bottom: 16px;
-  display: flex;
-
-  .form-label {
-    width: 90px;
-    line-height: 32px;
-    margin-right: 10px;
-    text-align: right;
-  }
 
   .form-value-wrapper {
     line-height: 32px;

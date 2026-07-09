@@ -200,6 +200,22 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
 
+        # 外链模式: 创建用户不可见的 Engineless AI Agent 应用, 非插件
+        # is_ai_agent_app=True + type=engineless_app 的组合会自动在用户列表中隐藏
+        if params.get("is_engineless"):
+            application = create_third_app(
+                code=params["code"],
+                name=params["name_zh_cn"],
+                name_en=params["name_en"],
+                operator=request.user.pk,
+                app_tenant_info=params["app_tenant_info"],
+                is_ai_agent_app=True,
+            )
+            return Response(
+                data=ApplicationCreateOutputSLZ({"application": application, "source_init_result": None}).data,
+                status=status.HTTP_201_CREATED,
+            )
+
         # 若传入 git 源码配置，则走 git 仓库部署（支持 buildpack / dockerfile）
         if params.get("source_config"):
             return self._init_ai_agent_app_via_git(request, params)

@@ -282,6 +282,9 @@ class UserApplicationFilter:
         if just_leave_app_codes := mgr.list():
             applications = applications.exclude(code__in=just_leave_app_codes)
 
+        # 排除需要隐藏的 AI Agent 特殊外链应用 (is_ai_agent_app=True 且 type=engineless_app 的组合)
+        applications = applications.exclude(is_ai_agent_app=True, type=ApplicationType.ENGINELESS_APP.value)
+
         return BaseApplicationFilter.filter_queryset(
             applications,
             regions=regions,

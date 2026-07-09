@@ -17,9 +17,10 @@
 """运行环境敏感变量加密：开关判定、敏感变量识别、密钥注入
 
 部署时在 BkApp manifest 成型后、下发前做一次统一后处理: 识别敏感变量 → 获取该应用该环境
-的 runtime key(从表 AppRuntimeEncryptionKey) → 用 blue-krill cipher 加密并覆盖写入 → 追加统一密钥变量 `BKPAAS_ENCRYPT_SECRET_KEY`,`BKPAAS_ENCRYPTED_ENV_KEYS` 供下游 SDK 解密
+的 runtime key(从表 AppRuntimeEncryptionKey) → 用 blue-krill cipher 加密并覆盖写入 →
+追加统一密钥变量 `BKPAAS_ENCRYPT_SECRET_KEY`,`BKPAAS_ENCRYPTED_ENV_KEYS` 供下游 SDK 解密
 
-加密是增强项：任何环节故障都不得阻断部署,一律降级明文 + warning 日志，密文带自有前缀 `bkenv$`
+加密是增强项：任何环节故障都不得阻断部署,一律降级明文 + warning 日志，密文带自有前缀 `bkpaas_enc$`
 """
 
 import logging
@@ -149,10 +150,6 @@ def apply_runtime_encryption(model_res: crd.BkAppResource, env: ModuleEnvironmen
     if not is_encrypt_enabled(env):
         return
 
-    sensitive_keys = collect_sensitive_keys(env)
-    if not sensitive_keys:
-        return
-
     # runtime key 生成/读取失败 → 该应用加密不可用,降级明文 + warning,部署继续
     try:
         key = get_or_create_runtime_key(env)
@@ -160,6 +157,7 @@ def apply_runtime_encryption(model_res: crd.BkAppResource, env: ModuleEnvironmen
         logger.warning("Failed to get or create runtime key for env %s, degrade to plaintext", env, exc_info=True)
         return
 
+    sensitive_keys = collect_sensitive_keys(env)
     handler = EncryptHandler(secret_key=key)  # type: ignore[arg-type]  # blue-krill 支持 str 密钥
 
     # 记录实际被加密(未降级明文)的变量 key,注入清单变量供 SDK 精确解密

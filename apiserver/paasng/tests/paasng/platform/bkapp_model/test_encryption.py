@@ -160,9 +160,11 @@ class TestApplyRuntimeEncryption:
         apply_runtime_encryption(res, bk_stag_env)
 
         env_map = {v.name: v.value for v in res.spec.configuration.env}
-        assert env_map == {"PLAIN_VAR": "keepme"}
-        assert SECRET_KEY_ENV_NAME not in env_map
-        assert ENCRYPTED_KEYS_ENV_NAME not in env_map
+        assert env_map["PLAIN_VAR"] == "keepme"
+        # 双开关开启时，无论是否有变量被加密，统一密钥变量都应注入来标识已开启该功能
+        assert SECRET_KEY_ENV_NAME in env_map
+        # 无敏感变量被加密时，清单变量注入为空串
+        assert env_map[ENCRYPTED_KEYS_ENV_NAME] == ""
 
     def test_encrypted_keys_var_lists_only_encrypted(
         self, bk_module, bk_stag_env, enable_global_switch, enable_app_switch

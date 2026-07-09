@@ -163,6 +163,29 @@ class TestAIAgentViewSet:
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
 
+    def test_create_engineless_ai_agent_app(
+        self,
+        bk_user,
+        api_client,
+        bk_app_code,
+        bk_app_name,
+    ):
+        """创建 engineless AI Agent 外链应用：type=engineless_app, is_plugin_app=False"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_engineless": True,
+            },
+        )
+        assert response.status_code == 201, f"error: {response.json()}"
+        app_data = response.json()["application"]
+        assert app_data["type"] == ApplicationType.ENGINELESS_APP
+        assert app_data["is_ai_agent_app"] is True
+        # 占位外链应用不是插件，不应注册网关
+        assert app_data["is_plugin_app"] is False
+
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path, settings):
         # Set the allowed hosts otherwise the validation will fail
         settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]

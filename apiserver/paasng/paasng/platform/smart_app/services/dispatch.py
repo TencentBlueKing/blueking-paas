@@ -131,8 +131,8 @@ def dispatch_slug_image_to_registry(
     source_dir = get_source_dir_from_desc(stat.meta_info, module.name)
 
     base_path = workplace / stat.relative_path
-    layer_path = safe_resolve_subpath(base_path, f"{source_dir}/layer.tar.gz")
-    procfile_path = safe_resolve_subpath(base_path, f"{source_dir}/{module.name}.Procfile.tar.gz")
+    layer_path = safe_resolve_subpath(base_path, Path(source_dir) / "layer.tar.gz")
+    procfile_path = safe_resolve_subpath(base_path, Path(source_dir) / f"{module.name}.Procfile.tar.gz")
 
     mgr = SMartImageManager(module)
     base_image = mgr.get_slugrunner_image_info()

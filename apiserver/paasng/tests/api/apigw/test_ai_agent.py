@@ -186,6 +186,37 @@ class TestAIAgentViewSet:
         # 占位外链应用不是插件，不应注册网关
         assert app_data["is_plugin_app"] is False
 
+    def test_engineless_ai_agent_hidden_from_user_list(
+        self,
+        api_client,
+        bk_app,
+        bk_app_code,
+        bk_app_name,
+    ):
+        """创建 engineless AI Agent 应用后, 不应出现在用户应用列表中"""
+        # 先建一个 engineless AI Agent 应用
+        resp = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_engineless": True,
+            },
+        )
+        assert resp.status_code == 201
+
+        # 查询用户应用列表, 验证 engineless AI Agent 不可见
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            list_resp = api_client.get("/api/bkapps/applications/lists/detailed")
+
+        assert list_resp.status_code == 200
+        app_codes = {item["application"]["code"] for item in list_resp.json()["results"]}
+
+        # engineless AI Agent 应用不应出现在列表中
+        assert bk_app_code not in app_codes
+        # 常规应用应该在列表中 (确保测试有意义)
+        assert bk_app.code in app_codes
+
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path, settings):
         # Set the allowed hosts otherwise the validation will fail
         settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]

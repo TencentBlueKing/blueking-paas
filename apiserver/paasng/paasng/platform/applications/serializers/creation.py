@@ -141,12 +141,10 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
         # 两种 AI Agent 应用都标记 is_ai_agent_app=True
         data["is_ai_agent_app"] = True
         if data.get("is_engineless"):
-            # 占位外链应用：无引擎、非插件、不可部署
             data["is_plugin_app"] = False
             data["type"] = ApplicationType.ENGINELESS_APP.value
             data["engine_enabled"] = False
         else:
-            # 可部署的插件应用：部署时会自动注册网关（bp-{app_code}）
             data["is_plugin_app"] = True
             data["type"] = ApplicationType.CLOUD_NATIVE.value
             data["engine_enabled"] = True

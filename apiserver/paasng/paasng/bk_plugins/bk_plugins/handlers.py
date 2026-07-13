@@ -21,7 +21,6 @@ import logging
 
 from django.dispatch import receiver
 
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.engine.models import Deployment
@@ -46,24 +45,6 @@ def on_plugin_app_created(sender, application: Application, **kwargs):
     if distributor_codes := kwargs.get("extra_fields", {}).get("distributor_codes"):
         profile.pre_distributor_codes = distributor_codes
         profile.save()
-
-
-@receiver(post_create_application)
-def on_engineless_ai_agent_created(sender, application: Application, **kwargs):
-    """Sync API gateway for engineless AI Agent apps on creation.
-
-    Engineless AI Agent is not a plugin (is_plugin_app=False), but its gateway
-    registration reuses the plugin's gateway infrastructure (BkPluginProfile +
-    safe_sync_apigw), hence this handler lives in the bk_plugins module.
-    Unlike plugin apps (gateway synced on deployment), engineless apps sync
-    immediately since they will never deploy.
-    """
-    if not (application.is_ai_agent_app and application.type == ApplicationType.ENGINELESS_APP.value):
-        return
-
-    BkPluginProfile.objects.get_or_create_by_application(application)
-    logger.info("Syncing api-gw resource for engineless AI Agent %s, triggered by creation.", application)
-    safe_sync_apigw(application)
 
 
 @receiver(pre_appenv_deploy)

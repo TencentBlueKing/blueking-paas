@@ -89,7 +89,7 @@ class TestAIAgentMarketAddress:
         result = _ai_agent_market_address(bk_prod_env)
         assert len(result) == 0
 
-    def test_injects_market_entrance_url(self, bk_app, bk_module, bk_prod_env, bk_prod_wl_app, bk_user):
+    def test_injects_market_entrance_url(self, bk_app, bk_module, bk_prod_env, bk_user):
         """AI Agent 应用注入正确的 market_address 值."""
         bk_app.is_ai_agent_app = True
         bk_app.save()
@@ -99,7 +99,7 @@ class TestAIAgentMarketAddress:
         bk_module.save()
 
         # 创建成功的发布使 prod 环境处于 running 状态
-        create_release(bk_prod_wl_app, bk_user)
+        create_release(bk_prod_env.wl_app, bk_user)
 
         ingress_config = {"app_root_domains": [{"name": "example.com"}]}
         with cluster_ingress_config(config=ingress_config):

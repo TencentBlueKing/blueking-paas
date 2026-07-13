@@ -32,7 +32,11 @@ from paas_wl.infras.resources.base.kres import KSecret
 
 
 class HelmClient:
-    """Helm 客户端，用于获取 Helm Release 相关信息"""
+    """Helm 客户端，用于获取 Helm Release 相关信息。
+
+    :param cluster_name: 集群名称。
+    :raises ValueError: 无法根据 cluster_name 获取有效集群访问 client 时
+    """
 
     def __init__(self, cluster_name: str):
         self.client = get_client_by_cluster_name(cluster_name)

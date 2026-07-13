@@ -31,6 +31,14 @@ class ApplicationType(StrStructuredEnum):
     CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
 
+class DeployPolicy(StrStructuredEnum):
+    """应用部署策略：描述应用部署到何种环境（安全合规隔离 / 专用资源 / ...）"""
+
+    DEFAULT = EnumField("default", label=_("默认"))
+    # 需部署到网络/容器隔离环境（如 gvisor 集群），提供更高隔离性的安全保障
+    ISOLATED = EnumField("isolated", label=_("安全合规隔离"))
+
+
 class AppStatus(StrStructuredEnum):
     """Application status for list filtering"""
 

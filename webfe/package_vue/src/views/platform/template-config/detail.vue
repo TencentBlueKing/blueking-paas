@@ -25,6 +25,7 @@
             {{ data[key] ? $t('是') : $t('否') }}
           </span>
         </div>
+        <span v-else-if="key === 'supported_runtime_types'">{{ formatRuntimeTypes(data[key]) }}</span>
         <span v-else>{{ data[key] || '--' }}</span>
       </template>
     </DetailsRow>
@@ -68,6 +69,7 @@ export default {
       },
       default: {
         blob_url: '二进制包存储路径',
+        supported_runtime_types: '支持的构建方式',
       },
       plugin: {
         repo_type: '代码仓库类型',
@@ -79,11 +81,23 @@ export default {
         required_buildpacks: '必须的构建工具',
         processes: '进程配置',
       },
+      runtimeTypeMap: {
+        buildpack: '蓝鲸 Buildpack',
+        dockerfile: 'Dockerfile',
+      },
     };
   },
   computed: {
     displayDetailMap() {
       return this[this.tabActive] || this.baseInfo;
+    },
+  },
+  methods: {
+    formatRuntimeTypes(runtimeTypes) {
+      if (!Array.isArray(runtimeTypes) || !runtimeTypes.length) {
+        return '--';
+      }
+      return runtimeTypes.map(type => this.$t(this.runtimeTypeMap[type] || type)).join('、');
     },
   },
 };

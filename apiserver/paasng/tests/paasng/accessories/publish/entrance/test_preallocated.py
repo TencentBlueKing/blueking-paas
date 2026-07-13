@@ -26,7 +26,6 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import (
-    _ai_agent_market_address,
     _default_preallocated_urls,
     get_exposed_url_type,
     get_preallocated_address,
@@ -74,28 +73,6 @@ def test_default_preallocated_urls_normal(bk_stag_env):
         urls = _default_preallocated_urls(bk_stag_env).kv_map["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert isinstance(urls, str)
         assert set(json.loads(urls).keys()) == {"stag", "prod"}
-
-
-@pytest.mark.usefixtures("_with_live_addrs")
-class TestAIAgentMarketAddress:
-    """Test AI Agent market address env var injection."""
-
-    def test_non_ai_agent_app_not_injected(self, bk_prod_env):
-        """非 AI Agent 应用不注入."""
-        bk_prod_env.application.is_ai_agent_app = False
-        bk_prod_env.application.save()
-
-        result = _ai_agent_market_address(bk_prod_env)
-        assert len(result) == 0
-
-    def test_injects_market_entrance_url(self, bk_app, bk_prod_env):
-        """AI Agent 应用注入 market_address 环境变量."""
-        bk_app.is_ai_agent_app = True
-        bk_app.save()
-
-        result = _ai_agent_market_address(bk_prod_env)
-        assert len(result) == 1
-        assert result[0].key == "BKPAAS_MARKET_ENTRANCE_URL"
 
 
 class TestGetPreallocatedAddress:

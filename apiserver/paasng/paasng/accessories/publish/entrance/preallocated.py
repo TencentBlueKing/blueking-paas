@@ -117,29 +117,19 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
 
 
 @env_vars_providers.register_env
-def _ai_agent_market_address(env: ModuleEnvironment) -> EnvVariableList:
-    """为 AI Agent 应用注入应用市场访问地址."""
-    if env.environment != AppEnvName.PROD:
-        return EnvVariableList()
+def _market_entrance_url(env: ModuleEnvironment) -> EnvVariableList:
+    """注入应用市场访问地址."""
     application = env.module.application
-    if not application.is_ai_agent_app:
-        return EnvVariableList()
-
     market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
     entrance = MarketAvailableAddressHelper(market_config).access_entrance
-    if entrance is None or not entrance.address:
-        logger.warning(
-            "Fail to resolve market address for AI Agent app %s: no address available",
-            application.code,
-        )
-        return EnvVariableList()
+    url = entrance.address if entrance and entrance.address else ""
 
     return EnvVariableList(
         [
             EnvVariableObj.with_sys_prefix(
                 key="MARKET_ENTRANCE_URL",
-                value=entrance.address,
-                description=_("AI Agent 应用市场访问地址"),
+                value=url,
+                description=_("应用市场访问地址"),
             )
         ]
     )

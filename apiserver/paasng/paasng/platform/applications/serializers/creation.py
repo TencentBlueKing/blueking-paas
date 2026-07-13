@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
@@ -150,6 +150,9 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
             data["is_plugin_app"] = True
             data["type"] = ApplicationType.CLOUD_NATIVE.value
             data["engine_enabled"] = True
+            data["deploy_policy"] = (
+                DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
+            )
 
         return data
 

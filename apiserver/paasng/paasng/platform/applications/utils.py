@@ -33,7 +33,7 @@ from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.specs import AppSpecs
@@ -83,7 +83,7 @@ def create_application(
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
-    is_isolated: bool = False,
+    deploy_policy: str = DeployPolicy.DEFAULT.value,
     app_tenant_info: AppTenantInfo | None = None,
 ):
     """创建 Application 模型"""
@@ -104,7 +104,7 @@ def create_application(
         name_en=name_en,
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
-        is_isolated=is_isolated,
+        deploy_policy=deploy_policy,
         app_tenant_mode=app_tenant_info.app_tenant_mode.value,
         app_tenant_id=app_tenant_info.app_tenant_id,
         tenant_id=app_tenant_info.tenant_id,

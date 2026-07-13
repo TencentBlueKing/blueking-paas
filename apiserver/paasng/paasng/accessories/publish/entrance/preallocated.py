@@ -119,6 +119,8 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
 @env_vars_providers.register_env
 def _ai_agent_market_address(env: ModuleEnvironment) -> EnvVariableList:
     """为 AI Agent 应用注入应用市场访问地址."""
+    if env.environment != AppEnvName.PROD:
+        return EnvVariableList()
     application = env.module.application
     if not application.is_ai_agent_app:
         return EnvVariableList()

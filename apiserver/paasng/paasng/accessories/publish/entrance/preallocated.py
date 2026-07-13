@@ -120,7 +120,7 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
 def _market_entrance_url(env: ModuleEnvironment) -> EnvVariableList:
     """注入应用市场访问地址."""
     application = env.module.application
-    market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+    market_config, _created = MarketConfig.objects.get_or_create_by_app(application)
     entrance = MarketAvailableAddressHelper(market_config).access_entrance
     url = entrance.address if entrance and entrance.address else ""
 

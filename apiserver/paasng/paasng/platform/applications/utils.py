@@ -149,8 +149,9 @@ def create_third_app(
     operator: str,
     app_tenant_info: Optional[AppTenantInfo] = None,
     market_params: Optional[dict] = None,
+    is_ai_agent_app: bool = False,
 ) -> Application:
-    """创建第三方（外链）应用"""
+    """创建第三方（外链）应用, 支持创建特殊的 AI Agent 第三方（外链）应用"""
     if market_params is None:
         market_params = {}
 
@@ -161,6 +162,7 @@ def create_third_app(
         app_type=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
+        is_ai_agent_app=is_ai_agent_app,
         app_tenant_info=app_tenant_info,
     )
     create_default_module(application)

@@ -70,7 +70,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterComponentListOutputSLZ(many=True)},
     )
     def list(self, request, cluster_name, *args, **kwargs):
-        release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
+        release_map = {r.chart.name: r for r in _get_helm_client(cluster_name).list_releases()}
 
         components = []
         for comp in self.get_queryset():
@@ -92,8 +92,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
         if not Cluster.objects.filter(name=cluster_name).first():
             return Response(status=status.HTTP_404_NOT_FOUND)
-
-        release = HelmClient(cluster_name).get_release(component_name)
+        release = _get_helm_client(cluster_name).get_release(component_name)
         if not release:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -168,7 +167,8 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         namespace = cluster.component_preferred_namespace
         # 默认使用组件名称作为 release 名称
         release_name = component_name
-        if release := HelmClient(cluster_name).get_release(component_name):
+        release = _get_helm_client(cluster_name).get_release(component_name)
+        if release:
             # 如果组件已经部署
             # 1. 需要指定成对应的命名空间镜像更新
             namespace = release.namespace
@@ -254,7 +254,8 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
     ) -> Tuple[str | None, str | None]:
         """获取组件在集群中的当前版本 & 可选的最新版本"""
         cur_version, latest_version = None, None
-        if release := HelmClient(cluster.name).get_release(component.name):
+        release = _get_helm_client(cluster.name).get_release(component.name)
+        if release:
             cur_version = release.chart.version
 
         # 非 BCS 集群无法获取组件版本信息
@@ -278,3 +279,16 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             latest_version = chart_versions[0].version
 
         return cur_version, latest_version
+
+
+def _get_helm_client(cluster_name: str) -> HelmClient:
+    """获取指定集群的 Helm 客户端。
+
+    :param cluster_name: 集群名称
+    :raises error_codes.CANNOT_GET_CLUSTER_STATUS: 当集群不存在或缺少可用的访问配置
+        （如未配置 APIServer）时
+    """
+    try:
+        return HelmClient(cluster_name)
+    except ValueError:
+        raise error_codes.CANNOT_GET_CLUSTER_STATUS.f(_("集群缺少可用的访问配置"))

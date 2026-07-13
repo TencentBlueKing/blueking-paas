@@ -23,7 +23,7 @@ import pytest
 import yaml
 from django.conf import settings
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
@@ -141,10 +141,11 @@ class TestAIAgentViewSet:
         assert app_data["is_plugin_app"] is True
         assert app_data["modules"][0]["web_config"]["build_method"] == build_method
 
-        # 校验隔离部署标记正确落库
+        # 校验隔离部署标记正确落库（对外 is_isolated 布尔映射为 deploy_policy 枚举）
         application = Application.objects.get(code=bk_app_code)
         assert application.is_ai_agent_app is True
-        assert application.is_isolated is is_isolated
+        expected_policy = DeployPolicy.ISOLATED.value if is_isolated else DeployPolicy.DEFAULT.value
+        assert application.deploy_policy == expected_policy
 
     def test_create_ai_agent_app_via_git_without_bkapp_spec(self, api_client, bk_app_code, bk_app_name):
         """传入 source_config 但缺少 bkapp_spec 时，应校验失败"""

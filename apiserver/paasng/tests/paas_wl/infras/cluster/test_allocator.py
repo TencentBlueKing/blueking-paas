@@ -26,7 +26,7 @@ from paas_wl.infras.cluster.constants import (
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator, EnvClusterService
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, DeployPolicy
 from tests.utils.basic import generate_random_string
 
 pytestmark = [
@@ -228,6 +228,15 @@ class TestEnvClusterService:
         assert ctx.environment == AppEnvironment.STAGING
         assert ctx.username == "zhangsan"
         assert ctx.usage == ClusterUsage.AI_AGENT
+
+    def test_build_allocation_context_with_isolated_ai_agent_default_module(self, bk_app, bk_stag_env):
+        bk_app.is_ai_agent_app = True
+        bk_app.deploy_policy = DeployPolicy.ISOLATED.value
+        bk_app.save(update_fields=["is_ai_agent_app", "deploy_policy"])
+
+        ctx = EnvClusterService(bk_stag_env)._build_allocation_context(operator="zhangsan")
+
+        assert ctx.usage == ClusterUsage.AI_AGENT_ISOLATED
 
     def test_build_allocation_context_with_normal_app(self, bk_app, bk_stag_env):
         ctx = EnvClusterService(bk_stag_env)._build_allocation_context()

@@ -22,6 +22,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
+from paasng.utils.error_codes import error_codes
 from tests.utils.mocks.bcs import StubBCSUserClient
 from tests.utils.mocks.helm import StubHelmClient
 
@@ -67,6 +68,19 @@ class TestListClusterComponents:
                 "status": "not_installed",
             },
         ]
+
+    def test_list_when_helm_client_unavailable(self, plat_mgt_api_client, init_system_cluster):
+        class ErrorHelmClient:
+            def __init__(self, cluster_name: str):
+                raise ValueError("context not found")
+
+        with patch("paasng.plat_mgt.infras.clusters.views.components.HelmClient", new=ErrorHelmClient):
+            resp = plat_mgt_api_client.get(
+                reverse("plat_mgt.infras.cluster.component.list", kwargs={"cluster_name": init_system_cluster.name})
+            )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == error_codes.CANNOT_GET_CLUSTER_STATUS.code
 
 
 class TestRetrieveClusterComponent:

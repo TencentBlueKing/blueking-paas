@@ -22,13 +22,13 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.core.env import env_is_running
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
-from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.configurations.provider import env_vars_providers
@@ -117,37 +117,27 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
 
 
 @env_vars_providers.register_env
-def _ai_agent_prod_url(env: ModuleEnvironment) -> EnvVariableList:
-    """为 AI Agent 应用注入主模块生产环境访问地址."""
+def _ai_agent_market_address(env: ModuleEnvironment) -> EnvVariableList:
+    """为 AI Agent 应用注入应用市场访问地址."""
     application = env.module.application
     if not application.is_ai_agent_app:
         return EnvVariableList()
 
-    prod_env = application.get_default_module().envs.filter(environment=AppEnvName.PROD).first()
-    if not prod_env:
-        logger.warning("AI Agent app %s has no prod env, skip injecting prod url", application.code)
-        return EnvVariableList()
-
-    # 已部署: 包含内置地址 + 自定义域名; 未部署: 回退预分配地址
-    # 将使用 BaseEnvAddresses._sort 进行排序
-    if env_is_running(prod_env):
-        addresses = LiveEnvAddresses(prod_env).list()
-    else:
-        addresses = PreAllocatedEnvAddresses(prod_env).list()
-    if not addresses:
+    market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+    entrance = MarketAvailableAddressHelper(market_config).access_entrance
+    if entrance is None or not entrance.address:
         logger.warning(
-            "Fail to resolve prod url for AI Agent app %s: no address available",
+            "Fail to resolve market address for AI Agent app %s: no address available",
             application.code,
         )
         return EnvVariableList()
 
-    url = addresses[0].url
     return EnvVariableList(
         [
             EnvVariableObj.with_sys_prefix(
-                key="AI_AGENT_PROD_URL",
-                value=url,
-                description=_("AI Agent 应用主模块生产环境访问地址"),
+                key="MARKET_ENTRANCE_URL",
+                value=entrance.address,
+                description=_("AI Agent 应用市场访问地址"),
             )
         ]
     )

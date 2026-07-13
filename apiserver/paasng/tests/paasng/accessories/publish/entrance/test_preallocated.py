@@ -26,7 +26,7 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import (
-    _ai_agent_prod_url,
+    _ai_agent_market_address,
     _default_preallocated_urls,
     get_exposed_url_type,
     get_preallocated_address,
@@ -36,6 +36,7 @@ from paasng.accessories.publish.entrance.preallocated import (
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
+from tests.paas_wl.utils.release import create_release
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -74,6 +75,39 @@ def test_default_preallocated_urls_normal(bk_stag_env):
         urls = _default_preallocated_urls(bk_stag_env).kv_map["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert isinstance(urls, str)
         assert set(json.loads(urls).keys()) == {"stag", "prod"}
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+class TestAIAgentMarketAddress:
+    """Test AI Agent market address env var injection."""
+
+    def test_non_ai_agent_app_not_injected(self, bk_prod_env):
+        """非 AI Agent 应用不注入."""
+        bk_prod_env.application.is_ai_agent_app = False
+        bk_prod_env.application.save()
+
+        result = _ai_agent_market_address(bk_prod_env)
+        assert len(result) == 0
+
+    def test_injects_market_entrance_url(self, bk_app, bk_module, bk_prod_env, bk_prod_wl_app, bk_user):
+        """AI Agent 应用注入正确的 market_address 值."""
+        bk_app.is_ai_agent_app = True
+        bk_app.save()
+
+        # 设置 exposed_url_type 为子域名模式以确定 URL 格式
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+        bk_module.save()
+
+        # 创建成功的发布使 prod 环境处于 running 状态
+        create_release(bk_prod_wl_app, bk_user)
+
+        ingress_config = {"app_root_domains": [{"name": "example.com"}]}
+        with cluster_ingress_config(config=ingress_config):
+            result = _ai_agent_market_address(bk_prod_env)
+
+        assert len(result) == 1
+        assert result[0].key == "BKPAAS_MARKET_ENTRANCE_URL"
+        assert result[0].value == f"http://{bk_app.code}.example.com"
 
 
 class TestGetPreallocatedAddress:
@@ -233,65 +267,3 @@ class TestDefaultEntrance:
             f"http://stag-dot-{bk_app.code}.bar-1.example.com",
             f"http://stag-dot-{bk_app.code}.bar-2.example.org",
         ]
-
-
-@pytest.mark.usefixtures("_with_wl_apps")
-class TestAIAgentProdUrl:
-    """Test AI Agent prod url env var injection."""
-
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        with cluster_ingress_config(config={"app_root_domains": [{"name": "ai-agent.example.com"}]}):
-            yield
-
-    def test_non_ai_agent_app_not_injected(self, bk_stag_env):
-        """非 AI Agent 应用不注入专属变量"""
-        bk_stag_env.application.is_ai_agent_app = False
-        bk_stag_env.application.save()
-
-        result = _ai_agent_prod_url(bk_stag_env)
-        assert len(result) == 0
-
-    def test_ai_agent_app_preallocated_url(self, bk_app, bk_module, bk_stag_env):
-        """AI Agent 应用注入预分配地址 (生产环境未部署时)"""
-        bk_module.is_default = True
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.save()
-        bk_app.is_ai_agent_app = True
-        bk_app.save()
-
-        result = _ai_agent_prod_url(bk_stag_env)
-        assert len(result) == 1
-        assert result[0].key == "BKPAAS_AI_AGENT_PROD_URL"
-        assert result[0].value == f"http://{bk_app.code}.ai-agent.example.com"
-
-    def test_non_default_module_gets_main_prod_url(self, bk_app, bk_module, bk_module_2):
-        """非默认模块部署时仍指向主模块生产环境地址"""
-        bk_app.is_ai_agent_app = True
-        bk_app.save()
-
-        # 确保 bk_module 是设置了 exposed_url_type 的主模块
-        bk_module.is_default = True
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.save()
-
-        # bk_module_2 是非默认模块, 用它的 stag env 调用
-        non_default_stag_env = bk_module_2.envs.get(environment="stag")
-
-        result = _ai_agent_prod_url(non_default_stag_env)
-        assert len(result) == 1
-        assert result[0].key == "BKPAAS_AI_AGENT_PROD_URL"
-        # 地址来自主模块 (bk_module) 的 prod, 不是非默认模块的
-        assert result[0].value == f"http://{bk_app.code}.ai-agent.example.com"
-
-    def test_no_prod_env_not_injected(self, bk_stag_env):
-        """主模块无生产环境时不注入"""
-        bk_stag_env.application.is_ai_agent_app = True
-        bk_stag_env.application.save()
-
-        # 删除主模块的 prod 环境
-        default_module = bk_stag_env.application.get_default_module()
-        default_module.envs.filter(environment="prod").delete()
-
-        result = _ai_agent_prod_url(bk_stag_env)
-        assert len(result) == 0

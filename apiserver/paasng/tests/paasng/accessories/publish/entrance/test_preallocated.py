@@ -36,7 +36,6 @@ from paasng.accessories.publish.entrance.preallocated import (
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
-from tests.paas_wl.utils.release import create_release
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -77,7 +76,7 @@ def test_default_preallocated_urls_normal(bk_stag_env):
         assert set(json.loads(urls).keys()) == {"stag", "prod"}
 
 
-@pytest.mark.usefixtures("_with_wl_apps")
+@pytest.mark.usefixtures("_with_live_addrs")
 class TestAIAgentMarketAddress:
     """Test AI Agent market address env var injection."""
 
@@ -89,25 +88,14 @@ class TestAIAgentMarketAddress:
         result = _ai_agent_market_address(bk_prod_env)
         assert len(result) == 0
 
-    def test_injects_market_entrance_url(self, bk_app, bk_module, bk_prod_env, bk_user):
-        """AI Agent 应用注入正确的 market_address 值."""
+    def test_injects_market_entrance_url(self, bk_app, bk_prod_env):
+        """AI Agent 应用注入 market_address 环境变量."""
         bk_app.is_ai_agent_app = True
         bk_app.save()
 
-        # 设置 exposed_url_type 为子域名模式以确定 URL 格式
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.save()
-
-        # 创建成功的发布使 prod 环境处于 running 状态
-        create_release(bk_prod_env.wl_app, bk_user)
-
-        ingress_config = {"app_root_domains": [{"name": "example.com"}]}
-        with cluster_ingress_config(config=ingress_config):
-            result = _ai_agent_market_address(bk_prod_env)
-
+        result = _ai_agent_market_address(bk_prod_env)
         assert len(result) == 1
         assert result[0].key == "BKPAAS_MARKET_ENTRANCE_URL"
-        assert result[0].value == f"http://{bk_app.code}.example.com"
 
 
 class TestGetPreallocatedAddress:

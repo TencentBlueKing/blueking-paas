@@ -401,13 +401,13 @@ class PluginMembersViewSet(viewsets.ViewSet):
         return Response(data={})
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
-    def add_role_members(self, request, code, role):
+    def add_members_to_role(self, request, code, role):
         """插件应用按角色添加成员"""
         application = get_object_or_404(Application, code=code)
         try:
             role_enum = ApplicationRole(int(role))
         except (ValueError, TypeError):
-            error_codes.CREATE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
+            raise error_codes.CREATE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
 
         slz = api_serializers.PluginRoleMembersSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -420,7 +420,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
-    def delete_role_members(self, request, code, role):
+    def delete_members_from_role(self, request, code, role):
         """插件应用按角色删除成员"""
         application = get_object_or_404(Application, code=code)
         try:

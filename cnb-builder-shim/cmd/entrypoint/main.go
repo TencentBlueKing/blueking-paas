@@ -95,11 +95,17 @@ func shouldKeepAlive() bool {
 
 // writeMarkers writes the build-done marker and result markers based on exit code.
 func writeMarkers(logger logr.Logger, code int) {
-	utils.WriteBuildDone(logger)
+	if err := utils.WriteBuildDone(); err != nil {
+		logger.Error(err, "failed to write build-done marker")
+	}
 	if code == 0 {
-		utils.WriteBuildResultSuccess(logger)
+		if err := utils.WriteBuildResultSuccess(); err != nil {
+			logger.Error(err, "failed to write build-result-success marker")
+		}
 	} else {
-		utils.WriteBuildResultFailed(logger)
+		if err := utils.WriteBuildResultFailed(); err != nil {
+			logger.Error(err, "failed to write build-result-failed marker")
+		}
 	}
 }
 

@@ -20,9 +20,22 @@ package utils
 
 import (
 	"os"
-
-	"github.com/go-logr/logr"
 )
+
+// Marker files are written to /tmp inside the build container to indicate the
+// build completion status. When the container is kept alive (via CNB_EXIT_DELAY /
+// --exit-delay), the platform queries these files through exec probes to determine
+// the build result:
+//
+//   Startup Probe:  test -f /tmp/build-done              -> containerStatus.started
+//   Readiness Probe: test -f /tmp/build-result-success   -> containerStatus.ready
+//
+// Build result is determined by started + ready. The failed marker is not
+// consumed by any probe; it exists only for operator visibility during debugging.
+//
+// - /tmp/build-done:              written once the build pipeline finishes (regardless of result).
+// - /tmp/build-result-success:    written only when the build succeeded.
+// - /tmp/build-result-failed:     written only when the build failed (NOT used by probes).
 
 const (
 	// BuildDoneMarker is the marker file indicating the build has completed (whether success or failure).
@@ -34,22 +47,16 @@ const (
 )
 
 // WriteBuildDone writes the build-done marker file.
-func WriteBuildDone(logger logr.Logger) {
-	if err := os.WriteFile(BuildDoneMarker, []byte("done"), 0o644); err != nil {
-		logger.Error(err, "failed to write build-done marker")
-	}
+func WriteBuildDone() error {
+	return os.WriteFile(BuildDoneMarker, []byte("done"), 0o644)
 }
 
 // WriteBuildResultSuccess writes the build-result-success marker file.
-func WriteBuildResultSuccess(logger logr.Logger) {
-	if err := os.WriteFile(BuildResultSuccessMarker, []byte("success"), 0o644); err != nil {
-		logger.Error(err, "failed to write build-result-success marker")
-	}
+func WriteBuildResultSuccess() error {
+	return os.WriteFile(BuildResultSuccessMarker, []byte("success"), 0o644)
 }
 
 // WriteBuildResultFailed writes the build-result-failed marker file.
-func WriteBuildResultFailed(logger logr.Logger) {
-	if err := os.WriteFile(BuildResultFailedMarker, []byte("failed"), 0o644); err != nil {
-		logger.Error(err, "failed to write build-result-failed marker")
-	}
+func WriteBuildResultFailed() error {
+	return os.WriteFile(BuildResultFailedMarker, []byte("failed"), 0o644)
 }

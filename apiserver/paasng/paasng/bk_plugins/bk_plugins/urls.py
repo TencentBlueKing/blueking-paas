@@ -98,7 +98,7 @@ urlpatterns = [
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/roles/(?P<role>[^/]+)/members/$",
         pluginscenter_views.PluginMembersViewSet.as_view(
-            {"post": "add_role_members", "delete": "delete_role_members"}
+            {"post": "add_members_to_role", "delete": "delete_members_from_role"}
         ),
         name="sys.api.plugins_center.bk_plugins.role.members",
     ),

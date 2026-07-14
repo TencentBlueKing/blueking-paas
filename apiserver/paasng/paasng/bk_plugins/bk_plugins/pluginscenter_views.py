@@ -367,7 +367,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
     def sync_members(self, request, code):
-        """同步插件成员"""
+        """同步插件成员（全量）"""
         application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
@@ -399,6 +399,44 @@ class PluginMembersViewSet(viewsets.ViewSet):
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})
+
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
+    def add_role_members(self, request, code, role):
+        """插件应用按角色添加成员"""
+        application = get_object_or_404(Application, code=code)
+        try:
+            role_enum = ApplicationRole(int(role))
+        except (ValueError, TypeError):
+            error_codes.CREATE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
+
+        slz = api_serializers.PluginRoleMembersSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        usernames = slz.validated_data["usernames"]
+
+        add_role_members(app_code=application.code, role=role_enum, usernames=usernames)
+
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
+    def delete_role_members(self, request, code, role):
+        """插件应用按角色删除成员"""
+        application = get_object_or_404(Application, code=code)
+        try:
+            role_enum = ApplicationRole(int(role))
+        except (ValueError, TypeError):
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(_("无效的角色参数: {role}").format(role=role))
+
+        slz = api_serializers.PluginRoleMembersSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        usernames = slz.validated_data["usernames"]
+
+        delete_role_members(app_code=application.code, role=role_enum, usernames=usernames)
+
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PluginConfigurationViewSet(viewsets.ViewSet):

@@ -398,7 +398,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
                 delete_role_members(app_code=application.code, role=role, usernames=[username])
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
-        return Response(data={})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
     def add_role_members(self, request, code, role):
@@ -417,7 +417,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
-        return Response(data={})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginRoleMembersSLZ)
     def delete_role_members(self, request, code, role):
@@ -436,7 +436,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
-        return Response(data={})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PluginConfigurationViewSet(viewsets.ViewSet):

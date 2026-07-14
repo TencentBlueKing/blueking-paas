@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-15 14:25+0800\n"
+"POT-Creation-Date: 2026-07-08 17:26+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,23 +17,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:87
+#: paas_wl/bk_app/cnative/specs/constants.py:97
 msgid "待实施"
 msgstr "Pending"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:88
+#: paas_wl/bk_app/cnative/specs/constants.py:98
 msgid "进行中"
 msgstr "Ongoing"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:89
+#: paas_wl/bk_app/cnative/specs/constants.py:99
 msgid "已就绪"
 msgstr "Ready"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:90
+#: paas_wl/bk_app/cnative/specs/constants.py:100
 msgid "错误"
 msgstr "Error"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:91
+#: paas_wl/bk_app/cnative/specs/constants.py:101
 msgid "未知"
 msgstr "Unknown"
 
@@ -247,8 +247,8 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/views.py:136
 msgid "镜像仓库凭证错误, 请检查镜像凭证配置是否正确"
 msgstr ""
-"Image repository credential verification failed, please check the credentials "
-"are correct."
+"Image repository credential verification failed, please check the "
+"credentials are correct."
 
 #: paas_wl/bk_app/cnative/specs/views.py:138
 msgid "镜像仓库请求超时, 请检查网络连接"
@@ -342,64 +342,68 @@ msgstr "Virtual cluster"
 msgid "AI Agent 沙箱"
 msgstr "AI Agent sandbox"
 
-#: paas_wl/infras/cluster/constants.py:47
+#: paas_wl/infras/cluster/constants.py:38
+msgid "AI Agent 应用"
+msgstr "AI Agent App"
+
+#: paas_wl/infras/cluster/constants.py:48
 msgid "允许挂载日志到主机"
 msgstr "Allows mounting logs to host"
 
-#: paas_wl/infras/cluster/constants.py:53
+#: paas_wl/infras/cluster/constants.py:54
 msgid "Ingress 路径是否使用正则表达式"
 msgstr "Ingress path uses regex"
 
-#: paas_wl/infras/cluster/constants.py:55
+#: paas_wl/infras/cluster/constants.py:56
 msgid "从蓝鲸监控查询资源使用率"
 msgstr "Retrieve resource metrics from BK Monitor"
 
-#: paas_wl/infras/cluster/constants.py:60
+#: paas_wl/infras/cluster/constants.py:61
 #: paasng/platform/applications/constants.py:104
 msgid "使用蓝鲸日志平台方案采集日志"
 msgstr "Uses BlueKing log platform for log collection"
 
-#: paas_wl/infras/cluster/constants.py:64
+#: paas_wl/infras/cluster/constants.py:65
 msgid "支持自动扩容"
 msgstr "Supports auto-scaling"
 
-#: paas_wl/infras/cluster/constants.py:66
+#: paas_wl/infras/cluster/constants.py:67
 msgid "支持 BCS Egress"
 msgstr "Supports BCS Egress"
 
-#: paas_wl/infras/cluster/constants.py:68
+#: paas_wl/infras/cluster/constants.py:69
 msgid "支持 gRPC Ingress"
 msgstr "Supports gRPC Ingress"
 
-#: paas_wl/infras/cluster/constants.py:74
+#: paas_wl/infras/cluster/constants.py:75
 msgid "BCS 项目 ID"
 msgstr "BCS Project ID"
 
-#: paas_wl/infras/cluster/constants.py:75
+#: paas_wl/infras/cluster/constants.py:76
 msgid "BCS 集群 ID"
 msgstr "BCS Cluster ID"
 
-#: paas_wl/infras/cluster/constants.py:76
+#: paas_wl/infras/cluster/constants.py:77
 msgid "蓝鲸业务 ID"
 msgstr "Blueking Business ID"
 
-#: paas_wl/infras/cluster/constants.py:78
+#: paas_wl/infras/cluster/constants.py:79
 msgid "跳过内置镜像凭证注入"
 msgstr "Skip inject builtin image credentials"
 
-#: paas_wl/infras/cluster/constants.py:81
+#: paas_wl/infras/cluster/constants.py:82
 msgid "Ingress 类名"
 msgstr "Ingress Class Name"
 
-#: paas_wl/infras/cluster/constants.py:84
+#: paas_wl/infras/cluster/constants.py:85
 msgid "Slugbuilder 资源配额"
 msgstr "Slugbuilder resource quota"
 
-#: paas_wl/infras/cluster/constants.py:90
+#: paas_wl/infras/cluster/constants.py:91
 msgid "统一分配"
 msgstr "Uniform allocation"
 
-#: paas_wl/infras/cluster/constants.py:91
+#: paas_wl/infras/cluster/constants.py:92
 msgid "按规则分配"
 msgstr "Allocate according to rules"
 
@@ -973,7 +977,9 @@ msgstr "Try FAQ query"
 
 #: paasng/accessories/smart_advisor/utils.py:60
 msgid "暂时无法找到解决方案，请前往“标准输出日志”检查是否有异常"
-msgstr "Temporarily unable to find a solution, please check the standard output log for exceptions"
+msgstr ""
+"Temporarily unable to find a solution, please check the standard output log "
+"for exceptions"
 
 #: paasng/accessories/smart_advisor/utils.py:81
 msgid "已找到解决方案"
@@ -987,6 +993,12 @@ msgstr "The name of the API gateway to which the plugin is bound"
 #: paasng/platform/engine/views/deploy.py:223
 msgid "部署请求异常，请稍候再试"
 msgstr "Deployment request exception, please try again later"
+
+#: paasng/bk_plugins/bk_plugins/pluginscenter_views.py:410
+#: paasng/bk_plugins/bk_plugins/pluginscenter_views.py:429
+#, python-brace-format
+msgid "无效的角色参数: {role}"
+msgstr ""
 
 #: paasng/bk_plugins/bk_plugins/tasks.py:51
 #: paasng/platform/engine/views/misc.py:100
@@ -2844,52 +2856,56 @@ msgstr "OAuth display information does not support the field {}"
 
 #: paasng/plat_mgt/sourcectl/serializers.py:187
 #: paasng/plat_mgt/sourcectl/serializers.py:200
-#: paasng/plat_mgt/templates/serializers.py:181
-#: paasng/plat_mgt/templates/serializers.py:196
+#: paasng/plat_mgt/templates/serializers.py:188
+#: paasng/plat_mgt/templates/serializers.py:203
 msgid "名称已存在，请使用其他名称"
 msgstr "name already exists, please use another name"
 
-#: paasng/plat_mgt/templates/serializers.py:114
+#: paasng/plat_mgt/templates/serializers.py:116
 msgid "不支持的代码仓库类型"
 msgstr "Unsupported Code Repository type"
 
-#: paasng/plat_mgt/templates/serializers.py:119
+#: paasng/plat_mgt/templates/serializers.py:121
+msgid "支持的运行时类型必须为 List[str] 格式"
+msgstr "Supported runtime type must be in List[str] format"
+
+#: paasng/plat_mgt/templates/serializers.py:126
 msgid "预设增强服务配置必须为 Dict 格式"
 msgstr "Preset enhanced service configuration must be in Dict format"
 
-#: paasng/plat_mgt/templates/serializers.py:125
+#: paasng/plat_mgt/templates/serializers.py:132
 msgid "构建工具配置必须为 List[str] 格式"
 msgstr "Build tool configuration must be in List[str] format"
 
-#: paasng/plat_mgt/templates/serializers.py:128
+#: paasng/plat_mgt/templates/serializers.py:135
 msgid "针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"
 msgstr ""
 "When configuring required_buildpacks for different images, the default value "
 "__default__ must be set"
 
-#: paasng/plat_mgt/templates/serializers.py:131
+#: paasng/plat_mgt/templates/serializers.py:138
 msgid "构建工具配置必须为 Dict[str, List[str]] 格式"
 msgstr "Build tool configuration must be in Dict[str, List[str]] format"
 
-#: paasng/plat_mgt/templates/serializers.py:133
+#: paasng/plat_mgt/templates/serializers.py:140
 msgid "构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"
 msgstr "Build tools must be in List[str] or Dict[str, List[str]] format"
 
-#: paasng/plat_mgt/templates/serializers.py:138
+#: paasng/plat_mgt/templates/serializers.py:145
 msgid "进程配置必须为 Dict 格式"
 msgstr "Process configuration must be in Dict format"
 
-#: paasng/plat_mgt/templates/serializers.py:158
+#: paasng/plat_mgt/templates/serializers.py:165
 msgid "二进制包存储配置必须为有效的地址字符串"
 msgstr ""
 "The value of the binary package storage configuration must be a valid "
 "address string"
 
-#: paasng/plat_mgt/templates/serializers.py:164
+#: paasng/plat_mgt/templates/serializers.py:171
 msgid "插件模板必须配置代码仓库地址"
 msgstr "Plugin template must config Code Repository Address (repo_url)"
 
-#: paasng/plat_mgt/templates/serializers.py:166
+#: paasng/plat_mgt/templates/serializers.py:173
 msgid "插件模板必须配置代码所在目录"
 msgstr "Plugin template must config Template code directory (source_dir)"
 
@@ -3469,11 +3485,11 @@ msgstr ""
 msgid "发布时自动构建"
 msgstr "Automatically build when deploying"
 
-#: paasng/platform/engine/deploy/interruptions.py:47
+#: paasng/platform/engine/deploy/interruptions.py:50
 msgid "无法中断由他人发起的部署"
 msgstr "Cannot interrupt deployment initiated by others"
 
-#: paasng/platform/engine/deploy/interruptions.py:49
+#: paasng/platform/engine/deploy/interruptions.py:52
 msgid "无法中断，部署已处于结束状态"
 msgstr "cannot be interrupted, deployment has ended"
 
@@ -3666,14 +3682,13 @@ msgstr ""
 "contact the APP administrator"
 
 #: paasng/platform/engine/workflow/srv_version.py:69
-#, python-brace-format
 msgid ""
 "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', "
 "operator:'{}'"
 msgstr ""
 "The platform is not properly deployed and cannot perform this operation. "
-"Please contact the administrator. Component version mismatch: apiserver:'{}', "
-"operator:'{}'"
+"Please contact the administrator. Component version mismatch: "
+"apiserver:'{}', operator:'{}'"
 
 #: paasng/platform/evaluation/constants.py:25
 msgid "运行中"
@@ -3878,71 +3893,71 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:386
+#: paasng/platform/modules/manager.py:389
 msgid "平台代码仓库组配置缺失"
 msgstr "Platform code repository group configuration is missing"
 
-#: paasng/platform/modules/manager.py:389
-#: paasng/platform/modules/manager.py:428
+#: paasng/platform/modules/manager.py:392
+#: paasng/platform/modules/manager.py:431
 msgid "当前代码源不支持新建仓库"
 msgstr "The current code source does not support creating a new repository"
 
-#: paasng/platform/modules/manager.py:403
-#: paasng/platform/modules/manager.py:466
+#: paasng/platform/modules/manager.py:406
+#: paasng/platform/modules/manager.py:469
 msgid "仓库名称已存在"
 msgstr "The repository name already exists"
 
-#: paasng/platform/modules/manager.py:406
-#: paasng/platform/modules/manager.py:469
+#: paasng/platform/modules/manager.py:409
+#: paasng/platform/modules/manager.py:472
 msgid "创建代码仓库失败"
 msgstr "Failed to create code repository"
 
-#: paasng/platform/modules/manager.py:439
+#: paasng/platform/modules/manager.py:442
 msgid "您没有权限操作该代码仓库，请确认您的授权信息"
 msgstr ""
 "You do not have permission to operate this code repository. Please confirm "
 "your authorization information."
 
-#: paasng/platform/modules/manager.py:447
+#: paasng/platform/modules/manager.py:450
 msgid "必须使用“当前账号”授权才能在用户命名空间下创建仓库"
 msgstr ""
 "You must use 'Current Account' authorization to create a repository in the "
 "user namespace"
 
-#: paasng/platform/modules/manager.py:464
+#: paasng/platform/modules/manager.py:467
 msgid "创建代码仓库失败，请确认您的授权信息"
 msgstr ""
 "Failed to create the code repository, please confirm your auth information"
 
-#: paasng/platform/modules/manager.py:481
+#: paasng/platform/modules/manager.py:484
 msgid "当前代码源不支持删除仓库"
 msgstr "The current code source does not support deleting the repository"
 
-#: paasng/platform/modules/manager.py:525
-#: paasng/platform/modules/manager.py:565
+#: paasng/platform/modules/manager.py:528
+#: paasng/platform/modules/manager.py:568
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:528
-#: paasng/platform/modules/manager.py:605
+#: paasng/platform/modules/manager.py:531
+#: paasng/platform/modules/manager.py:608
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:533
-#: paasng/platform/modules/manager.py:595
-#: paasng/platform/modules/manager.py:599
+#: paasng/platform/modules/manager.py:536
+#: paasng/platform/modules/manager.py:598
+#: paasng/platform/modules/manager.py:602
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:571
+#: paasng/platform/modules/manager.py:574
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:602
+#: paasng/platform/modules/manager.py:605
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:609
+#: paasng/platform/modules/manager.py:612
 msgid "初始化应用模型失败, 请稍候再试"
 msgstr "Failed to initialize the application model. Please try again later."
 
@@ -4396,15 +4411,19 @@ msgstr "Template code directory"
 msgid "模板渲染方式"
 msgstr "Template rendering method"
 
-#: paasng/platform/templates/models.py:60
+#: paasng/platform/templates/models.py:65
 msgid "运行时类型"
 msgstr "Runtime Type"
 
-#: paasng/platform/templates/models.py:62
+#: paasng/platform/templates/models.py:66
+msgid "支持的运行时类型"
+msgstr "Supported runtime types"
+
+#: paasng/platform/templates/models.py:68
 msgid "是否隐藏"
 msgstr "Is Hidden"
 
-#: paasng/platform/templates/models.py:62
+#: paasng/platform/templates/models.py:68
 msgid "被隐藏的模板不会出现在创建应用时的列表中"
 msgstr ""
 "hidden templates will not appear in the list when creating new applications"

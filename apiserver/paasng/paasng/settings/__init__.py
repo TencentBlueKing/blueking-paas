@@ -1627,6 +1627,11 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "create_agent_sandbox_volume",
         "delete_agent_sandbox_volume",
         "list_agent_sandbox_volumes",
+        "list_agent_sandbox_volume_files",
+        "stat_agent_sandbox_volume_file",
+        "preview_agent_sandbox_volume_file",
+        "get_agent_sandbox_volume_file_download_url",
+        "delete_agent_sandbox_volume_file",
     ],
 )
 
@@ -1658,6 +1663,18 @@ AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkp
 # 存放 sandbox daemon 二进制的 bucket 和 key
 AGENT_SANDBOX_DAEMON_BUCKET = settings.get("AGENT_SANDBOX_DAEMON_BUCKET", SERVICE_LOGO_BUCKET)
 AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/daemon")
+
+# ---------------------------------------------
+# Agent Sandbox 文件持久化配置(沙箱销毁后仍能访问其会话级 PV 中的产物文件)
+# ---------------------------------------------
+# 常驻 daemon 的固定访问地址(集群内 DNS),挂 CFS 根目录、对外提供 jail 化的文件操作接口
+AGENT_SANDBOX_RESIDENT_DAEMON_URL = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_URL", "")
+# 与常驻 daemon 共享的静态 token(对应 daemon 侧的 TOKEN 环境变量)
+AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN", "")
+# 存放沙箱产物归档文件的 bkrepo bucket(GENERIC,私有)
+AGENT_SANDBOX_ARTIFACT_BUCKET = settings.get("AGENT_SANDBOX_ARTIFACT_BUCKET", "agent-sandbox-artifacts")
+# 单个产物文件允许归档的最大字节数,超出返回 413,默认 100MB(与 daemon 侧 ARCHIVE_MAX_SIZE 对齐)
+AGENT_SANDBOX_ARTIFACT_MAX_SIZE = settings.get("AGENT_SANDBOX_ARTIFACT_MAX_SIZE", 100 * 1024 * 1024)
 
 # mount_path 黑名单：沙箱容器内不允许用户挂载共享卷的路径前缀列表
 # 参考 Daytona "不可挂 /proc /sys /etc" 的约束并进一步收紧。

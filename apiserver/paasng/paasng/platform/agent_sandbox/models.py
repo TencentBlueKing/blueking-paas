@@ -60,6 +60,30 @@ class Volume(UuidAuditedModel):
         return f"app/{self.uuid.hex}"
 
 
+class VolumeArtifact(UuidAuditedModel):
+    """Volume 内文件归档记录
+
+    沙箱产物文件按需归档到 bkrepo(供前端直连下载/预览),该表记录 volume 内相对路径
+    与 bkrepo 对象 key 的映射
+    归档快判用 (mtime, size): 命中且一致则复用已归档对象
+    """
+
+    volume = models.ForeignKey(Volume, on_delete=models.CASCADE, db_constraint=False, related_name="artifacts")
+    rel_path = models.CharField(verbose_name="volume 内相对路径", max_length=700)
+    mtime = models.CharField(verbose_name="归档时文件 mtime", max_length=64, help_text="RFC3339，与 daemon 返回一致")
+    size = models.BigIntegerField(verbose_name="归档时文件大小(字节)")
+    sha256 = models.CharField(verbose_name="内容摘要", max_length=64)
+    bkrepo_key = models.CharField(verbose_name="bkrepo 对象 key", max_length=1024)
+    archived_at = models.DateTimeField(verbose_name="归档时间")
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("volume", "rel_path")
+
+    def is_fresh_for(self, mtime: str, size: int) -> bool:
+        return self.mtime == mtime and self.size == size
+
+
 class SandboxManager(models.Manager):
     """沙箱 Manager 类"""
 
@@ -184,12 +208,8 @@ class SandboxAppSettings(UuidAuditedModel):
         db_constraint=False,
         related_name="sandbox_app_settings",
     )
-    cpu = models.DecimalField(
-        verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True
-    )
-    memory = models.DecimalField(
-        verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, null=True, blank=True
-    )
+    cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True)
+    memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, null=True, blank=True)
     tenant_id = tenant_id_field_factory()
 
     class Meta:

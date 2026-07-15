@@ -21,6 +21,8 @@ This module provides stub implementations of sandbox components for testing,
 enabling unit and API tests without real K8s/daemon dependencies.
 """
 
+from typing import Self
+
 from paasng.platform.agent_sandbox.daemon_client import ExecuteResult
 
 # The default working directory in sandbox container
@@ -107,7 +109,7 @@ class StubDaemonClient:
     def close(self) -> None:
         """Close the client (no-op for stub)."""
 
-    def __enter__(self) -> "StubDaemonClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -132,3 +134,89 @@ class StubDaemonClientFactory:
     def reset(self) -> None:
         """Reset the factory, clearing the cached client."""
         self._client = None
+
+
+class StubResidentDaemonClient:
+    """Stub implementation of ResidentDaemonClient for testing.
+
+    Simulates the resident daemon's jailed CFS file operations with an in-memory file system,
+    keyed by (base_path, rel_path). File values are dicts of {content, mtime, size}.
+    """
+
+    def __init__(self):
+        # {(base_path, rel_path): {"content": bytes, "mtime": str, "size": int}}
+        self._files: dict[tuple[str, str], dict] = {}
+
+    def put_file(self, base_path: str, rel_path: str, content: bytes, mtime: str = "2026-06-24T10:23:11Z") -> None:
+        """Seed an in-memory file for tests."""
+        self._files[(base_path, rel_path)] = {"content": content, "mtime": mtime, "size": len(content)}
+
+    def list(self, base_path, rel_path="", recursive=False, page=1, page_size=100) -> dict:
+        items = []
+        for (bp, rp), meta in self._files.items():
+            if bp != base_path:
+                continue
+            if rel_path and not rp.startswith(rel_path):
+                continue
+            items.append(
+                {
+                    "path": rp,
+                    "name": rp.rsplit("/", 1)[-1],
+                    "is_dir": False,
+                    "size": meta["size"],
+                    "modified_at": meta["mtime"],
+                    "mime": "text/plain",
+                    "sha256": None,
+                }
+            )
+        return {"total": len(items), "items": items}
+
+    def stat(self, base_path, rel_path) -> dict:
+        meta = self._files.get((base_path, rel_path))
+        if meta is None:
+            return {"exists": False, "path": rel_path}
+        return {
+            "exists": True,
+            "path": rel_path,
+            "size": meta["size"],
+            "modified_at": meta["mtime"],
+            "mime": "text/plain",
+        }
+
+    def preview(self, base_path, rel_path, max_bytes=None):
+        from paasng.platform.agent_sandbox.exceptions import SandboxFileNotFound
+
+        meta = self._files.get((base_path, rel_path))
+        if meta is None:
+            raise SandboxFileNotFound(f"file not found: {rel_path}")
+        limit = max_bytes or 65536
+        content = meta["content"]
+        truncated = len(content) > limit
+        return content[:limit], truncated
+
+    def archive(self, base_path, rel_path, upload_url) -> dict:
+        import hashlib
+
+        from paasng.platform.agent_sandbox.exceptions import SandboxFileNotFound
+
+        meta = self._files.get((base_path, rel_path))
+        if meta is None:
+            raise SandboxFileNotFound(f"file not found: {rel_path}")
+        return {
+            "sha256": hashlib.sha256(meta["content"]).hexdigest(),
+            "size": meta["size"],
+            "mtime": meta["mtime"],
+        }
+
+    def delete(self, base_path, rel_path) -> None:
+        # 幂等: 不存在也视为成功
+        self._files.pop((base_path, rel_path), None)
+
+    def close(self) -> None:
+        """Close the client (no-op for stub)."""
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()

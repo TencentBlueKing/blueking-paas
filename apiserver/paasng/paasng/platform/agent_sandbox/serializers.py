@@ -183,6 +183,112 @@ class VolumeOutputSLZ(serializers.ModelSerializer):
         return obj.storage_path
 
 
+def _validate_rel_path(value: str) -> str:
+    """Normalize and validate a volume-relative path.
+
+    Blocks '..' segments as a first line of defense; the daemon jail is the hard boundary.
+    Returns the path with any leading slash stripped ("/" or "" both mean the volume root).
+    """
+    if ".." in value.split("/"):
+        raise serializers.ValidationError("path must not contain '..' path segments")
+    return value.lstrip("/")
+
+
+class VolumeFileListInputSLZ(serializers.Serializer):
+    """列出 volume 内文件(分页)。"""
+
+    path = serializers.CharField(
+        label="路径", required=False, default="", allow_blank=True, help_text="volume 内相对路径，默认根目录"
+    )
+    recursive = serializers.BooleanField(label="递归", required=False, default=False)
+    page = serializers.IntegerField(label="页码", required=False, default=1, min_value=1)
+    page_size = serializers.IntegerField(label="每页数量", required=False, default=100, min_value=1)
+
+    def validate_path(self, value: str) -> str:
+        return _validate_rel_path(value)
+
+    def validate_page_size(self, value: int) -> int:
+        # 上限 500,超限 clamp(与 daemon 侧 maxPageSize 对齐)
+        return min(value, 500)
+
+
+class VolumeFileItemOutputSLZ(serializers.Serializer):
+    """列表/元数据中的单个文件条目。"""
+
+    path = serializers.CharField()
+    name = serializers.CharField()
+    is_dir = serializers.BooleanField()
+    size = serializers.IntegerField()
+    modified_at = serializers.CharField()
+    mime = serializers.CharField(allow_blank=True)
+    # sha256 = serializers.CharField(allow_null=True)
+
+
+class VolumeFileListOutputSLZ(serializers.Serializer):
+    """列表响应。"""
+
+    total = serializers.IntegerField()
+    items = VolumeFileItemOutputSLZ(many=True)
+
+
+class VolumeFileStatInputSLZ(serializers.Serializer):
+    """查询 volume 内文件元数据。"""
+
+    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+
+    def validate_path(self, value: str) -> str:
+        return _validate_rel_path(value)
+
+
+class VolumeFileStatOutputSLZ(serializers.Serializer):
+    """元数据响应。不存在时 exists=false,仍返回 HTTP 200。"""
+
+    exists = serializers.BooleanField()
+    path = serializers.CharField()
+    size = serializers.IntegerField(required=False)
+    modified_at = serializers.CharField(required=False)
+    mime = serializers.CharField(required=False, allow_blank=True)
+
+
+class VolumeFilePreviewInputSLZ(serializers.Serializer):
+    """文本小段预览。"""
+
+    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+    max_bytes = serializers.IntegerField(label="截断上限(字节)", required=False, default=65536, min_value=1)
+
+    def validate_path(self, value: str) -> str:
+        return _validate_rel_path(value)
+
+
+class VolumeFileDownloadURLInputSLZ(serializers.Serializer):
+    """归档并签发下载/预览 URL,一次返回两个互斥 URL。"""
+
+    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+    expires_in = serializers.IntegerField(label="有效期(秒)", required=False, default=600, min_value=1, max_value=3600)
+
+    def validate_path(self, value: str) -> str:
+        return _validate_rel_path(value)
+
+
+class VolumeFileDownloadURLOutputSLZ(serializers.Serializer):
+    """下载/预览 URL 响应。download_url 与 preview_url 互斥,各只带自己的 flag 参数。"""
+
+    download_url = serializers.CharField()
+    preview_url = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    size = serializers.IntegerField()
+    sha256 = serializers.CharField()
+
+
+class VolumeFileDeleteInputSLZ(serializers.Serializer):
+    """删除 volume 内单个文件。"""
+
+    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+
+    def validate_path(self, value: str) -> str:
+        return _validate_rel_path(value)
+
+
 class SandboxCreateFolderInputSLZ(serializers.Serializer):
     """The serializer for creating folder in sandbox."""
 

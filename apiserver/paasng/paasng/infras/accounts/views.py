@@ -72,6 +72,8 @@ class UserInfoViewSet(APIView):
             "avatar_url": user.avatar_url or user_logo,
             # 从用户管理 API (bk-login/bk-user) 透传的时区字段, 若不存在则使用默认时区
             "time_zone": getattr(user, "time_zone", settings.TIME_ZONE),
+            # 个人设置地址 (用户管理系统的个人中心页)
+            "personal_center_url": f"{settings.BK_USER_URL}/personal-center" if settings.BK_USER_URL else "",
         }
         return Response(data)
 

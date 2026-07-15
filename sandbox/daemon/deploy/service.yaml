@@ -1,0 +1,18 @@
+# 常驻 daemon 的集群内 Service。
+# apiserver 通过固定 endpoint(settings.AGENT_SANDBOX_RESIDENT_DAEMON_URL)访问,
+# 例如: http://bkpaas-sandbox-resident-daemon.<namespace>.svc.cluster.local:8000
+apiVersion: v1
+kind: Service
+metadata:
+  name: bkpaas-sandbox-resident-daemon
+  labels:
+    app: bkpaas-sandbox-resident-daemon
+spec:
+  type: ClusterIP
+  selector:
+    app: bkpaas-sandbox-resident-daemon
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP

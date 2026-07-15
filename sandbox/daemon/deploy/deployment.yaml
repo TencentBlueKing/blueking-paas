@@ -1,0 +1,77 @@
+# 常驻(resident)daemon —— 沙箱文件持久化的平台侧组件。
+#
+# 与随沙箱 Pod 起停的临时 daemon 不同, 本 Deployment 长期运行、独立于任何沙箱,
+# 挂载 CFS **根目录**(path: /), 从而能按 app/{volume_uuid_hex} 定位任意 app 的任意 volume。
+#
+# 说明:
+#   - 本期单实例起步; HA(多副本 / 故障恢复)留部署阶段, 非本期功能项。
+#   - CSI volumeAttributes 与 apiserver 侧 settings.AGENT_SANDBOX_CFS_* 对齐
+#     (driver / fsid / host / vers), 唯一区别是这里 path 固定为 "/"(挂根)。
+#   - 下列 <PLACEHOLDER> 由部署时按目标集群填充。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bkpaas-sandbox-resident-daemon
+  labels:
+    app: bkpaas-sandbox-resident-daemon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bkpaas-sandbox-resident-daemon
+  template:
+    metadata:
+      labels:
+        app: bkpaas-sandbox-resident-daemon
+    spec:
+      # 优雅关闭: 收到 SIGTERM 后 daemon 会停止接收新请求并等待在途请求完成
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: resident-daemon
+          image: <PLACEHOLDER_IMAGE>  # 由 sandbox/daemon/Dockerfile 构建, 默认 CMD ["resident"]
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: ENVIRONMENT
+              value: "prod"
+            - name: SERVER_PORT
+              value: "8000"
+            # 与 apiserver 侧 AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN 共享的静态 token
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: bkpaas-sandbox-resident-daemon
+                  key: token
+            # 挂载点内的 CFS 根, jail 根前缀。与下方 volumeMount.mountPath 保持一致
+            - name: CFS_ROOT
+              value: "/cfs"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: cfs-root
+              mountPath: /cfs
+      volumes:
+        # CSI inline volume, 挂 CFS 根目录(path: /)。
+        # driver / fsid / host / vers 对齐 apiserver settings.AGENT_SANDBOX_CFS_*。
+        - name: cfs-root
+          csi:
+            driver: <PLACEHOLDER_AGENT_SANDBOX_CFS_DRIVER>
+            volumeAttributes:
+              fsid: "<PLACEHOLDER_AGENT_SANDBOX_CFS_FSID>"
+              host: "<PLACEHOLDER_AGENT_SANDBOX_CFS_HOST>"
+              path: "/"
+              vers: "<PLACEHOLDER_AGENT_SANDBOX_CFS_VERS>"

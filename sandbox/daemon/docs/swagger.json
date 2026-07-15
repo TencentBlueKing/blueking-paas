@@ -40,6 +40,189 @@
                 }
             }
         },
+        "/files/cfs": {
+            "delete": {
+                "description": "Delete base_path/rel_path; deleting a non-existent file is idempotent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Delete a single file in a volume",
+                "operationId": "PVDeleteFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "jail root path issued by apiserver",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "volume-relative path",
+                        "name": "rel_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.DeleteResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/cfs/archive": {
+            "post": {
+                "description": "Read the file, compute sha256, and PUT it to the presigned upload URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Archive a file to bkrepo",
+                "operationId": "ArchiveFile",
+                "parameters": [
+                    {
+                        "description": "Archive request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.ArchiveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.ArchiveResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/cfs/list": {
+            "post": {
+                "description": "List files under base_path/rel_path with pagination, optionally recursive",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "List files in a volume path",
+                "operationId": "ListFiles",
+                "parameters": [
+                    {
+                        "description": "List request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.ListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.ListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/cfs/preview": {
+            "post": {
+                "description": "Return the first max_bytes of a text file as UTF-8; 415 for non-text types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Preview a text file",
+                "operationId": "PreviewFile",
+                "parameters": [
+                    {
+                        "description": "Preview request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.PreviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "headers": {
+                            "X-Truncated": {
+                                "type": "string",
+                                "description": "whether the content was truncated"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/files/cfs/stat": {
+            "post": {
+                "description": "Return metadata of base_path/rel_path; returns 200 with exists=false if not found",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Stat a file in a volume",
+                "operationId": "StatFile",
+                "parameters": [
+                    {
+                        "description": "Stat request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.StatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_pv.StatResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/files/download": {
             "get": {
                 "description": "Download a file from the specified path",
@@ -216,6 +399,167 @@
                 },
                 "output": {
                     "type": "string"
+                }
+            }
+        },
+        "pkg_server_pv.ArchiveRequest": {
+            "type": "object",
+            "required": [
+                "base_path",
+                "rel_path",
+                "upload_url"
+            ],
+            "properties": {
+                "base_path": {
+                    "type": "string"
+                },
+                "rel_path": {
+                    "type": "string"
+                },
+                "upload_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_pv.ArchiveResponse": {
+            "type": "object",
+            "properties": {
+                "mtime": {
+                    "description": "Mtime 归档时文件的修改时间(RFC3339, UTC)",
+                    "type": "string"
+                },
+                "sha256": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_pv.DeleteResponse": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pkg_server_pv.FileItem": {
+            "type": "object",
+            "properties": {
+                "is_dir": {
+                    "type": "boolean"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "description": "Path 相对 jail 根(即 volume 根)的路径",
+                    "type": "string"
+                },
+                "sha256": {
+                    "description": "Sha256 恒为 nil, 去重表缓存值由 apiserver 回填",
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_pv.ListRequest": {
+            "type": "object",
+            "required": [
+                "base_path"
+            ],
+            "properties": {
+                "base_path": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "recursive": {
+                    "type": "boolean"
+                },
+                "rel_path": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_pv.ListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pkg_server_pv.FileItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_pv.PreviewRequest": {
+            "type": "object",
+            "required": [
+                "base_path",
+                "rel_path"
+            ],
+            "properties": {
+                "base_path": {
+                    "type": "string"
+                },
+                "max_bytes": {
+                    "description": "MaxBytes 截断上限, \u003c=0 时使用 config.G.PreviewMaxBytes",
+                    "type": "integer"
+                },
+                "rel_path": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_pv.StatRequest": {
+            "type": "object",
+            "required": [
+                "base_path",
+                "rel_path"
+            ],
+            "properties": {
+                "base_path": {
+                    "type": "string"
+                },
+                "rel_path": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_pv.StatResponse": {
+            "type": "object",
+            "properties": {
+                "exists": {
+                    "type": "boolean"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
                 }
             }
         }

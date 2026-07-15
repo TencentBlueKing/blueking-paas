@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any, Self
+from typing import Any, Dict, List, Self
 
 from attrs import define
 
@@ -78,59 +78,46 @@ class EnvSpecificBindingPolicy(BindingPolicy):
         return env_plans.get(env.environment, [])
 
 
-def precedence_policy_factory(
-    cond_type: str, cond_data: dict[str, Any], binding_policy: BindingPolicy
-) -> "BindingPrecedencePolicy":
-    """Create a precedence policy object"""
-    match cond_type:
-        case PrecedencePolicyCondType.REGION_IN.value:
-            return RegionInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
-        case PrecedencePolicyCondType.CLUSTER_IN.value:
-            return ClusterInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
-        case PrecedencePolicyCondType.USAGE_IN.value:
-            return UsageInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
-        case PrecedencePolicyCondType.ALWAYS_MATCH.value:
-            return AlwaysMatchPrecedencePolicy(binding_policy=binding_policy)
-        case _:
-            raise ValueError(f"Invalid condition type: {cond_type}")
+@define
+class BindingPrecedencePolicy:
+    """基于 matcher dict 的规则分配策略.
 
+    :param matcher: key=条件类型值, value=匹配值列表. 例如:
+        - {"region_in": ["default", "tencent"]}
+        - {"cluster_in": ["devcloud-gz"]}
+        - {"usage_in": ["ai_agent"]}
+        - {} 空字典表示无条件命中 (兜底规则)
 
-class BindingPrecedencePolicy(abc.ABC):
-    """The precedence policy type."""
+    :param binding_policy: 匹配后使用的 plan 分配策略
+    """
 
+    matcher: Dict[str, List[str]]
     binding_policy: BindingPolicy
 
     def get_plan_ids(self, env: ModuleEnvironment) -> list[str]:
         """Get the plan ids based on the environment"""
         return self.binding_policy.get_plan_ids(env)
 
-    @abc.abstractmethod
     def match(self, env: ModuleEnvironment) -> bool:
-        """Check if current precedence policy matches the environment"""
-        raise NotImplementedError
+        if not self.matcher:
+            return True
 
-
-@define
-class RegionInPrecedencePolicy(BindingPrecedencePolicy):
-    """The precedence policy that checks the region is in a list."""
-
-    cond_data: dict[str, Any]
-    binding_policy: BindingPolicy
-
-    def match(self, env: ModuleEnvironment) -> bool:
-        return env.application.region in self.cond_data["regions"]
-
-
-@define
-class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
-    """The precedence policy that checks the cluster name is in a list."""
-
-    cond_data: dict[str, Any]
-    binding_policy: BindingPolicy
-
-    def match(self, env: ModuleEnvironment) -> bool:
-        cluster_name = EnvClusterService(env).get_cluster_name()
-        return cluster_name in self.cond_data["cluster_names"]
+        for cond_type_str, values in self.matcher.items():
+            cond_type = PrecedencePolicyCondType(cond_type_str)
+            if cond_type == PrecedencePolicyCondType.REGION_IN:
+                if env.application.region not in values:
+                    return False
+            elif cond_type == PrecedencePolicyCondType.CLUSTER_IN:
+                cluster_name = EnvClusterService(env).get_cluster_name()
+                if cluster_name not in values:
+                    return False
+            elif cond_type == PrecedencePolicyCondType.USAGE_IN:
+                usage = get_env_usage(env)
+                if usage is None or usage not in values:
+                    return False
+            else:
+                raise ValueError(f"Unknown condition type: {cond_type_str}")
+        return True
 
 
 def get_env_usage(env: ModuleEnvironment) -> str | None:
@@ -140,28 +127,6 @@ def get_env_usage(env: ModuleEnvironment) -> str | None:
     if env.module_id and env.module.get_source_origin() == SourceOrigin.AI_AGENT:
         return ServiceUsage.AI_AGENT.value
     return None
-
-
-@define
-class UsageInPrecedencePolicy(BindingPrecedencePolicy):
-    """The precedence policy that checks the usage is in a list."""
-
-    cond_data: dict[str, Any]
-    binding_policy: BindingPolicy
-
-    def match(self, env: ModuleEnvironment) -> bool:
-        usage = get_env_usage(env)
-        return usage is not None and usage in self.cond_data["usages"]
-
-
-@define
-class AlwaysMatchPrecedencePolicy(BindingPrecedencePolicy):
-    """A guaranteed fallback precedence policy that matches all cases unconditionally."""
-
-    binding_policy: BindingPolicy
-
-    def match(self, env: ModuleEnvironment) -> bool:
-        return True
 
 
 def get_service_type(service: ServiceObj) -> str:
@@ -190,8 +155,7 @@ class ServiceBindingPolicyDTO:
 class ServiceBindingPrecedencePolicyDTO:
     """The DTO object for ServiceBindingPrecedencePolicy."""
 
-    cond_type: str
-    cond_data: dict[str, list[str]]
+    matcher: dict[str, list[str]]
     priority: int
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
@@ -199,8 +163,7 @@ class ServiceBindingPrecedencePolicyDTO:
     @classmethod
     def from_db_obj(cls, policy: ServiceBindingPrecedencePolicy) -> Self:
         return cls(
-            cond_type=policy.cond_type,
-            cond_data=policy.cond_data,
+            matcher=policy.matcher,
             priority=policy.priority,
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
@@ -216,7 +179,7 @@ class PolicyCombinationConfig:
     1. Rule-based Precedence Policies:
        - Evaluates multiple conditions in priority order
        - First matching condition determines the allocation
-       - Always uses cond_type=PrecedencePolicyCondType.ALWAYS_MATCH as the guaranteed fallback
+       - The policy with the lowest priority should have an empty matcher ({}) as the guaranteed fallback
 
     2. Unified Allocation Policy:
        - Applies a single allocation rule to all cases
@@ -233,25 +196,22 @@ class PolicyCombinationConfig:
     PolicyCombinationConfig(
         tenant_id="tenant_x",
         service_id="service_x",
-        allocation_policy_type="rule_based",
+        policy_type="rule_based",
         allocation_precedence_policies=[
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.REGION_IN.value,
-                cond_data={"regions": ["region_default"]},
+                matcher={"region_in": ["region_default"]},
                 priority=2,
                 plans=["plan_region"]
             ),
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
-                cond_data={"cluster_names": ["cluster_default"]},
+                matcher={"cluster_in": ["cluster_default"]},
                 priority=1,
                 plans=["plan_cluster"]
             ),
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.Always_Match.value.
-                cond_data={},
+                matcher={},
                 priority=0,
-                plans=["plan"]
+                plans=["plan_default"]
             )
         ],
         allocation_policy=None,
@@ -266,12 +226,13 @@ class PolicyCombinationConfig:
     PolicyCombinationConfig(
         tenant_id="tenant_x",
         service_id="service_x",
-        allocation_policy_type="uniform",
+        policy_type="uniform",
         allocation_precedence_policies=None,
         allocation_policy=ServiceBindingPolicyDTO(
             plans=["plan_unified"],
         )
     )
+    ```
     """
 
     tenant_id: str

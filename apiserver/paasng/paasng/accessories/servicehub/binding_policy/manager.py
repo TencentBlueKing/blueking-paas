@@ -23,7 +23,6 @@ from paasng.accessories.servicehub.binding_policy.policy import (
     ServiceBindingPrecedencePolicyDTO,
 )
 from paasng.accessories.servicehub.constants import (
-    PrecedencePolicyCondType,
     ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
@@ -125,23 +124,21 @@ class SvcBindingPolicyManager:
 
         :param policies: A list of precedence policies.
         """
-        # Validate: 检查最低优先级的策略是否为 always_match
+        # Validate: 检查最低优先级的策略是否为 always_match（空 matcher）
         min_priority_policy = min(policies, key=lambda p: p.priority)
-        if min_priority_policy.cond_type != PrecedencePolicyCondType.ALWAYS_MATCH.value:
-            raise ValueError("The policy with the minimum priority must be 'always_match'.")
+        if min_priority_policy.matcher != {}:
+            raise ValueError("The policy with the minimum priority must have an empty matcher (always_match).")
 
         ServiceAllocationPolicy.objects.set_type_rule_based(self.service, self.tenant_id)
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
         for config in policies:
             type_, data = self._to_policy_type_data(config.plans, config.env_plans)
-            cond_type = PrecedencePolicyCondType(config.cond_type)
             ServiceBindingPrecedencePolicy.objects.create(
                 service_id=self.service.uuid,
                 service_type=get_service_type(self.service),
                 tenant_id=self.tenant_id,
                 priority=config.priority,
-                cond_type=cond_type.value,
-                cond_data=config.cond_data,
+                matcher=config.matcher,
                 type=type_,
                 data=data,
             )

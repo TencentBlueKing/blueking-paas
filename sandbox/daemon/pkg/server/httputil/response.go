@@ -59,3 +59,18 @@ func InternalErrorResponse(c *gin.Context, err error) {
 func RequestTimeoutResponse(c *gin.Context, err error) {
 	c.AbortWithError(http.StatusRequestTimeout, err) // nolint
 }
+
+// PayloadTooLargeResponse sends a payload too large (413) response
+func PayloadTooLargeResponse(c *gin.Context, err error) {
+	c.AbortWithError(http.StatusRequestEntityTooLarge, err) // nolint
+}
+
+// UnsupportedMediaTypeResponse sends an unsupported media type (415) response
+func UnsupportedMediaTypeResponse(c *gin.Context, err error) {
+	c.AbortWithError(http.StatusUnsupportedMediaType, err) // nolint
+}
+
+// BadGatewayResponse sends a bad gateway (502) response
+func BadGatewayResponse(c *gin.Context, err error) {
+	c.AbortWithError(http.StatusBadGateway, err) // nolint
+}

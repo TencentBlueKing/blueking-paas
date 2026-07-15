@@ -188,6 +188,13 @@ func main() {
 		return
 	}
 
+	// resident 子命令: 以常驻模式启动(挂 CFS 根, 面向 apiserver 提供 PV 文件操作)。
+	// 与 version 同构, 靠 os.Args[1] 特判, 不影响现有沙箱 daemon 的 entrypoint 拉起逻辑。
+	if len(os.Args) > 1 && os.Args[1] == "resident" {
+		runResident()
+		return
+	}
+
 	errChan := make(chan error)
 
 	cfg, err := config.Load()
@@ -267,6 +274,41 @@ func main() {
 	entrypoint.Shutdown(cfg.EntrypointShutdownTimeout, cfg.SigtermShutdownTimeout)
 
 	slog.Info("Shutdown complete")
+}
+
+// runResident starts the daemon in resident mode.
+//
+// It shares the common bootstrap (config + logging + signal-driven graceful shutdown)
+// with the sandbox mode but does NOT manage an entrypoint child process: the resident
+// daemon is a standalone platform component that only serves PV file operations over HTTP.
+func runResident() {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("Failed to load config", "error", err)
+		panic(err)
+	}
+
+	var logWriter io.Writer
+	logFile, err := os.OpenFile(cfg.DaemonLogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		slog.Error("Failed to open log file", "path", cfg.DaemonLogFilePath, "error", err)
+	} else {
+		defer logFile.Close() // nolint
+		logWriter = logFile
+	}
+	initLogs(logWriter)
+
+	slog.Info("Starting resident daemon", "cfsRoot", cfg.CFSRoot)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.StartResident(ctx); err != nil {
+		slog.Error("Resident server error", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Resident daemon shutdown complete")
 }
 
 func initLogs(logWriter io.Writer) {

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from datetime import timedelta
 from pathlib import PurePosixPath
 
 from django.conf import settings
@@ -33,17 +34,23 @@ from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServi
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
+from paasng.platform.agent_sandbox.artifact import archive_volume_file, build_download_urls, delete_volume_artifact
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
+    SandboxArchiveFailed,
     SandboxCreateError,
     SandboxError,
     SandboxExecTimeout,
+    SandboxFileNotFound,
+    SandboxFileNotPreviewable,
+    SandboxFileTooLarge,
     SandboxImageValidateError,
     SandboxServiceNotReady,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
 from paasng.platform.agent_sandbox.models import Volume
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
+from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
 from paasng.platform.agent_sandbox.sandbox import (
     create_sandbox,
     delete_sandbox,
@@ -63,6 +70,14 @@ from paasng.platform.agent_sandbox.serializers import (
     SandboxProcessOutputSLZ,
     SandboxUploadFileInputSLZ,
     VolumeCreateInputSLZ,
+    VolumeFileDeleteInputSLZ,
+    VolumeFileDownloadURLInputSLZ,
+    VolumeFileDownloadURLOutputSLZ,
+    VolumeFileListInputSLZ,
+    VolumeFileListOutputSLZ,
+    VolumeFilePreviewInputSLZ,
+    VolumeFileStatInputSLZ,
+    VolumeFileStatOutputSLZ,
     VolumeOutputSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -124,6 +139,168 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
         return Response(VolumeOutputSLZ(volumes, many=True).data)
+
+
+class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """Volume 文件持久化相关接口。
+
+    面向 AIDev 前端提供沙箱销毁后仍可访问的产物文件的 列表 / 元数据 / 文本预览 /
+    下载(预览)URL / 删除。文件字节永不穿过 apiserver:大数据(下载)走 bkrepo 签名 URL
+    直连,归档由常驻 daemon 直连 bkrepo 上传,apiserver 仅编排、签发临时 URL。
+    """
+
+    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+
+    def _get_volume(self, code: str, volume_id: str) -> Volume:
+        """校验 app 归属并返回未删除的 Volume。
+
+        get_application() 触发 IsAPIGWVerifiedApp 的对象级校验(来源 app 必须与目标 app 一致),
+        再按 application 过滤 volume, 保证 app 之间的隔离。
+        """
+        application = self.get_application()
+        return get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileListInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileListOutputSLZ()},
+    )
+    def list(self, request, code, volume_id):
+        """列出 volume 内文件(分页)。"""
+        volume = self._get_volume(code, volume_id)
+        slz = VolumeFileListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_resident_daemon_client().list(
+                base_path=volume.storage_path,
+                rel_path=data["path"],
+                recursive=data["recursive"],
+                page=data["page"],
+                page_size=data["page_size"],
+            )
+        except SandboxFileNotFound:
+            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to list files in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        return Response(VolumeFileListOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileStatInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileStatOutputSLZ()},
+    )
+    def stat(self, request, code, volume_id):
+        """查询 volume 内文件元数据(不存在时返回 200 + exists=false)。"""
+        volume = self._get_volume(code, volume_id)
+        slz = VolumeFileStatInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_resident_daemon_client().stat(base_path=volume.storage_path, rel_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to stat file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        return Response(VolumeFileStatOutputSLZ(result).data)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=VolumeFilePreviewInputSLZ(), responses={200: ""})
+    def preview(self, request, code, volume_id):
+        """文本小段预览。忠实透传 daemon 的 text/plain body 与 X-Truncated header。"""
+        volume = self._get_volume(code, volume_id)
+        slz = VolumeFilePreviewInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_resident_daemon_client().preview(
+                base_path=volume.storage_path, rel_path=data["path"], max_bytes=data["max_bytes"]
+            )
+        except SandboxFileNotFound:
+            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
+        except SandboxFileNotPreviewable:
+            raise error_codes.AGENT_SANDBOX_FILE_NOT_PREVIEWABLE
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to preview file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        response = HttpResponse(result.content, content_type="text/plain; charset=utf-8")
+        response["X-Truncated"] = "true" if result.truncated else "false"
+        response["Access-Control-Expose-Headers"] = "X-Truncated"
+        return response
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=VolumeFileDownloadURLInputSLZ(),
+        responses={status.HTTP_200_OK: VolumeFileDownloadURLOutputSLZ()},
+    )
+    def download_url(self, request, code, volume_id):
+        """归档到 bkrepo(按需)并签发下载/预览 URL,一次返回两个互斥 URL。
+
+        ``download_url`` 带 ``download=true``(attachment),``preview_url`` 带 ``preview=true``(inline)。
+        """
+        volume = self._get_volume(code, volume_id)
+        slz = VolumeFileDownloadURLInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            artifact = archive_volume_file(volume, data["path"])
+            download_url, preview_url = build_download_urls(artifact, expires_in=data["expires_in"])
+        except SandboxFileNotFound:
+            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
+        except SandboxFileTooLarge:
+            raise error_codes.AGENT_SANDBOX_FILE_TOO_LARGE
+        except SandboxArchiveFailed:
+            logger.exception("Failed to archive file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_ARCHIVE_FAILED
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to build download url for volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        return Response(
+            VolumeFileDownloadURLOutputSLZ(
+                {
+                    "download_url": download_url,
+                    "preview_url": preview_url,
+                    "expires_at": timezone.now() + timedelta(seconds=data["expires_in"]),
+                    "size": artifact.size,
+                    "sha256": artifact.sha256,
+                }
+            ).data
+        )
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], query_serializer=VolumeFileDeleteInputSLZ(), responses={status.HTTP_200_OK: ""}
+    )
+    def destroy(self, request, code, volume_id):
+        """删除 volume 内单个文件(幂等)。"""
+        volume = self._get_volume(code, volume_id)
+        slz = VolumeFileDeleteInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_resident_daemon_client().delete(base_path=volume.storage_path, rel_path=data["path"])
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to delete file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        # 清理 bkrepo 对象 + 去重表记录, 避免下次归档命中陈旧映射 / "Node existed"
+        delete_volume_artifact(volume, data["path"])
+        return Response({"deleted": True})
 
 
 class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):

@@ -59,5 +59,21 @@ class SandboxImageValidateError(SandboxError):
     """Raised when snapshot image validation fails (e.g., not found, external registry, unsupported format)."""
 
 
+class SandboxFileNotFound(SandboxError):
+    """Raised when the target file does not exist in the volume."""
+
+
+class SandboxFileTooLarge(SandboxError):
+    """Raised when the target file exceeds the archive size limit."""
+
+
+class SandboxFileNotPreviewable(SandboxError):
+    """Raised when the target file is not previewable (e.g., a non-text type)."""
+
+
+class SandboxArchiveFailed(SandboxError):
+    """Raised when archiving a volume file to bkrepo fails."""
+
+
 class ImageBuildSourceError(SandboxError):
     """Raised when preparing image build source fails (e.g. missing Dockerfile)."""

@@ -350,9 +350,6 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
 
     # 新版匹配器: key 为条件类型值 (如 "region_in"), value 为匹配值列表; 空字典 {} 表示无条件命中
     matcher = models.JSONField(verbose_name="匹配器", default=dict)
-    # 旧版匹配字段 (已废弃), See `PrecedencePolicyCondType`
-    cond_type = models.CharField(verbose_name="条件类型", max_length=16)
-    cond_data = models.JSONField(verbose_name="条件值", default={})
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
     data = models.JSONField(help_text="策略值", default={})

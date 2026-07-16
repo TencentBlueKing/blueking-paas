@@ -59,8 +59,8 @@ def should_use_shared_bk_log_index(module: Module) -> bool:
     """判断是否使用共享索引
 
     对应 module 的采集项:
-    - 已存在，根据 name_en 是否为共享索引的名称
-    - 不存在时，根据全局开关 ENABLE_SHARED_BK_LOG_INDEX 决定是否使用共享索引
+    - 已存在(存量应用)，根据 name_en 是否为共享索引的名称
+    - 不存在时(新建应用)，根据全局开关 ENABLE_SHARED_BK_LOG_INDEX 且为 ai agent 类型的应用开启共享索引
     """
     builtin_names = set(
         CustomCollectorConfigModel.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
@@ -68,7 +68,7 @@ def should_use_shared_bk_log_index(module: Module) -> bool:
     if builtin_names:
         return bool(builtin_names & SHARED_INDEX_NAMES)
 
-    return settings.ENABLE_SHARED_BK_LOG_INDEX
+    return module.application.is_ai_agent_app and settings.ENABLE_SHARED_BK_LOG_INDEX
 
 
 def setup_shared_bk_log_model(env: ModuleEnvironment):

@@ -77,9 +77,9 @@ def sync_encrypted_secret_env_injection_feature_for_app(sender, application: App
     """
     新建应用的 ENCRYPTED_SECRET_ENV_INJECTION 应用特性与平台全局开关保持一致
     """
-    if not getattr(settings, "ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT", False):
-        return
-    application.feature_flag.set_feature(AppFeatureFlagConst.ENCRYPTED_SECRET_ENV_INJECTION, True)
+    application.feature_flag.set_feature(
+        AppFeatureFlagConst.ENCRYPTED_SECRET_ENV_INJECTION, settings.ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT
+    )
 
 
 @receiver(post_create_application)

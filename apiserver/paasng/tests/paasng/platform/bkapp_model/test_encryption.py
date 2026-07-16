@@ -23,7 +23,7 @@ from paasng.platform.bkapp_model.encryption import (
     CIPHER_PREFIX,
     ENCRYPTED_KEYS_ENV_NAME,
     SECRET_KEY_ENV_NAME,
-    apply_runtime_encryption,
+    apply_encrypted_secret_env_injection,
     collect_sensitive_keys,
     get_or_create_runtime_key,
     is_encrypt_enabled,
@@ -126,7 +126,7 @@ class TestApplyRuntimeEncryption:
             env_vars=[("SECRET_TOKEN", "plain-secret"), ("PLAIN_VAR", "keepme")],
             overlay_vars=[("stag", "SECRET_TOKEN", "plain-secret"), ("prod", "SECRET_TOKEN", "prod-secret")],
         )
-        apply_runtime_encryption(res, bk_stag_env)
+        apply_encrypted_secret_env_injection(res, bk_stag_env)
 
         env_map = {v.name: v.value for v in res.spec.configuration.env}
         # 密文特有前缀
@@ -147,8 +147,8 @@ class TestApplyRuntimeEncryption:
         )
         stag_res = _build_resource(env_vars=[("SECRET_TOKEN", "plain")])
         prod_res = _build_resource(env_vars=[("SECRET_TOKEN", "plain")])
-        apply_runtime_encryption(stag_res, bk_stag_env)
-        apply_runtime_encryption(prod_res, bk_prod_env)
+        apply_encrypted_secret_env_injection(stag_res, bk_stag_env)
+        apply_encrypted_secret_env_injection(prod_res, bk_prod_env)
 
         stag_key = {v.name: v.value for v in stag_res.spec.configuration.env}[SECRET_KEY_ENV_NAME]
         prod_key = {v.name: v.value for v in prod_res.spec.configuration.env}[SECRET_KEY_ENV_NAME]
@@ -157,7 +157,7 @@ class TestApplyRuntimeEncryption:
     def test_no_sensitive_keys(self, bk_stag_env, enable_global_switch, enable_app_switch):
         # 只要应用满足开启加密敏感环境变量条件，即使无任何变量被加密，也注入密钥和加密变量名
         res = _build_resource(env_vars=[("PLAIN_VAR", "keepme")])
-        apply_runtime_encryption(res, bk_stag_env)
+        apply_encrypted_secret_env_injection(res, bk_stag_env)
 
         env_map = {v.name: v.value for v in res.spec.configuration.env}
         assert env_map["PLAIN_VAR"] == "keepme"
@@ -180,7 +180,7 @@ class TestApplyRuntimeEncryption:
                 tenant_id=bk_module.tenant_id,
             )
         res = _build_resource(env_vars=[("SECRET_B", "vb"), ("SECRET_A", "va")])
-        apply_runtime_encryption(res, bk_stag_env)
+        apply_encrypted_secret_env_injection(res, bk_stag_env)
 
         env_map = {v.name: v.value for v in res.spec.configuration.env}
         # 清单已排序、逗号分隔，仅含实际加密的 key

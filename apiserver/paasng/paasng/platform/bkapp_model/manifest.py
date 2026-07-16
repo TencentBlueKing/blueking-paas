@@ -64,7 +64,7 @@ from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
-from paasng.platform.bkapp_model.encryption import apply_runtime_encryption
+from paasng.platform.bkapp_model.encryption import apply_encrypted_secret_env_injection
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -582,7 +582,7 @@ def get_bkapp_resource_for_deploy(
     # 运行环境敏感变量加密后处理：识别敏感变量 → 密文替换 → 注入统一密钥变量。
     # 需置于 apply_builtin_env_vars 等所有 env 变量注入之后，作为下发前的最后一环。
     # 双开关未开启时内部直接返回，行为与现状一致。
-    apply_runtime_encryption(model_res, env)
+    apply_encrypted_secret_env_injection(model_res, env)
 
     # TODO: Missing parts: "build"
     return model_res

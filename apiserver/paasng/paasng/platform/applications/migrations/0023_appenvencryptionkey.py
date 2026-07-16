@@ -8,12 +8,12 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('applications', '0021_application_is_isolated'),
+        ('applications', '0022_remove_application_is_isolated_and_more'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AppRuntimeEncryptionKey',
+            name='AppEnvEncryptionKey',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('region', models.CharField(help_text='部署区域', max_length=32)),
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('key', blue_krill.models.fields.EncryptField(verbose_name='运行时密钥')),
                 ('cipher_type', models.CharField(default='FernetCipher', max_length=16, verbose_name='加密算法类型')),
                 ('tenant_id', models.CharField(db_index=True, default='default', help_text='本条数据的所属租户', max_length=32, verbose_name='租户 ID')),
-                ('application', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='runtime_encryption_keys', to='applications.application')),
+                ('application', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='env_encryption_keys', to='applications.application')),
             ],
             options={
                 'unique_together': {('application', 'environment')},

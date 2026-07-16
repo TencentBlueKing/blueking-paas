@@ -137,7 +137,7 @@ def _try_encrypt(handler: EncryptHandler, value: str) -> Tuple[str, bool]:
         return value, False
 
 
-def apply_runtime_encryption(model_res: crd.BkAppResource, env: ModuleEnvironment):
+def apply_encrypted_secret_env_injection(model_res: crd.BkAppResource, env: ModuleEnvironment):
     """统一后处理：对成型 BkApp manifest 中的敏感变量做密文替换,并注入统一密钥变量
 
     仅处理 global configuration.env 与目标 env 的 overlay 条目(其它环境 overlay 会在部署那个

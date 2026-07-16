@@ -17,12 +17,14 @@
 
 import logging
 import os
+import secrets
 import time
 import uuid
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from bkstorages.backends.bkrepo import RequestError
 from blue_krill.models.fields import EncryptField
+from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
@@ -835,3 +837,17 @@ class AppEnvEncryptionKey(TimestampedModel):
 
     def __str__(self):
         return f"{self.application.code} - {self.environment}"
+
+    @staticmethod
+    def generate_key(cipher_type: str) -> str:
+        """按 cipher_type 生成一把 runtime 密钥
+
+        - SM4CTR: 随机 32 位十六进制串(SM4 取前 16 字节为密钥)
+        - FernetCipher: `Fernet.generate_key()` 生成的 base64 串
+        """
+        cipher = cipher_type.upper()
+        if cipher == "SM4CTR":
+            return secrets.token_hex(16)
+        elif cipher == "FERNETCIPHER":
+            return Fernet.generate_key().decode()
+        raise ValueError(f"Unsupported cipher type: {cipher_type}")

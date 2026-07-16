@@ -14,11 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import secrets
-from typing import Literal
 
 from blue_krill.encrypt.handler import EncryptHandler
-from cryptography.fernet import Fernet
 from django.conf import settings
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
@@ -67,35 +64,20 @@ def collect_sensitive_keys(env: ModuleEnvironment) -> set[str]:
     return keys
 
 
-def _generate_env_encryption_key(cipher_type: Literal["SM4CTR", "Fernet"]) -> str:
-    """按 ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE 生成一把 runtime 密钥
-
-    - FernetCipher:`Fernet.generate_key()` 生成的 base64 串
-    - SM4CTR:随机 32 位十六进制串(SM4 取前 16 字节为密钥)
-    """
-    if cipher_type.upper() == "SM4CTR":
-        return secrets.token_hex(16)
-    elif cipher_type.upper() == "FERNETCIPHER":
-        return Fernet.generate_key().decode()
-    else:
-        raise ValueError(f"Unsupported cipher type: {cipher_type}")
-
-
-def get_or_create_env_encryption_key(env: ModuleEnvironment, cipher_type: Literal["SM4CTR", "Fernet"]) -> str:
+def get_or_create_env_encryption_key(env: ModuleEnvironment, cipher_type: str):
     """
     获取该应用该环境的加密密钥, 不存在则生成并持久化
     """
     application = env.application
-    obj, _ = AppEnvEncryptionKey.objects.get_or_create(
+    return AppEnvEncryptionKey.objects.get_or_create(
         application=application,
         environment=env.environment,
         defaults={
-            "key": _generate_env_encryption_key(cipher_type),
+            "key": AppEnvEncryptionKey.generate_key(cipher_type),
             "cipher_type": cipher_type,
             "tenant_id": application.tenant_id,
         },
     )
-    return obj.key
 
 
 def _encrypt_value(handler: EncryptHandler, value: str) -> str:
@@ -115,9 +97,9 @@ def apply_encrypted_secret_env_injection(model_res: crd.BkAppResource, env: Modu
     if not is_encrypted_secret_env_injection_enabled(env):
         return
 
-    key = get_or_create_env_encryption_key(env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+    env_encryption_obj, _ = get_or_create_env_encryption_key(env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
     sensitive_keys = collect_sensitive_keys(env)
-    handler = EncryptHandler(secret_key=key)  # type: ignore[arg-type]  # blue-krill 支持 str 密钥
+    handler = EncryptHandler(secret_key=env_encryption_obj.key)  # type: ignore[arg-type]  # blue-krill 支持 str 密钥
 
     encrypted_keys: set[str] = set()
 
@@ -136,7 +118,7 @@ def apply_encrypted_secret_env_injection(model_res: crd.BkAppResource, env: Modu
                 encrypted_keys.add(ov.name)
 
     # 注入统一密钥变量与被加密变量清单到目标 env overlay,供运行时 SDK 使用
-    _inject_env_overlay_var(model_res, env, SECRET_KEY_ENV_NAME, key)
+    _inject_env_overlay_var(model_res, env, SECRET_KEY_ENV_NAME, env_encryption_obj.key)
     _inject_env_overlay_var(model_res, env, ENCRYPTED_KEYS_ENV_NAME, ",".join(sorted(encrypted_keys)))
 
 

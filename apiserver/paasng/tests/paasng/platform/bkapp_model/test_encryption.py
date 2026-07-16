@@ -57,8 +57,8 @@ class TestIsEncryptedSecretEnvInjectionEnabled:
 
 class TestGetOrCreateRuntimeKey:
     def test_idempotent(self, bk_stag_env):
-        key1 = get_or_create_env_encryption_key(bk_stag_env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
-        key2 = get_or_create_env_encryption_key(bk_stag_env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+        key1, _ = get_or_create_env_encryption_key(bk_stag_env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+        key2, _ = get_or_create_env_encryption_key(bk_stag_env, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
         assert key1 == key2
         assert AppEnvEncryptionKey.objects.filter(application=bk_stag_env.application).count() == 1
 

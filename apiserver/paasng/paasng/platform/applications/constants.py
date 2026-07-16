@@ -117,7 +117,7 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
     # 运行环境敏感变量加密开关（应用级），默认关闭；需与平台全局开关同时开启才生效
-    ENCRYPT_SENSITIVE_ENV_VARS = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
+    ENCRYPTED_SECRET_ENV_INJECTION = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
 
 
 class LightApplicationViewSetErrorCode(StrStructuredEnum):

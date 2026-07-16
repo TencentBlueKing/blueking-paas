@@ -127,9 +127,13 @@ SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 BK_CRYPTO_TYPE = settings.get("BK_CRYPTO_TYPE", "CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
 
-# 平台全局「运行环境敏感变量加密」总开关，默认关闭。仅当此开关与应用级 feature flag
-# (AppFeatureFlag.ENCRYPT_SENSITIVE_ENV_VARS) 同时开启时，云原生应用部署才会对敏感环境变量密文注入。
-ENABLE_ENCRYPT_SENSITIVE_ENV_VARS = settings.get("ENABLE_ENCRYPT_SENSITIVE_ENV_VARS", False)
+# 新建应用是否默认启用「运行环境敏感变量加密」应用级 feature flag (AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)，
+# 默认关闭。该值仅在创建应用时用于同步 feature flag 默认值，运行时是否启用加密以应用级 feature flag 为准。
+ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT", False)
+
+# 运行环境敏感变量加密使用的算法类型（独立于平台全局 ENCRYPT_CIPHER_TYPE），
+# 可选 'FernetCipher' / 'SM4CTR'，默认 FernetCipher。密钥按该算法生成，密文注入与 SDK 解密须与之保持一致。
+ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE", "FernetCipher")
 
 DEBUG = settings.get("DEBUG", False)
 

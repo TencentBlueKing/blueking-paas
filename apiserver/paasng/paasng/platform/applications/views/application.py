@@ -591,7 +591,7 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         app_view_actions_perm(
             {
                 "switch_app_desc_flag": AppAction.BASIC_DEVELOP,
-                "switch_encrypt_sensitive_env_vars_flag": AppAction.BASIC_DEVELOP,
+                "switch_encrypted_secret_env_injection_flag": AppAction.BASIC_DEVELOP,
             },
             default_action=AppAction.VIEW_BASIC_INFO,
         ),
@@ -621,17 +621,17 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         application.feature_flag.set_feature(flag, not app_desc_enabled)
         return Response({flag: application.feature_flag.has_feature(flag)})
 
-    @swagger_auto_schema(tags=["特性标记"], request_body=slzs.ToggleEncryptSensitiveEnvVarsFlagSLZ)
-    def switch_encrypt_sensitive_env_vars_flag(self, request, code):
+    @swagger_auto_schema(tags=["特性标记"], request_body=slzs.ToggleEncryptedSecretEnvInjectionFlagSLZ)
+    def switch_encrypted_secret_env_injection_flag(self, request, code):
         """应用管理者自助开关「加密运行环境敏感变量」（应用级开关）。
 
         仅当此开关与平台全局开关同时开启时，云原生应用部署才会对敏感环境变量做密文注入。
         """
-        slz = slzs.ToggleEncryptSensitiveEnvVarsFlagSLZ(data=request.data)
+        slz = slzs.ToggleEncryptedSecretEnvInjectionFlagSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
         application = self.get_application()
-        flag = AppFeatureFlag.ENCRYPT_SENSITIVE_ENV_VARS
+        flag = AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION
         application.feature_flag.set_feature(flag, slz.validated_data["enabled"])
         return Response({flag: application.feature_flag.has_feature(flag)})
 

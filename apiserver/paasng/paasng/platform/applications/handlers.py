@@ -73,13 +73,13 @@ def turn_on_bk_log_feature_for_app(sender, application: Application, **kwargs):
 
 
 @receiver(post_create_application)
-def sync_encrypt_sensitive_env_vars_feature_for_app(sender, application: Application, **kwargs):
+def sync_encrypted_secret_env_injection_feature_for_app(sender, application: Application, **kwargs):
     """
-    新建应用的 ENCRYPT_SENSITIVE_ENV_VARS 应用特性与平台全局开关保持一致
+    新建应用的 ENCRYPTED_SECRET_ENV_INJECTION 应用特性与平台全局开关保持一致
     """
-    if not getattr(settings, "ENABLE_ENCRYPT_SENSITIVE_ENV_VARS", False):
+    if not getattr(settings, "ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT", False):
         return
-    application.feature_flag.set_feature(AppFeatureFlagConst.ENCRYPT_SENSITIVE_ENV_VARS, True)
+    application.feature_flag.set_feature(AppFeatureFlagConst.ENCRYPTED_SECRET_ENV_INJECTION, True)
 
 
 @receiver(post_create_application)

@@ -19,12 +19,34 @@ func detectMime(path string) string {
 	return detectMimeByExt(filepath.Base(path))
 }
 
+// builtinMimesByExt 是 daemon 自维护的标准 MIME 映射, 在 detectMimeByExt 中优先级最高,
+// 使常见扩展名的取值不随宿主漂移。标准库在 unix 上先读 FreeDesktop /usr/share/mime/globs2,
+// 再退回 /etc/mime.types, 二者都会给出 application/x-yaml 这类厂商前缀值, 且在精简镜像下可能
+// 缺失; 此表固化标准取值, 优先采用 IANA 已注册型(text/markdown, text/csv, application/yaml,
+// application/sql), 无正式注册的取社区通用写法并在此固化(text/x-go 等)。
+var builtinMimesByExt = map[string]string{
+	".txt":  "text/plain",
+	".log":  "text/plain",
+	".md":   "text/markdown",
+	".csv":  "text/csv",
+	".yaml": "application/yaml",
+	".yml":  "application/yaml",
+	".toml": "application/toml",
+	".sql":  "application/sql",
+	".go":   "text/x-go",
+	".py":   "text/x-python",
+	".sh":   "text/x-shellscript",
+}
+
 // detectMimeByExt 仅按扩展名推断 MIME, 不读取文件内容。用于列表等批量场景。
 // 解析顺序: 内置兜底表 builtinMimesByExt → 标准库 mime.TypeByExtension → application/octet-stream。
 // 内置表优先, 使常见文本/配置/代码扩展名的判定不随宿主 /etc/mime.types 变化
 // (alpine 等精简镜像默认无该文件), 其余扩展名交由标准库兜底(如 .png/.pdf/.svg)。
 func detectMimeByExt(name string) string {
 	ext := strings.ToLower(filepath.Ext(name))
+	if m, ok := builtinMimesByExt[ext]; ok {
+		return m
+	}
 	if m := mime.TypeByExtension(ext); m != "" {
 		return stripCharset(m)
 	}
@@ -46,7 +68,7 @@ func isTextMime(m string) bool {
 	}
 	switch m {
 	case "application/json", "application/xml", "application/javascript",
-		"application/x-yaml", "application/yaml":
+		"application/yaml", "application/x-yaml", "application/toml", "application/sql":
 		return true
 	}
 	return false

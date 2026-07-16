@@ -25,8 +25,8 @@ func bindJSON(c *gin.Context, req any) bool {
 
 // resolveJailed 依次做两道路径校验, 逃逸时以 403 结束请求。
 // 返回的 full 为 jail 内绝对路径(未解析 symlink), jailRoot 供 handler 内二次校验用。
-func resolveJailed(c *gin.Context, cfsRoot, basePath, relPath string) (full, jailRoot string, ok bool) {
-	full, jailRoot, err := Resolve(cfsRoot, basePath, relPath)
+func resolveJailed(c *gin.Context, rootDir, basePath, relPath string) (full, jailRoot string, ok bool) {
+	full, jailRoot, err := Resolve(rootDir, basePath, relPath)
 	if err != nil {
 		httputil.ForbiddenResponse(c, err)
 		return "", "", false

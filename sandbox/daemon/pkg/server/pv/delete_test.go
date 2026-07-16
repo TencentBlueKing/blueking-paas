@@ -18,7 +18,7 @@ func doDelete(router *gin.Engine, basePath, relPath string) *httptest.ResponseRe
 	q.Set("base_path", basePath)
 	q.Set("rel_path", relPath)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodDelete, "/files/cfs?"+q.Encode(), nil)
+	httpReq, _ := http.NewRequest(http.MethodDelete, "/files?"+q.Encode(), nil)
 	router.ServeHTTP(w, httpReq)
 	return w
 }
@@ -26,18 +26,18 @@ func doDelete(router *gin.Engine, basePath, relPath string) *httptest.ResponseRe
 var _ = Describe("DeleteFile", func() {
 	var (
 		router   *gin.Engine
-		cfsRoot  string
+		rootDir  string
 		jailRoot string
 	)
 
 	BeforeEach(func() {
-		cfsRoot, jailRoot = newTestEnv()
+		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.DELETE("/files/cfs", DeleteFile)
+		router.DELETE("/files", DeleteFile)
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(cfsRoot) // nolint
+		os.RemoveAll(rootDir) // nolint
 	})
 
 	It("deletes an existing file", func() {

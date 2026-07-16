@@ -16,7 +16,7 @@ import (
 func doList(router *gin.Engine, req ListRequest) *httptest.ResponseRecorder {
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/cfs/list", bytes.NewReader(body))
+	httpReq, _ := http.NewRequest(http.MethodPost, "/files/list", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, httpReq)
 	return w
@@ -25,18 +25,18 @@ func doList(router *gin.Engine, req ListRequest) *httptest.ResponseRecorder {
 var _ = Describe("ListFiles", func() {
 	var (
 		router   *gin.Engine
-		cfsRoot  string
+		rootDir  string
 		jailRoot string
 	)
 
 	BeforeEach(func() {
-		cfsRoot, jailRoot = newTestEnv()
+		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/cfs/list", ListFiles)
+		router.POST("/files/list", ListFiles)
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(cfsRoot) // nolint
+		os.RemoveAll(rootDir) // nolint
 	})
 
 	It("lists files non-recursively", func() {

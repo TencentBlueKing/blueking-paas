@@ -47,8 +47,8 @@ type Config struct {
 
 	// 以下为常驻(resident)模式专属配置, 沙箱模式不读取
 
-	// CFSRoot 常驻 daemon 挂载的 CFS 根目录, 作为路径 jail 的根前缀
-	CFSRoot string `env:"CFS_ROOT" envDefault:"/cfs"`
+	// RootDir 常驻 daemon 挂载的共享存储根目录, 作为路径 jail 的根前缀
+	RootDir string `env:"ROOT_DIR" envDefault:"/storage"`
 	// PreviewMaxBytes 文本预览默认截断上限(字节)
 	PreviewMaxBytes int64 `env:"PREVIEW_MAX_BYTES" envDefault:"65536"`
 	// ArchiveMaxSize 允许归档的单文件最大字节数, 超出返回 413, 默认 100MB

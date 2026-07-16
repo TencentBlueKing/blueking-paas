@@ -81,7 +81,7 @@ func Start() error {
 // StartResident starts the resident daemon server.
 //
 // Unlike Start (which runs inside a sandbox alongside a user entrypoint), the resident
-// daemon is a long-lived platform component that mounts the CFS root and exposes
+// daemon is a long-lived platform component that mounts the shared-storage root and exposes
 // jailed file operations (list/stat/preview/archive/delete) to the apiserver.
 //
 // It runs until ctx is cancelled, then shuts the HTTP server down gracefully.
@@ -100,9 +100,8 @@ func StartResident(ctx context.Context) error {
 	// 添加 token 验证中间件
 	r.Use(httputil.TokenAuthMiddleware(config.G.Token))
 
-	// CFS 文件操作(全部走 base_path + rel_path 路径 jail)。
-	// 挂在 /files 下的 cfs 子命名空间, 明确标识这是针对 CFS 挂载盘的操作。
-	files := r.Group("/files/cfs")
+	// 常驻 daemon 的 PV 文件操作(全部走 base_path + rel_path 路径 jail)。
+	files := r.Group("/files")
 	files.POST("/list", pv.ListFiles)
 	files.POST("/stat", pv.StatFile)
 	files.POST("/preview", pv.PreviewFile)

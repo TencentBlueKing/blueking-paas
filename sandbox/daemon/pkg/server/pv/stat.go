@@ -18,7 +18,7 @@ import (
 //	@Produce		json
 //	@Param			request	body		StatRequest	true	"Stat request"
 //	@Success		200		{object}	StatResponse
-//	@Router			/files/cfs/stat [post]
+//	@Router			/files/stat [post]
 //
 //	@id				StatFile
 func StatFile(c *gin.Context) {
@@ -27,7 +27,7 @@ func StatFile(c *gin.Context) {
 		return
 	}
 
-	full, _, ok := resolveJailed(c, config.G.CFSRoot, req.BasePath, req.RelPath)
+	full, _, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}

@@ -24,7 +24,7 @@ import (
 //	@Param			request	body	PreviewRequest	true	"Preview request"
 //	@Success		200
 //	@Header			200	{string}	X-Truncated	"whether the content was truncated"
-//	@Router			/files/cfs/preview [post]
+//	@Router			/files/preview [post]
 //
 //	@id				PreviewFile
 func PreviewFile(c *gin.Context) {
@@ -33,7 +33,7 @@ func PreviewFile(c *gin.Context) {
 		return
 	}
 
-	full, jailRoot, ok := resolveJailed(c, config.G.CFSRoot, req.BasePath, req.RelPath)
+	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}

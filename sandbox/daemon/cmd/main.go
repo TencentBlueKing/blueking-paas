@@ -188,7 +188,7 @@ func main() {
 		return
 	}
 
-	// resident 子命令: 以常驻模式启动(挂 CFS 根, 面向 apiserver 提供 PV 文件操作)。
+	// resident 子命令: 以常驻模式启动(挂载共享存储根, 面向 apiserver 提供 PV 文件操作)。
 	// 与 version 同构, 靠 os.Args[1] 特判, 不影响现有沙箱 daemon 的 entrypoint 拉起逻辑。
 	if len(os.Args) > 1 && os.Args[1] == "resident" {
 		runResident()
@@ -298,7 +298,7 @@ func runResident() {
 	}
 	initLogs(logWriter)
 
-	slog.Info("Starting resident daemon", "cfsRoot", cfg.CFSRoot)
+	slog.Info("Starting resident daemon", "rootDir", cfg.RootDir)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

@@ -15,23 +15,23 @@ import (
 
 const testBasePath = "app/volume1"
 
-// newTestEnv points config.G at a fresh temp CFS root, creates the jail root
-// (cfsRoot/testBasePath), and returns both so specs can drop fixture files in.
-func newTestEnv() (cfsRoot, jailRoot string) {
-	cfsRoot, err := os.MkdirTemp("", "pv-handler-*")
+// newTestEnv points config.G at a fresh temp storage root, creates the jail root
+// (rootDir/testBasePath), and returns both so specs can drop fixture files in.
+func newTestEnv() (rootDir, jailRoot string) {
+	rootDir, err := os.MkdirTemp("", "pv-handler-*")
 	if err != nil {
 		panic(err)
 	}
 	config.G = &config.Config{
-		CFSRoot:         cfsRoot,
+		RootDir:         rootDir,
 		PreviewMaxBytes: 65536,
 		ArchiveMaxSize:  100 * 1024 * 1024,
 	}
-	jailRoot = filepath.Join(cfsRoot, testBasePath)
+	jailRoot = filepath.Join(rootDir, testBasePath)
 	if err := os.MkdirAll(jailRoot, 0o755); err != nil {
 		panic(err)
 	}
-	return cfsRoot, jailRoot
+	return rootDir, jailRoot
 }
 
 // newTestRouter builds a gin engine with the error middleware and validator wired,

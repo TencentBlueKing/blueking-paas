@@ -21,7 +21,7 @@ import (
 func doArchive(router *gin.Engine, req ArchiveRequest) *httptest.ResponseRecorder {
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/cfs/archive", bytes.NewReader(body))
+	httpReq, _ := http.NewRequest(http.MethodPost, "/files/archive", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, httpReq)
 	return w
@@ -30,18 +30,18 @@ func doArchive(router *gin.Engine, req ArchiveRequest) *httptest.ResponseRecorde
 var _ = Describe("ArchiveFile", func() {
 	var (
 		router   *gin.Engine
-		cfsRoot  string
+		rootDir  string
 		jailRoot string
 	)
 
 	BeforeEach(func() {
-		cfsRoot, jailRoot = newTestEnv()
+		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/cfs/archive", ArchiveFile)
+		router.POST("/files/archive", ArchiveFile)
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(cfsRoot) // nolint
+		os.RemoveAll(rootDir) // nolint
 	})
 
 	It("uploads the file via PUT and returns sha256/size", func() {

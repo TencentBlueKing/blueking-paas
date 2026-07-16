@@ -18,7 +18,7 @@ import (
 func doPreview(router *gin.Engine, req PreviewRequest) *httptest.ResponseRecorder {
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/cfs/preview", bytes.NewReader(body))
+	httpReq, _ := http.NewRequest(http.MethodPost, "/files/preview", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, httpReq)
 	return w
@@ -27,18 +27,18 @@ func doPreview(router *gin.Engine, req PreviewRequest) *httptest.ResponseRecorde
 var _ = Describe("PreviewFile", func() {
 	var (
 		router   *gin.Engine
-		cfsRoot  string
+		rootDir  string
 		jailRoot string
 	)
 
 	BeforeEach(func() {
-		cfsRoot, jailRoot = newTestEnv()
+		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/cfs/preview", PreviewFile)
+		router.POST("/files/preview", PreviewFile)
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(cfsRoot) // nolint
+		os.RemoveAll(rootDir) // nolint
 	})
 
 	It("returns full text content when under the limit", func() {

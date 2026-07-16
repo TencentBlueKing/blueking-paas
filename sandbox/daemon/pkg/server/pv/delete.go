@@ -20,7 +20,7 @@ import (
 //	@Param			base_path	query		string	true	"jail root path issued by apiserver"
 //	@Param			rel_path	query		string	true	"volume-relative path"
 //	@Success		200			{object}	DeleteResponse
-//	@Router			/files/cfs [delete]
+//	@Router			/files [delete]
 //
 //	@id				PVDeleteFile
 func DeleteFile(c *gin.Context) {
@@ -35,7 +35,7 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	full, jailRoot, ok := resolveJailed(c, config.G.CFSRoot, basePath, relPath)
+	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, basePath, relPath)
 	if !ok {
 		return
 	}

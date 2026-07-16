@@ -16,7 +16,7 @@ import (
 func doStat(router *gin.Engine, req StatRequest) *httptest.ResponseRecorder {
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/cfs/stat", bytes.NewReader(body))
+	httpReq, _ := http.NewRequest(http.MethodPost, "/files/stat", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, httpReq)
 	return w
@@ -25,18 +25,18 @@ func doStat(router *gin.Engine, req StatRequest) *httptest.ResponseRecorder {
 var _ = Describe("StatFile", func() {
 	var (
 		router   *gin.Engine
-		cfsRoot  string
+		rootDir  string
 		jailRoot string
 	)
 
 	BeforeEach(func() {
-		cfsRoot, jailRoot = newTestEnv()
+		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/cfs/stat", StatFile)
+		router.POST("/files/stat", StatFile)
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(cfsRoot) // nolint
+		os.RemoveAll(rootDir) // nolint
 	})
 
 	It("returns metadata for an existing file", func() {

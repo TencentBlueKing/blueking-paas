@@ -25,7 +25,7 @@ import (
 //	@Produce		json
 //	@Param			request	body		ArchiveRequest	true	"Archive request"
 //	@Success		200		{object}	ArchiveResponse
-//	@Router			/files/cfs/archive [post]
+//	@Router			/files/archive [post]
 //
 //	@id				ArchiveFile
 func ArchiveFile(c *gin.Context) {
@@ -34,7 +34,7 @@ func ArchiveFile(c *gin.Context) {
 		return
 	}
 
-	full, jailRoot, ok := resolveJailed(c, config.G.CFSRoot, req.BasePath, req.RelPath)
+	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}

@@ -31,7 +31,7 @@ from django.utils import timezone
 from paasng.utils.blobstore import BlobStore, make_blob_store
 
 from .constants import UPLOAD_URL_EXPIRES_IN
-from .exceptions import SandboxFileNotFound, SandboxFileTooLarge
+from .exceptions import SandboxFileNotFound
 from .models import Volume, VolumeArtifact
 from .resident_daemon_client import ResidentDaemonClient, get_resident_daemon_client
 
@@ -73,8 +73,6 @@ def archive_volume_file(volume: Volume, rel_path: str, client: ResidentDaemonCli
 
     mtime = meta["modified_at"]
     size = meta["size"]
-    if size > settings.AGENT_SANDBOX_ARTIFACT_MAX_SIZE:
-        raise SandboxFileTooLarge(f"file size {size} exceeds limit {settings.AGENT_SANDBOX_ARTIFACT_MAX_SIZE}")
 
     existing = VolumeArtifact.objects.filter(volume=volume, rel_path=rel_path).first()
     # volume + relative path + mtime + size 都相同才可能复用已归档对象

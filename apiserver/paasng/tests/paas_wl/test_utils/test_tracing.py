@@ -20,14 +20,15 @@ import requests
 import requests_mock
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
-from paasng.misc.tracing.instrumentor import requests_callback
+from paas_wl.utils.tracing import requests_callback
 
 
 class TestResponseHookIntegration:
-    """回归测试: RequestsInstrumentor().instrument(response_hook=requests_callback)
+    """回归测试：RequestsInstrumentor().instrument(response_hook=requests_callback)
 
     验证 OTel 0.64b0 的 response_hook 回调签名 (span, request, response)
-    与 requests_callback 的 3 参数签名匹配, 不会抛出 TypeError.
+    与 requests_callback 的 3 参数签名匹配，不会抛出 TypeError。
+    该回调在 paas_wl 和 paasng 两处共享同一份实现 (paas_wl.utils.tracing)。
     """
 
     @pytest.fixture(autouse=True)
@@ -39,7 +40,7 @@ class TestResponseHookIntegration:
         instrumentor.uninstrument()
 
     def test_application_json(self):
-        """response_hook 三元组签名匹配, 不抛 TypeError"""
+        """P1: response_hook 三元组签名匹配，不抛 TypeError"""
         with requests_mock.Mocker() as m:
             m.get("http://test/api", json={"code": 0}, headers={"Content-Type": "application/json"})
 
@@ -47,7 +48,7 @@ class TestResponseHookIntegration:
             assert resp.status_code == 200
 
     def test_application_json_with_charset(self):
-        """Content-Type 带 charset 参数时正常解析, 不抛 TypeError"""
+        """P2: Content-Type 带 charset 参数时正常解析，不抛 TypeError"""
         with requests_mock.Mocker() as m:
             m.get(
                 "http://test/api",
@@ -59,8 +60,20 @@ class TestResponseHookIntegration:
             assert resp.status_code == 200
             assert resp.json() == {"code": 0, "message": "ok"}
 
+    def test_application_json_case_insensitive(self):
+        """Content-Type 大小写不敏感 (RFC 7231)"""
+        with requests_mock.Mocker() as m:
+            m.get(
+                "http://test/api",
+                json={"code": 0, "message": "ok"},
+                headers={"Content-Type": "Application/JSON; charset=utf-8"},
+            )
+
+            resp = requests.get("http://test/api", timeout=1)
+            assert resp.status_code == 200
+
     def test_non_json_skipped(self):
-        """非 JSON 响应正常返回, 不抛异常"""
+        """非 JSON 响应正常返回，不抛异常"""
         with requests_mock.Mocker() as m:
             m.get("http://test/healthz", text="OK", headers={"Content-Type": "text/plain"})
 
@@ -69,7 +82,7 @@ class TestResponseHookIntegration:
             assert resp.text == "OK"
 
     def test_response_is_none_on_connection_error(self):
-        """连接异常时 response_hook 收到 response=None, 不抛 TypeError"""
+        """P1: 连接异常时 response_hook 收到 response=None，不抛 TypeError"""
         with requests_mock.Mocker() as m:
             m.get("http://test/timeout", exc=ConnectionError)
 

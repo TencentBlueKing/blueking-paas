@@ -30,9 +30,7 @@ from requests.models import Response
 
 
 def requests_callback(span: Span, request, response: Optional[Response]):
-    """
-    处理蓝鲸标准协议响应
-    """
+    """处理蓝鲸标准协议响应"""
     # requests 请求异常, 例如访问超时等
     if response is None:
         return
@@ -40,7 +38,7 @@ def requests_callback(span: Span, request, response: Optional[Response]):
     # 并非所有返回内容都是 json 格式的, 因此需要根据返回头进行判断, 避免处理二进制格式的内容
     # 使用 split 分离 media type 和参数 (如 charset), 兼容 "application/json; charset=utf-8" 等变体
     content_type = response.headers.get("Content-Type", "")
-    if content_type.split(";")[0].strip() != "application/json":
+    if content_type.split(";")[0].strip().lower() != "application/json":
         return
 
     try:
@@ -82,9 +80,7 @@ def requests_callback(span: Span, request, response: Optional[Response]):
 
 
 def django_response_hook(span: Span, request, response):
-    """
-    处理 PaasNG Django 响应
-    """
+    """处理 Django 响应"""
     if response.status_code == 200:
         span.set_status(Status(StatusCode.OK))
     else:

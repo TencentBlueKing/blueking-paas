@@ -76,11 +76,11 @@ class TestBuildFinishedAt:
     @pytest.mark.parametrize(
         ("annotations", "expected"),
         [
-            ({}, True),
+            ({}, False),
             ({"build_finished_at": arrow.now().shift(seconds=-60).isoformat()}, True),
             ({"build_finished_at": arrow.now().shift(seconds=-3600).isoformat()}, False),
-            ({"build_finished_at": "invalid-date"}, True),
-            (None, True),
+            ({"build_finished_at": "invalid-date"}, False),
+            (None, False),
         ],
     )
     def test_is_debug_window_available(self, annotations, expected):

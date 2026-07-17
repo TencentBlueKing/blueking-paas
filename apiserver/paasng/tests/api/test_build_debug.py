@@ -22,6 +22,20 @@ import pytest
 from paasng.platform.engine.models.deployment import AdvancedOptions
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
+
+def _make_pod_stub(phase, started=True):
+    """创建模拟的 builder Pod 对象."""
+    pod = mock.MagicMock()
+    pod.status.phase = phase
+    if started:
+        c_status = mock.MagicMock()
+        c_status.started = True
+        pod.status.container_statuses = [c_status]
+    else:
+        pod.status.container_statuses = []
+    return pod
+
+
 pytestmark = pytest.mark.django_db
 
 
@@ -129,13 +143,12 @@ class TestGetBuildDebug:
 
     @pytest.mark.parametrize("window_available", [True, False], ids=["available", "expired"])
     def test_build_debug_window_check(self, api_client, bk_app, bk_module, window_available):
-        """Pod Running 时 available 取决于调试窗口是否过期."""
+        """Pod Running 且构建已完成时, available 取决于调试窗口是否过期."""
         deployment = create_fake_deployment(bk_module)
         deployment.advanced_options = AdvancedOptions(build_debug=True)
         deployment.save()
 
-        fake_pod = mock.MagicMock()
-        fake_pod.status.phase = "Running"
+        fake_pod = _make_pod_stub("Running")
         wl_app = mock.MagicMock()
         wl_app.namespace = "test-ns"
 
@@ -158,6 +171,27 @@ class TestGetBuildDebug:
             assert data["builder_pod_name"] == "builder-pod-name"
             assert data["namespace"] == "test-ns"
 
+    def test_build_debug_build_in_progress(self, api_client, bk_app, bk_module):
+        """Pod Running 但构建未完成 (started=False) 时返回 available=False."""
+        deployment = create_fake_deployment(bk_module)
+        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.save()
+
+        fake_pod = _make_pod_stub("Running", started=False)
+        wl_app = mock.MagicMock()
+        wl_app.namespace = "test-ns"
+
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.DeploymentViewSet._get_debug_builder_pod",
+            return_value=(wl_app, "builder-pod-name", fake_pod),
+        ):
+            url = _build_debug_url(bk_app.code, bk_module.name, deployment.id)
+            resp = api_client.get(url)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["enabled"] is True
+            assert data["available"] is False
+
 
 class TestCreateBuildDebugConsole:
     """测试 create_build_debug_console 接口."""
@@ -170,8 +204,7 @@ class TestCreateBuildDebugConsole:
         deployment.advanced_options = AdvancedOptions(build_debug=True)
         deployment.save()
 
-        fake_pod = mock.MagicMock()
-        fake_pod.status.phase = "Running"
+        fake_pod = _make_pod_stub("Running")
         wl_app = mock.MagicMock()
         wl_app.namespace = "test-ns"
 
@@ -229,8 +262,7 @@ class TestCreateBuildDebugConsole:
         deployment.advanced_options = AdvancedOptions(build_debug=True)
         deployment.save()
 
-        fake_pod = mock.MagicMock()
-        fake_pod.status.phase = "Running"
+        fake_pod = _make_pod_stub("Running")
 
         with (
             mock.patch(
@@ -241,6 +273,22 @@ class TestCreateBuildDebugConsole:
                 "paasng.platform.engine.views.deploy.BuildHandler.is_debug_window_available",
                 return_value=False,
             ),
+        ):
+            url = _build_debug_console_url(bk_app.code, bk_module.name, deployment.id)
+            resp = api_client.post(url)
+            assert resp.status_code == 400
+
+    def test_create_console_build_in_progress(self, api_client, bk_app, bk_module):
+        """构建进行中 (started=False) 时创建控制台应返回 400."""
+        deployment = create_fake_deployment(bk_module)
+        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.save()
+
+        fake_pod = _make_pod_stub("Running", started=False)
+
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.DeploymentViewSet._get_debug_builder_pod",
+            return_value=(mock.MagicMock(), "builder-pod-name", fake_pod),
         ):
             url = _build_debug_console_url(bk_app.code, bk_module.name, deployment.id)
             resp = api_client.post(url)

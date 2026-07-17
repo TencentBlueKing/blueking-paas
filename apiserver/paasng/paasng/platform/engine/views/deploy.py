@@ -45,7 +45,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.configurations.building import BUILD_DEBUG_TIMEOUT, get_use_bk_ci_pipeline
+from paasng.platform.engine.configurations.building import get_build_debug_timeout, get_use_bk_ci_pipeline
 from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
@@ -346,7 +346,14 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
             )
 
-        available = BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT)
+        # 检查构建是否已完成 (startupProbe 通过, 即 /tmp/build-done 已创建)
+        container_statuses = pod.status.container_statuses or []
+        if not container_statuses or not getattr(container_statuses[0], "started", False):
+            return Response(
+                {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+            )
+
+        available = BuildHandler.is_debug_window_available(pod, get_build_debug_timeout())
         return Response(
             {"enabled": True, "available": available, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
         )
@@ -362,8 +369,13 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if pod is None or pod.status.phase != "Running":
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试容器已不可用"))
 
+        # 检查构建是否已完成 (startupProbe 通过, 即 /tmp/build-done 已创建)
+        container_statuses = pod.status.container_statuses or []
+        if not container_statuses or not getattr(container_statuses[0], "started", False):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建任务正在进行中，请稍后再试"))
+
         # 检查构建调试窗口是否已过期
-        if not BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT):
+        if not BuildHandler.is_debug_window_available(pod, get_build_debug_timeout()):
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试窗口已过期"))
 
         cluster = get_cluster_by_app(wl_app)

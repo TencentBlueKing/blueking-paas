@@ -463,13 +463,16 @@ class BuildHandler(PodScheduleHandler):
         }
 
         if template.build_debug:
+            # failureThreshold 根据 BUILD_PROCESS_TIMEOUT 动态计算
+            probe_timeout = max(settings.BUILD_PROCESS_TIMEOUT, 60)
+            failure_threshold = (probe_timeout - 30) // 3
             container_spec.update(
                 {
                     "startupProbe": {
                         "exec": {"command": ["test", "-f", "/tmp/build-done"]},
                         "initialDelaySeconds": 30,
                         "periodSeconds": 3,
-                        "failureThreshold": 290,  # 30 + 290*3 = 900s = 15min, 对接 BUILD_PROCESS_TIMEOUT
+                        "failureThreshold": failure_threshold,
                     },
                     "readinessProbe": {
                         "exec": {"command": ["test", "-f", "/tmp/build-result-success"]},
@@ -640,7 +643,10 @@ class BuildHandler(PodScheduleHandler):
 
     @staticmethod
     def is_debug_window_available(pod, timeout_seconds: int) -> bool:
-        """检查调试的构建 Pod 是否还可用 (未过期), 基于 "build_finished_at" 注解, 如果没有注解或无法解析, 视为未过期可用
+        """检查调试的构建 Pod 是否还可用 (未过期), 基于 "build_finished_at" 注解.
+
+        注解缺失表示构建尚未完成或刚完成但注解尚未写入, 此时调试窗口尚未开启, 返回 False.
+        注解格式异常时同样返回 False, 防止因解析失败而错误放行.
 
         :param pod: Pod 对象 (必须有 metadata.annotations).
         :param timeout_seconds: 调试窗口持续时间 (单位为 秒)
@@ -649,12 +655,12 @@ class BuildHandler(PodScheduleHandler):
         annotations = pod.metadata.annotations or {}
         finished_at_raw = annotations.get("build_finished_at")
         if not finished_at_raw:
-            return True
+            return False
         try:
             return arrow.now() < arrow.get(finished_at_raw).shift(seconds=timeout_seconds)
-        except Exception:
-            logger.exception("Failed to parse build_finished_at annotation, treating as available")
-            return True
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to parse build_finished_at annotation, treating as unavailable")
+            return False
 
 
 class CommandHandler(PodScheduleHandler):

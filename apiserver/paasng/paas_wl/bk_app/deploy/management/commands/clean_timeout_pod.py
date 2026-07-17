@@ -16,13 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import arrow
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paas_wl.infras.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
-from paasng.platform.engine.configurations.building import BUILD_DEBUG_TIMEOUT
+from paasng.platform.engine.configurations.building import get_build_debug_timeout
 
 
 class Command(BaseCommand):
@@ -42,10 +43,21 @@ class Command(BaseCommand):
             # normally, there is only one slug instance
             for pod in pods.items:
                 if self._is_debug_pod(pod):
-                    # 检查 debug Pod 的调试窗口是否已过期
-                    if not BuildHandler.is_debug_window_available(pod, BUILD_DEBUG_TIMEOUT):
-                        self._delete_pod(client, pod, dry_run, reason="debug window expired")
-                        timeout_count += 1
+                    annotations = pod.metadata.annotations or {}
+                    finished_at_raw = annotations.get("build_finished_at")
+                    if finished_at_raw:
+                        # 已完成的 debug Pod: 按调试窗口过期时间清理
+                        if not BuildHandler.is_debug_window_available(pod, get_build_debug_timeout()):
+                            self._delete_pod(client, pod, dry_run, reason="debug window expired")
+                            timeout_count += 1
+                    else:
+                        # 未完成的 debug Pod: 用 creationTimestamp 兜底，防止 hung build 永久泄漏
+                        timedelta = now - arrow.get(pod.metadata.creationTimestamp).datetime
+                        if timedelta.total_seconds() > settings.BUILD_PROCESS_TIMEOUT:
+                            self._delete_pod(
+                                client, pod, dry_run, reason=f"debug build hung > {settings.BUILD_PROCESS_TIMEOUT}s"
+                            )
+                            timeout_count += 1
                 else:
                     # 非 debug Pod: 基于 creationTimestamp 判断
                     timedelta = now - arrow.get(pod.metadata.creationTimestamp).datetime

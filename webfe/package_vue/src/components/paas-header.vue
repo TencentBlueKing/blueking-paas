@@ -129,34 +129,11 @@
           </bk-popover>
         </template>
         <!-- 退出登录 -->
-        <bk-popover
-          theme="light navigation-message"
-          ext-cls="top-bar-popover"
-          :arrow="false"
-          offset="30, 13"
-          placement="bottom-start"
-          :tippy-options="{ hideOnClick: false }"
-        >
-          <div class="header-user is-left ps-head-last">
-            <!-- 多租户展示 -->
-            <UserDisplay :value="user.username" :fallback="user.chineseName || user.username" />
-            <i class="bk-icon icon-down-shape" />
-          </div>
-          <template #content>
-            <ul class="monitor-navigation-admin">
-              <li class="nav-item">
-                <a
-                  id="logOut"
-                  href="javascript:"
-                  target="_blank"
-                  @click="logout"
-                >
-                  {{ $t('退出登录') }}
-                </a>
-              </li>
-            </ul>
-          </template>
-        </bk-popover>
+        <PaasLoginUserinfo
+          class="header-user is-left ps-head-last"
+          :user="user"
+          @logout="logout"
+        />
       </ul>
     </div>
     <log-version :dialog-show.sync="showLogVersion" />
@@ -172,14 +149,14 @@ import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
 import logoSvg from '@static/images/logo.svg';
 import globalInput from './global-search/search-input.vue';
-import UserDisplay from '@/components/user/user-display.vue';
+import PaasLoginUserinfo from '@/components/user/login-userinfo.vue';
 import { mapState, mapGetters } from 'vuex';
 
 export default {
   components: {
     logVersion,
     globalInput,
-    UserDisplay,
+    PaasLoginUserinfo,
   },
   mixins: [psHeaderInfo, selectEventMixin],
   props: [],

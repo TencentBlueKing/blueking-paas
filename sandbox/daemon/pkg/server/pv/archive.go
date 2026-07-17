@@ -9,12 +9,19 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
+
+// archiveClient 上传专用 HTTP client, 带超时避免上游挂起拖垮 daemon。
+var archiveClient = &http.Client{Timeout: 5 * time.Minute}
+
+// archiveMaxSize 允许归档的单文件最大字节数, 超出返回 413。
+const archiveMaxSize int64 = 104857600 // 100MB
 
 // ArchiveFile godoc
 //
@@ -41,29 +48,21 @@ func ArchiveFile(c *gin.Context) {
 
 	real, err := ResolveSymlink(full, jailRoot)
 	if err != nil {
-		if errors.Is(err, ErrPathEscape) {
-			httputil.ForbiddenResponse(c, err)
-			return
-		}
-		if os.IsNotExist(err) {
-			httputil.NotFoundResponse(c, err)
-			return
-		}
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 
 	info, err := os.Stat(real)
 	if err != nil {
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 	if info.IsDir() {
 		httputil.BadRequestResponse(c, errors.New("path must be a file"))
 		return
 	}
-	if info.Size() > config.G.ArchiveMaxSize {
-		httputil.PayloadTooLargeResponse(c, fmt.Errorf("file size %d exceeds limit %d", info.Size(), config.G.ArchiveMaxSize))
+	if info.Size() > archiveMaxSize {
+		httputil.PayloadTooLargeResponse(c, fmt.Errorf("file size %d exceeds limit %d", info.Size(), archiveMaxSize))
 		return
 	}
 
@@ -80,9 +79,7 @@ func ArchiveFile(c *gin.Context) {
 	})
 }
 
-// uploadFile 读取文件, 边读边算 sha256, 并 PUT 到临时上传 URL。返回内容的 sha256 十六进制串。
-//
-// TODO(Q-upload-verb): 上传动词本期按 PUT 实现, 待与 bkrepo 联调确认是否需改 multipart。
+// uploadFile 读文件, 经 TeeReader 边读边算 sha256 并 PUT 到临时上传 URL, 返回内容 sha256 十六进制串。
 func uploadFile(ctx context.Context, path string, size int64, uploadURL string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -91,17 +88,15 @@ func uploadFile(ctx context.Context, path string, size int64, uploadURL string) 
 	defer f.Close() // nolint
 
 	hasher := sha256.New()
-	// TeeReader: 上传流经 body 的同时把字节喂给 hasher, 单次读取即完成算摘要 + 上传
-	body := io.TeeReader(f, hasher)
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, body)
+	// TeeReader: 上传流经 body 的同时把字节喂给 hasher, 单次读取即完成算摘要 + 上传。
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, io.TeeReader(f, hasher))
 	if err != nil {
 		return "", err
 	}
 	httpReq.ContentLength = size
 	httpReq.Header.Set("Content-Type", "application/octet-stream")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := archiveClient.Do(httpReq)
 	if err != nil {
 		return "", err
 	}
@@ -111,6 +106,5 @@ func uploadFile(ctx context.Context, path string, size int64, uploadURL string) 
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return "", fmt.Errorf("upload responded %d: %s", resp.StatusCode, string(msg))
 	}
-
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }

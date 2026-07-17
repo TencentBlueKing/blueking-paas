@@ -14,8 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 )
 
 func doArchive(router *gin.Engine, req ArchiveRequest) *httptest.ResponseRecorder {
@@ -82,9 +80,13 @@ var _ = Describe("ArchiveFile", func() {
 		Expect(w.Code).To(Equal(http.StatusBadGateway))
 	})
 
-	It("returns 413 when the file exceeds ArchiveMaxSize", func() {
-		Expect(os.WriteFile(filepath.Join(jailRoot, "big.bin"), []byte("0123456789"), 0o644)).To(Succeed())
-		config.G.ArchiveMaxSize = 5
+	It("returns 413 when the file exceeds archiveMaxSize", func() {
+		// 用 truncate 造稀疏大文件(不实际写盘), 仅用于触发 size 超限。
+		bigPath := filepath.Join(jailRoot, "big.bin")
+		f, err := os.Create(bigPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Truncate(archiveMaxSize + 1)).To(Succeed())
+		Expect(f.Close()).To(Succeed())
 
 		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "big.bin", UploadURL: "http://unused"})
 		Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))

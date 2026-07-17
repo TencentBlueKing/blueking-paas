@@ -23,9 +23,7 @@ func newTestEnv() (rootDir, jailRoot string) {
 		panic(err)
 	}
 	config.G = &config.Config{
-		RootDir:         rootDir,
-		PreviewMaxBytes: 65536,
-		ArchiveMaxSize:  100 * 1024 * 1024,
+		RootDir: rootDir,
 	}
 	jailRoot = filepath.Join(rootDir, testBasePath)
 	if err := os.MkdirAll(jailRoot, 0o755); err != nil {

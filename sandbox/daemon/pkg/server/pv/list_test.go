@@ -1,12 +1,13 @@
 package pv
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,10 +15,22 @@ import (
 )
 
 func doList(router *gin.Engine, req ListRequest) *httptest.ResponseRecorder {
-	body, _ := json.Marshal(req)
+	q := url.Values{}
+	q.Set("base_path", req.BasePath)
+	if req.RelPath != "" {
+		q.Set("rel_path", req.RelPath)
+	}
+	if req.Recursive {
+		q.Set("recursive", "true")
+	}
+	if req.Page != 0 {
+		q.Set("page", strconv.Itoa(req.Page))
+	}
+	if req.PageSize != 0 {
+		q.Set("page_size", strconv.Itoa(req.PageSize))
+	}
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/list", bytes.NewReader(body))
-	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq, _ := http.NewRequest(http.MethodGet, "/files/list?"+q.Encode(), nil)
 	router.ServeHTTP(w, httpReq)
 	return w
 }
@@ -32,7 +45,7 @@ var _ = Describe("ListFiles", func() {
 	BeforeEach(func() {
 		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/list", ListFiles)
+		router.GET("/files/list", ListFiles)
 	})
 
 	AfterEach(func() {

@@ -45,14 +45,9 @@ type Config struct {
 	// MaxExecTimeout 命令行执行的最大超时时间
 	MaxExecTimeout time.Duration `env:"MAX_EXEC_TIMEOUT" envDefault:"360s"`
 
-	// 以下为常驻(resident)模式专属配置, 沙箱模式不读取
-
+	// **以下为常驻(resident)模式专属配置, 沙箱模式不读取**
 	// RootDir 常驻 daemon 挂载的共享存储根目录, 作为路径 jail 的根前缀
 	RootDir string `env:"ROOT_DIR" envDefault:"/storage"`
-	// PreviewMaxBytes 文本预览默认截断上限(字节)
-	PreviewMaxBytes int64 `env:"PREVIEW_MAX_BYTES" envDefault:"65536"`
-	// ArchiveMaxSize 允许归档的单文件最大字节数, 超出返回 413, 默认 100MB
-	ArchiveMaxSize int64 `env:"ARCHIVE_MAX_SIZE" envDefault:"104857600"`
 }
 
 // Load loads the daemon configuration

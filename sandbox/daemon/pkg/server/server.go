@@ -102,9 +102,9 @@ func StartResident(ctx context.Context) error {
 
 	// 常驻 daemon 的 PV 文件操作(全部走 base_path + rel_path 路径 jail)。
 	files := r.Group("/files")
-	files.POST("/list", pv.ListFiles)
-	files.POST("/stat", pv.StatFile)
-	files.POST("/preview", pv.PreviewFile)
+	files.GET("/list", pv.ListFiles)
+	files.GET("/stat", pv.StatFile)
+	files.GET("/preview", pv.PreviewFile)
 	files.POST("/archive", pv.ArchiveFile)
 	files.DELETE("", pv.DeleteFile)
 

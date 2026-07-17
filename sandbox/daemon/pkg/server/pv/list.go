@@ -13,10 +13,8 @@ import (
 )
 
 const (
-	// defaultPageSize 默认分页大小
 	defaultPageSize = 100
-	// maxPageSize 分页大小上限, 超出 clamp 到此值
-	maxPageSize = 500
+	maxPageSize     = 500
 )
 
 // ListFiles godoc
@@ -26,16 +24,17 @@ const (
 //	@Tags			pv
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		ListRequest	true	"List request"
+//	@Param			request	query		ListRequest	true	"List request"
 //	@Success		200		{object}	ListResponse
-//	@Router			/files/list [post]
+//	@Router			/files/list [get]
 //
 //	@id				ListFiles
 func ListFiles(c *gin.Context) {
 	var req ListRequest
-	if !bindJSON(c, &req) {
+	if !bindQuery(c, &req) {
 		return
 	}
+	c.Header("Cache-Control", "no-store")
 
 	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
@@ -44,36 +43,19 @@ func ListFiles(c *gin.Context) {
 
 	items, err := collectItems(full, jailRoot, req.Recursive)
 	if err != nil {
-		if os.IsNotExist(err) {
-			httputil.NotFoundResponse(c, err)
-			return
-		}
-		if os.IsPermission(err) {
-			httputil.ForbiddenResponse(c, err)
-			return
-		}
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 
 	sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
-
-	total := len(items)
 	page, pageSize := normalizePaging(req.Page, req.PageSize)
-	start := (page - 1) * pageSize
-	if start > total {
-		start = total
-	}
-	end := start + pageSize
-	if end > total {
-		end = total
-	}
+	start := min((page-1)*pageSize, len(items))
+	end := min(start+pageSize, len(items))
 
-	httputil.SuccessResponse(c, ListResponse{Total: total, Items: items[start:end]})
+	httputil.SuccessResponse(c, ListResponse{Total: len(items), Items: items[start:end]})
 }
 
-// collectItems 遍历 dir 下的条目。recursive=true 时用 WalkDir 递归(跳过 dir 自身),
-// 否则仅 ReadDir 当前层。Path 为相对 jailRoot 的路径。
+// collectItems 遍历 dir: recursive 用 WalkDir(跳过 dir 自身), 否则仅当前层。Path 相对 jailRoot。
 func collectItems(dir, jailRoot string, recursive bool) ([]FileItem, error) {
 	items := make([]FileItem, 0)
 
@@ -109,7 +91,7 @@ func collectItems(dir, jailRoot string, recursive bool) ([]FileItem, error) {
 	return items, nil
 }
 
-// newFileItem 由目录条目构造 FileItem。sha256 恒为 nil, 由 apiserver 回填去重表缓存值。
+// newFileItem 由目录条目构造 FileItem, mime 仅按扩展名(不读内容)。sha256 恒为 nil。
 func newFileItem(absPath, jailRoot string, d fs.DirEntry) (FileItem, error) {
 	info, err := d.Info()
 	if err != nil {
@@ -119,14 +101,12 @@ func newFileItem(absPath, jailRoot string, d fs.DirEntry) (FileItem, error) {
 	if err != nil {
 		return FileItem{}, err
 	}
-
 	item := FileItem{
 		Path:       relPath,
 		Name:       info.Name(),
 		IsDir:      info.IsDir(),
 		Size:       info.Size(),
 		ModifiedAt: formatTime(info.ModTime()),
-		Sha256:     nil,
 	}
 	if !info.IsDir() {
 		item.Mime = detectMimeByExt(info.Name())
@@ -134,7 +114,7 @@ func newFileItem(absPath, jailRoot string, d fs.DirEntry) (FileItem, error) {
 	return item, nil
 }
 
-// normalizePaging 归一化分页参数: page 最小为 1, pageSize 落在 (0, maxPageSize] 内。
+// normalizePaging 归一化: page>=1, pageSize 落在 (0, maxPageSize]。
 func normalizePaging(page, pageSize int) (int, int) {
 	if page < 1 {
 		page = 1

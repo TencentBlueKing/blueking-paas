@@ -1,10 +1,10 @@
 package pv
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -14,10 +14,11 @@ import (
 )
 
 func doStat(router *gin.Engine, req StatRequest) *httptest.ResponseRecorder {
-	body, _ := json.Marshal(req)
+	q := url.Values{}
+	q.Set("base_path", req.BasePath)
+	q.Set("rel_path", req.RelPath)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/stat", bytes.NewReader(body))
-	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq, _ := http.NewRequest(http.MethodGet, "/files/stat?"+q.Encode(), nil)
 	router.ServeHTTP(w, httpReq)
 	return w
 }
@@ -32,7 +33,7 @@ var _ = Describe("StatFile", func() {
 	BeforeEach(func() {
 		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/stat", StatFile)
+		router.GET("/files/stat", StatFile)
 	})
 
 	AfterEach(func() {

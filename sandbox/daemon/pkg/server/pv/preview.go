@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,9 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 )
 
+// previewMaxBytes 文本预览默认截断上限(字节), max_bytes 超过或 <=0 时钳到此值。
+const previewMaxBytes int64 = 65536
+
 // PreviewFile godoc
 //
 //	@Summary		Preview a text file
@@ -21,17 +25,18 @@ import (
 //	@Tags			pv
 //	@Accept			json
 //	@Produce		plain
-//	@Param			request	body	PreviewRequest	true	"Preview request"
+//	@Param			request	query	PreviewRequest	true	"Preview request"
 //	@Success		200
 //	@Header			200	{string}	X-Truncated	"whether the content was truncated"
-//	@Router			/files/preview [post]
+//	@Router			/files/preview [get]
 //
 //	@id				PreviewFile
 func PreviewFile(c *gin.Context) {
 	var req PreviewRequest
-	if !bindJSON(c, &req) {
+	if !bindQuery(c, &req) {
 		return
 	}
+	c.Header("Cache-Control", "no-store")
 
 	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
@@ -40,21 +45,13 @@ func PreviewFile(c *gin.Context) {
 
 	real, err := ResolveSymlink(full, jailRoot)
 	if err != nil {
-		if errors.Is(err, ErrPathEscape) {
-			httputil.ForbiddenResponse(c, err)
-			return
-		}
-		if os.IsNotExist(err) {
-			httputil.NotFoundResponse(c, err)
-			return
-		}
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 
 	info, err := os.Stat(real)
 	if err != nil {
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 	if info.IsDir() {
@@ -62,63 +59,52 @@ func PreviewFile(c *gin.Context) {
 		return
 	}
 
-	// 仅文本类可预览; 非文本类返回 415, 前端改用 download_url + disposition=inline。
-	// 按内容嗅探(魔数)判定, 兼顾被改名伪装的文件。
-	mimeType := detectMime(real)
-	if !isTextMime(mimeType) {
+	// 按内容嗅探(魔数)判定, 兼顾被改名伪装的文件; 非文本返回 415 交前端 inline 下载。
+	if !isTextMime(detectMime(real)) {
 		httputil.UnsupportedMediaTypeResponse(c, errors.New("file is not previewable"))
 		return
 	}
 
+	// max_bytes 客户端可控, 钳到上限防内存放大; <=0 用默认上限。
 	maxBytes := req.MaxBytes
-	if maxBytes <= 0 {
-		maxBytes = config.G.PreviewMaxBytes
+	if maxBytes <= 0 || maxBytes > previewMaxBytes {
+		maxBytes = previewMaxBytes
 	}
 
 	f, err := os.Open(real)
 	if err != nil {
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 	defer f.Close() // nolint
 
-	// 多读 1 字节以判定是否发生截断
+	// 多读 1 字节判定是否截断。
 	raw, err := io.ReadAll(io.LimitReader(f, maxBytes+1))
 	if err != nil {
 		httputil.InternalErrorResponse(c, err)
 		return
 	}
 
-	// 文件级截断: 读到的字节数超过上限, 说明文件还有更多内容。
-	fileTruncated := int64(len(raw)) > maxBytes
-	if fileTruncated {
+	truncated := int64(len(raw)) > maxBytes
+	if truncated {
 		raw = raw[:maxBytes]
 	}
 
-	// 规整为合法 UTF-8。toUTF8 会在字符边界裁掉被字节截断拆散的多字节字符,
-	// 避免按字节切分 UTF-8 / GBK 字符后产生乱码。
+	// 规整为合法 UTF-8: toUTF8 在字符边界裁掉被截断拆散的多字节字符; GBK->UTF-8 膨胀后超限则再裁一次。
 	content := toUTF8(raw)
-
-	// GBK -> UTF-8 会使字节数膨胀(中文 2 -> 3), 解码后可能超过 maxBytes,
-	// 需在字符边界再次裁剪, 保证输出不超过上限且不拆散字符。
-	capped := int64(len(content)) > maxBytes
-	if capped {
+	if int64(len(content)) > maxBytes {
 		content = capUTF8(content, maxBytes)
+		truncated = true
 	}
 
-	if fileTruncated || capped {
-		c.Header("X-Truncated", "true")
-	} else {
-		c.Header("X-Truncated", "false")
-	}
+	c.Header("X-Truncated", strconv.FormatBool(truncated))
 	c.Data(http.StatusOK, "text/plain; charset=utf-8", content)
 }
 
-// toUTF8 将内容规整为合法 UTF-8, 永不返回包含不完整多字节字符的字节流:
-//  1. 已是合法 UTF-8 -> 原样返回;
-//  2. 仅因尾部存在不完整的多字节字符而非法(常见于按字节截断的 UTF-8 文件)
-//     -> 裁掉尾部不完整字符后返回合法前缀, 避免误判为 GBK 而产生乱码;
-//  3. 否则尝试按 GBK 解码(简体中文常见), 解码结果再裁一次尾部不完整字符;
+// toUTF8 将内容规整为合法 UTF-8, 永不返回含不完整多字节字符的字节流:
+//  1. 已合法 -> 原样返回;
+//  2. 仅尾部不完整(常见于按字节截断) -> 裁掉尾部返回前缀, 避免误判为 GBK 产生乱码;
+//  3. 否则尝试按 GBK 解码(简体中文常见), 解码结果再裁一次尾部;
 //  4. 仍失败则原样返回(前端按 UTF-8 尽力渲染)。
 func toUTF8(raw []byte) []byte {
 	if utf8.Valid(raw) {
@@ -130,7 +116,7 @@ func toUTF8(raw []byte) []byte {
 	if decoded, err := simplifiedchinese.GBK.NewDecoder().Bytes(raw); err == nil && utf8.Valid(decoded) {
 		return decoded
 	} else if utf8.Valid(decoded) {
-		// 解码过程中遇到尾部不完整的 GBK 字符会返回 err, 但已解码前缀仍是合法 UTF-8。
+		// 解码遇尾部不完整 GBK 字符会返回 err, 但已解码前缀仍是合法 UTF-8。
 		if trimmed := trimTrailingIncompleteRune(decoded); trimmed != nil {
 			return trimmed
 		}
@@ -138,11 +124,10 @@ func toUTF8(raw []byte) []byte {
 	return raw
 }
 
-// trimTrailingIncompleteRune 处理「按字节截断拆散了末尾多字节字符」的情形:
-// 若 raw 主体是合法 UTF-8、仅末尾残留一个不完整的字符, 则返回裁掉该残留后的合法前缀;
-// 否则(例如整体是 GBK, 全程都不是合法 UTF-8)返回 nil, 交由上层走 GBK 解码分支。
+// trimTrailingIncompleteRune 处理末尾被字节截断拆散的多字节字符: 若主体合法、仅尾部残留
+// 一个不完整字符, 返回裁掉后的前缀; 否则(如整体是 GBK)返回 nil, 交上层走 GBK 解码分支。
 func trimTrailingIncompleteRune(raw []byte) []byte {
-	// 自末尾回退, 跳过所有续字节(0x80~0xBF), 定位最后一个字符的起始字节。
+	// 自末尾回退, 跳过续字节(0x80~0xBF), 定位最后一个字符的起始字节。
 	start := len(raw)
 	for n := 0; n < utf8.UTFMax && start > 0; n++ {
 		start--
@@ -155,16 +140,14 @@ func trimTrailingIncompleteRune(raw []byte) []byte {
 	}
 	prefix := raw[:start]
 	tail := raw[start:]
-	// 前缀必须本身合法, 尾部必须是一个「期望更多续字节但未收齐」的残缺字符,
-	// 二者同时成立才认定是截断拆散, 否则视作非 UTF-8 内容(交 GBK 分支)。
+	// 前缀必须合法, 尾部须是"期望更多续字节但未收齐"的残缺字符, 二者同时成立才认定是截断拆散。
 	if !utf8.Valid(prefix) || utf8.FullRune(tail) || !validRunePrefix(tail) {
 		return nil
 	}
 	return prefix
 }
 
-// validRunePrefix 判断 b 是否为一个多字节字符的合法(但不完整)前缀:
-// 首字节是合法的多字节起始字节, 其余为合法续字节, 且长度小于该字符应有长度。
+// validRunePrefix 判断 b 是否为某多字节字符的合法但不完整前缀。
 func validRunePrefix(b []byte) bool {
 	if len(b) == 0 {
 		return false
@@ -172,10 +155,8 @@ func validRunePrefix(b []byte) bool {
 	first := b[0]
 	var expect int
 	switch {
-	case first < 0x80:
-		return false // ASCII: 不存在「不完整前缀」
-	case first < 0xC0:
-		return false // 续字节不应作为字符起始
+	case first < 0x80, first < 0xC0:
+		return false // ASCII 或续字节, 不存在"不完整前缀"
 	case first < 0xE0:
 		expect = 2
 	case first < 0xF0:
@@ -186,7 +167,7 @@ func validRunePrefix(b []byte) bool {
 		return false
 	}
 	if len(b) >= expect {
-		return false // 字节已收齐, 不属于「不完整前缀」
+		return false
 	}
 	for _, c := range b[1:] {
 		if c < 0x80 || c >= 0xC0 {
@@ -196,7 +177,7 @@ func validRunePrefix(b []byte) bool {
 	return true
 }
 
-// capUTF8 将 b 裁剪到不超过 max 字节, 且不拆散末尾的多字节字符。
+// capUTF8 将 b 裁到不超过 max 字节, 且不拆散末尾多字节字符。
 func capUTF8(b []byte, max int64) []byte {
 	if int64(len(b)) <= max {
 		return b

@@ -26,12 +26,8 @@ import (
 func DeleteFile(c *gin.Context) {
 	basePath := c.Query("base_path")
 	relPath := c.Query("rel_path")
-	if basePath == "" {
-		httputil.BadRequestResponse(c, errors.New("base_path is required"))
-		return
-	}
-	if relPath == "" {
-		httputil.BadRequestResponse(c, errors.New("rel_path is required"))
+	if basePath == "" || relPath == "" {
+		httputil.BadRequestResponse(c, errors.New("base_path and rel_path are required"))
 		return
 	}
 
@@ -40,25 +36,21 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	// symlink 兜底: 存在则二次校验真实路径; 不存在则视为已删除(幂等)
+	// symlink 兜底: 不存在视为已删除(幂等), 解析逃逸则 403。
 	real, err := ResolveSymlink(full, jailRoot)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
-			return
+		} else {
+			respondErr(c, err)
 		}
-		if errors.Is(err, ErrPathEscape) {
-			httputil.ForbiddenResponse(c, err)
-			return
-		}
-		httputil.InternalErrorResponse(c, err)
 		return
 	}
 
-	// 仅支持删除单个文件, 拒绝目录(产物文件场景)
+	// 仅删单个文件, 拒绝目录(产物文件场景)。
 	info, err := os.Lstat(real)
 	if err != nil {
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
 	if info.IsDir() {
@@ -71,9 +63,8 @@ func DeleteFile(c *gin.Context) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
 			return
 		}
-		httputil.InternalErrorResponse(c, err)
+		respondErr(c, err)
 		return
 	}
-
 	httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
 }

@@ -55,6 +55,12 @@ var _ = Describe("Resolve", func() {
 		_, _, err := Resolve(rootDir, basePath, "../volume1-evil/secret")
 		Expect(err).To(MatchError(ErrPathEscape))
 	})
+
+	It("rejects a base_path that escapes rootDir via ..", func() {
+		// basePath 本身含 .. 时 jailRoot 会逸出 rootDir, 须在 Resolve 阶段挡住
+		_, _, err := Resolve(rootDir, "../sibling", "x")
+		Expect(err).To(MatchError(ErrPathEscape))
+	})
 })
 
 var _ = Describe("ResolveSymlink", func() {

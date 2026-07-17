@@ -2,11 +2,12 @@ package pv
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,14 @@ import (
 )
 
 func doPreview(router *gin.Engine, req PreviewRequest) *httptest.ResponseRecorder {
-	body, _ := json.Marshal(req)
+	q := url.Values{}
+	q.Set("base_path", req.BasePath)
+	q.Set("rel_path", req.RelPath)
+	if req.MaxBytes != 0 {
+		q.Set("max_bytes", strconv.FormatInt(req.MaxBytes, 10))
+	}
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/preview", bytes.NewReader(body))
-	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq, _ := http.NewRequest(http.MethodGet, "/files/preview?"+q.Encode(), nil)
 	router.ServeHTTP(w, httpReq)
 	return w
 }
@@ -34,7 +39,7 @@ var _ = Describe("PreviewFile", func() {
 	BeforeEach(func() {
 		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/preview", PreviewFile)
+		router.GET("/files/preview", PreviewFile)
 	})
 
 	AfterEach(func() {
@@ -99,6 +104,16 @@ var _ = Describe("PreviewFile", func() {
 			Expect(w.Body.String()).To(Equal(e.expected), "max_bytes=%d", e.n)
 			Expect(w.Header().Get("X-Truncated")).To(Equal("true"), "max_bytes=%d", e.n)
 		}
+	})
+
+	It("clamps an oversized max_bytes to previewMaxBytes", func() {
+		// max_bytes 客户端可控且超过上限时, 须钳到 previewMaxBytes, 防内存放大。
+		Expect(os.WriteFile(filepath.Join(jailRoot, "big.txt"), bytes.Repeat([]byte("a"), int(previewMaxBytes)+10), 0o644)).To(Succeed())
+
+		w := doPreview(router, PreviewRequest{BasePath: testBasePath, RelPath: "big.txt", MaxBytes: previewMaxBytes * 10})
+		Expect(w.Code).To(Equal(http.StatusOK))
+		Expect(int64(w.Body.Len())).To(Equal(previewMaxBytes))
+		Expect(w.Header().Get("X-Truncated")).To(Equal("true"))
 	})
 
 	It("caps GBK->UTF-8 expansion on a rune boundary", func() {

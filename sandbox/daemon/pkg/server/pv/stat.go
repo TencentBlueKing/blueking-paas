@@ -16,34 +16,31 @@ import (
 //	@Tags			pv
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		StatRequest	true	"Stat request"
+//	@Param			request	query		StatRequest	true	"Stat request"
 //	@Success		200		{object}	StatResponse
-//	@Router			/files/stat [post]
+//	@Router			/files/stat [get]
 //
 //	@id				StatFile
 func StatFile(c *gin.Context) {
 	var req StatRequest
-	if !bindJSON(c, &req) {
+	if !bindQuery(c, &req) {
 		return
 	}
+	c.Header("Cache-Control", "no-store")
 
 	full, _, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}
 
-	// 用 Lstat: stat 语义是"查在不在", 不跟随 symlink, 不存在非错误
+	// Lstat 不跟随 symlink: stat 语义是"查在不在", 不存在非错误。
 	info, err := os.Lstat(full)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, StatResponse{Exists: false, Path: req.RelPath})
-			return
+		} else {
+			respondErr(c, err)
 		}
-		if os.IsPermission(err) {
-			httputil.ForbiddenResponse(c, err)
-			return
-		}
-		httputil.InternalErrorResponse(c, err)
 		return
 	}
 
@@ -54,7 +51,8 @@ func StatFile(c *gin.Context) {
 		ModifiedAt: formatTime(info.ModTime()),
 	}
 	if !info.IsDir() {
-		resp.Mime = detectMime(full)
+		// 不读内容(避免 symlink 嗅探逃逸), 与 list 一致按扩展名判定。
+		resp.Mime = detectMimeByExt(info.Name())
 	}
 	httputil.SuccessResponse(c, resp)
 }

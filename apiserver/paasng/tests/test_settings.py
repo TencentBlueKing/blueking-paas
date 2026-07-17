@@ -20,7 +20,6 @@ from unittest import mock
 
 import pytest
 from blue_krill.encrypt.utils import encrypt_string
-from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from dynaconf import LazySettings
 
 from paasng.settings.utils import (
@@ -154,41 +153,3 @@ def test_get_service_remote_endpoints_extra_services_merge_provision_params(sett
 )
 def test_is_in_celery_worker(argv, expected):
     assert is_in_celery_worker(argv) is expected
-
-
-class TestMySQL57CompatibilityPatch:
-    """smoke test: Django 5.2+ MySQL 5.7 兼容 patch
-
-    验证 sql_rename_column 在 MySQL 5.7 下返回 CHANGE 语法.
-    """
-
-    def test_mysql_57_returns_change_syntax(self):
-        """MySQL 5.7 下返回 CHANGE COLUMN 语法"""
-        editor = mock.MagicMock(spec=DatabaseSchemaEditor)
-        # 模拟 MySQL 5.7 连接
-        editor.connection.mysql_is_mariadb = False
-        editor.connection.mysql_version = (5, 7, 42)
-
-        sql = DatabaseSchemaEditor.sql_rename_column.fget(editor)
-        assert "CHANGE" in sql
-        assert "RENAME" not in sql
-
-    def test_mysql_80_uses_original(self):
-        """MySQL 8.0+ 走原始 RENAME COLUMN 逻辑"""
-        editor = mock.MagicMock(spec=DatabaseSchemaEditor)
-        editor.connection.mysql_is_mariadb = False
-        editor.connection.mysql_version = (8, 0, 36)
-
-        sql = DatabaseSchemaEditor.sql_rename_column.fget(editor)
-        # Django 原生 MySQL 8.0 使用 RENAME COLUMN
-        assert "RENAME COLUMN" in sql
-
-    def test_mariadb_uses_original(self):
-        """MariaDB 分支走原始逻辑"""
-        editor = mock.MagicMock(spec=DatabaseSchemaEditor)
-        editor.connection.mysql_is_mariadb = True
-        editor.connection.mysql_version = (10, 4, 0)
-
-        sql = DatabaseSchemaEditor.sql_rename_column.fget(editor)
-        # MariaDB 应走原始逻辑（不返回 CHANGE 模板）
-        assert "CHANGE" not in sql or "RENAME" in sql

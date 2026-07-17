@@ -25,7 +25,7 @@ All path-taking operations take a ``base_path`` (the jail root, computed by apis
 ``app/{volume_uuid_hex}``) plus a user-controlled ``rel_path``; the daemon enforces the jail.
 """
 
-from typing import Any, NotRequired, Self, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 import requests
 from django.conf import settings
@@ -187,12 +187,6 @@ class ResidentDaemonClient:
             raise SandboxDaemonAPIError(f"Request failed: {exc}")
         else:
             return resp
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()
 
 
 def get_resident_daemon_client() -> ResidentDaemonClient:

@@ -241,7 +241,6 @@ class VolumeFileItemOutputSLZ(serializers.Serializer):
     size = serializers.IntegerField(label="文件大小（字节）")
     modified_at = serializers.CharField(label="最后修改时间")
     mime = serializers.CharField(label="MIME 类型", allow_blank=True)
-    # sha256 = serializers.CharField(allow_null=True)
 
 
 class VolumeFileListOutputSLZ(serializers.Serializer):

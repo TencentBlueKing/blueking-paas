@@ -29,6 +29,7 @@
     "@blueking/functional-dependency": "^0.0.1-beta.12",
     "@blueking/log": "^2.1.4",
     "@blueking/login-modal": "^1.0.1",
+    "@blueking/login-userinfo": "0.0.16",
     "@blueking/notice-component-vue2": "^2.0.4",
     "@blueking/platform-config": "^1.0.5",
     "@blueking/stylelint-config-bk": "^2.1.0-beta.9",

@@ -19,7 +19,7 @@ import cattr
 from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import PolicyCombinationConfig
-from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
+from paasng.accessories.servicehub.constants import PrecedencePolicyCondType, ServiceAllocationPolicyType
 
 
 class BaseAllocationPolicySLZ(serializers.Serializer):
@@ -46,15 +46,18 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     class Meta:
         ref_name = "plat_mgt.infras.services.AllocationPrecedencePolicySLZ"
 
-    matcher = serializers.DictField(
-        child=serializers.ListField(child=serializers.CharField()),
-        default=dict,
-    )
+    matcher = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
 
     def validate_matcher(self, value):
+        valid_keys = set(PrecedencePolicyCondType.get_values())
         if len(value) > 1:
             raise serializers.ValidationError("Each rule allows only one matching condition.")
+        for key, val_list in value.items():
+            if key not in valid_keys:
+                raise serializers.ValidationError(f"Unknown condition type: {key}, allowed: {valid_keys}")
+            if not val_list:
+                raise serializers.ValidationError(f"Value list for '{key}' cannot be empty.")
         return value
 
 

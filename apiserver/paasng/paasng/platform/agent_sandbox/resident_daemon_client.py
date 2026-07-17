@@ -19,7 +19,9 @@
 
 Unlike ``SandboxDaemonClient`` (which talks to a per-sandbox daemon through the Sandbox
 Router), the resident daemon is a long-lived platform component reachable at a fixed
-endpoint. It mounts the CFS root and exposes jailed file operations over ``/files/cfs/*``.
+endpoint. It mounts the CFS/NFS root and exposes jailed file operations under ``/files/*``:
+list / stat / preview are ``GET`` with query params, archive is ``POST`` with a JSON body,
+delete is ``DELETE`` with query params.
 
 All path-taking operations take a ``base_path`` (the jail root, computed by apiserver as
 ``app/{volume_uuid_hex}``) plus a user-controlled ``rel_path``; the daemon enforces the jail.
@@ -93,19 +95,21 @@ class ResidentDaemonClient:
         page_size: int = 100,
     ) -> ListResult:
         """List files under base_path/rel_path with pagination."""
-        payload = {
+        params: dict[str, Any] = {
             "base_path": base_path,
             "rel_path": rel_path,
-            "recursive": recursive,
             "page": page,
             "page_size": page_size,
         }
-        return self._request("POST", "/files/cfs/list", json=payload).json()
+        # 与 daemon 约定一致: 布尔 query 用小写 "true", 仅在开启时下发(false 为默认, 省略)
+        if recursive:
+            params["recursive"] = "true"
+        return self._request("GET", "/files/list", params=params).json()
 
     def stat(self, base_path: str, rel_path: str) -> StatResult:
         """Return metadata of base_path/rel_path."""
-        payload = {"base_path": base_path, "rel_path": rel_path}
-        return self._request("POST", "/files/cfs/stat", json=payload).json()
+        params = {"base_path": base_path, "rel_path": rel_path}
+        return self._request("GET", "/files/stat", params=params).json()
 
     def preview(self, base_path: str, rel_path: str, max_bytes: int | None = None) -> tuple[bytes, bool]:
         """Preview the first bytes of a text file, returned as UTF-8.
@@ -113,22 +117,22 @@ class ResidentDaemonClient:
         :returns: ``(content, truncated)`` where ``truncated`` reflects the daemon's ``X-Truncated`` header.
         :raises SandboxFileNotPreviewable: When the file is not a previewable text type.
         """
-        payload: dict = {"base_path": base_path, "rel_path": rel_path}
+        params: dict[str, Any] = {"base_path": base_path, "rel_path": rel_path}
         if max_bytes is not None:
-            payload["max_bytes"] = max_bytes
-        resp = self._request("POST", "/files/cfs/preview", json=payload)
+            params["max_bytes"] = max_bytes
+        resp = self._request("GET", "/files/preview", params=params)
         truncated = resp.headers.get("X-Truncated", "false").lower() == "true"
         return resp.content, truncated
 
     def archive(self, base_path: str, rel_path: str, upload_url: str) -> ArchiveResult:
         """Archive a file to bkrepo via the presigned upload URL."""
         payload = {"base_path": base_path, "rel_path": rel_path, "upload_url": upload_url}
-        return self._request("POST", "/files/cfs/archive", json=payload).json()
+        return self._request("POST", "/files/archive", json=payload).json()
 
     def delete(self, base_path: str, rel_path: str) -> None:
         """Delete a single file. Deleting a non-existent file is idempotent (success)."""
         params = {"base_path": base_path, "rel_path": rel_path}
-        self._request("DELETE", "/files/cfs", params=params)
+        self._request("DELETE", "/files", params=params)
 
     def close(self) -> None:
         """Close the HTTP session."""

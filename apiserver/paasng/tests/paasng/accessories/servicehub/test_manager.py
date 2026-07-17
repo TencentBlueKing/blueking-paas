@@ -265,7 +265,7 @@ class TestSvcBindingPolicyManager:
             allocation_precedence_policies=allocation_precedence_policies,
         )
         mgr = SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID)
-        with pytest.raises(ValueError, match=r"The policy with the minimum priority*"):
+        with pytest.raises(ValueError, match=r"exactly one policy with empty matcher"):
             mgr.save_comb_cfg(cfg)
 
     def test_should_fail_when_save_invalid_plan_id(self, service_obj, uniform_policy_config):

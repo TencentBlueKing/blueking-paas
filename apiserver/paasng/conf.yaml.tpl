@@ -909,20 +909,23 @@ DEV_SANDBOX_CLUSTER: ""
 # 存放 sandbox daemon 二进制的 key
 # AGENT_SANDBOX_DAEMON_KEY: "sandbox/daemon"
 
-# ---- Agent Sandbox 共享存储（CFS + CSI inline 方式）----
+# ---- Agent Sandbox 共享存储（CSI inline 方式）----
 
-# 是否启用 Agent Sandbox 共享卷功能，未配置关键字段（FSID/HOST）时保持关闭
+# 是否启用 Agent Sandbox 共享卷功能，未正确配置 CSI driver / volumeAttributes 时保持关闭
 # AGENT_SANDBOX_VOLUME_ENABLED: false
-# CSI driver 名称，默认腾讯云 TKE 的 CFS 驱动
-# AGENT_SANDBOX_CFS_DRIVER: "com.tencent.cloud.csi.cfs"
-# CFS 文件系统 ID
-# AGENT_SANDBOX_CFS_FSID: ""
-# CFS 挂载目标地址
-# AGENT_SANDBOX_CFS_HOST: ""
-# CFS 根路径
-# AGENT_SANDBOX_CFS_PATH: "/"
-# CFS 协议版本
-# AGENT_SANDBOX_CFS_VERS: "3"
+# CSI driver 名称，默认腾讯云 TKE 的 CFS 驱动，可替换为其他 RWX CSI driver（如 NFS、CephFS）
+# AGENT_SANDBOX_VOLUME_CSI_DRIVER: "com.tencent.cloud.csi.cfs"
+# CSI volumeAttributes，原样透传给 K8s，键值由具体 CSI driver 决定
+# CFS 示例:
+# AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES:
+#   fsid: ""
+#   host: ""
+#   path: "/"
+#   vers: "3"
+# NFS 示例:
+# AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES:
+#   server: "10.0.0.1"
+#   share: "/data"
 
 # 沙箱容器内不允许用户挂载共享卷的路径前缀黑名单，防止覆盖 daemon 或基础工具链
 # AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES:

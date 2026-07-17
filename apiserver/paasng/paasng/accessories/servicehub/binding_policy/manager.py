@@ -124,16 +124,23 @@ class SvcBindingPolicyManager:
 
         :param policies: A list of precedence policies.
         """
-        # Validate: 最低优先级的规则必须为空 matcher（兜底规则），其余规则必须非空
+        # Validate: priority 唯一, 空 matcher（兜底）有且仅有一条且优先级最低
+        priorities = [p.priority for p in policies]
+        if len(priorities) != len(set(priorities)):
+            raise ValueError("All policies must have unique priorities.")
+
+        empty_matcher_policies = [p for p in policies if not p.matcher]
+        if len(empty_matcher_policies) != 1:
+            raise ValueError(
+                f"Must have exactly one policy with empty matcher (fallback), but got {len(empty_matcher_policies)}."
+            )
+
         min_priority_policy = min(policies, key=lambda p: p.priority)
-        if min_priority_policy.matcher != {}:
-            raise ValueError("The policy with the minimum priority must have an empty matcher (always_match).")
-        for policy in policies:
-            if policy is not min_priority_policy and not policy.matcher:
-                raise ValueError(
-                    f"Only the minimum priority policy can have an empty matcher, "
-                    f"but policy with priority {policy.priority} does."
-                )
+        if empty_matcher_policies[0] is not min_priority_policy:
+            raise ValueError(
+                f"The fallback policy (empty matcher) must have the minimum priority, "
+                f"got priority {empty_matcher_policies[0].priority}."
+            )
 
         ServiceAllocationPolicy.objects.set_type_rule_based(self.service, self.tenant_id)
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()

@@ -10,9 +10,11 @@ def populate_matcher_from_cond_fields(apps, schema_editor):
         if not policy.cond_type or policy.cond_type == "always_match" or not policy.cond_data:
             policy.matcher = {}
         else:
-            # cond_data 形如 {"region_in": ["xxx"]} / {"cluster_in": ["xxx"]} / {"usage_in": ["xxx"]}
+            # 将旧 cond_data (如 {"regions": ["xxx"]} / {"cluster_names": ["xxx"]} / {"usages": ["xxx"]})
+            # 转换为 matcher: {cond_type: values}, 因旧版 key 不统一，取第一个 value 即可
             policy.matcher = {policy.cond_type: list(policy.cond_data.values())[0]}
         policy.save(update_fields=["matcher"])
+
 
 class Migration(migrations.Migration):
 

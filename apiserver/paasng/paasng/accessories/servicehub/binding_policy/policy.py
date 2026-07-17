@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any, Dict, List, Self
+from typing import Any, Self
 
 from attrs import define
 
@@ -82,7 +82,12 @@ class EnvSpecificBindingPolicy(BindingPolicy):
 class BindingPrecedencePolicy:
     """基于 matcher dict 的规则分配策略.
 
-    :param matcher: key=条件类型值, value=匹配值列表. 例如:
+    不变量:
+    - 空 matcher {} 表示无条件命中的兜底规则，有且仅有一条，且优先级最低
+    - 非兜底规则必须显式声明 matcher, 且仅含单个条件 key (当前不支持多条件组合)
+    - matcher key 必须属于 PrecedencePolicyCondType 枚举值，非法 key 会在 match() 时抛 ValueError
+
+    :param matcher: 匹配条件, 单 key dict 或空 dict, 例如:
         - {"region_in": ["default", "tencent"]}
         - {"cluster_in": ["devcloud-gz"]}
         - {"usage_in": ["ai_agent"]}
@@ -91,7 +96,7 @@ class BindingPrecedencePolicy:
     :param binding_policy: 匹配后使用的 plan 分配策略
     """
 
-    matcher: Dict[str, List[str]]
+    matcher: dict[str, list[str]]
     binding_policy: BindingPolicy
 
     def get_plan_ids(self, env: ModuleEnvironment) -> list[str]:
@@ -102,21 +107,24 @@ class BindingPrecedencePolicy:
         if not self.matcher:
             return True
 
-        for cond_type_str, values in self.matcher.items():
-            cond_type = PrecedencePolicyCondType(cond_type_str)
-            if cond_type == PrecedencePolicyCondType.REGION_IN:
-                if env.application.region not in values:
-                    return False
-            elif cond_type == PrecedencePolicyCondType.CLUSTER_IN:
-                cluster_name = EnvClusterService(env).get_cluster_name()
-                if cluster_name not in values:
-                    return False
-            elif cond_type == PrecedencePolicyCondType.USAGE_IN:
-                usage = get_env_usage(env)
-                if usage is None or usage not in values:
-                    return False
-            else:
-                raise ValueError(f"Unknown condition type: {cond_type_str}")
+        if len(self.matcher) != 1:
+            raise ValueError(f"Expected exactly one matcher condition, got {len(self.matcher)}")
+
+        ((cond_type_str, values),) = self.matcher.items()
+        cond_type = PrecedencePolicyCondType(cond_type_str)
+        if cond_type == PrecedencePolicyCondType.REGION_IN:
+            if env.application.region not in values:
+                return False
+        elif cond_type == PrecedencePolicyCondType.CLUSTER_IN:
+            cluster_name = EnvClusterService(env).get_cluster_name()
+            if cluster_name not in values:
+                return False
+        elif cond_type == PrecedencePolicyCondType.USAGE_IN:
+            usage = get_env_usage(env)
+            if usage is None or usage not in values:
+                return False
+        else:
+            raise ValueError(f"Unknown condition type: {cond_type_str}")
         return True
 
 

@@ -32,9 +32,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
 from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServiceError
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.agent_sandbox.artifact import archive_volume_file, build_download_url, delete_volume_artifact
@@ -157,7 +155,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                            CFS
     """
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     def _get_volume(self, volume_id: str) -> Volume:
         """校验 app 归属并返回未删除的 Volume。

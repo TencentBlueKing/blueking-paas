@@ -103,16 +103,22 @@ def db_distributed_lock(lock_name: str):
         with connection.cursor() as cursor:
             cursor.execute("SELECT GET_LOCK(%s, 0)", [lock_name])
             acquired = bool(cursor.fetchone()[0])
-        if acquired:
-            logger.info("Distributed lock '%s' acquired.", lock_name)
-        else:
-            logger.info("Distributed lock '%s' is held by another instance, skip.", lock_name)
-        yield acquired
     except Exception:
         logger.exception("Error while acquiring distributed lock '%s'", lock_name)
-        yield False
+        acquired = False
+
+    logger.info(
+        "Distributed lock '%s' %s.",
+        lock_name,
+        "acquired" if acquired else "is held by another instance, skip",
+    )
+    try:
+        yield acquired
     finally:
         if acquired:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT RELEASE_LOCK(%s)", [lock_name])
-            logger.info("Distributed lock '%s' released.", lock_name)
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT RELEASE_LOCK(%s)", [lock_name])
+                logger.info("Distributed lock '%s' released.", lock_name)
+            except Exception:
+                logger.exception("Error releasing distributed lock '%s'", lock_name)

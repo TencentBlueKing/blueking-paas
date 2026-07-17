@@ -30,6 +30,7 @@ def extend_quota(
     extra_size_bytes: int,
     max_allowed_bytes: int,
     required_usage_rate: int | None = None,
+    pre_fetched_quota=None,
 ) -> int:
     """
     :param extra_size_bytes: extra bytes to be extended
@@ -37,16 +38,17 @@ def extend_quota(
         desired_max_size exceeds the limits.
     :param required_usage_rate: the required usage rate, if given, the current usage max greater
         than this value or ExtendQuotaUsageTooLow will be raised
+    :param pre_fetched_quota: optional pre-fetched RepoQuota to avoid redundant HTTP call
     :return: new max_size in bytes
 
     :raises: NoNeedToExtendQuota / ExtendQuotaUsageTooLow / ExtendQuotaMaxSizeExceeded
     """
-    quota = manager.get_repo_quota(bucket)
+    quota = pre_fetched_quota or manager.get_repo_quota(bucket)
 
     if math.isinf(quota.max_size):
         raise NoNeedToExtendQuota
 
-    if required_usage_rate and quota.quota_used_rate < required_usage_rate:
+    if required_usage_rate is not None and quota.quota_used_rate < required_usage_rate:
         logger.warning(f"unable to extend quota for {bucket}: usage too low = {quota.quota_used_rate}")
         raise ExtendQuotaUsageTooLow(f"current usage is too low: {quota.quota_used_rate} < {required_usage_rate}")
 

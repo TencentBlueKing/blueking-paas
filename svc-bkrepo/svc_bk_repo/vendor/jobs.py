@@ -36,6 +36,12 @@ def auto_extend_bkrepo_quota():
         logger.info("BKRepo auto-expand is globally disabled, skip.")
         return
 
+    # 阈值 0 不进行扩容
+    threshold = settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD
+    if threshold is not None and threshold < 1:
+        logger.warning("BKREPO_AUTO_EXPAND_USAGE_THRESHOLD=%d < 1, skip to avoid unconditional expand.", threshold)
+        return
+
     with db_distributed_lock("auto_extend_bkrepo_quota") as acquired:
         if not acquired:
             return
@@ -55,7 +61,8 @@ def auto_extend_bkrepo_quota():
                         bucket=bucket_name,
                         extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
                         max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
-                        required_usage_rate=settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD,
+                        required_usage_rate=threshold,
+                        pre_fetched_quota=old_quota,
                     )
                     AutoExpandEvent.objects.create(
                         instance=instance,
@@ -64,7 +71,7 @@ def auto_extend_bkrepo_quota():
                         new_size=new_size,
                         step_size=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
                     )
-                    logger.warning(
+                    logger.info(
                         "Auto-extended quota for instance=%s bucket=%s: %d -> %d bytes (+%d bytes)",
                         instance.uuid,
                         bucket_name,

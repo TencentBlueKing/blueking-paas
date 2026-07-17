@@ -20,7 +20,3 @@ from django.apps import AppConfig
 
 class MonitoringConfig(AppConfig):
     name = "svc_bk_repo.monitoring"
-
-    def ready(self):
-        # 注册 signal handler
-        from svc_bk_repo.monitoring import signals  # noqa: F401

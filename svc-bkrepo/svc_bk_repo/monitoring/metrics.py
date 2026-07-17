@@ -17,25 +17,19 @@
 
 import datetime
 
-from prometheus_client import Counter
 from prometheus_client.core import CollectorRegistry, GaugeMetricFamily
 
 global_registry = CollectorRegistry()
 
-# 自动扩容上报监控
-auto_expand_counter = Counter(
-    "bkrepo_auto_expand_events_total",
-    "Total number of auto-expand events, incremented on each successful expand",
-    ["service_id", "instance_id", "repo_name"],
-)
-
 
 class BKRepoMetricsCollector:
     def collect(self):
-        from svc_bk_repo.monitoring.models import RepoQuotaStatistics
+        from svc_bk_repo.monitoring.models import AutoExpandEvent, RepoQuotaStatistics
 
         dt = datetime.datetime.now()
         timestamp = dt.timestamp()
+
+        # bkrepo 配额使用率
         quota_used_rate_metric = GaugeMetricFamily(
             "bkrepo_quota_used_rate_metrics",
             "bkrepo Quota Used Rate Metrics",
@@ -51,8 +45,25 @@ class BKRepoMetricsCollector:
                 repo_quota_stat.quota_used_rate,
                 timestamp=timestamp,
             )
-
         yield quota_used_rate_metric
+
+        # 自动扩容事件计数: 从 DB 聚合
+        auto_expand_metric = GaugeMetricFamily(
+            "bkrepo_auto_expand_events_total",
+            "Total number of auto-expand events",
+            labels=["service_id", "instance_id", "repo_name"],
+        )
+        for event in AutoExpandEvent.objects.all():
+            auto_expand_metric.add_metric(
+                [
+                    str(event.instance.service_id),
+                    str(event.instance_id),
+                    event.repo_name,
+                ],
+                1,
+                timestamp=timestamp,
+            )
+        yield auto_expand_metric
 
 
 global_registry.register(BKRepoMetricsCollector())

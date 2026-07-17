@@ -60,7 +60,7 @@ def archive_volume_file(volume: Volume, rel_path: str, client: ResidentDaemonCli
     3. Otherwise sign a presigned UPLOAD url, ask the daemon to archive, and upsert the record.
 
     :raises SandboxFileNotFound: When the file does not exist (propagated from stat).
-    :raises SandboxFileTooLarge: When the file exceeds AGENT_SANDBOX_ARTIFACT_MAX_SIZE.
+    :raises SandboxFileTooLarge: When the file exceeds deamon limits
     :raises SandboxArchiveFailed: When the daemon fails to archive.
     """
     client = client or get_resident_daemon_client()

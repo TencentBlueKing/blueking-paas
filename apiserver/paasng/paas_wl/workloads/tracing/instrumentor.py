@@ -29,7 +29,7 @@ from opentelemetry.trace import Span, Status, StatusCode
 from requests.models import Response
 
 
-def requests_callback(span: Span, response: Optional[Response]):
+def requests_callback(span: Span, request, response: Optional[Response]):
     """
     处理蓝鲸标准协议响应
     """
@@ -38,7 +38,9 @@ def requests_callback(span: Span, response: Optional[Response]):
         return
 
     # 并非所有返回内容都是 json 格式的, 因此需要根据返回头进行判断, 避免处理二进制格式的内容
-    if response.headers.get("Content-Type") != "application/json":
+    # 使用 split 分离 media type 和参数 (如 charset), 兼容 "application/json; charset=utf-8" 等变体
+    content_type = response.headers.get("Content-Type", "")
+    if content_type.split(";")[0].strip() != "application/json":
         return
 
     try:

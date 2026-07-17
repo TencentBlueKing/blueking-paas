@@ -154,7 +154,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                            CFS
     """
 
-    permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
+    permission_classes = [IsAuthenticated]
 
     def _get_volume(self, volume_id: str) -> Volume:
         """校验 app 归属并返回未删除的 Volume。

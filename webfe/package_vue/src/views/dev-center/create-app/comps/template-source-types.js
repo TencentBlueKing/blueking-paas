@@ -1,0 +1,5 @@
+export const TEMPLATE_SOURCE_TYPES = {
+  BK_DEVOPS: 1,
+  BK_PLUGIN: 3,
+  EMPTY_TEMPLATE: 4,
+};

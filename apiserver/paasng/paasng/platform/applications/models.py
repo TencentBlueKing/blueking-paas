@@ -35,7 +35,13 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AppStatus
+from paasng.platform.applications.constants import (
+    AppFeatureFlag,
+    ApplicationRole,
+    ApplicationType,
+    AppStatus,
+    DeployPolicy,
+)
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
@@ -282,6 +288,9 @@ class UserApplicationFilter:
         if just_leave_app_codes := mgr.list():
             applications = applications.exclude(code__in=just_leave_app_codes)
 
+        # 排除需要隐藏的 AI Agent 特殊外链应用 (is_ai_agent_app=True 且 type=engineless_app 的组合)
+        applications = applications.exclude(is_ai_agent_app=True, type=ApplicationType.ENGINELESS_APP.value)
+
         return BaseApplicationFilter.filter_queryset(
             applications,
             regions=regions,
@@ -354,10 +363,11 @@ class Application(OwnerTimestampedModel):
         verbose_name="是否为 AI Agent 插件应用",
         default=False,
     )
-    is_isolated = models.BooleanField(
-        verbose_name="是否隔离部署",
-        default=False,
-        help_text="应用需部署到网络/容器隔离环境（如 gvisor 集群）",
+    deploy_policy = models.CharField(
+        verbose_name="部署策略",
+        max_length=32,
+        default=DeployPolicy.DEFAULT.value,
+        help_text="应用部署策略（隔离性/安全性维度），如 isolated 表示需部署到网络/容器隔离环境（如 gvisor 集群）",
     )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 

@@ -103,43 +103,6 @@
               ></bk-input>
             </bk-form-item>
           </template>
-          <!-- 镜像仓库不需要展示构建方式 -->
-          <bk-form-item
-            :required="true"
-            error-display-type="normal"
-            ext-cls="form-item-cls mt20"
-            :label="$t('构建方式')"
-            v-if="isBkDefaultCode && formData.buildMethod !== 'image'"
-          >
-            <div class="mt5">
-              <bk-radio-group
-                v-model="formData.buildMethod"
-                class="construction-manner"
-                @change="handleChangeBuildMethod"
-              >
-                <bk-radio :value="'buildpack'">
-                  {{ $t('蓝鲸 Buildpack') }}
-                  <span
-                    class="tips"
-                    @click.stop
-                  >
-                    <bk-icon type="info-circle" />
-                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
-                  </span>
-                </bk-radio>
-                <bk-radio :value="'dockerfile'">
-                  Dockerfile
-                  <span
-                    class="tips"
-                    @click.stop
-                  >
-                    <bk-icon type="info-circle" />
-                    {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
-                  </span>
-                </bk-radio>
-              </bk-radio-group>
-            </div>
-          </bk-form-item>
         </bk-form>
 
         <bk-steps
@@ -225,7 +188,6 @@
             <!-- 代码仓库 -->
             <section v-if="isBkDefaultCode">
               <bk-form
-                v-if="formData.buildMethod === 'buildpack'"
                 ref="formModuleRef"
                 :model="formData"
                 :rules="rules"
@@ -240,24 +202,13 @@
                   ext-cls="form-item-cls"
                   :label="$t('模板来源')"
                 >
-                  <div class="flex-row align-items-center tab-container mb20">
-                    <div
-                      class="tab-item template"
-                      :class="[{ active: activeIndex === 1 }]"
-                      @click="handleCodeTypeChange(1)"
-                    >
-                      {{ $t('蓝鲸开发框架') }}
-                    </div>
-                    <div
-                      v-if="userFeature.BK_PLUGIN_TYPED_APPLICATION"
-                      class="tab-item template"
-                      :class="[{ active: activeIndex === 3 }]"
-                      @click="handleCodeTypeChange(3)"
-                    >
-                      {{ $t('蓝鲸插件') }}
-                    </div>
-                  </div>
+                  <TemplateSourceTabs
+                    :value="activeIndex"
+                    :show-plugin="userFeature.BK_PLUGIN_TYPED_APPLICATION"
+                    @change="handleCodeTypeChange"
+                  />
                 </bk-form-item>
+                <!-- 蓝鲸开发框架 -->
                 <section v-show="isBkDevOps">
                   <bk-form-item
                     error-display-type="normal"
@@ -295,6 +246,7 @@
                     </bk-radio-group>
                   </div>
                 </section>
+                <!-- 蓝鲸插件 -->
                 <div
                   v-show="isBkPlugin"
                   class="plugin-container"
@@ -315,6 +267,14 @@
                       </li>
                     </bk-radio-group>
                   </ul>
+                </div>
+                <!-- 空模板 -->
+                <div
+                  v-show="isEmptyTemplate"
+                  class="empty-template-container"
+                >
+                  <bk-icon type="info-circle" />
+                  {{ $t('空模版：从零开始创建应用，适合需要完全自定义项目结构的场景。') }}
                 </div>
               </bk-form>
             </section>
@@ -413,7 +373,11 @@
                       slot="tip"
                       class="g-tip"
                     >
-                      {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
+                      {{
+                        $t('将自动创建该私有仓库并完成模板代码初始化{t}，当前用户默认为仓库管理员。', {
+                          t: isEmptyTemplate ? $t('（默认使用 Dockerfile 构建，创建成功后可修改）') : '',
+                        })
+                      }}
                     </p>
                   </bk-form-item>
                   <!-- 未授权提示 -->
@@ -441,6 +405,33 @@
                     @change="changeSourceControl"
                   />
                 </bk-form-item>
+
+                <!-- 已有代码仓库-构建方式 -->
+                <bk-form-item
+                  :required="true"
+                  error-display-type="normal"
+                  ext-cls="form-item-cls mt20 mb20"
+                  :label="$t('构建方式')"
+                >
+                  <div class="mt5">
+                    <bk-radio-group
+                      v-model="formData.buildMethod"
+                      @change="handleChangeBuildMethod"
+                    >
+                      <bk-radio :value="'buildpack'">
+                        {{ $t('蓝鲸 Buildpack') }}
+                      </bk-radio>
+                      <bk-radio
+                        :value="'dockerfile'"
+                        :disabled="!isDockerfileAllowed"
+                        v-bk-tooltips="dockerfileDisabledTips"
+                      >
+                        Dockerfile
+                      </bk-radio>
+                    </bk-radio-group>
+                  </div>
+                </bk-form-item>
+
                 <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
                   <git-extend
                     ref="extend"
@@ -770,6 +761,8 @@ import PlatformCodeRepositoryForm from './comps/platform-code-repository-form.vu
 import CodeSourceSelector from './comps/code-source-selector.vue';
 import UnauthorizedTips from './comps/unauthorized-tips.vue';
 import ReservedPrefixTips from './comps/reserved-prefix-tips.vue';
+import TemplateSourceTabs from './comps/template-source-tabs.vue';
+import { TEMPLATE_SOURCE_TYPES } from './comps/template-source-types';
 
 export default {
   components: {
@@ -785,6 +778,7 @@ export default {
     CodeSourceSelector,
     UnauthorizedTips,
     ReservedPrefixTips,
+    TemplateSourceTabs,
   },
   mixins: [sidebarDiffMixin],
   props: {
@@ -991,7 +985,7 @@ export default {
         },
       ],
       curCodeSource: 'default',
-      activeIndex: 1,
+      activeIndex: TEMPLATE_SOURCE_TYPES.BK_DEVOPS,
       isShowAdvancedOptions: false,
       pluginTmpls: [],
       curPluginTemplate: '',
@@ -1042,11 +1036,15 @@ export default {
     },
     // 蓝鲸插件
     isBkPlugin() {
-      return this.activeIndex === 3;
+      return this.activeIndex === TEMPLATE_SOURCE_TYPES.BK_PLUGIN;
+    },
+    // 空模板
+    isEmptyTemplate() {
+      return this.activeIndex === TEMPLATE_SOURCE_TYPES.EMPTY_TEMPLATE;
     },
     // 蓝鲸开发
     isBkDevOps() {
-      return this.activeIndex === 1;
+      return this.activeIndex === TEMPLATE_SOURCE_TYPES.BK_DEVOPS;
     },
     curExtendConfig() {
       return this.gitExtendConfig[this.sourceControlTypeItem];
@@ -1077,16 +1075,11 @@ export default {
         NodeJS: 'package.json',
         Go: 'go.mod',
       };
-      // Dockerfile 构建方式直接返回固定文件
-      if (this.isDockerfile) {
-        return [{ name: 'requirements.txt' }];
-      }
       // 获取当前语言类型
-      const currentLanguage = this.isBkPlugin
-        ? this.pluginTmpls.find((v) => v.name === this.curPluginTemplate)?.language
-        : this.buttonActive || 'Python';
+      const currentLanguage =
+        this.getCurrentTemplate()?.language || (this.isEmptyTemplate ? 'Python' : this.buttonActive) || 'Python';
 
-      return [{ name: languageFileMap[currentLanguage] }];
+      return [{ name: languageFileMap[currentLanguage] || languageFileMap.Python }];
     },
     // 创建应用禁用 tips
     disableCreateTips() {
@@ -1106,6 +1099,29 @@ export default {
     // 是否为平台自动创建
     isCreatedByPlatform() {
       return this.codeRepositoryConfig.type === 'platform';
+    },
+    // 当前模板支持的构建方式类型
+    supportedRuntimeTypes() {
+      if (this.isEmptyTemplate) {
+        return ['dockerfile'];
+      }
+      const currentTemplate = this.getCurrentTemplate();
+      if (currentTemplate?.supported_runtime_types) {
+        return currentTemplate.supported_runtime_types;
+      }
+      return ['buildpack'];
+    },
+    // 判断是否允许选择 Dockerfile 构建方式
+    isDockerfileAllowed() {
+      return this.supportedRuntimeTypes.includes('dockerfile');
+    },
+    dockerfileDisabledTips() {
+      const templateDisplayName = this.getCurrentTemplate()?.display_name || this.$t('当前模板');
+      return {
+        content: `${templateDisplayName}${this.$t('暂不支持使用 Dockerfile 构建')}`,
+        disabled: this.isDockerfileAllowed,
+        placement: 'top',
+      };
     },
   },
   watch: {
@@ -1155,6 +1171,12 @@ export default {
     },
     'platformFeature.REGION_DISPLAY'() {
       this.getPluginTmpls();
+    },
+    supportedRuntimeTypes: {
+      handler(value) {
+        this.syncBuildMethodWithSupportedRuntimeTypes(value);
+      },
+      immediate: true,
     },
   },
   mounted() {
@@ -1237,6 +1259,43 @@ export default {
         });
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    // 获取当前选中的模板信息（供 computed 使用）
+    getCurrentTemplate() {
+      if (this.isEmptyTemplate) {
+        return null;
+      }
+      // 优先从插件模板中查找
+      if (this.isBkPlugin && this.curPluginTemplate) {
+        return this.pluginTmpls.find((v) => v.name === this.curPluginTemplate);
+      }
+      // 从语言模板中查找
+      if (this.languagesList && this.formData.sourceInitTemplate) {
+        return this.languagesList.find((item) => item.name === this.formData.sourceInitTemplate);
+      }
+      return null;
+    },
+
+    getSourceInitTemplate() {
+      if (this.isEmptyTemplate) {
+        return '';
+      }
+      return this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate;
+    },
+
+    // 当前模板不支持已选构建方式时，自动回退到 Buildpack
+    syncBuildMethodWithSupportedRuntimeTypes(runtimeTypes = this.supportedRuntimeTypes) {
+      if (this.formData.sourceOrigin !== 'soundCode') {
+        return;
+      }
+      if (this.isEmptyTemplate) {
+        this.formData.buildMethod = 'dockerfile';
+        return;
+      }
+      if (!runtimeTypes.includes(this.formData.buildMethod)) {
+        this.formData.buildMethod = 'buildpack';
       }
     },
 
@@ -1475,7 +1534,7 @@ export default {
         // 租户模式
         ...(this.isShowTenant && { app_tenant_mode: this.formData.tenantMode }),
         source_config: {
-          source_init_template: this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate,
+          source_init_template: this.getSourceInitTemplate(),
           source_control_type: this.sourceControlTypeItem,
           ...this.getRepositoryParams(),
           source_origin: this.sourceOrigin,
@@ -1501,7 +1560,9 @@ export default {
           dockerfile_path: this.formData.dockerfilePath || null,
           docker_build_args: dockerBuild,
         };
-        delete params.source_config.source_init_template;
+        if (!this.isEmptyTemplate) {
+          delete params.source_config.source_init_template;
+        }
       }
 
       // 仅镜像
@@ -1740,7 +1801,7 @@ export default {
     // 切换应用类型
     handleSwitchAppType(codeSource) {
       this.codeSourceId = codeSource;
-      this.activeIndex = 1;
+      this.activeIndex = TEMPLATE_SOURCE_TYPES.BK_DEVOPS;
       this.curStep = 1;
       this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;
@@ -1750,10 +1811,10 @@ export default {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {
           this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
-          this.handleCodeTypeChange(2);
+          this.handleCodeTypeChange(this.GLOBAL.APP_TYPES.LESSCODE_APP);
         } else if (codeSource === 'default') {
           // 普通应用
-          this.handleCodeTypeChange(1);
+          this.handleCodeTypeChange(TEMPLATE_SOURCE_TYPES.BK_DEVOPS);
         } else if (codeSource === 'image') {
           this.curCodeSource = 'default';
           this.formData.sourceOrigin = codeSource;
@@ -1767,6 +1828,16 @@ export default {
     // 模版来源切换
     handleCodeTypeChange(payload) {
       this.activeIndex = payload;
+      if (this.isEmptyTemplate) {
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
+        this.formData.sourceInitTemplate = '';
+        this.formData.buildMethod = 'dockerfile';
+        return;
+      }
+      // 切回蓝鲸开发框架时，恢复默认选中项（解决来回切换后 select 空置的问题）
+      if (this.isBkDevOps && this.languagesList?.length > 0 && !this.formData.sourceInitTemplate) {
+        this.formData.sourceInitTemplate = this.languagesList[0].name;
+      }
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP || payload === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         this.sourceOrigin = payload;
       } else {

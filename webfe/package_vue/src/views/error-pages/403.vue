@@ -28,9 +28,16 @@
           :theme="'primary'"
           :title="$t('申请成为开发者')"
           class="mr10"
-          @click="toApplication"
+          @click="toApplication(applyUrl)"
         >
           {{ $t('申请成为开发者') }}
+        </bk-button>
+        <bk-button
+          v-if="adminApplyUrl"
+          :theme="'primary'"
+          @click="toApplication(adminApplyUrl)"
+        >
+          {{ $t('申请成为管理员') }}
         </bk-button>
       </div>
     </div>
@@ -38,6 +45,7 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
 
 export default {
   data() {
@@ -46,23 +54,28 @@ export default {
     };
   },
   computed: {
+    ...mapState(['applyUrls', 'errorDetail']),
+    ...mapState('plugin', ['pluginApplyUrl']),
     isPlugin() {
       return this.$route.meta.plugin;
     },
     applyUrl() {
       if (this.isPlugin) {
-        return this.$store.state.plugin.pluginApplyUrl;
+        return this.pluginApplyUrl;
       }
-      return this.$store.state.applyUrl;
+      return this.applyUrls?.apply_url_for_dev;
+    },
+    adminApplyUrl() {
+      if (this.isPlugin) {
+        return '';
+      }
+      return this.applyUrls?.apply_url_for_admin;
     },
     id() {
       return this.$route.params.id;
     },
     pluginTypeId() {
       return this.$route.params.pluginTypeId;
-    },
-    errorDetail() {
-      return this.$store.state.errorDetail;
     },
   },
   async created() {
@@ -78,8 +91,8 @@ export default {
     this.isPermission(appInfo);
   },
   methods: {
-    toApplication() {
-      window.open(this.applyUrl, '_blank');
+    toApplication(url) {
+      window.open(url, '_blank');
     },
     // 应用是否有权限
     isPermission(data) {

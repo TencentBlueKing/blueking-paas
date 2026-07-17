@@ -19,8 +19,8 @@
 将 AI Agent 应用的 RabbitMQ 绑定从旧集群迁移到新集群.
 
 命令效果:
-    1. 解绑旧的 MQ 绑定 (仅删 DB 记录, 远程实例保留运行, 不影响线上)
-    2. 绑定新的目标方案并创建全新的 MQ 实例 (使用非幂等端点创建, 避免远程因 engine_app_name 重复而拒绝不同方案的实例).
+    1. 创建新绑定并 provision 新集群 MQ 实例.
+    2. 确认新实例可用后, 删除旧的 DB 绑定记录 (远端实例保留运行, 不影响线上).
     3. 输出新旧实例 UUID 及凭证信息.
 
 迁移后运维操作:
@@ -46,6 +46,7 @@
 """
 
 import json
+import logging
 import uuid
 
 from django.core.management.base import BaseCommand, CommandError
@@ -57,6 +58,8 @@ from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachmen
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
+
+logger = logging.getLogger("commands")
 
 SERVICE_NAME = "rabbitmq"
 
@@ -84,10 +87,10 @@ class Command(BaseCommand):
             dest="target_plan_id",
             type=str,
             required=False,
-            help="Optional. Explicit New plan UUID. If not provided, auto-select via binding policy.",
+            help="Optional. Explicit new plan UUID. If not provided, auto-select via binding policy.",
         )
 
-    def handle(self, app_code: str, module_name: str, environment: str, target_plan_id: str | None, **options):
+    def handle(self, app_code: str, module_name: str, environment: str, target_plan_id: str | None, **options):  # noqa: PLR0915
         self.stdout.write(f"Starting MQ migration for {app_code}/{module_name}/{environment}")
         application, module, env, engine_app, service_obj = self._resolve_context(app_code, module_name, environment)
 
@@ -113,43 +116,87 @@ class Command(BaseCommand):
         }
 
         # 选择目标方案
-        target_plan = self._resolve_target_plan(service_obj, env, target_plan_id, old_plan)
+        target_plan = self._resolve_target_plan(service_obj, env, target_plan_id)
 
-        # 保存旧绑定数据, 供失败时回滚使用
-        # 解绑旧的 MQ 实例 (仅删 DB 记录, 不回收远程资源)
+        if str(old_plan.uuid) == target_plan.uuid:
+            raise CommandError(
+                f"The current plan ({old_plan.name}) is already the target plan; no migration is required."
+            )
+
+        self.stdout.write(f"Target plan: {target_plan.name} ({target_plan.uuid})")
+
+        # 唯一约束 (service_id, engine_app)，必须先删旧再建新
+        # delete() 后 pk=None, 失败时 save() 即可 INSERT 回滚, 无需手动维护字段列表
         old_db_obj = old_rel.db_obj
         old_db_obj.delete()
+        self.stdout.write("Old binding removed, creating new binding...")
 
-        # 绑定新的目标方案
-        RemoteServiceEngineAppAttachment.objects.create(
-            engine_app=engine_app,
-            service_id=service_obj.uuid,
-            plan_id=target_plan.uuid,
-            tenant_id=env.tenant_id,
-        )
+        new_attachment = None
+        try:
+            new_attachment = RemoteServiceEngineAppAttachment.objects.create(
+                engine_app=engine_app,
+                service_id=service_obj.uuid,
+                plan_id=target_plan.uuid,
+                credentials_enabled=old_db_obj.credentials_enabled,
+                region=old_db_obj.region,
+                owner=old_db_obj.owner,
+                tenant_id=env.tenant_id,
+            )
+        except Exception as e:  # noqa: BLE001
+            self._rollback_old_binding(old_db_obj)
+            raise CommandError(f"Failed to create new binding: {e}")
+
         new_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app, service_obj))
         if not new_rels:
+            new_attachment.delete()
+            self._rollback_old_binding(old_db_obj)
             raise CommandError("Failed to find newly created binding after attachment creation.")
         new_rel = new_rels[0]
+
+        # Provision 新实例
+        instance_id = None
         try:
-            self._provision_new_instance(new_rel)
+            instance_id = self._provision_new_instance(new_rel)
         except Exception as e:  # noqa: BLE001
-            # 回滚并报错：删除失败的新绑定，恢复旧绑定
-            new_rel.db_obj.delete()
-            old_db_obj.save()  # delete() 后 pk=None, save() 会 INSERT 新记录
+            new_attachment.delete()
+            self._rollback_old_binding(old_db_obj)
+            if instance_id:
+                self._try_delete_remote_instance(new_rel, instance_id)
             raise CommandError(f"Migration failed at provisioning stage: {e}")
 
-        new_instance = new_rel.get_instance()
-        new_info = {
-            "instance_uuid": new_instance.uuid,
-            "plan_name": target_plan.name,
-            "plan_uuid": target_plan.uuid,
-            "credentials": new_instance.credentials_insensitive,
-        }
+        # 获取新实例信息 (查询失败不影响迁移提交)
+        try:
+            new_instance = new_rel.get_instance()
+            new_credentials = new_instance.credentials_insensitive
+            instance_uuid = new_instance.uuid
+        except Exception as e:  # noqa: BLE001
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Provisioning succeeded (instance_id={instance_id}), but failed to retrieve credentials: {e}"
+                )
+            )
+            self.stdout.write(f"  [New] instance_id={instance_id}, plan={target_plan.name}")
+            self.stdout.write(f"  [Old] instance={old_info['instance_uuid']}, plan={old_info['plan_name']}")
+            self.stdout.write("")
+            self.stdout.write(
+                self.style.WARNING(
+                    "Migration partially completed. The new MQ instance has been created "
+                    "but credential retrieval failed. Re-deploy the app and verify env vars "
+                    "manually, then clean up the old instance."
+                )
+            )
+            raise CommandError(f"Migration completed but credential retrieval failed: {e}")
+
+        self.stdout.write(self.style.SUCCESS("Old binding removed, new binding active."))
 
         # 输出结果
-        self.stdout.write(f"App: {application.code} | Module: {module.name} | Env: {env.environment}")
-        self._print_result(old_info, new_info)
+        new_info = {
+            "instance_uuid": instance_uuid,
+            "plan_name": target_plan.name,
+            "plan_uuid": target_plan.uuid,
+            "credentials": new_credentials,
+        }
+        self._print_result(application.code, module.name, env.environment, old_info, new_info)
 
     def _resolve_context(self, app_code, module_name, environment):
         """解析并返回迁移所需的对象上下文"""
@@ -170,7 +217,6 @@ class Command(BaseCommand):
         env = module.get_envs(environment=AppEnvName(environment))
         engine_app = env.get_engine_app()
 
-        # 获取 RabbitMQ 服务
         try:
             service_obj = mixed_service_mgr.find_by_name(SERVICE_NAME)
         except ServiceObjNotFound:
@@ -178,55 +224,128 @@ class Command(BaseCommand):
 
         return application, module, env, engine_app, service_obj
 
-    def _resolve_target_plan(self, service_obj, env, target_plan_id, old_plan):
-        """选择目标方案"""
-        if target_plan_id:
-            target_plan = next((p for p in service_obj.get_plans(is_active=True) if p.uuid == target_plan_id), None)
-            if target_plan is None:
-                raise CommandError(f"Plan with id '{target_plan_id}' not found or is not active")
-        else:
-            plans = PlanSelector().list(service_obj, env)
-            if not plans:
-                raise CommandError("No available plan found; please specify one using --target-plan-id.")
-            if len(plans) > 1:
-                raise CommandError(
-                    f"Multiple available plans exist: {[p.name for p in plans]}; please specify one using --target-plan-id."
-                )
-            target_plan = plans[0]
+    def _resolve_target_plan(self, service_obj, env, target_plan_id):
+        """选择目标方案, 并校验租户与绑定策略兼容性.
 
-        if str(old_plan.uuid) == target_plan.uuid:
+        若指定 --target-plan-id, 限制为只在 PlanSelector 为该环境分配的可选方案中匹配,
+        并校验 plan 的 tenant_id 与 env 一致, 避免跨租户或策略外 plan.
+        """
+        # 先获取该环境下 binding policy 允许的全部 plan
+        allowed_plans = PlanSelector().list(service_obj, env)
+
+        if target_plan_id:
+            # 从允许的 plan 中匹配, 而非从全部 active plan 中选
+            target_plan = next((p for p in allowed_plans if p.uuid == target_plan_id), None)
+            if target_plan is None:
+                raise CommandError(
+                    f"Plan '{target_plan_id}' is not in the allowed plans for this environment "
+                    f"(binding policy result: {[p.name for p in allowed_plans]}). "
+                    "It may belong to a different tenant or is not authorized for this env."
+                )
+        else:
+            if not allowed_plans:
+                raise CommandError("No available plan found; please specify one using --target-plan-id.")
+            if len(allowed_plans) > 1:
+                raise CommandError(
+                    f"Multiple available plans exist: {[p.name for p in allowed_plans]}; "
+                    "please specify one using --target-plan-id."
+                )
+            target_plan = allowed_plans[0]
+
+        # 额外校验 tenant_id 一致 (PlanSelector 理论上已过滤, 此处作为安全兜底)
+        if target_plan.tenant_id != env.tenant_id:
             raise CommandError(
-                f"The current plan ({old_plan.name}) is already the target plan; no migration is required."
+                f"Plan '{target_plan.name}' tenant_id ({target_plan.tenant_id}) "
+                f"does not match env tenant_id ({env.tenant_id})."
             )
 
         return target_plan
 
-    def _provision_new_instance(self, new_rel):
-        """创建新 MQ 实例"""
-        # 复用 RemoteEngineAppInstanceRel.provision() 的核心流程, 但始终走非幂等端点 (不检查 supports_idempotent_provision)
-        # 避免远程因 engine_app_name 重复而拒绝不同方案的实例. 旧实例保留在远端, 不影响线上运行服务, 应用重新部署后新 MQ 生效.
+    def _rollback_old_binding(self, old_db_obj):
+        """回滚旧绑定. 若 save 失败则输出 CRITICAL 信息供人工恢复."""
+        try:
+            old_db_obj.save()
+            self.stdout.write("Rollback: old binding restored.")
+        except Exception:
+            logger.exception("CRITICAL: rollback failed, old binding lost!")
+            self.stdout.write(
+                self.style.ERROR(
+                    "CRITICAL: Failed to restore old binding! "
+                    f"Attrs: engine_app_id={old_db_obj.engine_app_id}, "
+                    f"service_id={old_db_obj.service_id}, "
+                    f"plan_id={old_db_obj.plan_id}, "
+                    f"service_instance_id={old_db_obj.service_instance_id}, "
+                    f"credentials_enabled={old_db_obj.credentials_enabled}, "
+                    f"region={old_db_obj.region}, "
+                    f"owner={old_db_obj.owner}, "
+                    f"tenant_id={old_db_obj.tenant_id}"
+                )
+            )
+
+    def _provision_new_instance(self, new_rel) -> str:
+        """创建新 MQ 实例, 返回 instance_id.
+
+        复用 RemoteEngineAppInstanceRel.provision() 的核心流程, 但始终走非幂等端点,
+        避免远程因 engine_app_name 重复而拒绝不同方案的实例.
+        """
+        logger.info("Provisioning new instance for %s/%s", new_rel.db_engine_app.name, new_rel.get_service().name)
+
         params = new_rel.render_params(new_rel.remote_config.provision_params_tmpl)
         instance_id = str(uuid.uuid4())
-        new_rel.remote_client.provision_instance(
-            str(new_rel.db_obj.service_id), str(new_rel.db_obj.plan_id), instance_id, params=params
-        )
-        new_rel.db_obj.service_instance_id = instance_id
-        new_rel.db_obj.save(update_fields=["service_instance_id"])
-        if new_rel.get_service().supports_inst_config():
-            new_rel.sync_instance_config()
 
-    def _print_result(self, old_info, new_info):
+        # 远端 POST 创建实例
+        try:
+            new_rel.remote_client.provision_instance(
+                str(new_rel.db_obj.service_id), str(new_rel.db_obj.plan_id), instance_id, params=params
+            )
+        except Exception:
+            logger.exception("Remote provision_instance POST failed for instance_id=%s", instance_id)
+            raise
+
+        # DB 写入
+        try:
+            new_rel.db_obj.service_instance_id = instance_id
+            new_rel.db_obj.save(update_fields=["service_instance_id"])
+        except Exception:
+            logger.exception("DB save failed after successful remote provision for instance_id=%s", instance_id)
+            # 远端已创建, DB 写失败 -> 尝试回收远端孤儿实例
+            self._try_delete_remote_instance(new_rel, instance_id)
+            raise
+
+        # 同步实例配置 (非关键路径, 失败仅 warn)
+        if new_rel.get_service().supports_inst_config():
+            try:
+                new_rel.sync_instance_config()
+            except Exception:  # noqa: BLE001
+                logger.warning("sync_instance_config failed for instance_id=%s, non-critical", instance_id)
+
+        logger.info("Provisioned new instance %s successfully", instance_id)
+        return instance_id
+
+    def _try_delete_remote_instance(self, rel, instance_id: str):
+        """尽力回收远端孤儿实例, 失败仅记录日志不影响主流程."""
+        try:
+            logger.warning("Attempting to clean up orphan remote instance %s", instance_id)
+            rel.remote_client.delete_instance(instance_id=instance_id)
+        except Exception:
+            logger.exception("Failed to delete orphan remote instance %s, manual cleanup required", instance_id)
+
+    def _print_result(self, app_code, module_name, environment, old_info, new_info):
         self.stdout.write("")
-        self.stdout.write("Old environment MQ:")
-        self.stdout.write(f"  Plan:  {old_info['plan_name']} ({old_info['plan_uuid']})")
-        self.stdout.write(f"  Instance: {old_info['instance_uuid']}")
-        self.stdout.write(f"  Credentials: {json.dumps(old_info['credentials'])}")
-        self.stdout.write("")
-        self.stdout.write("New environment MQ:")
-        self.stdout.write(f"  Plan:  {new_info['plan_name']} ({new_info['plan_uuid']})")
-        self.stdout.write(f"  Instance: {new_info['instance_uuid']}")
-        self.stdout.write(f"  Credentials: {json.dumps(new_info['credentials'])}")
-        self.stdout.write("")
+        self.stdout.write(f"  Application : {app_code}")
+        self.stdout.write(f"  Module      : {module_name}")
+        self.stdout.write(f"  Environment : {environment}")
+        self.stdout.write("-" * 40)
+        self.stdout.write("  [Old MQ]")
+        self.stdout.write(f"    Plan     : {old_info['plan_name']} ({old_info['plan_uuid']})")
+        self.stdout.write(f"    Instance : {old_info['instance_uuid']}")
+        self.stdout.write(f"    Creds    : {json.dumps(old_info['credentials'])}")
+        self.stdout.write("-" * 40)
+        self.stdout.write("  [New MQ]")
+        self.stdout.write(f"    Plan     : {new_info['plan_name']} ({new_info['plan_uuid']})")
+        self.stdout.write(f"    Instance : {new_info['instance_uuid']}")
+        self.stdout.write(f"    Creds    : {json.dumps(new_info['credentials'])}")
+        self.stdout.write("-" * 40)
         self.stdout.write(self.style.SUCCESS("Migration completed successfully"))
         self.stdout.write(
             self.style.WARNING(

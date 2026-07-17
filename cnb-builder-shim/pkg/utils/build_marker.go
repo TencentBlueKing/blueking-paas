@@ -38,6 +38,9 @@ import (
 // - /tmp/build-result-failed:     written only when the build failed (NOT used by probes).
 
 const (
+	// markerFileMode is the permission bits for marker files.
+	markerFileMode = 0o644
+
 	// BuildDoneMarker is the marker file indicating the build has completed (whether success or failure).
 	BuildDoneMarker = "/tmp/build-done"
 	// BuildResultSuccessMarker is the marker file indicating the build succeeded.
@@ -48,15 +51,15 @@ const (
 
 // WriteBuildDone writes the build-done marker file.
 func WriteBuildDone() error {
-	return os.WriteFile(BuildDoneMarker, []byte("done"), 0o644)
+	return os.WriteFile(BuildDoneMarker, []byte("done"), markerFileMode)
 }
 
 // WriteBuildResultSuccess writes the build-result-success marker file.
 func WriteBuildResultSuccess() error {
-	return os.WriteFile(BuildResultSuccessMarker, []byte("success"), 0o644)
+	return os.WriteFile(BuildResultSuccessMarker, []byte("success"), markerFileMode)
 }
 
 // WriteBuildResultFailed writes the build-result-failed marker file.
 func WriteBuildResultFailed() error {
-	return os.WriteFile(BuildResultFailedMarker, []byte("failed"), 0o644)
+	return os.WriteFile(BuildResultFailedMarker, []byte("failed"), markerFileMode)
 }

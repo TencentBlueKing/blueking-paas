@@ -64,9 +64,11 @@ func main() {
 	code := run(logger)
 
 	// Build debug: write markers and keep container alive before exit
-	if shouldKeepAlive() {
+	if duration, err := getExitDelay(); err != nil {
+		logger.Error(err, "Invalid exit-delay, keep-alive disabled")
+	} else if duration > 0 {
 		writeMarkers(logger, code)
-		preExit(logger)
+		preExit(logger, duration)
 	}
 	os.Exit(code)
 }
@@ -85,19 +87,18 @@ func run(logger logr.Logger) int {
 	return 0
 }
 
-func shouldKeepAlive() bool {
+// getExitDelay parses CNB_EXIT_DELAY and returns the sleep duration and any
+// parse error. Returns 0 when the flag is unset.
+func getExitDelay() (time.Duration, error) {
 	duration, err := time.ParseDuration(*exitDelay)
 	if err != nil {
-		return false
+		return 0, err
 	}
-	return duration > 0
+	return duration, nil
 }
 
 // writeMarkers writes the build-done marker and result markers based on exit code.
 func writeMarkers(logger logr.Logger, code int) {
-	if err := utils.WriteBuildDone(); err != nil {
-		logger.Error(err, "failed to write build-done marker")
-	}
 	if code == 0 {
 		if err := utils.WriteBuildResultSuccess(); err != nil {
 			logger.Error(err, "failed to write build-result-success marker")
@@ -106,6 +107,9 @@ func writeMarkers(logger logr.Logger, code int) {
 		if err := utils.WriteBuildResultFailed(); err != nil {
 			logger.Error(err, "failed to write build-result-failed marker")
 		}
+	}
+	if err := utils.WriteBuildDone(); err != nil {
+		logger.Error(err, "failed to write build-done marker")
 	}
 }
 
@@ -127,20 +131,8 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 	return cmd
 }
 
-// preExit do something before exit:
-// - sleep delay duration if exit-delay is set
-func preExit(logger logr.Logger) {
-	duration, err := time.ParseDuration(*exitDelay)
-	if err != nil {
-		logger.Error(err, "Sleeping before exit error")
-		os.Exit(1)
-	}
-
-	if duration == time.Duration(0) {
-		return
-	}
-
+// preExit logs and sleeps for the given duration before exit.
+func preExit(logger logr.Logger, duration time.Duration) {
 	logger.Info(fmt.Sprintf("Sleeping %v before exit", duration))
-
 	time.Sleep(duration)
 }

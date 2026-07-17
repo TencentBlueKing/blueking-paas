@@ -412,7 +412,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         advanced = deployment.advanced_options
         if not advanced or not advanced.build_debug:
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("该部署未开启构建调试"))
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
 
         wl_app = deployment.app_environment.wl_app
         handler = BuildHandler.new_by_app(wl_app)

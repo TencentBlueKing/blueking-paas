@@ -22,7 +22,13 @@ import pytest
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, BuildProbePoller, BuildProbeStatus
+from paas_wl.bk_app.deploy.app_res.controllers import (
+    BUILD_DEBUG_LABEL_KEY,
+    BUILD_DEBUG_LABEL_VALUE,
+    BuildHandler,
+    BuildProbePoller,
+    BuildProbeStatus,
+)
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
@@ -61,7 +67,7 @@ class TestBuildProbePoller:
 
     @patch("time.sleep", return_value=None)
     @patch("time.monotonic", side_effect=[0, 100, 200, 100000])  # 超时
-    def test_poll_timeout(self, mock_sleep, mock_monotonic, build_handler):
+    def test_poll_timeout(self, mock_monotonic, mock_sleep, build_handler):
         """超过 BUILD_PROCESS_TIMEOUT 后返回 None."""
         build_handler.check_probe_and_pod = Mock(return_value=BuildProbeStatus.BUILDING)
 
@@ -120,7 +126,7 @@ class TestBuildSlugWithDebug:
             None,
             {
                 "kind": "Pod",
-                "metadata": {"name": "foo", "labels": {"build-debug": "true"}},
+                "metadata": {"name": "foo", "labels": {BUILD_DEBUG_LABEL_KEY: BUILD_DEBUG_LABEL_VALUE}},
                 "status": {"phase": "Running", "startTime": timezone.now().isoformat()},
             },
         )

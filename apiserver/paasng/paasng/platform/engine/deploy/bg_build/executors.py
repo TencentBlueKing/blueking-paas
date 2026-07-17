@@ -232,7 +232,6 @@ class DefaultBuildProcessExecutor(DeployStep):
             build_result = poller.poll_until_ready()
         finally:
             stop_event.set()
-            time.sleep(3)  # 等待管道缓冲排空
             log_thread.join(timeout=5)
 
         # 记录构建完成时间, 用于后续调试窗口判定和超时清理

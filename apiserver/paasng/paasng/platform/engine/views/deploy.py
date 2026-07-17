@@ -335,27 +335,33 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         deployment = _get_deployment(self.get_module_via_path(), uuid)
         latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
         if deployment != latest:
-            return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
+            return Response(self._build_debug_data(enabled=False, available=False))
         advanced = deployment.advanced_options
         if not advanced or not advanced.build_debug:
-            return Response({"enabled": False, "available": False, "builder_pod_name": None, "namespace": None})
+            return Response(self._build_debug_data(enabled=False, available=False))
 
         wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
             return Response(
-                {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+                self._build_debug_data(
+                    enabled=True, available=False, builder_pod_name=builder_name, namespace=wl_app.namespace
+                )
             )
 
         # 检查构建是否已完成 (startupProbe 通过, 即 /tmp/build-done 已创建)
         container_statuses = pod.status.container_statuses or []
         if not container_statuses or not getattr(container_statuses[0], "started", False):
             return Response(
-                {"enabled": True, "available": False, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+                self._build_debug_data(
+                    enabled=True, available=False, builder_pod_name=builder_name, namespace=wl_app.namespace
+                )
             )
 
         available = BuildHandler.is_debug_window_available(pod, get_build_debug_timeout())
         return Response(
-            {"enabled": True, "available": available, "builder_pod_name": builder_name, "namespace": wl_app.namespace}
+            self._build_debug_data(
+                enabled=True, available=available, builder_pod_name=builder_name, namespace=wl_app.namespace
+            )
         )
 
     @swagger_auto_schema(tags=["部署阶段"])
@@ -365,6 +371,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
         if deployment != latest:
             raise error_codes.BUILD_DEBUG_STALE_DEPLOYMENT.f(_("已有新的部署开始，当前构建调试入口已失效"))
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.build_debug:
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
         wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试容器已不可用"))
@@ -406,19 +415,21 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
     def _get_debug_builder_pod(self, deployment: Deployment):
-        """获取构建调试 Pod, 返回 (wl_app, builder_name, pod).
-
-        :raises: APIError 若部署未开启构建调试
-        """
-        advanced = deployment.advanced_options
-        if not advanced or not advanced.build_debug:
-            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
-
+        """获取构建调试 Pod, 返回 (wl_app, builder_name, pod)."""
         wl_app = deployment.app_environment.wl_app
         handler = BuildHandler.new_by_app(wl_app)
         builder_name = generate_builder_name(wl_app)
         pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
         return wl_app, builder_name, pod
+
+    @staticmethod
+    def _build_debug_data(enabled: bool, available: bool, builder_pod_name=None, namespace=None) -> dict:
+        return {
+            "enabled": enabled,
+            "available": available,
+            "builder_pod_name": builder_pod_name,
+            "namespace": namespace,
+        }
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

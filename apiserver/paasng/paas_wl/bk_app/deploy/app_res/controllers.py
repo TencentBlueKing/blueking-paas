@@ -594,7 +594,8 @@ class BuildHandler(PodScheduleHandler):
         pod_name = self.normalize_builder_name(name)
         try:
             return parse_pod(KPod(self.client).get(pod_name, namespace=namespace))
-        except ResourceMissing:
+        except (ResourceMissing, ValueError):
+            logger.warning("Failed to get or parse Pod<%s/%s>", namespace, pod_name)
             return None
 
     def check_probe_and_pod(self, namespace: str, name: str) -> BuildProbeStatus:

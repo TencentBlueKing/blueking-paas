@@ -27,6 +27,8 @@ from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.configurations.provider import env_vars_providers
@@ -109,6 +111,25 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
                 key="DEFAULT_PREALLOCATED_URLS",
                 value=addrs_value,
                 description=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+            )
+        ]
+    )
+
+
+@env_vars_providers.register_env
+def _market_entrance_url(env: ModuleEnvironment) -> EnvVariableList:
+    """注入应用市场访问地址."""
+    application = env.module.application
+    market_config, _created = MarketConfig.objects.get_or_create_by_app(application)
+    entrance = MarketAvailableAddressHelper(market_config).access_entrance
+    url = entrance.address if entrance and entrance.address else ""
+
+    return EnvVariableList(
+        [
+            EnvVariableObj.with_sys_prefix(
+                key="MARKET_ENTRANCE_URL",
+                value=url,
+                description=_("应用市场访问地址"),
             )
         ]
     )

@@ -90,7 +90,7 @@ const state = {
   },
   localLanguage,
   navType: {},
-  applyUrl: '',
+  applyUrls: {},
   envEventData: ['stag', 'prod'],
   errorDetail: {},
   // 是否显示通知中心
@@ -293,8 +293,8 @@ const mutations = {
   updateNavType(state, data) {
     state.navType = data;
   },
-  updateApplyUrl(state, data) {
-    state.applyUrl = data;
+  updateApplyUrls(state, data = {}) {
+    state.applyUrls = data;
   },
   updateErrorDetail(state, data) {
     state.errorDetail = data;
@@ -375,6 +375,7 @@ const actions = {
   getAppInfo({ commit }, { appCode, moduleId }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
     commit('updateAppLoading', true);
+    commit('updateApplyUrls', {});
     return http.get(url).then((response) => {
       if (!moduleId) {
         moduleId = response.application.modules.find(module => module.is_default).name;
@@ -383,9 +384,7 @@ const actions = {
       return response;
     })
       .catch((err) => {
-        if (err.apply_url_for_dev) {
-          commit('updateApplyUrl', err.apply_url_for_dev);
-        }
+        commit('updateApplyUrls', err);
         return err;
       })
       .finally(() => {

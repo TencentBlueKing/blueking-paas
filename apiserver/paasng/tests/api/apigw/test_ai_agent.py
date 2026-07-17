@@ -23,7 +23,8 @@ import pytest
 import yaml
 from django.conf import settings
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
+from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -93,6 +94,129 @@ class TestAIAgentViewSet:
         assert response.json()["application"]["type"] == ApplicationType.CLOUD_NATIVE
         assert response.json()["application"]["is_ai_agent_app"] is True
         assert response.json()["application"]["is_plugin_app"] is True
+
+    @pytest.mark.usefixtures("_init_tmpls")
+    @pytest.mark.usefixtures("mock_initialize_vcs_with_template")
+    @pytest.mark.parametrize(
+        ("build_method", "extra_build_config", "is_isolated"),
+        [
+            # 使用 git 仓库 + dockerfile 构建
+            ("dockerfile", {"dockerfile_path": "Dockerfile"}, False),
+            # 使用 git 仓库 + buildpack 构建
+            ("buildpack", {}, False),
+            # 使用 git 仓库 + dockerfile 构建，标记为隔离部署
+            ("dockerfile", {"dockerfile_path": "Dockerfile"}, True),
+        ],
+    )
+    def test_create_ai_agent_app_via_git(
+        self,
+        bk_user,
+        api_client,
+        mock_wl_services_in_creation,
+        bk_app_code,
+        bk_app_name,
+        build_method,
+        extra_build_config,
+        is_isolated,
+    ):
+        """传入 source_config 时，AI Agent 应用走 git 仓库部署（支持 buildpack / dockerfile）"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_isolated": is_isolated,
+                "bkapp_spec": {"build_config": {"build_method": build_method, **extra_build_config}},
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
+        app_data = response.json()["application"]
+        assert app_data["type"] == ApplicationType.CLOUD_NATIVE
+        assert app_data["is_ai_agent_app"] is True
+        assert app_data["is_plugin_app"] is True
+        assert app_data["modules"][0]["web_config"]["build_method"] == build_method
+
+        # 校验隔离部署标记正确落库（对外 is_isolated 布尔映射为 deploy_policy 枚举）
+        application = Application.objects.get(code=bk_app_code)
+        assert application.is_ai_agent_app is True
+        expected_policy = DeployPolicy.ISOLATED.value if is_isolated else DeployPolicy.DEFAULT.value
+        assert application.deploy_policy == expected_policy
+
+    def test_create_ai_agent_app_via_git_without_bkapp_spec(self, api_client, bk_app_code, bk_app_name):
+        """传入 source_config 但缺少 bkapp_spec 时，应校验失败"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+
+    def test_create_engineless_ai_agent_app(
+        self,
+        bk_user,
+        api_client,
+        bk_app_code,
+        bk_app_name,
+    ):
+        """创建 engineless AI Agent 外链应用：type=engineless_app, is_plugin_app=False"""
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_engineless": True,
+            },
+        )
+        assert response.status_code == 201, f"error: {response.json()}"
+        app_data = response.json()["application"]
+        assert app_data["type"] == ApplicationType.ENGINELESS_APP
+        assert app_data["is_ai_agent_app"] is True
+        # 占位外链应用不是插件，不应注册网关
+        assert app_data["is_plugin_app"] is False
+
+    def test_engineless_ai_agent_hidden_from_user_list(
+        self,
+        api_client,
+        bk_app,
+        bk_app_code,
+        bk_app_name,
+    ):
+        """创建 engineless AI Agent 应用后, 不应出现在用户应用列表中"""
+        # 先建一个 engineless AI Agent 应用
+        resp = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data={
+                "code": bk_app_code,
+                "name": bk_app_name,
+                "is_engineless": True,
+            },
+        )
+        assert resp.status_code == 201
+
+        # 查询用户应用列表, 验证 engineless AI Agent 不可见
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            list_resp = api_client.get("/api/bkapps/applications/lists/detailed")
+
+        assert list_resp.status_code == 200
+        app_codes = {item["application"]["code"] for item in list_resp.json()["results"]}
+
+        # engineless AI Agent 应用不应出现在列表中
+        assert bk_app_code not in app_codes
+        # 常规应用应该在列表中 (确保测试有意义)
+        assert bk_app.code in app_codes
 
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path, settings):
         # Set the allowed hosts otherwise the validation will fail

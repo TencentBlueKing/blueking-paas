@@ -75,6 +75,22 @@
               :placeholder="$t('请输入对象存储中的包路径')"
             ></bk-input>
           </bk-form-item>
+          <bk-form-item
+            :label="$t('支持的构建方式')"
+            :property="'supported_runtime_types'"
+            :required="true"
+            :rules="runtimeTypeRules"
+          >
+            <bk-checkbox-group v-model="formData.supported_runtime_types">
+              <bk-checkbox
+                v-for="option in runtimeTypeOptions"
+                :key="option.id"
+                :value="option.id"
+              >
+                {{ $t(option.name) }}
+              </bk-checkbox>
+            </bk-checkbox-group>
+          </bk-form-item>
         </bk-form>
       </template>
 
@@ -186,6 +202,7 @@ const INITIAL_FORM_DATA = {
   is_display: true,
   // 模块信息（模块）
   blob_url: '',
+  supported_runtime_types: ['buildpack'],
   // 模块信息（插件）
   repo_type: '',
   repo_url: '',
@@ -202,6 +219,19 @@ const requiredRule = {
   message: i18n.t('必填项'),
   trigger: 'blur',
 };
+
+// 构建方式默认值
+const DEFAULT_RUNTIME_TYPES = ['buildpack'];
+const RUNTIME_TYPE_OPTIONS = Object.freeze([
+  {
+    id: 'buildpack',
+    name: '蓝鲸 Buildpack',
+  },
+  {
+    id: 'dockerfile',
+    name: 'Dockerfile',
+  },
+]);
 
 // 模块信息-插件非必填项
 const nonRequiredFields = ['repo_type', 'source_dir'];
@@ -225,7 +255,7 @@ export default {
       default: () => ({}),
     },
     id: {
-      type: Number | String,
+      type: [Number, String],
       default: -1,
     },
     metadata: {
@@ -252,6 +282,16 @@ export default {
         }))
       ),
       blobUrlRules: [{ ...requiredRule }],
+      runtimeTypeOptions: RUNTIME_TYPE_OPTIONS,
+      runtimeTypeRules: [
+        {
+          validator(val) {
+            return Array.isArray(val) && val.length > 0;
+          },
+          message: i18n.t('必填项'),
+          trigger: 'change',
+        },
+      ],
       // 配置信息 form 配置
       configFormItems: Object.freeze(CONFIG_INFO_FORM_CONFIG),
     };
@@ -282,7 +322,7 @@ export default {
     data: {
       handler(newVal) {
         if (!this.isAdd) {
-          this.formData = { ...newVal };
+          this.formData = this.normalizeFormData(newVal);
         }
       },
       deep: true,
@@ -305,11 +345,20 @@ export default {
     shown() {
       if (!this.isAdd) {
         // 编辑数据回填
-        this.formData = { ...this.data };
+        this.formData = this.normalizeFormData(this.data);
       }
     },
     reset() {
       this.formData = cloneDeep(INITIAL_FORM_DATA);
+    },
+    normalizeFormData(data = {}) {
+      return {
+        ...cloneDeep(INITIAL_FORM_DATA),
+        ...data,
+        supported_runtime_types: Array.isArray(data.supported_runtime_types)
+          ? data.supported_runtime_types
+          : [...DEFAULT_RUNTIME_TYPES],
+      };
     },
     // JSON 验证方法
     validateAllJsonFields() {

@@ -212,7 +212,7 @@ export default {
         name: 'permission403',
         params: {
           id: appCode,
-          url: store.state.applyUrl,
+          url: store.state.applyUrls?.apply_url_for_dev,
         },
       });
     }
@@ -251,7 +251,7 @@ export default {
         name: 'permission403',
         params: {
           id: appCode,
-          url: store.state.applyUrl,
+          url: store.state.applyUrls?.apply_url_for_dev,
         },
       });
     }

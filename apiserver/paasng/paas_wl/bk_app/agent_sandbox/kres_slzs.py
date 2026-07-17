@@ -145,20 +145,14 @@ def _build_resources(cpu: float, memory: float) -> Dict[str, Dict[str, str]]:
 def _build_csi_volume_source() -> Dict[str, Any]:
     """Build the ``csi`` source block for the shared inline volume.
 
-    The driver and volumeAttributes are driven by settings so that future
-    deployments can swap CFS for other RWX-capable CSI drivers (e.g. CephFS,
-    NFS) without code changes. For drivers beyond Tencent Cloud CFS, additional
-    branches can be added here once their volumeAttributes schema is known.
+    The driver and volumeAttributes are fully driven by settings so that any
+    RWX-capable CSI driver (Tencent Cloud CFS, NFS, CephFS, ...) can be used
+    without code changes: ``AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES`` is passed
+    through as-is, and its keys are defined by the target CSI driver.
     """
-    driver = settings.AGENT_SANDBOX_CFS_DRIVER
     return {
-        "driver": driver,
-        "volumeAttributes": {
-            "fsid": settings.AGENT_SANDBOX_CFS_FSID,
-            "host": settings.AGENT_SANDBOX_CFS_HOST,
-            "path": settings.AGENT_SANDBOX_CFS_PATH,
-            "vers": settings.AGENT_SANDBOX_CFS_VERS,
-        },
+        "driver": settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER,
+        "volumeAttributes": dict(settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES),
     }
 
 

@@ -21,7 +21,7 @@ from django.conf import settings
 from paas_service.models import ServiceInstance
 
 from svc_bk_repo.monitoring.models import AutoExpandEvent
-from svc_bk_repo.shared.scheduler import scheduler
+from svc_bk_repo.shared.scheduler import db_distributed_lock, scheduler
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
 from svc_bk_repo.vendor.helper import get_repo_manager
@@ -36,49 +36,53 @@ def auto_extend_bkrepo_quota():
         logger.info("BKRepo auto-expand is globally disabled, skip.")
         return
 
-    logger.info("Starting auto-extend bkrepo quota.")
-    for instance in ServiceInstance.objects.all():
-        manager = get_repo_manager(instance.plan_id)
-        credentials = instance.get_credentials()
-        private_bucket = credentials["private_bucket"]
-        public_bucket = credentials["public_bucket"]
+    with db_distributed_lock("auto_extend_bkrepo_quota") as acquired:
+        if not acquired:
+            return
 
-        for bucket_name in (private_bucket, public_bucket):
-            try:
-                old_quota = manager.get_repo_quota(bucket_name)
-                new_size = extend_quota(
-                    manager,
-                    bucket=bucket_name,
-                    extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
-                    max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
-                    required_usage_rate=settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD,
-                )
-                AutoExpandEvent.objects.create(
-                    instance=instance,
-                    repo_name=bucket_name,
-                    old_size=int(old_quota.max_size),
-                    new_size=new_size,
-                    step_size=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
-                )
-                logger.warning(
-                    "Auto-extended quota for instance=%s bucket=%s: %d -> %d bytes (+%d bytes)",
-                    instance.uuid,
-                    bucket_name,
-                    int(old_quota.max_size),
-                    new_size,
-                    settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
-                )
-            except NoNeedToExtendQuota:
-                logger.debug("Bucket=%s has no quota limit, skip auto-extend.", bucket_name)
-            except ExtendQuotaUsageTooLow:
-                logger.debug("Bucket=%s usage below threshold, skip auto-extend.", bucket_name)
-            except ExtendQuotaMaxSizeExceeded:
-                logger.warning(
-                    "Bucket=%s already at max allowed size (%d bytes), cannot auto-extend.",
-                    bucket_name,
-                    settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
-                )
-            except Exception:
-                logger.exception("Unknown error while auto-extending bucket=%s", bucket_name)
+        logger.info("Starting auto-extend bkrepo quota.")
+        for instance in ServiceInstance.objects.all():
+            manager = get_repo_manager(instance.plan_id)
+            credentials = instance.get_credentials()
+            private_bucket = credentials["private_bucket"]
+            public_bucket = credentials["public_bucket"]
 
-    logger.info("Auto-extend bkrepo quota finished.")
+            for bucket_name in (private_bucket, public_bucket):
+                try:
+                    old_quota = manager.get_repo_quota(bucket_name)
+                    new_size = extend_quota(
+                        manager,
+                        bucket=bucket_name,
+                        extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+                        max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
+                        required_usage_rate=settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD,
+                    )
+                    AutoExpandEvent.objects.create(
+                        instance=instance,
+                        repo_name=bucket_name,
+                        old_size=int(old_quota.max_size),
+                        new_size=new_size,
+                        step_size=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+                    )
+                    logger.warning(
+                        "Auto-extended quota for instance=%s bucket=%s: %d -> %d bytes (+%d bytes)",
+                        instance.uuid,
+                        bucket_name,
+                        int(old_quota.max_size),
+                        new_size,
+                        settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+                    )
+                except NoNeedToExtendQuota:
+                    logger.debug("Bucket=%s has no quota limit, skip auto-extend.", bucket_name)
+                except ExtendQuotaUsageTooLow:
+                    logger.debug("Bucket=%s usage below threshold, skip auto-extend.", bucket_name)
+                except ExtendQuotaMaxSizeExceeded:
+                    logger.warning(
+                        "Bucket=%s already at max allowed size (%d bytes), cannot auto-extend.",
+                        bucket_name,
+                        settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
+                    )
+                except Exception:
+                    logger.exception("Unknown error while auto-extending bucket=%s", bucket_name)
+
+        logger.info("Auto-extend bkrepo quota finished.")

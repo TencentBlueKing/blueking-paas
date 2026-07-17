@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .utils import BaseFancyModel
@@ -79,7 +79,7 @@ class Channel(BaseFancyModel):
         if self.messages_unconfirmed > 0:
             return False
 
-        if max_idle and self.idle_since + max_idle > datetime.utcnow():
+        if max_idle and self.idle_since + max_idle > datetime.now(timezone.utc):
             return False
 
         message_stats = self.message_stats

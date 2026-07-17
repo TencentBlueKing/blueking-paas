@@ -33,7 +33,7 @@ from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.specs import AppSpecs
@@ -83,6 +83,7 @@ def create_application(
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
+    deploy_policy: str = DeployPolicy.DEFAULT.value,
     app_tenant_info: AppTenantInfo | None = None,
 ):
     """创建 Application 模型"""
@@ -103,6 +104,7 @@ def create_application(
         name_en=name_en,
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
+        deploy_policy=deploy_policy,
         app_tenant_mode=app_tenant_info.app_tenant_mode.value,
         app_tenant_id=app_tenant_info.app_tenant_id,
         tenant_id=app_tenant_info.tenant_id,
@@ -147,8 +149,9 @@ def create_third_app(
     operator: str,
     app_tenant_info: Optional[AppTenantInfo] = None,
     market_params: Optional[dict] = None,
+    is_ai_agent_app: bool = False,
 ) -> Application:
-    """创建第三方（外链）应用"""
+    """创建第三方（外链）应用, 支持创建特殊的 AI Agent 第三方（外链）应用"""
     if market_params is None:
         market_params = {}
 
@@ -159,6 +162,7 @@ def create_third_app(
         app_type=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
+        is_ai_agent_app=is_ai_agent_app,
         app_tenant_info=app_tenant_info,
     )
     create_default_module(application)

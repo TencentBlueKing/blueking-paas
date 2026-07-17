@@ -18,7 +18,7 @@
 import logging
 import time
 import typing
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from operator import itemgetter
 
 from django.core.management.base import BaseCommand
@@ -157,7 +157,7 @@ class Command(BaseCommand):
         peer_host_set = set(peer_host)
         max_duration = timedelta(seconds=max_idle)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         connections = []
         for c in client.connection.list():
             if not self.connection_match_filters(virtual_hosts, peer_host_set, c):

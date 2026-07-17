@@ -131,8 +131,8 @@ def dispatch_slug_image_to_registry(
     source_dir = get_source_dir_from_desc(stat.meta_info, module.name)
 
     base_path = workplace / stat.relative_path
-    layer_path = safe_resolve_subpath(base_path, f"{source_dir}/layer.tar.gz")
-    procfile_path = safe_resolve_subpath(base_path, f"{source_dir}/{module.name}.Procfile.tar.gz")
+    layer_path = safe_resolve_subpath(base_path, source_dir, "layer.tar.gz")
+    procfile_path = safe_resolve_subpath(base_path, source_dir, f"{module.name}.Procfile.tar.gz")
 
     mgr = SMartImageManager(module)
     base_image = mgr.get_slugrunner_image_info()
@@ -318,7 +318,7 @@ def _construct_exported_image_manifest(image_tmp_folder: Path) -> DockerExported
     # 没有 manifest.json 时, 解析 index.json 文件
     index_json = json.loads((image_tmp_folder / "index.json").read_text())
     manifest_digest = index_json["manifests"][0]["digest"]
-    manifest_file = safe_resolve_subpath(image_tmp_folder, f"blobs/{manifest_digest.replace(':', '/')}")
+    manifest_file = safe_resolve_subpath(image_tmp_folder, "blobs", f"{manifest_digest.replace(':', '/')}")
 
     manifest = json.loads(manifest_file.read_text())
     config_digest = manifest["config"]["digest"]

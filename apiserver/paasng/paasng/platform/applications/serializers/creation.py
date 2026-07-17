@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
@@ -123,11 +123,14 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
     默认使用固定模板包（bk-ai-plugin-python）+ buildpack 部署。若传入 source_config，则
     改为使用 git 仓库源码部署，并可通过 bkapp_spec.build_config 选择 buildpack / dockerfile
     构建方式（两者解耦，任意 AI Agent 应用均可使用 git 仓库部署）。
+
+    新增 is_engineless 参数：当设置为 true 时，创建无引擎的外链 AI Agent 应用，
+    该应用在用户列表中不可见（is_ai_agent_app=True + type=engineless_app 的组合会被自动过滤），
+    仅可通过直接链接访问，支持成员管理（添加/删除管理员）。
     """
 
-    is_isolated = serializers.BooleanField(
-        default=False, help_text="是否部署到隔离环境（如 gvisor 集群）"
-    )
+    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境（如 gvisor 集群）")
+    is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
     # 以下参数为选填，不传则走原有固定模板包流程（向后兼容）
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
     bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
@@ -135,20 +138,30 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
-        data.update(
-            {
-                "is_ai_agent_app": True,
-                # AI Agent 应用也是一个插件，需要自动注册网关
-                "is_plugin_app": True,
-                "type": ApplicationType.CLOUD_NATIVE.value,
-                "engine_enabled": True,
-            }
-        )
+        # 两种 AI Agent 应用都标记 is_ai_agent_app=True
+        data["is_ai_agent_app"] = True
+        if data.get("is_engineless"):
+            # 占位外链应用：无引擎、非插件、不可部署
+            data["is_plugin_app"] = False
+            data["type"] = ApplicationType.ENGINELESS_APP.value
+            data["engine_enabled"] = False
+        else:
+            # 可部署的插件应用：部署时会自动注册网关（bp-{app_code}）
+            data["is_plugin_app"] = True
+            data["type"] = ApplicationType.CLOUD_NATIVE.value
+            data["engine_enabled"] = True
+            data["deploy_policy"] = (
+                DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
+            )
 
         return data
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         attrs = super().validate(attrs)
+
+        # 外链模式无需校验 source_config / bkapp_spec
+        if attrs.get("is_engineless"):
+            return attrs
 
         # 仅当使用 git 仓库部署时，才校验构建方式与源码来源的兼容性
         source_config = attrs.get("source_config")

@@ -151,7 +151,7 @@ class StubResidentDaemonClient:
         """Seed an in-memory file for tests."""
         self._files[(base_path, rel_path)] = {"content": content, "mtime": mtime, "size": len(content)}
 
-    def list(self, base_path, rel_path="", recursive=False, page=1, page_size=100) -> dict:
+    def list(self, base_path, rel_path="", is_recursive=False, page=1, page_size=100) -> dict:
         items = []
         for (bp, rp), meta in self._files.items():
             if bp != base_path:

@@ -45,5 +45,5 @@ DEFAULT_SANDBOX_MEMORY = Decimal(2)
 # 沙箱产物归档 / 下载 URL 的默认与上限有效期(秒)
 DEFAULT_DOWNLOAD_URL_EXPIRES_IN = 600
 MAX_DOWNLOAD_URL_EXPIRES_IN = 3600
-# 上传临时 URL 的有效期,给 daemon 读大文件 + PUT 留足余量
+# 上传临时 URL 的有效期，给 daemon 读大文件 + PUT 留足余量
 UPLOAD_URL_EXPIRES_IN = 3600

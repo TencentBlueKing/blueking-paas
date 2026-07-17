@@ -1667,7 +1667,7 @@ AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/dae
 # ---------------------------------------------
 # Agent Sandbox 文件持久化配置(沙箱销毁后仍能访问其会话级 PV 中的产物文件)
 # ---------------------------------------------
-# 常驻 daemon 的固定访问地址(集群内 DNS),挂 CFS 根目录、对外提供 jail 化的文件操作接口
+# 常驻 daemon 的固定访问地址(集群内 DNS)，挂 CFS 根目录、对外提供 jail 化的文件操作接口
 AGENT_SANDBOX_RESIDENT_DAEMON_URL = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_URL", "")
 # 与常驻 daemon 共享的静态 token(对应 daemon 侧的 TOKEN 环境变量)
 AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN", "")

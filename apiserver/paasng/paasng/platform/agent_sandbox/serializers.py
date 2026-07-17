@@ -155,6 +155,19 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
             "created",
             "expired_at",
         )
+        extra_kwargs = {
+            "uuid": {"label": "沙箱 UUID"},
+            "name": {"label": "名称"},
+            "snapshot": {"label": "快照镜像"},
+            "target": {"label": "目标区域"},
+            "env_vars": {"label": "环境变量"},
+            "volume_mounts": {"label": "共享挂载"},
+            "cpu": {"label": "CPU 上限（核）"},
+            "memory": {"label": "内存上限（GB）"},
+            "status": {"label": "状态"},
+            "created": {"label": "创建时间"},
+            "expired_at": {"label": "过期时间"},
+        }
 
 
 class VolumeCreateInputSLZ(serializers.Serializer):
@@ -169,12 +182,19 @@ class VolumeCreateInputSLZ(serializers.Serializer):
 class VolumeOutputSLZ(serializers.ModelSerializer):
     """The serializer for volume output."""
 
-    storage_instance_id = serializers.SerializerMethodField()
-    storage_path = serializers.SerializerMethodField()
+    storage_instance_id = serializers.SerializerMethodField(label="存储实例 ID")
+    storage_path = serializers.SerializerMethodField(label="存储路径")
 
     class Meta:
         model = Volume
         fields = ("uuid", "name", "display_name", "application_id", "storage_instance_id", "storage_path", "created")
+        extra_kwargs = {
+            "uuid": {"label": "卷 UUID"},
+            "name": {"label": "卷名称"},
+            "display_name": {"label": "显示名称"},
+            "application_id": {"label": "应用 ID"},
+            "created": {"label": "创建时间"},
+        }
 
     def get_storage_instance_id(self, obj) -> str:
         return settings.AGENT_SANDBOX_CFS_FSID
@@ -200,7 +220,7 @@ class VolumeFileListInputSLZ(serializers.Serializer):
     path = serializers.CharField(
         label="路径", required=False, default="", allow_blank=True, help_text="volume 内相对路径，默认根目录"
     )
-    recursive = serializers.BooleanField(label="递归", required=False, default=False)
+    is_recursive = serializers.BooleanField(label="递归", required=False, default=False)
     page = serializers.IntegerField(label="页码", required=False, default=1, min_value=1)
     page_size = serializers.IntegerField(label="每页数量", required=False, default=100, min_value=1)
 
@@ -215,20 +235,20 @@ class VolumeFileListInputSLZ(serializers.Serializer):
 class VolumeFileItemOutputSLZ(serializers.Serializer):
     """列表/元数据中的单个文件条目。"""
 
-    path = serializers.CharField()
-    name = serializers.CharField()
-    is_dir = serializers.BooleanField()
-    size = serializers.IntegerField()
-    modified_at = serializers.CharField()
-    mime = serializers.CharField(allow_blank=True)
+    path = serializers.CharField(label="文件路径")
+    name = serializers.CharField(label="文件名")
+    is_dir = serializers.BooleanField(label="是否目录")
+    size = serializers.IntegerField(label="文件大小（字节）")
+    modified_at = serializers.CharField(label="最后修改时间")
+    mime = serializers.CharField(label="MIME 类型", allow_blank=True)
     # sha256 = serializers.CharField(allow_null=True)
 
 
 class VolumeFileListOutputSLZ(serializers.Serializer):
-    """列表响应。"""
+    """列表响应"""
 
-    total = serializers.IntegerField()
-    items = VolumeFileItemOutputSLZ(many=True)
+    count = serializers.IntegerField(label="文件总数")
+    results = VolumeFileItemOutputSLZ(label="文件列表", many=True)
 
 
 class VolumeFileStatInputSLZ(serializers.Serializer):
@@ -243,11 +263,11 @@ class VolumeFileStatInputSLZ(serializers.Serializer):
 class VolumeFileStatOutputSLZ(serializers.Serializer):
     """元数据响应。不存在时 exists=false,仍返回 HTTP 200。"""
 
-    exists = serializers.BooleanField()
-    path = serializers.CharField()
-    size = serializers.IntegerField(required=False)
-    modified_at = serializers.CharField(required=False)
-    mime = serializers.CharField(required=False, allow_blank=True)
+    exists = serializers.BooleanField(label="是否存在")
+    path = serializers.CharField(label="文件路径")
+    size = serializers.IntegerField(label="文件大小（字节）", required=False)
+    modified_at = serializers.CharField(label="最后修改时间", required=False)
+    mime = serializers.CharField(label="MIME 类型", required=False, allow_blank=True)
 
 
 class VolumeFilePreviewInputSLZ(serializers.Serializer):
@@ -261,7 +281,7 @@ class VolumeFilePreviewInputSLZ(serializers.Serializer):
 
 
 class VolumeFileDownloadURLInputSLZ(serializers.Serializer):
-    """归档并签发下载/预览 URL,一次返回两个互斥 URL。"""
+    """归档并签发下载/预览 URL"""
 
     path = serializers.CharField(label="路径", help_text="volume 内相对路径")
     expires_in = serializers.IntegerField(label="有效期(秒)", required=False, default=600, min_value=1, max_value=3600)
@@ -271,13 +291,13 @@ class VolumeFileDownloadURLInputSLZ(serializers.Serializer):
 
 
 class VolumeFileDownloadURLOutputSLZ(serializers.Serializer):
-    """下载/预览 URL 响应。download_url 与 preview_url 互斥,各只带自己的 flag 参数。"""
+    """下载/预览 URL 响应"""
 
-    download_url = serializers.CharField()
-    preview_url = serializers.CharField()
-    expires_at = serializers.DateTimeField()
-    size = serializers.IntegerField()
-    sha256 = serializers.CharField()
+    download_url = serializers.CharField(label="下载 URL")
+    preview_url = serializers.CharField(label="预览 URL")
+    expires_at = serializers.DateTimeField(label="过期时间")
+    size = serializers.IntegerField(label="文件大小（字节）")
+    sha256 = serializers.CharField(label="文件 SHA256")
 
 
 class VolumeFileDeleteInputSLZ(serializers.Serializer):

@@ -25,10 +25,10 @@ All path-taking operations take a ``base_path`` (the jail root, computed by apis
 ``app/{volume_uuid_hex}``) plus a user-controlled ``rel_path``; the daemon enforces the jail.
 """
 
-from functools import lru_cache
 from typing import Any, NotRequired, Self, TypedDict
 
 import requests
+from django.conf import settings
 
 from .exceptions import (
     SandboxArchiveFailed,
@@ -106,7 +106,7 @@ class ResidentDaemonClient:
         self,
         base_path: str,
         rel_path: str = "",
-        recursive: bool = False,
+        is_recursive: bool = False,
         page: int = 1,
         page_size: int = 100,
     ) -> ListResult:
@@ -114,7 +114,7 @@ class ResidentDaemonClient:
         payload = {
             "base_path": base_path,
             "rel_path": rel_path,
-            "recursive": recursive,
+            "is_recursive": is_recursive,
             "page": page,
             "page_size": page_size,
         }
@@ -195,10 +195,8 @@ class ResidentDaemonClient:
         self.close()
 
 
-@lru_cache(maxsize=1)
 def get_resident_daemon_client() -> ResidentDaemonClient:
     """Build a ResidentDaemonClient from platform settings."""
-    from django.conf import settings
 
     return ResidentDaemonClient(
         base_url=settings.AGENT_SANDBOX_RESIDENT_DAEMON_URL,

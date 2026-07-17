@@ -186,7 +186,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             result = get_resident_daemon_client().list(
                 base_path=volume.storage_path,
                 rel_path=data["path"],
-                recursive=data["recursive"],
+                is_recursive=data["is_recursive"],
                 page=data["page"],
                 page_size=data["page_size"],
             )
@@ -203,7 +203,9 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         except SandboxError:
             logger.exception("Failed to list files in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
-        return Response(VolumeFileListOutputSLZ(result).data)
+        # daemon 返回 {total, items}, 对外统一为 {count, results} 列表响应风格
+        payload = {"count": result["total"], "results": result["items"]}
+        return Response(VolumeFileListOutputSLZ(payload).data)
 
     @swagger_auto_schema(
         tags=["agent_sandbox"],
@@ -332,7 +334,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
 
         # 清理 bkrepo 对象 + 去重表记录, 避免下次归档命中陈旧映射 / "Node existed"
         delete_volume_artifact(volume, data["path"])
-        return Response({"deleted": True})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, SandboxViewMixin):

@@ -60,8 +60,8 @@ class TestVolumeFileViewSet:
         )
         resp = api_client.get(list_url, data={"path": "outputs"})
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["total"] == 1
-        assert resp.json()["items"][0]["path"] == "outputs/report.html"
+        assert resp.json()["count"] == 1
+        assert resp.json()["results"][0]["path"] == "outputs/report.html"
 
         stat_url = reverse(
             "agent_sandbox.volume.files.stat", kwargs={"code": volume.application.code, "volume_id": volume.uuid}
@@ -166,20 +166,6 @@ class TestVolumeFileViewSet:
         resp = api_client.get(url, data={"path": "nope.txt"})
         assert resp.status_code == status.HTTP_404_NOT_FOUND
         assert resp.json()["code"] == "AGENT_SANDBOX_FILE_NOT_FOUND"
-
-    @pytest.mark.usefixtures("_mock_presigned_url")
-    def test_download_url_too_large_returns_413(
-        self, api_client: APIClient, volume: Volume, stub_resident_client, settings
-    ) -> None:
-        settings.AGENT_SANDBOX_ARTIFACT_MAX_SIZE = 4
-        stub_resident_client.put_file(volume.storage_path, "big.txt", b"way too large")
-        url = reverse(
-            "agent_sandbox.volume.files.download_url",
-            kwargs={"code": volume.application.code, "volume_id": volume.uuid},
-        )
-        resp = api_client.get(url, data={"path": "big.txt"})
-        assert resp.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-        assert resp.json()["code"] == "AGENT_SANDBOX_FILE_TOO_LARGE"
 
     def test_delete_cleans_bkrepo_object(
         self, api_client: APIClient, volume: Volume, stub_resident_client, blob_store

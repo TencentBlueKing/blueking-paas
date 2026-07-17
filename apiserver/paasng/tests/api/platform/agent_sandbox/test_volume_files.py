@@ -23,7 +23,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from paasng.platform.agent_sandbox.artifact import build_bkrepo_key
-from paasng.platform.agent_sandbox.exceptions import SandboxFileNotPreviewable
+from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxFileNotPreviewable
 from paasng.platform.agent_sandbox.models import Volume, VolumeArtifact
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -98,6 +98,36 @@ class TestVolumeFileViewSet:
             resp = api_client.get(preview_url, data={"path": "image.png"})
         assert resp.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         assert resp.json()["code"] == "AGENT_SANDBOX_FILE_NOT_PREVIEWABLE"
+
+    def test_list_daemon_400_surfaces_as_400(
+        self, api_client: APIClient, volume: Volume, stub_resident_client
+    ) -> None:
+        """daemon 返回 400 时应透传为 400 + 可读信息, 而非冒泡为 500。"""
+        err = SandboxDaemonAPIError(
+            "HTTP error 400 on /files/list", status_code=400, detail="invalid path: not allowed"
+        )
+        list_url = reverse(
+            "agent_sandbox.volume.files", kwargs={"code": volume.application.code, "volume_id": volume.uuid}
+        )
+        with mock.patch.object(stub_resident_client, "list", side_effect=err):
+            resp = api_client.get(list_url, data={"path": "report.html"})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "AGENT_SANDBOX_FILE_OPERATION_FAILED"
+        assert "invalid path" in resp.json()["detail"]
+
+    def test_list_daemon_500_surfaces_as_500(
+        self, api_client: APIClient, volume: Volume, stub_resident_client
+    ) -> None:
+        """daemon 返回 5xx 时应映射为 500 错误码并记录日志。"""
+        err = SandboxDaemonAPIError("HTTP error 500 on /files/list", status_code=500, detail="internal daemon error")
+        list_url = reverse(
+            "agent_sandbox.volume.files", kwargs={"code": volume.application.code, "volume_id": volume.uuid}
+        )
+        with mock.patch.object(stub_resident_client, "list", side_effect=err):
+            resp = api_client.get(list_url, data={"path": "report.html"})
+        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert resp.json()["code"] == "AGENT_SANDBOX_DAEMON_API_ERROR"
+        assert "internal daemon error" in resp.json()["detail"]
 
     @pytest.mark.usefixtures("_mock_presigned_url")
     def test_download_url_archives_and_dedupes(

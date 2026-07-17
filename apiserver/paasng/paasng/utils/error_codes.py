@@ -244,6 +244,7 @@ class ErrorCodes:
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
     AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT = ErrorCode(_("Agent 沙箱进程执行超时"), status_code=408)
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
+    AGENT_SANDBOX_DAEMON_API_ERROR = ErrorCode(_("Agent 沙箱守护进程 API 异常"), status_code=500)
     AGENT_SANDBOX_IMAGE_VALIDATE_FAILED = ErrorCode(_("Agent 沙箱快照镜像验证失败"), status_code=400)
 
     # Agent sandbox volume file (persistence)

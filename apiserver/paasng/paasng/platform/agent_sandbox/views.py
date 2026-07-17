@@ -42,6 +42,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxArchiveFailed,
     SandboxCreateError,
+    SandboxDaemonAPIError,
     SandboxError,
     SandboxExecTimeout,
     SandboxFileNotFound,
@@ -195,6 +196,12 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxDaemonAPIError as exc:
+            if exc.status_code is not None and 400 <= exc.status_code < 500:
+                # 客户端错误(如非法路径): 透传 daemon 错误信息, 不记录 traceback
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+            logger.exception("Failed to list files in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
         except SandboxError:
             logger.exception("Failed to list files in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -214,6 +221,11 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             result = get_resident_daemon_client().stat(base_path=volume.storage_path, rel_path=data["path"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxDaemonAPIError as exc:
+            if exc.status_code is not None and 400 <= exc.status_code < 500:
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+            logger.exception("Failed to stat file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
         except SandboxError:
             logger.exception("Failed to stat file in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -235,6 +247,11 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.AGENT_SANDBOX_FILE_NOT_PREVIEWABLE
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxDaemonAPIError as exc:
+            if exc.status_code is not None and 400 <= exc.status_code < 500:
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+            logger.exception("Failed to preview file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
         except SandboxError:
             logger.exception("Failed to preview file in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -273,6 +290,11 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.AGENT_SANDBOX_ARCHIVE_FAILED
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxDaemonAPIError as exc:
+            if exc.status_code is not None and 400 <= exc.status_code < 500:
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+            logger.exception("Failed to build download url for volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
         except SandboxError:
             logger.exception("Failed to build download url for volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -301,6 +323,11 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             get_resident_daemon_client().delete(base_path=volume.storage_path, rel_path=data["path"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxDaemonAPIError as exc:
+            if exc.status_code is not None and 400 <= exc.status_code < 500:
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+            logger.exception("Failed to delete file in volume: %s", volume.uuid)
+            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
         except SandboxError:
             logger.exception("Failed to delete file in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED

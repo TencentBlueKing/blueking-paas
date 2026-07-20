@@ -230,9 +230,8 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             page=data["page"],
             page_size=data["page_size"],
         )
-        # daemon 返回 {total, items}, 对外统一为 {count, results} 列表响应风格
-        payload = {"count": result["total"], "results": result["items"]}
-        return Response(VolumeFileListOutputSLZ(payload).data)
+        # daemon 直接返回 {count, results}, 经序列化器校验后透传给前端
+        return Response(VolumeFileListOutputSLZ(result).data)
 
     @swagger_auto_schema(
         tags=["agent_sandbox"],

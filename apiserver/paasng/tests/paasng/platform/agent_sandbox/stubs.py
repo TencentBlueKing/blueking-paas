@@ -169,7 +169,7 @@ class StubResidentDaemonClient:
                     "sha256": None,
                 }
             )
-        return {"total": len(items), "items": items}
+        return {"count": len(items), "results": items}
 
     def stat(self, base_path, rel_path) -> dict:
         meta = self._files.get((base_path, rel_path))

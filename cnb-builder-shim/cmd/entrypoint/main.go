@@ -43,7 +43,9 @@ const (
 var (
 	buildInit       = flag.String("build-init", DefaultBuildInitPath, "path to build-init")
 	lifecycleDriver = flag.String("lifecycle-driver", DefaultLifecycleDriverPath, "path to lifecycle-driver")
-	exitDelay       = flag.String(
+	// exitDelay is set by apiserver when creating the build pod, via --exit-delay flag
+	// or CNB_EXIT_DELAY env var.
+	exitDelay = flag.String(
 		"exit-delay",
 		utils.EnvOrDefault("CNB_EXIT_DELAY", "0"),
 		"sleep delay duration(string like 1m30s) before exit",

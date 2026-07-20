@@ -46,7 +46,7 @@ def extend_quota(
     if math.isinf(quota.max_size):
         raise NoNeedToExtendQuota
 
-    if required_usage_rate and quota.quota_used_rate < required_usage_rate:
+    if required_usage_rate is not None and quota.quota_used_rate < required_usage_rate:
         logger.warning(f"unable to extend quota for {bucket}: usage too low = {quota.quota_used_rate}")
         raise ExtendQuotaUsageTooLow(f"current usage is too low: {quota.quota_used_rate} < {required_usage_rate}")
 

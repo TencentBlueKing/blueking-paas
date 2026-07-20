@@ -1,6 +1,5 @@
-# 生产用多阶段镜像: 构建 daemon 二进制, 以常驻(resident)模式运行。
-# 沙箱内 daemon 与常驻 daemon 共用同一二进制, 常驻模式由 CMD 的 `resident` 参数切入。
-
+# -------------- builder container --------------
+# Build the daemon binary
 FROM golang:1.25.4-alpine3.22 AS builder
 
 WORKDIR /workspace
@@ -18,6 +17,7 @@ COPY . .
 # make build 会同时生成 swagger 文档并产出 build/daemon
 RUN make build
 
+# -------------- runner container --------------
 FROM alpine:3.22
 
 WORKDIR /app

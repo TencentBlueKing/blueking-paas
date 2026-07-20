@@ -27,7 +27,7 @@ definitions:
       output:
         type: string
     type: object
-  pkg_server_pv.ArchiveRequest:
+  pkg_server_volumefs.ArchiveRequest:
     properties:
       base_path:
         type: string
@@ -40,7 +40,7 @@ definitions:
     - rel_path
     - upload_url
     type: object
-  pkg_server_pv.ArchiveResponse:
+  pkg_server_volumefs.ArchiveResponse:
     properties:
       mtime:
         type: string
@@ -49,12 +49,12 @@ definitions:
       size:
         type: integer
     type: object
-  pkg_server_pv.DeleteResponse:
+  pkg_server_volumefs.DeleteResponse:
     properties:
       deleted:
         type: boolean
     type: object
-  pkg_server_pv.FileItem:
+  pkg_server_volumefs.FileItem:
     properties:
       is_dir:
         type: boolean
@@ -69,16 +69,16 @@ definitions:
       size:
         type: integer
     type: object
-  pkg_server_pv.ListResponse:
+  pkg_server_volumefs.ListResponse:
     properties:
       count:
         type: integer
       results:
         items:
-          $ref: '#/definitions/pkg_server_pv.FileItem'
+          $ref: '#/definitions/pkg_server_volumefs.FileItem'
         type: array
     type: object
-  pkg_server_pv.StatResponse:
+  pkg_server_volumefs.StatResponse:
     properties:
       exists:
         type: boolean
@@ -117,7 +117,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pkg_server_pv.DeleteResponse'
+            $ref: '#/definitions/pkg_server_volumefs.DeleteResponse'
       summary: Delete a single file in a volume
       tags:
       - pv
@@ -159,14 +159,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server_pv.ArchiveRequest'
+          $ref: '#/definitions/pkg_server_volumefs.ArchiveRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pkg_server_pv.ArchiveResponse'
+            $ref: '#/definitions/pkg_server_volumefs.ArchiveResponse'
       summary: Archive a file to bkrepo
       tags:
       - pv
@@ -241,7 +241,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pkg_server_pv.ListResponse'
+            $ref: '#/definitions/pkg_server_volumefs.ListResponse'
       summary: List files in a volume path
       tags:
       - pv
@@ -298,7 +298,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pkg_server_pv.StatResponse'
+            $ref: '#/definitions/pkg_server_volumefs.StatResponse'
       summary: Stat a file in a volume
       tags:
       - pv

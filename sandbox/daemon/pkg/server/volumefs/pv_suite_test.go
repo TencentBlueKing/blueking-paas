@@ -1,4 +1,4 @@
-package pv
+package volumefs
 
 import (
 	"testing"

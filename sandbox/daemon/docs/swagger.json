@@ -38,7 +38,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.DeleteResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.DeleteResponse"
                         }
                     }
                 }
@@ -101,7 +101,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ArchiveRequest"
+                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveRequest"
                         }
                     }
                 ],
@@ -109,7 +109,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ArchiveResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveResponse"
                         }
                     }
                 }
@@ -223,7 +223,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ListResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.ListResponse"
                         }
                     }
                 }
@@ -307,7 +307,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.StatResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.StatResponse"
                         }
                     }
                 }
@@ -430,7 +430,7 @@
                 }
             }
         },
-        "pkg_server_pv.ArchiveRequest": {
+        "pkg_server_volumefs.ArchiveRequest": {
             "type": "object",
             "required": [
                 "base_path",
@@ -449,7 +449,7 @@
                 }
             }
         },
-        "pkg_server_pv.ArchiveResponse": {
+        "pkg_server_volumefs.ArchiveResponse": {
             "type": "object",
             "properties": {
                 "mtime": {
@@ -463,7 +463,7 @@
                 }
             }
         },
-        "pkg_server_pv.DeleteResponse": {
+        "pkg_server_volumefs.DeleteResponse": {
             "type": "object",
             "properties": {
                 "deleted": {
@@ -471,7 +471,7 @@
                 }
             }
         },
-        "pkg_server_pv.FileItem": {
+        "pkg_server_volumefs.FileItem": {
             "type": "object",
             "properties": {
                 "is_dir": {
@@ -494,7 +494,7 @@
                 }
             }
         },
-        "pkg_server_pv.ListResponse": {
+        "pkg_server_volumefs.ListResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -503,12 +503,12 @@
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/pkg_server_pv.FileItem"
+                        "$ref": "#/definitions/pkg_server_volumefs.FileItem"
                     }
                 }
             }
         },
-        "pkg_server_pv.StatResponse": {
+        "pkg_server_volumefs.StatResponse": {
             "type": "object",
             "properties": {
                 "exists": {

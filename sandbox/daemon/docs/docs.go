@@ -49,7 +49,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.DeleteResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.DeleteResponse"
                         }
                     }
                 }
@@ -112,7 +112,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ArchiveRequest"
+                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveRequest"
                         }
                     }
                 ],
@@ -120,7 +120,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ArchiveResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveResponse"
                         }
                     }
                 }
@@ -234,7 +234,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.ListResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.ListResponse"
                         }
                     }
                 }
@@ -318,7 +318,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pkg_server_pv.StatResponse"
+                            "$ref": "#/definitions/pkg_server_volumefs.StatResponse"
                         }
                     }
                 }
@@ -441,7 +441,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_pv.ArchiveRequest": {
+        "pkg_server_volumefs.ArchiveRequest": {
             "type": "object",
             "required": [
                 "base_path",
@@ -460,7 +460,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_pv.ArchiveResponse": {
+        "pkg_server_volumefs.ArchiveResponse": {
             "type": "object",
             "properties": {
                 "mtime": {
@@ -474,7 +474,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_pv.DeleteResponse": {
+        "pkg_server_volumefs.DeleteResponse": {
             "type": "object",
             "properties": {
                 "deleted": {
@@ -482,7 +482,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_pv.FileItem": {
+        "pkg_server_volumefs.FileItem": {
             "type": "object",
             "properties": {
                 "is_dir": {
@@ -505,7 +505,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_pv.ListResponse": {
+        "pkg_server_volumefs.ListResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -514,12 +514,12 @@ const docTemplate = `{
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/pkg_server_pv.FileItem"
+                        "$ref": "#/definitions/pkg_server_volumefs.FileItem"
                     }
                 }
             }
         },
-        "pkg_server_pv.StatResponse": {
+        "pkg_server_volumefs.StatResponse": {
             "type": "object",
             "properties": {
                 "exists": {

@@ -17,7 +17,7 @@ import (
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/fs"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/process"
-	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/pv"
+	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/volumefs"
 )
 
 // newEngine builds a gin engine with the common middlewares and validator shared
@@ -102,11 +102,11 @@ func StartResident(ctx context.Context) error {
 
 	// 常驻 daemon 的 PV 文件操作(全部走 base_path + rel_path 路径 jail)。
 	files := r.Group("/files")
-	files.GET("/list", pv.ListFiles)
-	files.GET("/stat", pv.StatFile)
-	files.GET("/preview", pv.PreviewFile)
-	files.POST("/archive", pv.ArchiveFile)
-	files.DELETE("", pv.DeleteFile)
+	files.GET("/list", volumefs.ListFiles)
+	files.GET("/stat", volumefs.StatFile)
+	files.GET("/preview", volumefs.PreviewFile)
+	files.POST("/archive", volumefs.ArchiveFile)
+	files.DELETE("", volumefs.DeleteFile)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.G.ServerHost, config.G.ServerPort),

@@ -1,4 +1,4 @@
-package pv
+package volumefs
 
 // ListRequest 列目录请求(GET /files/list)。base_path 由 apiserver 下发(jail 根), rel_path 为 volume 内相对路径。
 type ListRequest struct {

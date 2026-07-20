@@ -184,7 +184,7 @@ class TestVolumeFileViewSet:
             "agent_sandbox.volume.files", kwargs={"code": volume.application.code, "volume_id": volume.uuid}
         )
         resp = api_client.delete(f"{del_url}?path=report.html")
-        assert resp.status_code == status.HTTP_200_OK
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
         # 删除路径应清掉 bkrepo 对象
         blob_store.delete_file.assert_called_once_with(key)
         assert not VolumeArtifact.objects.filter(volume=volume, rel_path="report.html").exists()
@@ -252,13 +252,12 @@ class TestVolumeFileViewSet:
         url = reverse("agent_sandbox.volume.files", kwargs={"code": volume.application.code, "volume_id": volume.uuid})
 
         resp = api_client.delete(f"{url}?path=report.html")
-        assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["deleted"] is True
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not VolumeArtifact.objects.filter(volume=volume, rel_path="report.html").exists()
 
         # 再次删除仍然成功(幂等)
         resp2 = api_client.delete(f"{url}?path=report.html")
-        assert resp2.status_code == status.HTTP_200_OK
+        assert resp2.status_code == status.HTTP_204_NO_CONTENT
 
 
 @pytest.mark.usefixtures("_mock_app_mismatch_permission", "stub_resident_client")

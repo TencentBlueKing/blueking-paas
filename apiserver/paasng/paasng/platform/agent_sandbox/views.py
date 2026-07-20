@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import functools
 import logging
 from datetime import timedelta
 from pathlib import PurePosixPath
@@ -143,6 +144,45 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         return Response(VolumeOutputSLZ(volumes, many=True).data)
 
 
+def handle_volume_file_errors(action: str):
+    """把 ``VolumeFileViewSet`` 各 action 中重复的「基础设施异常 -> 错误码」映射收敛到一处。
+
+    仅覆盖所有 action 共有、处理方式一致的异常:
+
+    - ``SandboxServiceNotReady``: 服务未就绪(502), 不记录 traceback。
+    - ``SandboxDaemonAPIError``: 4xx 视为客户端错误透传(不记录), 5xx/传输层错误记录后转 DAEMON_API_ERROR。
+    - ``SandboxError``(兜底): 记录后转 FILE_OPERATION_FAILED。
+
+    各 action 仍可在方法体内保留自己的领域异常分支(如 ``SandboxFileNotFound`` /
+    ``SandboxFileTooLarge`` / ``SandboxArchiveFailed``), 它们会先于此处的兜底分支命中,
+    从而保持各 action 原有的精确语义。
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, request, *args, **kwargs):
+            volume_id = kwargs.get("volume_id")
+            try:
+                return func(self, request, *args, **kwargs)
+            except SandboxServiceNotReady:
+                raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+            except SandboxFileNotFound:
+                raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
+            except SandboxDaemonAPIError as exc:
+                if exc.status_code is not None and 400 <= exc.status_code < 500:
+                    # 客户端错误(如非法路径): 透传 daemon 错误信息, 不记录 traceback
+                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+                logger.exception("Failed to %s in volume: %s", action, volume_id)
+                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
+            except SandboxError:
+                logger.exception("Failed to %s in volume: %s", action, volume_id)
+                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        return wrapper
+
+    return decorator
+
+
 class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     """Volume 文件持久化相关接口
 
@@ -177,32 +217,19 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         query_serializer=VolumeFileListInputSLZ(),
         responses={status.HTTP_200_OK: VolumeFileListOutputSLZ()},
     )
+    @handle_volume_file_errors("list files")
     def list(self, request, code, volume_id):
         """列出 volume 内文件(分页)。"""
         volume = self._get_volume(volume_id)
         data = self._validate(VolumeFileListInputSLZ, request.query_params)
 
-        try:
-            result = get_resident_daemon_client().list(
-                base_path=volume.storage_path,
-                rel_path=data["path"],
-                is_recursive=data["is_recursive"],
-                page=data["page"],
-                page_size=data["page_size"],
-            )
-        except SandboxFileNotFound:
-            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
-        except SandboxServiceNotReady:
-            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxDaemonAPIError as exc:
-            if exc.status_code is not None and 400 <= exc.status_code < 500:
-                # 客户端错误(如非法路径): 透传 daemon 错误信息, 不记录 traceback
-                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
-            logger.exception("Failed to list files in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
-        except SandboxError:
-            logger.exception("Failed to list files in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        result = get_resident_daemon_client().list(
+            base_path=volume.storage_path,
+            rel_path=data["path"],
+            is_recursive=data["is_recursive"],
+            page=data["page"],
+            page_size=data["page_size"],
+        )
         # daemon 返回 {total, items}, 对外统一为 {count, results} 列表响应风格
         payload = {"count": result["total"], "results": result["items"]}
         return Response(VolumeFileListOutputSLZ(payload).data)
@@ -212,26 +239,17 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         query_serializer=VolumeFileStatInputSLZ(),
         responses={status.HTTP_200_OK: VolumeFileStatOutputSLZ()},
     )
+    @handle_volume_file_errors("stat file")
     def stat(self, request, code, volume_id):
         """查询 volume 内文件元数据(不存在时返回 200 + exists=false)。"""
         volume = self._get_volume(volume_id)
         data = self._validate(VolumeFileStatInputSLZ, request.query_params)
 
-        try:
-            result = get_resident_daemon_client().stat(base_path=volume.storage_path, rel_path=data["path"])
-        except SandboxServiceNotReady:
-            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxDaemonAPIError as exc:
-            if exc.status_code is not None and 400 <= exc.status_code < 500:
-                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
-            logger.exception("Failed to stat file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
-        except SandboxError:
-            logger.exception("Failed to stat file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        result = get_resident_daemon_client().stat(base_path=volume.storage_path, rel_path=data["path"])
         return Response(VolumeFileStatOutputSLZ(result).data)
 
     @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=VolumeFilePreviewInputSLZ(), responses={200: ""})
+    @handle_volume_file_errors("preview file")
     def preview(self, request, code, volume_id):
         """文本小段预览。忠实透传 daemon 的 text/plain body 与 X-Truncated header。"""
         volume = self._get_volume(volume_id)
@@ -241,20 +259,8 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             content, truncated = get_resident_daemon_client().preview(
                 base_path=volume.storage_path, rel_path=data["path"], max_bytes=data["max_bytes"]
             )
-        except SandboxFileNotFound:
-            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
         except SandboxFileNotPreviewable:
             raise error_codes.AGENT_SANDBOX_FILE_NOT_PREVIEWABLE
-        except SandboxServiceNotReady:
-            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxDaemonAPIError as exc:
-            if exc.status_code is not None and 400 <= exc.status_code < 500:
-                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
-            logger.exception("Failed to preview file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
-        except SandboxError:
-            logger.exception("Failed to preview file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
 
         # 透传原始文本，手动设置 content_type
         response = HttpResponse(content, content_type="text/plain; charset=utf-8")
@@ -267,6 +273,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         query_serializer=VolumeFileDownloadURLInputSLZ(),
         responses={status.HTTP_200_OK: VolumeFileDownloadURLOutputSLZ()},
     )
+    @handle_volume_file_errors("build download url")
     def download_url(self, request, code, volume_id):
         """归档到 bkrepo(按需)并签发下载/预览 URL,一次返回两个互斥 URL。
 
@@ -281,23 +288,11 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             sep = "&" if urlparse(base_url).query else "?"
             download_url = f"{base_url}{sep}{urlencode({'download': 'true'})}"
             preview_url = f"{base_url}{sep}{urlencode({'preview': 'true'})}"
-        except SandboxFileNotFound:
-            raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
         except SandboxFileTooLarge:
             raise error_codes.AGENT_SANDBOX_FILE_TOO_LARGE
         except SandboxArchiveFailed:
             logger.exception("Failed to archive file in volume: %s", volume.uuid)
             raise error_codes.AGENT_SANDBOX_ARCHIVE_FAILED
-        except SandboxServiceNotReady:
-            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxDaemonAPIError as exc:
-            if exc.status_code is not None and 400 <= exc.status_code < 500:
-                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
-            logger.exception("Failed to build download url for volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
-        except SandboxError:
-            logger.exception("Failed to build download url for volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
 
         return Response(
             VolumeFileDownloadURLOutputSLZ(
@@ -312,25 +307,15 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         )
 
     @swagger_auto_schema(
-        tags=["agent_sandbox"], query_serializer=VolumeFileDeleteInputSLZ(), responses={status.HTTP_200_OK: ""}
+        tags=["agent_sandbox"], query_serializer=VolumeFileDeleteInputSLZ(), responses={status.HTTP_204_NO_CONTENT: ""}
     )
+    @handle_volume_file_errors("delete file")
     def destroy(self, request, code, volume_id):
         """删除 volume 内单个文件(幂等)。"""
         volume = self._get_volume(volume_id)
         data = self._validate(VolumeFileDeleteInputSLZ, request.query_params)
 
-        try:
-            get_resident_daemon_client().delete(base_path=volume.storage_path, rel_path=data["path"])
-        except SandboxServiceNotReady:
-            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxDaemonAPIError as exc:
-            if exc.status_code is not None and 400 <= exc.status_code < 500:
-                raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
-            logger.exception("Failed to delete file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
-        except SandboxError:
-            logger.exception("Failed to delete file in volume: %s", volume.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        get_resident_daemon_client().delete(base_path=volume.storage_path, rel_path=data["path"])
 
         # 清理 bkrepo 对象 + 去重表记录, 避免下次归档命中陈旧映射 / "Node existed"
         delete_volume_artifact(volume, data["path"])

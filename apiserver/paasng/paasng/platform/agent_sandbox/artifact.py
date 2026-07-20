@@ -107,10 +107,7 @@ def archive_volume_file(volume: Volume, rel_path: str, client: ResidentDaemonCli
 
 
 def delete_bkrepo_object(store: BlobStore, key: str) -> None:
-    try:
-        store.delete_file(key)
-    except Exception:
-        logger.exception("Failed to delete bkrepo object (key=%s); ignoring", key)
+    store.delete_file(key)
 
 
 def delete_volume_artifact(volume: Volume, rel_path: str) -> None:

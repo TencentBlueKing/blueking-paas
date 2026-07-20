@@ -18,10 +18,6 @@ from paas_wl.infras.resources.base.kres import BaseKresource
 
 
 class SandboxInstance(BaseKresource):
-    """CRD: SandboxInstance(sbi), 最小沙箱运行实例, 由集群侧 sandbox-controller 协调渲染 cube Pod。
-
-    与 BkApp CR 一样, 本类仅复用底层通用的 dynamic client 下发能力
-    (create_or_update / patch / get / delete), 不与 BkApp 的数据模型耦合。
-    """
+    """CRD: SandboxInstance(sbi), 最小沙箱运行实例, 由集群侧 sandbox-controller 协调渲染 cube Pod。"""
 
     kind = "SandboxInstance"

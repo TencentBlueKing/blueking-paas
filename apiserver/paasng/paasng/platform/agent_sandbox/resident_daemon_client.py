@@ -118,12 +118,12 @@ class ResidentDaemonClient:
             "page": page,
             "page_size": page_size,
         }
-        return self._request("GET", "/files/cfs/list", params=payload).json()
+        return self._request("GET", "/files/list", params=payload).json()
 
     def stat(self, base_path: str, rel_path: str) -> StatResult:
         """Return metadata of base_path/rel_path."""
         payload = {"base_path": base_path, "rel_path": rel_path}
-        return self._request("GET", "/files/cfs/stat", params=payload).json()
+        return self._request("GET", "/files/stat", params=payload).json()
 
     def preview(self, base_path: str, rel_path: str, max_bytes: int | None = None) -> tuple[bytes, bool]:
         """Preview the first bytes of a text file, returned as UTF-8.
@@ -134,19 +134,19 @@ class ResidentDaemonClient:
         payload: dict = {"base_path": base_path, "rel_path": rel_path}
         if max_bytes is not None:
             payload["max_bytes"] = max_bytes
-        resp = self._request("GET", "/files/cfs/preview", params=payload)
+        resp = self._request("GET", "/files/preview", params=payload)
         truncated = resp.headers.get("X-Truncated", "false").lower() == "true"
         return resp.content, truncated
 
     def archive(self, base_path: str, rel_path: str, upload_url: str) -> ArchiveResult:
         """Archive a file to bkrepo via the presigned upload URL."""
         payload = {"base_path": base_path, "rel_path": rel_path, "upload_url": upload_url}
-        return self._request("POST", "/files/cfs/archive", json=payload).json()
+        return self._request("POST", "/files/archive", json=payload).json()
 
     def delete(self, base_path: str, rel_path: str) -> None:
         """Delete a single file. Deleting a non-existent file is idempotent (success)."""
         params = {"base_path": base_path, "rel_path": rel_path}
-        self._request("DELETE", "/files/cfs", params=params)
+        self._request("DELETE", "/files", params=params)
 
     def close(self) -> None:
         """Close the HTTP session."""

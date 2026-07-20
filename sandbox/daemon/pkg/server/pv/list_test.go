@@ -127,6 +127,20 @@ var _ = Describe("ListFiles", func() {
 		Expect(w.Code).To(Equal(http.StatusNotFound))
 	})
 
+	It("returns 400 when the path is a file, not a directory", func() {
+		Expect(os.WriteFile(filepath.Join(jailRoot, "a.txt"), []byte("a"), 0o644)).To(Succeed())
+
+		w := doList(router, ListRequest{BasePath: testBasePath, RelPath: "a.txt"})
+		Expect(w.Code).To(Equal(http.StatusBadRequest))
+	})
+
+	It("returns 400 when a file path is listed recursively", func() {
+		Expect(os.WriteFile(filepath.Join(jailRoot, "a.txt"), []byte("a"), 0o644)).To(Succeed())
+
+		w := doList(router, ListRequest{BasePath: testBasePath, RelPath: "a.txt", Recursive: true})
+		Expect(w.Code).To(Equal(http.StatusBadRequest))
+	})
+
 	It("rejects a jail escape with 403", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath, RelPath: "../../"})
 		Expect(w.Code).To(Equal(http.StatusForbidden))

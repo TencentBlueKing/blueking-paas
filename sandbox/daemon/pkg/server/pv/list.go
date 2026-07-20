@@ -1,6 +1,7 @@
 package pv
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -38,6 +39,18 @@ func ListFiles(c *gin.Context) {
 
 	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
+		return
+	}
+
+	// 列目录语义要求目标本身是目录; 指向文件(或指向文件的中段路径)属客户端误用, 返回 400 而非 500。
+	// Stat 跟随 symlink, 与后续 ReadDir/WalkDir 的行为一致; 不存在仍走 404。
+	info, err := os.Stat(full)
+	if err != nil {
+		respondErr(c, err)
+		return
+	}
+	if !info.IsDir() {
+		httputil.BadRequestResponse(c, fmt.Errorf("not a directory: %q", req.RelPath))
 		return
 	}
 

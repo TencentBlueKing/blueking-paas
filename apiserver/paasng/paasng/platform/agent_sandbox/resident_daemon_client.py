@@ -118,12 +118,12 @@ class ResidentDaemonClient:
             "page": page,
             "page_size": page_size,
         }
-        return self._request("GET", "/files/cfs/list", param=payload).json()
+        return self._request("GET", "/files/cfs/list", params=payload).json()
 
     def stat(self, base_path: str, rel_path: str) -> StatResult:
         """Return metadata of base_path/rel_path."""
         payload = {"base_path": base_path, "rel_path": rel_path}
-        return self._request("GET", "/files/cfs/stat", param=payload).json()
+        return self._request("GET", "/files/cfs/stat", params=payload).json()
 
     def preview(self, base_path: str, rel_path: str, max_bytes: int | None = None) -> tuple[bytes, bool]:
         """Preview the first bytes of a text file, returned as UTF-8.
@@ -134,7 +134,7 @@ class ResidentDaemonClient:
         payload: dict = {"base_path": base_path, "rel_path": rel_path}
         if max_bytes is not None:
             payload["max_bytes"] = max_bytes
-        resp = self._request("GET", "/files/cfs/preview", param=payload)
+        resp = self._request("GET", "/files/cfs/preview", params=payload)
         truncated = resp.headers.get("X-Truncated", "false").lower() == "true"
         return resp.content, truncated
 

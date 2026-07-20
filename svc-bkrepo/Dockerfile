@@ -1,4 +1,4 @@
-FROM mirrors.tencent.com/blueking/python:3.14-tencentos4
+FROM mirrors.tencent.com/blueking/python:3.14.6-tencentos4
 USER root
 
 RUN yum install gcc procps bind-utils -y

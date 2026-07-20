@@ -22,7 +22,7 @@ ADD ./configs ./configs
 RUN EDITION=${EDITION} npm run build
 
 ################# PaaS #################
-FROM mirrors.tencent.com/blueking/python:3.14-tencentos4
+FROM mirrors.tencent.com/blueking/python:3.11.10-ts4
 USER root
 
 RUN yum install -y gcc subversion openssh-clients mysql-devel pkg-config vim git gettext procps bind-utils

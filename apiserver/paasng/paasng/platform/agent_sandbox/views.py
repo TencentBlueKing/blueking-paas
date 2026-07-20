@@ -171,9 +171,9 @@ def handle_volume_file_errors(action: str):
             except SandboxDaemonAPIError as exc:
                 if exc.status_code is not None and 400 <= exc.status_code < 500:
                     # 客户端错误(如非法路径): 透传 daemon 错误信息, 不记录 traceback
-                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(exc.detail or str(exc))
+                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
                 logger.exception("Failed to %s in volume: %s", action, volume_id)
-                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(exc.detail or str(exc))
+                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR
             except SandboxError:
                 logger.exception("Failed to %s in volume: %s", action, volume_id)
                 raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED

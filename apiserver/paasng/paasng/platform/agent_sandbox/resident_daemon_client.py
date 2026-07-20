@@ -25,6 +25,7 @@ All path-taking operations take a ``base_path`` (the jail root, computed by apis
 ``app/{volume_uuid_hex}``) plus a user-controlled ``rel_path``; the daemon enforces the jail.
 """
 
+from datetime import datetime
 from typing import Any, NotRequired, TypedDict
 
 import requests
@@ -108,6 +109,8 @@ class ResidentDaemonClient:
         is_recursive: bool = False,
         page: int = 1,
         page_size: int = 100,
+        since: datetime | None = None,
+        until: datetime | None = None,
     ) -> ListResult:
         """List files under base_path/rel_path with pagination."""
         payload = {
@@ -117,6 +120,10 @@ class ResidentDaemonClient:
             "page": page,
             "page_size": page_size,
         }
+        if since is not None:
+            payload["since"] = since.isoformat()
+        if until is not None:
+            payload["until"] = until.isoformat()
         return self._request_json("GET", "/files/list", params=payload)
 
     def stat(self, base_path: str, rel_path: str) -> StatResult:

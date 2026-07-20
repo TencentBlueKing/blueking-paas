@@ -19,7 +19,7 @@
 
 Unlike ``SandboxDaemonClient`` (which talks to a per-sandbox daemon through the Sandbox
 Router), the resident daemon is a long-lived platform component reachable at a fixed
-endpoint. It mounts the CFS root and exposes jailed file operations over ``/files/cfs/*``.
+endpoint. It mounts the CFS root and exposes jailed file operations over ``/files/*``.
 
 All path-taking operations take a ``base_path`` (the jail root, computed by apiserver as
 ``app/{volume_uuid_hex}``) plus a user-controlled ``rel_path``; the daemon enforces the jail.
@@ -39,7 +39,6 @@ from .exceptions import (
     SandboxServiceNotReady,
 )
 
-# Default timeout for HTTP requests (in seconds)
 DEFAULT_REQUEST_TIMEOUT = 60
 
 
@@ -118,12 +117,12 @@ class ResidentDaemonClient:
             "page": page,
             "page_size": page_size,
         }
-        return self._request("GET", "/files/list", params=payload).json()
+        return self._request_json("GET", "/files/list", params=payload)
 
     def stat(self, base_path: str, rel_path: str) -> StatResult:
         """Return metadata of base_path/rel_path."""
         payload = {"base_path": base_path, "rel_path": rel_path}
-        return self._request("GET", "/files/stat", params=payload).json()
+        return self._request_json("GET", "/files/stat", params=payload)
 
     def preview(self, base_path: str, rel_path: str, max_bytes: int | None = None) -> tuple[bytes, bool]:
         """Preview the first bytes of a text file, returned as UTF-8.
@@ -131,7 +130,7 @@ class ResidentDaemonClient:
         :returns: ``(content, truncated)`` where ``truncated`` reflects the daemon's ``X-Truncated`` header.
         :raises SandboxFileNotPreviewable: When the file is not a previewable text type.
         """
-        payload: dict = {"base_path": base_path, "rel_path": rel_path}
+        payload: dict[str, object] = {"base_path": base_path, "rel_path": rel_path}
         if max_bytes is not None:
             payload["max_bytes"] = max_bytes
         resp = self._request("GET", "/files/preview", params=payload)
@@ -141,7 +140,7 @@ class ResidentDaemonClient:
     def archive(self, base_path: str, rel_path: str, upload_url: str) -> ArchiveResult:
         """Archive a file to bkrepo via the presigned upload URL."""
         payload = {"base_path": base_path, "rel_path": rel_path, "upload_url": upload_url}
-        return self._request("POST", "/files/archive", json=payload).json()
+        return self._request_json("POST", "/files/archive", json=payload)
 
     def delete(self, base_path: str, rel_path: str) -> None:
         """Delete a single file. Deleting a non-existent file is idempotent (success)."""
@@ -151,6 +150,9 @@ class ResidentDaemonClient:
     def close(self) -> None:
         """Close the HTTP session."""
         self._session.close()
+
+    def _request_json(self, method: str, path: str, **kwargs: Any) -> Any:
+        return self._request(method, path, **kwargs).json()
 
     def _request(self, method: str, path: str, timeout: int | None = None, **kwargs: Any) -> requests.Response:
         """Send an HTTP request with unified error handling.
@@ -183,7 +185,6 @@ class ResidentDaemonClient:
                 raise SandboxServiceNotReady(detail or "resident daemon service is not ready")
             raise SandboxDaemonAPIError(f"HTTP error {status_code} on {path}", status_code=status_code, detail=detail)
         except requests.RequestException as exc:
-            # Transport-level failure (connection refused, DNS, etc.): no response, hence no status code.
             raise SandboxDaemonAPIError(f"Request failed: {exc}")
         else:
             return resp

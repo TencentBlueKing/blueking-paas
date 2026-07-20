@@ -21,6 +21,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
+from paasng.utils.serializers import SafePathField
 
 from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
 from .models import Sandbox, Volume
@@ -203,29 +204,15 @@ class VolumeOutputSLZ(serializers.ModelSerializer):
         return obj.storage_path
 
 
-def _validate_rel_path(value: str) -> str:
-    """Normalize and validate a volume-relative path.
-
-    Blocks '..' segments as a first line of defense; the daemon jail is the hard boundary.
-    Returns the path with any leading slash stripped ("/" or "" both mean the volume root).
-    """
-    if ".." in value.split("/"):
-        raise serializers.ValidationError("path must not contain '..' path segments")
-    return value.lstrip("/")
-
-
 class VolumeFileListInputSLZ(serializers.Serializer):
     """列出 volume 内文件(分页)。"""
 
-    path = serializers.CharField(
+    path = SafePathField(
         label="路径", required=False, default="", allow_blank=True, help_text="volume 内相对路径，默认根目录"
     )
     is_recursive = serializers.BooleanField(label="递归", required=False, default=False)
     page = serializers.IntegerField(label="页码", required=False, default=1, min_value=1)
     page_size = serializers.IntegerField(label="每页数量", required=False, default=100, min_value=1)
-
-    def validate_path(self, value: str) -> str:
-        return _validate_rel_path(value)
 
     def validate_page_size(self, value: int) -> int:
         # 上限 500,超限 clamp(与 daemon 侧 maxPageSize 对齐)
@@ -235,7 +222,7 @@ class VolumeFileListInputSLZ(serializers.Serializer):
 class VolumeFileItemOutputSLZ(serializers.Serializer):
     """列表/元数据中的单个文件条目。"""
 
-    path = serializers.CharField(label="文件路径")
+    path = SafePathField(label="文件路径")
     name = serializers.CharField(label="文件名")
     is_dir = serializers.BooleanField(label="是否目录")
     size = serializers.IntegerField(label="文件大小（字节）")
@@ -244,7 +231,7 @@ class VolumeFileItemOutputSLZ(serializers.Serializer):
 
 
 class VolumeFileListOutputSLZ(serializers.Serializer):
-    """列表响应"""
+    """列出volume内文件响应"""
 
     count = serializers.IntegerField(label="文件总数")
     results = VolumeFileItemOutputSLZ(label="文件列表", many=True)
@@ -253,10 +240,7 @@ class VolumeFileListOutputSLZ(serializers.Serializer):
 class VolumeFileStatInputSLZ(serializers.Serializer):
     """查询 volume 内文件元数据。"""
 
-    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
-
-    def validate_path(self, value: str) -> str:
-        return _validate_rel_path(value)
+    path = SafePathField(label="路径", help_text="volume 内相对路径")
 
 
 class VolumeFileStatOutputSLZ(serializers.Serializer):
@@ -272,21 +256,15 @@ class VolumeFileStatOutputSLZ(serializers.Serializer):
 class VolumeFilePreviewInputSLZ(serializers.Serializer):
     """文本小段预览。"""
 
-    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+    path = SafePathField(label="路径", help_text="volume 内相对路径")
     max_bytes = serializers.IntegerField(label="截断上限(字节)", required=False, default=65536, min_value=1)
-
-    def validate_path(self, value: str) -> str:
-        return _validate_rel_path(value)
 
 
 class VolumeFileDownloadURLInputSLZ(serializers.Serializer):
     """归档并签发下载/预览 URL"""
 
-    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
+    path = SafePathField(label="路径", help_text="volume 内相对路径")
     expires_in = serializers.IntegerField(label="有效期(秒)", required=False, default=600, min_value=1, max_value=3600)
-
-    def validate_path(self, value: str) -> str:
-        return _validate_rel_path(value)
 
 
 class VolumeFileDownloadURLOutputSLZ(serializers.Serializer):
@@ -302,10 +280,7 @@ class VolumeFileDownloadURLOutputSLZ(serializers.Serializer):
 class VolumeFileDeleteInputSLZ(serializers.Serializer):
     """删除 volume 内单个文件。"""
 
-    path = serializers.CharField(label="路径", help_text="volume 内相对路径")
-
-    def validate_path(self, value: str) -> str:
-        return _validate_rel_path(value)
+    path = SafePathField(label="路径", help_text="volume 内相对路径")
 
 
 class SandboxCreateFolderInputSLZ(serializers.Serializer):

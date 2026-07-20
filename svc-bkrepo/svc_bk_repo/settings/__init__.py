@@ -305,8 +305,12 @@ EXTEND_CONFIG_EXTRA_SIZE_BYTES = 2**30
 # bkrepo 自动扩容全局开关，默认关闭
 BKREPO_AUTO_EXPAND_ENABLED = env.bool("BKREPO_AUTO_EXPAND_ENABLED", default=False)
 
-# bkrepo 自动扩容使用率阈值(%)，默认 80%
+# bkrepo 自动扩容使用率阈值(%)，默认 80%，应在 65~100 之间
 BKREPO_AUTO_EXPAND_USAGE_THRESHOLD = env.int("BKREPO_AUTO_EXPAND_USAGE_THRESHOLD", default=80)
+if not (65 <= BKREPO_AUTO_EXPAND_USAGE_THRESHOLD <= 100):
+    raise ValueError(
+        f"BKREPO_AUTO_EXPAND_USAGE_THRESHOLD must be in [65, 100], got {BKREPO_AUTO_EXPAND_USAGE_THRESHOLD}"
+    )
 
 BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
 # 蓝鲸登录票据在Cookie中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息

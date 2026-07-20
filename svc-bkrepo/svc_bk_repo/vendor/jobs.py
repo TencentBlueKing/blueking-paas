@@ -38,12 +38,7 @@ def auto_extend_bkrepo_quota():
         logger.info("BKRepo auto-expand is globally disabled, skip.")
         return
 
-    # 阈值 0 不进行扩容
     threshold = settings.BKREPO_AUTO_EXPAND_USAGE_THRESHOLD
-    if threshold is not None and threshold < 1:
-        logger.warning("BKREPO_AUTO_EXPAND_USAGE_THRESHOLD=%d < 1, skip to avoid unconditional expand.", threshold)
-        return
-
     with db_distributed_lock("auto_extend_bkrepo_quota") as acquired:
         if not acquired:
             return

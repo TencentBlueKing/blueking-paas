@@ -17,9 +17,17 @@
 
 import datetime
 
+from prometheus_client import Counter
 from prometheus_client.core import CollectorRegistry, GaugeMetricFamily
 
 global_registry = CollectorRegistry()
+
+# 自动扩容监控: 每次扩容成功时 inc(), 通过 multiprocess 聚合多 worker 的计数
+auto_expand_counter = Counter(
+    "bkrepo_auto_expand_events_total",
+    "Total number of auto-expand events",
+    ["service_id", "instance_id", "repo_name"],
+)
 
 
 class BKRepoMetricsCollector:
@@ -28,6 +36,8 @@ class BKRepoMetricsCollector:
 
         dt = datetime.datetime.now()
         timestamp = dt.timestamp()
+
+        # bkrepo 配额使用率
         quota_used_rate_metric = GaugeMetricFamily(
             "bkrepo_quota_used_rate_metrics",
             "bkrepo Quota Used Rate Metrics",
@@ -43,7 +53,6 @@ class BKRepoMetricsCollector:
                 repo_quota_stat.quota_used_rate,
                 timestamp=timestamp,
             )
-
         yield quota_used_rate_metric
 
 

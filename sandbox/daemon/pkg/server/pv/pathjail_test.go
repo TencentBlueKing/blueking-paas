@@ -57,8 +57,15 @@ var _ = Describe("Resolve", func() {
 	})
 
 	It("rejects a base_path that escapes rootDir via ..", func() {
-		// basePath 本身含 .. 时 jailRoot 会逸出 rootDir, 须在 Resolve 阶段挡住
 		_, _, err := Resolve(rootDir, "../sibling", "x")
+		Expect(err).To(MatchError(ErrPathEscape))
+	})
+
+	It("rejects absolute and storage-root base paths", func() {
+		_, _, err := Resolve(rootDir, "/etc", "passwd")
+		Expect(err).To(MatchError(ErrPathEscape))
+
+		_, _, err = Resolve(rootDir, ".", "app/volume1")
 		Expect(err).To(MatchError(ErrPathEscape))
 	})
 })
@@ -68,13 +75,12 @@ var _ = Describe("ResolveSymlink", func() {
 		rootDir  string
 		jailRoot string
 	)
-	const basePath = "app/volume1"
 
 	BeforeEach(func() {
 		var err error
 		rootDir, err = os.MkdirTemp("", "jail-symlink-*")
 		Expect(err).NotTo(HaveOccurred())
-		jailRoot = filepath.Join(rootDir, basePath)
+		jailRoot = filepath.Join(rootDir, "app/volume1")
 		Expect(os.MkdirAll(jailRoot, 0o755)).To(Succeed())
 	})
 
@@ -108,5 +114,45 @@ var _ = Describe("ResolveSymlink", func() {
 	It("returns a not-exist error for a missing path", func() {
 		_, err := ResolveSymlink(filepath.Join(jailRoot, "nope"), jailRoot)
 		Expect(os.IsNotExist(err)).To(BeTrue())
+	})
+})
+
+var _ = Describe("ResolveDeletionTarget", func() {
+	var (
+		rootDir  string
+		jailRoot string
+	)
+
+	BeforeEach(func() {
+		var err error
+		rootDir, err = os.MkdirTemp("", "jail-delete-*")
+		Expect(err).NotTo(HaveOccurred())
+		jailRoot = filepath.Join(rootDir, "app/volume1")
+		Expect(os.MkdirAll(jailRoot, 0o755)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(rootDir)).To(Succeed())
+	})
+
+	It("keeps the final symlink unresolved", func() {
+		target := filepath.Join(jailRoot, "target.txt")
+		link := filepath.Join(jailRoot, "link.txt")
+		Expect(os.WriteFile(target, []byte("x"), 0o644)).To(Succeed())
+		Expect(os.Symlink(target, link)).To(Succeed())
+
+		resolved, err := ResolveDeletionTarget(link, jailRoot)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resolved).To(Equal(link))
+	})
+
+	It("rejects a parent symlink that points outside the jail", func() {
+		outside := filepath.Join(rootDir, "outside")
+		Expect(os.MkdirAll(outside, 0o755)).To(Succeed())
+		link := filepath.Join(jailRoot, "escape")
+		Expect(os.Symlink(outside, link)).To(Succeed())
+
+		_, err := ResolveDeletionTarget(filepath.Join(link, "secret.txt"), jailRoot)
+		Expect(err).To(MatchError(ErrPathEscape))
 	})
 })

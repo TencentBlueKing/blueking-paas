@@ -28,19 +28,23 @@ func StatFile(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 
-	full, _, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
+	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}
 
-	// Lstat 不跟随 symlink: stat 语义是"查在不在", 不存在非错误。
-	info, err := os.Lstat(full)
+	real, err := ResolveSymlink(full, jailRoot)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, StatResponse{Exists: false, Path: req.RelPath})
 		} else {
 			respondErr(c, err)
 		}
+		return
+	}
+	info, err := os.Stat(real)
+	if err != nil {
+		respondErr(c, err)
 		return
 	}
 
@@ -51,7 +55,6 @@ func StatFile(c *gin.Context) {
 		ModifiedAt: formatTime(info.ModTime()),
 	}
 	if !info.IsDir() {
-		// 不读内容(避免 symlink 嗅探逃逸), 与 list 一致按扩展名判定。
 		resp.Mime = detectMimeByExt(info.Name())
 	}
 	httputil.SuccessResponse(c, resp)

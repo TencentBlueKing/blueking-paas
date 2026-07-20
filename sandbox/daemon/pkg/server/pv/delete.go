@@ -36,8 +36,13 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	// symlink 兜底: 不存在视为已删除(幂等), 解析逃逸则 403。
-	real, err := ResolveSymlink(full, jailRoot)
+	target, err := ResolveDeletionTarget(full, jailRoot)
+	if err != nil {
+		respondErr(c, err)
+		return
+	}
+
+	info, err := os.Lstat(target)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
@@ -47,18 +52,12 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	// 仅删单个文件, 拒绝目录(产物文件场景)。
-	info, err := os.Lstat(real)
-	if err != nil {
-		respondErr(c, err)
-		return
-	}
 	if info.IsDir() {
 		httputil.BadRequestResponse(c, errors.New("cannot delete a directory"))
 		return
 	}
 
-	if err := os.Remove(real); err != nil {
+	if err := os.Remove(target); err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
 			return

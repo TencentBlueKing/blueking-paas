@@ -44,7 +44,12 @@ func ListFiles(c *gin.Context) {
 
 	// 列目录语义要求目标本身是目录; 指向文件(或指向文件的中段路径)属客户端误用, 返回 400 而非 500。
 	// Stat 跟随 symlink, 与后续 ReadDir/WalkDir 的行为一致; 不存在仍走 404。
-	info, err := os.Stat(full)
+	realDir, err := ResolveSymlink(full, jailRoot)
+	if err != nil {
+		respondErr(c, err)
+		return
+	}
+	info, err := os.Stat(realDir)
 	if err != nil {
 		respondErr(c, err)
 		return
@@ -54,7 +59,7 @@ func ListFiles(c *gin.Context) {
 		return
 	}
 
-	items, err := collectItems(full, jailRoot, req.Recursive)
+	items, err := collectItems(realDir, jailRoot, req.Recursive)
 	if err != nil {
 		respondErr(c, err)
 		return
@@ -65,7 +70,7 @@ func ListFiles(c *gin.Context) {
 	start := min((page-1)*pageSize, len(items))
 	end := min(start+pageSize, len(items))
 
-	httputil.SuccessResponse(c, ListResponse{Total: len(items), Items: items[start:end]})
+	httputil.SuccessResponse(c, ListResponse{Count: len(items), Results: items[start:end]})
 }
 
 // collectItems 遍历 dir: recursive 用 WalkDir(跳过 dir 自身), 否则仅当前层。Path 相对 jailRoot。

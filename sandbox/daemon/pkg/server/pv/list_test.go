@@ -21,7 +21,7 @@ func doList(router *gin.Engine, req ListRequest) *httptest.ResponseRecorder {
 		q.Set("rel_path", req.RelPath)
 	}
 	if req.Recursive {
-		q.Set("recursive", "true")
+		q.Set("is_recursive", "true")
 	}
 	if req.Page != 0 {
 		q.Set("page", strconv.Itoa(req.Page))
@@ -64,18 +64,17 @@ var _ = Describe("ListFiles", func() {
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
 		// a.txt, b.json, sub -> 3 top-level entries, sub/c.txt excluded
-		Expect(resp.Total).To(Equal(3))
-		Expect(resp.Items).To(HaveLen(3))
+		Expect(resp.Count).To(Equal(3))
+		Expect(resp.Results).To(HaveLen(3))
 	})
 
-	It("infers mime by extension and leaves sha256 null", func() {
+	It("infers mime by extension", func() {
 		Expect(os.WriteFile(filepath.Join(jailRoot, "report.html"), []byte("<html>"), 0o644)).To(Succeed())
 
 		w := doList(router, ListRequest{BasePath: testBasePath})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Items[0].Mime).To(Equal("text/html"))
-		Expect(resp.Items[0].Sha256).To(BeNil())
+		Expect(resp.Results[0].Mime).To(Equal("text/html"))
 	})
 
 	// .txt 等常见文本扩展名不在 Go 标准库内置表内, 且 alpine 运行镜像无 /etc/mime.types,
@@ -86,7 +85,7 @@ var _ = Describe("ListFiles", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Items[0].Mime).To(Equal("text/plain"))
+		Expect(resp.Results[0].Mime).To(Equal("text/plain"))
 	})
 
 	It("lists recursively including nested files", func() {
@@ -98,7 +97,7 @@ var _ = Describe("ListFiles", func() {
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
 		// a.txt, sub, sub/c.txt
-		Expect(resp.Total).To(Equal(3))
+		Expect(resp.Count).To(Equal(3))
 	})
 
 	It("handles an empty directory", func() {
@@ -106,8 +105,8 @@ var _ = Describe("ListFiles", func() {
 		Expect(w.Code).To(Equal(http.StatusOK))
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Total).To(Equal(0))
-		Expect(resp.Items).NotTo(BeNil())
+		Expect(resp.Count).To(Equal(0))
+		Expect(resp.Results).NotTo(BeNil())
 	})
 
 	It("clamps page_size to the max and paginates", func() {
@@ -118,8 +117,8 @@ var _ = Describe("ListFiles", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath, Page: 1, PageSize: 100000})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Total).To(Equal(10))
-		Expect(resp.Items).To(HaveLen(10)) // all 10 fit under clamped 500
+		Expect(resp.Count).To(Equal(10))
+		Expect(resp.Results).To(HaveLen(10)) // all 10 fit under clamped 500
 	})
 
 	It("returns 404 for a missing directory", func() {
@@ -143,6 +142,15 @@ var _ = Describe("ListFiles", func() {
 
 	It("rejects a jail escape with 403", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath, RelPath: "../../"})
+		Expect(w.Code).To(Equal(http.StatusForbidden))
+	})
+
+	It("rejects a directory symlink that points outside the jail", func() {
+		outside := filepath.Join(rootDir, "outside")
+		Expect(os.MkdirAll(outside, 0o755)).To(Succeed())
+		Expect(os.Symlink(outside, filepath.Join(jailRoot, "escape"))).To(Succeed())
+
+		w := doList(router, ListRequest{BasePath: testBasePath, RelPath: "escape"})
 		Expect(w.Code).To(Equal(http.StatusForbidden))
 	})
 

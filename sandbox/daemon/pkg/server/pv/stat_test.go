@@ -66,4 +66,13 @@ var _ = Describe("StatFile", func() {
 		w := doStat(router, StatRequest{BasePath: testBasePath, RelPath: "../../etc/passwd"})
 		Expect(w.Code).To(Equal(http.StatusForbidden))
 	})
+
+	It("rejects a symlink that points outside the jail", func() {
+		outside := filepath.Join(rootDir, "outside.txt")
+		Expect(os.WriteFile(outside, []byte("secret"), 0o644)).To(Succeed())
+		Expect(os.Symlink(outside, filepath.Join(jailRoot, "escape"))).To(Succeed())
+
+		w := doStat(router, StatRequest{BasePath: testBasePath, RelPath: "escape"})
+		Expect(w.Code).To(Equal(http.StatusForbidden))
+	})
 })

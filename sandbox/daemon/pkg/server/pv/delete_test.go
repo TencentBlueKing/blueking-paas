@@ -76,6 +76,33 @@ var _ = Describe("DeleteFile", func() {
 		Expect(w.Code).To(Equal(http.StatusForbidden))
 	})
 
+	It("removes a symlink without removing its target", func() {
+		target := filepath.Join(jailRoot, "target.txt")
+		link := filepath.Join(jailRoot, "link.txt")
+		Expect(os.WriteFile(target, []byte("x"), 0o644)).To(Succeed())
+		Expect(os.Symlink(target, link)).To(Succeed())
+
+		w := doDelete(router, testBasePath, "link.txt")
+		Expect(w.Code).To(Equal(http.StatusOK))
+		_, err := os.Lstat(link)
+		Expect(os.IsNotExist(err)).To(BeTrue())
+		_, err = os.Stat(target)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("refuses to delete through a parent symlink that points outside the jail", func() {
+		outside := filepath.Join(rootDir, "outside")
+		Expect(os.MkdirAll(outside, 0o755)).To(Succeed())
+		secret := filepath.Join(outside, "secret.txt")
+		Expect(os.WriteFile(secret, []byte("secret"), 0o644)).To(Succeed())
+		Expect(os.Symlink(outside, filepath.Join(jailRoot, "escape"))).To(Succeed())
+
+		w := doDelete(router, testBasePath, "escape/secret.txt")
+		Expect(w.Code).To(Equal(http.StatusForbidden))
+		_, err := os.Stat(secret)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("rejects a missing base_path with 400", func() {
 		w := doDelete(router, "", "x")
 		Expect(w.Code).To(Equal(http.StatusBadRequest))

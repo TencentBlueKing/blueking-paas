@@ -50,7 +50,7 @@ var _ = Describe("StatFile", func() {
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
 		Expect(resp.Exists).To(BeTrue())
 		Expect(resp.Size).To(Equal(int64(6)))
-		Expect(resp.Mime).To(Equal("text/html"))
+		Expect(resp.Mime).To(HavePrefix("text/html"))
 	})
 
 	It("returns 200 with exists=false for a missing file", func() {

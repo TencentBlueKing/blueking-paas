@@ -5,6 +5,8 @@ type ListRequest struct {
 	BasePath  string `form:"base_path" validate:"required"`
 	RelPath   string `form:"rel_path" validate:"optional"`
 	Recursive bool   `form:"is_recursive" validate:"optional"`
+	Since     string `form:"since" validate:"optional"`
+	Until     string `form:"until" validate:"optional"`
 	Page      int    `form:"page" validate:"optional"`
 	PageSize  int    `form:"page_size" validate:"optional"`
 }

@@ -31,18 +31,13 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, basePath, relPath)
+	root, name, ok := openJailedRoot(c, config.G.RootDir, basePath, relPath)
 	if !ok {
 		return
 	}
+	defer root.Close() // nolint
 
-	target, err := ResolveDeletionTarget(full, jailRoot)
-	if err != nil {
-		respondErr(c, err)
-		return
-	}
-
-	info, err := os.Lstat(target)
+	info, err := root.Lstat(name)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
@@ -57,7 +52,7 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	if err := os.Remove(target); err != nil {
+	if err := root.Remove(name); err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, DeleteResponse{Deleted: true})
 			return

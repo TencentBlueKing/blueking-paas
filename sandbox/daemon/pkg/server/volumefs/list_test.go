@@ -2,12 +2,14 @@ package volumefs
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/onsi/ginkgo/v2"
@@ -22,6 +24,12 @@ func doList(router *gin.Engine, req ListRequest) *httptest.ResponseRecorder {
 	}
 	if req.Recursive {
 		q.Set("is_recursive", "true")
+	}
+	if req.Since != "" {
+		q.Set("since", req.Since)
+	}
+	if req.Until != "" {
+		q.Set("until", req.Until)
 	}
 	if req.Page != 0 {
 		q.Set("page", strconv.Itoa(req.Page))
@@ -74,7 +82,7 @@ var _ = Describe("ListFiles", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Results[0].Mime).To(Equal("text/html"))
+		Expect(resp.Results[0].Mime).To(HavePrefix("text/html"))
 	})
 
 	// .txt 等常见文本扩展名不在 Go 标准库内置表内, 且 alpine 运行镜像无 /etc/mime.types,
@@ -85,7 +93,7 @@ var _ = Describe("ListFiles", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Results[0].Mime).To(Equal("text/plain"))
+		Expect(resp.Results[0].Mime).To(HavePrefix("text/plain"))
 	})
 
 	It("lists recursively including nested files", func() {
@@ -100,6 +108,55 @@ var _ = Describe("ListFiles", func() {
 		Expect(resp.Count).To(Equal(3))
 	})
 
+	It("filters entries in an inclusive since/until range before paginating", func() {
+		older := filepath.Join(jailRoot, "older.txt")
+		atSince := filepath.Join(jailRoot, "at-since.txt")
+		inRange := filepath.Join(jailRoot, "in-range.txt")
+		atUntil := filepath.Join(jailRoot, "at-until.txt")
+		newer := filepath.Join(jailRoot, "newer.txt")
+		for _, path := range []string{older, atSince, inRange, atUntil, newer} {
+			Expect(os.WriteFile(path, []byte("x"), 0o644)).To(Succeed())
+		}
+
+		since := time.Date(2026, time.June, 24, 10, 23, 11, 0, time.UTC)
+		until := since.Add(2 * time.Second)
+		Expect(os.Chtimes(older, since.Add(-time.Second), since.Add(-time.Second))).To(Succeed())
+		Expect(os.Chtimes(atSince, since, since)).To(Succeed())
+		Expect(os.Chtimes(inRange, since.Add(time.Second), since.Add(time.Second))).To(Succeed())
+		Expect(os.Chtimes(atUntil, until, until)).To(Succeed())
+		Expect(os.Chtimes(newer, until.Add(time.Second), until.Add(time.Second))).To(Succeed())
+
+		w := doList(router, ListRequest{
+			BasePath: testBasePath,
+			Since:    since.Format(time.RFC3339),
+			Until:    until.Format(time.RFC3339),
+			PageSize: 1,
+		})
+		Expect(w.Code).To(Equal(http.StatusOK))
+
+		var resp ListResponse
+		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
+		Expect(resp.Count).To(Equal(3))
+		Expect(resp.Results).To(ConsistOf(HaveField("Path", "at-since.txt")))
+	})
+
+	It("rejects invalid since and until filters", func() {
+		w := doList(router, ListRequest{BasePath: testBasePath, Since: "not-a-time"})
+		Expect(w.Code).To(Equal(http.StatusBadRequest))
+
+		w = doList(router, ListRequest{BasePath: testBasePath, Until: "not-a-time"})
+		Expect(w.Code).To(Equal(http.StatusBadRequest))
+	})
+
+	It("rejects a since value after until", func() {
+		w := doList(router, ListRequest{
+			BasePath: testBasePath,
+			Since:    "2026-06-25T00:00:00Z",
+			Until:    "2026-06-24T00:00:00Z",
+		})
+		Expect(w.Code).To(Equal(http.StatusBadRequest))
+	})
+
 	It("handles an empty directory", func() {
 		w := doList(router, ListRequest{BasePath: testBasePath})
 		Expect(w.Code).To(Equal(http.StatusOK))
@@ -110,15 +167,21 @@ var _ = Describe("ListFiles", func() {
 	})
 
 	It("clamps page_size to the max and paginates", func() {
-		for i := 0; i < 10; i++ {
-			name := filepath.Join(jailRoot, string(rune('a'+i))+".txt")
+		for i := 0; i <= maxPageSize; i++ {
+			name := filepath.Join(jailRoot, fmt.Sprintf("%03d.txt", i))
 			Expect(os.WriteFile(name, []byte("x"), 0o644)).To(Succeed())
 		}
 		w := doList(router, ListRequest{BasePath: testBasePath, Page: 1, PageSize: 100000})
 		var resp ListResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
-		Expect(resp.Count).To(Equal(10))
-		Expect(resp.Results).To(HaveLen(10)) // all 10 fit under clamped 500
+		Expect(resp.Count).To(Equal(maxPageSize + 1))
+		Expect(resp.Results).To(HaveLen(maxPageSize))
+
+		w = doList(router, ListRequest{BasePath: testBasePath, Page: 2, PageSize: maxPageSize})
+		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
+		Expect(resp.Count).To(Equal(maxPageSize + 1))
+		Expect(resp.Results).To(HaveLen(1))
+		Expect(resp.Results[0].Path).To(Equal(fmt.Sprintf("%03d.txt", maxPageSize)))
 	})
 
 	It("returns 404 for a missing directory", func() {

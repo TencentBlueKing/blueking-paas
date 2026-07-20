@@ -28,23 +28,19 @@ func StatFile(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 
-	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
+	root, name, ok := openJailedRoot(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}
+	defer root.Close() // nolint
 
-	real, err := ResolveSymlink(full, jailRoot)
+	info, err := root.Stat(name)
 	if err != nil {
 		if os.IsNotExist(err) {
 			httputil.SuccessResponse(c, StatResponse{Exists: false, Path: req.RelPath})
 		} else {
 			respondErr(c, err)
 		}
-		return
-	}
-	info, err := os.Stat(real)
-	if err != nil {
-		respondErr(c, err)
 		return
 	}
 
@@ -55,7 +51,12 @@ func StatFile(c *gin.Context) {
 		ModifiedAt: formatTime(info.ModTime()),
 	}
 	if !info.IsDir() {
-		resp.Mime = detectMimeByExt(info.Name())
+		m, err := detectMime(root, name)
+		if err != nil {
+			respondErr(c, err)
+			return
+		}
+		resp.Mime = m.String()
 	}
 	httputil.SuccessResponse(c, resp)
 }

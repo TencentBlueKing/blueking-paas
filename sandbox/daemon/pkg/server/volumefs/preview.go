@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"unicode/utf8"
 
@@ -38,18 +37,13 @@ func PreviewFile(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 
-	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
+	root, name, ok := openJailedRoot(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}
+	defer root.Close() // nolint
 
-	real, err := ResolveSymlink(full, jailRoot)
-	if err != nil {
-		respondErr(c, err)
-		return
-	}
-
-	info, err := os.Stat(real)
+	info, err := root.Stat(name)
 	if err != nil {
 		respondErr(c, err)
 		return
@@ -60,7 +54,13 @@ func PreviewFile(c *gin.Context) {
 	}
 
 	// 按内容嗅探(魔数)判定, 兼顾被改名伪装的文件; 非文本返回 415 交前端 inline 下载。
-	if !isTextMime(detectMime(real)) {
+	m, err := detectMime(root, name)
+	if err != nil {
+		respondErr(c, err)
+		return
+	}
+
+	if !isTextMime(m.String()) {
 		httputil.UnsupportedMediaTypeResponse(c, errors.New("file is not previewable"))
 		return
 	}
@@ -71,7 +71,7 @@ func PreviewFile(c *gin.Context) {
 		maxBytes = previewMaxBytes
 	}
 
-	f, err := os.Open(real)
+	f, err := root.Open(name)
 	if err != nil {
 		respondErr(c, err)
 		return

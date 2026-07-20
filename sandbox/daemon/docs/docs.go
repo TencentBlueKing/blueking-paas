@@ -228,6 +228,16 @@ const docTemplate = `{
                         "type": "string",
                         "name": "rel_path",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "until",
+                        "in": "query"
                     }
                 ],
                 "responses": {

@@ -6,8 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server/httputil"
@@ -41,29 +39,3 @@ func newTestRouter() *gin.Engine {
 	r.Use(httputil.ErrorMiddleware())
 	return r
 }
-
-var _ = Describe("detectMimeByExt", func() {
-	DescribeTable("infers mime by extension",
-		func(name, expected string) {
-			Expect(detectMimeByExt(name)).To(Equal(expected))
-		},
-		Entry("plain text", "a.txt", "text/plain"),
-		Entry("log", "app.log", "text/plain"),
-		Entry("markdown", "README.md", "text/markdown"),
-		Entry("yaml", "config.yaml", "application/yaml"),
-		Entry("toml", "config.toml", "application/toml"),
-		Entry("csv", "data.csv", "text/csv"),
-		Entry("go", "main.go", "text/x-go"),
-		Entry("python", "app.py", "text/x-python"),
-		Entry("sql", "schema.sql", "application/sql"),
-		// 大写扩展名归一化
-		Entry("upper-case ext", "README.MD", "text/markdown"),
-		// 标准库内置表覆盖的类型
-		Entry("html", "report.html", "text/html"),
-		Entry("json", "data.json", "application/json"),
-		Entry("svg", "logo.svg", "image/svg+xml"),
-		// 未知扩展名兜底
-		Entry("unknown ext", "blob.xyz", "application/octet-stream"),
-		Entry("no ext", "Makefile", "application/octet-stream"),
-	)
-})

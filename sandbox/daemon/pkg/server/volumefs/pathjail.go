@@ -7,56 +7,44 @@ import (
 	"strings"
 )
 
-// ErrPathEscape 解析后的路径逃逸出 jail 根, 属越权访问。
+// ErrPathEscape indicates an attempt to access a path outside the volume jail.
 var ErrPathEscape = errors.New("path escapes the jail root")
 
-// Resolve returns a lexical path inside the volume jail. Symlinks are checked separately
-// before an operation dereferences the resolved path.
-func Resolve(rootDir, basePath, relPath string) (full, jailRoot string, err error) {
-	if err = validateBasePath(basePath); err != nil {
-		return "", "", err
+// openVolumeRoot opens basePath below rootDir as a traversal-resistant root.
+// Both components are opened through os.Root: this keeps a base_path symlink from
+// escaping the storage root and makes every subsequent operation symlink-safe.
+func openVolumeRoot(rootDir, basePath string) (*os.Root, error) {
+	if err := validateBasePath(basePath); err != nil {
+		return nil, err
 	}
-	jailRoot = filepath.Join(rootDir, basePath)
-	full = filepath.Join(jailRoot, relPath)
-	if !withinJail(full, jailRoot) {
-		return "", jailRoot, ErrPathEscape
+
+	storageRoot, err := os.OpenRoot(rootDir)
+	if err != nil {
+		return nil, err
 	}
-	return full, jailRoot, nil
+	defer storageRoot.Close() // nolint
+
+	return storageRoot.OpenRoot(basePath)
 }
 
-// ResolveSymlink resolves an existing path and verifies that its target remains in the jail.
-func ResolveSymlink(full, jailRoot string) (real string, err error) {
-	real, err = filepath.EvalSymlinks(full)
-	if err != nil {
-		return "", err
+// validateRootPath rejects names which are not contained in an os.Root.
+// Empty paths are represented by ".", the root directory itself.
+func validateRootPath(name string) (string, error) {
+	if name == "" {
+		return ".", nil
 	}
-	if !withinJail(real, jailRoot) {
+	clean := filepath.Clean(name)
+	if filepath.IsAbs(name) || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
 		return "", ErrPathEscape
 	}
-	return real, nil
-}
-
-// ResolveDeletionTarget resolves every parent directory but leaves the final path
-// component untouched, so deleting a symlink removes the link rather than its target.
-func ResolveDeletionTarget(full, jailRoot string) (string, error) {
-	parent, err := ResolveSymlink(filepath.Dir(full), jailRoot)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(parent, filepath.Base(full)), nil
+	return clean, nil
 }
 
 // validateBasePath prevents the jail root itself from escaping the storage root.
 func validateBasePath(basePath string) error {
-	clean := filepath.Clean(basePath)
-	if filepath.IsAbs(basePath) || clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+	clean, err := validateRootPath(basePath)
+	if err != nil || clean == "." {
 		return ErrPathEscape
 	}
 	return nil
-}
-
-// withinJail reports whether target is jailRoot or one of its descendants.
-func withinJail(target, jailRoot string) bool {
-	rel, err := filepath.Rel(jailRoot, target)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && !filepath.IsAbs(rel)
 }

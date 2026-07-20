@@ -41,18 +41,13 @@ func ArchiveFile(c *gin.Context) {
 		return
 	}
 
-	full, jailRoot, ok := resolveJailed(c, config.G.RootDir, req.BasePath, req.RelPath)
+	root, name, ok := openJailedRoot(c, config.G.RootDir, req.BasePath, req.RelPath)
 	if !ok {
 		return
 	}
+	defer root.Close() // nolint
 
-	real, err := ResolveSymlink(full, jailRoot)
-	if err != nil {
-		respondErr(c, err)
-		return
-	}
-
-	info, err := os.Stat(real)
+	info, err := root.Stat(name)
 	if err != nil {
 		respondErr(c, err)
 		return
@@ -66,7 +61,14 @@ func ArchiveFile(c *gin.Context) {
 		return
 	}
 
-	sum, err := uploadFile(c.Request.Context(), real, info.Size(), req.UploadURL)
+	f, err := root.Open(name)
+	if err != nil {
+		respondErr(c, err)
+		return
+	}
+	defer f.Close() // nolint
+
+	sum, err := uploadFile(c.Request.Context(), f, info.Size(), req.UploadURL)
 	if err != nil {
 		httputil.BadGatewayResponse(c, fmt.Errorf("archive failed: %w", err))
 		return
@@ -80,13 +82,7 @@ func ArchiveFile(c *gin.Context) {
 }
 
 // uploadFile 读文件, 经 TeeReader 边读边算 sha256 并 PUT 到临时上传 URL, 返回内容 sha256 十六进制串。
-func uploadFile(ctx context.Context, path string, size int64, uploadURL string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close() // nolint
-
+func uploadFile(ctx context.Context, f *os.File, size int64, uploadURL string) (string, error) {
 	hasher := sha256.New()
 	// TeeReader: 上传流经 body 的同时把字节喂给 hasher, 单次读取即完成算摘要 + 上传。
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, io.TeeReader(f, hasher))

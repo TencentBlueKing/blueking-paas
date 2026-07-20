@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -32,20 +33,26 @@ func bindQuery(c *gin.Context, req any) bool {
 	return true
 }
 
-// resolveJailed 做 jail 前缀校验, 逃逸时以 403 结束。full 为 jail 内绝对路径(未解析 symlink)。
-func resolveJailed(c *gin.Context, rootDir, basePath, relPath string) (full, jailRoot string, ok bool) {
-	full, jailRoot, err := Resolve(rootDir, basePath, relPath)
+// openJailedRoot opens the volume jail and validates a root-relative path.
+// os.Root performs the authoritative traversal and symlink checks for operations.
+func openJailedRoot(c *gin.Context, rootDir, basePath, relPath string) (root *os.Root, name string, ok bool) {
+	name, err := validateRootPath(relPath)
 	if err != nil {
 		httputil.ForbiddenResponse(c, err)
-		return "", "", false
+		return nil, "", false
 	}
-	return full, jailRoot, true
+	root, err = openVolumeRoot(rootDir, basePath)
+	if err != nil {
+		httputil.ForbiddenResponse(c, err)
+		return nil, "", false
+	}
+	return root, name, true
 }
 
 // respondErr 把 jail/文件系统错误映射到对应的 HTTP 状态码。
 func respondErr(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, ErrPathEscape), errors.Is(err, os.ErrPermission):
+	case errors.Is(err, ErrPathEscape), errors.Is(err, os.ErrPermission), strings.Contains(err.Error(), "path escapes"):
 		httputil.ForbiddenResponse(c, err)
 	case errors.Is(err, os.ErrNotExist):
 		httputil.NotFoundResponse(c, err)

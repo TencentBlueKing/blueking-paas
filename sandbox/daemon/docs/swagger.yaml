@@ -235,6 +235,12 @@ paths:
       - in: query
         name: rel_path
         type: string
+      - in: query
+        name: since
+        type: string
+      - in: query
+        name: until
+        type: string
       produces:
       - application/json
       responses:

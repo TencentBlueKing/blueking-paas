@@ -63,7 +63,6 @@ def auto_extend_bkrepo_quota():
                         extra_size_bytes=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
                         max_allowed_bytes=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
                         required_usage_rate=threshold,
-                        pre_fetched_quota=old_quota,
                     )
                     AutoExpandEvent.objects.create(
                         instance=instance,

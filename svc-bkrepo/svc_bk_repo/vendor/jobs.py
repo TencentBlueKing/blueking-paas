@@ -25,6 +25,7 @@ from svc_bk_repo.shared.scheduler import db_distributed_lock, scheduler
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
 from svc_bk_repo.vendor.helper import get_repo_manager
+from svc_bk_repo.vendor.render import humanize_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -72,12 +73,12 @@ def auto_extend_bkrepo_quota():
                         step_size=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
                     )
                     logger.info(
-                        "Auto-extended quota for instance=%s bucket=%s: %d -> %d bytes (+%d bytes)",
+                        "Auto-extended quota for instance=%s bucket=%s: %s -> %s (+%s)",
                         instance.uuid,
                         bucket_name,
-                        int(old_quota.max_size),
-                        new_size,
-                        settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+                        humanize_bytes(int(old_quota.max_size)),
+                        humanize_bytes(new_size),
+                        humanize_bytes(settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES),
                     )
                 except NoNeedToExtendQuota:
                     logger.debug("Bucket=%s has no quota limit, skip auto-extend.", bucket_name)
@@ -85,9 +86,9 @@ def auto_extend_bkrepo_quota():
                     logger.debug("Bucket=%s usage below threshold, skip auto-extend.", bucket_name)
                 except ExtendQuotaMaxSizeExceeded:
                     logger.warning(
-                        "Bucket=%s already at max allowed size (%d bytes), cannot auto-extend.",
+                        "Bucket=%s already at max allowed size (%s), cannot auto-extend.",
                         bucket_name,
-                        settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
+                        humanize_bytes(settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED),
                     )
                 except Exception:
                     logger.exception("Unknown error while auto-extending bucket=%s", bucket_name)

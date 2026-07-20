@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from paas_service.models import ServiceInstance
 
+from svc_bk_repo.monitoring.metrics import auto_expand_counter
 from svc_bk_repo.monitoring.models import AutoExpandEvent
 from svc_bk_repo.shared.scheduler import db_distributed_lock, scheduler
 from svc_bk_repo.vendor.actions import extend_quota
@@ -71,6 +72,11 @@ def auto_extend_bkrepo_quota():
                         new_size=new_size,
                         step_size=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
                     )
+                    auto_expand_counter.labels(
+                        service_id=str(instance.service_id),
+                        instance_id=str(instance.id),
+                        repo_name=bucket_name,
+                    ).inc()
                     logger.info(
                         "Auto-extended quota for instance=%s bucket=%s: %s -> %s (+%s)",
                         instance.uuid,

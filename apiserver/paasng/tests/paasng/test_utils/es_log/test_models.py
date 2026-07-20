@@ -16,10 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+from datetime import timezone as tz
+from zoneinfo import ZoneInfo
 
 import cattr
 import pytest
-import pytz
 from attrs import converters, define
 
 from paasng.utils.es_log.misc import count_filters_options, flatten_structure, format_timestamp
@@ -32,8 +33,8 @@ from paasng.utils.es_log.models import FieldFilter, LogLine, extra_field
         (1000, "timestamp[s]", 1000),
         (1000, "timestamp[ns]", 1),
         (datetime.datetime(1970, 1, 1), "datetime", 0),
-        (datetime.datetime(1970, 1, 1).replace(tzinfo=pytz.timezone("UTC")), "datetime", 0),
-        (datetime.datetime(1970, 1, 1).replace(tzinfo=pytz.timezone("Asia/Shanghai")), "datetime", -28800),
+        (datetime.datetime(1970, 1, 1).replace(tzinfo=tz.utc), "datetime", 0),
+        (datetime.datetime(1970, 1, 1).replace(tzinfo=ZoneInfo("Asia/Shanghai")), "datetime", -28800),
     ],
 )
 def test_format_timestamp(value, input_format, expected):

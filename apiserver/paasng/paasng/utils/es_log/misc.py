@@ -19,11 +19,11 @@ import datetime
 import logging
 import re
 from collections import Counter, defaultdict
+from datetime import timezone as tz
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 import arrow
-import pytz
 from elasticsearch_dsl.response.aggs import FieldBucketData
 from rest_framework.fields import get_attribute
 
@@ -133,12 +133,12 @@ def filter_indexes_by_time_range(indexes: List[str], time_range: "SmartTimeRange
     picked_indexes = []
     # ES 日志 index 使用 UTC 时间分块, 因此过滤 indexes 时需要转成 utc 时间
     if time_range.start_time.tzinfo:
-        start_date = time_range.start_time.astimezone(pytz.utc).date()
+        start_date = time_range.start_time.astimezone(tz.utc).date()
     else:
         # 无时区信息, 不做额外的转换, 避免出错
         start_date = time_range.start_time.date()
     if time_range.end_time.tzinfo:
-        end_date = time_range.end_time.astimezone(pytz.utc).date()
+        end_date = time_range.end_time.astimezone(tz.utc).date()
     else:
         # 无时区信息, 不做额外的转换, 避免出错
         end_date = time_range.end_time.date()

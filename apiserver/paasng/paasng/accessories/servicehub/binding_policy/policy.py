@@ -110,7 +110,7 @@ class BindingPrecedencePolicy:
         if len(self.matcher) != 1:
             raise ValueError(f"Expected exactly one matcher condition, got {len(self.matcher)}")
 
-        ((cond_type_str, values),) = self.matcher.items()
+        cond_type_str, values = next(iter(self.matcher.items()))
         cond_type = PrecedencePolicyCondType(cond_type_str)
         if cond_type == PrecedencePolicyCondType.REGION_IN:
             if env.application.region not in values:

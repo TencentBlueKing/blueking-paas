@@ -16,7 +16,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from kubernetes.client.exceptions import ApiException
 
@@ -33,15 +33,13 @@ from paas_wl.bk_app.sandbox_instance.exceptions import (
 )
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
+from paas_wl.infras.resources.base.kres import PatchType
 
 logger = logging.getLogger(__name__)
 
 
 class SandboxInstanceManager:
     """管理 SandboxInstance CR 的下发、查询、状态控制与删除。
-
-    该管理器只复用底层通用的 CR 下发能力(``SandboxInstance(BaseKresource)``),
-    与 BkApp 的 AppModelResource / deploy() / WaitAppModelReady 完全解耦。
 
     :param cluster_name: 目标集群名。CR 下发到该集群, 由集群侧 sandbox-controller 协调。
     """
@@ -88,6 +86,9 @@ class SandboxInstanceManager:
                 raise SandboxInstanceNotFound(f"{namespace}/{name}") from e
         return obj.to_dict()
 
+    # TODO: 以下 get/set_desired_state/restart/delete 方法为配套 API(停止/重启/删除/查询)预留,
+    #  当前主链路仅使用 deploy(); 配套 ViewSet 将在后续 PR 中接入并桥接到 ErrorCode 体系。
+
     def set_desired_state(self, namespace: str, name: str, desired_state: DesiredState) -> Dict[str, Any]:
         """通过 patch spec.desiredState 停止 / 启动沙箱。
 
@@ -95,13 +96,18 @@ class SandboxInstanceManager:
         - Running: operator 复用原持久盘重新创建 Pod。
         """
         patch_body = {"spec": {"desiredState": desired_state.value}}
-        return self._patch(namespace, name, patch_body)
+        return self._patch(namespace, name, patch_body, ptype=PatchType.MERGE)
 
     def restart(self, namespace: str, name: str) -> Dict[str, Any]:
         """通过 restartedAt 注解触发一次重调度重启(删 Pod 重建, 复用持久盘)。"""
         restarted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        patch_body = {"metadata": {"annotations": {RESTARTED_AT_ANNOTATION: restarted_at}}}
-        return self._patch(namespace, name, patch_body)
+        # RFC 6902 JSON Patch: 用 add 操作(对已存在的 key 等价于 replace)
+        # annotation key 中的 '/' 需转义为 '~1', '~' 转义为 '~0'
+        escaped_key = RESTARTED_AT_ANNOTATION.replace("~", "~0").replace("/", "~1")
+        patch_body: List[Dict[str, str]] = [
+            {"op": "add", "path": f"/metadata/annotations/{escaped_key}", "value": restarted_at}
+        ]
+        return self._patch(namespace, name, patch_body, ptype=PatchType.JSON)
 
     def delete(self, namespace: str, name: str) -> None:
         """删除 SandboxInstance CR。
@@ -118,11 +124,13 @@ class SandboxInstanceManager:
                 logger.exception("failed to delete SandboxInstance %s/%s", namespace, name)
                 raise SandboxInstanceDeployError(str(e)) from e
 
-    def _patch(self, namespace: str, name: str, patch_body: Dict[str, Any]) -> Dict[str, Any]:
+    def _patch(
+        self, namespace: str, name: str, patch_body: Any, ptype: PatchType = PatchType.MERGE
+    ) -> Dict[str, Any]:
         with get_client_by_cluster_name(self.cluster_name) as client:
             try:
                 obj = SandboxInstance(client, api_version=SANDBOX_INSTANCE_API_VERSION).patch(
-                    name, body=patch_body, namespace=namespace
+                    name, body=patch_body, namespace=namespace, ptype=ptype
                 )
             except ResourceMissing as e:
                 raise SandboxInstanceNotFound(f"{namespace}/{name}") from e

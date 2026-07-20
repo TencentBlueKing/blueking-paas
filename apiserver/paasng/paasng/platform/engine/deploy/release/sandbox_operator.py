@@ -28,21 +28,25 @@
 import logging
 import math
 import time
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from django.db import IntegrityError
 from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.addresses import save_addresses
-from paas_wl.bk_app.cnative.specs.constants import DeployStatus
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DEFAULT_RES_QUOTA_PLAN_NAME, DeployStatus
+from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, BkAppResource
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.sandbox_instance.entities import SandboxInstanceSpec
 from paas_wl.bk_app.sandbox_instance.resource import SandboxInstanceManager
 from paas_wl.core.resource import generate_bkapp_name, get_process_selector
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
 from paas_wl.workloads.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.workloads.networking.ingress.managers.service import build_process_service
@@ -56,11 +60,10 @@ from paasng.platform.engine.models.deployment import Deployment
 
 logger = logging.getLogger(__name__)
 
+# TODO: 确认后续如何支持 SIDECAR 模式
 # AI Agent 应用采用单进程模型, 固定使用 web 进程承载 HTTP 服务
 AI_AGENT_PROCESS_TYPE = "web"
 
-# resQuotaPlan 未指定时的默认方案名, 与 ResQuotaPlan 内置数据一致
-DEFAULT_RES_QUOTA_PLAN = "default"
 
 
 def release_by_sandbox_instance(
@@ -97,13 +100,19 @@ def release_by_sandbox_instance(
         raise
 
     try:
-        # 确保命名空间存在(与云原生对齐, 使用 env.wl_app.namespace)
+        # 确保命名空间存在
         ensure_namespace(env)
+
+        # 下发镜像拉取凭证 Secret(私有镜像场景必需)
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            image_credentials = ImageCredentials.load_from_app(wl_app)
+            ImageCredentialsManager(client).upsert(image_credentials, update_method="patch")
 
         # 下发 SandboxInstance CR(异步, 就绪由 poller 判定)
         cluster_name = EnvClusterService(env).get_cluster_name()
         spec = build_sandbox_spec_from_deploy(env, build, deployment, deploy_id=str(app_model_deploy.id))
-        SandboxInstanceManager(cluster_name).deploy(spec)
+        deployed_manifest = SandboxInstanceManager(cluster_name).deploy(spec)
 
         # 地址暴露: 平台侧自建 Service + Ingress 指向 cube Pod, 并写入地址 DB
         deploy_sandbox_networking(env)
@@ -115,8 +124,9 @@ def release_by_sandbox_instance(
         app_model_deploy.save(update_fields=["status", "updated"])
         raise
 
+    revision.deployed_value = deployed_manifest
     revision.has_deployed = True
-    revision.save(update_fields=["has_deployed", "updated"])
+    revision.save(update_fields=["deployed_value", "has_deployed", "updated"])
 
     # 后台轮询 SandboxInstance 就绪状态, 就绪后回填 AppModelDeploy.status
     WaitSandboxInstanceReady.start(
@@ -129,25 +139,32 @@ def release_by_sandbox_instance(
 def build_sandbox_spec_from_deploy(
     env: ModuleEnvironment, build: Build, deployment: Deployment, deploy_id: str
 ) -> SandboxInstanceSpec:
-    """从部署上下文拼装 SandboxInstanceSpec。
-
-    - image: 取本次构建产物镜像。
-    - cpu_cores / memory: 从 BkApp Model 的 web 进程 resQuotaPlan 解析。
-    - command / args: 从 BkApp Model 的 web 进程读取。
-    - namespace: 对齐云原生命名空间(env.wl_app.namespace), 使地址/日志链路可复用。
-    - labels: 云原生 Service selector(module-name + process-name),
-      sandbox-controller 会继承到 cube Pod, 从而被平台自建的 Service 选中。
-    """
+    """从部署上下文拼装 SandboxInstanceSpec"""
     wl_app = env.wl_app
+    advanced_options = deployment.advanced_options
 
     bkapp_res = get_bkapp_resource_for_deploy(
         env,
         deploy_id=deploy_id,
         deployment=deployment,
         force_image=build.image,
+        image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
     )
     proc = _find_process(bkapp_res.spec.processes, AI_AGENT_PROCESS_TYPE)
     cpu_cores, memory = _resolve_resource_quota(proc.resQuotaPlan if proc else None)
+
+    # 从 BkApp resource 中 resolve 当前环境适用的运行时配置
+    env_name = env.environment
+    env_vars = _resolve_env_vars_for_sandbox(bkapp_res, env_name)
+    node_selector, tolerations = _resolve_scheduling_for_sandbox(bkapp_res)
+    dns_nameservers, host_aliases = _resolve_domain_resolution_for_sandbox(bkapp_res)
+
+    # 镜像拉取策略: 优先从部署选项取, 否则从 BkApp build 配置取, 兜底 IfNotPresent
+    image_pull_policy = (
+        (advanced_options.image_pull_policy if advanced_options else None)
+        or (bkapp_res.spec.build.imagePullPolicy if bkapp_res.spec.build else None)
+        or "IfNotPresent"
+    )
 
     return SandboxInstanceSpec(
         name=generate_bkapp_name(env),
@@ -155,9 +172,17 @@ def build_sandbox_spec_from_deploy(
         image=build.image,
         cpu_cores=cpu_cores,
         memory=memory,
-        command=list(proc.command or []) if proc else [],
-        args=list(proc.args or []) if proc else [],
+        command=(proc.command or []) if proc else [],
+        args=(proc.args or []) if proc else [],
         labels=get_process_selector(wl_app, AI_AGENT_PROCESS_TYPE),
+        annotations={BKPAAS_DEPLOY_ID_ANNO_KEY: deploy_id},
+        env_vars=env_vars,
+        image_pull_policy=image_pull_policy,
+        image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app)}],
+        node_selector=node_selector,
+        tolerations=tolerations,
+        dns_nameservers=dns_nameservers,
+        host_aliases=host_aliases,
     )
 
 
@@ -201,11 +226,11 @@ def _resolve_resource_quota(res_quota_plan: str | None) -> Tuple[int, str]:
     - cpu: 转换为整数核数(SandboxInstance 的 cpu.cores 为整数)。
     - memory: 直接透传 K8s quantity 字符串。
     """
-    plan_name = res_quota_plan or DEFAULT_RES_QUOTA_PLAN
+    plan_name = res_quota_plan or DEFAULT_RES_QUOTA_PLAN_NAME
     try:
         plan = ResQuotaPlan.objects.get(name=plan_name, is_active=True)
     except ResQuotaPlan.DoesNotExist:
-        plan = ResQuotaPlan.objects.get(name=DEFAULT_RES_QUOTA_PLAN)
+        plan = ResQuotaPlan.objects.get(name=DEFAULT_RES_QUOTA_PLAN_NAME)
 
     limits = plan.limits or {}
     cpu_cores = _parse_cpu_cores(limits.get("cpu", "4000m"))
@@ -221,3 +246,80 @@ def _parse_cpu_cores(cpu: str) -> int:
     """
     cores = math.ceil(parse_quantity(str(cpu).strip()))
     return max(cores, 1)
+
+
+# ---------------------------------------------------------------------------
+# BkApp → SandboxInstance 运行时配置 resolve 函数
+# ---------------------------------------------------------------------------
+
+
+def _resolve_env_vars_for_sandbox(bkapp_res: BkAppResource, env_name: str) -> List[Dict[str, str]]:
+    """从 BkApp 中 resolve 出当前环境的最终环境变量列表。
+
+    逻辑: 全局变量(spec.configuration.env) 为基础, 同名的环境专属变量
+    (envOverlay.envVariables 中 envName 匹配当前环境) 覆盖之。
+    返回标准 K8s env 结构: [{"name": ..., "value": ...}]
+    """
+    # 以全局变量为底
+    env_map: Dict[str, str] = {}
+    for var in bkapp_res.spec.configuration.env:
+        env_map[var.name] = var.value
+
+    # 环境专属覆盖
+    overlay = bkapp_res.spec.envOverlay
+    if overlay and overlay.envVariables:
+        for overlay_var in overlay.envVariables:
+            if overlay_var.envName == env_name:
+                env_map[overlay_var.name] = overlay_var.value
+
+    return [{"name": k, "value": v} for k, v in env_map.items()]
+
+
+
+def _resolve_scheduling_for_sandbox(
+    bkapp_res: BkAppResource,
+) -> Tuple[Dict[str, str], List[Dict[str, Any]]]:
+    """从 BkApp 中提取调度配置(nodeSelector / tolerations)。"""
+    node_selector: Dict[str, str] = {}
+    tolerations: List[Dict[str, Any]] = []
+
+    schedule = bkapp_res.spec.schedule
+    if not schedule:
+        return node_selector, tolerations
+
+    if schedule.nodeSelector:
+        node_selector = dict(schedule.nodeSelector)
+
+    if schedule.tolerations:
+        for t in schedule.tolerations:
+            toleration: Dict[str, Any] = {"key": t.key, "operator": t.operator}
+            if t.value is not None:
+                toleration["value"] = t.value
+            if t.effect is not None:
+                toleration["effect"] = t.effect
+            if t.tolerationSeconds is not None:
+                toleration["tolerationSeconds"] = t.tolerationSeconds
+            tolerations.append(toleration)
+
+    return node_selector, tolerations
+
+
+def _resolve_domain_resolution_for_sandbox(
+    bkapp_res: BkAppResource,
+) -> Tuple[List[str], List[Dict[str, Any]]]:
+    """从 BkApp 中提取域名解析配置(nameservers / hostAliases)。"""
+    dns_nameservers: List[str] = []
+    host_aliases: List[Dict[str, Any]] = []
+
+    domain_res = bkapp_res.spec.domainResolution
+    if not domain_res:
+        return dns_nameservers, host_aliases
+
+    if domain_res.nameservers:
+        dns_nameservers = list(domain_res.nameservers)
+
+    if domain_res.hostAliases:
+        for alias in domain_res.hostAliases:
+            host_aliases.append({"ip": alias.ip, "hostnames": list(alias.hostnames)})
+
+    return dns_nameservers, host_aliases

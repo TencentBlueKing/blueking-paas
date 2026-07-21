@@ -1,0 +1,22 @@
+apiserver/paasng/paasng/platform/engine/deploy/bg_wait/wait_sandbox.py
+  h_190e3af8dc7b5f 30,55,74-83,85-88
+apiserver/paasng/paasng/platform/applications/serializers/creation.py
+  h_190e3af8dc7b5f 132
+apiserver/paasng/paasng/platform/engine/deploy/release/sandbox_operator.py
+  h_190e3af8dc7b5f 63,103,142,144,151,161-167,180
+apiserver/paasng/paas_wl/bk_app/sandbox_instance/entities.py
+  h_190e3af8dc7b5f 55-76,87,89-95,110-116,151-167,175-176,208,214-215
+apiserver/paasng/paas_wl/bk_app/sandbox_instance/resource.py
+  h_190e3af8dc7b5f 19,36,102,107-113,131,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "33a194700212e9ac74c85ac31885ee5e8ec1b8ac",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

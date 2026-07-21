@@ -229,6 +229,8 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             is_recursive=data["is_recursive"],
             page=data["page"],
             page_size=data["page_size"],
+            since=data["since"],
+            until=data["until"],
         )
         # daemon 直接返回 {count, results}, 经序列化器校验后透传给前端
         return Response(VolumeFileListOutputSLZ(result).data)

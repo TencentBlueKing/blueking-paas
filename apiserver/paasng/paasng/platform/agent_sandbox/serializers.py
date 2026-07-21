@@ -213,8 +213,8 @@ class VolumeFileListInputSLZ(serializers.Serializer):
     is_recursive = serializers.BooleanField(label="递归", required=False, default=False)
     page = serializers.IntegerField(label="页码", required=False, default=1, min_value=1)
     page_size = serializers.IntegerField(label="每页数量", required=False, default=100, min_value=1)
-    since = serializers.DateTimeField(label="起始时间", required=False)
-    until = serializers.DateTimeField(label="结束时间", required=False)
+    since = serializers.DateTimeField(label="起始时间", required=False, default=None)
+    until = serializers.DateTimeField(label="结束时间", required=False, default=None)
 
     def validate_page_size(self, value: int) -> int:
         # 上限 500,超限 clamp(与 daemon 侧 maxPageSize 对齐)

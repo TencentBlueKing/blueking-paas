@@ -31,6 +31,11 @@ from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.encryption import (
+    collect_sensitive_keys,
+    encrypt_sensitive_values,
+    get_runtime_encryption_env_vars,
+)
 from paasng.platform.engine.configurations.env_var import listers as vars_listers
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.constants import ConfigVarEnvName
@@ -46,12 +51,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def get_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+def get_env_variables(env: ModuleEnvironment, is_encrypted: bool = False) -> Dict[str, str]:
     """Get env vars for current environment, the result includes user defined and builtin env vars.
 
     :param env: The environment object.
+    :param is_encrypted: Whether to encrypt sensitive values.
     :return: A dict of env variables.
     """
+    if is_encrypted:
+        return UnifiedEnvVarsReader(env).get_encrypted_kv_map()
     return UnifiedEnvVarsReader(env).get_kv_map()
 
 
@@ -111,6 +119,20 @@ class UnifiedEnvVarsReader:
                 continue
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
+
+    def get_encrypted_kv_map(
+        self, exclude_sources: list[EnvVarSource] | None = None, include_runtime_metadata: bool = True
+    ) -> Dict[str, str]:
+        """Return values with sensitive entries encrypted when the feature is enabled.
+
+        Cloud-native manifests set ``include_runtime_metadata`` to false, then
+        add the metadata to their environment-specific overlay instead.
+        """
+        raw_kv_map = self.get_kv_map(exclude_sources)
+        result, encrypted_keys = encrypt_sensitive_values(self.env, raw_kv_map, collect_sensitive_keys(self.env))
+        if include_runtime_metadata:
+            result.update(get_runtime_encryption_env_vars(self.env, encrypted_keys))
+        return result
 
     def list_conflicted_info(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
         """Get the system keys that will conflict with user-defined vars, including conflict details.

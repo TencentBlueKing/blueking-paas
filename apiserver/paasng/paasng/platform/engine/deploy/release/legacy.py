@@ -181,7 +181,7 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
         raise ValueError("No deployment object can be found")
 
     # Create the release and start the background task to wait for the release if needed
-    extra_envs = get_env_variables(env)
+    extra_envs = get_env_variables(env, is_encrypted=True)
     release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile())
     if start_async_waiting:
         wait_for_release(

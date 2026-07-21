@@ -576,6 +576,24 @@ class ApplicationEnvironment(TimestampedModel):
     def get_engine_app(self):
         return self.engine_app
 
+    def get_env_encryption_key(self):
+        """Get the AppEnvEncryptionKey object for current environment if exists, otherwise return None"""
+        return AppEnvEncryptionKey.objects.filter(application=self.application, environment=self.environment).first()
+
+    def get_or_create_env_encryption_key(self):
+        """Get or create the AppEnvEncryptionKey object for current environment"""
+        # Import lazily because encryption depends on Service Hub and eventually
+        # imports this models module while Django is populating the app registry.
+        from paasng.platform.bkapp_model.encryption import get_or_create_env_encryption_key
+
+        return get_or_create_env_encryption_key(self, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+
+    def rotate_env_encryption_key(self, cipher_type: str | None = None):
+        """Rotate this environment's encryption key for the next deployment."""
+        from paasng.platform.bkapp_model.encryption import rotate_env_encryption_key
+
+        return rotate_env_encryption_key(self, cipher_type or settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+
     @property
     def wl_app(self):
         """Return the WlApp object(in 'workloads' module)"""

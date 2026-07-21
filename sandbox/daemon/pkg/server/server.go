@@ -82,7 +82,7 @@ func Start() error {
 //
 // Unlike Start (which runs inside a sandbox alongside a user entrypoint), the resident
 // daemon is a long-lived platform component that mounts the shared-storage root and exposes
-// jailed file operations (list/stat/preview/archive/delete) to the apiserver.
+// jailed file operations (list/stat/preview/export/delete) to the apiserver.
 //
 // It runs until ctx is cancelled, then shuts the HTTP server down gracefully.
 func StartResident(ctx context.Context) error {
@@ -105,7 +105,7 @@ func StartResident(ctx context.Context) error {
 	files.GET("/list", volumefs.ListFiles)
 	files.GET("/stat", volumefs.StatFile)
 	files.GET("/preview", volumefs.PreviewFile)
-	files.POST("/archive", volumefs.ArchiveFile)
+	files.POST("/export", volumefs.ExportFile)
 	files.DELETE("", volumefs.DeleteFile)
 
 	srv := &http.Server{

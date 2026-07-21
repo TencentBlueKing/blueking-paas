@@ -27,7 +27,12 @@ definitions:
       output:
         type: string
     type: object
-  pkg_server_volumefs.ArchiveRequest:
+  pkg_server_volumefs.DeleteResponse:
+    properties:
+      deleted:
+        type: boolean
+    type: object
+  pkg_server_volumefs.ExportFileRequest:
     properties:
       base_path:
         type: string
@@ -40,7 +45,7 @@ definitions:
     - rel_path
     - upload_url
     type: object
-  pkg_server_volumefs.ArchiveResponse:
+  pkg_server_volumefs.ExportFileResponse:
     properties:
       mtime:
         type: string
@@ -48,11 +53,6 @@ definitions:
         type: string
       size:
         type: integer
-    type: object
-  pkg_server_volumefs.DeleteResponse:
-    properties:
-      deleted:
-        type: boolean
     type: object
   pkg_server_volumefs.FileItem:
     properties:
@@ -69,10 +69,19 @@ definitions:
       size:
         type: integer
     type: object
+  pkg_server_volumefs.ListExtraData:
+    properties:
+      directory:
+        type: integer
+      files:
+        type: integer
+    type: object
   pkg_server_volumefs.ListResponse:
     properties:
       count:
         type: integer
+      extra_data:
+        $ref: '#/definitions/pkg_server_volumefs.ListExtraData'
       results:
         items:
           $ref: '#/definitions/pkg_server_volumefs.FileItem'
@@ -146,30 +155,6 @@ paths:
       summary: Delete a file or folder
       tags:
       - files
-  /files/archive:
-    post:
-      consumes:
-      - application/json
-      description: Read the file, compute sha256, and PUT it to the presigned upload
-        URL
-      operationId: ArchiveFile
-      parameters:
-      - description: Archive request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/pkg_server_volumefs.ArchiveRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/pkg_server_volumefs.ArchiveResponse'
-      summary: Archive a file to bkrepo
-      tags:
-      - pv
   /files/download:
     get:
       consumes:
@@ -190,6 +175,30 @@ paths:
       summary: Download a file
       tags:
       - files
+  /files/export:
+    post:
+      consumes:
+      - application/json
+      description: Read a file from the volume, compute its sha256, and upload it
+        using a presigned URL
+      operationId: ExportFile
+      parameters:
+      - description: Export file request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_volumefs.ExportFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_server_volumefs.ExportFileResponse'
+      summary: Export a file to object storage
+      tags:
+      - pv
   /files/folder:
     post:
       consumes:

@@ -91,41 +91,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/files/archive": {
-            "post": {
-                "description": "Read the file, compute sha256, and PUT it to the presigned upload URL",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "pv"
-                ],
-                "summary": "Archive a file to bkrepo",
-                "operationId": "ArchiveFile",
-                "parameters": [
-                    {
-                        "description": "Archive request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/pkg_server_volumefs.ArchiveResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/files/download": {
             "get": {
                 "description": "Download a file from the specified path",
@@ -152,6 +117,41 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/files/export": {
+            "post": {
+                "description": "Read a file from the volume, compute its sha256, and upload it using a presigned URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Export a file to object storage",
+                "operationId": "ExportFile",
+                "parameters": [
+                    {
+                        "description": "Export file request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.ExportFileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.ExportFileResponse"
+                        }
                     }
                 }
             }
@@ -451,7 +451,15 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_volumefs.ArchiveRequest": {
+        "pkg_server_volumefs.DeleteResponse": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pkg_server_volumefs.ExportFileRequest": {
             "type": "object",
             "required": [
                 "base_path",
@@ -470,7 +478,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pkg_server_volumefs.ArchiveResponse": {
+        "pkg_server_volumefs.ExportFileResponse": {
             "type": "object",
             "properties": {
                 "mtime": {
@@ -481,14 +489,6 @@ const docTemplate = `{
                 },
                 "size": {
                     "type": "integer"
-                }
-            }
-        },
-        "pkg_server_volumefs.DeleteResponse": {
-            "type": "object",
-            "properties": {
-                "deleted": {
-                    "type": "boolean"
                 }
             }
         },
@@ -515,11 +515,25 @@ const docTemplate = `{
                 }
             }
         },
+        "pkg_server_volumefs.ListExtraData": {
+            "type": "object",
+            "properties": {
+                "directory": {
+                    "type": "integer"
+                },
+                "files": {
+                    "type": "integer"
+                }
+            }
+        },
         "pkg_server_volumefs.ListResponse": {
             "type": "object",
             "properties": {
                 "count": {
                     "type": "integer"
+                },
+                "extra_data": {
+                    "$ref": "#/definitions/pkg_server_volumefs.ListExtraData"
                 },
                 "results": {
                     "type": "array",

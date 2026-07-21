@@ -16,16 +16,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func doArchive(router *gin.Engine, req ArchiveRequest) *httptest.ResponseRecorder {
+func doExport(router *gin.Engine, req ExportFileRequest) *httptest.ResponseRecorder {
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodPost, "/files/archive", bytes.NewReader(body))
+	httpReq, _ := http.NewRequest(http.MethodPost, "/files/export", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, httpReq)
 	return w
 }
 
-var _ = Describe("ArchiveFile", func() {
+var _ = Describe("ExportFile", func() {
 	var (
 		router   *gin.Engine
 		rootDir  string
@@ -35,7 +35,7 @@ var _ = Describe("ArchiveFile", func() {
 	BeforeEach(func() {
 		rootDir, jailRoot = newTestEnv()
 		router = newTestRouter()
-		router.POST("/files/archive", ArchiveFile)
+		router.POST("/files/export", ExportFile)
 	})
 
 	AfterEach(func() {
@@ -55,10 +55,10 @@ var _ = Describe("ArchiveFile", func() {
 		}))
 		defer upstream.Close()
 
-		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "out.bin", UploadURL: upstream.URL})
+		w := doExport(router, ExportFileRequest{BasePath: testBasePath, RelPath: "out.bin", UploadURL: upstream.URL})
 		Expect(w.Code).To(Equal(http.StatusOK))
 
-		var resp ArchiveResponse
+		var resp ExportFileResponse
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
 
 		sum := sha256.Sum256(content)
@@ -76,29 +76,29 @@ var _ = Describe("ArchiveFile", func() {
 		}))
 		defer upstream.Close()
 
-		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "out.bin", UploadURL: upstream.URL})
+		w := doExport(router, ExportFileRequest{BasePath: testBasePath, RelPath: "out.bin", UploadURL: upstream.URL})
 		Expect(w.Code).To(Equal(http.StatusBadGateway))
 	})
 
-	It("returns 413 when the file exceeds archiveMaxSize", func() {
+	It("returns 413 when the file exceeds exportMaxSize", func() {
 		// 用 truncate 造稀疏大文件(不实际写盘), 仅用于触发 size 超限。
 		bigPath := filepath.Join(jailRoot, "big.bin")
 		f, err := os.Create(bigPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Truncate(archiveMaxSize + 1)).To(Succeed())
+		Expect(f.Truncate(exportMaxSize + 1)).To(Succeed())
 		Expect(f.Close()).To(Succeed())
 
-		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "big.bin", UploadURL: "http://unused"})
+		w := doExport(router, ExportFileRequest{BasePath: testBasePath, RelPath: "big.bin", UploadURL: "http://unused"})
 		Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))
 	})
 
 	It("returns 404 for a missing file", func() {
-		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "nope.bin", UploadURL: "http://unused"})
+		w := doExport(router, ExportFileRequest{BasePath: testBasePath, RelPath: "nope.bin", UploadURL: "http://unused"})
 		Expect(w.Code).To(Equal(http.StatusNotFound))
 	})
 
 	It("rejects a jail escape with 403", func() {
-		w := doArchive(router, ArchiveRequest{BasePath: testBasePath, RelPath: "../../etc/passwd", UploadURL: "http://unused"})
+		w := doExport(router, ExportFileRequest{BasePath: testBasePath, RelPath: "../../etc/passwd", UploadURL: "http://unused"})
 		Expect(w.Code).To(Equal(http.StatusForbidden))
 	})
 })

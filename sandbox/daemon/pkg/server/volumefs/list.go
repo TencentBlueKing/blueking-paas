@@ -63,25 +63,50 @@ func ListFiles(c *gin.Context) {
 		return
 	}
 	page, pageSize := normalizePaging(req.Page, req.PageSize)
-	items, count, err := collectItems(root, dir, req.Recursive, modifiedTimeRange, page, pageSize)
+	collected, err := collectItems(root, dir, req.Recursive, modifiedTimeRange)
 	if err != nil {
 		respondErr(c, err)
 		return
 	}
 
-	sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
+	sort.Slice(collected, func(i, j int) bool { return collected[i].path < collected[j].path })
+	count := len(collected)
+	extraData := ListExtraData{}
+	for _, entry := range collected {
+		if entry.info.IsDir() {
+			extraData.Directories++
+		} else {
+			extraData.Files++
+		}
+	}
+	items := make([]FileItem, 0, pageSize)
+	start := pageStart(page, pageSize)
+	if start < count {
+		end := start + min(pageSize, count-start)
+		for _, entry := range collected[start:end] {
+			item, err := newFileItem(root, entry.path, entry.info)
+			if err != nil {
+				respondErr(c, err)
+				return
+			}
+			items = append(items, item)
+		}
+	}
 
-	httputil.SuccessResponse(c, ListResponse{Count: count, Results: items})
+	httputil.SuccessResponse(c, ListResponse{Count: count, Results: items, ExtraData: extraData})
+}
+
+type collectedItem struct {
+	path string
+	info os.FileInfo
 }
 
 // collectItems traverses a directory using root-relative names. Every stat and
 // open stays below the os.Root, including entries swapped to symlinks mid-walk.
 // timeRange 按 since <= 修改时间 <= until 筛选条目；任一边界可省略。
-// 它只构造当前页的条目，以避免大目录在分页前被完整加载到内存；count 仍为全部条目数。
-func collectItems(root *os.Root, dir string, recursive bool, timeRange modifiedTimeRange, page, pageSize int) ([]FileItem, int, error) {
-	items := make([]FileItem, 0, pageSize)
-	start := pageStart(page, pageSize)
-	count := 0
+// 它先收集全部匹配条目的轻量元数据，供调用方全局排序后分页。
+func collectItems(root *os.Root, dir string, recursive bool, timeRange modifiedTimeRange) ([]collectedItem, error) {
+	items := make([]collectedItem, 0)
 
 	appendItem := func(path string) error {
 		info, err := root.Stat(path)
@@ -93,14 +118,7 @@ func collectItems(root *os.Root, dir string, recursive bool, timeRange modifiedT
 				return nil
 			}
 		}
-		if count >= start && len(items) < pageSize {
-			item, err := newFileItem(root, path, info)
-			if err != nil {
-				return err
-			}
-			items = append(items, item)
-		}
-		count++
+		items = append(items, collectedItem{path: path, info: info})
 		return nil
 	}
 
@@ -134,9 +152,9 @@ func collectItems(root *os.Root, dir string, recursive bool, timeRange modifiedT
 	}
 
 	if err := walk(dir); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
-	return items, count, nil
+	return items, nil
 }
 
 type modifiedTimeRange struct {
@@ -215,7 +233,7 @@ func detectMime(root *os.Root, name string) (*mimetype.MIME, error) {
 	return mimetype.DetectReader(f)
 }
 
-// normalizePaging 归一化: page>=1, pageSize 落在 (0, maxPageSize]。
+// normalizePaging 归一化: page>=1, pageSize 落在 (0, maxPageSize]
 func normalizePaging(page, pageSize int) (int, int) {
 	if page < 1 {
 		page = 1

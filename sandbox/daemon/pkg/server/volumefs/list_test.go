@@ -76,6 +76,29 @@ var _ = Describe("ListFiles", func() {
 		Expect(resp.Results).To(HaveLen(3))
 	})
 
+	It("reports file and directory totals in extra_data", func() {
+		Expect(os.WriteFile(filepath.Join(jailRoot, "a.txt"), []byte("a"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(jailRoot, "b.json"), []byte("{}"), 0o644)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(jailRoot, "sub"), 0o755)).To(Succeed())
+
+		w := doList(router, ListRequest{BasePath: testBasePath, PageSize: 1})
+		Expect(w.Code).To(Equal(http.StatusOK))
+
+		var payload struct {
+			Count     int        `json:"count"`
+			Results   []FileItem `json:"results"`
+			ExtraData struct {
+				Files     int `json:"files"`
+				Directory int `json:"directory"`
+			} `json:"extra_data"`
+		}
+		Expect(json.Unmarshal(w.Body.Bytes(), &payload)).To(Succeed())
+		Expect(payload.Count).To(Equal(3))
+		Expect(payload.Results).To(HaveLen(1))
+		Expect(payload.ExtraData.Files).To(Equal(2))
+		Expect(payload.ExtraData.Directory).To(Equal(1))
+	})
+
 	It("infers mime by extension", func() {
 		Expect(os.WriteFile(filepath.Join(jailRoot, "report.html"), []byte("<html>"), 0o644)).To(Succeed())
 
@@ -106,6 +129,19 @@ var _ = Describe("ListFiles", func() {
 		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
 		// a.txt, sub, sub/c.txt
 		Expect(resp.Count).To(Equal(3))
+	})
+
+	It("sorts the complete recursive result before paginating", func() {
+		Expect(os.MkdirAll(filepath.Join(jailRoot, "a"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(jailRoot, "a", "nested.txt"), []byte("nested"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(jailRoot, "a.txt"), []byte("a"), 0o644)).To(Succeed())
+
+		w := doList(router, ListRequest{BasePath: testBasePath, Recursive: true, PageSize: 2})
+		var resp ListResponse
+		Expect(json.Unmarshal(w.Body.Bytes(), &resp)).To(Succeed())
+		Expect(resp.Results).To(HaveLen(2))
+		Expect(resp.Results[0].Path).To(Equal("a"))
+		Expect(resp.Results[1].Path).To(Equal("a.txt"))
 	})
 
 	It("filters entries in an inclusive since/until range before paginating", func() {

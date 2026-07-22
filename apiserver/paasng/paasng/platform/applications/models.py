@@ -39,6 +39,7 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import (
+    AppEnvEncryptionKeyType,
     AppEnvironment,
     AppFeatureFlag,
     ApplicationRole,
@@ -863,9 +864,10 @@ class AppEnvEncryptionKey(TimestampedModel):
         - SM4CTR: 随机 32 位十六进制串(SM4 取前 16 字节为密钥)
         - FernetCipher: `Fernet.generate_key()` 生成的 base64 串
         """
-        cipher = cipher_type.upper()
-        if cipher == "SM4CTR":
+        if cipher_type == AppEnvEncryptionKeyType.SM4CTR:
             return secrets.token_hex(16)
-        elif cipher == "FERNETCIPHER":
+        elif cipher_type.upper() == AppEnvEncryptionKeyType.FERNET.upper():
             return Fernet.generate_key().decode()
-        raise ValueError(f"Unsupported cipher type: {cipher_type}")
+        raise ValueError(
+            f"Unsupported cipher type: {cipher_type}, only support {[t.value for t in AppEnvEncryptionKeyType]}"
+        )

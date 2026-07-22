@@ -133,3 +133,10 @@ class LightApplicationViewSetErrorCode(StrStructuredEnum):
 class AvailabilityLevel(StrStructuredEnum):
     STANDARD = EnumField("standard", label="基础")
     PREMIUM = EnumField("premium", label="高级别")
+
+
+class AppEnvEncryptionKeyType(StrStructuredEnum):
+    """应用环境加密密钥类型"""
+
+    FERNET = EnumField("FernetCipher", label="Fernet")
+    SM4CTR = EnumField("SM4CTR", label="SM4CTR")

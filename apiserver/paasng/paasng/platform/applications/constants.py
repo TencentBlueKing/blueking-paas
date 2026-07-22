@@ -116,6 +116,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     # 持久存储挂载卷相关的 feature flag
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
+    # 允许应用自定义自动扩缩容指标的阈值（如 cpuUtilization）
+    CUSTOM_AUTOSCALING_THRESHOLD = FeatureFlagField(label=_("允许修改自动扩容阈值"), default=False)
+
 
 class LightApplicationViewSetErrorCode(StrStructuredEnum):
     SUCCESS = "0"

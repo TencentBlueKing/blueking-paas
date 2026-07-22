@@ -41,6 +41,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -57,6 +58,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -73,6 +75,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -89,6 +92,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -112,6 +116,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": True,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
         ],

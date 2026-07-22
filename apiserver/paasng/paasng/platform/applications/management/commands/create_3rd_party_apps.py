@@ -40,6 +40,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
@@ -191,7 +192,14 @@ class Command(BaseCommand):
 
         if created:
             module = create_default_module(application)
-            self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+            try:
+                self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+            except BkOauthClientCodeConflictError:
+                logger.warning(
+                    "oauth app(code:%s) already exists in bkAuth, skip create. "
+                    "Note: tenant mode & id of the existing oauth app will not be updated.",
+                    app_desc.code,
+                )
         else:
             module = application.get_default_module()
 

@@ -59,8 +59,6 @@ class ScalingConfigSLZ(serializers.Serializer):
 
     min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数")
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
-    # WARNING: The metrics field is only for output and should never be saved to the database
-    # TODO: Remove the metrics field when the UI does not reads it anymore.
     metrics = serializers.ListField(
         child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
     )

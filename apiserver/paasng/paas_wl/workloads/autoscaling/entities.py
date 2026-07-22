@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import cattr
@@ -66,11 +66,13 @@ class AutoscalingConfig:
     max_replicas: int
     # 扩缩容策略
     policy: str
+    # 自定义扩缩容指标; 为空时使用 DEFAULT_METRICS
+    metrics: List[MetricSpec] = field(default_factory=list)
 
     def to_autoscaling_spec(self) -> ProcAutoscalingSpec:
         """Transform current config into the autoscaling spec object."""
         if self.policy == ScalingPolicy.DEFAULT.value:
-            metrics = cattr.structure(DEFAULT_METRICS, List[MetricSpec])
+            metrics = self.metrics or cattr.structure(DEFAULT_METRICS, List[MetricSpec])
             return ProcAutoscalingSpec(
                 min_replicas=self.min_replicas,
                 max_replicas=self.max_replicas,

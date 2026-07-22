@@ -28,8 +28,10 @@ class AutoscalingConfig(BaseModel):
     :param min_replicas: 最小副本数量
     :param max_replicas: 最大副本数量
     :param policy: 扩缩容策略
+    :param metrics: 自定义扩缩容指标; 为空时使用默认指标
     """
 
     min_replicas: int
     max_replicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list = Field(default_factory=list)

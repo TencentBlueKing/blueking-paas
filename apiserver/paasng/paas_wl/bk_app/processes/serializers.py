@@ -322,6 +322,35 @@ class MetricSpecSLZ(serializers.Serializer):
     value = serializers.CharField(required=True, help_text=_("资源指标值/百分比"))
     described_object = ScalingObjectRefSLZ(required=False)
 
+    def validate(self, attrs: Dict) -> Dict:
+        # TODO 目前只支持 Resources, Pods / Object 尚未实现
+        metric = attrs.get("metric")
+        value = attrs.get("value", "").strip()
+        source_type = attrs.get("type") or ScalingMetricSourceType.RESOURCE
+
+        if source_type != ScalingMetricSourceType.RESOURCE:
+            raise ValidationError(_("当前仅支持 Resource 类型指标, 不支持的 type: {}").format(source_type))
+
+        if metric in (ScalingMetric.CPU_UTILIZATION, ScalingMetric.MEMORY_UTILIZATION):
+            # 使用率类型: 必须是 (0, 100] 的数字字符串
+            try:
+                numeric_value = float(value)
+            except ValueError:
+                raise ValidationError(_("使用率类型指标值必须是数字字符串, 如 85 / 85.5"))
+            if not (0 < numeric_value <= 100):
+                raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
+            attrs["value"] = str(numeric_value)
+        elif metric in (ScalingMetric.CPU_AVERAGE_VALUE, ScalingMetric.MEMORY_AVERAGE_VALUE):
+            # 平均值类型: 必须是可被 parse_quantity 解析的 K8s 资源量字符串 (如 500m / 256Mi)
+            try:
+                parse_quantity(value)
+            except Exception:  # noqa: BLE001
+                raise ValidationError(
+                    _("平均值类型指标值必须是合法的 K8s 资源量字符串, 如 500m / 256Mi, 当前值: {}").format(value)
+                )
+
+        return attrs
+
 
 class ScalingConfigSLZ(serializers.Serializer):
     """扩缩容配置"""

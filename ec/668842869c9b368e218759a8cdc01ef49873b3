@@ -1,0 +1,16 @@
+apiserver/paasng/paas_wl/bk_app/sandbox_instance/crd.py
+  h_190e3af8dc7b5f 21
+apiserver/paasng/paasng/platform/engine/deploy/bg_wait/wait_sandbox.py
+  h_190e3af8dc7b5f 100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "ec668842869c9b368e218759a8cdc01ef49873b3",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

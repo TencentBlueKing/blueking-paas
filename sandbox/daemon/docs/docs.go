@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/files": {
+            "delete": {
+                "description": "Delete base_path/rel_path; deleting a non-existent file is idempotent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Delete a single file in a volume",
+                "operationId": "PVDeleteFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "jail root path issued by apiserver",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "volume-relative path",
+                        "name": "rel_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.DeleteResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/files/": {
             "delete": {
                 "description": "Delete a file or folder at the specified path, with optional recursive deletion for directories",
@@ -81,6 +121,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/files/export": {
+            "post": {
+                "description": "Read a file from the volume, compute its sha256, and upload it using a presigned URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Export a file to object storage",
+                "operationId": "ExportFile",
+                "parameters": [
+                    {
+                        "description": "Export file request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.ExportFileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.ExportFileResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/files/folder": {
             "post": {
                 "description": "Create a new folder with optional permission mode",
@@ -109,6 +184,152 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    }
+                }
+            }
+        },
+        "/files/list": {
+            "get": {
+                "description": "List files under base_path/rel_path with pagination, optionally recursive",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "List files in a volume path",
+                "operationId": "ListFiles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "name": "is_recursive",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "rel_path",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "until",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.ListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/preview": {
+            "get": {
+                "description": "Return the first max_bytes of a text file as UTF-8; 415 for non-text types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Preview a text file",
+                "operationId": "PreviewFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "max_bytes",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "rel_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "headers": {
+                            "X-Truncated": {
+                                "type": "string",
+                                "description": "whether the content was truncated"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/files/stat": {
+            "get": {
+                "description": "Return metadata of base_path/rel_path; returns 200 with exists=false if not found",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Stat a file in a volume",
+                "operationId": "StatFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "rel_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.StatResponse"
+                        }
                     }
                 }
             }
@@ -227,6 +448,118 @@ const docTemplate = `{
                 },
                 "output": {
                     "type": "string"
+                }
+            }
+        },
+        "pkg_server_volumefs.DeleteResponse": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pkg_server_volumefs.ExportFileRequest": {
+            "type": "object",
+            "required": [
+                "base_path",
+                "rel_path",
+                "upload_url"
+            ],
+            "properties": {
+                "base_path": {
+                    "type": "string"
+                },
+                "rel_path": {
+                    "type": "string"
+                },
+                "upload_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_volumefs.ExportFileResponse": {
+            "type": "object",
+            "properties": {
+                "mtime": {
+                    "type": "string"
+                },
+                "sha256": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_volumefs.FileItem": {
+            "type": "object",
+            "properties": {
+                "is_dir": {
+                    "type": "boolean"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_volumefs.ListExtraData": {
+            "type": "object",
+            "properties": {
+                "directory": {
+                    "type": "integer"
+                },
+                "files": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pkg_server_volumefs.ListResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "extra_data": {
+                    "$ref": "#/definitions/pkg_server_volumefs.ListExtraData"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pkg_server_volumefs.FileItem"
+                    }
+                }
+            }
+        },
+        "pkg_server_volumefs.StatResponse": {
+            "type": "object",
+            "properties": {
+                "exists": {
+                    "type": "boolean"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
                 }
             }
         }

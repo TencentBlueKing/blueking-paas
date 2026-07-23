@@ -37,6 +37,7 @@ from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
+from paasng.platform.applications.constants import DeployPolicy
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
@@ -57,7 +58,12 @@ logger = logging.getLogger(__name__)
 
 class BkAppReleaseMgr(DeployStep):
     """BkApp(CRD) Release Step, will schedule the Deployment/Ingress and so on by k8s operator.
-    The k8s operator is deployed at app cluster"""
+    The k8s operator is deployed at app cluster
+
+    NOTE: 隔离型 AI Agent 应用(is_ai_agent_app 且 deploy_policy=ISOLATED)的运行时由 SandboxInstance CR 承载,
+    经集群侧 sandbox-controller 渲染 cube Pod, 不经过 app-operator。此类应用在 start 中分叉到
+    release_by_sandbox_instance; 非隔离 AI Agent 及其它应用仍走 release_by_k8s_operator。
+    """
 
     phase_type = DeployPhaseTypes.RELEASE
 
@@ -77,13 +83,28 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure("部署应用"):
-            bkapp_release_id = release_by_k8s_operator(
-                self.module_environment,
-                revision,
-                operator=self.deployment.operator,
-                build=build,
-                deployment=self.deployment,
-            )
+            application = self.module_environment.application
+            # 仅隔离型 AI Agent 应用(is_ai_agent_app 且 deploy_policy=ISOLATED)运行时由 SandboxInstance CR 承载;
+            # 非隔离 AI Agent 及其它应用仍走 BkApp CR(release_by_k8s_operator)。
+            if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
+                # 延迟 import 以规避 sandbox_operator -> operator 的循环依赖
+                from paasng.platform.engine.deploy.release.sandbox_operator import release_by_sandbox_instance
+
+                bkapp_release_id = release_by_sandbox_instance(
+                    self.module_environment,
+                    revision,
+                    operator=self.deployment.operator,
+                    build=build,
+                    deployment=self.deployment,
+                )
+            else:
+                bkapp_release_id = release_by_k8s_operator(
+                    self.module_environment,
+                    revision,
+                    operator=self.deployment.operator,
+                    build=build,
+                    deployment=self.deployment,
+                )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(bkapp_release_id=bkapp_release_id)

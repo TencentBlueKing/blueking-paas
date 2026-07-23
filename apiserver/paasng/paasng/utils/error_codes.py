@@ -253,6 +253,12 @@ class ErrorCodes:
     AGENT_SANDBOX_FILE_NOT_PREVIEWABLE = ErrorCode(_("Agent 沙箱文件不可预览"), status_code=415)
     AGENT_SANDBOX_ARCHIVE_FAILED = ErrorCode(_("Agent 沙箱文件归档失败"))
 
+    # Sandbox instance (SandboxInstance CR)
+    # TODO: 配套 API(停止/重启/删除等)落地时启用, 届时桥接 SandboxInstanceDeployError/NotFound 到 ErrorCode 体系
+    SANDBOX_INSTANCE_DEPLOY_FAILED = ErrorCode(_("下发沙箱实例失败"))
+    SANDBOX_INSTANCE_READY_TIMEOUT = ErrorCode(_("等待沙箱实例就绪超时"), status_code=504)
+    SANDBOX_INSTANCE_NOT_FOUND = ErrorCode(_("沙箱实例不存在"), status_code=404)
+
     # Agent sandbox volume
     AGENT_SANDBOX_VOLUME_NOT_FOUND = ErrorCode(_("Volume 不存在"), status_code=404)
     AGENT_SANDBOX_VOLUME_ALREADY_EXISTS = ErrorCode(_("Volume 已存在"), status_code=409)

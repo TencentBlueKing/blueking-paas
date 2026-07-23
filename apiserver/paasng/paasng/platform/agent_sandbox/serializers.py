@@ -198,7 +198,9 @@ class VolumeOutputSLZ(serializers.ModelSerializer):
         }
 
     def get_storage_instance_id(self, obj) -> str:
-        return settings.AGENT_SANDBOX_CFS_FSID
+        # 存储实例标识，键名由具体 CSI driver 决定（CFS 为 fsid，NFS 为 server 等）
+        attrs = settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES or {}
+        return attrs.get("fsid") or attrs.get("server") or ""
 
     def get_storage_path(self, obj) -> str:
         return obj.storage_path

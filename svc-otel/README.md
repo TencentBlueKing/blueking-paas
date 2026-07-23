@@ -4,15 +4,15 @@
 
 ## 本地开发指引
 
-### 1. 安装 Python 3.11
+### 1. 安装 Python 3.14
 
 推荐使用 [pyenv](https://github.com/pyenv/pyenv) 管理 Python 环境。
 
 - 安装 pyenv，请参考 [相关指引](https://github.com/pyenv/pyenv#getting-pyenv)。
-- 使用 pyenv 安装 Python 3.11：
+- 使用 pyenv 安装 Python 3.14：
 
 ```shell
-❯ pyenv install 3.11.10
+❯ pyenv install 3.14.6
 ```
 
 ### 2. 安装项目依赖

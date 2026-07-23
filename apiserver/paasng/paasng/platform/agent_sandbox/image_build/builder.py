@@ -19,7 +19,7 @@ import logging
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
-from six import ensure_text
+from django.utils.encoding import force_str
 
 from paas_wl.bk_app.agent_sandbox.image_credential import generate_dockerconfig_b64
 from paas_wl.infras.cluster.entities import AllocationContext
@@ -190,7 +190,7 @@ class KanikoBuildExecutor:
         """Read all logs from the build pod."""
         try:
             resp = self.kpod.get_log(name=self.pod_name, namespace=self.namespace)
-            return ensure_text(resp.data)
+            return force_str(resp.data)
         except Exception:
             logger.exception("Failed to read logs for build %s", self.build.uuid)
             return "Failed to read build logs"

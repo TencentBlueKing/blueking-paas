@@ -29,7 +29,7 @@ from opentelemetry.trace import Span, Status, StatusCode
 from requests.models import Response
 
 
-def requests_callback(span: Span, response: Optional[Response]):
+def requests_callback(span: Span, request, response: Optional[Response]):
     """
     处理蓝鲸标准协议响应
     """
@@ -81,7 +81,7 @@ def requests_callback(span: Span, response: Optional[Response]):
 
 def django_response_hook(span: Span, request, response):
     """
-    处理 PaasNG Django 响应
+    处理 Django 响应
     """
     if response.status_code == 200:
         span.set_status(Status(StatusCode.OK))

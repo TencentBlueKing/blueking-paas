@@ -23,7 +23,6 @@ from django.db.models import Min
 
 from paasng.accessories.servicehub.binding_policy.policy import get_service_type
 from paasng.accessories.servicehub.constants import (
-    PrecedencePolicyCondType,
     ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
@@ -92,8 +91,7 @@ class Command(BaseCommand):
                     service_type=get_service_type(service_obj),
                     tenant_id=precedence_policy.tenant_id,
                     priority=min_priority - 1,
-                    cond_type=PrecedencePolicyCondType.ALWAYS_MATCH.value,
-                    cond_data={},
+                    matcher={},
                     type=precedence_policy_type,
                     data=plans,
                 )

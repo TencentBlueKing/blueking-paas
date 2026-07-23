@@ -31,7 +31,7 @@ from paasng.accessories.servicehub.binding_policy.policy import (
     ServiceBindingPolicyDTO,
     ServiceBindingPrecedencePolicyDTO,
 )
-from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType, ServiceAllocationPolicyType
+from paasng.accessories.servicehub.constants import Category, ServiceAllocationPolicyType
 from paasng.accessories.servicehub.exceptions import (
     BindServicePlanError,
     ServiceObjNotFound,
@@ -216,20 +216,17 @@ class TestSvcBindingPolicyManager:
         """A pre-configured rule-based combination config object for testing."""
         allocation_precedence_policies = [
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.REGION_IN,
-                cond_data={"regions": [bk_app.region]},
+                matcher={"region_in": [bk_app.region]},
                 priority=2,
                 plans=[plan1.uuid],
             ),
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.CLUSTER_IN,
-                cond_data={"cluster_name": ["cluster1", "cluster2"]},
+                matcher={"cluster_in": ["cluster1", "cluster2"]},
                 priority=1,
                 env_plans={"stag": [plan2.uuid]},
             ),
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
-                cond_data={},
+                matcher={},
                 priority=0,
                 env_plans={"stag": [plan1.uuid]},
             ),
@@ -255,8 +252,7 @@ class TestSvcBindingPolicyManager:
     def test_create_with_invalid_cfg(self, service_obj, bk_app, bk_module, plan1, plan2):
         allocation_precedence_policies = [
             ServiceBindingPrecedencePolicyDTO(
-                cond_type=PrecedencePolicyCondType.CLUSTER_IN,
-                cond_data={"cluster_name": ["cluster1", "cluster2"]},
+                matcher={"cluster_in": ["cluster1", "cluster2"]},
                 priority=1,
                 env_plans={"stag": [plan2.uuid]},
             ),
@@ -269,7 +265,7 @@ class TestSvcBindingPolicyManager:
             allocation_precedence_policies=allocation_precedence_policies,
         )
         mgr = SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID)
-        with pytest.raises(ValueError, match=r"The policy with the minimum priority*"):
+        with pytest.raises(ValueError, match=r"exactly one policy with empty matcher"):
             mgr.save_comb_cfg(cfg)
 
     def test_should_fail_when_save_invalid_plan_id(self, service_obj, uniform_policy_config):
@@ -292,12 +288,12 @@ class TestSvcBindingPolicyManager:
         assert len(policies) == 3
         p1, p2, p3 = policies
         assert [
-            (p1.cond_data, p1.plans, p1.priority),
-            (p2.cond_data, p2.env_plans, p2.priority),
-            (p3.cond_data, p3.env_plans, p3.priority),
+            (p1.matcher, p1.plans, p1.priority),
+            (p2.matcher, p2.env_plans, p2.priority),
+            (p3.matcher, p3.env_plans, p3.priority),
         ] == [
-            ({"regions": [bk_app.region]}, [plan1.uuid], 2),
-            ({"cluster_name": ["cluster1", "cluster2"]}, {"stag": [plan2.uuid]}, 1),
+            ({"region_in": [bk_app.region]}, [plan1.uuid], 2),
+            ({"cluster_in": ["cluster1", "cluster2"]}, {"stag": [plan2.uuid]}, 1),
             ({}, {"stag": [plan1.uuid]}, 0),
         ]
 

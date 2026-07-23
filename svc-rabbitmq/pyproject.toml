@@ -48,7 +48,7 @@ dependencies = [
     'python-dateutil (==2.8.2)',
     'prometheus_client (==0.14.1)',
     'AMQPStorm (==2.10.4)',
-    "pydantic (==2.11.10)",
+    "pydantic (==2.12.5)",
     'django-prometheus (==2.2.0)',
     'django-environ (==0.14.0)',
     'urllib3 (==1.26.20)',

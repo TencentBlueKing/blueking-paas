@@ -4,15 +4,15 @@
 
 ## 本地开发指引
 
-### 1. 安装 Python 3.11
+### 1. 安装 Python 3.14
 
 推荐使用 [pyenv](https://github.com/pyenv/pyenv) 管理 Python 环境。
 
 - 安装 pyenv，请参考 [相关指引](https://github.com/pyenv/pyenv#getting-pyenv)。
-- 使用 pyenv 安装 Python 3.11：
+- 使用 pyenv 安装 Python 3.14：
 
 ```shell
-❯ pyenv install 3.11.10
+❯ pyenv install 3.14.6
 ```
 
 ### 2. 安装项目依赖
@@ -65,11 +65,10 @@ $ helm upgrade redis-operator ot-helm/redis-operator \
   --install --create-namespace --namespace ot-operators \
   --version 0.23.0 \
   --set manager.config.kubeClientQPS=100
-  
-# Test
-$ helm test redis-operator --namespace ot-operators 
-```
 
+# Test
+$ helm test redis-operator --namespace ot-operators
+```
 
 ### 5. 初始化数据
 

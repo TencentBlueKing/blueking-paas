@@ -2333,3 +2333,137 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/files:
+    get:
+      operationId: list_agent_sandbox_volume_files
+      description: 列出 Agent 沙箱 Volume 内文件(分页)
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    delete:
+      operationId: delete_agent_sandbox_volume_file
+      description: 删除 Agent 沙箱 Volume 内单个文件(幂等)
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/stat:
+    get:
+      operationId: stat_agent_sandbox_volume_file
+      description: 查询 Agent 沙箱 Volume 内文件元数据(不存在时返回 exists=false)
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/stat
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/preview:
+    get:
+      operationId: preview_agent_sandbox_volume_file
+      description: 预览 Agent 沙箱 Volume 内文本文件(按 max_bytes 截断, 非文本类返回 415)
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/preview
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/download_url:
+    get:
+      operationId: get_agent_sandbox_volume_file_download_url
+      description: 归档并签发 Agent 沙箱 Volume 内文件的下载/预览 URL(一次返回互斥的 download_url 与 preview_url)
+      tags:
+      - Agent沙箱相关接口
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/download_url
+          matchSubpath: false
+          timeout: 300
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true

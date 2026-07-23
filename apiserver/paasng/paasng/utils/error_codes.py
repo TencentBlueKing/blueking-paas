@@ -244,7 +244,14 @@ class ErrorCodes:
     AGENT_SANDBOX_PROCESS_OPERATION_FAILED = ErrorCode(_("Agent 沙箱进程操作失败"))
     AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT = ErrorCode(_("Agent 沙箱进程执行超时"), status_code=408)
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
+    AGENT_SANDBOX_DAEMON_API_ERROR = ErrorCode(_("Agent 沙箱守护进程 API 异常"), status_code=500)
     AGENT_SANDBOX_IMAGE_VALIDATE_FAILED = ErrorCode(_("Agent 沙箱快照镜像验证失败"), status_code=400)
+
+    # Agent sandbox volume file (persistence)
+    AGENT_SANDBOX_FILE_NOT_FOUND = ErrorCode(_("Agent 沙箱文件不存在"), status_code=404)
+    AGENT_SANDBOX_FILE_TOO_LARGE = ErrorCode(_("Agent 沙箱文件过大"), status_code=413)
+    AGENT_SANDBOX_FILE_NOT_PREVIEWABLE = ErrorCode(_("Agent 沙箱文件不可预览"), status_code=415)
+    AGENT_SANDBOX_ARCHIVE_FAILED = ErrorCode(_("Agent 沙箱文件归档失败"))
 
     # Agent sandbox volume
     AGENT_SANDBOX_VOLUME_NOT_FOUND = ErrorCode(_("Volume 不存在"), status_code=404)

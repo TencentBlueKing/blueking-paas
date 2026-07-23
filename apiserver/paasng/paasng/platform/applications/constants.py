@@ -116,6 +116,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     # 持久存储挂载卷相关的 feature flag
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
+    # 运行环境敏感变量加密开关（应用级），默认关闭；需与平台全局开关同时开启才生效
+    ENCRYPTED_SECRET_ENV_INJECTION = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
+
 
 class LightApplicationViewSetErrorCode(StrStructuredEnum):
     SUCCESS = "0"
@@ -130,3 +133,10 @@ class LightApplicationViewSetErrorCode(StrStructuredEnum):
 class AvailabilityLevel(StrStructuredEnum):
     STANDARD = EnumField("standard", label="基础")
     PREMIUM = EnumField("premium", label="高级别")
+
+
+class AppEnvEncryptionKeyType(StrStructuredEnum):
+    """应用环境加密密钥类型"""
+
+    FERNET = EnumField("FernetCipher", label="Fernet")
+    SM4CTR = EnumField("SM4CTR", label="SM4CTR")

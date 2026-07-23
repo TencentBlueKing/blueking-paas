@@ -157,6 +157,11 @@ urlpatterns += [
         name="api.applications.feature_flags.switch.app_desc_flag",
     ),
     re_path(
+        r"^api/bkapps/applications/feature_flags/(?P<code>[^/]+)/switch/encrypted_secret_env_injection_flag/$",
+        views.ApplicationFeatureFlagViewSet.as_view({"put": "switch_encrypted_secret_env_injection_flag"}),
+        name="api.applications.feature_flags.switch.encrypted_secret_env_injection_flag",
+    ),
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/protections/$",
         views.ApplicationResProtectionsViewSet.as_view({"get": "list"}),
         name="api.applications.protections",

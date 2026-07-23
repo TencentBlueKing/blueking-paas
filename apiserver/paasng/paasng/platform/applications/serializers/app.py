@@ -463,6 +463,12 @@ class ApplicationFeatureFlagSLZ(serializers.Serializer):
     effect = serializers.BooleanField()
 
 
+class ToggleEncryptedSecretEnvInjectionFlagSLZ(serializers.Serializer):
+    """应用级「加密运行环境敏感变量」开关"""
+
+    enabled = serializers.BooleanField(help_text="是否开启加密")
+
+
 class ProtectionStatusSLZ(serializers.Serializer):
     """Serialize app resource protection status"""
 

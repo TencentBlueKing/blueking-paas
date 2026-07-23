@@ -17,11 +17,14 @@
 
 import logging
 import os
+import secrets
 import time
 import uuid
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from bkstorages.backends.bkrepo import RequestError
+from blue_krill.models.fields import EncryptField
+from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
@@ -36,6 +39,8 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import (
+    AppEnvEncryptionKeyType,
+    AppEnvironment,
     AppFeatureFlag,
     ApplicationRole,
     ApplicationType,
@@ -572,6 +577,24 @@ class ApplicationEnvironment(TimestampedModel):
     def get_engine_app(self):
         return self.engine_app
 
+    def get_env_encryption_key(self):
+        """Get the AppEnvEncryptionKey object for current environment if exists, otherwise return None"""
+        return AppEnvEncryptionKey.objects.filter(application=self.application, environment=self.environment).first()
+
+    def get_or_create_env_encryption_key(self):
+        """Get or create the AppEnvEncryptionKey object for current environment"""
+        # Import lazily because encryption depends on Service Hub and eventually
+        # imports this models module while Django is populating the app registry.
+        from paasng.platform.bkapp_model.encryption import get_or_create_env_encryption_key
+
+        return get_or_create_env_encryption_key(self, settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+
+    def rotate_env_encryption_key(self, cipher_type: str | None = None):
+        """Rotate this environment's encryption key for the next deployment."""
+        from paasng.platform.bkapp_model.encryption import rotate_env_encryption_key
+
+        return rotate_env_encryption_key(self, cipher_type or settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE)
+
     @property
     def wl_app(self):
         """Return the WlApp object(in 'workloads' module)"""
@@ -805,3 +828,46 @@ class ReservedPrefixAuthCode(TimestampedModel):
 
     def __str__(self):
         return f"{self.app_code} - {self.auth_code} - {'used' if self.is_used else 'unused'}"
+
+
+class AppEnvEncryptionKey(TimestampedModel):
+    """每应用每环境的敏感变量加密密钥。
+
+    用于在部署云原生应用时对敏感环境变量做密文注入：平台用该密钥重新加密敏感变量的值,
+    并随容器下发同一把密钥(BKPAAS_ENCRYPT_SECRET_KEY),应用侧(SDK) 用它解密取回原值。
+
+    密钥格式由 ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE(FernetCipher / SM4CTR) 决定
+    """
+
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="env_encryption_keys"
+    )
+    environment = models.CharField(verbose_name="环境", choices=AppEnvironment.get_choices(), max_length=16)
+    key = EncryptField(verbose_name="加密密钥")
+    # key 对应的算法类型
+    cipher_type = models.CharField(
+        verbose_name="加密算法类型", max_length=16, default=settings.ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE
+    )
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("application", "environment")
+
+    def __str__(self):
+        return f"{self.application.code} - {self.environment}"
+
+    @staticmethod
+    def generate_key(cipher_type: str) -> str:
+        """按 cipher_type 生成一把 runtime 密钥
+
+        - SM4CTR: 随机 32 位十六进制串(SM4 取前 16 字节为密钥)
+        - FernetCipher: `Fernet.generate_key()` 生成的 base64 串
+        """
+        if cipher_type == AppEnvEncryptionKeyType.SM4CTR:
+            return secrets.token_hex(16)
+        elif cipher_type.upper() == AppEnvEncryptionKeyType.FERNET.upper():
+            return Fernet.generate_key().decode()
+        raise ValueError(
+            f"Unsupported cipher type: {cipher_type}, only support {[t.value for t in AppEnvEncryptionKeyType]}"
+        )

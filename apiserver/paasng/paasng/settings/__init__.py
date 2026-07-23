@@ -141,6 +141,16 @@ SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 BK_CRYPTO_TYPE = settings.get("BK_CRYPTO_TYPE", "CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
 
+# 新建应用是否默认启用「运行环境敏感变量加密」应用级 feature flag (AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)，
+# 默认关闭。该值仅在创建应用时用于同步 feature flag 默认值，运行时是否启用加密以应用级 feature flag 为准。
+ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT", False)
+
+# 运行环境敏感变量加密使用的算法类型（独立于平台全局 ENCRYPT_CIPHER_TYPE），可选 'SHANGMI' , 'CLASSIC'
+ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE", "CLASSIC")
+ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE = (
+    "SM4CTR" if ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
+)
+
 DEBUG = settings.get("DEBUG", False)
 
 RUNNING_TESTS = "test" in sys.argv or "pytest" in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ

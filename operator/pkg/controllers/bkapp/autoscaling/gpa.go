@@ -19,6 +19,8 @@
 package autoscaling
 
 import (
+	"strconv"
+
 	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,7 +67,7 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 			Spec: autoscaling.GeneralPodAutoscalerSpec{
 				AutoScalingDrivenMode: autoscaling.AutoScalingDrivenMode{
 					MetricMode: &autoscaling.MetricMode{
-						Metrics: buildMetricSpecs(spec.Policy),
+						Metrics: buildMetricSpecs(spec),
 					},
 				},
 				MinReplicas: &spec.MinReplicas,
@@ -81,12 +83,29 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 	return gpaList
 }
 
-// 构建资源指标配置，目前仅支持按策略组装
-func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.MetricSpec) {
-	switch policy {
+func buildMetricSpecs(spec *paasv1alpha2.AutoscalingSpec) []autoscaling.MetricSpec {
+	if len(spec.Metrics) > 0 {
+		return lo.Map(spec.Metrics, func(m paasv1alpha2.MetricSpec, _ int) autoscaling.MetricSpec {
+			v, err := strconv.Atoi(m.Value)
+			if err != nil {
+				v = 85
+			}
+			return autoscaling.MetricSpec{
+				Type: autoscaling.ResourceMetricSourceType,
+				Resource: &autoscaling.ResourceMetricSource{
+					Name: v1.ResourceCPU,
+					Target: autoscaling.MetricTarget{
+						Type:               autoscaling.UtilizationMetricType,
+						AverageUtilization: lo.ToPtr(int32(v)),
+					},
+				},
+			}
+		})
+	}
+	// 无自定义 metrics，回退到默认
+	switch spec.Policy {
 	case paasv1alpha2.ScalingPolicyDefault:
-		// 默认策略：cpu utilization 85%
-		metrics = append(metrics, autoscaling.MetricSpec{
+		return []autoscaling.MetricSpec{{
 			Type: autoscaling.ResourceMetricSourceType,
 			Resource: &autoscaling.ResourceMetricSource{
 				Name: v1.ResourceCPU,
@@ -95,10 +114,9 @@ func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.
 					AverageUtilization: lo.ToPtr(int32(85)),
 				},
 			},
-		})
+		}}
 	}
-
-	return metrics
+	return nil
 }
 
 // GenGPAHealthStatus check if the GPA is healthy

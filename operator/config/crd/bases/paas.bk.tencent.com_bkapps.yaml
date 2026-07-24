@@ -159,6 +159,30 @@ spec:
                             It cannot be less that minReplicas.
                           format: int32
                           type: integer
+                        metrics:
+                          description: Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+                          items:
+                            description: MetricSpec 定义扩缩容指标
+                            properties:
+                              metric:
+                                description: Metric 指标名称
+                                enum:
+                                - cpuUtilization
+                                type: string
+                              type:
+                                description: Type 指标来源类型
+                                enum:
+                                - Resource
+                                type: string
+                              value:
+                                description: Value 指标值, 百分比 (0-100]
+                                type: string
+                            required:
+                            - metric
+                            - type
+                            - value
+                            type: object
+                          type: array
                         minReplicas:
                           description: |-
                             minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
@@ -323,6 +347,30 @@ spec:
                             It cannot be less that minReplicas.
                           format: int32
                           type: integer
+                        metrics:
+                          description: Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+                          items:
+                            description: MetricSpec 定义扩缩容指标
+                            properties:
+                              metric:
+                                description: Metric 指标名称
+                                enum:
+                                - cpuUtilization
+                                type: string
+                              type:
+                                description: Type 指标来源类型
+                                enum:
+                                - Resource
+                                type: string
+                              value:
+                                description: Value 指标值, 百分比 (0-100]
+                                type: string
+                            required:
+                            - metric
+                            - type
+                            - value
+                            type: object
+                          type: array
                         minReplicas:
                           description: |-
                             minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
@@ -1339,6 +1387,30 @@ spec:
                             It cannot be less that minReplicas.
                           format: int32
                           type: integer
+                        metrics:
+                          description: Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+                          items:
+                            description: MetricSpec 定义扩缩容指标
+                            properties:
+                              metric:
+                                description: Metric 指标名称
+                                enum:
+                                - cpuUtilization
+                                type: string
+                              type:
+                                description: Type 指标来源类型
+                                enum:
+                                - Resource
+                                type: string
+                              value:
+                                description: Value 指标值, 百分比 (0-100]
+                                type: string
+                            required:
+                            - metric
+                            - type
+                            - value
+                            type: object
+                          type: array
                         minReplicas:
                           description: |-
                             minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
@@ -1618,6 +1690,30 @@ spec:
                             It cannot be less that minReplicas.
                           format: int32
                           type: integer
+                        metrics:
+                          description: Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+                          items:
+                            description: MetricSpec 定义扩缩容指标
+                            properties:
+                              metric:
+                                description: Metric 指标名称
+                                enum:
+                                - cpuUtilization
+                                type: string
+                              type:
+                                description: Type 指标来源类型
+                                enum:
+                                - Resource
+                                type: string
+                              value:
+                                description: Value 指标值, 百分比 (0-100]
+                                type: string
+                            required:
+                            - metric
+                            - type
+                            - value
+                            type: object
+                          type: array
                         minReplicas:
                           description: |-
                             minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.

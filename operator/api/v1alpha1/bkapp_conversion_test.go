@@ -114,6 +114,9 @@ var _ = Describe("test conversion back and forth", func() {
 							MinReplicas: 2,
 							MaxReplicas: 5,
 							Policy:      ScalingPolicyDefault,
+							Metrics: []MetricSpec{
+								{Type: "Resource", Metric: "cpuUtilization", Value: "70"},
+							},
 						},
 					},
 				},
@@ -145,6 +148,9 @@ var _ = Describe("test conversion back and forth", func() {
 								MinReplicas: 1,
 								MaxReplicas: 3,
 								Policy:      ScalingPolicyDefault,
+								Metrics: []MetricSpec{
+									{Type: "Resource", Metric: "cpuUtilization", Value: "60"},
+								},
 							},
 						},
 					},
@@ -293,6 +299,9 @@ var _ = Describe("test conversion back and forth", func() {
 							MinReplicas: 1,
 							MaxReplicas: 10,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
+							Metrics: []paasv1alpha2.MetricSpec{
+								{Type: "Resource", Metric: "cpuUtilization", Value: "70"},
+							},
 						},
 					},
 				},
@@ -321,6 +330,9 @@ var _ = Describe("test conversion back and forth", func() {
 								MinReplicas: 1,
 								MaxReplicas: 3,
 								Policy:      paasv1alpha2.ScalingPolicyDefault,
+								Metrics: []paasv1alpha2.MetricSpec{
+									{Type: "Resource", Metric: "cpuUtilization", Value: "60"},
+								},
 							},
 						},
 					},

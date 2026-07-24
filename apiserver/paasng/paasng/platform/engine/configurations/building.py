@@ -19,10 +19,13 @@ import base64
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from django.conf import settings
+
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
+from paasng.utils.datetime import get_time_delta
 
 if TYPE_CHECKING:
     from paasng.platform.engine.models import EngineApp
@@ -100,12 +103,19 @@ class SlugBuilderTemplate:
     :param namespace: the namespace of the Pod
     :param runtime: Runtime Info of the Pod, including image, pullSecrets, command, args and so on.
     :param schedule: Schedule Rule of the Pod, including tolerations and node_selector.
+    :param build_debug: Whether to enable build debug mode, which keeps the builder Pod alive after build.
     """
 
     name: str
     namespace: str
     runtime: ContainerRuntimeSpec
     schedule: Schedule
+    build_debug: bool = False
+
+
+def get_build_debug_timeout() -> int:
+    """构建调试窗口超时时间 (秒), 对齐 BUILD_DEBUG_EXIT_DELAY 配置 (如 "30m")."""
+    return int(get_time_delta(settings.BUILD_DEBUG_EXIT_DELAY).total_seconds())
 
 
 def get_dockerfile_path(module: "Module") -> str:

@@ -174,13 +174,14 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: BuildMetadata):
 
 
 def prepare_slugbuilder_template(
-    app: "WlApp", env_vars: Dict, builder_image: Optional[str] = None
+    app: "WlApp", env_vars: Dict, builder_image: Optional[str] = None, build_debug: bool = False
 ) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
     :param app: WlApp to build, provide info about namespace, region and etc.
     :param env_vars: Extra environment vars
     :param builder_image: image of slugbuilder
+    :param build_debug: Whether to enable build debug mode
     :returns: args for start slugbuilder
     """
     # Builder image name
@@ -199,6 +200,7 @@ def prepare_slugbuilder_template(
             resources=get_slugbuilder_resources(app),
         ),
         schedule=get_schedule_config(app, only_cluster_default=True),
+        build_debug=build_debug,
     )
 
 

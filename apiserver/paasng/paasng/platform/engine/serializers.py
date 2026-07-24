@@ -72,6 +72,7 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
     invoke_message = serializers.CharField(help_text="触发信息", required=False, allow_null=True, allow_blank=True)
+    build_debug = serializers.BooleanField(help_text="开启构建调试, 构建容器在成功/失败后保活", default=False)
 
 
 class CreateDeploymentSLZ(serializers.Serializer):

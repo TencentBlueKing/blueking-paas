@@ -62,6 +62,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
 from paasng.platform.bkapp_model.entities import Process
@@ -90,6 +91,17 @@ from paasng.platform.modules.models import BuildConfig, Module
 from paasng.utils.camel_converter import dict_to_camel
 
 logger = logging.getLogger(__name__)
+
+
+def _filter_scaling_metrics(module: Module, metrics: List[Dict]) -> List[Dict]:
+    """按特性开关过滤扩缩容指标.
+
+    应用未开启 CUSTOM_AUTOSCALING_THRESHOLD 时置空 metrics (operator 侧将回退到默认指标);
+    数据库中始终保留用户配置的原始值 (用户意图), 仅在构建下发到集群的 manifest 时过滤.
+    """
+    if metrics and not module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
+        return []
+    return metrics
 
 
 class ManifestConstructor(ABC):
@@ -199,6 +211,12 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 logger.warning("模块<%s>的 %s 进程未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
                 command, args = [], []
 
+            scaling_config = process_spec.scaling_config
+            if scaling_config:
+                scaling_config = scaling_config.copy(
+                    update={"metrics": _filter_scaling_metrics(module, scaling_config.metrics)}
+                )
+
             process_entity = Process(
                 name=process_spec.name,
                 command=command,
@@ -206,7 +224,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 replicas=process_spec.target_replicas,
                 target_port=process_spec.port,
                 res_quota_plan=self._sanitize_plan_name(process_spec.plan_name),
-                autoscaling=process_spec.scaling_config,
+                autoscaling=scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
                 graceful_shutdown_seconds=process_spec.graceful_shutdown_seconds,
@@ -250,6 +268,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                             minReplicas=item.scaling_config.min_replicas,
                             maxReplicas=item.scaling_config.max_replicas,
                             policy=item.scaling_config.policy,
+                            metrics=_filter_scaling_metrics(module, item.scaling_config.metrics),
                         ),
                     )
                 if item.plan_name and item.plan_name != proc_spec.plan_name:

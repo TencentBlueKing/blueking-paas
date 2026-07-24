@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Any, Dict
+
 from pydantic import BaseModel, Field
 
 from paasng.utils.structure import prepare_json_field
@@ -34,4 +36,4 @@ class AutoscalingConfig(BaseModel):
     min_replicas: int
     max_replicas: int
     policy: str = Field(..., min_length=1)
-    metrics: list = Field(default_factory=list)
+    metrics: list[Dict[str, Any]] = Field(default_factory=list)

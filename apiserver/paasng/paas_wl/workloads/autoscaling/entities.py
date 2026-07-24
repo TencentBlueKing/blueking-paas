@@ -71,11 +71,18 @@ class AutoscalingConfig:
 
     def to_autoscaling_spec(self) -> ProcAutoscalingSpec:
         """Transform current config into the autoscaling spec object."""
-        if self.policy == ScalingPolicy.DEFAULT.value:
-            metrics = self.metrics or cattr.structure(DEFAULT_METRICS, List[MetricSpec])
+        # 优先使用用户自定义 metrics
+        if self.metrics:
             return ProcAutoscalingSpec(
                 min_replicas=self.min_replicas,
                 max_replicas=self.max_replicas,
-                metrics=metrics,
+                metrics=self.metrics,
+            )
+        # 无自定义 metrics 时, 根据 policy 决定默认值
+        if self.policy == ScalingPolicy.DEFAULT.value:
+            return ProcAutoscalingSpec(
+                min_replicas=self.min_replicas,
+                max_replicas=self.max_replicas,
+                metrics=cattr.structure(DEFAULT_METRICS, List[MetricSpec]),
             )
         raise ValueError("Unable to get metrics, policy: {}".format(self.policy))

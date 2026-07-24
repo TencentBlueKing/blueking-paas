@@ -74,7 +74,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationTarget
 from paasng.misc.audit.service import add_app_audit_record
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model import fieldmgr
@@ -114,9 +114,6 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         autoscaling = data["autoscaling"]
         target_replicas = data.get("target_replicas")
         scaling_config = data.get("scaling_config")
-
-        # 应用未开启 "CUSTOM_AUTOSCALING_THRESHOLD" 特性时, 即使前端传入了自定义 metrics 也会被忽略
-        scaling_config = self._filter_scaling_config_by_feature_flag(autoscaling, scaling_config)
 
         # TODO 由于云原生应用去除了对 ProcessSpec model 的依赖, 因此暂时不做操作频率限制, 待后续评估后再添加?
         if wl_app.type == WlAppType.DEFAULT:
@@ -160,30 +157,6 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             status=status.HTTP_200_OK,
             data={"target_replicas": target_replicas, "target_status": target_status},
         )
-
-    def _filter_scaling_config_by_feature_flag(
-        self, autoscaling: bool, scaling_config: Optional[AutoscalingConfig]
-    ) -> Optional[AutoscalingConfig]:
-        """根据 "CUSTOM_AUTOSCALING_THRESHOLD" 特性, 过滤 scaling_config.
-
-        - 当应用未开启该特性时, 即使前端传入了自定义 metrics 也会被清空, 强制回退到 DEFAULT_METRICS
-        - 其他情况 (开启特性 / 未传 scaling_config / 未开启自动扩缩容) 原样返回
-        """
-        if not (autoscaling and scaling_config and scaling_config.metrics):
-            return scaling_config
-
-        if self.get_application().feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
-            return scaling_config
-
-        logger.info(
-            "Application %s has not enabled feature %s, ignore custom metrics: %s",
-            self.get_application().code,
-            AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD.value,
-            scaling_config.metrics,
-        )
-        # 清空 metrics, 使其回退到 DEFAULT_METRICS
-        scaling_config.metrics = []
-        return scaling_config
 
     def _perform_update(
         self,

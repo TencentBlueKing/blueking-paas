@@ -21,10 +21,10 @@ package autoscaling
 import (
 	"strconv"
 
-	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
@@ -84,39 +84,30 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 }
 
 func buildMetricSpecs(spec *paasv1alpha2.AutoscalingSpec) []autoscaling.MetricSpec {
+	utilization := int32(85)
 	if len(spec.Metrics) > 0 {
-		return lo.Map(spec.Metrics, func(m paasv1alpha2.MetricSpec, _ int) autoscaling.MetricSpec {
-			v, err := strconv.Atoi(m.Value)
-			if err != nil {
-				v = 85
-			}
-			return autoscaling.MetricSpec{
-				Type: autoscaling.ResourceMetricSourceType,
-				Resource: &autoscaling.ResourceMetricSource{
-					Name: v1.ResourceCPU,
-					Target: autoscaling.MetricTarget{
-						Type:               autoscaling.UtilizationMetricType,
-						AverageUtilization: lo.ToPtr(int32(v)),
-					},
-				},
-			}
-		})
+		v, err := strconv.Atoi(spec.Metrics[0].Value)
+		if err != nil {
+			log.Log.Error(err, "failed to parse metric value, fallback to 85", "value", spec.Metrics[0].Value)
+		} else {
+			utilization = int32(v)
+		}
 	}
-	// 无自定义 metrics，回退到默认
-	switch spec.Policy {
-	case paasv1alpha2.ScalingPolicyDefault:
-		return []autoscaling.MetricSpec{{
-			Type: autoscaling.ResourceMetricSourceType,
-			Resource: &autoscaling.ResourceMetricSource{
-				Name: v1.ResourceCPU,
-				Target: autoscaling.MetricTarget{
-					Type:               autoscaling.UtilizationMetricType,
-					AverageUtilization: lo.ToPtr(int32(85)),
-				},
+
+	if spec.Policy != paasv1alpha2.ScalingPolicyDefault {
+		return nil
+	}
+
+	return []autoscaling.MetricSpec{{
+		Type: autoscaling.ResourceMetricSourceType,
+		Resource: &autoscaling.ResourceMetricSource{
+			Name: v1.ResourceCPU,
+			Target: autoscaling.MetricTarget{
+				Type:               autoscaling.UtilizationMetricType,
+				AverageUtilization: &utilization,
 			},
-		}}
-	}
-	return nil
+		},
+	}}
 }
 
 // GenGPAHealthStatus check if the GPA is healthy

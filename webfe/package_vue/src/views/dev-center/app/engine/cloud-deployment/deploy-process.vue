@@ -1191,7 +1191,7 @@ export default {
         return '85';
       },
       set(val) {
-        const numVal = String(val).replace(/[^0-9.]/g, '');
+        const numVal = String(val).replace(/[^0-9]/g, '');
         if (!numVal) return;
         this._setEnvMetric('stag', numVal);
       },
@@ -1203,7 +1203,7 @@ export default {
         return '85';
       },
       set(val) {
-        const numVal = String(val).replace(/[^0-9.]/g, '');
+        const numVal = String(val).replace(/[^0-9]/g, '');
         if (!numVal) return;
         this._setEnvMetric('prod', numVal);
       },
@@ -1671,7 +1671,7 @@ export default {
         this.$store.commit('cloudApi/updatePageEdit', false);
         this.init();
       } catch (error) {
-        this.catchErrorHandler(e);
+        this.catchErrorHandler(error);
       }
     },
 

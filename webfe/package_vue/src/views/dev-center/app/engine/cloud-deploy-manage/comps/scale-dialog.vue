@@ -260,10 +260,12 @@ export default {
         return '85';
       },
       set(val) {
+        const numVal = String(val).replace(/[^0-9]/g, '');
+        if (!numVal) return;
         if (this.scalingConfig.metrics && this.scalingConfig.metrics.length > 0) {
-          this.scalingConfig.metrics[0].value = val;
+          this.scalingConfig.metrics[0].value = numVal;
         } else {
-          this.scalingConfig.metrics = [{ metric: 'cpuUtilization', value: val }];
+          this.scalingConfig.metrics = [{ type: 'Resource', metric: 'cpuUtilization', value: numVal }];
         }
       },
     },

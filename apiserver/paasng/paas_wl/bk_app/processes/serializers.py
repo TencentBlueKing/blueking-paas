@@ -320,34 +320,24 @@ class MetricSpecSLZ(serializers.Serializer):
     )
     metric = serializers.ChoiceField(required=True, choices=ScalingMetric.get_choices())
     value = serializers.CharField(required=True, help_text=_("资源指标值/百分比"))
-    described_object = ScalingObjectRefSLZ(required=False)
+    described_object = ScalingObjectRefSLZ(required=False, allow_null=True)
 
     def validate(self, attrs: Dict) -> Dict:
-        # TODO 目前只支持 Resources, Pods / Object 尚未实现
+        # NOTE: 当前仅支持资源类型的 CPU 使用率指标
+        source_type = attrs.get("type")
         metric = attrs.get("metric")
         value = attrs.get("value", "").strip()
-        source_type = attrs.get("type") or ScalingMetricSourceType.RESOURCE
-
         if source_type != ScalingMetricSourceType.RESOURCE:
             raise ValidationError(_("当前仅支持 Resource 类型指标, 不支持的 type: {}").format(source_type))
+        if metric != ScalingMetric.CPU_UTILIZATION:
+            raise ValidationError(_("当前不支持该指标类型: {}").format(metric))
 
-        if metric in (ScalingMetric.CPU_UTILIZATION, ScalingMetric.MEMORY_UTILIZATION):
-            # 使用率类型: 必须是 (0, 100] 的数字字符串
-            try:
-                numeric_value = float(value)
-            except ValueError:
-                raise ValidationError(_("使用率类型指标值必须是数字字符串, 如 85 / 85.5"))
-            if not (0 < numeric_value <= 100):
-                raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
-            attrs["value"] = str(numeric_value)
-        elif metric in (ScalingMetric.CPU_AVERAGE_VALUE, ScalingMetric.MEMORY_AVERAGE_VALUE):
-            # 平均值类型: 必须是可被 parse_quantity 解析的 K8s 资源量字符串 (如 500m / 256Mi)
-            try:
-                parse_quantity(value)
-            except Exception:  # noqa: BLE001
-                raise ValidationError(
-                    _("平均值类型指标值必须是合法的 K8s 资源量字符串, 如 500m / 256Mi, 当前值: {}").format(value)
-                )
+        try:
+            numeric_value = int(value)
+        except ValueError:
+            raise ValidationError(_("使用率类型指标值必须是整数字符串, 如 85"))
+        if not (0 < numeric_value <= 100):
+            raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
 
         return attrs
 

@@ -24,7 +24,6 @@ from typing_extensions import TypeAlias
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
-from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
@@ -59,9 +58,9 @@ class ScalingConfigSLZ(serializers.Serializer):
 
     min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数")
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
-    metrics = serializers.ListField(
-        child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
-    )
+    # metrics 缺省为空列表, 表示使用默认指标 (operator 侧回退到 cpuUtilization=85),
+    # 避免在用户未提供时向 DB 写入伪造的显式值
+    metrics = serializers.ListField(child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=list)
     policy = serializers.ChoiceField(
         default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices(), help_text="扩缩容策略"
     )

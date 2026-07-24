@@ -44,6 +44,10 @@ type Config struct {
 
 	// MaxExecTimeout 命令行执行的最大超时时间
 	MaxExecTimeout time.Duration `env:"MAX_EXEC_TIMEOUT" envDefault:"360s"`
+
+	// **以下为常驻(resident)模式专属配置, 沙箱模式不读取**
+	// RootDir 常驻 daemon 挂载的共享存储根目录, 作为路径 jail 的根前缀
+	RootDir string `env:"ROOT_DIR" envDefault:"/storage"`
 }
 
 // Load loads the daemon configuration

@@ -15,6 +15,7 @@ import (
 
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/config"
 	"github.com/TencentBlueking/blueking-paas/sandbox/daemon/pkg/server"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -183,11 +184,51 @@ func runPreStartScript(scriptPath string, timeout time.Duration) error {
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		printVersion()
-		return
+	if err := newRootCommand().Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func newRootCommand() *cobra.Command {
+	return newRootCommandWithSandboxRunner(runSandbox)
+}
+
+func newRootCommandWithSandboxRunner(run func([]string)) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:                "daemon [entrypoint...]",
+		Short:              "Sandbox daemon",
+		Args:               cobra.ArbitraryArgs,
+		DisableFlagParsing: true,
+		TraverseChildren:   true,
+		SilenceUsage:       true,
+		Run: func(_ *cobra.Command, args []string) {
+			run(args)
+		},
 	}
 
+	rootCmd.AddCommand(
+		&cobra.Command{
+			Use:   "version",
+			Short: "Print version information",
+			Args:  cobra.NoArgs,
+			Run: func(cmd *cobra.Command, _ []string) {
+				printVersion(cmd.OutOrStdout())
+			},
+		},
+		&cobra.Command{
+			Use:   "resident",
+			Short: "Start the resident daemon",
+			Args:  cobra.NoArgs,
+			Run: func(_ *cobra.Command, _ []string) {
+				runDaemon()
+			},
+		},
+	)
+
+	return rootCmd
+}
+
+func runSandbox(entrypointArgs []string) {
 	errChan := make(chan error)
 
 	cfg, err := config.Load()
@@ -233,8 +274,7 @@ func main() {
 
 	// entrypoint 并非指 daemon 服务本身, 而是用户镜像的自定义启动命令(如 `start web`), 此时沙箱环境的启动命令变成 `./daemon start web`
 	// 实际上, entrypoint 会作为 daemon 的子进程被拉起并托管
-	// 当 os.Args[1:] 为空时, 尝试使用默认的 entrypoint 脚本
-	entrypointArgs := os.Args[1:]
+	// 当入口参数为空时, 尝试使用默认的 entrypoint 脚本
 	if len(entrypointArgs) == 0 {
 		if _, err := os.Stat(cfg.DefaultEntrypointPath); err == nil {
 			slog.Info("No entrypoint args provided, using default entrypoint script", "path", cfg.DefaultEntrypointPath)
@@ -269,6 +309,41 @@ func main() {
 	slog.Info("Shutdown complete")
 }
 
+// runResident starts the daemon in resident mode.
+//
+// It shares the common bootstrap (config + logging + signal-driven graceful shutdown)
+// with the sandbox mode but does NOT manage an entrypoint child process: the resident
+// daemon is a standalone platform component that only serves PV file operations over HTTP.
+func runDaemon() {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("Failed to load config", "error", err)
+		panic(err)
+	}
+
+	var logWriter io.Writer
+	logFile, err := os.OpenFile(cfg.DaemonLogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		slog.Error("Failed to open log file", "path", cfg.DaemonLogFilePath, "error", err)
+	} else {
+		defer logFile.Close() // nolint
+		logWriter = logFile
+	}
+	initLogs(logWriter)
+
+	slog.Info("Starting resident daemon", "rootDir", cfg.RootDir)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.StartResident(ctx); err != nil {
+		slog.Error("Resident server error", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Resident daemon shutdown complete")
+}
+
 func initLogs(logWriter io.Writer) {
 	logLevel := config.ParseLogLevel(config.G.LogLevel)
 	handler := config.NewMultiWriterHandler(logLevel, os.Stdout, logWriter)
@@ -276,7 +351,7 @@ func initLogs(logWriter io.Writer) {
 }
 
 // printVersion 打印版本信息
-func printVersion() {
-	fmt.Printf("version: %s\n", version)
-	fmt.Printf("buildTime: %s\n", buildTime)
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "version: %s\n", version)     // nolint
+	fmt.Fprintf(w, "buildTime: %s\n", buildTime) // nolint
 }

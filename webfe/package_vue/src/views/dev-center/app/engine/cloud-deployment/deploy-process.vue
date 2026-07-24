@@ -379,10 +379,14 @@
                           </bk-select>
                           <div class="mr10 ml10">=</div>
                           <bk-input
-                            disabled
-                            v-model="cpuValue"
+                            :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
+                            v-model="stagCpuValue"
+                            type="number"
+                            :min="1"
+                            :max="100"
                             style="width: 150px"
                           />
+                          <div class="mr10 ml10">%</div>
                           <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
@@ -558,10 +562,14 @@
                           </bk-select>
                           <div class="mr10 ml10">=</div>
                           <bk-input
-                            disabled
-                            v-model="cpuValue"
+                            :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
+                            v-model="prodCpuValue"
+                            type="number"
+                            :min="1"
+                            :max="100"
                             style="width: 150px"
                           />
+                          <div class="mr10 ml10">%</div>
                           <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
@@ -1150,7 +1158,6 @@ export default {
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
       cpuLabel: 'CPU 使用率',
-      cpuValue: '85%',
       autoScalDisableConfig: {
         prod: {},
         stag: {},
@@ -1176,7 +1183,31 @@ export default {
     };
   },
   computed: {
-    ...mapState(['localLanguage', 'curAppModule']),
+    ...mapState(['localLanguage', 'curAppModule', 'curAppInfo']),
+    stagCpuValue: {
+      get() {
+        const metrics = this.formData?.env_overlay?.stag?.scaling_config?.metrics;
+        if (metrics && metrics.length > 0) return String(metrics[0].value);
+        return '85';
+      },
+      set(val) {
+        const numVal = String(val).replace(/[^0-9]/g, '');
+        if (!numVal) return;
+        this._setEnvMetric('stag', numVal);
+      },
+    },
+    prodCpuValue: {
+      get() {
+        const metrics = this.formData?.env_overlay?.prod?.scaling_config?.metrics;
+        if (metrics && metrics.length > 0) return String(metrics[0].value);
+        return '85';
+      },
+      set(val) {
+        const numVal = String(val).replace(/[^0-9]/g, '');
+        if (!numVal) return;
+        this._setEnvMetric('prod', numVal);
+      },
+    },
     appCode() {
       return this.$route.params.id;
     },
@@ -1341,6 +1372,15 @@ export default {
     },
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
+    },
+    _setEnvMetric(env, numVal) {
+      const config = this.formData?.env_overlay?.[env]?.scaling_config;
+      if (!config) return;
+      if (!config.metrics || config.metrics.length === 0) {
+        this.$set(config, 'metrics', [{ type: 'Resource', metric: 'cpuUtilization', value: numVal }]);
+      } else {
+        this.$set(config.metrics[0], 'value', numVal);
+      }
     },
 
     // 启动命令复制
@@ -1631,7 +1671,7 @@ export default {
         this.$store.commit('cloudApi/updatePageEdit', false);
         this.init();
       } catch (error) {
-        this.catchErrorHandler(e);
+        this.catchErrorHandler(error);
       }
     },
 

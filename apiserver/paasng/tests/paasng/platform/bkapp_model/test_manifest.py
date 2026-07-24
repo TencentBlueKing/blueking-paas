@@ -43,6 +43,8 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.models import ApplicationFeatureFlag
 from paasng.platform.bkapp_model.entities import Component, ProcService
 from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
@@ -298,6 +300,7 @@ class TestProcessesManifestConstructor:
                         "minReplicas": 1,
                         "maxReplicas": 5,
                         "policy": "default",
+                        "metrics": [],
                     }
                 ],
                 "envVariables": None,
@@ -319,7 +322,43 @@ class TestProcessesManifestConstructor:
             "minReplicas": 1,
             "maxReplicas": 2,
             "policy": "default",
+            "metrics": [],
         }
+
+    @pytest.fixture()
+    def process_web_overlay_with_metrics(self, process_web) -> ProcessSpecEnvOverlay:
+        """An autoscaling overlay with custom metrics for web process"""
+        return G(
+            ProcessSpecEnvOverlay,
+            proc_spec=process_web,
+            environment_name="stag",
+            autoscaling=True,
+            scaling_config={
+                "min_replicas": 1,
+                "max_replicas": 5,
+                "policy": "default",
+                "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70"}],
+            },
+        )
+
+    def test_autoscaling_metrics_filtered_without_feature_flag(
+        self, bk_module, blank_resource, process_web, process_web_overlay_with_metrics
+    ):
+        """未开启 CUSTOM_AUTOSCALING_THRESHOLD 特性时, 下发到 manifest 的 metrics 应被置空"""
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(include={"envOverlay"})["envOverlay"]["autoscaling"][0]
+        assert data["metrics"] == []
+
+    def test_autoscaling_metrics_applied_with_feature_flag(
+        self, bk_module, blank_resource, process_web, process_web_overlay_with_metrics
+    ):
+        """开启 CUSTOM_AUTOSCALING_THRESHOLD 特性后, 自定义 metrics 应写入 manifest"""
+        ApplicationFeatureFlag.objects.set_feature(
+            AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD, True, bk_module.application
+        )
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(include={"envOverlay"})["envOverlay"]["autoscaling"][0]
+        assert data["metrics"] == [{"type": "Resource", "metric": "cpuUtilization", "value": "70"}]
 
     def test_integrated_proc_services(self, bk_module, blank_resource, process_web_with_proc_services):
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)

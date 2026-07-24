@@ -17,6 +17,7 @@
 
 # TODO: Add Tests for both controller classes
 import logging
+from dataclasses import replace
 from typing import Optional
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
@@ -35,7 +36,7 @@ from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -257,7 +258,7 @@ class CNativeProcController:
             BkAppProcScaler(self.env).set_autoscaling(proc_type, False, None)
             return
 
-        # Check the feature flag first
+        # Check the cluster feature flag first
         cluster = get_cluster_by_app(self.app)
         if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_AUTOSCALING):
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
@@ -269,14 +270,25 @@ class CNativeProcController:
             if not scaling_config:
                 raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
+        # 数据库中保留用户配置的 metrics (用户意图), 下发 CRD 时才按特性开关过滤,
+        # 避免特性关闭期间覆盖 DB 中的用户数据
         ModuleProcessSpecManager(self.env.module).set_autoscaling(
             proc_type, self.env.environment, True, scaling_config
         )
+        crd_config = self._filter_metrics_by_feature_flag(scaling_config)
         try:
-            BkAppProcScaler(self.env).set_autoscaling(proc_type, True, scaling_config)
+            BkAppProcScaler(self.env).set_autoscaling(proc_type, True, crd_config)
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
+
+    def _filter_metrics_by_feature_flag(self, config: AutoscalingConfig) -> AutoscalingConfig:
+        """应用未开启 CUSTOM_AUTOSCALING_THRESHOLD 时, 置空下发到 CRD 的 metrics (operator 将回退到默认指标)."""
+        if config.metrics and not self.env.module.application.feature_flag.has_feature(
+            AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD
+        ):
+            return replace(config, metrics=[])
+        return config
 
     def _get_module_process_spec(self, proc_type: str):
         try:

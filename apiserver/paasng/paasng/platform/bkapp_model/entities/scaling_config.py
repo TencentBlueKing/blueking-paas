@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Any, Dict
+
 from pydantic import BaseModel, Field
 
 from paasng.utils.structure import prepare_json_field
@@ -28,8 +30,10 @@ class AutoscalingConfig(BaseModel):
     :param min_replicas: 最小副本数量
     :param max_replicas: 最大副本数量
     :param policy: 扩缩容策略
+    :param metrics: 自定义扩缩容指标; 为空时使用默认指标
     """
 
     min_replicas: int
     max_replicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list[Dict[str, Any]] = Field(default_factory=list)

@@ -71,19 +71,37 @@
             style="width: 216px"
           />
         </bk-form-item>
-        <!-- 只读 -->
+        <!-- 触发条件 -->
         <bk-form-item
           v-if="autoscaling"
           :label="$t('触发条件：')"
           :label-width="76"
           ext-cls="horizontal-cls"
         >
-          <span class="form-text mr10">{{ $t('CPU 使用率') }} = 85%</span>
-          <bk-icon
-            class="info-circle-cls"
-            type="info-circle"
-            v-bk-tooltips="autoScalingTip"
-          />
+          <div class="desc-container flex-row">
+            <bk-select
+              v-model="cpuLabel"
+              disabled
+              style="width: 150px"
+            >
+              <bk-option
+                v-for="option in triggerMethodData"
+                :id="option"
+                :key="option"
+                :name="option"
+              />
+            </bk-select>
+            <div class="mr10 ml10">=</div>
+            <bk-input
+              :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
+              v-model="cpuUtilizationRate"
+              type="number"
+              :min="1"
+              :max="100"
+              style="width: 150px"
+            />
+            <div class="mr10 ml10">%</div>
+          </div>
         </bk-form-item>
         <bk-form-item
           v-if="autoscaling"
@@ -93,7 +111,7 @@
           <div class="trigger-tips-wrapper">
             <p>
               {{ $t('当 CPU 使用率') }} &gt;
-              <span class="usage">85%</span>
+              <span class="usage">{{ cpuUtilizationRate }}%</span>
               {{ $t('时，会触发扩容') }}
             </p>
             <p>
@@ -192,8 +210,8 @@ export default {
         { label: this.$t('手动调节'), type: 'manual', value: false },
         { label: this.$t('自动调节'), type: 'automatic', value: true },
       ],
-      // CPU 使用率
-      defaultUtilizationRate: '85%',
+      triggerMethodData: ['CPU 使用率'],
+      cpuLabel: 'CPU 使用率',
       processData: {},
       curTargetReplicas: 0,
       autoScalingTip: {
@@ -234,9 +252,27 @@ export default {
   },
 
   computed: {
+    cpuUtilizationRate: {
+      get() {
+        if (this.scalingConfig.metrics && this.scalingConfig.metrics.length > 0) {
+          return this.scalingConfig.metrics[0].value;
+        }
+        return '85';
+      },
+      set(val) {
+        const numVal = String(val).replace(/[^0-9]/g, '');
+        if (!numVal) return;
+        if (this.scalingConfig.metrics && this.scalingConfig.metrics.length > 0) {
+          this.scalingConfig.metrics[0].value = numVal;
+        } else {
+          this.scalingConfig.metrics = [{ type: 'Resource', metric: 'cpuUtilization', value: numVal }];
+        }
+      },
+    },
     shrinkLimit() {
       if (!this.curTargetReplicas) return '0%';
-      return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
+      const threshold = parseFloat(this.cpuUtilizationRate) || 85;
+      return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * threshold).toFixed(1)}%`;
     },
   },
 
@@ -429,6 +465,7 @@ export default {
       this.scalingConfig.maxReplicas = this.initScalingConfig.maxReplicas;
       this.scalingConfig.minReplicas = this.initScalingConfig.minReplicas;
       this.scalingConfig.targetReplicas = this.initScalingConfig.targetReplicas;
+      this.scalingConfig.metrics = cloneDeep(this.initScalingConfig.metrics || [{ metric: 'cpuUtilization', value: '85' }]);
       this.$refs.scalingConfigForm?.clearError();
     },
 
@@ -472,8 +509,14 @@ export default {
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;
       this.scalingConfig.targetReplicas = process.available_instance_count;
+      // 从后端数据初始化 metrics, 未传时使用默认值 cpuUtilization=85
+      if (process?.scalingConfig?.metrics && process.scalingConfig.metrics.length > 0) {
+        this.scalingConfig.metrics = cloneDeep(process.scalingConfig.metrics);
+      } else {
+        this.scalingConfig.metrics = [{ metric: 'cpuUtilization', value: '85' }];
+      }
 
-      this.initScalingConfig = { ...this.scalingConfig };
+      this.initScalingConfig = cloneDeep(this.scalingConfig);
       this.curTargetReplicas = this.processPlan.targetReplicas;
 
       this.scaleDialog.visible = true;

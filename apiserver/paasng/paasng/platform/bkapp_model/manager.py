@@ -47,6 +47,8 @@ class ModuleProcessSpecManager:
         proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
         defaults: Dict[str, Union[bool, Dict, None]] = {"tenant_id": proc_spec.tenant_id, "autoscaling": enabled}
         if config is not None:
+            # 注意：DB 中始终保留用户配置的 metrics (用户意图), 特性开关的过滤在
+            # 下发 CRD (CNativeProcController) 和构建部署 manifest 时进行
             defaults.update(scaling_config=asdict(config))
 
         ProcessSpecEnvOverlay.objects.update_or_create(

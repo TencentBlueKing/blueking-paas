@@ -227,6 +227,24 @@ type AutoscalingSpec struct {
 
 	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
 	Policy ScalingPolicy `json:"policy"`
+
+	// Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+	// +optional
+	Metrics []MetricSpec `json:"metrics,omitempty"`
+}
+
+// MetricSpec 定义扩缩容指标
+type MetricSpec struct {
+	// Type 指标来源类型
+	// +kubebuilder:validation:Enum=Resource
+	Type string `json:"type"`
+
+	// Metric 指标名称
+	// +kubebuilder:validation:Enum=cpuUtilization
+	Metric string `json:"metric"`
+
+	// Value 指标值, 百分比 (0-100]
+	Value string `json:"value"`
 }
 
 // ScalingPolicy is used to specify which policy should be used while scaling

@@ -351,6 +351,71 @@ WEBPACK_LOADER = {
     }
 }
 
+
+def _patch_webpack_loader_for_new_stats_format():
+    """Monkey-patch django-webpack-loader to support the new webpack-bundle-tracker stats format.
+
+    webpack-bundle-tracker >= 1.0 produces stats where each chunk is a dict {name, path}
+    and there is no top-level "assets" mapping. django-webpack-loader (up to 3.2.4) still
+    assumes the old format (string chunks + a separate "assets" dict), so both filter_chunks
+    and get_bundle raise errors on the new stats.
+
+    This patch:
+    - filter_chunks: extract the "name" field from dict chunks before applying ignore regexes,
+      while preserving the original chunk objects.
+    - get_bundle: when chunks are dicts, skip the assets["assets"][chunk] lookup and build the
+      output directly from the chunk's own "name"/"path" fields; fall back to the original
+      behaviour for legacy string chunks so we do not regress other consumers.
+
+    TODO: Remove this patch once django-webpack-loader natively supports the new stats format.
+    """
+    try:
+        from django.contrib.staticfiles.storage import staticfiles_storage
+        from webpack_loader.exceptions import WebpackBundleLookupError
+        from webpack_loader.loaders import WebpackLoader
+    except ImportError:
+        return
+
+    def _chunk_name(chunk):
+        return chunk.get("name", "") if isinstance(chunk, dict) else chunk
+
+    def _patched_filter_chunks(self, chunks):
+        return [
+            chunk for chunk in chunks if not any(regex.match(_chunk_name(chunk)) for regex in self.config["ignores"])
+        ]
+
+    def _chunk_to_bundle_item(self, chunk):
+        # Build the {name, url} dict that downstream render_bundle/get_as_tags expects
+        name = chunk["name"]
+        public_path = chunk.get("publicPath")
+        if public_path and public_path != "auto":
+            url = public_path
+        else:
+            relpath = os.path.normpath(os.path.join(self.config["BUNDLE_DIR_NAME"], name))
+            url = staticfiles_storage.url(relpath)
+        return {"name": name, "url": url}
+
+    _original_get_bundle = WebpackLoader.get_bundle
+
+    def _patched_get_bundle(self, bundle_name):
+        assets = self.get_assets()
+        status = assets.get("status")
+        # Only override when the stats file follows the new dict-chunks format
+        if status == "done" and "assets" not in assets:
+            chunks = assets["chunks"].get(bundle_name)
+            if chunks is None:
+                raise WebpackBundleLookupError(f"Cannot resolve bundle {bundle_name}.")
+            filtered = self.filter_chunks(chunks)
+            return [_chunk_to_bundle_item(self, chunk) for chunk in filtered if isinstance(chunk, dict)]
+        # Legacy format or error/compile status: defer to the original implementation
+        return _original_get_bundle(self, bundle_name)
+
+    WebpackLoader.filter_chunks = _patched_filter_chunks
+    WebpackLoader.get_bundle = _patched_get_bundle
+
+
+_patch_webpack_loader_for_new_stats_format()
+
 STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",

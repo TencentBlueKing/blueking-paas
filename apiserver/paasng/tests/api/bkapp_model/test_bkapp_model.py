@@ -76,7 +76,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
             "min_replicas": 1,
             "max_replicas": 1,
-            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
+            "metrics": [],
             "policy": "default",
         }
         assert proc_specs[0]["services"] is None
@@ -176,7 +176,6 @@ class TestModuleProcessSpecViewSet:
                         "scaling_config": {
                             "min_replicas": 1,
                             "max_replicas": 5,
-                            # NOTE: The metrics field will be ignored by the backend
                             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70"}],
                         },
                     },
@@ -212,7 +211,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["env_overlay"]["prod"]["scaling_config"] == {
             "min_replicas": 1,
             "max_replicas": 5,
-            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70.0"}],
             "policy": "default",
         }
         assert proc_specs[1]["probes"] == {"liveness": None, "readiness": None, "startup": None}
@@ -222,6 +221,7 @@ class TestModuleProcessSpecViewSet:
             min_replicas=1,
             max_replicas=5,
             policy="default",
+            metrics=[{"metric": "cpuUtilization", "type": "Resource", "value": "70.0"}],
         )
         assert spec_obj.probes == {"liveness": None, "readiness": None, "startup": None}
         assert spec_obj.probes.liveness is None

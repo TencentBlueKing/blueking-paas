@@ -298,6 +298,7 @@ class TestProcessesManifestConstructor:
                         "minReplicas": 1,
                         "maxReplicas": 5,
                         "policy": "default",
+                        "metrics": None,
                     }
                 ],
                 "envVariables": None,
@@ -319,6 +320,7 @@ class TestProcessesManifestConstructor:
             "minReplicas": 1,
             "maxReplicas": 2,
             "policy": "default",
+            "metrics": [],
         }
 
     def test_integrated_proc_services(self, bk_module, blank_resource, process_web_with_proc_services):

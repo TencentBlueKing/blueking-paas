@@ -88,25 +88,38 @@
             width="60"
           ></bk-table-column>
           <bk-table-column
-            label="API"
+            :label="isMcpService ? $t('名称') : 'API'"
             min-width="120"
           >
             <template slot-scope="props">
-              <template v-if="props.row.doc_link">
-                <a
-                  target="_blank"
-                  :href="props.row.doc_link"
-                >
-                  <span v-dompurify-html="highlight(props.row)" />
-                  <i
-                    class="fa fa-book"
-                    aria-hidden="true"
+              <div class="api-name-cell">
+                <template v-if="props.row.doc_link">
+                  <a
+                    target="_blank"
+                    :href="props.row.doc_link"
+                  >
+                    <span
+                      class="text-ellipsis"
+                      v-bk-overflow-tips
+                      v-dompurify-html="highlight(props.row)"
+                    />
+                  </a>
+                </template>
+                <template v-else>
+                  <span
+                    class="text-ellipsis"
+                    v-bk-overflow-tips
+                    v-dompurify-html="highlight(props.row)"
                   />
-                </a>
-              </template>
-              <template v-else>
-                <span v-dompurify-html="highlight(props.row)" />
-              </template>
+                </template>
+                <bk-tag
+                  v-if="isMcpService && props.row.is_official"
+                  theme="success"
+                  class="official-tag"
+                >
+                  {{ $t('官方') }}
+                </bk-tag>
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -831,6 +844,35 @@ export default {
 .table-operate-buttons {
   position: relative;
   left: -12px;
+}
+
+.api-name-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  > .text-ellipsis,
+  > a {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  > a {
+    display: flex;
+    align-items: center;
+    .text-ellipsis {
+      flex: 1;
+      min-width: 0;
+    }
+    > i {
+      flex-shrink: 0;
+    }
+  }
+}
+
+.official-tag {
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 span.sensitive {

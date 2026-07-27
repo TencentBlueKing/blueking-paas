@@ -251,6 +251,30 @@ class TestBuildSandboxSpecFromDeploy:
         assert spec.command == []
         assert spec.args == []
 
+    def test_sidecars_default_empty(self, bk_stag_env, build, deployment, _mock_quota):
+        """sidecars 默认为空列表(当前无 DB 模型, 预留接口)"""
+        bkapp_res = _make_bkapp_resource(
+            processes=[BkAppProcess(name="web")],
+        )
+
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.release.sandbox_operator.get_bkapp_resource_for_deploy",
+                return_value=bkapp_res,
+            ),
+            mock.patch(
+                "paasng.platform.engine.deploy.release.sandbox_operator.get_process_selector",
+                return_value={},
+            ),
+        ):
+            spec = build_sandbox_spec_from_deploy(bk_stag_env, build, deployment, deploy_id="1")
+
+        assert spec.sidecars == []
+        manifest = spec.build_manifest()
+        containers = manifest["spec"]["podTemplate"]["containers"]
+        assert len(containers) == 1
+        assert containers[0]["name"] == "main"
+
 
 # ============================================================================
 # TestWaitSandboxInstanceReady

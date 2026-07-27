@@ -48,6 +48,94 @@ class RootfsConfig:
     pvc_size: str
 
 
+@dataclass(frozen=True)
+class SharedVolume:
+    """emptyDir 共享卷声明, 用于主容器与 sidecar 容器之间共享文件目录。
+
+    :param name: volume 名称, 同一 SandboxInstanceSpec 中唯一。
+    :param medium: emptyDir.medium, 空串为默认(磁盘), "Memory" 为 tmpfs。
+    :param size_limit: emptyDir.sizeLimit, 形如 "1Gi", 空串表示不限制。
+    """
+
+    name: str
+    medium: str = ""
+    size_limit: str = ""
+
+
+@dataclass(frozen=True)
+class VolumeMount:
+    """容器中的卷挂载点, 引用 SharedVolume.name。
+
+    :param name: 引用 SharedVolume.name。
+    :param mount_path: 容器内挂载路径, 如 "/shared"。
+    :param read_only: 是否只读挂载, 默认 False。
+    """
+
+    name: str
+    mount_path: str
+    read_only: bool = False
+
+    def to_k8s_dict(self) -> Dict[str, Any]:
+        """转换为 K8s volumeMount dict。"""
+        mount: Dict[str, Any] = {"name": self.name, "mountPath": self.mount_path}
+        if self.read_only:
+            mount["readOnly"] = True
+        return mount
+
+
+@dataclass(frozen=True)
+class SidecarContainer:
+    """SandboxInstance 的 sidecar 容器配置。
+
+    sidecar 容器与主容器共享同一个 Pod 网络命名空间,
+    可用于日志采集、代理转发、监控 agent 等辅助工作负载。
+
+    :param name: 容器名, 不允许与主容器名 "main" 冲突, 且在 sidecars 列表中唯一。
+    :param image: 容器镜像。
+    :param command: 启动命令, 可选。
+    :param args: 启动参数, 可选。
+    :param ports: 容器端口列表, 结构 [{"containerPort": 8080, "protocol": "TCP"}]。
+    :param cpu: CPU 资源限制, 形如 "500m"。
+    :param memory: 内存资源限制, 形如 "256Mi"。
+    :param env_vars: 环境变量, 标准 K8s env 结构 [{"name": ..., "value": ...}]。
+    :param image_pull_policy: 镜像拉取策略, 默认 IfNotPresent。
+    """
+
+    name: str
+    image: str
+    command: List[str] = field(default_factory=list)
+    args: List[str] = field(default_factory=list)
+    ports: List[Dict[str, Any]] = field(default_factory=list)
+    cpu: str = "500m"
+    memory: str = "256Mi"
+    env_vars: List[Dict[str, str]] = field(default_factory=list)
+    image_pull_policy: str = "IfNotPresent"
+    volume_mounts: List["VolumeMount"] = field(default_factory=list)
+
+    def to_container_dict(self) -> Dict[str, Any]:
+        """将 sidecar 配置转换为 K8s container spec dict。"""
+        container: Dict[str, Any] = {
+            "name": self.name,
+            "image": self.image,
+            "imagePullPolicy": self.image_pull_policy,
+            "resources": {
+                "limits": {"cpu": self.cpu, "memory": self.memory},
+                "requests": {"cpu": self.cpu, "memory": self.memory},
+            },
+        }
+        if self.command:
+            container["command"] = self.command
+        if self.args:
+            container["args"] = self.args
+        if self.ports:
+            container["ports"] = list(self.ports)
+        if self.env_vars:
+            container["env"] = list(self.env_vars)
+        if self.volume_mounts:
+            container["volumeMounts"] = [vm.to_k8s_dict() for vm in self.volume_mounts]
+        return container
+
+
 @dataclass
 class SandboxInstanceSpec:
     """SandboxInstance 的业务参数, 由后端按此拼装出完整 CR manifest。
@@ -66,8 +154,8 @@ class SandboxInstanceSpec:
 
     暂不支持 / 不适用的能力:
       - 挂载卷(mounts): SandboxInstance 以 rootfs 整盘为主存储模型, 暂不映射
-        BkApp 的 configMap/secret/persistentStorage 挂载; 
-        TODO: 后续支持多容器后考虑如何通过 emptyDir 支持容器间文件共享 
+        BkApp 的 configMap/secret/persistentStorage 挂载;
+        已通过 shared_volumes + volume_mounts 支持 emptyDir 容器间文件共享。
       - 多副本 / 自动扩缩容: 一个 SandboxInstance 固定对应一个 MicroVM 实例。
       - 部署钩子(preRelease hook): sandbox 无中间态编排。
       - 健康检查(probes): cube Pod 存活由 sandbox-controller 管理, 不支持自定义探针。
@@ -93,6 +181,9 @@ class SandboxInstanceSpec:
     :param tolerations: 调度 tolerations 列表。
     :param dns_nameservers: DNS nameservers 列表。
     :param host_aliases: podTemplate.hostAliases, 结构 [{"ip": ..., "hostnames": [...]}]。
+    :param sidecars: sidecar 容器列表, 默认空列表(向后兼容)。
+    :param shared_volumes: emptyDir 共享卷声明列表, 用于主容器与 sidecar 之间共享文件目录。
+    :param volume_mounts: 主容器的卷挂载点列表, 引用 shared_volumes 中的 name。
     """
 
     name: str
@@ -114,6 +205,37 @@ class SandboxInstanceSpec:
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
     dns_nameservers: List[str] = field(default_factory=list)
     host_aliases: List[Dict[str, Any]] = field(default_factory=list)
+    sidecars: List["SidecarContainer"] = field(default_factory=list)
+    shared_volumes: List["SharedVolume"] = field(default_factory=list)
+    volume_mounts: List["VolumeMount"] = field(default_factory=list)
+
+    def __post_init__(self):
+        """校验 sidecars 和 volume 配置的合法性。"""
+        sidecar_names = set()
+        for sc in self.sidecars:
+            if sc.name == "main":
+                raise ValueError("sidecar 容器名不能为 'main', 与主容器冲突")
+            if sc.name in sidecar_names:
+                raise ValueError(f"sidecar 容器名 '{sc.name}' 重复")
+            sidecar_names.add(sc.name)
+
+        # 校验 shared_volumes 名称唯一性
+        volume_names: set = set()
+        for sv in self.shared_volumes:
+            if sv.name in volume_names:
+                raise ValueError(f"shared_volumes 名称 '{sv.name}' 重复")
+            volume_names.add(sv.name)
+
+        # 校验 volume_mounts 引用的 name 必须存在于 shared_volumes 中
+        for vm in self.volume_mounts:
+            if vm.name not in volume_names:
+                raise ValueError(f"主容器 volumeMount 引用了不存在的 volume '{vm.name}'")
+        for sc in self.sidecars:
+            for vm in sc.volume_mounts:
+                if vm.name not in volume_names:
+                    raise ValueError(
+                        f"sidecar '{sc.name}' 的 volumeMount 引用了不存在的 volume '{vm.name}'"
+                    )
 
     def build_manifest(self) -> Dict[str, Any]:
         """按业务参数拼装出完整的 SandboxInstance CR manifest(dict)。"""
@@ -125,7 +247,10 @@ class SandboxInstanceSpec:
         }
 
         # v1beta1: 容器 / 卷统一下沉到 spec.podTemplate(扁平 PodSpec)
-        pod_template: Dict[str, Any] = {"containers": [self._build_main_container()]}
+        containers = [self._build_main_container()]
+        for sc in self.sidecars:
+            containers.append(sc.to_container_dict())
+        pod_template: Dict[str, Any] = {"containers": containers}
 
         # rootfs 持久化: 挂载系统盘 + 声明持久 PVC
         if self.rootfs:
@@ -148,6 +273,18 @@ class SandboxInstanceSpec:
                     "persistentVolumeClaim": {"claimName": pvc_claim_name},
                 }
             ]
+
+        # emptyDir 共享卷: 用于主容器与 sidecar 之间共享文件目录
+        if self.shared_volumes:
+            volumes = pod_template.get("volumes", [])
+            for sv in self.shared_volumes:
+                empty_dir: Dict[str, Any] = {}
+                if sv.medium:
+                    empty_dir["medium"] = sv.medium
+                if sv.size_limit:
+                    empty_dir["sizeLimit"] = sv.size_limit
+                volumes.append({"name": sv.name, "emptyDir": empty_dir})
+            pod_template["volumes"] = volumes
 
         # 调度配置
         if self.node_selector:
@@ -213,4 +350,6 @@ class SandboxInstanceSpec:
             container["args"] = self.args
         if self.env_vars:
             container["env"] = list(self.env_vars)
+        if self.volume_mounts:
+            container["volumeMounts"] = [vm.to_k8s_dict() for vm in self.volume_mounts]
         return container

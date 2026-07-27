@@ -60,7 +60,7 @@ from paasng.platform.engine.models.deployment import Deployment
 
 logger = logging.getLogger(__name__)
 
-# TODO: 确认后续如何支持 SIDECAR 模式
+# NOTE: sidecar 容器配置当前默认为空列表, 后续将从 DB 模型或部署配置中读取
 # AI Agent 应用采用单进程模型, 固定使用 web 进程承载 HTTP 服务
 AI_AGENT_PROCESS_TYPE = "web"
 
@@ -183,6 +183,7 @@ def build_sandbox_spec_from_deploy(
         tolerations=tolerations,
         dns_nameservers=dns_nameservers,
         host_aliases=host_aliases,
+        sidecars=[],
     )
 
 

@@ -320,7 +320,9 @@ class MetricSpecSLZ(serializers.Serializer):
     )
     metric = serializers.ChoiceField(required=True, choices=ScalingMetric.get_choices())
     value = serializers.CharField(required=True, help_text=_("资源指标值/百分比"))
-    described_object = ScalingObjectRefSLZ(required=False, allow_null=True)
+
+    # described_object 仅 Object 类型指标需要，Resource / Pods 读时过滤 / 写时拒绝
+    described_object = ScalingObjectRefSLZ(required=False)
 
     def validate(self, attrs: Dict) -> Dict:
         # NOTE: 当前仅支持资源类型的 CPU 使用率指标
@@ -340,6 +342,13 @@ class MetricSpecSLZ(serializers.Serializer):
             raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
 
         return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # 仅 Object 类型指标应返回 described_object，其他类型 (Resource / Pods) 过滤掉
+        if data.get("type") != ScalingMetricSourceType.OBJECT:
+            data.pop("described_object", None)
+        return data
 
 
 class ScalingConfigSLZ(serializers.Serializer):

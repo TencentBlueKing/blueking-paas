@@ -19,15 +19,13 @@ import logging
 import time
 import traceback
 
-import six
-
 from paasng.platform.mgrlegacy.exceptions import MigrationFailed
 from paasng.platform.mgrlegacy.models import MigrationContext, MigrationRegister
 
 logger = logging.getLogger(__name__)
 
 
-class BaseMigration(six.with_metaclass(MigrationRegister)):
+class BaseMigration(metaclass=MigrationRegister):
     """Base class for application migration"""
 
     def get_description(self):

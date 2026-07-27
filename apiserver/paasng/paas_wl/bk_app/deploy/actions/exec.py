@@ -19,7 +19,7 @@ import logging
 from typing import TYPE_CHECKING, Dict
 
 from attr import define, field
-from six import ensure_text
+from django.utils.encoding import force_str
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError, CommandRerunError
 from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
@@ -77,8 +77,7 @@ class AppCommandExecutor:
             for raw_line in self.command_handler.get_command_logs(
                 command=self.kmodel, timeout=_FOLLOWING_LOGS_TIMEOUT, follow=True
             ):
-                line = ensure_text(raw_line)
-                self.stream.write_message(line)
+                self.stream.write_message(force_str(raw_line))
             self.wait_for_succeeded()
         except ResourceDuplicate as e:
             # 上一个 Pre-Release Hook 仍未退出

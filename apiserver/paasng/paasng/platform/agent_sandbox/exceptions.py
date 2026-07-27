@@ -51,12 +51,38 @@ class SandboxServiceNotReady(SandboxError):
     """Raised when the sandbox daemon service is not ready (e.g., 502 Bad Gateway)."""
 
 
-class SandboxDaemonAPIError(Exception):
-    """Raised when the sandbox daemon API returns an error."""
+class SandboxDaemonAPIError(SandboxError):
+    """Raised when the sandbox daemon API returns an error.
+
+    :param status_code: HTTP status code returned by the daemon; ``None`` for transport-level
+        failures (e.g. connection refused) where no response was received.
+    :param detail: Human-readable detail extracted from the daemon response body, if any.
+    """
+
+    def __init__(self, message: str, *, status_code: int | None = None, detail: str | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.detail = detail
 
 
 class SandboxImageValidateError(SandboxError):
     """Raised when snapshot image validation fails (e.g., not found, external registry, unsupported format)."""
+
+
+class SandboxFileNotFound(SandboxError):
+    """Raised when the target file does not exist in the volume."""
+
+
+class SandboxFileTooLarge(SandboxError):
+    """Raised when the target file exceeds the archive size limit."""
+
+
+class SandboxFileNotPreviewable(SandboxError):
+    """Raised when the target file is not previewable (e.g., a non-text type)."""
+
+
+class SandboxArchiveFailed(SandboxError):
+    """Raised when archiving a volume file to bkrepo fails."""
 
 
 class ImageBuildSourceError(SandboxError):

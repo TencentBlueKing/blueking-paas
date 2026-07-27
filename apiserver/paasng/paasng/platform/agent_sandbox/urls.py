@@ -22,6 +22,7 @@ from .views import (
     AgentSandboxFSViewSet,
     AgentSandboxProcessViewSet,
     AgentSandboxViewSet,
+    VolumeFileViewSet,
     VolumeViewSet,
 )
 
@@ -36,6 +37,27 @@ urlpatterns = [
         "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>",
         VolumeViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.volume.destroy",
+    ),
+    # Volume file (persistence) URLs
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/files",
+        VolumeFileViewSet.as_view({"get": "list", "delete": "destroy"}),
+        name="agent_sandbox.volume.files",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/files/stat",
+        VolumeFileViewSet.as_view({"get": "stat"}),
+        name="agent_sandbox.volume.files.stat",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/files/preview",
+        VolumeFileViewSet.as_view({"get": "preview"}),
+        name="agent_sandbox.volume.files.preview",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/files/download_url",
+        VolumeFileViewSet.as_view({"get": "download_url"}),
+        name="agent_sandbox.volume.files.download_url",
     ),
     path(
         "api/agent_sandbox/applications/<slug:code>/sandboxes/",

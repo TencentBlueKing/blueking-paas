@@ -49,6 +49,7 @@ dependencies = [
     "paas-service (==3.1.0)",
     'djangorestframework (==3.17.1)',
     'requests (==2.32.3)',
+    'pydantic (==2.12.5)',
     'gevent (==26.5.0)',
     'cryptography (==46.0.6)',
     'jsonfield (==3.2.0)',

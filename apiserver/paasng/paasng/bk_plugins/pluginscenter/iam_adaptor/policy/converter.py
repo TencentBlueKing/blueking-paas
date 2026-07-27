@@ -16,11 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 import operator
+from functools import reduce
 
 from django.db.models import Q
 from iam.contrib.converter.queryset import DjangoQuerySetConverter
 from iam.eval.constants import OP
-from six.moves import reduce
 
 
 class PluginPolicyConverter(DjangoQuerySetConverter):

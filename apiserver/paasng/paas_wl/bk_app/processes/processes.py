@@ -19,10 +19,10 @@ import json
 from typing import Dict, List, Optional
 
 from attrs import asdict, define, field
+from django.utils.encoding import force_str
 from django.utils.functional import cached_property
 from kubernetes.client.exceptions import ApiException
 from kubernetes.utils.quantity import parse_quantity
-from six import ensure_text
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
@@ -334,7 +334,7 @@ class ProcessManager:
             else:
                 raise
 
-        return ensure_text(rsp.data)
+        return force_str(rsp.data)
 
     def get_instance_logs_stream(
         self,
@@ -371,7 +371,7 @@ class ProcessManager:
 
         try:
             for line in KPod(k8s_client).get_log(**params):
-                yield ensure_text(line)
+                yield force_str(line)
         except ApiException as e:
             if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
                 raise InstanceNotFound("Terminated container not found")

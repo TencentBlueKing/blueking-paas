@@ -17,7 +17,7 @@
 
 import logging
 
-from six import ensure_text
+from django.utils.encoding import force_str
 
 from paas_wl.bk_app.deploy.app_res.controllers import BkAppHookHandler
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
@@ -81,7 +81,7 @@ class PreReleaseDummyExecutor(DeployStep):
 
         try:
             for line in handler.fetch_logs(follow=True):
-                self.stream.write_message(ensure_text(line))
+                self.stream.write_message(force_str(line))
         except Exception:
             logger.exception(f"A critical error happened during fetch logs from hook({hook_name})")
             self.stream.write_message(Style.Error("fetch logs failed"))

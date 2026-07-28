@@ -199,6 +199,7 @@ INSTALLED_APPS = [
     "paasng.platform.declarative",
     "paasng.platform.smart_app",
     "paasng.platform.agent_sandbox",
+    "paasng.platform.sandbox_instance",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
     "paasng.bk_plugins.pluginscenter.iam_adaptor",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -17,30 +16,29 @@
 
 from celery import shared_task
 
-from paasng.platform.agent_sandbox.image_build.image_cache import pre_pull_sandbox_image
-from paasng.platform.agent_sandbox.image_build.source_prepare import prepare_source
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
 from paasng.platform.image_build.tasks import execute_image_build
+from paasng.platform.sandbox_instance.models import SidecarImage
+
+
+def _register_sidecar_image(build: ImageBuildRecord) -> None:
+    """构建成功后，自动注册为可用 sidecar 镜像。"""
+    SidecarImage.objects.get_or_create(
+        app_code=build.app_code,
+        image=build.output_image,
+        tenant_id=build.tenant_id,
+        defaults={
+            "name": build.image_name,
+            "tag": build.image_tag,
+            "build_record": build,
+        },
+    )
 
 
 @shared_task()
-def run_image_build(build_id: str, pre_pull: bool = False):
-    """异步执行 Agent Sandbox 镜像构建任务。
+def run_sidecar_image_build(build_id: str):
+    """异步执行 sidecar 镜像构建（纯 Kaniko 构建，不注入 daemon）。
 
-    与通用构建的区别：
-    - 构建前执行 prepare_source（注入 sandbox daemon 二进制）
-    - 构建成功后根据 pre_pull 参数决定是否预拉取镜像到目标集群
-
-    :param build_id: ImageBuildRecord 的 UUID
-    :param pre_pull: 构建成功后是否将镜像预拉取到目标沙箱集群
+    构建成功后自动创建 SidecarImage 记录。
     """
-
-    def _on_after_success(build: ImageBuildRecord) -> None:
-        if pre_pull:
-            pre_pull_sandbox_image.delay(str(build.uuid))
-
-    execute_image_build(
-        build_id,
-        on_before_build=prepare_source,
-        on_after_success=_on_after_success if pre_pull else None,
-    )
+    execute_image_build(build_id, on_after_success=_register_sidecar_image)

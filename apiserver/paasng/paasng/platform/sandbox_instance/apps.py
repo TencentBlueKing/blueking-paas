@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -15,16 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.apps import AppConfig
 
 
-class ImageType(StrStructuredEnum):
-    AGENT_SANDBOX = EnumField("agent_sandbox", label="Agent Sandbox image build")
-    SIDECAR = EnumField("sidecar", label="Sidecar image build")
-
-
-class ImageBuildStatus(StrStructuredEnum):
-    PENDING = EnumField("pending", label="waiting to be built")
-    BUILDING = EnumField("building", label="building image")
-    SUCCESSFUL = EnumField("successful", label="build succeeded")
-    FAILED = EnumField("failed", label="build failed")
+class SandboxInstanceConfig(AppConfig):
+    name = "paasng.platform.sandbox_instance"

@@ -53,3 +53,6 @@ class ClientAction(StrStructuredEnum):
 
     # 目前仅供 AIDev 平台使用，用于构建 Agent Sandbox 镜像
     BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))
+
+    # 目前仅供 AIDev 平台使用，用于管理 SandboxInstance Sidecar 镜像
+    MANAGE_SIDECAR_IMAGE = EnumField("sysapi:manage:sidecar-image", label=_("管理 Sidecar 镜像"))

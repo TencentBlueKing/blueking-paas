@@ -115,4 +115,6 @@ urlpatterns = [
     ),
     # Image build system API
     path("sys/api/agent_sandbox/image_build/", include("paasng.platform.agent_sandbox.image_build.urls")),
+    # Sidecar image management system API
+    path("sys/api/sandbox_instance/sidecar_image/", include("paasng.platform.sandbox_instance.sidecar_image.urls")),
 ]

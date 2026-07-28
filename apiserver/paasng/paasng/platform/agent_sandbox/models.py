@@ -27,7 +27,7 @@ from django.utils.crypto import get_random_string
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.tenant.fields import tenant_id_field_factory
-from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
+from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus, ImageType
 from paasng.platform.applications.models import Application
 from paasng.utils.models import BkUserField, UuidAuditedModel
 
@@ -227,6 +227,11 @@ class ImageBuildRecord(UuidAuditedModel):
     docker_build_args = models.JSONField(default=dict, blank=True, help_text="Docker 构建参数（--build-arg）")
     prepared_source_path = models.CharField(
         max_length=1024, default="", blank=True, help_text="预处理后上传到对象存储的源码包路径"
+    )
+    image_type = models.CharField(
+        max_length=16,
+        default=ImageType.AGENT_SANDBOX.value,
+        help_text="镜像类型：agent_sandbox（Agent 沙箱镜像）/ sidecar（Sidecar 镜像）",
     )
     status = models.CharField(max_length=16, default=ImageBuildStatus.PENDING.value)
     started_at = models.DateTimeField(null=True, help_text="构建开始时间")

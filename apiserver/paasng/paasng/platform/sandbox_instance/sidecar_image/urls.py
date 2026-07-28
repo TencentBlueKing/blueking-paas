@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -15,16 +14,34 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.urls import path
 
+from .views import SidecarImageViewSet
 
-class ImageType(StrStructuredEnum):
-    AGENT_SANDBOX = EnumField("agent_sandbox", label="Agent Sandbox image build")
-    SIDECAR = EnumField("sidecar", label="Sidecar image build")
-
-
-class ImageBuildStatus(StrStructuredEnum):
-    PENDING = EnumField("pending", label="waiting to be built")
-    BUILDING = EnumField("building", label="building image")
-    SUCCESSFUL = EnumField("successful", label="build succeeded")
-    FAILED = EnumField("failed", label="build failed")
+urlpatterns = [
+    path(
+        "build",
+        SidecarImageViewSet.as_view({"post": "build"}),
+        name="sidecar_image.build",
+    ),
+    path(
+        "build/<str:build_id>/status",
+        SidecarImageViewSet.as_view({"get": "build_status"}),
+        name="sidecar_image.build_status",
+    ),
+    path(
+        "register",
+        SidecarImageViewSet.as_view({"post": "register"}),
+        name="sidecar_image.register",
+    ),
+    path(
+        "",
+        SidecarImageViewSet.as_view({"get": "list"}),
+        name="sidecar_image.list",
+    ),
+    path(
+        "<str:image_id>",
+        SidecarImageViewSet.as_view({"delete": "destroy"}),
+        name="sidecar_image.destroy",
+    ),
+]

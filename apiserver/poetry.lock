@@ -30,13 +30,13 @@ vine = ">=5.0.0,<6.0.0"
 
 [[package]]
 name = "apigw-manager"
-version = "5.0.0"
+version = "5.0.1"
 description = "The SDK for managing blueking gateway resource."
 optional = false
 python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "apigw_manager-5.0.0-py3-none-any.whl", hash = "sha256:ed58814484c3255701be6a7eae2b82d1dd0f50a5144388434d06074b63c28bf0"},
+    {file = "apigw_manager-5.0.1-py3-none-any.whl", hash = "sha256:d292d39687adf70bdf01408c30cf9cebc39df6e3d0fb888e8e5d12910808c88b"},
 ]
 
 [package.dependencies]
@@ -4545,4 +4545,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "f721ad19d80642c821e00675db94f6cc944f2ac96ef043c6d1910269c21fc49f"
+content-hash = "b02c2534dbd13e1e6f1912fe41d748ee21a3e826ca723db79453ba07c3beda9b"

@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a80fb23122f14a111454ac0c60cf1c2348fb6e64",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

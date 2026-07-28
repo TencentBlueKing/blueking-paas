@@ -60,7 +60,7 @@ class ScalingConfigSLZ(serializers.Serializer):
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
     # metrics 缺省为空列表, 表示使用默认指标 (operator 侧回退到 cpuUtilization=85),
     # 避免在用户未提供时向 DB 写入伪造的显式值
-    metrics = serializers.ListField(child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=list)
+    metrics = serializers.ListField(child=MetricSpecSLZ(), help_text="扩缩容指标", default=list)
     policy = serializers.ChoiceField(
         default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices(), help_text="扩缩容策略"
     )

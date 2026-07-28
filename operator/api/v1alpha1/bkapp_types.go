@@ -244,6 +244,7 @@ type MetricSpec struct {
 	Metric string `json:"metric"`
 
 	// Value 指标值, 百分比 (0-100]
+	// +kubebuilder:validation:Pattern=`^(100|[1-9][0-9]?)$`
 	Value string `json:"value"`
 }
 

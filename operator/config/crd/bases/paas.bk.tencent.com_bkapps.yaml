@@ -176,6 +176,7 @@ spec:
                                 type: string
                               value:
                                 description: Value 指标值, 百分比 (0-100]
+                                pattern: ^(100|[1-9][0-9]?)$
                                 type: string
                             required:
                             - metric
@@ -364,6 +365,7 @@ spec:
                                 type: string
                               value:
                                 description: Value 指标值, 百分比 (0-100]
+                                pattern: ^(100|[1-9][0-9]?)$
                                 type: string
                             required:
                             - metric
@@ -1404,6 +1406,7 @@ spec:
                                 type: string
                               value:
                                 description: Value 指标值, 百分比 (0-100]
+                                pattern: ^(100|[1-9][0-9]?)$
                                 type: string
                             required:
                             - metric
@@ -1707,6 +1710,7 @@ spec:
                                 type: string
                               value:
                                 description: Value 指标值, 百分比 (0-100]
+                                pattern: ^(100|[1-9][0-9]?)$
                                 type: string
                             required:
                             - metric

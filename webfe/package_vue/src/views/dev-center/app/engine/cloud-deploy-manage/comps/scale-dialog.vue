@@ -465,7 +465,7 @@ export default {
       this.scalingConfig.maxReplicas = this.initScalingConfig.maxReplicas;
       this.scalingConfig.minReplicas = this.initScalingConfig.minReplicas;
       this.scalingConfig.targetReplicas = this.initScalingConfig.targetReplicas;
-      this.scalingConfig.metrics = cloneDeep(this.initScalingConfig.metrics || [{ metric: 'cpuUtilization', value: '85' }]);
+      this.scalingConfig.metrics = cloneDeep(this.initScalingConfig.metrics || [{ type: 'Resource', metric: 'cpuUtilization', value: '85' }]);
       this.$refs.scalingConfigForm?.clearError();
     },
 
@@ -513,7 +513,7 @@ export default {
       if (process?.scalingConfig?.metrics && process.scalingConfig.metrics.length > 0) {
         this.scalingConfig.metrics = cloneDeep(process.scalingConfig.metrics);
       } else {
-        this.scalingConfig.metrics = [{ metric: 'cpuUtilization', value: '85' }];
+        this.scalingConfig.metrics = [{ type: 'Resource', metric: 'cpuUtilization', value: '85' }];
       }
 
       this.initScalingConfig = cloneDeep(this.scalingConfig);

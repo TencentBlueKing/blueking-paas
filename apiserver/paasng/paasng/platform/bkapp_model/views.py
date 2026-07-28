@@ -27,12 +27,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.models import update_app_resource
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
@@ -191,12 +192,13 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 更新环境覆盖&更新可观测功能配置
         metrics = []
+        app = module.application
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
-                    ProcessSpecEnvOverlay.objects.save_by_module(
-                        module, proc_spec["name"], env_name, **proc_env_overlay
-                    )
+                    # 特性开关关闭时, 将传入的 metrics 替换为默认值
+                    overlay = self._filter_scaling_metrics(app, proc_env_overlay)
+                    ProcessSpecEnvOverlay.objects.save_by_module(module, proc_spec["name"], env_name, **overlay)
             if metric := get_items(proc_spec, "monitoring.metric"):
                 metrics.append({"process": proc_spec["name"], **metric})
 
@@ -204,6 +206,17 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ObservabilityConfig.objects.upsert_by_module(module, monitoring)
 
         return self.retrieve(request, code, module_name)
+
+    @staticmethod
+    def _filter_scaling_metrics(app: Application, env_overlay: dict) -> dict:
+        """特性开关关闭时, 将 scaling_config 中传入的 metrics 替换为默认值."""
+        scaling_config = env_overlay.get("scaling_config")
+        if not scaling_config or not scaling_config.get("metrics"):
+            return env_overlay
+        if app.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
+            return env_overlay
+        env_overlay["scaling_config"]["metrics"] = DEFAULT_METRICS
+        return env_overlay
 
 
 class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

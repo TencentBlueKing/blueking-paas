@@ -32,6 +32,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/health"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
+	"github.com/samber/lo"
 )
 
 // GetWantedGPAs 根据应用生成对应的 GPA(general-pod-autoscaler) 配置列表
@@ -83,31 +84,47 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 	return gpaList
 }
 
-func buildMetricSpecs(spec *paasv1alpha2.AutoscalingSpec) []autoscaling.MetricSpec {
-	utilization := int32(85)
+func buildMetricSpecs(spec *paasv1alpha2.AutoscalingSpec) (metrics []autoscaling.MetricSpec) {
+	// Note: 当前仅支持 ResourceCPU 的 Metric 指标
+	// 如果 spec.Metrics 有值, 将使用自定义的 Metrics
 	if len(spec.Metrics) > 0 {
-		v, err := strconv.Atoi(spec.Metrics[0].Value)
-		if err != nil {
-			log.Log.Error(err, "failed to parse metric value, fallback to 85", "value", spec.Metrics[0].Value)
-		} else {
-			utilization = int32(v)
+		for _, m := range spec.Metrics {
+			var utilization int32
+			if v, err := strconv.Atoi(m.Value); err == nil {
+				utilization = int32(v)
+			} else {
+				log.Log.Error(err, "failed to parse metric value, fallback to 85", "value", m.Value)
+				utilization = int32(85)
+			}
+			metrics = append(metrics, autoscaling.MetricSpec{
+				Type: autoscaling.ResourceMetricSourceType,
+				Resource: &autoscaling.ResourceMetricSource{
+					Name: v1.ResourceCPU,
+					Target: autoscaling.MetricTarget{
+						Type:               autoscaling.UtilizationMetricType,
+						AverageUtilization: lo.ToPtr(utilization),
+					},
+				},
+			})
 		}
+		return metrics
 	}
 
-	if spec.Policy != paasv1alpha2.ScalingPolicyDefault {
-		return nil
-	}
-
-	return []autoscaling.MetricSpec{{
-		Type: autoscaling.ResourceMetricSourceType,
-		Resource: &autoscaling.ResourceMetricSource{
-			Name: v1.ResourceCPU,
-			Target: autoscaling.MetricTarget{
-				Type:               autoscaling.UtilizationMetricType,
-				AverageUtilization: &utilization,
+	switch spec.Policy {
+	case paasv1alpha2.ScalingPolicyDefault:
+		// 默认策略：cpu utilization 85%
+		metrics = append(metrics, autoscaling.MetricSpec{
+			Type: autoscaling.ResourceMetricSourceType,
+			Resource: &autoscaling.ResourceMetricSource{
+				Name: v1.ResourceCPU,
+				Target: autoscaling.MetricTarget{
+					Type:               autoscaling.UtilizationMetricType,
+					AverageUtilization: lo.ToPtr(int32(85)),
+				},
 			},
-		},
-	}}
+		})
+	}
+	return metrics
 }
 
 // GenGPAHealthStatus check if the GPA is healthy

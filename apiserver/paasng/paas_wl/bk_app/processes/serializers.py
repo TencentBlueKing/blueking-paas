@@ -328,7 +328,7 @@ class MetricSpecSLZ(serializers.Serializer):
         # NOTE: 当前仅支持资源类型的 CPU 使用率指标
         source_type = attrs.get("type")
         metric = attrs.get("metric")
-        value = attrs.get("value", "").strip()
+        value = attrs.get("value", "")
         if source_type != ScalingMetricSourceType.RESOURCE:
             raise ValidationError(_("当前仅支持 Resource 类型指标, 不支持的 type: {}").format(source_type))
         if metric != ScalingMetric.CPU_UTILIZATION:

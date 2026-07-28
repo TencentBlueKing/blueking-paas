@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-08 17:26+0800\n"
+"POT-Creation-Date: 2026-07-28 15:58+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -284,44 +284,60 @@ msgstr ""
 msgid "资源指标值/百分比"
 msgstr "Resource metric value/percentage"
 
-#: paas_wl/bk_app/processes/serializers.py:329
+#: paas_wl/bk_app/processes/serializers.py:333
+msgid "当前仅支持 Resource 类型指标, 不支持的 type: {}"
+msgstr "Only Resource type metrics are supported, unsupported type: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:335
+msgid "当前不支持该指标类型: {}"
+msgstr "This metric type is not supported: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:340
+msgid "使用率类型指标值必须是整数字符串, 如 85"
+msgstr "Utilization-type metric value must be an integer string, e.g. 85"
+
+#: paas_wl/bk_app/processes/serializers.py:342
+msgid "使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}"
+msgstr "Utilization-type metric value must be within the range (0, 100], current value: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:357
 msgid "最小副本数"
 msgstr "Minimum replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:330
+#: paas_wl/bk_app/processes/serializers.py:358
 msgid "最大副本数"
 msgstr "Maximum replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:331
+#: paas_wl/bk_app/processes/serializers.py:359
 msgid "扩缩容策略"
 msgstr "Scaling policy"
 
-#: paas_wl/bk_app/processes/serializers.py:332
+#: paas_wl/bk_app/processes/serializers.py:360
 msgid "扩缩容指标"
 msgstr "Scaling indicators"
 
-#: paas_wl/bk_app/processes/serializers.py:374
+#: paas_wl/bk_app/processes/serializers.py:402
 msgid "目标进程副本数"
 msgstr "Target number of process replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:375
+#: paas_wl/bk_app/processes/serializers.py:403
 msgid "是否开启自动扩缩容"
 msgstr "Auto-scaling enabled"
 
-#: paas_wl/bk_app/processes/serializers.py:376
+#: paas_wl/bk_app/processes/serializers.py:404
 msgid "进程扩缩容配置"
 msgstr "Process scaling settings"
 
-#: paas_wl/bk_app/processes/serializers.py:382
+#: paas_wl/bk_app/processes/serializers.py:410
 msgid "当启用自动扩缩容时，必须提供有效的 scaling_config"
 msgstr "When auto-scaling is enabled, a valid scaling_config must be provided"
 
-#: paas_wl/bk_app/processes/serializers.py:384
+#: paas_wl/bk_app/processes/serializers.py:412
 msgid "当操作类型为扩缩容时，必须提供有效的 target_replicas"
 msgstr ""
 "When the operation type is scaling, valid target_replicas must be provided"
 
-#: paas_wl/bk_app/processes/serializers.py:394
+#: paas_wl/bk_app/processes/serializers.py:422
 msgid "scaling_config 配置格式有误：{}"
 msgstr "Incorrect format for scaling_config: {}"
 
@@ -346,64 +362,68 @@ msgstr "AI Agent sandbox"
 msgid "AI Agent 应用"
 msgstr "AI Agent App"
 
-#: paas_wl/infras/cluster/constants.py:48
+#: paas_wl/infras/cluster/constants.py:39
+msgid "需要隔离部署的 AI Agent 应用"
+msgstr "AI Agent apps requiring isolated deployment"
+
+#: paas_wl/infras/cluster/constants.py:49
 msgid "允许挂载日志到主机"
 msgstr "Allows mounting logs to host"
 
-#: paas_wl/infras/cluster/constants.py:54
+#: paas_wl/infras/cluster/constants.py:55
 msgid "Ingress 路径是否使用正则表达式"
 msgstr "Ingress path uses regex"
 
-#: paas_wl/infras/cluster/constants.py:56
+#: paas_wl/infras/cluster/constants.py:57
 msgid "从蓝鲸监控查询资源使用率"
 msgstr "Retrieve resource metrics from BK Monitor"
 
-#: paas_wl/infras/cluster/constants.py:61
-#: paasng/platform/applications/constants.py:104
+#: paas_wl/infras/cluster/constants.py:62
+#: paasng/platform/applications/constants.py:112
 msgid "使用蓝鲸日志平台方案采集日志"
 msgstr "Uses BlueKing log platform for log collection"
 
-#: paas_wl/infras/cluster/constants.py:65
+#: paas_wl/infras/cluster/constants.py:66
 msgid "支持自动扩容"
 msgstr "Supports auto-scaling"
 
-#: paas_wl/infras/cluster/constants.py:67
+#: paas_wl/infras/cluster/constants.py:68
 msgid "支持 BCS Egress"
 msgstr "Supports BCS Egress"
 
-#: paas_wl/infras/cluster/constants.py:69
+#: paas_wl/infras/cluster/constants.py:70
 msgid "支持 gRPC Ingress"
 msgstr "Supports gRPC Ingress"
 
-#: paas_wl/infras/cluster/constants.py:75
+#: paas_wl/infras/cluster/constants.py:76
 msgid "BCS 项目 ID"
 msgstr "BCS Project ID"
 
-#: paas_wl/infras/cluster/constants.py:76
+#: paas_wl/infras/cluster/constants.py:77
 msgid "BCS 集群 ID"
 msgstr "BCS Cluster ID"
 
-#: paas_wl/infras/cluster/constants.py:77
+#: paas_wl/infras/cluster/constants.py:78
 msgid "蓝鲸业务 ID"
 msgstr "Blueking Business ID"
 
-#: paas_wl/infras/cluster/constants.py:79
+#: paas_wl/infras/cluster/constants.py:80
 msgid "跳过内置镜像凭证注入"
 msgstr "Skip inject builtin image credentials"
 
-#: paas_wl/infras/cluster/constants.py:82
+#: paas_wl/infras/cluster/constants.py:83
 msgid "Ingress 类名"
 msgstr "Ingress Class Name"
 
-#: paas_wl/infras/cluster/constants.py:85
+#: paas_wl/infras/cluster/constants.py:86
 msgid "Slugbuilder 资源配额"
 msgstr "Slugbuilder resource quota"
 
-#: paas_wl/infras/cluster/constants.py:91
+#: paas_wl/infras/cluster/constants.py:92
 msgid "统一分配"
 msgstr "Uniform allocation"
 
-#: paas_wl/infras/cluster/constants.py:92
+#: paas_wl/infras/cluster/constants.py:93
 msgid "按规则分配"
 msgstr "Allocate according to rules"
 
@@ -536,7 +556,7 @@ msgid "内存使用量"
 msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
-#: paasng/platform/applications/views/creation.py:152
+#: paasng/platform/applications/views/creation.py:296
 #: paasng/platform/modules/views.py:377
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
@@ -682,7 +702,7 @@ msgstr "version information format error"
 
 #: paasng/accessories/dev_sandbox/serializers.py:126
 #: paasng/plat_mgt/config_vars/serializers.py:46
-#: paasng/utils/serializers.py:274
+#: paasng/utils/serializers.py:273
 msgid "格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。"
 msgstr ""
 "The format is incorrect.It can only start with a capital letter and consist "
@@ -820,13 +840,17 @@ msgstr "paas-analysis service is not configured"
 msgid "暂不允许关闭日志统计功能"
 msgstr "It is temporarily not allowed to turn off the log statistics function"
 
-#: paasng/accessories/publish/entrance/preallocated.py:111
+#: paasng/accessories/publish/entrance/preallocated.py:113
 msgid ""
 "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
 "\"http://prod.com\"}"
 msgstr ""
 "Access URLs for different environments of the application modules, such as "
 "{\"stag\": \"http://stag.com\", \"prod\": \"http://prod.com\"}"
+
+#: paasng/accessories/publish/entrance/preallocated.py:132
+msgid "应用市场访问地址"
+msgstr "App marketplace URL"
 
 #: paasng/accessories/publish/entrance/serializers.py:32
 msgid "类型错误，只允许修改为子域名类型"
@@ -998,7 +1022,7 @@ msgstr "Deployment request exception, please try again later"
 #: paasng/bk_plugins/bk_plugins/pluginscenter_views.py:429
 #, python-brace-format
 msgid "无效的角色参数: {role}"
-msgstr ""
+msgstr "Invalid role parameter: {role}"
 
 #: paasng/bk_plugins/bk_plugins/tasks.py:51
 #: paasng/platform/engine/views/misc.py:100
@@ -1035,7 +1059,7 @@ msgstr "delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
 #: paasng/misc/audit/constants.py:125
-#: paasng/platform/applications/constants.py:39
+#: paasng/platform/applications/constants.py:47
 msgid "下架"
 msgstr "archive"
 
@@ -1273,7 +1297,7 @@ msgid "上一次灰度发布还未审批完成"
 msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
-#: paasng/utils/error_codes.py:267
+#: paasng/utils/error_codes.py:275
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -1538,12 +1562,12 @@ msgid "同名仓库已存在"
 msgstr "A repository with the same name already exists"
 
 #: paasng/bk_plugins/pluginscenter/sourcectl/tencent.py:82
-#: paasng/platform/sourcectl/tc_git/client.py:355
+#: paasng/platform/sourcectl/tc_git/client.py:376
 msgid "工蜂接口请求超时"
 msgstr "Tc_git interface request timeout"
 
 #: paasng/bk_plugins/pluginscenter/sourcectl/tencent.py:85
-#: paasng/platform/sourcectl/tc_git/client.py:358
+#: paasng/platform/sourcectl/tc_git/client.py:379
 msgid "工蜂接口请求异常"
 msgstr "Tc_git interface request exception"
 
@@ -1752,21 +1776,21 @@ msgstr "Platform operations"
 msgid "临时权限限制"
 msgstr "Temporary permission restrictions"
 
-#: paasng/infras/accounts/views.py:94 paasng/infras/accounts/views.py:132
+#: paasng/infras/accounts/views.py:96 paasng/infras/accounts/views.py:134
 msgid "暂不支持发送验证码"
 msgstr "Sending verification codes is not supported at this time"
 
-#: paasng/infras/accounts/views.py:97
+#: paasng/infras/accounts/views.py:99
 #, python-brace-format
 msgid "您的蓝鲸验证码是：{verification_code}，请妥善保管。"
 msgstr ""
 "Your BlueKing verification code is: {verification_code}, please keep it safe."
 
-#: paasng/infras/accounts/views.py:112 paasng/platform/sourcectl/views.py:125
+#: paasng/infras/accounts/views.py:114 paasng/platform/sourcectl/views.py:125
 msgid "蓝鲸平台"
 msgstr "BlueKing"
 
-#: paasng/infras/accounts/views.py:280
+#: paasng/infras/accounts/views.py:282
 msgid "授权成功, 2秒后自动关闭该页面"
 msgstr ""
 "The authorization is successful, the page will be closed automatically after "
@@ -2683,19 +2707,19 @@ msgstr ""
 "The cluster connectivity test failed. Please check whether the Server, Token "
 "and other configurations are correct."
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:146
+#: paasng/plat_mgt/infras/clusters/views/components.py:145
 msgid "非 BCS 集群需要手动更新组件"
 msgstr "Non-BCS clusters require manual component updates"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:149
+#: paasng/plat_mgt/infras/clusters/views/components.py:148
 msgid "无法获取组件最新版本信息"
 msgstr "Unable to get component latest version info"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:157
+#: paasng/plat_mgt/infras/clusters/views/components.py:156
 msgid "版本号解析异常"
 msgstr "Unable to parse component version"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:160
+#: paasng/plat_mgt/infras/clusters/views/components.py:159
 msgid "不支持跨大版本更新，需要到集群中手动操作"
 msgstr ""
 "Don't support cross-version updates and requires manual operations in the "
@@ -2713,11 +2737,15 @@ msgstr "Specified cluster does not exist"
 msgid "指定集群组件不存在"
 msgstr "Specified cluster component does not exist"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:274
+#: paasng/plat_mgt/infras/clusters/views/components.py:275
 msgid "获取组件版本信息失败，请确认操作人是否有权限"
 msgstr ""
 "Failed to get component version information. Please confirm whether the "
 "operator has permission."
+
+#: paasng/plat_mgt/infras/clusters/views/components.py:294
+msgid "集群缺少可用的访问配置"
+msgstr "No available access configuration for the cluster"
 
 #: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:63
 msgid "至少需要指定一个匹配规则, 且匹配规则不能为空字符串"
@@ -2748,7 +2776,7 @@ msgid "该实例已被分配，无法删除"
 msgstr "This instance has been allocated, cannot be deleted"
 
 #: paasng/plat_mgt/res_quota_plan/serializers.py:65
-#: paasng/plat_mgt/res_quota_plan/serializers.py:136
+#: paasng/plat_mgt/res_quota_plan/serializers.py:137
 msgid "格式不正确, 必须为正整数加 'm'"
 msgstr "Invalid format: must be a positive integer followed by 'm'"
 
@@ -2759,23 +2787,23 @@ msgid "不能超过最大值 %s"
 msgstr "Cannot exceed maximum value %s"
 
 #: paasng/plat_mgt/res_quota_plan/serializers.py:79
-#: paasng/plat_mgt/res_quota_plan/serializers.py:124
+#: paasng/plat_mgt/res_quota_plan/serializers.py:125
 msgid "格式不正确, 必须为正整数加 'Mi' 或 'Gi'"
 msgstr "Invalid format: must be a positive integer followed by 'Mi' or 'Gi'"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:95
+#: paasng/plat_mgt/res_quota_plan/serializers.py:96
 msgid "资源配额方案名称已存在，请使用其他名称"
 msgstr "Resource quota plan name already exists, please use a different name."
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:97
-msgid "名称只能包含数字和英文字符"
-msgstr "Name can only contain numbers and letters"
+#: paasng/plat_mgt/res_quota_plan/serializers.py:98
+msgid "名称只能包含数字、英文字符和中划线，且需以字母或数字开头和结尾"
+msgstr "Name can only contain digits, letters, and hyphens, and must start and end with a letter or digit"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:110
+#: paasng/plat_mgt/res_quota_plan/serializers.py:111
 msgid "cpu requests 不能超过 cpu limits"
 msgstr "cpu requests cannot exceed cpu limits"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:115
+#: paasng/plat_mgt/res_quota_plan/serializers.py:116
 msgid "memory requests 不能超过 memory limits"
 msgstr "memory requests cannot exceed memory limits"
 
@@ -2792,7 +2820,7 @@ msgstr "The plan is already in use by an application."
 msgid "应用 ID 已存在授权码"
 msgstr "APP ID already has an auth code"
 
-#: paasng/plat_mgt/reserved_prefix/views.py:107 paasng/utils/error_codes.py:255
+#: paasng/plat_mgt/reserved_prefix/views.py:107 paasng/utils/error_codes.py:263
 msgid "已使用的保留前缀授权码不能被删除"
 msgstr "Used reserved prefix auth code cannot be deleted"
 
@@ -2909,26 +2937,38 @@ msgstr "Plugin template must config Code Repository Address (repo_url)"
 msgid "插件模板必须配置代码所在目录"
 msgstr "Plugin template must config Template code directory (source_dir)"
 
-#: paasng/platform/agent_sandbox/views.py:285
+#: paasng/platform/agent_sandbox/views.py:482
 #, python-brace-format
 msgid "超时时间: {timeout}s"
 msgstr "Timeout: {timeout}s"
 
 #: paasng/platform/applications/constants.py:37
+msgid "默认"
+msgstr "Default"
+
+#: paasng/platform/applications/constants.py:39
+msgid "安全合规隔离"
+msgstr "Security and compliance isolation"
+
+#: paasng/platform/applications/constants.py:45
 msgid "未部署"
 msgstr "Not deployed"
 
-#: paasng/platform/applications/constants.py:38
+#: paasng/platform/applications/constants.py:46
 msgid "正常"
 msgstr "Normal"
 
-#: paasng/platform/applications/constants.py:106
+#: paasng/platform/applications/constants.py:114
 msgid "开启出口 IP 管理"
 msgstr "Enable outbound IP management."
 
-#: paasng/platform/applications/constants.py:109
+#: paasng/platform/applications/constants.py:117
 msgid "开启持久存储挂载卷"
 msgstr "Enable persistent storage mount volumes."
+
+#: paasng/platform/applications/constants.py:120
+msgid "允许修改自动扩容阈值"
+msgstr "Allow modifying autoscaling threshold"
 
 #: paasng/platform/applications/exceptions.py:23
 msgid "应用编码"
@@ -2976,14 +3016,30 @@ msgstr "Engine enabled, type cannot be \"engineless_app"
 msgid "源码/镜像配置"
 msgstr "Source Code/Image Configuration"
 
-#: paasng/platform/applications/serializers/creation.py:148
+#: paasng/platform/applications/serializers/creation.py:135
+msgid "git 源码配置，传入则使用 git 仓库部署"
+msgstr "Git source code configuration. If provided, the app will be deployed from a Git repository"
+
+#: paasng/platform/applications/serializers/creation.py:136
+msgid "构建配置，配合 source_config 使用"
+msgstr "Build configuration, used together with source_config"
+
+#: paasng/platform/applications/serializers/creation.py:170
+msgid "使用 git 仓库部署时必须提供 bkapp_spec 构建配置"
+msgstr "bkapp_spec build configuration is required when deploying from a Git repository"
+
+#: paasng/platform/applications/serializers/creation.py:174
+msgid "AI Agent 应用不支持 custom_image 构建方式"
+msgstr "AI Agent apps do not support the custom_image build method"
+
+#: paasng/platform/applications/serializers/creation.py:189
 msgid "该接口只支持创建外链应用"
 msgstr ""
 "This interface only supports the creation of external link applications."
 
 #: paasng/platform/applications/serializers/fields.py:48
 #: paasng/platform/applications/serializers/fields.py:49
-#: paasng/platform/applications/serializers/fields.py:76
+#: paasng/platform/applications/serializers/fields.py:75
 msgid "应用 ID"
 msgstr "APP ID"
 
@@ -2994,7 +3050,7 @@ msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
 "half-corner ligatures (-), length between 3-20."
 
-#: paasng/platform/applications/serializers/fields.py:79
+#: paasng/platform/applications/serializers/fields.py:78
 msgid ""
 "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，长度在 "
 "3-20 之间。"
@@ -3002,26 +3058,26 @@ msgstr ""
 "Format error, can only contain lowercase letters (a-z), numbers (0-9), and "
 "half-width hyphens (-) and underscores (_), length between 3-20."
 
-#: paasng/platform/applications/serializers/fields.py:228
+#: paasng/platform/applications/serializers/fields.py:227
 msgid "应用名称({}) 为 {} 的应用已存在"
 msgstr "An application name ({}) for {} already exists."
 
-#: paasng/platform/applications/serializers/fields.py:235
+#: paasng/platform/applications/serializers/fields.py:234
 #, python-brace-format
 msgid "构建目录 {path} 不合法"
 msgstr "Invalid build directory {path}"
 
-#: paasng/platform/applications/serializers/fields.py:236
+#: paasng/platform/applications/serializers/fields.py:235
 #, python-brace-format
 msgid "构建目录 {path} 存在逃逸风险"
 msgstr "The build directory {path} has a path escape risk"
 
-#: paasng/platform/applications/serializers/fields.py:249
+#: paasng/platform/applications/serializers/fields.py:248
 #, python-brace-format
 msgid "Dockerfile 目录 {path} 不合法"
 msgstr "Invalid dockerfile path {path}"
 
-#: paasng/platform/applications/serializers/fields.py:250
+#: paasng/platform/applications/serializers/fields.py:249
 #, python-brace-format
 msgid "Dockerfile 目录 {path} 存在逃逸风险"
 msgstr "The dockerfile path {path} has a path escape risk"
@@ -3067,13 +3123,13 @@ msgstr ""
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views/creation.py:335
+#: paasng/platform/applications/views/creation.py:393
 msgid "集群未配置默认的根域名, 请检查集群配置是否合理."
 msgstr ""
 "The cluster is not configured with a default root domain. Please check if "
 "the cluster configuration is correct."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:92
+#: paasng/platform/bkapp_model/serializers/serializers.py:89
 #: paasng/platform/bkapp_model/serializers/v1alpha2.py:213
 msgid ""
 "服务名应仅包含小写字母，数字字符和连字符\"-\"，且必须以字母数字字符开头和结"
@@ -3083,34 +3139,34 @@ msgstr ""
 "and hyphens \"-\", and must start and end with alphanumeric characters. The "
 "maximum length is 63"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:162
+#: paasng/platform/bkapp_model/serializers/serializers.py:159
 msgid "至多设置一个探活配置"
 msgstr "At most one liveness probe configuration can be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:164
+#: paasng/platform/bkapp_model/serializers/serializers.py:161
 msgid "至少设置一个探活配置"
 msgstr "At least one liveness probe configuration must be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:198
+#: paasng/platform/bkapp_model/serializers/serializers.py:195
 #: paasng/platform/bkapp_model/serializers/v1alpha2.py:255
 msgid "组件 {}-{} 不存在"
 msgstr "Component {} {} does not exist."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:200
+#: paasng/platform/bkapp_model/serializers/serializers.py:197
 #: paasng/platform/bkapp_model/serializers/v1alpha2.py:257
 msgid "参数校验失败"
 msgstr "Parameter verification failed"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:366
+#: paasng/platform/bkapp_model/serializers/serializers.py:363
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:386
+#: paasng/platform/bkapp_model/serializers/serializers.py:383
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 "At least one valid value must be provided: nameservers or host_aliases."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:392
+#: paasng/platform/bkapp_model/serializers/serializers.py:389
 msgid "BkApp 配置信息"
 msgstr "BkApp config info"
 
@@ -3589,7 +3645,7 @@ msgstr ""
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
 
-#: paasng/platform/engine/utils/source.py:313
+#: paasng/platform/engine/utils/source.py:319
 #, python-brace-format
 msgid ""
 "WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
@@ -4212,7 +4268,6 @@ msgstr "Access to Git<{fullname}> project error"
 
 #: paasng/platform/sourcectl/gitee/client.py:64
 #: paasng/platform/sourcectl/github/client.py:72
-#: paasng/platform/sourcectl/tc_git/client.py:98
 msgid "当前仅支持 base64 编码格式"
 msgstr "Only base64 encoding format is supported"
 
@@ -4223,6 +4278,10 @@ msgstr "Image repository"
 #: paasng/platform/sourcectl/models.py:649
 msgid "服务名称"
 msgstr "Service Name"
+
+#: paasng/platform/sourcectl/tc_git/client.py:115
+msgid "仅支持 base64 编码格式，当前格式为：{encoding}"
+msgstr "Only base64 encoding is supported, current encoding: {encoding}"
 
 #: paasng/platform/sourcectl/type_specs.py:50
 msgid "蓝鲸 SVN"
@@ -4450,28 +4509,28 @@ msgstr "Already under review, please do not submit duplicate requests"
 msgid "提交申请成功"
 msgstr "Submitted successfully"
 
-#: paasng/settings/__init__.py:907
+#: paasng/settings/__init__.py:920
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing old permission center URL, recommended to switch to BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:911
+#: paasng/settings/__init__.py:924
 msgid "蓝鲸权限中心的应用ID"
 msgstr "BlueKing permission center APP ID"
 
-#: paasng/settings/__init__.py:915
+#: paasng/settings/__init__.py:928
 msgid "蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing permission center intranet access URL, recommended to switch to "
 "BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:917
+#: paasng/settings/__init__.py:930
 msgid "蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL"
 msgstr ""
 "BlueKing configuration platform access URL, recommended to switch to "
 "BKPAAS_CC_URL"
 
-#: paasng/settings/__init__.py:918
+#: paasng/settings/__init__.py:931
 msgid "蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL"
 msgstr ""
 "BlueKing job platform access URL, recommended to switch to BKPAAS_JOB_URL"
@@ -5023,75 +5082,99 @@ msgstr "Unable to delete application cluster"
 msgid "无法更新集群组件"
 msgstr "cannot update cluster components"
 
-#: paasng/utils/error_codes.py:232
+#: paasng/utils/error_codes.py:230
+msgid "无法获取集群状态"
+msgstr "Unable to retrieve cluster status"
+
+#: paasng/utils/error_codes.py:233
 msgid "创建开发沙箱失败"
 msgstr "failed to create dev sandbox"
 
-#: paasng/utils/error_codes.py:233
+#: paasng/utils/error_codes.py:234
 msgid "开发沙箱已存在"
 msgstr "dev sandbox already exists"
 
-#: paasng/utils/error_codes.py:234
+#: paasng/utils/error_codes.py:235
 msgid "指定的开发沙箱不存在"
 msgstr "dev sandbox not found"
 
-#: paasng/utils/error_codes.py:235
+#: paasng/utils/error_codes.py:236
 msgid "开发沙箱总数量超过上限"
 msgstr "number of dev sandboxes exceeds the limit"
 
-#: paasng/utils/error_codes.py:236
+#: paasng/utils/error_codes.py:237
 msgid "开发沙箱 API 请求异常"
 msgstr "dev sandbox API request exception"
 
-#: paasng/utils/error_codes.py:239
+#: paasng/utils/error_codes.py:240
 msgid "创建 Agent 沙箱失败"
 msgstr "failed to create dev sandbox"
 
-#: paasng/utils/error_codes.py:240
+#: paasng/utils/error_codes.py:241
 msgid "Agent 沙箱已存在"
 msgstr "dev sandbox already exists"
 
-#: paasng/utils/error_codes.py:241
+#: paasng/utils/error_codes.py:242
 msgid "删除 Agent 沙箱失败"
 msgstr "Delete Agent sandbox failed"
 
-#: paasng/utils/error_codes.py:242
+#: paasng/utils/error_codes.py:243
 msgid "Agent 沙箱文件操作失败"
 msgstr "Agent sandbox file operation failed"
 
-#: paasng/utils/error_codes.py:243
+#: paasng/utils/error_codes.py:244
 msgid "Agent 沙箱进程操作失败"
 msgstr "Agent sandbox process operation failed."
 
-#: paasng/utils/error_codes.py:244
+#: paasng/utils/error_codes.py:245
 msgid "Agent 沙箱进程执行超时"
 msgstr "Agent sandbox process execution timeout"
 
-#: paasng/utils/error_codes.py:245
+#: paasng/utils/error_codes.py:246
 msgid "Agent 沙箱服务未就绪"
 msgstr "Agent sandbox service not ready"
 
-#: paasng/utils/error_codes.py:246
+#: paasng/utils/error_codes.py:247
+msgid "Agent 沙箱守护进程 API 异常"
+msgstr "Agent sandbox daemon API exception"
+
+#: paasng/utils/error_codes.py:248
 msgid "Agent 沙箱快照镜像验证失败"
 msgstr "Agent sandbox snapshot image validation failed"
 
-#: paasng/utils/error_codes.py:249
+#: paasng/utils/error_codes.py:251
+msgid "Agent 沙箱文件不存在"
+msgstr "Agent sandbox file does not exist"
+
+#: paasng/utils/error_codes.py:252
+msgid "Agent 沙箱文件过大"
+msgstr "Agent sandbox file is too large"
+
+#: paasng/utils/error_codes.py:253
+msgid "Agent 沙箱文件不可预览"
+msgstr "Agent sandbox file cannot be previewed"
+
+#: paasng/utils/error_codes.py:254
+msgid "Agent 沙箱文件归档失败"
+msgstr "Failed to archive Agent sandbox file"
+
+#: paasng/utils/error_codes.py:257
 msgid "Volume 不存在"
 msgstr "Volume not found"
 
-#: paasng/utils/error_codes.py:250
+#: paasng/utils/error_codes.py:258
 msgid "Volume 已存在"
 msgstr "Volume already exists"
 
-#: paasng/utils/error_codes.py:251
+#: paasng/utils/error_codes.py:259
 msgid "Volume 创建失败"
 msgstr "Failed to create volume."
 
-#: paasng/utils/error_codes.py:252
+#: paasng/utils/error_codes.py:260
 msgid "Volume 删除失败"
 msgstr "Failed to delete volume"
 
-#: paasng/utils/error_codes.py:254
+#: paasng/utils/error_codes.py:262
 msgid "生成保留前缀授权码失败"
 msgstr "Generate reserved prefix auth code failed"
 
@@ -5100,56 +5183,56 @@ msgstr "Generate reserved prefix auth code failed"
 msgid "错误码: {code_num}, {msg}"
 msgstr "Error code: {code_num}, {msg}"
 
-#: paasng/utils/serializers.py:183
+#: paasng/utils/serializers.py:182
 #, python-brace-format
 msgid "\"{input}\" is not a valid bytes."
 msgstr "\"{input}\" is not a valid bytes."
 
-#: paasng/utils/serializers.py:184
+#: paasng/utils/serializers.py:183
 #, python-brace-format
 msgid "\"{input}\" is not a valid format, please startswith \"base64,\""
 msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 
-#: paasng/utils/serializers.py:185
+#: paasng/utils/serializers.py:184
 #, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
 msgstr "\"{input}\" is not a valid base64, please check it."
 
-#: paasng/utils/serializers.py:306
+#: paasng/utils/serializers.py:305
 #, python-brace-format
 msgid "至多包含 {max_items} 个对象."
 msgstr "Contains at most {max_items} objects."
 
-#: paasng/utils/serializers.py:307
+#: paasng/utils/serializers.py:306
 #, python-brace-format
 msgid "至少包含 {min_items} 个对象."
 msgstr "Contains at least {min_items} objects."
 
-#: paasng/utils/serializers.py:340
+#: paasng/utils/serializers.py:339
 #, python-brace-format
 msgid "路径 {path} 不合法"
 msgstr "path {path} invalid"
 
-#: paasng/utils/serializers.py:341
+#: paasng/utils/serializers.py:340
 #, python-brace-format
 msgid "路径 {path} 存在逃逸风险"
 msgstr "The path {path} has a path escape risk"
 
-#: paasng/utils/serializers.py:404
+#: paasng/utils/serializers.py:403
 #, python-brace-format
 msgid "Base64 解码失败: {value}"
 msgstr "Base64 decode failed: {value}"
 
-#: paasng/utils/serializers.py:407
+#: paasng/utils/serializers.py:406
 msgid "后端解密失败"
 msgstr "Backend decryption failed"
 
-#: paasng/utils/serializers.py:420
+#: paasng/utils/serializers.py:419
 #, python-brace-format
 msgid "无效的加密值格式: {value}"
 msgstr "Invalid encrypted value format: {value}"
 
-#: paasng/utils/serializers.py:440
+#: paasng/utils/serializers.py:439
 #, python-brace-format
 msgid "数据嵌套层级过深，最大层级为 {max_depth}"
 msgstr ""
@@ -5183,6 +5266,9 @@ msgstr "This value does not match the required pattern."
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:43
 msgid "zh-cn"
 msgstr "zh-cn"
+
+#~ msgid "名称只能包含数字和英文字符"
+#~ msgstr "Name can only contain numbers and letters"
 
 #~ msgid "IP/域名"
 #~ msgstr "IP/Domain Name"

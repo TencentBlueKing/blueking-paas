@@ -1,0 +1,14 @@
+apiserver/paasng/tests/paasng/platform/declarative/deployment/v3/test_controller.py
+  h_190e3af8dc7b5f 25,59-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "857869ad1775474580e73d45ef29beab22b75a6f",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

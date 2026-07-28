@@ -25,12 +25,7 @@ RUN EDITION=${EDITION} npm run build
 FROM python:3.8.13-slim-buster
 USER root
 
-RUN cat >/etc/apt/sources.list <<'EOF'
-deb http://archive.debian.org/debian buster main
-deb http://archive.debian.org/debian buster-updates main
-deb http://archive.debian.org/debian-security buster/updates main
-deb http://archive.debian.org/debian buster-backports main
-EOF
+RUN sed -i 's/deb.debian.org/archive.debian.org/' /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git
 

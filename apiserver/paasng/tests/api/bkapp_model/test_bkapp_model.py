@@ -21,6 +21,7 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
 from paasng.platform.bkapp_model.entities.components import Component
 from paasng.platform.bkapp_model.models import (
@@ -104,6 +105,7 @@ class TestModuleProcessSpecViewSet:
             },
         )
         assert web.get_autoscaling("stag")
+        bk_cnative_app.feature_flag.set_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD, True)
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         probes_cfg = {
             "liveness": {

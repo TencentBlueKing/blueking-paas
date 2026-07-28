@@ -26,7 +26,7 @@ from paas_wl.bk_app.sandbox_instance.constants import (
     DesiredState,
 )
 from paas_wl.bk_app.sandbox_instance.crd import SandboxInstance
-from paas_wl.bk_app.sandbox_instance.entities import SandboxInstanceSpec
+from paas_wl.bk_app.sandbox_instance.entities import SandboxInstanceResource, SandboxInstanceSpec
 from paas_wl.bk_app.sandbox_instance.exceptions import (
     SandboxInstanceDeployError,
     SandboxInstanceNotFound,
@@ -72,19 +72,17 @@ class SandboxInstanceManager:
 
         return obj.to_dict()
 
-    def get(self, namespace: str, name: str) -> Dict[str, Any]:
-        """查询 SandboxInstance CR。
+    def get(self, namespace: str, name: str) -> SandboxInstanceResource:
+        """查询 SandboxInstance CR, 返回结构化对象。
 
         :raises SandboxInstanceNotFound: CR 不存在。
         """
         with get_client_by_cluster_name(self.cluster_name) as client:
             try:
-                obj = SandboxInstance(client, api_version=SANDBOX_INSTANCE_API_VERSION).get(
-                    name, namespace=namespace
-                )
+                obj = SandboxInstance(client, api_version=SANDBOX_INSTANCE_API_VERSION).get(name, namespace=namespace)
             except ResourceMissing as e:
                 raise SandboxInstanceNotFound(f"{namespace}/{name}") from e
-        return obj.to_dict()
+        return SandboxInstanceResource.from_dict(obj.to_dict())
 
     # TODO: 以下 get/set_desired_state/restart/delete 方法为配套 API(停止/重启/删除/查询)预留,
     #  当前主链路仅使用 deploy(); 配套 ViewSet 将在后续 PR 中接入并桥接到 ErrorCode 体系。
@@ -104,9 +102,7 @@ class SandboxInstanceManager:
         # RFC 6902 JSON Patch: 用 add 操作(对已存在的 key 等价于 replace)
         # annotation key 中的 '/' 需转义为 '~1', '~' 转义为 '~0'
         escaped_key = RESTARTED_AT_ANNOTATION.replace("~", "~0").replace("/", "~1")
-        patch_body = [
-            {"op": "add", "path": f"/metadata/annotations/{escaped_key}", "value": restarted_at}
-        ]
+        patch_body = [{"op": "add", "path": f"/metadata/annotations/{escaped_key}", "value": restarted_at}]
         return self._patch(namespace, name, patch_body, ptype=PatchType.JSON)
 
     def delete(self, namespace: str, name: str) -> None:
@@ -124,9 +120,7 @@ class SandboxInstanceManager:
                 logger.exception("failed to delete SandboxInstance %s/%s", namespace, name)
                 raise SandboxInstanceDeployError(str(e)) from e
 
-    def _patch(
-        self, namespace: str, name: str, patch_body: Any, ptype: PatchType = PatchType.MERGE
-    ) -> Dict[str, Any]:
+    def _patch(self, namespace: str, name: str, patch_body: Any, ptype: PatchType = PatchType.MERGE) -> Dict[str, Any]:
         with get_client_by_cluster_name(self.cluster_name) as client:
             try:
                 obj = SandboxInstance(client, api_version=SANDBOX_INSTANCE_API_VERSION).patch(

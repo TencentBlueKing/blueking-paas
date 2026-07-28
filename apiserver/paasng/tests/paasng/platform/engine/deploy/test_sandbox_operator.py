@@ -37,6 +37,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
 )
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.sandbox_instance.constants import SandboxInstancePhase
+from paas_wl.bk_app.sandbox_instance.entities import SandboxInstanceResource
 from paas_wl.bk_app.sandbox_instance.exceptions import SandboxInstanceNotFound
 from paasng.platform.engine.deploy.bg_wait.wait_sandbox import WaitSandboxInstanceReady
 from paasng.platform.engine.deploy.release.sandbox_operator import build_sandbox_spec_from_deploy
@@ -45,9 +46,7 @@ from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def _make_bkapp_resource(
-    processes=None, env_vars=None, env_overlay_vars=None, schedule=None, domain_resolution=None
-):
+def _make_bkapp_resource(processes=None, env_vars=None, env_overlay_vars=None, schedule=None, domain_resolution=None):
     """构造一个最小化的 BkAppResource 用于测试。"""
     spec_kwargs = {
         "processes": processes or [],
@@ -80,9 +79,7 @@ class TestBuildSandboxSpecFromDeploy:
         """Mock ResQuotaPlan 查询返回固定值 cpu=4000m, memory=2048Mi"""
         fake_plan = mock.MagicMock()
         fake_plan.limits = {"cpu": "4000m", "memory": "2048Mi"}
-        with mock.patch(
-            "paasng.platform.engine.deploy.release.sandbox_operator.ResQuotaPlan.objects"
-        ) as m:
+        with mock.patch("paasng.platform.engine.deploy.release.sandbox_operator.ResQuotaPlan.objects") as m:
             m.get.return_value = fake_plan
             yield
 
@@ -98,11 +95,10 @@ class TestBuildSandboxSpecFromDeploy:
         """A mock Deployment object."""
         return mock.MagicMock()
 
-    def test_basic_fields(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_basic_fields(self, bk_stag_env, build, deployment):
         """基本字段映射: image/command/args/cpu/memory/labels/annotations"""
-        bkapp_res = _make_bkapp_resource(
-            processes=[BkAppProcess(name="web", command=["python"], args=["-m", "app"])]
-        )
+        bkapp_res = _make_bkapp_resource(processes=[BkAppProcess(name="web", command=["python"], args=["-m", "app"])])
 
         with (
             mock.patch(
@@ -124,7 +120,8 @@ class TestBuildSandboxSpecFromDeploy:
         assert spec.labels == {"app": "test"}
         assert spec.annotations == {BKPAAS_DEPLOY_ID_ANNO_KEY: "42"}
 
-    def test_env_vars_global_and_overlay(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_env_vars_global_and_overlay(self, bk_stag_env, build, deployment):
         """环境变量: 全局变量 + overlay 覆盖合并"""
         bkapp_res = _make_bkapp_resource(
             processes=[BkAppProcess(name="web")],
@@ -154,7 +151,8 @@ class TestBuildSandboxSpecFromDeploy:
         assert env_map["C"] == "3"
         assert "D" not in env_map
 
-    def test_env_overlay_only_current_env(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_env_overlay_only_current_env(self, bk_stag_env, build, deployment):
         """overlay 仅取当前环境(stag)的变量, 忽略 prod"""
         bkapp_res = _make_bkapp_resource(
             processes=[BkAppProcess(name="web")],
@@ -180,7 +178,8 @@ class TestBuildSandboxSpecFromDeploy:
         # prod overlay 不应作用于 stag 环境
         assert env_map["X"] == "base"
 
-    def test_scheduling(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_scheduling(self, bk_stag_env, build, deployment):
         """调度配置: nodeSelector / tolerations 透传"""
         bkapp_res = _make_bkapp_resource(
             processes=[BkAppProcess(name="web")],
@@ -207,7 +206,8 @@ class TestBuildSandboxSpecFromDeploy:
         assert spec.tolerations[0]["key"] == "gpu"
         assert spec.tolerations[0]["effect"] == "NoSchedule"
 
-    def test_domain_resolution(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_domain_resolution(self, bk_stag_env, build, deployment):
         """域名解析: dns_nameservers / host_aliases 透传"""
         bkapp_res = _make_bkapp_resource(
             processes=[BkAppProcess(name="web")],
@@ -232,7 +232,8 @@ class TestBuildSandboxSpecFromDeploy:
         assert spec.dns_nameservers == ["8.8.8.8", "8.8.4.4"]
         assert spec.host_aliases == [{"ip": "127.0.0.1", "hostnames": ["local.dev"]}]
 
-    def test_no_process_found(self, bk_stag_env, build, deployment, _mock_quota):
+    @pytest.mark.usefixtures("_mock_quota")
+    def test_no_process_found(self, bk_stag_env, build, deployment):
         """进程列表为空时: command/args 为空, 使用默认 quota"""
         bkapp_res = _make_bkapp_resource(processes=[])
 
@@ -282,6 +283,9 @@ class TestWaitSandboxInstanceReady:
         if get_side_effect:
             mgr_instance.get.side_effect = get_side_effect
         else:
+            # 将原始字典转换为结构化对象, 与 SandboxInstanceManager.get() 的真实返回类型一致
+            if isinstance(get_return, dict):
+                get_return = SandboxInstanceResource.from_dict(get_return)
             mgr_instance.get.return_value = get_return
         return mock.patch(
             "paasng.platform.engine.deploy.bg_wait.wait_sandbox.SandboxInstanceManager",
@@ -329,7 +333,11 @@ class TestWaitSandboxInstanceReady:
         """phase=Pending → doing, 且 update_status 被调用"""
         cr = {
             "metadata": {"generation": 1, "annotations": {BKPAAS_DEPLOY_ID_ANNO_KEY: str(app_model_deploy.id)}},
-            "status": {"phase": SandboxInstancePhase.PENDING.value, "message": "pulling image", "observedGeneration": 1},
+            "status": {
+                "phase": SandboxInstancePhase.PENDING.value,
+                "message": "pulling image",
+                "observedGeneration": 1,
+            },
         }
         with (
             self._mock_cluster(),

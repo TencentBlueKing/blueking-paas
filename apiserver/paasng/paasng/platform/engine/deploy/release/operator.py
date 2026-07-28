@@ -31,11 +31,8 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.cnative.specs.resource import is_exposed_grpc_svc
-from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.infras.resources.base.kres import KNamespace
-from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
 from paasng.platform.applications.constants import DeployPolicy
 from paasng.platform.applications.models import ModuleEnvironment
@@ -43,6 +40,8 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
+from paasng.platform.engine.deploy.release.helpers import ensure_bk_log_if_need, ensure_namespace
+from paasng.platform.engine.deploy.release.sandbox_operator import release_by_sandbox_instance
 from paasng.platform.engine.exceptions import (
     DeployShouldAbortError,
     ServerVersionCheckFailed,
@@ -87,9 +86,6 @@ class BkAppReleaseMgr(DeployStep):
             # 仅隔离型 AI Agent 应用(is_ai_agent_app 且 deploy_policy=ISOLATED)运行时由 SandboxInstance CR 承载;
             # 非隔离 AI Agent 及其它应用仍走 BkApp CR(release_by_k8s_operator)。
             if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
-                # 延迟 import 以规避 sandbox_operator -> operator 的循环依赖
-                from paasng.platform.engine.deploy.release.sandbox_operator import release_by_sandbox_instance
-
                 bkapp_release_id = release_by_sandbox_instance(
                     self.module_environment,
                     revision,
@@ -240,31 +236,6 @@ def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
     cluster = get_cluster_by_app(env.wl_app)
     if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_GRPC_INGRESS):
         raise DeployShouldAbortError("grpc ingress feature is not available in the current cluster")
-
-
-def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15) -> bool:
-    """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
-
-    :param env: ModuleEnvironment
-    :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
-    :return: whether an namespace was created.
-    """
-    wl_app = env.wl_app
-    with get_client_by_app(wl_app) as client:
-        namespace_client = KNamespace(client)
-        _, created = namespace_client.get_or_create(name=wl_app.namespace)
-        if created:
-            namespace_client.wait_for_default_sa(namespace=wl_app.namespace, timeout=max_wait_seconds)
-        return created
-
-
-def ensure_bk_log_if_need(env: ModuleEnvironment):
-    """如果集群支持且应用声明了 BkLogConfig, 则尝试下发日志采集配置"""
-    try:
-        # 下发 BkLogConfig
-        make_bk_log_controller(env).create_or_patch()
-    except Exception:
-        logger.exception("An error occur when creating BkLogConfig")
 
 
 def sync_service_monitor(env: ModuleEnvironment):

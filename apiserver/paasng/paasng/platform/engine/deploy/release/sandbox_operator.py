@@ -36,8 +36,8 @@ from kubernetes.utils.quantity import parse_quantity
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.addresses import save_addresses
 from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DEFAULT_RES_QUOTA_PLAN_NAME, DeployStatus
-from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, BkAppResource
+from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.sandbox_instance.entities import SandboxInstanceSpec
 from paas_wl.bk_app.sandbox_instance.resource import SandboxInstanceManager
@@ -55,7 +55,7 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler
 from paasng.platform.engine.deploy.bg_wait.wait_sandbox import WaitSandboxInstanceReady
-from paasng.platform.engine.deploy.release.operator import ensure_bk_log_if_need, ensure_namespace
+from paasng.platform.engine.deploy.release.helpers import ensure_bk_log_if_need, ensure_namespace
 from paasng.platform.engine.models.deployment import Deployment
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,6 @@ logger = logging.getLogger(__name__)
 # TODO: 确认后续如何支持 SIDECAR 模式
 # AI Agent 应用采用单进程模型, 固定使用 web 进程承载 HTTP 服务
 AI_AGENT_PROCESS_TYPE = "web"
-
 
 
 def release_by_sandbox_instance(
@@ -272,8 +271,7 @@ def _resolve_env_vars_for_sandbox(bkapp_res: BkAppResource, env_name: str) -> Li
             if overlay_var.envName == env_name:
                 env_map[overlay_var.name] = overlay_var.value
 
-    return [{"name": k, "value": v} for k, v in env_map.items()]
-
+    return [{"name": k, "value": v} for k, v in sorted(env_map.items())]
 
 
 def _resolve_scheduling_for_sandbox(

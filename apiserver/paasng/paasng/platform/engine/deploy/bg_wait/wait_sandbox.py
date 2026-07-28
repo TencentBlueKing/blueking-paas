@@ -66,28 +66,24 @@ class WaitSandboxInstanceReady(WaitBkAppProcedurePoller):
         cluster_name = EnvClusterService(self.env).get_cluster_name()
         wl_app = self.env.wl_app
         try:
-            obj = SandboxInstanceManager(cluster_name).get(wl_app.namespace, generate_bkapp_name(self.env))
+            sbi = SandboxInstanceManager(cluster_name).get(wl_app.namespace, generate_bkapp_name(self.env))
         except SandboxInstanceNotFound:
             # CR 尚未被 apiserver 记录, 继续等待
             return PollingResult.doing()
 
         # deploy_id 一致性校验: CR 注解中的 deploy-id 与期望不一致时, 说明该 CR 已被
         # 后续发布覆盖, 本次 poller 应标记为 Abandoned 并退出, 避免误判。
-        annotations = obj.get("metadata", {}).get("annotations", {}) or {}
-        cr_deploy_id = annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY)
+        cr_deploy_id = sbi.annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY)
         if cr_deploy_id and cr_deploy_id != str(deploy_id):
             state = ModelResState(DeployStatus.UNKNOWN, "Abandoned", "deployment has been superseded by a newer one")
             return PollingResult.done(data={"state": state, "last_update": None})
 
         # observedGeneration 校验: status 尚未反映最新 spec 时, phase 不可信
-        generation = obj.get("metadata", {}).get("generation", 0)
-        status = obj.get("status", {}) or {}
-        observed_generation = status.get("observedGeneration", 0)
-        if observed_generation != generation:
-            return PollingResult.doing(data={"waiting_for_reconcile": True, "generation": generation})
+        if sbi.status.observed_generation != sbi.generation:
+            return PollingResult.doing(data={"waiting_for_reconcile": True, "generation": sbi.generation})
 
-        phase = status.get("phase")
-        message = status.get("message", "")
+        phase = sbi.status.phase
+        message = sbi.status.message or ""
 
         if phase == SandboxInstancePhase.RUNNING.value:
             state = ModelResState(DeployStatus.READY, "Running", message or "SandboxInstance is running")

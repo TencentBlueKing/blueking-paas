@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from paas_wl.bk_app.sandbox_instance.constants import (
     DEFAULT_NETWORK_MODE,
@@ -66,8 +66,8 @@ class SandboxInstanceSpec:
 
     暂不支持 / 不适用的能力:
       - 挂载卷(mounts): SandboxInstance 以 rootfs 整盘为主存储模型, 暂不映射
-        BkApp 的 configMap/secret/persistentStorage 挂载; 
-        TODO: 后续支持多容器后考虑如何通过 emptyDir 支持容器间文件共享 
+        BkApp 的 configMap/secret/persistentStorage 挂载;
+        TODO: 后续支持多容器后考虑如何通过 emptyDir 支持容器间文件共享
       - 多副本 / 自动扩缩容: 一个 SandboxInstance 固定对应一个 MicroVM 实例。
       - 部署钩子(preRelease hook): sandbox 无中间态编排。
       - 健康检查(probes): cube Pod 存活由 sandbox-controller 管理, 不支持自定义探针。
@@ -102,7 +102,7 @@ class SandboxInstanceSpec:
     memory: str
     command: List[str] = field(default_factory=list)
     args: List[str] = field(default_factory=list)
-    rootfs: Optional[RootfsConfig] = None
+    rootfs: RootfsConfig | None = None
     desired_state: DesiredState = DesiredState.RUNNING
     runtime_class_name: str = DEFAULT_RUNTIME_CLASS_NAME
     annotations: Dict[str, str] = field(default_factory=dict)
@@ -117,7 +117,7 @@ class SandboxInstanceSpec:
 
     def build_manifest(self) -> Dict[str, Any]:
         """按业务参数拼装出完整的 SandboxInstance CR manifest(dict)。"""
-        pvc_claim_name = f"{self.name}-pvc"
+        pvc_name = f"{self.name}-pvc"
 
         domain: Dict[str, Any] = {
             "cpu": {"cores": self.cpu_cores},
@@ -145,7 +145,7 @@ class SandboxInstanceSpec:
             pod_template["volumes"] = [
                 {
                     "name": STATE_VOLUME_NAME,
-                    "persistentVolumeClaim": {"claimName": pvc_claim_name},
+                    "persistentVolumeClaim": {"claimName": pvc_name},
                 }
             ]
 
@@ -176,7 +176,7 @@ class SandboxInstanceSpec:
         if self.rootfs:
             spec["volumeClaimTemplates"] = [
                 {
-                    "metadata": {"name": pvc_claim_name},
+                    "metadata": {"name": pvc_name},
                     "spec": {
                         "accessModes": ["ReadWriteOnce"],
                         "resources": {"requests": {"storage": self.rootfs.pvc_size}},
@@ -214,3 +214,79 @@ class SandboxInstanceSpec:
         if self.env_vars:
             container["env"] = list(self.env_vars)
         return container
+
+
+# ---------------------------------------------------------------------------
+# SandboxInstance CR 响应结构(从集群返回的 CR 映射为结构化对象)
+# 完整 CRD 定义见同目录 sbi 文件。
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SandboxInstanceCRStatus:
+    """SandboxInstance CR status 子结构。"""
+
+    phase: str | None = None
+    message: str | None = None
+    observed_generation: int = 0
+    sandbox_ip: str | None = None
+    pod_name: str | None = None
+    node_name: str | None = None
+
+
+@dataclass(frozen=True)
+class SandboxInstanceCRSpec:
+    """SandboxInstance CR spec 子结构。"""
+
+    desired_state: str | None = None
+    runtime_class_name: str | None = None
+    domain: Dict[str, Any] | None = None
+    network: Dict[str, Any] | None = None
+    pod_template: Dict[str, Any] | None = None
+    volume_claim_templates: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SandboxInstanceResource:
+    """从集群返回的 SandboxInstance CR 结构化表示。
+
+    对应 CRD: advanced.bkbcs.tencent.com/v1beta1 SandboxInstance。
+    """
+
+    name: str
+    namespace: str
+    generation: int
+    annotations: Dict[str, str]
+    labels: Dict[str, str]
+    spec: SandboxInstanceCRSpec
+    status: SandboxInstanceCRStatus
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SandboxInstanceResource":
+        """从 ResourceInstance.to_dict() 返回的原始 dict 构建结构化对象。"""
+        metadata = data.get("metadata", {}) or {}
+        spec_raw = data.get("spec", {}) or {}
+        status_raw = data.get("status", {}) or {}
+        return cls(
+            name=metadata.get("name", ""),
+            namespace=metadata.get("namespace", ""),
+            generation=metadata.get("generation", 0),
+            annotations=metadata.get("annotations", {}) or {},
+            labels=metadata.get("labels", {}) or {},
+            spec=SandboxInstanceCRSpec(
+                desired_state=spec_raw.get("desiredState"),
+                runtime_class_name=spec_raw.get("runtimeClassName"),
+                domain=spec_raw.get("domain"),
+                network=spec_raw.get("network"),
+                pod_template=spec_raw.get("podTemplate"),
+                volume_claim_templates=spec_raw.get("volumeClaimTemplates") or [],
+            ),
+            status=SandboxInstanceCRStatus(
+                phase=status_raw.get("phase"),
+                message=status_raw.get("message"),
+                observed_generation=status_raw.get("observedGeneration", 0),
+                sandbox_ip=status_raw.get("sandboxIP"),
+                pod_name=status_raw.get("podName"),
+                node_name=status_raw.get("nodeName"),
+            ),
+        )

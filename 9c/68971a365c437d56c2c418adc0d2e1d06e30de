@@ -1,0 +1,14 @@
+apiserver/paasng/paas_wl/bk_app/sandbox_instance/entities.py
+  h_190e3af8dc7b5f 105,217-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9c68971a365c437d56c2c418adc0d2e1d06e30de",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

@@ -133,6 +133,34 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.post(url, data=data)
         assert response.status_code == expected_status
 
+    @pytest.mark.parametrize(
+        ("name", "expected_status"),
+        [
+            # 合法名称：纯字母数字、含中划线、单字符
+            ("plan1", 201),
+            ("another-plan", 201),
+            ("4c-2g-plan", 201),
+            ("a", 201),
+            # 非法名称：中划线开头/结尾、连续中划线仅在首尾、含非法字符
+            ("-plan", 400),
+            ("plan-", 400),
+            ("-", 400),
+            ("plan_1", 400),
+            ("方案", 400),
+        ],
+    )
+    def test_name_validation(self, plat_mgt_api_client, name, expected_status):
+        """测试方案名称字符校验：支持字母、数字与中划线，且首尾须为字母或数字"""
+        url = reverse("plat_mgt.res_quota_plans.list_create")
+        data = {
+            "name": name,
+            "limits": {"cpu": "4000m", "memory": "2048Mi"},
+            "requests": {"cpu": "1000m", "memory": "512Mi"},
+        }
+
+        response = plat_mgt_api_client.post(url, data=data)
+        assert response.status_code == expected_status
+
     def test_list_quantity_options(self, plat_mgt_api_client):
         url = reverse("plat_mgt.res_quota_plans.list_quantity_options")
         response = plat_mgt_api_client.get(url)

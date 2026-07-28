@@ -89,12 +89,13 @@ class ResQuotaPlanInputSLZ(serializers.Serializer):
     """资源配额方案基础输入序列化器"""
 
     name = serializers.RegexField(
-        regex=r"^[a-zA-Z0-9]+$",
+        # 允许字母、数字与中划线，且须以字母或数字开头和结尾，中划线仅可出现在中间
+        regex=r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$",
         max_length=64,
         validators=[
             UniqueValidator(queryset=ResQuotaPlan.objects.all(), message=_("资源配额方案名称已存在，请使用其他名称"))
         ],
-        error_messages={"invalid": _("名称只能包含数字和英文字符")},
+        error_messages={"invalid": _("名称只能包含数字、英文字符和中划线，且需以字母或数字开头和结尾")},
     )
     limits = ResourceQuotaSLZ()
     requests = ResourceQuotaSLZ()

@@ -32,13 +32,13 @@ from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import delete_sandbox
 
-DEFAULT_CLEANUP_CONCURRENCY = 4
+DEFAULT_CLEANUP_CONCURRENCY = 2
 
 
 def expired_sandbox_queryset(now):
     return (
         Sandbox.objects.filter(expired_at__isnull=False, expired_at__lte=now)
-        .exclude(status__in=[SandboxStatus.DELETED.value, SandboxStatus.ERR_DELETING.value])
+        .exclude(status__in=[SandboxStatus.DELETED.value])
         .select_related("application")
         .order_by("expired_at")
     )

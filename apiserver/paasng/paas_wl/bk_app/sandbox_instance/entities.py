@@ -198,7 +198,7 @@ class SandboxInstanceSpec:
         }
 
     def _build_network(self) -> Dict[str, Any]:
-        network: Dict[str, Any] = {"mode": DEFAULT_NETWORK_MODE}
+        network = {"mode": DEFAULT_NETWORK_MODE}
         return network
 
     def _build_main_container(self) -> Dict[str, Any]:

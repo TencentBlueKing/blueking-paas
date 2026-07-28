@@ -16,7 +16,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from kubernetes.client.exceptions import ApiException
 
@@ -104,7 +104,7 @@ class SandboxInstanceManager:
         # RFC 6902 JSON Patch: 用 add 操作(对已存在的 key 等价于 replace)
         # annotation key 中的 '/' 需转义为 '~1', '~' 转义为 '~0'
         escaped_key = RESTARTED_AT_ANNOTATION.replace("~", "~0").replace("/", "~1")
-        patch_body: List[Dict[str, str]] = [
+        patch_body = [
             {"op": "add", "path": f"/metadata/annotations/{escaped_key}", "value": restarted_at}
         ]
         return self._patch(namespace, name, patch_body, ptype=PatchType.JSON)

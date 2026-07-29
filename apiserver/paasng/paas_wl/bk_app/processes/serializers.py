@@ -341,6 +341,7 @@ class MetricSpecSLZ(serializers.Serializer):
         if not (0 < numeric_value <= 100):
             raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
 
+        attrs["value"] = str(numeric_value)
         return attrs
 
     def to_representation(self, instance):

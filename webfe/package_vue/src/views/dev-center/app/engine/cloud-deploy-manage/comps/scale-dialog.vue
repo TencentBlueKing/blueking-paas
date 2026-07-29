@@ -260,8 +260,9 @@ export default {
         return '85';
       },
       set(val) {
-        const numVal = String(val).replace(/[^0-9]/g, '');
-        if (!numVal) return;
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 1 || num > 100) return;
+        const numVal = String(num);
         if (this.scalingConfig.metrics && this.scalingConfig.metrics.length > 0) {
           this.scalingConfig.metrics[0].value = numVal;
         } else {

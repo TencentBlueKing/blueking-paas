@@ -18,7 +18,7 @@
 # TODO: Add Tests for both controller classes
 import logging
 from dataclasses import replace
-from typing import Optional
+from typing import List, Optional
 
 import cattr
 
@@ -36,7 +36,7 @@ from paas_wl.infras.resources.base.kres import KDeployment
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
-from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, MetricSpec, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
@@ -289,7 +289,7 @@ class CNativeProcController:
             return config
         if self.env.module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
             return config
-        return replace(config, metrics=cattr.structure(DEFAULT_METRICS, list))
+        return replace(config, metrics=cattr.structure(DEFAULT_METRICS, List[MetricSpec]))
 
     def _get_module_process_spec(self, proc_type: str):
         try:

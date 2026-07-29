@@ -994,7 +994,7 @@ export default {
         command: [],
         args: [],
         port: 5000,
-        env_overlay: ENV_OVERLAY,
+        env_overlay: cloneDeep(ENV_OVERLAY),
         services: [],
       },
       formDataBackUp: {
@@ -1004,7 +1004,7 @@ export default {
         command: [],
         args: [],
         port: 5000,
-        env_overlay: ENV_OVERLAY,
+        env_overlay: cloneDeep(ENV_OVERLAY),
         services: [],
       },
       allowCreate: true,
@@ -1191,9 +1191,9 @@ export default {
         return '85';
       },
       set(val) {
-        const numVal = String(val).replace(/[^0-9]/g, '');
-        if (!numVal) return;
-        this._setEnvMetric('stag', numVal);
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 1 || num > 100) return;
+        this._setEnvMetric('stag', String(num));
       },
     },
     prodCpuValue: {
@@ -1203,9 +1203,9 @@ export default {
         return '85';
       },
       set(val) {
-        const numVal = String(val).replace(/[^0-9]/g, '');
-        if (!numVal) return;
-        this._setEnvMetric('prod', numVal);
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 1 || num > 100) return;
+        this._setEnvMetric('prod', String(num));
       },
     },
     appCode() {
@@ -1335,7 +1335,7 @@ export default {
             this.formData.image = this.imageUrl;
           }
           if (!Object.keys(this.formData.env_overlay).length) {
-            this.formData.env_overlay = ENV_OVERLAY;
+            this.formData.env_overlay = cloneDeep(ENV_OVERLAY);
           }
           this.panels = cloneDeep(this.processData);
         }

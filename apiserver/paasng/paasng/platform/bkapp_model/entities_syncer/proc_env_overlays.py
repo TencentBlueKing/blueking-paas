@@ -296,6 +296,7 @@ class AutoscalingSyncerFieldAlgo(SyncerFieldAlgo):
                 "min_replicas": input_p.min_replicas,
                 "max_replicas": input_p.max_replicas,
                 "policy": input_p.policy,
+                "metrics": getattr(input_p, "metrics", []) or [],
             },
         }
 

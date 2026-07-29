@@ -45,6 +45,7 @@ from .serializers import (
     ExecProbeActionSLZ,
     ExposedTypeSLZ,
     HTTPHeaderSLZ,
+    MetricSpecSLZ,
     TCPSocketProbeActionSLZ,
     validate_res_quota_plan,
 )
@@ -132,6 +133,7 @@ class AutoscalingSpecInputSLZ(serializers.Serializer):
     minReplicas = serializers.IntegerField(required=True, min_value=1, source="min_replicas")
     maxReplicas = serializers.IntegerField(required=True, min_value=1, source="max_replicas")
     policy = serializers.ChoiceField(default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices())
+    metrics = serializers.ListField(child=MetricSpecSLZ(), required=False, default=list)
 
 
 class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):

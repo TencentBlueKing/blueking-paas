@@ -97,9 +97,8 @@ class TestConstructPodSpecVolumes:
         assert len(spec["volumes"]) == 1
         vol = spec["volumes"][0]
         assert vol["name"] == SHARED_VOLUME_NAME_IN_POD
-        assert vol["csi"]["driver"] == settings.AGENT_SANDBOX_CFS_DRIVER
-        attrs = vol["csi"]["volumeAttributes"]
-        assert set(attrs.keys()) == {"fsid", "host", "path", "vers"}
+        assert vol["csi"]["driver"] == settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER
+        assert vol["csi"]["volumeAttributes"] == dict(settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES)
 
         mounts = spec["containers"][0]["volumeMounts"]
         assert mounts == [
@@ -145,11 +144,12 @@ class TestConstructPodSpecVolumes:
         assert sub_paths == [f"app/{vid1.replace('-', '')}", f"app/{vid2.replace('-', '')}"]
 
     def test_csi_attributes_follow_settings(self, sbx_app, settings):
-        settings.AGENT_SANDBOX_CFS_DRIVER = "com.example.csi.other"
-        settings.AGENT_SANDBOX_CFS_FSID = "fsid-x"
-        settings.AGENT_SANDBOX_CFS_HOST = "10.0.0.1"
-        settings.AGENT_SANDBOX_CFS_PATH = "/data"
-        settings.AGENT_SANDBOX_CFS_VERS = "4"
+        # 验证 driver 与 volumeAttributes 完全由 settings 透传，可适配任意 CSI 实现（如 NFS）
+        settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER = "nfs.csi.k8s.io"
+        settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES = {
+            "server": "10.0.0.1",
+            "share": "/data",
+        }
 
         vid = _vol_id()
         sbx = _make_sandbox(
@@ -166,12 +166,10 @@ class TestConstructPodSpecVolumes:
         spec = AgentSandboxSerializer._construct_pod_spec(sbx)
         csi = spec["volumes"][0]["csi"]
 
-        assert csi["driver"] == "com.example.csi.other"
+        assert csi["driver"] == "nfs.csi.k8s.io"
         assert csi["volumeAttributes"] == {
-            "fsid": "fsid-x",
-            "host": "10.0.0.1",
-            "path": "/data",
-            "vers": "4",
+            "server": "10.0.0.1",
+            "share": "/data",
         }
 
 

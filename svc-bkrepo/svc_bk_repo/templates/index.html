@@ -111,6 +111,22 @@
 <div class="dev_center_module" id="operations" v-if="uid">
     <template>
         <h4 class="dev_module_title mt50">常用操作</h4>
+
+        {% if auto_expand_enabled %}
+        <!-- 自动扩容状态（平台配置，仅展示） -->
+        <div class="action" style="margin-bottom: 20px;">
+            <div class="action-type">
+                自动扩容
+            </div>
+            <div class="action-detail">
+                <p class="tip mt5" style="font-size: 13px; color: #888; line-height: 24px;">
+                    当仓库使用率达到 {{ auto_expand_threshold }}% 时，系统将自动扩容 {{ expand_step }}，最大不超过 {{ expand_max }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 自助扩容（用户操作） -->
         <div class="action">
             <div class="action-type">
                 自助扩容
@@ -124,10 +140,10 @@
                 </a>
 
                 <p class="tip mt5" style="font-size: 13px; color: #888; line-height: 24px;">
-                    仅当空间占用超过 50% 时可用，每次扩容大小为1GB，最大不超过10GB
+                    仅当空间占用超过 50% 时可用，每次扩容大小为 1GB，最大不超过 10GB
                 </p>
                 <p class="tip mt5" style="font-size: 13px; color: #888; line-height: 24px;">
-                    如有超过10GB的特殊容量需求，请联系<a class="bk-text-button"
+                    如有超过 10GB 的特殊容量需求，请联系<a class="bk-text-button"
                                                 href="wxwork://message/?username=BK助手" target="">蓝鲸助手</a>
                 </p>
             </div>

@@ -84,18 +84,26 @@
               {{ $t('复制审批链接') }}
             </bk-button>
           </span>
-          <a
-            v-else-if="column.prop === 'name' && row.mcp_server?.doc_link"
-            :href="row.mcp_server?.doc_link"
-            target="_blank"
-            class="text-ellipsis"
-            v-dompurify-html="highlight(getDisplayName(row))"
-          ></a>
-          <div
+          <!-- 名称 -->
+          <component
             v-else-if="column.prop === 'name'"
-            class="text-ellipsis"
-            v-dompurify-html="highlight(getDisplayName(row))"
-          ></div>
+            :is="row.mcp_server?.doc_link ? 'a' : 'div'"
+            :href="row.mcp_server?.doc_link"
+            :target="row.mcp_server?.doc_link ? '_blank' : undefined"
+            class="name-cell"
+          >
+            <span
+              class="text-ellipsis"
+              v-dompurify-html="highlight(getDisplayName(row))"
+            ></span>
+            <bk-tag
+              v-if="row.mcp_server?.is_official"
+              theme="success"
+              class="official-tag"
+            >
+              {{ $t('官方') }}
+            </bk-tag>
+          </component>
           <span v-else-if="column.prop === 'description'">
             <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>
           </span>
@@ -259,7 +267,7 @@ export default {
           approved: this.$t('已有权限，无需申请'),
           owned: this.$t('已有权限，无需申请'),
         };
-        const mcpServers = results.map(item => ({
+        const mcpServers = results.map((item) => ({
           ...item,
           applyDisabled: item?.permission?.action !== 'apply',
           applyTips: disabledTips[item?.permission?.status] || '',
@@ -437,8 +445,19 @@ export default {
       border-color: #2caf5e;
     }
   }
-  .text-ellipsis {
-    display: block;
+  .name-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    .text-ellipsis {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+  .official-tag {
+    flex-shrink: 0;
+    margin-left: 8px;
   }
 }
 </style>

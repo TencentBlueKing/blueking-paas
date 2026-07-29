@@ -40,6 +40,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
@@ -95,6 +96,10 @@ class Command(BaseCommand):
         else:
             app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
 
+        # 只有 PAAS_THIRD_APP_INIT_CODES 环境变量中定义的应用 ID 可以忽略 bkauth 409 报错
+        env_init_codes = os.getenv("PAAS_THIRD_APP_INIT_CODES", "")
+        env_init_code_list = env_init_codes.split(",") if env_init_codes else []
+
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
             for app in apps:
@@ -125,6 +130,7 @@ class Command(BaseCommand):
                         app_tenant_info.app_tenant_mode,
                         app_tenant_info.app_tenant_id,
                         app_tenant_info.tenant_id,
+                        env_init_code_list,
                     )
 
     def get_app_secret_key(self, code: str) -> str:
@@ -148,6 +154,7 @@ class Command(BaseCommand):
         app_tenant_mode: str,
         app_tenant_id: str,
         tenant_id: str,
+        env_init_code_list: list,
     ):
         try:
             application, created = Application.objects.update_or_create(
@@ -191,7 +198,17 @@ class Command(BaseCommand):
 
         if created:
             module = create_default_module(application)
-            self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+            try:
+                self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+            except BkOauthClientCodeConflictError:
+                if app_desc.code in env_init_code_list:
+                    logger.warning(
+                        "oauth app(code:%s) already exists in bkAuth, skip create. "
+                        "Note: tenant mode & id of the existing oauth app will not be updated.",
+                        app_desc.code,
+                    )
+                else:
+                    raise
         else:
             module = application.get_default_module()
 

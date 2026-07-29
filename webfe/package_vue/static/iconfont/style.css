@@ -26,6 +26,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-app-store:before {
 	content: "\e286";
 }
+.paasng-export:before {
+	content: "\e2a5";
+}
 .paasng-feature-conversion:before {
 	content: "\e21f";
 }

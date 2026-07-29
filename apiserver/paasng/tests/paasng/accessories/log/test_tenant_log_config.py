@@ -90,9 +90,23 @@ class TestShouldUseSharedBkLogIndex:
     """测试共享索引链路判定"""
 
     @override_settings(ENABLE_SHARED_BK_LOG_INDEX=True)
-    def test_new_collector_uses_global_setting(self, bk_module):
-        """没有历史内置采集项时, 使用全局开关决定是否创建共享索引"""
+    def test_new_ai_agent_app_uses_shared_index(self, bk_module):
+        """没有历史内置采集项时, AI Agent 应用在全局开关开启时使用共享索引"""
+        self._mark_as_ai_agent_app(bk_module)
+
         assert should_use_shared_bk_log_index(bk_module) is True
+
+    @override_settings(ENABLE_SHARED_BK_LOG_INDEX=True)
+    def test_new_non_ai_agent_app_skips_shared_index(self, bk_module):
+        """没有历史内置采集项时, 非 AI Agent 应用即使全局开关开启也不使用共享索引"""
+        assert should_use_shared_bk_log_index(bk_module) is False
+
+    @override_settings(ENABLE_SHARED_BK_LOG_INDEX=False)
+    def test_new_ai_agent_app_respects_disabled_global_setting(self, bk_module):
+        """没有历史内置采集项时, AI Agent 应用在全局开关关闭时不使用共享索引"""
+        self._mark_as_ai_agent_app(bk_module)
+
+        assert should_use_shared_bk_log_index(bk_module) is False
 
     @override_settings(ENABLE_SHARED_BK_LOG_INDEX=False)
     def test_existing_shared_collector_ignores_global_setting(self, bk_module):
@@ -107,6 +121,11 @@ class TestShouldUseSharedBkLogIndex:
         self._create_builtin_collector(bk_module, "foo_app__default__json")
 
         assert should_use_shared_bk_log_index(bk_module) is False
+
+    def _mark_as_ai_agent_app(self, bk_module):
+        """将应用标记为 AI Agent 类型"""
+        bk_module.application.is_ai_agent_app = True
+        bk_module.application.save(update_fields=["is_ai_agent_app"])
 
     def _create_builtin_collector(self, bk_module, name_en: str):
         """创建模块内置采集项"""

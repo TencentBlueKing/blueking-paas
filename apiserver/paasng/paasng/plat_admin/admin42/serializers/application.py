@@ -17,9 +17,9 @@
 
 import logging
 from typing import Any, Dict, List
+from zoneinfo import ZoneInfo
 
 import arrow
-import pytz
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -110,7 +110,7 @@ class EnvDeploySummarySLZ(serializers.Serializer):
         return (
             (
                 arrow.get(obj["latest_deployed_at"])
-                .astimezone(tz=pytz.timezone(settings.TIME_ZONE))
+                .astimezone(tz=ZoneInfo(settings.TIME_ZONE))
                 .strftime("%Y-%m-%d %H:%M:%S")
             )
             if obj.get("latest_deployed_at")

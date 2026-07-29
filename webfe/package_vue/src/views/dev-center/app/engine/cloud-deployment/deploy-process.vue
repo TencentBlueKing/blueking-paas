@@ -382,8 +382,6 @@
                             :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
                             v-model="stagCpuValue"
                             type="number"
-                            :min="1"
-                            :max="100"
                             style="width: 150px"
                           />
                           <div class="mr10 ml10">%</div>
@@ -565,8 +563,6 @@
                             :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
                             v-model="prodCpuValue"
                             type="number"
-                            :min="1"
-                            :max="100"
                             style="width: 150px"
                           />
                           <div class="mr10 ml10">%</div>
@@ -1191,9 +1187,7 @@ export default {
         return '85';
       },
       set(val) {
-        const num = parseInt(val, 10);
-        if (isNaN(num) || num < 1 || num > 100) return;
-        this._setEnvMetric('stag', String(num));
+        this._setEnvMetric('stag', String(val));
       },
     },
     prodCpuValue: {
@@ -1203,9 +1197,7 @@ export default {
         return '85';
       },
       set(val) {
-        const num = parseInt(val, 10);
-        if (isNaN(num) || num < 1 || num > 100) return;
-        this._setEnvMetric('prod', String(num));
+        this._setEnvMetric('prod', String(val));
       },
     },
     appCode() {
@@ -1598,6 +1590,14 @@ export default {
 
     // 处理校验
     async handleValidate() {
+      // CPU 阈值校验
+      for (const env of ['stag', 'prod']) {
+        const rate = Number(this[`${env}CpuValue`]);
+        if (Number.isNaN(rate) || !Number.isInteger(rate) || rate < 1 || rate > 100) {
+          this.$bkMessage({ theme: 'error', message: this.$t('CPU 使用率阈值需为 1-100 的整数') });
+          return false;
+        }
+      }
       try {
         await this.$refs?.formStagEnv?.validate();
         await this.$refs?.formProdEnv?.validate();

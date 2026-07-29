@@ -96,8 +96,6 @@
               :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
               v-model="cpuUtilizationRate"
               type="number"
-              :min="1"
-              :max="100"
               style="width: 150px"
             />
             <div class="mr10 ml10">%</div>
@@ -260,13 +258,10 @@ export default {
         return '85';
       },
       set(val) {
-        const num = parseInt(val, 10);
-        if (isNaN(num) || num < 1 || num > 100) return;
-        const numVal = String(num);
         if (this.scalingConfig.metrics && this.scalingConfig.metrics.length > 0) {
-          this.scalingConfig.metrics[0].value = numVal;
+          this.scalingConfig.metrics[0].value = String(val);
         } else {
-          this.scalingConfig.metrics = [{ type: 'Resource', metric: 'cpuUtilization', value: numVal }];
+          this.scalingConfig.metrics = [{ type: 'Resource', metric: 'cpuUtilization', value: String(val) }];
         }
       },
     },
@@ -289,6 +284,11 @@ export default {
   methods: {
     // 校验
     handleConfirm() {
+      const rate = Number(this.cpuUtilizationRate);
+      if (Number.isNaN(rate) || !Number.isInteger(rate) || rate < 1 || rate > 100) {
+        this.$bkMessage({ theme: 'error', message: this.$t('CPU 使用率阈值需为 1-100 的整数') });
+        return;
+      }
       this.isLoading = true;
       setTimeout(async () => {
         try {

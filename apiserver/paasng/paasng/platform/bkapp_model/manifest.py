@@ -96,8 +96,7 @@ logger = logging.getLogger(__name__)
 def _filter_scaling_metrics(module: Module, metrics: List[Dict]) -> List[Dict]:
     """按特性开关过滤扩缩容指标.
 
-    应用未开启 CUSTOM_AUTOSCALING_THRESHOLD 时置空 metrics (operator 侧将回退到默认指标);
-    数据库中始终保留用户配置的原始值 (用户意图), 仅在构建下发到集群的 manifest 时过滤.
+    应用未开启 CUSTOM_AUTOSCALING_THRESHOLD 时置空 metrics (operator 侧将回退到默认指标).
     """
     if metrics and not module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
         return []

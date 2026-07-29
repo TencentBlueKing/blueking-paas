@@ -317,6 +317,7 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
             _("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
         ),
         sys_var("MULTI_TENANT_MODE", multi_tenant_mode, _("是否开启多租户模式")),
+        sys_var("DB_TYPE", settings.BKPAAS_DB_TYPE, _("蓝鲸PaaS平台数据库类型")),
     ]
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
     system_envs_with_prefix.extend(

@@ -893,7 +893,7 @@ BK_IAM_V3_APP_CODE = "bk_iam"
 # 蓝鲸根域名
 BK_DOMAIN = settings.get("BK_DOMAIN", "")
 # 蓝鲸 PaaS 平台数据库类型（可通过 helm values 配置相关值）
-BKPAAS_DB_TYPE = settings.get("BKPAAS_DB_TYPE", "")
+BKPAAS_DB_TYPE = settings.get("BKPAAS_DB_TYPE", "mysql")
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get("BK_CC_URL", "")
 BK_JOB_URL = settings.get("BK_JOB_URL", "")

@@ -364,7 +364,7 @@ msgstr "AI Agent App"
 
 #: paas_wl/infras/cluster/constants.py:39
 msgid "需要隔离部署的 AI Agent 应用"
-msgstr "AI Agent apps requiring isolated deployment"
+msgstr "AI Agent app that requires isolated deployment"
 
 #: paas_wl/infras/cluster/constants.py:49
 msgid "允许挂载日志到主机"
@@ -3386,57 +3386,61 @@ msgstr ""
 msgid "是否开启多租户模式"
 msgstr "Is multi-tenant mode enabled"
 
-#: paasng/platform/engine/configurations/config_var.py:325
+#: paasng/platform/engine/configurations/config_var.py:320
+msgid "蓝鲸PaaS平台数据库类型"
+msgstr "BlueKing PaaS platform database type"
+
+#: paasng/platform/engine/configurations/config_var.py:326
 msgid "网关 API 访问地址模板"
 msgstr "API Gateway API access URL template"
 
-#: paasng/platform/engine/configurations/config_var.py:328
+#: paasng/platform/engine/configurations/config_var.py:329
 msgid "组件 API 访问地址"
 msgstr "Component API access URL"
 
-#: paasng/platform/engine/configurations/config_var.py:330
+#: paasng/platform/engine/configurations/config_var.py:331
 msgid "PaaS2.0 开发者中心地址"
 msgstr "PaaS 2.0 developer center URL"
 
-#: paasng/platform/engine/configurations/config_var.py:404
+#: paasng/platform/engine/configurations/config_var.py:405
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/platform/engine/configurations/config_var.py:405
+#: paasng/platform/engine/configurations/config_var.py:406
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/platform/engine/configurations/config_var.py:406
+#: paasng/platform/engine/configurations/config_var.py:407
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/platform/engine/configurations/config_var.py:407
+#: paasng/platform/engine/configurations/config_var.py:408
 msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
-#: paasng/platform/engine/configurations/config_var.py:408
+#: paasng/platform/engine/configurations/config_var.py:409
 msgid "应用日志文件存放路径"
 msgstr "Application log file storage path"
 
-#: paasng/platform/engine/configurations/config_var.py:409
+#: paasng/platform/engine/configurations/config_var.py:410
 msgid "目标端口号，值为 5000"
 msgstr "Destination port number, the value is 5000"
 
-#: paasng/platform/engine/configurations/config_var.py:415
+#: paasng/platform/engine/configurations/config_var.py:416
 msgid "[不推荐使用] 内部变量，不推荐使用"
 msgstr "[Deprecated] Internal variable, not recommended for use"
 
-#: paasng/platform/engine/configurations/config_var.py:419
+#: paasng/platform/engine/configurations/config_var.py:420
 msgid "日志文件推荐使用的前缀"
 msgstr "Recommended prefix for log files"
 
-#: paasng/platform/engine/configurations/config_var.py:421
+#: paasng/platform/engine/configurations/config_var.py:422
 msgid "[不推荐使用] 当前进程类型"
 msgstr "[Deprecated] Current process type"
 
-#: paasng/platform/engine/configurations/config_var.py:425
+#: paasng/platform/engine/configurations/config_var.py:426
 msgid "[不推荐使用] 基于规则拼接的应用访问子路径，仅适合向前兼容时使用"
 msgstr ""
 "[Deprecated] Rule-based application access sub-path, suitable for backward "

@@ -17,8 +17,10 @@
 
 # TODO: Add Tests for both controller classes
 import logging
-from typing import Optional
+from dataclasses import replace
+from typing import List, Optional
 
+import cattr
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
@@ -34,7 +36,8 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KDeployment
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
-from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, MetricSpec, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
@@ -227,7 +230,7 @@ class CNativeProcController:
             is True, it's required when no old autoscaling config can be found in the database.
         """
         if autoscaling:
-            scaling_config = self._enforce_metrics_policy(scaling_config)
+            scaling_config = self._resolve_metrics(proc_type, scaling_config)
             self.scale_auto(proc_type, autoscaling, scaling_config)
         else:
             self.disable_autoscaling_if_enabled(proc_type)
@@ -281,13 +284,23 @@ class CNativeProcController:
             raise ProcessNotFound(str(e))
         return
 
-    def _enforce_metrics_policy(self, config: Optional[AutoscalingConfig]) -> Optional[AutoscalingConfig]:
-        """特性开关关闭时, 拒绝设置自定义 metrics; 存量数据不改动."""
-        if not config or not config.metrics:
+    def _resolve_metrics(self, proc_type: str, config: Optional[AutoscalingConfig]) -> Optional[AutoscalingConfig]:
+        """解析 metrics: 拒绝非法请求 + 从 DB 补全空值."""
+        if not config:
             return config
-        if self.env.module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
+        # 用户显式传了自定义 metrics -> 特性开关检查
+        if config.metrics:
+            if not self.env.module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
+                raise ValueError(_("当前应用未开启自定义自动扩缩容阈值特性, 无法设置 metrics"))
             return config
-        raise ValueError(_("当前应用未开启自定义自动扩缩容阈值特性, 无法设置 metrics"))
+        # 未传 metrics -> 从 DB 存量补全, DB 也没有则用默认值
+        try:
+            proc_spec = self._get_module_process_spec(proc_type)
+            db_conf = proc_spec.get_scaling_config(self.env.environment)
+        except ProcessNotFound:
+            db_conf = None
+        metrics = cattr.structure(db_conf.metrics if db_conf else DEFAULT_METRICS, List[MetricSpec])
+        return replace(config, metrics=metrics)
 
     def _get_module_process_spec(self, proc_type: str):
         try:

@@ -321,16 +321,21 @@ export default {
       }
 
       const { processType } = this.processPlan;
+      const scalingConfig = {
+        min_replicas: this.scalingConfig.minReplicas,
+        max_replicas: this.scalingConfig.maxReplicas,
+        metrics: this.scalingConfig.metrics,
+      };
+      // 未开启自定义阈值特性时, 不提交自定义 metrics
+      if (!this.curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD) {
+        delete scalingConfig.metrics;
+      }
       const planForm = {
         process_type: processType,
         operate_type: 'scale',
         target_replicas: this.scalingConfig.targetReplicas,
         autoscaling: this.autoscaling,
-        scaling_config: {
-          min_replicas: this.scalingConfig.minReplicas,
-          max_replicas: this.scalingConfig.maxReplicas,
-          metrics: this.scalingConfig.metrics,
-        },
+        scaling_config: scalingConfig,
       };
 
       try {

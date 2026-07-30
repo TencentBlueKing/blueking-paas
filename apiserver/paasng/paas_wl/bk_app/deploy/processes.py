@@ -17,10 +17,9 @@
 
 # TODO: Add Tests for both controller classes
 import logging
-from dataclasses import replace
-from typing import List, Optional
+from typing import Optional
 
-import cattr
+from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
@@ -35,8 +34,7 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KDeployment
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
-from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
-from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, MetricSpec, ScalingObjectRef
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
@@ -284,12 +282,12 @@ class CNativeProcController:
         return
 
     def _enforce_metrics_policy(self, config: Optional[AutoscalingConfig]) -> Optional[AutoscalingConfig]:
-        """特性开关关闭时, 将自定义 metrics 替换为 DEFAULT_METRICS."""
+        """特性开关关闭时, 拒绝设置自定义 metrics; 存量数据不改动."""
         if not config or not config.metrics:
             return config
         if self.env.module.application.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
             return config
-        return replace(config, metrics=cattr.structure(DEFAULT_METRICS, List[MetricSpec]))
+        raise ValueError(_("当前应用未开启自定义自动扩缩容阈值特性, 无法设置 metrics"))
 
     def _get_module_process_spec(self, proc_type: str):
         try:

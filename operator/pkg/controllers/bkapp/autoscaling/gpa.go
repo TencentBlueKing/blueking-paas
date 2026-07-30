@@ -21,6 +21,7 @@ package autoscaling
 import (
 	"strconv"
 
+	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,7 +33,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/health"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
-	"github.com/samber/lo"
 )
 
 // GetWantedGPAs 根据应用生成对应的 GPA(general-pod-autoscaler) 配置列表

@@ -22,12 +22,13 @@ from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
+from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.models import update_app_resource
-from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -196,7 +197,6 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
-                    # 特性开关关闭时, 将传入的 metrics 替换为默认值
                     overlay = self._filter_scaling_metrics(app, proc_env_overlay)
                     ProcessSpecEnvOverlay.objects.save_by_module(module, proc_spec["name"], env_name, **overlay)
             if metric := get_items(proc_spec, "monitoring.metric"):
@@ -209,14 +209,13 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @staticmethod
     def _filter_scaling_metrics(app: Application, env_overlay: dict) -> dict:
-        """特性开关关闭时, 将 scaling_config 中传入的 metrics 替换为默认值."""
+        """特性开关关闭时, 拒绝设置自定义 metrics; 存量数据不改动."""
         scaling_config = env_overlay.get("scaling_config")
         if not scaling_config or not scaling_config.get("metrics"):
             return env_overlay
         if app.feature_flag.has_feature(AppFeatureFlag.CUSTOM_AUTOSCALING_THRESHOLD):
             return env_overlay
-        env_overlay["scaling_config"]["metrics"] = DEFAULT_METRICS
-        return env_overlay
+        raise ValidationError(_("当前应用未开启自定义自动扩缩容阈值特性, 无法设置 metrics"))
 
 
 class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

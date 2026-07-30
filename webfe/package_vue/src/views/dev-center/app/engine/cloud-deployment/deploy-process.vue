@@ -1654,12 +1654,21 @@ export default {
 
     // 保存进程配置信息
     async saveAppProcessInfo() {
+      const procSpecs = cloneDeep(this.processData);
+      // 未开启自定义阈值特性时，移除 scaling_config 中的 metrics
+      if (!this.curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD) {
+        procSpecs.forEach((p) => {
+          for (const env of ['stag', 'prod']) {
+            delete p.env_overlay?.[env]?.scaling_config?.metrics;
+          }
+        });
+      }
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           params: {
-            proc_specs: [...this.processData],
+            proc_specs: procSpecs,
           },
         });
         this.$refs.entryChangeDialog?.handleAfterLeave();

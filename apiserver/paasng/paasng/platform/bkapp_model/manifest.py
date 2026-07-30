@@ -82,6 +82,7 @@ from paasng.platform.bkapp_model.utils import (
     MergeStrategy,
     merge_env_vars,
     merge_env_vars_overlay,
+    override_env_vars_overlay,
 )
 from paasng.platform.engine.configurations.config_var import EnvVarSource, UnifiedEnvVarsReader
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
@@ -345,15 +346,18 @@ class EnvVarsManifestConstructor(ManifestConstructor):
 
     @staticmethod
     def _add_encryption_metadata(
-        env_variables: list[crd.EnvVarOverlay], environments: list[ModuleEnvironment]
+        env_variables: list[crd.EnvVarOverlay],
+        environments: list[ModuleEnvironment],
+        configuration_env_variables: list[crd.EnvVar] | None = None,
     ) -> list[crd.EnvVarOverlay]:
         """Add metadata only for values that remain encrypted after all overrides."""
+        default_values = {var.name: var.value for var in configuration_env_variables or []}
         for environment in environments:
-            encrypted_keys = {
-                var.name
-                for var in env_variables
-                if var.envName == environment.environment and is_encrypted_value(var.value)
-            }
+            effective_values = default_values.copy()
+            effective_values.update(
+                {var.name: var.value for var in env_variables if var.envName == environment.environment}
+            )
+            encrypted_keys = {name for name, value in effective_values.items() if is_encrypted_value(value)}
             metadata = get_runtime_encryption_env_vars(environment, encrypted_keys)
             env_variables = merge_env_vars_overlay(
                 env_variables,
@@ -419,9 +423,9 @@ class EnvVarsManifestConstructor(ManifestConstructor):
         overlay_vars = merge_env_vars_overlay(
             global_sensitive_vars_overlay, scoped_preset_vars, strategy=MergeStrategy.OVERRIDE
         )
-        overlay.envVariables = self._add_encryption_metadata(
-            merge_env_vars_overlay(overlay_vars, scoped_user_vars, strategy=MergeStrategy.OVERRIDE), environments
-        )
+        # Runtime encryption metadata is injected by apply_builtin_env_vars()
+        # only when constructing the deployable resource.
+        overlay.envVariables = merge_env_vars_overlay(overlay_vars, scoped_user_vars, strategy=MergeStrategy.OVERRIDE)
 
 
 class HooksManifestConstructor(ManifestConstructor):
@@ -703,10 +707,9 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
         if not overlay:
             overlay = model_res.spec.envOverlay = crd.EnvOverlay(envVariables=[])
         overlay.envVariables = EnvVarsManifestConstructor._add_encryption_metadata(
-            merge_env_vars_overlay(
-                overlay.envVariables or [], builtin_env_vars_overlay, strategy=MergeStrategy.OVERRIDE
-            ),
+            override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay),
             [env],
+            configuration_env_variables=model_res.spec.configuration.env,
         )
 
 

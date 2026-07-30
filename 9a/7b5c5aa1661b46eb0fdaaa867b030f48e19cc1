@@ -1,0 +1,14 @@
+apiserver/paasng/paasng/platform/sandbox_instance/sidecar_image/serializers.py
+  h_190e3af8dc7b5f 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9a7b5c5aa1661b46eb0fdaaa867b030f48e19cc1",
+  "prompts": {},
+  "humans": {
+    "h_190e3af8dc7b5f": {
+      "author": "ZUP779 <zup779@gmail.com>"
+    }
+  }
+}

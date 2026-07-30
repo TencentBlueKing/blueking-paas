@@ -40,7 +40,6 @@ def enable_app_switch(bk_app):
 
 @pytest.fixture()
 def disable_app_switch(bk_app):
-    # 测试环境全局开关默认开启，新建应用会继承为 True，需显式关闭以构造「应用级关闭」场景
     ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, False, bk_app)
 
 

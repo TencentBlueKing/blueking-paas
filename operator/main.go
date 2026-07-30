@@ -46,6 +46,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	sandboxv1beta1 "bk.tencent.com/paas-app-operator/api/sandbox/v1beta1"
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
@@ -75,6 +76,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(sandboxv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

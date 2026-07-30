@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +44,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	sandboxv1beta1 "bk.tencent.com/paas-app-operator/api/sandbox/v1beta1"
 	"bk.tencent.com/paas-app-operator/controllers/base"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	bkappctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp"
@@ -77,6 +79,8 @@ type BkAppReconciler struct {
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get
 //+kubebuilder:rbac:groups=autoscaling.tkex.tencent.com,resources=generalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=autoscaling.tkex.tencent.com,resources=generalpodautoscalers/status,verbs=get
+//+kubebuilder:rbac:groups=advanced.bkbcs.tencent.com,resources=sandboxinstances,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=advanced.bkbcs.tencent.com,resources=sandboxinstances/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -145,6 +149,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 		// Other reconcilers related with workloads
 		processes.NewDeploymentReconciler(r.client),
+		processes.NewSandboxInstanceReconciler(r.client),
 		processes.NewServiceReconciler(r.client),
 		autoscalingctrl.NewReconciler(r.client),
 	} {
@@ -214,6 +219,13 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(bkappctrl.NewHookSuccessPredicate(),
 			bkappctrl.NewHookFailedPredicate())))
 
+	// Only watch SandboxInstance if the CRD is installed in the cluster
+	if isCRDAvailable(mgr, sandboxv1beta1.GroupVersion.WithKind("SandboxInstance")) {
+		controllerBuilder = controllerBuilder.Owns(&sandboxv1beta1.SandboxInstance{})
+	} else {
+		logf.FromContext(ctx).Info("SandboxInstance CRD not found, skipping watch")
+	}
+
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(
 			ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
@@ -224,6 +236,12 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	}
 
 	return controllerBuilder.Complete(r)
+}
+
+// isCRDAvailable checks whether a given GVK is registered in the cluster's API server.
+func isCRDAvailable(mgr ctrl.Manager, gvk schema.GroupVersionKind) bool {
+	_, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	return err == nil
 }
 
 func getOwnerNames(rawObj client.Object) []string {

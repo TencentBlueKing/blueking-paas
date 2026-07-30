@@ -129,7 +129,7 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
     仅可通过直接链接访问，支持成员管理（添加/删除管理员）。
     """
 
-    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境（如 gvisor 集群）")
+    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境")
     is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
     # 以下参数为选填，不传则走原有固定模板包流程（向后兼容）
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))

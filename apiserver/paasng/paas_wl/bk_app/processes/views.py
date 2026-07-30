@@ -74,7 +74,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationTarget
 from paasng.misc.audit.service import add_app_audit_record
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model import fieldmgr
@@ -260,7 +260,11 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             deployment_obj = get_object_or_404(Deployment, id=deployment_id)
             bkapp_release_id = deployment_obj.bkapp_release_id
 
-        processes_status = ProcInstByEnvListWatcher(application, environment).list()
+        # 隔离型 AI Agent 由 SandboxInstance CR 直接渲染 Pod, 不存在 BkApp 对应的 Deployment。
+        if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
+            processes_status = ProcInstByEnvListWatcher(application, environment).list_instances_only()
+        else:
+            processes_status = ProcInstByEnvListWatcher(application, environment).list()
 
         for process in processes_status.processes:
             module_name = process.app.module_name

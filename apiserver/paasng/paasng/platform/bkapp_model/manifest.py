@@ -62,9 +62,13 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
-from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.constants import AppFeatureFlag, DeployPolicy
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
+from paasng.platform.bkapp_model.constants import (
+    PORT_PLACEHOLDER,
+    WORKLOAD_TYPE_DEPLOYMENT,
+    WORKLOAD_TYPE_SANDBOX_INSTANCE,
+)
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -653,6 +657,13 @@ def get_bkapp_resource_for_deploy(
     mgr = ModuleRuntimeManager(env.module)
     if mgr.build_config.build_method == RuntimeType.BUILDPACK:
         _update_cmd_args_from_wl_build(model_res, WlBuild.objects.get(uuid=deployment.build_id))
+
+    # 显式声明 workloadType，隔离型 AI Agent 应用使用 SandboxInstance，其余使用 Deployment
+    application = env.application
+    if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
+        model_res.spec.workloadType = WORKLOAD_TYPE_SANDBOX_INSTANCE
+    else:
+        model_res.spec.workloadType = WORKLOAD_TYPE_DEPLOYMENT
 
     # TODO: Missing parts: "build"
     return model_res

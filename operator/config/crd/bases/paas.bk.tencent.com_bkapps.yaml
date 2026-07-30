@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.20.0
   name: bkapps.paas.bk.tencent.com
 spec:
   group: paas.bk.tencent.com
@@ -460,10 +460,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -613,10 +613,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -766,10 +766,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -906,8 +906,6 @@ spec:
                               The exposed type of the service. If not specified(or specified as null), the service can only be accessed
                               within the cluster, not from outside. however, it is primarily informational here,
                               the real control logic is in paas "apiserver".
-                              TODO implement control logic in operator?
-
 
                               ExposedType can be one of the following:
                               - {Name: ExposedTypeNameBkHTTP} exposed by DomainGroupMapping. Backend protocol is http.
@@ -929,7 +927,6 @@ spec:
                             format: int32
                             type: integer
                           protocol:
-                            default: TCP
                             description: The protocol of the service. Default value
                               is TCP if not specified.
                             type: string
@@ -1077,16 +1074,8 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -1127,12 +1116,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -1813,10 +1797,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -1966,10 +1950,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -2119,10 +2103,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -2259,8 +2243,6 @@ spec:
                               The exposed type of the service. If not specified(or specified as null), the service can only be accessed
                               within the cluster, not from outside. however, it is primarily informational here,
                               the real control logic is in paas "apiserver".
-                              TODO implement control logic in operator?
-
 
                               ExposedType can be one of the following:
                               - {Name: ExposedTypeNameBkHTTP} exposed by DomainGroupMapping. Backend protocol is http.
@@ -2282,7 +2264,6 @@ spec:
                             format: int32
                             type: integer
                           protocol:
-                            default: TCP
                             description: The protocol of the service. Default value
                               is TCP if not specified.
                             type: string
@@ -2381,6 +2362,15 @@ spec:
                       type: object
                     type: array
                 type: object
+              workloadType:
+                description: |-
+                  WorkloadType specifies the kind of workload the operator should reconcile from this BkApp.
+                  "deployment" (default): reconcile into a standard Deployment.
+                  "sandboxInstance": reconcile into a SandboxInstance CR (cube MicroVM).
+                enum:
+                - deployment
+                - sandboxInstance
+                type: string
             required:
             - build
             - configuration
@@ -2451,16 +2441,8 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -2501,12 +2483,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

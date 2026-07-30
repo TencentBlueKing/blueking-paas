@@ -20,6 +20,10 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 # 为方便用户填写而设计的端口占位符, 并非实际的 shell 环境变量. 在转换成 BkApp 模型时会被平台替换成预设值 settings.CONTAINER_PORT
 PORT_PLACEHOLDER = "${PORT}"
 
+# BkApp workloadType 常量，需与 operator 侧 paasv1alpha2.WorkloadType* 保持一致
+WORKLOAD_TYPE_DEPLOYMENT = "deployment"
+WORKLOAD_TYPE_SANDBOX_INSTANCE = "sandboxInstance"
+
 # Maximum resource limitations for each process
 # The same with the limitations in the Operator.
 MAX_PROC_CPU = "48000m"

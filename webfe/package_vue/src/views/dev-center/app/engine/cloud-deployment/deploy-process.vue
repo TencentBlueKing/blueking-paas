@@ -379,10 +379,12 @@
                           </bk-select>
                           <div class="mr10 ml10">=</div>
                           <bk-input
-                            disabled
-                            v-model="cpuValue"
+                            :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
+                            v-model="stagCpuValue"
+                            type="number"
                             style="width: 150px"
                           />
+                          <div class="mr10 ml10">%</div>
                           <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
@@ -558,10 +560,12 @@
                           </bk-select>
                           <div class="mr10 ml10">=</div>
                           <bk-input
-                            disabled
-                            v-model="cpuValue"
+                            :disabled="!curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD"
+                            v-model="prodCpuValue"
+                            type="number"
                             style="width: 150px"
                           />
+                          <div class="mr10 ml10">%</div>
                           <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
@@ -986,7 +990,7 @@ export default {
         command: [],
         args: [],
         port: 5000,
-        env_overlay: ENV_OVERLAY,
+        env_overlay: cloneDeep(ENV_OVERLAY),
         services: [],
       },
       formDataBackUp: {
@@ -996,7 +1000,7 @@ export default {
         command: [],
         args: [],
         port: 5000,
-        env_overlay: ENV_OVERLAY,
+        env_overlay: cloneDeep(ENV_OVERLAY),
         services: [],
       },
       allowCreate: true,
@@ -1150,7 +1154,6 @@ export default {
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
       cpuLabel: 'CPU 使用率',
-      cpuValue: '85%',
       autoScalDisableConfig: {
         prod: {},
         stag: {},
@@ -1176,7 +1179,27 @@ export default {
     };
   },
   computed: {
-    ...mapState(['localLanguage', 'curAppModule']),
+    ...mapState(['localLanguage', 'curAppModule', 'curAppInfo']),
+    stagCpuValue: {
+      get() {
+        const metrics = this.formData?.env_overlay?.stag?.scaling_config?.metrics;
+        if (metrics && metrics.length > 0) return String(metrics[0].value);
+        return '85';
+      },
+      set(val) {
+        this._setEnvMetric('stag', String(val));
+      },
+    },
+    prodCpuValue: {
+      get() {
+        const metrics = this.formData?.env_overlay?.prod?.scaling_config?.metrics;
+        if (metrics && metrics.length > 0) return String(metrics[0].value);
+        return '85';
+      },
+      set(val) {
+        this._setEnvMetric('prod', String(val));
+      },
+    },
     appCode() {
       return this.$route.params.id;
     },
@@ -1304,7 +1327,7 @@ export default {
             this.formData.image = this.imageUrl;
           }
           if (!Object.keys(this.formData.env_overlay).length) {
-            this.formData.env_overlay = ENV_OVERLAY;
+            this.formData.env_overlay = cloneDeep(ENV_OVERLAY);
           }
           this.panels = cloneDeep(this.processData);
         }
@@ -1341,6 +1364,15 @@ export default {
     },
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
+    },
+    _setEnvMetric(env, numVal) {
+      const config = this.formData?.env_overlay?.[env]?.scaling_config;
+      if (!config) return;
+      if (!config.metrics || config.metrics.length === 0) {
+        this.$set(config, 'metrics', [{ type: 'Resource', metric: 'cpuUtilization', value: numVal }]);
+      } else {
+        this.$set(config.metrics[0], 'value', numVal);
+      }
     },
 
     // 启动命令复制
@@ -1558,6 +1590,14 @@ export default {
 
     // 处理校验
     async handleValidate() {
+      // CPU 阈值校验
+      for (const env of ['stag', 'prod']) {
+        const rate = Number(this[`${env}CpuValue`]);
+        if (Number.isNaN(rate) || !Number.isInteger(rate) || rate < 1 || rate > 100) {
+          this.$bkMessage({ theme: 'error', message: this.$t('CPU 使用率阈值需为 1-100 的整数') });
+          return false;
+        }
+      }
       try {
         await this.$refs?.formStagEnv?.validate();
         await this.$refs?.formProdEnv?.validate();
@@ -1614,12 +1654,21 @@ export default {
 
     // 保存进程配置信息
     async saveAppProcessInfo() {
+      const procSpecs = cloneDeep(this.processData);
+      // 未开启自定义阈值特性时，移除 scaling_config 中的 metrics
+      if (!this.curAppInfo.feature.CUSTOM_AUTOSCALING_THRESHOLD) {
+        procSpecs.forEach((p) => {
+          for (const env of ['stag', 'prod']) {
+            delete p.env_overlay?.[env]?.scaling_config?.metrics;
+          }
+        });
+      }
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           params: {
-            proc_specs: [...this.processData],
+            proc_specs: procSpecs,
           },
         });
         this.$refs.entryChangeDialog?.handleAfterLeave();
@@ -1631,7 +1680,7 @@ export default {
         this.$store.commit('cloudApi/updatePageEdit', false);
         this.init();
       } catch (error) {
-        this.catchErrorHandler(e);
+        this.catchErrorHandler(error);
       }
     },
 

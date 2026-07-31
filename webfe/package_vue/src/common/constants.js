@@ -177,7 +177,7 @@ export const ENV_OVERLAY = {
         {
           type: 'Resource',
           metric: 'cpuUtilization',
-          value: '85%',
+          value: '85',
         },
       ],
       policy: 'default',
@@ -195,7 +195,7 @@ export const ENV_OVERLAY = {
         {
           type: 'Resource',
           metric: 'cpuUtilization',
-          value: '85%',
+          value: '85',
         },
       ],
       policy: 'default',

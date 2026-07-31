@@ -43,6 +43,7 @@ class TestGetDefaultFeatureFlags:
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
                     "ENCRYPTED_SECRET_ENV_INJECTION": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -60,6 +61,7 @@ class TestGetDefaultFeatureFlags:
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
                     "ENCRYPTED_SECRET_ENV_INJECTION": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -77,6 +79,7 @@ class TestGetDefaultFeatureFlags:
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
                     "ENCRYPTED_SECRET_ENV_INJECTION": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -94,6 +97,7 @@ class TestGetDefaultFeatureFlags:
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
                     "ENCRYPTED_SECRET_ENV_INJECTION": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
             (
@@ -118,6 +122,7 @@ class TestGetDefaultFeatureFlags:
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": True,
                     "ENCRYPTED_SECRET_ENV_INJECTION": False,
+                    "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
         ],

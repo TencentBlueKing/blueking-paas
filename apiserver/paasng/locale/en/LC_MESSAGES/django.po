@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-28 09:21+0800\n"
+"POT-Creation-Date: 2026-07-30 11:04+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -274,6 +274,11 @@ msgstr ""
 "The current application does not support persistent storage functionality. "
 "Please contact the administrator."
 
+#: paas_wl/bk_app/deploy/processes.py:290
+#: paasng/platform/bkapp_model/views.py:218
+msgid "当前应用未开启自定义自动扩缩容阈值特性, 无法设置 metrics"
+msgstr "Auto-scaling threshold customization is not enabled for this app; metrics cannot be set."
+
 #: paas_wl/bk_app/processes/controllers.py:50
 msgid "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
 msgstr ""
@@ -284,44 +289,62 @@ msgstr ""
 msgid "资源指标值/百分比"
 msgstr "Resource metric value/percentage"
 
-#: paas_wl/bk_app/processes/serializers.py:329
+#: paas_wl/bk_app/processes/serializers.py:333
+msgid "当前仅支持 Resource 类型指标, 不支持的 type: {}"
+msgstr "Only Resource type metrics are supported, unsupported type: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:335
+msgid "当前不支持该指标类型: {}"
+msgstr "This metric type is not supported: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:340
+msgid "使用率类型指标值必须是整数字符串, 如 85"
+msgstr "Utilization-type metric value must be an integer string, e.g. 85"
+
+#: paas_wl/bk_app/processes/serializers.py:342
+msgid "使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}"
+msgstr ""
+"Utilization-type metric value must be within the range (0, 100], current "
+"value: {}"
+
+#: paas_wl/bk_app/processes/serializers.py:358
 msgid "最小副本数"
 msgstr "Minimum replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:330
+#: paas_wl/bk_app/processes/serializers.py:359
 msgid "最大副本数"
 msgstr "Maximum replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:331
+#: paas_wl/bk_app/processes/serializers.py:360
 msgid "扩缩容策略"
 msgstr "Scaling policy"
 
-#: paas_wl/bk_app/processes/serializers.py:332
+#: paas_wl/bk_app/processes/serializers.py:361
 msgid "扩缩容指标"
 msgstr "Scaling indicators"
 
-#: paas_wl/bk_app/processes/serializers.py:374
+#: paas_wl/bk_app/processes/serializers.py:403
 msgid "目标进程副本数"
 msgstr "Target number of process replicas"
 
-#: paas_wl/bk_app/processes/serializers.py:375
+#: paas_wl/bk_app/processes/serializers.py:404
 msgid "是否开启自动扩缩容"
 msgstr "Auto-scaling enabled"
 
-#: paas_wl/bk_app/processes/serializers.py:376
+#: paas_wl/bk_app/processes/serializers.py:405
 msgid "进程扩缩容配置"
 msgstr "Process scaling settings"
 
-#: paas_wl/bk_app/processes/serializers.py:382
+#: paas_wl/bk_app/processes/serializers.py:411
 msgid "当启用自动扩缩容时，必须提供有效的 scaling_config"
 msgstr "When auto-scaling is enabled, a valid scaling_config must be provided"
 
-#: paas_wl/bk_app/processes/serializers.py:384
+#: paas_wl/bk_app/processes/serializers.py:413
 msgid "当操作类型为扩缩容时，必须提供有效的 target_replicas"
 msgstr ""
 "When the operation type is scaling, valid target_replicas must be provided"
 
-#: paas_wl/bk_app/processes/serializers.py:394
+#: paas_wl/bk_app/processes/serializers.py:423
 msgid "scaling_config 配置格式有误：{}"
 msgstr "Incorrect format for scaling_config: {}"
 
@@ -2760,7 +2783,7 @@ msgid "该实例已被分配，无法删除"
 msgstr "This instance has been allocated, cannot be deleted"
 
 #: paasng/plat_mgt/res_quota_plan/serializers.py:65
-#: paasng/plat_mgt/res_quota_plan/serializers.py:136
+#: paasng/plat_mgt/res_quota_plan/serializers.py:137
 msgid "格式不正确, 必须为正整数加 'm'"
 msgstr "Invalid format: must be a positive integer followed by 'm'"
 
@@ -2771,23 +2794,25 @@ msgid "不能超过最大值 %s"
 msgstr "Cannot exceed maximum value %s"
 
 #: paasng/plat_mgt/res_quota_plan/serializers.py:79
-#: paasng/plat_mgt/res_quota_plan/serializers.py:124
+#: paasng/plat_mgt/res_quota_plan/serializers.py:125
 msgid "格式不正确, 必须为正整数加 'Mi' 或 'Gi'"
 msgstr "Invalid format: must be a positive integer followed by 'Mi' or 'Gi'"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:95
+#: paasng/plat_mgt/res_quota_plan/serializers.py:96
 msgid "资源配额方案名称已存在，请使用其他名称"
 msgstr "Resource quota plan name already exists, please use a different name."
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:97
-msgid "名称只能包含数字和英文字符"
-msgstr "Name can only contain numbers and letters"
+#: paasng/plat_mgt/res_quota_plan/serializers.py:98
+msgid "名称只能包含数字、英文字符和中划线，且需以字母或数字开头和结尾"
+msgstr ""
+"Name can only contain digits, letters, and hyphens, and must start and end "
+"with a letter or digit"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:110
+#: paasng/plat_mgt/res_quota_plan/serializers.py:111
 msgid "cpu requests 不能超过 cpu limits"
 msgstr "cpu requests cannot exceed cpu limits"
 
-#: paasng/plat_mgt/res_quota_plan/serializers.py:115
+#: paasng/plat_mgt/res_quota_plan/serializers.py:116
 msgid "memory requests 不能超过 memory limits"
 msgstr "memory requests cannot exceed memory limits"
 
@@ -2950,6 +2975,10 @@ msgstr "Enable outbound IP management."
 msgid "开启持久存储挂载卷"
 msgstr "Enable persistent storage mount volumes."
 
+#: paasng/platform/applications/constants.py:120
+msgid "允许修改自动扩容阈值"
+msgstr "Allow modifying autoscaling threshold"
+
 #: paasng/platform/applications/exceptions.py:23
 msgid "应用编码"
 msgstr "APP Code"
@@ -2998,7 +3027,9 @@ msgstr "Source Code/Image Configuration"
 
 #: paasng/platform/applications/serializers/creation.py:135
 msgid "git 源码配置，传入则使用 git 仓库部署"
-msgstr "Git source code configuration. If provided, the app will be deployed from a Git repository"
+msgstr ""
+"Git source code configuration. If provided, the app will be deployed from a "
+"Git repository"
 
 #: paasng/platform/applications/serializers/creation.py:136
 msgid "构建配置，配合 source_config 使用"
@@ -3006,7 +3037,9 @@ msgstr "Build configuration, used together with source_config"
 
 #: paasng/platform/applications/serializers/creation.py:170
 msgid "使用 git 仓库部署时必须提供 bkapp_spec 构建配置"
-msgstr "bkapp_spec build configuration is required when deploying from a Git repository"
+msgstr ""
+"bkapp_spec build configuration is required when deploying from a Git "
+"repository"
 
 #: paasng/platform/applications/serializers/creation.py:174
 msgid "AI Agent 应用不支持 custom_image 构建方式"
@@ -3109,8 +3142,8 @@ msgstr ""
 "The cluster is not configured with a default root domain. Please check if "
 "the cluster configuration is correct."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:92
-#: paasng/platform/bkapp_model/serializers/v1alpha2.py:213
+#: paasng/platform/bkapp_model/serializers/serializers.py:89
+#: paasng/platform/bkapp_model/serializers/v1alpha2.py:215
 msgid ""
 "服务名应仅包含小写字母，数字字符和连字符\"-\"，且必须以字母数字字符开头和结"
 "尾，最大长度不超过 63"
@@ -3119,34 +3152,34 @@ msgstr ""
 "and hyphens \"-\", and must start and end with alphanumeric characters. The "
 "maximum length is 63"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:162
+#: paasng/platform/bkapp_model/serializers/serializers.py:159
 msgid "至多设置一个探活配置"
 msgstr "At most one liveness probe configuration can be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:164
+#: paasng/platform/bkapp_model/serializers/serializers.py:161
 msgid "至少设置一个探活配置"
 msgstr "At least one liveness probe configuration must be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:198
-#: paasng/platform/bkapp_model/serializers/v1alpha2.py:255
+#: paasng/platform/bkapp_model/serializers/serializers.py:195
+#: paasng/platform/bkapp_model/serializers/v1alpha2.py:257
 msgid "组件 {}-{} 不存在"
 msgstr "Component {} {} does not exist."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:200
-#: paasng/platform/bkapp_model/serializers/v1alpha2.py:257
+#: paasng/platform/bkapp_model/serializers/serializers.py:197
+#: paasng/platform/bkapp_model/serializers/v1alpha2.py:259
 msgid "参数校验失败"
 msgstr "Parameter verification failed"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:366
+#: paasng/platform/bkapp_model/serializers/serializers.py:363
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:386
+#: paasng/platform/bkapp_model/serializers/serializers.py:383
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 "At least one valid value must be provided: nameservers or host_aliases."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:392
+#: paasng/platform/bkapp_model/serializers/serializers.py:389
 msgid "BkApp 配置信息"
 msgstr "BkApp config info"
 
@@ -3629,7 +3662,7 @@ msgstr ""
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
 
-#: paasng/platform/engine/utils/source.py:313
+#: paasng/platform/engine/utils/source.py:319
 #, python-brace-format
 msgid ""
 "WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
@@ -4264,6 +4297,7 @@ msgid "服务名称"
 msgstr "Service Name"
 
 #: paasng/platform/sourcectl/tc_git/client.py:115
+#, python-brace-format
 msgid "仅支持 base64 编码格式，当前格式为：{encoding}"
 msgstr "Only base64 encoding is supported, current encoding: {encoding}"
 
@@ -5250,6 +5284,9 @@ msgstr "This value does not match the required pattern."
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:43
 msgid "zh-cn"
 msgstr "zh-cn"
+
+#~ msgid "名称只能包含数字和英文字符"
+#~ msgstr "Name can only contain numbers and letters"
 
 #~ msgid "IP/域名"
 #~ msgstr "IP/Domain Name"

@@ -118,6 +118,8 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
 
     # 敏感环境变量加密 feature flag
     ENCRYPTED_SECRET_ENV_INJECTION = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
+    # 允许应用自定义自动扩缩容指标的阈值（如 cpuUtilization）
+    CUSTOM_AUTOSCALING_THRESHOLD = FeatureFlagField(label=_("允许修改自动扩容阈值"), default=False)
 
 
 class LightApplicationViewSetErrorCode(StrStructuredEnum):

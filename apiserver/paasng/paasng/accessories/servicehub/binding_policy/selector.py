@@ -28,7 +28,7 @@ from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.module import Module
 
-from .policy import binding_policy_factory, precedence_policy_factory
+from .policy import BindingPrecedencePolicy, binding_policy_factory
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +133,8 @@ class PlanSelector:
             service_id=service.uuid, tenant_id=env.tenant_id
         ).order_by("-priority")
         for pre_policy in precedence_policies:
-            policy_obj = precedence_policy_factory(
-                pre_policy.cond_type,
-                pre_policy.cond_data,
+            policy_obj = BindingPrecedencePolicy(
+                matcher=pre_policy.matcher,
                 binding_policy=binding_policy_factory(pre_policy.type, pre_policy.data),
             )
             # If the policy does not match the env object, try the next one

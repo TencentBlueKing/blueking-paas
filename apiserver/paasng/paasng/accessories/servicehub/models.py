@@ -339,7 +339,8 @@ class ServiceBindingPolicy(AuditedModel):
 class ServiceBindingPrecedencePolicy(AuditedModel):
     """按规则匹配，一般由多个 ServiceBindingPrecedencePolicy 实例组合形成一个完整的规则匹配。
 
-    - 当前支持三种规则匹配：Region.in Cluster.in 和 AlwaysMatch，详见 PrecedencePolicyCondType。
+    - 当前支持三种规则匹配: Region.in Cluster.in 和 Usage.in, 详见 PrecedencePolicyCondType。
+    - 兜底规则（无条件命中）以 matcher={} 表示。
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
@@ -347,9 +348,8 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
-    # See `PrecedencePolicyCondType`
-    cond_type = models.CharField(verbose_name="条件类型", max_length=16)
-    cond_data = models.JSONField(verbose_name="条件值", default={})
+    # 新版匹配器: key 为条件类型值 (如 "region_in"), value 为匹配值列表; 空字典 {} 表示无条件命中
+    matcher = models.JSONField(verbose_name="匹配器", default=dict)
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
     data = models.JSONField(help_text="策略值", default={})

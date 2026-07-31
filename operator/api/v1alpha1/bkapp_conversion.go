@@ -50,10 +50,15 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		}
 		// Copy Autoscaling field, extra logics needs because of the pointer type
 		if proc.Autoscaling != nil {
+			dstMetrics := make([]paasv1alpha2.MetricSpec, len(proc.Autoscaling.Metrics))
+			for i, m := range proc.Autoscaling.Metrics {
+				dstMetrics[i] = paasv1alpha2.MetricSpec{Type: m.Type, Metric: m.Metric, Value: m.Value}
+			}
 			dstProc.Autoscaling = &paasv1alpha2.AutoscalingSpec{
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      paasv1alpha2.ScalingPolicy(proc.Autoscaling.Policy),
+				Metrics:     dstMetrics,
 			}
 		}
 		// Copy Probes field, extra logics needs because of the pointer type
@@ -190,10 +195,15 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 
 		// Copy Autoscaling field, extra logics needs because of the pointer type
 		if proc.Autoscaling != nil {
+			dstMetrics := make([]MetricSpec, len(proc.Autoscaling.Metrics))
+			for i, m := range proc.Autoscaling.Metrics {
+				dstMetrics[i] = MetricSpec{Type: m.Type, Metric: m.Metric, Value: m.Value}
+			}
 			dstProc.Autoscaling = &AutoscalingSpec{
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      ScalingPolicy(proc.Autoscaling.Policy),
+				Metrics:     dstMetrics,
 			}
 		}
 		// Copy Probes field, extra logics needs because of the pointer type

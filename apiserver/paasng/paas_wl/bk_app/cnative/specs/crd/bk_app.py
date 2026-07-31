@@ -54,6 +54,7 @@ class AutoscalingSpec(BaseModel):
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list[dict] | None = None
 
 
 class ExecAction(BaseModel):
@@ -281,6 +282,7 @@ class AutoscalingOverlay(BaseModel):
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list[dict] | None = None
 
 
 class EnvOverlay(BaseModel):

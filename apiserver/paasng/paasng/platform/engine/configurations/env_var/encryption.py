@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+"""Encrypt sensitive environment variables before injecting them into workloads."""
+
 from collections.abc import Mapping
 
 from blue_krill.encrypt.handler import EncryptHandler

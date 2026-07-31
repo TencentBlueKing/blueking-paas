@@ -28,7 +28,6 @@ from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.encryption import is_encrypted_secret_env_injection_enabled
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
@@ -182,7 +181,7 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
         raise ValueError("No deployment object can be found")
 
     # Create the release and start the background task to wait for the release if needed
-    extra_envs = get_env_variables(env, is_encrypted=is_encrypted_secret_env_injection_enabled(env))
+    extra_envs = get_env_variables(env, encrypt_sensitive=True)
     release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile())
     if start_async_waiting:
         wait_for_release(

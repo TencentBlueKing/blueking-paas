@@ -20,7 +20,7 @@ from django.conf import settings
 
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import AppEnvEncryptionKey, ApplicationFeatureFlag
-from paasng.platform.bkapp_model.encryption import (
+from paasng.platform.engine.configurations.env_var.encryption import (
     CIPHER_PREFIX,
     collect_sensitive_keys,
     encrypt_sensitive_values,

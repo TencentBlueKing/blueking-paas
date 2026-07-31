@@ -17,6 +17,7 @@
 """Config variables related functions"""
 
 import logging
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import TYPE_CHECKING, Dict, Iterator, List
 
@@ -31,15 +32,16 @@ from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.encryption import (
+from paasng.platform.engine.configurations.env_var import listers as vars_listers
+from paasng.platform.engine.configurations.env_var.encryption import (
     collect_sensitive_keys,
     encrypt_sensitive_values,
     get_runtime_encryption_env_vars,
+    is_encrypted_value,
 )
-from paasng.platform.engine.configurations.env_var import listers as vars_listers
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.platform.engine.models.config_var import BuiltinConfigVar
+from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models import Module
 from paasng.utils.masked_curlify import MASKED_CONTENT
@@ -51,14 +53,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def get_env_variables(env: ModuleEnvironment, is_encrypted: bool = False) -> Dict[str, str]:
+def get_env_variables(env: ModuleEnvironment, encrypt_sensitive: bool = False) -> Dict[str, str]:
     """Get env vars for current environment, the result includes user defined and builtin env vars.
 
     :param env: The environment object.
-    :param is_encrypted: Whether to encrypt sensitive values.
+    :param encrypt_sensitive: Whether to encrypt sensitive values.
     :return: A dict of env variables.
     """
-    if is_encrypted:
+    if encrypt_sensitive:
         return UnifiedEnvVarsReader(env).get_encrypted_kv_map()
     return UnifiedEnvVarsReader(env).get_kv_map()
 
@@ -120,19 +122,35 @@ class UnifiedEnvVarsReader:
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
-    def get_encrypted_kv_map(
-        self, exclude_sources: list[EnvVarSource] | None = None, include_runtime_metadata: bool = True
-    ) -> Dict[str, str]:
-        """Return values with sensitive entries encrypted when the feature is enabled.
-
-        Cloud-native manifests set ``include_runtime_metadata`` to false, then
-        add the metadata to their environment-specific overlay instead.
-        """
-        raw_kv_map = self.get_kv_map(exclude_sources)
-        result, encrypted_keys = encrypt_sensitive_values(self.env, raw_kv_map, collect_sensitive_keys(self.env))
-        if include_runtime_metadata:
-            result.update(get_runtime_encryption_env_vars(self.env, encrypted_keys))
+    def get_encrypted_values(self, exclude_sources: list[EnvVarSource] | None = None) -> Dict[str, str]:
+        """Return values with sensitive entries encrypted when the feature is enabled."""
+        result, _ = self._get_encrypted_values_and_keys(exclude_sources)
         return result
+
+    def _get_encrypted_values_and_keys(
+        self, exclude_sources: list[EnvVarSource] | None = None
+    ) -> tuple[dict[str, str], set[str]]:
+        """Return encrypted values and the keys encrypted during this call."""
+        raw_kv_map = self.get_kv_map(exclude_sources)
+        return encrypt_sensitive_values(self.env, raw_kv_map, collect_sensitive_keys(self.env))
+
+    def get_encrypted_kv_map(self, exclude_sources: list[EnvVarSource] | None = None) -> Dict[str, str]:
+        """Return encrypted values and the runtime metadata required to decrypt them."""
+        result, encrypted_keys = self._get_encrypted_values_and_keys(exclude_sources)
+        result.update(get_runtime_encryption_env_vars(self.env, encrypted_keys))
+        return result
+
+    def encrypt_config_vars(self, config_vars: list[ConfigVar]) -> dict[str, str]:
+        """Encrypt sensitive user-configured variables for the current environment."""
+        values = {var.key: var.value for var in config_vars}
+        sensitive_keys = {var.key for var in config_vars if var.is_sensitive}
+        encrypted_values, _ = encrypt_sensitive_values(self.env, values, sensitive_keys)
+        return encrypted_values
+
+    def get_runtime_encryption_metadata(self, values: Mapping[str, str]) -> dict[str, str]:
+        """Return runtime metadata for values encrypted by the environment-variable injector."""
+        encrypted_keys = {name for name, value in values.items() if is_encrypted_value(value)}
+        return get_runtime_encryption_env_vars(self.env, encrypted_keys)
 
     def list_conflicted_info(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
         """Get the system keys that will conflict with user-defined vars, including conflict details.

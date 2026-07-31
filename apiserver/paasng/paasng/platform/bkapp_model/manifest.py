@@ -64,11 +64,6 @@ from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
-from paasng.platform.bkapp_model.encryption import (
-    encrypt_sensitive_values,
-    get_runtime_encryption_env_vars,
-    is_encrypted_value,
-)
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -328,6 +323,30 @@ class ProcessesManifestConstructor(ManifestConstructor):
         return quota_plan_memory[-1][1]
 
 
+def add_encryption_metadata(
+    env_variables: list[crd.EnvVarOverlay],
+    environments: list[ModuleEnvironment],
+    configuration_env_variables: list[crd.EnvVar] | None = None,
+) -> list[crd.EnvVarOverlay]:
+    """Add metadata only for values that remain encrypted after all overrides."""
+    default_values = {var.name: var.value for var in configuration_env_variables or []}
+    for environment in environments:
+        effective_values = default_values.copy()
+        effective_values.update(
+            {var.name: var.value for var in env_variables if var.envName == environment.environment}
+        )
+        metadata = UnifiedEnvVarsReader(environment).get_runtime_encryption_metadata(effective_values)
+        env_variables = merge_env_vars_overlay(
+            env_variables,
+            [
+                crd.EnvVarOverlay(envName=environment.environment, name=name, value=value)
+                for name, value in metadata.items()
+            ],
+            strategy=MergeStrategy.OVERRIDE,
+        )
+    return env_variables
+
+
 class EnvVarsManifestConstructor(ManifestConstructor):
     """Construct the env variables part."""
 
@@ -336,38 +355,11 @@ class EnvVarsManifestConstructor(ManifestConstructor):
         environment: ModuleEnvironment, config_vars: list[ConfigVar]
     ) -> list[crd.EnvVarOverlay]:
         """Encrypt and map config variables for one target environment."""
-        values = {var.key: var.value for var in config_vars}
-        sensitive_keys = {var.key for var in config_vars if var.is_sensitive}
-        encrypted_values, _ = encrypt_sensitive_values(environment, values, sensitive_keys)
+        encrypted_values = UnifiedEnvVarsReader(environment).encrypt_config_vars(config_vars)
         return [
             crd.EnvVarOverlay(envName=environment.environment, name=var.key, value=encrypted_values[var.key])
             for var in config_vars
         ]
-
-    @staticmethod
-    def _add_encryption_metadata(
-        env_variables: list[crd.EnvVarOverlay],
-        environments: list[ModuleEnvironment],
-        configuration_env_variables: list[crd.EnvVar] | None = None,
-    ) -> list[crd.EnvVarOverlay]:
-        """Add metadata only for values that remain encrypted after all overrides."""
-        default_values = {var.name: var.value for var in configuration_env_variables or []}
-        for environment in environments:
-            effective_values = default_values.copy()
-            effective_values.update(
-                {var.name: var.value for var in env_variables if var.envName == environment.environment}
-            )
-            encrypted_keys = {name for name, value in effective_values.items() if is_encrypted_value(value)}
-            metadata = get_runtime_encryption_env_vars(environment, encrypted_keys)
-            env_variables = merge_env_vars_overlay(
-                env_variables,
-                [
-                    crd.EnvVarOverlay(envName=environment.environment, name=name, value=value)
-                    for name, value in metadata.items()
-                ],
-                strategy=MergeStrategy.OVERRIDE,
-            )
-        return env_variables
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         # 描述文件的环境变量无“敏感“概念，无需要加密处理
@@ -683,7 +675,7 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
 
     # 此处，云原生应用忽略这些类型的环境变量：用户手动定义、描述文件定义、服务发现，
     # 忽略用户手动定义（include_config_vars）是因为 EnvVarsManifestConstructor 已处理过。
-    system_vars = UnifiedEnvVarsReader(env).get_encrypted_kv_map(
+    system_vars = UnifiedEnvVarsReader(env).get_encrypted_values(
         exclude_sources=[
             # 用户在产品或描述文件手动定义，已经由 EnvVarsManifestConstructor 处理
             EnvVarSource.USER_CONFIGURED,
@@ -693,7 +685,6 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
             # 云原生应用不需要在构建镜像中推送制品到 blobstore，因此忽略
             EnvVarSource.BUILTIN_BLOBSTORE,
         ],
-        include_runtime_metadata=False,
     )
     for name, value in system_vars.items():
         env_vars.append(crd.EnvVar(name=name, value=value))
@@ -706,7 +697,7 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
         overlay = model_res.spec.envOverlay
         if not overlay:
             overlay = model_res.spec.envOverlay = crd.EnvOverlay(envVariables=[])
-        overlay.envVariables = EnvVarsManifestConstructor._add_encryption_metadata(
+        overlay.envVariables = add_encryption_metadata(
             override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay),
             [env],
             configuration_env_variables=model_res.spec.configuration.env,

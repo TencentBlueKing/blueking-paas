@@ -73,6 +73,16 @@ def turn_on_bk_log_feature_for_app(sender, application: Application, **kwargs):
 
 
 @receiver(post_create_application)
+def sync_encrypted_secret_env_injection_feature_for_app(sender, application: Application, **kwargs):
+    """
+    新建应用的 ENCRYPTED_SECRET_ENV_INJECTION 应用特性与平台全局开关保持一致
+    """
+    application.feature_flag.set_feature(
+        AppFeatureFlagConst.ENCRYPTED_SECRET_ENV_INJECTION, settings.ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT
+    )
+
+
+@receiver(post_create_application)
 def extra_setup_tasks(sender, application: Application, **kwargs):
     """Extra tasks to create an application"""
     # Send signal to trigger extra tasks before application was created

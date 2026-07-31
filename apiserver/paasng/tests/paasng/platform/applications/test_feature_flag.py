@@ -19,8 +19,9 @@ from unittest import mock
 
 import pytest
 
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application, get_default_feature_flags
-from tests.utils.helpers import override_region_configs
+from tests.utils.helpers import create_app, override_region_configs
 
 
 class TestGetDefaultFeatureFlags:
@@ -41,6 +42,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPTED_SECRET_ENV_INJECTION": False,
                     "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
@@ -58,6 +60,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPTED_SECRET_ENV_INJECTION": False,
                     "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
@@ -75,6 +78,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPTED_SECRET_ENV_INJECTION": False,
                     "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
@@ -92,6 +96,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": False,
+                    "ENCRYPTED_SECRET_ENV_INJECTION": False,
                     "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
@@ -116,6 +121,7 @@ class TestGetDefaultFeatureFlags:
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
                     "ENABLE_PERSISTENT_STORAGE": True,
+                    "ENCRYPTED_SECRET_ENV_INJECTION": False,
                     "CUSTOM_AUTOSCALING_THRESHOLD": False,
                 },
             ),
@@ -131,3 +137,19 @@ class TestGetDefaultFeatureFlags:
             mock.patch.object(Application, "engine_enabled", mock.PropertyMock(return_value=engine_enabled)),
         ):
             assert get_default_feature_flags(bk_app) == default_feature_flags
+
+
+class TestSyncEncryptFeatureOnCreate:
+    """新建应用的应用级加密 feature flag 默认值与平台配置 ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT 保持一致"""
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_default_on_new_app_inherits_enabled(self, settings):
+        settings.ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT = True
+        app = create_app()
+        assert app.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION) is True
+
+    @pytest.mark.django_db(databases=["default", "workloads"])
+    def test_default_off_new_app_stays_disabled(self, settings):
+        settings.ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT = False
+        app = create_app()
+        assert app.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION) is False

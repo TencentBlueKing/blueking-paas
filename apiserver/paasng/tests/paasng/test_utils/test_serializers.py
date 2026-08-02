@@ -135,6 +135,10 @@ class TestSafePathField:
             "foo/bar",
             "foo/bar/baz",
             "./foo/bar/baz",
+            # Unicode (e.g. Chinese) filenames are valid
+            "你好.md",
+            "日志/2026年/总结.md",
+            "こんにちは.md",
         ],
     )
     def test_valid(self, safe_path):
@@ -152,6 +156,10 @@ class TestSafePathField:
             "foo/%2e%2e/bar/baz",
             "foo/%2e%2e%2fbar/baz",
             "/safe////../etc/passwd",
+            # Unicode does not bypass the traversal checks
+            "你好/../bar",
+            "/你好/bar",
+            "こん..にちは.md",
         ],
     )
     def test_invalid(self, safe_path):

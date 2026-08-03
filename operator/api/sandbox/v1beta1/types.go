@@ -41,7 +41,7 @@ const (
 )
 
 // SandboxInstance is the Schema for the sandboxinstances API.
-// CRD owned by sandbox-controller (advanced.bkbcs.tencent.com/v1beta1).
+// CRD owned by sandbox-controller (advanced.bkbcs.tencent.com/v1beta1), not controlled by bkAppOperator.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 type SandboxInstance struct {

@@ -80,7 +80,7 @@ class ProcInstByEnvListWatcher:
         return list_ns_processes(self.cluster_name, self.namespace)
 
     def list_instances_only(self) -> ProcessesInfo:
-        """仅按 Pod 构造进程状态, 适用于没有 Deployment 的 SandboxInstance 应用。"""
+        """仅按 Pod 构造进程状态, 适用于没有 Deployment 的隔离沙箱应用。"""
         return list_ns_processes_from_instances(self.cluster_name, self.namespace)
 
     def watch(

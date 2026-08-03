@@ -85,9 +85,9 @@ def list_ns_processes(cluster_name: str, namespace: str) -> ProcessesInfo:
 
 
 def list_ns_processes_from_instances(cluster_name: str, namespace: str) -> ProcessesInfo:
-    """仅根据 Pod 列表构造实时进程信息。
+    """根据实例 Pod 列表构造实时进程信息。
 
-    SandboxInstance 直接渲染 Pod, 不会生成 Deployment。此函数按应用和进程类型聚合
+    使用隔离沙箱的应用通过 CR 直接渲染 Pod, 不会生成 Deployment。此函数按应用和进程类型聚合
     Pod, 并生成兼容进程列表接口的 Process 对象。
     """
     insts_in_k8s = ns_instance_kmodel.list_by_ns_with_mdata(cluster_name, namespace)

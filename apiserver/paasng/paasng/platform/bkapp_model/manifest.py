@@ -62,7 +62,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
-from paasng.platform.applications.constants import AppFeatureFlag, DeployPolicy
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
@@ -657,9 +657,9 @@ def get_bkapp_resource_for_deploy(
     if mgr.build_config.build_method == RuntimeType.BUILDPACK:
         _update_cmd_args_from_wl_build(model_res, WlBuild.objects.get(uuid=deployment.build_id))
 
-    # 显式声明 workloadType，隔离型 AI Agent 应用使用 SandboxInstance，其余使用 Deployment
+    # 显式声明 workloadType，隔离沙箱应用使用 SandboxInstance，其余使用 Deployment
     application = env.application
-    if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
+    if application.use_isolated_sandbox:
         model_res.spec.workloadType = WorkloadType.SANDBOX_INSTANCE
     else:
         model_res.spec.workloadType = WorkloadType.DEPLOYMENT

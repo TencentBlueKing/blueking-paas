@@ -66,8 +66,7 @@ from paasng.platform.applications.constants import AppFeatureFlag, DeployPolicy
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
-    WORKLOAD_TYPE_DEPLOYMENT,
-    WORKLOAD_TYPE_SANDBOX_INSTANCE,
+    WorkloadType,
 )
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
@@ -661,9 +660,9 @@ def get_bkapp_resource_for_deploy(
     # 显式声明 workloadType，隔离型 AI Agent 应用使用 SandboxInstance，其余使用 Deployment
     application = env.application
     if application.is_ai_agent_app and application.deploy_policy == DeployPolicy.ISOLATED.value:
-        model_res.spec.workloadType = WORKLOAD_TYPE_SANDBOX_INSTANCE
+        model_res.spec.workloadType = WorkloadType.SANDBOX_INSTANCE
     else:
-        model_res.spec.workloadType = WORKLOAD_TYPE_DEPLOYMENT
+        model_res.spec.workloadType = WorkloadType.DEPLOYMENT
 
     # TODO: Missing parts: "build"
     return model_res

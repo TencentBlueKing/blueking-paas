@@ -23,6 +23,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// SandboxInstance phase constants
+const (
+	SandboxPhasePending     = "Pending"
+	SandboxPhaseCreating    = "Creating"
+	SandboxPhaseRunning     = "Running"
+	SandboxPhaseStopping    = "Stopping"
+	SandboxPhaseStopped     = "Stopped"
+	SandboxPhaseFailed      = "Failed"
+	SandboxPhaseTerminating = "Terminating"
+)
+
+// SandboxInstance desired state constants
+const (
+	SandboxDesiredStateRunning = "Running"
+	SandboxDesiredStateStopped = "Stopped"
+)
+
 // SandboxInstance is the Schema for the sandboxinstances API.
 // CRD owned by sandbox-controller (advanced.bkbcs.tencent.com/v1beta1).
 // +kubebuilder:object:root=true
@@ -172,23 +189,6 @@ type SandboxInstanceStatus struct {
 	// +optional
 	NodeName string `json:"nodeName,omitempty"`
 }
-
-// SandboxInstance phase constants
-const (
-	SandboxPhasePending     = "Pending"
-	SandboxPhaseCreating    = "Creating"
-	SandboxPhaseRunning     = "Running"
-	SandboxPhaseStopping    = "Stopping"
-	SandboxPhaseStopped     = "Stopped"
-	SandboxPhaseFailed      = "Failed"
-	SandboxPhaseTerminating = "Terminating"
-)
-
-// SandboxInstance desired state constants
-const (
-	SandboxDesiredStateRunning = "Running"
-	SandboxDesiredStateStopped = "Stopped"
-)
 
 func init() {
 	SchemeBuilder.Register(&SandboxInstance{}, &SandboxInstanceList{})

@@ -927,6 +927,7 @@ spec:
                             format: int32
                             type: integer
                           protocol:
+                            default: TCP
                             description: The protocol of the service. Default value
                               is TCP if not specified.
                             type: string
@@ -2264,6 +2265,7 @@ spec:
                             format: int32
                             type: integer
                           protocol:
+                            default: TCP
                             description: The protocol of the service. Default value
                               is TCP if not specified.
                             type: string

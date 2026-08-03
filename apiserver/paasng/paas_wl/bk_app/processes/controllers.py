@@ -17,6 +17,7 @@
 
 import datetime
 import logging
+from collections import defaultdict
 from types import SimpleNamespace
 from typing import Dict, List, NamedTuple, Optional, Protocol, Type
 
@@ -90,9 +91,9 @@ def list_ns_processes_from_instances(cluster_name: str, namespace: str) -> Proce
     Pod, 并生成兼容进程列表接口的 Process 对象。
     """
     insts_in_k8s = ns_instance_kmodel.list_by_ns_with_mdata(cluster_name, namespace)
-    grouped_instances: dict[tuple[WlApp, str], list] = {}
+    grouped_instances: dict[tuple[WlApp, str], list] = defaultdict(list)
     for instance in insts_in_k8s.items:
-        grouped_instances.setdefault((instance.app, instance.process_type), []).append(instance)
+        grouped_instances[(instance.app, instance.process_type)].append(instance)
 
     processes = []
     for (wl_app, process_type), instances in grouped_instances.items():

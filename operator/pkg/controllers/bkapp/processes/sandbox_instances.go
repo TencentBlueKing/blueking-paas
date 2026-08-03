@@ -27,6 +27,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,12 +45,12 @@ import (
 )
 
 const (
-	// sandboxRuntimeClassName is the default runtime class for sandbox instances
-	sandboxRuntimeClassName = "cube"
-	// sandboxNetworkMode is the default network mode
-	sandboxNetworkMode = "direct-cni"
-	// sandboxWebProcessName is the process name for AI Agent apps
-	sandboxWebProcessName = "web"
+	// defaultSandboxRuntimeClassName is the default runtime class for sandbox instances
+	defaultSandboxRuntimeClassName = "cube"
+	// defaultSandboxNetworkMode is the default network mode
+	defaultSandboxNetworkMode = "direct-cni"
+	// defaultSandboxWebProcessName is the process name for AI Agent apps
+	defaultSandboxWebProcessName = "web"
 )
 
 // NewSandboxInstanceReconciler creates a new SandboxInstanceReconciler
@@ -138,61 +139,17 @@ func (r *SandboxInstanceReconciler) handleCRDUnavailable(bkapp *paasv1alpha2.BkA
 }
 
 // buildSandboxInstance constructs the desired SandboxInstance CR from BkApp spec.
-func (r *SandboxInstanceReconciler) buildSandboxInstance(ctx context.Context, bkapp *paasv1alpha2.BkApp) (*sandboxv1beta1.SandboxInstance, error) {
-	log := logf.FromContext(ctx)
-
-	// Find the web process
-	proc := bkapp.Spec.FindProcess(sandboxWebProcessName)
-	if proc == nil && len(bkapp.Spec.Processes) > 0 {
-		proc = &bkapp.Spec.Processes[0]
-	}
-	if proc == nil {
-		return nil, errors.New("no process defined in BkApp")
-	}
-
-	// Get resource requirements (CPU/Memory)
-	// TODO: Consider returning error instead of silent fallback for sandbox scenarios
-	// where resource specs are tied to billing.
-	resGetter := envs.NewProcResourcesGetter(bkapp)
-	resReq, err := resGetter.GetByProc(proc.Name)
+func (r *SandboxInstanceReconciler) buildSandboxInstance(
+	ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+) (*sandboxv1beta1.SandboxInstance, error) {
+	proc, err := r.resolveProcess(bkapp)
 	if err != nil {
-		log.Info("Failed to get resources for process, use default values",
-			"process", proc.Name, "bkapp", bkapp.Name, "error", err)
-		resReq = resGetter.Default()
+		return nil, err
 	}
 
-	// Parse CPU cores from limits
-	cpuCores := parseCPUCores(resReq.Limits)
-	memory := resReq.Limits.Memory().String()
-
-	// Get image
-	// TODO: 按照 bkapp 逻辑 fallback 到默认镜像
-	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get(proc.Name)
-	if err != nil {
-		log.Info("Failed to get image for process, use default values",
-			"process", proc.Name, "bkapp", bkapp.Name, "error", err)
-		image = resources.DefaultImage
-		pullPolicy = corev1.PullIfNotPresent
-	}
-
-	// Build environment variables
-	envVars := common.GetAppEnvs(bkapp)
-	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: proc.Name})
-
-	// Build the main container
-	container := corev1.Container{
-		Name:            proc.Name,
-		Image:           image,
-		ImagePullPolicy: pullPolicy,
-		Env:             envVars,
-		Command:         proc.Command,
-		Args:            proc.Args,
-	}
-
-	// Use the full process labels for the CR and rendered Pod. Besides satisfying
-	// the Service selector, these labels allow the platform's namespace-scoped
-	// process reader to associate the Pod with its WlApp and process type.
-	podLabels := labels.Deployment(bkapp, proc.Name)
+	container := r.buildMainContainer(ctx, bkapp, proc)
+	podLabels := labels.Workload(bkapp, proc.Name)
 
 	// Build the SandboxInstance
 	sbi := &sandboxv1beta1.SandboxInstance{
@@ -201,7 +158,7 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(ctx context.Context, bk
 			Kind:       "SandboxInstance",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      names.Deployment(bkapp, proc.Name),
+			Name:      names.Workload(bkapp, proc.Name),
 			Namespace: bkapp.Namespace,
 			Labels:    podLabels,
 			Annotations: map[string]string{
@@ -217,13 +174,13 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(ctx context.Context, bk
 		},
 		Spec: sandboxv1beta1.SandboxInstanceSpec{
 			DesiredState:     sandboxv1beta1.SandboxDesiredStateRunning,
-			RuntimeClassName: sandboxRuntimeClassName,
+			RuntimeClassName: defaultSandboxRuntimeClassName,
 			Network: sandboxv1beta1.SandboxNetwork{
-				Mode: sandboxNetworkMode,
+				Mode: defaultSandboxNetworkMode,
 			},
 			Domain: sandboxv1beta1.SandboxDomain{
-				CPU:    sandboxv1beta1.SandboxCPU{Cores: cpuCores},
-				Memory: memory,
+				CPU:    sandboxv1beta1.SandboxCPU{Cores: int32(container.Resources.Limits.Cpu().Value())},
+				Memory: container.Resources.Limits.Memory().String(),
 			},
 			PodTemplate: sandboxv1beta1.SandboxPodTemplate{
 				Containers:       []corev1.Container{container},
@@ -238,6 +195,66 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(ctx context.Context, bk
 	}
 
 	return sbi, nil
+}
+
+// resolveProcess finds the target process from BkApp spec.
+// It prefers the "web" process, falling back to the first defined process.
+func (r *SandboxInstanceReconciler) resolveProcess(
+	bkapp *paasv1alpha2.BkApp,
+) (*paasv1alpha2.Process, error) {
+	proc := bkapp.Spec.FindProcess(defaultSandboxWebProcessName)
+	if proc == nil && len(bkapp.Spec.Processes) > 0 {
+		proc = &bkapp.Spec.Processes[0]
+	}
+	if proc == nil {
+		return nil, errors.New("no process defined in BkApp")
+	}
+	return proc, nil
+}
+
+// buildMainContainer constructs the main container spec from process definition.
+func (r *SandboxInstanceReconciler) buildMainContainer(
+	ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+	proc *paasv1alpha2.Process,
+) corev1.Container {
+	log := logf.FromContext(ctx)
+
+	// Get resource requirements (CPU/Memory)
+	resGetter := envs.NewProcResourcesGetter(bkapp)
+	resReq, err := resGetter.GetByProc(proc.Name)
+	if err != nil {
+		log.Info("Failed to get resources for process, use default values",
+			"process", proc.Name, "bkapp", bkapp.Name, "error", err)
+		resReq = resGetter.Default()
+	}
+
+	// Ceil CPU to integer cores as required by SandboxInstance
+	cpuCores := parseCPUCores(resReq.Limits)
+	resReq.Limits[corev1.ResourceCPU] = *resource.NewQuantity(int64(cpuCores), resource.DecimalSI)
+
+	// Get image
+	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get(proc.Name)
+	if err != nil {
+		log.Info("Failed to get image for process, use default values",
+			"process", proc.Name, "bkapp", bkapp.Name, "error", err)
+		image = resources.DefaultImage
+		pullPolicy = corev1.PullIfNotPresent
+	}
+
+	// Build environment variables
+	envVars := common.GetAppEnvs(bkapp)
+	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: proc.Name})
+
+	return corev1.Container{
+		Name:            proc.Name,
+		Image:           image,
+		ImagePullPolicy: pullPolicy,
+		Env:             envVars,
+		Command:         proc.Command,
+		Args:            proc.Args,
+		Resources:       resReq,
+	}
 }
 
 // updateSandboxInstance patches the existing SandboxInstance if the desired spec differs.
@@ -281,10 +298,14 @@ func (r *SandboxInstanceReconciler) updateBkAppStatus(bkapp *paasv1alpha2.BkApp,
 		// Pending, Creating, Stopping, Stopped, Terminating
 		bkapp.Status.Phase = paasv1alpha2.AppPending
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               paasv1alpha2.AppAvailable,
-			Status:             metav1.ConditionFalse,
-			Reason:             "SandboxProgressing",
-			Message:            lo.Ternary(message != "", message, fmt.Sprintf("SandboxInstance is in phase: %s", lo.Ternary(phase != "", phase, "Unknown"))),
+			Type:   paasv1alpha2.AppAvailable,
+			Status: metav1.ConditionFalse,
+			Reason: "SandboxProgressing",
+			Message: lo.Ternary(
+				message != "",
+				message,
+				fmt.Sprintf("SandboxInstance is in phase: %s", lo.Ternary(phase != "", phase, "Unknown")),
+			),
 			ObservedGeneration: bkapp.Generation,
 		})
 	}
@@ -296,7 +317,7 @@ func parseCPUCores(limits corev1.ResourceList) int32 {
 	cpu := limits.Cpu()
 	if cpu == nil || cpu.IsZero() {
 		// default 2 cores
-		return 2 
+		return 2
 	}
 	// MilliValue() returns milliCPU, divide by 1000 and ceil
 	cores := int32(math.Ceil(float64(cpu.MilliValue()) / 1000.0))

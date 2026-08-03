@@ -258,10 +258,10 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 	})
 
 	Context("test parseCPUCores", func() {
-		It("should return 4 cores by default when CPU is zero", func() {
+		It("should return 2 cores by default when CPU is zero", func() {
 			limits := corev1.ResourceList{}
 			cores := parseCPUCores(limits)
-			Expect(cores).To(Equal(int32(4)))
+			Expect(cores).To(Equal(int32(2)))
 		})
 	})
 

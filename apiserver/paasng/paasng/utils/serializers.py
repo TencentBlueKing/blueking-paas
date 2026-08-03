@@ -332,9 +332,9 @@ class StringArrayField(fields.CharField):
 
 
 class SafePathField(serializers.RegexField):
-    """安全路径字段，只允许包含字母、数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
+    """安全路径字段，只允许包含 Unicode字符（字母，汉字等）数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
 
-    regex = re.compile(r"^[a-zA-Z0-9_\-./]+$")
+    regex = re.compile(r"^[\w\-./]+$")
     default_error_messages = {
         "invalid": _("路径 {path} 不合法"),
         "escape_risk": _("路径 {path} 存在逃逸风险"),

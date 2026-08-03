@@ -17,7 +17,7 @@
 
 import typing
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from paasng.platform.modules.helpers import ModuleRuntimeBinder
@@ -32,6 +32,7 @@ class Command(BaseCommand):
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
         parser.add_argument("--stack", dest="stack", default="", help="buildpack stack (e.g. heroku-24)")
+        parser.add_argument("--type", dest="buildpack_type", help="buildpack type (e.g. tar or oci-embedded)")
         parser.add_argument("--module", dest="module_names", help="module name", nargs="*")
         parser.add_argument("--app-code", dest="app_codes", help="application code", nargs="*")
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
@@ -45,19 +46,26 @@ class Command(BaseCommand):
         return AppSlugRunner.objects.get(name=image)
 
     def get_buildpacks(
-        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str], stack: str = ""
+        self,
+        buildpack_ids: typing.List[int],
+        buildpack_names: typing.List[str],
+        stack: str = "",
+        buildpack_type: typing.Optional[str] = None,
     ) -> typing.Iterable[AppBuildPack]:
         """根据条件获取 buildpack queryset
 
         :param buildpack_ids: buildpack id 列表，按 id 查询时不应用 stack 过滤
-        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 过滤
+        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 和 type 过滤
         :param stack: 运行时栈标识，仅在按 name 查询时生效
+        :param buildpack_type: buildpack 引用类型，仅在按 name 查询时生效
         """
         qs = AppBuildPack.objects.all()
         if buildpack_ids:
             qs = qs.filter(pk__in=buildpack_ids)
         if buildpack_names:
             qs = qs.filter(name__in=buildpack_names, stack=stack)
+            if buildpack_type:
+                qs = qs.filter(type=buildpack_type)
         return qs
 
     def get_modules(
@@ -72,11 +80,18 @@ class Command(BaseCommand):
         return qs
 
     @transaction.atomic
-    def handle(self, image, module_names, app_codes, buildpack_ids, buildpack_names, dry_run, stack, **kwargs):
+    def handle(
+        self, image, module_names, app_codes, buildpack_ids, buildpack_names, dry_run, stack, buildpack_type, **kwargs
+    ):
+        if buildpack_names and not buildpack_type:
+            raise CommandError("--type is required when --buildpack-name is provided")
+
         modules = self.get_modules(module_names, app_codes)
         slugbuilder = self.get_slugbuilder(image)
         slugrunner = self.get_slugrunner(image)
-        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names, stack=stack))
+        buildpacks = list(
+            self.get_buildpacks(buildpack_ids, buildpack_names, stack=stack, buildpack_type=buildpack_type)
+        )
 
         for module in modules:
             binder = ModuleRuntimeBinder(module)

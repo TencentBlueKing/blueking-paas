@@ -66,6 +66,7 @@ class Command(BaseCommand):
         obj, created = AppBuildPack.objects.update_or_create(
             name=name,
             stack=stack,
+            type=type_,
             defaults={
                 "display_name_zh_cn": display_name_zh_cn,
                 "display_name_en": display_name_en,
@@ -74,7 +75,6 @@ class Command(BaseCommand):
                 "is_hidden": is_hidden,
                 "version": tag,
                 "language": language,
-                "type": type_,
                 "address": address,
                 "environments": parse_assignment_list(environments),
             },

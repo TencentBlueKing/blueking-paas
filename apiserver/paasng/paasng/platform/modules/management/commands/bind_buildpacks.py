@@ -17,7 +17,7 @@
 
 import typing
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from paasng.platform.modules.helpers import SlugbuilderBinder
@@ -32,6 +32,7 @@ class Command(BaseCommand):
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
         parser.add_argument("--stack", default="", help="buildpack 的运行时栈标识，如 heroku-24")
+        parser.add_argument("--type", dest="buildpack_type", help="buildpack 的引用类型，如 tar 或 oci-embedded")
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def get_slugbuilder(self, image: str) -> AppSlugBuilder:
@@ -39,25 +40,35 @@ class Command(BaseCommand):
         return AppSlugBuilder.objects.get(name=image)
 
     def get_buildpacks(
-        self, buildpack_ids: typing.List[int], buildpack_names: typing.List[str], stack: str = ""
+        self,
+        buildpack_ids: typing.List[int],
+        buildpack_names: typing.List[str],
+        stack: str = "",
+        buildpack_type: typing.Optional[str] = None,
     ) -> typing.Iterable[AppBuildPack]:
         """根据条件获取 buildpack queryset
 
         :param buildpack_ids: buildpack id 列表，按 id 查询时不应用 stack 过滤
-        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 过滤
+        :param buildpack_names: buildpack name 列表，按 name 查询时应用 stack 和 type 过滤
         :param stack: 运行时栈标识，仅在按 name 查询时生效
+        :param buildpack_type: buildpack 引用类型，仅在按 name 查询时生效
         """
         qs = AppBuildPack.objects.all()
         if buildpack_ids:
             qs = qs.filter(pk__in=buildpack_ids)
         if buildpack_names:
             qs = qs.filter(name__in=buildpack_names, stack=stack)
+            if buildpack_type:
+                qs = qs.filter(type=buildpack_type)
         return qs
 
     @transaction.atomic
-    def handle(self, image, buildpack_ids, buildpack_names, stack, dry_run, **kwargs):
+    def handle(self, image, buildpack_ids, buildpack_names, stack, buildpack_type, dry_run, **kwargs):
+        if buildpack_names and not buildpack_type:
+            raise CommandError("--type is required when --buildpack-name is provided")
+
         slugbuilder = self.get_slugbuilder(image)
-        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names, stack))
+        buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names, stack, buildpack_type))
         if not buildpacks:
             self.stderr.write(self.style.WARNING("未找到匹配的 buildpack，请检查参数是否正确"))
             return

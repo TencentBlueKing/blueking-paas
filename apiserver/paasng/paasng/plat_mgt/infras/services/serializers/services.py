@@ -147,7 +147,7 @@ class ServiceCreateSLZ(serializers.Serializer):
             )
 
         #  创建 S-Mart 应用时，使用 service_name 来指定增强服务， 故禁止本地增强服务和远程增强服务重名
-        service_id_ctx = getattr(self.context.get("service"), "uuid")
+        service_id_ctx = getattr(self.context.get("service"), "uuid", None)
         for svc in mixed_service_mgr.list():
             # 更新时，允许和自己重名
             if svc.name == name and svc.uuid != service_id_ctx:

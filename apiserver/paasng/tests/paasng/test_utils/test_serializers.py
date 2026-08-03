@@ -160,6 +160,7 @@ class TestSafePathField:
             "你好/../bar",
             "/你好/bar",
             "こん..にちは.md",
+            "😄.txt",
         ],
     )
     def test_invalid(self, safe_path):

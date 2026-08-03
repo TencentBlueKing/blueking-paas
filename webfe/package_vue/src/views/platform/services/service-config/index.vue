@@ -110,9 +110,9 @@
                   </span>
                   <!-- 匹配规则 - 属性值不固定 -->
                   <span
-                    v-for="(v, k) in item.cond_data"
+                    v-for="(v, k) in item.matcher"
                     class="tag rule"
-                    :key="k"
+                    :key="`rule-${k}-${v}`"
                     v-show="v"
                   >
                     {{ `${k}=${v}` }}
@@ -128,11 +128,11 @@
                   </template>
                   <template v-else>
                     <span
-                      v-for="item in getPlanNames(item.plans)"
+                      v-for="planName in getPlanNames(item.plans)"
                       class="tag"
-                      :key="item"
+                      :key="planName"
                     >
-                      {{ $t('方案') }}：{{ item }}
+                      {{ $t('方案') }}：{{ planName }}
                     </span>
                   </template>
                 </div>
@@ -397,11 +397,10 @@ export default {
     // 处理规则分配配置
     handleRuleBasedAllocation(policies) {
       return policies.map((item) => {
-        const key = Object.keys(item.cond_data || {})[0];
+        const [matcherKey, matcherValue] = Object.entries(item.matcher || {})[0] || [];
         return {
           matcher: {
-            // cond_type：key、cond_data: { [name]: 输入框数据 }
-            ...(item.cond_type && item.cond_data && key ? { [key]: item.cond_data[key]?.join(',') } : {}),
+            ...(matcherKey ? { [matcherKey]: matcherValue?.join(',') } : {}),
           },
           policy: {
             // 不按环境

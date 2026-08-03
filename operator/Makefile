@@ -91,7 +91,7 @@ tidy: ## 执行 go mod tidy
 
 .PHONY: test
 test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输出覆盖率报告
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -i -p path)" \
 	$(GINKGO) --cover --coverprofile cover.out ./...
 
 .PHONY: lint

@@ -29,6 +29,12 @@ const domainGroupMappingKey = "bkapp.paas.bk.tencent.com/domain-group-mapping-na
 
 // Deployment 为应用的不同进程生成关联 Deployment 的标签
 func Deployment(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
+	// TODO: 后续改为直接使用 Workload 生成标签
+	return Workload(bkapp, process)
+}
+
+// Workload 为应用的不同进程生成 workload 资源（Deployment/SandboxInstance）的标签
+func Workload(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
 	labels := map[string]string{
 		paasv1alpha2.BkAppNameKey:    bkapp.Name,
 		paasv1alpha2.ProcessNameKey:  process,

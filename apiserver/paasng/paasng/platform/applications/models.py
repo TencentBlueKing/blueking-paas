@@ -430,10 +430,15 @@ class Application(OwnerTimestampedModel):
 
     @property
     def engine_enabled(self) -> bool:
-        """获取是否开启引擎（即判断是否“精简版应用”）"""
+        """获取是否开启引擎（即判断是否"精简版应用"）"""
         from .specs import AppSpecs
 
         return AppSpecs(self).engine_enabled
+
+    @property
+    def use_isolated_sandbox(self) -> bool:
+        """使用隔离沙箱的应用（底层使用 SandboxInstance CR 作为 workload）"""
+        return self.is_ai_agent_app and self.deploy_policy == DeployPolicy.ISOLATED.value
 
     def get_source_obj(self) -> "RepositoryInstance":
         """获取 Application 对应的源码 Repo 对象"""

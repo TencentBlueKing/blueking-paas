@@ -434,6 +434,7 @@ class BkAppSpec(BaseModel):
     envOverlay: EnvOverlay | None = None
     observability: Observability | None = None
     schedule: Schedule | None = None
+    workloadType: str | None = None
 
 
 class BkAppStatus(BaseModel):

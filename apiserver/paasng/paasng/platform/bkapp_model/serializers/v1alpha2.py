@@ -237,6 +237,9 @@ class ProcServiceInputSLZ(serializers.Serializer):
 
 
 class ComponentInputSLZ(serializers.Serializer):
+    # 用于在 to_internal_value 与 validate 之间传递未转换的组件参数, 校验后即移除
+    _RAW_PROPERTIES_KEY = "_raw_properties"
+
     name = serializers.CharField(help_text="组件类型", max_length=32)
     version = serializers.CharField(help_text="组件版本", max_length=32)
     properties = serializers.DictField(help_text="组件参数", required=False)
@@ -245,14 +248,19 @@ class ComponentInputSLZ(serializers.Serializer):
         internal_value = super().to_internal_value(data)
         # 检查是否存在properties字段
         if "properties" in data:
+            # 组件 schema 以 camelCase 描述参数(与下发到 BkApp 的字段名保持一致), 而键名转换后
+            # sharedVolumes 会变成 shared_volumes, 在设有 additionalProperties=false 的 schema
+            # 下会被当作非法字段。因此这里留存原始参数, 由 validate 使用它完成校验。
+            internal_value[self._RAW_PROPERTIES_KEY] = data["properties"]
             # 转换 properties 中的键名
             internal_value["properties"] = camel_to_snake_case(data["properties"])
 
         return internal_value
 
     def validate(self, attrs: Dict) -> Dict:
+        raw_properties = attrs.pop(self._RAW_PROPERTIES_KEY, {})
         try:
-            validate_component_properties(attrs["name"], attrs["version"], attrs.get("properties", {}))
+            validate_component_properties(attrs["name"], attrs["version"], raw_properties)
         except ComponentNotFound:
             raise ValidationError(_("组件 {}-{} 不存在").format(attrs["name"], attrs["version"]))
         except ComponentPropertiesInvalid as e:

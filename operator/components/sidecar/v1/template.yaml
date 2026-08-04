@@ -1,0 +1,101 @@
+{{- /*
+sidecar 组件：在进程主容器旁注入一个附属容器。
+
+模板渲染结果会以 strategic merge patch 的方式合并到工作负载上：
+containers / volumes 均按 name 归并，因此这里只需声明增量部分。
+.procName 由operator 注入，指向进程主容器的名称。
+*/ -}}
+spec:
+  podTemplate:
+    containers:
+      - name: {{ .name }}
+        image: {{ .image | printf "%q" }}
+        imagePullPolicy: IfNotPresent
+        {{- with .command }}
+        command:
+          {{- range . }}
+          - {{ . | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .args }}
+        args:
+          {{- range . }}
+          - {{ . | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .env }}
+        env:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            value: {{ .value | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .ports }}
+        ports:
+          {{- range . }}
+          - containerPort: {{ .containerPort }}
+            {{- with .name }}
+            name: {{ . | printf "%q" }}
+            {{- end }}
+            protocol: {{ with .protocol }}{{ . }}{{ else }}TCP{{ end }}
+          {{- end }}
+        {{- end }}
+        {{- with .resources }}
+        resources:
+          {{- with .limits }}
+          limits:
+            {{- with .cpu }}
+            cpu: {{ . | printf "%q" }}
+            {{- end }}
+            {{- with .memory }}
+            memory: {{ . | printf "%q" }}
+            {{- end }}
+          {{- end }}
+          {{- with .requests }}
+          requests:
+            {{- with .cpu }}
+            cpu: {{ . | printf "%q" }}
+            {{- end }}
+            {{- with .memory }}
+            memory: {{ . | printf "%q" }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- with .volumeMounts }}
+        volumeMounts:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            mountPath: {{ .mountPath | printf "%q" }}
+            {{- if .readOnly }}
+            readOnly: true
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- with .mainContainerVolumeMounts }}
+      - name: {{ $.procName | printf "%q" }}
+        volumeMounts:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            mountPath: {{ .mountPath | printf "%q" }}
+            {{- if .readOnly }}
+            readOnly: true
+            {{- end }}
+          {{- end }}
+      {{- end }}
+    {{- with .sharedVolumes }}
+    volumes:
+      {{- range . }}
+      - name: {{ .name | printf "%q" }}
+        {{- if or .medium .sizeLimit }}
+        emptyDir:
+          {{- with .medium }}
+          medium: {{ . | printf "%q" }}
+          {{- end }}
+          {{- with .sizeLimit }}
+          sizeLimit: {{ . | printf "%q" }}
+          {{- end }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      {{- end }}
+    {{- end }}

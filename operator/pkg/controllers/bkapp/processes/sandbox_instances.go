@@ -21,13 +21,11 @@ package processes
 import (
 	"context"
 	"fmt"
-	"math"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,6 +39,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/envs"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/components"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
 )
 
@@ -178,10 +177,6 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(
 			Network: sandboxv1beta1.SandboxNetwork{
 				Mode: defaultSandboxNetworkMode,
 			},
-			Domain: sandboxv1beta1.SandboxDomain{
-				CPU:    sandboxv1beta1.SandboxCPU{Cores: int32(container.Resources.Limits.Cpu().Value())},
-				Memory: container.Resources.Limits.Memory().String(),
-			},
 			PodTemplate: sandboxv1beta1.SandboxPodTemplate{
 				Containers:       []corev1.Container{container},
 				NodeSelector:     common.BuildNodeSelector(bkapp),
@@ -192,6 +187,11 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(
 				Labels:           podLabels,
 			},
 		},
+	}
+
+	// patch components to sandboxinstance
+	if err = components.PatchToSandboxInstance(proc, sbi); err != nil {
+		return nil, errors.Wrap(err, "patch components to SandboxInstance")
 	}
 
 	return sbi, nil
@@ -228,10 +228,6 @@ func (r *SandboxInstanceReconciler) buildMainContainer(
 			"process", proc.Name, "bkapp", bkapp.Name, "error", err)
 		resReq = resGetter.Default()
 	}
-
-	// Ceil CPU to integer cores as required by SandboxInstance
-	cpuCores := parseCPUCores(resReq.Limits)
-	resReq.Limits[corev1.ResourceCPU] = *resource.NewQuantity(int64(cpuCores), resource.DecimalSI)
 
 	// Get image
 	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get(proc.Name)
@@ -309,22 +305,6 @@ func (r *SandboxInstanceReconciler) updateBkAppStatus(bkapp *paasv1alpha2.BkApp,
 			ObservedGeneration: bkapp.Generation,
 		})
 	}
-}
-
-// parseCPUCores extracts integer CPU cores from resource limits.
-// SandboxInstance requires integer cores, so we ceil the value.
-func parseCPUCores(limits corev1.ResourceList) int32 {
-	cpu := limits.Cpu()
-	if cpu == nil || cpu.IsZero() {
-		// default 2 cores
-		return 2
-	}
-	// MilliValue() returns milliCPU, divide by 1000 and ceil
-	cores := int32(math.Ceil(float64(cpu.MilliValue()) / 1000.0))
-	if cores < 1 {
-		cores = 1
-	}
-	return cores
 }
 
 // buildDNSConfigForSandbox builds DNS config from BkApp's domainResolution

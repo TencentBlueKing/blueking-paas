@@ -20,19 +20,124 @@ package processes
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	sandboxv1beta1 "bk.tencent.com/paas-app-operator/api/sandbox/v1beta1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	componentsMgr "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
+
+// sidecarTemplate mirrors support-files/components/sidecar/v1/template.yaml in
+// the apiserver repo, which is the template shipped to the operator's component
+// directory. Keep the two in sync.
+const sidecarTemplate = `spec:
+  podTemplate:
+    containers:
+      - name: {{ .name }}
+        image: {{ .image | printf "%q" }}
+        imagePullPolicy: IfNotPresent
+        {{- with .command }}
+        command:
+          {{- range . }}
+          - {{ . | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .args }}
+        args:
+          {{- range . }}
+          - {{ . | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .env }}
+        env:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            value: {{ .value | printf "%q" }}
+          {{- end }}
+        {{- end }}
+        {{- with .ports }}
+        ports:
+          {{- range . }}
+          - containerPort: {{ .containerPort }}
+            {{- with .name }}
+            name: {{ . | printf "%q" }}
+            {{- end }}
+            protocol: {{ with .protocol }}{{ . }}{{ else }}TCP{{ end }}
+          {{- end }}
+        {{- end }}
+        {{- with .resources }}
+        resources:
+          {{- with .limits }}
+          limits:
+            {{- with .cpu }}
+            cpu: {{ . | printf "%q" }}
+            {{- end }}
+            {{- with .memory }}
+            memory: {{ . | printf "%q" }}
+            {{- end }}
+          {{- end }}
+          {{- with .requests }}
+          requests:
+            {{- with .cpu }}
+            cpu: {{ . | printf "%q" }}
+            {{- end }}
+            {{- with .memory }}
+            memory: {{ . | printf "%q" }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- with .volumeMounts }}
+        volumeMounts:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            mountPath: {{ .mountPath | printf "%q" }}
+            {{- if .readOnly }}
+            readOnly: true
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- with .mainContainerVolumeMounts }}
+      - name: {{ $.procName | printf "%q" }}
+        volumeMounts:
+          {{- range . }}
+          - name: {{ .name | printf "%q" }}
+            mountPath: {{ .mountPath | printf "%q" }}
+            {{- if .readOnly }}
+            readOnly: true
+            {{- end }}
+          {{- end }}
+      {{- end }}
+    {{- with .sharedVolumes }}
+    volumes:
+      {{- range . }}
+      - name: {{ .name | printf "%q" }}
+        {{- if or .medium .sizeLimit }}
+        emptyDir:
+          {{- with .medium }}
+          medium: {{ . | printf "%q" }}
+          {{- end }}
+          {{- with .sizeLimit }}
+          sizeLimit: {{ . | printf "%q" }}
+          {{- end }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+`
 
 var _ = Describe("Test SandboxInstanceReconciler", func() {
 	var bkapp *paasv1alpha2.BkApp
@@ -257,11 +362,45 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 		})
 	})
 
-	Context("test parseCPUCores", func() {
-		It("should return 2 cores by default when CPU is zero", func() {
-			limits := corev1.ResourceList{}
-			cores := parseCPUCores(limits)
-			Expect(cores).To(Equal(int32(2)))
+	Context("test container resources", func() {
+		// Resource quotas belong to the container that consumes them. Rewriting them
+		// into spec.domain would give the sandbox two sources of truth, and rounding
+		// CPU up to whole cores would silently hand the process more than its plan.
+		It("should keep the quota plan's resources on the container", func() {
+			r := NewSandboxInstanceReconciler(nil)
+			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The "default" quota plan resolves to 4000m CPU / 1024Mi memory limits
+			// and 200m CPU / 256Mi memory requests.
+			res := sbi.Spec.PodTemplate.Containers[0].Resources
+			Expect(res.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(res.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+			Expect(res.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(res.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+		})
+
+		It("should not populate spec.domain", func() {
+			r := NewSandboxInstanceReconciler(nil)
+			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sbi.Spec.Domain).To(BeNil())
+		})
+
+		It("should keep sub-core CPU limits untouched", func() {
+			Expect(kubeutil.SetJsonAnnotation(
+				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+					"web": {"cpu": "1500m", "memory": "512Mi"},
+				},
+			)).To(Succeed())
+
+			r := NewSandboxInstanceReconciler(nil)
+			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
+			Expect(err).NotTo(HaveOccurred())
+
+			limits := sbi.Spec.PodTemplate.Containers[0].Resources.Limits
+			Expect(limits.Cpu().Equal(resource.MustParse("1500m"))).To(BeTrue())
+			Expect(limits.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
 		})
 	})
 
@@ -275,6 +414,204 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			result := r.Reconcile(ctx, bkapp)
 			Expect(result.ShouldAbort()).To(BeFalse())
 			// No deployments should be created
+		})
+	})
+
+	Context("test sidecar component support", func() {
+		var tempDir string
+
+		// sidecarComponent builds a Component entry carrying the given properties.
+		sidecarComponent := func(props string) paasv1alpha2.Component {
+			return paasv1alpha2.Component{
+				Name:       "sidecar",
+				Version:    "v1",
+				Properties: runtime.RawExtension{Raw: []byte(props)},
+			}
+		}
+
+		// containersByName indexes the rendered containers by name. A strategic
+		// merge patch does not preserve list order, so containers must never be
+		// looked up by position.
+		containersByName := func(sbi *sandboxv1beta1.SandboxInstance) map[string]corev1.Container {
+			indexed := map[string]corev1.Container{}
+			for _, c := range sbi.Spec.PodTemplate.Containers {
+				indexed[c.Name] = c
+			}
+			return indexed
+		}
+
+		// getSandboxInstance fetches the SandboxInstance built for the "web" process.
+		getSandboxInstance := func(cli client.Client, ctx context.Context) *sandboxv1beta1.SandboxInstance {
+			sbi := &sandboxv1beta1.SandboxInstance{}
+			Expect(cli.Get(ctx, types.NamespacedName{
+				Name: names.Deployment(bkapp, "web"), Namespace: "default",
+			}, sbi)).To(Succeed())
+			return sbi
+		}
+
+		BeforeEach(func() {
+			// Point the component loader at a copy of the real sidecar component,
+			// so these tests exercise the template that actually ships.
+			tempDir, _ = os.MkdirTemp("", "sandbox_components_test")
+			componentsMgr.DefaultComponentDir = tempDir
+			versionDir := filepath.Join(tempDir, "sidecar", "v1")
+			Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
+			Expect(
+				os.WriteFile(filepath.Join(versionDir, "template.yaml"), []byte(sidecarTemplate), 0o644),
+			).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tempDir)).To(Succeed())
+			componentsMgr.DefaultComponentDir = "/components"
+		})
+
+		It("should include sidecar containers in SandboxInstance", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				sidecarComponent(`{
+					"name": "log-collector",
+					"image": "fluentd:latest",
+					"command": ["/bin/sh", "-c", "fluentd"],
+					"env": [{"name": "LOG_LEVEL", "value": "info"}]
+				}`),
+			}
+			cli := builder.WithObjects(bkapp).Build()
+			r := NewSandboxInstanceReconciler(cli)
+			ctx := context.Background()
+
+			r.Reconcile(ctx, bkapp)
+
+			sbi := getSandboxInstance(cli, ctx)
+			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(2))
+
+			containers := containersByName(sbi)
+			Expect(containers).To(HaveKey("web"))
+			Expect(containers["web"].Image).To(Equal("my-agent:latest"))
+
+			Expect(containers).To(HaveKey("log-collector"))
+			sidecar := containers["log-collector"]
+			Expect(sidecar.Image).To(Equal("fluentd:latest"))
+			Expect(sidecar.Command).To(Equal([]string{"/bin/sh", "-c", "fluentd"}))
+			Expect(sidecar.Env).To(HaveLen(1))
+			Expect(sidecar.Env[0].Name).To(Equal("LOG_LEVEL"))
+			Expect(sidecar.Env[0].Value).To(Equal("info"))
+		})
+
+		It("should include shared volumes and mount them on both containers", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				sidecarComponent(`{
+					"name": "worker",
+					"image": "worker:v1",
+					"sharedVolumes": [
+						{"name": "shared-data", "sizeLimit": "1Gi"},
+						{"name": "tmpfs-cache", "medium": "Memory"}
+					],
+					"volumeMounts": [{"name": "shared-data", "mountPath": "/data"}],
+					"mainContainerVolumeMounts": [{"name": "shared-data", "mountPath": "/app/data"}]
+				}`),
+			}
+			cli := builder.WithObjects(bkapp).Build()
+			r := NewSandboxInstanceReconciler(cli)
+			ctx := context.Background()
+
+			r.Reconcile(ctx, bkapp)
+
+			sbi := getSandboxInstance(cli, ctx)
+
+			volumesByName := map[string]corev1.Volume{}
+			for _, v := range sbi.Spec.PodTemplate.Volumes {
+				volumesByName[v.Name] = v
+			}
+			Expect(volumesByName).To(HaveLen(2))
+			Expect(volumesByName["shared-data"].EmptyDir).NotTo(BeNil())
+			Expect(volumesByName["shared-data"].EmptyDir.SizeLimit.String()).To(Equal("1Gi"))
+			Expect(volumesByName["tmpfs-cache"].EmptyDir.Medium).To(Equal(corev1.StorageMediumMemory))
+
+			containers := containersByName(sbi)
+			// The main container receives its own mount of the shared volume.
+			Expect(containers["web"].VolumeMounts).To(HaveLen(1))
+			Expect(containers["web"].VolumeMounts[0].Name).To(Equal("shared-data"))
+			Expect(containers["web"].VolumeMounts[0].MountPath).To(Equal("/app/data"))
+
+			Expect(containers["worker"].VolumeMounts).To(HaveLen(1))
+			Expect(containers["worker"].VolumeMounts[0].Name).To(Equal("shared-data"))
+			Expect(containers["worker"].VolumeMounts[0].MountPath).To(Equal("/data"))
+		})
+
+		It("should support multiple sidecar components", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				sidecarComponent(`{"name": "first", "image": "first:v1"}`),
+				sidecarComponent(`{"name": "second", "image": "second:v1"}`),
+			}
+			cli := builder.WithObjects(bkapp).Build()
+			r := NewSandboxInstanceReconciler(cli)
+			ctx := context.Background()
+
+			r.Reconcile(ctx, bkapp)
+
+			sbi := getSandboxInstance(cli, ctx)
+			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(3))
+
+			containers := containersByName(sbi)
+			Expect(containers).To(HaveLen(3))
+			Expect(containers).To(HaveKey("web"))
+			Expect(containers["first"].Image).To(Equal("first:v1"))
+			Expect(containers["second"].Image).To(Equal("second:v1"))
+		})
+
+		It("should have no sidecars or volumes when no component is configured", func() {
+			cli := builder.WithObjects(bkapp).Build()
+			r := NewSandboxInstanceReconciler(cli)
+			ctx := context.Background()
+
+			r.Reconcile(ctx, bkapp)
+
+			sbi := getSandboxInstance(cli, ctx)
+			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(1))
+			Expect(sbi.Spec.PodTemplate.Containers[0].Name).To(Equal("web"))
+			Expect(sbi.Spec.PodTemplate.Volumes).To(BeEmpty())
+		})
+
+		// A strategic merge patch grows a "merge" list by seeding new entries from
+		// the existing ones, so a sidecar can silently inherit the main container's
+		// command / env / resources / workingDir. That would make the sidecar run
+		// the app's entrypoint and claim a second full resource quota, so the
+		// injection must isolate the two containers.
+		It("should not let a sidecar inherit main container fields", func() {
+			// Give the main container the full set of fields the operator builds
+			// in production; a bare name/image main container hides the problem.
+			bkapp.Spec.Processes[0].Command = []string{"/bin/sh", "-c", "python main.py"}
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				// Only name and image are declared: everything else must stay unset.
+				sidecarComponent(`{"name": "log-collector", "image": "fluentd:latest"}`),
+			}
+			cli := builder.WithObjects(bkapp).Build()
+			r := NewSandboxInstanceReconciler(cli)
+			ctx := context.Background()
+
+			r.Reconcile(ctx, bkapp)
+
+			sbi := getSandboxInstance(cli, ctx)
+			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(2))
+
+			containers := containersByName(sbi)
+			main := containers["web"]
+			sidecar := containers["log-collector"]
+
+			// The main container keeps everything the operator gave it.
+			Expect(main.Image).To(Equal("my-agent:latest"))
+			Expect(main.Command).To(Equal([]string{"/bin/sh", "-c", "python main.py"}))
+			Expect(main.Resources.Limits).NotTo(BeEmpty())
+
+			// The sidecar keeps only what it declared.
+			Expect(sidecar.Image).To(Equal("fluentd:latest"))
+			Expect(sidecar.Command).To(BeEmpty(), "sidecar must not inherit the main container's command")
+			Expect(sidecar.Args).To(BeEmpty(), "sidecar must not inherit the main container's args")
+			Expect(sidecar.Env).To(BeEmpty(), "sidecar must not inherit the main container's env")
+			Expect(sidecar.WorkingDir).To(BeEmpty(), "sidecar must not inherit the main container's workingDir")
+			Expect(
+				sidecar.Resources.Limits,
+			).To(BeEmpty(), "sidecar must not inherit the main container's resource limits")
 		})
 	})
 })

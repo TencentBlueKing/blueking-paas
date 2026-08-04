@@ -72,8 +72,9 @@ type SandboxInstanceSpec struct {
 	// Network defines network configuration
 	Network SandboxNetwork `json:"network"`
 
-	// Domain defines compute resource allocations (CPU/Memory)
-	Domain SandboxDomain `json:"domain"`
+	// Domain defines compute resource allocations (CPU/Memory).
+	// +optional
+	Domain *SandboxDomain `json:"domain,omitempty"`
 
 	// PodTemplate defines the pod template for the sandbox instance
 	PodTemplate SandboxPodTemplate `json:"podTemplate"`
@@ -131,12 +132,18 @@ type SandboxDisk struct {
 // SandboxPodTemplate defines the pod specification for the sandbox
 // +kubebuilder:object:generate=true
 type SandboxPodTemplate struct {
-	// Containers is a list of containers in the sandbox pod
-	Containers []corev1.Container `json:"containers"`
+	// Containers is a list of containers in the sandbox pod.
+	//
+	// The patchStrategy/patchMergeKey tags mirror those on corev1.PodSpec. They are
+	// only read by apimachinery's strategicpatch when computing a merge locally, and
+	// have no effect on how the CR is serialized to the API server. Without them, a
+	// strategic merge patch would replace the whole list instead of merging entries
+	// by name, which would drop the main container when injecting sidecars.
+	Containers []corev1.Container `json:"containers" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Volumes to mount
 	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge,retainKeys" patchMergeKey:"name"`
 
 	// NodeSelector for scheduling
 	// +optional

@@ -17,6 +17,8 @@
 
 import datetime
 import logging
+from collections import defaultdict
+from types import SimpleNamespace
 from typing import Dict, List, NamedTuple, Optional, Protocol, Type
 
 from django.utils import timezone
@@ -24,10 +26,12 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
+from paas_wl.bk_app.processes.entities import Runtime
 from paas_wl.bk_app.processes.exceptions import ProcessOperationTooOften
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.readers import instance_kmodel, ns_instance_kmodel, ns_process_kmodel, process_kmodel
+from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
@@ -78,6 +82,43 @@ def list_ns_processes(cluster_name: str, namespace: str) -> ProcessesInfo:
         rv_proc=procs_in_k8s.get_resource_version(),
         rv_inst=insts_in_k8s.get_resource_version(),
     )
+
+
+def list_ns_processes_from_instances(cluster_name: str, namespace: str) -> ProcessesInfo:
+    """根据实例 Pod 列表构造实时进程信息。
+
+    使用隔离沙箱的应用通过 CR 直接渲染 Pod, 不会生成 Deployment。此函数按应用和进程类型聚合
+    Pod, 并生成兼容进程列表接口的 Process 对象。
+    """
+    insts_in_k8s = ns_instance_kmodel.list_by_ns_with_mdata(cluster_name, namespace)
+    grouped_instances: dict[tuple[WlApp, str], list] = defaultdict(list)
+    for instance in insts_in_k8s.items:
+        grouped_instances[(instance.app, instance.process_type)].append(instance)
+
+    processes = []
+    for (wl_app, process_type), instances in grouped_instances.items():
+        process = Process(
+            app=wl_app,
+            name=process_type,
+            version=max((instance.version for instance in instances), default=0),
+            replicas=1,
+            type=process_type,
+            schedule=Schedule(cluster_name=cluster_name, tolerations=[], node_selector={}),
+            runtime=Runtime(envs={}, image=instances[0].image, command=[], args=[]),
+            instances=instances,
+        )
+        # 构造 metadata 对象, 序列化器需要通过 metadata.name 获取进程名称
+        # NOTE: 目前隔离沙箱应用仅支持单副本
+        metadata = SimpleNamespace(name=f"{wl_app.name}--{process_type}")
+        process.fulfill_runtime(
+            replicas=1,
+            success=sum(instance.ready for instance in instances),
+            metadata=metadata,
+        )
+        processes.append(process)
+
+    rv_inst = insts_in_k8s.get_resource_version()
+    return ProcessesInfo(processes=processes, rv_proc=rv_inst, rv_inst=rv_inst)
 
 
 def list_processes(env: ModuleEnvironment) -> ProcessesInfo:

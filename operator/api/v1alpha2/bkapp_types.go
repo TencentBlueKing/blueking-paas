@@ -163,7 +163,24 @@ type AppSpec struct {
 	// Schedule holds scheduling related configurations, includes node selector and tolerations.
 	// +optional
 	Schedule *Schedule `json:"schedule,omitempty"`
+
+	// WorkloadType specifies the kind of workload the operator should reconcile from this BkApp.
+	// "deployment" (default): reconcile into a standard Deployment.
+	// "sandboxInstance": reconcile into a SandboxInstance CR (cube MicroVM).
+	// +optional
+	// +kubebuilder:validation:Enum=deployment;sandboxInstance
+	WorkloadType WorkloadType `json:"workloadType,omitempty"`
 }
+
+// WorkloadType defines which kind of workload resource the operator produces from a BkApp.
+type WorkloadType string
+
+const (
+	// WorkloadTypeDeployment means the operator reconciles BkApp into a standard Deployment.
+	WorkloadTypeDeployment WorkloadType = "deployment"
+	// WorkloadTypeSandboxInstance means the operator reconciles BkApp into a SandboxInstance CR (cube MicroVM).
+	WorkloadTypeSandboxInstance WorkloadType = "sandboxInstance"
+)
 
 // Schedule holds scheduling related configurations, includes node selector and tolerations.
 type Schedule struct {

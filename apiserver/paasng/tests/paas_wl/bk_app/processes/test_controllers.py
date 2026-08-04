@@ -16,12 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.processes.controllers import list_processes
+from paas_wl.bk_app.processes.controllers import list_ns_processes_from_instances, list_processes
 from paas_wl.bk_app.processes.entities import Runtime
 from paas_wl.bk_app.processes.kres_entities import Instance, Process, Schedule
 from paas_wl.infras.resources.generation.version import AppResVerManager
+from paas_wl.infras.resources.kube_res.base import ResourceList
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -93,3 +95,29 @@ def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_re
     mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
     wl_release.delete()
     assert len(list_processes(bk_stag_env).processes) == 1
+
+
+def test_list_ns_processes_from_instances(wl_app):
+    instances = [
+        Instance(app=wl_app, name="web-1", process_type="web", image="example.com/app:v1", version=42, ready=True)
+    ]
+    instance_list = ResourceList(items=instances, metadata=ResourceField({"resourceVersion": "100"}))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            "paas_wl.bk_app.processes.controllers.ns_instance_kmodel.list_by_ns_with_mdata",
+            lambda cluster_name, namespace: instance_list,
+        )
+        result = list_ns_processes_from_instances("default", wl_app.namespace)
+
+    assert result.rv_proc == "100"
+    assert result.rv_inst == "100"
+    assert len(result.processes) == 1
+    process = result.processes[0]
+    assert process.type == "web"
+    assert process.version == 42
+    assert process.runtime.image == "example.com/app:v1"
+    assert process.status is not None
+    assert process.status.replicas == 1
+    assert process.status.success == 1
+    assert process.instances == instances

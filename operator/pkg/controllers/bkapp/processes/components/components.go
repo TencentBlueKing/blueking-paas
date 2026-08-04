@@ -39,15 +39,8 @@ type ComponentMutator struct {
 	defaultParams map[string]any
 }
 
-// patchTo applies the rendered component template onto obj via a strategic merge
-// patch. The zero value of T supplies the patchStrategy/patchMergeKey struct tags
-// that apimachinery reads to decide how lists are merged.
-//
-// The patched JSON is decoded into a fresh T rather than into obj: encoding/json
-// reuses the existing slice elements of a non-zero target by index and only
-// overwrites the keys present in the JSON. Since a strategic merge patch reorders
-// a merge list, decoding in place would leave a sidecar holding whichever fields
-// the main container had at that index (command, env, resources, ...).
+// patchTo inject component to object via a strategic merge
+// patch.
 func patchTo[T any](c *ComponentMutator, obj *T) error {
 	patchBytes, err := c.getTemplate()
 	if err != nil {

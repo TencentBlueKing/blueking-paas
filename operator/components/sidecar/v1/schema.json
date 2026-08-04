@@ -15,7 +15,7 @@
     },
     "image": {
       "type": "string",
-      "description": "附属容器镜像，必须为平台构建产出的镜像",
+      "description": "附属容器镜像",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@-]*$",
       "minLength": 1,
       "maxLength": 512

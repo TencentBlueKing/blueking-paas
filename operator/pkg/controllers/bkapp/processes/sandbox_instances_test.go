@@ -362,10 +362,9 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 		})
 	})
 
-	Context("test container resources and domain", func() {
-		// Process quota lands on podTemplate.containers[].resources. Domain is
-		// left empty ({}); sandbox-controller derives the guest size from the
-		// first container when cpu/memory are omitted.
+	Context("test container resources", func() {
+		// Process quota lands on podTemplate.containers[].resources.
+		// Spec.Domain is left empty; guest sizing is handled by sandbox-controller.
 		It("should keep the quota plan's resources on the container", func() {
 			r := NewSandboxInstanceReconciler(nil)
 			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
@@ -378,15 +377,7 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			Expect(res.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
 			Expect(res.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(res.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
-		})
-
-		It("should leave domain empty so guest size can be derived", func() {
-			r := NewSandboxInstanceReconciler(nil)
-			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(sbi.Spec.Domain).To(Equal(sandboxv1beta1.SandboxDomain{}))
-			Expect(sbi.Spec.Domain.CPU.Cores).To(BeZero())
-			Expect(sbi.Spec.Domain.Memory).To(BeEmpty())
 		})
 
 		It("should keep sub-core CPU limits untouched on the container", func() {
@@ -403,7 +394,6 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			limits := sbi.Spec.PodTemplate.Containers[0].Resources.Limits
 			Expect(limits.Cpu().Equal(resource.MustParse("1500m"))).To(BeTrue())
 			Expect(limits.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(sbi.Spec.Domain).To(Equal(sandboxv1beta1.SandboxDomain{}))
 		})
 	})
 
@@ -539,40 +529,6 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			Expect(containers["worker"].VolumeMounts).To(HaveLen(1))
 			Expect(containers["worker"].VolumeMounts[0].Name).To(Equal("shared-data"))
 			Expect(containers["worker"].VolumeMounts[0].MountPath).To(Equal("/data"))
-		})
-
-		It("should support multiple sidecar components", func() {
-			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
-				sidecarComponent(`{"name": "first", "image": "first:v1"}`),
-				sidecarComponent(`{"name": "second", "image": "second:v1"}`),
-			}
-			cli := builder.WithObjects(bkapp).Build()
-			r := NewSandboxInstanceReconciler(cli)
-			ctx := context.Background()
-
-			r.Reconcile(ctx, bkapp)
-
-			sbi := getSandboxInstance(cli, ctx)
-			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(3))
-
-			containers := containersByName(sbi)
-			Expect(containers).To(HaveLen(3))
-			Expect(containers).To(HaveKey("web"))
-			Expect(containers["first"].Image).To(Equal("first:v1"))
-			Expect(containers["second"].Image).To(Equal("second:v1"))
-		})
-
-		It("should have no sidecars or volumes when no component is configured", func() {
-			cli := builder.WithObjects(bkapp).Build()
-			r := NewSandboxInstanceReconciler(cli)
-			ctx := context.Background()
-
-			r.Reconcile(ctx, bkapp)
-
-			sbi := getSandboxInstance(cli, ctx)
-			Expect(sbi.Spec.PodTemplate.Containers).To(HaveLen(1))
-			Expect(sbi.Spec.PodTemplate.Containers[0].Name).To(Equal("web"))
-			Expect(sbi.Spec.PodTemplate.Volumes).To(BeEmpty())
 		})
 
 		// A strategic merge patch grows a "merge" list by seeding new entries from

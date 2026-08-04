@@ -73,7 +73,7 @@ type SandboxInstanceSpec struct {
 	Network SandboxNetwork `json:"network"`
 
 	// Domain is required by the SandboxInstance CRD.
-	// 保留 domain 中的 cpu/memory 为空，由 sandbox controller 负责计算。
+	// Leave domain.cpu/memory empty; sandbox-controller computes the guest size.
 	Domain SandboxDomain `json:"domain"`
 
 	// PodTemplate defines the pod template for the sandbox instance

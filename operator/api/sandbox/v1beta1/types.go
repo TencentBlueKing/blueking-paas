@@ -72,9 +72,9 @@ type SandboxInstanceSpec struct {
 	// Network defines network configuration
 	Network SandboxNetwork `json:"network"`
 
-	// Domain defines compute resource allocations (CPU/Memory).
-	// +optional
-	Domain *SandboxDomain `json:"domain,omitempty"`
+	// Domain is required by the SandboxInstance CRD.
+	// 保留 domain 中的 cpu/memory 为空，由 sandbox controller 负责计算。
+	Domain SandboxDomain `json:"domain"`
 
 	// PodTemplate defines the pod template for the sandbox instance
 	PodTemplate SandboxPodTemplate `json:"podTemplate"`
@@ -93,11 +93,14 @@ type SandboxNetwork struct {
 // SandboxDomain defines compute resource configuration
 // +kubebuilder:object:generate=true
 type SandboxDomain struct {
-	// CPU configuration
-	CPU SandboxCPU `json:"cpu"`
+	// CPU configuration. Omit to let sandbox-controller derive from containers.
+	// +optional
+	CPU SandboxCPU `json:"cpu,omitempty"`
 
-	// Memory quantity string, e.g. "4Gi"
-	Memory string `json:"memory"`
+	// Memory quantity string, e.g. "4Gi". Omit to let sandbox-controller derive
+	// from containers.
+	// +optional
+	Memory string `json:"memory,omitempty"`
 
 	// Devices configuration (rootfs disks etc.)
 	// +optional
@@ -107,7 +110,8 @@ type SandboxDomain struct {
 // SandboxCPU defines CPU resource
 type SandboxCPU struct {
 	// Cores is the number of vCPU cores (integer)
-	Cores int32 `json:"cores"`
+	// +optional
+	Cores int32 `json:"cores,omitempty"`
 }
 
 // SandboxDevices defines device configuration for rootfs etc.

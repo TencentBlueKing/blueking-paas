@@ -362,10 +362,10 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 		})
 	})
 
-	Context("test container resources", func() {
-		// Resource quotas belong to the container that consumes them. Rewriting them
-		// into spec.domain would give the sandbox two sources of truth, and rounding
-		// CPU up to whole cores would silently hand the process more than its plan.
+	Context("test container resources and domain", func() {
+		// Process quota lands on podTemplate.containers[].resources. Domain is
+		// left empty ({}); sandbox-controller derives the guest size from the
+		// first container when cpu/memory are omitted.
 		It("should keep the quota plan's resources on the container", func() {
 			r := NewSandboxInstanceReconciler(nil)
 			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
@@ -380,14 +380,16 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			Expect(res.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
 		})
 
-		It("should not populate spec.domain", func() {
+		It("should leave domain empty so guest size can be derived", func() {
 			r := NewSandboxInstanceReconciler(nil)
 			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(sbi.Spec.Domain).To(BeNil())
+			Expect(sbi.Spec.Domain).To(Equal(sandboxv1beta1.SandboxDomain{}))
+			Expect(sbi.Spec.Domain.CPU.Cores).To(BeZero())
+			Expect(sbi.Spec.Domain.Memory).To(BeEmpty())
 		})
 
-		It("should keep sub-core CPU limits untouched", func() {
+		It("should keep sub-core CPU limits untouched on the container", func() {
 			Expect(kubeutil.SetJsonAnnotation(
 				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
 					"web": {"cpu": "1500m", "memory": "512Mi"},
@@ -401,6 +403,7 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 			limits := sbi.Spec.PodTemplate.Containers[0].Resources.Limits
 			Expect(limits.Cpu().Equal(resource.MustParse("1500m"))).To(BeTrue())
 			Expect(limits.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
+			Expect(sbi.Spec.Domain).To(Equal(sandboxv1beta1.SandboxDomain{}))
 		})
 	})
 

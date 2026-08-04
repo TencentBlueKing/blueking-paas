@@ -131,11 +131,7 @@ func (in *SandboxInstanceList) DeepCopyObject() runtime.Object {
 func (in *SandboxInstanceSpec) DeepCopyInto(out *SandboxInstanceSpec) {
 	*out = *in
 	out.Network = in.Network
-	if in.Domain != nil {
-		in, out := &in.Domain, &out.Domain
-		*out = new(SandboxDomain)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Domain.DeepCopyInto(&out.Domain)
 	in.PodTemplate.DeepCopyInto(&out.PodTemplate)
 	if in.VolumeClaimTemplates != nil {
 		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates

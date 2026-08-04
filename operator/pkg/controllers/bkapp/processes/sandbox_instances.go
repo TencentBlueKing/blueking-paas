@@ -177,6 +177,8 @@ func (r *SandboxInstanceReconciler) buildSandboxInstance(
 			Network: sandboxv1beta1.SandboxNetwork{
 				Mode: defaultSandboxNetworkMode,
 			},
+			// domain 保留为空，由 sandbox controller 计算 guest 的 cpu/memory
+			Domain: sandboxv1beta1.SandboxDomain{},
 			PodTemplate: sandboxv1beta1.SandboxPodTemplate{
 				Containers:       []corev1.Container{container},
 				NodeSelector:     common.BuildNodeSelector(bkapp),

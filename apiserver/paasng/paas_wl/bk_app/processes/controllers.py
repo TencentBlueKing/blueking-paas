@@ -108,6 +108,7 @@ def list_ns_processes_from_instances(cluster_name: str, namespace: str) -> Proce
             instances=instances,
         )
         # 构造 metadata 对象, 序列化器需要通过 metadata.name 获取进程名称
+        # NOTE: 目前隔离沙箱应用仅支持单副本
         metadata = SimpleNamespace(name=f"{wl_app.name}--{process_type}")
         process.fulfill_runtime(
             replicas=1,

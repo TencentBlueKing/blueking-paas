@@ -17,6 +17,8 @@
 IMG ?= controller:latest
 # envtest 二进制指定的需要下载的 kubebuilder 版本
 ENVTEST_K8S_VERSION = 1.24.1
+# 构建单测镜像时预置 envtest assets 的目标架构，默认 amd64
+TARGETARCH ?= amd64
 # 在部署时会关联到 controller Deployment 的 imagePullSecrets
 DOCKER_CONFIG_JSON ?= ""
 # 待自动更新的 helm chart 目标目录
@@ -135,8 +137,11 @@ docker-push: ## 推送 Manager 镜像，需指定 IMG 参数
 	docker push ${IMG}
 
 .PHONY: docker-dev
-docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像
-	docker build -f ./Dockerfile-Dev -t bkpaas-app-operator-dev:$(VERSION) --no-cache .
+docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像，可指定 TARGETARCH 参数
+	docker build -f ./Dockerfile-Dev \
+		--build-arg K8S_VERSION=$(ENVTEST_K8S_VERSION) \
+		--build-arg TARGETARCH=$(TARGETARCH) \
+		-t bkpaas-app-operator-dev:$(VERSION) --no-cache .
 
 ##@ 部署命令
 

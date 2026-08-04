@@ -26,16 +26,18 @@ RUN make controller-gen envtest ginkgo golines gofumpt golangci-lint
 
 # Preinstall envtest assets because the GCS kubebuilder-tools bucket used by
 # this setup-envtest version is no longer available.
+ARG K8S_VERSION=1.24.1
 ARG ETCD_VERSION=v3.5.4
+ARG TARGETARCH=amd64
 RUN set -eux; \
-    ENVTEST_DIR="/root/.local/share/kubebuilder-envtest/k8s/1.24.1-linux-amd64"; \
+    ENVTEST_DIR="/root/.local/share/kubebuilder-envtest/k8s/${K8S_VERSION}-linux-${TARGETARCH}"; \
     mkdir -p "${ENVTEST_DIR}"; \
     cd "${ENVTEST_DIR}"; \
-    curl -fsSL -o kube-apiserver "https://dl.k8s.io/v1.24.1/bin/linux/amd64/kube-apiserver"; \
-    curl -fsSL -o kubectl "https://dl.k8s.io/v1.24.1/bin/linux/amd64/kubectl"; \
+    curl -fsSL -o kube-apiserver "https://dl.k8s.io/v${K8S_VERSION}/bin/linux/${TARGETARCH}/kube-apiserver"; \
+    curl -fsSL -o kubectl "https://dl.k8s.io/v${K8S_VERSION}/bin/linux/${TARGETARCH}/kubectl"; \
     curl -fsSL -o etcd.tar.gz \
-        "https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz"; \
+        "https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz"; \
     tar xzf etcd.tar.gz; \
-    mv "etcd-${ETCD_VERSION}-linux-amd64/etcd" ./etcd; \
-    rm -rf etcd.tar.gz "etcd-${ETCD_VERSION}-linux-amd64"; \
+    mv "etcd-${ETCD_VERSION}-linux-${TARGETARCH}/etcd" ./etcd; \
+    rm -rf etcd.tar.gz "etcd-${ETCD_VERSION}-linux-${TARGETARCH}"; \
     chmod +x kube-apiserver kubectl etcd

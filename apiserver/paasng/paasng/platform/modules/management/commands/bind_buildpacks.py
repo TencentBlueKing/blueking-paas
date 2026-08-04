@@ -20,6 +20,7 @@ import typing
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from paasng.platform.modules.constants import BuildPackType
 from paasng.platform.modules.helpers import SlugbuilderBinder
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder
 
@@ -32,7 +33,12 @@ class Command(BaseCommand):
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
         parser.add_argument("--stack", default="", help="buildpack 的运行时栈标识，如 heroku-24")
-        parser.add_argument("--type", dest="buildpack_type", help="buildpack 的引用类型，如 tar 或 oci-embedded")
+        parser.add_argument(
+            "--type",
+            dest="buildpack_type",
+            help="buildpack 的引用类型，如 tar 或 oci-embedded",
+            choices=[item.value for item in BuildPackType],
+        )
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def get_slugbuilder(self, image: str) -> AppSlugBuilder:

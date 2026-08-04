@@ -18,6 +18,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from paasng.platform.modules.constants import BuildPackType
 from paasng.platform.modules.models import AppBuildPack
 from paasng.platform.modules.utils import parse_assignment_list
 
@@ -33,7 +34,9 @@ class Command(BaseCommand):
         parser.add_argument("--description_en", required=False, help="buildpack description(en)")
         parser.add_argument("-t", "--tag", required=True, help="version")
         parser.add_argument("-l", "--language", required=True, help="language")
-        parser.add_argument("-T", "--type", dest="type_", default="tar", help="type")
+        parser.add_argument(
+            "-T", "--type", dest="type_", default="tar", help="type", choices=[item.value for item in BuildPackType]
+        )
         parser.add_argument("-a", "--address", required=True, help="address")
         parser.add_argument(
             "-e",

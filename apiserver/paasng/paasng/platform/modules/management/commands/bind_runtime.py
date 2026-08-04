@@ -20,6 +20,7 @@ import typing
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from paasng.platform.modules.constants import BuildPackType
 from paasng.platform.modules.helpers import ModuleRuntimeBinder
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
 
@@ -32,7 +33,12 @@ class Command(BaseCommand):
         parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
         parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
         parser.add_argument("--stack", dest="stack", default="", help="buildpack stack (e.g. heroku-24)")
-        parser.add_argument("--type", dest="buildpack_type", help="buildpack type (e.g. tar or oci-embedded)")
+        parser.add_argument(
+            "--type",
+            dest="buildpack_type",
+            help="buildpack type (e.g. tar or oci-embedded)",
+            choices=[x.value for x in BuildPackType],
+        )
         parser.add_argument("--module", dest="module_names", help="module name", nargs="*")
         parser.add_argument("--app-code", dest="app_codes", help="application code", nargs="*")
         parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")

@@ -64,7 +64,10 @@ from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
+from paasng.platform.bkapp_model.constants import (
+    PORT_PLACEHOLDER,
+    WorkloadType,
+)
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -653,6 +656,13 @@ def get_bkapp_resource_for_deploy(
     mgr = ModuleRuntimeManager(env.module)
     if mgr.build_config.build_method == RuntimeType.BUILDPACK:
         _update_cmd_args_from_wl_build(model_res, WlBuild.objects.get(uuid=deployment.build_id))
+
+    # 显式声明 workloadType，隔离沙箱应用使用 SandboxInstance，其余使用 Deployment
+    application = env.application
+    if application.use_isolated_sandbox:
+        model_res.spec.workloadType = WorkloadType.SANDBOX_INSTANCE
+    else:
+        model_res.spec.workloadType = WorkloadType.DEPLOYMENT
 
     # TODO: Missing parts: "build"
     return model_res

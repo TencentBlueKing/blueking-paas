@@ -58,6 +58,11 @@ type DeploymentReconciler struct {
 
 // Reconcile ...
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
+	// SandboxInstance workload is handled by SandboxInstanceReconciler
+	if bkapp.Spec.WorkloadType == paasv1alpha2.WorkloadTypeSandboxInstance {
+		return r.Result
+	}
+
 	log := logf.FromContext(ctx)
 	currentDeploys, err := r.getCurrentDeployments(ctx, bkapp)
 	if err != nil {

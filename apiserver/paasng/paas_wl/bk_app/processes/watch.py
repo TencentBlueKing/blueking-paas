@@ -24,7 +24,12 @@ from django.db import connection
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.processes.controllers import ProcessesInfo, list_ns_processes, list_processes
+from paas_wl.bk_app.processes.controllers import (
+    ProcessesInfo,
+    list_ns_processes,
+    list_ns_processes_from_instances,
+    list_processes,
+)
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.readers import (
     ProcessAPIAdapter,
@@ -73,6 +78,10 @@ class ProcInstByEnvListWatcher:
 
     def list(self) -> ProcessesInfo:
         return list_ns_processes(self.cluster_name, self.namespace)
+
+    def list_instances_only(self) -> ProcessesInfo:
+        """仅按 Pod 构造进程状态, 适用于没有 Deployment 的隔离沙箱应用。"""
+        return list_ns_processes_from_instances(self.cluster_name, self.namespace)
 
     def watch(
         self, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None

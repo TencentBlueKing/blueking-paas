@@ -17,6 +17,8 @@
 IMG ?= controller:latest
 # envtest 二进制指定的需要下载的 kubebuilder 版本
 ENVTEST_K8S_VERSION = 1.24.1
+# 构建单测镜像时预置 envtest assets 的目标架构，默认 amd64
+TARGETARCH ?= amd64
 # 在部署时会关联到 controller Deployment 的 imagePullSecrets
 DOCKER_CONFIG_JSON ?= ""
 # 待自动更新的 helm chart 目标目录
@@ -69,6 +71,8 @@ manifests: controller-gen ## 生成 WebhookConfiguration，ClusterRole，CustomR
 	# 如果需要增加更新其他部分的 manifests 文件，请在 output:none 前追加对应参数。
 	# 参考： https://book.kubebuilder.io/reference/controller-gen.html#output-rules
 	$(CONTROLLER_GEN) paths="./..." crd:crdVersions=v1 webhook rbac:roleName=manager-role output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:rbac:artifacts:config=config/rbac output:none
+	# 删除非本项目管理的 CRD（SandboxInstance 由 sandbox-controller 管理）
+	rm -f config/crd/bases/_sandboxinstances.yaml
 
 .PHONY: generate
 generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
@@ -89,7 +93,7 @@ tidy: ## 执行 go mod tidy
 
 .PHONY: test
 test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输出覆盖率报告
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -i -p path)" \
 	$(GINKGO) --cover --coverprofile cover.out ./...
 
 .PHONY: lint
@@ -133,8 +137,11 @@ docker-push: ## 推送 Manager 镜像，需指定 IMG 参数
 	docker push ${IMG}
 
 .PHONY: docker-dev
-docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像
-	docker build -f ./Dockerfile-Dev -t bkpaas-app-operator-dev:$(VERSION) --no-cache .
+docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像，可指定 TARGETARCH 参数
+	docker build -f ./Dockerfile-Dev \
+		--build-arg K8S_VERSION=$(ENVTEST_K8S_VERSION) \
+		--build-arg TARGETARCH=$(TARGETARCH) \
+		-t bkpaas-app-operator-dev:$(VERSION) --no-cache .
 
 ##@ 部署命令
 
@@ -182,7 +189,7 @@ HELMIFY ?= $(LOCALBIN)/helmify
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.20.0
 GOCILINT_VERSION ?= v1.64.8
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"

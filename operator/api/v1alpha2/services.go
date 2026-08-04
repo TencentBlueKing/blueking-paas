@@ -44,6 +44,7 @@ type ProcService struct {
 
 	// The protocol of the service. Default value is TCP if not specified.
 	// +optional
+	// +kubebuilder:default="TCP"
 	Protocol corev1.Protocol `json:"protocol,omitempty"`
 
 	// The exposed type of the service. If not specified(or specified as null), the service can only be accessed

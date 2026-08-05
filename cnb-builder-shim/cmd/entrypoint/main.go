@@ -65,9 +65,10 @@ func main() {
 	// Run the build, returns exit code
 	code := run(logger)
 
-	// Build debug: write markers and keep container alive before exit
-	if duration, err := getExitDelay(); err != nil {
-		logger.Error(err, "Invalid exit-delay, keep-alive disabled")
+	// Build debug: write markers and keep container alive before exit.
+	// Invalid exit-delay only disables keep-alive; it must not mask the build result.
+	if duration, err := time.ParseDuration(*exitDelay); err != nil {
+		logger.Error(err, "Invalid exit-delay, keep-alive and build markers disabled")
 	} else if duration > 0 {
 		writeMarkers(logger, code)
 		preExit(logger, duration)
@@ -89,21 +90,13 @@ func run(logger logr.Logger) int {
 	return 0
 }
 
-// getExitDelay parses CNB_EXIT_DELAY and returns the sleep duration and any
-// parse error. Returns 0 when the flag is unset.
-func getExitDelay() (time.Duration, error) {
-	duration, err := time.ParseDuration(*exitDelay)
-	if err != nil {
-		return 0, err
-	}
-	return duration, nil
-}
-
-// writeMarkers writes the build-done marker and result markers based on exit code.
+// writeMarkers publishes the build result via marker files.
+// Order matters: build-done is written last as the commit point, and skipped if the result marker fails.
 func writeMarkers(logger logr.Logger, code int) {
 	if code == 0 {
 		if err := utils.WriteBuildResultSuccess(); err != nil {
-			logger.Error(err, "failed to write build-result-success marker")
+			logger.Error(err, "failed to write build-result-success marker, skip build-done to avoid a false failure")
+			return
 		}
 	} else {
 		if err := utils.WriteBuildResultFailed(); err != nil {
@@ -111,7 +104,7 @@ func writeMarkers(logger logr.Logger, code int) {
 		}
 	}
 	if err := utils.WriteBuildDone(); err != nil {
-		logger.Error(err, "failed to write build-done marker")
+		logger.Error(err, "failed to write build-done marker, the platform cannot observe the build result")
 	}
 }
 

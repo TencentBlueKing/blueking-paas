@@ -32,6 +32,7 @@ import (
 //
 // Build result is determined by started + ready. The failed marker is not
 // consumed by any probe; it exists only for operator visibility during debugging.
+// File contents are for human inspection only; probes only check existence.
 //
 // - /tmp/build-done:              written once the build pipeline finishes (regardless of result).
 // - /tmp/build-result-success:    written only when the build succeeded.

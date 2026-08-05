@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -13,12 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.egress_ips import ClusterEgressIps, get_cluster_egress_ips
-
-
-def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:
-    """Get cluster's egress info"""
-    cluster = Cluster.objects.get(name=cluster_name)
-    return get_cluster_egress_ips(cluster)

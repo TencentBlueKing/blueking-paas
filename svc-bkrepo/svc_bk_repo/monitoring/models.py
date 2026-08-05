@@ -34,3 +34,14 @@ class RepoQuotaStatistics(models.Model):
             # 如果不限制仓库配额, 则使用率为 0
             return 0
         return self.used / self.max_size * 100
+
+
+class AutoExpandEvent(models.Model):
+    """自动扩容事件记录"""
+
+    instance = models.ForeignKey("paas_service.ServiceInstance", on_delete=models.CASCADE, db_constraint=False)
+    repo_name = models.CharField(max_length=64, verbose_name="仓库名称")
+    old_size = models.BigIntegerField(verbose_name="扩容前配额", help_text="单位字节")
+    new_size = models.BigIntegerField(verbose_name="扩容后配额", help_text="单位字节")
+    step_size = models.BigIntegerField(verbose_name="扩容步长", help_text="单位字节")
+    created = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")

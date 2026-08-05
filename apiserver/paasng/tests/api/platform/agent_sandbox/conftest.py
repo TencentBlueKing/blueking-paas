@@ -22,9 +22,13 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp
-from paasng.platform.agent_sandbox.models import Sandbox
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
-from tests.paasng.platform.agent_sandbox.stubs import DEFAULT_WORKDIR, StubDaemonClientFactory
+from tests.paasng.platform.agent_sandbox.stubs import (
+    DEFAULT_WORKDIR,
+    StubDaemonClientFactory,
+    StubResidentDaemonClient,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -160,3 +164,34 @@ def sandbox_id(
         mock.patch.object(sandbox_client, "get_logs", return_value="test log output\n"),
     ):
         yield sandbox_obj.uuid.hex
+
+
+@pytest.fixture()
+def volume(bk_app: Any) -> Volume:
+    """Create a Volume record for testing volume file APIs."""
+    return Volume.objects.create(
+        application=bk_app,
+        name=f"vol-{uuid.uuid4().hex[:8]}",
+        tenant_id=bk_app.tenant_id,
+    )
+
+
+@pytest.fixture()
+def stub_resident_client():
+    """Provide a StubResidentDaemonClient and patch get_resident_daemon_client to return it.
+
+    Also patches the client used inside the archive orchestration so both the view layer and
+    archive_volume_file() share the same in-memory file system.
+    """
+    client = StubResidentDaemonClient()
+    with (
+        mock.patch(
+            "paasng.platform.agent_sandbox.views.get_resident_daemon_client",
+            return_value=client,
+        ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.artifact.get_resident_daemon_client",
+            return_value=client,
+        ),
+    ):
+        yield client

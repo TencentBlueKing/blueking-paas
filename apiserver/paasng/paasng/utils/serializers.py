@@ -36,7 +36,6 @@ from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
-from past.builtins import basestring
 from rest_framework import fields, serializers
 from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 
@@ -60,7 +59,7 @@ class UserField(serializers.Field):
     """User field for present user friendly user object"""
 
     def to_representation(self, obj):
-        assert isinstance(obj, basestring), "Only accept user_id"
+        assert isinstance(obj, str), "Only accept user_id"
         user = get_user_by_user_id(obj)
         avatar = get_user_avatar(user.username)
         return {"id": user.pk, "username": user.username, "provider_type": user.provider_type, "avatar": avatar}
@@ -76,7 +75,7 @@ class UserNameField(serializers.Field):
     """UserName field for present username friendly user object"""
 
     def to_representation(self, obj):
-        assert isinstance(obj, basestring), "Only accept user_id"
+        assert isinstance(obj, str), "Only accept user_id"
         user = get_user_by_user_id(obj)
         return user.username
 
@@ -141,7 +140,7 @@ class MultiUserField(serializers.CharField):
     def to_representation(self, value):
         users = [get_user_by_user_id(user) for user in value]
         for index, user in enumerate(users):
-            if not isinstance(user, basestring):
+            if not isinstance(user, str):
                 users[index] = getattr(user, "username")
         return ",".join(users)
 
@@ -333,9 +332,9 @@ class StringArrayField(fields.CharField):
 
 
 class SafePathField(serializers.RegexField):
-    """安全路径字段，只允许包含字母、数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
+    """安全路径字段，只允许包含 Unicode字符（字母，汉字等）数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
 
-    regex = re.compile(r"^[a-zA-Z0-9_\-./]+$")
+    regex = re.compile(r"^[\w\-./]+$")
     default_error_messages = {
         "invalid": _("路径 {path} 不合法"),
         "escape_risk": _("路径 {path} 存在逃逸风险"),

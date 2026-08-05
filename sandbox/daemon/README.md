@@ -42,6 +42,8 @@ $ make test
 $ make build
 # 运行
 $ TOKEN=your-secret-token ./build/daemon
+# 常驻模式：作为独立服务运行，挂载共享存储并提供 PV 文件操作接口
+$ TOKEN=your-secret-token ./build/daemon resident
 ```
 
 ## 配置说明
@@ -84,3 +86,8 @@ Authorization: Bearer <TOKEN>
 $ make build
 ```
 
+## Resident 模式启动
+
+Resident 模式以独立服务运行，不启动用户入口进程；它挂载共享存储，并通过 HTTP 提供受路径隔离保护的 PV 文件操作接口。
+
+启动前需设置 `TOKEN` 认证使用，并确保共享存储已挂载到 `ROOT_DIR`（默认 `/storage`）。服务启动后可通过 `/health` 检查健康状态。

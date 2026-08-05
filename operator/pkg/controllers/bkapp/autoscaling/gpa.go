@@ -19,10 +19,13 @@
 package autoscaling
 
 import (
+	"strconv"
+
 	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
@@ -65,7 +68,7 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 			Spec: autoscaling.GeneralPodAutoscalerSpec{
 				AutoScalingDrivenMode: autoscaling.AutoScalingDrivenMode{
 					MetricMode: &autoscaling.MetricMode{
-						Metrics: buildMetricSpecs(spec.Policy),
+						Metrics: buildMetricSpecs(spec),
 					},
 				},
 				MinReplicas: &spec.MinReplicas,
@@ -81,9 +84,33 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 	return gpaList
 }
 
-// 构建资源指标配置，目前仅支持按策略组装
-func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.MetricSpec) {
-	switch policy {
+func buildMetricSpecs(spec *paasv1alpha2.AutoscalingSpec) (metrics []autoscaling.MetricSpec) {
+	// Note: 当前仅支持 ResourceCPU 的 Metric 指标
+	// 如果 spec.Metrics 有值, 将使用自定义的 Metrics
+	if len(spec.Metrics) > 0 {
+		for _, m := range spec.Metrics {
+			var utilization int32
+			if v, err := strconv.Atoi(m.Value); err == nil {
+				utilization = int32(v)
+			} else {
+				log.Log.Error(err, "failed to parse metric value, fallback to 85", "value", m.Value)
+				utilization = int32(85)
+			}
+			metrics = append(metrics, autoscaling.MetricSpec{
+				Type: autoscaling.ResourceMetricSourceType,
+				Resource: &autoscaling.ResourceMetricSource{
+					Name: v1.ResourceCPU,
+					Target: autoscaling.MetricTarget{
+						Type:               autoscaling.UtilizationMetricType,
+						AverageUtilization: lo.ToPtr(utilization),
+					},
+				},
+			})
+		}
+		return metrics
+	}
+
+	switch spec.Policy {
 	case paasv1alpha2.ScalingPolicyDefault:
 		// 默认策略：cpu utilization 85%
 		metrics = append(metrics, autoscaling.MetricSpec{
@@ -97,7 +124,6 @@ func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.
 			},
 		})
 	}
-
 	return metrics
 }
 

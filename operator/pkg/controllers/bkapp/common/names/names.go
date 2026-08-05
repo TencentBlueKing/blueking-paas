@@ -40,6 +40,12 @@ func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
 
 // Deployment 为应用的不同进程生成 Deployment 资源名称
 func Deployment(bkapp *paasv1alpha2.BkApp, process string) string {
+	// TODO: 后续改为直接使用 Workload 生成资源名称
+	return Workload(bkapp, process)
+}
+
+// Workload 为应用的不同进程生成对应的 workload 资源名称
+func Workload(bkapp *paasv1alpha2.BkApp, process string) string {
 	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
 }
 

@@ -132,12 +132,8 @@ export default {
       isAllocatedByEnv: false,
       submitLoading: false,
       resizeObserver: null,
-      // 条件类型-方案规则为固定值
-      conditionTypes: [
-        { key: 'regions', name: 'region_in' },
-        { key: 'cluster_names', name: 'cluster_in' },
-        { key: 'usages', name: 'usage_in' },
-      ],
+      // 条件类型
+      conditionTypes: [],
       label: '方案',
       tips: '如果配置多个方案：开发者启用增强服务时需要根据 “方案名称” 选择具体的增强服务方案；如开发者未选择任何值，则默认使用已选列表中的第一个方案。',
     };
@@ -181,10 +177,11 @@ export default {
     handleShown() {
       // 处理类型
       if (this.isEdit) {
-        const { type, allocation_policy = {} } = this.curTenantData.policies;
+        const { type, allocation_policy: allocationPolicy = {} } = this.curTenantData.policies;
         this.methodValue = type;
-        this.isAllocatedByEnv = !!allocation_policy.env_specific;
+        this.isAllocatedByEnv = !!allocationPolicy.env_specific;
       }
+      this.getServiceBindingPolicyConditionTypes();
       this.$nextTick(() => {
         this.setupResizeObserver();
         // 打开侧栏时，获取当前侧栏数据
@@ -283,11 +280,9 @@ export default {
       if (!flag) throw new Error(this.$t('必填项'));
       const policies = data.map((rule, index) => {
         const { matcher } = rule;
-        const ruleItem = this.conditionTypes.find((v) => v.key === matcher.key);
         return {
-          // 将方案name反转为id
-          cond_type: ruleItem ? ruleItem.name : 'always_match',
-          cond_data: ruleItem ? { [ruleItem.key]: matcher.value.split(',') } : {},
+          // 生成匹配条件，最后一条规则作为兜底条件
+          matcher: matcher.key && matcher.value ? { [matcher.key]: matcher.value.split(',') } : {},
           priority: data.length - index,
           ...this.generatePolicyConfig(rule),
         };
@@ -298,6 +293,16 @@ export default {
         allocation_policy: null,
         policy_type: 'rule_based',
       };
+    },
+    // 获取分配条件类型
+    async getServiceBindingPolicyConditionTypes() {
+      try {
+        const res = await this.$store.dispatch('tenant/getServiceBindingPolicyConditionTypes');
+        this.conditionTypes = Array.isArray(res) ? res.filter(item => item.key !== 'always_match') : [];
+      } catch (e) {
+        this.conditionTypes = [];
+        this.catchErrorHandler(e);
+      }
     },
     // 创建/更新配置服务
     async editOrAddConfigurationPlan(data) {

@@ -15,82 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import atexit
-import errno
-import functools
 import logging
-import os
-from pathlib import Path
 
-from apscheduler.schedulers.background import BackgroundScheduler as Scheduler
 from django.conf import settings
-from filelock import FileLock
-from paas_service.models import Plan, ServiceInstance
+from paas_service.models import ServiceInstance
 
 from svc_bk_repo.monitoring.models import RepoQuotaStatistics
-from svc_bk_repo.vendor.helper import BKGenericRepoManager
+from svc_bk_repo.shared.scheduler import scheduler
+from svc_bk_repo.vendor.helper import get_repo_manager
 
 logger = logging.getLogger(__name__)
-scheduler = Scheduler()
-
-
-SCHEDULER_LOCK_FILE = "scheduler.lock"
-SCHEDULER_PID_FILE = "scheduler.pid"
-
-
-def process_exists(pid: int):
-    """Check whether pid exists in the current process table. UNIX only."""
-    if pid < 0:
-        return False
-    if pid == 0:
-        # According to "man 2 kill" PID 0 refers to every process
-        # in the process group of the calling process.
-        # On certain systems 0 is a valid PID but we have no way
-        # to know that in a portable fashion.
-        raise ValueError("invalid PID 0")
-    try:
-        os.kill(pid, 0)
-    except OSError as err:
-        if err.errno == errno.ESRCH:
-            # ESRCH == No such process
-            return False
-        elif err.errno == errno.EPERM:
-            # EPERM clearly means there's a process to deny access to
-            return True
-        else:
-            # According to "man 2 kill" possible error values are
-            # (EINVAL, EPERM, ESRCH)
-            raise
-    else:
-        return True
-
-
-def start_scheduler():
-    lock = FileLock(lock_file=SCHEDULER_LOCK_FILE)
-    with lock:
-        pid = Path(SCHEDULER_PID_FILE)
-        if pid.exists() and process_exists(int(pid.read_text())):
-            logger.info("Scheduler should be running")
-            return
-
-        pid.write_text(str(os.getpid()))
-    logger.info("Start scheduler!")
-    scheduler.start()
-    atexit.register(clear_lock)
-
-
-def clear_lock():
-    logger.info("clear scheduler.pid")
-    pid = Path(SCHEDULER_PID_FILE)
-    pid.unlink()
-
-
-@functools.lru_cache()
-def get_repo_manager(plan_id: str):
-    plan = Plan.objects.get(pk=plan_id)
-    plan_config = plan.get_config()
-    manager = BKGenericRepoManager(**plan_config)
-    return manager
 
 
 @scheduler.scheduled_job("interval", minutes=settings.BKREPO_COLLECT_INTERVAL_MINUTES)

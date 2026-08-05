@@ -68,6 +68,7 @@ class TestCreateAppResource:
                 "configuration": {"env": []},
                 "observability": None,
                 "schedule": None,
+                "workloadType": None,
             },
             "status": {
                 "conditions": [],

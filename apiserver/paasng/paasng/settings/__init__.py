@@ -53,6 +53,7 @@ import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.db.backends.mysql.features import DatabaseFeatures
+from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.encoding import force_bytes, force_str
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -98,6 +99,9 @@ _notset = object()
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 
+# Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量 MySQL 5.7 DB:
+#   1. 绕过 minimum_database_version 启动检查
+#   2. 回退 RENAME COLUMN 为 CHANGE COLUMN（RENAME COLUMN 仅 MySQL 8.0.4+ 支持）
 class PatchFeatures:
     """Patched Django Features"""
 
@@ -109,9 +113,19 @@ class PatchFeatures:
             return (5, 7)
 
 
-# Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
-# 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
 DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version
+
+_original_sql_rename_column = DatabaseSchemaEditor.sql_rename_column.fget
+
+
+def _patched_sql_rename_column(self):
+    if not self.connection.mysql_is_mariadb and self.connection.mysql_version < (8, 0, 4):
+        return "ALTER TABLE %(table)s CHANGE %(old_column)s %(new_column)s %(type)s"
+    return _original_sql_rename_column(self)
+
+
+DatabaseSchemaEditor.sql_rename_column = property(_patched_sql_rename_column)
+
 
 pymysql.install_as_MySQLdb()
 
@@ -126,6 +140,16 @@ SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 # 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
 BK_CRYPTO_TYPE = settings.get("BK_CRYPTO_TYPE", "CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
+
+# 新建应用是否默认启用「运行环境敏感变量加密」应用级 feature flag (AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)，
+# 默认关闭。该值仅在创建应用时用于同步 feature flag 默认值，运行时是否启用加密以应用级 feature flag 为准。
+ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_DEFAULT", False)
+
+# 运行环境敏感变量加密使用的算法类型（独立于平台全局 ENCRYPT_CIPHER_TYPE），可选 'SHANGMI' , 'CLASSIC'
+ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE = settings.get("ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE", "CLASSIC")
+ENCRYPTED_SECRET_ENV_INJECTION_CIPHER_TYPE = (
+    "SM4CTR" if ENCRYPTED_SECRET_ENV_INJECTION_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
+)
 
 DEBUG = settings.get("DEBUG", False)
 
@@ -265,7 +289,7 @@ AUTH_USER_MODEL = "bkpaas_auth.User"
 AUTHENTICATION_BACKENDS = ["bkpaas_auth.backends.UniversalAuthBackend", "bkpaas_auth.backends.APIGatewayAuthBackend"]
 
 # FIXME: Enable this will cause 500 Error, will fix later
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STORAGES["staticfiles"]["BACKEND"] = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "paasng.urls"
 
@@ -304,7 +328,6 @@ LANGUAGES = (
 )
 TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 # 国际化 cookie 信息必须跟整个蓝鲸体系保存一致
@@ -879,6 +902,8 @@ BK_IAM_V3_APP_CODE = "bk_iam"
 
 # 蓝鲸根域名
 BK_DOMAIN = settings.get("BK_DOMAIN", "")
+# 蓝鲸 PaaS 平台数据库类型（可通过 helm values 配置相关值）
+BKPAAS_DB_TYPE = settings.get("BKPAAS_DB_TYPE", "mysql")
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get("BK_CC_URL", "")
 BK_JOB_URL = settings.get("BK_JOB_URL", "")
@@ -1630,6 +1655,11 @@ APIGW_GRANT_AGENT_SANDBOX_APIS: list[str] = settings.get(
         "create_agent_sandbox_volume",
         "delete_agent_sandbox_volume",
         "list_agent_sandbox_volumes",
+        "list_agent_sandbox_volume_files",
+        "stat_agent_sandbox_volume_file",
+        "preview_agent_sandbox_volume_file",
+        "get_agent_sandbox_volume_file_download_url",
+        "delete_agent_sandbox_volume_file",
     ],
 )
 
@@ -1661,6 +1691,16 @@ AGENT_SANDBOX_PACKAGE_BUCKET = settings.get("AGENT_SANDBOX_PACKAGE_BUCKET", "bkp
 # 存放 sandbox daemon 二进制的 bucket 和 key
 AGENT_SANDBOX_DAEMON_BUCKET = settings.get("AGENT_SANDBOX_DAEMON_BUCKET", SERVICE_LOGO_BUCKET)
 AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/daemon")
+
+# ---------------------------------------------
+# Agent Sandbox 文件持久化配置(沙箱销毁后仍能访问其会话级 PV 中的产物文件)
+# ---------------------------------------------
+# 常驻 daemon 的固定访问地址(集群内 DNS)，挂 CFS 根目录、对外提供 jail 化的文件操作接口
+AGENT_SANDBOX_RESIDENT_DAEMON_URL = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_URL", "")
+# 与常驻 daemon 共享的静态 token(对应 daemon 侧的 TOKEN 环境变量)
+AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN", "")
+# 存放沙箱产物归档文件的 bkrepo bucket(GENERIC,私有)
+AGENT_SANDBOX_ARTIFACT_BUCKET = settings.get("AGENT_SANDBOX_ARTIFACT_BUCKET", "agent-sandbox-artifacts")
 
 # mount_path 黑名单：沙箱容器内不允许用户挂载共享卷的路径前缀列表
 # 参考 Daytona "不可挂 /proc /sys /etc" 的约束并进一步收紧。

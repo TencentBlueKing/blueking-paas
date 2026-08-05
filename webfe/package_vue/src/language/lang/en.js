@@ -1119,6 +1119,7 @@ export default {
   内容: 'Content',
   告警详情: 'Alarm details',
   阈值: 'Threshold',
+  'CPU 使用率阈值需为 1-100 的整数': 'CPU utilization threshold must be an integer between 1 and 100',
   '文档：如何查看慢查询的 SQL 语句': 'Doc: How to View SQL Statements for Slow Queries',
   '告警开始时间：': 'Alarm start time: ',
   '告警内容：': 'Alarm content: ',

@@ -199,6 +199,8 @@ class TestBuiltInEnvVars:
             "BKPAAS_ENVIRONMENT",
             "BKPAAS_MAJOR_VERSION",
             "BKPAAS_ENGINE_REGION",
+            # 平台内置系统变量
+            "BKPAAS_DB_TYPE",
         }.issubset(config_vars.keys())
 
     def test_param_include_custom_builtin_config_vars(self, bk_stag_env):

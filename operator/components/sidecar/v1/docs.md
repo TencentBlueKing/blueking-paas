@@ -2,7 +2,8 @@
 
 在进程主容器旁运行一个附属（sidecar）容器，用于日志采集、代理转发、辅助计算等场景。
 
-当前仅对 AI Agent 隔离沙箱生效。
+由于不同 workload 的配置路径不一致， 目前组件无法同时支持两类 workload。 
+该组件当前仅对 AI Agent 隔离沙箱（WorkloadType = SandboxInstance）生效。
 
 需要多个附属容器时，为同一进程声明多个 `sidecar` 组件条目，每个条目描述一个容器。
 

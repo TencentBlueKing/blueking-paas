@@ -632,6 +632,8 @@ class BuildHandler(PodScheduleHandler):
         elif ready:
             return BuildProbeStatus.SUCCEEDED
         else:
+            # 过渡态: startupProbe 已通过但 readinessProbe 尚未就绪,
+            # poll_until_ready() 会重检消除时序误判
             return BuildProbeStatus.FAILED
 
     def set_build_finished_at(self, namespace: str, name: str):

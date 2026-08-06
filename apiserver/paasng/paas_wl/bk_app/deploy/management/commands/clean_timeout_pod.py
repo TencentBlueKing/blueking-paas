@@ -27,7 +27,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
 )
 from paas_wl.infras.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
-from paasng.platform.engine.configurations.building import get_build_debug_timeout
+from paas_wl.utils.basic import get_time_delta
 
 
 class Command(BaseCommand):
@@ -51,7 +51,7 @@ class Command(BaseCommand):
                     finished_at_raw = annotations.get("build_finished_at")
                     if finished_at_raw:
                         # 已完成的 debug Pod: 按调试窗口过期时间清理
-                        if not BuildHandler.is_debug_window_available(pod, get_build_debug_timeout()):
+                        if not BuildHandler.is_debug_window_available(pod, self._debug_timeout()):
                             self._delete_pod(client, pod, dry_run, reason="debug window expired")
                             timeout_count += 1
                     else:
@@ -70,6 +70,11 @@ class Command(BaseCommand):
                         timeout_count += 1
 
             self.stdout.write(f"{cluster_name} has {timeout_count} timeout pods, cleaned\n")
+
+    @staticmethod
+    def _debug_timeout() -> int:
+        """构建调试窗口超时时间 (秒), 对齐 BUILD_DEBUG_EXIT_DELAY 配置."""
+        return int(get_time_delta(settings.BUILD_DEBUG_EXIT_DELAY).total_seconds())
 
     def _is_debug_pod(self, pod) -> bool:
         """检查 Pod 是否为构建调试 Pod (label build-debug=true)."""

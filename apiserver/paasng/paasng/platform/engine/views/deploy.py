@@ -37,7 +37,9 @@ from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paasng.accessories.smart_advisor.utils import get_failure_hint
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
@@ -374,6 +376,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         advanced = deployment.advanced_options
         if not advanced or not advanced.build_debug:
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
+
+        # 复用现有 WebConsole 的 ENABLE_WEB_CONSOLE 白名单判定
+        if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
+
         wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
         if pod is None or pod.status.phase != "Running":
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试容器已不可用"))
@@ -389,28 +396,60 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         cluster = get_cluster_by_app(wl_app)
         tenant_id = deployment.app_environment.application.tenant_id
-        result = bcs_client_cls(tenant_id).create_web_console_sessions(
-            json={
-                "namespace": wl_app.namespace,
-                "pod_name": builder_name,
-                "container_name": builder_name,
-                "command": "bash",
-                "operator": request.user.username,
-            },
-            path_params={
-                "cluster_id": cluster.bcs_cluster_id,
-                "project_id_or_code": cluster.bcs_project_id,
-                "version": "v4",
-            },
-        )
+        try:
+            result = bcs_client_cls(tenant_id).create_web_console_sessions(
+                json={
+                    "namespace": wl_app.namespace,
+                    "pod_name": builder_name,
+                    "container_name": builder_name,
+                    "command": "bash",
+                    "operator": request.user.username,
+                },
+                path_params={
+                    "cluster_id": cluster.bcs_cluster_id,
+                    "project_id_or_code": cluster.bcs_project_id,
+                    "version": "v4",
+                },
+            )
+        except Exception:
+            logger.exception(
+                "Failed to create WebConsole session via BCS for Pod<%s/%s>", wl_app.namespace, builder_name
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("创建构建调试控制台会话失败，请稍后重试"))
+
+        # BCS 返回非 0 时以错误响应而非透传伪 200, 保持与其他接口风格一致.
+        if result.get("code") != 0:
+            logger.warning(
+                "BCS create_web_console_sessions returned code=%s for Pod<%s/%s>, message=%s, request_id=%s",
+                result.get("code"),
+                wl_app.namespace,
+                builder_name,
+                result.get("message"),
+                result.get("request_id"),
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(
+                result.get("message") or _("创建构建调试控制台会话失败，请稍后重试")
+            )
+
         data = result.get("data") or {}
+        session_id = data.get("session_id")
+        web_console_url = data.get("web_console_url")
+        if not session_id or not web_console_url:
+            logger.warning(
+                "BCS response missing session_id or web_console_url for Pod<%s/%s>, data=%s",
+                wl_app.namespace,
+                builder_name,
+                data,
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("创建构建调试控制台会话失败，请稍后重试"))
+
         return Response(
             {
                 "code": result.get("code"),
                 "message": result.get("message"),
                 "request_id": result.get("request_id"),
-                "session_id": data.get("session_id"),
-                "web_console_url": data.get("web_console_url"),
+                "session_id": session_id,
+                "web_console_url": web_console_url,
             }
         )
 

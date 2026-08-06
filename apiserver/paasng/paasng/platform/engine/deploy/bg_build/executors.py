@@ -206,22 +206,30 @@ class DefaultBuildProcessExecutor(DeployStep):
         Pod 在构建完成后 sleep 保活, 可登录调试.
         """
         stop_event = threading.Event()
-        # 守护线程写, 主线程在 log_thread.join() 后读, 无需额外加锁.
+        lock = threading.Lock()
         log_errors: list[Exception] = []
+        # 独立实例: 子线程不共享主线程的 build_handler, 消除 K8s client 并发使用.
+        child_handler = BuildHandler.new_by_app(self.wl_app)
+        # 流关闭标志: 主线程离开本方法前置位, 阻止子线程迟到写污染后续部署阶段输出.
+        stream_finished = False
 
         def _stream_logs():
             try:
-                for raw_line in self.build_handler.get_build_log(
+                for raw_line in child_handler.get_build_log(
                     name=self._builder_name,
                     follow=True,
                     timeout=_POD_LOG_READ_TIMEOUT,
                     namespace=self.wl_app.namespace,
                 ):
-                    if stop_event.is_set():
-                        break
-                    self.stream.write_message(force_str(raw_line))
+                    with lock:
+                        # stop_event 和 stream_finished 均在锁内检查, 与 write_message 原子化,
+                        # 消除主线程离开后子线程迟到写的 TOCTOU 窗口.
+                        if stop_event.is_set() or stream_finished:
+                            break
+                        self.stream.write_message(force_str(raw_line))
             except Exception as e:
-                log_errors.append(e)
+                with lock:
+                    log_errors.append(e)
                 logger.exception("Failed to stream build logs for App: %s", self.wl_app.name)
 
         log_thread = threading.Thread(target=_stream_logs, daemon=True)
@@ -233,14 +241,28 @@ class DefaultBuildProcessExecutor(DeployStep):
         finally:
             stop_event.set()
             log_thread.join(timeout=5)
+            if log_thread.is_alive():
+                logger.warning(
+                    "Log streaming thread still alive after join timeout for App<%s>, log_errors may be incomplete.",
+                    self.wl_app.name,
+                )
 
         # 记录构建完成时间, 用于后续调试窗口判定和超时清理
         if build_result in (BuildProbeStatus.SUCCEEDED, BuildProbeStatus.FAILED):
             self.build_handler.set_build_finished_at(self.wl_app.namespace, self._builder_name)
 
-        if log_errors:
-            self.stream.write_message(Style.Warning("Log streaming encountered an error, some logs may be missing."))
+        # 仅在子线程已正常退出时读取 log_errors.
+        if not log_thread.is_alive():
+            with lock:
+                if log_errors:
+                    self.stream.write_message(
+                        Style.Warning("Log streaming encountered an error, some logs may be missing.")
+                    )
 
+        # 置位流关闭标志后再写最终消息: 此后子线程任何迟到写都会被 stream_finished 拦截,
+        # 不会穿插进 _handle_build_result 的输出或后续部署阶段的输出.
+        with lock:
+            stream_finished = True
         self._handle_build_result(build_result)
 
     def _handle_build_result(self, build_result: BuildProbeStatus | None):

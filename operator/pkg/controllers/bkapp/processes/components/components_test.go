@@ -126,6 +126,7 @@ spec:
 
 		AfterEach(func() {
 			Expect(os.RemoveAll(tempDir)).To(Succeed())
+			componentsMgr.DefaultComponentDir = "/components"
 		})
 
 		It("apply component to deployment", func() {

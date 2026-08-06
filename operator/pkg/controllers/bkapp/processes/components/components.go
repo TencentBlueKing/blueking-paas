@@ -24,6 +24,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
 
@@ -137,20 +138,59 @@ func PatchToDeployment(
 // Note that a strategic merge patch does not preserve list order, so the main
 // container may end up behind the injected sidecars. Containers are looked up by
 // name rather than by position, so the resulting order carries no meaning.
+//
+// VolumeClaimTemplates are merged by metadata.name after each patch: a PVC's
+// name lives under metadata, so struct-tag strategic merge cannot use
+// patchMergeKey:"name" the way StatefulSetSpec does with its OpenAPI schema.
 func PatchToSandboxInstance(
 	proc *paasv1alpha2.Process,
 	sbi *sandboxv1beta1.SandboxInstance,
 ) error {
 	for _, component := range proc.Components {
+		priorClaims := sbi.Spec.VolumeClaimTemplates
 		mutator := &ComponentMutator{
 			component: component,
 			defaultParams: map[string]any{
 				"procName": proc.Name,
+				// Components that declare namespace-scoped resources (such as the PVC
+				// templates of persistent_rootfs) must derive unique names from the
+				// workload, because several processes of the same application share a
+				// namespace. sbi.Name is already names.Workload(bkapp, proc).
+				"workloadName": sbi.Name,
 			},
 		}
 		if err := patchTo(mutator, sbi); err != nil {
 			return err
 		}
+		sbi.Spec.VolumeClaimTemplates = mergeVolumeClaimTemplates(priorClaims, sbi.Spec.VolumeClaimTemplates)
 	}
 	return nil
+}
+
+// mergeVolumeClaimTemplates upserts patched into base by metadata.name. Entries
+// that appear only in patched are appended; a name present in both keeps the
+// patched copy.
+func mergeVolumeClaimTemplates(base, patched []corev1.PersistentVolumeClaim) []corev1.PersistentVolumeClaim {
+	if len(patched) == 0 {
+		return base
+	}
+	if len(base) == 0 {
+		return patched
+	}
+	merged := make([]corev1.PersistentVolumeClaim, len(base))
+	copy(merged, base)
+	index := make(map[string]int, len(merged))
+	for i, claim := range merged {
+		index[claim.Name] = i
+	}
+	// 同名用 patch 覆盖，新的直接追加
+	for _, claim := range patched {
+		if i, ok := index[claim.Name]; ok {
+			merged[i] = claim
+			continue
+		}
+		index[claim.Name] = len(merged)
+		merged = append(merged, claim)
+	}
+	return merged
 }

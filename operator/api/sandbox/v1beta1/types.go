@@ -79,7 +79,7 @@ type SandboxInstanceSpec struct {
 	// PodTemplate defines the pod template for the sandbox instance
 	PodTemplate SandboxPodTemplate `json:"podTemplate"`
 
-	// VolumeClaimTemplates are PVC templates for persistent storage
+	// VolumeClaimTemplates are PVC templates for persistent storage.
 	// +optional
 	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 }
@@ -119,18 +119,21 @@ type SandboxCPU struct {
 type SandboxDevices struct {
 	// Disks is a list of disk configurations
 	// +optional
-	Disks []SandboxDisk `json:"disks,omitempty"`
+	Disks []SandboxDisk `json:"disks,omitempty" patchStrategy:"merge" patchMergeKey:"containerName"`
 }
 
 // SandboxDisk defines a disk configuration entry
 type SandboxDisk struct {
-	Name       string `json:"name"`
-	VolumeName string `json:"volumeName"`
-	Role       string `json:"role"`
-	Image      string `json:"image"`
-	SourcePath string `json:"sourcePath"`
-	Size       string `json:"size"`
-	FsType     string `json:"fsType"`
+	Name string `json:"name"`
+	// ContainerName binds this disk to a container in podTemplate.containers
+	// +optional
+	ContainerName string `json:"containerName,omitempty"`
+	VolumeName    string `json:"volumeName"`
+	Role          string `json:"role"`
+	Image         string `json:"image"`
+	SourcePath    string `json:"sourcePath"`
+	Size          string `json:"size"`
+	FsType        string `json:"fsType"`
 }
 
 // SandboxPodTemplate defines the pod specification for the sandbox

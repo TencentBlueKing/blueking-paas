@@ -19,6 +19,9 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
 COPY Makefile Makefile
+# Component tests render the definitions that actually ship rather than fixtures,
+# so they read this directory through a path relative to the package under test.
+COPY components/ components/
 
 # Install dependent tools
 RUN apk --update --no-cache add bash make vim curl tar

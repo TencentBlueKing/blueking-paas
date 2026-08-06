@@ -171,6 +171,66 @@ class TestProcessesField:
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
 
+class TestPersistentRootfsComponent:
+    """Exercise the shipped persistent_rootfs schema rather than a test fixture, so a
+    schema that rejects legitimate app_desc.yaml input fails here.
+    """
+
+    @staticmethod
+    def make_desc(properties):
+        return builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "replicas": 1,
+                        "components": [
+                            {"name": "persistent_rootfs", "version": "v1", "properties": properties},
+                        ],
+                    }
+                ]
+            },
+        )
+
+    def test_stored_in_snake_case(self, bk_module, bk_deployment):
+        json_data = self.make_desc({"diskSize": "50Gi", "pvcSize": "60Gi", "containerName": "worker"})
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert web.components == [
+            Component(
+                name="persistent_rootfs",
+                version="v1",
+                properties={"disk_size": "50Gi", "pvc_size": "60Gi", "container_name": "worker"},
+            ),
+        ]
+
+    @pytest.mark.parametrize(
+        "properties",
+        [
+            pytest.param({"diskSize": "50Gi"}, id="missing-pvc-size"),
+            pytest.param({"pvcSize": "60Gi"}, id="missing-disk-size"),
+            pytest.param({"diskSize": "50GB", "pvcSize": "60Gi"}, id="not-a-k8s-quantity"),
+            pytest.param({"diskSize": "50Gi", "pvcSize": "60Gi", "fsType": "xfs"}, id="unknown-property"),
+            pytest.param(
+                {"containerName": "Bad_Name", "diskSize": "50Gi", "pvcSize": "60Gi"}, id="bad-container-name"
+            ),
+            # snake_case is what the importer produces internally, never what a user writes
+            pytest.param({"disk_size": "50Gi", "pvc_size": "60Gi"}, id="snake-case-input"),
+        ],
+    )
+    def test_invalid_properties(self, bk_deployment, properties):
+        json_data = self.make_desc(properties)
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        with pytest.raises(DescriptionValidationError, match=r"spec.processes.0.components.0: 参数校验失败"):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+
 class TestEnvVariablesField:
     def test_invalid_input(self, bk_deployment):
         json_data = builder.make_module(

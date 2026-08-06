@@ -44,3 +44,13 @@ DEFAULT_SANDBOX_MEMORY = Decimal(2)
 
 # 上传临时 URL 的有效期，给 daemon 读大文件 + PUT 留足余量
 UPLOAD_URL_EXPIRES_IN = 3600
+
+# bkrepo 临时 token 类型。预览页仅接受 PREVIEW 类型的 token（DOWNLOAD token 会被 bkrepo
+# preview 服务直接拒绝），因此不能复用签发下载 URL 的 generic/temporary/url/create
+PREVIEW_TOKEN_TYPE = "PREVIEW"
+
+# bkrepo 预览页路由 /ui/{project}/filePreview/{repoType}/{extraParam}/{repo}/{path}
+# 中的两个固定段：平台产物仓库均为本地仓库，repoType 取 local；extraParam 仅 remote 仓库
+# 需要传 base64 编码的源地址，本地仓库固定为 0
+PREVIEW_REPO_TYPE = "local"
+PREVIEW_EXTRA_PARAM = "0"

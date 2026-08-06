@@ -22,13 +22,18 @@ URLs and tells the resident daemon to archive (daemon reads CFS, computes sha256
 directly to bkrepo). Downloads are served by the frontend hitting the signed bkrepo URL.
 """
 
+from urllib.parse import quote, urlencode
+
 from blue_krill.storages.blobstore.base import SignatureType
+from blue_krill.storages.blobstore.bkrepo import TIMEOUT_THRESHOLD, BKGenericRepo, safe_urljoin
+from blue_krill.storages.blobstore.exceptions import RequestError
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
 
 from paasng.utils.blobstore import make_blob_store
 
-from .constants import UPLOAD_URL_EXPIRES_IN
+from .constants import PREVIEW_EXTRA_PARAM, PREVIEW_REPO_TYPE, PREVIEW_TOKEN_TYPE, UPLOAD_URL_EXPIRES_IN
 from .exceptions import SandboxFileNotFound
 from .models import Volume, VolumeArtifact
 from .resident_daemon_client import ResidentDaemonClient, get_resident_daemon_client
@@ -103,3 +108,65 @@ def build_download_url(artifact: VolumeArtifact, expires_in: int) -> str:
     return store.generate_presigned_url(
         key=artifact.bkrepo_key, expires_in=expires_in, signature_type=SignatureType.DOWNLOAD
     )
+
+
+def build_preview_url(artifact: VolumeArtifact, expires_in: int) -> str:
+    """Build a bkrepo web preview page URL for an archived object.
+
+    Unlike :func:`build_download_url`, this is *not* a presigned object URL — it points at
+    bkrepo's frontend preview route, which renders the file (images, PDF, ...) in a page:
+
+        {BK_REPO_URL}/ui/{project}/filePreview/local/0/{repo}/{key}?token={token}
+
+    The token must be created with type ``PREVIEW``; bkrepo's preview service rejects
+    ``DOWNLOAD`` tokens, so ``generate_presigned_url`` cannot be reused here.
+
+    :raises ImproperlyConfigured: When ``BK_REPO_URL`` is not configured, or the artifact
+        bucket is not backed by bkrepo (preview is a bkrepo-only capability).
+    """
+    if not settings.BK_REPO_URL:
+        raise ImproperlyConfigured('"BK_REPO_URL" is required to build bkrepo preview URLs')
+
+    store = make_blob_store(settings.AGENT_SANDBOX_ARTIFACT_BUCKET)
+    if not isinstance(store, BKGenericRepo):
+        raise ImproperlyConfigured(f"preview URL is only supported by bkrepo, not {type(store).__name__}")
+
+    token = create_preview_token(store, artifact.bkrepo_key, expires_in)
+    # key 内含用户可控的文件名，逐段转义；"/" 是路由分隔符，需保留
+    quoted_key = quote(artifact.bkrepo_key, safe="/")
+    return (
+        f"{settings.BK_REPO_URL.rstrip('/')}/ui/{store.project}/filePreview"
+        f"/{PREVIEW_REPO_TYPE}/{PREVIEW_EXTRA_PARAM}/{store.bucket}/{quoted_key}"
+        f"?{urlencode({'token': token})}"
+    )
+
+
+def create_preview_token(store: BKGenericRepo, key: str, expires_in: int) -> str:
+    """Create a bkrepo temporary token of type ``PREVIEW`` for a single object.
+
+    :param expires_in: Token lifetime in seconds; ``<= 0`` means never expires.
+    :raises RequestError: When bkrepo rejects the request or returns no token.
+    """
+    url = safe_urljoin(store.endpoint_url, "generic/temporary/token/create")
+    resp = store.get_client().post(
+        url,
+        json={
+            "projectId": store.project,
+            "repoName": store.bucket,
+            "fullPathSet": [f"/{key.lstrip('/')}"],
+            "expireSeconds": expires_in,
+            "type": PREVIEW_TOKEN_TYPE,
+        },
+        timeout=TIMEOUT_THRESHOLD,
+    )
+    try:
+        data = resp.json()
+    except ValueError as e:
+        raise RequestError(str(e), code="Unknown", response=resp) from e
+    if data.get("code") != 0:
+        raise RequestError(data.get("message"), code=str(data.get("code")), response=resp)
+
+    tokens = data.get("data") or []
+    if not tokens:
+        raise RequestError("bkrepo returned no preview token", code=str(data.get("code")), response=resp)
+    return tokens[0]["token"]

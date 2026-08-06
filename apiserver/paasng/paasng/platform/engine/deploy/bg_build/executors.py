@@ -39,9 +39,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
     ensure_image_credentials_secret,
 )
 from paas_wl.infras.resources.base.exceptions import (
-    PodAbsentError,
     PodNotSucceededError,
-    PodTimeoutError,
     ReadTargetStatusTimeout,
     ResourceDuplicate,
 )
@@ -278,15 +276,9 @@ class DefaultBuildProcessExecutor(DeployStep):
             )
         else:
             # pod_ended / timeout / ResourceMissing: 按正常流程处理
-            # ResourceMissing 时 Pod 已不存在, wait_for_succeeded 会抛 PodAbsentError
+            # 终止异常必须传播至 execute(), 由上层 except Exception 将构建标记为 FAILED
             try:
                 self.wait_for_succeeded()
-            except (PodAbsentError, PodTimeoutError):
-                logger.warning(
-                    "Builder Pod<%s/%s> not in expected state during fallback handling.",
-                    self.wl_app.namespace,
-                    self._builder_name,
-                )
             finally:
                 self.clean_slugbuilder()
 

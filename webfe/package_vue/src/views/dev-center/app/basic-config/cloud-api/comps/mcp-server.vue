@@ -50,7 +50,7 @@
         v-bind="column"
         :label="$t(column.label)"
         :key="column.prop"
-        show-overflow-tooltip
+        :show-overflow-tooltip="column.prop !== 'name'"
       >
         <template slot-scope="{ row }">
           <!-- 状态 -->
@@ -94,6 +94,7 @@
           >
             <span
               class="text-ellipsis"
+              v-bk-overflow-tips
               v-dompurify-html="highlight(getDisplayName(row))"
             ></span>
             <bk-tag
@@ -103,6 +104,17 @@
             >
               {{ $t('官方') }}
             </bk-tag>
+            <span
+              v-if="row.mcp_server?.oauth2_public_client_enabled"
+              v-bk-tooltips="{
+                content: $t(
+                  '该 MCP Server 已开启 OAuth2 公开客户端模式。在 Cursor、CodeBuddy 等工具中通过 OAuth 授权使用时，无需在此申请权限，授权完成后即可使用；仅在需要以当前应用的 ID / 密钥调用该 MCP 时，才需申请权限。'
+                ),
+              }"
+              class="oauth2-public-client-icon"
+            >
+              <i class="paasng-icon paasng-cc-lang"></i>
+            </span>
           </component>
           <span v-else-if="column.prop === 'description'">
             <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>
@@ -367,6 +379,7 @@ export default {
           id: row.mcp_server?.id,
           name: row.mcp_server?.name,
           description: row.mcp_server?.description,
+          oauth2_public_client_enabled: row.mcp_server?.oauth2_public_client_enabled,
           status: row.permission?.status,
           expires_in: row.permission?.expires_in,
         };
@@ -458,6 +471,11 @@ export default {
   .official-tag {
     flex-shrink: 0;
     margin-left: 8px;
+  }
+  .oauth2-public-client-icon {
+    margin-left: 8px;
+    font-size: 14px;
+    color: #3a84ff;
   }
 }
 </style>

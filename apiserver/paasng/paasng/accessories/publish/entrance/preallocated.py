@@ -27,6 +27,7 @@ from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -116,6 +117,31 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
     )
 
 
+def _get_preallocated_market_entrance_url(market_config: MarketConfig) -> str:
+    """获取应用市场访问地址的预计算版本，用于绑定模块的生产环境尚未部署的场景。
+
+    - 仅当市场地址来源为「与绑定模块生产环境一致」时才有预计算结果，其他类型（第三方地址、
+      独立域名）的地址直接存储于 MarketConfig 中，无需预计算
+    - 地址为预计算生成，无需真实部署，不保证能访问
+
+    :return: 无法获取预计算地址时返回空字符串
+    """
+    source_url_type = ProductSourceUrlType(market_config.source_url_type)
+    if source_url_type not in [ProductSourceUrlType.ENGINE_PROD_ENV, ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS]:
+        return ""
+
+    # source_module 可为空，此时无法定位到具体环境
+    module = market_config.source_module
+    if not module:
+        return ""
+
+    entrance = get_preallocated_url(module.get_envs(AppEnvName.PROD.value))
+    # 与 MarketAvailableAddressHelper.access_entrance 保持一致：仅当 prefer_https 为 False 时强制使用 http
+    if source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV and market_config.prefer_https is False:
+        entrance = MarketAvailableAddressHelper.transform_protocol(entrance, protocol="http")
+    return entrance.address if entrance else ""
+
+
 @env_vars_providers.register_env
 def _market_entrance_url(env: ModuleEnvironment) -> EnvVariableList:
     """注入应用市场访问地址."""
@@ -123,6 +149,10 @@ def _market_entrance_url(env: ModuleEnvironment) -> EnvVariableList:
     market_config, _created = MarketConfig.objects.get_or_create_by_app(application)
     entrance = MarketAvailableAddressHelper(market_config).access_entrance
     url = entrance.address if entrance and entrance.address else ""
+    # 绑定模块的生产环境未部署时（如应用首次部署），无法获取真实的访问地址，
+    # 此时退化使用预计算地址，避免注入空值
+    if not url:
+        url = _get_preallocated_market_entrance_url(market_config)
 
     return EnvVariableList(
         [

@@ -258,6 +258,23 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
+    @pytest.fixture()
+    def process_web_with_persistent_rootfs(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with a persistent_rootfs component.
+
+        app_desc.yaml declares the properties in camelCase but they are stored in
+        snake_case, so this fixture stores them the way the importer would.
+        """
+        process_web.components = [
+            Component(
+                name="persistent_rootfs",
+                version="v1",
+                properties={"disk_size": "50Gi", "pvc_size": "60Gi", "container_name": "worker"},
+            ),
+        ]
+        process_web.save()
+        return process_web
+
     def test_get_command_and_args(self, bk_module, process_web):
         assert ProcessesManifestConstructor().get_command_and_args(process_web) == (
             ["python"],
@@ -378,6 +395,22 @@ class TestProcessesManifestConstructor:
                 "version": "v1",
             },
         ]
+
+    def test_proc_component_properties_are_restored_to_camel_case(
+        self, bk_module, blank_resource, process_web_with_persistent_rootfs
+    ):
+        """Properties are stored in snake_case but the operator's component templates
+        address them in camelCase, so the manifest must convert them back. A missed
+        key renders as an empty value instead of failing, hence the exact assertion.
+        """
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
+        # properties is already a dict on the BkApp process; dict_to_camel restores camelCase keys.
+        assert data["components"][0]["properties"] == {
+            "diskSize": "50Gi",
+            "pvcSize": "60Gi",
+            "containerName": "worker",
+        }
 
     @pytest.mark.parametrize(
         ("plan_name", "expected"),

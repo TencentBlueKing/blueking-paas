@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "persistent_rootfs",
+  "description": "为沙箱中的某个容器声明一块持久化 rootfs 系统盘，使该容器文件系统上的变更在实例重建后保留",
+  "type": "object",
+  "required": ["diskSize", "pvcSize"],
+  "additionalProperties": false,
+  "properties": {
+    "containerName": {
+      "type": "string",
+      "description": "盘绑定的容器名，须与 pod 内某容器（进程主容器或 sidecar）的 name 一致；省略时绑定进程主容器",
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "diskSize": {
+      "type": "string",
+      "description": "rootfs disk-image 文件大小，如 50Gi",
+      "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|K|M|G|T)?$"
+    },
+    "pvcSize": {
+      "type": "string",
+      "description": "承载 disk-image 的 PVC 容量，须大于 diskSize，如 60Gi",
+      "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|K|M|G|T)?$"
+    }
+  }
+}

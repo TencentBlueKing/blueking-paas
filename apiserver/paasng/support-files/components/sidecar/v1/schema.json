@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sidecar",
+  "description": "在进程主容器旁运行一个附属容器，并可声明与主容器共享的临时卷",
+  "type": "object",
+  "required": ["name", "image"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "附属容器名称，需符合 DNS-1123 规范，且不能与主容器（进程名）重复",
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "image": {
+      "type": "string",
+      "description": "附属容器镜像",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@-]*$",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "command": {
+      "type": "array",
+      "description": "容器启动命令（entrypoint），不经shell 解释",
+      "items": {
+        "type": "string"
+      }
+    },
+    "args": {
+      "type": "array",
+      "description": "启动命令的参数",
+      "items": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "array",
+      "description": "环境变量列表",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ports": {
+      "type": "array",
+      "description": "容器暴露的端口列表",
+      "items": {
+        "type": "object",
+        "required": ["containerPort"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 15
+          },
+          "containerPort": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "protocol": {
+            "type": "string",
+            "enum": ["TCP", "UDP"]
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "description": "资源配额，未声明时由sandbox 侧默认值决定",
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "$ref": "#/definitions/resourceMap"
+        },
+        "requests": {
+          "$ref": "#/definitions/resourceMap"
+        }
+      }
+    },
+    "volumeMounts": {
+      "type": "array",
+      "description": "挂载到该容器内的卷，name 需引用 sharedVolumes 中声明的卷",
+      "items": {
+        "type": "object",
+        "required": ["name", "mountPath"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1
+          },
+          "mountPath": {
+            "type": "string",
+            "pattern": "^/.*",
+            "minLength": 1
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "sharedVolumes": {
+      "type": "array",
+      "description": "声明供主容器与附属容器共享的 emptyDir 卷",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1
+          },
+          "medium": {
+            "type": "string",
+            "description": "空字符串表示使用磁盘，Memory 表示使用 tmpfs",
+            "enum": ["", "Memory"]
+          },
+          "sizeLimit": {
+            "type": "string",
+            "description": "卷容量上限，如 128Mi、1Gi",
+            "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|K|M|G|T)?$"
+          }
+        }
+      }
+    },
+    "mainContainerVolumeMounts": {
+      "type": "array",
+      "description": "挂载到进程主容器内的卷，name 需引用 sharedVolumes 中声明的卷",
+      "items": {
+        "type": "object",
+        "required": ["name", "mountPath"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1
+          },
+          "mountPath": {
+            "type": "string",
+            "pattern": "^/.*",
+            "minLength": 1
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "resourceMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?m?$"
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|K|M|G|T)?$"
+        }
+      }
+    }
+  }
+}

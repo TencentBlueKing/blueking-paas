@@ -72,7 +72,8 @@ type SandboxInstanceSpec struct {
 	// Network defines network configuration
 	Network SandboxNetwork `json:"network"`
 
-	// Domain defines compute resource allocations (CPU/Memory)
+	// Domain is required by the SandboxInstance CRD.
+	// Leave domain.cpu/memory empty; sandbox-controller computes the guest size.
 	Domain SandboxDomain `json:"domain"`
 
 	// PodTemplate defines the pod template for the sandbox instance
@@ -92,11 +93,14 @@ type SandboxNetwork struct {
 // SandboxDomain defines compute resource configuration
 // +kubebuilder:object:generate=true
 type SandboxDomain struct {
-	// CPU configuration
-	CPU SandboxCPU `json:"cpu"`
+	// CPU configuration. Omit to let sandbox-controller derive from containers.
+	// +optional
+	CPU SandboxCPU `json:"cpu,omitempty"`
 
-	// Memory quantity string, e.g. "4Gi"
-	Memory string `json:"memory"`
+	// Memory quantity string, e.g. "4Gi". Omit to let sandbox-controller derive
+	// from containers.
+	// +optional
+	Memory string `json:"memory,omitempty"`
 
 	// Devices configuration (rootfs disks etc.)
 	// +optional
@@ -106,7 +110,8 @@ type SandboxDomain struct {
 // SandboxCPU defines CPU resource
 type SandboxCPU struct {
 	// Cores is the number of vCPU cores (integer)
-	Cores int32 `json:"cores"`
+	// +optional
+	Cores int32 `json:"cores,omitempty"`
 }
 
 // SandboxDevices defines device configuration for rootfs etc.
@@ -131,12 +136,18 @@ type SandboxDisk struct {
 // SandboxPodTemplate defines the pod specification for the sandbox
 // +kubebuilder:object:generate=true
 type SandboxPodTemplate struct {
-	// Containers is a list of containers in the sandbox pod
-	Containers []corev1.Container `json:"containers"`
+	// Containers is a list of containers in the sandbox pod.
+	//
+	// The patchStrategy/patchMergeKey tags mirror those on corev1.PodSpec. They are
+	// only read by apimachinery's strategicpatch when computing a merge locally, and
+	// have no effect on how the CR is serialized to the API server. Without them, a
+	// strategic merge patch would replace the whole list instead of merging entries
+	// by name, which would drop the main container when injecting sidecars.
+	Containers []corev1.Container `json:"containers" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Volumes to mount
 	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge,retainKeys" patchMergeKey:"name"`
 
 	// NodeSelector for scheduling
 	// +optional

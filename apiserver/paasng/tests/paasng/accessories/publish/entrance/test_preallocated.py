@@ -27,11 +27,14 @@ from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import (
     _default_preallocated_urls,
+    _get_preallocated_market_entrance_url,
     get_exposed_url_type,
     get_preallocated_address,
     get_preallocated_url,
     get_preallocated_urls,
 )
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
@@ -232,3 +235,29 @@ class TestDefaultEntrance:
             f"http://stag-dot-{bk_app.code}.bar-1.example.com",
             f"http://stag-dot-{bk_app.code}.bar-2.example.org",
         ]
+
+
+def test_get_preallocated_market_entrance_url(bk_app):
+    """预计算的应用市场地址：仅「与绑定模块生产环境一致」类型有结果，
+    且 prefer_https 为 False 时强制降级为 http，ENGINE_PROD_ENV_HTTPS 不受影响。
+    """
+    with cluster_ingress_config(config={"app_root_domains": [{"name": "example.com", "https_enabled": True}]}):
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
+        market_config.source_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+        market_config.source_module.save()
+
+        # 非「与绑定模块生产环境一致」类型无需预计算
+        market_config.source_url_type = ProductSourceUrlType.THIRD_PARTY.value
+        market_config.save()
+        assert _get_preallocated_market_entrance_url(market_config) == ""
+
+        # prefer_https 为 False 时强制降级为 http
+        market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV.value
+        market_config.prefer_https = False
+        market_config.save()
+        assert _get_preallocated_market_entrance_url(market_config) == f"http://{bk_app.code}.example.com"
+
+        # ENGINE_PROD_ENV_HTTPS 不受 prefer_https 影响，保持 https
+        market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS.value
+        market_config.save()
+        assert _get_preallocated_market_entrance_url(market_config) == f"https://{bk_app.code}.example.com"

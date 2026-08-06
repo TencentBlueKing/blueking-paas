@@ -40,7 +40,9 @@ const (
 var (
 	buildInit       = flag.String("build-init", DefaultBuildInitPath, "path to build-init")
 	lifecycleDriver = flag.String("lifecycle-driver", DefaultLifecycleDriverPath, "path to lifecycle-driver")
-	exitDelay       = flag.String(
+	// exitDelay is set by apiserver when creating the build pod, via --exit-delay flag
+	// or CNB_EXIT_DELAY env var.
+	exitDelay = flag.String(
 		"exit-delay",
 		utils.EnvOrDefault("CNB_EXIT_DELAY", "0"),
 		"sleep delay duration(string like 1m30s) before exit",
@@ -57,19 +59,50 @@ func main() {
 	flag.Parse()
 	logger := logging.Default()
 
+	// Run the build, returns exit code
+	code := run(logger)
+
+	// Build debug: write markers and keep container alive before exit.
+	// Invalid exit-delay only disables keep-alive; it must not mask the build result.
+	if duration, err := time.ParseDuration(*exitDelay); err != nil {
+		logger.Error(err, "Invalid exit-delay, keep-alive and build markers disabled")
+	} else if duration > 0 {
+		writeMarkers(logger, code)
+		preExit(logger, duration)
+	}
+	os.Exit(code)
+}
+
+// run executes the full build pipeline and returns an exit code.
+func run(logger logr.Logger) int {
 	ctx := context.Background()
 	if err := makeBuildInitCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Setup Build Environ Failed")
-		preExit(logger)
-		os.Exit(1)
+		return 1
 	}
 	if err := makeLifecycleDriverCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Build failed")
-		preExit(logger)
-		os.Exit(1)
+		return 1
 	}
+	return 0
+}
 
-	preExit(logger)
+// writeMarkers publishes the build result via marker files.
+// Order matters: build-done is written last as the commit point, and skipped if the result marker fails.
+func writeMarkers(logger logr.Logger, code int) {
+	if code == 0 {
+		if err := utils.WriteBuildResultSuccess(); err != nil {
+			logger.Error(err, "failed to write build-result-success marker, skip build-done to avoid a false failure")
+			return
+		}
+	} else {
+		if err := utils.WriteBuildResultFailed(); err != nil {
+			logger.Error(err, "failed to write build-result-failed marker")
+		}
+	}
+	if err := utils.WriteBuildDone(); err != nil {
+		logger.Error(err, "failed to write build-done marker, the platform cannot observe the build result")
+	}
 }
 
 func makeBuildInitCmd(ctx context.Context) *exec.Cmd {
@@ -90,20 +123,8 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 	return cmd
 }
 
-// preExit do something before exit:
-// - sleep delay duration if exit-delay is set
-func preExit(logger logr.Logger) {
-	duration, err := time.ParseDuration(*exitDelay)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Sleeping before exit error"))
-		os.Exit(1)
-	}
-
-	if duration == time.Duration(0) {
-		return
-	}
-
+// preExit logs and sleeps for the given duration before exit.
+func preExit(logger logr.Logger, duration time.Duration) {
 	logger.Info(fmt.Sprintf("Sleeping %v before exit", duration))
-
 	time.Sleep(duration)
 }

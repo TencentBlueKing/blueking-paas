@@ -44,7 +44,7 @@
     "vue-loader": "^15.7.1",
     "vue-template-compiler": "^2.6.12",
     "webpack": "^4.41.2",
-    "webpack-bundle-tracker": "^0.2.0",
+    "webpack-bundle-tracker": "^1.8.1",
     "webpack-cli": "^3.3.9"
   },
   "dependencies": {

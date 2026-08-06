@@ -112,7 +112,7 @@ class TestRemoteEngineAppInstanceRel:
         assert plan.is_eager is plan_data["properties"]["is_eager"]  # type: ignore
         assert plan.properties == plan_data["properties"]
 
-    @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
+    @mock.patch("paas_wl.infras.cluster.egress.get_cluster_egress_info")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     def test_provision(
         self,
@@ -150,7 +150,7 @@ class TestRemoteEngineAppInstanceRel:
                     assert bool(all(mocked_provision.call_args[0]))
                     assert mocked_provision.call_args[1]["params"]["username"] == rel.db_engine_app.name
 
-    @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
+    @mock.patch("paas_wl.infras.cluster.egress.get_cluster_egress_info")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.idempotent_provision_instance")
     def test_provision_with_idempotent_api(

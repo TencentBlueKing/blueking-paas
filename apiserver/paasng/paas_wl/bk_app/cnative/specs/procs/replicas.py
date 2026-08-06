@@ -19,6 +19,7 @@
 
 import copy
 import logging
+from dataclasses import asdict
 from typing import Dict, List, Optional
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
@@ -29,6 +30,7 @@ from paas_wl.infras.resources.base.base import EnhancedApiClient
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import PatchType
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -192,7 +194,7 @@ class BkAppProcScaler:
                 item_copy.minReplicas = config.min_replicas
                 item_copy.maxReplicas = config.max_replicas
                 item_copy.policy = config.policy
-                # Other properties such as "metrics" are not supported yet
+                item_copy.metrics = [asdict(m) for m in config.metrics]
                 found = True
             results.append(item_copy)
 
@@ -204,6 +206,7 @@ class BkAppProcScaler:
                     minReplicas=config.min_replicas,
                     maxReplicas=config.max_replicas,
                     policy=config.policy,
+                    metrics=[asdict(m) for m in config.metrics],
                 )
             )
         return results
@@ -261,6 +264,7 @@ class AutoscalingReader:
                 "min_replicas": c.minReplicas,
                 "max_replicas": c.maxReplicas,
                 "policy": c.policy,
+                "metrics": c.metrics or DEFAULT_METRICS,
             }
             if (c := p.autoscaling)
             else None
@@ -280,5 +284,6 @@ class AutoscalingReader:
                     "min_replicas": r.minReplicas,
                     "max_replicas": r.maxReplicas,
                     "policy": r.policy,
+                    "metrics": r.metrics or DEFAULT_METRICS,
                 }
         return results

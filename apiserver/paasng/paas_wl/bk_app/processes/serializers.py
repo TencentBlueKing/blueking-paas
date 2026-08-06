@@ -320,7 +320,36 @@ class MetricSpecSLZ(serializers.Serializer):
     )
     metric = serializers.ChoiceField(required=True, choices=ScalingMetric.get_choices())
     value = serializers.CharField(required=True, help_text=_("资源指标值/百分比"))
+
+    # described_object 仅 Object 类型指标需要，Resource / Pods 读时过滤 / 写时拒绝
     described_object = ScalingObjectRefSLZ(required=False)
+
+    def validate(self, attrs: Dict) -> Dict:
+        # NOTE: 当前仅支持资源类型的 CPU 使用率指标
+        source_type = attrs.get("type")
+        metric = attrs.get("metric")
+        value = attrs.get("value", "")
+        if source_type != ScalingMetricSourceType.RESOURCE:
+            raise ValidationError(_("当前仅支持 Resource 类型指标, 不支持的 type: {}").format(source_type))
+        if metric != ScalingMetric.CPU_UTILIZATION:
+            raise ValidationError(_("当前不支持该指标类型: {}").format(metric))
+
+        try:
+            numeric_value = int(value)
+        except ValueError:
+            raise ValidationError(_("使用率类型指标值必须是整数字符串, 如 85"))
+        if not (0 < numeric_value <= 100):
+            raise ValidationError(_("使用率类型指标值必须在 (0, 100] 区间内, 当前值: {}").format(value))
+
+        attrs["value"] = str(numeric_value)
+        return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # 仅 Object 类型指标应返回 described_object，其他类型 (Resource / Pods) 过滤掉
+        if data.get("type") != ScalingMetricSourceType.OBJECT:
+            data.pop("described_object", None)
+        return data
 
 
 class ScalingConfigSLZ(serializers.Serializer):

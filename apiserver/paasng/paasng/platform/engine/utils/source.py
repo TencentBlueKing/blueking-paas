@@ -49,7 +49,7 @@ from paasng.platform.sourcectl.exceptions import (
     GetProcfileError,
     GetProcfileFormatError,
 )
-from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.models import SourcePackage, VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.platform.sourcectl.utils import DockerIgnore
 from paasng.utils.file import validate_source_dir_str
@@ -163,6 +163,12 @@ def get_desc_data_by_version(module: Module, operator: str, version_info: Versio
     try:
         return metadata_reader.get_app_desc(version_info)
     except GetAppYamlError:
+        return None
+    except SourcePackage.DoesNotExist:
+        # 历史镜像部署(指定 build_id)时, version_info.revision 取自 build.image_tag
+        # (如 "0.0.1-2607241137", 含构建时间戳); 而 SourcePackage.version 是上传包时的
+        # 纯版本号(如 "0.0.1"), 两者不匹配导致查询抛 DoesNotExist
+        # 历史镜像部署无需读 app_desc(进程信息从历史 deployment 复制), 视为无描述文件即可
         return None
 
 

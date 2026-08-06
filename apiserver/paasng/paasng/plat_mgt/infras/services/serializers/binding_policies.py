@@ -46,9 +46,19 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     class Meta:
         ref_name = "plat_mgt.infras.services.AllocationPrecedencePolicySLZ"
 
-    cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
-    cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
+    matcher = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
+
+    def validate_matcher(self, value):
+        valid_keys = set(PrecedencePolicyCondType.get_values())
+        if len(value) > 1:
+            raise serializers.ValidationError("Each rule allows only one matching condition.")
+        for key, val_list in value.items():
+            if key not in valid_keys:
+                raise serializers.ValidationError(f"Unknown condition type: {key}, allowed: {valid_keys}")
+            if not val_list:
+                raise serializers.ValidationError(f"Value list for '{key}' cannot be empty.")
+        return value
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
@@ -70,7 +80,25 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
         attrs = super().to_internal_value(data)
         service_id = self.context.get("service_id")
         attrs["service_id"] = service_id
+
+        if attrs.get("policy_type") == ServiceAllocationPolicyType.RULE_BASED.value:
+            self._validate_precedence_policies(attrs.get("allocation_precedence_policies") or [])
+
         return cattr.structure(attrs, PolicyCombinationConfig)
+
+    @staticmethod
+    def _validate_precedence_policies(policies: list) -> None:
+        priorities = [p["priority"] for p in policies]
+        if len(priorities) != len(set(priorities)):
+            raise serializers.ValidationError("policies priority must be unique")
+
+        empty_matcher = [p for p in policies if not p["matcher"]]
+        if len(empty_matcher) != 1:
+            raise serializers.ValidationError(
+                f"required exactly one fallback (empty matcher), got {len(empty_matcher)}"
+            )
+        if empty_matcher[0]["priority"] != min(priorities):
+            raise serializers.ValidationError("fallback must have the lowest priority")
 
 
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):

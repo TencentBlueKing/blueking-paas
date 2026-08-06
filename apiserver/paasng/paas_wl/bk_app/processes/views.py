@@ -260,7 +260,11 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             deployment_obj = get_object_or_404(Deployment, id=deployment_id)
             bkapp_release_id = deployment_obj.bkapp_release_id
 
-        processes_status = ProcInstByEnvListWatcher(application, environment).list()
+        # 使用隔离沙箱的应用由 CR 直接渲染 Pod, 不存在对应的 Deployment。
+        if application.use_isolated_sandbox:
+            processes_status = ProcInstByEnvListWatcher(application, environment).list_instances_only()
+        else:
+            processes_status = ProcInstByEnvListWatcher(application, environment).list()
 
         for process in processes_status.processes:
             module_name = process.app.module_name

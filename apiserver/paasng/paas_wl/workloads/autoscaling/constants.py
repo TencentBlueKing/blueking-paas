@@ -62,7 +62,7 @@ class ScalingMetric(StrStructuredEnum):
     MEMORY_AVERAGE_VALUE = EnumField("memoryAverageValue", label=_("内存使用量"))
 
 
-# The default metrics for autoscaling, do not support customize at this time
+# 自动扩缩容默认指标: 当用户未提供自定义 metrics 时使用
 DEFAULT_METRICS = [
     {
         "type": "Resource",

@@ -23,7 +23,6 @@ from django.db.models import Min
 
 from paasng.accessories.servicehub.binding_policy.policy import get_service_type
 from paasng.accessories.servicehub.constants import (
-    PrecedencePolicyCondType,
     ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
@@ -44,11 +43,12 @@ class Command(BaseCommand):
 
     背景:
     ServiceBindingPrecedencePolicy 本身用于带条件匹配，ServiceBindingPolicy 用于无条件匹配，作为兜底策略。
-    本次修改后，ServiceBindingPrecedencePolicy 用于规则匹配，使用类型为 "AlwaysMatch" 作为兜底策略。
-    ServiceBindingPolicy 用于统一分配。
-    并且添加了模型 ServiceAllocationPolicy 存储和判断分配策略（规则匹配/统一分配）
+    本次修改后，ServiceBindingPrecedencePolicy 同时支持按条件匹配和无条件匹配 (matcher={})，
+    其中 matcher={} 表示无条件命中的兜底规则 (取代了旧版 "always_match" 条件类型)。
+    ServiceBindingPolicy 仅用于统一分配。
+    新增 ServiceAllocationPolicy 模型来区分两种分配模式 (rule_based / uniform).
     目的:
-    - 将带条件匹配 ServiceBindingPolicy 兜底策略转换为 always_match ServiceBindingPrecedencePolicy
+    - 将带条件匹配 ServiceBindingPolicy 兜底策略转换为 matcher={} 的 ServiceBindingPrecedencePolicy
     - 为带条件匹配创建 rule_based 类型的 ServiceAllocationPolicy
     - 根据孤立的 ServiceBindingPolicy 创建 uniform 类型的 ServiceAllocationPolicy
     """
@@ -92,8 +92,7 @@ class Command(BaseCommand):
                     service_type=get_service_type(service_obj),
                     tenant_id=precedence_policy.tenant_id,
                     priority=min_priority - 1,
-                    cond_type=PrecedencePolicyCondType.ALWAYS_MATCH.value,
-                    cond_data={},
+                    matcher={},
                     type=precedence_policy_type,
                     data=plans,
                 )

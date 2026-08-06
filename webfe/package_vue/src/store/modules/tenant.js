@@ -110,6 +110,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 获取增强服务分配条件类型
+     */
+    getServiceBindingPolicyConditionTypes({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/service_binding_policy_condition_types/`;
+      return http.get(url);
+    },
+    /**
      * 获取全量集群策略
      */
     getClusterAllocationPolicies({}) {

@@ -54,6 +54,7 @@ class AutoscalingSpec(BaseModel):
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list[dict] | None = None
 
 
 class ExecAction(BaseModel):
@@ -281,6 +282,7 @@ class AutoscalingOverlay(BaseModel):
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
+    metrics: list[dict] | None = None
 
 
 class EnvOverlay(BaseModel):
@@ -432,6 +434,7 @@ class BkAppSpec(BaseModel):
     envOverlay: EnvOverlay | None = None
     observability: Observability | None = None
     schedule: Schedule | None = None
+    workloadType: str | None = None
 
 
 class BkAppStatus(BaseModel):

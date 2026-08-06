@@ -163,7 +163,24 @@ type AppSpec struct {
 	// Schedule holds scheduling related configurations, includes node selector and tolerations.
 	// +optional
 	Schedule *Schedule `json:"schedule,omitempty"`
+
+	// WorkloadType specifies the kind of workload the operator should reconcile from this BkApp.
+	// "deployment" (default): reconcile into a standard Deployment.
+	// "sandboxInstance": reconcile into a SandboxInstance CR (cube MicroVM).
+	// +optional
+	// +kubebuilder:validation:Enum=deployment;sandboxInstance
+	WorkloadType WorkloadType `json:"workloadType,omitempty"`
 }
+
+// WorkloadType defines which kind of workload resource the operator produces from a BkApp.
+type WorkloadType string
+
+const (
+	// WorkloadTypeDeployment means the operator reconciles BkApp into a standard Deployment.
+	WorkloadTypeDeployment WorkloadType = "deployment"
+	// WorkloadTypeSandboxInstance means the operator reconciles BkApp into a SandboxInstance CR (cube MicroVM).
+	WorkloadTypeSandboxInstance WorkloadType = "sandboxInstance"
+)
 
 // Schedule holds scheduling related configurations, includes node selector and tolerations.
 type Schedule struct {
@@ -336,6 +353,25 @@ type AutoscalingSpec struct {
 
 	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
 	Policy ScalingPolicy `json:"policy"`
+
+	// Metrics 自定义扩缩容指标; 为空时使用默认值(cpu 85%)
+	// +optional
+	Metrics []MetricSpec `json:"metrics,omitempty"`
+}
+
+// MetricSpec 定义扩缩容指标
+type MetricSpec struct {
+	// Type 指标来源类型
+	// +kubebuilder:validation:Enum=Resource
+	Type string `json:"type"`
+
+	// Metric 指标名称
+	// +kubebuilder:validation:Enum=cpuUtilization
+	Metric string `json:"metric"`
+
+	// Value 指标值, 百分比 (0-100]
+	// +kubebuilder:validation:Pattern=`^(100|[1-9][0-9]?)$`
+	Value string `json:"value"`
 }
 
 // ScalingPolicy is used to specify which policy should be used while scaling

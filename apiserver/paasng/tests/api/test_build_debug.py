@@ -196,6 +196,15 @@ class TestGetBuildDebug:
 class TestCreateBuildDebugConsole:
     """测试 create_build_debug_console 接口."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_user_feature(self):
+        """Mock user_has_feature 返回 True, 允许通过权限检查."""
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.user_has_feature",
+            return_value=mock.MagicMock(has_permission=mock.MagicMock(return_value=True)),
+        ):
+            yield
+
     @mock.patch("paasng.platform.engine.views.deploy.get_cluster_by_app")
     @mock.patch("paasng.platform.engine.views.deploy.bcs_client_cls")
     def test_create_console_success(self, mock_bcs_cls, mock_get_cluster, api_client, bk_app, bk_module):

@@ -134,4 +134,5 @@ class Command(BaseCommand):
 
         for _url in data.api_server_urls:
             APIServer.objects.get_or_create(cluster=cluster, host=_url)
+        APIServer.objects.filter(cluster=cluster).exclude(host__in=data.api_server_urls).delete()
         logger.info("The cluster was initialized successfully")

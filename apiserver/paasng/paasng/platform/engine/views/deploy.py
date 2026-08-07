@@ -33,8 +33,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.models import Build
+from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paasng.accessories.smart_advisor.utils import get_failure_hint
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
@@ -42,7 +47,9 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.engine.configurations.building import get_build_debug_timeout, get_use_bk_ci_pipeline
 from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
+from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -69,6 +76,7 @@ from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
@@ -131,6 +139,15 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
+
+        # 构建调试: 验证构建方式是否支持
+        if params["advanced_options"].get("debug_enabled"):
+            if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("你暂无权限使用构建调试功能"))
+            if get_use_bk_ci_pipeline(module):
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("蓝盾流水线构建不支持构建调试"))
+            if not ModuleRuntimeManager(module).is_cnb_runtime:
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("当前构建方式不支持构建调试, 仅支持 CNB 构建"))
 
         # 选择历史构建的镜像时需要传递 build_id
         build = None
@@ -315,6 +332,153 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except DeployInterruptionFailed as e:
             raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(str(e))
         return Response({})
+
+    @swagger_auto_schema(tags=["部署阶段"])
+    def get_build_debug(self, request, code, module_name, uuid):
+        """获取构建调试入口状态"""
+        # 构建调试需要 ALLOW_BUILD_DEBUG 特性，WebConsole 需要 ENABLE_WEB_CONSOLE 特性，两者都满足才可用
+        if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限使用构建调试功能"))
+        if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
+
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
+        if deployment != latest:
+            return Response(self._build_debug_data(enabled=False, available=False))
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.debug_enabled:
+            return Response(self._build_debug_data(enabled=False, available=False))
+
+        wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
+        if pod is None or pod.status.phase != "Running":
+            return Response(
+                self._build_debug_data(
+                    enabled=True, available=False, builder_pod_name=builder_name, namespace=wl_app.namespace
+                )
+            )
+
+        # 检查构建是否已完成 (startupProbe 通过, 即 /tmp/build-done 已创建)
+        container_statuses = pod.status.container_statuses or []
+        if not container_statuses or not getattr(container_statuses[0], "started", False):
+            return Response(
+                self._build_debug_data(
+                    enabled=True, available=False, builder_pod_name=builder_name, namespace=wl_app.namespace
+                )
+            )
+
+        available = BuildHandler.is_debug_window_available(pod, get_build_debug_timeout())
+        return Response(
+            self._build_debug_data(
+                enabled=True, available=available, builder_pod_name=builder_name, namespace=wl_app.namespace
+            )
+        )
+
+    @swagger_auto_schema(tags=["部署阶段"])
+    def create_build_debug_console(self, request, code, module_name, uuid):
+        """创建构建调试容器的 WebConsole 会话"""
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
+        if deployment != latest:
+            raise error_codes.BUILD_DEBUG_STALE_DEPLOYMENT.f(_("已有新的部署开始，当前构建调试入口已失效"))
+        advanced = deployment.advanced_options
+        if not advanced or not advanced.debug_enabled:
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
+
+        # 构建调试需要 ALLOW_BUILD_DEBUG 特性, WebConsole 需要 ENABLE_WEB_CONSOLE 特性, 两者都满足才可用
+        if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限使用构建调试功能"))
+        if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
+
+        wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
+        if pod is None or pod.status.phase != "Running":
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试容器已不可用"))
+
+        # 检查构建是否已完成 (startupProbe 通过, 即 /tmp/build-done 已创建)
+        container_statuses = pod.status.container_statuses or []
+        if not container_statuses or not getattr(container_statuses[0], "started", False):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建任务正在进行中，请稍后再试"))
+
+        # 检查构建调试窗口是否已过期
+        if not BuildHandler.is_debug_window_available(pod, get_build_debug_timeout()):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("构建调试窗口已过期"))
+
+        cluster = get_cluster_by_app(wl_app)
+        tenant_id = deployment.app_environment.application.tenant_id
+        try:
+            result = bcs_client_cls(tenant_id).create_web_console_sessions(
+                json={
+                    "namespace": wl_app.namespace,
+                    "pod_name": builder_name,
+                    "container_name": builder_name,
+                    "command": "bash",
+                    "operator": request.user.username,
+                },
+                path_params={
+                    "cluster_id": cluster.bcs_cluster_id,
+                    "project_id_or_code": cluster.bcs_project_id,
+                    "version": "v4",
+                },
+            )
+        except Exception:
+            logger.exception(
+                "Failed to create WebConsole session via BCS for Pod<%s/%s>", wl_app.namespace, builder_name
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("创建构建调试控制台会话失败，请稍后重试"))
+
+        # BCS 返回非 0 时以错误响应而非透传伪 200, 保持与其他接口风格一致.
+        if result.get("code") != 0:
+            logger.warning(
+                "BCS create_web_console_sessions returned code=%s for Pod<%s/%s>, message=%s, request_id=%s",
+                result.get("code"),
+                wl_app.namespace,
+                builder_name,
+                result.get("message"),
+                result.get("request_id"),
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(
+                result.get("message") or _("创建构建调试控制台会话失败，请稍后重试")
+            )
+
+        data = result.get("data") or {}
+        session_id = data.get("session_id")
+        web_console_url = data.get("web_console_url")
+        if not session_id or not web_console_url:
+            logger.warning(
+                "BCS response missing session_id or web_console_url for Pod<%s/%s>, data=%s",
+                wl_app.namespace,
+                builder_name,
+                data,
+            )
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("创建构建调试控制台会话失败，请稍后重试"))
+
+        return Response(
+            {
+                "code": result.get("code"),
+                "message": result.get("message"),
+                "request_id": result.get("request_id"),
+                "session_id": session_id,
+                "web_console_url": web_console_url,
+            }
+        )
+
+    def _get_debug_builder_pod(self, deployment: Deployment):
+        """获取构建调试 Pod, 返回 (wl_app, builder_name, pod)."""
+        wl_app = deployment.app_environment.wl_app
+        handler = BuildHandler.new_by_app(wl_app)
+        builder_name = generate_builder_name(wl_app)
+        pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
+        return wl_app, builder_name, pod
+
+    @staticmethod
+    def _build_debug_data(enabled: bool, available: bool, builder_pod_name=None, namespace=None) -> dict:
+        return {
+            "enabled": enabled,
+            "available": available,
+            "builder_pod_name": builder_pod_name,
+            "namespace": namespace,
+        }
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

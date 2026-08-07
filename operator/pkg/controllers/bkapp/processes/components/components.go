@@ -24,9 +24,11 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
 
+	sandboxv1beta1 "bk.tencent.com/paas-app-operator/api/sandbox/v1beta1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,30 +40,31 @@ type ComponentMutator struct {
 	defaultParams map[string]any
 }
 
-// PatchToDeployment inject component to deployment
-func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) error {
+// patchTo inject component to object via a strategic merge
+// patch.
+func patchTo[T any](c *ComponentMutator, obj *T) error {
 	patchBytes, err := c.getTemplate()
 	if err != nil {
 		return errors.Wrapf(err, "get template %s:%s", c.component.Name, c.component.Version)
 	}
-	originalBytes, err := json.Marshal(deployment)
+	originalBytes, err := json.Marshal(obj)
 	if err != nil {
-		return errors.Wrap(err, "json marshal deployment")
+		return errors.Wrap(err, "json marshal object")
 	}
 	patchJSONBytes, err := yaml.YAMLToJSON(patchBytes)
 	if err != nil {
 		return errors.Wrap(err, "component tpl yaml to json")
 	}
-	patchedBytes, err := strategicpatch.StrategicMergePatch(originalBytes, patchJSONBytes, appsv1.Deployment{})
+	var dataStruct T
+	patchedBytes, err := strategicpatch.StrategicMergePatch(originalBytes, patchJSONBytes, dataStruct)
 	if err != nil {
 		return errors.Wrap(err, "strategic merge patch")
 	}
-	newDeployment := &appsv1.Deployment{}
-	if err = json.Unmarshal(patchedBytes, newDeployment); err != nil {
-		return errors.Wrap(err, "json unmarshal deployment")
+	patched := new(T)
+	if err = json.Unmarshal(patchedBytes, patched); err != nil {
+		return errors.Wrap(err, "json unmarshal patched object")
 	}
-	*deployment = *newDeployment
-
+	*obj = *patched
 	return nil
 }
 
@@ -121,10 +124,73 @@ func PatchToDeployment(
 				"procName": proc.Name,
 			},
 		}
-		err := mutator.patchToDeployment(deployment)
+		err := patchTo(mutator, deployment)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// PatchToSandboxInstance patches all of the process's components onto a
+// SandboxInstance CR.
+//
+// Note that a strategic merge patch does not preserve list order, so the main
+// container may end up behind the injected sidecars. Containers are looked up by
+// name rather than by position, so the resulting order carries no meaning.
+//
+// VolumeClaimTemplates are merged by metadata.name after each patch: a PVC's
+// name lives under metadata, so struct-tag strategic merge cannot use
+// patchMergeKey:"name" the way StatefulSetSpec does with its OpenAPI schema.
+func PatchToSandboxInstance(
+	proc *paasv1alpha2.Process,
+	sbi *sandboxv1beta1.SandboxInstance,
+) error {
+	for _, component := range proc.Components {
+		priorClaims := sbi.Spec.VolumeClaimTemplates
+		mutator := &ComponentMutator{
+			component: component,
+			defaultParams: map[string]any{
+				"procName": proc.Name,
+				// Components that declare namespace-scoped resources (such as the PVC
+				// templates of persistent_rootfs) must derive unique names from the
+				// workload, because several processes of the same application share a
+				// namespace. sbi.Name is already names.Workload(bkapp, proc).
+				"workloadName": sbi.Name,
+			},
+		}
+		if err := patchTo(mutator, sbi); err != nil {
+			return err
+		}
+		sbi.Spec.VolumeClaimTemplates = mergeVolumeClaimTemplates(priorClaims, sbi.Spec.VolumeClaimTemplates)
+	}
+	return nil
+}
+
+// mergeVolumeClaimTemplates upserts patched into base by metadata.name. Entries
+// that appear only in patched are appended; a name present in both keeps the
+// patched copy.
+func mergeVolumeClaimTemplates(base, patched []corev1.PersistentVolumeClaim) []corev1.PersistentVolumeClaim {
+	if len(patched) == 0 {
+		return base
+	}
+	if len(base) == 0 {
+		return patched
+	}
+	merged := make([]corev1.PersistentVolumeClaim, len(base))
+	copy(merged, base)
+	index := make(map[string]int, len(merged))
+	for i, claim := range merged {
+		index[claim.Name] = i
+	}
+	// 同名用 patch 覆盖，新的直接追加
+	for _, claim := range patched {
+		if i, ok := index[claim.Name]; ok {
+			merged[i] = claim
+			continue
+		}
+		index[claim.Name] = len(merged)
+		merged = append(merged, claim)
+	}
+	return merged
 }

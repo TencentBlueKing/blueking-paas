@@ -1,0 +1,47 @@
+{{- /*
+persistent_rootfs 组件：为沙箱中的某个容器声明一块持久化 rootfs 系统盘。
+
+渲染结果以 strategic merge patch 合并到 SandboxInstance 上，需要三处联动：
+  - spec.domain.devices.disks   声明 rootfs 盘，size 是 disk-image 文件的大小
+  - spec.podTemplate.volumes    把承载 disk-image 的 PVC 挂进沙箱
+  - spec.volumeClaimTemplates   PVC 模板，由 sandbox-controller 负责创建
+
+containerName 指定盘绑定的容器；未声明时回落到 .procName（进程主容器）。
+需要给 sidecar 也开持久盘时，再声明一条本组件并填其容器名即可——disks /
+volumeClaimTemplates 均按 containerName / claim name 归并，不会互相覆盖。
+
+volumeName / PVC 名带上容器维度，并带上 .workloadName（进程 workload 名），因为
+同一应用的多个进程共用一个命名空间。
+*/ -}}
+{{- $containerName := .procName -}}
+{{- if .containerName -}}
+{{- $containerName = .containerName -}}
+{{- end -}}
+{{- $volumeName := printf "state-%s" $containerName -}}
+{{- $claimName := printf "%s-%s-pvc" .workloadName $volumeName -}}
+spec:
+  domain:
+    devices:
+      disks:
+        - name: rootfs
+          containerName: {{ $containerName | printf "%q" }}
+          volumeName: {{ $volumeName | printf "%q" }}
+          role: rootfsDisk
+          image: rootdisk.img
+          sourcePath: rootfs
+          size: {{ .diskSize | printf "%q" }}
+          fsType: ext4
+  podTemplate:
+    volumes:
+      - name: {{ $volumeName | printf "%q" }}
+        persistentVolumeClaim:
+          claimName: {{ $claimName | printf "%q" }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $claimName | printf "%q" }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .pvcSize | printf "%q" }}

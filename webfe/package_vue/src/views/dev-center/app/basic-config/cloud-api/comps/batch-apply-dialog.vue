@@ -23,6 +23,15 @@
           </template>
         </div>
       </paasng-alert>
+      <paasng-alert
+        v-if="hasOauth2PublicClientEnabledServer"
+        class="mb-16"
+        :title="
+          $t(
+            '该 MCP Server 已开启 OAuth2 公开客户端模式。在 Cursor、CodeBuddy 等工具中通过 OAuth 授权使用时，无需在此申请权限，授权完成后即可使用；仅在需要以当前应用的 ID / 密钥调用该 MCP 时，才需申请权限。'
+          )
+        "
+      />
       <bk-table
         ref="batchTable"
         style="width: 100%"
@@ -195,6 +204,10 @@ export default {
     // 是否为 MCP 服务类型
     isMcpService() {
       return this.currentApiType === 'mcp-service';
+    },
+    // 是否有开启Oauth2公有客户端的MCP Server
+    hasOauth2PublicClientEnabledServer() {
+      return this.isMcpService && this.rows.some((item) => item.oauth2_public_client_enabled);
     },
     alertTxt() {
       return this.$t('将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限', {

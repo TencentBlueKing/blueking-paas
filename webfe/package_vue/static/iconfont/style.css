@@ -59,6 +59,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-bukeyulan:before {
 	content: "\e21c";
 }
+.paasng-cc-lang:before {
+	content: "\e2a6";
+}
 .paasng-github-logo:before {
 	content: "\e21e";
 }

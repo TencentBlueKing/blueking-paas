@@ -141,7 +141,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         params = serializer.data
 
         # 构建调试: 验证构建方式是否支持
-        if params["advanced_options"].get("build_debug"):
+        if params["advanced_options"].get("debug_enabled"):
             if get_use_bk_ci_pipeline(module):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("蓝盾流水线构建不支持构建调试"))
             if not ModuleRuntimeManager(module).is_cnb_runtime:
@@ -339,7 +339,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if deployment != latest:
             return Response(self._build_debug_data(enabled=False, available=False))
         advanced = deployment.advanced_options
-        if not advanced or not advanced.build_debug:
+        if not advanced or not advanced.debug_enabled:
             return Response(self._build_debug_data(enabled=False, available=False))
 
         wl_app, builder_name, pod = self._get_debug_builder_pod(deployment)
@@ -374,7 +374,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if deployment != latest:
             raise error_codes.BUILD_DEBUG_STALE_DEPLOYMENT.f(_("已有新的部署开始，当前构建调试入口已失效"))
         advanced = deployment.advanced_options
-        if not advanced or not advanced.build_debug:
+        if not advanced or not advanced.debug_enabled:
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
 
         # 复用现有 WebConsole 的 ENABLE_WEB_CONSOLE 白名单判定

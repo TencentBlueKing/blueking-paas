@@ -79,9 +79,9 @@ class BuildProbeStatus(StrEnum):
 # Probe polling interval in seconds for build debug mode
 _PROBE_POLL_INTERVAL = 5
 
-# Label key/value for build-debug pods
-BUILD_DEBUG_LABEL_KEY = "build-debug"
-BUILD_DEBUG_LABEL_VALUE = "true"
+# Label key/value for debug-enabled pods
+DEBUG_ENABLED_LABEL_KEY = "debug-enabled"
+DEBUG_ENABLED_LABEL_VALUE = "true"
 
 
 class BuildProbePoller:
@@ -429,8 +429,8 @@ class BuildHandler(PodScheduleHandler):
         else:
             # 构建调试模式: 旧 debug Pod 无条件强制删除
             if (getattr(slug_pod.metadata, "labels", None) or {}).get(
-                BUILD_DEBUG_LABEL_KEY
-            ) == BUILD_DEBUG_LABEL_VALUE:
+                DEBUG_ENABLED_LABEL_KEY
+            ) == DEBUG_ENABLED_LABEL_VALUE:
                 logger.info(
                     "Found existing debug Pod<%s/%s>, force delete it for new deployment.",
                     template.namespace,
@@ -468,7 +468,7 @@ class BuildHandler(PodScheduleHandler):
             "resources": template.runtime.resources,
         }
 
-        if template.build_debug:
+        if template.debug_enabled:
             # failureThreshold 根据 BUILD_PROCESS_TIMEOUT 动态计算
             probe_timeout = max(settings.BUILD_PROCESS_TIMEOUT, 60)
             failure_threshold = (probe_timeout - 30) // 3
@@ -488,10 +488,10 @@ class BuildHandler(PodScheduleHandler):
                 }
             )
 
-        # 构建调试模式: 添加 build-debug label
+        # 构建调试模式: 添加 debug-enabled label
         labels = {"pod_selector": pod_name, "category": "slug-builder"}
-        if template.build_debug:
-            labels[BUILD_DEBUG_LABEL_KEY] = BUILD_DEBUG_LABEL_VALUE
+        if template.debug_enabled:
+            labels[DEBUG_ENABLED_LABEL_KEY] = DEBUG_ENABLED_LABEL_VALUE
 
         slug_pod_body: Dict = {
             "metadata": {

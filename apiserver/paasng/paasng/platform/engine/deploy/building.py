@@ -278,8 +278,8 @@ class ApplicationBuilder(BaseBuilder):
         extra_envs = {**extra_envs, **build_info.environments}
 
         # 构建调试: 开启时注入 CNB_EXIT_DELAY 让容器在构建完成后保活
-        build_debug = self.deployment.advanced_options.build_debug
-        if build_debug and build_info.use_cnb:
+        debug_enabled = self.deployment.advanced_options.debug_enabled
+        if debug_enabled and build_info.use_cnb:
             extra_envs["CNB_EXIT_DELAY"] = settings.BUILD_DEBUG_EXIT_DELAY
 
         # Use the default image when it's None, which means no images are bound to the app
@@ -308,7 +308,7 @@ class ApplicationBuilder(BaseBuilder):
             buildpacks=build_process.buildpacks_as_build_env(),
             extra_envs=extra_envs,
             bkapp_revision_id=bkapp_revision_id,
-            build_debug=self.deployment.advanced_options.build_debug and build_info.use_cnb,
+            debug_enabled=self.deployment.advanced_options.debug_enabled and build_info.use_cnb,
         )
 
         start_bg_build_process.delay(

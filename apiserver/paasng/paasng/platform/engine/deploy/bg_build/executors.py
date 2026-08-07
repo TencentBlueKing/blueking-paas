@@ -98,7 +98,7 @@ class DefaultBuildProcessExecutor(DeployStep):
 
     def execute(self, metadata: BuildMetadata):
         """Execute the build process"""
-        build_debug = metadata.build_debug
+        debug_enabled = metadata.debug_enabled
 
         try:
             with self.procedure("准备构建环境"):
@@ -112,7 +112,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
                 slugbuilder_template = prepare_slugbuilder_template(
-                    self.wl_app, env_vars, builder_image=self.bp.image, build_debug=build_debug
+                    self.wl_app, env_vars, builder_image=self.bp.image, debug_enabled=debug_enabled
                 )
 
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
@@ -124,7 +124,7 @@ class DefaultBuildProcessExecutor(DeployStep):
                 )
 
             self.bp.set_logs_was_ready()
-            self.start_following_logs(build_debug=build_debug)
+            self.start_following_logs(debug_enabled=debug_enabled)
 
             # 绑定Build对象
             build_instance = self.create_and_bind_build_instance(metadata=metadata)
@@ -165,12 +165,12 @@ class DefaultBuildProcessExecutor(DeployStep):
             self.stream.write_title("构建完成")
             self.stream.write_message("building process finished.")
 
-    def start_following_logs(self, build_debug: bool = False):
+    def start_following_logs(self, debug_enabled: bool = False):
         """获取 builder 进程生成的日志
 
-        :param build_debug: 是否启用构建调试模式, 当为 True 时, 使用探针驱动的日志流式传输而不是通过 Pod 退出驱动
+        :param debug_enabled: 是否启用构建调试模式, 当为 True 时, 使用探针驱动的日志流式传输而不是通过 Pod 退出驱动
         """
-        if build_debug:
+        if debug_enabled:
             self._stream_logs_with_probe_check()
         else:
             self._stream_logs_with_pod_exit()

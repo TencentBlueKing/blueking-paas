@@ -23,8 +23,8 @@ from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.bk_app.deploy.app_res.controllers import (
-    BUILD_DEBUG_LABEL_KEY,
-    BUILD_DEBUG_LABEL_VALUE,
+    DEBUG_ENABLED_LABEL_KEY,
+    DEBUG_ENABLED_LABEL_VALUE,
     BuildHandler,
     BuildProbePoller,
     BuildProbeStatus,
@@ -97,10 +97,10 @@ class TestBuildFinishedAt:
 
 
 class TestBuildSlugWithDebug:
-    """Tests for BuildHandler.build_slug with build_debug flag."""
+    """Tests for BuildHandler.build_slug with debug_enabled flag."""
 
     @staticmethod
-    def _make_template(wl_app, build_debug: bool) -> SlugBuilderTemplate:
+    def _make_template(wl_app, debug_enabled: bool) -> SlugBuilderTemplate:
         return SlugBuilderTemplate(
             name="slug-builder",
             namespace=wl_app.namespace,
@@ -113,7 +113,7 @@ class TestBuildSlugWithDebug:
                 node_selector={},
                 tolerations=[],
             ),
-            build_debug=build_debug,
+            debug_enabled=debug_enabled,
         )
 
     def test_build_slug_debug_force_delete_existing(self, build_handler, wl_app):
@@ -121,12 +121,12 @@ class TestBuildSlugWithDebug:
         namespace_create = Mock(return_value=None)
         namespace_check = Mock(return_value=True)
 
-        # 已存在的 Pod 带有 build-debug label
+        # 已存在的 Pod 带有 debug-enabled label
         existing_debug_pod = ResourceInstance(
             None,
             {
                 "kind": "Pod",
-                "metadata": {"name": "foo", "labels": {BUILD_DEBUG_LABEL_KEY: BUILD_DEBUG_LABEL_VALUE}},
+                "metadata": {"name": "foo", "labels": {DEBUG_ENABLED_LABEL_KEY: DEBUG_ENABLED_LABEL_VALUE}},
                 "status": {"phase": "Running", "startTime": timezone.now().isoformat()},
             },
         )
@@ -146,7 +146,7 @@ class TestBuildSlugWithDebug:
             patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update),
             patch("paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"),
         ):
-            build_handler.build_slug(template=self._make_template(wl_app, build_debug=True))
+            build_handler.build_slug(template=self._make_template(wl_app, debug_enabled=True))
             # 旧 debug Pod 被删除, 新 Pod 被创建
             assert kpod_delete.called
             assert kpod_create_or_update.called

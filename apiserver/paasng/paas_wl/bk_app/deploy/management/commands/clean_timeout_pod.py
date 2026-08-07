@@ -21,8 +21,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from paas_wl.bk_app.deploy.app_res.controllers import (
-    BUILD_DEBUG_LABEL_KEY,
-    BUILD_DEBUG_LABEL_VALUE,
+    DEBUG_ENABLED_LABEL_KEY,
+    DEBUG_ENABLED_LABEL_VALUE,
     BuildHandler,
 )
 from paas_wl.infras.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
@@ -77,8 +77,8 @@ class Command(BaseCommand):
         return int(get_time_delta(settings.BUILD_DEBUG_EXIT_DELAY).total_seconds())
 
     def _is_debug_pod(self, pod) -> bool:
-        """检查 Pod 是否为构建调试 Pod (label build-debug=true)."""
-        return (pod.metadata.labels or {}).get(BUILD_DEBUG_LABEL_KEY) == BUILD_DEBUG_LABEL_VALUE
+        """检查 Pod 是否为构建调试 Pod (label debug-enabled=true)."""
+        return (pod.metadata.labels or {}).get(DEBUG_ENABLED_LABEL_KEY) == DEBUG_ENABLED_LABEL_VALUE
 
     def _delete_pod(self, client, pod, dry_run: bool, reason: str):
         """删除 Pod, dry_run 模式仅打印日志."""

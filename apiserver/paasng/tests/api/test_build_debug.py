@@ -72,7 +72,7 @@ class TestDeployWithBuildDebug:
         """非 CNB 构建方式开启 build_debug 应被拒绝."""
         mock_inspector.return_value.perform.return_value.activated = False
         url = _build_deploy_url(bk_app.code, bk_module.name)
-        payload = self._deploy_payload(advanced_options={"build_debug": True})
+        payload = self._deploy_payload(advanced_options={"debug_enabled": True})
 
         resp = api_client.post(url, data=payload, format="json")
         assert resp.status_code == 400
@@ -88,7 +88,7 @@ class TestDeployWithBuildDebug:
         bk_module.build_config.save()
 
         url = _build_deploy_url(bk_app.code, bk_module.name)
-        payload = self._deploy_payload(advanced_options={"build_debug": True})
+        payload = self._deploy_payload(advanced_options={"debug_enabled": True})
 
         resp = api_client.post(url, data=payload, format="json")
         assert resp.status_code == 400
@@ -118,7 +118,7 @@ class TestGetBuildDebug:
     def test_build_debug_enabled_but_unavailable(self, api_client, bk_app, bk_module, pod_phase):
         """build_debug=True 但 Pod 不可用时返回 enabled=True, available=False."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         pod = None
@@ -145,7 +145,7 @@ class TestGetBuildDebug:
     def test_build_debug_window_check(self, api_client, bk_app, bk_module, window_available):
         """Pod Running 且构建已完成时, available 取决于调试窗口是否过期."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = _make_pod_stub("Running")
@@ -174,7 +174,7 @@ class TestGetBuildDebug:
     def test_build_debug_build_in_progress(self, api_client, bk_app, bk_module):
         """Pod Running 但构建未完成 (started=False) 时返回 available=False."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = _make_pod_stub("Running", started=False)
@@ -210,7 +210,7 @@ class TestCreateBuildDebugConsole:
     def test_create_console_success(self, mock_bcs_cls, mock_get_cluster, api_client, bk_app, bk_module):
         """正常创建 WebConsole 会话."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = _make_pod_stub("Running")
@@ -249,7 +249,7 @@ class TestCreateBuildDebugConsole:
     def test_create_console_pod_not_running(self, api_client, bk_app, bk_module):
         """Pod 不是 Running 状态时创建控制台应返回 400."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = mock.MagicMock()
@@ -268,7 +268,7 @@ class TestCreateBuildDebugConsole:
     def test_create_console_window_expired(self, mock_bcs_cls, mock_get_cluster, api_client, bk_app, bk_module):
         """调试窗口过期时创建控制台应返回 400."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = _make_pod_stub("Running")
@@ -290,7 +290,7 @@ class TestCreateBuildDebugConsole:
     def test_create_console_build_in_progress(self, api_client, bk_app, bk_module):
         """构建进行中 (started=False) 时创建控制台应返回 400."""
         deployment = create_fake_deployment(bk_module)
-        deployment.advanced_options = AdvancedOptions(build_debug=True)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
         deployment.save()
 
         fake_pod = _make_pod_stub("Running", started=False)

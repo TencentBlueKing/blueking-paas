@@ -77,7 +77,7 @@ class AdvancedOptions:
     # 副本数优先策略. 默认描述文件优先
     replicas_policy: ReplicasPolicy = ReplicasPolicy.APP_DESC_PRIORITY
     # 构建调试: 开启后构建容器在成功/失败后保活
-    build_debug: bool = False
+    debug_enabled: bool = False
 
 
 @dataclass

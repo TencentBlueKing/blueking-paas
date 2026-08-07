@@ -77,7 +77,7 @@ class BuildProbeStatus(StrEnum):
 
 
 # Probe polling interval in seconds for build debug mode
-_PROBE_POLL_INTERVAL = 5
+_PROBE_POLL_INTERVAL = 15
 
 # Label key/value for debug-enabled pods
 DEBUG_ENABLED_LABEL_KEY = "debug-enabled"

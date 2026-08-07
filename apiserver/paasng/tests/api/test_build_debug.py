@@ -57,6 +57,15 @@ def _build_debug_console_url(code: str, module_name: str, deployment_id: str) ->
 class TestDeployWithBuildDebug:
     """测试部署时 build_debug 参数的校验."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_user_feature(self):
+        """Mock user_has_feature 返回 True, 允许通过 ALLOW_BUILD_DEBUG 权限检查."""
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.user_has_feature",
+            return_value=mock.MagicMock(has_permission=mock.MagicMock(return_value=True)),
+        ):
+            yield
+
     def _deploy_payload(self, **overrides):
         base = {
             "version_type": "branch",
@@ -96,6 +105,15 @@ class TestDeployWithBuildDebug:
 
 class TestGetBuildDebug:
     """测试 get_build_debug 接口."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_user_feature(self):
+        """Mock user_has_feature 返回 True, 允许通过 ALLOW_BUILD_DEBUG 权限检查."""
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.user_has_feature",
+            return_value=mock.MagicMock(has_permission=mock.MagicMock(return_value=True)),
+        ):
+            yield
 
     def test_deployment_without_build_debug(self, api_client, bk_app, bk_module):
         """部署未开启 build_debug 时返回 enabled=False."""

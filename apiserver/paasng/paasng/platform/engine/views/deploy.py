@@ -142,6 +142,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 构建调试: 验证构建方式是否支持
         if params["advanced_options"].get("debug_enabled"):
+            if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("你暂无权限使用构建调试功能"))
             if get_use_bk_ci_pipeline(module):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("蓝盾流水线构建不支持构建调试"))
             if not ModuleRuntimeManager(module).is_cnb_runtime:
@@ -334,6 +336,12 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["部署阶段"])
     def get_build_debug(self, request, code, module_name, uuid):
         """获取构建调试入口状态"""
+        # 构建调试需要 ALLOW_BUILD_DEBUG 特性，WebConsole 需要 ENABLE_WEB_CONSOLE 特性，两者都满足才可用
+        if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限使用构建调试功能"))
+        if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
+
         deployment = _get_deployment(self.get_module_via_path(), uuid)
         latest = DeploymentGetter(deployment.app_environment).get_latest_deployment()
         if deployment != latest:
@@ -377,7 +385,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not advanced or not advanced.debug_enabled:
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("该部署未开启构建调试"))
 
-        # 复用现有 WebConsole 的 ENABLE_WEB_CONSOLE 白名单判定
+        # 构建调试需要 ALLOW_BUILD_DEBUG 特性, WebConsole 需要 ENABLE_WEB_CONSOLE 特性, 两者都满足才可用
+        if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
+            raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限使用构建调试功能"))
         if not user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
             raise error_codes.BUILD_DEBUG_UNAVAILABLE.f(_("你暂无权限访问构建调试控制台"))
 

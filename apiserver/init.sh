@@ -323,9 +323,9 @@ ensure-blueking-image() {
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
     --label secureEncrypted=1 supportHttp=1 normal_app=1 smart_app=1
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${apt_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${python_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}" --type tar
+    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${python_buildpack_name}" --type "${PAAS_PYTHON_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}" --type "${PAAS_NODEJS_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}" --type "${PAAS_GO_BUILDPACK_TYPE:-tar}"
 
     # 目前还是维持 heroku-18 版本镜像为默认（如果没有其他默认镜像），兼容目前数量较多的低版本 Python 应用
     # FIXME 后续需要推动 Python 开发框架、SaaS 等往 3.11+ 迁移，届时即可将 heroku-24 设为默认
@@ -343,9 +343,9 @@ ensure-blueking-image() {
     --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1 \
     --default
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${nodejs_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${golang_buildpack_name}" --type tar
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}" --type "${PAAS_PYTHON_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${nodejs_buildpack_name}" --type "${PAAS_NODEJS_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${golang_buildpack_name}" --type "${PAAS_GO_BUILDPACK_TYPE:-tar}"
 }
 
 # 初始化 heroku-24 基础镜像
@@ -367,10 +367,10 @@ ensure-noble-image() {
     --description_en "${PAAS_NOBLE_CNB_IMAGE_DESC_EN:-"Ubuntu-based, multi-buildpack combination build support"}" \
     --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
     --label secureEncrypted=1 supportHttp=true isCloudNativeBuilder=true cnative_app=1
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${apt_buildpack_name}" --stack heroku-24 --type oci-image
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${golang_buildpack_name}" --stack heroku-24 --type oci-embedded
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${python_buildpack_name}" --stack heroku-24 --type oci-embedded
-    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${nodejs_buildpack_name}" --stack heroku-24 --type oci-embedded
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${apt_buildpack_name}" --stack heroku-24 --type "${PAAS_NOBLE_APT_BUILDPACK_TYPE:-oci-image}"
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${golang_buildpack_name}" --stack heroku-24 --type "${PAAS_NOBLE_GO_BUILDPACK_TYPE:-oci-embedded}"
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${python_buildpack_name}" --stack heroku-24 --type "${PAAS_NOBLE_PYTHON_BUILDPACK_TYPE:-oci-embedded}"
+    python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${nodejs_buildpack_name}" --stack heroku-24 --type "${PAAS_NOBLE_NODEJS_BUILDPACK_TYPE:-oci-embedded}"
 }
 
 ensure-legacy-image() {
@@ -390,9 +390,9 @@ ensure-legacy-image() {
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
     --label secureEncrypted=1 category=legacy_app legacy_app=1
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${apt_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${python_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${nodejs_buildpack_name}" --type tar
-    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${golang_buildpack_name}" --type tar
+    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${python_buildpack_name}" --type "${PAAS_PYTHON_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${nodejs_buildpack_name}" --type "${PAAS_NODEJS_BUILDPACK_TYPE:-tar}"
+    python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${golang_buildpack_name}" --type "${PAAS_GO_BUILDPACK_TYPE:-tar}"
 }
 
 # 用于将镜像从外部仓库(如 hub.bktencent.com)推送到 bkrepo

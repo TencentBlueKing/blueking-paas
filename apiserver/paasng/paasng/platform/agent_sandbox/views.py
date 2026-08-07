@@ -36,7 +36,12 @@ from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServi
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.platform.agent_sandbox.artifact import archive_volume_file, build_download_url, delete_volume_artifact
+from paasng.platform.agent_sandbox.artifact import (
+    archive_volume_file,
+    build_download_url,
+    build_preview_url,
+    delete_volume_artifact,
+)
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxArchiveFailed,
@@ -276,9 +281,10 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     )
     @handle_volume_file_errors("build download url")
     def download_url(self, request, code, volume_id):
-        """归档到 bkrepo(按需)并签发下载/预览 URL,一次返回两个互斥 URL。
+        """归档到 bkrepo(按需)并签发下载 URL 与预览页 URL。
 
-        ``download_url`` 带 ``download=true``(attachment),``preview_url`` 带 ``preview=true``(inline)。
+        ``download_url`` 是直连对象存储的临时签名地址(带 ``download=true``, 浏览器另存为);
+        ``preview_url`` 指向 bkrepo 前端预览页, 由 bkrepo 渲染图片/PDF 等富类型文件。
         """
         volume = self._get_volume(volume_id)
         data = self._validate(VolumeFileDownloadURLInputSLZ, request.query_params)
@@ -288,7 +294,7 @@ class VolumeFileViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             base_url = build_download_url(artifact, expires_in=data["expires_in"])
             sep = "&" if urlparse(base_url).query else "?"
             download_url = f"{base_url}{sep}{urlencode({'download': 'true'})}"
-            preview_url = f"{base_url}{sep}{urlencode({'preview': 'true'})}"
+            preview_url = build_preview_url(artifact, expires_in=data["expires_in"])
         except SandboxFileTooLarge:
             raise error_codes.AGENT_SANDBOX_FILE_TOO_LARGE
         except SandboxArchiveFailed:

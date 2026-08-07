@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +33,7 @@ import (
 	sandboxv1beta1 "bk.tencent.com/paas-app-operator/api/sandbox/v1beta1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ = Describe("Test SandboxInstanceReconciler", func() {
@@ -257,11 +259,38 @@ var _ = Describe("Test SandboxInstanceReconciler", func() {
 		})
 	})
 
-	Context("test parseCPUCores", func() {
-		It("should return 2 cores by default when CPU is zero", func() {
-			limits := corev1.ResourceList{}
-			cores := parseCPUCores(limits)
-			Expect(cores).To(Equal(int32(2)))
+	Context("test container resources", func() {
+		// Process quota lands on podTemplate.containers[].resources.
+		// Spec.Domain is left empty; guest sizing is handled by sandbox-controller.
+		It("should keep the quota plan's resources on the container", func() {
+			r := NewSandboxInstanceReconciler(nil)
+			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The "default" quota plan resolves to 4000m CPU / 1024Mi memory limits
+			// and 200m CPU / 256Mi memory requests.
+			res := sbi.Spec.PodTemplate.Containers[0].Resources
+			Expect(res.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(res.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+			Expect(res.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(res.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(sbi.Spec.Domain).To(Equal(sandboxv1beta1.SandboxDomain{}))
+		})
+
+		It("should keep sub-core CPU limits untouched on the container", func() {
+			Expect(kubeutil.SetJsonAnnotation(
+				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+					"web": {"cpu": "1500m", "memory": "512Mi"},
+				},
+			)).To(Succeed())
+
+			r := NewSandboxInstanceReconciler(nil)
+			sbi, err := r.buildSandboxInstance(context.Background(), bkapp)
+			Expect(err).NotTo(HaveOccurred())
+
+			limits := sbi.Spec.PodTemplate.Containers[0].Resources.Limits
+			Expect(limits.Cpu().Equal(resource.MustParse("1500m"))).To(BeTrue())
+			Expect(limits.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
 		})
 	})
 

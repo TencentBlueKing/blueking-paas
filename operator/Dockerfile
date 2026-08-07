@@ -36,6 +36,11 @@ WORKDIR /
 COPY config/samples/paas_v1alpha1_projectconfig.yaml config.yaml
 COPY --from=builder /workspace/manager .
 
+# 进程组件定义，pkg/components/manager 在 reconcile 期间从 /components 读取。
+# 同一批定义在 apiserver/paasng/support-files/components/ 下另有一份（供参数校验与
+# 文档展示使用），两处需保持同步，详见 components/README.md。
+COPY components/ /components/
+
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

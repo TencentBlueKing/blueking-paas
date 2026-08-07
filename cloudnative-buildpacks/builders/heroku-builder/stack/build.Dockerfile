@@ -1,5 +1,5 @@
 ARG IMAGE=heroku/heroku
-ARG TAG=18.v27
+ARG TAG=18.v105
 
 FROM ${IMAGE}:${TAG}
 

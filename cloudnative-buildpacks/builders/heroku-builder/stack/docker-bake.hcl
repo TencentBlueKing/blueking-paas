@@ -29,7 +29,7 @@ function "run_image_name" {
 target "heroku-build-bionic" {
   dockerfile = "build.Dockerfile"
   args = {
-    TAG = "18.v27"
+    TAG = "18.v105"
     STACK_ID = "heroku-18"
     sources = <<EOF
         deb http://mirrors.cloud.tencent.com/ubuntu/ bionic main restricted universe multiverse
@@ -57,7 +57,7 @@ target "heroku-build-bionic" {
 target "heroku-run-bionic" {
   dockerfile = "run.Dockerfile"
   args = {
-    TAG = "18.v27"
+    TAG = "18.v105"
     STACK_ID = "heroku-18"
     sources = <<EOF
         deb http://mirrors.cloud.tencent.com/ubuntu/ bionic main restricted universe multiverse
@@ -86,7 +86,7 @@ target "heroku-run-bionic" {
 target "heroku-build-jammy" {
   dockerfile = "build.Dockerfile"
   args = {
-    TAG = "22.v122"
+    TAG = "22.v181"
     STACK_ID = "heroku-22"
     sources = <<EOF
         deb http://mirrors.tencent.com/ubuntu/ jammy main restricted universe multiverse
@@ -114,7 +114,7 @@ target "heroku-build-jammy" {
 target "heroku-run-jammy" {
   dockerfile = "run.Dockerfile"
   args = {
-    TAG = "22.v122"
+    TAG = "22.v181"
     STACK_ID = "heroku-22"
     sources = <<EOF
         deb http://mirrors.tencent.com/ubuntu/ jammy main restricted universe multiverse

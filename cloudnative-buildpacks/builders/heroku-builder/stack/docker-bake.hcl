@@ -32,7 +32,7 @@ variable "BASE_PACKAGES" {
 target "heroku-build-noble" {
   dockerfile = "build.Dockerfile"
   args = {
-    TAG = "24.v149"
+    TAG = "24.v181"
     STACK_ID = "heroku-24"
     sources = "${APT_SOURCES}"
     packages = "${BASE_PACKAGES}"
@@ -44,7 +44,7 @@ target "heroku-build-noble" {
 target "heroku-run-noble" {
   dockerfile = "run.Dockerfile"
   args = {
-    TAG = "24.v149"
+    TAG = "24.v181"
     STACK_ID = "heroku-24"
     sources = "${APT_SOURCES}"
     packages = "${BASE_PACKAGES}"

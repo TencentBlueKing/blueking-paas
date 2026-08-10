@@ -167,19 +167,19 @@ chardet = ">=3.0.2"
 
 [[package]]
 name = "bk-audit"
-version = "1.2.3b0"
+version = "1.3.0b0"
 description = "Bk Audit SDK"
 optional = false
-python-versions = "<4,>=3.8"
+python-versions = "<4,>=3.10"
 groups = ["main"]
 files = [
-    {file = "bk_audit-1.2.3b0-py3-none-any.whl", hash = "sha256:d2dfb941cd0f6dd8703ad184a731c092a0bda3cc9b6fc815896dfe71029e4e4d"},
-    {file = "bk_audit-1.2.3b0.tar.gz", hash = "sha256:c3d4d4d245def2967123d84b410d27c243c828ce77c7d0d48e369480eed31fce"},
+    {file = "bk_audit-1.3.0b0-py3-none-any.whl", hash = "sha256:95654f81847552c384a45073c3d248feb9e7965d747722dca955d6dfb2a89d47"},
+    {file = "bk_audit-1.3.0b0.tar.gz", hash = "sha256:012327c85ca6a8f88c88d4216fbc0593b1beac2da89ce2e9d08426ea0d898510"},
 ]
 
 [package.extras]
-bk-resource = ["bk-resource (>=0.4.0)"]
-opentelemetry = ["opentelemetry-api (>=1.20.0)", "opentelemetry-exporter-otlp (>=1.20.0)", "opentelemetry-sdk (>=1.20.0)", "protobuf (>=3.19.5)"]
+bk-resource = ["bk_resource (>=0.4.0)"]
+opentelemetry = ["opentelemetry-api (>=1.43.0,<1.44.0)", "opentelemetry-exporter-otlp (>=1.43.0,<1.44.0)", "opentelemetry-sdk (>=1.43.0,<1.44.0)", "protobuf (>=5.0,<8.0)"]
 
 [[package]]
 name = "bk-crypto-python-sdk"
@@ -4517,5 +4517,5 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.12"
-content-hash = "b02c2534dbd13e1e6f1912fe41d748ee21a3e826ca723db79453ba07c3beda9b"
+python-versions = ">=3.11,<3.15"
+content-hash = "36c9be8e4704ed95b2c0f3a761e72b0de39aa896c008b4976eba7468597906f5"

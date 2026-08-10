@@ -28,16 +28,16 @@ apiserver 为 blueking-paas 项目的主控模块。
 
 ### 准备 Python 开发环境
 
-1. 安装 Python 3.11
+1. 安装 Python 3.14
 
 我们推荐使用 [pyenv](https://github.com/pyenv/pyenv) 管理本地的 python 环境
 
 - 依照 [相关指引](https://github.com/pyenv/pyenv#getting-pyenv) 安装 pyenv
 
-- 使用 pyenv 安装 Python 3.11
+- 使用 pyenv 安装 Python 3.14
 
 ```shell
-❯ pyenv install 3.11.10
+❯ pyenv install 3.14.6
 ```
 
 2. 安装项目依赖

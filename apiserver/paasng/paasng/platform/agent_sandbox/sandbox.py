@@ -48,6 +48,7 @@ from paasng.platform.agent_sandbox.constants import (
     DEFAULT_SANDBOX_MEMORY,
     SANDBOX_DEFAULT_TTL_SECONDS,
     SandboxStatus,
+    SandboxWorkloadType,
 )
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
@@ -138,6 +139,7 @@ def create_sandbox(
     workspace: str | None = None,
     ttl_seconds: int = SANDBOX_DEFAULT_TTL_SECONDS,
     volume_mounts: list[dict] | None = None,
+    workload_type: str | None = None,
 ) -> Sandbox:
     """Create an agent sandbox record and its corresponding resources.
 
@@ -152,6 +154,7 @@ def create_sandbox(
     :param volume_mounts: The validated list of shared volume mount requests
         (each item: ``{"volume_id": UUID, "mount_path": str}``). Persisted to
         the Sandbox DB record and resolved into Pod spec mounts during provision.
+    :param workload_type: Sandbox workload type (``default`` / ``sandbox_instance``), optional.
     """
     # Pre-validate that the snapshot image exists in the registry before creating resources.
     # This avoids a long timeout when the pod tries to pull a non-existent image.
@@ -175,6 +178,7 @@ def create_sandbox(
         volume_mounts=volume_mounts,
         cpu=cpu,
         memory=memory,
+        workload_type=workload_type or SandboxWorkloadType.DEFAULT.value,
     )
 
     mgr = AgentSandboxResManager(application, sandbox_obj.target)

@@ -27,6 +27,7 @@ from paasng.platform.agent_sandbox.constants import (
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SandboxStatus,
+    SandboxWorkloadType,
 )
 from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
 from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
@@ -79,6 +80,7 @@ class TestCreateSandbox:
         assert sandbox.status == SandboxStatus.RUNNING.value
         assert sandbox.started_at is not None
         assert sandbox.env_vars == {"FOO": "BAR"}
+        assert sandbox.workload_type == SandboxWorkloadType.DEFAULT.value
         mock_sandbox_provision.assert_called_once()
         mock_image_validator.assert_not_called()
 
@@ -150,24 +152,24 @@ class TestResolveSandboxResources:
         """Per-app config overrides the platform default."""
         SandboxAppSettings.objects.create(
             application=bk_app,
-            cpu=Decimal("4"),
-            memory=Decimal("2"),
+            cpu=Decimal(4),
+            memory=Decimal(2),
             tenant_id=bk_app.tenant_id,
         )
         cpu, memory = resolve_sandbox_resources(bk_app)
-        assert cpu == Decimal("4")
-        assert memory == Decimal("2")
+        assert cpu == Decimal(4)
+        assert memory == Decimal(2)
 
     def test_partial_config_falls_back_per_field(self, bk_app):
         """Config exists but only sets cpu -> memory falls back to platform default."""
         SandboxAppSettings.objects.create(
             application=bk_app,
-            cpu=Decimal("4"),
+            cpu=Decimal(4),
             memory=None,
             tenant_id=bk_app.tenant_id,
         )
         cpu, memory = resolve_sandbox_resources(bk_app)
-        assert cpu == Decimal("4")
+        assert cpu == Decimal(4)
         assert memory == DEFAULT_SANDBOX_MEMORY
 
 
@@ -184,13 +186,13 @@ class TestCreateSandboxResources:
     def test_create_uses_app_level_config(self, bk_app, bk_user):
         SandboxAppSettings.objects.create(
             application=bk_app,
-            cpu=Decimal("4"),
-            memory=Decimal("2"),
+            cpu=Decimal(4),
+            memory=Decimal(2),
             tenant_id=bk_app.tenant_id,
         )
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="custom-res")
-        assert sandbox.cpu == Decimal("4")
-        assert sandbox.memory == Decimal("2")
+        assert sandbox.cpu == Decimal(4)
+        assert sandbox.memory == Decimal(2)
 
 
 # TODO: 利用实际的集群资源来测试沙箱的删除

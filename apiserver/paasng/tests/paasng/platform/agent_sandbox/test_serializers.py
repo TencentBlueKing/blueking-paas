@@ -19,9 +19,11 @@ import uuid
 import pytest
 from rest_framework import serializers
 
+from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
 from paasng.platform.agent_sandbox.serializers import (
     SandboxCreateInputSLZ,
     SandboxEnvVarsField,
+    SandboxListQuerySLZ,
     SandboxVolumeMountInputSLZ,
 )
 
@@ -162,3 +164,47 @@ class TestSandboxCreateInputVolumeMounts:
         )
         assert not slz.is_valid()
         assert "volume_mounts" in slz.errors
+
+
+class TestSandboxCreateInputWorkloadType:
+    """Covers workload_type validation on SandboxCreateInputSLZ."""
+
+    def test_default_and_valid_values(self):
+        slz = SandboxCreateInputSLZ(data={})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["workload_type"] == SandboxWorkloadType.DEFAULT.value
+
+        slz = SandboxCreateInputSLZ(data={"workload_type": SandboxWorkloadType.SANDBOX_INSTANCE.value})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["workload_type"] == SandboxWorkloadType.SANDBOX_INSTANCE.value
+
+    def test_rejects_invalid_value(self):
+        slz = SandboxCreateInputSLZ(data={"workload_type": "invalid_value"})
+        assert not slz.is_valid()
+        assert "workload_type" in slz.errors
+
+
+class TestSandboxListQuerySLZ:
+    """Covers query-parameter validation for sandbox list filters."""
+
+    def test_accepts_filters(self):
+        slz = SandboxListQuerySLZ(data={})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data == {}
+
+        slz = SandboxListQuerySLZ(
+            data={
+                "workload_type": SandboxWorkloadType.SANDBOX_INSTANCE.value,
+                "status": SandboxStatus.RUNNING.value,
+                "name": "demo",
+            }
+        )
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["workload_type"] == SandboxWorkloadType.SANDBOX_INSTANCE.value
+        assert slz.validated_data["status"] == SandboxStatus.RUNNING.value
+        assert slz.validated_data["name"] == "demo"
+
+    def test_rejects_invalid_status(self):
+        slz = SandboxListQuerySLZ(data={"status": "not-a-status"})
+        assert not slz.is_valid()
+        assert "status" in slz.errors

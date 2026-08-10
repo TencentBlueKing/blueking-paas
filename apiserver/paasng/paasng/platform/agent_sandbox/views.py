@@ -56,7 +56,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxServiceNotReady,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
-from paasng.platform.agent_sandbox.models import Volume
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
 from paasng.platform.agent_sandbox.sandbox import (
@@ -75,6 +75,7 @@ from paasng.platform.agent_sandbox.serializers import (
     SandboxExecInputSLZ,
     SandboxGetLogsInputSLZ,
     SandboxGetLogsOutputSLZ,
+    SandboxListQuerySLZ,
     SandboxProcessOutputSLZ,
     SandboxUploadFileInputSLZ,
     VolumeCreateInputSLZ,
@@ -357,6 +358,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
                 workspace=data.get("workspace"),
                 ttl_seconds=data["ttl_seconds"],
                 volume_mounts=data.get("volume_mounts"),
+                workload_type=data.get("workload_type"),
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
@@ -368,6 +370,35 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             logger.exception("Failed to create agent sandbox")
             raise error_codes.AGENT_SANDBOX_CREATE_FAILED
         return Response(SandboxCreateOutputSLZ(sandbox).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        query_serializer=SandboxListQuerySLZ(),
+        responses={status.HTTP_200_OK: SandboxCreateOutputSLZ(many=True)},
+    )
+    def list(self, request, code):
+        """查询应用下的 Agent Sandbox 列表。
+
+        支持按 ``workload_type`` / ``status`` / ``name`` 筛选。
+        未指定 ``status`` 时默认排除已软删除的沙箱；显式传入 ``status=deleted`` 时可查询已删除记录。
+        """
+        application = self.get_application()
+        slz = SandboxListQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        queryset = Sandbox.objects.filter(application=application)
+        if status_val := data.get("status"):
+            queryset = queryset.filter(status=status_val)
+        else:
+            queryset = queryset.filter(deleted_at__isnull=True)
+        if workload_type := data.get("workload_type"):
+            queryset = queryset.filter(workload_type=workload_type)
+        if name := data.get("name"):
+            queryset = queryset.filter(name=name)
+
+        queryset = queryset.order_by("-created")
+        return Response(SandboxCreateOutputSLZ(queryset, many=True).data)
 
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
     def destroy(self, request, sandbox_id):

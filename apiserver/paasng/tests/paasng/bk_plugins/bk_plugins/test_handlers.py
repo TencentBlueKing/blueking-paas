@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
-from paasng.bk_plugins.bk_plugins.handlers import on_pre_deployment
+from paasng.bk_plugins.bk_plugins.handlers import on_plugin_member_updated, on_pre_deployment
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db
@@ -30,3 +30,17 @@ def test_on_pre_deployment(safe_sync_apigw, bk_plugin_app):
     deployment = create_fake_deployment(bk_plugin_app.default_module)
     on_pre_deployment(None, deployment=deployment)
     assert safe_sync_apigw.called is True
+
+
+@patch("paasng.bk_plugins.bk_plugins.handlers.sync_plugin_apigw_maintainers")
+def test_on_plugin_member_updated_for_plugin(mock_task, bk_plugin_app):
+    # 插件应用成员变更应异步投递网关维护者同步任务
+    on_plugin_member_updated(None, application=bk_plugin_app)
+    mock_task.delay.assert_called_once_with(bk_plugin_app.code)
+
+
+@patch("paasng.bk_plugins.bk_plugins.handlers.sync_plugin_apigw_maintainers")
+def test_on_plugin_member_updated_for_non_plugin(mock_task, bk_app):
+    # 非插件应用不应触发任何网关同步动作
+    on_plugin_member_updated(None, application=bk_app)
+    mock_task.delay.assert_not_called()

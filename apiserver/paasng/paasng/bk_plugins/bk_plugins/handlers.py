@@ -22,12 +22,13 @@ import logging
 from django.dispatch import receiver
 
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import post_create_application
+from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.signals import pre_appenv_deploy
 
 from .apigw import safe_sync_apigw
 from .models import BkPluginProfile, is_bk_plugin
+from .tasks import sync_plugin_apigw_maintainers
 
 logger = logging.getLogger(__name__)
 
@@ -58,3 +59,14 @@ def on_pre_deployment(sender, deployment: Deployment, **kwargs):
     if not application.bk_plugin_profile.is_synced:
         logger.info("Syncing api-gw resource for %s, triggered by deployment.", application)
         safe_sync_apigw(application)
+
+
+@receiver(application_member_updated)
+def on_plugin_member_updated(sender, application: Application, **kwargs):
+    """插件应用成员变更后，异步刷新其 API 网关维护者名单"""
+    if not is_bk_plugin(application):
+        logger.debug('Syncing apigw maintainers: "%s" is not plugin type, will not proceed.', application)
+        return
+
+    # 异步全量覆盖同步，不阻塞成员变更主流程
+    sync_plugin_apigw_maintainers.delay(application.code)

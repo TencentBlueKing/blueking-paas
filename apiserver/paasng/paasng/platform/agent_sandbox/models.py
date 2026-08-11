@@ -38,7 +38,7 @@ from .constants import (
     SandboxStatus,
     SandboxWorkloadType,
 )
-from .exceptions import SandboxAlreadyExists
+from .exceptions import SandboxAlreadyExists, SandboxCreateError
 
 
 class Volume(UuidAuditedModel):
@@ -117,10 +117,17 @@ class SandboxManager(models.Manager):
             raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
         # 分配可调度集群
-        # NOTE: SandboxInstance 模式后续需要独立集群分配策略
-        cluster = ClusterAllocator(
-            AllocationContext.create_for_agent_sandbox(application.tenant_id, application.region)
-        ).get_default()
+        # NOTE: SandboxInstance 暂复用 AI_AGENT_ISOLATED（cube）策略；映射放在 platform 层，避免 paas_wl 反向依赖
+        alloc_ctx = AllocationContext.create_for_agent_sandbox(
+            application.tenant_id,
+            application.region,
+            for_sandbox_instance=workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        )
+
+        try:
+            cluster = ClusterAllocator(alloc_ctx).get_default()
+        except ValueError as exc:
+            raise SandboxCreateError(f"no available cluster for workload_type={workload_type}: {exc}") from exc
 
         target = cluster.name
 

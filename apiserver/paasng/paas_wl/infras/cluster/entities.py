@@ -212,17 +212,32 @@ class AllocationContext:
         return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
 
     @classmethod
-    def create_for_agent_sandbox(cls, tenant_id: str, region: str | None = None) -> "AllocationContext":
+    def create_for_agent_sandbox(
+        cls,
+        tenant_id: str,
+        region: str | None = None,
+        *,
+        for_sandbox_instance: bool = False,
+    ) -> "AllocationContext":
         """Create an allocation context for agent sandbox cluster.
+
+        SandboxInstance mode temporarily reuses ``AI_AGENT_ISOLATED`` so sandboxes share
+        the existing cube-capable cluster allocation policy. Split into a dedicated
+        usage when needed.
+
+        NOTE: Do not import paasng.platform.* here — paas_wl.infras is below platform
+        in the layer contract; callers should map workload_type to this flag.
 
         :param tenant_id: The tenant ID for the sandbox.
         :param region: Optional region, defaults to settings.DEFAULT_REGION_NAME.
-        :returns: AllocationContext configured for AGENT_SANDBOX usage.
+        :param for_sandbox_instance: Whether to allocate a cube-capable isolated cluster.
+        :returns: AllocationContext configured for the matching ClusterUsage.
         """
+        usage = ClusterUsage.AI_AGENT_ISOLATED if for_sandbox_instance else ClusterUsage.AGENT_SANDBOX
         return cls(
             tenant_id=tenant_id,
             region=region or settings.DEFAULT_REGION_NAME,
-            usage=ClusterUsage.AGENT_SANDBOX,
+            usage=usage,
             # agent_sandbox 不区分环境
             environment="",
         )

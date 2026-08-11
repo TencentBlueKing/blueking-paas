@@ -667,6 +667,41 @@ class KPod(BaseKresource):
         )
 
 
+class KSandboxInstance(BaseKresource):
+    """CRD: SandboxInstance managed by sandbox-controller (cube MicroVM)."""
+
+    kind = "SandboxInstance"
+
+    def wait_for_status(
+        self,
+        name: str,
+        target_statuses: Collection[str],
+        namespace: Namespace = None,
+        timeout: Optional[float] = None,
+        check_period: float = 0.5,
+    ):
+        """Block until SandboxInstance status.phase is one of ``target_statuses``.
+
+        :param target_statuses: return normally when instance phase is one of given statuses
+        :param timeout: timeout seconds for this join operation, default to never timeout
+        :param check_period: wait interval for polling
+        :raises: ReadTargetStatusTimeout
+        """
+        time_started = time.time()
+        instance = None
+        while timeout is None or time.time() - time_started < timeout:
+            try:
+                instance = self.get(name, namespace=namespace)
+            except ResourceMissing:
+                logger.warning("SandboxInstance %s %s not found.", namespace, name)
+            else:
+                phase = getattr(getattr(instance, "status", None), "phase", None)
+                if phase in target_statuses:
+                    return phase
+            time.sleep(check_period)
+        raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=instance)
+
+
 class KDeployment(BaseKresource):
     kind = "Deployment"
 

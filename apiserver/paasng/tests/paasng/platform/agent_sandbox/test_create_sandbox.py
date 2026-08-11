@@ -84,6 +84,30 @@ class TestCreateSandbox:
         mock_sandbox_provision.assert_called_once()
         mock_image_validator.assert_not_called()
 
+    def test_create_sandbox_instance_provisions_cr(self, bk_app, bk_user, mock_image_validator):
+        """SandboxInstance workload creates SandboxInstance CR instead of Pod."""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create") as mock_create_cr,
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create") as mock_create_pod,
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(AgentSandboxResManager, "_wait_for_sandbox_instance_running"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
+        ):
+            sandbox = create_sandbox(
+                application=bk_app,
+                creator=bk_user.pk,
+                name="si-demo",
+                workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+            )
+
+        assert sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
+        mock_create_cr.assert_called_once()
+        mock_create_pod.assert_not_called()
+
     def test_create_resource_failed(self, bk_app, bk_user, mock_image_validator):
         """Test that failed resource creation sets status to ERR_CREATING."""
         with (
@@ -210,7 +234,10 @@ class TestDeleteSandbox:
             sandbox.refresh_from_db()
             assert sandbox.status == SandboxStatus.DELETED.value
             assert sandbox.deleted_at is not None
-            mock_destroy.assert_called_once_with("to-delete")
+            mock_destroy.assert_called_once_with(
+                "to-delete",
+                workload_type=SandboxWorkloadType.DEFAULT.value,
+            )
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
     def test_delete_resource_failed(self, bk_app, bk_user, mock_image_validator):

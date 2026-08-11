@@ -33,6 +33,21 @@ DAEMON_COMMAND = [DAEMON_BINARY_PATH]
 # The bind port for sandbox daemon
 DAEMON_BIND_PORT = 30000
 
+# ================================
+# Constants for SandboxInstance CR (cube)
+# ================================
+
+SANDBOX_INSTANCE_API_VERSION = "advanced.bkbcs.tencent.com/v1beta1"
+SANDBOX_INSTANCE_DESIRED_STATE_RUNNING = "Running"
+SANDBOX_INSTANCE_RUNTIME_CLASS_NAME = "cube"
+SANDBOX_INSTANCE_NETWORK_MODE = "direct-cni"
+
+# SandboxInstance status.phase
+SANDBOX_INSTANCE_PHASE_PENDING = "Pending"
+SANDBOX_INSTANCE_PHASE_CREATING = "Creating"
+SANDBOX_INSTANCE_PHASE_RUNNING = "Running"
+SANDBOX_INSTANCE_PHASE_FAILED = "Failed"
+
 # The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
 # "agent-sandbox-router" (length > 16) will not conflict with app_code
 AGENT_SANDBOX_ROUTER_SUBDOMAIN_PREFIX = "agent-sandbox-router"

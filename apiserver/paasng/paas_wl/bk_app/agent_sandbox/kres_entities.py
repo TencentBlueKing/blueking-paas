@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass, field
-from typing import Self
+from typing import ClassVar, Self
 
 from attrs import define
 from django.conf import settings
@@ -93,8 +93,17 @@ class AgentSandboxKresApp:
 
 
 @dataclass
-class AgentSandboxPod(KresAppEntity):
-    """Agent sandbox backed by a Pod.
+class AgentSandboxWorkload(KresAppEntity):
+    """Shared fields for agent-sandbox workloads that build a podTemplate-shaped spec.
+
+    This is a **field-sharing** base for ``AgentSandboxPod`` and ``AgentSandboxInstance``,
+    not a Kubernetes resource type. The two concrete types are siblings:
+
+    - ``AgentSandboxPod`` — native Pod
+    - ``AgentSandboxInstance`` — SandboxInstance CR (cube MicroVM)
+
+    ``workload_type_key`` mirrors platform ``SandboxWorkloadType`` values and is the
+    stable discriminator for delete/status/log routing (prefer this over ``isinstance``).
 
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
@@ -103,13 +112,16 @@ class AgentSandboxPod(KresAppEntity):
     :param args: The arguments to pass to the command (/usr/local/bin/daemon).
     :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
-    :param volume_mounts: The shared volume mounts for the sandbox Pod. Not persisted;
-        only used during Pod spec construction.
-    :param cpu: The CPU limit in cores. Used to build resources.limits during Pod spec
+    :param volume_mounts: The shared volume mounts. Not persisted; only used during
+        podTemplate / Pod spec construction.
+    :param cpu: The CPU limit in cores. Used to build resources.limits during spec
         construction. Defaults to the platform default (2 cores).
-    :param memory: The memory limit in GB. Used to build resources.limits during Pod spec
+    :param memory: The memory limit in GB. Used to build resources.limits during spec
         construction. Defaults to the platform default (1 GB).
     """
+
+    # Match paasng.platform.agent_sandbox.constants.SandboxWorkloadType values.
+    workload_type_key: ClassVar[str] = "default"
 
     sandbox_id: str
     workdir: str
@@ -127,9 +139,10 @@ class AgentSandboxPod(KresAppEntity):
         self.command = DAEMON_COMMAND
 
     class Meta:
-        kres_class = kres.KPod
-        serializer = AgentSandboxPodSerializer
-        deserializer = AgentSandboxPodDeserializer
+        # Abstract field holder — never manage this type via KresAppEntityManager.
+        kres_class = kres.BaseKresource
+        serializer = None
+        deserializer = None
 
     @classmethod
     def create(
@@ -145,7 +158,7 @@ class AgentSandboxPod(KresAppEntity):
         cpu: float | None = None,
         memory: float | None = None,
     ) -> Self:
-        """Create a sandbox workload entity.
+        """Create a sandbox workload entity of the concrete subclass type.
 
         :param app: The AgentSandboxKresApp instance.
         :param name: The name of the sandbox.
@@ -180,12 +193,22 @@ class AgentSandboxPod(KresAppEntity):
 
 
 @dataclass
-class AgentSandboxInstance(AgentSandboxPod):
-    """Agent sandbox backed by a SandboxInstance CR (cube MicroVM).
+class AgentSandboxPod(AgentSandboxWorkload):
+    """Agent sandbox backed by a native Kubernetes Pod"""
 
-    Reuses AgentSandboxPod fields for podTemplate construction; Meta points to the
-    SandboxInstance CRD instead of a plain Pod.
-    """
+    workload_type_key: ClassVar[str] = "default"
+
+    class Meta:
+        kres_class = kres.KPod
+        serializer = AgentSandboxPodSerializer
+        deserializer = AgentSandboxPodDeserializer
+
+
+@dataclass
+class AgentSandboxInstance(AgentSandboxWorkload):
+    """Agent sandbox backed by a SandboxInstance CR (cube MicroVM)"""
+
+    workload_type_key: ClassVar[str] = "sandbox_instance"
 
     class Meta:
         kres_class = kres.KSandboxInstance
@@ -213,7 +236,7 @@ class AgentSandboxService(KresAppEntity):
         deserializer = AgentSandboxServiceDeserializer
 
     @classmethod
-    def create(cls, sandbox: AgentSandboxPod) -> "AgentSandboxService":
+    def create(cls, sandbox: AgentSandboxWorkload) -> "AgentSandboxService":
         ports = [ServicePortPair(name="daemon", port=DAEMON_BIND_PORT, target_port=DAEMON_BIND_PORT)]
         return cls(app=sandbox.app, name=sandbox.name, ports=ports, sandbox_id=sandbox.sandbox_id)
 

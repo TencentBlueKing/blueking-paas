@@ -116,8 +116,7 @@ class SandboxManager(models.Manager):
         ):
             raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
-        # 分配可调度集群
-        # NOTE: SandboxInstance 暂复用 AI_AGENT_ISOLATED（cube）策略；映射放在 platform 层，避免 paas_wl 反向依赖
+        # 分配可调度集群；SandboxInstance -> AGENT_SANDBOX_ISOLATED
         alloc_ctx = AllocationContext.create_for_agent_sandbox(
             application.tenant_id,
             application.region,

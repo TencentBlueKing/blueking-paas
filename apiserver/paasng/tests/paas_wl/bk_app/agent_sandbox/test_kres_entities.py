@@ -20,9 +20,11 @@ from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
+    AgentSandboxInstance,
     AgentSandboxKresApp,
     AgentSandboxPod,
     AgentSandboxService,
+    AgentSandboxWorkload,
     agent_sandbox_pod_kmodel,
     agent_sandbox_svc_kmodel,
 )
@@ -107,6 +109,22 @@ class TestAgentSandboxPod:
         assert sbx.env == {"FOO": "BAR"}
         assert sbx.command == DAEMON_COMMAND
         assert sbx.args == ["python", "-m", "http.server"]
+
+    def test_instance_is_sibling_not_pod_subclass(self, sbx_app: AgentSandboxKresApp):
+        """SandboxInstance shares AgentSandboxWorkload fields but is not a Pod subclass."""
+        instance = AgentSandboxInstance.create(
+            sbx_app,
+            name="si-sandbox",
+            sandbox_id="def456",
+            workdir="/app",
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
+        )
+        assert isinstance(instance, AgentSandboxWorkload)
+        assert isinstance(instance, AgentSandboxInstance)
+        assert not isinstance(instance, AgentSandboxPod)
+        assert not issubclass(AgentSandboxInstance, AgentSandboxPod)
+        assert AgentSandboxPod.workload_type_key == "default"
+        assert instance.workload_type_key == "sandbox_instance"
 
 
 class TestAgentSandboxService:

@@ -100,9 +100,9 @@ class TestSandboxModel:
 
 
 def test_create_for_agent_sandbox_usage_by_flag():
-    """default -> AGENT_SANDBOX; for_sandbox_instance -> AI_AGENT_ISOLATED (temporary reuse)."""
+    """default -> AGENT_SANDBOX; for_sandbox_instance -> AGENT_SANDBOX_ISOLATED."""
     default_ctx = AllocationContext.create_for_agent_sandbox("tenant-1")
     assert default_ctx.usage == ClusterUsage.AGENT_SANDBOX
 
     si_ctx = AllocationContext.create_for_agent_sandbox("tenant-1", for_sandbox_instance=True)
-    assert si_ctx.usage == ClusterUsage.AI_AGENT_ISOLATED
+    assert si_ctx.usage == ClusterUsage.AGENT_SANDBOX_ISOLATED

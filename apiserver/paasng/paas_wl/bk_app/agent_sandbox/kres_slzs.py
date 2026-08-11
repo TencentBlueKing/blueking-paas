@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         AgentSandboxKresApp,
         AgentSandboxPod,
         AgentSandboxService,
+        AgentSandboxWorkload,
     )
 
 
@@ -126,7 +127,7 @@ class AgentSandboxPodSerializer(KresAppEntitySerializer["AgentSandboxPod"]):
         }
 
     @staticmethod
-    def _construct_pod_spec(obj: "AgentSandboxPod") -> Dict:
+    def _construct_pod_spec(obj: "AgentSandboxWorkload") -> Dict:
         env = [{"name": key, "value": value} for key, value in obj.env.items()]
 
         main_container = {
@@ -226,12 +227,12 @@ class AgentSandboxPodDeserializer(KresAppEntityDeserializer["AgentSandboxPod", "
         return phase
 
 
-class AgentSandboxInstanceSerializer(KresAppEntitySerializer["AgentSandboxPod"]):
-    """Serialize AgentSandboxPod entity into a SandboxInstance CR (cube MicroVM)."""
+class AgentSandboxInstanceSerializer(KresAppEntitySerializer["AgentSandboxInstance"]):
+    """Serialize AgentSandboxInstance into a SandboxInstance CR (cube MicroVM)."""
 
     api_version = SANDBOX_INSTANCE_API_VERSION
 
-    def serialize(self, obj: "AgentSandboxPod", original_obj: Optional[ResourceInstance] = None, **kwargs):
+    def serialize(self, obj: "AgentSandboxInstance", original_obj: Optional[ResourceInstance] = None, **kwargs):
         labels = AgentSandboxLabels.generate(obj.sandbox_id)
         pod_spec = AgentSandboxPodSerializer._construct_pod_spec(obj)
 
@@ -264,7 +265,7 @@ class AgentSandboxInstanceSerializer(KresAppEntitySerializer["AgentSandboxPod"])
         return body
 
 
-class AgentSandboxInstanceDeserializer(KresAppEntityDeserializer["AgentSandboxPod", "AgentSandboxKresApp"]):
+class AgentSandboxInstanceDeserializer(KresAppEntityDeserializer["AgentSandboxInstance", "AgentSandboxKresApp"]):
     """Deserialize a SandboxInstance CR into an AgentSandboxInstance entity."""
 
     def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandboxInstance":

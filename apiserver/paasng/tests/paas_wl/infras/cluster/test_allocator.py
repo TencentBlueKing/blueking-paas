@@ -75,6 +75,10 @@ class TestClusterAllocator:
                     policy=AllocationPolicy(env_specific=False, clusters=["sandbox-cluster"]),
                 ),
                 AllocationPrecedencePolicy(
+                    matcher={ClusterAllocationPolicyCondType.USAGE_IS: "agent_sandbox_isolated"},
+                    policy=AllocationPolicy(env_specific=False, clusters=["sandbox-cube-cluster"]),
+                ),
+                AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.USAGE_IS: "ai_agent_isolated"},
                     policy=AllocationPolicy(env_specific=False, clusters=["sandbox-cube-cluster"]),
                 ),
@@ -177,6 +181,9 @@ class TestClusterAllocator:
         ctx.username = None
         ctx.usage = ClusterUsage.AGENT_SANDBOX
         assert ClusterAllocator(ctx).get_default().name == "sandbox-cluster"
+
+        ctx.usage = ClusterUsage.AGENT_SANDBOX_ISOLATED
+        assert ClusterAllocator(ctx).get_default().name == "sandbox-cube-cluster"
 
         ctx.usage = ClusterUsage.AI_AGENT_ISOLATED
         assert ClusterAllocator(ctx).get_default().name == "sandbox-cube-cluster"

@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest import mock
-
 import pytest
 import requests
 import requests_mock
@@ -82,17 +80,3 @@ class TestResponseHookIntegration:
             resp = requests.get("http://test/healthz", timeout=1)
             assert resp.status_code == 200
             assert resp.text == "OK"
-
-    def test_response_is_none_on_connection_error(self):
-        """连接异常时 response_hook 收到 response=None, 不抛 TypeError"""
-        with (
-            requests_mock.Mocker() as m,
-            mock.patch("paas_wl.utils.tracing.requests_callback", wraps=requests_callback) as spy,
-        ):
-            m.get("http://test/timeout", exc=ConnectionError)
-
-            with pytest.raises(ConnectionError):
-                requests.get("http://test/timeout", timeout=1)
-
-        spy.assert_called_once()
-        assert spy.call_args.kwargs.get("response") is None

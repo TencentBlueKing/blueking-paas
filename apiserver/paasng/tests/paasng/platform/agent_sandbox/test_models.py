@@ -20,7 +20,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists
 from paasng.platform.agent_sandbox.models import Sandbox
 
@@ -45,10 +45,21 @@ class TestSandboxModel:
         assert sandbox.name == "test-sandbox"
         assert sandbox.snapshot == "python:3.11-alpine"
         assert sandbox.status == SandboxStatus.PENDING.value
+        assert sandbox.workload_type == SandboxWorkloadType.DEFAULT.value
         assert sandbox.daemon_token is not None
         assert len(sandbox.daemon_token) == 32
         # 时间比较允许少量误差
         assert abs(sandbox.expired_at - (timezone.now() + timedelta(seconds=ttl_seconds))) < timedelta(seconds=1)
+
+        # 显式传入 workload_type 时应落库
+        si_sandbox = Sandbox.objects.new(
+            application=bk_app,
+            creator=bk_user.pk,
+            snapshot="python:3.11-alpine",
+            name="si-sandbox",
+            workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        )
+        assert si_sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
 
     def test_sandbox_create_duplicate_name(self, bk_app, bk_user):
         """Test that creating sandbox with duplicate name raises error."""

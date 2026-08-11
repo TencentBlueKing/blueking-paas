@@ -23,7 +23,12 @@ from rest_framework import serializers
 from paasng.platform.applications.models import Application
 from paasng.utils.serializers import SafePathField
 
-from .constants import SANDBOX_DEFAULT_TTL_SECONDS, SANDBOX_MAX_TTL_SECONDS
+from .constants import (
+    SANDBOX_DEFAULT_TTL_SECONDS,
+    SANDBOX_MAX_TTL_SECONDS,
+    SandboxStatus,
+    SandboxWorkloadType,
+)
 from .models import Sandbox, Volume
 
 
@@ -115,6 +120,13 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         default=list,
         help_text="共享文件挂载配置列表，不提供则不挂载任何共享卷。",
     )
+    workload_type = serializers.ChoiceField(
+        label="工作负载类型",
+        choices=SandboxWorkloadType.get_choices(),
+        required=False,
+        default=SandboxWorkloadType.DEFAULT.value,
+        help_text='沙箱运行时类型，可选值："default"（普通 Pod）、"sandbox_instance"，默认 "default"',
+    )
 
     def validate_volume_mounts(self, value: list[dict]) -> list[dict]:
         if not value:
@@ -138,6 +150,29 @@ class SandboxCreateInputSLZ(serializers.Serializer):
         return value
 
 
+class SandboxListQuerySLZ(serializers.Serializer):
+    """Query parameters for listing sandboxes."""
+
+    workload_type = serializers.ChoiceField(
+        label="工作负载类型",
+        choices=SandboxWorkloadType.get_choices(),
+        required=False,
+        help_text='按工作负载类型筛选，可选值："default"、"sandbox_instance"',
+    )
+    status = serializers.ChoiceField(
+        label="状态",
+        choices=SandboxStatus.get_choices(),
+        required=False,
+        help_text="按沙箱状态筛选",
+    )
+    name = serializers.CharField(
+        label="名称",
+        max_length=64,
+        required=False,
+        help_text="按沙箱名称精确筛选",
+    )
+
+
 class SandboxCreateOutputSLZ(serializers.ModelSerializer):
     """The serializer for creating sandbox output."""
 
@@ -152,6 +187,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
             "volume_mounts",
             "cpu",
             "memory",
+            "workload_type",
             "status",
             "created",
             "expired_at",
@@ -165,6 +201,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
             "volume_mounts": {"label": "共享挂载"},
             "cpu": {"label": "CPU 上限（核）"},
             "memory": {"label": "内存上限（GB）"},
+            "workload_type": {"label": "工作负载类型"},
             "status": {"label": "状态"},
             "created": {"label": "创建时间"},
             "expired_at": {"label": "过期时间"},

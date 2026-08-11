@@ -31,6 +31,17 @@ class SandboxStatus(StrStructuredEnum):
     ERR_DELETING = EnumField("err_deleting", label="unable to delete")
 
 
+class SandboxWorkloadType(StrStructuredEnum):
+    """Sandbox workload runtime type.
+
+    - DEFAULT: ordinary Kubernetes Pod
+    - SANDBOX_INSTANCE: SandboxInstance CR（底层由 sandbox-controller 渲染为 MicroVM）
+    """
+
+    DEFAULT = EnumField("default", label="普通 Pod")
+    SANDBOX_INSTANCE = EnumField("sandbox_instance", label="SandboxInstance")
+
+
 # 沙箱默认的 TTL（Time To Live）时长
 SANDBOX_DEFAULT_TTL_SECONDS = 30 * 60
 

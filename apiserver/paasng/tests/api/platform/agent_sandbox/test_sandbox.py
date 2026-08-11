@@ -23,10 +23,56 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
 from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError, SandboxImageValidateError
 from paasng.platform.agent_sandbox.models import Sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+@pytest.mark.usefixtures("_mock_verified_app_permission")
+class TestAgentSandboxViewSetList:
+    """Test cases for AgentSandboxViewSet.list API (AC-007)."""
+
+    def test_list_filtered(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
+        """Verify list filters and response includes workload_type."""
+        sandbox_obj.workload_type = SandboxWorkloadType.SANDBOX_INSTANCE.value
+        sandbox_obj.status = SandboxStatus.RUNNING.value
+        sandbox_obj.save(update_fields=["workload_type", "status"])
+
+        # noise: different workload_type / status / name
+        Sandbox.objects.new(
+            application=bk_app,
+            name="noise-default",
+            snapshot="python:3.11-alpine",
+            creator="test-user",
+            workload_type=SandboxWorkloadType.DEFAULT.value,
+        )
+        err_sandbox = Sandbox.objects.new(
+            application=bk_app,
+            name="noise-err",
+            snapshot="python:3.11-alpine",
+            creator="test-user",
+            workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        )
+        err_sandbox.status = SandboxStatus.ERR_CREATING.value
+        err_sandbox.save(update_fields=["status"])
+
+        list_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+        resp = api_client.get(
+            list_url,
+            data={
+                "workload_type": SandboxWorkloadType.SANDBOX_INSTANCE.value,
+                "status": SandboxStatus.RUNNING.value,
+                "name": sandbox_obj.name,
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["uuid"] == str(sandbox_obj.uuid)
+        assert data[0]["workload_type"] == SandboxWorkloadType.SANDBOX_INSTANCE.value
 
 
 @pytest.mark.usefixtures("_mock_verified_app_permission")
@@ -64,6 +110,7 @@ class TestAgentSandboxViewSetCreate:
         assert "name" in data
         assert "snapshot" in data
         assert "status" in data
+        assert data["workload_type"] == "default"
 
     def test_create_sandbox_already_exists(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify sandbox creation returns proper error when sandbox already exists.

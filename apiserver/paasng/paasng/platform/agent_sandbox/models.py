@@ -36,6 +36,7 @@ from .constants import (
     DEFAULT_SANDBOX_MEMORY,
     SANDBOX_DEFAULT_TTL_SECONDS,
     SandboxStatus,
+    SandboxWorkloadType,
 )
 from .exceptions import SandboxAlreadyExists
 
@@ -100,6 +101,7 @@ class SandboxManager(models.Manager):
         volume_mounts: list[dict] | None = None,
         cpu: Decimal | None = None,
         memory: Decimal | None = None,
+        workload_type: str = SandboxWorkloadType.DEFAULT.value,
     ):
         sandbox_id = uuid.uuid4()
         env_vars = env_vars or {}
@@ -115,6 +117,7 @@ class SandboxManager(models.Manager):
             raise SandboxAlreadyExists(f"sandbox name {name} in application {application.code} already exists")
 
         # 分配可调度集群
+        # NOTE: SandboxInstance 模式后续需要独立集群分配策略
         cluster = ClusterAllocator(
             AllocationContext.create_for_agent_sandbox(application.tenant_id, application.region)
         ).get_default()
@@ -138,6 +141,7 @@ class SandboxManager(models.Manager):
             target=target,
             env_vars=env_vars,
             volume_mounts=volume_mounts or [],
+            workload_type=workload_type,
             status=SandboxStatus.PENDING.value,
             creator=creator,
             tenant_id=application.tenant_id,
@@ -175,6 +179,13 @@ class Sandbox(UuidAuditedModel):
     )
     memory = models.DecimalField(
         verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default=DEFAULT_SANDBOX_MEMORY
+    )
+    # 创建时固定，生命周期内不支持切换
+    workload_type = models.CharField(
+        verbose_name="工作负载类型",
+        max_length=16,
+        default=SandboxWorkloadType.DEFAULT.value,
+        help_text="沙箱运行时类型：default（普通 Pod）/ sandbox_instance",
     )
 
     daemon_token = EncryptField(help_text="daemon 服务的访问 token")

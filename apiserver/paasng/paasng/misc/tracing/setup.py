@@ -25,7 +25,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.sampling import _KNOWN_SAMPLERS
 
-from .instrumentor import BKAppInstrumentor
+from paas_wl.utils.tracing import BKAppInstrumentor
 
 
 def setup_trace_config():

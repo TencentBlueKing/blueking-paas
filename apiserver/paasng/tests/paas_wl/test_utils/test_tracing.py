@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from unittest import mock
+
 import pytest
 import requests
 import requests_mock
@@ -24,11 +26,11 @@ from paas_wl.utils.tracing import requests_callback
 
 
 class TestResponseHookIntegration:
-    """回归测试：RequestsInstrumentor().instrument(response_hook=requests_callback)
+    """回归测试: RequestsInstrumentor().instrument(response_hook=requests_callback)
 
     验证 OTel 0.64b0 的 response_hook 回调签名 (span, request, response)
-    与 requests_callback 的 3 参数签名匹配，不会抛出 TypeError。
-    该回调在 paas_wl 和 paasng 两处共享同一份实现 (paas_wl.utils.tracing)。
+    与 requests_callback 的 3 参数签名匹配, 不会抛出 TypeError.
+    该回调在 paas_wl 和 paasng 两处共享同一份实现 (paas_wl.utils.tracing).
     """
 
     @pytest.fixture(autouse=True)
@@ -40,7 +42,7 @@ class TestResponseHookIntegration:
         instrumentor.uninstrument()
 
     def test_application_json(self):
-        """P1: response_hook 三元组签名匹配，不抛 TypeError"""
+        """response_hook 三元组签名匹配, 不抛 TypeError"""
         with requests_mock.Mocker() as m:
             m.get("http://test/api", json={"code": 0}, headers={"Content-Type": "application/json"})
 
@@ -48,7 +50,7 @@ class TestResponseHookIntegration:
             assert resp.status_code == 200
 
     def test_application_json_with_charset(self):
-        """P2: Content-Type 带 charset 参数时正常解析，不抛 TypeError"""
+        """Content-Type 带 charset 参数时正常解析, 不抛 TypeError"""
         with requests_mock.Mocker() as m:
             m.get(
                 "http://test/api",
@@ -73,7 +75,7 @@ class TestResponseHookIntegration:
             assert resp.status_code == 200
 
     def test_non_json_skipped(self):
-        """非 JSON 响应正常返回，不抛异常"""
+        """非 JSON 响应正常返回, 不抛异常"""
         with requests_mock.Mocker() as m:
             m.get("http://test/healthz", text="OK", headers={"Content-Type": "text/plain"})
 
@@ -82,9 +84,15 @@ class TestResponseHookIntegration:
             assert resp.text == "OK"
 
     def test_response_is_none_on_connection_error(self):
-        """P1: 连接异常时 response_hook 收到 response=None，不抛 TypeError"""
-        with requests_mock.Mocker() as m:
+        """连接异常时 response_hook 收到 response=None, 不抛 TypeError"""
+        with (
+            requests_mock.Mocker() as m,
+            mock.patch("paas_wl.utils.tracing.requests_callback", wraps=requests_callback) as spy,
+        ):
             m.get("http://test/timeout", exc=ConnectionError)
 
             with pytest.raises(ConnectionError):
                 requests.get("http://test/timeout", timeout=1)
+
+        spy.assert_called_once()
+        assert spy.call_args.kwargs.get("response") is None

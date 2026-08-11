@@ -113,5 +113,14 @@ class BKAppInstrumentor(BaseInstrumentor):
             )
 
     def _uninstrument(self, **kwargs):
-        for instrumentor in self.instrumentors:
-            instrumentor.uninstrument()
+        # Note: 各 Instrumentor 均为单例 (BaseInstrumentor 的实现保证)
+        LoggingInstrumentor().uninstrument()
+        RequestsInstrumentor().uninstrument()
+        DjangoInstrumentor().uninstrument()
+        RedisInstrumentor().uninstrument()
+        CeleryInstrumentor().uninstrument()
+
+        import pymysql
+
+        # unwrap 内部会校验是否真被包装过, 未开启 DB 追踪时为 no-op
+        dbapi.unwrap_connect(pymysql.connect, "connect")

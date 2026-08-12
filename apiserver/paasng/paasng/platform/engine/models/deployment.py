@@ -36,7 +36,7 @@ from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import HookList
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.utils.models import AuditedModel, make_json_field, make_legacy_json_field
+from paasng.utils.models import AuditedModel, Char32UUIDField, make_json_field, make_legacy_json_field
 
 logger = logging.getLogger(__name__)
 
@@ -114,17 +114,17 @@ class Deployment(OperationVersionBase):
     )
 
     # Related with engine
-    build_process_id = models.UUIDField(max_length=32, null=True)
-    build_id = models.UUIDField(max_length=32, null=True)
+    build_process_id = Char32UUIDField(max_length=32, null=True)
+    build_id = Char32UUIDField(max_length=32, null=True)
     build_status = models.CharField(choices=BuildStatus.get_choices(), max_length=16, default=BuildStatus.PENDING)
     build_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 build 的时间")
-    pre_release_id = models.UUIDField(max_length=32, null=True)
+    pre_release_id = Char32UUIDField(max_length=32, null=True)
     pre_release_status = models.CharField(
         choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
     )
     # 字段 pre_release_int_requested_at 未实际使用
     pre_release_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 pre-release 的时间")
-    release_id = models.UUIDField(max_length=32, null=True)
+    release_id = Char32UUIDField(max_length=32, null=True)
     bkapp_release_id = models.BigIntegerField(null=True, help_text="云原生应用发布记录ID")
     release_status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
     release_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 release 的时间")
@@ -140,8 +140,8 @@ class Deployment(OperationVersionBase):
     # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
     # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
     # such as logs of the service provision actions and hook command executions from cloud-native applications.
-    preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
-    main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
+    preparation_stream_id = Char32UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
+    main_stream_id = Char32UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
 
     tenant_id = tenant_id_field_factory()
 

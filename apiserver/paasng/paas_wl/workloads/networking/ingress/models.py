@@ -24,7 +24,7 @@ from django.db import models
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.utils.models import TimestampedModel
+from paas_wl.utils.models import Char32UUIDField, TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppSubpathSource
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -155,7 +155,7 @@ class Domain(TimestampedModel):
 
     name = models.CharField(help_text="域名", max_length=253, null=False)
     path_prefix = models.CharField(max_length=64, default="/", help_text="the accessible path for current domain")
-    module_id = models.UUIDField(help_text="关联的模块 ID", null=False)
+    module_id = Char32UUIDField(help_text="关联的模块 ID", null=False)
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
     https_enabled = models.BooleanField(default=False, null=True, help_text="该域名是否开启 https")
     tenant_id = tenant_id_field_factory(db_index=False)

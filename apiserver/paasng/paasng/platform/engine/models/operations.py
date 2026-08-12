@@ -21,7 +21,7 @@ from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus, OperationTypes
-from paasng.utils.models import BkUserField, TimestampedModel
+from paasng.utils.models import BkUserField, Char32UUIDField, TimestampedModel
 
 
 class OperationQuerySet(models.QuerySet):
@@ -38,7 +38,7 @@ class OperationQuerySet(models.QuerySet):
 
 
 class ModuleEnvironmentOperations(TimestampedModel):
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = Char32UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     application = models.ForeignKey(
         "applications.Application", on_delete=models.CASCADE, related_name="module_operations"
     )
@@ -47,7 +47,7 @@ class ModuleEnvironmentOperations(TimestampedModel):
     )
     operator = BkUserField()
     operation_type = models.CharField(max_length=32, choices=OperationTypes.get_choices())
-    object_uid = models.UUIDField("详情记录的UUID", default=uuid.uuid4, editable=False)
+    object_uid = Char32UUIDField("详情记录的UUID", default=uuid.uuid4, editable=False)
     status = models.CharField(
         "操作状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
     )

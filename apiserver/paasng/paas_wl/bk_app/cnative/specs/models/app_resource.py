@@ -35,7 +35,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
 from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.utils.basic import to_error_string
-from paas_wl.utils.models import BkUserField, TimestampedModel
+from paas_wl.utils.models import BkUserField, Char32UUIDField, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -84,8 +84,8 @@ class AppModelResourceManager(models.Manager):
 class AppModelResource(TimestampedModel):
     """Cloud-native Application's Model Resource"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), unique=True, null=False)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), unique=True, null=False)
     module = ModuleAttrFromID()
     revision = models.OneToOneField(verbose_name="当前 revision", to="AppModelRevision", on_delete=models.CASCADE)
 
@@ -117,8 +117,8 @@ class AppModelResource(TimestampedModel):
 class AppModelRevision(TimestampedModel):
     """Revisions of cloud-native Application's Model Resource"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
 
     # data fields
@@ -170,8 +170,8 @@ class AppModelDeploy(TimestampedModel):
     instead of the combination of (application_id, module_id, environment_name).
     """
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16

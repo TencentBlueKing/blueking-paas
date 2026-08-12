@@ -3113,4 +3113,5 @@ export default {
   公共采集项: 'Public Collection Item',
   '公共采集项由平台统一接入日志平台，不支持在日志平台进行单独的检索、配置。': 'Public collection items are centrally managed by the platform and connected to the log platform. They do not support independent search or configuration in the log platform.',
   '该 MCP Server 已开启 OAuth2 公开客户端模式。在 Cursor、CodeBuddy 等工具中通过 OAuth 授权使用时，无需在此申请权限，授权完成后即可使用；仅在需要以当前应用的 ID / 密钥调用该 MCP 时，才需申请权限。': 'This MCP Server has enabled the OAuth2 public client mode. When using it via OAuth authorization in tools such as Cursor or CodeBuddy, there is no need to request permissions here; it is ready for use immediately after authorization. Permission requests are required only when invoking the MCP using the current applications ID and secret.',
+  申请成为管理员: 'Apply to become an administrator',
 };

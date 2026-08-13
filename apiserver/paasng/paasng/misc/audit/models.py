@@ -122,6 +122,10 @@ class BaseOperation(UuidAuditedModel):
             # target 为应用时不展示，如：admin 部署 default 模块预发布环境成功
             return _("{user} {operation}{module_env_info}{result}").format(**ctx)
 
+        if self.target == OperationTarget.SECRET:
+            # target 为密钥时不展示, 如: admin 查看密钥成功
+            return _("{user} {operation}{target}{result}").format(**ctx)
+
         if self.attribute:
             if self.target == OperationTarget.CLOUD_API:
                 # admin 申请 bklog 网关云API权限

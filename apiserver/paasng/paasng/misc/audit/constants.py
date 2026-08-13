@@ -106,6 +106,7 @@ class OperationEnum(StrStructuredEnum):
     DELETE = EnumField("delete", label=_("删除"))
     MODIFY = EnumField("modify", label=_("修改"))
     REFRESH = EnumField("refresh", label=_("刷新"))
+    VIEW = EnumField("view", label=_("查看"))
     # 直接操作应用相关的类型，展示的文案包括完整的动宾短语
     CREATE_APP = EnumField("create_app", label=_("创建应用"))
     RELEASE_TO_MARKET = EnumField("online_to_market", label=_("发布到应用市场"))

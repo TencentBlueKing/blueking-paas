@@ -52,8 +52,8 @@ async def get_user_info(request: HttpRequest):
         200,
         {
             "authenticated": True,
-            "username": getattr(user, "username", ""),
-            "display_name": getattr(user, "display_name", ""),
-            "tenant_id": getattr(user, "tenant_id", None),
+            "username": user.username,
+            "display_name": user.display_name,
+            "tenant_id": user.tenant_id,
         },
     )

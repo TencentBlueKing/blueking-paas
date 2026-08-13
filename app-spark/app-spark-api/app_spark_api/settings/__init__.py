@@ -38,12 +38,9 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 
-import os
-import sys
 from pathlib import Path
 
 import pymysql
-from django.core.exceptions import ImproperlyConfigured
 from dynaconf import LazySettings
 
 from .utils import get_database_conf
@@ -66,9 +63,6 @@ settings = LazySettings(
     ENVVAR_PREFIX_FOR_DYNACONF="APP_SPARK_API",
     ENVVAR_FOR_DYNACONF="APP_SPARK_API_SETTINGS",
 )
-
-# 用于判断当前进程是否为 pytest 测试进程的 helper flag
-RUNNING_TESTS = "test" in sys.argv or "pytest" in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 # Django 项目使用的 SECRET_KEY，默认值不安全，建议使用真实生成的随机 secret 重载
 SECRET_KEY = settings.get(
@@ -140,13 +134,10 @@ ASGI_APPLICATION = "app_spark_api.asgi.application"
 
 DATABASES = {}
 
+# 当未配置 default 数据库时不再强制报错，以允许 `manage.py --help`、`django-admin check`
+# 等不需要数据库的运维命令正常执行。数据库仍是正式运行时的必选项。
 if default_db_conf := get_database_conf(settings):
     DATABASES["default"] = default_db_conf
-else:
-    raise ImproperlyConfigured(
-        "Default database is required. Please configure DATABASE_NAME "
-        "(and related DATABASE_USER / DATABASE_PASSWORD / DATABASE_HOST / DATABASE_PORT)."
-    )
 
 # == 缓存相关配置项
 # DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)

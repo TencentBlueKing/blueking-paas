@@ -19,23 +19,18 @@ if TYPE_CHECKING:
     from dynaconf.base import LazySettings
 
 
-def get_database_conf(settings: LazySettings, env_var_prefix: str = "", for_tests: bool = False) -> Optional[Dict]:
-    """Get a database config dict
+def get_database_conf(settings: LazySettings) -> Optional[Dict]:
+    """Get a database config dict."""
 
-    :param env_var_prefix: The prefix string for reading all database config keys
-    :param for_tests: Whether the conf will be used for running unittests, if True,
-        the database name will be prepend with a "test_" prefix.
-    """
-
-    database_name = settings.get(env_var_prefix + "DATABASE_NAME")
+    database_name = settings.get("DATABASE_NAME")
     if database_name:
-        database_user = settings.get(env_var_prefix + "DATABASE_USER", None)
-        database_password = settings.get(env_var_prefix + "DATABASE_PASSWORD", None)
-        database_host = settings.get(env_var_prefix + "DATABASE_HOST", None)
-        database_port = settings.get(env_var_prefix + "DATABASE_PORT", None)
-        database_options = settings.get(env_var_prefix + "DATABASE_OPTIONS", {})
+        database_user = settings.get("DATABASE_USER", None)
+        database_password = settings.get("DATABASE_PASSWORD", None)
+        database_host = settings.get("DATABASE_HOST", None)
+        database_port = settings.get("DATABASE_PORT", None)
+        database_options = settings.get("DATABASE_OPTIONS", {})
 
-        result = {
+        return {
             "ENGINE": "django.db.backends.mysql",
             "NAME": database_name,
             "USER": database_user,
@@ -44,8 +39,4 @@ def get_database_conf(settings: LazySettings, env_var_prefix: str = "", for_test
             "PORT": database_port,
             "OPTIONS": database_options,
         }
-        # Use a test database name when running tests to avoid unexpected changes
-        if for_tests:
-            result["NAME"] = f"test_{result['NAME']}"
-        return result
     return None

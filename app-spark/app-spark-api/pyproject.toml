@@ -32,10 +32,13 @@ known-first-party = ["app_spark_api"]
 
 [tool.mypy]
 python_version = "3.14"
-ignore_missing_imports = true
 show_error_codes = true
 check_untyped_defs = true
 files = ["app_spark_api", "manage.py"]
+
+[[tool.mypy.overrides]]
+module = ["django", "django.*", "dynaconf", "dynaconf.*", "pymysql", "bkpaas_auth", "bkpaas_auth.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "*.migrations.*"

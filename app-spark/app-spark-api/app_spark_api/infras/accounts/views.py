@@ -21,7 +21,7 @@ from django.views import View
 
 
 class HomeView(View):
-    async def get(self, request):
+    def get(self, request):
         return TemplateResponse(
             request,
             "accounts/home.html",

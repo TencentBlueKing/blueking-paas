@@ -45,22 +45,19 @@ repos:
         name: ruff-check-fix for "app-spark-api"
         language: system
         types: [python]
-        pass_filenames: false
-        entry: bash -c "cd app-spark/app-spark-api && uv run ruff check --force-exclude --select I --fix --no-cache ."
+        entry: uv run --project app-spark/app-spark-api ruff check --force-exclude --select I --fix --no-cache
         files: '^app-spark/app-spark-api/'
       - id: ruff-format-app-spark-api
         name: ruff-format for "app-spark-api"
         language: system
         types: [python]
-        pass_filenames: false
-        entry: bash -c "cd app-spark/app-spark-api && uv run ruff format --force-exclude --no-cache ."
+        entry: uv run --project app-spark/app-spark-api ruff format --force-exclude --no-cache
         files: '^app-spark/app-spark-api/'
       - id: ruff-check-app-spark-api
         name: ruff-check for "app-spark-api"
         language: system
         types: [python]
-        pass_filenames: false
-        entry: bash -c "cd app-spark/app-spark-api && uv run ruff check --force-exclude --no-cache ."
+        entry: uv run --project app-spark/app-spark-api ruff check --force-exclude --no-cache
         files: '^app-spark/app-spark-api/'
 
       # === 按项目拆分的类型与依赖边界检查 ===

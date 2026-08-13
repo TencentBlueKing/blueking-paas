@@ -16,7 +16,7 @@
 # LANGUAGE_COOKIE_DOMAIN: ''
 
 ## 数据库（引擎固定为 MySQL，必填）
-## 未配置 DATABASE_NAME 时服务启动会报错
+## 未配置 DATABASE_NAME 时服务无法正常启动（仅部分无需数据库的管理命令可执行）
 # DATABASE_NAME: app_spark
 # DATABASE_USER: ''
 # DATABASE_PASSWORD: ''
@@ -38,9 +38,6 @@
 # LOGIN_FULL: ''
 
 ## -------------------------------- 用户鉴权模块 bkpaas_auth SDK 相关配置 --------------------------------
-
-## 是否启用多租户模式，需和 ENABLE_MULTI_TENANT_MODE 保持一致
-# BKAUTH_ENABLE_MULTI_TENANT_MODE: false
 
 ## 用户身份校验类型，默认值为 bk_token
 # BKAUTH_BACKEND_TYPE: bk_token

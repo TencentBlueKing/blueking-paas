@@ -56,6 +56,25 @@ def safe_sync_apigw(plugin_app: Application):
         plugin_app.bk_plugin_profile.mark_synced(id_, gw_service.gw_name)
 
 
+def safe_sync_apigw_maintainers(plugin_app: Application):
+    """全量刷新插件网关的维护者名单，忽略错误
+
+    与 safe_sync_apigw 不同：本函数仅用于成员变更后刷新 maintainers，不做建网关、
+    预设 distributor 授权与 mark_synced。仅当网关已创建（is_synced 为真）时才调用 sync()
+    全量覆盖 maintainers；网关未创建则直接跳过，不主动建网关。
+    """
+    profile = plugin_app.bk_plugin_profile
+    # 网关尚未创建（未首次部署）时跳过，不主动建网关
+    if not profile.is_synced:
+        logger.info("Gateway for %s is not synced yet, skip refreshing maintainers.", plugin_app.code)
+        return
+
+    try:
+        PluginDefaultAPIGateway(plugin_app).sync()
+    except PluginApiGatewayServiceError:
+        logger.exception('Unable to refresh API Gateway maintainers for "%s"', plugin_app.code)
+
+
 def safe_update_gateway_status(plugin_app: Application, enabled: bool):
     """update a plugin's API Gateway status, ignore errors"""
     try:

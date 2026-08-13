@@ -26,7 +26,25 @@ from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment
 
+from .apigw import safe_sync_apigw_maintainers
+from .models import is_bk_plugin
+
 logger = logging.getLogger(__name__)
+
+
+@shared_task
+def sync_plugin_apigw_maintainers(app_code: str):
+    """插件应用成员变更后，全量刷新其 API 网关的维护者名单
+
+    :param str app_code: 发生成员变更的应用 ID
+    """
+    application = Application.objects.get(code=app_code)
+    # 仅对插件应用执行网关维护者同步
+    if not is_bk_plugin(application):
+        logger.debug('Syncing apigw maintainers: "%s" is not plugin type, will not proceed.', app_code)
+        return
+
+    safe_sync_apigw_maintainers(application)
 
 
 @shared_task

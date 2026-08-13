@@ -21,7 +21,12 @@ import pytest
 from bkapi_client_core.exceptions import BKAPIError
 from django_dynamic_fixture import G
 
-from paasng.bk_plugins.bk_plugins.apigw import PluginDefaultAPIGateway, safe_sync_apigw, set_distributors
+from paasng.bk_plugins.bk_plugins.apigw import (
+    PluginDefaultAPIGateway,
+    safe_sync_apigw,
+    safe_sync_apigw_maintainers,
+    set_distributors,
+)
 from paasng.bk_plugins.bk_plugins.exceptions import PluginApiGatewayServiceError
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
 
@@ -115,6 +120,42 @@ def test_safe_sync_apigw_failed(bk_plugin_app, fake_bad_client):
     ):
         safe_sync_apigw(bk_plugin_app)
         assert bk_plugin_app.bk_plugin_profile.api_gw_id is None
+
+
+class TestSafeSyncApigwMaintainers:
+    """成员变更后刷新网关维护者的容错入口"""
+
+    def test_skip_when_not_synced(self, bk_plugin_app, fake_good_client):
+        # 网关未创建（未首次部署）时应跳过，不调用 sync_api
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            safe_sync_apigw_maintainers(bk_plugin_app)
+            assert fake_good_client.sync_api.called is False
+
+    def test_refresh_when_synced(self, bk_plugin_app, fake_good_client):
+        # 网关已创建时应调用 sync() 全量覆盖 maintainers
+        bk_plugin_app.bk_plugin_profile.api_gw_id = 1
+        bk_plugin_app.bk_plugin_profile.save()
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            safe_sync_apigw_maintainers(bk_plugin_app)
+            assert fake_good_client.sync_api.called is True
+            _, kwargs = fake_good_client.sync_api.call_args_list[0]
+            assert len(kwargs["data"]["maintainers"]) > 0
+
+    def test_tolerate_sync_error(self, bk_plugin_app, fake_bad_client):
+        # 网关同步失败应被捕获，不向上抛出、不阻塞主流程
+        bk_plugin_app.bk_plugin_profile.api_gw_id = 1
+        bk_plugin_app.bk_plugin_profile.save()
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_bad_client,
+        ):
+            safe_sync_apigw_maintainers(bk_plugin_app)
 
 
 class TestSetDistributors:

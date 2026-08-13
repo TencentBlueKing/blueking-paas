@@ -28,9 +28,9 @@ from paas_wl.bk_app.agent_sandbox.constants import (
     SANDBOX_INSTANCE_API_VERSION,
     SANDBOX_INSTANCE_DESIRED_STATE_RUNNING,
     SANDBOX_INSTANCE_NETWORK_MODE,
-    SANDBOX_INSTANCE_PHASE_PENDING,
     SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
     SHARED_VOLUME_NAME_IN_POD,
+    SandboxInstancePhase,
 )
 from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
@@ -304,9 +304,9 @@ class AgentSandboxInstanceDeserializer(KresAppEntityDeserializer["AgentSandboxIn
     def _get_status(instance: ResourceInstance) -> str:
         status = getattr(instance, "status", None)
         if not status:
-            return SANDBOX_INSTANCE_PHASE_PENDING
+            return SandboxInstancePhase.PENDING.value
         phase = getattr(status, "phase", None)
-        return phase or SANDBOX_INSTANCE_PHASE_PENDING
+        return phase or SandboxInstancePhase.PENDING.value
 
 
 class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService"]):

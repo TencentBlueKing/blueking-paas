@@ -120,7 +120,7 @@ class SandboxManager(models.Manager):
         alloc_ctx = AllocationContext.create_for_agent_sandbox(
             application.tenant_id,
             application.region,
-            for_sandbox_instance=workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value,
+            is_isolated=workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value,
         )
 
         try:

@@ -23,7 +23,7 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.agent_sandbox.constants import SANDBOX_INSTANCE_PHASE_FAILED
+from paas_wl.bk_app.agent_sandbox.constants import SandboxInstancePhase
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxInstance,
     AgentSandboxKresApp,
@@ -380,7 +380,7 @@ class TestWaitForSandboxInstanceRunning:
             podName="si-demo-xyz",
         )
         mock_si = mock.MagicMock()
-        mock_si.wait_for_status.return_value = SANDBOX_INSTANCE_PHASE_FAILED
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.FAILED.value
         mock_si.get.return_value = mock.MagicMock(status=failed_status)
 
         with (

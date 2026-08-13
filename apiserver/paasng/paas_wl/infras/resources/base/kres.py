@@ -137,7 +137,7 @@ class BaseKresource:
 
     kind = ""
 
-    def __init__(self, client, request_timeout: Optional[float] = None, api_version: str = ""):
+    def __init__(self, client, request_timeout: float | None = None, api_version: str = ""):
         # Kres is able to support both client module or an ApiClient instance
         if isinstance(client, ModuleType):
             # The ApiClient will use the default Configuration by default
@@ -552,7 +552,7 @@ class KNode(BaseKresource):
 class KNamespace(BaseKresource):
     kind = "Namespace"
 
-    def wait_for_default_sa(self, namespace: Namespace, timeout: Optional[float] = None, check_period: float = 0.5):
+    def wait_for_default_sa(self, namespace: Namespace, timeout: float | None = None, check_period: float = 0.5):
         """Calling this function will blocks until the default ServiceAccount was created
 
         :param timeout: timeout seconds for this join operation, default to never timeout
@@ -631,7 +631,7 @@ class KPod(BaseKresource):
         name: str,
         target_statuses: Collection[str],
         namespace: Namespace = None,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check_period: float = 0.5,
     ):
         """Calling this function will blocks until the pod's status has become {target_status}
@@ -677,7 +677,7 @@ class KSandboxInstance(BaseKresource):
         name: str,
         target_statuses: Collection[str],
         namespace: Namespace = None,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check_period: float = 0.5,
     ):
         """Block until SandboxInstance status.phase is one of ``target_statuses``.

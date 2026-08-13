@@ -14,6 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+
 # ================================
 # Constants for "K8s Pod Sandbox"
 # ================================
@@ -42,11 +44,15 @@ SANDBOX_INSTANCE_DESIRED_STATE_RUNNING = "Running"
 SANDBOX_INSTANCE_RUNTIME_CLASS_NAME = "cube"
 SANDBOX_INSTANCE_NETWORK_MODE = "direct-cni"
 
-# SandboxInstance status.phase
-SANDBOX_INSTANCE_PHASE_PENDING = "Pending"
-SANDBOX_INSTANCE_PHASE_CREATING = "Creating"
-SANDBOX_INSTANCE_PHASE_RUNNING = "Running"
-SANDBOX_INSTANCE_PHASE_FAILED = "Failed"
+
+class SandboxInstancePhase(StrStructuredEnum):
+    """SandboxInstance CR ``status.phase``."""
+
+    PENDING = EnumField("Pending", label="等待中")
+    CREATING = EnumField("Creating", label="创建中")
+    RUNNING = EnumField("Running", label="运行中")
+    FAILED = EnumField("Failed", label="失败")
+
 
 # The prefix for 'agent sandbox router' domain, the full domain is expected to be "{prefix}.{root_domain}"
 # "agent-sandbox-router" (length > 16) will not conflict with app_code

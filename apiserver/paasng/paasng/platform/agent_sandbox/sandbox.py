@@ -28,11 +28,7 @@ from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
-from paas_wl.bk_app.agent_sandbox.constants import (
-    DAEMON_BIND_PORT,
-    SANDBOX_INSTANCE_PHASE_FAILED,
-    SANDBOX_INSTANCE_PHASE_RUNNING,
-)
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, SandboxInstancePhase
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
 from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
@@ -391,11 +387,11 @@ class AgentSandboxResManager:
         with self.kres_app.get_kube_api_client() as client:
             phase = kres.KSandboxInstance(client).wait_for_status(
                 name=name,
-                target_statuses={SANDBOX_INSTANCE_PHASE_RUNNING, SANDBOX_INSTANCE_PHASE_FAILED},
+                target_statuses={SandboxInstancePhase.RUNNING.value, SandboxInstancePhase.FAILED.value},
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
             )
-            if phase == SANDBOX_INSTANCE_PHASE_FAILED:
+            if phase == SandboxInstancePhase.FAILED.value:
                 logs = self._get_sandbox_instance_failure_diagnostics(client, name)
                 raise SandboxCreateError("sandbox instance failed to start", logs=logs)
 

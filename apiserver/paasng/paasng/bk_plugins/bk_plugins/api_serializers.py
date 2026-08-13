@@ -163,15 +163,15 @@ class PluginMemberSLZ(serializers.Serializer):
         ref_name = "PluginMemberSLZ__bk_plugins"
 
 
-class PluginMembersListSLZ(serializers.Serializer):
-    """插件应用成员列表的返回体格式"""
+class PluginMemberWithRolesSLZ(serializers.Serializer):
+    """插件应用单个成员的返回体格式"""
 
     username = serializers.CharField(help_text="用户名")
     roles = serializers.ListField(child=RoleField(), help_text="用户角色列表")
 
     class Meta:
         # Set a ref_name to avoid conflicts for drf-yasg
-        ref_name = "PluginMembersListSLZ__bk_plugins"
+        ref_name = "PluginMemberWithRolesSLZ__bk_plugins"
 
 
 class PluginRoleMembersSLZ(serializers.Serializer):

@@ -367,13 +367,13 @@ class PluginMembersViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(
         tags=["plugin-center"],
-        responses={status.HTTP_200_OK: api_serializers.PluginMembersListSLZ(many=True)},
+        responses={status.HTTP_200_OK: api_serializers.PluginMemberWithRolesSLZ(many=True)},
     )
     def list_members(self, request, code):
         """获取插件应用成员列表"""
         application = get_object_or_404(Application, code=code)
         members = fetch_application_members(app_code=application.code)
-        return Response(data=api_serializers.PluginMembersListSLZ(members, many=True).data)
+        return Response(data=api_serializers.PluginMemberWithRolesSLZ(members, many=True).data)
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
     def sync_members(self, request, code):

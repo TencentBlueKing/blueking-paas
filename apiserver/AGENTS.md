@@ -17,6 +17,7 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 * For Python files, run `ruff format` to format after edits.
 * In API tests, add docstrings and type hints for fixtures, especially setup fixtures.
 * Preserve in-function guidance comments in test fixtures during refactors (for example setup/teardown hint comments).
+* For UUID model fields, use `Char32UUIDField` instead of `models.UUIDField`. Reason: on Django 5.0+ with MariaDB 10.7+, `models.UUIDField` maps to native UUID instead of legacy `CHAR(32)`. Existing columns stay `CHAR(32)`, so writing dashed UUID values can fail with "Data too long".
 
 ## Common workflows
 

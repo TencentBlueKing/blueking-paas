@@ -25,6 +25,7 @@ from typing import Any
 from django.conf import settings
 from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, SandboxInstancePhase
@@ -185,6 +186,18 @@ def get_sandbox_client(sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
     """
     mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
     return mgr.get_from_db_record(sandbox_obj)
+
+
+def map_sandbox_instance_phase(phase: str) -> str:
+    """Map SandboxInstance CR ``status.phase`` to platform ``SandboxStatus``.
+
+    Running → RUNNING; Failed → ERR_CREATING; Pending/Creating/unknown → PENDING.
+    """
+    if phase == SandboxInstancePhase.RUNNING.value:
+        return SandboxStatus.RUNNING.value
+    if phase == SandboxInstancePhase.FAILED.value:
+        return SandboxStatus.ERR_CREATING.value
+    return SandboxStatus.PENDING.value
 
 
 def _entity_cls_for(workload_type: str) -> type[AgentSandboxWorkload]:
@@ -350,7 +363,7 @@ class AgentSandboxResManager:
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
             )
-            if phase == SandboxInstancePhase.FAILED.value:
+            if map_sandbox_instance_phase(phase) == SandboxStatus.ERR_CREATING.value:
                 logs = self._get_sandbox_instance_failure_diagnostics(client, name)
                 raise SandboxCreateError("sandbox instance failed to start", logs=logs)
 
@@ -407,7 +420,7 @@ class AgentSandboxResManager:
 
         try:
             _kmodel_for(workload_type).delete_by_name(self.kres_app, name, non_grace_period=True)
-        except (ApiException, AppEntityNotFound):
+        except (ApiException, AppEntityNotFound, ResourceNotFoundError):
             logger.warning(
                 "failed to cleanup sandbox workload after create error, name=%s, namespace=%s, workload_type=%s",
                 name,

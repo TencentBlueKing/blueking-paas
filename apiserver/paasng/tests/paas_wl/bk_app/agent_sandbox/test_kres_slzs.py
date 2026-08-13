@@ -25,6 +25,7 @@ import pytest
 from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import (
+    DAEMON_COMMAND,
     SANDBOX_INSTANCE_API_VERSION,
     SANDBOX_INSTANCE_NETWORK_MODE,
     SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
@@ -222,6 +223,14 @@ class TestAgentSandboxInstanceSerializer:
             workdir="/workspace",
             snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
             env={"TOKEN": "t", "SERVER_PORT": "30000"},
+            volume_mounts=[
+                VolumeMount(
+                    volume_id="vol-1",
+                    mount_path="/workspace/data",
+                    sub_path="app/vol1",
+                    read_only=False,
+                )
+            ],
         )
         gvk_config = GVKConfig(
             server_version="v1.24.0",
@@ -239,4 +248,10 @@ class TestAgentSandboxInstanceSerializer:
         assert manifest["spec"]["network"]["mode"] == SANDBOX_INSTANCE_NETWORK_MODE
         assert manifest["spec"]["domain"] == {}
         assert manifest["spec"]["podTemplate"]["containers"][0]["name"] == "main"
+        assert manifest["spec"]["podTemplate"]["containers"][0]["command"] == DAEMON_COMMAND
         assert manifest["spec"]["podTemplate"]["labels"]["bkapp.paas.bk.tencent.com/sandbox-id"] == "abc123"
+        volumes = manifest["spec"]["podTemplate"]["volumes"]
+        assert volumes[0]["name"] == SHARED_VOLUME_NAME_IN_POD
+        mounts = manifest["spec"]["podTemplate"]["containers"][0]["volumeMounts"]
+        assert mounts[0]["mountPath"] == "/workspace/data"
+        assert mounts[0]["subPath"] == "app/vol1"

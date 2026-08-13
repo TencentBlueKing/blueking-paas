@@ -34,7 +34,12 @@ from paasng.platform.agent_sandbox.constants import (
     SandboxStatus,
     SandboxWorkloadType,
 )
-from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, SandboxError, SandboxImageValidateError
+from paasng.platform.agent_sandbox.exceptions import (
+    SandboxCreateError,
+    SandboxCreateTimeout,
+    SandboxError,
+    SandboxImageValidateError,
+)
 from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
@@ -95,7 +100,7 @@ class TestCreateSandbox:
         with (
             mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create") as mock_create_cr,
             mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create") as mock_create_pod,
-            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create") as mock_create_svc,
             mock.patch.object(AgentSandboxResManager, "_wait_for_sandbox_instance_running"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
@@ -109,8 +114,10 @@ class TestCreateSandbox:
             )
 
         assert sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
+        assert sandbox.status == SandboxStatus.RUNNING.value
         mock_create_cr.assert_called_once()
         mock_create_pod.assert_not_called()
+        mock_create_svc.assert_called_once()
 
     def test_create_resource_failed(self, bk_app, bk_user, mock_image_validator):
         """Test that failed resource creation sets status to ERR_CREATING."""
@@ -125,6 +132,36 @@ class TestCreateSandbox:
             create_sandbox(application=bk_app, name="failed", env_vars={"FOO": "BAR"}, creator=bk_user.pk)
 
         sandbox = Sandbox.objects.get(application=bk_app, name="failed")
+        assert sandbox.status == SandboxStatus.ERR_CREATING.value
+        assert sandbox.started_at is None
+
+    def test_create_sandbox_instance_timeout_sets_err_creating(self, bk_app, bk_user, mock_image_validator):
+        """SandboxInstance wait timeout maps to ERR_CREATING (F-004)."""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+        from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
+
+        with (
+            suppress(SandboxCreateTimeout),
+            mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(
+                AgentSandboxResManager,
+                "_wait_for_sandbox_instance_running",
+                side_effect=ReadTargetStatusTimeout("si-timeout", 120),
+            ),
+            mock.patch.object(AgentSandboxResManager, "_cleanup_sandbox_on_create_error"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
+        ):
+            create_sandbox(
+                application=bk_app,
+                creator=bk_user.pk,
+                name="si-timeout",
+                workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+            )
+
+        sandbox = Sandbox.objects.get(application=bk_app, name="si-timeout")
         assert sandbox.status == SandboxStatus.ERR_CREATING.value
         assert sandbox.started_at is None
 
@@ -228,9 +265,18 @@ class TestDeleteSandbox:
     """Test sandbox deletion functionality."""
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
-    def test_delete_success(self, bk_app, bk_user, mock_image_validator):
-        """Test successful sandbox deletion updates status to DELETED."""
-        sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="to-delete")
+    @pytest.mark.parametrize(
+        "workload_type",
+        [SandboxWorkloadType.DEFAULT.value, SandboxWorkloadType.SANDBOX_INSTANCE.value],
+    )
+    def test_delete_success(self, bk_app, bk_user, mock_image_validator, workload_type):
+        """Deletion updates status to DELETED and passes the record's workload_type (AC-004)."""
+        sandbox = create_sandbox(
+            application=bk_app,
+            creator=bk_user.pk,
+            name=f"to-delete-{workload_type.replace('_', '-')}",
+            workload_type=workload_type,
+        )
 
         with mock.patch.object(AgentSandboxResManager, "destroy_by_name") as mock_destroy:
             delete_sandbox(sandbox)
@@ -238,10 +284,7 @@ class TestDeleteSandbox:
             sandbox.refresh_from_db()
             assert sandbox.status == SandboxStatus.DELETED.value
             assert sandbox.deleted_at is not None
-            mock_destroy.assert_called_once_with(
-                "to-delete",
-                workload_type=SandboxWorkloadType.DEFAULT.value,
-            )
+            mock_destroy.assert_called_once_with(sandbox.name, workload_type=workload_type)
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
     def test_delete_resource_failed(self, bk_app, bk_user, mock_image_validator):
@@ -322,6 +365,8 @@ class TestWaitForSandboxInstanceRunning:
         assert "pull failed" in exc_info.value.logs
         assert "si-demo-xyz" not in exc_info.value.logs
         mock_pod_logs.assert_called_once_with(mock_client, "si-demo-xyz")
+        mock_si.wait_for_status.assert_called_once()
+        assert mock_si.wait_for_status.call_args.kwargs["timeout"] == AgentSandboxResManager.create_timeout
 
 
 class TestGetFromDbRecordRuntimePath:

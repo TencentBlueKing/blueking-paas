@@ -20,10 +20,12 @@ from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
-    AgentSandbox,
+    AgentSandboxInstance,
     AgentSandboxKresApp,
+    AgentSandboxPod,
     AgentSandboxService,
-    agent_sandbox_kmodel,
+    AgentSandboxWorkload,
+    agent_sandbox_pod_kmodel,
     agent_sandbox_svc_kmodel,
 )
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -76,8 +78,8 @@ class TestAgentSandboxKresApp:
             sbx_app.get_kube_api_client()
 
 
-class TestAgentSandbox:
-    """Test AgentSandbox entity."""
+class TestAgentSandboxPod:
+    """Test AgentSandboxPod entity."""
 
     @pytest.fixture()
     def sbx_app(self) -> AgentSandboxKresApp:
@@ -89,8 +91,8 @@ class TestAgentSandbox:
         )
 
     def test_create(self, sbx_app: AgentSandboxKresApp):
-        """Test AgentSandbox.create factory method."""
-        sbx = AgentSandbox.create(
+        """Test AgentSandboxPod.create factory method."""
+        sbx = AgentSandboxPod.create(
             sbx_app,
             name="test-sandbox",
             sandbox_id="abc123",
@@ -108,6 +110,22 @@ class TestAgentSandbox:
         assert sbx.command == DAEMON_COMMAND
         assert sbx.args == ["python", "-m", "http.server"]
 
+    def test_instance_is_sibling_not_pod_subclass(self, sbx_app: AgentSandboxKresApp):
+        """SandboxInstance shares AgentSandboxWorkload fields but is not a Pod subclass."""
+        instance = AgentSandboxInstance.create(
+            sbx_app,
+            name="si-sandbox",
+            sandbox_id="def456",
+            workdir="/app",
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
+        )
+        assert isinstance(instance, AgentSandboxWorkload)
+        assert isinstance(instance, AgentSandboxInstance)
+        assert not isinstance(instance, AgentSandboxPod)
+        assert not issubclass(AgentSandboxInstance, AgentSandboxPod)
+        assert AgentSandboxPod.workload_type_key == "default"
+        assert instance.workload_type_key == "sandbox_instance"
+
 
 class TestAgentSandboxService:
     """Test AgentSandboxService entity."""
@@ -122,9 +140,9 @@ class TestAgentSandboxService:
         )
 
     @pytest.fixture()
-    def sandbox(self, sbx_app: AgentSandboxKresApp) -> AgentSandbox:
-        """Create an AgentSandbox for testing."""
-        return AgentSandbox.create(
+    def sandbox(self, sbx_app: AgentSandboxKresApp) -> AgentSandboxPod:
+        """Create an AgentSandboxPod for testing."""
+        return AgentSandboxPod.create(
             sbx_app,
             name="test-sandbox",
             sandbox_id="abc123",
@@ -132,7 +150,7 @@ class TestAgentSandboxService:
             snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
         )
 
-    def test_create(self, sandbox: AgentSandbox):
+    def test_create(self, sandbox: AgentSandboxPod):
         """Test AgentSandboxService.create factory method."""
         svc = AgentSandboxService.create(sandbox)
 
@@ -144,7 +162,7 @@ class TestAgentSandboxService:
 
 
 class TestAgentSandboxKModel:
-    """Test AgentSandbox kmodel operations with real K8s cluster."""
+    """Test AgentSandboxPod kmodel operations with real K8s cluster."""
 
     @pytest.fixture()
     def sbx_app(self, namespace_maker) -> AgentSandboxKresApp:
@@ -157,9 +175,9 @@ class TestAgentSandboxKModel:
         return sbx_app
 
     @pytest.fixture()
-    def sandbox(self, sbx_app: AgentSandboxKresApp) -> AgentSandbox:
-        """Create an AgentSandbox for testing."""
-        sbx = AgentSandbox.create(
+    def sandbox(self, sbx_app: AgentSandboxKresApp) -> AgentSandboxPod:
+        """Create an AgentSandboxPod for testing."""
+        sbx = AgentSandboxPod.create(
             sbx_app,
             name=random_resource_name(),
             sandbox_id="abc123",
@@ -174,8 +192,8 @@ class TestAgentSandboxKModel:
         namespace_maker.make(sbx_app.namespace)
 
         # test sandbox pod
-        agent_sandbox_kmodel.create(sandbox)
-        created_sbx = agent_sandbox_kmodel.get(sbx_app, sandbox.name)
+        agent_sandbox_pod_kmodel.create(sandbox)
+        created_sbx = agent_sandbox_pod_kmodel.get(sbx_app, sandbox.name)
         assert created_sbx.name == sandbox.name
         assert created_sbx.sandbox_id == sandbox.sandbox_id
         assert created_sbx.workdir == sandbox.workdir

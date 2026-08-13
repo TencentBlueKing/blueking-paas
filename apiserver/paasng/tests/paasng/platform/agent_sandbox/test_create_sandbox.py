@@ -23,13 +23,19 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.agent_sandbox.constants import SandboxInstancePhase
+from paas_wl.bk_app.agent_sandbox.kres_entities import (
+    AgentSandboxInstance,
+    AgentSandboxKresApp,
+    AgentSandboxPod,
+)
 from paasng.platform.agent_sandbox.constants import (
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SandboxStatus,
     SandboxWorkloadType,
 )
-from paasng.platform.agent_sandbox.exceptions import SandboxError, SandboxImageValidateError
+from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, SandboxError, SandboxImageValidateError
 from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
@@ -83,6 +89,30 @@ class TestCreateSandbox:
         assert sandbox.workload_type == SandboxWorkloadType.DEFAULT.value
         mock_sandbox_provision.assert_called_once()
         mock_image_validator.assert_not_called()
+
+    def test_create_sandbox_instance_provisions_cr(self, bk_app, bk_user, mock_image_validator):
+        """SandboxInstance workload creates SandboxInstance CR instead of Pod."""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create") as mock_create_cr,
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create") as mock_create_pod,
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(AgentSandboxResManager, "_wait_for_sandbox_instance_running"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
+        ):
+            sandbox = create_sandbox(
+                application=bk_app,
+                creator=bk_user.pk,
+                name="si-demo",
+                workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+            )
+
+        assert sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
+        mock_create_cr.assert_called_once()
+        mock_create_pod.assert_not_called()
 
     def test_create_resource_failed(self, bk_app, bk_user, mock_image_validator):
         """Test that failed resource creation sets status to ERR_CREATING."""
@@ -210,7 +240,10 @@ class TestDeleteSandbox:
             sandbox.refresh_from_db()
             assert sandbox.status == SandboxStatus.DELETED.value
             assert sandbox.deleted_at is not None
-            mock_destroy.assert_called_once_with("to-delete")
+            mock_destroy.assert_called_once_with(
+                "to-delete",
+                workload_type=SandboxWorkloadType.DEFAULT.value,
+            )
 
     @pytest.mark.usefixtures("mock_sandbox_provision")
     def test_delete_resource_failed(self, bk_app, bk_user, mock_image_validator):
@@ -334,3 +367,137 @@ class TestImageValidation:
 
         # Should NOT be called when using the default image
         mock_check.assert_not_called()
+
+
+class TestWaitForSandboxInstanceRunning:
+    """Failed SandboxInstance must surface CR status diagnostics (H-1)."""
+
+    def test_failed_includes_status_message_and_pod_logs(self, bk_app):
+        mgr = AgentSandboxResManager(bk_app, "default")
+        mock_client = mock.MagicMock()
+        failed_status = mock.MagicMock(
+            message="MicroVM boot failed: image pull error",
+            podName="si-demo-xyz",
+        )
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.FAILED.value
+        mock_si.get.return_value = mock.MagicMock(status=failed_status)
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.sandbox.kres.KSandboxInstance", return_value=mock_si),
+            mock.patch.object(mgr, "_get_pod_logs", return_value="pull failed\n") as mock_pod_logs,
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock_client
+            with pytest.raises(SandboxCreateError) as exc_info:
+                mgr._wait_for_sandbox_instance_running("si-demo")
+
+        assert exc_info.value.logs is not None
+        assert "MicroVM boot failed: image pull error" in exc_info.value.logs
+        assert "pull failed" in exc_info.value.logs
+        assert "si-demo-xyz" not in exc_info.value.logs
+        mock_pod_logs.assert_called_once_with(mock_client, "si-demo-xyz")
+
+
+class TestGetFromDbRecordRuntimePath:
+    """get_from_db_record must preserve workload_type so destroy/status hit the right resource."""
+
+    @pytest.mark.parametrize(
+        ("workload_type", "entity_cls"),
+        [
+            (SandboxWorkloadType.DEFAULT.value, AgentSandboxPod),
+            (SandboxWorkloadType.SANDBOX_INSTANCE.value, AgentSandboxInstance),
+        ],
+    )
+    def test_builds_entity_by_workload_type(self, bk_app, bk_user, workload_type, entity_cls):
+        sandbox = Sandbox.objects.new(
+            application=bk_app,
+            creator=bk_user.pk,
+            snapshot="python:3.11-alpine",
+            name=f"from-db-{workload_type.replace('_', '-')}",
+            workload_type=workload_type,
+        )
+        with mock.patch(
+            "paasng.platform.agent_sandbox.sandbox.get_router_endpoint",
+            return_value="router.example.com",
+        ):
+            client = AgentSandboxResManager(bk_app, sandbox.target).get_from_db_record(sandbox)
+
+        assert isinstance(client.entity, entity_cls)
+        assert type(client.entity) is entity_cls
+        assert client.entity.name == sandbox.name
+
+    def test_sandbox_instance_destroy_and_status_use_cr(self, bk_app, bk_user):
+        """SandboxInstance client must delete/read the CR, not the Pod API."""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+
+        sandbox = Sandbox.objects.new(
+            application=bk_app,
+            creator=bk_user.pk,
+            snapshot="python:3.11-alpine",
+            name="si-runtime",
+            workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+        )
+        with mock.patch(
+            "paasng.platform.agent_sandbox.sandbox.get_router_endpoint",
+            return_value="router.example.com",
+        ):
+            mgr = AgentSandboxResManager(bk_app, sandbox.target)
+            client = mgr.get_from_db_record(sandbox)
+
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "delete_by_name") as mock_del_cr,
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "delete_by_name") as mock_del_pod,
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "delete_by_name"),
+        ):
+            mgr.destroy(client)
+
+        mock_del_cr.assert_called_once()
+        mock_del_pod.assert_not_called()
+
+        cr_status = mock.MagicMock(status="Pending")
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "get", return_value=cr_status) as mock_get_cr,
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "get") as mock_get_pod,
+        ):
+            assert client.get_status() == "Pending"
+            mock_get_cr.assert_called_once()
+            mock_get_pod.assert_not_called()
+
+    def test_resolve_pod_name_by_workload(self, bk_app, bk_user):
+        """DEFAULT uses entity name; SandboxInstance requires status.podName."""
+        with mock.patch(
+            "paasng.platform.agent_sandbox.sandbox.get_router_endpoint",
+            return_value="router.example.com",
+        ):
+            pod_sbx = Sandbox.objects.new(
+                application=bk_app,
+                creator=bk_user.pk,
+                snapshot="python:3.11-alpine",
+                name="pod-logs",
+            )
+            pod_client = AgentSandboxResManager(bk_app, pod_sbx.target).get_from_db_record(pod_sbx)
+            assert pod_client._resolve_pod_name(mock.MagicMock()) == "pod-logs"
+
+            si_sbx = Sandbox.objects.new(
+                application=bk_app,
+                creator=bk_user.pk,
+                snapshot="python:3.11-alpine",
+                name="si-logs",
+                workload_type=SandboxWorkloadType.SANDBOX_INSTANCE.value,
+            )
+            si_client = AgentSandboxResManager(bk_app, si_sbx.target).get_from_db_record(si_sbx)
+
+        mock_instance = mock.MagicMock()
+        mock_instance.status.podName = "si-logs-from-status"
+        mock_ksi = mock.MagicMock()
+        mock_ksi.get.return_value = mock_instance
+        with mock.patch("paasng.platform.agent_sandbox.sandbox.kres.KSandboxInstance", return_value=mock_ksi):
+            assert si_client._resolve_pod_name(mock.MagicMock()) == "si-logs-from-status"
+
+        mock_instance.status.podName = ""
+        with (
+            mock.patch("paasng.platform.agent_sandbox.sandbox.kres.KSandboxInstance", return_value=mock_ksi),
+            pytest.raises(SandboxError, match="sandbox pod not found"),
+        ):
+            si_client._resolve_pod_name(mock.MagicMock())

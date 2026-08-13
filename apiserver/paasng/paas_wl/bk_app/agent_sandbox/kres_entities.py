@@ -15,14 +15,17 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass, field
+from typing import ClassVar, Self
 
 from attrs import define
 from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, DAEMON_COMMAND
 from paas_wl.bk_app.agent_sandbox.kres_slzs import (
-    AgentSandboxDeserializer,
-    AgentSandboxSerializer,
+    AgentSandboxInstanceDeserializer,
+    AgentSandboxInstanceSerializer,
+    AgentSandboxPodDeserializer,
+    AgentSandboxPodSerializer,
     AgentSandboxServiceDeserializer,
     AgentSandboxServiceSerializer,
     ServicePortPair,
@@ -90,8 +93,17 @@ class AgentSandboxKresApp:
 
 
 @dataclass
-class AgentSandbox(KresAppEntity):
-    """Agent sandbox backed by a Pod.
+class AgentSandboxWorkload(KresAppEntity):
+    """Shared fields for agent-sandbox workloads that build a podTemplate-shaped spec.
+
+    This is a **field-sharing** base for ``AgentSandboxPod`` and ``AgentSandboxInstance``,
+    not a Kubernetes resource type. The two concrete types are siblings:
+
+    - ``AgentSandboxPod`` — native Pod
+    - ``AgentSandboxInstance`` — SandboxInstance CR (cube MicroVM)
+
+    ``workload_type_key`` mirrors platform ``SandboxWorkloadType`` values and is the
+    stable discriminator for delete/status/log routing (prefer this over ``isinstance``).
 
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
@@ -100,13 +112,16 @@ class AgentSandbox(KresAppEntity):
     :param args: The arguments to pass to the command (/usr/local/bin/daemon).
     :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
-    :param volume_mounts: The shared volume mounts for the sandbox Pod. Not persisted;
-        only used during Pod spec construction.
-    :param cpu: The CPU limit in cores. Used to build resources.limits during Pod spec
+    :param volume_mounts: The shared volume mounts. Not persisted; only used during
+        podTemplate / Pod spec construction.
+    :param cpu: The CPU limit in cores. Used to build resources.limits during spec
         construction. Defaults to the platform default (2 cores).
-    :param memory: The memory limit in GB. Used to build resources.limits during Pod spec
+    :param memory: The memory limit in GB. Used to build resources.limits during spec
         construction. Defaults to the platform default (1 GB).
     """
+
+    # Match paasng.platform.agent_sandbox.constants.SandboxWorkloadType values.
+    workload_type_key: ClassVar[str] = "default"
 
     sandbox_id: str
     workdir: str
@@ -124,9 +139,10 @@ class AgentSandbox(KresAppEntity):
         self.command = DAEMON_COMMAND
 
     class Meta:
-        kres_class = kres.KPod
-        serializer = AgentSandboxSerializer
-        deserializer = AgentSandboxDeserializer
+        # Abstract field holder — never manage this type via KresAppEntityManager.
+        kres_class = kres.BaseKresource
+        serializer = None
+        deserializer = None
 
     @classmethod
     def create(
@@ -141,8 +157,8 @@ class AgentSandbox(KresAppEntity):
         volume_mounts: list[VolumeMount] | None = None,
         cpu: float | None = None,
         memory: float | None = None,
-    ) -> "AgentSandbox":
-        """Create an AgentSandbox instance.
+    ) -> Self:
+        """Create a sandbox workload entity of the concrete subclass type.
 
         :param app: The AgentSandboxKresApp instance.
         :param name: The name of the sandbox.
@@ -155,7 +171,7 @@ class AgentSandbox(KresAppEntity):
             (subPath / readOnly decided by the business layer).
         :param cpu: The CPU limit in cores. Defaults to the dataclass default when not provided.
         :param memory: The memory limit in GB. Defaults to the dataclass default when not provided.
-        :return: A new AgentSandbox instance.
+        :return: A new entity of the same type as ``cls``.
         """
         extra_resource_fields: dict = {}
         if cpu is not None:
@@ -174,6 +190,30 @@ class AgentSandbox(KresAppEntity):
             volume_mounts=list(volume_mounts or []),
             **extra_resource_fields,
         )
+
+
+@dataclass
+class AgentSandboxPod(AgentSandboxWorkload):
+    """Agent sandbox backed by a native Kubernetes Pod"""
+
+    workload_type_key: ClassVar[str] = "default"
+
+    class Meta:
+        kres_class = kres.KPod
+        serializer = AgentSandboxPodSerializer
+        deserializer = AgentSandboxPodDeserializer
+
+
+@dataclass
+class AgentSandboxInstance(AgentSandboxWorkload):
+    """Agent sandbox backed by a SandboxInstance CR (cube MicroVM)"""
+
+    workload_type_key: ClassVar[str] = "sandbox_instance"
+
+    class Meta:
+        kres_class = kres.KSandboxInstance
+        serializer = AgentSandboxInstanceSerializer
+        deserializer = AgentSandboxInstanceDeserializer
 
 
 @dataclass
@@ -196,12 +236,17 @@ class AgentSandboxService(KresAppEntity):
         deserializer = AgentSandboxServiceDeserializer
 
     @classmethod
-    def create(cls, sandbox: AgentSandbox) -> "AgentSandboxService":
+    def create(cls, sandbox: AgentSandboxWorkload) -> "AgentSandboxService":
         ports = [ServicePortPair(name="daemon", port=DAEMON_BIND_PORT, target_port=DAEMON_BIND_PORT)]
         return cls(app=sandbox.app, name=sandbox.name, ports=ports, sandbox_id=sandbox.sandbox_id)
 
 
-agent_sandbox_kmodel: KresAppEntityManager[AgentSandbox, AgentSandboxKresApp] = KresAppEntityManager(AgentSandbox)
+agent_sandbox_pod_kmodel: KresAppEntityManager[AgentSandboxPod, AgentSandboxKresApp] = KresAppEntityManager(
+    AgentSandboxPod
+)
+agent_sandbox_instance_kmodel: KresAppEntityManager[AgentSandboxInstance, AgentSandboxKresApp] = KresAppEntityManager(
+    AgentSandboxInstance
+)
 agent_sandbox_svc_kmodel: KresAppEntityManager[AgentSandboxService, AgentSandboxKresApp] = KresAppEntityManager(
     AgentSandboxService
 )

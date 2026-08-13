@@ -137,7 +137,7 @@ class BaseKresource:
 
     kind = ""
 
-    def __init__(self, client, request_timeout: Optional[float] = None, api_version: str = ""):
+    def __init__(self, client, request_timeout: float | None = None, api_version: str = ""):
         # Kres is able to support both client module or an ApiClient instance
         if isinstance(client, ModuleType):
             # The ApiClient will use the default Configuration by default
@@ -552,7 +552,7 @@ class KNode(BaseKresource):
 class KNamespace(BaseKresource):
     kind = "Namespace"
 
-    def wait_for_default_sa(self, namespace: Namespace, timeout: Optional[float] = None, check_period: float = 0.5):
+    def wait_for_default_sa(self, namespace: Namespace, timeout: float | None = None, check_period: float = 0.5):
         """Calling this function will blocks until the default ServiceAccount was created
 
         :param timeout: timeout seconds for this join operation, default to never timeout
@@ -631,7 +631,7 @@ class KPod(BaseKresource):
         name: str,
         target_statuses: Collection[str],
         namespace: Namespace = None,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check_period: float = 0.5,
     ):
         """Calling this function will blocks until the pod's status has become {target_status}
@@ -665,6 +665,41 @@ class KPod(BaseKresource):
         return client_mod.CoreV1Api(self.client).read_namespaced_pod_log(
             name=name, namespace=namespace, _preload_content=False, _request_timeout=timeout, **kwargs
         )
+
+
+class KSandboxInstance(BaseKresource):
+    """CRD: SandboxInstance managed by sandbox-controller (cube MicroVM)."""
+
+    kind = "SandboxInstance"
+
+    def wait_for_status(
+        self,
+        name: str,
+        target_statuses: Collection[str],
+        namespace: Namespace = None,
+        timeout: float | None = None,
+        check_period: float = 0.5,
+    ):
+        """Block until SandboxInstance status.phase is one of ``target_statuses``.
+
+        :param target_statuses: return normally when instance phase is one of given statuses
+        :param timeout: timeout seconds for this join operation, default to never timeout
+        :param check_period: wait interval for polling
+        :raises: ReadTargetStatusTimeout
+        """
+        time_started = time.time()
+        instance = None
+        while timeout is None or time.time() - time_started < timeout:
+            try:
+                instance = self.get(name, namespace=namespace)
+            except ResourceMissing:
+                logger.warning("SandboxInstance %s %s not found.", namespace, name)
+            else:
+                phase = getattr(getattr(instance, "status", None), "phase", None)
+                if phase in target_statuses:
+                    return phase
+            time.sleep(check_period)
+        raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=instance)
 
 
 class KDeployment(BaseKresource):

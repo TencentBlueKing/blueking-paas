@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Unit tests for AgentSandboxSerializer._construct_pod_spec, focusing on
+"""Unit tests for AgentSandboxPodSerializer._construct_pod_spec, focusing on
 how VolumeMount items are rendered into ``volumes`` + ``volumeMounts``
 (single CSI inline volume + subPath-split mounts)."""
 
@@ -24,13 +24,20 @@ import uuid
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.agent_sandbox.constants import SHARED_VOLUME_NAME_IN_POD
+from paas_wl.bk_app.agent_sandbox.constants import (
+    SANDBOX_INSTANCE_API_VERSION,
+    SANDBOX_INSTANCE_NETWORK_MODE,
+    SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
+    SHARED_VOLUME_NAME_IN_POD,
+)
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
-    AgentSandbox,
+    AgentSandboxInstance,
     AgentSandboxKresApp,
+    AgentSandboxPod,
     VolumeMount,
 )
-from paas_wl.bk_app.agent_sandbox.kres_slzs import AgentSandboxSerializer
+from paas_wl.bk_app.agent_sandbox.kres_slzs import AgentSandboxInstanceSerializer, AgentSandboxPodSerializer
+from paas_wl.infras.resources.kube_res.base import GVKConfig
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -46,13 +53,13 @@ def sbx_app() -> AgentSandboxKresApp:
     )
 
 
-def _make_sandbox(sbx_app, *, volume_mounts=None, cpu=None, memory=None) -> AgentSandbox:
+def _make_sandbox(sbx_app, *, volume_mounts=None, cpu=None, memory=None) -> AgentSandboxPod:
     kwargs = {}
     if cpu is not None:
         kwargs["cpu"] = cpu
     if memory is not None:
         kwargs["memory"] = memory
-    return AgentSandbox.create(
+    return AgentSandboxPod.create(
         sbx_app,
         name="test-sandbox",
         sandbox_id="abc123",
@@ -73,7 +80,7 @@ class TestConstructPodSpecVolumes:
 
     def test_no_volume_mounts_omits_volumes(self, sbx_app):
         sbx = _make_sandbox(sbx_app, volume_mounts=None)
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         assert "volumes" not in spec
         main_container = spec["containers"][0]
@@ -92,7 +99,7 @@ class TestConstructPodSpecVolumes:
                 ),
             ],
         )
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         assert len(spec["volumes"]) == 1
         vol = spec["volumes"][0]
@@ -130,7 +137,7 @@ class TestConstructPodSpecVolumes:
                 ),
             ],
         )
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         # Only a single CSI inline volume is declared regardless of mount count.
         assert len(spec["volumes"]) == 1
@@ -163,7 +170,7 @@ class TestConstructPodSpecVolumes:
                 )
             ],
         )
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
         csi = spec["volumes"][0]["csi"]
 
         assert csi["driver"] == "nfs.csi.k8s.io"
@@ -178,9 +185,9 @@ class TestConstructPodSpecResources:
     requests keep the platform default values."""
 
     def test_default_resources(self, sbx_app):
-        # 未显式指定时走 AgentSandbox 的默认值 (2 核 / 1 GB)
+        # 未显式指定时走 AgentSandboxPod 的默认值 (2 核 / 1 GB)
         sbx = _make_sandbox(sbx_app)
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
         assert resources["limits"] == {"cpu": "2000m", "memory": "1024Mi"}
@@ -188,7 +195,7 @@ class TestConstructPodSpecResources:
 
     def test_custom_resources(self, sbx_app):
         sbx = _make_sandbox(sbx_app, cpu=3, memory=2)
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
         assert resources["limits"] == {"cpu": "3000m", "memory": "2048Mi"}
@@ -198,7 +205,38 @@ class TestConstructPodSpecResources:
     def test_limits_not_below_requests(self, sbx_app):
         # 即使配置极小的值, limits 也不会低于 requests
         sbx = _make_sandbox(sbx_app, cpu=0, memory=0)
-        spec = AgentSandboxSerializer._construct_pod_spec(sbx)
+        spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
         assert resources["limits"] == {"cpu": "50m", "memory": "128Mi"}
+
+
+class TestAgentSandboxInstanceSerializer:
+    """Verify SandboxInstance CR manifest shape (S-002)."""
+
+    def test_serialize_sandbox_instance(self, sbx_app):
+        sbx = AgentSandboxInstance.create(
+            sbx_app,
+            name="si-sandbox",
+            sandbox_id="abc123",
+            workdir="/workspace",
+            snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
+            env={"TOKEN": "t", "SERVER_PORT": "30000"},
+        )
+        gvk_config = GVKConfig(
+            server_version="v1.24.0",
+            kind="SandboxInstance",
+            preferred_apiversion=SANDBOX_INSTANCE_API_VERSION,
+            available_apiversions=[SANDBOX_INSTANCE_API_VERSION],
+        )
+        manifest = AgentSandboxInstanceSerializer(AgentSandboxInstance, gvk_config).serialize(sbx)
+
+        assert manifest["apiVersion"] == SANDBOX_INSTANCE_API_VERSION
+        assert manifest["kind"] == "SandboxInstance"
+        assert manifest["metadata"]["name"] == "si-sandbox"
+        assert manifest["spec"]["desiredState"] == "Running"
+        assert manifest["spec"]["runtimeClassName"] == SANDBOX_INSTANCE_RUNTIME_CLASS_NAME
+        assert manifest["spec"]["network"]["mode"] == SANDBOX_INSTANCE_NETWORK_MODE
+        assert manifest["spec"]["domain"] == {}
+        assert manifest["spec"]["podTemplate"]["containers"][0]["name"] == "main"
+        assert manifest["spec"]["podTemplate"]["labels"]["bkapp.paas.bk.tencent.com/sandbox-id"] == "abc123"

@@ -21,7 +21,7 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp
+from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandboxKresApp, AgentSandboxPod
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
 from tests.paasng.platform.agent_sandbox.stubs import (
@@ -137,7 +137,7 @@ def sandbox_id(
         tenant_id=sandbox_obj.application.tenant_id,
         target=sandbox_obj.target,
     )
-    entity = AgentSandbox.create(
+    entity = AgentSandboxPod.create(
         app=kres_app,
         name=sandbox_obj.name,
         sandbox_id=sandbox_obj.uuid.hex,

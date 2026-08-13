@@ -21,7 +21,7 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp
+from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandboxKresApp, AgentSandboxPod
 from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
 
 from .stubs import DEFAULT_WORKDIR, StubDaemonClient, StubDaemonClientFactory
@@ -65,14 +65,14 @@ def stub_kres_app(bk_app) -> AgentSandboxKresApp:
 
 
 @pytest.fixture()
-def stub_agent_sandbox(stub_kres_app: AgentSandboxKresApp) -> AgentSandbox:
-    """Fixture that provides an AgentSandbox entity for testing.
+def stub_agent_sandbox(stub_kres_app: AgentSandboxKresApp) -> AgentSandboxPod:
+    """Fixture that provides an AgentSandboxPod entity for testing.
 
     :param stub_kres_app: The kres app fixture.
-    :returns: An AgentSandbox entity.
+    :returns: An AgentSandboxPod entity.
     """
     sandbox_id = uuid.uuid4().hex
-    return AgentSandbox.create(
+    return AgentSandboxPod.create(
         app=stub_kres_app,
         name=f"test-sbx-{sandbox_id[:8]}",
         sandbox_id=sandbox_id,
@@ -84,7 +84,7 @@ def stub_agent_sandbox(stub_kres_app: AgentSandboxKresApp) -> AgentSandbox:
 
 @pytest.fixture()
 def stub_k8s_sandbox(
-    stub_agent_sandbox: AgentSandbox,
+    stub_agent_sandbox: AgentSandboxPod,
     stub_daemon_factory: StubDaemonClientFactory,
 ) -> Iterator[KubernetesPodSandbox]:
     """Fixture that provides a KubernetesPodSandbox with StubDaemonClient backend.

@@ -25,13 +25,24 @@ from paas_wl.bk_app.agent_sandbox.constants import (
     DAEMON_BIND_PORT,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
+    SANDBOX_INSTANCE_API_VERSION,
+    SANDBOX_INSTANCE_DESIRED_STATE_RUNNING,
+    SANDBOX_INSTANCE_NETWORK_MODE,
+    SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
     SHARED_VOLUME_NAME_IN_POD,
+    SandboxInstancePhase,
 )
 from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
 from paas_wl.infras.resources.kube_res.base import KresAppEntityDeserializer, KresAppEntitySerializer
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp, AgentSandboxService
+    from paas_wl.bk_app.agent_sandbox.kres_entities import (
+        AgentSandboxInstance,
+        AgentSandboxKresApp,
+        AgentSandboxPod,
+        AgentSandboxService,
+        AgentSandboxWorkload,
+    )
 
 
 @define
@@ -42,10 +53,69 @@ class ServicePortPair:
     protocol: str = "TCP"
 
 
-class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
-    """The serializer for AgentSandbox entity."""
+class AgentSandboxLabels:
+    """Generate and parse labels for an agent sandbox workload."""
 
-    def serialize(self, obj: "AgentSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
+    key_sandbox_id = "bkapp.paas.bk.tencent.com/sandbox-id"
+
+    @classmethod
+    def parse(cls, labels: dict[str, str]) -> str:
+        """Parse labels from an agent sandbox workload.
+
+        :return: sandbox_id
+        """
+        sandbox_id = labels.get(cls.key_sandbox_id, "")
+        return sandbox_id
+
+    @classmethod
+    def generate(cls, sandbox_id: str) -> dict[str, str]:
+        """Generate labels for an agent sandbox workload."""
+        return {
+            "app.kubernetes.io/managed-by": "bkpaas-agent-sandbox",
+            cls.key_sandbox_id: sandbox_id,
+        }
+
+
+def _build_resources(cpu: float, memory: float) -> Dict[str, Dict[str, str]]:
+    """Build the container ``resources`` block for a sandbox Pod.
+
+    The ``limits`` are derived from the per-sandbox cpu/memory values (resolved from the
+    app-level config or the platform default), while ``requests`` keep the platform
+    default values. ``limits`` are guaranteed to be no less than ``requests``.
+
+    :param cpu: The CPU limit in cores (e.g. 2 means 2000m).
+    :param memory: The memory limit in GB (e.g. 1 means 1024Mi).
+    :returns: A dict with ``limits`` and ``requests`` sub-blocks.
+    """
+    requests = DEFAULT_RESOURCES["requests"]
+
+    cpu_milli = max(round(cpu * 1000), int(parse_quantity(requests["cpu"]) * 1000))
+    memory_mi = max(round(memory * 1024), int(parse_quantity(requests["memory"]) / (1024 * 1024)))
+
+    return {
+        "limits": {"cpu": f"{cpu_milli}m", "memory": f"{memory_mi}Mi"},
+        "requests": dict(requests),
+    }
+
+
+def _build_csi_volume_source() -> Dict[str, Any]:
+    """Build the ``csi`` source block for the shared inline volume.
+
+    The driver and volumeAttributes are fully driven by settings so that any
+    RWX-capable CSI driver (Tencent Cloud CFS, NFS, CephFS, ...) can be used
+    without code changes: ``AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES`` is passed
+    through as-is, and its keys are defined by the target CSI driver.
+    """
+    return {
+        "driver": settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER,
+        "volumeAttributes": dict(settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES),
+    }
+
+
+class AgentSandboxPodSerializer(KresAppEntitySerializer["AgentSandboxPod"]):
+    """The serializer for AgentSandboxPod entity."""
+
+    def serialize(self, obj: "AgentSandboxPod", original_obj: Optional[ResourceInstance] = None, **kwargs):
         return {
             "apiVersion": self.get_apiversion(),
             "kind": "Pod",
@@ -57,7 +127,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         }
 
     @staticmethod
-    def _construct_pod_spec(obj: "AgentSandbox") -> Dict:
+    def _construct_pod_spec(obj: "AgentSandboxWorkload") -> Dict:
         env = [{"name": key, "value": value} for key, value in obj.env.items()]
 
         main_container = {
@@ -120,46 +190,10 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
         return pod_spec
 
 
-def _build_resources(cpu: float, memory: float) -> Dict[str, Dict[str, str]]:
-    """Build the container ``resources`` block for a sandbox Pod.
+class AgentSandboxPodDeserializer(KresAppEntityDeserializer["AgentSandboxPod", "AgentSandboxKresApp"]):
+    """The deserializer for AgentSandboxPod entity."""
 
-    The ``limits`` are derived from the per-sandbox cpu/memory values (resolved from the
-    app-level config or the platform default), while ``requests`` keep the platform
-    default values. ``limits`` are guaranteed to be no less than ``requests``.
-
-    :param cpu: The CPU limit in cores (e.g. 2 means 2000m).
-    :param memory: The memory limit in GB (e.g. 1 means 1024Mi).
-    :returns: A dict with ``limits`` and ``requests`` sub-blocks.
-    """
-    requests = DEFAULT_RESOURCES["requests"]
-
-    cpu_milli = max(int(round(cpu * 1000)), int(parse_quantity(requests["cpu"]) * 1000))
-    memory_mi = max(int(round(memory * 1024)), int(parse_quantity(requests["memory"]) / (1024 * 1024)))
-
-    return {
-        "limits": {"cpu": f"{cpu_milli}m", "memory": f"{memory_mi}Mi"},
-        "requests": dict(requests),
-    }
-
-
-def _build_csi_volume_source() -> Dict[str, Any]:
-    """Build the ``csi`` source block for the shared inline volume.
-
-    The driver and volumeAttributes are fully driven by settings so that any
-    RWX-capable CSI driver (Tencent Cloud CFS, NFS, CephFS, ...) can be used
-    without code changes: ``AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES`` is passed
-    through as-is, and its keys are defined by the target CSI driver.
-    """
-    return {
-        "driver": settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER,
-        "volumeAttributes": dict(settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES),
-    }
-
-
-class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentSandboxKresApp"]):
-    """The deserializer for AgentSandbox entity."""
-
-    def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandbox":
+    def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandboxPod":
         main_container = kube_data.spec.containers[0]
         workdir = getattr(main_container, "workingDir", "")
         # Parse and get env as dict
@@ -191,6 +225,88 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
         if not phase:
             return "Pending"
         return phase
+
+
+class AgentSandboxInstanceSerializer(KresAppEntitySerializer["AgentSandboxInstance"]):
+    """Serialize AgentSandboxInstance into a SandboxInstance CR (cube MicroVM)."""
+
+    api_version = SANDBOX_INSTANCE_API_VERSION
+
+    def serialize(self, obj: "AgentSandboxInstance", original_obj: Optional[ResourceInstance] = None, **kwargs):
+        labels = AgentSandboxLabels.generate(obj.sandbox_id)
+        pod_spec = AgentSandboxPodSerializer._construct_pod_spec(obj)
+
+        pod_template: Dict[str, Any] = {
+            "containers": pod_spec["containers"],
+            "imagePullSecrets": pod_spec.get("imagePullSecrets") or [],
+            "labels": labels,
+        }
+        if volumes := pod_spec.get("volumes"):
+            pod_template["volumes"] = volumes
+
+        body: Dict[str, Any] = {
+            "apiVersion": self.get_apiversion(),
+            "kind": "SandboxInstance",
+            "metadata": {
+                "name": obj.name,
+                "labels": labels,
+            },
+            "spec": {
+                "desiredState": SANDBOX_INSTANCE_DESIRED_STATE_RUNNING,
+                "runtimeClassName": SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
+                "network": {"mode": SANDBOX_INSTANCE_NETWORK_MODE},
+                # Leave domain empty; sandbox-controller computes guest size.
+                "domain": {},
+                "podTemplate": pod_template,
+            },
+        }
+        if original_obj:
+            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
+        return body
+
+
+class AgentSandboxInstanceDeserializer(KresAppEntityDeserializer["AgentSandboxInstance", "AgentSandboxKresApp"]):
+    """Deserialize a SandboxInstance CR into an AgentSandboxInstance entity."""
+
+    def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandboxInstance":
+        containers = getattr(kube_data.spec.podTemplate, "containers", None) or []
+        main_container = containers[0] if containers else None
+        workdir = getattr(main_container, "workingDir", "") if main_container else ""
+        image = (
+            getattr(main_container, "image", settings.AGENT_SANDBOX_DEFAULT_IMAGE)
+            if main_container
+            else settings.AGENT_SANDBOX_DEFAULT_IMAGE
+        )
+        env: dict[str, str] = {}
+        args: list = []
+        if main_container:
+            env = {
+                str(item.name): str(getattr(item, "value", ""))
+                for item in (getattr(main_container, "env", None) or [])
+                if getattr(item, "name", None)
+            }
+            args = getattr(main_container, "args", []) or []
+
+        labels = kube_data.metadata.labels or {}
+        # Use self.entity_type to avoid circular import with kres_entities
+        return self.entity_type(
+            app=app,
+            name=kube_data.metadata.name,
+            sandbox_id=AgentSandboxLabels.parse(labels),
+            workdir=workdir,
+            image=image,
+            env=env,
+            args=args,
+            status=self._get_status(kube_data),
+        )
+
+    @staticmethod
+    def _get_status(instance: ResourceInstance) -> str:
+        status = getattr(instance, "status", None)
+        if not status:
+            return SandboxInstancePhase.PENDING.value
+        phase = getattr(status, "phase", None)
+        return phase or SandboxInstancePhase.PENDING.value
 
 
 class AgentSandboxServiceSerializer(KresAppEntitySerializer["AgentSandboxService"]):
@@ -240,26 +356,3 @@ class AgentSandboxServiceDeserializer(KresAppEntityDeserializer["AgentSandboxSer
             ports=ports,
             sandbox_id=AgentSandboxLabels.parse(kube_data.metadata.labels),
         )
-
-
-class AgentSandboxLabels:
-    """Generate and parse labels for an agent sandbox Pod."""
-
-    key_sandbox_id = "bkapp.paas.bk.tencent.com/sandbox-id"
-
-    @classmethod
-    def parse(cls, labels: dict[str, str]) -> str:
-        """Parse labels from an agent sandbox Pod.
-
-        :return: sandbox_id
-        """
-        sandbox_id = labels.get(cls.key_sandbox_id, "")
-        return sandbox_id
-
-    @classmethod
-    def generate(cls, sandbox_id: str) -> dict[str, str]:
-        """Generate labels for an agent sandbox Pod."""
-        return {
-            "app.kubernetes.io/managed-by": "bkpaas-agent-sandbox",
-            cls.key_sandbox_id: sandbox_id,
-        }

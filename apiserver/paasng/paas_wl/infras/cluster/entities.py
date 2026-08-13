@@ -212,17 +212,26 @@ class AllocationContext:
         return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
 
     @classmethod
-    def create_for_agent_sandbox(cls, tenant_id: str, region: str | None = None) -> "AllocationContext":
+    def create_for_agent_sandbox(
+        cls,
+        tenant_id: str,
+        region: str | None = None,
+        *,
+        is_isolated: bool = False,
+    ) -> "AllocationContext":
         """Create an allocation context for agent sandbox cluster.
 
         :param tenant_id: The tenant ID for the sandbox.
         :param region: Optional region, defaults to settings.DEFAULT_REGION_NAME.
-        :returns: AllocationContext configured for AGENT_SANDBOX usage.
+        :param is_isolated: Whether to allocate an isolated (cube) cluster via
+            ``AGENT_SANDBOX_ISOLATED``.
+        :returns: AllocationContext configured for the matching ClusterUsage.
         """
+        usage = ClusterUsage.AGENT_SANDBOX_ISOLATED if is_isolated else ClusterUsage.AGENT_SANDBOX
         return cls(
             tenant_id=tenant_id,
             region=region or settings.DEFAULT_REGION_NAME,
-            usage=ClusterUsage.AGENT_SANDBOX,
+            usage=usage,
             # agent_sandbox 不区分环境
             environment="",
         )

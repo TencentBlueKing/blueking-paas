@@ -21,26 +21,30 @@ import re
 import shlex
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from django.conf import settings
 from django.utils import timezone
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
-from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
+from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT, SandboxInstancePhase
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
 from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
-    AgentSandbox,
+    AgentSandboxInstance,
     AgentSandboxKresApp,
+    AgentSandboxPod,
     AgentSandboxService,
+    AgentSandboxWorkload,
     VolumeMount,
-    agent_sandbox_kmodel,
+    agent_sandbox_instance_kmodel,
+    agent_sandbox_pod_kmodel,
     agent_sandbox_svc_kmodel,
 )
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
+from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout, ResourceMissing
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import (
@@ -203,7 +207,7 @@ def delete_sandbox(sandbox_obj: Sandbox) -> None:
     """
     mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
     try:
-        mgr.destroy_by_name(sandbox_obj.name)
+        mgr.destroy_by_name(sandbox_obj.name, workload_type=sandbox_obj.workload_type)
     except SandboxError:
         sandbox_obj.status = SandboxStatus.ERR_DELETING.value
         sandbox_obj.save(update_fields=["status"])
@@ -222,6 +226,24 @@ def get_sandbox_client(sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
     """
     mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
     return mgr.get_from_db_record(sandbox_obj)
+
+
+def _entity_cls_for(workload_type: str) -> type[AgentSandboxWorkload]:
+    """Map platform ``SandboxWorkloadType`` to the concrete K8s entity class."""
+    if workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value:
+        return AgentSandboxInstance
+    return AgentSandboxPod
+
+
+def _kmodel_for(workload_type: str) -> Any:
+    """Map platform ``SandboxWorkloadType`` to the matching kmodel manager.
+
+    Return type is ``Any`` so callers can share get/create/delete_by_name without
+    fighting distinct generic manager types under mypy.
+    """
+    if workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value:
+        return agent_sandbox_instance_kmodel
+    return agent_sandbox_pod_kmodel
 
 
 class AgentSandboxResManager:
@@ -258,66 +280,78 @@ class AgentSandboxResManager:
             "SERVER_PORT": str(DAEMON_BIND_PORT),
         }
 
-        sandbox = AgentSandbox.create(
-            self.kres_app,
-            name=sandbox_obj.name,
-            sandbox_id=sandbox_obj.uuid.hex,
-            workdir=sandbox_obj.workspace,
-            snapshot=sandbox_obj.snapshot,
-            snapshot_entrypoint=sandbox_obj.snapshot_entrypoint,
-            env=env,
-            volume_mounts=volume_mounts,
-            cpu=sandbox_obj.cpu,
-            memory=sandbox_obj.memory,
-        )
+        workload_type = sandbox_obj.workload_type
+        create_kwargs = {
+            "app": self.kres_app,
+            "name": sandbox_obj.name,
+            "sandbox_id": sandbox_obj.uuid.hex,
+            "workdir": sandbox_obj.workspace,
+            "snapshot": sandbox_obj.snapshot,
+            "snapshot_entrypoint": sandbox_obj.snapshot_entrypoint,
+            "env": env,
+            "volume_mounts": volume_mounts,
+            "cpu": sandbox_obj.cpu,
+            "memory": sandbox_obj.memory,
+        }
+
         sandbox_created = False
+        workload: AgentSandboxWorkload
         try:
             with self.kres_app.get_kube_api_client() as client:
                 NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
                 ensure_image_credential(client=client, namespace=self.kres_app.namespace)
-            agent_sandbox_kmodel.create(sandbox)
+            workload = _entity_cls_for(workload_type).create(**create_kwargs)
+            _kmodel_for(workload_type).create(workload)
             sandbox_created = True
-            self._wait_for_running(sandbox.name)
+            if workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value:
+                self._wait_for_sandbox_instance_running(workload.name)
+            else:
+                self._wait_for_running(workload.name)
         except ReadTargetStatusTimeout as exc:
-            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
+            self._cleanup_sandbox_on_create_error(create_kwargs["name"], sandbox_created, workload_type=workload_type)
             raise SandboxCreateTimeout(str(exc)) from exc
         except SandboxCreateError:
-            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
+            self._cleanup_sandbox_on_create_error(create_kwargs["name"], sandbox_created, workload_type=workload_type)
             raise
         except ApiException as exc:
-            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
-            raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
+            self._cleanup_sandbox_on_create_error(create_kwargs["name"], sandbox_created, workload_type=workload_type)
+            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
 
         # 下发 ClusterIP 类型的 service, 关联到 sandbox pod, 由 'Agent Sandbox Router' 进行流量转发
-        sandbox_svc = AgentSandboxService.create(sandbox)
+        sandbox_svc = AgentSandboxService.create(workload)
         try:
             agent_sandbox_svc_kmodel.create(sandbox_svc)
         except ApiException as exc:
+            self._cleanup_sandbox_on_create_error(workload.name, True, workload_type=workload_type)
             raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
 
         router_endpoint = get_router_endpoint(self.kres_app.target)
         return KubernetesPodSandbox(
-            entity=sandbox,
+            entity=workload,
             router_endpoint=router_endpoint,
             daemon_token=sandbox_obj.daemon_token,
         )
 
-    def destroy_by_name(self, name: str) -> None:
-        """Destroy a sandbox by its name"""
+    def destroy_by_name(self, name: str, workload_type: str = SandboxWorkloadType.DEFAULT.value) -> None:
+        """Destroy a sandbox by its name.
+
+        :param name: Sandbox resource name.
+        :param workload_type: Determines whether to delete Pod or SandboxInstance CR.
+        """
         try:
-            agent_sandbox_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
-            # service name 和 pod name 相同
+            _kmodel_for(workload_type).delete_by_name(self.kres_app, name, non_grace_period=True)
+            # service name 和 workload name 相同
             agent_sandbox_svc_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
         except ApiException as exc:
-            raise SandboxError("failed to delete sandbox pod") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxError("failed to delete sandbox workload") from KresAgentSandboxError(str(exc), exc)
 
     def destroy(self, sbx: "KubernetesPodSandbox") -> None:
-        self.destroy_by_name(sbx.entity.name)
+        self.destroy_by_name(sbx.entity.name, workload_type=sbx.entity.workload_type_key)
 
     def get_from_db_record(self, sandbox_obj: Sandbox) -> "KubernetesPodSandbox":
         """Build a runtime sandbox client from a Sandbox record in database."""
         try:
-            entity = AgentSandbox.create(
+            entity = _entity_cls_for(sandbox_obj.workload_type).create(
                 self.kres_app,
                 name=sandbox_obj.name,
                 sandbox_id=sandbox_obj.uuid.hex,
@@ -348,6 +382,43 @@ class AgentSandboxResManager:
                 logs = self._get_pod_logs(client, pod_name)
                 raise SandboxCreateError("sandbox pod failed to start", logs=logs)
 
+    def _wait_for_sandbox_instance_running(self, name: str) -> None:
+        """Wait until SandboxInstance CR reaches Running or Failed phase."""
+        with self.kres_app.get_kube_api_client() as client:
+            phase = kres.KSandboxInstance(client).wait_for_status(
+                name=name,
+                target_statuses={SandboxInstancePhase.RUNNING.value, SandboxInstancePhase.FAILED.value},
+                namespace=self.kres_app.namespace,
+                timeout=self.create_timeout,
+            )
+            if phase == SandboxInstancePhase.FAILED.value:
+                logs = self._get_sandbox_instance_failure_diagnostics(client, name)
+                raise SandboxCreateError("sandbox instance failed to start", logs=logs)
+
+    def _get_sandbox_instance_failure_diagnostics(self, client, name: str) -> str:
+        """Collect failure diagnostics for a Failed SandboxInstance.
+
+        Expose ``status.message`` from sandbox-controller; when ``status.podName`` is set,
+        also append the last lines of the rendered cube Pod (same budget as Pod path).
+        Internal identifiers such as pod/node names are not returned to callers.
+        """
+        parts: list[str] = []
+        pod_name = ""
+        try:
+            instance = kres.KSandboxInstance(client).get(name, namespace=self.kres_app.namespace)
+            status = getattr(instance, "status", None)
+            if status:
+                message = getattr(status, "message", None) or ""
+                pod_name = getattr(status, "podName", None) or ""
+                if message:
+                    parts.append(message)
+        except Exception:
+            logger.exception("failed to get SandboxInstance %s status for diagnostics", name)
+
+        if pod_name and (pod_logs := self._get_pod_logs(client, pod_name)):
+            parts.append(pod_logs)
+        return "\n".join(parts)
+
     def _get_pod_logs(self, client, pod_name: str, tail_lines: int = 500) -> str:
         """Get logs from a pod for failed to start.
 
@@ -366,17 +437,23 @@ class AgentSandboxResManager:
             logger.exception("failed to get logs from failed pod %s", pod_name)
             return ""
 
-    def _cleanup_sandbox_on_create_error(self, pod_name: str, sandbox_created: bool) -> None:
+    def _cleanup_sandbox_on_create_error(
+        self,
+        name: str,
+        sandbox_created: bool,
+        workload_type: str = SandboxWorkloadType.DEFAULT.value,
+    ) -> None:
         if not sandbox_created:
             return
 
         try:
-            agent_sandbox_kmodel.delete_by_name(self.kres_app, pod_name, non_grace_period=True)
+            _kmodel_for(workload_type).delete_by_name(self.kres_app, name, non_grace_period=True)
         except (ApiException, AppEntityNotFound):
             logger.warning(
-                "failed to cleanup sandbox pod after create error, pod_name=%s, namespace=%s",
-                pod_name,
+                "failed to cleanup sandbox workload after create error, name=%s, namespace=%s, workload_type=%s",
+                name,
                 self.kres_app.namespace,
+                workload_type,
                 exc_info=True,
             )
 
@@ -391,12 +468,12 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     When requesting a pod, the request is first routed to the Agent Sandbox Router
     on the sandbox cluster, which then forwards it to the appropriate sandbox daemon.
 
-    :param entity: The AgentSandbox entity containing sandbox configuration.
+    :param entity: The AgentSandboxWorkload entity containing sandbox configuration.
     :param router_endpoint: The sandbox router endpoint (e.g., "agent-sandbox-router.example.com").
     :param daemon_token: The authentication token for the daemon service.
     """
 
-    def __init__(self, entity: AgentSandbox, router_endpoint: str, daemon_token: str):
+    def __init__(self, entity: AgentSandboxWorkload, router_endpoint: str, daemon_token: str):
         self.entity = entity
         self.router_endpoint = router_endpoint
         self.daemon_token = daemon_token
@@ -504,9 +581,10 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         """Get the current status of the sandbox.
 
         Note: This still uses Kubernetes API as the daemon doesn't provide status info.
+        SandboxInstance workloads read CR ``status.phase``; default workloads read Pod phase.
         """
         try:
-            sandbox = agent_sandbox_kmodel.get(self.kres_app, self.entity.name)
+            sandbox = _kmodel_for(self.entity.workload_type_key).get(self.kres_app, self.entity.name)
         except AppEntityNotFound as exc:
             raise SandboxError("sandbox not found") from exc
         else:
@@ -516,11 +594,12 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         """Get the logs of the sandbox.
 
         Note: This still uses Kubernetes API as the daemon doesn't provide logs.
+        For SandboxInstance, the underlying Pod name comes from CR ``status.podName``.
         """
         try:
             with self.kres_app.get_kube_api_client() as client:
                 resp = kres.KPod(client).get_log(
-                    name=self.entity.name,
+                    name=self._resolve_pod_name(client),
                     namespace=self.namespace,
                     tail_lines=tail_lines,
                     timestamps=timestamps,
@@ -528,6 +607,25 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
             return resp.data.decode("utf-8", errors="replace")
         except ApiException as exc:
             raise SandboxError("failed to get sandbox logs") from KresAgentSandboxError(str(exc), exc)
+
+    def _resolve_pod_name(self, client) -> str:
+        """Resolve the Pod name used for log retrieval.
+
+        SandboxInstance must expose ``status.podName``; do not fall back to label
+        selection, which can match unrelated Pods sharing the same sandbox-id label.
+        """
+        if self.entity.workload_type_key != SandboxWorkloadType.SANDBOX_INSTANCE.value:
+            return self.entity.name
+
+        try:
+            instance = kres.KSandboxInstance(client).get(self.entity.name, namespace=self.namespace)
+        except (ResourceMissing, ApiException) as exc:
+            raise SandboxError("sandbox pod not found") from exc
+
+        pod_name = getattr(getattr(instance, "status", None), "podName", None) or ""
+        if not pod_name:
+            raise SandboxError("sandbox pod not found")
+        return pod_name
 
     def _build_command_string(self, cmd: list[str] | str, env_vars: dict) -> str:
         """Build the command string with environment variables.

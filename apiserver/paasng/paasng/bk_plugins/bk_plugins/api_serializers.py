@@ -22,7 +22,7 @@ from rest_framework import serializers
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import validate_app_tenant_info
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.serializers import AppIDField, AppNameField
+from paasng.platform.applications.serializers import AppIDField, AppNameField, RoleField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import field_env_var_key
 
@@ -161,6 +161,17 @@ class PluginMemberSLZ(serializers.Serializer):
     class Meta:
         # Set a ref_name to avoid conflicts for drf-yasg
         ref_name = "PluginMemberSLZ__bk_plugins"
+
+
+class PluginMemberWithRolesSLZ(serializers.Serializer):
+    """插件应用单个成员的返回体格式"""
+
+    username = serializers.CharField(help_text="用户名")
+    roles = serializers.ListField(child=RoleField(), help_text="用户角色列表")
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginMemberWithRolesSLZ__bk_plugins"
 
 
 class PluginRoleMembersSLZ(serializers.Serializer):

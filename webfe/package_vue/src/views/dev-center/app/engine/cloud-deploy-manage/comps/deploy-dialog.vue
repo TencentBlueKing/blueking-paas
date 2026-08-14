@@ -285,6 +285,36 @@
         </div>
       </div>
 
+      <!-- 构建调试 -->
+      <div
+        v-if="isShowBuildDebug"
+        class="advanced-options"
+      >
+        <div
+          class="advanced-options-header"
+          @click="isAdvancedOptionsExpanded = !isAdvancedOptionsExpanded"
+        >
+          <i
+            class="paasng-icon"
+            :class="isAdvancedOptionsExpanded ? 'paasng-angle-line-down' : 'paasng-angle-line-up'"
+          />
+          <span>{{ $t('高级选项') }}</span>
+        </div>
+        <div
+          v-show="isAdvancedOptionsExpanded"
+          class="build-debug-option"
+        >
+          <div class="label">{{ $t('构建调试') }}</div>
+          <p class="tips mt-4 mb-6">
+            {{ $t('开启后，构建容器会在构建结束后保留30分钟，期间可登录容器查看日志和调试') }}
+          </p>
+          <bk-switcher
+            v-model="debugEnabled"
+            theme="primary"
+          />
+        </div>
+      </div>
+
       <div
         class="v1-container"
         v-if="isShowImagePullStrategy || isSmartApp"
@@ -369,6 +399,8 @@
         </div>
       </section>
     </bk-dialog>
+
+    <!-- 部署日志侧栏 -->
     <bk-sideslider
       :is-show.sync="isShowSideslider"
       :title="$t('部署日志')"
@@ -376,7 +408,10 @@
       :quick-close="true"
       :before-close="handleCloseProcessWatch"
     >
-      <div slot="content">
+      <div
+        slot="content"
+        class="deploy-status-detail"
+      >
         <deploy-status-detail
           ref="deployStatusRef"
           :environment="environment"
@@ -583,6 +618,8 @@ export default {
       },
       deployRefreshLoading: false,
       codeRefreshLoading: false,
+      isAdvancedOptionsExpanded: true,
+      debugEnabled: false,
       commitDialog: {
         visiable: false,
         isLoading: false,
@@ -644,6 +681,11 @@ export default {
         return this.buttonActive === 'image';
       }
       return !this.allowMultipleImage;
+    },
+
+    // 蓝鲸 Buildpack 从源码构建时支持构建调试
+    isShowBuildDebug() {
+      return this.deploymentInfoBackUp.build_method === 'buildpack' && this.buttonActive === 'branch';
     },
 
     // 上一次选择的镜像拉取策略
@@ -712,6 +754,8 @@ export default {
         const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = activeImageSource || 'branch';
+        this.isAdvancedOptionsExpanded = true;
+        this.debugEnabled = false;
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -1068,6 +1112,7 @@ export default {
         // V1alpha1与V1alpha2都添加镜像拉取策略
         const advancedOptions = {
           image_pull_policy: this.imagePullStrategy,
+          debug_enabled: this.isShowBuildDebug && this.debugEnabled,
         };
         // 源码构建
         if (this.isSourceCodeBuild) {
@@ -1414,6 +1459,30 @@ export default {
   }
 }
 
+.advanced-options {
+  margin-top: 24px;
+  .advanced-options-header {
+    display: inline-flex;
+    align-items: center;
+    color: #3a84ff;
+    cursor: pointer;
+    .paasng-icon {
+      margin-right: 8px;
+      font-size: 12px;
+    }
+  }
+  .build-debug-option {
+    margin-top: 24px;
+    .label {
+      color: #4d4f56;
+    }
+    .tips {
+      font-size: 12px;
+      color: #979ba5;
+    }
+  }
+}
+
 .image-tag-cls {
   /deep/ .bk-label::after {
     display: none;
@@ -1495,11 +1564,12 @@ export default {
   transform: translateY(-1px);
 }
 .deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
-  overflow: unset;
-  .paas-deploy-log-wrapper {
+  overflow: hidden;
+  .bk-sideslider-content {
+    overflow: hidden;
+  }
+  .deploy-status-detail {
     height: 100%;
-    margin-bottom: 24px;
-    min-height: 620px;
   }
 }
 .code-depot {

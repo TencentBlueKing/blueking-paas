@@ -4,7 +4,7 @@
     :is-show.sync="historySideslider.isShow"
     :quick-close="true"
     ext-cls="deploy-history-sideslider"
-    @hidden="errorTips = {}"
+    @hidden="handleSidesliderHidden"
   >
     <div
       slot="header"
@@ -35,26 +35,32 @@
       class="deploy-detail"
     >
       <template v-if="!(isLogLoading || isTimelineLoading)">
-        <deploy-timeline
-          v-if="timeLineList.length"
-          :list="timeLineList"
-          :disabled="true"
-          class="mt20 ml15 mr15"
-          style="min-width: 250px"
+        <!-- 部署状态栏 -->
+        <deploy-status-bar
+          v-if="isDeployOperation"
+          :app-code="appCode"
+          :module-id="moduleId"
+          :deployment="currentDeployment"
+          :possible-reason="errorTips.possible_reason"
+          :debug-disabled="!currentDeployment.isLatestDeployment"
+          @redeploy="handleRedeploy"
+          @back="handleBack"
         />
-        <div class="paas-log-box">
-          <div
-            v-if="isMatchedSolutionsFound"
-            class="wrapper danger"
-          >
-            <div class="fl">
-              <span class="paasng-icon paasng-info-circle-shape" />
-            </div>
-            <section style="position: relative; margin-left: 50px">
-              <p class="deploy-pending-text">
-                {{ $t('部署失败') }}
-              </p>
-              <p class="deploy-text-wrapper">
+        <div class="deploy-log-content">
+          <deploy-timeline
+            v-if="timeLineList.length"
+            :list="timeLineList"
+            :disabled="true"
+            style="min-width: 250px; margin-right: 24px"
+          />
+          <div class="paas-log-box">
+            <deploy-status-bar
+              v-if="!isDeployOperation && isMatchedSolutionsFound"
+              :deployment="{ status: 'failed' }"
+              :show-actions="false"
+              class="legacy-error-summary"
+            >
+              <template slot="description">
                 <span class="reason mr5">{{ errorTips.possible_reason }}</span>
                 <span
                   v-for="(help, index) in errorTips.helpers"
@@ -68,16 +74,16 @@
                     {{ help.text }}
                   </a>
                 </span>
-              </p>
-            </section>
+              </template>
+            </deploy-status-bar>
+            <bk-alert
+              v-else-if="!isMatchedSolutionsFound"
+              class="log-stage-alert"
+              type="warning"
+              :title="$t('仅展示准备阶段、构建阶段日志')"
+            />
+            <log-display :content="curDeployLog" />
           </div>
-          <bk-alert
-            v-else
-            style="margin: -20px -20px 10px -20px; border-radius: 0"
-            type="warning"
-            :title="$t('仅展示准备阶段、构建阶段日志')"
-          />
-          <pre v-dompurify-html="curDeployLog" />
         </div>
       </template>
     </div>
@@ -86,21 +92,25 @@
 
 <script>
 import deployTimeline from './deploy-timeline';
+import DeployStatusBar from './deploy-status-bar.vue';
+import LogDisplay from '@/components/log-display';
 import UserDisplay from '@/components/user/user-display.vue';
 import { mapGetters } from 'vuex';
 
 export default {
   components: {
     deployTimeline,
+    DeployStatusBar,
+    LogDisplay,
     UserDisplay,
   },
   props: {
     appCode: {
-      type: String | Number,
+      type: [String, Number],
       default: '',
     },
     moduleId: {
-      type: String | Number,
+      type: [String, Number],
       default: '',
     },
   },
@@ -121,6 +131,7 @@ export default {
       },
       errorTips: {},
       logExportUrl: '',
+      currentDeployment: {},
     };
   },
 
@@ -128,12 +139,15 @@ export default {
     isMatchedSolutionsFound() {
       return this.errorTips.matched_solutions_found;
     },
+    isDeployOperation() {
+      return this.currentDeployment.operation_type === 'online';
+    },
     ...mapGetters(['isMultiTenantDisplayMode']),
   },
 
   mounted() {
+    // eslint-disable-next-line no-undef
     const AU = require('ansi_up');
-    // eslint-disable-next-line
     this.ansiUp = new AU.default();
   },
 
@@ -314,14 +328,29 @@ export default {
       this.historySideslider.operator = titleInfo.operator;
     },
 
+    handleRedeploy(deployment) {
+      this.historySideslider.isShow = false;
+      this.$emit('redeploy', deployment);
+    },
+
+    handleBack() {
+      this.historySideslider.isShow = false;
+    },
+
+    handleSidesliderHidden() {
+      this.errorTips = {};
+      this.currentDeployment = {};
+    },
+
     handleShowLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
       if (this.isTimelineLoading || this.isLogLoading) {
         return false;
       }
+      this.currentDeployment = row;
 
-      const { operator, created: time, moduleName, environment, operation_type } = row;
+      const { operator, created: time, moduleName, environment, operation_type: operationType } = row;
 
       // 构建标题信息
       const titleInfo = this.buildLogTitleInfo({
@@ -329,12 +358,12 @@ export default {
         environment,
         operator: operator.username,
         time,
-        logType: operation_type,
+        logType: operationType,
       });
 
       this.setSidesliderTitle(titleInfo);
 
-      if (operation_type === 'offline') {
+      if (operationType === 'offline') {
         this.curDeployLog = row.logDetail;
       } else {
         this.getDeployTimeline(row);
@@ -347,6 +376,7 @@ export default {
     handleShowBuildLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
+      this.currentDeployment = {};
       if (this.isTimelineLoading || this.isLogLoading) {
         return false;
       }
@@ -379,103 +409,37 @@ export default {
 }
 .deploy-detail {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
   height: 100%;
+  padding: 20px 24px;
 
   /deep/ .paas-deploy-log-wrapper {
     height: 100%;
   }
 
-  .wrapper {
-    margin: -20px -20px 10px;
-    height: 64px;
-    background: #f5f6fa;
-    line-height: 64px;
-    padding: 0 20px;
+  .deploy-log-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
 
-    &::after {
-      display: block;
-      clear: both;
-      content: '';
-      font-size: 0;
-      height: 0;
-      visibility: hidden;
+    .paas-log-box {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      gap: 10px;
+      background: #fff;
     }
 
-    &.default-box {
-      padding: 11px 12px 11px 20px;
-      height: auto;
-      line-height: 16px;
-      .span {
-        height: 16px;
-      }
+    .log-stage-alert {
+      flex-shrink: 0;
+      border-radius: 0;
     }
 
-    &.not-deploy {
-      height: 42px;
-      line-height: 42px;
-    }
-
-    &.primary {
-      background: #e1ecff;
-      color: #979ba5;
-    }
-
-    &.warning {
-      background: #fff4e2;
-      border-color: #ffdfac;
-
-      .paasng-icon {
-        color: #fe9f07;
-      }
-    }
-
-    &.danger {
-      background: #ffecec;
-      color: #979ba5;
-
-      .paasng-icon {
-        color: #eb3635;
-        position: relative;
-        top: 4px;
-        font-size: 32px;
-      }
-    }
-
-    &.success {
-      background: #e7fcfa;
-      color: #979ba5;
-
-      .paasng-icon {
-        position: relative;
-        top: 4px;
-        color: #3fc06d;
-        font-size: 32px;
-      }
-    }
-    .deploy-pending-text {
-      position: relative;
-      top: 5px;
-      font-size: 14px;
-      color: #313238;
-      font-weight: 500;
-      line-height: 32px;
-    }
-    .deploy-text-wrapper {
-      position: relative;
-      top: -5px;
-      line-height: 32px;
-      font-size: 12px;
-      .branch-text,
-      .version-text,
-      .time-text {
-        font-size: 12px;
-        color: #63656e;
-        opacity: 0.9;
-      }
-      .branch-text,
-      .version-text {
-        margin-right: 30px;
-      }
+    .legacy-error-summary {
+      flex-shrink: 0;
     }
   }
 }

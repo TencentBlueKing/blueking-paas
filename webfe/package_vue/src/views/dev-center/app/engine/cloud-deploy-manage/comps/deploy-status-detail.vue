@@ -1,160 +1,100 @@
 <template>
-  <div class="deploy-view pl10 pr10 pt20">
-    <!-- 部署中、部署成功、部署失败 -->
-    <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
-      <bk-alert
-        type="info"
-        :show-icon="false"
-        class="mb20 alert-cls"
-        v-if="isWatchDeploying"
-      >
-        <div
-          class="flex-row align-items-center justify-content-between"
-          slot="title"
-        >
-          <div class="flex-row align-items-center">
-            <div class="fl">
-              <round-loading
-                size="small"
-                ext-cls="deploy-round-loading"
-              />
-            </div>
-            <p class="deploy-pending-text pl20">
-              {{ $t('正在部署中...') }}
-            </p>
-            <p class="deploy-text-wrapper">
-              <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
-                <!-- 分支 -->
-                <span v-if="deploymentInfo.version_info.version_type === 'branch'">
-                  <span class="version-text pl10">
-                    {{ $t('版本：') }}
-                    {{ deploymentInfo.version_info.revision ? deploymentInfo.version_info.revision.substring(0, 8) : '--' }}
-                  </span>
-                  <span class="branch-text pl30">
-                    {{ $t('分支：') }}
-                    {{ deploymentInfo.version_info.version_name }}
-                  </span>
-                </span>
-                <!-- tag -->
-                <span v-else>
-                  <span class="branch-text">
-                    {{ $t('镜像Tag：') }}
-                    {{ deploymentInfo.version_info.version_name || '--' }}
-                  </span>
-                </span>
-              </span>
-              <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
-                <span class="branch-text">
-                  {{ $t('镜像Tag：') }}
-                  {{ deploymentInfo.version_info.version_name || '--' }}
-                </span>
-              </span>
-              <span
-                v-if="deployTotalTime"
-                class="time-text"
-              >
-                {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}
-              </span>
-            </p>
-          </div>
-          <div
-            v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
-            class="action-wrapper"
-          >
-            <bk-button
-              theme="primary"
-              size="small"
-              :outline="true"
-              @click="stopDeploy"
+  <div class="deploy-view">
+    <deploy-status-bar
+      v-if="isShowDeployStatus"
+      class="mb20"
+      :app-code="appCode"
+      :module-id="curModuleId"
+      :deployment="statusBarDeployment"
+      :possible-reason="curDeployResult.possible_reason"
+    >
+      <template slot="description">
+        <template v-if="isDeployFail">
+          <span class="mr10">
+            {{ deployFailReason }}
+          </span>
+          <template v-if="curDeployResult.result === 'failed' && curDeployResult.error_tips">
+            <a
+              v-for="(help, index) in curDeployResult.error_tips.helpers"
+              :key="index"
+              :href="help.link"
+              target="_blank"
+              class="mr10"
             >
-              {{ $t('停止部署') }}
-            </bk-button>
-          </div>
-        </div>
-      </bk-alert>
-      <bk-alert
-        type="error"
-        :show-icon="false"
-        class="mb20 alert-cls"
-        v-if="isDeployFail"
-      >
-        <div
-          class="flex-row align-items-center justify-content-between"
-          slot="title"
-        >
-          <div class="flex-row align-items-center">
-            <p class="deploy-pending-text pl10">
-              {{ $t('部署失败') }}
-            </p>
-            <p class="pl20">
-              <span>{{ curDeployResult.possible_reason }}</span>
-              <span
-                class="pl10"
-                v-if="curDeployResult.result === 'failed'"
-              >
-                <span
-                  v-for="(help, index) in curDeployResult.error_tips.helpers"
-                  :key="index"
-                >
-                  <a
-                    :href="help.link"
-                    target="_blank"
-                    class="mr10"
-                  >
-                    {{ help.text }}
-                  </a>
-                </span>
+              {{ help.text }}
+            </a>
+          </template>
+        </template>
+        <template v-else-if="isDeployInterrupted">
+          {{ $t('手动停止部署') }}
+        </template>
+        <template v-else>
+          <span v-if="deploymentInfo.version_info">
+            <template
+              v-if="
+                deploymentInfo.build_method !== 'custom_image' && deploymentInfo.version_info.version_type === 'branch'
+              "
+            >
+              <span class="mr20">
+                {{ $t('版本：') }}
+                {{ deploymentInfo.version_info.revision ? deploymentInfo.version_info.revision.substring(0, 8) : '--' }}
               </span>
-            </p>
-          </div>
+              <span>
+                {{ $t('分支：') }}
+                {{ deploymentInfo.version_info.version_name || '--' }}
+              </span>
+            </template>
+            <span v-else>
+              {{ $t('镜像Tag：') }}
+              {{ deploymentInfo.version_info.version_name || '--' }}
+            </span>
+          </span>
+          <span
+            v-if="deployTotalTime"
+            class="ml20"
+          >
+            {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}
+          </span>
+        </template>
+      </template>
+      <template
+        slot="actions"
+        slot-scope="{ theme }"
+      >
+        <bk-button
+          v-if="canStopDeploy"
+          :theme="theme"
+          outline
+          @click="stopDeploy"
+        >
+          {{ $t('停止部署') }}
+        </bk-button>
+        <template v-if="isDeploySuccess">
           <bk-button
-            theme="danger"
-            ext-cls="paas-deploy-failed-btn ml10"
+            :theme="theme"
             outline
-            size="small"
+            @click="handleOpenLink"
+          >
+            {{ $t('访问') }}
+          </bk-button>
+          <bk-button
+            :theme="theme"
+            outline
             @click="handleCallback"
           >
             {{ $t('返回') }}
           </bk-button>
-        </div>
-      </bk-alert>
-      <bk-alert
-        type="success"
-        :show-icon="false"
-        class="mb20 alert-cls"
-        v-if="isDeploySuccess"
-      >
-        <div
-          class="flex-row align-items-center justify-content-between"
-          slot="title"
+        </template>
+        <bk-button
+          v-if="isDeployFail"
+          :theme="theme"
+          outline
+          @click="handleCallback"
         >
-          <p class="deploy-pending-text pl10">
-            {{ $t('部署成功') }}
-          </p>
-          <section>
-            <bk-button
-              theme="success"
-              ext-cls="paas-deploy-success-btn"
-              outline
-              size="small"
-              @click="handleOpenLink"
-            >
-              {{ $t('访问') }}
-            </bk-button>
-            <bk-button
-              style="margin-left: 6px"
-              theme="success"
-              ext-cls="paas-deploy-success-btn"
-              outline
-              size="small"
-              @click="handleCallback"
-            >
-              {{ $t('返回') }}
-            </bk-button>
-          </section>
-        </div>
-      </bk-alert>
-    </div>
+          {{ $t('返回') }}
+        </bk-button>
+      </template>
+    </deploy-status-bar>
     <div class="deploy-time-log flex-row">
       <div
         id="deploy-timeline-box"
@@ -210,12 +150,14 @@
 </template>
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
+import DeployStatusBar from '@/components/deploy/deploy-status-bar.vue';
 import deployTimeline from './deploy-timeline';
 import deployLog from './deploy-log';
 import dayjs from '@/common/dayjs';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash';
 export default {
   components: {
+    DeployStatusBar,
     deployTimeline,
     deployLog,
   },
@@ -306,13 +248,46 @@ export default {
     };
   },
   computed: {
+    isShowDeployStatus() {
+      return [
+        this.isWatchDeploying,
+        this.isDeploySuccess,
+        this.isDeployFail,
+        this.isDeployInterrupted,
+        this.isDeployInterrupting,
+      ].some(Boolean);
+    },
+    canStopDeploy() {
+      return (
+        this.isWatchDeploying &&
+        !this.isDeployInterrupted &&
+        (this.appearDeployState.includes('build') || this.appearDeployState.includes('release'))
+      );
+    },
+    deployFailReason() {
+      return this.curDeployResult.possible_reason || this.$t('暂无解决方案，可前往“标准输出日志”检测是否有异常');
+    },
+    currentDeployStatus() {
+      if (this.isDeploySuccess) return 'successful';
+      if (this.isDeployFail) return 'failed';
+      if (this.isDeployInterrupted) return 'interrupted';
+      return 'pending';
+    },
+    statusBarDeployment() {
+      return {
+        status: this.currentDeployStatus,
+        deployment_id: this.deploymentId,
+        moduleName: this.curModuleId,
+      };
+    },
     curDeployStage() {
-      const flag =
-        this.isWatchDeploying ||
-        this.isDeploySuccess ||
-        this.isDeployFail ||
-        this.isDeployInterrupted ||
-        this.isDeployInterrupting;
+      const flag = [
+        this.isWatchDeploying,
+        this.isDeploySuccess,
+        this.isDeployFail,
+        this.isDeployInterrupted,
+        this.isDeployInterrupting,
+      ].some(Boolean);
       return flag ? 'deploy' : 'noDeploy';
     },
     curModuleId() {
@@ -339,7 +314,7 @@ export default {
     // 接受父组件传过来的rvData
     rvData: {
       handler(v) {
-        this.watchRvData = _.cloneDeep(v);
+        this.watchRvData = cloneDeep(v);
       },
       immediate: true,
     },
@@ -355,14 +330,15 @@ export default {
     this.ansiUp = new AU.default();
 
     window.addEventListener('scroll', () => {
-      this.isScrollFixed =
-        (this.isWatchDeploying ||
-          this.isWatchOfflineing ||
-          this.isDeploySuccess ||
-          this.isDeployFail ||
-          this.isDeployInterrupted ||
-          this.isDeployInterrupting) &&
-        window.pageYOffset >= 260;
+      const isDeploying = [
+        this.isWatchDeploying,
+        this.isWatchOfflineing,
+        this.isDeploySuccess,
+        this.isDeployFail,
+        this.isDeployInterrupted,
+        this.isDeployInterrupting,
+      ].some(Boolean);
+      this.isScrollFixed = isDeploying && window.pageYOffset >= 260;
     });
 
     window.addEventListener('resize', () => {
@@ -462,10 +438,12 @@ export default {
             // 停止部署成功
             this.isDeployInterrupted = true;
             this.isDeployInterrupting = false;
+            this.isWatchDeploying = false;
           }
           this.$nextTick(() => {
-            this.$refs.deployTimelineRef &&
+            if (this.$refs.deployTimelineRef) {
               this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+            }
           });
         });
 
@@ -498,9 +476,9 @@ export default {
             this.serverProcessEvent && this.serverProcessEvent.close(); // 关闭进程的watch事件流
           }
           this.$nextTick(() => {
-            // eslint-disable-next-line max-len
-            this.$refs.deployTimelineRef &&
+            if (this.$refs.deployTimelineRef) {
               this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+            }
           });
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
         });
@@ -1014,7 +992,8 @@ export default {
           if (data.object.module_name !== this.curModuleId) return; // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId || data.object.version !== this.releaseId) return; // 更新当前模块的进程且是当前版本
+          // 更新当前模块的进程且是当前版本
+          if (data.object.module_name !== this.curModuleId || data.object.version !== this.releaseId) return;
           this.updateInstanceData(data);
           // if (data.type === 'ADDED') {
           //   if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
@@ -1200,19 +1179,26 @@ export default {
   },
 };
 </script>
+
 <style lang="scss" scoped>
-.deploy-pending-text {
-  color: #63656e;
-  font-weight: 700;
-  font-size: 14px;
+.deploy-view {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: calc(100vh - 52px);
+  min-height: 0;
+  padding: 20px;
+  overflow: hidden;
 }
-.deploy-text-wrapper {
-  padding-left: 30px;
+
+.deploy-time-log {
+  flex: 1;
+  min-height: 0;
 }
-.alert-cls {
-  border: none !important;
-  /deep/ .bk-alert-wraper {
-    padding: 5px 10px;
-  }
+
+:deep(.paas-deploy-log-wrapper) {
+  height: 100%;
+  min-height: 0;
+  margin-bottom: 0;
 }
 </style>

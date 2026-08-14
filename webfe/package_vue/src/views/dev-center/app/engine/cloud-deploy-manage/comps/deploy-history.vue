@@ -196,6 +196,7 @@
       ref="logSidesliderRef"
       :app-code="appCode"
       :module-id="moduleValue"
+      @redeploy="handleRedeploy"
     />
 
     <!-- 查看YAML -->
@@ -399,8 +400,9 @@ export default {
         });
 
         const reg = RegExp('^[a-z0-9]{40}$');
-        res.results.forEach((operation) => {
+        res.results.forEach((operation, index) => {
           const key = operation.operation_type === 'offline' ? 'offline_operation' : 'deployment';
+          operation.isLatestDeployment = curPage === 1 && index === 0;
           operation.environment = operation[key].environment;
           operation.name = operation[key].repo.name;
           operation.revision = operation[key].repo.revision;
@@ -515,6 +517,19 @@ export default {
      */
     handleShowLogSideslider(row) {
       this.$refs.logSidesliderRef?.handleShowLog(row);
+    },
+
+    // 重新部署
+    handleRedeploy(row) {
+      this.$router.push({
+        name: row.environment === 'prod' ? 'cloudAppDeployManageProd' : 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+          isShowDeploy: true,
+          deployModuleId: row.moduleName,
+          filterModule: row.moduleName,
+        },
+      });
     },
 
     /**

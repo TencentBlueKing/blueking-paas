@@ -85,7 +85,7 @@ module.exports = {
     config.plugin('html-main').use(HtmlWebpackPlugin, [
       {
         template: isProduction ? 'index.html' : 'index.dev.html',
-        inject: isProduction ? false : true,
+        inject: false,
       },
     ]);
 

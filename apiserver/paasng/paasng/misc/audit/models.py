@@ -123,7 +123,7 @@ class BaseOperation(UuidAuditedModel):
             return _("{user} {operation}{module_env_info}{result}").format(**ctx)
 
         if self.target == OperationTarget.SECRET:
-            # target 为密钥时不展示, 如: admin 查看密钥成功
+            # SECRET 的 attribute 记录的是密钥 ID，不在普通文案中暴露，详情通过 attribute 字段查看
             return _("{user} {operation}{target}{result}").format(**ctx)
 
         if self.attribute:

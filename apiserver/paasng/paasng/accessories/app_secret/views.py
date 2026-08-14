@@ -184,6 +184,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.VIEW,
             target=OperationTarget.SECRET,
+            attribute=str(bk_app_secret_id),
         )
         return Response({"bk_app_secret": secret.bk_app_secret})
 

@@ -85,7 +85,7 @@ class TestAppOperationRecord:
             (
                 OperationTarget.SECRET,
                 OperationEnum.VIEW,
-                "1",
+                "10001",  # 被查看的密钥 ID
                 None,
                 None,
                 ResultCode.SUCCESS,

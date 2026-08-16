@@ -82,6 +82,15 @@ class TestAppOperationRecord:
                 ResultCode.ONGOING,
                 "{username} 申请 bkdata 网关 API 权限",
             ),
+            (
+                OperationTarget.SECRET,
+                OperationEnum.VIEW,
+                "10001",  # 被查看的密钥 ID
+                None,
+                None,
+                ResultCode.SUCCESS,
+                "{username} 查看密钥成功",
+            ),
         ],
     )
     def test_opreation_record_display(

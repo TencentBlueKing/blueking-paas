@@ -22,3 +22,8 @@ class LinkType(IntEnum):
     empty = 0
     proxy = 1
     inherit = 2
+
+
+# RabbitMQ stream 插件的默认监听端口。凭证里的字段名是 stream_port，平台注入环境变量时
+# 会加上服务名前缀，应用最终看到的是 RABBITMQ_STREAM_PORT
+DEFAULT_STREAM_PORT = 5552

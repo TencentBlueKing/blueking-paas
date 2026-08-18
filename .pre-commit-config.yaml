@@ -2,6 +2,7 @@ fail_fast: true
 repos:
   - repo: local
     hooks:
+      # === 通用安全检查 ===
       - id: Name check
         name: Check sensitive info
         verbose: true
@@ -15,24 +16,51 @@ repos:
         require_serial: true
         entry: bash -c "if [[ -d pre_commit_hooks ]]; then pre_commit_hooks/ip.sh $@; fi"
 
+      # === 通用 Python 质量检查（Poetry 项目）===
+      # 这些 hook 复用仓库根目录的 Ruff 配置，并默认服务于 apiserver 等现有 Poetry 项目。
+      # app-spark-api 使用独立的 Python/uv 环境，因此在这里显式排除，避免被根 Poetry 环境误伤。
       # 总是使用 --force-exclude 来让 ruff 配置文件中的 exclude 生效
       - id: ruff-check-fix
         name: ruff-check-fix
         language: system
         types: [python]
+        exclude: '^app-spark/app-spark-api/'
         # 修复包导入顺序问题，类似 isort 工具
         entry: poetry run ruff check --force-exclude --select I --fix --no-cache 
       - id: ruff-format
         name: ruff-format
         language: system
         types: [python]
+        exclude: '^app-spark/app-spark-api/'
         entry: poetry run ruff format --force-exclude --no-cache
       - id: ruff-check
         name: ruff-check
         language: system
         types: [python]
+        exclude: '^app-spark/app-spark-api/'
         entry: poetry run ruff check --force-exclude --no-cache
 
+      # === app-spark-api 专用 Python 质量检查（uv 项目）===
+      - id: ruff-check-fix-app-spark-api
+        name: ruff-check-fix for "app-spark-api"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/app-spark-api ruff check --force-exclude --select I --fix --no-cache
+        files: '^app-spark/app-spark-api/'
+      - id: ruff-format-app-spark-api
+        name: ruff-format for "app-spark-api"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/app-spark-api ruff format --force-exclude --no-cache
+        files: '^app-spark/app-spark-api/'
+      - id: ruff-check-app-spark-api
+        name: ruff-check for "app-spark-api"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/app-spark-api ruff check --force-exclude --no-cache
+        files: '^app-spark/app-spark-api/'
+
+      # === 按项目拆分的类型与依赖边界检查 ===
       # mypy hooks for each Python project, the hooks must be separated because different
       # project might use their own configurations
       - id: mypy-apiserver
@@ -42,6 +70,13 @@ repos:
         pass_filenames: false
         entry: bash -c "cd apiserver && poetry run mypy . --config-file=./pyproject.toml"
         files: '^apiserver/'
+      - id: mypy-app-spark-api
+        name: run mypy check for "app-spark-api"
+        language: system
+        types: [python]
+        pass_filenames: false
+        entry: bash -c "cd app-spark/app-spark-api && uv run mypy --config-file=./pyproject.toml"
+        files: '^app-spark/app-spark-api/'
       - id: import-linter-apiserver
         name: run import-linter check for "apiserver"
         language: system
@@ -49,6 +84,8 @@ repos:
         pass_filenames: false
         entry: bash -c "cd apiserver/paasng && poetry run lint-imports"
         files: '^apiserver/'
+
+      # === 其他子项目 / 非 Python 工具链检查 ===
       # Disable this hook temporarily because is may results EOF error and loss
       # of changes.
       # - id: operator-fmt

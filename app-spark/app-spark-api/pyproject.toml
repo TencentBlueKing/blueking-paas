@@ -1,0 +1,56 @@
+[project]
+name = "app-spark-api"
+version = "0.1.0"
+description = "An AI-native app-building tool powered by the BlueKing PaaS platform and AI technology."
+readme = "README.md"
+authors = [{ name = "blueking", email = "blueking@tencent.com" }]
+requires-python = ">=3.14"
+dependencies = [
+    "bkpaas-auth>=4.4.0,<5.0.0",
+    "django>=6.0.8,<6.1",
+    "django-ninja>=1.6.2,<2.0.0",
+    "dynaconf>=3.3.5,<4.0.0",
+    "pymysql>=1.2.0,<2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]==6.0.9",
+    "mypy>=2.3.0,<3.0.0",
+    "pytest-asyncio>=1.3.0,<2.0.0",
+    "pytest-django>=4.14.0,<5.0.0",
+    "ruff>=0.16.1,<0.17.0",
+    "uvicorn>=0.52.1,<0.53.0",
+]
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+target-version = "py314"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app_spark_api"]
+
+[tool.mypy]
+python_version = "3.14"
+show_error_codes = true
+check_untyped_defs = true
+files = ["app_spark_api", "manage.py"]
+plugins = ["mypy_django_plugin.main"]
+
+[[tool.mypy.overrides]]
+module = ["dynaconf", "dynaconf.*", "pymysql"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "app_spark_api.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "app_spark_api.settings"
+addopts = "-p no:cacheprovider"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

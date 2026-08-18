@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>app-spark-api 用户状态</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fa;
+            color: #1f2329;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e6eb;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <div id="status-text">正在检查登录状态...</div>
+            <div id="tenant-text" class="muted hidden"></div>
+        </div>
+    </header>
+    <main class="content">
+        <p class="muted">Welcome to AppSpark!</p>
+    </main>
+
+    <script>
+        const apiUserinfoUrl = "{{ api_userinfo_url|escapejs }}";
+        const defaultLoginUrl = "{{ default_login_url|escapejs }}";
+
+        function isSafeHttpUrl(url) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                return parsed.protocol === "http:" || parsed.protocol === "https:";
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function renderAuthenticatedUser(data) {
+            const statusText = document.getElementById("status-text");
+            const tenantText = document.getElementById("tenant-text");
+
+            statusText.textContent = `当前登录用户：${data.username}`;
+
+            if (data.tenant_id) {
+                tenantText.textContent = `租户：${data.tenant_id}`;
+                tenantText.classList.remove("hidden");
+            }
+        }
+
+        function renderAnonymousUser(loginUrl) {
+            const statusText = document.getElementById("status-text");
+            const targetLoginUrl = loginUrl || defaultLoginUrl;
+
+            if (targetLoginUrl && isSafeHttpUrl(targetLoginUrl)) {
+                statusText.textContent = "当前未登录，";
+                const link = document.createElement("a");
+                link.href = targetLoginUrl;
+                link.textContent = "点击登录";
+                statusText.appendChild(link);
+                return;
+            }
+
+            statusText.textContent = "当前未登录，且尚未配置登录地址。";
+        }
+
+        async function loadUserStatus() {
+            try {
+                const response = await fetch(apiUserinfoUrl, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (response.status === 401) {
+                    const data = await response.json();
+                    renderAnonymousUser(data.login_url);
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`unexpected status code: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderAuthenticatedUser(data);
+            } catch (error) {
+                const statusText = document.getElementById("status-text");
+                statusText.textContent = `获取用户状态失败：${error.message}`;
+            }
+        }
+
+        loadUserStatus();
+    </script>
+</body>
+</html>

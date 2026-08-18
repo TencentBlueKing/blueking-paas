@@ -15,8 +15,8 @@ class Command(BaseCommand):
 
     # Note: PLAN_CONFIGS 中第一个方案是默认方案，不能轻易修改顺序
     PLAN_CONFIGS = [
-        {"name": "0shared", "description": "共享实例"},
-        {"name": "1exclusive", "description": "独占实例"},
+        {"name": "0shared", "description": "共享实例", "config": "{}"},
+        {"name": "1exclusive", "description": "独占实例", "config": "{}"},
     ]
 
     def add_arguments(self, parser):
@@ -43,10 +43,7 @@ class Command(BaseCommand):
                     service=svc,
                     name=config["name"],
                     tenant_id=tenant_id,
-                    defaults={
-                        "is_active": True,
-                        "description": config["description"],
-                    },
+                    defaults={"is_active": True, "description": config["description"], "config": config["config"]},
                 )
                 plan_uuids.append(str(plan.uuid))
                 if created:

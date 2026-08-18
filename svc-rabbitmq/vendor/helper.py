@@ -159,7 +159,8 @@ class InstanceHelper:
         if not isinstance(credentials, dict):
             credentials = json.loads(credentials)
 
-        # 凭证还可能带上 TLS 证书路径、stream 端口等扩展字段，这里只取建立连接必需的部分
+        # dataclass 不允许未声明的关键字参数；凭证里可能还有 ca/cert/stream_port 等扩展字段，
+        # 直接 Credentials(**credentials) 会 TypeError
         field_names = {f.name for f in fields(self.Credentials)}
         return self.Credentials(**{key: value for key, value in credentials.items() if key in field_names})
 

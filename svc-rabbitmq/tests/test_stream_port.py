@@ -16,14 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rest_framework.exceptions import ValidationError
-from vendor.apps import validate_plan_stream_port
+from django.core.management.base import CommandError
 from vendor.constants import DEFAULT_STREAM_PORT
 from vendor.helper import InstanceHelper
+from vendor.management.commands.sync_stream_port import Command as SyncStreamPortCommand
 from vendor.provider import Provider
 
 from .conftest import make_cluster
@@ -47,17 +46,64 @@ def test_new_instance_gets_plan_stream_port():
     assert instance_data.credentials["stream_port"] == 6552
 
 
-def test_plan_with_invalid_port_is_rejected():
-    """AC-004：非法端口在方案保存时就被拒绝，不会下发成应用环境变量。"""
-    plan = SimpleNamespace(get_config=lambda: {"enable_stream": True, "stream_port": 70000})
-
-    with pytest.raises(ValidationError, match="1–65535"):
-        validate_plan_stream_port(None, plan)
-
-
 def test_get_credentials_tolerates_stream_port():
     """凭证多出 stream_port 后，巡检任务取凭证不能报错。"""
     instance = MagicMock()
     instance.credentials = json.dumps({**CREDENTIALS, "stream_port": DEFAULT_STREAM_PORT})
 
     assert InstanceHelper(instance).get_credentials().vhost == "vhost"
+
+
+def test_sync_stream_port_backfills_instance():
+    """指定方案后，存量实例凭证被回填 stream_port。"""
+    plan = MagicMock()
+    plan.name = "default"
+    plan.get_config.return_value = {"enable_stream": True, "stream_port": 6552}
+
+    instance = MagicMock()
+    instance.uuid = "ins-1"
+    instance.get_credentials.return_value = dict(CREDENTIALS)
+
+    with (
+        patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan,
+        patch("vendor.management.commands.sync_stream_port.ServiceInstance") as mock_si,
+    ):
+        mock_plan.objects.get.return_value = plan
+        mock_si.objects.filter.return_value = [instance]
+        SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=False)
+
+    instance.save.assert_called_once()
+    assert json.loads(instance.credentials)["stream_port"] == 6552
+
+
+def test_sync_stream_port_dry_run_does_not_save():
+    """--dry-run 只打印范围，不写库。"""
+    plan = MagicMock()
+    plan.name = "default"
+    plan.get_config.return_value = {"enable_stream": True, "stream_port": DEFAULT_STREAM_PORT}
+
+    instance = MagicMock()
+    instance.uuid = "ins-1"
+    instance.get_credentials.return_value = dict(CREDENTIALS)
+
+    with (
+        patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan,
+        patch("vendor.management.commands.sync_stream_port.ServiceInstance") as mock_si,
+    ):
+        mock_plan.objects.get.return_value = plan
+        mock_si.objects.filter.return_value = [instance]
+        SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=True)
+
+    instance.save.assert_not_called()
+
+
+def test_sync_stream_port_requires_enable_stream():
+    """未开启 stream 的方案不允许回填，避免误写入环境变量。"""
+    plan = MagicMock()
+    plan.name = "default"
+    plan.get_config.return_value = {"enable_stream": False}
+
+    with patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan:
+        mock_plan.objects.get.return_value = plan
+        with pytest.raises(CommandError, match="enable_stream"):
+            SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=False)

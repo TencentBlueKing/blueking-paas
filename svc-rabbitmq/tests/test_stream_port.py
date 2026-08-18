@@ -16,18 +16,29 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
+from django.core.management import call_command
 from django.core.management.base import CommandError
+from paas_service.models import Plan
 from vendor.constants import DEFAULT_STREAM_PORT
 from vendor.helper import InstanceHelper
-from vendor.management.commands.sync_stream_port import Command as SyncStreamPortCommand
 from vendor.provider import Provider
 
-from .conftest import make_cluster
+from .conftest import DEFAULT_INSTANCE_CREDENTIALS, make_cluster
 
-CREDENTIALS = {"host": "127.0.0.1", "port": 5672, "user": "user", "password": "secret", "vhost": "vhost"}
+STREAM_PORT = 6552
+
+
+@pytest.fixture
+def stream_plan(plan) -> Plan:
+    """在默认方案上开启 stream，供回填命令复用。"""
+    plan.config = json.dumps({"enable_stream": True, "stream_port": STREAM_PORT})
+    plan.save(update_fields=["config", "updated"])
+    return plan
 
 
 def test_new_instance_gets_plan_stream_port():
@@ -35,75 +46,45 @@ def test_new_instance_gets_plan_stream_port():
 
     凭证里的 key 必须是 stream_port，写成 RABBITMQ_STREAM_PORT 会被平台加成双前缀。
     """
-    bill = MagicMock()
-    bill.uuid.hex = "billuuidhex"
+    bill = SimpleNamespace(uuid=uuid4())
 
     # 插件与 RabbitMQ 的交互不在本用例关注范围内
     with patch("vendor.provider.Client.from_cluster"), patch("vendor.provider.PROVIDER_PLUGINS", []):
-        provider = Provider(enable_stream=True, stream_port=6552)
+        provider = Provider(enable_stream=True, stream_port=STREAM_PORT)
         instance_data = provider.create_instance("app", bill, {}, make_cluster())
 
-    assert instance_data.credentials["stream_port"] == 6552
+    assert instance_data.credentials["stream_port"] == STREAM_PORT
 
 
 def test_get_credentials_tolerates_stream_port():
     """凭证多出 stream_port 后，巡检任务取凭证不能报错。"""
-    instance = MagicMock()
-    instance.credentials = json.dumps({**CREDENTIALS, "stream_port": DEFAULT_STREAM_PORT})
+    instance = SimpleNamespace(
+        credentials=json.dumps({**DEFAULT_INSTANCE_CREDENTIALS, "stream_port": DEFAULT_STREAM_PORT})
+    )
 
     assert InstanceHelper(instance).get_credentials().vhost == "vhost"
 
 
-def test_sync_stream_port_backfills_instance():
+@pytest.mark.django_db
+def test_sync_stream_port_backfills_instance(stream_plan, instance):
     """指定方案后，存量实例凭证被回填 stream_port。"""
-    plan = MagicMock()
-    plan.name = "default"
-    plan.get_config.return_value = {"enable_stream": True, "stream_port": 6552}
+    call_command("sync_stream_port", plan_id=str(stream_plan.pk))
 
-    instance = MagicMock()
-    instance.uuid = "ins-1"
-    instance.get_credentials.return_value = dict(CREDENTIALS)
-
-    with (
-        patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan,
-        patch("vendor.management.commands.sync_stream_port.ServiceInstance") as mock_si,
-    ):
-        mock_plan.objects.get.return_value = plan
-        mock_si.objects.filter.return_value = [instance]
-        SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=False)
-
-    instance.save.assert_called_once()
-    assert json.loads(instance.credentials)["stream_port"] == 6552
+    instance.refresh_from_db()
+    assert instance.get_credentials()["stream_port"] == STREAM_PORT
 
 
-def test_sync_stream_port_dry_run_does_not_save():
+@pytest.mark.django_db
+def test_sync_stream_port_dry_run_does_not_save(stream_plan, instance):
     """--dry-run 只打印范围，不写库。"""
-    plan = MagicMock()
-    plan.name = "default"
-    plan.get_config.return_value = {"enable_stream": True, "stream_port": DEFAULT_STREAM_PORT}
+    call_command("sync_stream_port", plan_id=str(stream_plan.pk), dry_run=True)
 
-    instance = MagicMock()
-    instance.uuid = "ins-1"
-    instance.get_credentials.return_value = dict(CREDENTIALS)
-
-    with (
-        patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan,
-        patch("vendor.management.commands.sync_stream_port.ServiceInstance") as mock_si,
-    ):
-        mock_plan.objects.get.return_value = plan
-        mock_si.objects.filter.return_value = [instance]
-        SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=True)
-
-    instance.save.assert_not_called()
+    instance.refresh_from_db()
+    assert "stream_port" not in instance.get_credentials()
 
 
-def test_sync_stream_port_requires_enable_stream():
+@pytest.mark.django_db
+def test_sync_stream_port_requires_enable_stream(plan):
     """未开启 stream 的方案不允许回填，避免误写入环境变量。"""
-    plan = MagicMock()
-    plan.name = "default"
-    plan.get_config.return_value = {"enable_stream": False}
-
-    with patch("vendor.management.commands.sync_stream_port.Plan") as mock_plan:
-        mock_plan.objects.get.return_value = plan
-        with pytest.raises(CommandError, match="enable_stream"):
-            SyncStreamPortCommand().handle(plan_id="plan-uuid", dry_run=False)
+    with pytest.raises(CommandError, match="enable_stream"):
+        call_command("sync_stream_port", plan_id=str(plan.pk))

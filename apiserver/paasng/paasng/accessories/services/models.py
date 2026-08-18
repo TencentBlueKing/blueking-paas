@@ -318,7 +318,7 @@ class Plan(UuidAuditedModel):
         return "{name}-{service}".format(name=self.name, service=self.service.name)
 
     def get_config(self) -> Dict:
-        config = json.loads(self.config)
+        config = json.loads(self.config or "{}")
         config["__plan__"] = self
         return config
 

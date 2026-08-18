@@ -24,7 +24,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     VolumeSourceType,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
-from paas_wl.utils.models import TimestampedModel
+from paas_wl.utils.models import Char32UUIDField, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import make_json_field
 
@@ -34,8 +34,8 @@ SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 class ConfigMapSource(TimestampedModel):
     """ConfigMap 类型的挂载资源"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=True)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
@@ -55,8 +55,8 @@ class ConfigMapSource(TimestampedModel):
 class PersistentStorageSource(TimestampedModel):
     """持久存储类型的挂载资源"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=True)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
@@ -77,7 +77,7 @@ class PersistentStorageSource(TimestampedModel):
 class Mount(TimestampedModel):
     """挂载配置"""
 
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
 
     environment_name = models.CharField(
@@ -117,7 +117,7 @@ class MountDeploymentSnapshot(TimestampedModel):
     ]
     """
 
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    module_id = Char32UUIDField(verbose_name=_("所属模块"), null=False)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )

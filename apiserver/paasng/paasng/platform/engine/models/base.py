@@ -25,7 +25,7 @@ from django.utils import timezone
 from paas_wl.bk_app.applications.models import WlApp
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
-from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
+from paasng.utils.models import BkUserField, Char32UUIDField, OwnerTimestampedModel, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.engine.utils.output import DeployStream
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class OperationVersionBase(TimestampedModel):
     """带操作版本信息的BaseModel"""
 
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = Char32UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     operator = BkUserField()
 
     source_type = models.CharField(verbose_name="源码托管类型", max_length=16, null=True)
@@ -53,7 +53,7 @@ class OperationVersionBase(TimestampedModel):
 class EngineApp(OwnerTimestampedModel):
     """蓝鲸应用引擎应用"""
 
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = Char32UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     name = models.CharField(max_length=64, unique=True)
 
     region = models.CharField(max_length=32)

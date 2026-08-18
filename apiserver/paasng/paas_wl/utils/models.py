@@ -38,10 +38,29 @@ class AuditedModel(models.Model):
         abstract = True
 
 
+class Char32UUIDField(models.UUIDField):
+    """UUIDField that maps to CHAR(32) instead of native UUID on MariaDB 10.7+.
+
+    This is required for backward compatibility when upgrading from Django < 5.0
+    to Django >= 5.0 on MariaDB 10.7+, where UUIDField now defaults to native UUID type.
+
+    See: https://docs.djangoproject.com/en/5.2/releases/5.0/#migrating-existing-uuidfield-on-mariadb-10-7
+    """
+
+    def db_type(self, connection):
+        return "char(32)"
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        value = super().get_db_prep_value(value, connection, prepared)
+        if isinstance(value, uuid.UUID):
+            value = value.hex
+        return value
+
+
 class UuidAuditedModel(AuditedModel):
     """Add a UUID primary key to an class`AuditedModel`."""
 
-    uuid = models.UUIDField(
+    uuid = Char32UUIDField(
         "UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
     )
 

@@ -13,9 +13,11 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from django.apps import apps
 from django.core.checks import Error, register
 from django.core.checks import Warning as CheckWarning
+from django.db import models
 
 
 @register()
@@ -79,3 +81,26 @@ def get_first_party_models():
         if not app_config.module.__name__.startswith(("paasng.", "paas_wl.")):
             continue
         yield from app_config.get_models()
+
+
+@register()
+def check_uuid_field(app_configs, **kwargs) -> list[Error]:
+    """Forbid using `models.UUIDField` directly in first-party models.
+
+    On Django 5.0+/MariaDB 10.7+, `models.UUIDField` maps to native UUID instead of
+    legacy `CHAR(32)`, which is incompatible with existing `CHAR(32)` columns.
+    Use `Char32UUIDField` instead.
+    """
+    errors = []
+    for model in get_first_party_models():
+        for field in model._meta.get_fields():
+            # Char32UUIDField 重写了 db_type, 凡仍沿用基类 db_type 的 UUIDField 都是不安全的
+            if isinstance(field, models.UUIDField) and field.__class__.db_type is models.UUIDField.db_type:
+                errors.append(
+                    Error(
+                        f"The field `{model._meta.label}.{field.name}` uses `{field.__class__.__name__}` "
+                        "with the default (native UUID) db_type.",
+                        hint="Use `Char32UUIDField` instead, or override `db_type()` to return `char(32)`.",
+                    )
+                )
+    return errors

@@ -65,6 +65,7 @@ settings = LazySettings(
 )
 
 # Django 项目使用的 SECRET_KEY，默认值不安全，建议使用真实生成的随机 secret 重载
+# 示例命令： python -c "import secrets; print(secrets.token_urlsafe(50))"
 SECRET_KEY = settings.get(
     "SECRET_KEY",
     "django-insecure-^_*&rfc*!0j9hbv72brmurr@8t^gd)$zq@19jb0xze-)7g^!0i",

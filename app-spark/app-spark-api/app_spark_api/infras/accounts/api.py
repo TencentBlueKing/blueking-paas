@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -41,7 +42,7 @@ async def get_user_info(request: HttpRequest):
     user = await request.auser()
     if not user.is_authenticated:
         return Status(
-            401,
+            HTTPStatus.UNAUTHORIZED,
             {
                 "authenticated": False,
                 "login_url": settings.LOGIN_FULL,
@@ -49,7 +50,7 @@ async def get_user_info(request: HttpRequest):
         )
 
     return Status(
-        200,
+        HTTPStatus.OK,
         {
             "authenticated": True,
             "username": user.username,

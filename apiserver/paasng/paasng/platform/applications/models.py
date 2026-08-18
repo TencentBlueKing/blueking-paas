@@ -53,6 +53,7 @@ from paasng.platform.modules.models.module import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
+    Char32UUIDField,
     OrderByField,
     OwnerTimestampedModel,
     ProcessedImageField,
@@ -320,7 +321,7 @@ def rename_logo_with_extra_prefix(instance: "Application", filename: str) -> str
 class Application(OwnerTimestampedModel):
     """蓝鲸应用"""
 
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = Char32UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     code = models.CharField(verbose_name="应用代号", max_length=20, unique=True)
     name = models.CharField(verbose_name="应用名称", max_length=20)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")

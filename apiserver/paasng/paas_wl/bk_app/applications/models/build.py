@@ -33,7 +33,7 @@ from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
-from paas_wl.utils.models import UuidAuditedModel, make_json_field
+from paas_wl.utils.models import Char32UUIDField, UuidAuditedModel, make_json_field
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
@@ -56,8 +56,8 @@ BuildArtifactMetadataField = make_json_field("BuildArtifactMetadataField", py_mo
 
 
 class Build(UuidAuditedModel):
-    application_id = models.UUIDField(verbose_name="所属应用", null=True)
-    module_id = models.UUIDField(verbose_name="所属模块", null=True)
+    application_id = Char32UUIDField(verbose_name="所属应用", null=True)
+    module_id = Char32UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
@@ -286,8 +286,8 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
-    application_id = models.UUIDField(verbose_name="所属应用", null=True)
-    module_id = models.UUIDField(verbose_name="所属模块", null=True)
+    application_id = Char32UUIDField(verbose_name="所属应用", null=True)
+    module_id = Char32UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")

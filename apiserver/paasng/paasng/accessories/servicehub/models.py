@@ -27,7 +27,13 @@ from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
-from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel, UuidAuditedModel
+from paasng.utils.models import (
+    AuditedModel,
+    Char32UUIDField,
+    OwnerTimestampedModel,
+    TimestampedModel,
+    UuidAuditedModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +176,7 @@ class RemoteServiceModuleAttachment(OwnerTimestampedModel):
     """Binding relationship of module <-> remote service"""
 
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
-    service_id = models.UUIDField(verbose_name="远程增强服务 ID")
+    service_id = Char32UUIDField(verbose_name="远程增强服务 ID")
     tenant_id = tenant_id_field_factory()
 
     class Meta:
@@ -186,9 +192,9 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     engine_app = models.ForeignKey(
         "engine.EngineApp", on_delete=models.CASCADE, related_name="remote_service_attachment"
     )
-    service_id = models.UUIDField(verbose_name="远程增强服务 ID")
-    plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
-    service_instance_id = models.UUIDField(null=True)
+    service_id = Char32UUIDField(verbose_name="远程增强服务 ID")
+    plan_id = Char32UUIDField(verbose_name="远程增强服务 Plan ID")
+    service_instance_id = Char32UUIDField(null=True)
     credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
     tenant_id = tenant_id_field_factory()
 
@@ -209,8 +215,8 @@ class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
         verbose_name="蓝鲸引擎应用",
         related_name="unbound_remote_service_attachment",
     )
-    service_id = models.UUIDField(verbose_name="远程增强服务 ID")
-    service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
+    service_id = Char32UUIDField(verbose_name="远程增强服务 ID")
+    service_instance_id = Char32UUIDField(null=True, verbose_name="远程增强服务实例 ID")
     tenant_id = tenant_id_field_factory()
 
     class Meta:
@@ -261,7 +267,7 @@ class SharedServiceAttachment(TimestampedModel):
 
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="发起共享的应用模块")
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16)
-    service_id = models.UUIDField(verbose_name="增强服务 ID")
+    service_id = Char32UUIDField(verbose_name="增强服务 ID")
     ref_attachment_pk = models.IntegerField(verbose_name="被共享的服务绑定关系主键")
     tenant_id = tenant_id_field_factory()
 
@@ -305,7 +311,7 @@ class ServiceAllocationPolicyManager(models.Manager):
 class ServiceAllocationPolicy(UuidAuditedModel):
     """服务分配策略"""
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    service_id = Char32UUIDField(verbose_name="增强服务 ID", db_index=True)
     # 枚举值 -> ServiceAllocationPolicyType
     type = models.CharField(max_length=32, help_text="分配策略类型")
 
@@ -323,7 +329,7 @@ class ServiceBindingPolicy(AuditedModel):
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID")
+    service_id = Char32UUIDField(verbose_name="增强服务 ID")
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
@@ -344,7 +350,7 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    service_id = Char32UUIDField(verbose_name="增强服务 ID", db_index=True)
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
@@ -371,7 +377,7 @@ class DefaultPolicyCreationRecord(AuditedModel):
     3. 用户手动删除已创建的策略后，由于本表中已经有初始化记录保证不会重复初始化
     """
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    service_id = Char32UUIDField(verbose_name="增强服务 ID", unique=True)
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
     finished_at = models.DateTimeField(verbose_name="完成时间", null=True, blank=True)

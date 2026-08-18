@@ -27,7 +27,7 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
-from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
+from paasng.utils.models import Char32UUIDField, OwnerTimestampedModel, TimestampedModel, make_json_field
 
 from .entities import DefaultAppLegacyData, MigrationResult, ProcessDetails, RollbackResult
 
@@ -333,7 +333,7 @@ class WlAppBackupRel(TimestampedModel):
     """WlApp 的备份关系表"""
 
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    original_id = models.UUIDField(verbose_name="原 WlApp uuid")
-    backup_id = models.UUIDField(verbose_name="对应备份的 WlApp uuid")
+    original_id = Char32UUIDField(verbose_name="原 WlApp uuid")
+    backup_id = Char32UUIDField(verbose_name="对应备份的 WlApp uuid")
 
     tenant_id = tenant_id_field_factory()

@@ -23,6 +23,7 @@ from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel, WlApp
+from paas_wl.utils.models import Char32UUIDField
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 
@@ -74,7 +75,7 @@ class AppUserCredential(UuidAuditedModel):
     NOTE: AppUserCredential 存储用户通过表单配置的镜像凭证(适用于云原生应用). 在实际应用时, 会同步到 AppImageCredential 表中.
     """
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
+    application_id = Char32UUIDField(verbose_name=_("所属应用"), null=False)
 
     name = models.CharField(max_length=32, help_text="凭证名称")
     username = models.CharField(max_length=64, help_text="账号")

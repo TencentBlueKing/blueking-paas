@@ -7,4 +7,4 @@ class TenantConfig(AppConfig):
 
     def ready(self):
         # Register the Django check function
-        from .sys_check import check_model_multi_tenancy_configured  # noqa: F401
+        from .sys_check import check_model_multi_tenancy_configured, check_uuid_field  # noqa: F401

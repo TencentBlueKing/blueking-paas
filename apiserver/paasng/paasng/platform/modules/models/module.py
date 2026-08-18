@@ -23,7 +23,7 @@ from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.utils.models import BkUserField, OwnerTimestampedModel
+from paasng.utils.models import BkUserField, Char32UUIDField, OwnerTimestampedModel
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class Module(OwnerTimestampedModel):
     can create multiple modules to achieve a micro-services architecture
     """
 
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = Char32UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     application = models.ForeignKey("applications.Application", on_delete=models.CASCADE, related_name="modules")
 
     name = models.CharField(verbose_name="模块名称", max_length=20)

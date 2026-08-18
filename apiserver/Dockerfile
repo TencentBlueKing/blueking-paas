@@ -25,7 +25,7 @@ RUN EDITION=${EDITION} npm run build
 FROM mirrors.tencent.com/blueking/python:3.14.6-tencentos4
 USER root
 
-RUN yum install -y gcc subversion openssh-clients mysql-devel pkg-config vim git gettext procps bind-utils
+RUN yum install -y gcc subversion openssh-clients mysql-devel pkg-config vim git gettext procps bind-utils gawk
 
 RUN mkdir ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
 

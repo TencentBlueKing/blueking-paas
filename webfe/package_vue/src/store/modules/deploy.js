@@ -22,6 +22,8 @@
 import http from '@/api';
 import { json2Query } from '@/common/tools';
 
+const isBuildDebugAllowed = rootState => rootState.userFeature?.ALLOW_BUILD_DEBUG === true;
+
 const state = {
   // 是否允许推广到应用市场, 一般只有接入登录的应用才允许
   // canPublishToMarket: false,
@@ -332,7 +334,13 @@ const actions = {
    * 获取构建调试窗口状态
    * @param {Object} params 请求参数：appCode, moduleId, deployId
    */
-  getBuildDebugStatus({}, { appCode, moduleId, deployId }, config = {}) {
+  getBuildDebugStatus({ rootState }, { appCode, moduleId, deployId }, config = {}) {
+    if (!isBuildDebugAllowed(rootState)) {
+      return {
+        enabled: false,
+        available: false,
+      };
+    }
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/build_debug/`;
     return http.get(url, config);
   },
@@ -341,7 +349,10 @@ const actions = {
    * 创建构建调试控制台会话
    * @param {Object} params 请求参数：appCode, moduleId, deployId
    */
-  createBuildDebugConsole({}, { appCode, moduleId, deployId }, config = {}) {
+  createBuildDebugConsole({ rootState }, { appCode, moduleId, deployId }, config = {}) {
+    if (!isBuildDebugAllowed(rootState)) {
+      return null;
+    }
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/build_debug/console/`;
     return http.post(url, {}, config);
   },

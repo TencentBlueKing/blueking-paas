@@ -7,6 +7,7 @@
       :module-id="curModuleId"
       :deployment="statusBarDeployment"
       :possible-reason="curDeployResult.possible_reason"
+      :show-debug-action="showDebugAction"
     >
       <template slot="description">
         <template v-if="isDeployFail">
@@ -179,6 +180,10 @@ export default {
     rvData: {
       type: Object,
       default: () => ({}),
+    },
+    showDebugAction: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

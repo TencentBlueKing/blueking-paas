@@ -31,10 +31,10 @@
     </div>
     <div
       slot="content"
-      v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
+      v-bkloading="{ isLoading: isLogLoading || isTimelineLoading || isDebugStatusLoading, opacity: 1 }"
       class="deploy-detail"
     >
-      <template v-if="!(isLogLoading || isTimelineLoading)">
+      <template v-if="!(isLogLoading || isTimelineLoading || isDebugStatusLoading)">
         <!-- 部署状态栏 -->
         <deploy-status-bar
           v-if="isDeployOperation"
@@ -42,6 +42,7 @@
           :module-id="moduleId"
           :deployment="currentDeployment"
           :possible-reason="errorTips.possible_reason"
+          :show-debug-action="isBuildDebugEnabled"
           :debug-disabled="!currentDeployment.isLatestDeployment"
           @redeploy="handleRedeploy"
           @back="handleBack"
@@ -119,6 +120,8 @@ export default {
     return {
       isLogLoading: false,
       isTimelineLoading: false,
+      isDebugStatusLoading: false,
+      isBuildDebugEnabled: false,
       ansiUp: null,
       curDeployLog: '',
       timeLineList: [],
@@ -223,6 +226,26 @@ export default {
         });
       } finally {
         this.isLogLoading = false;
+      }
+    },
+
+    /**
+     * 获取构建调试开启状态
+     */
+    async getBuildDebugEnabled(params) {
+      this.isDebugStatusLoading = true;
+      this.isBuildDebugEnabled = false;
+      try {
+        const res = await this.$store.dispatch('deploy/getBuildDebugStatus', {
+          appCode: this.appCode,
+          moduleId: params.moduleName || this.moduleId,
+          deployId: params.deployment_id,
+        });
+        this.isBuildDebugEnabled = !!res.enabled;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.isDebugStatusLoading = false;
       }
     },
 
@@ -340,12 +363,14 @@ export default {
     handleSidesliderHidden() {
       this.errorTips = {};
       this.currentDeployment = {};
+      this.isBuildDebugEnabled = false;
     },
 
     handleShowLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
-      if (this.isTimelineLoading || this.isLogLoading) {
+      this.isBuildDebugEnabled = false;
+      if (this.isTimelineLoading || this.isLogLoading || this.isDebugStatusLoading) {
         return false;
       }
       this.currentDeployment = row;
@@ -366,6 +391,7 @@ export default {
       if (operationType === 'offline') {
         this.curDeployLog = row.logDetail;
       } else {
+        this.getBuildDebugEnabled(row);
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }
@@ -376,8 +402,9 @@ export default {
     handleShowBuildLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
+      this.isBuildDebugEnabled = false;
       this.currentDeployment = {};
-      if (this.isTimelineLoading || this.isLogLoading) {
+      if (this.isTimelineLoading || this.isLogLoading || this.isDebugStatusLoading) {
         return false;
       }
 

@@ -418,6 +418,7 @@
           :deployment-id="deploymentId"
           :deployment-info="deploymentInfoBackUp"
           :rv-data="rvData"
+          :show-debug-action="deployedDebugEnabled"
           @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
@@ -524,6 +525,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
+import { mapState } from 'vuex';
 
 // 当前状态，禁用部署按钮
 const DEPLOY_ERROR_STATES = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO', 'FILL_EXTRA_INFO'];
@@ -620,6 +622,7 @@ export default {
       codeRefreshLoading: false,
       isAdvancedOptionsExpanded: true,
       debugEnabled: false,
+      deployedDebugEnabled: false,
       commitDialog: {
         visiable: false,
         isLoading: false,
@@ -634,6 +637,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['userFeature']),
     curAppModule() {
       return this.curAppModuleList.find((e) => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
     },
@@ -685,7 +689,11 @@ export default {
 
     // 蓝鲸 Buildpack 从源码构建时支持构建调试
     isShowBuildDebug() {
-      return this.deploymentInfoBackUp.build_method === 'buildpack' && this.buttonActive === 'branch';
+      return (
+        this.userFeature.ALLOW_BUILD_DEBUG === true
+        && this.deploymentInfoBackUp.build_method === 'buildpack'
+        && this.buttonActive === 'branch'
+      );
     },
 
     // 上一次选择的镜像拉取策略
@@ -756,6 +764,7 @@ export default {
         this.buttonActive = activeImageSource || 'branch';
         this.isAdvancedOptionsExpanded = true;
         this.debugEnabled = false;
+        this.deployedDebugEnabled = false;
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -1155,6 +1164,7 @@ export default {
         });
         this.deployAppDialog.visiable = false;
         this.deploymentId = res.deployment_id;
+        this.deployedDebugEnabled = advancedOptions.debug_enabled;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true; // 打开侧边栏
         this.$emit('showSideslider');

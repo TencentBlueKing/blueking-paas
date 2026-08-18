@@ -21,6 +21,7 @@
       class="status-actions"
     >
       <bk-button
+        v-if="isDebugActionVisible"
         :theme="actionTheme"
         :loading="isDebugLoading"
         :disabled="debugDisabled"
@@ -53,6 +54,8 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
+
 export default {
   props: {
     appCode: {
@@ -75,6 +78,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    showDebugAction: {
+      type: Boolean,
+      default: true,
+    },
     debugDisabled: {
       type: Boolean,
       default: false,
@@ -88,6 +95,10 @@ export default {
   },
 
   computed: {
+    ...mapState(['userFeature']),
+    isDebugActionVisible() {
+      return this.showDebugAction && this.userFeature.ALLOW_BUILD_DEBUG === true;
+    },
     actionTheme() {
       return this.statusConfig.theme;
     },
@@ -134,7 +145,7 @@ export default {
      * 登录构建调试控制台
      */
     async handleLoginDebug() {
-      if (this.isDebugLoading || this.debugDisabled) return;
+      if (!this.isDebugActionVisible || this.isDebugLoading || this.debugDisabled) return;
 
       this.isDebugLoading = true;
       const params = {

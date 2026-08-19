@@ -29,8 +29,18 @@
 ## 生产环境请配置远程服务缓存（如 RedisCache、DatabaseCache），以保证多副本多 worker 时缓存数据一致
 # DEFAULT_CACHE_CONFIG:
 
+## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
+# BLOBSTORE_BKREPO_CONFIG:
+#   PROJECT: ''
+#   ENDPOINT: ''
+#   USERNAME: ''
+#   PASSWORD: ''
+
 ## 是否启用多租户模式，仅支持在初次部署时配置，部署后不支持动态调整
 # ENABLE_MULTI_TENANT_MODE: false
+
+## 是否自动为当前访问用户创建用户 profile，即站点是否对全员默认开放
+# AUTO_CREATE_REGULAR_USER: true
 
 ## ---------------------------------- 各系统地址相关配置 ----------------------------------
 

@@ -10,6 +10,14 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 * After editing Python files, run:
     - formatting: `uv run ruff format {filename}`
     - type-checking: `uv run mypy {filename}`
+* Add Sphinx-style doc to public Python APIs. Include a short usage example for APIs whose invocation is not obvious.
+
+### Design conventions
+
+* Prefer frozen attrs classes for internal configuration and data models, and use cattrs to structure and validate untyped input.
+    - Translate library validation failures into domain-level exceptions at module boundaries.
+* Avoid Django `choices` when defining models if the choices might change in the future, document the supported values instead.
+
 
 ### Running tests
 

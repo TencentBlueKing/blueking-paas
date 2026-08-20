@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import os
 from functools import wraps
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from django.utils.translation import gettext as _
 
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.platform.applications.models import SMartAppExtraInfo
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -129,7 +131,23 @@ class Command(BaseCommand):
 
         with atomic():
             # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
-            application = handler.handle_app(operator)
+
+            # 只有 PAAS_THIRD_APP_INIT_CODES 环境变量中定义的应用 ID 可以忽略 bkauth 409 报错
+            env_init_codes = os.getenv("PAAS_THIRD_APP_INIT_CODES", "")
+            env_init_code_list = env_init_codes.split(",") if env_init_codes else []
+
+            try:
+                application = handler.handle_app(operator)
+            except BkOauthClientCodeConflictError:
+                if original_app_desc.code in env_init_code_list:
+                    logger.warning(
+                        "oauth app(code:%s) already exists in bkAuth, skip create. "
+                        "Note: tenant mode & id of the existing oauth app will not be updated.",
+                        original_app_desc.code,
+                    )
+                else:
+                    raise
+
             # 创建/更新 SMartAppExtraInfo, 记录应用原始 code
             SMartAppExtraInfo.objects.update_or_create(
                 app=application, defaults={"original_code": original_app_desc.code, "tenant_id": application.tenant_id}

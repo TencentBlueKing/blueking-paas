@@ -105,7 +105,7 @@ func StartResident(ctx context.Context) error {
 	files.GET("/list", volumefs.ListFiles)
 	files.GET("/stat", volumefs.StatFile)
 	files.GET("/preview", volumefs.PreviewFile)
-	files.POST("/export", volumefs.ExportFile)
+	files.POST("/archive", volumefs.ExportFile)
 	files.DELETE("", volumefs.DeleteFile)
 
 	srv := &http.Server{

@@ -166,5 +166,8 @@ def make_storage_backend(backend: str, config: object) -> SourceStorage:
         host_config = structure_storage_config(config, HostTmpPathConfig)
         return HostTmpPath(path=host_config.path)
 
-    bkrepo_config = structure_storage_config(config, BkRepoConfig)
-    return BkRepo(bucket=bkrepo_config.bucket, key=bkrepo_config.key)
+    if storage_backend == StorageBackend.BK_REPO:
+        bkrepo_config = structure_storage_config(config, BkRepoConfig)
+        return BkRepo(bucket=bkrepo_config.bucket, key=bkrepo_config.key)
+
+    raise StorageConfigurationError(f"Unsupported storage backend: {storage_backend}")

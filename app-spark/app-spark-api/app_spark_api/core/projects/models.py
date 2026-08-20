@@ -30,4 +30,5 @@ class Project(OwnerTimestampedModel):
 
     class Meta:
         # 项目名称租户内唯一
+        # TODO: 软删除后应该释放对应的 name
         unique_together = ("tenant_id", "name")

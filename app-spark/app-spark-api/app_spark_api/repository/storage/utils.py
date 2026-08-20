@@ -22,18 +22,28 @@ import subprocess
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, ContextManager, Iterator
+from typing import Generator
 
 logger = logging.getLogger(__name__)
 
+VCS_DIRECTORIES = (".git", ".hg", ".svn", ".bzr", "CVS")
+
 
 def compress_directory(source_path, target_path):
-    """Compress a directory using tar command."""
+    """Compress a directory using tar command, excluding VCS metadata."""
     # Use tar command to compress
     # Add "GZIP=-n" to disable gzip timestamp
     # see: https://serverfault.com/questions/110208/different-md5sums-for-same-tar-contents
     process = subprocess.Popen(
-        ["/bin/tar", "--exclude=.svn", "-czf", str(target_path), "-C", str(source_path), "."],
+        [
+            "/bin/tar",
+            *(f"--exclude={directory}" for directory in VCS_DIRECTORIES),
+            "-czf",
+            str(target_path),
+            "-C",
+            str(source_path),
+            ".",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env={"GZIP": "-n"},
@@ -60,11 +70,9 @@ def uncompress_directory(source_path, target_path):
         raise RuntimeError("Unable to unpackage source, error: %s" % stderr)
 
 
-def _generate_temp_file_(suffix="") -> Iterator[Path]:
+@contextmanager
+def generate_temp_file(suffix="") -> Generator[Path]:
     with tempfile.NamedTemporaryFile(delete=True, suffix=suffix) as file:
         path = Path(file.name)
         logger.debug("Generating temp path: %s", path)
         yield path
-
-
-generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)

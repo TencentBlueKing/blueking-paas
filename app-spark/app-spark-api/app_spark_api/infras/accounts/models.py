@@ -43,15 +43,15 @@ class UserProfileManager(models.Manager):
 
         current_tenant_id = get_tenant(user).id
 
-        try:
-            profile = self.get(user=user.pk)
-        except UserProfile.DoesNotExist:
-            # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
-            if settings.AUTO_CREATE_REGULAR_USER:
-                return self.create(user=user.pk, tenant_id=current_tenant_id, role=SiteRole.USER.value)
-            raise
-        else:
+        # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
+        if settings.AUTO_CREATE_REGULAR_USER:
+            profile, _ = self.get_or_create(
+                user=user.pk,
+                defaults={"tenant_id": current_tenant_id, "role": SiteRole.USER.value},
+            )
             return profile
+
+        return self.get(user=user.pk)
 
     def get_by_natural_key(self, user: str):
         return self.get(user=user)

@@ -29,11 +29,19 @@ def assert_source_files(source_dir: Path, files: dict[str, bytes]) -> None:
 def test_host_tmp_path_store_and_get(tmp_path):
     source_dir = tmp_path / "source"
     expected_files = {
+        ".gitignore": b"*.pyc\n",
         "README.md": b"# app-spark\n",
         "src/main.py": b"print('hello')\n",
         "static/logo.bin": b"\x00\x01\xff",
     }
-    write_source(source_dir, expected_files)
+    vcs_metadata = {
+        ".git/config": b"git metadata",
+        ".hg/hgrc": b"mercurial metadata",
+        ".svn/entries": b"subversion metadata",
+        ".bzr/branch-format": b"bazaar metadata",
+        "CVS/Root": b"cvs metadata",
+    }
+    write_source(source_dir, expected_files | vcs_metadata)
 
     package_path = tmp_path / "storage" / "source.tgz"
     storage = HostTmpPath(package_path)

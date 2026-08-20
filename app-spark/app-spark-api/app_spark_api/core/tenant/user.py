@@ -17,6 +17,7 @@
 
 from typing import TYPE_CHECKING
 
+import attrs
 from attrs import define
 from django.conf import settings
 
@@ -57,7 +58,7 @@ class Tenant:
     """
 
     id: str
-    is_op_type: bool = False
+    is_op_type: bool = attrs.field(init=False)
     is_stub: bool = False
 
     def __attrs_post_init__(self):

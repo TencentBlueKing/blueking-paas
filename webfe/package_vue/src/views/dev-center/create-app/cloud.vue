@@ -1369,7 +1369,7 @@ export default {
 
         // Region 的集群信息
         adv_region_clusters.forEach((item) => {
-          if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
+          if (!Object.prototype.hasOwnProperty.call(this.advancedOptionsObj, item.region)) {
             this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
           }
         });

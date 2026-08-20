@@ -196,146 +196,147 @@
                         <col />
                         <col style="width: 102px" />
                       </colgroup>
-                      <template v-for="subRow in row.children">
-                        <tr :key="subRow.id">
-                          <td>
-                            <span
-                              v-bk-tooltips.top="subRow.name"
-                              class="name"
-                            >
-                              {{ subRow.name }}
+                      <tr
+                        v-for="subRow in row.children"
+                        :key="subRow.id"
+                      >
+                        <td>
+                          <span
+                            v-bk-tooltips.top="subRow.name"
+                            class="name"
+                          >
+                            {{ subRow.name }}
+                          </span>
+                          <i
+                            v-if="subRow.is_required"
+                            class="is-required"
+                          >
+                            *
+                          </i>
+                        </td>
+                        <td>
+                          <template v-if="!subRow.isEdit">
+                            <span :class="subRow.instance.is_used ? 'active' : ''">
+                              {{ subRow.instance.is_used ? $t('是') : $t('否') }}
                             </span>
-                            <i
-                              v-if="subRow.is_required"
-                              class="is-required"
-                            >
-                              *
-                            </i>
-                          </td>
-                          <td>
-                            <template v-if="!subRow.isEdit">
-                              <span :class="subRow.instance.is_used ? 'active' : ''">
-                                {{ subRow.instance.is_used ? $t('是') : $t('否') }}
-                              </span>
-                            </template>
-                            <template v-else>
-                              <bk-switcher
-                                :value="subRow.instance.is_used"
-                                theme="primary"
-                                @change="handleSwitchChange(...arguments, subRow)"
+                          </template>
+                          <template v-else>
+                            <bk-switcher
+                              :value="subRow.instance.is_used"
+                              theme="primary"
+                              @change="handleSwitchChange(...arguments, subRow)"
+                            />
+                          </template>
+                        </td>
+                        <td class="url-td">
+                          <template
+                            v-if="
+                              subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit
+                            "
+                          >
+                            <span>
+                              <i
+                                class="paasng-icon paasng-exclamation-circle"
+                                style="color: #ffb848"
                               />
-                            </template>
-                          </td>
-                          <td class="url-td">
-                            <template
-                              v-if="
-                                subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit
-                              "
-                            >
-                              <span>
-                                <i
-                                  class="paasng-icon paasng-exclamation-circle"
-                                  style="color: #ffb848"
-                                />
-                                {{ $t('请填写') }}
-                              </span>
-                            </template>
-                            <template v-else>
-                              <template v-if="!!subRow.instance.url">
-                                <div v-if="!subRow.isEdit">
-                                  <bk-popconfirm
-                                    trigger="mouseenter"
-                                    ext-cls=""
-                                    confirm-button-is-text
-                                    confirm-text="复制"
-                                    cancel-text=""
-                                    @confirm="handleCopy(subRow)"
+                              {{ $t('请填写') }}
+                            </span>
+                          </template>
+                          <template v-else>
+                            <template v-if="!!subRow.instance.url">
+                              <div v-if="!subRow.isEdit">
+                                <bk-popconfirm
+                                  trigger="mouseenter"
+                                  ext-cls=""
+                                  confirm-button-is-text
+                                  confirm-text="复制"
+                                  cancel-text=""
+                                  @confirm="handleCopy(subRow)"
+                                >
+                                  <div slot="content">
+                                    {{ subRow.instance.url }}
+                                  </div>
+                                  <span
+                                    style="
+                                      display: inline-block;
+                                      max-width: 220px;
+                                      overflow: hidden;
+                                      text-overflow: ellipsis;
+                                      white-space: nowrap;
+                                    "
                                   >
-                                    <div slot="content">
-                                      {{ subRow.instance.url }}
-                                    </div>
-                                    <span
-                                      style="
-                                        display: inline-block;
-                                        max-width: 220px;
-                                        overflow: hidden;
-                                        text-overflow: ellipsis;
-                                        white-space: nowrap;
-                                      "
-                                    >
-                                      {{ subRow.instance.url }}
-                                    </span>
-                                  </bk-popconfirm>
-                                </div>
-                                <template v-if="subRow.isEdit">
-                                  <bk-input
-                                    type="textarea"
-                                    :value="subRow.instance.url"
-                                    @input="handleUrlInput(...arguments, subRow)"
-                                  />
-                                </template>
+                                    {{ subRow.instance.url }}
+                                  </span>
+                                </bk-popconfirm>
+                              </div>
+                              <template v-if="subRow.isEdit">
+                                <bk-input
+                                  type="textarea"
+                                  :value="subRow.instance.url"
+                                  @input="handleUrlInput(...arguments, subRow)"
+                                />
                               </template>
-                              <template v-else>
-                                <span v-if="!subRow.isEdit">--</span>
-                                <template v-else>
-                                  <bk-input
-                                    type="textarea"
-                                    :value="subRow.instance.url"
-                                    @input="handleUrlInput(...arguments, subRow)"
-                                  />
-                                </template>
-                              </template>
-                            </template>
-                          </td>
-                          <td
-                            v-bk-overflow-tips
-                            class="text-ellipsis"
-                          >
-                            {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
-                          </td>
-                          <td
-                            v-bk-overflow-tips
-                            class="text-ellipsis"
-                          >
-                            {{
-                              subRow.instance
-                                ? subRow.instance.updated
-                                  ? smartTime(subRow.instance.updated, 'fromNow')
-                                  : '--'
-                                : '--'
-                            }}
-                          </td>
-                          <td>
-                            <template v-if="!subRow.isEdit">
-                              <bk-button
-                                theme="primary"
-                                text
-                                @click.native.stop
-                                @click="handleEdit(subRow)"
-                              >
-                                {{ $t('编辑') }}
-                              </bk-button>
                             </template>
                             <template v-else>
-                              <bk-button
-                                theme="primary"
-                                text
-                                @click.stop="handleSave(subRow)"
-                              >
-                                {{ $t('保存') }}
-                              </bk-button>
-                              <bk-button
-                                style="margin-left: 5px"
-                                theme="primary"
-                                text
-                                @click.stop="handleCancel(subRow)"
-                              >
-                                {{ $t('取消') }}
-                              </bk-button>
+                              <span v-if="!subRow.isEdit">--</span>
+                              <template v-else>
+                                <bk-input
+                                  type="textarea"
+                                  :value="subRow.instance.url"
+                                  @input="handleUrlInput(...arguments, subRow)"
+                                />
+                              </template>
                             </template>
-                          </td>
-                        </tr>
-                      </template>
+                          </template>
+                        </td>
+                        <td
+                          v-bk-overflow-tips
+                          class="text-ellipsis"
+                        >
+                          {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
+                        </td>
+                        <td
+                          v-bk-overflow-tips
+                          class="text-ellipsis"
+                        >
+                          {{
+                            subRow.instance
+                              ? subRow.instance.updated
+                                ? smartTime(subRow.instance.updated, 'fromNow')
+                                : '--'
+                              : '--'
+                          }}
+                        </td>
+                        <td>
+                          <template v-if="!subRow.isEdit">
+                            <bk-button
+                              theme="primary"
+                              text
+                              @click.native.stop
+                              @click="handleEdit(subRow)"
+                            >
+                              {{ $t('编辑') }}
+                            </bk-button>
+                          </template>
+                          <template v-else>
+                            <bk-button
+                              theme="primary"
+                              text
+                              @click.stop="handleSave(subRow)"
+                            >
+                              {{ $t('保存') }}
+                            </bk-button>
+                            <bk-button
+                              style="margin-left: 5px"
+                              theme="primary"
+                              text
+                              @click.stop="handleCancel(subRow)"
+                            >
+                              {{ $t('取消') }}
+                            </bk-button>
+                          </template>
+                        </td>
+                      </tr>
                     </table>
                   </td>
                 </tr>
@@ -396,7 +397,7 @@ export default {
             is_used: true,
           };
           if (item.is_required && item.instance.is_used && !item.instance.url) {
-            ++count;
+            count += 1;
           }
           docuList.forEach((subItem) => {
             if (subItem.parent && subItem.parent === item.id) {
@@ -405,7 +406,7 @@ export default {
             }
           });
         });
-        const templateList = docuList.filter((item) => !childrenList.map((_) => _.id).includes(item.id));
+        const templateList = docuList.filter(item => !childrenList.map(_ => _.id).includes(item.id));
         this.notCompletedCount = count;
         this.tableList = JSON.parse(JSON.stringify(templateList));
       } catch (res) {
@@ -449,11 +450,11 @@ export default {
         this.$delete(payload, 'urlBackup');
         if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
           // eslint-disable-next-line no-plusplus
-          ++this.notCompletedCount;
+          this.notCompletedCount += 1;
         }
         if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
           // eslint-disable-next-line no-plusplus
-          --this.notCompletedCount;
+          this.notCompletedCount -= 1;
         }
       } catch (res) {
         this.$paasMessage({
@@ -480,10 +481,10 @@ export default {
         this.$delete(payload, 'isUseBackup');
         this.$delete(payload, 'urlBackup');
         if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
-          ++this.notCompletedCount;
+          this.notCompletedCount += 1;
         }
         if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
-          --this.notCompletedCount;
+          this.notCompletedCount -= 1;
         }
       } catch (res) {
         this.$paasMessage({

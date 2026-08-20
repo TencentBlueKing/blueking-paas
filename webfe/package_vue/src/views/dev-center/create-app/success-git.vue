@@ -300,7 +300,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+          message: e.detail || this.$t('服务暂不可用，请稍后再试'),
         });
       } finally {
         this.isRefresLoading = false;

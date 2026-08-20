@@ -1245,8 +1245,7 @@ export default {
       const data = this.overViewData;
 
       // 默认按扩缩容方式计算所有资源
-      for (const moduleName in data) {
-        const moduleData = data[moduleName];
+      Object.values(data).forEach((moduleData) => {
 
         ['stag', 'prod'].forEach((envName) => {
           const processes = moduleData.envs[envName]?.processes || [];
@@ -1287,7 +1286,7 @@ export default {
             });
           });
         });
-      }
+      });
 
       return {
         hasAutoscaling,

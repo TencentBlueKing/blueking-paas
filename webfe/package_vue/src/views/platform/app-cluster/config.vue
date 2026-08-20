@@ -102,11 +102,11 @@
                   </template>
                   <template v-else>
                     <span
-                      v-for="item in item.policy.clusters"
+                      v-for="cluster in item.policy.clusters"
                       class="tag"
-                      :key="`uniform-${item}`"
+                      :key="`uniform-${cluster}`"
                     >
-                      {{ $t('集群') }}：{{ item }}
+                      {{ $t('集群') }}：{{ cluster }}
                     </span>
                   </template>
                 </div>

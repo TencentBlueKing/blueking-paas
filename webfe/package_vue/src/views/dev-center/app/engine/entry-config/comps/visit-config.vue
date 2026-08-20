@@ -485,7 +485,7 @@ export default {
             validator: (value) => {
               const pathPrefix = this.curPathPrefix[this.curInputIndex];
               const val = pathPrefix === undefined ? value : pathPrefix;
-              const reg = /^(\/[a-z0-9_\-]*)*\/?$/;
+              const reg = /^(\/[a-z0-9_-]*)*\/?$/;
               return reg.test(val);
             },
             message: () => this.$t('路径必须以"/"开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'),
@@ -922,7 +922,7 @@ export default {
     clearEditFields(envItem) {
       const fieldsToDelete = ['editProtocol', 'isDropdownShow', 'originalUrl'];
       fieldsToDelete.forEach((field) => {
-        if (envItem.hasOwnProperty(field)) {
+        if (Object.prototype.hasOwnProperty.call(envItem, field)) {
           delete envItem[field];
         }
       });

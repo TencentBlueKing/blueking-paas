@@ -413,7 +413,7 @@ export default {
       let template;
 
       switch (this.type) {
-        case 'rtx':
+        case 'rtx': {
           const child = `${highlightKeyword(node.english_name)} (${node.chinese_name})`;
           template = (
             <div class={parentClass}>
@@ -428,6 +428,7 @@ export default {
             </div>
           );
           break;
+        }
         case 'email':
           template = (
             <div class={parentClass}>

@@ -22,6 +22,7 @@ from pathlib import PurePosixPath
 from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -88,8 +89,10 @@ from paasng.platform.agent_sandbox.serializers import (
     VolumeFileStatInputSLZ,
     VolumeFileStatOutputSLZ,
     VolumeOutputSLZ,
+    VolumeShareInputSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
@@ -144,10 +147,64 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         responses={status.HTTP_200_OK: VolumeOutputSLZ(many=True)},
     )
     def list(self, request, code):
-        """查询应用的可用共享存储卷列表。"""
+        """查询当前应用自己创建的共享存储卷。
+
+        不包含他人授权给本应用的 Volume。授权关系写在 ``shared_app_codes`` JSON
+        字段上，按「code 是否在列表中」查询无法走索引，租户 Volume 量大时会扫全表。
+        跨应用挂载仍可通过已知 ``volume_id`` + 授权校验完成（创建沙箱时解析）。
+        """
         application = self.get_application()
         volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
         return Response(VolumeOutputSLZ(volumes, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=VolumeShareInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def share(self, request, code, volume_id):
+        """授权另一应用将该 Volume 挂到自己的沙箱。幂等。"""
+        application = self.get_application()
+        slz = VolumeShareInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        grantee_app_code = slz.validated_data["grantee_app_code"]
+
+        with transaction.atomic():
+            volume = get_object_or_404(
+                Volume.objects.select_for_update(),
+                uuid=volume_id,
+                application=application,
+                deleted_at__isnull=True,
+            )
+            if grantee_app_code == application.code:
+                raise error_codes.APP_NOT_FOUND
+            grantee = Application.objects.filter(code=grantee_app_code, tenant_id=application.tenant_id).first()
+            if not grantee:
+                raise error_codes.APP_NOT_FOUND
+
+            codes = list(volume.shared_app_codes or [])
+            if grantee_app_code not in codes:
+                codes.append(grantee_app_code)
+                volume.shared_app_codes = codes
+                volume.save(update_fields=["shared_app_codes", "updated"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def unshare(self, request, code, volume_id, grantee_app_code):
+        """撤销对指定应用的挂载授权。幂等。"""
+        application = self.get_application()
+        with transaction.atomic():
+            volume = get_object_or_404(
+                Volume.objects.select_for_update(),
+                uuid=volume_id,
+                application=application,
+                deleted_at__isnull=True,
+            )
+            codes = list(volume.shared_app_codes or [])
+            if grantee_app_code in codes:
+                volume.shared_app_codes = [c for c in codes if c != grantee_app_code]
+                volume.save(update_fields=["shared_app_codes", "updated"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def handle_volume_file_errors(action: str):

@@ -83,7 +83,12 @@ def _build_volume_mounts(application: Application, raw: list[dict] | None) -> li
     Looks up each ``volume_id`` in the database to obtain the CFS subPath.
     Returns an empty list when the feature is disabled or no mounts are requested.
 
-    :param application: The application that owns the Volumes.
+    A Volume may be mounted by its owning application, or by another application
+    in the same tenant whose code is listed in ``shared_app_codes``. Direct Volume
+    CRUD / file APIs still require ownership and are not affected by this lookup.
+
+    :param application: The application creating the sandbox; used for tenant
+        isolation and grant checks.
     :param raw: The validated list of raw dicts from the request serializer.
         Each item: ``{"volume_id": UUID, "mount_path": str}``.
     """
@@ -95,9 +100,10 @@ def _build_volume_mounts(application: Application, raw: list[dict] | None) -> li
         str(v.uuid): v
         for v in Volume.objects.filter(
             uuid__in=volume_ids,
-            application=application,
+            tenant_id=application.tenant_id,
             deleted_at__isnull=True,
         )
+        if v.allows_mount_by(application)
     }
 
     result: list[VolumeMount] = []

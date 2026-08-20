@@ -44,6 +44,7 @@ from paasng.platform.agent_sandbox.sandbox import (
     delete_sandbox,
     resolve_sandbox_resources,
 )
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -336,6 +337,63 @@ class TestBuildVolumeMounts:
         assert len(result) == 2
         assert result[0].volume_id == str(vol2.uuid)
         assert result[1].volume_id == str(vol1.uuid)
+
+    def test_allows_cross_app_volume_when_granted(self, bk_app, bk_user, settings):
+        """Owner must put the caller app code into shared_app_codes before cross-app mount."""
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        other_app = create_app(owner_username=bk_user.username)
+        volume = Volume.objects.create(
+            application=other_app,
+            name="shared-vol",
+            tenant_id=bk_app.tenant_id,
+            shared_app_codes=[bk_app.code],
+        )
+
+        result = _build_volume_mounts(
+            bk_app,
+            [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
+        )
+        assert len(result) == 1
+        assert result[0].volume_id == str(volume.uuid)
+        assert result[0].sub_path == f"app/{volume.uuid.hex}"
+
+    def test_rejects_cross_app_volume_without_grant(self, bk_app, bk_user, settings):
+        from paasng.utils.error_codes import error_codes
+
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        other_app = create_app(owner_username=bk_user.username)
+        volume = Volume.objects.create(
+            application=other_app,
+            name="ungranted-vol",
+            tenant_id=bk_app.tenant_id,
+        )
+
+        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
+            _build_volume_mounts(
+                bk_app,
+                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
+            )
+
+    def test_rejects_cross_tenant_volume(self, bk_app, bk_user, settings):
+        from paasng.utils.error_codes import error_codes
+
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+        other_app = create_app(owner_username=bk_user.username)
+        volume = Volume.objects.create(
+            application=other_app,
+            name="other-tenant-vol",
+            tenant_id="other-tenant",
+            shared_app_codes=[bk_app.code],
+        )
+
+        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
+            _build_volume_mounts(
+                bk_app,
+                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
+            )
 
 
 class TestImageValidation:

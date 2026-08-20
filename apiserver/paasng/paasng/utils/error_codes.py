@@ -260,6 +260,7 @@ class ErrorCodes:
     AGENT_SANDBOX_VOLUME_ALREADY_EXISTS = ErrorCode(_("Volume 已存在"), status_code=409)
     AGENT_SANDBOX_VOLUME_CREATE_FAILED = ErrorCode(_("Volume 创建失败"))
     AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"))
+    AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED = ErrorCode(_("Volume 授权应用数量已达上限"), status_code=400)
 
     CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("生成保留前缀授权码失败"))
     CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("已使用的保留前缀授权码不能被删除"))

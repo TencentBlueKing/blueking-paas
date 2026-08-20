@@ -54,7 +54,7 @@ class Volume(UuidAuditedModel):
     shared_app_codes = models.JSONField(
         verbose_name="共享给的应用 code 列表",
         default=list,
-        help_text="被授权后可把该 Volume 挂到自己的沙箱；空列表表示不跨应用共享",
+        help_text="被授权后可把该 Volume 挂到自己的沙箱；空列表表示不跨应用共享，最多 50 个",
     )
 
     class Meta:

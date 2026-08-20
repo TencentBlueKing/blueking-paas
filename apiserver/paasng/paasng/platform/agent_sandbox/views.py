@@ -43,6 +43,7 @@ from paasng.platform.agent_sandbox.artifact import (
     build_preview_url,
     delete_volume_artifact,
 )
+from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxArchiveFailed,
@@ -163,7 +164,7 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def share(self, request, code, volume_id):
-        """授权另一应用将该 Volume 挂到自己的沙箱。幂等。"""
+        """授权另一应用将该 Volume 挂到自己的沙箱。幂等。给自己授权视为 no-op。"""
         application = self.get_application()
         slz = VolumeShareInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -176,14 +177,17 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                 application=application,
                 deleted_at__isnull=True,
             )
+            # 归属方本来就能挂载，不必写入 shared_app_codes
             if grantee_app_code == application.code:
-                raise error_codes.APP_NOT_FOUND
+                return Response(status=status.HTTP_204_NO_CONTENT)
             grantee = Application.objects.filter(code=grantee_app_code, tenant_id=application.tenant_id).first()
             if not grantee:
                 raise error_codes.APP_NOT_FOUND
 
             codes = list(volume.shared_app_codes or [])
             if grantee_app_code not in codes:
+                if len(codes) >= VOLUME_SHARED_APP_CODES_MAX:
+                    raise error_codes.AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED
                 codes.append(grantee_app_code)
                 volume.shared_app_codes = codes
                 volume.save(update_fields=["shared_app_codes", "updated"])

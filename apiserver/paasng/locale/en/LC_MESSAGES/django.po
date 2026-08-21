@@ -5244,7 +5244,11 @@ msgstr "Failed to create volume."
 msgid "Volume 删除失败"
 msgstr "Failed to delete volume"
 
-#: paasng/utils/error_codes.py:264
+#: paasng/utils/error_codes.py:263
+msgid "Volume 授权应用数量已达上限"
+msgstr "The number of applications granted access to this Volume has reached the limit"
+
+#: paasng/utils/error_codes.py:265
 msgid "生成保留前缀授权码失败"
 msgstr "Generate reserved prefix auth code failed"
 

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import math
 
 from django.conf import settings
 from paas_service.models import ServiceInstance
@@ -39,6 +40,10 @@ def update_bkrepo_quota_statistics():
         public_bucket = credentials["public_bucket"]
         private_quota = manager.get_repo_quota(private_bucket)
         public_quota = manager.get_repo_quota(public_bucket)
+
+        # 无限容量跳过记录用量 metrics
+        if math.isinf(private_quota.max_size) or math.isinf(public_quota.max_size):
+            continue
 
         RepoQuotaStatistics.objects.update_or_create(
             instance=instance,

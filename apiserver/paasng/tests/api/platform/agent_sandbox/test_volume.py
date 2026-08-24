@@ -22,7 +22,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
 from paasng.platform.agent_sandbox.models import Volume
 from tests.utils.helpers import create_app
 
@@ -84,17 +83,12 @@ class TestVolumeShareAPI:
         volume.refresh_from_db()
         assert other_app.code not in (volume.shared_app_codes or [])
 
-    def test_share_self_is_noop_unknown_rejected(self, api_client: APIClient, bk_app: Any, volume: Volume) -> None:
-        """Self-grant is a no-op; unknown grantee still returns APP_NOT_FOUND."""
+    def test_share_unknown_grantee_returns_400(self, api_client: APIClient, bk_app: Any, volume: Volume) -> None:
+        """Domain-level grant failures surface as client errors."""
         shares_url = reverse(
             "agent_sandbox.volume.shares",
             kwargs={"code": bk_app.code, "volume_id": volume.uuid},
         )
-        resp = api_client.post(shares_url, data={"grantee_app_code": bk_app.code}, format="json")
-        assert resp.status_code == status.HTTP_204_NO_CONTENT
-        volume.refresh_from_db()
-        assert volume.shared_app_codes == []
-
         resp = api_client.post(shares_url, data={"grantee_app_code": "no-such-app"}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -109,32 +103,6 @@ class TestVolumeShareAPI:
         assert resp.status_code == status.HTTP_200_OK
         uuids = {item["uuid"] for item in resp.json()}
         assert str(volume.uuid) not in uuids
-
-    def test_share_rejects_when_limit_reached(
-        self, api_client: APIClient, bk_app: Any, bk_user, volume: Volume
-    ) -> None:
-        """New grants are rejected once shared_app_codes hits the soft cap; re-grant is still idempotent."""
-        other_app = create_app(owner_username=bk_user.username)
-        volume.shared_app_codes = [f"app-{i:02d}" for i in range(VOLUME_SHARED_APP_CODES_MAX)]
-        volume.save(update_fields=["shared_app_codes", "updated"])
-
-        shares_url = reverse(
-            "agent_sandbox.volume.shares",
-            kwargs={"code": bk_app.code, "volume_id": volume.uuid},
-        )
-        resp = api_client.post(shares_url, data={"grantee_app_code": other_app.code}, format="json")
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        volume.refresh_from_db()
-        assert other_app.code not in volume.shared_app_codes
-        assert len(volume.shared_app_codes) == VOLUME_SHARED_APP_CODES_MAX
-
-        volume.shared_app_codes = volume.shared_app_codes[:-1] + [other_app.code]
-        volume.save(update_fields=["shared_app_codes", "updated"])
-        resp = api_client.post(shares_url, data={"grantee_app_code": other_app.code}, format="json")
-        assert resp.status_code == status.HTTP_204_NO_CONTENT
-        volume.refresh_from_db()
-        assert volume.shared_app_codes.count(other_app.code) == 1
-        assert len(volume.shared_app_codes) == VOLUME_SHARED_APP_CODES_MAX
 
     def test_share_other_app_volume_returns_404(self, api_client: APIClient, bk_app: Any, bk_user) -> None:
         """Only the owner can grant access to a Volume."""

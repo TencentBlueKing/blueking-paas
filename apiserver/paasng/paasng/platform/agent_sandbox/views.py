@@ -22,7 +22,6 @@ from pathlib import PurePosixPath
 from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
-from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -43,7 +42,6 @@ from paasng.platform.agent_sandbox.artifact import (
     build_preview_url,
     delete_volume_artifact,
 )
-from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxArchiveFailed,
@@ -56,6 +54,8 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxFileTooLarge,
     SandboxImageValidateError,
     SandboxServiceNotReady,
+    VolumeGranteeNotFound,
+    VolumeShareLimitExceeded,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
@@ -92,8 +92,8 @@ from paasng.platform.agent_sandbox.serializers import (
     VolumeOutputSLZ,
     VolumeShareInputSLZ,
 )
+from paasng.platform.agent_sandbox.volume import share_volume, unshare_volume
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
@@ -168,46 +168,22 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         slz = VolumeShareInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        grantee_app_code = slz.validated_data["grantee_app_code"]
 
-        with transaction.atomic():
-            volume = get_object_or_404(
-                Volume.objects.select_for_update(),
-                uuid=volume_id,
-                application=application,
-                deleted_at__isnull=True,
-            )
-            # 归属方本来就能挂载，不必写入 shared_app_codes
-            if grantee_app_code == application.code:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            grantee = Application.objects.filter(code=grantee_app_code, tenant_id=application.tenant_id).first()
-            if not grantee:
-                raise error_codes.APP_NOT_FOUND
-
-            codes = list(volume.shared_app_codes or [])
-            if grantee_app_code not in codes:
-                if len(codes) >= VOLUME_SHARED_APP_CODES_MAX:
-                    raise error_codes.AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED
-                codes.append(grantee_app_code)
-                volume.shared_app_codes = codes
-                volume.save(update_fields=["shared_app_codes", "updated"])
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        try:
+            share_volume(volume, slz.validated_data["grantee_app_code"])
+        except VolumeGranteeNotFound:
+            raise error_codes.APP_NOT_FOUND
+        except VolumeShareLimitExceeded:
+            raise error_codes.AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
     def unshare(self, request, code, volume_id, grantee_app_code):
         """撤销对指定应用的挂载授权。幂等。"""
         application = self.get_application()
-        with transaction.atomic():
-            volume = get_object_or_404(
-                Volume.objects.select_for_update(),
-                uuid=volume_id,
-                application=application,
-                deleted_at__isnull=True,
-            )
-            codes = list(volume.shared_app_codes or [])
-            if grantee_app_code in codes:
-                volume.shared_app_codes = [c for c in codes if c != grantee_app_code]
-                volume.save(update_fields=["shared_app_codes", "updated"])
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        unshare_volume(volume, grantee_app_code)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

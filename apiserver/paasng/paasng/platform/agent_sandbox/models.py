@@ -52,9 +52,9 @@ class Volume(UuidAuditedModel):
     deleted_at = models.DateTimeField("删除时间", null=True)
     tenant_id = tenant_id_field_factory()
     shared_app_codes = models.JSONField(
-        verbose_name="共享给的应用 code 列表",
+        verbose_name="被授权应用列表",
         default=list,
-        help_text="被授权后可把该 Volume 挂到自己的沙箱；空列表表示不跨应用共享，最多 50 个",
+        help_text="被授权应用可把该 Volume 挂到应用所属沙箱下；空列表表示不跨应用共享，最多 50 个",
     )
 
     class Meta:

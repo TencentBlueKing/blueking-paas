@@ -41,18 +41,23 @@ def update_bkrepo_quota_statistics():
         private_quota = manager.get_repo_quota(private_bucket)
         public_quota = manager.get_repo_quota(public_bucket)
 
-        # 无限容量跳过记录用量 metrics
-        if math.isinf(private_quota.max_size) or math.isinf(public_quota.max_size):
-            continue
+        # 无限制容量跳过记录用量 metrics
+        if not math.isinf(private_quota.max_size):
+            RepoQuotaStatistics.objects.update_or_create(
+                instance=instance,
+                repo_name=private_bucket,
+                defaults={"max_size": private_quota.max_size, "used": private_quota.used},
+            )
+        else:
+            logger.info("Private repo %s has unlimited quota, skip update", private_bucket)
 
-        RepoQuotaStatistics.objects.update_or_create(
-            instance=instance,
-            repo_name=private_bucket,
-            defaults={"max_size": private_quota.max_size, "used": private_quota.used},
-        )
-        RepoQuotaStatistics.objects.update_or_create(
-            instance=instance,
-            repo_name=public_bucket,
-            defaults={"max_size": public_quota.max_size, "used": public_quota.used},
-        )
+        if not math.isinf(public_quota.max_size):
+            RepoQuotaStatistics.objects.update_or_create(
+                instance=instance,
+                repo_name=public_bucket,
+                defaults={"max_size": public_quota.max_size, "used": public_quota.used},
+            )
+        else:
+            logger.info("Public repo %s has unlimited quota, skip update", public_bucket)
+
     logger.info("bkrepo quota updated.")

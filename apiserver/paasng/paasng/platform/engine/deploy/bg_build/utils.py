@@ -19,7 +19,7 @@ import json
 import logging
 import os
 import urllib.parse
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 from urllib.parse import unquote
 
 from blue_krill.storages.blobstore.base import SignatureType
@@ -176,9 +176,9 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: BuildMetadata):
 def prepare_slugbuilder_template(
     app: "WlApp",
     env_vars: Dict,
-    builder_image: Optional[str] = None,
+    builder_image: str | None = None,
     debug_enabled: bool = False,
-    build_process_id: Optional[str] = None,
+    build_process_id: str | None = None,
 ) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 

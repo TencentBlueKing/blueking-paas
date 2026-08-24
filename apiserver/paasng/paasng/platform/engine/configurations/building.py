@@ -111,7 +111,7 @@ class SlugBuilderTemplate:
     runtime: ContainerRuntimeSpec
     schedule: Schedule
     debug_enabled: bool = False
-    build_process_id: Optional[str] = None
+    build_process_id: str | None = None
 
 
 def get_build_debug_timeout() -> int:

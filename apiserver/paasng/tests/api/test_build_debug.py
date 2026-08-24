@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import uuid
 from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.deploy.app_res.controllers import BUILD_PROCESS_ID_LABEL_KEY
 from paasng.platform.engine.models.deployment import AdvancedOptions
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
@@ -320,3 +322,56 @@ class TestCreateBuildDebugConsole:
             url = _build_debug_console_url(bk_app.code, bk_module.name, deployment.id)
             resp = api_client.post(url)
             assert resp.status_code == 400
+
+
+class TestBuildDebugPodOwnership:
+    """Pod 归属校验: 新部署在生成自己的 Pod 之前, 不应进入上一次部署遗留的 debug Pod."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_user_feature(self):
+        """Mock user_has_feature 返回 True, 通过权限检查."""
+        with mock.patch(
+            "paasng.platform.engine.views.deploy.user_has_feature",
+            return_value=mock.MagicMock(has_permission=mock.MagicMock(return_value=True)),
+        ):
+            yield
+
+    @pytest.mark.parametrize(
+        "bp_id",
+        [None, uuid.UUID("11111111-1111-1111-1111-111111111111")],
+        ids=["prepare_phase", "before_new_pod_created"],
+    )
+    def test_cannot_enter_stale_pod(self, api_client, bk_app, bk_module, bp_id):
+        """新部署用新 uuid 进入调试时, 上一次部署遗留的旧 Pod 应被拦截."""
+        deployment = create_fake_deployment(bk_module)
+        deployment.advanced_options = AdvancedOptions(debug_enabled=True)
+        deployment.build_process_id = bp_id
+        deployment.save()
+
+        # 上一次部署遗留的 debug Pod, 其 label 的 build-process-id 与当前部署不匹配
+        stale_pod = mock.MagicMock()
+        stale_pod.metadata.labels = {
+            BUILD_PROCESS_ID_LABEL_KEY: str(uuid.UUID("22222222-2222-2222-2222-222222222222"))
+        }
+
+        wl_app = mock.MagicMock()
+        wl_app.module_name = "default"
+        wl_app.namespace = "test-ns"
+
+        with (
+            mock.patch.object(
+                type(deployment.app_environment),
+                "wl_app",
+                new_callable=mock.PropertyMock,
+                return_value=wl_app,
+            ),
+            mock.patch(
+                "paasng.platform.engine.views.deploy.BuildHandler.new_by_app",
+                return_value=mock.MagicMock(get_pod=mock.MagicMock(return_value=stale_pod)),
+            ),
+            mock.patch("paasng.platform.engine.views.deploy.bcs_client_cls") as mock_bcs_cls,
+        ):
+            resp = api_client.post(_build_debug_console_url(bk_app.code, bk_module.name, deployment.id))
+
+        assert resp.status_code == 400
+        mock_bcs_cls.return_value.create_web_console_sessions.assert_not_called()

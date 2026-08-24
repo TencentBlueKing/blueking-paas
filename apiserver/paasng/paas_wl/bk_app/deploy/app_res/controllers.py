@@ -83,6 +83,9 @@ _PROBE_POLL_INTERVAL = 15
 DEBUG_ENABLED_LABEL_KEY = "debug-enabled"
 DEBUG_ENABLED_LABEL_VALUE = "true"
 
+# Label key for build-process ownership
+BUILD_PROCESS_ID_LABEL_KEY = "build-process-id"
+
 
 class BuildProbePoller:
     """轮询 Pod 探针状态直到构建完成.
@@ -492,6 +495,8 @@ class BuildHandler(PodScheduleHandler):
         labels = {"pod_selector": pod_name, "category": "slug-builder"}
         if template.debug_enabled:
             labels[DEBUG_ENABLED_LABEL_KEY] = DEBUG_ENABLED_LABEL_VALUE
+        if template.build_process_id:
+            labels[BUILD_PROCESS_ID_LABEL_KEY] = template.build_process_id
 
         slug_pod_body: Dict = {
             "metadata": {

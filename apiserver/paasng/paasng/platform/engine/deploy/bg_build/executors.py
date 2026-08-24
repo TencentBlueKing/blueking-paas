@@ -112,7 +112,11 @@ class DefaultBuildProcessExecutor(DeployStep):
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
                 slugbuilder_template = prepare_slugbuilder_template(
-                    self.wl_app, env_vars, builder_image=self.bp.image, debug_enabled=debug_enabled
+                    self.wl_app,
+                    env_vars,
+                    builder_image=self.bp.image,
+                    debug_enabled=debug_enabled,
+                    build_process_id=str(self.bp.uuid),
                 )
 
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import math
 
 from django.conf import settings
 from paas_service.models import ServiceInstance
@@ -40,14 +41,23 @@ def update_bkrepo_quota_statistics():
         private_quota = manager.get_repo_quota(private_bucket)
         public_quota = manager.get_repo_quota(public_bucket)
 
-        RepoQuotaStatistics.objects.update_or_create(
-            instance=instance,
-            repo_name=private_bucket,
-            defaults={"max_size": private_quota.max_size, "used": private_quota.used},
-        )
-        RepoQuotaStatistics.objects.update_or_create(
-            instance=instance,
-            repo_name=public_bucket,
-            defaults={"max_size": public_quota.max_size, "used": public_quota.used},
-        )
+        # 无限制容量跳过记录用量 metrics
+        if not math.isinf(private_quota.max_size):
+            RepoQuotaStatistics.objects.update_or_create(
+                instance=instance,
+                repo_name=private_bucket,
+                defaults={"max_size": private_quota.max_size, "used": private_quota.used},
+            )
+        else:
+            logger.info("Private repo %s has unlimited quota, skip update", private_bucket)
+
+        if not math.isinf(public_quota.max_size):
+            RepoQuotaStatistics.objects.update_or_create(
+                instance=instance,
+                repo_name=public_bucket,
+                defaults={"max_size": public_quota.max_size, "used": public_quota.used},
+            )
+        else:
+            logger.info("Public repo %s has unlimited quota, skip update", public_bucket)
+
     logger.info("bkrepo quota updated.")

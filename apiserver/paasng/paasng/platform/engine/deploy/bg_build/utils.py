@@ -19,7 +19,7 @@ import json
 import logging
 import os
 import urllib.parse
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 from urllib.parse import unquote
 
 from blue_krill.storages.blobstore.base import SignatureType
@@ -174,7 +174,11 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: BuildMetadata):
 
 
 def prepare_slugbuilder_template(
-    app: "WlApp", env_vars: Dict, builder_image: Optional[str] = None, debug_enabled: bool = False
+    app: "WlApp",
+    env_vars: Dict,
+    builder_image: str | None = None,
+    debug_enabled: bool = False,
+    build_process_id: str | None = None,
 ) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
@@ -182,6 +186,7 @@ def prepare_slugbuilder_template(
     :param env_vars: Extra environment vars
     :param builder_image: image of slugbuilder
     :param debug_enabled: Whether to enable build debug mode
+    :param build_process_id: Build process ID, used to label the builder Pod for ownership check
     :returns: args for start slugbuilder
     """
     # Builder image name
@@ -201,6 +206,7 @@ def prepare_slugbuilder_template(
         ),
         schedule=get_schedule_config(app, only_cluster_default=True),
         debug_enabled=debug_enabled,
+        build_process_id=build_process_id,
     )
 
 

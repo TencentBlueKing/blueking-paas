@@ -29,11 +29,20 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.usefixtures("_mock_verified_app_permission")
-class TestVolumeViewSetOwnership:
-    """Delete still requires the path app to own the Volume."""
+class TestVolumeAPI:
+    """Owner grants/revokes mount access; list still only returns owned Volumes."""
 
-    def test_delete_other_app_volume_returns_404(self, api_client: APIClient, bk_app: Any, bk_user) -> None:
-        """Knowing another app's volume UUID is not enough to delete it."""
+    @pytest.mark.parametrize(
+        ("url_name", "method", "payload"),
+        [
+            pytest.param("agent_sandbox.volume.destroy", "delete", None, id="destroy"),
+            pytest.param("agent_sandbox.volume.shares", "post", {"grantee_app_code": "some-app"}, id="share"),
+        ],
+    )
+    def test_operating_other_app_volume_returns_404(
+        self, api_client: APIClient, bk_app: Any, bk_user, url_name: str, method: str, payload: dict | None
+    ) -> None:
+        """Knowing another app's volume UUID is not enough to operate on it."""
         other_app = create_app(owner_username=bk_user.username)
         other_volume = Volume.objects.create(
             application=other_app,
@@ -41,19 +50,13 @@ class TestVolumeViewSetOwnership:
             tenant_id=bk_app.tenant_id,
         )
 
-        url = reverse(
-            "agent_sandbox.volume.destroy",
-            kwargs={"code": bk_app.code, "volume_id": other_volume.uuid},
-        )
-        resp = api_client.delete(url)
+        url = reverse(url_name, kwargs={"code": bk_app.code, "volume_id": other_volume.uuid})
+        resp = getattr(api_client, method)(url, data=payload, format="json")
+
         assert resp.status_code == status.HTTP_404_NOT_FOUND
         other_volume.refresh_from_db()
         assert other_volume.deleted_at is None
-
-
-@pytest.mark.usefixtures("_mock_verified_app_permission")
-class TestVolumeShareAPI:
-    """Owner grants/revokes mount access; list still only returns owned Volumes."""
+        assert other_volume.shared_app_codes == []
 
     def test_share_and_unshare(self, api_client: APIClient, bk_app: Any, bk_user, volume: Volume) -> None:
         """Grant, then revoke a same-tenant application."""
@@ -66,12 +69,6 @@ class TestVolumeShareAPI:
         resp = api_client.post(shares_url, data={"grantee_app_code": other_app.code}, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         volume.refresh_from_db()
-        assert other_app.code in (volume.shared_app_codes or [])
-
-        # idempotent grant
-        resp = api_client.post(shares_url, data={"grantee_app_code": other_app.code}, format="json")
-        assert resp.status_code == status.HTTP_204_NO_CONTENT
-        volume.refresh_from_db()
         assert volume.shared_app_codes == [other_app.code]
 
         unshare_url = reverse(
@@ -81,16 +78,7 @@ class TestVolumeShareAPI:
         resp = api_client.delete(unshare_url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         volume.refresh_from_db()
-        assert other_app.code not in (volume.shared_app_codes or [])
-
-    def test_share_unknown_grantee_returns_400(self, api_client: APIClient, bk_app: Any, volume: Volume) -> None:
-        """Domain-level grant failures surface as client errors."""
-        shares_url = reverse(
-            "agent_sandbox.volume.shares",
-            kwargs={"code": bk_app.code, "volume_id": volume.uuid},
-        )
-        resp = api_client.post(shares_url, data={"grantee_app_code": "no-such-app"}, format="json")
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert volume.shared_app_codes == []
 
     def test_list_excludes_granted_volumes(self, api_client: APIClient, bk_app: Any, bk_user, volume: Volume) -> None:
         """List does not include Volumes owned by others, even after a grant."""
@@ -103,18 +91,3 @@ class TestVolumeShareAPI:
         assert resp.status_code == status.HTTP_200_OK
         uuids = {item["uuid"] for item in resp.json()}
         assert str(volume.uuid) not in uuids
-
-    def test_share_other_app_volume_returns_404(self, api_client: APIClient, bk_app: Any, bk_user) -> None:
-        """Only the owner can grant access to a Volume."""
-        other_app = create_app(owner_username=bk_user.username)
-        other_volume = Volume.objects.create(
-            application=other_app,
-            name="other-vol",
-            tenant_id=bk_app.tenant_id,
-        )
-        shares_url = reverse(
-            "agent_sandbox.volume.shares",
-            kwargs={"code": bk_app.code, "volume_id": other_volume.uuid},
-        )
-        resp = api_client.post(shares_url, data={"grantee_app_code": other_app.code}, format="json")
-        assert resp.status_code == status.HTTP_404_NOT_FOUND

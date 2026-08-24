@@ -19,7 +19,6 @@ import copy
 import logging
 import re
 import shlex
-import uuid
 from decimal import Decimal
 from typing import Any
 
@@ -37,7 +36,6 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxPod,
     AgentSandboxService,
     AgentSandboxWorkload,
-    VolumeMount,
     agent_sandbox_instance_kmodel,
     agent_sandbox_pod_kmodel,
     agent_sandbox_svc_kmodel,
@@ -66,60 +64,15 @@ from paasng.platform.agent_sandbox.exceptions import (
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
-from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
+from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings
 from paasng.platform.agent_sandbox.process import SandboxProcess
+from paasng.platform.agent_sandbox.volume import resolve_volume_mounts
 from paasng.platform.applications.models import Application
-from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
 
 ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-
-
-def _build_volume_mounts(application: Application, raw: list[dict] | None) -> list[VolumeMount]:
-    """Resolve user-supplied volume_mounts into concrete Pod spec entries.
-
-    Looks up each ``volume_id`` in the database to obtain the CFS subPath.
-    Returns an empty list when the feature is disabled or no mounts are requested.
-
-    A Volume may be mounted by its owning application, or by another application
-    in the same tenant whose code is listed in ``shared_app_codes``. Direct Volume
-    CRUD / file APIs still require ownership and are not affected by this lookup.
-
-    :param application: The application creating the sandbox; used for tenant
-        isolation and grant checks.
-    :param raw: The validated list of raw dicts from the request serializer.
-        Each item: ``{"volume_id": UUID, "mount_path": str}``.
-    """
-    if not raw or not settings.AGENT_SANDBOX_VOLUME_ENABLED:
-        return []
-
-    volume_ids = [uuid.UUID(str(item["volume_id"])) for item in raw]
-    volumes = {
-        str(v.uuid): v
-        for v in Volume.objects.filter(
-            uuid__in=volume_ids,
-            tenant_id=application.tenant_id,
-            deleted_at__isnull=True,
-        )
-        if v.allows_mount_by(application)
-    }
-
-    result: list[VolumeMount] = []
-    for item in raw:
-        volume = volumes.get(str(item["volume_id"]))
-        if volume is None:
-            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
-        result.append(
-            VolumeMount(
-                volume_id=str(volume.uuid),
-                mount_path=item["mount_path"],
-                sub_path=volume.storage_path,
-                read_only=False,
-            )
-        )
-    return result
 
 
 def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decimal]:
@@ -278,7 +231,7 @@ class AgentSandboxResManager:
         """
 
         # TODO: 考虑增加一张关联表，记录 volume 被哪些沙箱使用了， 同时用于审计
-        volume_mounts = _build_volume_mounts(sandbox_obj.application, sandbox_obj.volume_mounts or None)
+        volume_mounts = resolve_volume_mounts(sandbox_obj.application, sandbox_obj.volume_mounts or None)
 
         env: dict[str, str] = {
             **copy.deepcopy(sandbox_obj.env_vars),

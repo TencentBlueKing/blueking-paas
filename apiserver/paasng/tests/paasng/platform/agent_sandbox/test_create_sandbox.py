@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import uuid
 from contextlib import suppress
 from decimal import Decimal
 from typing import Iterator
@@ -39,12 +38,10 @@ from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, Sandbox
 from paasng.platform.agent_sandbox.models import Sandbox, SandboxAppSettings, Volume
 from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
-    _build_volume_mounts,
     create_sandbox,
     delete_sandbox,
     resolve_sandbox_resources,
 )
-from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -264,136 +261,6 @@ class TestDeleteSandbox:
         sandbox.refresh_from_db()
         assert sandbox.status == SandboxStatus.ERR_DELETING.value
         assert sandbox.deleted_at is None
-
-
-class TestBuildVolumeMounts:
-    """Unit tests for _build_shared_volume_mounts with Volume DB lookup."""
-
-    def test_looks_up_volume_and_builds_mount(self, bk_app, settings):
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        volume = Volume.objects.create(
-            application=bk_app,
-            name="test-vol",
-            tenant_id=bk_app.tenant_id,
-        )
-
-        result = _build_volume_mounts(
-            bk_app,
-            [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
-        )
-        assert len(result) == 1
-        mount = result[0]
-        assert mount.volume_id == str(volume.uuid)
-        assert mount.mount_path == "/workspace/shared"
-        assert mount.sub_path == f"app/{volume.uuid.hex}"
-        assert mount.read_only is False
-
-    def test_raises_when_volume_not_found(self, bk_app, settings):
-        from paasng.utils.error_codes import error_codes
-
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        fake_uuid = uuid.uuid4()
-        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
-            _build_volume_mounts(
-                bk_app,
-                [{"volume_id": fake_uuid, "mount_path": "/workspace/shared"}],
-            )
-
-    def test_skips_soft_deleted_volumes(self, bk_app, settings):
-        from django.utils import timezone
-
-        from paasng.utils.error_codes import error_codes
-
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        volume = Volume.objects.create(
-            application=bk_app,
-            name="deleted-vol",
-            tenant_id=bk_app.tenant_id,
-            deleted_at=timezone.now(),
-        )
-
-        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
-            _build_volume_mounts(
-                bk_app,
-                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
-            )
-
-    def test_multiple_volumes_preserve_order(self, bk_app, settings):
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        vol1 = Volume.objects.create(application=bk_app, name="vol-1", tenant_id=bk_app.tenant_id)
-        vol2 = Volume.objects.create(application=bk_app, name="vol-2", tenant_id=bk_app.tenant_id)
-
-        result = _build_volume_mounts(
-            bk_app,
-            [
-                {"volume_id": vol2.uuid, "mount_path": "/opt/data"},
-                {"volume_id": vol1.uuid, "mount_path": "/workspace/shared"},
-            ],
-        )
-        assert len(result) == 2
-        assert result[0].volume_id == str(vol2.uuid)
-        assert result[1].volume_id == str(vol1.uuid)
-
-    def test_allows_cross_app_volume_when_granted(self, bk_app, bk_user, settings):
-        """Owner must put the caller app code into shared_app_codes before cross-app mount."""
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        other_app = create_app(owner_username=bk_user.username)
-        volume = Volume.objects.create(
-            application=other_app,
-            name="shared-vol",
-            tenant_id=bk_app.tenant_id,
-            shared_app_codes=[bk_app.code],
-        )
-
-        result = _build_volume_mounts(
-            bk_app,
-            [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
-        )
-        assert len(result) == 1
-        assert result[0].volume_id == str(volume.uuid)
-        assert result[0].sub_path == f"app/{volume.uuid.hex}"
-
-    def test_rejects_cross_app_volume_without_grant(self, bk_app, bk_user, settings):
-        from paasng.utils.error_codes import error_codes
-
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        other_app = create_app(owner_username=bk_user.username)
-        volume = Volume.objects.create(
-            application=other_app,
-            name="ungranted-vol",
-            tenant_id=bk_app.tenant_id,
-        )
-
-        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
-            _build_volume_mounts(
-                bk_app,
-                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
-            )
-
-    def test_rejects_cross_tenant_volume(self, bk_app, bk_user, settings):
-        from paasng.utils.error_codes import error_codes
-
-        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
-
-        other_app = create_app(owner_username=bk_user.username)
-        volume = Volume.objects.create(
-            application=other_app,
-            name="other-tenant-vol",
-            tenant_id="other-tenant",
-            shared_app_codes=[bk_app.code],
-        )
-
-        with pytest.raises(type(error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND)):
-            _build_volume_mounts(
-                bk_app,
-                [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}],
-            )
 
 
 class TestImageValidation:

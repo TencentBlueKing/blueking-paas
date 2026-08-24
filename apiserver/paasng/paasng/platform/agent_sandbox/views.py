@@ -55,6 +55,8 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxImageValidateError,
     SandboxServiceNotReady,
     VolumeGranteeNotFound,
+    VolumeNotFound,
+    VolumeNotMountable,
     VolumeShareLimitExceeded,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
@@ -401,6 +403,9 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
         except SandboxImageValidateError as e:
             raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
+        except (VolumeNotFound, VolumeNotMountable):
+            # 未授权与不存在返回同一错误码，避免用 volume_id 探测其他应用的 Volume
+            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
         except SandboxCreateError as e:
             raise error_codes.AGENT_SANDBOX_CREATE_FAILED.set_data({"logs": e.logs})
         except SandboxError:

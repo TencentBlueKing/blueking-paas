@@ -14,12 +14,65 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import uuid
+
+from django.conf import settings
 from django.db import transaction
 
+from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
 from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
-from paasng.platform.agent_sandbox.exceptions import VolumeGranteeNotFound, VolumeShareLimitExceeded
+from paasng.platform.agent_sandbox.exceptions import (
+    VolumeGranteeNotFound,
+    VolumeNotFound,
+    VolumeNotMountable,
+    VolumeShareLimitExceeded,
+)
 from paasng.platform.agent_sandbox.models import Volume
 from paasng.platform.applications.models import Application
+
+
+def resolve_volume_mounts(application: Application, requests: list[dict] | None) -> list[VolumeMount]:
+    """把用户提交的挂载请求解析为 Pod spec 的挂载项，逐条校验挂载资格。
+
+    一个 Volume 可以被归属应用挂载，也可以被同租户内、code 位于 ``shared_app_codes``
+    的应用挂载。Volume 自身的 CRUD / 文件接口仍然只认归属关系，不受此处的授权影响。
+
+    :param application: 创建沙箱的应用，用于租户隔离与授权判定。
+    :param requests: 序列化器校验后的挂载请求，每项为 ``{"volume_id": UUID, "mount_path": str}``；
+        为空或未开启共享卷特性时返回空列表。
+    :raises VolumeNotFound: 请求的 Volume 不存在、已软删除或不属于本租户。
+    :raises VolumeNotMountable: Volume 存在，但本应用未获得挂载授权。
+    """
+    if not requests or not settings.AGENT_SANDBOX_VOLUME_ENABLED:
+        return []
+
+    volume_ids = [uuid.UUID(str(item["volume_id"])) for item in requests]
+    volumes = {
+        str(v.uuid): v
+        for v in Volume.objects.filter(
+            uuid__in=volume_ids,
+            tenant_id=application.tenant_id,
+            deleted_at__isnull=True,
+        )
+    }
+
+    mounts: list[VolumeMount] = []
+    for item in requests:
+        volume = volumes.get(str(item["volume_id"]))
+        # 上层用户看到的报错都会是 volume not found
+        if volume is None:
+            raise VolumeNotFound(f"volume {item['volume_id']} not found in tenant {application.tenant_id}")
+        if not volume.allows_mount_by(application):
+            raise VolumeNotMountable(f"application {application.code} is not allowed to mount volume {volume.uuid}")
+        mounts.append(
+            VolumeMount(
+                volume_id=str(volume.uuid),
+                mount_path=item["mount_path"],
+                sub_path=volume.storage_path,
+                read_only=False,
+            )
+        )
+    return mounts
 
 
 def share_volume(volume: Volume, grantee_app_code: str) -> None:

@@ -19,11 +19,12 @@ import uuid
 from typing import Any
 
 import pytest
+from django.utils import timezone
 
 from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
-from paasng.platform.agent_sandbox.exceptions import VolumeShareLimitExceeded
+from paasng.platform.agent_sandbox.exceptions import VolumeNotFound, VolumeNotMountable, VolumeShareLimitExceeded
 from paasng.platform.agent_sandbox.models import Volume
-from paasng.platform.agent_sandbox.volume import share_volume, unshare_volume
+from paasng.platform.agent_sandbox.volume import resolve_volume_mounts, share_volume, unshare_volume
 from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -41,6 +42,89 @@ def volume(bk_app: Any) -> Volume:
         name=f"vol-{uuid.uuid4().hex[:8]}",
         tenant_id=bk_app.tenant_id,
     )
+
+
+def _missing_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
+    return uuid.uuid4()
+
+
+def _soft_deleted_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
+    volume = Volume.objects.create(
+        application=bk_app,
+        name="deleted-vol",
+        tenant_id=bk_app.tenant_id,
+        deleted_at=timezone.now(),
+    )
+    return volume.uuid
+
+
+def _cross_tenant_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
+    """即使已授权，属于其他租户的 Volume 也不可见。"""
+    other_app = create_app(owner_username=bk_user.username)
+    volume = Volume.objects.create(
+        application=other_app,
+        name="other-tenant-vol",
+        tenant_id="other-tenant",
+        shared_app_codes=[bk_app.code],
+    )
+    return volume.uuid
+
+
+class TestResolveVolumeMounts:
+    @pytest.fixture(autouse=True)
+    def _enable_volume_feature(self, settings) -> None:
+        """共享卷特性默认关闭，解析挂载项前需先打开开关。"""
+        settings.AGENT_SANDBOX_VOLUME_ENABLED = True
+
+    def test_resolves_owned_volumes_in_request_order(self, bk_app: Any) -> None:
+        """每条请求按序解析为携带 CFS subPath 的挂载项。"""
+        vol1 = Volume.objects.create(application=bk_app, name="vol-1", tenant_id=bk_app.tenant_id)
+        vol2 = Volume.objects.create(application=bk_app, name="vol-2", tenant_id=bk_app.tenant_id)
+
+        mounts = resolve_volume_mounts(
+            bk_app,
+            [
+                {"volume_id": vol2.uuid, "mount_path": "/opt/data"},
+                {"volume_id": vol1.uuid, "mount_path": "/workspace/shared"},
+            ],
+        )
+
+        assert [m.volume_id for m in mounts] == [str(vol2.uuid), str(vol1.uuid)]
+        assert mounts[0].mount_path == "/opt/data"
+        assert mounts[0].sub_path == f"app/{vol2.uuid.hex}"
+        assert mounts[0].read_only is False
+
+    @pytest.mark.parametrize(
+        "make_volume_id",
+        [
+            pytest.param(_missing_volume_id, id="missing"),
+            pytest.param(_soft_deleted_volume_id, id="soft-deleted"),
+            pytest.param(_cross_tenant_volume_id, id="cross-tenant"),
+        ],
+    )
+    def test_rejects_invisible_volume(self, bk_app: Any, bk_user, make_volume_id) -> None:
+        """不在本租户存活集合内的 Volume 与不存在等同。"""
+        volume_id = make_volume_id(bk_app, bk_user)
+
+        with pytest.raises(VolumeNotFound):
+            resolve_volume_mounts(bk_app, [{"volume_id": volume_id, "mount_path": "/workspace/shared"}])
+
+    def test_cross_app_volume_requires_grant(self, bk_app: Any, bk_user) -> None:
+        """他人的 Volume 需先获授权才可挂载。"""
+        other_app = create_app(owner_username=bk_user.username)
+        volume = Volume.objects.create(
+            application=other_app,
+            name="cross-app-vol",
+            tenant_id=bk_app.tenant_id,
+        )
+        requests = [{"volume_id": volume.uuid, "mount_path": "/workspace/shared"}]
+
+        with pytest.raises(VolumeNotMountable):
+            resolve_volume_mounts(bk_app, requests)
+
+        share_volume(volume, bk_app.code)
+        mounts = resolve_volume_mounts(bk_app, requests)
+        assert [m.volume_id for m in mounts] == [str(volume.uuid)]
 
 
 class TestShareVolume:

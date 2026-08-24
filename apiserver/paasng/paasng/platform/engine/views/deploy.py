@@ -472,15 +472,16 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 校验 Pod 归属: 防止新部署命中上一次部署遗留的 debug Pod
         bp_id = deployment.build_process_id
-        pod_labels = (getattr(pod.metadata, "labels", None) or {}) if pod is not None else {}
-        if pod is not None and (not bp_id or pod_labels.get(BUILD_PROCESS_ID_LABEL_KEY) != str(bp_id)):
-            logger.warning(
-                "Found builder Pod<%s/%s> not belonging to deployment<%s>, treat as absent.",
-                wl_app.namespace,
-                builder_name,
-                deployment.id,
-            )
-            pod = None
+        if pod is not None:
+            pod_labels = getattr(pod.metadata, "labels", None) or {}
+            if not bp_id or pod_labels.get(BUILD_PROCESS_ID_LABEL_KEY) != str(bp_id):
+                logger.warning(
+                    "Found builder Pod<%s/%s> not belonging to deployment<%s>, treat as absent.",
+                    wl_app.namespace,
+                    builder_name,
+                    deployment.id,
+                )
+                pod = None
 
         return wl_app, builder_name, pod
 

@@ -491,7 +491,7 @@ class BuildHandler(PodScheduleHandler):
                 }
             )
 
-        # 构建调试模式: 添加 debug-enabled label
+        # 构建调试模式: 添加 debug-enabled 和 build_process_id labels
         labels = {"pod_selector": pod_name, "category": "slug-builder"}
         if template.debug_enabled:
             labels[DEBUG_ENABLED_LABEL_KEY] = DEBUG_ENABLED_LABEL_VALUE

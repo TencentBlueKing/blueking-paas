@@ -51,6 +51,11 @@ class Volume(UuidAuditedModel):
     display_name = models.CharField(verbose_name="显示名称", max_length=256, blank=True, default="")
     deleted_at = models.DateTimeField("删除时间", null=True)
     tenant_id = tenant_id_field_factory()
+    shared_app_codes = models.JSONField(
+        verbose_name="被授权应用列表",
+        default=list,
+        help_text="被授权应用可把该 Volume 挂到应用所属沙箱下；空列表表示不跨应用共享，最多 50 个",
+    )
 
     class Meta:
         unique_together = ("tenant_id", "application_id", "name")
@@ -59,6 +64,12 @@ class Volume(UuidAuditedModel):
     def storage_path(self) -> str:
         """共享存储上的 subPath，格式为 app/{uuid_hex}。"""
         return f"app/{self.uuid.hex}"
+
+    def allows_mount_by(self, application: Application) -> bool:
+        """Whether ``application`` may mount this Volume into its sandbox."""
+        if self.application_id == application.pk:
+            return True
+        return application.code in (self.shared_app_codes or [])
 
 
 class VolumeArtifact(UuidAuditedModel):

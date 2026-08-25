@@ -54,6 +54,10 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxFileTooLarge,
     SandboxImageValidateError,
     SandboxServiceNotReady,
+    VolumeGranteeNotFound,
+    VolumeNotFound,
+    VolumeNotMountable,
+    VolumeShareLimitExceeded,
 )
 from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
@@ -88,7 +92,9 @@ from paasng.platform.agent_sandbox.serializers import (
     VolumeFileStatInputSLZ,
     VolumeFileStatOutputSLZ,
     VolumeOutputSLZ,
+    VolumeShareInputSLZ,
 )
+from paasng.platform.agent_sandbox.volume import share_volume, unshare_volume
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
@@ -144,10 +150,43 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         responses={status.HTTP_200_OK: VolumeOutputSLZ(many=True)},
     )
     def list(self, request, code):
-        """查询应用的可用共享存储卷列表。"""
+        """查询当前应用自己创建的共享存储卷。
+
+        不包含他人授权给本应用的 Volume。授权关系写在 ``shared_app_codes`` JSON
+        字段上，按「code 是否在列表中」查询无法走索引，租户 Volume 量大时会扫全表。
+        跨应用挂载仍可通过已知 ``volume_id`` + 授权校验完成（创建沙箱时解析）。
+        """
         application = self.get_application()
         volumes = Volume.objects.filter(application=application, deleted_at__isnull=True).order_by("-created")
         return Response(VolumeOutputSLZ(volumes, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=VolumeShareInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def share(self, request, code, volume_id):
+        """授权另一应用将该 Volume 挂到自己的沙箱。幂等。给自己授权视为 no-op。"""
+        application = self.get_application()
+        slz = VolumeShareInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        try:
+            share_volume(volume, slz.validated_data["grantee_app_code"])
+        except VolumeGranteeNotFound:
+            raise error_codes.APP_NOT_FOUND
+        except VolumeShareLimitExceeded:
+            raise error_codes.AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    def unshare(self, request, code, volume_id, grantee_app_code):
+        """撤销对指定应用的挂载授权。幂等。"""
+        application = self.get_application()
+        volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
+        unshare_volume(volume, grantee_app_code)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def handle_volume_file_errors(action: str):
@@ -364,6 +403,9 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
         except SandboxImageValidateError as e:
             raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
+        except (VolumeNotFound, VolumeNotMountable):
+            # 未授权与不存在返回同一错误码，避免用 volume_id 探测其他应用的 Volume
+            raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
         except SandboxCreateError as e:
             raise error_codes.AGENT_SANDBOX_CREATE_FAILED.set_data({"logs": e.logs})
         except SandboxError:

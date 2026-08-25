@@ -53,6 +53,9 @@ SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60
 DEFAULT_SANDBOX_CPU = Decimal(4)
 DEFAULT_SANDBOX_MEMORY = Decimal(2)
 
+# Volume.shared_app_codes 软上限；超出后 share 接口拒绝写入
+VOLUME_SHARED_APP_CODES_MAX = 50
+
 # 上传临时 URL 的有效期，给 daemon 读大文件 + PUT 留足余量
 UPLOAD_URL_EXPIRES_IN = 3600
 

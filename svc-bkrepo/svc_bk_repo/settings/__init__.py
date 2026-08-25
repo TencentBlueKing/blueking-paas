@@ -34,8 +34,8 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 
-# Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量 MySQL 5.7 DB:
-#   1. 绕过 minimum_database_version 启动检查
+# Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量低版本 MySQL:
+#   1. 绕过 minimum_database_version 启动检查（本服务存量环境可能仍是 MySQL 5.5）
 #   2. 回退 RENAME COLUMN 为 CHANGE COLUMN（RENAME COLUMN 仅 MySQL 8.0.4+ 支持）
 class PatchFeatures:
     """Patched Django Features"""
@@ -45,7 +45,7 @@ class PatchFeatures:
         if self.connection.mysql_is_mariadb:
             return (10, 4)
         else:
-            return (5, 7)
+            return (5, 5)
 
 
 DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version

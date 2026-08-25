@@ -6,7 +6,10 @@ readme = "README.md"
 authors = [{ name = "blueking", email = "blueking@tencent.com" }]
 requires-python = ">=3.14"
 dependencies = [
+    "attrs>=26.1.0,<27.0.0",
     "bkpaas-auth>=4.4.0,<5.0.0",
+    "blue-krill>=3.1.1,<4.0.0",
+    "cattrs>=26.1.0,<27.0.0",
     "django>=6.0.8,<6.1",
     "django-ninja>=1.6.2,<2.0.0",
     "dynaconf>=3.3.5,<4.0.0",

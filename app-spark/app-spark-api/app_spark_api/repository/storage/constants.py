@@ -14,27 +14,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""pytest fixtures for app-spark-api tests."""
-
-import pytest
-
-from app_spark_api.core.projects.models import Project
-from tests.helpers import create_user
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
-@pytest.fixture()
-def bk_user():
-    """Generate a random user."""
-    return create_user()
-
-
-@pytest.fixture()
-def project(bk_user):
-    """Create a Project owned and created by the current BlueKing user."""
-    return Project.objects.create(
-        id="test-project",
-        name="Test Project",
-        creator=bk_user,
-        owner=bk_user,
-        tenant_id=bk_user.tenant_id,
-    )
+class StorageBackend(models.TextChoices):
+    HOST_TMP_PATH = "host_tmp_path", _("主机临时路径")
+    BK_REPO = "bk_repo", _("蓝鲸制品库")

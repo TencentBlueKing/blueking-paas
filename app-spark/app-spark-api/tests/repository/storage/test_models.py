@@ -14,27 +14,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""pytest fixtures for app-spark-api tests."""
-
 import pytest
 
-from app_spark_api.core.projects.models import Project
-from tests.helpers import create_user
+from app_spark_api.repository.storage.backends import HostTmpPath
+from app_spark_api.repository.storage.constants import StorageBackend
+from app_spark_api.repository.storage.models import ProjectSourceStorage
+
+pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture()
-def bk_user():
-    """Generate a random user."""
-    return create_user()
-
-
-@pytest.fixture()
-def project(bk_user):
-    """Create a Project owned and created by the current BlueKing user."""
-    return Project.objects.create(
-        id="test-project",
-        name="Test Project",
-        creator=bk_user,
-        owner=bk_user,
-        tenant_id=bk_user.tenant_id,
+def test_project_source_storage_builds_backend(project, tmp_path):
+    package_path = tmp_path / "source.tgz"
+    source_storage = ProjectSourceStorage.objects.create(
+        project=project,
+        backend=StorageBackend.HOST_TMP_PATH,
+        config={"path": str(package_path)},
     )
+
+    backend = source_storage.get_backend()
+
+    assert isinstance(backend, HostTmpPath)
+    assert backend.path == package_path
+    assert project.source_storage == source_storage

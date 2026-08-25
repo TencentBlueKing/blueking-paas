@@ -1764,6 +1764,28 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+    delete:
+      operationId: unbind_service
+      description: 解绑应用模块与增强服务
+      tags:
+      - 增强服务
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Unbind addon service
   /system/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/:
     post:
       operationId: granted_ai_agent_distributors

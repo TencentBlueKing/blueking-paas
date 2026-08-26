@@ -295,8 +295,8 @@
           @click="isAdvancedOptionsExpanded = !isAdvancedOptionsExpanded"
         >
           <i
-            class="paasng-icon"
-            :class="isAdvancedOptionsExpanded ? 'paasng-angle-line-down' : 'paasng-angle-line-up'"
+            class="paasng-icon paasng-angle-line-down"
+            :class="{ collapsed: !isAdvancedOptionsExpanded }"
           />
           <span>{{ $t('高级选项') }}</span>
         </div>
@@ -306,7 +306,7 @@
         >
           <div class="label">{{ $t('构建调试') }}</div>
           <p class="tips mt-4 mb-6">
-            {{ $t('开启后，构建容器会在构建结束后保留30分钟，期间可登录容器查看日志和调试') }}
+            {{ $t('开启后，本次构建结束前会进入调试模式（最长 30 分钟），期间可登录构建环境进行调试') }}
           </p>
           <bk-switcher
             v-model="debugEnabled"
@@ -420,6 +420,7 @@
           :rv-data="rvData"
           :show-debug-action="deployedDebugEnabled"
           @close="handleCloseSideslider"
+          @redeploy="handleRedeploy"
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
@@ -620,7 +621,7 @@ export default {
       },
       deployRefreshLoading: false,
       codeRefreshLoading: false,
-      isAdvancedOptionsExpanded: true,
+      isAdvancedOptionsExpanded: false,
       debugEnabled: false,
       deployedDebugEnabled: false,
       commitDialog: {
@@ -639,7 +640,7 @@ export default {
   computed: {
     ...mapState(['userFeature']),
     curAppModule() {
-      return this.curAppModuleList.find((e) => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
+      return this.curAppModuleList.find(e => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
     },
     branchEmptyText() {
       const sourceType = this.overview.repo && this.overview.repo.source_type;
@@ -762,7 +763,7 @@ export default {
         const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = activeImageSource || 'branch';
-        this.isAdvancedOptionsExpanded = true;
+        this.isAdvancedOptionsExpanded = this.deploymentInfoBackUp.isRedeploy === true;
         this.debugEnabled = false;
         this.deployedDebugEnabled = false;
         this.tagData.tagValue = '';
@@ -810,7 +811,7 @@ export default {
     // 获取第一个匹配的错误数据
     getFirstErrorData(errorStates) {
       const failedConditions = this.deployPreparations.failed_conditions || [];
-      const errorList = failedConditions.find((v) => errorStates.includes(v.action_name));
+      const errorList = failedConditions.find(v => errorStates.includes(v.action_name));
       return errorList || {};
     },
     setCurData() {
@@ -888,7 +889,7 @@ export default {
           };
 
           // 组装数据，实现分组
-          if (!branchesList.map((item) => item.id).includes(branch.type)) {
+          if (!branchesList.map(item => item.id).includes(branch.type)) {
             branchesList.push({
               id: branch.type,
               name: branch.type,
@@ -896,7 +897,7 @@ export default {
               children: [obj],
             });
           } else {
-            const curData = branchesList.find((item) => item.id === branch.type);
+            const curData = branchesList.find(item => item.id === branch.type);
             curData.children.push(obj);
           }
 
@@ -1273,6 +1274,12 @@ export default {
       this.handleCloseProcessWatch();
     },
 
+    // 关闭当前部署详情并通知父组件重新打开部署弹窗
+    handleRedeploy() {
+      this.handleCloseProcessWatch();
+      this.$emit('redeploy');
+    },
+
     handleScrollToBottom() {
       if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
       this.pagination.limit += 10;
@@ -1306,7 +1313,7 @@ export default {
           };
 
           Object.keys(errorTypes).forEach((type) => {
-            const errorList = ret.failed_conditions.filter((v) => errorTypes[type].includes(v.action_name));
+            const errorList = ret.failed_conditions.filter(v => errorTypes[type].includes(v.action_name));
             this.isShowErrorAlert[type] = errorList.length > 0;
           });
         } else {
@@ -1479,6 +1486,10 @@ export default {
     .paasng-icon {
       margin-right: 8px;
       font-size: 12px;
+      transition: transform 0.2s ease;
+      &.collapsed {
+        transform: rotate(-90deg);
+      }
     }
   }
   .build-debug-option {

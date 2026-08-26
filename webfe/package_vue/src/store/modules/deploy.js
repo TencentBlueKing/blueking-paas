@@ -22,6 +22,7 @@
 import http from '@/api';
 import { json2Query } from '@/common/tools';
 
+// 判断当前用户是否允许使用构建调试功能
 const isBuildDebugAllowed = rootState => rootState.userFeature?.ALLOW_BUILD_DEBUG === true;
 
 const state = {

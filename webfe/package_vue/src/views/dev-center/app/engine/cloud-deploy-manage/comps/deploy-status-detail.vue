@@ -86,14 +86,22 @@
             {{ $t('返回') }}
           </bk-button>
         </template>
-        <bk-button
-          v-if="isDeployFail"
-          :theme="theme"
-          outline
-          @click="handleCallback"
-        >
-          {{ $t('返回') }}
-        </bk-button>
+        <template v-if="isDeployFail">
+          <bk-button
+            :theme="theme"
+            outline
+            @click="$emit('redeploy')"
+          >
+            {{ $t('重新部署') }}
+          </bk-button>
+          <bk-button
+            :theme="theme"
+            outline
+            @click="handleCallback"
+          >
+            {{ $t('返回') }}
+          </bk-button>
+        </template>
       </template>
     </deploy-status-bar>
     <div class="deploy-time-log flex-row">
@@ -183,7 +191,7 @@ export default {
     },
     showDebugAction: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   data() {
@@ -264,9 +272,9 @@ export default {
     },
     canStopDeploy() {
       return (
-        this.isWatchDeploying &&
-        !this.isDeployInterrupted &&
-        (this.appearDeployState.includes('build') || this.appearDeployState.includes('release'))
+        this.isWatchDeploying
+        && !this.isDeployInterrupted
+        && (this.appearDeployState.includes('build') || this.appearDeployState.includes('release'))
       );
     },
     deployFailReason() {
@@ -746,8 +754,8 @@ export default {
 
         // 普通应用不展示
         if (
-          this.curAppModule.web_config.templated_source_enabled &&
-          this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP
+          this.curAppModule.web_config.templated_source_enabled
+          && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP
         ) {
           sourceInfo.push(
             {
@@ -775,8 +783,8 @@ export default {
           const value = this.isSmartApp
             ? smartRoute
             : this.curAppModule.source_origin === 1
-            ? this.$t('代码库')
-            : this.$t('蓝鲸运维开发平台提供源码包');
+              ? this.$t('代码库')
+              : this.$t('蓝鲸运维开发平台提供源码包');
           // 普通应用不展示
           if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
             sourceInfo.push({

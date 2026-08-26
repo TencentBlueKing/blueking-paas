@@ -43,6 +43,7 @@
           :deployment="currentDeployment"
           :possible-reason="errorTips.possible_reason"
           :show-debug-action="isBuildDebugEnabled"
+          :debug-available="isBuildDebugAvailable"
           :debug-disabled="!currentDeployment.isLatestDeployment"
           @redeploy="handleRedeploy"
           @back="handleBack"
@@ -122,6 +123,7 @@ export default {
       isTimelineLoading: false,
       isDebugStatusLoading: false,
       isBuildDebugEnabled: false,
+      isBuildDebugAvailable: false,
       ansiUp: null,
       curDeployLog: '',
       timeLineList: [],
@@ -235,13 +237,16 @@ export default {
     async getBuildDebugEnabled(params) {
       this.isDebugStatusLoading = true;
       this.isBuildDebugEnabled = false;
+      this.isBuildDebugAvailable = false;
       try {
         const res = await this.$store.dispatch('deploy/getBuildDebugStatus', {
           appCode: this.appCode,
           moduleId: params.moduleName || this.moduleId,
           deployId: params.deployment_id,
         });
-        this.isBuildDebugEnabled = !!res.enabled;
+        // 旧部署的构建容器会被后续部署覆盖，保留禁用入口说明失效原因
+        this.isBuildDebugEnabled = !!res.enabled || !params.isLatestDeployment;
+        this.isBuildDebugAvailable = !!res.available && params.isLatestDeployment;
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -364,12 +369,14 @@ export default {
       this.errorTips = {};
       this.currentDeployment = {};
       this.isBuildDebugEnabled = false;
+      this.isBuildDebugAvailable = false;
     },
 
     handleShowLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
       this.isBuildDebugEnabled = false;
+      this.isBuildDebugAvailable = false;
       if (this.isTimelineLoading || this.isLogLoading || this.isDebugStatusLoading) {
         return false;
       }
@@ -391,7 +398,9 @@ export default {
       if (operationType === 'offline') {
         this.curDeployLog = row.logDetail;
       } else {
-        this.getBuildDebugEnabled(row);
+        if (row.status === 'failed') {
+          this.getBuildDebugEnabled(row);
+        }
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }
@@ -403,6 +412,7 @@ export default {
       this.timeLineList = [];
       this.curDeployLog = '';
       this.isBuildDebugEnabled = false;
+      this.isBuildDebugAvailable = false;
       this.currentDeployment = {};
       if (this.isTimelineLoading || this.isLogLoading || this.isDebugStatusLoading) {
         return false;

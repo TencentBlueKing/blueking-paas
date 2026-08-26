@@ -919,6 +919,7 @@ export default {
   登录调试: 'Log in for debugging',
   该部署未开启构建调试: 'Build debugging was not enabled for this deployment',
   构建调试窗口不可用: 'The build debugging window is unavailable',
+  构建环境已被回收: 'The build environment has been recycled',
   '创建构建调试控制台会话失败，请稍后重试': 'Failed to create a build debugging console session. Please try again later.',
   '暂无解决方案，可前往“标准输出日志”检测是否异常': 'No solution is available. Check the standard output logs for errors.',
   应用部署成功: 'Deployment succeeded',
@@ -1347,8 +1348,8 @@ export default {
   '集成插件开发框架，插件版本管理，插件运行时等模块': 'Integrate plugin framework, plugin version management, plugin runtime and other modules',
   高级选项: 'Advanced options',
   构建调试: 'Build debugging',
-  '开启后，构建容器会在构建结束后保留30分钟，期间可登录容器查看日志和调试':
-    'When enabled, the build container will be retained for 30 minutes after the build finishes. During this period, you can log in to the container to view logs and debug.',
+  '开启后，本次构建结束前会进入调试模式（最长 30 分钟），期间可登录构建环境进行调试':
+    'Once enabled, the build will enter debug mode (up to 30 minutes) before the current build ends, during which you can log in to the build environment to debug.',
   选择集群: 'Select cluster',
   '应用创建中，请稍候': 'APP creation, please wait',
   创建应用: 'Create APP',

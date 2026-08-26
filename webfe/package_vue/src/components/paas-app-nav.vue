@@ -195,7 +195,7 @@ export default {
         if (!this.curAppInfo.web_config.engine_enabled) {
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
             return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'operationRecord'].includes(nav.name);
           });
@@ -205,30 +205,30 @@ export default {
         if (this.curAppModule?.region !== 'ieod') {
           navTree.forEach((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
           });
         }
 
         // 当角色为开发者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'developer') {
-          navTree = navTree.filter((nav) => this.roleAllowRouters.developer.includes(nav.name));
+          navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
         }
 
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
-          navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
+          navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
           this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理
         if (
-          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP &&
-          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
+          && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
         ) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appPackages')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
             }
           });
         }
@@ -265,15 +265,13 @@ export default {
         navTree = navTree.filter((nav) => {
           const key = featureMaps[nav.name];
           if (nav.name === 'appAnalysis') {
-            const result = ['PA_WEBSITE_ANALYTICS', 'PA_INGRESS_ANALYTICS', 'PA_CUSTOM_EVENT_ANALYTICS'].some(
-              (key) => this.curAppInfo.feature[key]
-            );
+            const result = ['PA_WEBSITE_ANALYTICS', 'PA_INGRESS_ANALYTICS', 'PA_CUSTOM_EVENT_ANALYTICS'].some(key => this.curAppInfo.feature[key]);
             // 访问统计三项都为false，不展示一级导航
             if (!result) {
               return false;
             }
           }
-          if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+          if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
             return this.curAppInfo.feature[key];
           }
           return true;
@@ -287,7 +285,7 @@ export default {
           const children = nav.children.filter((sub) => {
             const key = subFeatureMaps[sub.destRoute.name];
             // 如果有相应key，根据key来处理是否启用
-            if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+            if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
               return this.curAppInfo.feature[key];
             }
             return true;
@@ -426,9 +424,10 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(
-            (nav) => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName
-          );
+          const router = this.allNavItems.find(nav => (
+            (nav.matchRouters && nav.matchRouters.includes(routeName))
+            || nav.destRoute?.name === routeName
+          ));
           reject(router);
         }
       });
@@ -446,7 +445,7 @@ export default {
     },
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
-      const category = navTree.find((item) => item.name === categoryName);
+      const category = navTree.find(item => item.name === categoryName);
       if (category) {
         category.children.push({
           categoryName,
@@ -467,7 +466,7 @@ export default {
      * @param {String} name 名称
      */
     addServiceNavItem(navTree, id, name) {
-      const category = navTree.find((item) => item.name === 'appServices');
+      const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
         name: this.$t(name),
@@ -551,7 +550,8 @@ export default {
     },
 
     afterEnter(el) {
-      $(el).hide().slideDown(400);
+      $(el).hide()
+        .slideDown(400);
     },
 
     leave(el, done) {

@@ -1683,7 +1683,7 @@ export default {
       // 如果相应环境上次部署过，默认选中上次部署的分支
       // 如果正式环境没有部署过，默认选中预发布环境部署过的分支
 
-      if (favBranchName && this.branchesMap.hasOwnProperty(favBranchName)) {
+      if (favBranchName && Object.prototype.hasOwnProperty.call(this.branchesMap, favBranchName)) {
         this.branchSelection = favBranchName;
         return;
       }
@@ -3264,7 +3264,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+          message: e.detail || this.$t('服务暂不可用，请稍后再试'),
         });
       }
     },

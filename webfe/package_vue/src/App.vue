@@ -133,7 +133,7 @@ export default {
     // 沙箱环境页面
     &.sandbox-page {
       height: 100%;
-    } 
+    }
   }
   .paas-app-main-container {
     min-height: 0;

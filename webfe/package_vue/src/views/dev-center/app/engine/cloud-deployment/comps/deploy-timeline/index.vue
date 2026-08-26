@@ -145,7 +145,7 @@
                 this.list.forEach(item => {
                     item.status = 'default';
                     item.content = '';
-                    if (item.hasOwnProperty('loading')) {
+                    if (Object.prototype.hasOwnProperty.call(item, 'loading')) {
                         item.loading = false;
                     }
                 });

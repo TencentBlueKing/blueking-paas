@@ -68,6 +68,7 @@
               </li>
               <li
                 v-for="(val, key) in PERMISSIONS"
+                :key="key"
                 :class="['role-item', { 'is-last': '模块管理' === key }]"
               >
                 <div

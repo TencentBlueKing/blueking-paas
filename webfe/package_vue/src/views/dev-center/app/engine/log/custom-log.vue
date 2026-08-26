@@ -219,14 +219,13 @@
                     <td class="log-message">
                       <div v-dompurify-html="log.message || '--'" />
                     </td>
-                    <template v-for="field of fieldSelectedList">
-                      <td
-                        :key="field"
-                        class="field"
-                      >
-                        <div v-dompurify-html="log.detail[field] || '--'" />
-                      </td>
-                    </template>
+                    <td
+                      v-for="field of fieldSelectedList"
+                      :key="field"
+                      class="field"
+                    >
+                      <div v-dompurify-html="log.detail[field] || '--'" />
+                    </td>
                   </tr>
                   <tr
                     v-if="log.isToggled"
@@ -329,7 +328,8 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -478,7 +478,7 @@ export default {
     fieldSelectedList() {
       const keys = Object.keys(this.fieldChecked);
       this.fieldSelectedList.forEach((item) => {
-        if (!this.fieldChecked.hasOwnProperty(item)) {
+        if (!Object.prototype.hasOwnProperty.call(this.fieldChecked, item)) {
           this.fieldChecked[item] = [];
           this.fieldPopoverShow[item] = false;
         }
@@ -840,7 +840,7 @@ export default {
       });
     },
 
-    handleLogReload(params) {
+    handleLogReload() {
       this.loadData(false);
     },
 
@@ -906,8 +906,7 @@ export default {
         }
         this.fieldPopoverShow[field] = true;
         this.filterKeyword = '';
-        // eslint-disable-next-line no-plusplus
-        this.renderIndex++;
+        this.renderIndex += 1;
       } else {
         if (this.$refs[`filterIcon${field}`][0] === e.target) {
           this.handleCancelFilterChange(field);
@@ -915,7 +914,7 @@ export default {
       }
     },
 
-    hideAllFilterPopover(el) {
+    hideAllFilterPopover() {
       for (const key in this.fieldPopoverShow) {
         this.fieldPopoverShow[key] = false;
       }
@@ -1288,8 +1287,8 @@ export default {
   .stream-log {
     display: flex;
     margin-bottom: 8px;
-    font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-      'Arial';
+    font-family:
+      Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑', 'Arial';
 
     .pod-name {
       min-width: 95px;

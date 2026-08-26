@@ -313,7 +313,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?/,
+            regex: /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?/,
             message: this.$t('请输入正确的URL地址'),
             trigger: 'blur',
           },

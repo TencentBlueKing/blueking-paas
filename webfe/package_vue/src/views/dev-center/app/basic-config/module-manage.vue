@@ -1425,7 +1425,7 @@ export default {
           }
           break;
         case 'bare_svn':
-        case 'bare_git':
+        case 'bare_git': {
           const repoData = this.$refs.repoInfo.getData();
           if (!repoData.url) {
             this.$paasMessage({
@@ -1450,6 +1450,7 @@ export default {
           }
 
           break;
+        }
         case 'bk_svn':
         default:
           sourceRepoUrl = undefined;
@@ -1656,7 +1657,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+          message: e.detail || this.$t('服务暂不可用，请稍后再试'),
         });
       }
     },

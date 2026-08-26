@@ -1,7 +1,12 @@
 <template lang="html">
   <ul class="overview-list">
     <template v-for="navItem in displayNavTree">
-      <li class="group-title">{{ navItem.name }}</li>
+      <li
+        :key="`group-${navItem.name}`"
+        class="group-title"
+      >
+        {{ navItem.name }}
+      </li>
       <!-- 显示分组 -->
       <template v-for="(category, categoryIndex) in navItem.children">
         <!-- 有子级导航 -->
@@ -34,13 +39,13 @@
               class="overview-text-slide"
             >
               <a
-                v-for="(navItem, navIndex) in category.children"
+                v-for="(childNavItem, navIndex) in category.children"
                 :key="navIndex"
-                :class="{ on: navItem.isSelected }"
+                :class="{ on: childNavItem.isSelected }"
                 href="javascript: void(0);"
-                @click="goPage(navItem)"
+                @click="goPage(childNavItem)"
               >
-                {{ navItem.name }}
+                {{ childNavItem.name }}
               </a>
             </div>
           </transition>
@@ -227,12 +232,12 @@ export default {
       };
       return {
         name: navItem.destRoute.name,
-        params: params,
+        params,
       };
     },
     getIconClass(navItem) {
       const classes = ['paasng-icon', 'overview-list-icon'];
-      classes.push('paasng-' + (navItem.iconfontName || 'gear'));
+      classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
       return classes;
     },
     enter(el, done) {

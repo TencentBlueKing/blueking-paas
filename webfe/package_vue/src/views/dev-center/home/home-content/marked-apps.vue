@@ -131,6 +131,7 @@
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import { mapGetters } from 'vuex';
 import { APP_TENANT_MODE, APP_STATUS } from '@/common/constants';
+import { bus } from '@/common/bus';
 
 export default {
   data() {

@@ -17,7 +17,9 @@
 
 """Unit tests for AgentSandboxPodSerializer._construct_pod_spec, focusing on
 how VolumeMount items are rendered into ``volumes`` + ``volumeMounts``
-(single CSI inline volume + subPath-split mounts)."""
+(single CSI inline volume + subPath-split mounts). Shared spec construction
+is parametrized across Pod and SandboxInstance entities.
+"""
 
 import uuid
 
@@ -25,6 +27,7 @@ import pytest
 from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import (
+    DAEMON_COMMAND,
     SANDBOX_INSTANCE_API_VERSION,
     SANDBOX_INSTANCE_NETWORK_MODE,
     SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
@@ -34,6 +37,7 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxInstance,
     AgentSandboxKresApp,
     AgentSandboxPod,
+    AgentSandboxWorkload,
     VolumeMount,
 )
 from paas_wl.bk_app.agent_sandbox.kres_slzs import AgentSandboxInstanceSerializer, AgentSandboxPodSerializer
@@ -53,13 +57,18 @@ def sbx_app() -> AgentSandboxKresApp:
     )
 
 
-def _make_sandbox(sbx_app, *, volume_mounts=None, cpu=None, memory=None) -> AgentSandboxPod:
+@pytest.fixture(params=[AgentSandboxPod, AgentSandboxInstance], ids=["pod", "sandbox_instance"])
+def sandbox_entity_cls(request) -> type[AgentSandboxWorkload]:
+    return request.param
+
+
+def _make_sandbox(sbx_app, entity_cls: type[AgentSandboxWorkload], *, volume_mounts=None, cpu=None, memory=None):
     kwargs = {}
     if cpu is not None:
         kwargs["cpu"] = cpu
     if memory is not None:
         kwargs["memory"] = memory
-    return AgentSandboxPod.create(
+    return entity_cls.create(
         sbx_app,
         name="test-sandbox",
         sandbox_id="abc123",
@@ -78,18 +87,19 @@ def _vol_id() -> str:
 class TestConstructPodSpecVolumes:
     """Verify the CSI inline volume + subPath volumeMount layout."""
 
-    def test_no_volume_mounts_omits_volumes(self, sbx_app):
-        sbx = _make_sandbox(sbx_app, volume_mounts=None)
+    def test_no_volume_mounts_omits_volumes(self, sbx_app, sandbox_entity_cls):
+        sbx = _make_sandbox(sbx_app, sandbox_entity_cls, volume_mounts=None)
         spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         assert "volumes" not in spec
         main_container = spec["containers"][0]
         assert "volumeMounts" not in main_container
 
-    def test_single_volume_mount_is_rw(self, sbx_app):
+    def test_single_volume_mount_is_rw(self, sbx_app, sandbox_entity_cls):
         vid = _vol_id()
         sbx = _make_sandbox(
             sbx_app,
+            sandbox_entity_cls,
             volume_mounts=[
                 VolumeMount(
                     volume_id=vid,
@@ -117,11 +127,12 @@ class TestConstructPodSpecVolumes:
             }
         ]
 
-    def test_two_volumes_share_single_csi_volume(self, sbx_app):
+    def test_two_volumes_share_single_csi_volume(self, sbx_app, sandbox_entity_cls):
         vid1 = _vol_id()
         vid2 = _vol_id()
         sbx = _make_sandbox(
             sbx_app,
+            sandbox_entity_cls,
             volume_mounts=[
                 VolumeMount(
                     volume_id=vid1,
@@ -150,7 +161,7 @@ class TestConstructPodSpecVolumes:
         sub_paths = [m["subPath"] for m in mounts]
         assert sub_paths == [f"app/{vid1.replace('-', '')}", f"app/{vid2.replace('-', '')}"]
 
-    def test_csi_attributes_follow_settings(self, sbx_app, settings):
+    def test_csi_attributes_follow_settings(self, sbx_app, sandbox_entity_cls, settings):
         # 验证 driver 与 volumeAttributes 完全由 settings 透传，可适配任意 CSI 实现（如 NFS）
         settings.AGENT_SANDBOX_VOLUME_CSI_DRIVER = "nfs.csi.k8s.io"
         settings.AGENT_SANDBOX_VOLUME_CSI_ATTRIBUTES = {
@@ -161,6 +172,7 @@ class TestConstructPodSpecVolumes:
         vid = _vol_id()
         sbx = _make_sandbox(
             sbx_app,
+            sandbox_entity_cls,
             volume_mounts=[
                 VolumeMount(
                     volume_id=vid,
@@ -184,17 +196,17 @@ class TestConstructPodSpecResources:
     """Verify resources.limits are derived from the sandbox cpu/memory while
     requests keep the platform default values."""
 
-    def test_default_resources(self, sbx_app):
-        # 未显式指定时走 AgentSandboxPod 的默认值 (2 核 / 1 GB)
-        sbx = _make_sandbox(sbx_app)
+    def test_default_resources(self, sbx_app, sandbox_entity_cls):
+        # 未显式指定时走 AgentSandboxWorkload 的默认值 (2 核 / 1 GB)
+        sbx = _make_sandbox(sbx_app, sandbox_entity_cls)
         spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
         assert resources["limits"] == {"cpu": "2000m", "memory": "1024Mi"}
         assert resources["requests"] == {"cpu": "50m", "memory": "128Mi"}
 
-    def test_custom_resources(self, sbx_app):
-        sbx = _make_sandbox(sbx_app, cpu=3, memory=2)
+    def test_custom_resources(self, sbx_app, sandbox_entity_cls):
+        sbx = _make_sandbox(sbx_app, sandbox_entity_cls, cpu=3, memory=2)
         spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
@@ -202,9 +214,9 @@ class TestConstructPodSpecResources:
         # requests 始终保持平台默认值
         assert resources["requests"] == {"cpu": "50m", "memory": "128Mi"}
 
-    def test_limits_not_below_requests(self, sbx_app):
+    def test_limits_not_below_requests(self, sbx_app, sandbox_entity_cls):
         # 即使配置极小的值, limits 也不会低于 requests
-        sbx = _make_sandbox(sbx_app, cpu=0, memory=0)
+        sbx = _make_sandbox(sbx_app, sandbox_entity_cls, cpu=0, memory=0)
         spec = AgentSandboxPodSerializer._construct_pod_spec(sbx)
 
         resources = spec["containers"][0]["resources"]
@@ -222,6 +234,14 @@ class TestAgentSandboxInstanceSerializer:
             workdir="/workspace",
             snapshot=settings.AGENT_SANDBOX_DEFAULT_IMAGE,
             env={"TOKEN": "t", "SERVER_PORT": "30000"},
+            volume_mounts=[
+                VolumeMount(
+                    volume_id="vol-1",
+                    mount_path="/workspace/data",
+                    sub_path="app/vol1",
+                    read_only=False,
+                )
+            ],
         )
         gvk_config = GVKConfig(
             server_version="v1.24.0",
@@ -239,4 +259,10 @@ class TestAgentSandboxInstanceSerializer:
         assert manifest["spec"]["network"]["mode"] == SANDBOX_INSTANCE_NETWORK_MODE
         assert manifest["spec"]["domain"] == {}
         assert manifest["spec"]["podTemplate"]["containers"][0]["name"] == "main"
+        assert manifest["spec"]["podTemplate"]["containers"][0]["command"] == DAEMON_COMMAND
         assert manifest["spec"]["podTemplate"]["labels"]["bkapp.paas.bk.tencent.com/sandbox-id"] == "abc123"
+        volumes = manifest["spec"]["podTemplate"]["volumes"]
+        assert volumes[0]["name"] == SHARED_VOLUME_NAME_IN_POD
+        mounts = manifest["spec"]["podTemplate"]["containers"][0]["volumeMounts"]
+        assert mounts[0]["mountPath"] == "/workspace/data"
+        assert mounts[0]["subPath"] == "app/vol1"

@@ -23,6 +23,7 @@ import environ
 import pymysql
 import sentry_sdk
 import urllib3
+from django.db.backends.mysql.base import DatabaseWrapper
 from django.db.backends.mysql.features import DatabaseFeatures
 from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
@@ -37,6 +38,7 @@ urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 # Django 5.2+ 不再官方支持 MySQL 5.7, 以下 Patch 用于兼容存量低版本 MySQL:
 #   1. 绕过 minimum_database_version 启动检查（本服务存量环境可能仍是 MySQL 5.5）
 #   2. 回退 RENAME COLUMN 为 CHANGE COLUMN（RENAME COLUMN 仅 MySQL 8.0.4+ 支持）
+#   3. DateTime/Time 去掉 fractional seconds（datetime(6)/time(6) 仅 MySQL 5.6.4+ 支持）
 class PatchFeatures:
     """Patched Django Features"""
 
@@ -65,6 +67,22 @@ pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
 setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
+
+# MySQL 5.5 不支持 datetime(6)/time(6)，需回退为不带 fractional seconds 的类型
+_original_data_types = DatabaseWrapper.data_types.func
+
+
+def _patched_data_types(self):
+    types = _original_data_types(self)
+    if not self.mysql_is_mariadb and self.mysql_version < (5, 6, 4):
+        types["DateTimeField"] = "datetime"
+        types["TimeField"] = "time"
+    return types
+
+
+_patched_data_types_prop = cached_property(_patched_data_types)
+_patched_data_types_prop.__set_name__(DatabaseWrapper, "data_types")
+DatabaseWrapper.data_types = _patched_data_types_prop
 
 env = environ.Env(
     # set casting, default value

@@ -23,12 +23,17 @@ import environ
 import pymysql
 import sentry_sdk
 import urllib3
-from django.db.backends.mysql.base import DatabaseWrapper
 from django.db.backends.mysql.features import DatabaseFeatures
 from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+
+# mysql.base 会 import MySQLdb，必须先把 PyMySQL 伪装成 MySQLdb
+pymysql.install_as_MySQLdb()
+setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
+
+from django.db.backends.mysql.base import DatabaseWrapper
 
 # Patch the SSL module for compatibility with legacy CA credentials.
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
@@ -62,11 +67,6 @@ def _patched_sql_rename_column(self):
 
 
 DatabaseSchemaEditor.sql_rename_column = property(_patched_sql_rename_column)
-
-pymysql.install_as_MySQLdb()
-# Patch version info to force pass Django client check
-setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
-
 
 # MySQL 5.5 不支持 datetime(6)/time(6)，需回退为不带 fractional seconds 的类型
 _original_data_types = DatabaseWrapper.data_types.func

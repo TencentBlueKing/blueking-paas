@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandboxKresApp, AgentSandboxPod
-from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
+from paasng.platform.agent_sandbox.sandbox import KubernetesSandbox
 
 from .stubs import DEFAULT_WORKDIR, StubDaemonClient, StubDaemonClientFactory
 
@@ -86,17 +86,17 @@ def stub_agent_sandbox(stub_kres_app: AgentSandboxKresApp) -> AgentSandboxPod:
 def stub_k8s_sandbox(
     stub_agent_sandbox: AgentSandboxPod,
     stub_daemon_factory: StubDaemonClientFactory,
-) -> Iterator[KubernetesPodSandbox]:
-    """Fixture that provides a KubernetesPodSandbox with StubDaemonClient backend.
+) -> Iterator[KubernetesSandbox]:
+    """Fixture that provides a KubernetesSandbox with StubDaemonClient backend.
 
-    This fixture creates a KubernetesPodSandbox that uses StubDaemonClient
+    This fixture creates a KubernetesSandbox that uses StubDaemonClient
     for all daemon operations, enabling unit testing without real K8s/daemon.
 
     :param stub_agent_sandbox: The agent sandbox entity fixture.
     :param stub_daemon_factory: The daemon client factory fixture.
-    :returns: A KubernetesPodSandbox instance with stub backend.
+    :returns: A KubernetesSandbox instance with stub backend.
     """
-    sandbox = KubernetesPodSandbox(
+    sandbox = KubernetesSandbox(
         entity=stub_agent_sandbox,
         router_endpoint="agent-sbx-router.example.com",
         daemon_token="test-token",

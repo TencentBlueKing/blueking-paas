@@ -24,8 +24,8 @@ from .conftest import DEFAULT_WORKDIR
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestKubernetesPodSandboxWithStub:
-    """Test KubernetesPodSandbox using StubDaemonClient backend.
+class TestKubernetesSandboxWithStub:
+    """Test KubernetesSandbox using StubDaemonClient backend.
 
     These tests verify the sandbox operations without requiring a real
     Kubernetes cluster or daemon service.
@@ -98,7 +98,7 @@ class TestKubernetesPodSandboxWithStub:
         assert remote_path not in stub_daemon_client._files
 
 
-class TestKubernetesPodSandboxCommandBuilding:
+class TestKubernetesSandboxCommandBuilding:
     """Test command string building functionality."""
 
     @pytest.mark.parametrize(

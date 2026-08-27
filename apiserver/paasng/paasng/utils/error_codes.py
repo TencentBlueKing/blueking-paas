@@ -262,6 +262,12 @@ class ErrorCodes:
     AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"))
     AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED = ErrorCode(_("Volume 授权应用数量已达上限"), status_code=400)
 
+    # Agent sandbox e2b compatibility
+    AGENT_SANDBOX_E2B_API_KEY_QUOTA_EXCEEDED = ErrorCode(
+        _("e2b API Key 数量已达上限，请先吊销不再使用的 Key"), status_code=400
+    )
+    AGENT_SANDBOX_E2B_API_KEY_CREATE_FAILED = ErrorCode(_("e2b API Key 签发失败"))
+
     CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("生成保留前缀授权码失败"))
     CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("已使用的保留前缀授权码不能被删除"))
 

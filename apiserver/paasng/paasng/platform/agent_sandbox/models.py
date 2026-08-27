@@ -38,6 +38,9 @@ from .constants import (
     SandboxStatus,
     SandboxWorkloadType,
 )
+from .e2b.constants import KEY_GENERATE_MAX_RETRIES, MAX_ACTIVE_KEYS_PER_APP
+from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded
+from .e2b.keys import generate_api_key, hash_api_key, make_display_prefix
 from .exceptions import SandboxAlreadyExists, SandboxCreateError
 
 
@@ -52,9 +55,9 @@ class Volume(UuidAuditedModel):
     deleted_at = models.DateTimeField("删除时间", null=True)
     tenant_id = tenant_id_field_factory()
     shared_app_codes = models.JSONField(
-        verbose_name="被授权应用列表",
+        verbose_name="共享给的应用 code 列表",
         default=list,
-        help_text="被授权应用可把该 Volume 挂到应用所属沙箱下；空列表表示不跨应用共享，最多 50 个",
+        help_text="被授权后可把该 Volume 挂到自己的沙箱；空列表表示不跨应用共享，最多 50 个",
     )
 
     class Meta:
@@ -299,3 +302,82 @@ class ImageBuildLog(UuidAuditedModel):
     build = models.OneToOneField(ImageBuildRecord, db_constraint=False, on_delete=models.CASCADE, related_name="log")
     content = models.TextField(default="", blank=True, help_text="构建容器的标准输出日志")
     tenant_id = tenant_id_field_factory()
+
+
+class E2BApiKeyManager(models.Manager):
+    """E2BApiKey Manager 类"""
+
+    def issue(self, application: Application, owner: str, name: str = "") -> tuple["E2BApiKey", str]:
+        """签发一枚新 key。
+
+        :param application: key 所属应用，也是后续 e2b 请求的归属主体
+        :param owner: 签发人，用于审计
+        :param name: 用户自定义的名称，便于在列表里区分多枚 key
+        :return: (key 记录, 明文 key)。明文只在这一次返回，不入库
+        :raises E2BApiKeyQuotaExceeded: 有效 key 数量已达上限
+        :raises E2BApiKeyGenerateError: 连续多次生成的 key 都撞上了已有记录
+        """
+        active_count = self.filter(application=application, enabled=True).count()
+        if active_count >= MAX_ACTIVE_KEYS_PER_APP:
+            raise E2BApiKeyQuotaExceeded(
+                f"application {application.code} already has {active_count} active e2b api keys"
+            )
+
+        for _ in range(KEY_GENERATE_MAX_RETRIES):
+            plain_key = generate_api_key()
+            key_hash = hash_api_key(plain_key)
+            if self.filter(key_hash=key_hash).exists():
+                continue
+            api_key = self.create(
+                application=application,
+                name=name,
+                key_hash=key_hash,
+                key_prefix=make_display_prefix(plain_key),
+                owner=owner,
+                tenant_id=application.tenant_id,
+            )
+            return api_key, plain_key
+
+        raise E2BApiKeyGenerateError(f"failed to generate a unique e2b api key after {KEY_GENERATE_MAX_RETRIES} tries")
+
+
+class E2BApiKey(UuidAuditedModel):
+    """apiserver 自行签发的 e2b API Key。
+
+    标准 e2b SDK 只会在请求头里带 ``X-API-Key``，发不出 APIGW 所需的应用态凭证，
+    所以 e2b 协议端点不能复用 ``IsAPIGWVerifiedApp``，需要这一套独立的凭证。
+
+    底层沙箱集群 gateway 的真实凭证由 apiserver 独占持有，与本表没有任何映射关系：
+    用户 key 泄露只影响该 key 名下的沙箱，不波及集群。
+    """
+
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="e2b_api_keys"
+    )
+    name = models.CharField(verbose_name="名称", max_length=64, blank=True, default="", help_text="便于区分多枚 key")
+    # 只存摘要，明文在签发响应里一次性返回后即不可再获取
+    key_hash = models.CharField(verbose_name="密钥摘要", max_length=64, unique=True)
+    key_prefix = models.CharField(verbose_name="密钥前缀", max_length=16, help_text="仅用于列表展示")
+    enabled = models.BooleanField(verbose_name="是否启用", default=True)
+    # 吊销采用置为失效而非物理删除，保留审计线索
+    revoked_at = models.DateTimeField(verbose_name="吊销时间", null=True)
+
+    owner = BkUserField(verbose_name="签发人")
+    tenant_id = tenant_id_field_factory()
+
+    objects = E2BApiKeyManager()
+
+    class Meta:
+        ordering = ["-created"]
+        indexes = [models.Index(fields=["application", "enabled"])]
+
+    def __str__(self):
+        return f"{self.key_prefix}...({self.application_id})"
+
+    def revoke(self):
+        """吊销该 key，幂等。"""
+        if not self.enabled:
+            return
+        self.enabled = False
+        self.revoked_at = timezone.now()
+        self.save(update_fields=["enabled", "revoked_at", "updated"])

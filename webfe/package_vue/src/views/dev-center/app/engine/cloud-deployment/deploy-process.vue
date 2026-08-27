@@ -163,7 +163,7 @@
                     :key="tagInputIndex"
                   />
                   <p class="whole-item-tips">
-                    {{ $t("数组类型，示例数据：['/serverctl', 'start']，按回车键分隔每个元素") }}
+                    {{ $t('数组类型，示例数据：{n}，按回车键分隔每个元素', { n: `['/serverctl', 'start']`}) }}
                   </p>
                 </bk-form-item>
 
@@ -183,7 +183,7 @@
                     :paste-fn="copyCommandParameter"
                   />
                   <p class="whole-item-tips">
-                    {{ $t("数组类型，示例数据：['--port', '8081']，按回车键分隔每个元素") }}
+                    {{ $t("数组类型，示例数据：{n}，按回车键分隔每个元素", { n: `['--port', '8081']` }) }}
                   </p>
                 </bk-form-item>
                 <!-- 进程服务编辑态 -->
@@ -1134,7 +1134,7 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: (v) => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
+            validator: v => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
             message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
             trigger: 'blur',
           },
@@ -1224,7 +1224,7 @@ export default {
       return this.isMainEntry(this.formData.services);
     },
     curProcessMainEntryData() {
-      return this.panels.find((v) => this.isMainEntry(v.services));
+      return this.panels.find(v => this.isMainEntry(v.services));
     },
     // metric tips
     metricTipsHtml() {
@@ -1355,7 +1355,7 @@ export default {
       this.$set(this.serviceProcess, firstProcess.name, !!firstProcess.services?.length);
 
       // 数据格式统一
-      processList = processList.map((item) => ({
+      processList = processList.map(item => ({
         ...item,
         services: Array.isArray(item.services) ? item.services : [],
       }));
@@ -1523,7 +1523,7 @@ export default {
         if (this.rules.processName?.length === 2) {
           this.rules.processName.push({
             validator: (v) => {
-              const panelName = this.panels.map((e) => e.name);
+              const panelName = this.panels.map(e => e.name);
               return !panelName.includes(v);
             },
             message: `${this.$t('不允许添加同名进程')}`,
@@ -1692,9 +1692,9 @@ export default {
     // 资源配额方案change回调
     handleChange(name, env) {
       if (env === 'stag') {
-        this.stagQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
+        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
       } else {
-        this.prodQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
+        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
       }
     },
     // 设置对应探测数据
@@ -1704,7 +1704,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some((service) => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
+      return services.some(service => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
     },
     // 启停进程
     toggleServiceProcess(falg) {
@@ -1734,7 +1734,7 @@ export default {
       }
     },
     handleDeleteService(name) {
-      const index = this.formData.services.findIndex((v) => v.name === name);
+      const index = this.formData.services.findIndex(v => v.name === name);
       this.formData.services.splice(index, 1);
     },
     // 切换主入口
@@ -1777,9 +1777,7 @@ export default {
     },
     getEntryNames() {
       if (!this.curProcessMainEntryData) return null;
-      const entry = this.curProcessMainEntryData?.services?.find((v) =>
-        ['bk/http', 'bk/grpc'].includes(v.exposed_type?.name)
-      );
+      const entry = this.curProcessMainEntryData?.services?.find(v => ['bk/http', 'bk/grpc'].includes(v.exposed_type?.name));
       return {
         processName: this.curProcessMainEntryData.name,
         servieName: entry.name,
@@ -1797,8 +1795,8 @@ export default {
         const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
           appCode: this.appCode,
         });
-        const module = res.find((module) => module.name === this.curModuleId);
-        this.moduleAccessAddress = module?.envs?.prod?.find((env) => env.address.type !== 'custom')?.address?.url || '';
+        const module = res.find(module => module.name === this.curModuleId);
+        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type !== 'custom')?.address?.url || '';
       } catch (e) {
         this.moduleAccessAddress = '';
       }
@@ -1814,7 +1812,7 @@ export default {
     },
     // 同步metric数据
     handleUpdateMetric(config) {
-      const index = this.processData.findIndex((v) => v.name === config.name);
+      const index = this.processData.findIndex(v => v.name === config.name);
       this.$set(this.processData[index].monitoring.metric, config.key, config.value);
     },
     // 获取仪表盘链接

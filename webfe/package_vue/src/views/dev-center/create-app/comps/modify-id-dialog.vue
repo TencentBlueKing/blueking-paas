@@ -48,7 +48,7 @@
           :property="'code'"
           :error-display-type="'normal'"
         >
-          <bk-input v-model="formData.code"></bk-input>
+          <bk-input v-model="formData.code" :placeholder="$t('请输入 3-20 字符的小写字母、数字、连字符(-)和下划线(_)，以小写字母开头')"></bk-input>
         </bk-form-item>
         <bk-form-item
           :label="$t('应用名称')"
@@ -99,6 +99,11 @@ export default {
             trigger: 'blur',
           },
           {
+            validator: value => /^[a-z][a-z0-9_-]{2,19}$/.test(value),
+            message: this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)和下划线(_)，以小写字母开头'),
+            trigger: 'blur',
+          },
+          {
             validator: (value) => {
               if (!this.verifyCode) {
                 return true;
@@ -121,10 +126,10 @@ export default {
   },
   computed: {
     dialogVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -138,7 +143,7 @@ export default {
         },
         (validator) => {
           console.error(validator);
-        }
+        },
       );
     },
     handleValueChange(v) {

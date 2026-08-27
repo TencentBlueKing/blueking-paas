@@ -225,7 +225,15 @@ class VolumeOutputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Volume
-        fields = ("uuid", "name", "display_name", "application_id", "storage_instance_id", "storage_path", "created")
+        fields = (
+            "uuid",
+            "name",
+            "display_name",
+            "application_id",
+            "storage_instance_id",
+            "storage_path",
+            "created",
+        )
         extra_kwargs = {
             "uuid": {"label": "卷 UUID"},
             "name": {"label": "卷名称"},
@@ -241,6 +249,12 @@ class VolumeOutputSLZ(serializers.ModelSerializer):
 
     def get_storage_path(self, obj) -> str:
         return obj.storage_path
+
+
+class VolumeShareInputSLZ(serializers.Serializer):
+    """Authorize another application to mount this Volume."""
+
+    grantee_app_code = serializers.CharField(label="被授权应用 code", max_length=20)
 
 
 class VolumeFileListInputSLZ(serializers.Serializer):

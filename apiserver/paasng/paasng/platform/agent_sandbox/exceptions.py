@@ -87,3 +87,19 @@ class SandboxArchiveFailed(SandboxError):
 
 class ImageBuildSourceError(SandboxError):
     """Raised when preparing image build source fails (e.g. missing Dockerfile)."""
+
+
+class VolumeNotFound(SandboxError):
+    """Raised when the requested volume does not exist, has been soft-deleted or belongs to another tenant."""
+
+
+class VolumeNotMountable(SandboxError):
+    """Raised when the application has not been granted access to mount the volume."""
+
+
+class VolumeGranteeNotFound(SandboxError):
+    """Raised when the application being granted volume access does not exist in the tenant."""
+
+
+class VolumeShareLimitExceeded(SandboxError):
+    """Raised when a volume has reached the maximum number of granted applications."""

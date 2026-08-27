@@ -23,7 +23,7 @@ import pytest
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandboxKresApp, AgentSandboxPod
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
-from paasng.platform.agent_sandbox.sandbox import KubernetesPodSandbox
+from paasng.platform.agent_sandbox.sandbox import KubernetesSandbox
 from tests.paasng.platform.agent_sandbox.stubs import (
     DEFAULT_WORKDIR,
     StubDaemonClientFactory,
@@ -125,7 +125,7 @@ def sandbox_id(
 ) -> Generator[str, None, None]:
     """Fixture that provides a sandbox UUID with mocked daemon client.
 
-    This fixture creates a Sandbox record and returns a KubernetesPodSandbox
+    This fixture creates a Sandbox record and returns a KubernetesSandbox
     with StubDaemonClient backend, enabling API tests without real K8s/daemon.
 
     :param sandbox_obj: The sandbox record fixture.
@@ -145,7 +145,7 @@ def sandbox_id(
         snapshot=sandbox_obj.snapshot,
         env=sandbox_obj.env_vars,
     )
-    sandbox_client = KubernetesPodSandbox(
+    sandbox_client = KubernetesSandbox(
         entity=entity,
         router_endpoint="agent-sbx-router.example.com",
         daemon_token=sandbox_obj.daemon_token,

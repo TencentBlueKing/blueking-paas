@@ -33,7 +33,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.models import Build
-from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
+from paas_wl.bk_app.deploy.app_res.controllers import BUILD_PROCESS_ID_LABEL_KEY, BuildHandler
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paasng.accessories.smart_advisor.utils import get_failure_hint
@@ -469,6 +469,20 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         handler = BuildHandler.new_by_app(wl_app)
         builder_name = generate_builder_name(wl_app)
         pod = handler.get_pod(namespace=wl_app.namespace, name=builder_name)
+
+        # 校验 Pod 归属: 防止新部署命中上一次部署遗留的 debug Pod
+        bp_id = deployment.build_process_id
+        if pod is not None:
+            pod_labels = getattr(pod.metadata, "labels", None) or {}
+            if not bp_id or pod_labels.get(BUILD_PROCESS_ID_LABEL_KEY) != str(bp_id):
+                logger.warning(
+                    "Found builder Pod<%s/%s> not belonging to deployment<%s>, treat as absent.",
+                    wl_app.namespace,
+                    builder_name,
+                    deployment.id,
+                )
+                pod = None
+
         return wl_app, builder_name, pod
 
     @staticmethod

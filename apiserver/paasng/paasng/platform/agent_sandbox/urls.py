@@ -38,6 +38,16 @@ urlpatterns = [
         VolumeViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.volume.destroy",
     ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/shares",
+        VolumeViewSet.as_view({"post": "share"}),
+        name="agent_sandbox.volume.shares",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/shares/<slug:grantee_app_code>",
+        VolumeViewSet.as_view({"delete": "unshare"}),
+        name="agent_sandbox.volume.shares.destroy",
+    ),
     # Volume file (persistence) URLs
     path(
         "api/agent_sandbox/applications/<slug:code>/volumes/<uuid:volume_id>/files",

@@ -763,7 +763,7 @@ export default {
       } catch (res) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -816,7 +816,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+          message: e.detail || this.$t('服务暂不可用，请稍后再试'),
         });
       }
     },

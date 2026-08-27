@@ -248,18 +248,17 @@
                       />
                       {{ formatTime(log.timestamp) }}
                     </td>
-                    <template v-for="field of fieldSelectedList">
-                      <td
-                        :key="field"
-                        class="field"
-                      >
-                        <div
-                          v-if="log.detail[field]"
-                          v-dompurify-html="log.detail[field]"
-                        ></div>
-                        <span v-else>--</span>
-                      </td>
-                    </template>
+                    <td
+                      v-for="field of fieldSelectedList"
+                      :key="field"
+                      class="field"
+                    >
+                      <div
+                        v-if="log.detail[field]"
+                        v-dompurify-html="log.detail[field]"
+                      ></div>
+                      <span v-else>--</span>
+                    </td>
                   </tr>
                   <tr
                     v-if="log.isToggled"
@@ -359,7 +358,8 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -497,8 +497,8 @@ export default {
     '$route.params'(newVal, oldVal) {
       if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
         this.isLoading = true;
-        this.renderIndex++;
-        this.routeChangeIndex++;
+        this.renderIndex += 1;
+        this.routeChangeIndex += 1;
         this.resetParams();
         this.loadData();
       }
@@ -506,7 +506,7 @@ export default {
     fieldSelectedList() {
       const keys = Object.keys(this.fieldChecked);
       this.fieldSelectedList.forEach((item) => {
-        if (!this.fieldChecked.hasOwnProperty(item)) {
+        if (!Object.prototype.hasOwnProperty.call(this.fieldChecked, item)) {
           this.fieldChecked[item] = [];
           this.fieldPopoverShow[item] = false;
         }
@@ -876,7 +876,7 @@ export default {
       });
     },
 
-    handleLogReload(params) {
+    handleLogReload() {
       this.loadData(false);
     },
 
@@ -894,7 +894,7 @@ export default {
       this.loadData(false);
     },
 
-    handleFilterChange(field) {
+    handleFilterChange() {
       const list = [];
       for (const key in this.fieldChecked) {
         this.fieldChecked[key].forEach((field) => {
@@ -939,7 +939,7 @@ export default {
       // 勾选状态还原
       if (this.tableFormatFilters.length) {
         const checkedStr = this.tableFormatFilters[0].value;
-        const results = checkedStr.split('|').map((v) => `${field}:${v.trim()}`);
+        const results = checkedStr.split('|').map(v => `${field}:${v.trim()}`);
         this.fieldChecked[field] = results;
       } else {
         this.fieldChecked[field] = [];
@@ -947,12 +947,11 @@ export default {
       this.filterKeyword = '';
     },
 
-    hideAllFilterPopover(el) {
+    hideAllFilterPopover() {
       for (const key in this.fieldPopoverShow) {
         this.fieldPopoverShow[key] = false;
       }
-      // eslint-disable-next-line no-plusplus
-      this.renderFilter++;
+      this.renderFilter += 1;
     },
 
     handleHideFilter(field) {
@@ -969,8 +968,7 @@ export default {
       }
       this.getChartData();
       this.getLogList();
-      // eslint-disable-next-line no-plusplus
-      this.renderIndex++;
+      this.renderIndex += 1;
     },
 
     clearFilterKey() {
@@ -1330,8 +1328,8 @@ export default {
   .stream-log {
     display: flex;
     margin-bottom: 8px;
-    font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-      'Arial';
+    font-family:
+      Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑', 'Arial';
 
     .pod-name {
       min-width: 95px;

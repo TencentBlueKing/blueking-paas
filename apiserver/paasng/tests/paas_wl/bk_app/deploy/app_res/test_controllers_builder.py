@@ -24,7 +24,7 @@ from django.conf import settings
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
+from paas_wl.bk_app.deploy.app_res.controllers import BUILD_PROCESS_ID_LABEL_KEY, BuildHandler
 from paas_wl.infras.resources.base.exceptions import (
     PodAbsentError,
     PodNotSucceededError,
@@ -102,6 +102,36 @@ class TestBuildHandler:
             assert len(body["spec"]["tolerations"]) == 1
             assert body["spec"]["tolerations"][0]["key"] == "region"
             assert body["spec"]["tolerations"][0]["operator"] == "Equal"
+
+    def test_build_slug_debug_labels(self, build_handler):
+        """debug 构建 Pod 应携带 debug-enabled 与 build-process-id label."""
+        template = SlugBuilderTemplate(
+            name="slug-builder",
+            namespace="bkapp-foo-stag",
+            runtime=ContainerRuntimeSpec(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={}),
+            schedule=Schedule(cluster_name="", node_selector={}, tolerations=[]),
+            debug_enabled=True,
+            build_process_id="fake-build-process-id",
+        )
+
+        kpod_get = Mock(side_effect=ResourceMissing("slug-builder", "bkapp-foo-stag"))
+        create_pod_body = parse_pod(
+            ResourceInstance(None, {"kind": "Pod", "metadata": {"name": "bkapp-foo-stag-slug-pod"}})
+        )
+        kpod_create_or_update = Mock(return_value=(create_pod_body, True))
+
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", Mock(return_value=None)),
+            patch("paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", Mock(return_value=True)),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update),
+        ):
+            build_handler.build_slug(template=template)
+
+        _args, kwargs = kpod_create_or_update.call_args_list[0]
+        body = kwargs.get("body")
+        assert body["metadata"]["labels"]["debug-enabled"] == "true"
+        assert body["metadata"]["labels"][BUILD_PROCESS_ID_LABEL_KEY] == "fake-build-process-id"
 
     def test_build_slug_exist(self, build_handler, pod_template):
         namespace_create = Mock(return_value=None)

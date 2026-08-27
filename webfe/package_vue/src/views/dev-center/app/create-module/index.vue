@@ -735,10 +735,11 @@ export default {
       // 请求下拉数据
       switch (this.sourceControlType) {
         case 'bk_gitlab':
-        case 'tc_git':
+        case 'tc_git': {
           const config = this.gitExtendConfig[this.sourceControlType];
           config.fetchMethod();
           break;
+        }
         default:
           break;
       }
@@ -806,7 +807,7 @@ export default {
           case 'bk_gitlab':
           case 'github':
           case 'gitee':
-          case 'tc_git':
+          case 'tc_git': {
             const config = this.gitExtendConfig[this.sourceControlType];
             sourceRepoUrl = config.selectedRepoUrl;
             if (!sourceRepoUrl) {
@@ -819,6 +820,7 @@ export default {
               return;
             }
             break;
+          }
           case 'bk_svn':
           default:
             sourceRepoUrl = undefined;

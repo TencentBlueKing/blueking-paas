@@ -34,12 +34,12 @@ export default {
          *
          * @param {Object} params search_term, appCode, order_by, limit, offset
          */
-    getUserPermissionList ({ commit, state }, { appCode, order_by, limit, offset, search_term }, config = {}) {
+    getUserPermissionList(_context, { appCode, order_by, limit, offset, search_term }, config = {}) {
       const params = {
         order_by,
         limit,
         offset,
-        search_term
+        search_term,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/user/strategy/?${json2Query(params)}`;
       return http.get(url, config);
@@ -50,10 +50,8 @@ export default {
          *
          * @param {Object} params appCode, ids
          */
-    deleteUserPermission ({ commit, state }, { appCode, ids }, config = {}) {
-      const params = ids.map(item => {
-        return `id=${item}`;
-      }).join('&');
+    deleteUserPermission(_context, { appCode, ids }, config = {}) {
+      const params = ids.map(item => `id=${item}`).join('&');
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/user/strategy/?${params}`;
       return http.delete(url, {}, config);
     },
@@ -63,7 +61,7 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, params
          */
-    addUser ({ commit, state }, { appCode, params }, config = {}) {
+    addUser(_context, { appCode, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/user/strategy/`;
       return http.post(url, params, config);
     },
@@ -73,7 +71,7 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, params
          */
-    checkUserPermissin ({ commit, state }, { appCode }, config = {}) {
+    checkUserPermissin(_context, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/user/switch/`;
       return http.get(url, config);
     },
@@ -83,16 +81,16 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, is_enabled
          */
-    setUserPermissin ({ commit, state }, { appCode, is_enabled }, config = {}) {
+    setUserPermissin(_context, { appCode, is_enabled }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/user/switch/`;
-      return http.post(url, { is_enabled: is_enabled }, config);
+      return http.post(url, { is_enabled }, config);
     },
     /**
          * 用户权限有效时间续期
          *
          * @param {Object} Obj { appCode, id, params }
          */
-    userPermissinRenewal ({ commit, state }, { appCode, id, params }, config = {}) {
+    userPermissinRenewal(_context, { appCode, id, params }, config = {}) {
       const obj = { ...params };
       if (obj.expires_at === null) {
         delete obj.expires;
@@ -108,13 +106,13 @@ export default {
          *
          * @param {Object} params search_term, appCode, order_by, limit, offset
          */
-    getExemptList ({ commit, state }, { appCode, order_by, limit, offset, search_term, restriction_type }, config = {}) {
+    getExemptList(_context, { appCode, order_by, limit, offset, search_term, restriction_type }, config = {}) {
       const params = {
         order_by,
         limit,
         offset,
         search_term,
-        restriction_type
+        restriction_type,
       };
       const restrictionType = params.restriction_type;
       delete params.restriction_type;
@@ -127,7 +125,7 @@ export default {
          *
          * @param {Object} params
          */
-    createExempt ({ commit, state }, params, config = {}) {
+    createExempt(_context, params, config = {}) {
       const { appCode, data } = params;
       const restrictionType = params.restriction_type;
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_exempt/restriction_type/${restrictionType}/strategy/`;
@@ -139,7 +137,7 @@ export default {
          *
          * @param {Object} params
          */
-    updateExempt ({ commit, state }, params, config = {}) {
+    updateExempt(_context, params, config = {}) {
       const { appCode, data } = params;
       const restrictionType = params.restriction_type;
       const strategyId = params.strategy_id;
@@ -152,8 +150,8 @@ export default {
          *
          * @param {Object} params
          */
-    deleteExempt ({ commit, state }, params, config = {}) {
-      const appCode = params.appCode;
+    deleteExempt(_context, params, config = {}) {
+      const { appCode } = params;
       const restrictionType = params.restriction_type;
       const strategyId = params.strategy_id;
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_exempt/restriction_type/${restrictionType}/strategy/${strategyId}/`;
@@ -165,14 +163,14 @@ export default {
          *
          * @param {Object} params
          */
-    batchDeleteExempt ({ commit, state }, params, config = {}) {
+    batchDeleteExempt(_context, params, config = {}) {
       const { appCode, id } = params;
       const restrictionType = params.restriction_type;
       const requestParams = {
-        id
+        id,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_exempt/restriction_type/${restrictionType}/strategy/?${json2Query(requestParams)}`;
       return http.delete(url, {}, config);
-    }
-  }
+    },
+  },
 };

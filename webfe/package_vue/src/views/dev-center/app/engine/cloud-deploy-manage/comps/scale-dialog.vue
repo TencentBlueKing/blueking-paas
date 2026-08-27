@@ -160,6 +160,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { cloneDeep, isEqual } from 'lodash';
+import { bus } from '@/common/bus';
 let maxReplicasNum = 0;
 
 export default {

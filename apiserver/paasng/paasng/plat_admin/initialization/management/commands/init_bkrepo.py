@@ -44,8 +44,6 @@ BUILTIN_REPOS = [
     Repo(name=settings.BLOBSTORE_BUCKET_APP_SOURCE, type=RepositoryType.GENERIC, public=False),
     Repo(name=settings.BLOBSTORE_BUCKET_TEMPLATES, type=RepositoryType.GENERIC, public=False),
     Repo(name=settings.BLOBSTORE_BUCKET_AP_PACKAGES, type=RepositoryType.GENERIC, public=False),
-    # Agent Sandbox 产物文件归档仓库(沙箱文件持久化), 前端直连下载/预览
-    Repo(name=settings.AGENT_SANDBOX_ARTIFACT_BUCKET, type=RepositoryType.GENERIC, public=False),
     Repo(name="docker", type=RepositoryType.DOCKER, public=False),
     Repo(name="pypi", type=RepositoryType.PYPI, public=True),
     Repo(name="npm", type=RepositoryType.NPM, public=True),
@@ -56,6 +54,10 @@ BUILTIN_REPOS = [
     #   以下是网关 java/go sdk 需要
     Repo(name="maven", type=RepositoryType.MAVEN, public=True),
     Repo(name="generic", type=RepositoryType.GENERIC, public=True),
+    # Agent Sandbox 镜像构建中间源码包仓库(注入 daemon 后的 prepared.tar.gz, 供 Kaniko 拉取)
+    Repo(name=settings.AGENT_SANDBOX_PACKAGE_BUCKET, type=RepositoryType.GENERIC, public=False),
+    # Agent Sandbox 产物文件归档仓库(沙箱文件持久化)
+    Repo(name=settings.AGENT_SANDBOX_ARTIFACT_BUCKET, type=RepositoryType.GENERIC, public=False),
 ]
 
 

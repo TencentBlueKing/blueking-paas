@@ -94,6 +94,8 @@
 </template>
 
 <script>
+import { bus } from '@/common/bus';
+
 export default {
   name: 'LogCard',
   props: {
@@ -128,7 +130,7 @@ export default {
       return this.type === 'build';
     },
     displayLogs() {
-      let curLogs = this.isBuildLog ? this.logs ?? '' : this.logs[this.curRunLogType] ?? '';
+      let curLogs = this.isBuildLog ? (this.logs ?? '') : (this.logs[this.curRunLogType] ?? '');
       // 如果 curLogs 是一个数组，每项之间添加换行符
       if (Array.isArray(curLogs)) {
         curLogs = curLogs.join('\n');
@@ -137,9 +139,7 @@ export default {
     },
     logTypeList() {
       if (!this.isBuildLog && this.logs !== null) {
-        return Object.keys(this.logs).map((v) => {
-          return { name: v };
-        });
+        return Object.keys(this.logs).map((v) => ({ name: v }));
       }
       return [];
     },

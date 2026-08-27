@@ -22,6 +22,7 @@ module.exports = {
   globals: {
     $: true,
     BACKEND_URL: true,
+    require: 'readonly',
   },
   rules: {
     // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格

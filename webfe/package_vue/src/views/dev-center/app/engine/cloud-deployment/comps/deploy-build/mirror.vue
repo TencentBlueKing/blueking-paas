@@ -28,7 +28,7 @@
               <!-- 源码交付，平台产出镜像模式 -->
               <template v-else-if="mirrorData.env_image_repositories">
                 <!-- 如果两个环境的镜像仓库是一样的，则只显示一个 -->
-                <div v-if="mirrorData.env_image_repositories.prod == mirrorData.env_image_repositories.stag">
+                <div v-if="mirrorData.env_image_repositories.prod === mirrorData.env_image_repositories.stag">
                   <span class="form-text">{{ mirrorData.env_image_repositories.prod }}</span>
                 </div>
                 <!-- 否则两个环境分别展示 -->

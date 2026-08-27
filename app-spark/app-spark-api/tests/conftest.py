@@ -18,6 +18,7 @@
 
 import pytest
 
+from app_spark_api.core.projects.models import Project
 from tests.helpers import create_user
 
 
@@ -25,3 +26,15 @@ from tests.helpers import create_user
 def bk_user():
     """Generate a random user."""
     return create_user()
+
+
+@pytest.fixture()
+def project(bk_user):
+    """Create a Project owned and created by the current BlueKing user."""
+    return Project.objects.create(
+        id="test-project",
+        name="Test Project",
+        creator=bk_user,
+        owner=bk_user,
+        tenant_id=bk_user.tenant_id,
+    )

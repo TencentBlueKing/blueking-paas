@@ -85,6 +85,8 @@ INSTALLED_APPS = [
     # with not real database users.
     "bkpaas_auth",
     "app_spark_api.infras.accounts.apps.AccountsConfig",
+    "app_spark_api.core.projects.apps.ProjectsConfig",
+    "app_spark_api.repository.storage.apps.StorageConfig",
 ]
 
 
@@ -172,6 +174,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# 自动为当前访问用户创建用户 profile，表示对全员默认开放。关闭后，用户必须被手动添加到
+# UserProfile 表中才能访问站点
+AUTO_CREATE_REGULAR_USER = settings.get("AUTO_CREATE_REGULAR_USER", True)
+
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
@@ -225,6 +231,13 @@ BKAUTH_USER_INFO_APIGW_URL = settings.get("BKAUTH_USER_INFO_APIGW_URL", "")
 BKAUTH_USER_COOKIE_VERIFY_URL = settings.get("BKAUTH_USER_COOKIE_VERIFY_URL", "")
 
 BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get("BKAUTH_TOKEN_USER_INFO_ENDPOINT", "")
+
+# --------
+# 项目 Project 源码相关配置（存储、远程仓库等）
+# --------
+
+## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
+BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
 
 
 # Static files (CSS, JavaScript, Images)

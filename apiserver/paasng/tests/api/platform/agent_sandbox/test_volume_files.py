@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -25,6 +26,7 @@ from rest_framework.test import APIClient
 from paasng.platform.agent_sandbox.artifact import build_bkrepo_key
 from paasng.platform.agent_sandbox.exceptions import SandboxDaemonAPIError, SandboxFileNotPreviewable
 from paasng.platform.agent_sandbox.models import Volume, VolumeArtifact
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -270,3 +272,22 @@ class TestVolumeFilePermission:
         )
         resp = api_client.get(list_url, data={"path": ""})
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("_mock_verified_app_permission", "stub_resident_client")
+class TestVolumeFileOwnership:
+    """File APIs still require the path app to own the Volume, even with a known UUID."""
+
+    def test_list_other_app_volume_returns_404(self, api_client: APIClient, bk_app: Any, bk_user) -> None:
+        other_app = create_app(owner_username=bk_user.username)
+        other_volume = Volume.objects.create(
+            application=other_app,
+            name="other-vol",
+            tenant_id=bk_app.tenant_id,
+        )
+        list_url = reverse(
+            "agent_sandbox.volume.files",
+            kwargs={"code": bk_app.code, "volume_id": other_volume.uuid},
+        )
+        resp = api_client.get(list_url, data={"path": ""})
+        assert resp.status_code == status.HTTP_404_NOT_FOUND

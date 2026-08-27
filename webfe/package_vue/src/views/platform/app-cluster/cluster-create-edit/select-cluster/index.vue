@@ -365,7 +365,7 @@ export default {
       infoFormData: {
         name: '',
         description: '',
-        //集群来源
+        // 集群来源
         cluster_source: 'bcs',
         // 项目
         bcs_project_id: '',

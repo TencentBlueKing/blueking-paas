@@ -971,7 +971,7 @@ export default {
         const keywords = this.searchValue
           .split(',')
           .filter((keyword) => keyword.trim() !== '')
-          .map((keyword) => keyword.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+          .map((keyword) => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
 
         if (keywords.length === 0) return name; // 如果没有关键词，直接返回原名
 
@@ -994,7 +994,7 @@ export default {
         const keywords = this.searchValue
           .split(',')
           .filter((keyword) => keyword.trim() !== '')
-          .map((keyword) => keyword.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+          .map((keyword) => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
         if (keywords.length) {
           const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
           description = description.replace(regex, (matched) => `<marked>${matched}</marked>`);

@@ -187,7 +187,7 @@
                 isListPanelShow: false,
                 searchPrefix: '{{',
                 searchSuffix: '}}',
-                searchReg: /\{\{([^\{\}]+)?\}\}/,
+                searchReg: /{{([^{}]+)?}}/,
                 chineseReg: /[\u4e00-\u9fa5]/g,
                 keyWord: '',
                 curSelectIndex: -1,

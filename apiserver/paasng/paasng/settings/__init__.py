@@ -1699,8 +1699,8 @@ AGENT_SANDBOX_DAEMON_KEY = settings.get("AGENT_SANDBOX_DAEMON_KEY", "sandbox/dae
 AGENT_SANDBOX_RESIDENT_DAEMON_URL = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_URL", "")
 # 与常驻 daemon 共享的静态 token(对应 daemon 侧的 TOKEN 环境变量)
 AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN = settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN", "")
-# 存放沙箱产物归档文件的 bkrepo bucket(GENERIC,私有)
-AGENT_SANDBOX_ARTIFACT_BUCKET = settings.get("AGENT_SANDBOX_ARTIFACT_BUCKET", "agent-sandbox-artifacts")
+# 存放沙箱 PV 产物归档的 bkrepo bucket
+AGENT_SANDBOX_ARTIFACT_BUCKET = settings.get("AGENT_SANDBOX_ARTIFACT_BUCKET", "bkpaas3-sandbox-artifacts")
 
 # mount_path 黑名单：沙箱容器内不允许用户挂载共享卷的路径前缀列表
 # 参考 Daytona "不可挂 /proc /sys /etc" 的约束并进一步收紧。

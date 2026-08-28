@@ -32,7 +32,7 @@ from rest_framework.views import APIView
 
 from svc_bk_repo.vendor.actions import extend_quota
 from svc_bk_repo.vendor.exceptions import ExtendQuotaMaxSizeExceeded, ExtendQuotaUsageTooLow, NoNeedToExtendQuota
-from svc_bk_repo.vendor.helper import BKGenericRepoManager
+from svc_bk_repo.vendor.helper import get_repo_manager
 from svc_bk_repo.vendor.render import humanize_bytes
 from svc_bk_repo.vendor.serializers import ServiceInstanceForManageSLZ
 
@@ -59,8 +59,7 @@ class BKRepoIndexView(TemplateView):
     def get_context_data(self, **kwargs):
         instance = get_object_or_404(ServiceInstance, pk=self.kwargs["instance_id"])
 
-        plan_config = instance.plan.get_config()
-        manager = BKGenericRepoManager(**plan_config)
+        manager = get_repo_manager(instance)
 
         credentials = instance.get_credentials()
         private_bucket = credentials["private_bucket"]
@@ -96,8 +95,7 @@ class BKRepoManageView(APIView):
         """自助扩容"""
         instance = get_object_or_404(ServiceInstance, uuid=instance_id)
 
-        plan_config = instance.plan.get_config()
-        manager = BKGenericRepoManager(**plan_config)
+        manager = get_repo_manager(instance)
 
         credentials = instance.get_credentials()
         private_bucket = credentials["private_bucket"]

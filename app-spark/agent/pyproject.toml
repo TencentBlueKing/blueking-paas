@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.29"]
+build-backend = "hatchling.build"
+
+[project]
+name = "app-spark-agent"
+version = "0.1.0"
+description = "Workspace-scoped coding agent runtime for App-Spark"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "environs>=15.1.0,<16.0.0",
+    "fastapi>=0.116.0",
+    # Required by environs; declared explicitly because `settings.py` imports its validators
+    # directly rather than through the untyped `environs.validate` alias.
+    "marshmallow>=4.0.0,<5.0.0",
+    "pydantic-ai-harness>=0.24.0,<1.0.0",
+    "pydantic-ai-slim[ag-ui,openai]>=2.32.1,<3.0.0",
+    "uvicorn>=0.52.1,<0.53.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pyright>=1.1.411",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.16.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app_spark_agent"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["e2e"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "live: exercises the real DeepSeek API",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

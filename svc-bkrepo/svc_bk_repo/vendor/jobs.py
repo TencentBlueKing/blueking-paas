@@ -45,7 +45,7 @@ def auto_extend_bkrepo_quota():
 
         logger.info("Starting auto-extend bkrepo quota.")
         for instance in ServiceInstance.objects.all():
-            manager = get_repo_manager(instance.plan_id)
+            manager = get_repo_manager(instance)
             credentials = instance.get_credentials()
             private_bucket = credentials["private_bucket"]
             public_bucket = credentials["public_bucket"]

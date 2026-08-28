@@ -17,20 +17,21 @@
 
 import re
 
-# This pattern is widely used by kubernetes
-DNS_SAFE_PATTERN = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
-
-# Same replacement as WlApp.namespace — keep underscore distinguishable from hyphen
-_UNDERSCORE_REPLACEMENT = "0us0"
+import pytest
+from utils.text import DNS_SAFE_PATTERN, to_dns_safe
 
 
-def to_dns_safe(name: str) -> str:
-    """Turn an arbitrary string into a Kubernetes DNS-1123 label.
-
-    Underscores follow the platform convention (``_`` -> ``0us0``) used by
-    application namespaces. Other illegal characters become ``-``.
-    """
-    sanitized = name.lower().replace("_", _UNDERSCORE_REPLACEMENT)
-    sanitized = re.sub(r"[^a-z0-9-]+", "-", sanitized)
-    sanitized = re.sub(r"-{2,}", "-", sanitized).strip("-")
-    return sanitized or "ns"
+class TestToDnsSafe:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("bkapp-cloud_stone-m-console-backend-prod", "bkapp-cloud0us0stone-m-console-backend-prod"),
+            ("bkapp-foo-stag", "bkapp-foo-stag"),
+            ("BkApp-Foo_Bar", "bkapp-foo0us0bar"),
+            ("---", "ns"),
+            ("@@@", "ns"),
+        ],
+    )
+    def test_sanitize(self, raw, expected):
+        assert to_dns_safe(raw) == expected
+        assert re.fullmatch(DNS_SAFE_PATTERN, to_dns_safe(raw))

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Dict
 
 from paas_service.base_vendor import BaseProvider, InstanceData
+from utils.text import to_dns_safe
 
 from svc_redis.controller.controllers import RedisInstanceController
 from svc_redis.controller.entities import RedisInstanceCredential, RedisPlanConfig
@@ -77,10 +78,9 @@ class Provider(BaseProvider):
         """
         logger.info("Creating service instance...")
 
-        # 创建唯一的 namespace
-        preferred_name = str(params.get("engine_app_name"))
+        # engine_app_name 可能含下划线等非法字符，先转成 DNS-1123 再生成 namespace
+        preferred_name = to_dns_safe(str(params.get("engine_app_name") or "app"))
         uid = gen_unique_id(preferred_name)
-        # 为了 namespace 更具可读性，添加前缀
         namespace = f"svc-redis-{uid}"
 
         try:

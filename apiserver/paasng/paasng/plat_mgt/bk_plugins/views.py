@@ -86,13 +86,13 @@ class BKPluginMembersManageViewSet(ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod
-    def _gen_data_detail(code: str, username: str) -> DataDetail:
+    def _gen_data_detail(plugin: PluginInstance, username: str) -> DataDetail:
         return DataDetail(
             data={
                 "username": username,
                 "roles": [
                     plugin_constants.PluginRole(role).name.lower()
-                    for role in members_api.fetch_user_roles(code, username)
+                    for role in members_api.fetch_user_roles(plugin, username)
                 ],
             },
         )

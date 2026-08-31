@@ -19,9 +19,10 @@
 将 AI Agent 应用的 RabbitMQ 绑定从旧集群迁移到新集群.
 
 命令效果:
-    1. 创建新绑定并 provision 新集群 MQ 实例.
-    2. 确认新实例可用后, 删除旧的 DB 绑定记录 (远端实例保留运行, 不影响线上).
-    3. 输出新旧实例 UUID 及凭证信息.
+    1. 若当前绑定尚未 provision, 切换到目标方案, 下次部署时创建新集群 MQ 实例.
+    2. 若已有实例, 创建新绑定并 provision 新集群 MQ 实例.
+    3. 确认新实例可用后, 删除旧的 DB 绑定记录 (远端实例保留运行, 不影响线上).
+    4. 输出新旧实例 UUID 及凭证信息.
 
 迁移后运维操作:
     1. 通知用户重新部署应用, 下次部署时新凭证会注入到 Pod 中 (新 MQ 生效)
@@ -96,13 +97,47 @@ class Command(BaseCommand):
 
         # 查找现有 MQ 绑定
         old_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app, service_obj))
+        unprovisioned_rel = None
         if not old_rels:
+            unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app, service_obj))
+            if unprovisioned_rels:
+                unprovisioned_rel = unprovisioned_rels[0]
+            else:
+                self.stdout.write(
+                    self.style.WARNING(f"[SKIPPED] No RabbitMQ binding for {app_code}/{module_name}/{environment}")
+                )
+                return
+
+        # 选择目标方案
+        target_plan = self._resolve_target_plan(service_obj, env, target_plan_id)
+        self.stdout.write(f"Target plan: {target_plan.name} ({target_plan.uuid})")
+
+        if unprovisioned_rel is not None:
+            current_plan_id = str(unprovisioned_rel.db_obj.plan_id)
+            if current_plan_id == str(target_plan.uuid):
+                self.stdout.write(
+                    self.style.WARNING(
+                        "[SKIPPED] The unprovisioned RabbitMQ binding already uses "
+                        f"the target plan ({target_plan.name})."
+                    )
+                )
+                return
+
+            unprovisioned_rel.db_obj.plan_id = target_plan.uuid
+            try:
+                unprovisioned_rel.db_obj.save(update_fields=["plan_id"])
+            except Exception as e:
+                raise CommandError(f"Failed to switch the unprovisioned RabbitMQ binding plan: {e}") from e
+
             self.stdout.write(
-                self.style.WARNING(
-                    f"[SKIPPED] No provisioned RabbitMQ binding for {app_code}/{module_name}/{environment}"
+                self.style.SUCCESS(
+                    "No RabbitMQ instance has been provisioned. "
+                    f"The binding plan was switched from {current_plan_id} to {target_plan.uuid}; "
+                    "the target plan will be used on the next deployment."
                 )
             )
             return
+
         old_rel = old_rels[0]
 
         # 记录旧实例信息
@@ -115,15 +150,10 @@ class Command(BaseCommand):
             "credentials": old_instance.credentials_insensitive,
         }
 
-        # 选择目标方案
-        target_plan = self._resolve_target_plan(service_obj, env, target_plan_id)
-
         if str(old_plan.uuid) == target_plan.uuid:
             raise CommandError(
                 f"The current plan ({old_plan.name}) is already the target plan; no migration is required."
             )
-
-        self.stdout.write(f"Target plan: {target_plan.name} ({target_plan.uuid})")
 
         # 唯一约束 (service_id, engine_app)，必须先删旧再建新
         # delete() 后 pk=None, 失败时 save() 即可 INSERT 回滚, 无需手动维护字段列表

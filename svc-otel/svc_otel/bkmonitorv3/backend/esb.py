@@ -33,7 +33,7 @@ class MonitorV3Group(OperationGroup):
         Operation,
         name="detail_apm_application",
         method="GET",
-        path="/api/c/compapi/v2/monitor_v3/detail_apm_application/",
+        path="/api/c/compapi/v2/monitor_v3/apm/detail_apm_application/",
     )
     # 创建空间
     metadata_create_space = bind_property(

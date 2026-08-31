@@ -22,7 +22,7 @@ from paas_service.models import ServiceInstance
 from paas_service.utils import get_paas_app_info
 
 from svc_bk_repo.vendor.actions import extend_quota
-from svc_bk_repo.vendor.helper import BKGenericRepoManager
+from svc_bk_repo.vendor.helper import get_repo_manager
 from svc_bk_repo.vendor.render import humanize_bytes
 
 
@@ -63,8 +63,7 @@ class Command(BaseCommand):
         except ServiceInstance.DoesNotExist:
             raise CommandError(f"ServiceInstance 不存在: {instance_id}")
 
-        plan_config = instance.plan.get_config()
-        manager = BKGenericRepoManager(**plan_config)
+        manager = get_repo_manager(instance)
 
         credentials = instance.get_credentials()
         if bucket_type == "private":

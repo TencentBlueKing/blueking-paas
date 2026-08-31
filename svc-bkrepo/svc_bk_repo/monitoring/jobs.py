@@ -33,7 +33,7 @@ def update_bkrepo_quota_statistics():
     """Update bkrepo quota statistics periodically"""
     logger.info("Starting update bkrepo quota.")
     for instance in ServiceInstance.objects.all():
-        manager = get_repo_manager(instance.plan_id)
+        manager = get_repo_manager(instance)
 
         credentials = instance.get_credentials()
         private_bucket = credentials["private_bucket"]

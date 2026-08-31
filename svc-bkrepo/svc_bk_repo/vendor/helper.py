@@ -23,7 +23,8 @@ from typing import Dict, List, Optional
 import curlify
 import requests
 from blue_krill.storages.blobstore.bkrepo import safe_urljoin
-from paas_service.models import Plan
+from paas_service.constants import DEFAULT_TENANT_ID
+from paas_service.models import Plan, ServiceInstance
 from requests.auth import HTTPBasicAuth
 
 from svc_bk_repo.vendor.exceptions import RequestError
@@ -165,10 +166,30 @@ class BKGenericRepoManager:
         _validate_resp(client.post(url, data={"quota": quota}))
 
 
+def resolve_instance_tenant_id(instance: ServiceInstance) -> str:
+    """解析实例访问 BKRepo 时应携带的租户 ID.
+
+    优先使用申请实例时写入 config 的 tenant_id（与 Provider 创建仓库时一致）；
+    老实例缺失该字段时回退到实例表字段，再回退到平台默认租户。
+    """
+    config = instance.config or {}
+    return config.get("tenant_id") or instance.tenant_id or DEFAULT_TENANT_ID
+
+
 @functools.lru_cache()
-def get_repo_manager(plan_id: str):
-    """根据 Plan ID 获取对应的 BKGenericRepoManager 实例"""
+def _get_repo_manager(plan_id: str, tenant_id: str) -> BKGenericRepoManager:
+    """根据 Plan ID 和租户 ID 获取 BKGenericRepoManager 实例."""
     plan = Plan.objects.get(pk=plan_id)
     plan_config = plan.get_config()
-    manager = BKGenericRepoManager(**plan_config)
-    return manager
+    return BKGenericRepoManager(
+        endpoint_url=plan_config["endpoint_url"],
+        username=plan_config["username"],
+        password=plan_config["password"],
+        project=plan_config["project"],
+        tenant_id=tenant_id,
+    )
+
+
+def get_repo_manager(instance: ServiceInstance) -> BKGenericRepoManager:
+    """根据增强服务实例获取对应的 BKGenericRepoManager."""
+    return _get_repo_manager(str(instance.plan_id), resolve_instance_tenant_id(instance))

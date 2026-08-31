@@ -1,0 +1,87 @@
+"""Agent 服务可配置项。"""
+
+from environs import Env, EnvError
+from marshmallow.validate import Length, Range
+
+# 所有配置项共用的环境变量前缀。
+ENV_PREFIX = "APP_SPARK_AGENT_"
+
+env = Env(prefix=ENV_PREFIX)
+env.read_env(".env")
+
+# -----------------------------------------------------------------------
+# 运行目标
+# -----------------------------------------------------------------------
+
+# 暴露给编码工具的 workspace 目录，Agent 只能读写这里面的内容。
+WORKSPACE = env.path("WORKSPACE", None)
+
+# 会话持久化状态的存放目录，必须位于 WORKSPACE 之外，否则会被 Agent 自己的文件和
+# Shell 工具读到、甚至改坏自己的历史。这一点在构建应用时强制检查。
+STATE_DIR = env.path("STATE_DIR", None)
+
+# -----------------------------------------------------------------------
+# 模型
+# -----------------------------------------------------------------------
+
+# 对话使用的模型，格式是 pydantic-ai 的 ``<provider>:<model>``。
+MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
+
+# 模型 API Key。留空时不会报错，而是退回 provider 自己的环境变量约定。
+API_KEY = env.str("API_KEY", None)
+
+# Agent 的系统提示词。它和 ``agent.py`` 里挂载的能力是配套的——提示词里提到的「file 工具」
+# 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
+#
+# TODO：当前仅做调试功能后，后续再调，以及增加更多 SKILL。
+INSTRUCTIONS = """
+You are a coding agent working inside the provided workspace.
+
+Complete the user's task autonomously. Inspect the workspace before changing it, make the
+smallest coherent change that solves the request, and verify the result when useful. Follow all
+AGENTS.md instructions. Preserve existing user changes and report what changed, what you
+verified, and anything that remains blocked.
+
+Use file tools for reading and editing and shell tools for commands. Treat paths as relative to the
+workspace. Never expose credentials or intentionally inspect secret files.
+""".strip()
+
+# -----------------------------------------------------------------------
+# 上下文压缩
+# -----------------------------------------------------------------------
+
+# 压缩要把输入压回到的 token 预算。
+#
+# DeepSeek V4 Flash 的上下文窗口是 1,000,000 token，
+# 但输入和生成共用这一个信封，而模型最多能输出 384,000 token。压回 480,000 就给一次
+# 满长度生成留出了余量（480K + 384K = 864K），而不是让一段长历史把回复的空间挤掉。
+# 用绝对值而不是窗口比例：这样触发点固定在测试能够到的地方，也不会随计价表变动而漂移。
+COMPACTION_TARGET_TOKENS = env.int("COMPACTION_TARGET_TOKENS", 480_000, validate=Range(min=1))
+
+# 单条消息 part 的 token 上限，超过就截断。跑飞的生成表现为**一个**超大 part 而不是总量
+# 偏大，所以任何基于总量的策略都碰不到它；把超限的部分截掉才能保证下一次请求还发得出去。
+COMPACTION_MAX_PART_TOKENS = env.int("COMPACTION_MAX_PART_TOKENS", 50_000, validate=Range(min=1))
+
+# 摘要层原样保留的对话尾部长度。它同时也是摘要层的下限：短于这个长度的历史会被原样返回，
+# 因为没有足够旧的内容值得总结。
+COMPACTION_KEEP_MESSAGES = env.int("COMPACTION_KEEP_MESSAGES", 20, validate=Range(min=0))
+
+# 清空工具结果时，最近多少组「工具调用 / 工具结果」保持完整。刚发生的工具结果往往正是模型
+# 下一步要用的，清掉它们省下的 token 换不回这个代价。
+COMPACTION_KEEP_TOOL_RESULT_PAIRS = env.int(
+    "COMPACTION_KEEP_TOOL_RESULT_PAIRS", 3, validate=Range(min=0)
+)
+
+# -----------------------------------------------------------------------
+# HTTP 接口
+# -----------------------------------------------------------------------
+
+# 两条日志游标接口 ``limit`` 参数的默认值和上限。
+DEFAULT_DRAIN_LIMIT = env.int("DEFAULT_DRAIN_LIMIT", 200, validate=Range(min=1))
+MAX_DRAIN_LIMIT = env.int("MAX_DRAIN_LIMIT", 1_000, validate=Range(min=1))
+
+if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
+    raise EnvError(
+        f"{ENV_PREFIX}DEFAULT_DRAIN_LIMIT ({DEFAULT_DRAIN_LIMIT}) must not be greater than "
+        f"{ENV_PREFIX}MAX_DRAIN_LIMIT ({MAX_DRAIN_LIMIT})"
+    )

@@ -29,7 +29,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from paasng.platform.agent_sandbox.models import E2BApiKey
 
 from .constants import API_KEY_HEADER
-from .keys import hash_api_key, is_well_formed
+from .keys import hash_api_key, is_valid_e2b_api_key
 
 # key 无效、已吊销、格式非法三种情况共用这一句，避免调用方通过错误信息区分
 _AUTH_FAILED_MESSAGE = "Invalid API key"
@@ -70,7 +70,7 @@ class E2BApiKeyAuthentication(authentication.BaseAuthentication):
             raise AuthenticationFailed(_AUTH_FAILED_MESSAGE)
 
         # 格式不合法的 key 不可能在库里，先挡掉省一次查询
-        if not is_well_formed(raw_key):
+        if not is_valid_e2b_api_key(raw_key):
             raise AuthenticationFailed(_AUTH_FAILED_MESSAGE)
 
         api_key = E2BApiKey.objects.filter(key_hash=hash_api_key(raw_key), enabled=True).first()

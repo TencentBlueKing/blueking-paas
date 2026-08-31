@@ -20,7 +20,7 @@ import re
 import pytest
 
 from paasng.platform.agent_sandbox.e2b.constants import API_KEY_RANDOM_BYTES
-from paasng.platform.agent_sandbox.e2b.keys import generate_api_key, is_well_formed, make_display_prefix
+from paasng.platform.agent_sandbox.e2b.keys import generate_api_key, is_valid_e2b_api_key, make_display_prefix
 
 # e2b SDK 客户端侧的校验正则，key 不满足它时 SDK 在本地就会拒绝，请求根本发不出去。
 # 与 e2b/api/__init__.py 的 _API_KEY_PATTERN 保持一致
@@ -61,4 +61,4 @@ def test_display_prefix_is_a_strict_prefix():
     ],
 )
 def test_is_well_formed(key, expected):
-    assert is_well_formed(key) is expected
+    assert is_valid_e2b_api_key(key) is expected

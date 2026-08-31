@@ -43,7 +43,7 @@ def make_display_prefix(key: str) -> str:
     return key[:API_KEY_DISPLAY_PREFIX_LEN]
 
 
-def is_well_formed(key: str) -> bool:
+def is_valid_e2b_api_key(key: str) -> bool:
     """是否满足 e2b SDK 的格式约束。
 
     这里的判断与 SDK 客户端侧的校验保持一致，用于在查库之前挡掉明显非法的 key。

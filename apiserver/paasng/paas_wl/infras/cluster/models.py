@@ -255,6 +255,29 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     tenant_id = tenant_id_field_factory()
 
 
+class ClusterE2BConfig(UuidAuditedModel):
+    """
+    集群的 e2b 沙箱接入配置
+    """
+
+    cluster = models.OneToOneField(Cluster, related_name="e2b_config", on_delete=models.CASCADE)
+    # apiserver 与集群同网络时填集群内 Service 地址（http://e2b-gateway.namespace:8080），
+    # 跨网络时填该集群控制面入口的单名域名
+    control_plane_url = models.CharField(
+        help_text="e2b-gateway 地址，负责沙箱创建、销毁等管理操作，仅 apiserver 侧访问", max_length=256
+    )
+    # 泛域名模式填裸域名（xxx.com）：SDK 拼出的主机名是 <端口>-<沙箱ID>.xxx.com，
+    # 这里每多一级前缀，主机名就多一级子域，而通配证书只匹配一级标签，多出来就握不上手。
+    data_plane_address = models.CharField(
+        help_text="供 SDK 直连 e2b-sandbox-gateway 的对外地址，负责命令执行与文件读写，会改写进创建响应的域名字段",
+        max_length=256,
+    )
+    api_key = EncryptField(help_text="该集群 gateway 的真实凭证，仅 apiserver 持有，不下发给用户")
+    enabled = models.BooleanField(help_text="是否参与 e2b 沙箱调度", default=True)
+
+    tenant_id = tenant_id_field_factory()
+
+
 class ClusterAppImageRegistry(UuidAuditedModel):
     """
     集群应用镜像仓库配置

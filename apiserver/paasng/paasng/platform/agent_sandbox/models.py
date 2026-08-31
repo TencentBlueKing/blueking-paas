@@ -38,8 +38,12 @@ from .constants import (
     SandboxStatus,
     SandboxWorkloadType,
 )
-from .e2b.constants import KEY_GENERATE_MAX_RETRIES, MAX_ACTIVE_KEYS_PER_APP
-from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded
+from .e2b.constants import (
+    KEY_GENERATE_MAX_RETRIES,
+    MAX_ACTIVE_KEYS_PER_APP,
+    E2BSandboxStatus,
+)
+from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded, E2BSandboxNotFound
 from .e2b.keys import generate_api_key, hash_api_key, make_display_prefix
 from .exceptions import SandboxAlreadyExists, SandboxCreateError
 
@@ -381,3 +385,64 @@ class E2BApiKey(UuidAuditedModel):
         self.enabled = False
         self.revoked_at = timezone.now()
         self.save(update_fields=["enabled", "revoked_at", "updated"])
+
+
+class E2BSandboxManager(models.Manager):
+    """E2BSandbox Manager 类
+
+    这里的两个查询方法是 e2b 沙箱的**唯一**归属判定入口，上层不得绕过它们
+    自行拼 filter，更不得拿 gateway 的返回当归属依据。
+    """
+
+    def owned_by(self, application: Application) -> "models.QuerySet[E2BSandbox]":
+        """列出该应用名下的沙箱"""
+        return self.filter(application=application)
+
+    def get_owned(self, application: Application, sandbox_id: str) -> "E2BSandbox":
+        """取出属于该应用的沙箱。
+
+        :raises E2BSandboxNotFound: 沙箱不存在，或存在但不属于该应用
+        """
+        try:
+            return self.get(sandbox_id=sandbox_id, application=application)
+        except E2BSandbox.DoesNotExist:
+            # 两种情况共用一个异常，调用方据此一律返回 404：
+            # 若区分开，攻击者就能用状态码探测某个沙箱 ID 是否存在
+            raise E2BSandboxNotFound(f"sandbox {sandbox_id} not found")
+
+
+class E2BSandbox(UuidAuditedModel):
+    """e2b 沙箱的归属绑定。
+
+    底层沙箱集群 gateway 没有租户概念，apiserver 用统一凭证访问时拿到的是全平台的沙箱全集。
+    因此需要本表来绑定沙箱与应用的归属关系。
+    """
+
+    sandbox_id = models.CharField(
+        verbose_name="沙箱 ID",
+        # 按 claim 形态（e2b-envd-claim-...）留余量，不对格式做假设
+        max_length=128,
+        unique=True,
+        help_text="gateway 返回的 ID",
+    )
+    # 归属主体
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="e2b_sandboxes"
+    )
+    cluster_name = models.CharField(verbose_name="所属集群", max_length=32)
+    # 创建沙箱使用的模板标识，由底层 e2b-gateway 识别并使用，此处只做透传和记录
+    template_id = models.CharField(verbose_name="模板标识", max_length=128, blank=True, default="")
+    status = models.CharField(verbose_name="状态", max_length=16, default=E2BSandboxStatus.RUNNING.value)
+    expired_at = models.DateTimeField(verbose_name="过期时间", null=True)
+
+    tenant_id = tenant_id_field_factory()
+
+    objects = E2BSandboxManager()
+
+    class Meta:
+        ordering = ["-created"]
+        # 列表查询固定按「归属主体 + 状态」过滤，走这条联合索引避免全表扫描
+        indexes = [models.Index(fields=["application", "status"])]
+
+    def __str__(self):
+        return f"{self.sandbox_id}({self.application_id})"

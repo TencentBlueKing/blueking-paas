@@ -26,3 +26,15 @@ class E2BApiKeyQuotaExceeded(E2BError):
 
 class E2BApiKeyGenerateError(E2BError):
     """生成唯一 key 失败"""
+
+
+class E2BSandboxNotFound(E2BError):
+    """沙箱不存在，或存在但不属于发起方"""
+
+
+class E2BClusterUnavailable(E2BError):
+    """没有可用于 e2b 沙箱的集群"""
+
+
+class E2BClusterNotConfigured(E2BError):
+    """指定集群没有登记 e2b 配置，或配置已被停用"""

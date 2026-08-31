@@ -17,6 +17,8 @@
 
 from pydantic import BaseModel, Field
 
+from .constants import DEFAULT_STREAM_PORT
+
 
 class PlanSchema(BaseModel):
     """RabbitMQ 服务方案配置"""
@@ -26,3 +28,9 @@ class PlanSchema(BaseModel):
     management_api: str = Field(description="RabbitMQ 管理API地址", example="http://rabbitmq.example.com:15672")
     admin: str = Field(description="RabbitMQ 管理员用户名", example="admin")
     password: str = Field(description="RabbitMQ 管理员密码", example="password123")
+    enable_stream: bool = Field(
+        default=False, description="是否向应用注入 stream 端口，需集群已启用 stream 插件", example=False
+    )
+    stream_port: int = Field(
+        default=DEFAULT_STREAM_PORT, description="RabbitMQ stream 插件监听端口", example=DEFAULT_STREAM_PORT
+    )

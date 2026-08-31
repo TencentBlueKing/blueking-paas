@@ -19,7 +19,7 @@ import json
 import logging
 import random
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from operator import attrgetter
 
 from django.conf import settings
@@ -158,7 +158,11 @@ class InstanceHelper:
         credentials = self.instance.credentials
         if not isinstance(credentials, dict):
             credentials = json.loads(credentials)
-        return self.Credentials(**credentials)
+
+        # dataclass 不允许未声明的关键字参数；凭证里可能还有 ca/cert/stream_port 等扩展字段，
+        # 直接 Credentials(**credentials) 会 TypeError
+        field_names = {f.name for f in fields(self.Credentials)}
+        return self.Credentials(**{key: value for key, value in credentials.items() if key in field_names})
 
     def get_cluster_id(self) -> "int":
         return self.instance.config.get("cluster", settings.INSTANCE_DEFAULT_CLUSTER_ID)

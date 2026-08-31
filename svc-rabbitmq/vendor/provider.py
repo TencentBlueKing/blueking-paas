@@ -26,6 +26,7 @@ from pydantic import ValidationError
 
 from .client import Client
 from .clusters import Cluster
+from .constants import DEFAULT_STREAM_PORT
 from .helper import InstanceHelper, Version
 from .models import Cluster as ClusterModel
 from .models import InstanceBill, LimitPolicy, UserPolicy
@@ -227,6 +228,9 @@ class Provider(BaseProvider):
     tls: Dict[str, str] = field(default_factory=dict)
     # clusters 包含多个 RabbitMQ 集群配置
     clusters: List[Dict] = field(default_factory=list)
+    # 开启后，实例凭证中会额外携带 stream 端口（应用侧为 RABBITMQ_STREAM_PORT）
+    enable_stream: bool = False
+    stream_port: int = DEFAULT_STREAM_PORT
 
     def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []
@@ -350,6 +354,10 @@ class Provider(BaseProvider):
         if cluster.tls.get("insecure_skip_verify") in [True, "true", "True"]:
             credentials["insecure_skip_verify"] = "true"
 
+        # 存量实例由 sync_stream_port 命令回填
+        if self.enable_stream:
+            credentials["stream_port"] = self.stream_port
+
         return InstanceData(
             credentials=credentials,
             config={"bill": bill.uuid.hex, "provider_name": provider_name, "enable_tls": bool(ca or cert or cert_key)},
@@ -410,6 +418,7 @@ class Provider(BaseProvider):
             "user": str,
             "password": str,
             "vhost": str,
+            "stream_port": int,  # 仅方案开启 stream 时存在
         config: {}
         :return:
         """

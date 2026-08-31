@@ -27,6 +27,8 @@ from .views import (
 )
 
 urlpatterns = [
+    # e2b 兼容层：API Key 管理
+    path("", include("paasng.platform.agent_sandbox.e2b.urls")),
     # Volume URLs
     path(
         "api/agent_sandbox/applications/<slug:code>/volumes/",

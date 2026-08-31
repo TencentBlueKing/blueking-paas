@@ -15,8 +15,31 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+"""
+为指定的 bkrepo 实例扩容仓库配额，默认：扩容 1G，最大 10G.
 
-from django.conf import settings
+使用方式:
+    python manage.py extend_bkrepo_quota <instance_id> \\
+        [--bucket_type private|public] \\
+        [--extra_size 1] \\
+        [--max_allowed 10]
+
+instance_id 获取方式 (在 apiserver Django shell 中执行):
+
+from paasng.platform.applications.models import Application
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+
+app = Application.objects.get(code="你的应用ID")
+module = app.get_module("default")  # 多模块就改成对应模块名
+env = module.get_envs("prod")       # stag / prod
+
+for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app):
+    svc = rel.get_service()
+    print(svc.name, svc.display_name, rel.get_instance().uuid)
+
+    输出里找 BKRepo / 对象存储那一行, 后面的 UUID 即为 instance_id.
+"""
+
 from django.core.management.base import BaseCommand, CommandError
 from paas_service.models import ServiceInstance
 from paas_service.utils import get_paas_app_info
@@ -41,20 +64,18 @@ class Command(BaseCommand):
         parser.add_argument(
             "--extra_size",
             type=int,
-            default=settings.EXTEND_CONFIG_EXTRA_SIZE_BYTES,
+            default=1,
             help="扩容增量, 单位 GB (默认: 1)",
         )
         parser.add_argument(
             "--max_allowed",
             type=int,
-            default=settings.EXTEND_CONFIG_MAX_SIZE_ALLOWED,
+            default=10,
             help="扩容上限, 单位 GB (默认: 10)",
         )
 
     def handle(self, instance_id: str, bucket_type: str, extra_size: int, max_allowed: int, *args, **options):
         # GB -> bytes
-        # 参考: vendor.render.ABBREVS
-        #   ABBREVS = ((1 << 50, "PB"), (1 << 40, "TB"), (1 << 30, "GB"), (1 << 20, "MB"), (1 << 10, "KB"), (1, "bytes"))
         extra_size_bytes = extra_size * (2**30)
         max_allowed_bytes = max_allowed * (2**30)
 
@@ -99,6 +120,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"扩容成功: {humanize_bytes(new_max_size_bytes)} (增加了 {humanize_bytes(max_allowed_bytes)})"
+                f"扩容成功: {humanize_bytes(new_max_size_bytes)} (增加了 {humanize_bytes(extra_size_bytes)})"
             )
         )

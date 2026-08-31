@@ -15,15 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import IntEnum
+"""e2b 协议兼容层。
 
-
-class LinkType(IntEnum):
-    empty = 0
-    proxy = 1
-    inherit = 2
-
-
-# RabbitMQ stream 插件的默认监听端口。凭证里的字段名是 stream_port，平台注入环境变量时
-# 会加上服务名前缀，应用最终看到的是 RABBITMQ_STREAM_PORT
-DEFAULT_STREAM_PORT = 5552
+标准 e2b SDK 只会在请求头里携带 ``X-API-Key``，发不出 APIGW 所需的应用态凭证，
+所以这一层有自己的一套密钥签发与认证，与 ``agent_sandbox`` 既有接口的认证方式互不影响。
+"""

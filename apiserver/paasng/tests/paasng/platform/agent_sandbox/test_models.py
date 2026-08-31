@@ -65,7 +65,7 @@ class TestSandboxModel:
         assert si_sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
 
     def test_raises_when_no_cluster(self, bk_app, bk_user):
-        """No available cube cluster surfaces as SandboxCreateError (AC-005)."""
+        """No available cube cluster surfaces as SandboxCreateError."""
         with (
             mock.patch(
                 "paasng.platform.agent_sandbox.models.ClusterAllocator.get_default",

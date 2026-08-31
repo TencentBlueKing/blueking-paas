@@ -21,7 +21,6 @@ from typing import Dict
 
 from django.conf import settings
 from paas_service.base_vendor import BaseProvider, InstanceData
-from paas_service.utils import gen_unique_id
 
 from svc_otel.bkmonitorv3.client import make_bk_monitor_client
 from svc_otel.vendor.models import ApmData
@@ -29,30 +28,32 @@ from svc_otel.vendor.models import ApmData
 logger = logging.getLogger(__name__)
 
 
+def _build_apm_app_name(bk_app_code: str, env: str) -> str:
+    """按应用 + 环境生成稳定的 APM 应用名，保证同一 app/env 复用同一个监控实例。
+
+    APM 应用名称只能包含小写字母和数字 (^[a-z0-9_]+$)，需要将 bk_app_code 的连字符转换为 0us0。
+    """
+    return f"bkapp_{bk_app_code}_{env}".replace("-", "0us0")
+
+
 @dataclass
 class Provider(BaseProvider):
     SERVICE_NAME = "otel"
 
     def _apply_data_token(self, bk_app_code: str, env: str, bk_monitor_space_id: str, tenant_id: str) -> ApmData:
-        """到蓝鲸监控 OTEL 服务给应用申请 data_token"""
-        # 先查询 app_code、env 对应的 data_token 是否已经申请过，已申请则直接返回
-        if ApmData.objects.filter(bk_app_code=bk_app_code, env=env).exists():
-            apm_data = ApmData.objects.get(bk_app_code=bk_app_code, env=env)
-            return apm_data
+        """到蓝鲸监控 OTEL 服务给应用申请 data_token。
 
-        app_name = f"bkapp_{bk_app_code}_{env}"
-        # APM 应用名称只能包含小写字母和数字(^[a-z0-9_]+$), 需要将 bk_app_code 的连字符转换为 0us0
-        app_name = app_name.replace("-", "0us0")
-
-        # 保证 app_name 的唯一性
-        unique_app_name = gen_unique_id(app_name, reserve_length=64, divide_char="_")
+        先调 detail_apm_application 查询，已存在则复用 token，不存在再创建。
+        本地已有记录时沿用当时的 app_name，兼容历史上带唯一后缀的名称。
+        """
+        apm_data = ApmData.objects.filter(bk_app_code=bk_app_code, env=env).first()
+        app_name = apm_data.app_name if apm_data else _build_apm_app_name(bk_app_code, env)
 
         client = make_bk_monitor_client(tenant_id)
-        data_token = client.create_apm(unique_app_name, bk_monitor_space_id)
+        data_token = client.get_or_create_apm(app_name, bk_monitor_space_id)
 
-        # 将新申请的 data_token 存储到 DB 中
         apm_data, _c = ApmData.objects.update_or_create(
-            bk_app_code=bk_app_code, env=env, defaults={"data_token": data_token, "app_name": unique_app_name}
+            bk_app_code=bk_app_code, env=env, defaults={"data_token": data_token, "app_name": app_name}
         )
         return apm_data
 

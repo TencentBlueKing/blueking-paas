@@ -35,6 +35,14 @@ class Group(OperationGroup):
         path="/app/apm/create_application/",
     )
 
+    # 查询 APM 应用详情
+    detail_apm_application = bind_property(
+        Operation,
+        name="detail_apm_application",
+        method="GET",
+        path="/app/apm/detail_apm_application/",
+    )
+
     # 创建空间
     metadata_create_space = bind_property(
         Operation,

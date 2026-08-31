@@ -32,7 +32,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.usefixtures("_mock_verified_app_permission")
 class TestAgentSandboxViewSetList:
-    """Test cases for AgentSandboxViewSet.list API (AC-007)."""
+    """Test cases for AgentSandboxViewSet.list API."""
 
     def test_list_filtered(self, api_client: APIClient, bk_app: Any, sandbox_obj: Sandbox) -> None:
         """Verify list filters and response includes workload_type."""

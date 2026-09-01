@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+
 # e2b SDK 在发请求前会本地校验 key 形如 ``e2b_`` + 十六进制串，不合格的 key 请求根本发不出去。
 # 因此这两个常量不是风格选择，改动会直接导致标准 SDK 不可用。
 API_KEY_PREFIX = "e2b_"
@@ -31,3 +33,17 @@ MAX_ACTIVE_KEYS_PER_APP = 5
 
 # 生成 key 时的哈希碰撞重试次数。160 位随机下碰撞概率可忽略，这里只是兜底
 KEY_GENERATE_MAX_RETRIES = 3
+
+
+class E2BSandboxStatus(StrStructuredEnum):
+    """E2B 标准沙箱状态"""
+
+    RUNNING = EnumField("running", label="运行中")
+    PAUSED = EnumField("paused", label="已暂停")
+    # 被销毁、被 gateway 超时回收，或对账时发现网关侧已不存在
+    TERMINATED = EnumField("terminated", label="已终止")
+
+    @classmethod
+    def active_values(cls) -> list[str]:
+        """仍占用底层资源、需要参与对账的状态。"""
+        return [cls.RUNNING.value, cls.PAUSED.value]

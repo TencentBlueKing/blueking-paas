@@ -41,6 +41,7 @@ from .exceptions import (
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
 )
+from .permissions import IsE2BApiKey
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +117,12 @@ class E2BProtocolViewSet(viewsets.GenericViewSet):
     """e2b 协议端点的基类。
 
     - 认证只认 ``X-API-Key``，与平台既有接口的 APIGW 认证完全隔离
+    - 权限要求主体必须是 Key 解析出的 ``E2BPrincipal``，不接受普通登录态
     - 渲染器固定为原生 JSON，避免被蓝鲸规范的包装层改写响应体
     """
 
     authentication_classes = [E2BApiKeyAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsE2BApiKey]
     renderer_classes = [JSONRenderer]
 
     def get_exception_handler(self):

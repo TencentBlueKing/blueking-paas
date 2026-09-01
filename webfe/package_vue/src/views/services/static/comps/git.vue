@@ -83,13 +83,14 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { getAssetUrl } from '@/common/utils';
 export default {
   mixins: [appBaseMixin],
   data() {
     return {
       loading: false,
-      devopsImg: require('@static/images/devops.png'),
-      devopsInnerImg: require('@static/images/devops-inner.png'),
+      devopsImg: getAssetUrl(require('@static/images/devops.png')),
+      devopsInnerImg: getAssetUrl(require('@static/images/devops-inner.png')),
       oauth2Backends: [
         {
           name: 'tc_git',

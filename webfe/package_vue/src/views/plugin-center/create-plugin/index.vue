@@ -296,6 +296,7 @@ import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
 import { throttle, uniqBy } from 'lodash';
 import i18n from '@/language/i18n';
+import { getAssetUrl } from '@/common/utils';
 
 const BkSchemaForm = createForm();
 // 必填校验
@@ -312,7 +313,7 @@ export default {
   },
   data() {
     return {
-      pluginDefaultImg: require('@static/images/plugin-default.svg'),
+      pluginDefaultImg: getAssetUrl(require('@static/images/plugin-default.svg')),
       form: {
         pd_id: '',
         plugin_id: '',

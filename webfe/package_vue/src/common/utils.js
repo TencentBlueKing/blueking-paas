@@ -426,3 +426,21 @@ export function convertMemoryToBytes(value) {
   }
   return 0;
 }
+
+/**
+ * 规范化静态资源地址
+ * 不同构建配置下，require('xxx.svg' | 'xxx.png') 可能返回字符串 URL，
+ * 也可能返回 ESM 模块对象（形如 { default: '真实url' }）。
+ * 直接把模块对象用于字符串拼接（如 `url(${img})`、:onerror）会得到
+ * `[object Module]`，甚至抛出 "Cannot convert object to primitive value"。
+ * 该函数统一取出真实 URL 字符串。
+ *
+ * @param {string | { default?: string }} asset require 静态资源的返回值
+ * @returns {string} 真实资源 URL
+ */
+export function getAssetUrl(asset) {
+  if (asset && typeof asset === 'object') {
+    return asset.default || '';
+  }
+  return asset || '';
+}

@@ -165,7 +165,7 @@
 </template>
 
 <script>
-import searchAppList from '@/components/searching/searchAppList';
+import searchAppList from '@/components/searching/search-app-list';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { bus } from '@/common/bus';
 

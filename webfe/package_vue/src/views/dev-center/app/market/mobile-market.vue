@@ -268,7 +268,7 @@
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
-import wxQiyeQrcode from '@/components/ui/Qrcode';
+import wxQiyeQrcode from '@/components/ui/qrcode';
 
 export default {
   components: {

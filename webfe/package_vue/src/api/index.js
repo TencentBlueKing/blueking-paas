@@ -240,7 +240,7 @@ function handleReject(error, config) {
     let message = error.message || i18n.t('系统出现异常');
     if (Object.prototype.toString.call(message) === '[object Object]') {
       const msg = [];
-      for (const key in message) {
+      for (const key of Object.keys(message)) {
         const val = Object.prototype.toString.call(message[key]) === '[object Array]'
           ? message[key].join(';')
           : message[key];

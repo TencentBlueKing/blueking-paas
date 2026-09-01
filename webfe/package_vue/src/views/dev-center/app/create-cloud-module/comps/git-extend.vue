@@ -74,68 +74,68 @@
 </template>
 
 <script>
-    export default {
-        props: {
-            isAuth: {
-                type: Boolean,
-                default: false
-            },
-            isLoading: {
-                type: Boolean,
-                default: false
-            },
-            gitControlType: {
-                type: String
-            },
-            alertText: {
-                type: String
-            },
-            authAddress: {
-                type: String
-            },
-            fetchMethod: {
-                type: Function
-            },
-            repoList: {
-                type: Array
-            },
-            selectedRepoUrl: {
-                type: String
-            }
-        },
-        data () {
-            return {
-                url: ''
-            };
-        },
-        computed: {
-            selected: {
-                get: function () {
-                    return this.url;
-                },
-                set: function (url) {
-                    this.url = url;
-                    this.$emit('update:selectedRepoUrl', url);
-                }
-            }
-        },
-        methods: {
-            auth_associate (authUrl, callback) {
-                this.check_window_close(
-                    window.open(authUrl, this.$t('授权窗口'), 'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'),
-                    300, callback
-                );
-            },
-            async check_window_close (win, sleepTime = 300, callback = () => undefined) {
-                if (win.closed) {
-                    callback();
-                } else {
-                    await new Promise(resolve => {
-                        setTimeout(resolve, sleepTime);
-                    });
-                    this.check_window_close(win, sleepTime, callback);
-                }
-            }
-        }
+export default {
+  props: {
+    isAuth: {
+      type: Boolean,
+      default: false,
+    },
+    isLoading: {
+      type: Boolean,
+      default: false,
+    },
+    gitControlType: {
+      type: String,
+    },
+    alertText: {
+      type: String,
+    },
+    authAddress: {
+      type: String,
+    },
+    fetchMethod: {
+      type: Function,
+    },
+    repoList: {
+      type: Array,
+    },
+    selectedRepoUrl: {
+      type: String,
+    },
+  },
+  data() {
+    return {
+      url: '',
     };
+  },
+  computed: {
+    selected: {
+      get() {
+        return this.url;
+      },
+      set(url) {
+        this.url = url;
+        this.$emit('update:selectedRepoUrl', url);
+      },
+    },
+  },
+  methods: {
+    auth_associate(authUrl, callback) {
+      this.check_window_close(
+        window.open(authUrl, this.$t('授权窗口'), 'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'),
+        300, callback,
+      );
+    },
+    async check_window_close(win, sleepTime = 300, callback = () => undefined) {
+      if (win.closed) {
+        callback();
+      } else {
+        await new Promise((resolve) => {
+          setTimeout(resolve, sleepTime);
+        });
+        this.check_window_close(win, sleepTime, callback);
+      }
+    },
+  },
+};
 </script>

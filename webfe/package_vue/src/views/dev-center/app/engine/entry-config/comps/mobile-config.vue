@@ -108,79 +108,81 @@
 </template>
 
 <script>
-    import wxQiyeQrcode from '@/components/ui/Qrcode';
+import wxQiyeQrcode from '@/components/ui/qrcode';
 
-    export default {
-        components: {
-            wxQiyeQrcode
+export default {
+  components: {
+    wxQiyeQrcode,
+  },
+  data() {
+    return {
+      isInitLoading: false,
+      mobileConfig: {
+        stag: {
+          is_enabled: false,
         },
-        data () {
-            return {
-                isInitLoading: false,
-                mobileConfig: {
-                    stag: {
-                        is_enabled: false
-                    },
-                    prod: {
-                        is_enabled: false
-                    },
-                    canReleaseToMobile: false,
-                    errMsg: `${this.$t('请联系')}${this.GLOBAL.HELPER.name}${this.$t('开启权限')}!`
-                },
-                appCode: ''
-            };
+        prod: {
+          is_enabled: false,
         },
-        watch: {
-            '$route.params': function () {
-                this.appCode = this.$route.params.id;
-                this.init();
-            }
-        },
-        mounted () {
-            this.appCode = this.$route.params.id;
-            this.init();
-        },
-        methods: {
-            init: function () {
-                this.loadMobileConfig();
-            },
-            loadMobileConfig: function () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/mobile_config/`;
-                this.isInitLoading = true;
-                this.$http.get(url).then(
-                    res => {
-                        this.mobileConfig = Object.assign(this.mobileConfig, res, { canReleaseToMobile: true });
-                    },
-                    res => {
-                        this.mobileConfig.canReleaseToMobile = false;
-                    }
-                ).finally(res => {
-                    this.isInitLoading = false;
-                    this.$emit('data-ready', 'mobile-config');
-                });
-            },
-            onToggleChange: function (env) {
-                if (!this.mobileConfig.canReleaseToMobile) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.mobileConfig.errMsg
-                    });
-                    return false;
-                }
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${env}/mobile_config/`;
-                const isEnabled = !this.mobileConfig[env].is_enabled;
-                this.$http.post(url, { is_enabled: isEnabled }).then(res => {
-                    this.mobileConfig[env] = res;
-                }).catch(err => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: err.detail
-                    });
-                    this.mobileConfig[env].is_enabled = !isEnabled;
-                });
-            }
-        }
+        canReleaseToMobile: false,
+        errMsg: `${this.$t('请联系')}${this.GLOBAL.HELPER.name}${this.$t('开启权限')}!`,
+      },
+      appCode: '',
     };
+  },
+  watch: {
+    '$route.params'() {
+      this.appCode = this.$route.params.id;
+      this.init();
+    },
+  },
+  mounted() {
+    this.appCode = this.$route.params.id;
+    this.init();
+  },
+  methods: {
+    init() {
+      this.loadMobileConfig();
+    },
+    loadMobileConfig() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/mobile_config/`;
+      this.isInitLoading = true;
+      this.$http.get(url).then(
+        (res) => {
+          this.mobileConfig = Object.assign(this.mobileConfig, res, { canReleaseToMobile: true });
+        },
+        () => {
+          this.mobileConfig.canReleaseToMobile = false;
+        },
+      )
+        .finally(() => {
+          this.isInitLoading = false;
+          this.$emit('data-ready', 'mobile-config');
+        });
+    },
+    onToggleChange(env) {
+      if (!this.mobileConfig.canReleaseToMobile) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.mobileConfig.errMsg,
+        });
+        return false;
+      }
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${env}/mobile_config/`;
+      const isEnabled = !this.mobileConfig[env].is_enabled;
+      this.$http.post(url, { is_enabled: isEnabled }).then((res) => {
+        this.mobileConfig[env] = res;
+      })
+        .catch((err) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: err.detail,
+          });
+          this.mobileConfig[env].is_enabled = !isEnabled;
+        });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

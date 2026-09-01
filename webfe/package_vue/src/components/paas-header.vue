@@ -143,7 +143,7 @@
 <script>
 import auth from '@/auth';
 import { bus } from '@/common/bus';
-import selectEventMixin from '@/components/searching/selectEventMixin';
+import selectEventMixin from '@/components/searching/select-event-mixin';
 import { psHeaderInfo } from '@/mixins/ps-static-mixin';
 import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';

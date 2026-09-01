@@ -53,52 +53,52 @@
   </div>
 </template>
 <script>
-    export default {
-        name: '',
-        props: {
-            title: {
-                type: String,
-                default: ''
-            },
-            data: {
-                type: Array,
-                default: () => []
-            },
-            canFullScreen: {
-                type: Boolean,
-                default: false
-            },
-            extCls: {
-                type: String,
-                default: ''
-            }
-        },
-        data () {
-            return {
-                fullDialogVisiable: false
-            };
-        },
-        computed: {
-            isShowFullScreen () {
-                return this.canFullScreen && this.data.length > 0;
-            },
-            isShowTitle () {
-                return this.title !== '';
-            }
-        },
-        methods: {
-            handleScrollToBottom () {
-                this.$refs.content.scrollTop = this.$refs.content.scrollHeight;
-                if (this.fullDialogVisiable) {
-                    this.$refs.dialogContent.scrollTop = this.$refs.dialogContent.scrollHeight;
-                }
-            },
-            handleFullScreen () {
-                this.fullDialogVisiable = true;
-                this.$refs.dialogContent.scrollTop = this.$refs.dialogContent.scrollHeight;
-            }
-        }
+export default {
+  name: '',
+  props: {
+    title: {
+      type: String,
+      default: '',
+    },
+    data: {
+      type: Array,
+      default: () => [],
+    },
+    canFullScreen: {
+      type: Boolean,
+      default: false,
+    },
+    extCls: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    return {
+      fullDialogVisiable: false,
     };
+  },
+  computed: {
+    isShowFullScreen() {
+      return this.canFullScreen && this.data.length > 0;
+    },
+    isShowTitle() {
+      return this.title !== '';
+    },
+  },
+  methods: {
+    handleScrollToBottom() {
+      this.$refs.content.scrollTop = this.$refs.content.scrollHeight;
+      if (this.fullDialogVisiable) {
+        this.$refs.dialogContent.scrollTop = this.$refs.dialogContent.scrollHeight;
+      }
+    },
+    handleFullScreen() {
+      this.fullDialogVisiable = true;
+      this.$refs.dialogContent.scrollTop = this.$refs.dialogContent.scrollHeight;
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .paas-deploy-log-stage-wrapper {
@@ -143,7 +143,8 @@
                 line-height: 20px;
                 font-size: 12px;
                 color: #c4c6cc;
-                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
+                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,
+                    \\5FAE\8F6F\96C5\9ED1,Arial;
             }
         }
     }
@@ -176,7 +177,8 @@
                 line-height: 20px;
                 font-size: 12px;
                 color: #c4c6cc;
-                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
+                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,
+                    \\5FAE\8F6F\96C5\9ED1,Arial;
             }
         }
     }

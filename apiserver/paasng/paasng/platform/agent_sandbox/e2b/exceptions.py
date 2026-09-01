@@ -38,3 +38,23 @@ class E2BClusterUnavailable(E2BError):
 
 class E2BClusterNotConfigured(E2BError):
     """指定集群没有登记 e2b 配置，或配置已被停用"""
+
+
+class E2BGatewayError(E2BError):
+    """调用底层网关失败的基类"""
+
+
+class E2BGatewayUnavailable(E2BGatewayError):
+    """网关连不上：DNS、连接被拒、入口故障等"""
+
+
+class E2BGatewayTimeout(E2BGatewayError):
+    """网关在超时窗口内没有返回"""
+
+
+class E2BGatewayNotFound(E2BGatewayError):
+    """网关侧不存在该沙箱
+
+    与 E2BSandboxNotFound 分开：那个是本地归属表判定的结果，这个是网关的回答。
+    本地有记录而网关说没有，说明沙箱已被回收，两者对外都是 404 但成因不同。
+    """

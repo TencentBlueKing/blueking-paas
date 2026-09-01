@@ -34,6 +34,20 @@ MAX_ACTIVE_KEYS_PER_APP = 5
 # 生成 key 时的哈希碰撞重试次数。160 位随机下碰撞概率可忽略，这里只是兜底
 KEY_GENERATE_MAX_RETRIES = 3
 
+# 创建沙箱的等待上限。池子未命中时网关要现场拉起实例，比其余控制面调用慢得多。
+# 取 30 秒是需求给的创建耗时上限，超过即向 SDK 返回 408 建议重试
+GATEWAY_CREATE_TIMEOUT_SECONDS = 30
+
+# 其余控制面调用都是查询或状态变更，网关侧没有耗时操作
+GATEWAY_REQUEST_TIMEOUT_SECONDS = 10
+
+# 网关响应中承载数据面地址的字段，apiserver 必须改写它：
+# 网关填的是集群内 Service 域名，集群外的 SDK 解析不到
+DATA_PLANE_DOMAIN_FIELD = "domain"
+
+# 网关响应中的沙箱标识字段
+SANDBOX_ID_FIELD = "sandboxID"
+
 
 class E2BSandboxStatus(StrStructuredEnum):
     """E2B 标准沙箱状态"""

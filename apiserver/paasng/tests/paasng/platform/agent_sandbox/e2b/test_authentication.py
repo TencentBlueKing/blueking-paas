@@ -21,8 +21,9 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 
-from paasng.platform.agent_sandbox.e2b.authentication import E2BApiKeyAuthentication
+from paasng.platform.agent_sandbox.e2b.authentication import E2BApiKeyAuthentication, E2BPrincipal
 from paasng.platform.agent_sandbox.e2b.base_views import E2BProtocolViewSet
+from paasng.platform.agent_sandbox.e2b.permissions import IsE2BApiKey
 from paasng.platform.agent_sandbox.models import E2BApiKey
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -126,3 +127,19 @@ class TestProtocolViewSet:
 
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data == {"app": bk_app.code, "prefix": key_obj.key_prefix}
+
+
+class TestIsE2BApiKey:
+    def test_accepts_e2b_principal(self, issued_key):
+        key_obj, _ = issued_key
+        request = APIRequestFactory().get("/e2b/probe")
+        request.user = E2BPrincipal(api_key=key_obj)
+
+        assert IsE2BApiKey().has_permission(request, view=None) is True
+
+    def test_rejects_platform_user(self, bk_user):
+        """平台登录态不能冒充 Key 主体访问协议端点。"""
+        request = APIRequestFactory().get("/e2b/probe")
+        request.user = bk_user
+
+        assert IsE2BApiKey().has_permission(request, view=None) is False

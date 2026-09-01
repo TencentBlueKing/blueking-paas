@@ -50,3 +50,19 @@ class E2BApiKeyCreateOutputSLZ(E2BApiKeyOutputSLZ):
 
     class Meta(E2BApiKeyOutputSLZ.Meta):
         fields = [*E2BApiKeyOutputSLZ.Meta.fields, "api_key"]
+
+
+class E2BSandboxCreateInputSLZ(serializers.Serializer):
+    """只校验我们必须知道的字段，其余直接交给底层 e2b 网关。
+
+    请求体的字段集由 e2b 协议规定，SDK 版本演进会往里加字段（挂卷、网络策略等）。
+    在这里穷举一遍就等于维护第二份 schema，且漏掉的字段会被 DRF 静默丢弃——
+    表现为用户传了参数却不生效，比报错更难排查。因此校验之后转发的是原始请求体。
+    """
+
+    # 字段名是 e2b 协议规定的驼峰形式，不能改成平台习惯的下划线
+    templateID = serializers.CharField(help_text="沙箱模板标识")
+
+
+class E2BSandboxTimeoutInputSLZ(serializers.Serializer):
+    timeout = serializers.IntegerField(min_value=1, help_text="从此刻起的存活秒数")

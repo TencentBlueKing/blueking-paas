@@ -17,7 +17,12 @@
 
 from django.urls import path
 
+from .sandbox_views import E2BSandboxViewSet
 from .views import E2BApiKeyViewSet
+
+# e2b 协议端点的挂载前缀。用户侧要设 E2B_API_URL=https://<domain>/api/agent_sandbox/e2b，
+# SDK 拿它当 httpx 的 base_url，再接协议规定的相对路径（/sandboxes、/v2/sandboxes 等）。
+E2B_PROTOCOL_PREFIX = "api/agent_sandbox/e2b/"
 
 urlpatterns = [
     path(
@@ -29,5 +34,25 @@ urlpatterns = [
         "api/agent_sandbox/applications/<slug:code>/e2b/api_keys/<uuid:key_id>",
         E2BApiKeyViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.e2b.api_key.destroy",
+    ),
+    path(
+        E2B_PROTOCOL_PREFIX + "sandboxes",
+        E2BSandboxViewSet.as_view({"post": "create"}),
+        name="agent_sandbox.e2b.sandboxes.create",
+    ),
+    path(
+        E2B_PROTOCOL_PREFIX + "v2/sandboxes",
+        E2BSandboxViewSet.as_view({"get": "list"}),
+        name="agent_sandbox.e2b.sandboxes.list",
+    ),
+    path(
+        E2B_PROTOCOL_PREFIX + "sandboxes/<str:sandbox_id>",
+        E2BSandboxViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        name="agent_sandbox.e2b.sandboxes.detail",
+    ),
+    path(
+        E2B_PROTOCOL_PREFIX + "sandboxes/<str:sandbox_id>/timeout",
+        E2BSandboxViewSet.as_view({"post": "set_timeout"}),
+        name="agent_sandbox.e2b.sandboxes.timeout",
     ),
 ]

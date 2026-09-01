@@ -24,25 +24,13 @@ from paas_wl.infras.cluster.constants import (
     ClusterUsage,
 )
 from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
-from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy, ClusterE2BConfig
+from paas_wl.infras.cluster.models import ClusterAllocationPolicy, ClusterE2BConfig
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.agent_sandbox.e2b.clusters import get_e2b_cluster_config, select_e2b_cluster
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BClusterUnavailable
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-@pytest.fixture()
-def e2b_config() -> ClusterE2BConfig:
-    """给测试集群登记一份 e2b 配置。"""
-    return ClusterE2BConfig.objects.create(
-        cluster=Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING),
-        control_plane_url="http://e2b-gateway.bcs-system:8080",
-        data_plane_address="e2b.example.com",
-        api_key="e2b_real_gateway_key",
-        tenant_id=DEFAULT_TENANT_ID,
-    )
 
 
 @pytest.mark.usefixtures("e2b_config")

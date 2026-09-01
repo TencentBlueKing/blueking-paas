@@ -363,7 +363,13 @@ export default {
       user: {},
       CODECC_RELEASE_STATUS,
       rollbacks: [],
-      canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
+      canTerminateStatus: [
+        'gray_approval_in_progress',
+        'pre_prod_approval_in_progress',
+        'full_approval_in_progress',
+        'in_gray',
+        'in_pre_prod',
+      ],
     };
   },
   computed: {
@@ -921,16 +927,19 @@ export default {
   &.failed,
   &.interrupted,
   &.full_approval_failed,
-  &.gray_approval_failed {
+  &.gray_approval_failed,
+  &.pre_prod_approval_failed {
     background: #ffe6e6;
     border: 1px solid #ea3636;
   }
   &.full_approval_in_progress,
-  &.gray_approval_in_progress {
+  &.gray_approval_in_progress,
+  &.pre_prod_approval_in_progress {
     background: #ffe8c3;
     border: 1px solid #ff9c01;
   }
-  &.in_gray {
+  &.in_gray,
+  &.in_pre_prod {
     background: #e1ecff;
     border: 1px solid #699df4;
   }

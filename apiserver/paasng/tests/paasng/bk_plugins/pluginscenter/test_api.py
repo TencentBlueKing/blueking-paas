@@ -366,6 +366,10 @@ class TestSysApis:
             ("gray", ItsmTicketStatus.FINISHED.value, False, "failed"),
             # 灰度发布： 单据结束、审批结果为不同意， 版本状态为发布中
             ("gray", ItsmTicketStatus.FINISHED.value, True, "pending"),
+            # 预发布：审批拒绝，版本失败
+            ("pre_prod", ItsmTicketStatus.FINISHED.value, False, "failed"),
+            # 预发布：审批通过，版本仍为发布中
+            ("pre_prod", ItsmTicketStatus.FINISHED.value, True, "pending"),
         ],
     )
     def test_itsm_canry_release_callback(

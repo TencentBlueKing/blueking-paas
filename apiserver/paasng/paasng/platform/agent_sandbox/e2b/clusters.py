@@ -27,7 +27,7 @@ from .exceptions import E2BClusterNotConfigured, E2BClusterUnavailable
 logger = logging.getLogger(__name__)
 
 
-def select_cluster(tenant_id: str, region: str | None = None) -> Cluster:
+def select_e2b_cluster(tenant_id: str, region: str | None = None) -> Cluster:
     """为新沙箱挑一个集群。
 
     复用平台的集群分配器，再交上「已登记且启用 e2b 配置」这个条件。分配器是策略求值器
@@ -53,7 +53,7 @@ def select_cluster(tenant_id: str, region: str | None = None) -> Cluster:
     return cluster
 
 
-def get_cluster_config(cluster_name: str) -> ClusterE2BConfig:
+def get_e2b_cluster_config(cluster_name: str) -> ClusterE2BConfig:
     """读取集群的 e2b 配置。
 
     :raises E2BClusterNotConfigured: 集群未登记 e2b 配置，或配置已被停用

@@ -26,7 +26,7 @@ from paas_wl.infras.cluster.constants import (
 from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy, ClusterE2BConfig
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from paasng.platform.agent_sandbox.e2b.clusters import get_cluster_config, select_cluster
+from paasng.platform.agent_sandbox.e2b.clusters import get_e2b_cluster_config, select_e2b_cluster
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BClusterUnavailable
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -48,7 +48,7 @@ def e2b_config() -> ClusterE2BConfig:
 @pytest.mark.usefixtures("e2b_config")
 class TestSelectCluster:
     def test_returns_configured_cluster(self):
-        assert select_cluster(DEFAULT_TENANT_ID).name == CLUSTER_NAME_FOR_TESTING
+        assert select_e2b_cluster(DEFAULT_TENANT_ID).name == CLUSTER_NAME_FOR_TESTING
 
     def test_rejects_when_all_clusters_disabled(self, e2b_config):
         """所有集群都停用后必须选不出来，由调用方转成 503。"""
@@ -56,19 +56,19 @@ class TestSelectCluster:
         e2b_config.save(update_fields=["enabled"])
 
         with pytest.raises(E2BClusterUnavailable):
-            select_cluster(DEFAULT_TENANT_ID)
+            select_e2b_cluster(DEFAULT_TENANT_ID)
 
     def test_rejects_when_no_policy_for_tenant(self):
         """租户没有分配策略时分配器抛 ValueError，这里要转成自己的异常。"""
         with pytest.raises(E2BClusterUnavailable):
-            select_cluster("tenant-without-policy")
+            select_e2b_cluster("tenant-without-policy")
 
 
 class TestSelectClusterWithoutConfig:
     def test_rejects_cluster_not_registered(self):
         """集群被策略选中但没登记 e2b 配置，同样不能用于 e2b 沙箱。"""
         with pytest.raises(E2BClusterUnavailable):
-            select_cluster(DEFAULT_TENANT_ID)
+            select_e2b_cluster(DEFAULT_TENANT_ID)
 
 
 class TestSelectClusterUsage:
@@ -98,12 +98,12 @@ class TestSelectClusterUsage:
     def test_matches_isolated_usage_rule(self, apply_policy_for_usage):
         apply_policy_for_usage(ClusterUsage.AGENT_SANDBOX_ISOLATED)
 
-        assert select_cluster(DEFAULT_TENANT_ID).name == CLUSTER_NAME_FOR_TESTING
+        assert select_e2b_cluster(DEFAULT_TENANT_ID).name == CLUSTER_NAME_FOR_TESTING
 
 
 class TestGetClusterConfig:
     def test_returns_registered_config(self, e2b_config):
-        config = get_cluster_config(CLUSTER_NAME_FOR_TESTING)
+        config = get_e2b_cluster_config(CLUSTER_NAME_FOR_TESTING)
 
         assert config.pk == e2b_config.pk
         assert config.control_plane_url == "http://e2b-gateway.bcs-system:8080"
@@ -115,11 +115,11 @@ class TestGetClusterConfig:
         e2b_config.save(update_fields=["enabled"])
 
         with pytest.raises(E2BClusterNotConfigured):
-            get_cluster_config(CLUSTER_NAME_FOR_TESTING)
+            get_e2b_cluster_config(CLUSTER_NAME_FOR_TESTING)
 
     def test_rejects_unregistered_cluster(self):
         with pytest.raises(E2BClusterNotConfigured):
-            get_cluster_config("cluster-never-registered")
+            get_e2b_cluster_config("cluster-never-registered")
 
 
 def test_credentials_are_encrypted_at_rest(e2b_config):

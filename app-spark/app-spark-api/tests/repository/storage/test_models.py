@@ -16,7 +16,8 @@
 
 import pytest
 
-from app_spark_api.repository.storage.backends import HostTmpPath
+from app_spark_api.repository.storage.backends import SourceStorage
+from app_spark_api.repository.storage.blob_stores import HostTmpPath
 from app_spark_api.repository.storage.constants import StorageBackend
 from app_spark_api.repository.storage.models import ProjectSourceStorage
 
@@ -33,6 +34,7 @@ def test_project_source_storage_builds_backend(project, tmp_path):
 
     backend = source_storage.get_backend()
 
-    assert isinstance(backend, HostTmpPath)
-    assert backend.path == package_path
+    assert isinstance(backend, SourceStorage)
+    assert isinstance(backend.blob_store, HostTmpPath)
+    assert backend.blob_store.path == package_path
     assert project.source_storage == source_storage

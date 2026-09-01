@@ -16,9 +16,11 @@ import httpx
 from fastapi.testclient import TestClient
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
 from app_spark_agent.server import create_runtime_app
+from app_spark_agent.state import ConversationContext
 from tests.support.ag_ui import SSE_HEADERS, assistant_text, run_body, sse_events
 from tests.support.fake_models import gated_model
 
@@ -49,6 +51,11 @@ class AuthedTestClient(TestClient):
 # Long enough to survive a loaded machine, short enough that a guard that is never taken fails
 # the test instead of hanging the suite.
 BUSY_TIMEOUT_SECONDS = 5.0
+
+# The version a cold context arrives at. Deliberately not 0 or 1: a restored Runtime continues
+# someone else's numbering, so a version the receiving Runtime could have reached on its own
+# would hide an off-by-one.
+COLD_VERSION = 7
 
 
 class ApiFactory(Protocol):
@@ -143,6 +150,32 @@ def get_context(client: TestClient) -> dict[str, Any]:
     response = client.get("/context")
     assert response.status_code == 200, response.text
     return cast(dict[str, Any], response.json())
+
+
+def cold_context(
+    conversation_id: str | None = None,
+    *,
+    context_version: int = COLD_VERSION,
+) -> dict[str, Any]:
+    """Build the context document a control plane would hand to a fresh Runtime.
+
+    :param conversation_id: Conversation the history belongs to; a fresh one when omitted.
+    :param context_version: Version the archived context was taken at.
+    :return: The document ``PUT /context`` accepts, identical in shape to what ``GET`` returns.
+    """
+    conversation_id = conversation_id or str(uuid4())
+    context = ConversationContext(
+        conversation_id=conversation_id,
+        context_version=context_version,
+        messages=[
+            ModelRequest(
+                parts=[UserPromptPart(content="earlier turn")],
+                run_id=str(uuid4()),
+                conversation_id=conversation_id,
+            )
+        ],
+    )
+    return context.as_payload()
 
 
 @dataclass(frozen=True)

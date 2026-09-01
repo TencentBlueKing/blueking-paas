@@ -18,12 +18,13 @@ uv sync
 
 文档只用占位符，不要填真实密钥。
 
-`APP_SPARK_AGENT_*` 由接入层创建沙箱时注入，只从进程环境读取（不读配置文件）；键名与端口数值已锁定。
+生产环境的 `APP_SPARK_AGENT_*` 由接入层创建沙箱时注入；本地开发也可以通过 `.env` 提供。
+键名与端口数值已锁定。
 
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 所有 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面） |
-| `APP_SPARK_AGENT_MODEL_API_KEY` | 调用 `/runs` 时是 | 模型密钥。缺失则 `model_ready=false`，`POST /runs` 返回 503 |
+| `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 模型密钥。真实模型缺失时 `model_ready=false`，`POST /runs` 返回 503；`fake:*` 不需要 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 是 | 不带 vendor 前缀。当前只读入，尚未用于构造模型客户端 |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 是 | 自研网关 OpenAI 兼容入口。同上，当前只读入 |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`；本组件只读入，不拉起应用也不校验 |
@@ -49,6 +50,17 @@ make run
 ```
 
 其余压缩策略、游标 limit 等配置见 `app_spark_agent/settings.py`（`APP_SPARK_AGENT_*`，`.env` 也会自动读取）。
+
+## 假模型
+
+`MODEL` 除了 `<provider>:<model>`，还接受 `fake:<scenario>`——一个不发起任何网络请求的确定性
+模型。它让外部控制面可以零成本启动真实进程，覆盖真实 HTTP、SSE 与文件写入，而不必 mock 整个 Agent。
+
+```bash
+APP_SPARK_AGENT_MODEL=fake:write-file uv run uvicorn app_spark_agent.server.asgi:app --port 8765
+```
+
+目前支持的假模型场景详情可查看 `fake_model.py`。
 
 ## 调用 HTTP
 
@@ -91,6 +103,11 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 运行的 `contextVersion` 是 `0`。
 
 `/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer，供控制面读取或迁移会话状态。
+
+以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标、运行标志，以及
+`pushed_*` 复制游标与 `replication_pending`（都只在配了控制面时才有意义），`/log` 与
+`/ui-events` 按游标增量读取两条日志，`/context` 导出当前上下文（也可向空 Runtime 注入冷会话
+上下文并播种 seq）。
 
 ## 凭据屏蔽
 
@@ -135,6 +152,30 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 - `SummarizingCompaction` 是一次不可重放的真实 LLM 调用，冷启动重建上下文的唯一来源是
   `context.json`，绝不能从 `log.jsonl` 拼出来。
 
+## 远程持久化
+
+配置了控制面地址之后，上面三份文件不再是唯一副本：`app_spark_agent/replication/` 下的后台任务
+会把它们复制到控制面，状态目录退化成一个可以丢弃的本地缓冲。
+
+| 配置项 | 作用 |
+| --- | --- |
+| `CONTROL_PLANE_URL` | 已带会话前缀的完整地址；Runtime 不需要认识「会话」 |
+| `CONTROL_PLANE_TOKEN` | spawn 时注入、只授权这一个会话的 Bearer token |
+| `PUSH_BATCH_SIZE` | 单次 ingest 调用最多携带的记录数 |
+| `PUSH_RETRY_BACKOFF_SECONDS` | 单轮推送失败后的重试间隔 |
+| `PUSH_FLUSH_TIMEOUT_SECONDS` | run 收尾时等待控制面追平的上限 |
+
+- **run 结束时有一道屏障，但它不是保证**：先 flush、再释放 `run_guard`。flush 超时不会让 run
+  失败，数据仍在本地且后台任务会继续重试；`/health` 的 `replication_pending` 和 `pushed_*`
+  用于判断 Runtime 是否真的可以回收。
+- **flush 判断的是控制面是否真正追平**，不是单次调用有没有报错。发现缺口时会继续补齐并重新
+  触发后台任务。
+- **冷启动必须播种 seq**：`PUT /context?log_seq=40&ui_event_seq=55` 会让新记录从 41 和 56
+  继续，避免与控制面已有记录撞号。
+
+已知缺口：冷启动只恢复上下文，不恢复 workspace 源码；旧 Runtime 的 `run_id` 也不会在空状态
+目录中参与重放检测。控制面应先恢复源码，并始终为每轮生成新的 UUID。
+
 ## 本地镜像
 
 ```bash
@@ -152,14 +193,21 @@ docker run --rm -p 8090:8090 \
 
 ### 单元测试
 
-普通测试不请求模型、不需要真实 API Key、也不需要起进程：
+默认的测试命令不请求真实模型、不需要 API Key：
 
 ```bash
 make test
 ```
 
-`tests/api/` 跑在假模型上完整覆盖 HTTP 接口的正确与错误分支；状态原语、Agent 组装、压缩、
-事件合并在 `tests/` 其余模块。
+`tests/api/` 跑在进程内注入的假模型上，完整覆盖 HTTP 接口的正确与错误分支；状态原语、Agent
+组装、压缩、事件合并在 `tests/` 其余模块。`tests/replication/` 用 `httpx.MockTransport` 在进程
+内伪造控制面，但状态文件、游标、字节偏移全是真的——整套设计就架在「文件即 outbox」上。
+
+`tests/live/` 用 uvicorn 拉起**真实进程**，但模型是 `fake:` 场景，所以默认就跑。它覆盖
+的是进程内测试结构上够不到的那一段：Runtime 由 `create_app_from_settings()` 只凭环境变量装配
+起来——这正是任何外部控制面启动它的方式，而一个只能进程内注入的假模型对它们毫无用处。
+`test_replication.py` 是同一个道理：它在环回端口上跑一个假控制面，验证「跑完一轮 → 换一个状态
+目录全空的新进程 → 对话接着上一轮继续」，并且两代 Runtime 的 seq 拼成一条不重号的平坦序列。
 
 ### E2E 测试
 

@@ -6,7 +6,11 @@ configured entirely through ``APP_SPARK_AGENT_*`` variables. Nothing here reache
 process it started -- every assertion a test makes travels over HTTP, and the state directory
 is only ever read through the endpoints that serve it.
 
-Every call narrates itself through :mod:`tests.e2e.console`, which makes ``-s`` worth passing.
+Nothing here is tied to a particular model: :mod:`tests.e2e` drives these against the real one,
+and :mod:`tests.live` drives them against ``fake:`` scenarios that cost nothing.
+
+Every call narrates itself through :mod:`tests.support.console`, which makes ``-s`` worth
+passing.
 """
 
 import json
@@ -25,7 +29,7 @@ from uuid import uuid4
 import httpx
 
 from app_spark_agent import settings
-from tests.e2e import console
+from tests.support import console
 from tests.support.ag_ui import run_body
 
 ASGI_TARGET = "app_spark_agent.server.asgi:app"
@@ -105,21 +109,40 @@ class LiveRuntime:
         )
         return exported
 
-    def restore(self, context: dict[str, Any], *, if_match: str | None = None) -> httpx.Response:
+    def restore(
+        self,
+        context: dict[str, Any],
+        *,
+        if_match: str | None = None,
+        log_seq: int | None = None,
+        ui_event_seq: int | None = None,
+    ) -> httpx.Response:
         """Inject a cold context, and return the response without judging it.
 
         Both outcomes are part of the contract -- a mismatched ``If-Match`` is a 412, an
         occupied Runtime is a 409 -- so the status is the caller's to assert on.
+
+        :param context: The document ``GET /context`` produced, passed through unchanged.
+        :param if_match: Version the Runtime is expected to currently hold.
+        :param log_seq: Sequence number the transcript should continue from. Omitted means the
+            conversation has no history anywhere else and numbering starts at 1.
+        :param ui_event_seq: Sequence number the AG-UI history should continue from.
         """
         headers = {"If-Match": if_match} if if_match is not None else {}
-        response = self._client.put("/context", json=context, headers=headers)
-        console.exchange(
-            "PUT  /context",
-            response.status_code,
-            f"If-Match={if_match} {console.clip(response.text, limit=60)}"
-            if if_match is not None
-            else console.clip(response.text, limit=60),
+        params = {
+            name: value
+            for name, value in (("log_seq", log_seq), ("ui_event_seq", ui_event_seq))
+            if value is not None
+        }
+        response = self._client.put("/context", json=context, headers=headers, params=params)
+        described = " ".join(
+            [
+                *([f"If-Match={if_match}"] if if_match is not None else []),
+                *(f"{name}={value}" for name, value in params.items()),
+                console.clip(response.text, limit=60),
+            ]
         )
+        console.exchange("PUT  /context", response.status_code, described)
         return response
 
     def drain(self, channel: str) -> list[dict[str, Any]]:

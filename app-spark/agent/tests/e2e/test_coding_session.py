@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.e2e import console
-from tests.e2e.live import LiveRuntime, model_messages, part_kinds, stored_events
+from tests.support import console
+from tests.support.live import LiveRuntime, model_messages, part_kinds, stored_events
 
 pytestmark = pytest.mark.live
 

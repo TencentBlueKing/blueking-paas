@@ -54,6 +54,9 @@ TENANT_ID = env.str("TENANT_ID", "")
 # -----------------------------------------------------------------------
 
 # 对话使用的模型，格式是 pydantic-ai 的 ``<provider>:<model>``。
+#
+# 另外支持 ``fake:<scenario>``：一个不发起任何网络请求的确定性假模型，供集成测试把 Runtime
+# 真正启动起来，场景清单见 ``fake_model.py``。
 MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
 
 # 模型密钥，同时交给 provider。缺失时 health 报 model_ready=false，POST /runs 返回 503。
@@ -64,6 +67,10 @@ MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 # ``MODEL`` 与 ``MODEL_API_KEY`` 构造。
 MODEL_NAME = env.str("MODEL_NAME", "")
 MODEL_BASE_URL = env.str("MODEL_BASE_URL", "")
+
+# ``fake:slow`` 场景挂起的秒数。它存在的意义是让「run 正在进行中」成为一个能被外部观察到的
+# 稳定状态，从而可以真实地触发 Runtime 的 409，而不是靠 sleep 去猜时序。
+FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 
 # Agent 的系统提示词。它和 ``agent.py`` 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
@@ -106,6 +113,38 @@ COMPACTION_KEEP_MESSAGES = env.int("COMPACTION_KEEP_MESSAGES", 20, validate=Rang
 COMPACTION_KEEP_TOOL_RESULT_PAIRS = env.int("COMPACTION_KEEP_TOOL_RESULT_PAIRS", 3, validate=Range(min=0))
 
 # -----------------------------------------------------------------------
+# 状态回写（复制到控制面）
+# -----------------------------------------------------------------------
+
+# 控制面的会话级状态写入地址，例如
+# ``http://api/api/internal/conversations/<uuid>/state/``。
+#
+# 留空即关闭回写：此时 Runtime 完全独立，状态只存在于 STATE_DIR，也就是本地开发和单测的形态。
+# 地址由控制面在拉起 Runtime 时给出，且已经带上会话路径，所以 Runtime 自己不需要知道
+# 「会话」是什么，也不需要在启动时就知道自己的 conversation_id。
+CONTROL_PLANE_URL = env.str("CONTROL_PLANE_URL", None)
+
+# 访问上述地址用的 Bearer token，由控制面签发。配了 URL 就必须配它。
+CONTROL_PLANE_TOKEN = env.str("CONTROL_PLANE_TOKEN", None)
+
+# 单次状态写入调用的超时秒数。给得比较宽松是因为一份 context 文档可能有好几 MB，但必须有限：
+# 一轮 run 结束时的 flush 会等它。
+CONTROL_PLANE_TIMEOUT_SECONDS = env.float("CONTROL_PLANE_TIMEOUT_SECONDS", 30.0, validate=Range(min=0))
+
+# 每次推送最多带多少条日志记录。
+PUSH_BATCH_SIZE = env.int("PUSH_BATCH_SIZE", 50, validate=Range(min=1))
+
+# 一次推送失败后等多久重试，避免控制面挂掉时空转。
+PUSH_RETRY_BACKOFF_SECONDS = env.float("PUSH_RETRY_BACKOFF_SECONDS", 2.0, validate=Range(min=0))
+
+# 一轮 run 结束时等待推送追平的秒数。超时不会让这一轮失败——数据还在本地文件里、后台任务会继续
+# 重试——但 ``/health`` 的复制游标会显示落后。
+PUSH_FLUSH_TIMEOUT_SECONDS = env.float("PUSH_FLUSH_TIMEOUT_SECONDS", 30.0, validate=Range(min=0))
+
+if CONTROL_PLANE_URL and not CONTROL_PLANE_TOKEN:
+    raise EnvError(f"{ENV_PREFIX}CONTROL_PLANE_TOKEN must be set whenever {ENV_PREFIX}CONTROL_PLANE_URL is")
+
+# -----------------------------------------------------------------------
 # HTTP 接口
 # -----------------------------------------------------------------------
 
@@ -121,8 +160,8 @@ if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
 
 
 def is_model_ready() -> bool:
-    """``APP_SPARK_AGENT_MODEL_API_KEY`` 是否已注入。"""
-    return MODEL_API_KEY is not None
+    """模型是否无需外部凭据，或已注入 ``APP_SPARK_AGENT_MODEL_API_KEY``。"""
+    return MODEL.startswith("fake:") or MODEL_API_KEY is not None
 
 
 def _tokens_match(expected: str, actual: str) -> bool:

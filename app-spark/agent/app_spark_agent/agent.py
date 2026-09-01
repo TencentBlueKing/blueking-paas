@@ -21,6 +21,7 @@ from pydantic_ai_harness.repo_context import RepoContext
 from pydantic_ai_harness.shell import LLM_API_KEY_ENV_PATTERNS
 
 from app_spark_agent import settings
+from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
 
 
 class ApiKeyProvider(Protocol):
@@ -30,7 +31,13 @@ class ApiKeyProvider(Protocol):
 
 
 def build_model() -> Model:
-    """Build the model named by :data:`app_spark_agent.settings.MODEL`."""
+    """Build the model named by :data:`app_spark_agent.settings.MODEL`.
+
+    A ``fake:`` name is intercepted here rather than handed to ``infer_model``, which only
+    special-cases ``"test"`` and rejects any other unknown provider outright.
+    """
+    if settings.MODEL.startswith(FAKE_MODEL_PREFIX):
+        return build_fake_model(settings.MODEL.removeprefix(FAKE_MODEL_PREFIX))
 
     def provider_factory(provider_name: str) -> Provider[Any]:
         provider_class = infer_provider_class(provider_name)

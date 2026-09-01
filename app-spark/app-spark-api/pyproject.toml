@@ -13,6 +13,9 @@ dependencies = [
     "django>=6.0.8,<6.1",
     "django-ninja>=1.6.2,<2.0.0",
     "dynaconf>=3.3.5,<4.0.0",
+    # Already installed as a transitive dependency of bkpaas-auth, declared here because this
+    # project imports it directly to drive the Agent Runtime over HTTP.
+    "httpx2>=2.10.0,<3.0.0",
     "pymysql>=1.2.0,<2.0.0",
 ]
 
@@ -33,6 +36,11 @@ extend-exclude = [".venv"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app_spark_api"]
+
+[tool.ruff.lint.flake8-type-checking]
+# pydantic 会在运行时解析这些基类的字段注解，把它们的 import 挪进 TYPE_CHECKING 块会直接让
+# 模型构建失败，所以这里声明清楚，让 TC 规则不要对它们提出这种建议。
+runtime-evaluated-base-classes = ["ninja.Schema", "pydantic.BaseModel"]
 
 [tool.mypy]
 python_version = "3.14"

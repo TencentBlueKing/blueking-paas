@@ -12,7 +12,11 @@ They are marked ``live`` and need an API key::
 
     uv run pytest -m live -s
 
-``-s`` is not optional in practice. Each call narrates itself through :mod:`tests.e2e.console`, so
-the console shows the request, the tool calls, and the model's answer as it is being written --
-without it a passing run looks exactly like a hung one for minutes at a time.
+``-s`` is not optional in practice. Each call narrates itself through
+:mod:`tests.support.console`, so the console shows the request, the tool calls, and the model's
+answer as it is being written -- without it a passing run looks exactly like a hung one for
+minutes at a time.
+
+The machinery for starting and driving a real process lives in :mod:`tests.support.live`, and is
+shared with :mod:`tests.live`, which runs the same way against a fake model for free.
 """

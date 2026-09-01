@@ -23,3 +23,10 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 
 * Run all tests: `uv run pytest --reuse-db -s --maxfail=1 tests/`
 * ALWAYS prefer specifying test files for efficiency
+* `tests/api/test_conversations.py` spawns real agent processes instead of mocking them, so it
+  needs the agent's virtualenv: run `cd ../agent && uv sync` first. Without it the tests skip
+  with a reason rather than failing.
+    - It also uses `live_server`, because a spawned Runtime replicates its state over a real
+      socket and cannot reach an in-process test client.
+    - Replication lands *after* the run's event stream has been sent, so read-backs poll
+      (`wait_for_replication`) rather than assuming the database is already up to date.

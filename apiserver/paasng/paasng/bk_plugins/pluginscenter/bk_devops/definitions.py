@@ -104,7 +104,7 @@ class PipelineBuildStatus(BaseModel):
     """
 
     buildId: str = Field(alias="id")
-    startTime: int
+    startTime: Optional[int] = None
     endTime: Optional[int]
     status: str
     currentTimestamp: str
@@ -244,7 +244,7 @@ class PipelineBuildDetail(BaseModel):
     buildId: str = Field(alias="id")
     pipelineId: str
     pipelineName: str
-    startTime: int
+    startTime: Optional[int] = None
     endTime: Optional[int]
     status: str
     currentTimestamp: str

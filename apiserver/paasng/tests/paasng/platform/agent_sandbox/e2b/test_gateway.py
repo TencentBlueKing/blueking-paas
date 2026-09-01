@@ -24,12 +24,14 @@ import requests
 import requests_mock
 
 from paasng.platform.agent_sandbox.e2b.exceptions import (
+    E2BClusterNotConfigured,
     E2BGatewayError,
     E2BGatewayNotFound,
     E2BGatewayTimeout,
     E2BGatewayUnavailable,
 )
 from paasng.platform.agent_sandbox.e2b.gateway import E2BGatewayClient
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -120,3 +122,15 @@ def test_error_message_does_not_leak_gateway_body(client, gateway_http):
         client.list_sandboxes()
 
     assert "e2b_leaked_key" not in str(exc_info.value)
+
+
+def test_for_cluster_loads_registered_config(e2b_config):
+    """按集群名取配置再构造，编排层不必自己先 get 再 init。"""
+    with E2BGatewayClient.for_cluster(CLUSTER_NAME_FOR_TESTING) as client:
+        assert client.config == e2b_config
+        assert client.base_url == GATEWAY_URL
+
+
+def test_for_cluster_rejects_unregistered_cluster():
+    with pytest.raises(E2BClusterNotConfigured):
+        E2BGatewayClient.for_cluster("cluster-never-registered")

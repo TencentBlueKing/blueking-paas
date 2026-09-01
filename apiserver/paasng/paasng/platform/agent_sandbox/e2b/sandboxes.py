@@ -23,10 +23,11 @@ from typing import Any
 
 from django.utils.dateparse import parse_datetime
 
+from paas_wl.infras.cluster.models import ClusterE2BConfig
 from paasng.platform.agent_sandbox.models import E2BSandbox
 from paasng.platform.applications.models import Application
 
-from .clusters import get_e2b_cluster_config, select_e2b_cluster
+from .clusters import select_e2b_cluster
 from .constants import (
     DATA_PLANE_DOMAIN_FIELD,
     SANDBOX_ID_FIELD,
@@ -53,9 +54,8 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
     :raises E2BGatewayTimeout: 网关未在创建超时窗口内返回
     """
     cluster = select_e2b_cluster(application.tenant_id, application.region)
-    config = get_e2b_cluster_config(cluster.name)
 
-    with E2BGatewayClient(config) as client:
+    with E2BGatewayClient.for_cluster(cluster.name) as client:
         resp = client.create_sandbox(payload)
 
         # 从这里开始沙箱已在网关侧存在。后面任何一步失败都必须销毁它，
@@ -66,20 +66,31 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
             _rollback_created_sandbox(client, resp.get(SANDBOX_ID_FIELD))
             raise
 
-    # 改写数据面地址字段
-    resp[DATA_PLANE_DOMAIN_FIELD] = config.data_plane_address
-    return resp
+        return _rewrite_data_plane_address(resp, client.config)
 
 
 def get_sandbox(application: Application, sandbox_id: str) -> dict[str, Any]:
     """查询沙箱详情。
 
+    :returns: 预期网关详情响应，``domain`` 已改写为该集群的对外地址。其余字段原样透传，
+        字段名是 e2b 协议规定的驼峰形式。相对 list，详情多出连数据面所需的两项：
+
+        - ``sandboxID``：沙箱标识
+        - ``templateID``：创建时用的模板
+        - ``state``：网关侧运行态（``running`` / ``paused`` 等）
+        - ``startedAt`` / ``endAt``：实例启动与预计回收时间
+        - ``cpuCount`` / ``memoryMB`` / ``diskSizeMB``：规格
+        - ``envdVersion``：数据面 envd 版本
+        - ``clientID``：网关签发的客户端标识
+        - ``domain``：数据面入口域名，由平台换成 ``ClusterE2BConfig.data_plane_address``
+        - ``envdAccessToken``：本次重新签发的沙箱访问令牌，过期后续期靠再调 get，
+          不可缓存旧值
+
     :raises E2BSandboxNotFound: 沙箱不存在、不属于该应用，或本地已标记为终止
     """
     sandbox = _get_live_sandbox(application, sandbox_id)
-    config = get_e2b_cluster_config(sandbox.cluster_name)
 
-    with E2BGatewayClient(config) as client:
+    with E2BGatewayClient.for_cluster(sandbox.cluster_name) as client:
         try:
             resp = client.get_sandbox(sandbox_id)
         except E2BGatewayNotFound as exc:
@@ -87,9 +98,7 @@ def get_sandbox(application: Application, sandbox_id: str) -> dict[str, Any]:
             # 这里只做转译，本地状态的收敛交给对账任务，避免读路径写库
             raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
 
-    # 改写数据面地址字段
-    resp[DATA_PLANE_DOMAIN_FIELD] = config.data_plane_address
-    return resp
+        return _rewrite_data_plane_address(resp, client.config)
 
 
 def list_sandboxes(application: Application) -> list[dict[str, Any]]:
@@ -98,7 +107,20 @@ def list_sandboxes(application: Application) -> list[dict[str, Any]]:
     以本地归属表为准，向各集群网关取运行态后求交。不能直接透传网关的列表：
     那是平台统一凭证的全集，会把其他租户的沙箱一并暴露出去。
 
-    某个集群不可达时跳过该集群，不影响其余集群的结果
+    某个集群不可达时跳过该集群，不影响其余集群的结果。
+
+    :returns: 求交后的网关列表条目。每条字段原样透传，不做数据面地址改写——
+        列表本身不含 ``domain`` / ``envdAccessToken``，SDK 连数据面要再走 get。
+        字段名是 e2b 协议规定的驼峰形式，SDK 的 ``ListedSandbox.from_dict``
+        缺任一必填项都会整表反序列化失败：
+
+        - ``sandboxID``：沙箱标识
+        - ``templateID``：创建时用的模板
+        - ``state``：网关侧运行态（``running`` / ``paused`` 等）
+        - ``startedAt`` / ``endAt``：实例启动与预计回收时间
+        - ``cpuCount`` / ``memoryMB`` / ``diskSizeMB``：规格
+        - ``envdVersion``：数据面 envd 版本
+        - ``clientID``：网关签发的客户端标识
     """
     owned = _live_sandboxes(application)
     if not owned:
@@ -111,8 +133,7 @@ def list_sandboxes(application: Application) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for cluster_name, owned_ids in ids_by_cluster.items():
         try:
-            config = get_e2b_cluster_config(cluster_name)
-            with E2BGatewayClient(config) as client:
+            with E2BGatewayClient.for_cluster(cluster_name) as client:
                 cluster_items = client.list_sandboxes()
         except (E2BGatewayError, E2BClusterNotConfigured) as exc:
             logger.warning(
@@ -137,8 +158,7 @@ def kill_sandbox(application: Application, sandbox_id: str) -> None:
         # 已销毁过，不必再打网关
         return
 
-    config = get_e2b_cluster_config(sandbox.cluster_name)
-    with E2BGatewayClient(config) as client:
+    with E2BGatewayClient.for_cluster(sandbox.cluster_name) as client:
         try:
             client.kill_sandbox(sandbox_id)
         except E2BGatewayNotFound:
@@ -160,13 +180,25 @@ def set_sandbox_timeout(application: Application, sandbox_id: str, timeout: int)
     :raises E2BSandboxNotFound: 沙箱不存在、不属于该应用，或本地已标记为终止
     """
     sandbox = _get_live_sandbox(application, sandbox_id)
-    config = get_e2b_cluster_config(sandbox.cluster_name)
 
-    with E2BGatewayClient(config) as client:
+    with E2BGatewayClient.for_cluster(sandbox.cluster_name) as client:
         try:
             client.set_timeout(sandbox_id, timeout)
         except E2BGatewayNotFound as exc:
             raise E2BSandboxNotFound(f"sandbox {sandbox_id} is gone on gateway") from exc
+
+
+def _rewrite_data_plane_address(resp: dict[str, Any], config: ClusterE2BConfig) -> dict[str, Any]:
+    """把网关响应里的数据面地址换成该集群的对外入口。
+
+    网关填的是集群内 Service 域名（如 ``e2b-sandbox-gateway.bcs-system.svc.cluster.local``），
+    集群外 SDK 解析不到。SDK 会采用控制面返回的 domain 拼数据面 URL
+    （``https://<端口>-<沙箱ID>.<domain>``），本地 ``E2B_DOMAIN`` 只在该字段为空时兜底。
+    因此必须改写成 ``config.data_plane_address`` 上登记的对外地址；不同集群
+    改写出不同域名，客户端就被导向对应入口。
+    """
+    resp[DATA_PLANE_DOMAIN_FIELD] = config.data_plane_address
+    return resp
 
 
 def _get_live_sandbox(application: Application, sandbox_id: str) -> E2BSandbox:

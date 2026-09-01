@@ -26,6 +26,7 @@ from django.db.utils import IntegrityError
 
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.agent_sandbox.e2b import sandboxes
+from paasng.platform.agent_sandbox.e2b.clusters import get_e2b_cluster_config
 from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayNotFound,
@@ -84,7 +85,12 @@ class FakeGateway:
 
     def __call__(self, config):
         self.configs.append(config)
+        self.config = config
         return self
+
+    def for_cluster(self, cluster_name: str):
+        """与真实客户端的工厂方法对齐，编排层统一走这一条路径。"""
+        return self(get_e2b_cluster_config(cluster_name))
 
     def __enter__(self):
         return self

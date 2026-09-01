@@ -24,6 +24,7 @@ import requests
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
 
+from .clusters import get_e2b_cluster_config
 from .constants import (
     GATEWAY_CREATE_TIMEOUT_SECONDS,
     GATEWAY_REQUEST_TIMEOUT_SECONDS,
@@ -47,9 +48,18 @@ class E2BGatewayClient:
     """
 
     def __init__(self, config: ClusterE2BConfig):
+        self.config = config
         self.base_url = config.control_plane_url.rstrip("/")
         self._session = requests.Session()
         self._session.headers["X-API-Key"] = config.api_key
+
+    @classmethod
+    def for_cluster(cls, cluster_name: str) -> Self:
+        """按集群名取 e2b 配置并构造客户端。
+
+        编排层绝大多数路径都是「已知集群名 → 取配置 → 打网关」，走这一处即可。
+        """
+        return cls(get_e2b_cluster_config(cluster_name))
 
     def create_sandbox(self, payload: dict[str, Any]) -> dict[str, Any]:
         """认领或拉起一个沙箱。

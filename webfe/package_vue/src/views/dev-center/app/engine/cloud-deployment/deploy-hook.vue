@@ -75,7 +75,7 @@
               slot="tip"
               class="whole-item-tips"
             >
-              {{ $t("数组类型，示例数据：['/process_data']，按回车键分隔每个元素") }}
+              {{ $t('数组类型，示例数据：{n}，按回车键分隔每个元素', { n: `['/process_data']`}) }}
               <br />
               {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}
               ['/bin/sh', './bin/pre-task.sh']
@@ -97,7 +97,7 @@
               :paste-fn="copyCommandParameter"
             />
             <span class="whole-item-tips">
-              {{ $t("数组类型，示例数据：['--dataset', 'myset']，按回车键分隔每个元素") }}
+              {{ $t("数组类型，示例数据：{n}，按回车键分隔每个元素", { n: `['--dataset', 'myset']` }) }}
             </span>
           </bk-form-item>
         </bk-form>

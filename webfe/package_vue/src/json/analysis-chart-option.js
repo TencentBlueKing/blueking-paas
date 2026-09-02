@@ -25,7 +25,7 @@ export default {
     color: ['#699df4', '#ffb849'],
     // color: ['#4679f6', '#8ec68d', '#f2d0a8'],
     title: {
-      show: false
+      show: false,
     },
     tooltip: {
       trigger: 'axis',
@@ -33,12 +33,12 @@ export default {
         type: 'line',
         animation: true,
         label: {
-          backgroundColor: '#6a7985'
-        }
+          backgroundColor: '#6a7985',
+        },
       },
-      formatter (params, ticket, callback) {
+      formatter(params, ticket, callback) {
         let ret = `<div>${params[0].axisValueLabel}</div>`;
-        params.forEach(item => {
+        params.forEach((item) => {
           let val = parseInt(item.value);
           if (val === '0.00') {
             val = 0;
@@ -46,24 +46,24 @@ export default {
           ret += `<div>${item.seriesName}：${val}${i18n.t('次')}</div>`;
         });
         return ret;
-      }
+      },
     },
     legend: {
       data: [
         'Current',
         'Request',
-        'Limit'
-      ]
+        'Limit',
+      ],
     },
     toolbox: {
-      show: false
+      show: false,
     },
     grid: {
       top: '5%',
       left: '5%',
       right: '4%',
       bottom: '5%',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: [{
       type: 'category',
@@ -72,33 +72,33 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置横轴坐标刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置横轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value, index) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
           }
           return ret;
-        }
+        },
       },
       // 设置风格 - 竖线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
+          type: 'dashed',
+        },
       },
-      data: []
+      data: [],
     }],
     yAxis: [{
       boundaryGap: [0, '2%'],
@@ -107,30 +107,30 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置纵轴刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置纵轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value, index) {
           return `${value}`;
-        }
+        },
       },
       // 设置网格 - 横线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
-      }
+          type: 'dashed',
+        },
+      },
     }],
     series: [
-    ]
-  }
+    ],
+  },
 };

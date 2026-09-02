@@ -16,8 +16,8 @@
     </div>
     <TreeTextDisplay
       v-bind="$attrs"
-      :rootPath="rootPath"
-      :appendPath="appendPath"
+      :root-path="rootPath"
+      :append-path="appendPath"
       :is-dockerfile="isDockerfile"
       :tip-config="tipConfig"
     />
@@ -58,8 +58,8 @@ export default {
         extCls: 'dockerfile-tips-cls',
         html: `<p class="paas-example-tips">${this.dockerfileTips}</p>
         <p class="paas-example-tips">docker build . -f ${
-          this.appendPath ? this.appendPath : 'Dockerfile'
-        } imagename</p>`,
+  this.appendPath ? this.appendPath : 'Dockerfile'
+} imagename</p>`,
       };
     },
   },

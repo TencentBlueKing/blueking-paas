@@ -26,23 +26,23 @@
 </template>
 
 <script>
-    export default {
-        data () {
-            return {
-                trunkUrl: '',
-                appCode: this.$route.params.id
-            };
-        },
-        created () {
-            this.init();
-        },
-        init () {
-            this.appCode = this.$route.params.id;
-            const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
-            this.$http.get(url).then((response) => {
-                const resData = response;
-                this.trunkUrl = resData.repo.trunk_url;
-            });
-        }
+export default {
+  data() {
+    return {
+      trunkUrl: '',
+      appCode: this.$route.params.id,
     };
+  },
+  created() {
+    this.init();
+  },
+  init() {
+    this.appCode = this.$route.params.id;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
+    this.$http.get(url).then((response) => {
+      const resData = response;
+      this.trunkUrl = resData.repo.trunk_url;
+    });
+  },
+};
 </script>

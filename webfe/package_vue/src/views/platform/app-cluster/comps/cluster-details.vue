@@ -138,9 +138,9 @@ export default {
   },
   computed: {
     ...mapState('tenant', {
-      clustersStatus: (state) => state.clustersStatus,
-      detailActiveName: (state) => state.detailActiveName,
-      detailTabActive: (state) => state.detailTabActive,
+      clustersStatus: state => state.clustersStatus,
+      detailActiveName: state => state.detailActiveName,
+      detailTabActive: state => state.detailTabActive,
     }),
     curClustersStatus() {
       return this.clustersStatus[this.activeName] ?? {};
@@ -152,9 +152,7 @@ export default {
         return this.tenantList;
       }
       // 过滤数据，检查 name 是否包含搜索词
-      return this.tenantList.filter((item) => {
-        return item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-      });
+      return this.tenantList.filter(item => item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm));
     },
   },
   created() {

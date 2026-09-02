@@ -498,7 +498,7 @@ export default {
     },
     // 获取代码源图片
     getSourceImage() {
-      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
+      return imgSrc => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     establishStyle() {
       if (this.curLanguages && this.language && this.curLanguages[this.language]) {

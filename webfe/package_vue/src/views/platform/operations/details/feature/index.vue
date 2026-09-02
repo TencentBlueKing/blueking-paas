@@ -53,7 +53,7 @@
 import { debounce } from 'lodash';
 
 export default {
-  name: 'appFeature',
+  name: 'AppFeature',
   data() {
     return {
       searchValue: '',
@@ -151,9 +151,7 @@ export default {
     // 关键字搜索
     debounceFilterFeatures: debounce(function () {
       if (this.searchValue) {
-        this.filteredData = this.featureList.filter((f) => {
-          return f.label?.includes(this.searchValue);
-        });
+        this.filteredData = this.featureList.filter(f => f.label?.includes(this.searchValue));
       } else {
         this.filteredData = this.featureList;
       }

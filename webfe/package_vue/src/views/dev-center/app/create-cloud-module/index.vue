@@ -807,7 +807,7 @@ export default {
       return this.curAppInfo.application.region;
     },
     curSourceControl() {
-      const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
+      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
       return match;
     },
     createCloudAppData() {
@@ -950,7 +950,7 @@ export default {
   methods: {
     // 获取加密配置
     async fetchEncryptConfig() {
-      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch((e) => this.catchErrorHandler(e));
+      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch(e => this.catchErrorHandler(e));
     },
 
     handleCodeTypeChange(payload) {
@@ -991,7 +991,7 @@ export default {
         this.sourceControlTypes = results;
 
         // 判断是否提供选择仓库类型
-        this.codeRepositoryConfig.creationRepositories = results.filter((item) => item.repo_creation_enabled);
+        this.codeRepositoryConfig.creationRepositories = results.filter(item => item.repo_creation_enabled);
 
         this.sourceControlTypes = this.sourceControlTypes.map((e) => {
           e.imgSrc = e.value;
@@ -1040,7 +1040,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -1070,7 +1070,7 @@ export default {
         return null;
       }
       const templates = this.curLanguages?.[this.language] || [];
-      return templates.find((item) => item.name === this.sourceInitTemplate);
+      return templates.find(item => item.name === this.sourceInitTemplate);
     },
 
     // 当前模板不支持已选构建方式时，自动回退到 Buildpack
@@ -1248,8 +1248,8 @@ export default {
       }
 
       if (
-        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
-        ['bare_git', 'bare_svn'].includes(this.sourceControlType)
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP
+        && ['bare_git', 'bare_svn'].includes(this.sourceControlType)
       ) {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {

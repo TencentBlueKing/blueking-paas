@@ -363,12 +363,12 @@ export default {
         : this.$t('请选择版本，已经发布过的版本不可选择');
     },
     commitId() {
-      return this.sourceVersions.find((item) => item.name === this.curVersion.source_versions)?.revision || '--';
+      return this.sourceVersions.find(item => item.name === this.curVersion.source_versions)?.revision || '--';
     },
   },
   watch: {
     'curVersion.source_versions'() {
-      const versionData = this.sourceVersions.find((item) => item.name === this.curVersion.source_versions) || {};
+      const versionData = this.sourceVersions.find(item => item.name === this.curVersion.source_versions) || {};
       this.curVersion.comment = versionData.message;
       if (this.curVersion.version_no === 'revision' || this.curVersion.version_no === 'commit-hash') {
         if (this.curVersion.version_no === 'revision') {
@@ -432,7 +432,7 @@ export default {
         },
         (validator) => {
           console.error(validator.content);
-        }
+        },
       );
     },
 
@@ -440,7 +440,7 @@ export default {
     async createVersion() {
       this.isSubmitLoading = true;
       // 当前选中分支的数据
-      const versionData = this.sourceVersions.filter((item) => item.name === this.curVersion.source_versions);
+      const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
 
       // 数据
       const data = {
@@ -510,7 +510,7 @@ export default {
       }
 
       const fromRevision = this.curVersion.current_release.source_hash;
-      const curCodeItem = this.sourceVersions.filter((item) => item.name === this.curVersion.source_versions);
+      const curCodeItem = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
       const toRevision = `${curCodeItem[0].type}:${curCodeItem[0].name}`;
       const res = await this.$store.dispatch('plugin/getGitCompareUrl', {
         pdId: this.pdId,
@@ -558,7 +558,7 @@ export default {
       if (this.curVersionData.version_no === 'branch-timestamp') {
         const time = dayjs().format('YYMMDDHHmmss');
         this.curVersion.version = `${v}-${time}`;
-        const curVersionData = this.sourceVersions.find((item) => item.name === v) || {};
+        const curVersionData = this.sourceVersions.find(item => item.name === v) || {};
         this.curVersion.comment = curVersionData.message;
       }
     },

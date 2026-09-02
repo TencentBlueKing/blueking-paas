@@ -1,109 +1,94 @@
 import i18n from '@/language/i18n.js';
 
-const platformOverview = () =>
-  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/overview')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformOverview = () => import(/* webpackChunkName: 'platform-management' */ '@/views/platform/overview')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformManagement = () =>
-  import(/* webpackChunkName: 'platform-management' */ '@/views/platform')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformManagement = () => import(/* webpackChunkName: 'platform-management' */ '@/views/platform')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformAppCluster = () =>
-  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformAppCluster = () => import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const clusterCreateEdit = () =>
-  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster/cluster-create-edit')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const clusterCreateEdit = () => import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster/cluster-create-edit')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformAddOns = () =>
-  import(/* webpackChunkName: 'platform-services' */ '@/views/platform/services')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformAddOns = () => import(/* webpackChunkName: 'platform-services' */ '@/views/platform/services')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformUserManagement = () =>
-  import(/* webpackChunkName: 'platform-user' */ '@/views/platform/user-management')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformUserManagement = () => import(/* webpackChunkName: 'platform-user' */ '@/views/platform/user-management')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformAppList = () =>
-  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformAppList = () => import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformSoftDeleteApps = () =>
-  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformSoftDeleteApps = () => import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformAppDetails = () =>
-  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations/details')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformAppDetails = () => import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations/details')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const platformOperationAudit = () =>
-  import(/* webpackChunkName: 'platform-user' */ '@/views/platform/operation-audit')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const platformOperationAudit = () => import(/* webpackChunkName: 'platform-user' */ '@/views/platform/operation-audit')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const builtInEnvVariable = () =>
-  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/env-var')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const builtInEnvVariable = () => import(/* webpackChunkName: 'platform-config' */ '@/views/platform/env-var')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const cloudNativeAppResourceQuota = () =>
-  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/resource-quota')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const cloudNativeAppResourceQuota = () => import(/* webpackChunkName: 'platform-config' */ '@/views/platform/resource-quota')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const repositoryConfig = () =>
-  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/repository-config')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const repositoryConfig = () => import(/* webpackChunkName: 'platform-config' */ '@/views/platform/repository-config')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const templateConfig = () =>
-  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/template-config')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const templateConfig = () => import(/* webpackChunkName: 'platform-config' */ '@/views/platform/template-config')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
-const authorizationCode = () =>
-  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/authorization-code')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
+const authorizationCode = () => import(/* webpackChunkName: 'platform-config' */ '@/views/platform/authorization-code')
+  .then(module => module)
+  .catch((error) => {
+    window.showDeployTip(error);
+  });
 
 export const platformRouters = [
   {
@@ -146,8 +131,8 @@ export const platformRouters = [
             name: 'platformAppCluster',
             query: {
               active: 'list',
-            }
-          }
+            },
+          },
         },
       },
       {
@@ -223,7 +208,7 @@ export const platformRouters = [
           title: i18n.t('应用列表'),
           showRightSlot: {
             title: i18n.t('管理已删除应用'),
-            routeName: 'platformSoftDeleteApps'
+            routeName: 'platformSoftDeleteApps',
           },
         },
       },
@@ -236,7 +221,7 @@ export const platformRouters = [
           supportBack: true,
           backRoute: {
             name: 'platformAppList',
-          }
+          },
         },
       },
       {
@@ -255,7 +240,7 @@ export const platformRouters = [
           ],
           backRoute: {
             name: 'platformAppList',
-          }
+          },
         },
       },
       {

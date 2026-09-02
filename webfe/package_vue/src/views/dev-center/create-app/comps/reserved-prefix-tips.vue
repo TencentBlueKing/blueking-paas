@@ -72,7 +72,7 @@ export default {
   computed: {
     matchedPrefixes() {
       if (!this.code || !this.reservedPrefixes.length) return [];
-      return this.reservedPrefixes.filter((prefix) => this.code.startsWith(prefix));
+      return this.reservedPrefixes.filter(prefix => this.code.startsWith(prefix));
     },
   },
   methods: {

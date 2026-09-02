@@ -557,8 +557,7 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: (value) =>
-              /([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))(\.([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))){3}/.test(value),
+            validator: value => /([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))(\.([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))){3}/.test(value),
             trigger: 'blur',
             message: this.$t('IP/IP段格式不正确'),
           },
@@ -659,7 +658,7 @@ export default {
       return this.timeFilters.cur === 'custom';
     },
     curModule() {
-      return this.curAppModuleList.find((item) => item.is_default);
+      return this.curAppModuleList.find(item => item.is_default);
     },
   },
   watch: {
@@ -724,33 +723,23 @@ export default {
             const ignoreNum = response.ignore_num;
             this.isEdited = createNum > 0 || overwritedNum > 0;
             const message = (() => {
-              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
-                Boolean(ignoreNum)
-              )}`;
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
               let messageText = '';
               switch (numStr) {
                 case '111':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，更新'
-                  )} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
                   break;
                 case '110':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，更新'
-                  )} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '100':
                   messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '101':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，忽略'
-                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '011':
-                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                    '个IP白名单，忽略'
-                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '010':
                   messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
@@ -777,7 +766,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportFileDialog.loading = false;
@@ -810,7 +799,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -846,7 +835,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -894,7 +883,7 @@ export default {
           forever: this.$t('永久'),
           custom: this.$t('自定义'),
           cur: 'forever',
-        }
+        },
       );
       this.customTime = 1;
     },
@@ -1056,7 +1045,7 @@ export default {
       try {
         await this.$store.dispatch('ip/deleteIp', {
           appCode: this.appCode,
-          ids: this.currentSelectList.map((item) => item.id),
+          ids: this.currentSelectList.map(item => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;
@@ -1114,7 +1103,7 @@ export default {
               src: this.sortIcon,
             },
           }),
-        ]
+        ],
       );
     },
 
@@ -1300,7 +1289,7 @@ export default {
       const checkList = params.content
         .trim()
         .split(';')
-        .filter((item) => item !== '');
+        .filter(item => item !== '');
       for (const item of checkList) {
         if (!contentReg.test(item)) {
           this.$paasMessage({
@@ -1358,7 +1347,7 @@ export default {
           },
           () => {
             this.addIPDialog.isLoading = false;
-          }
+          },
         );
       }, 200);
     },
@@ -1377,7 +1366,7 @@ export default {
       params.content = params.content
         .trim()
         .split(';')
-        .filter((item) => item !== '')
+        .filter(item => item !== '')
         .join(';');
       try {
         await this.$store.dispatch('ip/addIp', {
@@ -1456,14 +1445,12 @@ export default {
     },
 
     afterDeleteClose() {
-      this.curIPParams = JSON.parse(
-        JSON.stringify({
-          content: '',
-          path: '',
-          desc: '',
-          expires_at: null,
-        })
-      );
+      this.curIPParams = JSON.parse(JSON.stringify({
+        content: '',
+        path: '',
+        desc: '',
+        expires_at: null,
+      }));
       this.removeIPDialog.id = 0;
     },
 
@@ -1493,7 +1480,7 @@ export default {
           forever: this.$t('永久'),
           custom: this.$t('自定义'),
           cur: 'forever',
-        }
+        },
       );
       this.customTime = 1;
     },

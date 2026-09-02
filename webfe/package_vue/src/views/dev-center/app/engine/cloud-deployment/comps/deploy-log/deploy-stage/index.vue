@@ -34,80 +34,80 @@
   </div>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin.js';
-    import ProcessItem from './render-process-item';
-    import StatusItem from './render-status-item';
-    export default {
-        name: '',
-        components: {
-            ProcessItem,
-            StatusItem
-        },
-        mixins: [appBaseMixin],
-        props: {
-            title: {
-                type: String,
-                default: ''
-            },
-            data: {
-                type: Array,
-                default: () => []
-            },
-            loading: {
-                type: Boolean,
-                default: false
-            },
-            environment: {
-                type: String,
-                default: 'stag'
-            }
-        },
-        data () {
-            return {
-                curProcessList: []
-            };
-        },
-        computed: {
-            abnormalCount () {
-                let abnormalLen = 0;
-                this.data.forEach(item => {
-                    item.instances.forEach(instanceItem => {
-                        if (!['Starting', 'Pending', 'Running'].includes(instanceItem.state)) {
-                            ++abnormalLen;
-                        }
-                    });
-                });
-                return abnormalLen;
-            }
-        },
-        watch: {
-            data: {
-                handler (value) {
-                    this.curProcessList = this.handleProcessData(value);
-                },
-                immediate: true,
-                deep: true
-            }
-        },
-        methods: {
-            handleProcessData (payload) {
-                if (!payload || payload.length < 1) {
-                    return [];
-                }
-                const processList = [];
-                payload.forEach(item => {
-                    item.instances.forEach(instanceItem => {
-                        processList.push({
-                            ...item,
-                            state: instanceItem.state,
-                            instanceData: { ...instanceItem }
-                        });
-                    });
-                });
-                return processList;
-            }
-        }
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import ProcessItem from './render-process-item';
+import StatusItem from './render-status-item';
+export default {
+  name: '',
+  components: {
+    ProcessItem,
+    StatusItem,
+  },
+  mixins: [appBaseMixin],
+  props: {
+    title: {
+      type: String,
+      default: '',
+    },
+    data: {
+      type: Array,
+      default: () => [],
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    environment: {
+      type: String,
+      default: 'stag',
+    },
+  },
+  data() {
+    return {
+      curProcessList: [],
     };
+  },
+  computed: {
+    abnormalCount() {
+      let abnormalLen = 0;
+      this.data.forEach((item) => {
+        item.instances.forEach((instanceItem) => {
+          if (!['Starting', 'Pending', 'Running'].includes(instanceItem.state)) {
+            ++abnormalLen;
+          }
+        });
+      });
+      return abnormalLen;
+    },
+  },
+  watch: {
+    data: {
+      handler(value) {
+        this.curProcessList = this.handleProcessData(value);
+      },
+      immediate: true,
+      deep: true,
+    },
+  },
+  methods: {
+    handleProcessData(payload) {
+      if (!payload || payload.length < 1) {
+        return [];
+      }
+      const processList = [];
+      payload.forEach((item) => {
+        item.instances.forEach((instanceItem) => {
+          processList.push({
+            ...item,
+            state: instanceItem.state,
+            instanceData: { ...instanceItem },
+          });
+        });
+      });
+      return processList;
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paas-deploy-log-deploy-stage-wrapper {

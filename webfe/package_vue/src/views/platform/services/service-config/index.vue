@@ -245,9 +245,9 @@ export default {
     filterBindingPolicies(policies) {
       switch (this.filterValue) {
         case 'notConfigured':
-          return policies.filter((item) => !item.policies);
+          return policies.filter(item => !item.policies);
         case 'configured':
-          return policies.filter((item) => item.policies);
+          return policies.filter(item => item.policies);
         default:
           return policies;
       }
@@ -255,7 +255,7 @@ export default {
     // 关键字搜索
     filterByKeyword(list) {
       const lowerCaseKeyword = this.searchValue.toLocaleLowerCase();
-      return list.filter((item) => item.name.toLocaleLowerCase()?.includes(lowerCaseKeyword));
+      return list.filter(item => item.name.toLocaleLowerCase()?.includes(lowerCaseKeyword));
     },
     handlerChange(data) {
       this.filterValue = data.name;
@@ -277,11 +277,10 @@ export default {
     getConditionalType(arrayLength, currentIndex) {
       if (currentIndex === 0) {
         return 'if';
-      } else if (currentIndex === arrayLength - 1) {
+      } if (currentIndex === arrayLength - 1) {
         return 'else';
-      } else {
-        return 'else if';
       }
+      return 'else if';
     },
     // 获取当前租户下服务-方案（select方案选择）
     async getServicePlansUnderTenant(tenantId, serviceId) {
@@ -319,11 +318,11 @@ export default {
         const res = await this.$store.dispatch('tenant/getBindingPolicies', { serviceId });
 
         // 创建租户ID到策略的映射
-        const policyMap = new Map(res.map((policy) => [policy.tenant_id, policy]));
+        const policyMap = new Map(res.map(policy => [policy.tenant_id, policy]));
 
         // 数据处理，排序
         this.bindingPolicies = this.tenants
-          .map((tenant) => ({
+          .map(tenant => ({
             ...tenant,
             policies: policyMap.get(tenant.id) || null,
           }))
@@ -338,9 +337,9 @@ export default {
           });
 
         // 获取已配置服务的租户ID集合
-        const configuredTenantIds = new Set(res.map((service) => service.tenant_id));
+        const configuredTenantIds = new Set(res.map(service => service.tenant_id));
         // 筛选未配置的租户
-        const unconfiguredTenants = this.tenants.filter((tenant) => !configuredTenantIds.has(tenant.id));
+        const unconfiguredTenants = this.tenants.filter(tenant => !configuredTenantIds.has(tenant.id));
         // 更新过滤统计
         this.updateFilterCounts(this.tenants.length, unconfiguredTenants.length);
       } catch (error) {
@@ -352,12 +351,11 @@ export default {
     updateFilterCounts(totalCount, notConfiguredCount) {
       const configuredCount = totalCount - notConfiguredCount;
       this.filterList.forEach((filter) => {
-        filter.count =
-          {
-            all: totalCount,
-            notConfigured: notConfiguredCount,
-            configured: configuredCount,
-          }[filter.name] ?? configuredCount;
+        filter.count =          {
+          all: totalCount,
+          notConfigured: notConfiguredCount,
+          configured: configuredCount,
+        }[filter.name] ?? configuredCount;
       });
     },
     // 获取id对应的name
@@ -366,9 +364,7 @@ export default {
         return [];
       }
       // uuid 存在同名的情况，需要同时判断 服务id & uuid
-      return ids.map((id) => {
-        return this.plansMap[`${id}_${this.activeServiceId}`];
-      });
+      return ids.map(id => this.plansMap[`${id}_${this.activeServiceId}`]);
     },
     // 生成分配配置（统一/规则）
     generateAllocationConfig(row, isUniform) {
@@ -383,9 +379,9 @@ export default {
     generateEnvPlan(envPlans) {
       return envPlans
         ? {
-            prod: this.getPlanNames(envPlans.prod),
-            stag: this.getPlanNames(envPlans.stag),
-          }
+          prod: this.getPlanNames(envPlans.prod),
+          stag: this.getPlanNames(envPlans.stag),
+        }
         : null;
     },
     // 处理统一分配配置
@@ -480,7 +476,7 @@ export default {
           [
             h('p', { class: 'tip-text mb5' }, `${this.$t('您可以')}：`),
             h('p', { class: 'tip-text' }, this.$t('1. 在 [服务方案] 中添加新方案')),
-          ]
+          ],
         ),
         okText: this.$t('前往添加'),
         confirmFn: () => {
@@ -492,7 +488,7 @@ export default {
     initResizeObserver() {
       this.resizeObserver = new ResizeObserver((entries) => {
         window.requestAnimationFrame(() => {
-          for (let entry of entries) {
+          for (const entry of entries) {
             if (entry.target === this.$refs.contentRef) {
               const height = entry.contentRect.height;
               this.tableHeight = height - 50;

@@ -86,15 +86,13 @@ export default {
       // 按行分割日志内容
       const logLines = logContent
         .split('\n')
-        .map((line) => line.replace(/\r/g, '').trim())
-        .filter((line) => line !== '');
+        .map(line => line.replace(/\r/g, '').trim())
+        .filter(line => line !== '');
 
-      const logs = logLines.map((line) => {
-        return {
-          message: line,
-          stream: 'STDOUT',
-        };
-      });
+      const logs = logLines.map(line => ({
+        message: line,
+        stream: 'STDOUT',
+      }));
       this.$refs.bkLog.addLogData(logs);
 
       // 更新总数量
@@ -128,11 +126,10 @@ export default {
     // 获取滚动容器元素
     getScrollContainer() {
       const bkLogEl = this.$refs.bkLog?.$el;
-      const scrollContainer =
-        bkLogEl.querySelector('.log-scroll-container') ||
-        bkLogEl.querySelector('[style*="overflow"]') ||
-        bkLogEl.querySelector('.bk-log-virtual-scroll') ||
-        bkLogEl;
+      const scrollContainer =        bkLogEl.querySelector('.log-scroll-container')
+        || bkLogEl.querySelector('[style*="overflow"]')
+        || bkLogEl.querySelector('.bk-log-virtual-scroll')
+        || bkLogEl;
       return scrollContainer;
     },
 

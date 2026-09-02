@@ -127,6 +127,11 @@ import MaskedTextViewer from '@/components/masked-text-viewer';
 import JsonEditorVue from 'json-editor-vue';
 import { validateJson } from '../../validators';
 export default {
+  components: {
+    DetailsRow,
+    MaskedTextViewer,
+    JsonEditorVue,
+  },
   props: {
     data: {
       type: Object,
@@ -142,11 +147,6 @@ export default {
       type: String,
       default: '',
     },
-  },
-  components: {
-    DetailsRow,
-    MaskedTextViewer,
-    JsonEditorVue,
   },
   data() {
     return {
@@ -273,7 +273,7 @@ export default {
             config: typeof this.valuesJson === 'string' ? JSON.parse(this.valuesJson) : this.valuesJson,
           };
           delete params.service_name;
-          const id = this.services.find((v) => v.name === this.formData.service_name)?.uuid;
+          const id = this.services.find(v => v.name === this.formData.service_name)?.uuid;
           const { uuid } = this.data;
           this.modifyPlan(id, uuid, params);
         })

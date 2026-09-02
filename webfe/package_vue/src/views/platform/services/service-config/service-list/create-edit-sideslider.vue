@@ -221,12 +221,12 @@ function getDefaultFormData() {
 
 export default {
   name: 'ServiceCreateEditSideslider',
-  mixins: [sidebarDiffMixin],
   components: {
     quillEditor,
     ConfigItemsTable,
     EnvTemplateTable,
   },
+  mixins: [sidebarDiffMixin],
   props: {
     show: {
       type: Boolean,
@@ -267,9 +267,7 @@ export default {
       rules: {
         logo: [
           {
-            validator: () => {
-              return this.files?.length > 0;
-            },
+            validator: () => this.files?.length > 0,
             message: '请上传 logo',
             trigger: 'change',
           },
@@ -287,7 +285,7 @@ export default {
         description: [...requiredRules],
         instance_tutorial: [
           {
-            validator: function (val) {
+            validator(val) {
               return val !== '';
             },
             message: '必填项',
@@ -299,10 +297,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -397,7 +395,7 @@ export default {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
+        reader.onerror = error => reject(error);
       });
     },
     // 自定义上传
@@ -475,7 +473,7 @@ export default {
     },
     // 提交
     async handleSubmit() {
-      let validateArr = [this.$refs.formRef?.validate()];
+      const validateArr = [this.$refs.formRef?.validate()];
       if (this.formData.origin === 'local') {
         validateArr.push(this.$refs.configItemsTableRef?.validate());
       }

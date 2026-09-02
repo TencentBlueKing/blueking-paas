@@ -74,14 +74,14 @@
 <script>
 import ModifyIdDialog from './modify-id-dialog.vue';
 export default {
+  components: {
+    ModifyIdDialog,
+  },
   props: {
     data: {
       type: Object,
       default: () => ({}),
     },
-  },
-  components: {
-    ModifyIdDialog,
   },
   data() {
     return {

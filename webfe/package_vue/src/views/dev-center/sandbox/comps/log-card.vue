@@ -139,7 +139,7 @@ export default {
     },
     logTypeList() {
       if (!this.isBuildLog && this.logs !== null) {
-        return Object.keys(this.logs).map((v) => ({ name: v }));
+        return Object.keys(this.logs).map(v => ({ name: v }));
       }
       return [];
     },

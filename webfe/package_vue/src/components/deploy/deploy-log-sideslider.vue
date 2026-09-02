@@ -326,23 +326,18 @@ export default {
 
       if (logType === 'offline') {
         return {
-          title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('下架日志')} (${operator}${this.$t(
-            '于'
-          )}${time}${this.$t('下架')})`,
+          title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')})`,
           titlePrefix: `${moduleName} ${this.$t('模块')}${envText}${this.$t('下架日志')} (`,
           titleSuffix: `${this.$t('于')}${time}${this.$t('下架')})`,
           operator,
         };
-      } else {
-        return {
-          title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} ${operator}${this.$t(
-            '于'
-          )}${time}${this.$t('部署')}`,
-          titlePrefix: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} `,
-          titleSuffix: `${this.$t('于')}${time}${this.$t('部署')}`,
-          operator,
-        };
       }
+      return {
+        title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`,
+        titlePrefix: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} `,
+        titleSuffix: `${this.$t('于')}${time}${this.$t('部署')}`,
+        operator,
+      };
     },
 
     /**

@@ -123,7 +123,7 @@ export default {
       if (value === this.$t('全部模块') || value === '') {
         this.showModuleList = this.moduleInfoList;
       } else {
-        this.showModuleList = this.moduleInfoList.filter((module) => module.name === this.moduleValue);
+        this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
       }
     },
     curAppModuleList: {

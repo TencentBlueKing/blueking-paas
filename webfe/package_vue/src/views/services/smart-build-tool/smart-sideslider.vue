@@ -205,10 +205,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },

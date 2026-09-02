@@ -722,7 +722,8 @@ import { mapState } from 'vuex';
 let maxReplicasNum = 0;
 
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -1127,7 +1128,7 @@ export default {
         () => {
           this.allProcesses = [];
           this.$emit('data-ready', this.environment);
-        }
+        },
       );
     },
 
@@ -1486,7 +1487,7 @@ export default {
         {
           start_time: initStartDate,
           end_time: initEndDate,
-        }
+        },
       );
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.isDatePickerOpen = false;
@@ -1500,8 +1501,8 @@ export default {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memoryLine;
 
-      cpuRef &&
-        cpuRef.mergeOptions({
+      cpuRef
+        && cpuRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -1523,8 +1524,8 @@ export default {
           ],
         });
 
-      memRef &&
-        memRef.mergeOptions({
+      memRef
+        && memRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -1562,8 +1563,8 @@ export default {
 
       processesData.processes.items.forEach((processItem) => {
         const { type, name: processName } = processItem;
-        const extraInfo = extraInfos.find((item) => item.type === type);
-        const packageInfo = packages.find((item) => item.name === type);
+        const extraInfo = extraInfos.find(item => item.type === type);
+        const packageInfo = packages.find(item => item.name === type);
 
         const processInfo = {
           ...processItem,
@@ -1616,7 +1617,8 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute')
+            .fromNow();
         });
 
         // 如果有当前展开项
@@ -1730,7 +1732,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
       }
     },
 
@@ -1739,7 +1741,8 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute')
+        .fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增
@@ -1861,8 +1864,8 @@ export default {
         const cpuRef = this.$refs.cpuLine;
         const memRef = this.$refs.memoryLine;
 
-        cpuRef &&
-          cpuRef.mergeOptions({
+        cpuRef
+          && cpuRef.mergeOptions({
             xAxis: [
               {
                 data: [],
@@ -1871,8 +1874,8 @@ export default {
             series: [],
           });
 
-        memRef &&
-          memRef.mergeOptions({
+        memRef
+          && memRef.mergeOptions({
             xAxis: [
               {
                 data: [],
@@ -1881,16 +1884,16 @@ export default {
             series: [],
           });
 
-        cpuRef &&
-          cpuRef.showLoading({
+        cpuRef
+          && cpuRef.showLoading({
             text: this.$t('正在加载'),
             color: '#30d878',
             textColor: '#fff',
             maskColor: 'rgba(255, 255, 255, 0.8)',
           });
 
-        memRef &&
-          memRef.showLoading({
+        memRef
+          && memRef.showLoading({
             text: this.$t('正在加载'),
             color: '#30d878',
             textColor: '#fff',
@@ -1951,10 +1954,10 @@ export default {
     async updateProcessConfig() {
       // 不允许小于1或者大于最大值，如果没有改变也不允许操作
       if (
-        !this.autoscaling &&
-        (this.processPlan.targetReplicas < 1 ||
-          this.processPlan.targetReplicas > this.processPlan.maxReplicas ||
-          this.processPlan.targetReplicas === this.processPlan.replicas)
+        !this.autoscaling
+        && (this.processPlan.targetReplicas < 1
+          || this.processPlan.targetReplicas > this.processPlan.maxReplicas
+          || this.processPlan.targetReplicas === this.processPlan.replicas)
       ) {
         return;
       }
@@ -2003,7 +2006,7 @@ export default {
           {
             operateIconTitle: process.operateIconTitle,
             index,
-          }
+          },
         );
       } else {
         // 启动操作
@@ -2037,7 +2040,7 @@ export default {
         {
           operateIconTitle: process.operateIconTitle,
           index,
-        }
+        },
       );
 
       const processType = process.name;
@@ -2118,7 +2121,7 @@ export default {
         this.$http
           .get(
             `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/realtimelogs/`,
-            { params: curParams }
+            { params: curParams },
           )
           .then((res) => {
             const logInfo = res;
@@ -2148,9 +2151,8 @@ export default {
 
     // 实时日志列表 时间 | 进程名 高亮
     keyLight(item) {
-      const text =
-        `<span style="color: #4491e1">[${item.ts}]</span>` +
-        ` <span style="color: #ffa65f">${item.process_name}</span>: ${item.message}`;
+      const text =        `<span style="color: #4491e1">[${item.ts}]</span>`
+        + ` <span style="color: #ffa65f">${item.process_name}</span>: ${item.message}`;
       return text;
     },
 

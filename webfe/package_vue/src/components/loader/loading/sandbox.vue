@@ -3,8 +3,8 @@
     :width="baseWidth"
     :height="600"
     :speed="loadingConf.speed"
-    :primaryColor="loadingConf.primaryColor"
-    :secondaryColor="loadingConf.secondaryColor"
+    :primary-color="loadingConf.primaryColor"
+    :secondary-color="loadingConf.secondaryColor"
   >
     <rect
       x="0"

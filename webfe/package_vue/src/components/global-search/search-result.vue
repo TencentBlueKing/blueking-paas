@@ -243,9 +243,7 @@ export default {
     highlight(text) {
       const keyword = this.searchValue;
       if (!keyword || !text) return text;
-      const escapeRegExp = (str) => {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      };
+      const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const escapedKeyword = escapeRegExp(keyword);
       const regex = new RegExp(`(${escapedKeyword})`, 'gi');
       return text.replace(regex, '<pasmark>$1</pasmark>');

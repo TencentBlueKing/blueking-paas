@@ -170,286 +170,286 @@
 </template>
 
 <script>
-    import appBaseInfoMixin from '@/mixins/app-base-mixin';
-    import { bus } from '@/common/bus';
-    export default {
-        mixins: [appBaseInfoMixin],
-        data () {
-            return {
-                sortIcon: require('@static/images/sort-icon.png'),
-                isFirstLoading: true,
-                orderList: [],
-                auditParams: {
-                    type: 'pass',
-                    ids: [],
-                    remark: ''
-                },
+import appBaseInfoMixin from '@/mixins/app-base-mixin';
+import { bus } from '@/common/bus';
+export default {
+  mixins: [appBaseInfoMixin],
+  data() {
+    return {
+      sortIcon: require('@static/images/sort-icon.png'),
+      isFirstLoading: true,
+      orderList: [],
+      auditParams: {
+        type: 'pass',
+        ids: [],
+        remark: '',
+      },
 
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
 
-                approveDialog: {
-                    visiable: false,
-                    title: '',
-                    width: 480
-                },
+      approveDialog: {
+        visiable: false,
+        title: '',
+        width: 480,
+      },
 
-                selectOrderIds: [],
+      selectOrderIds: [],
 
-                tableLoading: false,
+      tableLoading: false,
 
-                is_up: true,
+      is_up: true,
 
-                buttonLoading: false,
+      buttonLoading: false,
 
-                currentBackup: 1
-            };
+      currentBackup: 1,
+    };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+    'pagination.current'(value) {
+      this.currentBackup = value;
+    },
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    renderHeader(h, { column }) {
+      return h(
+        'div',
+        {
+          on: {
+            click: this.sortTab,
+          },
+          style: {
+            cursor: this.pagination.count ? 'pointer' : 'not-allowed',
+          },
         },
-        watch: {
-            '$route' () {
-                this.init();
+        [
+          h('span', {
+            domProps: {
+              innerHTML: this.$t('申请时间'),
             },
-            'pagination.current' (value) {
-                this.currentBackup = value;
-            }
-        },
-        mounted () {
-            this.init();
-        },
-        methods: {
-            renderHeader (h, { column }) {
-                return h(
-                    'div',
-                    {
-                        on: {
-                            click: this.sortTab
-                        },
-                        style: {
-                            cursor: this.pagination.count ? 'pointer' : 'not-allowed'
-                        }
-                    },
-                    [
-                        h('span', {
-                            domProps: {
-                                innerHTML: this.$t('申请时间')
-                            }
-                        }),
-                        h('img', {
-                            style: {
-                                position: 'relative',
-                                top: '1px',
-                                left: '1px',
-                                transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)'
-                            },
-                            attrs: {
-                                src: this.sortIcon
-                            }
-                        })
-                    ]
-                );
+          }),
+          h('img', {
+            style: {
+              position: 'relative',
+              top: '1px',
+              left: '1px',
+              transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
             },
+            attrs: {
+              src: this.sortIcon,
+            },
+          }),
+        ],
+      );
+    },
 
-            rowClick (row, event, column) {
-                row.expanded = !row.expanded;
-                this.$refs.processTableRef.toggleRowExpansion(row, row.expanded);
-            },
+    rowClick(row, event, column) {
+      row.expanded = !row.expanded;
+      this.$refs.processTableRef.toggleRowExpansion(row, row.expanded);
+    },
 
-            sortTab () {
-                if (!this.pagination.count) {
-                    return;
-                }
-                this.is_up = !this.is_up;
-                this.pagination.limit = 10;
-                this.pagination.current = 1;
-                this.fetchOrderList(true);
-            },
+    sortTab() {
+      if (!this.pagination.count) {
+        return;
+      }
+      this.is_up = !this.is_up;
+      this.pagination.limit = 10;
+      this.pagination.current = 1;
+      this.fetchOrderList(true);
+    },
 
-            /**
+    /**
              * 有效期时间显示格式化
              *
              * @param {String} payload 有效期时间字符
              *
              * @return {String} expiresStr 格式化后的有效期时间显示
              */
-            getFormatExpiresDisplay (payload) {
-                if (!payload) {
-                    return this.$t('永久');
-                }
-                const curExpires = Number(payload.split(' ')[0]);
-                const MONTH_DAY = 30;
-                let expiresStr = '';
-                const months = Math.floor(curExpires / MONTH_DAY);
-                switch (months) {
-                    case 3:
-                        expiresStr = this.$t('3个月');
-                        break;
-                    case 6:
-                        expiresStr = this.$t('6个月');
-                        break;
-                    case 12:
-                        expiresStr = this.$t('1年');
-                        break;
-                    default:
-                        expiresStr = `${curExpires}${this.$t('天')}`;
-                }
+    getFormatExpiresDisplay(payload) {
+      if (!payload) {
+        return this.$t('永久');
+      }
+      const curExpires = Number(payload.split(' ')[0]);
+      const MONTH_DAY = 30;
+      let expiresStr = '';
+      const months = Math.floor(curExpires / MONTH_DAY);
+      switch (months) {
+        case 3:
+          expiresStr = this.$t('3个月');
+          break;
+        case 6:
+          expiresStr = this.$t('6个月');
+          break;
+        case 12:
+          expiresStr = this.$t('1年');
+          break;
+        default:
+          expiresStr = `${curExpires}${this.$t('天')}`;
+      }
 
-                return expiresStr;
-            },
+      return expiresStr;
+    },
 
-            /**
+    /**
              * 分页页码 chang 回调
              *
              * @param {Number} page 页码
              */
-            pageChange (page) {
-                if (this.currentBackup === page) {
-                    return;
-                }
-                this.pagination.current = page;
-                this.fetchOrderList(true);
-            },
+    pageChange(page) {
+      if (this.currentBackup === page) {
+        return;
+      }
+      this.pagination.current = page;
+      this.fetchOrderList(true);
+    },
 
-            /**
+    /**
              * 分页limit chang 回调
              *
              * @param {Number} currentLimit 新limit
              * @param {Number} prevLimit 旧limit
              */
-            limitChange (currentLimit, prevLimit) {
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-                this.fetchOrderList(true);
-            },
+    limitChange(currentLimit, prevLimit) {
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
+      this.fetchOrderList(true);
+    },
 
-            /**
+    /**
              * 表格行 chang
              *
              * @param {Array} selection 选中值列表
              * @param {Array} currentRow 当前选中值
              */
-            itemHandlerChange (selection, currentRow) {
-                this.selectOrderIds.splice(0, this.selectOrderIds.length, ...selection.map(item => item.id));
-            },
-            /**
+    itemHandlerChange(selection, currentRow) {
+      this.selectOrderIds.splice(0, this.selectOrderIds.length, ...selection.map(item => item.id));
+    },
+    /**
              * 表格全选 chang
              *
              * @param {Array} selection 选中值列表
              */
-            allHandlerChange (selection) {
-                this.selectOrderIds.splice(0, this.selectOrderIds.length, ...selection.map(item => item.id));
+    allHandlerChange(selection) {
+      this.selectOrderIds.splice(0, this.selectOrderIds.length, ...selection.map(item => item.id));
+    },
+
+    dialogAfterClose() {
+      this.auditParams.type = 'pass';
+      this.auditParams.remark = '';
+      this.auditParams.ids.splice(0, this.auditParams.ids.length, ...[]);
+    },
+
+    cancelAudit() {
+      this.approveDialog.visiable = false;
+    },
+
+    batchAudit(type) {
+      this.auditParams.type = type;
+      this.auditParams.remark = type === 'pass' ? this.$t('同意') : '';
+      this.approveDialog.title = type === 'pass' ? this.$t('通过申请') : this.$t('驳回申请');
+      this.auditParams.ids.splice(0, this.auditParams.ids.length, ...this.selectOrderIds);
+      this.approveDialog.visiable = true;
+    },
+
+    showAuditModal(order, type) {
+      this.auditParams.type = type;
+      this.auditParams.remark = type === 'pass' ? this.$t('同意') : '';
+
+      this.auditParams.ids.splice(0, this.auditParams.ids.length, ...[order.id]);
+
+      this.approveDialog.title = type === 'pass' ? this.$t('通过申请') : this.$t('驳回申请');
+      this.approveDialog.visiable = true;
+    },
+
+    async saveAudit() {
+      const params = {
+        appCode: this.appCode,
+        type: this.auditParams.type,
+        record_ids: this.auditParams.ids.join(','),
+        remark: this.auditParams.remark,
+      };
+      this.buttonLoading = true;
+      try {
+        await this.$store.dispatch('order/operateOrder', params);
+        this.cancelAudit();
+        this.$paasMessage({
+          limit: 1,
+          theme: 'success',
+          message: this.$t('审批成功！'),
+        });
+        this.fetchOrderList(true);
+        bus.$emit('update-done-order');
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: `${this.$t('审批失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.buttonLoading = false;
+      }
+    },
+
+    async fetchOrderList(isTableLoading = false) {
+      this.tableLoading = isTableLoading;
+      try {
+        const params = {
+          filterType: 'processing',
+          appCode: this.appCode,
+          limit: this.pagination.limit,
+          offset: (this.pagination.current - 1) * this.pagination.limit,
+          order_by: this.is_up ? '-created' : 'created',
+        };
+
+        const res = await this.$store.dispatch('order/getOrderList', params);
+        this.pagination.count = res.count
+        ;(res.results || []).forEach((item) => {
+          item.isSelected = false;
+          item.expanded = false;
+          item.expires = this.getFormatExpiresDisplay(item.expires);
+          this.$set(item, 'children', [
+            {
+              ip: item.ip || '--',
+              business_interface_user: item.business_interface_user || '--',
+              reason: item.reason || '--',
+              expires: item.expires || '--',
             },
+          ]);
+        });
 
-            dialogAfterClose () {
-                this.auditParams.type = 'pass';
-                this.auditParams.remark = '';
-                this.auditParams.ids.splice(0, this.auditParams.ids.length, ...[]);
-            },
-
-            cancelAudit () {
-                this.approveDialog.visiable = false;
-            },
-
-            batchAudit (type) {
-                this.auditParams.type = type;
-                this.auditParams.remark = type === 'pass' ? this.$t('同意') : '';
-                this.approveDialog.title = type === 'pass' ? this.$t('通过申请') : this.$t('驳回申请');
-                this.auditParams.ids.splice(0, this.auditParams.ids.length, ...this.selectOrderIds);
-                this.approveDialog.visiable = true;
-            },
-
-            showAuditModal (order, type) {
-                this.auditParams.type = type;
-                this.auditParams.remark = type === 'pass' ? this.$t('同意') : '';
-
-                this.auditParams.ids.splice(0, this.auditParams.ids.length, ...[order.id]);
-
-                this.approveDialog.title = type === 'pass' ? this.$t('通过申请') : this.$t('驳回申请');
-                this.approveDialog.visiable = true;
-            },
-
-            async saveAudit () {
-                const params = {
-                    appCode: this.appCode,
-                    type: this.auditParams.type,
-                    record_ids: this.auditParams.ids.join(','),
-                    remark: this.auditParams.remark
-                };
-                this.buttonLoading = true;
-                try {
-                    await this.$store.dispatch('order/operateOrder', params);
-                    this.cancelAudit();
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'success',
-                        message: this.$t('审批成功！')
-                    });
-                    this.fetchOrderList(true);
-                    bus.$emit('update-done-order');
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: `${this.$t('审批失败：')} ${e.detail}`
-                    });
-                } finally {
-                    this.buttonLoading = false;
-                }
-            },
-
-            async fetchOrderList (isTableLoading = false) {
-                this.tableLoading = isTableLoading;
-                try {
-                    const params = {
-                        filterType: 'processing',
-                        appCode: this.appCode,
-                        limit: this.pagination.limit,
-                        offset: (this.pagination.current - 1) * this.pagination.limit,
-                        order_by: this.is_up ? '-created' : 'created'
-                    };
-
-                    const res = await this.$store.dispatch('order/getOrderList', params);
-                    this.pagination.count = res.count
-                    ;(res.results || []).forEach(item => {
-                        item.isSelected = false;
-                        item.expanded = false;
-                        item.expires = this.getFormatExpiresDisplay(item.expires);
-                        this.$set(item, 'children', [
-                            {
-                                ip: item.ip || '--',
-                                business_interface_user: item.business_interface_user || '--',
-                                reason: item.reason || '--',
-                                expires: item.expires || '--'
-                            }
-                        ]);
-                    });
-
-                    this.orderList.splice(0, this.orderList.length, ...(res.results || []));
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: this.$t('获取未审批单据失败')
-                    });
-                } finally {
-                    if (isTableLoading) {
-                        this.tableLoading = false;
-                    }
-                }
-            },
-
-            init () {
-                this.isFirstLoading = true;
-                this.fetchOrderList();
-                setTimeout(() => {
-                    this.isFirstLoading = false;
-                    this.$emit('data-ready', 'processing-order');
-                }, 1500);
-            }
+        this.orderList.splice(0, this.orderList.length, ...(res.results || []));
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: this.$t('获取未审批单据失败'),
+        });
+      } finally {
+        if (isTableLoading) {
+          this.tableLoading = false;
         }
-    };
+      }
+    },
+
+    init() {
+      this.isFirstLoading = true;
+      this.fetchOrderList();
+      setTimeout(() => {
+        this.isFirstLoading = false;
+        this.$emit('data-ready', 'processing-order');
+      }, 1500);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

@@ -25,7 +25,7 @@
           <span
             v-bk-tooltips="`${filter.key}：${filter.value}`"
             class="filter-value"
-            >{{ filter.key }}: <i>{{ filter.value }}</i></span
+          >{{ filter.key }}: <i>{{ filter.value }}</i></span
           >
         </li>
       </ul>
@@ -186,7 +186,8 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
 export default {
   components: {
@@ -614,7 +615,7 @@ export default {
             }
             return false;
           });
-          this.fieldList = this.fieldList.filter((item) => item);
+          this.fieldList = this.fieldList.filter(item => item);
         }
         data.forEach((item) => {
           item.message = this.highlight(logXss.process(item.message));

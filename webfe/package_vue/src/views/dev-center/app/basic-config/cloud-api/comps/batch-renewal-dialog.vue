@@ -152,11 +152,11 @@ export default {
     ...mapState(['localLanguage']),
     // 可续期
     renewalRows() {
-      return this.rows.filter((item) => !item.renewDisabled);
+      return this.rows.filter(item => !item.renewDisabled);
     },
     // 不可续期
     unavailableRows() {
-      return this.rows.filter((item) => item.renewDisabled);
+      return this.rows.filter(item => item.renewDisabled);
     },
     dialogTips() {
       if (!this.unavailableRows.length) {
@@ -164,7 +164,7 @@ export default {
       }
       return this.$t(
         '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限永久有效等情况不支持续期',
-        { n1: this.renewalRows.length, n2: this.unavailableRows.length }
+        { n1: this.renewalRows.length, n2: this.unavailableRows.length },
       );
     },
   },
@@ -200,9 +200,9 @@ export default {
           appCode: this.appCode,
         };
         if (this.isComponent) {
-          params.data.component_ids = this.renewalRows.map((item) => item.id);
+          params.data.component_ids = this.renewalRows.map(item => item.id);
         } else {
-          params.data.resource_ids = this.renewalRows.map((item) => item.id);
+          params.data.resource_ids = this.renewalRows.map(item => item.id);
         }
         const methods = this.isComponent ? 'sysRenewal' : 'renewal';
         await this.$store.dispatch(`cloudApi/${methods}`, params);
@@ -237,10 +237,9 @@ export default {
       }
       const renewalDuration = this.formData.expired * 30 * 24 * 60 * 60 * 1000;
       const expiresIn = Number(payload.expires_in);
-      const baseTime =
-        payload.permission_status === 'expired' || !expiresIn || expiresIn <= 0
-          ? this.curTime
-          : this.curTime + expiresIn * 1000;
+      const baseTime =        payload.permission_status === 'expired' || !expiresIn || expiresIn <= 0
+        ? this.curTime
+        : this.curTime + expiresIn * 1000;
       return formatDate(baseTime + renewalDuration);
     },
 

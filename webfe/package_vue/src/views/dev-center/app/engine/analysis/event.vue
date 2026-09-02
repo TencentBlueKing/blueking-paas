@@ -341,7 +341,8 @@ export default {
         const end = this.dateRange.endTime;
 
         const endSeconds = dayjs(end).valueOf();
-        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
+        const oneEndSeconds = dayjs(start).add(1, 'days')
+          .valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -382,9 +383,12 @@ export default {
 
         const startSeconds = dayjs(start).valueOf();
         const endSeconds = dayjs(end).valueOf();
-        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
-        const threeEndSeconds = dayjs(start).add(3, 'days').valueOf(); // 三天后
-        const sevenEndSeconds = dayjs(now).add(-7, 'days').valueOf(); // 七天后
+        const oneEndSeconds = dayjs(start).add(1, 'days')
+          .valueOf(); // 一天后
+        const threeEndSeconds = dayjs(start).add(3, 'days')
+          .valueOf(); // 三天后
+        const sevenEndSeconds = dayjs(now).add(-7, 'days')
+          .valueOf(); // 七天后
 
         // 精度规则:
         // if 时间选择器选择访问 < 1d
@@ -479,7 +483,7 @@ export default {
           count: 0,
           limit: 10,
           ordering: '',
-        }
+        },
       );
       this.getEventData();
     },
@@ -496,7 +500,7 @@ export default {
           count: 0,
           limit: 10,
           ordering: '',
-        }
+        },
       );
       this.getEventData();
     },
@@ -531,8 +535,8 @@ export default {
           requestParams.category = category;
         }
         const res = await this.$store.dispatch(url, requestParams);
-        const fields = this.fieldList.map((item) => item.name);
-        const props = this.fieldList.map((item) => item.prop);
+        const fields = this.fieldList.map(item => item.name);
+        const props = this.fieldList.map(item => item.prop);
         const data = this.formatJson(props, res.resources);
         const fileName = this.engineEnabled
           ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}`
@@ -551,7 +555,7 @@ export default {
     },
 
     formatJson(filterVal, jsonData) {
-      return jsonData.map((v) => filterVal.map((j) => v[j]));
+      return jsonData.map(v => filterVal.map(j => v[j]));
     },
 
     refresh() {
@@ -701,8 +705,8 @@ export default {
     showInstanceChart(instance, processes) {
       const chartRef = this.$refs.chart;
 
-      chartRef &&
-        chartRef.mergeOptions({
+      chartRef
+        && chartRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -711,8 +715,8 @@ export default {
           series: [],
         });
 
-      chartRef &&
-        chartRef.showLoading({
+      chartRef
+        && chartRef.showLoading({
           text: this.$t('正在加载'),
           color: '#30d878',
           textColor: '#fff',
@@ -853,8 +857,8 @@ export default {
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef &&
-        chartRef.mergeOptions({
+      chartRef
+        && chartRef.mergeOptions({
           xAxis: [
             {
               data: [],

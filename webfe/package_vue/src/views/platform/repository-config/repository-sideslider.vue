@@ -322,22 +322,20 @@ export default {
       },
       formData: { ...INITIAL_FORM_DATA },
       // 基本信息form配置
-      baseInfoFormItems: Object.freeze(
-        BASE_INFO_FORM_CONFIG.map((item) => ({
-          ...item,
-          required: true,
-          rules: item.rules ? item.rules : [{ ...requiredRule }],
-        }))
-      ),
+      baseInfoFormItems: Object.freeze(BASE_INFO_FORM_CONFIG.map(item => ({
+        ...item,
+        required: true,
+        rules: item.rules ? item.rules : [{ ...requiredRule }],
+      }))),
       defaultConfig: {},
     };
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -348,7 +346,7 @@ export default {
     oauthFormItems() {
       const { spec_cls } = this.formData;
       const isRequired = spec_cls ? !OPTIONAL_FIELDS.includes(spec_cls) : false;
-      return OAUTH_FORM_CONFIG.map((field) => ({
+      return OAUTH_FORM_CONFIG.map(field => ({
         ...field,
         required: isRequired,
         rules: isRequired ? [{ ...requiredRule }] : [],
@@ -445,7 +443,7 @@ export default {
       this.configClass.loading = true;
       try {
         const res = await this.$store.dispatch('tenantConfig/getSpecClsChoices');
-        this.configClass.list = res.map((v) => ({ id: v }));
+        this.configClass.list = res.map(v => ({ id: v }));
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -467,12 +465,10 @@ export default {
         'display_info_en',
       ];
 
-      const transformFields = (fields, formData) => {
-        return fields.reduce((acc, field) => {
-          acc[field] = this.toJsonObject(formData[field]);
-          return acc;
-        }, {});
-      };
+      const transformFields = (fields, formData) => fields.reduce((acc, field) => {
+        acc[field] = this.toJsonObject(formData[field]);
+        return acc;
+      }, {});
 
       return {
         ...this.formData,

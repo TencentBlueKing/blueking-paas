@@ -10,7 +10,7 @@
       :key="i"
       :data="item"
       :order="i"
-      :allLength="cardsList.length"
+      :all-length="cardsList.length"
       v-bind="$attrs"
       @add="handleAdd"
       @delete="handleDelete"

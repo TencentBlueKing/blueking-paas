@@ -254,10 +254,9 @@ export default {
     this.getCurrentUser();
   },
   mounted() {
-    const objectKey =
-      localStorage.getItem(this.$route.query.objectKey) === 'undefined'
-        ? ''
-        : localStorage.getItem(this.$route.query.objectKey);
+    const objectKey =      localStorage.getItem(this.$route.query.objectKey) === 'undefined'
+      ? ''
+      : localStorage.getItem(this.$route.query.objectKey);
     const extraInfo = JSON.parse(objectKey || '{}');
     this.downloadableAddress = extraInfo.downloadable_address;
     this.downloadableAddressExpiresIn = extraInfo.downloadable_address_expires_in;
@@ -269,8 +268,7 @@ export default {
       });
     },
     handlePageJump(name, moduleId) {
-      const targetRouteName =
-        name === 'process' ? (this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess') : name;
+      const targetRouteName =        name === 'process' ? (this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess') : name;
       this.$router.push({
         name: targetRouteName,
         params: {
@@ -283,7 +281,7 @@ export default {
       const { childNodes } = el;
 
       // 判断子元素是否存在
-      const allChildNodes = Array.from(childNodes).filter((node) => node.nodeType !== 8); // 过滤掉注释节点
+      const allChildNodes = Array.from(childNodes).filter(node => node.nodeType !== 8); // 过滤掉注释节点
       if (allChildNodes.length === 0) {
         el.style.display = 'none'; // 隐藏当前元素
       }
@@ -317,7 +315,7 @@ export default {
           const [firstModule] = modules;
           this.trunkURL = firstModule.repo?.trunk_url;
 
-          const defaultModule = modules.find((item) => item.name === 'default');
+          const defaultModule = modules.find(item => item.name === 'default');
           this.isShowTips = defaultModule?.source_origin === 1;
           this.isRuntimeType = firstModule.web_config?.runtime_type !== 'custom_image';
         }

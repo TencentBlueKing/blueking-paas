@@ -207,15 +207,14 @@ export default {
           key: 'plan_id',
           value: plan,
         };
-      } else {
-        return {
-          key: 'env_plan_id_map',
-          value: {
-            prod,
-            stag,
-          },
-        };
       }
+      return {
+        key: 'env_plan_id_map',
+        value: {
+          prod,
+          stag,
+        },
+      };
     },
     handleCancel() {
       this.$emit('on-change', 'cancel', {});

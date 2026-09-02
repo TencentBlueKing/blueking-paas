@@ -27,42 +27,42 @@
   </div>
 </template>
 <script>
-    export default {
-        name: '',
-        props: {
-            data: {
-                type: Array,
-                default: () => []
-            },
-            type: {
-                type: String,
-                default: 'user'
-            },
-            mode: {
-                type: String,
-                default: 'edit'
-            }
-        },
-        computed: {
-            icon () {
-                return this.type === 'user' ? 'paasng-user-shape' : 'paasng-organization';
-            },
-            title () {
-                return this.type === 'user' ? this.$t('用户') : this.$t('组织');
-            },
-            isDepartment () {
-                return this.type === 'department';
-            },
-            isEdit () {
-                return this.mode === 'edit';
-            }
-        },
-        methods: {
-            handleDelete (payload) {
-                this.$emit('on-delete', payload);
-            }
-        }
-    };
+export default {
+  name: '',
+  props: {
+    data: {
+      type: Array,
+      default: () => [],
+    },
+    type: {
+      type: String,
+      default: 'user',
+    },
+    mode: {
+      type: String,
+      default: 'edit',
+    },
+  },
+  computed: {
+    icon() {
+      return this.type === 'user' ? 'paasng-user-shape' : 'paasng-organization';
+    },
+    title() {
+      return this.type === 'user' ? this.$t('用户') : this.$t('组织');
+    },
+    isDepartment() {
+      return this.type === 'department';
+    },
+    isEdit() {
+      return this.mode === 'edit';
+    },
+  },
+  methods: {
+    handleDelete(payload) {
+      this.$emit('on-delete', payload);
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .paasng-member-display-wrapper {

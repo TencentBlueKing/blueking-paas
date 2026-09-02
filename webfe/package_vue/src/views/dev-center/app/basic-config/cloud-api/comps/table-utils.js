@@ -21,15 +21,15 @@ export function updateHeaderCheckboxState(options) {
   const { states } = tableRef.store;
 
   // 获取当前页可选择的行
-  const selectableRows = tableData.filter((row) => selectable(row));
+  const selectableRows = tableData.filter(row => selectable(row));
   if (!selectableRows.length) {
     states.isAllSelected = false;
     return;
   }
 
   // 计算当前页已选中的数量
-  const selectedIds = new Set(selectedList.map((item) => getNestedValue(item, rowKey)));
-  const selectedCount = selectableRows.filter((row) => selectedIds.has(getNestedValue(row, rowKey))).length;
+  const selectedIds = new Set(selectedList.map(item => getNestedValue(item, rowKey)));
+  const selectedCount = selectableRows.filter(row => selectedIds.has(getNestedValue(row, rowKey))).length;
 
   // 更新全选状态：只有当前页全部选中时才为 true
   states.isAllSelected = selectedCount === selectableRows.length;

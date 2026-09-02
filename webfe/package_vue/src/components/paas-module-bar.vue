@@ -214,13 +214,11 @@ export default defineComponent({
     const isSmartApp = computed(() => curAppModule.source_origin === vm.proxy.GLOBAL.APP_TYPES.SMART_APP);
 
     // 新建模块禁用提示
-    const disableTips = computed(() =>
-      isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')
-    );
+    const disableTips = computed(() => (isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')));
 
     // 切换tab
     const handleTabChange = async () => {
-      const curModule = (props.moduleList || []).find((e) => e.name === active.value);
+      const curModule = (props.moduleList || []).find(e => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
       emit('tab-change');
       const name = props.activeRouteName || props.firstModuleName;
@@ -282,13 +280,13 @@ export default defineComponent({
         });
         await store.dispatch('getAppInfo', {
           appCode: props.appCode,
-          moduleId: props.moduleList.find((item) => item.is_default).name,
+          moduleId: props.moduleList.find(item => item.is_default).name,
         });
         router.push({
           name: props.firstModuleName || route.name,
           params: {
             id: props.appCode,
-            moduleId: props.moduleList.find((item) => item.is_default).name,
+            moduleId: props.moduleList.find(item => item.is_default).name,
           },
         });
         store.dispatch('getAppInfo', { appCode: props.appCode, moduleId: curAppModuleName.value });

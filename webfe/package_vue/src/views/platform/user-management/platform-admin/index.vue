@@ -127,12 +127,12 @@ import UserDisplay from '@/components/user/user-display.vue';
 import { mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
-  // 分页逻辑使用mixins导入
-  mixins: [paginationMixin],
   components: {
     User,
     UserDisplay,
   },
+  // 分页逻辑使用mixins导入
+  mixins: [paginationMixin],
   data() {
     return {
       isTableLoading: false,
@@ -152,9 +152,7 @@ export default {
       },
       userRule: [
         {
-          validator: () => {
-            return !!this.addAdminDialog.formData?.userList?.length;
-          },
+          validator: () => !!this.addAdminDialog.formData?.userList?.length,
           message: this.$t('必填项'),
           trigger: 'blur',
         },
@@ -187,7 +185,7 @@ export default {
       ];
 
       if (!this.isMultiTenantDisplayMode) {
-        return baseColumns.filter((column) => column.label !== this.$t('管理员名称'));
+        return baseColumns.filter(column => column.label !== this.$t('管理员名称'));
       }
       return baseColumns;
     },
@@ -234,12 +232,10 @@ export default {
       try {
         await this.$refs.dialogForm.validate();
         const { userList } = this.addAdminDialog.formData;
-        const params = userList.map((v) => {
-          return {
-            user: v,
-            tenant_id: this.tenantId,
-          };
-        });
+        const params = userList.map(v => ({
+          user: v,
+          tenant_id: this.tenantId,
+        }));
         this.addPlatformAdministrators(params);
       } catch (error) {
         console.error('Form validation failed:', error);

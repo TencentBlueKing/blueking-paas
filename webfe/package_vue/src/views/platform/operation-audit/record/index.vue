@@ -211,8 +211,8 @@ export default {
       ];
     },
     filteredSearchData() {
-      const existingIds = this.searchValues.map((item) => item.id);
-      return this.searchData.filter((item) => !existingIds.includes(item.id));
+      const existingIds = this.searchValues.map(item => item.id);
+      return this.searchData.filter(item => !existingIds.includes(item.id));
     },
   },
   created() {
@@ -243,11 +243,9 @@ export default {
     // 处理列表请求参数
     constructQueryParams() {
       const { limit, current } = this.pagination;
-      const search = this.searchValues.map((v) => {
-        return {
-          [v.id]: v.values[0]?.id,
-        };
-      });
+      const search = this.searchValues.map(v => ({
+        [v.id]: v.values[0]?.id,
+      }));
       const searchParams = Object.assign({}, ...search);
       const queryParams = {
         limit,
@@ -315,7 +313,7 @@ export default {
         // 格式化数据，适配 search
         const transformedData = {};
         Object.entries(ret ?? {}).forEach(([key, items]) => {
-          transformedData[key] = items.map((item) => ({
+          transformedData[key] = items.map(item => ({
             id: item.value,
             name: item.label,
           }));

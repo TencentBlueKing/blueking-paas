@@ -159,9 +159,7 @@ export default {
     filterTableData() {
       const keyword = this.searchValue.trim().toLowerCase();
       if (!keyword) return this.tableData;
-      return this.tableData.filter(
-        (item) => item.code.toLowerCase().includes(keyword) || item.appCode.toLowerCase().includes(keyword)
-      );
+      return this.tableData.filter(item => item.code.toLowerCase().includes(keyword) || item.appCode.toLowerCase().includes(keyword));
     },
   },
   created() {
@@ -172,7 +170,7 @@ export default {
     async fetchCodeList() {
       try {
         const res = await this.$store.dispatch('tenantConfig/getAuthorizationCodeList');
-        this.tableData = (res || []).map((item) => ({
+        this.tableData = (res || []).map(item => ({
           id: item.id,
           code: item.auth_code,
           appCode: item.app_code,
@@ -199,7 +197,7 @@ export default {
         },
         (validator) => {
           console.log(validator);
-        }
+        },
       );
     },
     continueGenerate() {

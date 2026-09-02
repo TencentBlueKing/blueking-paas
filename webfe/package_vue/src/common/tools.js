@@ -140,7 +140,8 @@ export function formatErrorMessage(error, defaultMsg = '系统出现异常') {
   }
 
   if (Array.isArray(message)) {
-    return message.map(item => formatErrorMessage(item, '')).filter(Boolean).join('; ') || defaultMsg;
+    return message.map(item => formatErrorMessage(item, '')).filter(Boolean)
+      .join('; ') || defaultMsg;
   }
 
   const msgParts = Object.keys(message)
@@ -778,7 +779,7 @@ export function createSSE(url, options = {}) {
 
     // 添加自定义事件监听器
     customEventListeners.forEach((listeners, eventType) => {
-      listeners.forEach(listener => {
+      listeners.forEach((listener) => {
         eventSource.addEventListener(eventType, listener);
       });
     });
@@ -827,6 +828,6 @@ export function createSSE(url, options = {}) {
       if (eventSource) {
         eventSource.removeEventListener(type, listener);
       }
-    }
+    },
   };
 };

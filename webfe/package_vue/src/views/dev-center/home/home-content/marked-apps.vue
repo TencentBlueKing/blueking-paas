@@ -243,14 +243,12 @@ export default {
 
       // 应用状态过滤
       if (this.tableHeaderFilterValue !== 'all') {
-        filteredApps = filteredApps.filter((item) => item.application.app_status === this.tableHeaderFilterValue);
+        filteredApps = filteredApps.filter(item => item.application.app_status === this.tableHeaderFilterValue);
       }
 
       // 应用租户模式过滤
       if (this.currentTenantFilters && this.currentTenantFilters.length > 0) {
-        filteredApps = filteredApps.filter((item) => {
-          return this.currentTenantFilters.includes(item.application.app_tenant_mode);
-        });
+        filteredApps = filteredApps.filter(item => this.currentTenantFilters.includes(item.application.app_tenant_mode));
       }
 
       this.markedApps = filteredApps;
@@ -269,7 +267,7 @@ export default {
         name: routeName,
         params: {
           id: code,
-          moduleId: modules.find((item) => item.is_default).name,
+          moduleId: modules.find(item => item.is_default).name,
         },
       });
     },

@@ -45,107 +45,105 @@
   </bk-dialog>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    export default {
-        name: '',
-        mixins: [appBaseMixin],
-        props: {
-            show: {
-                type: Boolean,
-                default: false
-            },
-            name: {
-                type: String,
-                default: ''
-            },
-            data: {
-                type: Object,
-                default: () => {
-                    return {};
-                }
-            }
-        },
-        data () {
-            return {
-                isShowDialog: false,
-                curModuleValue: '',
-                selectLoading: false,
-                list: [],
-                loading: false
-            };
-        },
-        computed: {
-            disbaled () {
-                return this.curModuleValue === '';
-            },
-            curTitle () {
-                return this.data.display_name ? `${this.$t('已启用 ')}${this.data.display_name}${this.$t('服务的模块：')}` : '';
-            }
-        },
-        watch: {
-            show: {
-                handler (value) {
-                    this.isShowDialog = !!value;
-                    if (this.isShowDialog) {
-                        this.fetchData();
-                    }
-                },
-                immediate: true
-            }
-        },
-        methods: {
-            async fetchData () {
-                this.selectLoading = true;
-                try {
-                    const res = await this.$store.dispatch('service/getServicesShareableModule', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        serviceId: this.data.uuid
-                    });
-                    this.list = res;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.selectLoading = false;
-                }
-            },
-
-            async handleSumbit () {
-                this.loading = true;
-                try {
-                    await this.$store.dispatch('service/createSharedAttachment', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        serviceId: this.data.uuid,
-                        ref_module_name: this.list.find(item => item.id === this.curModuleValue).name
-                    });
-                    this.$emit('on-success');
-                    this.handleCancel();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            handleCancel () {
-                this.$emit('on-cancel');
-                this.$emit('update:show', false);
-            },
-
-            handleAfterLeave () {
-                this.curModuleValue = '';
-                this.$emit('update:show', false);
-                this.$emit('on-after-leave');
-            }
-        }
+import appBaseMixin from '@/mixins/app-base-mixin';
+export default {
+  name: '',
+  mixins: [appBaseMixin],
+  props: {
+    show: {
+      type: Boolean,
+      default: false,
+    },
+    name: {
+      type: String,
+      default: '',
+    },
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
+  data() {
+    return {
+      isShowDialog: false,
+      curModuleValue: '',
+      selectLoading: false,
+      list: [],
+      loading: false,
     };
+  },
+  computed: {
+    disbaled() {
+      return this.curModuleValue === '';
+    },
+    curTitle() {
+      return this.data.display_name ? `${this.$t('已启用 ')}${this.data.display_name}${this.$t('服务的模块：')}` : '';
+    },
+  },
+  watch: {
+    show: {
+      handler(value) {
+        this.isShowDialog = !!value;
+        if (this.isShowDialog) {
+          this.fetchData();
+        }
+      },
+      immediate: true,
+    },
+  },
+  methods: {
+    async fetchData() {
+      this.selectLoading = true;
+      try {
+        const res = await this.$store.dispatch('service/getServicesShareableModule', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.data.uuid,
+        });
+        this.list = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.selectLoading = false;
+      }
+    },
+
+    async handleSumbit() {
+      this.loading = true;
+      try {
+        await this.$store.dispatch('service/createSharedAttachment', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.data.uuid,
+          ref_module_name: this.list.find(item => item.id === this.curModuleValue).name,
+        });
+        this.$emit('on-success');
+        this.handleCancel();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    handleCancel() {
+      this.$emit('on-cancel');
+      this.$emit('update:show', false);
+    },
+
+    handleAfterLeave() {
+      this.curModuleValue = '';
+      this.$emit('update:show', false);
+      this.$emit('on-after-leave');
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paasng-service-export-dialog-cls {

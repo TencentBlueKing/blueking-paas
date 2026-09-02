@@ -198,14 +198,14 @@ export default {
       }
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {
-        to.params.moduleId = curAppInfo.application.modules.find((module) => module.is_default).name;
+        to.params.moduleId = curAppInfo.application.modules.find(module => module.is_default).name;
         next({
           name: to.name,
           params: to.params,
           query: to.query,
         });
       } else {
-        next((vm) => Object.assign(vm, { type: curAppInfo.application.type }));
+        next(vm => Object.assign(vm, { type: curAppInfo.application.type }));
       }
     } catch (e) {
       next({
@@ -237,7 +237,7 @@ export default {
 
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {
-        to.params.moduleId = curAppInfo.application.modules.find((module) => module.is_default).name;
+        to.params.moduleId = curAppInfo.application.modules.find(module => module.is_default).name;
         next({
           name: to.name,
           params: to.params,

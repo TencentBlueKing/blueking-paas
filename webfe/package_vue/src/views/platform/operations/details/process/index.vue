@@ -68,7 +68,7 @@ export default {
       return this.$route.params.code;
     },
     curProcessData() {
-      return this.processList.find((item) => item.name === this.curProcess);
+      return this.processList.find(item => item.name === this.curProcess);
     },
   },
   async created() {

@@ -206,7 +206,7 @@ export default {
       return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
     },
     showEntrances() {
-      return Object.keys(this.customDomainEntrances).some((key) => this.customDomainEntrances[key].length);
+      return Object.keys(this.customDomainEntrances).some(key => this.customDomainEntrances[key].length);
     },
     platformFeature() {
       return this.$store.state.platformFeature;

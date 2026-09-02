@@ -92,7 +92,7 @@ export default {
   },
   methods: {
     setMainEntryName(list = []) {
-      this.mainName = list.find((v) => this.isMainEntry(v.services))?.name;
+      this.mainName = list.find(v => this.isMainEntry(v.services))?.name;
     },
     handleChange(name, index) {
       this.$emit('change', name, index);
@@ -119,7 +119,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some((service) => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
+      return services.some(service => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
     },
   },
 };

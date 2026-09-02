@@ -644,7 +644,7 @@ export default {
       return this.curAppInfo.application.region === 'tencent';
     },
     curModule() {
-      return this.curAppModuleList.find((item) => item.is_default);
+      return this.curAppModuleList.find(item => item.is_default);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -670,7 +670,7 @@ export default {
     'curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE': {
       // 是否可以开启豁免路径
       handler(value) {
-        const hasExemptPathTag = this.userPanels.find((e) => e.name === 'exemptPath');
+        const hasExemptPathTag = this.userPanels.find(e => e.name === 'exemptPath');
         if (value) {
           if (!hasExemptPathTag) {
             this.userPanels.push({ name: 'exemptPath', label: this.$t('豁免路径') });
@@ -748,33 +748,23 @@ export default {
             const ignoreNum = response.ignore_num;
             this.isEdited = createNum > 0 || overwritedNum > 0;
             const message = (() => {
-              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
-                Boolean(ignoreNum)
-              )}`;
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
               let messageText = '';
               switch (numStr) {
                 case '111':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，更新'
-                  )} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
                   break;
                 case '110':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，更新'
-                  )} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '100':
                   messageText = `${this.$t('导入成功')}，${this.$t('新增')} ${createNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '101':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个IP白名单，忽略'
-                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '011':
-                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                    '个IP白名单，忽略'
-                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
                   break;
                 case '010':
                   messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
@@ -803,7 +793,7 @@ export default {
                 message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
               });
             }
-          }
+          },
         )
         .finally(() => {
           this.exportFileDialog.loading = false;
@@ -838,7 +828,7 @@ export default {
                 message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
               });
             }
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -876,7 +866,7 @@ export default {
               message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
             });
           }
-        }
+        },
       );
     },
 
@@ -1027,7 +1017,7 @@ export default {
               src: this.sortIcon,
             },
           }),
-        ]
+        ],
       );
     },
 
@@ -1122,7 +1112,7 @@ export default {
           content,
           desc,
           expires_at,
-        }
+        },
       );
       if (this.userType === 'rtx') {
         this.rtxList = content.split(';');
@@ -1250,7 +1240,7 @@ export default {
         const checkList = params.content
           .trim()
           .split(';')
-          .filter((item) => item !== '');
+          .filter(item => item !== '');
         for (const item of checkList) {
           if (!qqRegexp.test(item)) {
             this.$paasMessage({
@@ -1288,7 +1278,7 @@ export default {
           },
           () => {
             this.addUserDialog.isLoading = false;
-          }
+          },
         );
       }, 200);
     },
@@ -1306,7 +1296,7 @@ export default {
       params.content = params.content
         .trim()
         .split(';')
-        .filter((item) => item !== '')
+        .filter(item => item !== '')
         .join(';');
       this.addUserDialog.isLoading = true;
       try {
@@ -1321,9 +1311,7 @@ export default {
         let message = '';
         if (added.length && ignored.length) {
           message = res.ignored.length
-            ? `${this.$t('用户')}(${ignored.join('，')})${this.$t('已经存在，其余')} ${added.length} ${this.$t(
-                '个用户已添加成功'
-              )}`
+            ? `${this.$t('用户')}(${ignored.join('，')})${this.$t('已经存在，其余')} ${added.length} ${this.$t('个用户已添加成功')}`
             : '';
         } else if (!added.length && ignored.length) {
           message = this.$t('用户都已经在白名单中，请勿重复添加');
@@ -1402,7 +1390,7 @@ export default {
       try {
         await this.$store.dispatch('user/deleteUserPermission', {
           appCode: this.appCode,
-          ids: this.currentSelectList.map((item) => item.id),
+          ids: this.currentSelectList.map(item => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;
@@ -1452,13 +1440,11 @@ export default {
     },
 
     afterCloseRemove() {
-      this.curUserParams = JSON.parse(
-        JSON.stringify({
-          content: '',
-          desc: '',
-          expires_at: null,
-        })
-      );
+      this.curUserParams = JSON.parse(JSON.stringify({
+        content: '',
+        desc: '',
+        expires_at: null,
+      }));
       this.removeUserDialog.id = 0;
     },
 
@@ -1477,7 +1463,7 @@ export default {
           forever: this.$t('永久'),
           custom: this.$t('自定义'),
           cur: 'forever',
-        }
+        },
       );
       if (this.isExternal) {
         this.$delete(this.timeFilters, 'forever');

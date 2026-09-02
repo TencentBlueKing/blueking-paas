@@ -175,10 +175,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -201,7 +201,7 @@ export default {
     },
     // 当前实例table数据
     activeInstanceList() {
-      return this.list.filter((instance) => instance.service?.uuid === this.activeInstance);
+      return this.list.filter(instance => instance.service?.uuid === this.activeInstance);
     },
   },
   watch: {

@@ -71,10 +71,9 @@ export default {
       if (this.showRoot) {
         // 显示根节点的情况
         return this.formatTree(this.displayTreeData);
-      } else {
-        // 不显示根节点，直接从子节点开始
-        return this.formatChildren(this.displayTreeData.children);
       }
+      // 不显示根节点，直接从子节点开始
+      return this.formatChildren(this.displayTreeData.children);
     },
   },
   watch: {
@@ -133,7 +132,7 @@ export default {
         const connector = isLast ? '└─ ' : '├─ ';
 
         if (child.tag) {
-          const icon = `<i class="paasng-icon paasng-info-line ml10" v-bk-tooltips="config" />`;
+          const icon = '<i class="paasng-icon paasng-info-line ml10" v-bk-tooltips="config" />';
           result += `<span class="mark">${prefix}${connector}${child.name}${icon}</span>\n`;
         } else {
           result += `${prefix}${connector}${child.name}\n`;
@@ -218,15 +217,14 @@ export default {
           name: '/',
           children: [{ ...finalTree }, { name: 'app_desc.yaml' }],
         };
-      } else {
-        // 根路径为空 appendPath 为当前路径的根路径
-        const appendTree = this.formatTreeData(appendPath?.trim());
-        appendTree.tag = true;
-        return {
-          name: '/',
-          children: [{ ...appendTree }, ...this.defaultFiles, { name: 'app_desc.yaml' }],
-        };
       }
+      // 根路径为空 appendPath 为当前路径的根路径
+      const appendTree = this.formatTreeData(appendPath?.trim());
+      appendTree.tag = true;
+      return {
+        name: '/',
+        children: [{ ...appendTree }, ...this.defaultFiles, { name: 'app_desc.yaml' }],
+      };
     },
   },
 };

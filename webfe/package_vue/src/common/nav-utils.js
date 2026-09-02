@@ -18,15 +18,13 @@
 
 import _ from 'lodash';
 
-function excludeNavItemsByCategoryNames (navItems, categoryNames) {
+function excludeNavItemsByCategoryNames(navItems, categoryNames) {
   const invalidCategoryNames = categoryNames;
-  navItems = _.filter(navItems, (item) => {
-    return item && (!_.includes(invalidCategoryNames, item.categoryName));
-  });
+  navItems = _.filter(navItems, item => item && (!_.includes(invalidCategoryNames, item.categoryName)));
   return navItems;
 }
 
-function filterNavItemsByRole (appRole, navItems) {
+function filterNavItemsByRole(appRole, navItems) {
   let result = [];
   if (appRole === 'administrator') {
     result = navItems;
@@ -36,32 +34,24 @@ function filterNavItemsByRole (appRole, navItems) {
       'appServices',
       'appMarketing',
       'appConfigs',
-      'appPermissions'
+      'appPermissions',
     ];
 
-    result = _.find(navItems, (item) => {
-      return item.destRoute.name === 'appSummary';
-    });
+    result = _.find(navItems, item => item.destRoute.name === 'appSummary');
     result = [
       result,
-      ..._.filter(navItems, (item) => {
-        return _.includes(validCategoryNames, item.categoryName);
-      })
+      ..._.filter(navItems, item => _.includes(validCategoryNames, item.categoryName)),
     ];
   } else if (appRole === 'operator') {
     const validCategoryNames = [
       'appMarketing',
       'appConfigs',
-      'appPermissions'
+      'appPermissions',
     ];
-    result = _.find(navItems, (item) => {
-      return item.destRoute.name === 'appSummary';
-    });
+    result = _.find(navItems, item => item.destRoute.name === 'appSummary');
     result = [
       result,
-      ..._.filter(navItems, (item) => {
-        return _.includes(validCategoryNames, item.categoryName);
-      })
+      ..._.filter(navItems, item => _.includes(validCategoryNames, item.categoryName)),
     ];
   }
   return result;
@@ -69,5 +59,5 @@ function filterNavItemsByRole (appRole, navItems) {
 
 export default {
   excludeNavItemsByCategoryNames,
-  filterNavItemsByRole
+  filterNavItemsByRole,
 };

@@ -370,7 +370,7 @@ export default {
         this.isShowDialog = !!value;
         if (this.isShowDialog) {
           this.infiniteTreeKey = new Date().getTime();
-          const templateList = this.users.map((item) => ({
+          const templateList = this.users.map(item => ({
             username: item.name,
             id: item.id,
             display_name: item.display_name,
@@ -453,7 +453,7 @@ export default {
           item.$id = `${item.id}&department`;
 
           if (this.hasSelectedDepartments.length > 0) {
-            item.is_selected = this.hasSelectedDepartments.map((v) => v.id).includes(item.id);
+            item.is_selected = this.hasSelectedDepartments.map(v => v.id).includes(item.id);
           } else {
             item.is_selected = false;
           }
@@ -494,9 +494,9 @@ export default {
         }
       } else {
         if (node.type === 'user') {
-          this.hasSelectedUsers = [...this.hasSelectedUsers.filter((item) => item.id !== node.id)];
+          this.hasSelectedUsers = [...this.hasSelectedUsers.filter(item => item.id !== node.id)];
         } else {
-          this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter((item) => item.id !== node.id)];
+          this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter(item => item.id !== node.id)];
         }
       }
     },
@@ -537,8 +537,8 @@ export default {
       this.searchedResult.splice(0, this.searchedResult.length, ...[]);
       this.searchedDepartment.splice(0, this.searchedDepartment.length, ...[]);
       this.searchedUsers.splice(0, this.searchedUsers.length, ...[]);
-      const departIds = [...this.hasSelectedDepartments.map((item) => item.id)];
-      const userIds = [...this.hasSelectedUsers.map((item) => item.id)];
+      const departIds = [...this.hasSelectedDepartments.map(item => item.id)];
+      const userIds = [...this.hasSelectedUsers.map(item => item.id)];
       const params = {
         app_code: 'bk-magicbox',
         no_page: true,
@@ -605,7 +605,7 @@ export default {
         this.searchedResult.splice(
           0,
           this.searchedResult.length,
-          ...this.searchedDepartment.concat(this.searchedUsers)
+          ...this.searchedDepartment.concat(this.searchedUsers),
         );
       } catch (error) {
         console.error(error);
@@ -641,7 +641,7 @@ export default {
         const res = await Promise.all(fetchList);
         const categories = unique(res[0], 'id');
         const members = unique(res[1], 'id');
-        const curIndex = this.treeList.findIndex((item) => item.id === payload.id);
+        const curIndex = this.treeList.findIndex(item => item.id === payload.id);
         if (curIndex === -1) {
           return;
         }
@@ -659,7 +659,7 @@ export default {
           child.$id = `${child.id}&department`;
 
           if (this.hasSelectedDepartments.length > 0) {
-            child.is_selected = this.hasSelectedDepartments.map((item) => item.id).includes(child.id);
+            child.is_selected = this.hasSelectedDepartments.map(item => item.id).includes(child.id);
           } else {
             child.is_selected = false;
           }
@@ -683,13 +683,11 @@ export default {
           child.$id = `${child.id}&user`;
 
           if (this.hasSelectedUsers.length > 0) {
-            child.is_selected = this.hasSelectedUsers.map((item) => item.id).includes(child.id);
+            child.is_selected = this.hasSelectedUsers.map(item => item.id).includes(child.id);
           } else {
             child.is_selected = false;
           }
-          const existSelectedNode = this.treeList.find(
-            (item) => item.is_selected && item.id === child.id && item.type === 'user'
-          );
+          const existSelectedNode = this.treeList.find(item => item.is_selected && item.id === child.id && item.type === 'user');
           if (existSelectedNode) {
             child.is_selected = true;
             child.disabled = true;
@@ -738,9 +736,9 @@ export default {
         this.$refs.userTreeRef.setSingleSelectedStatus(item.id, false);
       }
       if (type === 'user') {
-        this.hasSelectedUsers = [...this.hasSelectedUsers.filter((user) => user.id !== item.id)];
+        this.hasSelectedUsers = [...this.hasSelectedUsers.filter(user => user.id !== item.id)];
       } else {
-        this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter((organ) => organ.id !== item.id)];
+        this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter(organ => organ.id !== item.id)];
       }
     },
 
@@ -751,7 +749,7 @@ export default {
         if (newVal) {
           this.hasSelectedDepartments.push(item);
         } else {
-          this.hasSelectedDepartments = this.hasSelectedDepartments.filter((organ) => organ.id !== item.id);
+          this.hasSelectedDepartments = this.hasSelectedDepartments.filter(organ => organ.id !== item.id);
         }
       }
     },
@@ -760,7 +758,7 @@ export default {
       if (newVal) {
         this.hasSelectedUsers.push(item);
       } else {
-        this.hasSelectedUsers = this.hasSelectedUsers.filter((user) => user.id !== item.id);
+        this.hasSelectedUsers = this.hasSelectedUsers.filter(user => user.id !== item.id);
       }
     },
 

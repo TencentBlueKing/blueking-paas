@@ -13,7 +13,7 @@
     <pre
       v-else
       class="masked-text-cls"
-      >{{ maskedText }}</pre
+    >{{ maskedText }}</pre
     >
     <!-- 明文/密文切换按钮 -->
     <i

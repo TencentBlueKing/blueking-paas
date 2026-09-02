@@ -139,7 +139,7 @@ export default {
     this.requestList();
     this.tags = [...this.value];
     this.$nextTick(() => {
-      this.$refs.tagInput.localTagList = this.tags.map((tag) => ({
+      this.$refs.tagInput.localTagList = this.tags.map(tag => ({
         [this.saveKey]: tag,
         [this.displayKey]: tag,
       }));
@@ -194,10 +194,9 @@ export default {
       const host = location.host;
       const protocol = location.protocol;
       const typeList = ['rtx', 'email', 'all'];
-      const prefix =
-        host.indexOf(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`) > -1
-          ? `http://o.${window.GLOBAL_CONFIG.IED_DOMAIN}/component/compapi/tof3/`
-          : host.indexOf(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`) > -1
+      const prefix =        host.indexOf(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`) > -1
+        ? `http://o.${window.GLOBAL_CONFIG.IED_DOMAIN}/component/compapi/tof3/`
+        : host.indexOf(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`) > -1
           ? `${protocol}//api.open.${window.GLOBAL_CONFIG.WOA_DOMAIN}/component/compapi/tof3/`
           : `${protocol}//open.${window.GLOBAL_CONFIG.OA_DOMAIN}/component/compapi/tof3/`;
       const config = {
@@ -219,7 +218,7 @@ export default {
           break;
         case 'email':
           config.url = `${prefix}get_all_ad_groups/`;
-          config.data['query_type'] = undefined;
+          config.data.query_type = undefined;
           config.data = {
             app_code: 'workbench',
           };
@@ -236,9 +235,9 @@ export default {
       this.isLoading = true;
       this.ajaxRequest({
         url: config.url,
-        jsonp: 'callback' + uuid(),
+        jsonp: `callback${uuid()}`,
         data: Object.assign(config.data),
-        success: function (res) {
+        success(res) {
           self.isLoading = false;
           if (res.result) {
             res.data.map((val) => {
@@ -248,7 +247,7 @@ export default {
             self.needsLogin = true;
           }
         },
-        error: function (error) {
+        error(error) {
           console.error(error, 'retry...');
           self.retry(config);
         },
@@ -288,7 +287,7 @@ export default {
                     titlebar=0,
                     toolbar=0,
                     close=0
-                `
+                `,
       );
       this.startCheckWindow();
     },
@@ -315,9 +314,9 @@ export default {
       const self = this;
       self.ajaxRequest({
         url: config.url,
-        jsonp: 'callback' + uuid(),
+        jsonp: `callback${uuid()}`,
         data: Object.assign(config.data),
-        success: function (res) {
+        success(res) {
           if (res.result) {
             res.data.map((val) => {
               self.renderList.push(val);
@@ -328,7 +327,7 @@ export default {
             self.$bkMessage({ message: res.message, theme: 'error', limit: 1 });
           }
         },
-        error: function (error) {
+        error(error) {
           self.isLoading = false;
           console.error(error);
           const msg = (error && error.toString()) || self.t('bk.memberSelector.sysErrorMsg');
@@ -343,7 +342,7 @@ export default {
 
       const callbackName = params.jsonp;
       const head = document.getElementsByTagName('head')[0];
-      params.data['callback'] = callbackName;
+      params.data.callback = callbackName;
 
       // 设置传递给后台的回调参数名
       const data = this.formatParams(params.data);
@@ -364,13 +363,13 @@ export default {
       };
 
       // 发送请求
-      script.src = params.url + '?' + data;
+      script.src = `${params.url}?${data}`;
     },
     // 格式化参数
     formatParams(data) {
       const arr = [];
       for (const name in data) {
-        arr.push(encodeURIComponent(name) + '=' + encodeURIComponent(data[name]));
+        arr.push(`${encodeURIComponent(name)}=${encodeURIComponent(data[name])}`);
       }
       return arr.join('&');
     },

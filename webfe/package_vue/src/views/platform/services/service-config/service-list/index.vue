@@ -209,7 +209,7 @@ export default {
         this.$nextTick(() => {
           let activeItem = null;
           if (this.oldSelectedItem) {
-            activeItem = res.find((item) => item.uuid === this.oldSelectedItem);
+            activeItem = res.find(item => item.uuid === this.oldSelectedItem);
           }
           if (!activeItem) {
             activeItem = this.groupedServices?.remote[0] || res[0];
@@ -217,7 +217,7 @@ export default {
           this.handleSelected(activeItem);
         });
         // 无远程服务收起
-        if (!res.find((s) => s.origin === 'remote')) {
+        if (!res.find(s => s.origin === 'remote')) {
           this.expand.remote = false;
         }
       } catch (e) {

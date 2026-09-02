@@ -17,96 +17,96 @@
  */
 
 const option = {
-  'color': ['#3a84ff'],
-  'yAxis': [
+  color: ['#3a84ff'],
+  yAxis: [
     {
-      'name': '',
-      'minInterval': 1,
-      'nameTextStyle': {
-        'color': 'red'
+      name: '',
+      minInterval: 1,
+      nameTextStyle: {
+        color: 'red',
       },
-      'boundaryGap': [0, '20%'],
-      'type': 'value',
-      'axisLine': {
-        'show': true,
-        'lineStyle': {
-          'color': '#dde4eb'
-        }
+      boundaryGap: [0, '20%'],
+      type: 'value',
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: '#dde4eb',
+        },
       },
-      'axisTick': {
-        'alignWithLabel': true,
-        'length': 0,
-        'lineStyle': {
-          'color': 'red'
-        }
+      axisTick: {
+        alignWithLabel: true,
+        length: 0,
+        lineStyle: {
+          color: 'red',
+        },
       },
-      'axisLabel': {
-        'color': '#868b97'
+      axisLabel: {
+        color: '#868b97',
       },
-      'splitLine': {
-        'show': true,
-        'lineStyle': {
-          'color': ['#ebf0f5'],
-          'type': 'dashed'
-        }
-      }
-    }
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: ['#ebf0f5'],
+          type: 'dashed',
+        },
+      },
+    },
   ],
-  'title': {
-    'text': '',
-    'x': 'center',
-    'textStyle': {
-      'color': '#63656e',
-      'fontSize': 13,
-      'align': 'center'
-    }
-  },
-  'series': [],
-  'tooltip': {
-    'axisPointer': {
-      'type': 'shadow'
+  title: {
+    text: '',
+    x: 'center',
+    textStyle: {
+      color: '#63656e',
+      fontSize: 13,
+      align: 'center',
     },
-    'trigger': 'item',
-    'formatter': function (data) {
+  },
+  series: [],
+  tooltip: {
+    axisPointer: {
+      type: 'shadow',
+    },
+    trigger: 'item',
+    formatter(data) {
       return '';
-    }
+    },
   },
-  'grid': {
-    'show': false,
-    'top': '15%',
-    'left': '3%',
-    'right': '3%',
-    'bottom': '11%',
-    'containLabel': true
+  grid: {
+    show: false,
+    top: '15%',
+    left: '3%',
+    right: '3%',
+    bottom: '11%',
+    containLabel: true,
   },
-  'xAxis': {
-    'data': [],
-    'type': 'category',
-    'axisLine': {
-      'show': true,
-      'lineStyle': {
-        'color': '#dde4eb'
-      }
+  xAxis: {
+    data: [],
+    type: 'category',
+    axisLine: {
+      show: true,
+      lineStyle: {
+        color: '#dde4eb',
+      },
     },
-    'axisLabel': {
-      'show': true,
-      'color': '#878c97'
+    axisLabel: {
+      show: true,
+      color: '#878c97',
     },
-    'axisTick': {
-      'alignWithLabel': true,
-      'length': 5,
-      'lineStyle': {
-        'color': '#ebf0f5'
-      }
+    axisTick: {
+      alignWithLabel: true,
+      length: 5,
+      lineStyle: {
+        color: '#ebf0f5',
+      },
     },
-    'splitLine': {
-      'show': true,
-      'lineStyle': {
-        'color': ['#ebf0f5'],
-        'type': 'dashed'
-      }
-    }
-  }
+    splitLine: {
+      show: true,
+      lineStyle: {
+        color: ['#ebf0f5'],
+        type: 'dashed',
+      },
+    },
+  },
 };
 
 export default option;

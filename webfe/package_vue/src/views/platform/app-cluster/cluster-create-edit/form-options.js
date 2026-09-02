@@ -117,9 +117,7 @@ export const bcsOptions = [
     rules: [...requiredRule],
     source: {
       // 通过接口获取数据
-      api: () => {
-        return store.dispatch('tenant/getBcsProjects');
-      },
+      api: () => store.dispatch('tenant/getBcsProjects'),
     },
   },
   {
@@ -140,12 +138,10 @@ export const bcsOptions = [
           const res = await store.dispatch('tenant/getBcsClusters', {
             projectId: arg,
           });
-          return res.map((item) => {
-            return {
-              ...item,
-              name: `${item.name}（${item.id}）`,
-            };
-          });
+          return res.map(item => ({
+            ...item,
+            name: `${item.name}（${item.id}）`,
+          }));
         } catch (e) {
           Promise.reject(e);
         }
@@ -236,12 +232,10 @@ export const elasticSearchOptions = [
     required: true,
     rules: [...requiredRule],
     source: {
-      api: () => {
-        return [
-          { id: 'http', name: 'HTTP' },
-          { id: 'https', name: 'HTTPS' },
-        ];
-      },
+      api: () => [
+        { id: 'http', name: 'HTTP' },
+        { id: 'https', name: 'HTTPS' },
+      ],
     },
   },
   {
@@ -284,9 +278,7 @@ export const availableTenantsOptions = [
     required: true,
     rules: [...requiredRule],
     source: {
-      api: () => {
-        return store.dispatch('tenant/getTenants');
-      },
+      api: () => store.dispatch('tenant/getTenants'),
     },
   },
 ];

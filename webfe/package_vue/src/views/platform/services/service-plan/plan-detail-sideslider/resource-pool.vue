@@ -153,6 +153,11 @@ import MaskedTextViewer from '@/components/masked-text-viewer';
 import TogglePlaintextButton from '../../toggle-plaintext-button.vue';
 
 export default {
+  components: {
+    MaskedTextViewer,
+    EditAddDialog,
+    TogglePlaintextButton,
+  },
   props: {
     data: {
       type: Object,
@@ -162,11 +167,6 @@ export default {
       type: String,
       default: '',
     },
-  },
-  components: {
-    MaskedTextViewer,
-    EditAddDialog,
-    TogglePlaintextButton,
   },
   data() {
     return {
@@ -217,7 +217,7 @@ export default {
           return;
         }
         // 检查所有配置项是否都为显示状态
-        const allPlaintext = this.allPlaintextKeys.every((key) => this.plaintextStatusMap[key] === true);
+        const allPlaintext = this.allPlaintextKeys.every(key => this.plaintextStatusMap[key] === true);
         this.isAllPlaintext = allPlaintext;
       },
       deep: true,
@@ -251,8 +251,7 @@ export default {
             rules.push(`${label} = ${displayValue}`);
           } else {
             // 多个值用 IN
-            const displayValues =
-              key === 'env_name' ? values.map((v) => envLabelMap[v] || v).join(', ') : values.join(', ');
+            const displayValues =              key === 'env_name' ? values.map(v => envLabelMap[v] || v).join(', ') : values.join(', ');
             rules.push(`${label} IN (${displayValues})`);
           }
         }
@@ -360,14 +359,14 @@ export default {
     // 准备克隆高亮：清空上一个高亮，记录当前实例列表
     prepareCloneHighlight() {
       this.highlightedRowId = null;
-      this.previousUuids = this.instances.map((item) => item.uuid);
+      this.previousUuids = this.instances.map(item => item.uuid);
       this.pendingHighlight = true;
     },
     // 检测并高亮新克隆的实例
     highlightClonedInstance() {
       if (!this.pendingHighlight || this.previousUuids.length === 0) return;
 
-      const newInstance = this.instances.find((item) => !this.previousUuids.includes(item.uuid));
+      const newInstance = this.instances.find(item => !this.previousUuids.includes(item.uuid));
       if (newInstance) {
         this.highlightedRowId = newInstance.uuid;
         setTimeout(() => {

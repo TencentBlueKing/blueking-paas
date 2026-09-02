@@ -77,6 +77,9 @@
 import ClusterTransfer from './cluster-transfer.vue';
 import transferDrag from '@/mixins/transfer-drag';
 export default {
+  components: {
+    ClusterTransfer,
+  },
   mixins: [transferDrag],
   props: {
     hasLabel: {
@@ -99,9 +102,6 @@ export default {
       type: String,
       default: '集群',
     },
-  },
-  components: {
-    ClusterTransfer,
   },
   data() {
     return {

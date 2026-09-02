@@ -169,7 +169,7 @@ export default {
       return this.loaderPlaceholder === 'table-loading' ? { operationCount: 1 } : {};
     },
     routerRefs() {
-      const curPenel = this.panels.find((e) => e.name === this.active);
+      const curPenel = this.panels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
     curAppModuleList() {
@@ -217,7 +217,7 @@ export default {
     },
   },
   created() {
-    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -233,7 +233,7 @@ export default {
   },
   methods: {
     handleGoPage(routeName) {
-      const label = this.panels.find((item) => item.name === routeName).label;
+      const label = this.panels.find(item => item.name === routeName).label;
       this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.active = routeName;

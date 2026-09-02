@@ -219,9 +219,7 @@ export default {
         content: this.$t('提示信息'),
         html: `<a target="_blank" href="${
           this.GLOBAL.LINK.BK_APP_DOC
-        }topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t(
-          '动态扩缩容计算规则'
-        )}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
+        }topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('动态扩缩容计算规则')}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
         placements: ['top'],
       },
       rules: {

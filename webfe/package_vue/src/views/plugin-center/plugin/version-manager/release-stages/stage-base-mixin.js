@@ -21,17 +21,17 @@
  */
 
 export default {
-  data () {
+  data() {
     return {
-      winHeight: 300
+      winHeight: 300,
     };
   },
   methods: {
-    async nextStage (resolve) {
+    async nextStage(resolve) {
       await resolve();
-    }
+    },
   },
-  mounted () {
+  mounted() {
     this.winHeight = window.innerHeight;
-  }
+  },
 };

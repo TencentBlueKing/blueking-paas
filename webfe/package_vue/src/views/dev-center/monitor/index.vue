@@ -205,358 +205,359 @@
 </template>
 
 <script>
-    import dayjs from '@/common/dayjs';
+import dayjs from '@/common/dayjs';
 
 
-    const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = dayjs().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
+const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'days')
+  .format('YYYY-MM-DD HH:mm:ss');
 
-    let timeRangeCache = '';
-    let timeShortCutText = '';
-    export default {
-        name: '',
-        data () {
-            const dateShortCut = [
-                {
-                    text: this.$t('最近5分钟'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 60 * 1000 * 5);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '5m';
-                        timeShortCutText = this.$t('最近5分钟');
-                    }
-                },
-                {
-                    text: this.$t('最近1小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 1);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '1h';
-                        timeShortCutText = this.$t('最近1小时');
-                    }
-                },
-                {
-                    text: this.$t('最近3小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 3);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '3h';
-                        timeShortCutText = this.$t('最近3小时');
-                    }
-                },
-                {
-                    text: this.$t('最近12小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 12);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '12h';
-                        timeShortCutText = this.$t('最近12小时');
-                    }
-                },
-                {
-                    text: this.$t('最近1天'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 24);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '1d';
-                        timeShortCutText = this.$t('最近1天');
-                    }
-                },
-                {
-                    text: this.$t('最近7天'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '7d';
-                        timeShortCutText = this.$t('最近7天');
-                    }
-                }
-            ];
-            return {
-                isLoading: true,
-                minHeight: 550,
-                dataList: [],
-                curPageData: [],
-                curSearchData: [],
-                appNum: '',
-                defaultImg: require('@static/images/default_logo.png'),
-                // 搜索词
-                filterKey: '',
-                pageConf: {
-                    count: 0,
-                    current: 0,
-                    limit: 10
-                },
-                isFilter: false,
+let timeRangeCache = '';
+let timeShortCutText = '';
+export default {
+  name: '',
+  data() {
+    const dateShortCut = [
+      {
+        text: this.$t('最近5分钟'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 60 * 1000 * 5);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '5m';
+          timeShortCutText = this.$t('最近5分钟');
+        },
+      },
+      {
+        text: this.$t('最近1小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 1);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '1h';
+          timeShortCutText = this.$t('最近1小时');
+        },
+      },
+      {
+        text: this.$t('最近3小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 3);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '3h';
+          timeShortCutText = this.$t('最近3小时');
+        },
+      },
+      {
+        text: this.$t('最近12小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 12);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '12h';
+          timeShortCutText = this.$t('最近12小时');
+        },
+      },
+      {
+        text: this.$t('最近1天'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 24);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '1d';
+          timeShortCutText = this.$t('最近1天');
+        },
+      },
+      {
+        text: this.$t('最近7天'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '7d';
+          timeShortCutText = this.$t('最近7天');
+        },
+      },
+    ];
+    return {
+      isLoading: true,
+      minHeight: 550,
+      dataList: [],
+      curPageData: [],
+      curSearchData: [],
+      appNum: '',
+      defaultImg: require('@static/images/default_logo.png'),
+      // 搜索词
+      filterKey: '',
+      pageConf: {
+        count: 0,
+        current: 0,
+        limit: 10,
+      },
+      isFilter: false,
 
-                datePickerOption: {
-                    // 小于今天的都不能选
-                    disabledDate (date) {
-                        return date && date.valueOf() > Date.now() - 86400;
-                    }
-                },
-                dateShortCut: dateShortCut,
-                initDateTimeRange: [initStartDate, initEndDate],
-                dateParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate
-                },
-                timerDisplay: this.$t('最近1天'),
-                isDatePickerOpen: false,
-                curDateType: 'custom',
-                isTableError: false,
-            };
+      datePickerOption: {
+        // 小于今天的都不能选
+        disabledDate(date) {
+          return date && date.valueOf() > Date.now() - 86400;
         },
-        watch: {
-            filterKey (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.curSearchData = [];
-                        this.fetchMonitorList();
-                        this.isFilter = false;
-                    }
-                }
-            }
-        },
-        created () {
-            this.fetchMonitorList();
-        },
-        mounted () {
-            const HEADER_HEIGHT = 50;
-            const FOOTER_HEIGHT = 70;
-            const winHeight = window.innerHeight;
-            const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-            if (contentHeight > this.minHeight) {
-                this.minHeight = contentHeight;
-            }
-        },
-        methods: {
-            /**
+      },
+      dateShortCut,
+      initDateTimeRange: [initStartDate, initEndDate],
+      dateParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+      },
+      timerDisplay: this.$t('最近1天'),
+      isDatePickerOpen: false,
+      curDateType: 'custom',
+      isTableError: false,
+    };
+  },
+  watch: {
+    filterKey(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.curSearchData = [];
+          this.fetchMonitorList();
+          this.isFilter = false;
+        }
+      }
+    },
+  },
+  created() {
+    this.fetchMonitorList();
+  },
+  mounted() {
+    const HEADER_HEIGHT = 50;
+    const FOOTER_HEIGHT = 70;
+    const winHeight = window.innerHeight;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    if (contentHeight > this.minHeight) {
+      this.minHeight = contentHeight;
+    }
+  },
+  methods: {
+    /**
              * 选择自定义时间
              */
-            handlerChange (dates, type) {
-                this.curDateType = !type ? 'custom' : type;
-                this.dateParams.start_time = dates[0];
-                this.dateParams.end_time = dates[1];
-                this.dateParams.time_range = timeRangeCache || 'customized';
-                if (timeShortCutText) {
-                    this.timerDisplay = timeShortCutText;
-                } else {
-                    this.timerDisplay = `${dates[0]} - ${dates[1]}`;
-                }
-                timeShortCutText = ''; // 清空
-                timeRangeCache = ''; // 清空
-            },
+    handlerChange(dates, type) {
+      this.curDateType = !type ? 'custom' : type;
+      this.dateParams.start_time = dates[0];
+      this.dateParams.end_time = dates[1];
+      this.dateParams.time_range = timeRangeCache || 'customized';
+      if (timeShortCutText) {
+        this.timerDisplay = timeShortCutText;
+      } else {
+        this.timerDisplay = `${dates[0]} - ${dates[1]}`;
+      }
+      timeShortCutText = ''; // 清空
+      timeRangeCache = ''; // 清空
+    },
 
-            toggleDatePicker () {
-                this.isDatePickerOpen = !this.isDatePickerOpen;
-            },
+    toggleDatePicker() {
+      this.isDatePickerOpen = !this.isDatePickerOpen;
+    },
 
-            hideDatePicker () {
-                this.isDatePickerOpen = false;
-            },
+    hideDatePicker() {
+      this.isDatePickerOpen = false;
+    },
 
-            /**
+    /**
              * 选择自定义时间，并确定
              */
-            handlerPickSuccess () {
-                this.isDatePickerOpen = false;
-                setTimeout(() => {
-                    this.fetchMonitorList();
-                }, 300);
-            },
+    handlerPickSuccess() {
+      this.isDatePickerOpen = false;
+      setTimeout(() => {
+        this.fetchMonitorList();
+      }, 300);
+    },
 
-            toPage (appItem) {
-                this.$router.push({
-                    name: 'appSummary',
-                    params: {
-                        id: appItem.app_code
-                    }
-                });
-            },
+    toPage(appItem) {
+      this.$router.push({
+        name: 'appSummary',
+        params: {
+          id: appItem.app_code,
+        },
+      });
+    },
 
-            initPageConf () {
-                this.pageConf.current = 1;
-                const total = this.dataList.length;
-                this.pageConf.count = total;
-            },
+    initPageConf() {
+      this.pageConf.current = 1;
+      const total = this.dataList.length;
+      this.pageConf.count = total;
+    },
 
-            pageChange (page = 1) {
-                this.pageConf.current = page;
-                const data = this.getDataByPage(page);
-                this.curPageData.splice(0, this.curPageData.length, ...data);
-            },
+    pageChange(page = 1) {
+      this.pageConf.current = page;
+      const data = this.getDataByPage(page);
+      this.curPageData.splice(0, this.curPageData.length, ...data);
+    },
 
-            handlePageSizeChange (pageSize) {
-                this.pageConf.limit = pageSize;
-                this.pageConf.current = 1;
-                this.pageChange(this.pageConf.current);
-            },
+    handlePageSizeChange(pageSize) {
+      this.pageConf.limit = pageSize;
+      this.pageConf.current = 1;
+      this.pageChange(this.pageConf.current);
+    },
 
-            /**
+    /**
              * 获取当前这一页的数据
              *
              * @param {number} page 当前页
              *
              * @return {Array} 当前页数据
              */
-            getDataByPage (page) {
-                if (!page) {
-                    this.pageConf.current = page = 1;
-                }
-                let startIndex = (page - 1) * this.pageConf.limit;
-                let endIndex = page * this.pageConf.limit;
-                if (startIndex < 0) {
-                    startIndex = 0;
-                }
-                if (endIndex > this.dataList.length) {
-                    endIndex = this.dataList.length;
-                }
-                return this.dataList.slice(startIndex, endIndex);
-            },
+    getDataByPage(page) {
+      if (!page) {
+        this.pageConf.current = page = 1;
+      }
+      let startIndex = (page - 1) * this.pageConf.limit;
+      let endIndex = page * this.pageConf.limit;
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      if (endIndex > this.dataList.length) {
+        endIndex = this.dataList.length;
+      }
+      return this.dataList.slice(startIndex, endIndex);
+    },
 
-            toMonitorRecord (item) {
-                this.$router.push({
-                    name: 'monitorAlarm',
-                    params: {
-                        id: item.app_code
-                    }
-                });
-            },
+    toMonitorRecord(item) {
+      this.$router.push({
+        name: 'monitorAlarm',
+        params: {
+          id: item.app_code,
+        },
+      });
+    },
 
-            expandedPanel (item) {
-                const uuidArr = [];
-                item.record_ids.forEach(recordItem => {
-                    uuidArr.push(recordItem);
-                });
-                const searchkey = {
-                    ordering: '-start',
-                    uuid: uuidArr
-                };
-                const params = {
-                    code: item.app_code,
-                    search: searchkey
-                };
-                item.expanded = !item.expanded;
-                this.fetchAlarmList(item, params);
-            },
+    expandedPanel(item) {
+      const uuidArr = [];
+      item.record_ids.forEach((recordItem) => {
+        uuidArr.push(recordItem);
+      });
+      const searchkey = {
+        ordering: '-start',
+        uuid: uuidArr,
+      };
+      const params = {
+        code: item.app_code,
+        search: searchkey,
+      };
+      item.expanded = !item.expanded;
+      this.fetchAlarmList(item, params);
+    },
 
-            async fetchAlarmList (payload, params = {}) {
-                payload.tableLoading = true;
-                try {
-                    const res = await this.$store.dispatch('alarm/getPersonalAlarmList', params);
-                    const listMap = {}
-                    ;(res.results || []).forEach(item => {
-                        const key = `${item.module}${item.env}${item.genre.uuid}`;
-                        if (!listMap[key]) {
-                            this.$set(listMap, key, {});
-                            listMap[key].count = 1;
-                            listMap[key].list = [item];
-                        } else {
-                            ++listMap[key].count;
-                            listMap[key].list.push(item);
-                        }
-                    });
-                    const tempList = [];
-                    for (const key in listMap) {
-                        const item = listMap[key].list[0];
-                        this.$set(item, 'count', listMap[key].count);
-                        tempList.push(item);
-                    }
-                    payload.alarmList.splice(0, payload.alarmList.length, ...tempList);
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    payload.tableLoading = false;
-                }
-            },
-
-            searchApp () {
-                if (this.filterKey === '') {
-                    return;
-                }
-                this.isFilter = true;
-                const filterList = this.dataList.filter(item => item.app_name.indexOf(this.filterKey) !== -1 || item.app_code.indexOf(this.filterKey) !== -1);
-                this.curSearchData.splice(0, this.curSearchData.length, ...filterList);
-                this.pageConf.current = 1;
-                const total = filterList.length;
-                this.pageConf.count = total;
-                let page = this.pageConf.current;
-                if (!page) {
-                    this.pageConf.current = page = 1;
-                }
-                let startIndex = (page - 1) * this.pageConf.limit;
-                let endIndex = page * this.pageConf.limit;
-                if (startIndex < 0) {
-                    startIndex = 0;
-                }
-                if (endIndex > this.curSearchData.length) {
-                    endIndex = this.curSearchData.length;
-                }
-
-                this.curPageData = this.curSearchData.slice(startIndex, endIndex);
-            },
-
-            async fetchMonitorList (page = 1) {
-                const params = {
-                    start_after: this.dateParams.start_time,
-                    start_before: this.dateParams.end_time
-                };
-                this.isLoading = true;
-                try {
-                    const res = await this.$store.dispatch('alarm/getPersonalMonitor', params)
-                    ;(res.results || []).forEach(item => {
-                        item.expanded = false;
-                        item.alarmList = [];
-                        item.tableLoading = false;
-                    });
-                    this.dataList.splice(0, this.dataList.length, ...(res.results || []));
-                    this.initPageConf();
-                    this.curPageData = this.getDataByPage(this.pageConf.current);
-                    this.isTableError = false;
-                } catch (e) {
-                    this.isTableError = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isLoading = false;
-                }
-            },
-
-            clearFilterKey () {
-                this.filterKey = '';
-            },
+    async fetchAlarmList(payload, params = {}) {
+      payload.tableLoading = true;
+      try {
+        const res = await this.$store.dispatch('alarm/getPersonalAlarmList', params);
+        const listMap = {}
+                    ;(res.results || []).forEach((item) => {
+          const key = `${item.module}${item.env}${item.genre.uuid}`;
+          if (!listMap[key]) {
+            this.$set(listMap, key, {});
+            listMap[key].count = 1;
+            listMap[key].list = [item];
+          } else {
+            ++listMap[key].count;
+            listMap[key].list.push(item);
+          }
+        });
+        const tempList = [];
+        for (const key in listMap) {
+          const item = listMap[key].list[0];
+          this.$set(item, 'count', listMap[key].count);
+          tempList.push(item);
         }
-    };
+        payload.alarmList.splice(0, payload.alarmList.length, ...tempList);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        payload.tableLoading = false;
+      }
+    },
+
+    searchApp() {
+      if (this.filterKey === '') {
+        return;
+      }
+      this.isFilter = true;
+      const filterList = this.dataList.filter(item => item.app_name.indexOf(this.filterKey) !== -1 || item.app_code.indexOf(this.filterKey) !== -1);
+      this.curSearchData.splice(0, this.curSearchData.length, ...filterList);
+      this.pageConf.current = 1;
+      const total = filterList.length;
+      this.pageConf.count = total;
+      let page = this.pageConf.current;
+      if (!page) {
+        this.pageConf.current = page = 1;
+      }
+      let startIndex = (page - 1) * this.pageConf.limit;
+      let endIndex = page * this.pageConf.limit;
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      if (endIndex > this.curSearchData.length) {
+        endIndex = this.curSearchData.length;
+      }
+
+      this.curPageData = this.curSearchData.slice(startIndex, endIndex);
+    },
+
+    async fetchMonitorList(page = 1) {
+      const params = {
+        start_after: this.dateParams.start_time,
+        start_before: this.dateParams.end_time,
+      };
+      this.isLoading = true;
+      try {
+        const res = await this.$store.dispatch('alarm/getPersonalMonitor', params)
+                    ;(res.results || []).forEach((item) => {
+          item.expanded = false;
+          item.alarmList = [];
+          item.tableLoading = false;
+        });
+        this.dataList.splice(0, this.dataList.length, ...(res.results || []));
+        this.initPageConf();
+        this.curPageData = this.getDataByPage(this.pageConf.current);
+        this.isTableError = false;
+      } catch (e) {
+        this.isTableError = true;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    clearFilterKey() {
+      this.filterKey = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

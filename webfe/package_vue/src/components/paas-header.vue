@@ -206,7 +206,7 @@ export default {
     userFeature: {
       handler(val) {
         if (!val.ALLOW_PLUGIN_CENTER) {
-          this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter((e) => e.text !== this.$t('插件开发'));
+          this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
         }
       },
       deep: true,
@@ -257,8 +257,8 @@ export default {
       // 遍历配置对象，检查当前路由是否匹配
       for (const config of routeConfig) {
         if (
-          (config.names && config.names.includes(this.$route.name)) ||
-          (config.paths && config.paths.some((path) => this.$route.path.includes(path)))
+          (config.names && config.names.includes(this.$route.name))
+          || (config.paths && config.paths.some(path => this.$route.path.includes(path)))
         ) {
           active = config.active;
           break;
@@ -267,9 +267,7 @@ export default {
       this.curActiveName = active;
     },
     logout() {
-      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(
-        window.location.href
-      )}`;
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(window.location.href)}`;
     },
     makeAjaxRequest(url, language) {
       return new Promise((resolve, reject) => {

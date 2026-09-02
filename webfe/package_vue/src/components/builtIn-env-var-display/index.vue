@@ -124,9 +124,6 @@ export default {
       searchKey: '',
     };
   },
-  created() {
-    this.getAllBuiltInEnvVars();
-  },
   computed: {
     // 根据搜索关键字过滤环境变量
     filteredEnvVars() {
@@ -135,13 +132,14 @@ export default {
         return envVars;
       }
       const keyword = this.searchKey.toLowerCase().trim();
-      return envVars.filter(
-        (item) =>
-          item.key?.toLowerCase().includes(keyword) ||
-          item.description?.toLowerCase().includes(keyword) ||
-          (!item.is_sensitive && item.value?.toString().toLowerCase().includes(keyword))
-      );
+      return envVars.filter(item => item.key?.toLowerCase().includes(keyword)
+          || item.description?.toLowerCase().includes(keyword)
+          || (!item.is_sensitive && item.value?.toString().toLowerCase()
+            .includes(keyword)));
     },
+  },
+  created() {
+    this.getAllBuiltInEnvVars();
   },
   methods: {
     getTooltipContent(item) {

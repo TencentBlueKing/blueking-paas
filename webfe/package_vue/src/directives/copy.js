@@ -20,7 +20,7 @@ import { bkMessage } from 'bk-magic-vue';
 import i18n from '@/language/i18n.js';
 
 const vPaasCopy = {
-  bind (el, { value }) {
+  bind(el, { value }) {
     el.$value = value;
     el.handler = ($event) => {
       $event.stopPropagation();
@@ -29,7 +29,7 @@ const vPaasCopy = {
           theme: 'warning',
           message: i18n.t('无复制内容'),
           delay: 2000,
-          dismissable: false
+          dismissable: false,
         });
         return;
       }
@@ -46,19 +46,19 @@ const vPaasCopy = {
           theme: 'success',
           message: i18n.t('复制成功'),
           delay: 2000,
-          dismissable: false
+          dismissable: false,
         });
       }
       document.body.removeChild(textarea);
     };
     el.addEventListener('click', el.handler);
   },
-  componentUpdated (el, { value }) {
+  componentUpdated(el, { value }) {
     el.$value = value;
   },
-  unbind (el) {
+  unbind(el) {
     el.removeEventListener('click', el.handler);
-  }
+  },
 };
 
 export default vPaasCopy;

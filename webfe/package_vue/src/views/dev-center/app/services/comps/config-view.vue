@@ -34,46 +34,46 @@
 </template>
 
 <script>
-    export default {
-        name: '',
-        props: {
-            list: {
-                type: Array,
-                default: []
-            },
-            canEdit: {
-                type: Boolean,
-                default: true
-            },
-            loading: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                isEdit: this.canEdit,
-                listDisplay: this.list,
-                saveLoading: false
-            };
-        },
-        watch: {
-            list (value) {
-                this.listDisplay = [...value];
-            },
-            canEdit (value) {
-                this.isEdit = !!value;
-            },
-            loading (value) {
-                this.saveLoading = !!value;
-            }
-        },
-        methods: {
-            handleEdit () {
-                this.$emit('on-edit');
-            }
-        }
+export default {
+  name: '',
+  props: {
+    list: {
+      type: Array,
+      default: [],
+    },
+    canEdit: {
+      type: Boolean,
+      default: true,
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      isEdit: this.canEdit,
+      listDisplay: this.list,
+      saveLoading: false,
     };
+  },
+  watch: {
+    list(value) {
+      this.listDisplay = [...value];
+    },
+    canEdit(value) {
+      this.isEdit = !!value;
+    },
+    loading(value) {
+      this.saveLoading = !!value;
+    },
+  },
+  methods: {
+    handleEdit() {
+      this.$emit('on-edit');
+    },
+  },
+};
 
 </script>
 

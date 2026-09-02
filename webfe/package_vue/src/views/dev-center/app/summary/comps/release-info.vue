@@ -81,71 +81,71 @@
 </template>
 
 <script>
-    export default {
-        props: {
-            appCode: {
-                type: String
-            },
-            environment: {
-                type: String
-            },
-            appDeployInfo: {
-                type: Object
-            }
-        },
-        data () {
-            return {
-                baseInfo: null
-                // canPublishToMarket: false
-            };
-        },
-        computed: {
-            curAppInfo () {
-                return this.$store.state.curAppInfo;
-            },
-            curAppModule () {
-                return this.$store.state.curAppModule;
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            async init () {
-                // const webConfig = this.curAppInfo.web_config
-                const configInfo = this.curAppInfo.application.config_info;
-
-                if (this.environment === 'prod') {
-                    this.baseInfo = {
-                        envName: this.$t('生产环境'),
-                        appUrl: {
-                            name: 'appDeployForProd',
-                            params: {
-                                id: this.appCode
-                            },
-                            query: {
-                                focus: 'prod'
-                            }
-                        },
-                        marketPublished: configInfo.market_published
-                        // canPublishToMarket: webConfig.can_publish_to_market
-                    };
-                } else {
-                    this.baseInfo = {
-                        envName: this.$t('预发布环境'),
-                        appUrl: {
-                            name: 'appDeploy',
-                            params: {
-                                id: this.appCode
-                            }
-                        },
-                        marketPublished: false
-                        // canPublishToMarket: false
-                    };
-                }
-            }
-        }
+export default {
+  props: {
+    appCode: {
+      type: String,
+    },
+    environment: {
+      type: String,
+    },
+    appDeployInfo: {
+      type: Object,
+    },
+  },
+  data() {
+    return {
+      baseInfo: null,
+      // canPublishToMarket: false
     };
+  },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    async init() {
+      // const webConfig = this.curAppInfo.web_config
+      const configInfo = this.curAppInfo.application.config_info;
+
+      if (this.environment === 'prod') {
+        this.baseInfo = {
+          envName: this.$t('生产环境'),
+          appUrl: {
+            name: 'appDeployForProd',
+            params: {
+              id: this.appCode,
+            },
+            query: {
+              focus: 'prod',
+            },
+          },
+          marketPublished: configInfo.market_published,
+          // canPublishToMarket: webConfig.can_publish_to_market
+        };
+      } else {
+        this.baseInfo = {
+          envName: this.$t('预发布环境'),
+          appUrl: {
+            name: 'appDeploy',
+            params: {
+              id: this.appCode,
+            },
+          },
+          marketPublished: false,
+          // canPublishToMarket: false
+        };
+      }
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .noDeploy {

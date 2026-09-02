@@ -84,14 +84,14 @@ export default {
   data() {
     const appCode = this.$route.params.id;
     return {
-      appCode: appCode,
+      appCode,
       application: {},
       trunkURL: '',
       advisedDocLinks: [],
     };
   },
   computed: {
-    pluginTips: function () {
+    pluginTips() {
       return ['pip install cookiecutter', `cookiecutter ${this.GLOBAL.LINK.BK_PLUGIN_TEMPLATE}`].join('\n');
     },
   },
@@ -101,7 +101,7 @@ export default {
       const body = response;
       this.application = body.application;
 
-      const repo = this.application.modules.find((module) => module.is_default).repo;
+      const repo = this.application.modules.find(module => module.is_default).repo;
       this.trunkURL = repo.trunk_url;
       this.$nextTick(() => {
         const el = document.querySelector('.content');
@@ -140,7 +140,7 @@ export default {
       const childNodes = el.childNodes;
 
       // 判断子元素是否存在
-      const allChildNodes = Array.from(childNodes).filter((node) => node.nodeType !== 8); // 过滤掉注释节点
+      const allChildNodes = Array.from(childNodes).filter(node => node.nodeType !== 8); // 过滤掉注释节点
       if (allChildNodes.length === 0) {
         el.style.display = 'none'; // 隐藏当前元素
       }

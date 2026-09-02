@@ -646,7 +646,7 @@ export default {
   computed: {
     runtimeBuildpacks() {
       let result = [];
-      const image = this.runtimeImageList.find((item) => item.image === this.runtimeDialogConf.image);
+      const image = this.runtimeImageList.find(item => item.image === this.runtimeDialogConf.image);
       const buildpacks = image ? [...image.buildpacks] : [];
 
       // 兼容穿梭框右侧排序问题，后续调整组件
@@ -663,7 +663,7 @@ export default {
       return result;
     },
     runtimeImageText() {
-      const result = this.runtimeImageList.find((item) => item.image === this.runtimeImage);
+      const result = this.runtimeImageList.find(item => item.image === this.runtimeImage);
       if (result) {
         return result.name || result.image;
       }
@@ -671,7 +671,7 @@ export default {
     },
     runtimeBuildTexts() {
       const builds = [];
-      const image = this.runtimeImageList.find((item) => item.image === this.runtimeImage);
+      const image = this.runtimeImageList.find(item => item.image === this.runtimeImage);
       const buildpacks = image ? image.buildpacks : [];
       this.runtimeBuild.forEach((item) => {
         buildpacks.forEach((pack) => {
@@ -689,7 +689,7 @@ export default {
       return this.availableEnv[0];
     },
     curModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
@@ -740,7 +740,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -787,33 +787,23 @@ export default {
             const ignoreNum = response.ignore_num;
             this.isEdited = createNum > 0 || overwritedNum > 0;
             const message = (() => {
-              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
-                Boolean(ignoreNum)
-              )}`;
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
               let messageText = '';
               switch (numStr) {
                 case '111':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，更新'
-                  )} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '110':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，更新'
-                  )} ${overwritedNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
                   break;
                 case '100':
                   messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
                   break;
                 case '101':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，忽略'
-                  )} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '011':
-                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                    '个变量，忽略'
-                  )} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '010':
                   messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -838,7 +828,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;
@@ -858,7 +848,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -900,27 +890,19 @@ export default {
           let messageText = '';
           switch (numStr) {
             case '111':
-              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t(
-                '个变量，更新'
-              )}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '110':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                '个变量，更新'
-              )} ${overwritedNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
               break;
             case '100':
               messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
               break;
             case '101':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                '个变量，忽略'
-              )} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '011':
-              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                '个变量，忽略'
-              )} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '010':
               messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -975,10 +957,8 @@ export default {
     fetchReleaseInfo() {
       // 这里分别调用预发布环境 和 生产环境的 API，只要有一个返回 200，isReleased 就要设置为 True
       this.$http
-        .get(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag` +
-            '/released_state/?with_processes=true'
-        )
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag`
+            + '/released_state/?with_processes=true')
         .then(
           (response) => {
             this.isReleased = true;
@@ -986,14 +966,12 @@ export default {
           },
           (errRes) => {
             console.error(errRes);
-          }
+          },
         );
 
       this.$http
-        .get(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod` +
-            '/released_state/?with_processes=true'
-        )
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod`
+            + '/released_state/?with_processes=true')
         .then(
           (response) => {
             this.isReleased = true;
@@ -1001,7 +979,7 @@ export default {
           },
           (errRes) => {
             console.error(errRes);
-          }
+          },
         );
     },
     async getAllImages() {
@@ -1038,7 +1016,7 @@ export default {
         this.runtimeBuild = [];
         this.runtimeImage = res.image ? res.image : '';
         if (res.buildpacks) {
-          this.runtimeBuild = res.buildpacks.map((item) => item.id);
+          this.runtimeBuild = res.buildpacks.map(item => item.id);
           this.targetListData = cloneDeep(this.runtimeBuild);
           this.curBuildpacks = cloneDeep(this.runtimeBuild);
         }
@@ -1097,16 +1075,15 @@ export default {
     },
     // 获取环境变量冲突提示信息
     getConflictMessage(key) {
-      const conflictItem = this.allConflictedKeys.find((item) => item.key === key);
+      const conflictItem = this.allConflictedKeys.find(item => item.key === key);
 
       if (!conflictItem) return {};
 
       const { conflicted_detail, override_conflicted, conflicted_source } = conflictItem;
       const basicText = override_conflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
-      const conflictSourceMessage =
-        conflicted_source === 'builtin_addons'
-          ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
-          : this.$t('和平台的内置环境变量冲突');
+      const conflictSourceMessage =        conflicted_source === 'builtin_addons'
+        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
+        : this.$t('和平台的内置环境变量冲突');
 
       return {
         message: `${basicText}，${conflictSourceMessage}`,
@@ -1139,9 +1116,9 @@ export default {
         if (this.activeEnvTab === '') {
           this.envVarList = [...res];
         } else {
-          this.envVarList = res.filter((envVar) => envVar.environment_name === this.activeEnvTab);
+          this.envVarList = res.filter(envVar => envVar.environment_name === this.activeEnvTab);
         }
-        this.envVarList = this.envVarList.map((item) => ({
+        this.envVarList = this.envVarList.map(item => ({
           ...item,
           // 与内置环境变量冲突提示
           conflict: this.getConflictMessage(item.key),
@@ -1183,7 +1160,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           varId: data.id,
-          data: data,
+          data,
         });
         this.handleEnvVarSuccess('修改', data);
       } catch (e) {
@@ -1219,9 +1196,7 @@ export default {
     releaseEnv(envName) {
       this.$refs.releaseDropDown.close();
       this.$http
-        .post(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`
-        )
+        .post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`)
         .then(
           (response) => {
             this.$paasMessage({
@@ -1235,7 +1210,7 @@ export default {
               theme: 'error',
               message: errorMsg,
             });
-          }
+          },
         );
       this.setEditedStatus(false);
     },
@@ -1266,7 +1241,7 @@ export default {
       // 目标容器拖拽
       this.mixinBindDragEvent(
         document.querySelector('.tool-transfer-wrapper-cls .target-list .content'),
-        targetLiClass
+        targetLiClass,
       );
     },
 

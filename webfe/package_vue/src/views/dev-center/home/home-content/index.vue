@@ -101,9 +101,7 @@ export default {
       });
     },
     showPanels() {
-      return this.availablePanels.filter((panel) => {
-        return this.panelShowStates[panel.name];
-      });
+      return this.availablePanels.filter(panel => this.panelShowStates[panel.name]);
     },
     appChartInfo() {
       return this.$store.state.baseInfo.appChartData;
@@ -118,7 +116,7 @@ export default {
     showPanels: {
       handler(newPanels) {
         if (newPanels.length > 0) {
-          const currentActiveExists = this.active && newPanels.some((p) => p.name === this.active);
+          const currentActiveExists = this.active && newPanels.some(p => p.name === this.active);
           // 如果没有激活项，或当前激活项不存在，或用户还未手动选择过，则自动选择第一个
           if (!currentActiveExists || !this.userHasManuallySelected) {
             this.active = newPanels[0].name;
@@ -165,7 +163,7 @@ export default {
     // 设置默认激活的面板
     setDefaultActivePanel() {
       if (this.showPanels.length > 0) {
-        const currentActiveExists = this.active && this.showPanels.some((panel) => panel.name === this.active);
+        const currentActiveExists = this.active && this.showPanels.some(panel => panel.name === this.active);
         if (!currentActiveExists) {
           this.active = this.showPanels[0].name;
         }

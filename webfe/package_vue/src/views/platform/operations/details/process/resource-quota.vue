@@ -340,6 +340,12 @@ import SectionContainer from '@/components/section-container';
 
 export default {
   name: 'ResourceQuota',
+  components: {
+    DetailsRow,
+    PrefixSelect,
+    DescriptionFile,
+    SectionContainer,
+  },
   props: {
     moduleId: {
       type: String,
@@ -354,12 +360,6 @@ export default {
       default: '',
     },
   },
-  components: {
-    DetailsRow,
-    PrefixSelect,
-    DescriptionFile,
-    SectionContainer,
-  },
   data() {
     // 通用必填校验规则
     const requiredRule = [
@@ -371,20 +371,20 @@ export default {
     ];
 
     // CPU Request 校验规则生成函数
-    const createCpuRequestRule = (env) => [
+    const createCpuRequestRule = env => [
       ...requiredRule,
       {
-        validator: (value) => this.validateCpuRequest(value, env),
+        validator: value => this.validateCpuRequest(value, env),
         message: this.$t('Requests 不能大于 Limits'),
         trigger: 'change',
       },
     ];
 
     // 内存 Request 校验规则生成函数
-    const createMemoryRequestRule = (env) => [
+    const createMemoryRequestRule = env => [
       ...requiredRule,
       {
-        validator: (value) => this.validateMemoryRequest(value, env),
+        validator: value => this.validateMemoryRequest(value, env),
         message: this.$t('Requests 不能大于 Limits'),
         trigger: 'change',
       },
@@ -495,7 +495,7 @@ export default {
     // 触发指定表单字段的校验
     triggerValidation(formRef, field) {
       this.$refs[formRef]?.validateField(field).catch((e) => {
-        console.error(`Validation error on field:`, e);
+        console.error('Validation error on field:', e);
       });
     },
     // 校验 CPU Requests 是否小于等于 Limits
@@ -521,7 +521,7 @@ export default {
       // 情况三：预设方案，override_plan_name: '预设方案名称'
       const envData = this.processData?.env_overlays?.[env];
       if (envData?.override_plan_name) {
-        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
+        const plan = this.planList.find(item => item.name === envData.override_plan_name);
         return plan?.name || envData.override_plan_name || '--';
       }
 
@@ -529,7 +529,7 @@ export default {
       if (this.formData[env].plan_name === 'custom') {
         return this.$t('自定义');
       }
-      const plan = this.planList.find((item) => item.name === this.formData[env].plan_name);
+      const plan = this.planList.find(item => item.name === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
     },
     // 获取查看态展示的资源数据（兼容情况三：override_plan_name）
@@ -541,7 +541,7 @@ export default {
 
       // 情况三：预设方案，override_plan_name: '预设方案名称'
       if (envData.override_plan_name) {
-        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
+        const plan = this.planList.find(item => item.name === envData.override_plan_name);
         if (plan) {
           return {
             limits: plan.limits || { cpu: '', memory: '' },
@@ -555,13 +555,13 @@ export default {
     // 获取 CPU 对应的 label
     getCpuLabel(value) {
       if (!value) return '--';
-      const option = this.cpuList.find((item) => item.value === value);
+      const option = this.cpuList.find(item => item.value === value);
       return option?.label || value;
     },
     // 获取内存对应的 label
     getMemoryLabel(value) {
       if (!value) return '--';
-      const option = this.memoryList.find((item) => item.value === value);
+      const option = this.memoryList.find(item => item.value === value);
       return option?.label || value;
     },
     // 创建空的 resources 结构
@@ -622,7 +622,7 @@ export default {
         if (data.override_plan_name) {
           this.formData[env].plan_name = data.override_plan_name;
           // 从 planList 中获取对应的 limits 和 requests
-          const plan = this.planList.find((item) => item.name === data.override_plan_name);
+          const plan = this.planList.find(item => item.name === data.override_plan_name);
           if (plan) {
             this.formData[env].resources = {
               limits: plan.limits || { cpu: '', memory: '' },

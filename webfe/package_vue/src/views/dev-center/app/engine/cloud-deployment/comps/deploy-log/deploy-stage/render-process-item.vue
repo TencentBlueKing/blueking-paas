@@ -80,98 +80,98 @@
   </div>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin.js';
-    import RenderStage from '../render-deploy-stage';
-    import StatusItem from './render-status-item';
-    import { formatDate } from '@/common/tools';
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import RenderStage from '../render-deploy-stage';
+import StatusItem from './render-status-item';
+import { formatDate } from '@/common/tools';
 
-    export default {
-        name: '',
-        components: {
-            StatusItem,
-            RenderStage
-        },
-        mixins: [appBaseMixin],
-        props: {
-            title: {
-                type: String,
-                default: ''
-            },
-            subTitle: {
-                type: String,
-                default: ''
-            },
-            status: {
-                type: String,
-                default: 'Running'
-            },
-            instanceName: {
-                type: String,
-                default: ''
-            }
-        },
-        data () {
-            return {
-                curExpanded: this.expanded,
-                instanceLogLoading: false,
-                logs: [],
-                fullDialogVisiable: false
-            };
-        },
-        computed: {
-            canFullScreen () {
-                return this.logs.length > 0;
-            }
-        },
-        methods: {
-            async handleExpanded () {
-                this.curExpanded = !this.curExpanded;
-                if (!this.curExpanded) {
-                    return;
-                }
-                await this.fetchProcessInstanceLog();
-            },
-
-            async fetchProcessInstanceLog () {
-                this.instanceLogLoading = true;
-                try {
-                    const params = {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        data: {
-                            query: {
-                                query_string: '',
-                                terms: {
-                                    pod_name: [this.instanceName]
-                                }
-                            }
-                        }
-                    };
-                    const res = await this.$store.dispatch('processes/getInstanceLog', params);
-                    this.logs = JSON.parse(JSON.stringify(res.logs)).reverse();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    this.instanceLogLoading = false;
-                }
-            },
-
-            handleFullScreen () {
-                this.fullDialogVisiable = true;
-            },
-
-            async handleRefresh () {
-                await this.fetchProcessInstanceLog();
-            },
-
-            formatTime (time) {
-                return time ? formatDate(time * 1000) : '--';
-            }
-        }
+export default {
+  name: '',
+  components: {
+    StatusItem,
+    RenderStage,
+  },
+  mixins: [appBaseMixin],
+  props: {
+    title: {
+      type: String,
+      default: '',
+    },
+    subTitle: {
+      type: String,
+      default: '',
+    },
+    status: {
+      type: String,
+      default: 'Running',
+    },
+    instanceName: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    return {
+      curExpanded: this.expanded,
+      instanceLogLoading: false,
+      logs: [],
+      fullDialogVisiable: false,
     };
+  },
+  computed: {
+    canFullScreen() {
+      return this.logs.length > 0;
+    },
+  },
+  methods: {
+    async handleExpanded() {
+      this.curExpanded = !this.curExpanded;
+      if (!this.curExpanded) {
+        return;
+      }
+      await this.fetchProcessInstanceLog();
+    },
+
+    async fetchProcessInstanceLog() {
+      this.instanceLogLoading = true;
+      try {
+        const params = {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: {
+            query: {
+              query_string: '',
+              terms: {
+                pod_name: [this.instanceName],
+              },
+            },
+          },
+        };
+        const res = await this.$store.dispatch('processes/getInstanceLog', params);
+        this.logs = JSON.parse(JSON.stringify(res.logs)).reverse();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.instanceLogLoading = false;
+      }
+    },
+
+    handleFullScreen() {
+      this.fullDialogVisiable = true;
+    },
+
+    async handleRefresh() {
+      await this.fetchProcessInstanceLog();
+    },
+
+    formatTime(time) {
+      return time ? formatDate(time * 1000) : '--';
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paas-deploy-process-item-wrapper {

@@ -118,62 +118,62 @@
   </bk-sideslider>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+import appBaseMixin from '@/mixins/app-base-mixin';
 
-    export default {
-        name: '',
-        mixins: [appBaseMixin],
-        props: {
-            isShow: {
-                type: Boolean,
-                default: false
-            },
-            title: {
-                type: String,
-                default: ''
-            },
-            siteName: {
-                type: String,
-                default: ''
-            },
-            engineEnable: {
-                type: Boolean,
-                default: true
-            },
-            isEvent: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                isShowSideslider: false,
-                copyText: ''
-            };
-        },
-        computed: {
-            entranceConfig () {
-                return this.$store.state.region.entrance_config;
-            }
-        },
-        watch: {
-            isShow (value) {
-                this.isShowSideslider = !!value;
-                if (this.isShowSideslider) {
-                    this.$nextTick(() => {
-                        const targetDom = document.getElementsByClassName('examples')[0];
-                        this.copyText = targetDom.innerText;
-                    });
-                }
-            }
-        },
-        methods: {
-            handleAnimationEnd () {
-                this.isShowSideslider = false;
-                this.$emit('update:isShow', false);
-            }
-        }
+export default {
+  name: '',
+  mixins: [appBaseMixin],
+  props: {
+    isShow: {
+      type: Boolean,
+      default: false,
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    siteName: {
+      type: String,
+      default: '',
+    },
+    engineEnable: {
+      type: Boolean,
+      default: true,
+    },
+    isEvent: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      isShowSideslider: false,
+      copyText: '',
     };
+  },
+  computed: {
+    entranceConfig() {
+      return this.$store.state.region.entrance_config;
+    },
+  },
+  watch: {
+    isShow(value) {
+      this.isShowSideslider = !!value;
+      if (this.isShowSideslider) {
+        this.$nextTick(() => {
+          const targetDom = document.getElementsByClassName('examples')[0];
+          this.copyText = targetDom.innerText;
+        });
+      }
+    },
+  },
+  methods: {
+    handleAnimationEnd() {
+      this.isShowSideslider = false;
+      this.$emit('update:isShow', false);
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .paas-analysis-sideslider-cls {

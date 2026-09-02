@@ -29,11 +29,6 @@
 <script>
 export default {
   name: 'RenderMemberList',
-  data() {
-    return {
-      fileCloseIcon: require('@static/images/file-close.svg'),
-    };
-  },
   props: {
     data: {
       type: Array,
@@ -47,6 +42,11 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      fileCloseIcon: require('@static/images/file-close.svg'),
+    };
   },
 };
 </script>

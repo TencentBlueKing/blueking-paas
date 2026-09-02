@@ -198,21 +198,20 @@ export default {
       matchingRulesMap: {},
     };
   },
-  created() {
-    this.init();
-  },
   computed: {
     displayPlatformList() {
-      const filterCondition =
-        this.filterValue === 'all'
-          ? () => true
-          : this.filterValue === 'notConfigured'
-          ? (item) => !item.policies
-          : (item) => item.policies;
+      const filterCondition =        this.filterValue === 'all'
+        ? () => true
+        : this.filterValue === 'notConfigured'
+          ? item => !item.policies
+          : item => item.policies;
 
       const filteredTable = this.platformList.filter(filterCondition);
       return this.searchValue ? this.filterByKeyword(filteredTable) : filteredTable;
     },
+  },
+  created() {
+    this.init();
   },
   methods: {
     init() {
@@ -224,9 +223,9 @@ export default {
       ]).finally(() => {
         // 将策略与租户数据重组
         this.platformList = this.tenants
-          .map((tenant) => ({
+          .map(tenant => ({
             ...tenant,
-            policies: this.allPolicies.find((v) => v.tenant_id === tenant.id) ?? null,
+            policies: this.allPolicies.find(v => v.tenant_id === tenant.id) ?? null,
           }))
           .sort((a, b) => {
             if (a.policies === null && b.policies !== null) {
@@ -241,9 +240,9 @@ export default {
           if (v.name === 'all') {
             v.count = this.platformList.length;
           } else if (v.name === 'notConfigured') {
-            v.count = this.platformList.filter((item) => !item.policies).length;
+            v.count = this.platformList.filter(item => !item.policies).length;
           } else {
-            v.count = this.platformList.filter((item) => item.policies).length;
+            v.count = this.platformList.filter(item => item.policies).length;
           }
         });
         this.isTableLoading = false;
@@ -253,7 +252,7 @@ export default {
     // 关键字搜索
     filterByKeyword(list) {
       const lowerCaseKeyword = this.searchValue.toLowerCase();
-      return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
+      return list.filter(item => item.name.toLowerCase().includes(lowerCaseKeyword));
     },
     handlerChange(data) {
       this.filterValue = data.name;
@@ -266,11 +265,10 @@ export default {
     getConditionalType(arrayLength, currentIndex) {
       if (currentIndex === 0) {
         return 'if';
-      } else if (currentIndex === arrayLength - 1) {
+      } if (currentIndex === arrayLength - 1) {
         return 'else';
-      } else {
-        return 'else if';
       }
+      return 'else if';
     },
     // 获取所有租户
     async getTenants() {
@@ -330,7 +328,7 @@ export default {
             h('p', { class: 'tip-text mb5' }, `${this.$t('您可以')}：`),
             h('p', { class: 'tip-text' }, this.$t('1. 联系平台管理员，为当前租户分配可用集群')),
             h('p', { class: 'tip-text' }, this.$t('2. 在 [集群列表] 中添加新集群')),
-          ]
+          ],
         ),
         okText: this.$t('前往添加'),
         confirmFn: () => {

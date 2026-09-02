@@ -48,15 +48,15 @@ export default {
       ];
       // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
-        panels = panels.filter((tab) => tab.name !== 'appMobileMarket');
+        panels = panels.filter(tab => tab.name !== 'appMobileMarket');
       }
       // 普通应用不支持 | feature判断
       if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
-        panels = panels.filter((tab) => tab.name !== 'storage');
+        panels = panels.filter(tab => tab.name !== 'storage');
       }
       // feature判断
       if (!this.curAppInfo.feature?.DOCUMENT_MANAGEMENT) {
-        panels = panels.filter((tab) => tab.name !== 'doc');
+        panels = panels.filter(tab => tab.name !== 'doc');
       }
       return panels;
     },
@@ -81,7 +81,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find((item) => item.name === name) || this.panels[0];
+      const curEnv = this.panels.find(item => item.name === name) || this.panels[0];
       this.$router.push({
         name: curEnv.routeName,
         params: {

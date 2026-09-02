@@ -34,12 +34,12 @@ export default {
          *
          * @param {Object} params search_term, appCode, order_by, limit, offset
          */
-    getIpList ({ commit, state }, { appCode, order_by, limit, offset, search_term }, config = {}) {
+    getIpList({ commit, state }, { appCode, order_by, limit, offset, search_term }, config = {}) {
       const params = {
         order_by,
         limit,
         offset,
-        search_term
+        search_term,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/strategy/?${json2Query(params)}`;
       return http.get(url, config);
@@ -50,10 +50,8 @@ export default {
          *
          * @param {Object} params appCode, ids
          */
-    deleteIp ({ commit, state }, { appCode, ids }, config = {}) {
-      const params = ids.map(item => {
-        return `id=${item}`;
-      }).join('&');
+    deleteIp({ commit, state }, { appCode, ids }, config = {}) {
+      const params = ids.map(item => `id=${item}`).join('&');
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/strategy/?${params}`;
       return http.delete(url, {}, config);
     },
@@ -63,7 +61,7 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, params
          */
-    addIp ({ commit, state }, { appCode, params }, config = {}) {
+    addIp({ commit, state }, { appCode, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/strategy/`;
       return http.post(url, params, config);
     },
@@ -73,7 +71,7 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, params
          */
-    checkIpPermissin ({ commit, state }, { appCode }, config = {}) {
+    checkIpPermissin({ commit, state }, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/switch/`;
       return http.get(url, config);
     },
@@ -83,9 +81,9 @@ export default {
          *
          * @param {Object} params 请求参数：appCode, is_enabled
          */
-    setIpPermissin ({ commit, state }, { appCode, is_enabled }, config = {}) {
+    setIpPermissin({ commit, state }, { appCode, is_enabled }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/switch/`;
-      return http.post(url, { is_enabled: is_enabled }, config);
+      return http.post(url, { is_enabled }, config);
     },
 
     /**
@@ -93,7 +91,7 @@ export default {
          *
          * @param {Object} Obj { appCode, id, params }
          */
-    ipPermissinRenewal ({ commit, state }, { appCode, id, params }, config = {}) {
+    ipPermissinRenewal({ commit, state }, { appCode, id, params }, config = {}) {
       const obj = { ...params };
       if (obj.expires_at === null) {
         delete obj.expires;
@@ -102,6 +100,6 @@ export default {
       }
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/restriction_type/ip/strategy/${id}`;
       return http.patch(url, obj, config);
-    }
-  }
+    },
+  },
 };

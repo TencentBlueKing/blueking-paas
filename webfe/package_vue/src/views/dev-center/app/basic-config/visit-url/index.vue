@@ -388,9 +388,7 @@ export default {
         pathPrefix: [
           {
             regex: /^\/[a-z-z0-9_-]*\/?$/,
-            message: `${this.$t('路径必须以')}"/"${this.$t(
-              '开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'
-            )}`,
+            message: `${this.$t('路径必须以')}"/"${this.$t('开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)')}`,
             trigger: 'blur',
           },
         ],
@@ -617,9 +615,7 @@ export default {
 
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
-      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(
-        (e) => e.environment === env && e.module === payload.name
-      ) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
+      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(e => e.environment === env && e.module === payload.name) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.mouseEnter = true;
@@ -635,7 +631,7 @@ export default {
 
     // 设置为主模块
     handleSetDefault(payload) {
-      this.curClickAppModule = this.curAppModuleList.find((e) => e.name === payload.name) || {}; // 当前点击的模块的所有信息
+      this.curClickAppModule = this.curAppModuleList.find(e => e.name === payload.name) || {}; // 当前点击的模块的所有信息
       this.domainDialog.visiable = true;
       this.domainDialog.moduleName = payload.name;
       this.domainDialog.title = this.$t(`是否设定${payload.name}模块为主模块`);
@@ -652,7 +648,7 @@ export default {
             theme: 'error',
             message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
           });
-        }
+        },
       );
     },
 
@@ -676,9 +672,7 @@ export default {
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
-      const readDataLength = (payload?.envs[envType] || []).filter(
-        (e, readIndex) => !e.isEdit && readIndex <= envIndex
-      ).length;
+      const readDataLength = (payload?.envs[envType] || []).filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
       const validateFromIndex = envIndex - readDataLength; // 当前点击保存的输入框下标
       await this.$refs.urlInfoForm[validateFromIndex].validate(); // 校验
       const curUrlParams = {

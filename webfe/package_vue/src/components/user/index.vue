@@ -81,7 +81,7 @@ export default {
         // 兼容历史 string 数据，可能是逗号分隔的多个值
         return val
           .split(',')
-          .map((s) => s.trim())
+          .map(s => s.trim())
           .filter(Boolean);
       }
       if (typeof val === 'object') {
@@ -107,9 +107,8 @@ export default {
 
         // 对外统一 emit 数组格式（保持父组件接口兼容：.join(), .length, [0] 等数组操作）
         const currentNormalized = this.normalizedValue;
-        const isSame =
-          normalizedVal.length === currentNormalized.length &&
-          normalizedVal.every((v, i) => v === currentNormalized[i]);
+        const isSame =          normalizedVal.length === currentNormalized.length
+          && normalizedVal.every((v, i) => v === currentNormalized[i]);
 
         if (!isSame) {
           this.$emit('input', normalizedVal);
@@ -155,12 +154,12 @@ export default {
         return [];
       }
       if (Array.isArray(val)) {
-        return val.filter((item) => item !== null && item !== undefined && item !== '');
+        return val.filter(item => item !== null && item !== undefined && item !== '');
       }
       if (typeof val === 'string') {
         return val
           .split(',')
-          .map((s) => s.trim())
+          .map(s => s.trim())
           .filter(Boolean);
       }
       if (typeof val === 'object') {
@@ -189,7 +188,7 @@ export default {
       });
       return {
         next: false,
-        results: users.map((user) => ({
+        results: users.map(user => ({
           username: user.english_name,
           display_name: user.chinese_name,
         })),
@@ -197,7 +196,7 @@ export default {
     },
     exactSearchMethod(usernames) {
       const isBatch = Array.isArray(usernames);
-      return Promise.resolve(isBatch ? usernames.map((username) => ({ username })) : { username: usernames });
+      return Promise.resolve(isBatch ? usernames.map(username => ({ username })) : { username: usernames });
     },
     pasteValidator(usernames) {
       return Promise.resolve(usernames);

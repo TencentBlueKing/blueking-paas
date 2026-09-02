@@ -43,7 +43,7 @@ export default {
           label: '空模板',
           value: TEMPLATE_SOURCE_TYPES.EMPTY_TEMPLATE,
         },
-      ].filter((item) => !item.hidden);
+      ].filter(item => !item.hidden);
     },
   },
   methods: {

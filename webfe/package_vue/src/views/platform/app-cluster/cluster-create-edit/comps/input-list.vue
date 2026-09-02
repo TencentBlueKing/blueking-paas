@@ -67,7 +67,7 @@ export default {
       return this.$refs.formRef.validate();
     },
     getData() {
-      return this.formData.servers.map((v) => v.value);
+      return this.formData.servers.map(v => v.value);
     },
     // 设置默认值
     setData(data) {

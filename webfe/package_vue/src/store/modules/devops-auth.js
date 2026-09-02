@@ -33,11 +33,11 @@ export default {
          * TODO：去掉，不再展示列表，改为直接展示代码检查结果
          * @param {Object} params 请求参数：appCode, moduleId, env, limit, offset
          */
-    getCodeReviewList ({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
+    getCodeReviewList({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
       const params = {
         limit,
         offset,
-        env
+        env,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/jobs/?${json2Query(params)}`;
       return http.get(url, config);
@@ -45,9 +45,9 @@ export default {
     /**
          * 判断模块的代码仓库是否支持代码检查功能
          */
-    getCiInfo ({ commit, state }, { appCode, moduleId }, config = {}) {
+    getCiInfo({ commit, state }, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/info/`;
       return http.get(url, config);
-    }
-  }
+    },
+  },
 };

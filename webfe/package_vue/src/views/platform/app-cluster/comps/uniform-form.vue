@@ -65,6 +65,10 @@ import ClusterSelect from './cluster-select.vue';
 import ClusterTransfer from './cluster-transfer.vue';
 export default {
   name: 'UniformForm',
+  components: {
+    ClusterSelect,
+    ClusterTransfer,
+  },
   props: {
     hasEnv: {
       type: Boolean,
@@ -87,10 +91,6 @@ export default {
       default: '如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。',
     },
   },
-  components: {
-    ClusterSelect,
-    ClusterTransfer,
-  },
   data() {
     return {
       // 统一分配-不按环境配置
@@ -99,27 +99,21 @@ export default {
       rules: {
         cluster: [
           {
-            validator: () => {
-              return this.clusters.length;
-            },
+            validator: () => this.clusters.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         stagCluster: [
           {
-            validator: () => {
-              return this.envClusters?.stag?.length;
-            },
+            validator: () => this.envClusters?.stag?.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         prodCluster: [
           {
-            validator: () => {
-              return this.envClusters?.prod?.length;
-            },
+            validator: () => this.envClusters?.prod?.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
@@ -163,7 +157,7 @@ export default {
           (e) => {
             console.error(e.content || e);
             reject(e);
-          }
+          },
         );
       });
     },

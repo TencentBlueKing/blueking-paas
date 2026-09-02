@@ -105,7 +105,7 @@
               href="javascript:void(0);"
               :class="filterIndex === filterKeyboardIndex ? 'active' : ''"
               @click="selectFilter(filter, filterIndex)"
-              >{{ filter.text }}</a
+            >{{ filter.text }}</a
             >
           </li>
         </ul>
@@ -134,7 +134,7 @@
               href="javascript:void(0);"
               :class="fvIndex === filterValueKeyboardIndex ? 'active' : ''"
               @click="selectFilterValue(fv)"
-              >{{ fv.text }}</a
+            >{{ fv.text }}</a
             >
           </li>
         </ul>
@@ -296,7 +296,7 @@ export default {
     const fixedSearchParams = [];
     const fixedSearchParamsIds = [];
     this.fixedSearchParams.forEach((fsp) => {
-      let selected = fsp.list.filter((val) => val.isSelected)[0];
+      let selected = fsp.list.filter(val => val.isSelected)[0];
       if (!selected) {
         selected = fsp.list[0];
       }
@@ -311,7 +311,7 @@ export default {
     const searchParams = [];
     this.filterList.forEach((filter) => {
       if (filter.list) {
-        const selected = filter.list.filter((val) => val.isSelected)[0];
+        const selected = filter.list.filter(val => val.isSelected)[0];
         if (selected) {
           filter.value = selected;
           this.filterValueKey = filter.id;
@@ -330,8 +330,7 @@ export default {
     this.filterListCache.splice(0, this.filterListCache.length, ...filterList);
 
     const { searchWrapper, searchParamsWrapper } = this.$refs;
-    this.searcherDropdownLeft =
-      getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) + this.searchParamsItemMargin;
+    this.searcherDropdownLeft =      getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) + this.searchParamsItemMargin;
 
     // 绑定清除 searchParams 的方法，父组件调用方式如下：
     // this.$refs.bkSearcher.$emit('resetSearchParams')
@@ -405,7 +404,7 @@ export default {
           },
           (err) => {
             console.error(err);
-          }
+          },
         );
       }
     },
@@ -423,7 +422,7 @@ export default {
       });
       this.filterValueList.splice(0, this.filterValueList.length, ...filterValueList);
 
-      const selected = this.filterValueList.filter((val) => val.isSelected)[0];
+      const selected = this.filterValueList.filter(val => val.isSelected)[0];
 
       // 说明选择的是固定参数的 fixedSearchParams
       if (this.fixedSearchParamsIds.indexOf(this.filterValueKey) > -1) {
@@ -482,8 +481,7 @@ export default {
       const { searchWrapper, searchParamsWrapper } = this.$refs;
       // this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper)
       //     + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode)
-      this.searcherDropdownLeft =
-        getActualLeft(searchParamsWrapper)
+      this.searcherDropdownLeft =        getActualLeft(searchParamsWrapper)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)
@@ -516,8 +514,7 @@ export default {
       const valueContainerNode = target.querySelector('.value-container');
 
       const { searchWrapper } = this.$refs;
-      this.searcherDropdownLeft =
-        getActualLeft(target)
+      this.searcherDropdownLeft =        getActualLeft(target)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)
@@ -584,7 +581,7 @@ export default {
         delete sp.value;
         filterList.push(JSON.parse(JSON.stringify(sp)));
       }
-      const item = filterList.filter((item) => sp.id === item.id);
+      const item = filterList.filter(item => sp.id === item.id);
       if (!item.length) {
         filterList.push(JSON.parse(JSON.stringify(sp)));
       }

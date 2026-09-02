@@ -30,7 +30,7 @@ export default {
     /**
          * 获取成员列表
          */
-    getMemberList ({ commit, state }, { appCode }, config = {}) {
+    getMemberList({ commit, state }, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
       return http.get(url, config);
     },
@@ -38,7 +38,7 @@ export default {
     /**
          * 新增成员
          */
-    addMember ({ commit, state }, { appCode, postParams }, config = {}) {
+    addMember({ commit, state }, { appCode, postParams }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
       return http.post(url, postParams, config);
     },
@@ -46,7 +46,7 @@ export default {
     /**
          * 退出应用
          */
-    quitApplication ({ commit, state }, { appCode }, config = {}) {
+    quitApplication({ commit, state }, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/leave/`;
       return http.post(url, {}, config);
     },
@@ -54,7 +54,7 @@ export default {
     /**
          * 角色更新
          */
-    updateRole ({ commit, state }, { appCode, id, params }, config = {}) {
+    updateRole({ commit, state }, { appCode, id, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
       return http.put(url, params, config);
     },
@@ -62,9 +62,9 @@ export default {
     /**
          * 删除成员
          */
-    deleteRole ({ commit, state }, { appCode, id }, config = {}) {
+    deleteRole({ commit, state }, { appCode, id }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
       return http.delete(url, config);
-    }
-  }
+    },
+  },
 };

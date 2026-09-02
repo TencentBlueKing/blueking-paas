@@ -33,9 +33,9 @@ export default {
      *
      * @param {Object} params
      */
-    getOverViewInfo ({ commit, state }, { appCode }) {
+    getOverViewInfo({ commit, state }, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/overview/`;
       return http.get(url);
-    }
-  }
+    },
+  },
 };

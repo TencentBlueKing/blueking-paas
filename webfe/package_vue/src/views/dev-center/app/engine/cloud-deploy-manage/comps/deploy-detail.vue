@@ -556,7 +556,8 @@ import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -762,7 +763,7 @@ export default {
     },
     runningInstanceLength() {
       return this.allProcesses.reduce((p, v) => {
-        const readyInstancesCount = v.instances.filter((instance) => instance.ready).length;
+        const readyInstancesCount = v.instances.filter(instance => instance.ready).length;
         return p + readyInstancesCount;
       }, 0);
     },
@@ -791,8 +792,8 @@ export default {
         if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
         if (
-          !isEqual(newVal, oldVal) &&
-          (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)
+          !isEqual(newVal, oldVal)
+          && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)
         ) {
           this.watchServerPush();
         }
@@ -837,7 +838,7 @@ export default {
       const { proc_specs: packages, instances, processes } = processesData;
       // 如果是下架的进程则 processesData.proc_specs 会有数据
       if (packages.length > 0) {
-        const processNames = processes.map((e) => e.type);
+        const processNames = processes.map(e => e.type);
         packages.forEach((e) => {
           if (!processNames.includes(e.name)) {
             processes.push({
@@ -857,8 +858,8 @@ export default {
       }
       processes.forEach((processItem) => {
         const { type, name } = processItem;
-        const packageInfo = packages.find((item) => item.name === type) || {};
-        const relatedInstances = instances.filter((instance) => instance.process_type === type);
+        const packageInfo = packages.find(item => item.name === type) || {};
+        const relatedInstances = instances.filter(instance => instance.process_type === type);
 
         const processInfo = {
           ...processItem,
@@ -894,7 +895,8 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = dayjs(item.start_time).startOf('minute').fromNow();
+          item.date_time = dayjs(item.start_time).startOf('minute')
+            .fromNow();
           item.isOperate = false;
         });
         allProcesses.push(process);
@@ -938,8 +940,8 @@ export default {
         const cpuRef = this.$refs.cpuLine;
         const memRef = this.$refs.memoryLine;
 
-        cpuRef &&
-          cpuRef.mergeOptions({
+        cpuRef
+          && cpuRef.mergeOptions({
             xAxis: [
               {
                 data: [],
@@ -948,8 +950,8 @@ export default {
             series: [],
           });
 
-        memRef &&
-          memRef.mergeOptions({
+        memRef
+          && memRef.mergeOptions({
             xAxis: [
               {
                 data: [],
@@ -958,16 +960,16 @@ export default {
             series: [],
           });
 
-        cpuRef &&
-          cpuRef.showLoading({
+        cpuRef
+          && cpuRef.showLoading({
             text: this.$t('正在加载'),
             color: '#30d878',
             textColor: '#fff',
             maskColor: 'rgba(255, 255, 255, 0.8)',
           });
 
-        memRef &&
-          memRef.showLoading({
+        memRef
+          && memRef.showLoading({
             text: this.$t('正在加载'),
             color: '#30d878',
             textColor: '#fff',
@@ -991,7 +993,7 @@ export default {
         {
           start_time: initStartDate,
           end_time: initEndDate,
-        }
+        },
       );
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.isDatePickerOpen = false;
@@ -1102,8 +1104,8 @@ export default {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memoryLine;
 
-      cpuRef &&
-        cpuRef.mergeOptions({
+      cpuRef
+        && cpuRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -1125,8 +1127,8 @@ export default {
           ],
         });
 
-      memRef &&
-        memRef.mergeOptions({
+      memRef
+        && memRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -1340,7 +1342,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
       }
     },
 
@@ -1349,7 +1351,8 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute').fromNow();
+      instanceData.date_time = dayjs(instanceData.start_time).startOf('minute')
+        .fromNow();
       this.allProcesses.forEach((process) => {
         if (process.type === instanceData.process_type) {
           // 新增

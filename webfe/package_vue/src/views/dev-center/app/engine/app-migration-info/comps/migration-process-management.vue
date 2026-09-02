@@ -293,7 +293,7 @@ export default {
       const packages = processesData.process_packages;
 
       processes.forEach((processeItem) => {
-        const packageInfo = packages.find((item) => item.name === processeItem.type) || {};
+        const packageInfo = packages.find(item => item.name === processeItem.type) || {};
         processeItem.instancesList = [];
         processeItem.autoscaling = packageInfo.autoscaling;
         // 普通扩缩容
@@ -314,7 +314,7 @@ export default {
     // 轮询进程列表
     pollingProcesses(processType) {
       this.pollingId = setInterval(() => {
-        const curProcess = this.allProcesses.find((process) => process.type === processType) || {};
+        const curProcess = this.allProcesses.find(process => process.type === processType) || {};
         // 正常状态停止轮询
         if (this.isNormalStatus(curProcess)) {
           this.stopPolling();

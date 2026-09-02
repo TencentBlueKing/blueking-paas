@@ -206,9 +206,7 @@ export default {
         sourceDir: [
           {
             regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
-            message: this.$t(
-              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
-            ),
+            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
             trigger: 'blur',
           },
         ],
@@ -231,9 +229,7 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t(
-          '如何设置部署目录'
-        )}</a>`,
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
         placements: ['right'],
       },
     };

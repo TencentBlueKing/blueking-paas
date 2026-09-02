@@ -36,5 +36,7 @@ module.exports = {
     'vue/space-infix-ops': 'off',
     'vue/object-curly-spacing': 'off',
     'vue/multi-word-component-names': 'off',
+    // 保持属性访问写法，禁止 eslint --fix 自动转换为解构赋值
+    'prefer-destructuring': 'off',
   },
 };

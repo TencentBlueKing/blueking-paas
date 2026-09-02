@@ -753,7 +753,7 @@ export default {
         name: routeName,
         params: {
           id: appItem.application.code,
-          moduleId: appItem.application.modules.find((item) => item.is_default).name,
+          moduleId: appItem.application.modules.find(item => item.is_default).name,
         },
       });
     },
@@ -908,7 +908,7 @@ export default {
     // 模块详情展开处理
     handleExpandRow(row) {
       if (this.expandRowKeys.includes(row.application.code)) {
-        this.expandRowKeys = this.expandRowKeys.filter((item) => item !== row.application.code);
+        this.expandRowKeys = this.expandRowKeys.filter(item => item !== row.application.code);
         return;
       }
       this.expandRowKeys.push(row.application.code);
@@ -916,10 +916,10 @@ export default {
     // 表格筛选
     handleFilterChange(filds) {
       if (filds.region_name) {
-        this.tableFilters['region'] = filds.region_name.length ? filds.region_name[0] : '';
+        this.tableFilters.region = filds.region_name.length ? filds.region_name[0] : '';
       }
       if (filds.app_tenant_mode) {
-        this.tableFilters['tenant'] = filds.app_tenant_mode.length ? filds.app_tenant_mode[0] : '';
+        this.tableFilters.tenant = filds.app_tenant_mode.length ? filds.app_tenant_mode[0] : '';
       }
       this.fetchAppList();
     },

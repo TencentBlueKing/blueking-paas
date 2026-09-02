@@ -31,7 +31,7 @@ export default {
          *
          * @param {Object} params
          */
-    getDocumentInstance ({ commit, state }, params) {
+    getDocumentInstance({ commit, state }, params) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
       return http.get(url);
     },
@@ -41,7 +41,7 @@ export default {
          *
          * @param {Object} params
          */
-    updateDocumentInstance ({ commit, state }, params) {
+    updateDocumentInstance({ commit, state }, params) {
       const requestParams = Object.assign({}, params);
       delete requestParams.appCode;
       const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
@@ -53,12 +53,12 @@ export default {
          *
          * @param {Object} params
          */
-    updateDocumentInstanceByExist ({ commit, state }, params) {
+    updateDocumentInstanceByExist({ commit, state }, params) {
       const requestParams = Object.assign({}, params);
       delete requestParams.appCode;
       delete requestParams.id;
       const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/${params.id}/`;
       return http.put(url, requestParams);
-    }
-  }
+    },
+  },
 };

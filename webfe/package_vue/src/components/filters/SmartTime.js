@@ -20,13 +20,14 @@ import Vue from 'vue';
 import dayjs from '@/common/dayjs';
 
 // 时间格式过滤器
-Vue.filter('time-smart', function (value, type) {
+Vue.filter('time-smart', (value, type) => {
   let formatTime;
   const curYear = new Date().getFullYear();
   switch (type) {
     case 'fromNow':
       // 距离当前时间多久
-      formatTime = dayjs(value).startOf('minute').fromNow();
+      formatTime = dayjs(value).startOf('minute')
+        .fromNow();
       break;
     case 'smartShorten':
       // 当年日期显示：07-25 16:16

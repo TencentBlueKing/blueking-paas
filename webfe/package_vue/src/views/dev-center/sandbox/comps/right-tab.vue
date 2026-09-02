@@ -112,8 +112,8 @@ import log from './log.vue';
 const BODY_LOCK_CLASS = 'sandbox-overflow-hidden-body-lock';
 
 export default {
-  components: { configInfo, log },
   name: 'SandboxTab',
+  components: { configInfo, log },
   props: {
     data: {
       type: Object,

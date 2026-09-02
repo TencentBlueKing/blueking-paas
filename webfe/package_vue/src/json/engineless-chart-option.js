@@ -29,14 +29,14 @@ export default {
       textStyle: {
         color: '#979BA5',
         fontWeight: 'normal',
-        fontSize: 12
-      }
+        fontSize: 12,
+      },
     },
     grid: {
       left: '5%',
       right: '4%',
       bottom: '10%',
-      containLabel: true
+      containLabel: true,
     },
     legend: {
       show: true,
@@ -49,12 +49,12 @@ export default {
         lineHeight: 14,
         rich: {
           a: {
-            verticalAlign: 'middle'
-          }
+            verticalAlign: 'middle',
+          },
         },
-        padding: [0, 0, -2, 0]
+        padding: [0, 0, -2, 0],
       },
-      data: [i18n.t('API 数量')]
+      data: [i18n.t('API 数量')],
     },
     xAxis: {
       type: 'category',
@@ -63,24 +63,24 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#DCDEE5'
-        }
+          color: '#DCDEE5',
+        },
       },
       // 设置横轴坐标刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置横轴文字
       axisLabel: {
         color: '#979BA5',
-        formatter (value, index) {
+        formatter(value, index) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
           }
           return ret;
-        }
-      }
+        },
+      },
     },
     yAxis: {
       type: 'value',
@@ -88,15 +88,15 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#DCDEE5'
-        }
+          color: '#DCDEE5',
+        },
       },
       // 设置纵轴刻度
       axisTick: {
-        show: false
+        show: false,
       },
       axisLabel: {
-        color: '#979BA5'
+        color: '#979BA5',
       },
       // 设置网格s
       splitLine: {
@@ -104,15 +104,15 @@ export default {
         // 设置纵轴文字
         axisLabel: {
           color: '#8a8f99',
-          formatter (value, index) {
+          formatter(value, index) {
             return `${value}`;
-          }
+          },
         },
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
-      }
+          type: 'dashed',
+        },
+      },
     },
     series: [
       {
@@ -122,10 +122,10 @@ export default {
         barMaxWidth: 24,
         itemStyle: {
           normal: {
-            color: '#3A84FF'
-          }
-        }
-      }
-    ]
-  }
+            color: '#3A84FF',
+          },
+        },
+      },
+    ],
+  },
 };

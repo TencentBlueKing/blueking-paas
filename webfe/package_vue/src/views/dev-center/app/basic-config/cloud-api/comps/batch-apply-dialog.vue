@@ -163,7 +163,7 @@ export default {
     apiType: {
       type: String,
       default: 'gateway',
-      validator: (value) => ['gateway', 'component', 'mcp-service'].includes(value),
+      validator: value => ['gateway', 'component', 'mcp-service'].includes(value),
     },
     // 是否需要申请时间
     isApplyTime: {
@@ -185,11 +185,11 @@ export default {
     ...mapState(['curUserInfo']),
     // 可申请
     applyRows() {
-      return this.rows.filter((item) => !item.applyDisabled);
+      return this.rows.filter(item => !item.applyDisabled);
     },
     // 可续期
     renewalRows() {
-      return this.rows.filter((item) => !item.renewDisabled);
+      return this.rows.filter(item => !item.renewDisabled);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -207,7 +207,7 @@ export default {
     },
     // 是否有开启Oauth2公有客户端的MCP Server
     hasOauth2PublicClientEnabledServer() {
-      return this.isMcpService && this.rows.some((item) => item.oauth2_public_client_enabled);
+      return this.isMcpService && this.rows.some(item => item.oauth2_public_client_enabled);
     },
     alertTxt() {
       return this.$t('将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限', {
@@ -275,13 +275,13 @@ export default {
           data: {
             ...commonData,
             ...extendedData,
-            component_ids: this.applyRows.map((item) => item.id),
+            component_ids: this.applyRows.map(item => item.id),
           },
         },
         'mcp-service': {
           data: {
             ...commonData,
-            mcp_server_ids: this.applyRows.map((item) => item.id),
+            mcp_server_ids: this.applyRows.map(item => item.id),
             applied_by: this.curUserInfo.username,
           },
         },
@@ -290,7 +290,7 @@ export default {
           data: {
             ...commonData,
             ...extendedData,
-            resource_ids: this.applyRows.map((item) => item.id),
+            resource_ids: this.applyRows.map(item => item.id),
             grant_dimension: 'resource',
           },
         },
@@ -342,7 +342,7 @@ export default {
         {
           reason: '',
           expired: 6,
-        }
+        },
       );
       this.$emit('update:show', false);
       this.$emit('after-leave');

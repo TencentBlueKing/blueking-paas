@@ -276,8 +276,8 @@ export default {
     },
     isConflict() {
       if (
-        this.packageData &&
-        this.packageData.app_description?.code === this.packageData.original_app_description?.code
+        this.packageData
+        && this.packageData.app_description?.code === this.packageData.original_app_description?.code
       ) {
         return false;
       }

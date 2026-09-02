@@ -388,10 +388,10 @@ const defaultMirrorData = {
 };
 
 export default {
-  mixins: [appBaseMixin, transferDrag],
   components: {
     ExamplesDirectory,
   },
+  mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       isMirrorEdit: false,
@@ -475,13 +475,11 @@ export default {
     },
     // 构建工具
     buildpacksList() {
-      const buildpacks = this.mirrorData.buildpacks.map(
-        (item) => `${item.display_name || item.name} (${item.description || '--'})`
-      );
+      const buildpacks = this.mirrorData.buildpacks.map(item => `${item.display_name || item.name} (${item.description || '--'})`);
       return buildpacks;
     },
     baseImageText() {
-      const result = this.baseImageList.find((item) => item.image === this.mirrorData.bp_stack_name);
+      const result = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
       if (result) {
         return result.name || result.image;
       }
@@ -579,7 +577,7 @@ export default {
     // 设置当前基础镜像构建工具
     setTools() {
       // 筛选当前镜像构建工具列表
-      const curTools = this.baseImageList.find((item) => item.image === this.mirrorData.bp_stack_name);
+      const curTools = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
       const buildpacks = curTools?.buildpacks ? [...curTools?.buildpacks] : [];
       const result = [];
       // 兼容穿梭框右侧排序问题
@@ -597,7 +595,7 @@ export default {
 
       // 当已选工具项
       if (selectedToolList.length) {
-        this.targetToolList = selectedToolList.map((tool) => tool.id);
+        this.targetToolList = selectedToolList.map(tool => tool.id);
       }
     },
 
@@ -661,7 +659,7 @@ export default {
       if (data.build_method === 'buildpack') {
         const targetToolIds = this.mixinTargetBuildpackIds || this.targetToolValues;
         // 构建工具
-        data.buildpacks = targetToolIds.map((id) => this.sourceToolList.find((tool) => tool.id === id));
+        data.buildpacks = targetToolIds.map(id => this.sourceToolList.find(tool => tool.id === id));
       } else {
         data.bp_stack_name = null;
 

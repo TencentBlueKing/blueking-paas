@@ -61,7 +61,7 @@
           :key="item.id"
           class-name="custom-column-td"
           :render-header="$renderHeader"
-          #default="{ row }"
+          v-slot="{ row }"
         >
           <div :class="['cell-child-cls', { 'not-configured': !bindMap[row.tenant_id]?.[item.uuid] }]">
             <IconStatus :configured="bindMap[row.tenant_id]?.[item.uuid]" />
@@ -120,11 +120,8 @@ export default {
   methods: {
     filterByKeyword(list) {
       const lowerCaseKeyword = this.searchValue.toLocaleLowerCase();
-      return list.filter(
-        (item) =>
-          item.tenant_id?.toLocaleLowerCase().includes(lowerCaseKeyword) ||
-          item.tenant_name?.toLocaleLowerCase().includes(lowerCaseKeyword)
-      );
+      return list.filter(item => item.tenant_id?.toLocaleLowerCase().includes(lowerCaseKeyword)
+          || item.tenant_name?.toLocaleLowerCase().includes(lowerCaseKeyword));
     },
     // 获取增强服务column
     async getOverviewServices() {

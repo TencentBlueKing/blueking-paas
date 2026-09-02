@@ -93,7 +93,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curPanel = this.panels.find((item) => item.name === name);
+      const curPanel = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curPanel.routeName,
         params: {

@@ -304,12 +304,10 @@ export default {
       let filteredList = [...this.varList];
 
       if (this.active !== 'all') {
-        filteredList = filteredList.filter(
-          (item) => item.environment_name === this.active || item.isNew || item.isBatchDeleted
-        );
+        filteredList = filteredList.filter(item => item.environment_name === this.active || item.isNew || item.isBatchDeleted);
       }
       // 过滤掉标记为删除的行
-      return filteredList.filter((item) => !item.isBatchDeleted);
+      return filteredList.filter(item => !item.isBatchDeleted);
     },
   },
   watch: {
@@ -330,7 +328,7 @@ export default {
   methods: {
     // 初始化数据
     initData() {
-      this.varList = cloneDeep(this.list).map((item) => ({
+      this.varList = cloneDeep(this.list).map(item => ({
         ...item,
         isEditing: false,
         // 替换为前端展示占位符
@@ -358,7 +356,7 @@ export default {
           trigger: 'blur',
         },
         {
-          validator: (value) => this.validateDuplicateKey(value, index),
+          validator: value => this.validateDuplicateKey(value, index),
           message: this.$t('该环境下已存在相同KEY的变量'),
           trigger: 'blur',
         },
@@ -393,12 +391,10 @@ export default {
       if (!currentRow || !currentRow.environment_name) return true;
 
       // 查找相同环境和KEY的行
-      const duplicateCount = this.formData.varList.filter(
-        (item, i) =>
-          i !== index && // 排除当前行
-          item.key === value &&
-          item.environment_name === currentRow.environment_name &&
-          !item.isBatchDeleted // 排除标记删除的行
+      const duplicateCount = this.formData.varList.filter((item, i) => i !== index // 排除当前行
+          && item.key === value
+          && item.environment_name === currentRow.environment_name
+          && !item.isBatchDeleted, // 排除标记删除的行
       ).length;
 
       return duplicateCount === 0;
@@ -406,8 +402,8 @@ export default {
 
     // 清除所有未保存的新建行
     cleanNewRows() {
-      this.varList = this.varList.filter((item) => !item.isNew);
-      this.formData.varList = this.formData.varList.filter((item) => !item.isNew);
+      this.varList = this.varList.filter(item => !item.isNew);
+      this.formData.varList = this.formData.varList.filter(item => !item.isNew);
     },
 
     // 同步表单数据与过滤后的列表
@@ -484,7 +480,7 @@ export default {
 
     // 取消所有编辑状态
     cancelAllEditing() {
-      const editingRows = [...this.varList].filter((item) => item.isEditing);
+      const editingRows = [...this.varList].filter(item => item.isEditing);
       editingRows.forEach((row) => {
         this.cancelEdit(row);
       });
@@ -493,13 +489,13 @@ export default {
     // 取消单个编辑行
     cancelEdit(row) {
       if (row.isNew) {
-        const index = this.varList.findIndex((item) => item === row);
+        const index = this.varList.findIndex(item => item === row);
         if (index !== -1) {
           this.varList.splice(index, 1);
           this.formData.varList.splice(index, 1);
         }
       } else {
-        const originalData = this.list.find((item) => item.id === row.id) || {};
+        const originalData = this.list.find(item => item.id === row.id) || {};
         Object.assign(row, originalData, {
           isEditing: false,
           // 替换为前端展示占位符
@@ -549,9 +545,7 @@ export default {
 
     // 设置指定行的编辑状态（供父组件调用）
     setEditingStatus(data, isEditing) {
-      const curIndex = this.varList.findIndex(
-        (item) => item.key === data.key && item.environment_name === data.environment_name
-      );
+      const curIndex = this.varList.findIndex(item => item.key === data.key && item.environment_name === data.environment_name);
       const row = this.varList[curIndex];
       if (row) {
         row.isEditing = isEditing;
@@ -615,9 +609,7 @@ export default {
 
     // 批量删除行
     batchDel(row) {
-      const deleteIndex = this.varList.findIndex(
-        (item) => item.id === row.id && item.environment_name === row.environment_name
-      );
+      const deleteIndex = this.varList.findIndex(item => item.id === row.id && item.environment_name === row.environment_name);
       // 标记为批量删除状态
       this.$set(this.varList[deleteIndex], 'isBatchDeleted', true);
       this.syncFormDataWithFilteredList();
@@ -629,8 +621,8 @@ export default {
         // 数据没有变化，校验失败
         await this.$refs.validateForm.validate();
         const modifiedData = this.varList
-          .filter((item) => !item.isBatchDeleted) // 过滤掉标记删除的项
-          .map((row) => this.getCleanVariable(row));
+          .filter(item => !item.isBatchDeleted) // 过滤掉标记删除的项
+          .map(row => this.getCleanVariable(row));
         // 触发批量保存事件
         this.$emit('batch-save', modifiedData);
         this.batchCancel();

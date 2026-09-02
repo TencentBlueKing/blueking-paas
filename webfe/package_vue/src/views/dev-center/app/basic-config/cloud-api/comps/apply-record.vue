@@ -490,12 +490,10 @@ export default {
       return list;
     },
     statusFilters() {
-      return this.statusList.map((v) => {
-        return {
-          text: v.name,
-          value: v.id,
-        };
-      });
+      return this.statusList.map(v => ({
+        text: v.name,
+        value: v.id,
+      }));
     },
     searchSelectData() {
       const isTenantMode = this.isMultiTenantDisplayMode || false;
@@ -559,8 +557,8 @@ export default {
           value: this.isMcpService
             ? this.$t('按 MCP Service')
             : this.curRecord.grant_dimension === 'resource'
-            ? this.$t('按资源')
-            : this.$t('按网关'),
+              ? this.$t('按资源')
+              : this.$t('按网关'),
           show: true,
         });
       }
@@ -610,15 +608,15 @@ export default {
           label: this.isMcpService
             ? this.$t('MCP Server')
             : this.isComponentApi
-            ? this.$t('系统名称')
-            : this.$t('网关名称'),
+              ? this.$t('系统名称')
+              : this.$t('网关名称'),
           value: this.isMcpService
             ? this.curRecord.name
             : this.isComponentApi
-            ? this.curRecord.system_name
-            : this.curRecord.gateway_name,
+              ? this.curRecord.system_name
+              : this.curRecord.gateway_name,
           show: true,
-        }
+        },
       );
       return fields;
     },
@@ -639,7 +637,7 @@ export default {
       this.currentBackup = value;
     },
     searchSelectValue(newVal) {
-      this.searchData = newVal.length ? Object.fromEntries(newVal.map((v) => [v.id, v.values[0].id])) : {};
+      this.searchData = newVal.length ? Object.fromEntries(newVal.map(v => [v.id, v.values[0].id])) : {};
       this.resetPagination();
       this.fetchList();
     },
@@ -663,7 +661,7 @@ export default {
     // 通过 URL query 参数初始化类型
     initTypeFromQuery() {
       const queryType = this.$route.query.type;
-      if (queryType && this.typeList.some((item) => item.id === queryType)) {
+      if (queryType && this.typeList.some(item => item.id === queryType)) {
         this.typeValue = queryType;
       }
     },
@@ -684,13 +682,13 @@ export default {
           current: 1,
           limit: 10,
           count: 0,
-        }
+        },
       );
     },
 
     // 状态展示文案
     getStatusDisplay(status) {
-      const data = this.statusList.find((item) => item.id === status);
+      const data = this.statusList.find(item => item.id === status);
       if (data) {
         return data.name;
       }
@@ -748,7 +746,7 @@ export default {
 
     // mcp service 数据格式化
     formatMcpServiceData(data) {
-      return data.map((item) => ({
+      return data.map(item => ({
         ...item.record,
         ...item.mcp_server,
         ...item,
@@ -782,11 +780,11 @@ export default {
         limit: this.pagination.limit,
         offset: this.pagination.limit * (this.pagination.current - 1),
         appCode: this.appCode,
-        applied_by: this.searchData['applied_by'] || '',
+        applied_by: this.searchData.applied_by || '',
         apply_status: this.statusValue,
         applied_time_start: new Date(this.dateRange.startTime).getTime() / 1000,
         applied_time_end: new Date(this.dateRange.endTime).getTime() / 1000,
-        query: this.searchData['keyword'] || '',
+        query: this.searchData.keyword || '',
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);

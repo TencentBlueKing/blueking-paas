@@ -287,7 +287,7 @@ export default {
           return;
         }
         // 服务服务id
-        const serviceId = services?.find((v) => v.name === GCS_MYSQL_NAME)?.service_id;
+        const serviceId = services?.find(v => v.name === GCS_MYSQL_NAME)?.service_id;
         this.getServiceInstances(params, serviceId);
       } catch (e) {
         this.catchErrorHandler(e);

@@ -146,7 +146,7 @@ export default {
     },
     // 内置方案禁用操作的 tooltip 配置
     builtinTooltipConfig() {
-      return (row) => ({
+      return row => ({
         content: row.is_builtin ? this.$t('平台内置方案不支持操作') : '',
         disabled: !row.is_builtin,
       });

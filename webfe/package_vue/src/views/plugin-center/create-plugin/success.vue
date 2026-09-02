@@ -130,8 +130,7 @@ export default {
     this.init();
   },
   mounted() {
-    const objectKey =
-      localStorage.getItem(this.$route.query.key) === 'undefined' ? '' : localStorage.getItem(this.$route.query.key);
+    const objectKey =      localStorage.getItem(this.$route.query.key) === 'undefined' ? '' : localStorage.getItem(this.$route.query.key);
     this.extraInfo = JSON.parse(objectKey || '{}');
   },
   methods: {

@@ -378,7 +378,7 @@ export default {
     async fetchPluginTypeList() {
       try {
         const typeList = await this.$store.dispatch('plugin/getPluginsTypeList');
-        this.curSchemas = typeList.find((t) => t.plugin_type.id === this.curPluginInfo.pd_id);
+        this.curSchemas = typeList.find(t => t.plugin_type.id === this.curPluginInfo.pd_id);
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -518,8 +518,8 @@ export default {
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef &&
-        chartRef.mergeOptions({
+      chartRef
+        && chartRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -562,7 +562,7 @@ export default {
     },
     // 切换仪表盘
     handleChange(name) {
-      this.displayDashboardData = this.data.find((v) => v.name === name);
+      this.displayDashboardData = this.data.find(v => v.name === name);
     },
     toPublish() {
       this.$router.push({

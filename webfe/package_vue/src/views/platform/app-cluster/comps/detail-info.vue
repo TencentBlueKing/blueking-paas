@@ -175,7 +175,7 @@ export default {
       };
     },
     clusterSource() {
-      return this.displayInfoData['cluster_source'];
+      return this.displayInfoData.cluster_source;
     },
     baseInfoKeys() {
       const keysArray = [
@@ -197,7 +197,7 @@ export default {
           0, // 插入到正确的位置以保持顺序
           { key: 'ca', value: this.$t('证书认证机构') },
           { key: 'cert', value: this.$t('客户端证书') },
-          { key: 'key', value: this.$t('客户端密钥') }
+          { key: 'key', value: this.$t('客户端密钥') },
         );
       }
       return keysArray.reduce((acc, item) => {

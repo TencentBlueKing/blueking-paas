@@ -33,5 +33,5 @@ export default {
     Object.keys(directives).forEach((key) => {
       Vue.directive(key, directives[key]);
     });
-  }
+  },
 };

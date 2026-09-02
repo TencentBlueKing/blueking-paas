@@ -33,7 +33,8 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <span class="tips"
+            <span
+              class="tips"
               v-bk-overflow-tips
               v-dompurify-html="namespaceTips"
             >

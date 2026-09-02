@@ -140,7 +140,7 @@ export default defineComponent({
     const handleTabChange = () => {
       if (props.isTrace) {
         const category = curAppInfo.value.application?.type === 'cloud_native' ? '云原生应用' : '普通应用';
-        const label = props.navList.find((item) => item.name === curActive.value).label;
+        const label = props.navList.find(item => item.name === curActive.value).label;
         instance.proxy.sendEventTracking({ id: traceIds[label], action: 'view', category });
       }
       emit('change', curActive.value);
@@ -151,7 +151,7 @@ export default defineComponent({
     };
 
     const handleChangeModule = (moduleName) => {
-      const module = props.moduleList.find((item) => item.name === moduleName) || {};
+      const module = props.moduleList.find(item => item.name === moduleName) || {};
       emit('change-module', module);
       store.commit('updateCurAppModule', module);
       // 根据模块刷新当前路由

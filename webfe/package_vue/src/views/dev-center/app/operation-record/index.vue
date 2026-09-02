@@ -275,7 +275,7 @@ export default {
       return this.$route.params.id;
     },
     moduleFilters() {
-      return this.curAppModuleList.map((m) => ({ value: m.name, text: m.name }));
+      return this.curAppModuleList.map(m => ({ value: m.name, text: m.name }));
     },
     dateShortcuts() {
       return createTimeShortcuts(this.$i18n);
@@ -380,9 +380,7 @@ export default {
     getDiffData(row) {
       const { module_name, environment, data_before, data_after } = row;
 
-      const getDataPromise = (data) => {
-        return data ? this.getDeployVersionDetails(module_name, environment, data) : Promise.resolve(null);
-      };
+      const getDataPromise = data => (data ? this.getDeployVersionDetails(module_name, environment, data) : Promise.resolve(null));
 
       const promises = [getDataPromise(data_before?.data), getDataPromise(data_after?.data)];
 
@@ -433,7 +431,7 @@ export default {
     // 时间筛选
     handleDateChange(date) {
       // 清空
-      if (date?.every((t) => t === '')) {
+      if (date?.every(t => t === '')) {
         this.dateParams = {};
         this.getRecords(1);
         return;

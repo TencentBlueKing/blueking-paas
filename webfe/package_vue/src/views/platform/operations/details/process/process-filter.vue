@@ -53,11 +53,6 @@
 <script>
 export default {
   name: 'ProcessFilter',
-  data() {
-    return {
-      deployIcon: require('@static/images/deploy-4.svg'),
-    };
-  },
   props: {
     loading: {
       type: Boolean,
@@ -79,6 +74,11 @@ export default {
       type: String,
       default: '',
     },
+  },
+  data() {
+    return {
+      deployIcon: require('@static/images/deploy-4.svg'),
+    };
   },
   computed: {
     currentModule: {

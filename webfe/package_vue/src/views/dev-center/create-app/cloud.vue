@@ -10,8 +10,8 @@
         :title="
           isAllowCreateApp
             ? $t(
-                '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
-              )
+              '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
+            )
             : notAllowCreateAppMessage
         "
       ></bk-alert>
@@ -899,10 +899,9 @@ export default {
               const reg = this.isBkLesscode ? /^[a-z]{1,20}$/ : /^[a-z][a-z0-9-]{2,19}$/;
               return reg.test(val);
             },
-            message: () =>
-              this.isBkLesscode
-                ? this.$t('格式不正确，由小写字母组成，长度小于 20 个字符')
-                : this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            message: () => (this.isBkLesscode
+              ? this.$t('格式不正确，由小写字母组成，长度小于 20 个字符')
+              : this.$t('请输入 3-20 字符的小写字母、数字、连字符(-)，以小写字母开头')),
             trigger: 'blur',
           },
         ],
@@ -922,10 +921,9 @@ export default {
               const reg = this.isBkLesscode ? /^[\u4e00-\u9fa5a-zA-Z0-9]{1,20}$/ : /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
               return reg.test(val);
             },
-            message: () =>
-              this.isBkLesscode
-                ? this.$t('由汉字、英文字母、数字组成，长度不超过 20 个字符')
-                : this.$t('由汉字、英文字母、数字、连字符（-）组成，长度不超过 20 个字符'),
+            message: () => (this.isBkLesscode
+              ? this.$t('由汉字、英文字母、数字组成，长度不超过 20 个字符')
+              : this.$t('由汉字、英文字母、数字、连字符（-）组成，长度不超过 20 个字符')),
             trigger: 'blur',
           },
         ],
@@ -935,9 +933,7 @@ export default {
               const reg = /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/;
               return reg.test(val);
             },
-            message: this.$t(
-              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
-            ),
+            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
             trigger: 'blur',
           },
         ],
@@ -993,9 +989,7 @@ export default {
       curRepoDir: '',
       // 是否允许创建应用
       isAllowCreateApp: true,
-      notAllowCreateAppMessage: this.$t(
-        '当前用户无可用的应用集群，无法创建应用；请联系平台管理员添加集群或调整集群分配策略。'
-      ),
+      notAllowCreateAppMessage: this.$t('当前用户无可用的应用集群，无法创建应用；请联系平台管理员添加集群或调整集群分配策略。'),
       // 代码仓库配置
       codeRepositoryConfig: {
         type: 'existing',
@@ -1009,17 +1003,17 @@ export default {
     ...mapGetters(['tenantId', 'isShowTenant']),
     isCodePrefixMatched() {
       if (!this.formData.code || !this.reservedPrefixes.length) return false;
-      return this.reservedPrefixes.some((prefix) => this.formData.code.startsWith(prefix));
+      return this.reservedPrefixes.some(prefix => this.formData.code.startsWith(prefix));
     },
     curSourceControl() {
-      return this.sourceControlTypes.find((item) => item.value === this.sourceControlTypeItem);
+      return this.sourceControlTypes.find(item => item.value === this.sourceControlTypeItem);
     },
     cloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
     },
     clusterList() {
       // TODO（mh）目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
-      return this.advancedOptionsObj[this.regionChoose]?.['prod'] || [];
+      return this.advancedOptionsObj[this.regionChoose]?.prod || [];
     },
     mirrorExamplePlaceholder() {
       return `${this.$t('请输入镜像仓库，如')}：${
@@ -1076,8 +1070,7 @@ export default {
         Go: 'go.mod',
       };
       // 获取当前语言类型
-      const currentLanguage =
-        this.getCurrentTemplate()?.language || (this.isEmptyTemplate ? 'Python' : this.buttonActive) || 'Python';
+      const currentLanguage =        this.getCurrentTemplate()?.language || (this.isEmptyTemplate ? 'Python' : this.buttonActive) || 'Python';
 
       return [{ name: languageFileMap[currentLanguage] || languageFileMap.Python }];
     },
@@ -1209,8 +1202,8 @@ export default {
         },
       };
       if (
-        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
-        ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP
+        && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
       ) {
         data.source_config.source_repo_url = this.repoData.url;
         data.source_config.source_repo_auth_info = {
@@ -1269,11 +1262,11 @@ export default {
       }
       // 优先从插件模板中查找
       if (this.isBkPlugin && this.curPluginTemplate) {
-        return this.pluginTmpls.find((v) => v.name === this.curPluginTemplate);
+        return this.pluginTmpls.find(v => v.name === this.curPluginTemplate);
       }
       // 从语言模板中查找
       if (this.languagesList && this.formData.sourceInitTemplate) {
-        return this.languagesList.find((item) => item.name === this.formData.sourceInitTemplate);
+        return this.languagesList.find(item => item.name === this.formData.sourceInitTemplate);
       }
       return null;
     },
@@ -1312,12 +1305,11 @@ export default {
         });
 
         // 判断是否提供选择仓库类型
-        this.codeRepositoryConfig.creationRepositories = res.filter((item) => item.repo_creation_enabled);
+        this.codeRepositoryConfig.creationRepositories = res.filter(item => item.repo_creation_enabled);
 
-        this.sourceControlTypeItem =
-          this.sourceControlTypes.find((item) => item.imgSrc === this.sourceControlTypeItem)?.imgSrc ??
-          this.sourceControlTypes[0]?.imgSrc;
-        const sourceControlTypeValues = this.sourceControlTypes.map((item) => item.value);
+        this.sourceControlTypeItem =          this.sourceControlTypes.find(item => item.imgSrc === this.sourceControlTypeItem)?.imgSrc
+          ?? this.sourceControlTypes[0]?.imgSrc;
+        const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
             this.$set(
@@ -1331,7 +1323,7 @@ export default {
                 fetchMethod: this.generateFetchRepoListMethod(item),
                 repoList: [],
                 selectedRepoUrl: '',
-              })
+              }),
             );
           }
         });
@@ -1339,8 +1331,8 @@ export default {
         Object.keys(this.gitExtendConfig).forEach((key) => {
           const config = this.gitExtendConfig[key];
           if (
-            key === this.sourceControlTypeItem &&
-            ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
+            key === this.sourceControlTypeItem
+            && ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
           ) {
             config.fetchMethod();
           }
@@ -1357,8 +1349,8 @@ export default {
         const { adv_region_clusters = [], allow_adv_options } = res;
 
         // 获取对应 region 下的集群信息
-        const curRegionClusters = adv_region_clusters.find((v) => v.region === this.GLOBAL.CONFIG.REGION_CHOOSE);
-        const hasRequiredClusters = (clusters) => clusters?.stag?.length > 0 && clusters?.prod?.length > 0;
+        const curRegionClusters = adv_region_clusters.find(v => v.region === this.GLOBAL.CONFIG.REGION_CHOOSE);
+        const hasRequiredClusters = clusters => clusters?.stag?.length > 0 && clusters?.prod?.length > 0;
         // 没有配置集群，无法创建应用
         this.isAllowCreateApp = curRegionClusters
           ? hasRequiredClusters(curRegionClusters?.env_cluster_names || {})
@@ -1386,7 +1378,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType: sourceControlTypeItem });
-          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -1408,9 +1400,9 @@ export default {
       this.sourceControlTypeItem = item.value;
       const curGitConfig = this.gitExtendConfig[this.sourceControlTypeItem];
       if (
-        curGitConfig &&
-        curGitConfig.repoList.length < 1 &&
-        ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
+        curGitConfig
+        && curGitConfig.repoList.length < 1
+        && ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
       ) {
         curGitConfig.fetchMethod();
       }
@@ -1593,8 +1585,8 @@ export default {
       }
 
       if (
-        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
-        ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP
+        && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
       ) {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
@@ -1611,9 +1603,9 @@ export default {
         };
         // 镜像凭证任意有一个值都需要image_credentials字段，如果都没有这不需要此字段
         if (
-          this.formData.imageCredentialName ||
-          this.formData.imageCredentialUserName ||
-          this.formData.imageCredentialPassWord
+          this.formData.imageCredentialName
+          || this.formData.imageCredentialUserName
+          || this.formData.imageCredentialPassWord
         ) {
           params.bkapp_spec.build_config.image_credential = {};
         }
@@ -1713,7 +1705,7 @@ export default {
           class: 'flex-row justify-content-between',
           style: { width: '100%' },
         },
-        [message, this.createAuthLinkButton(h, authPageUrl)]
+        [message, this.createAuthLinkButton(h, authPageUrl)],
       );
 
       this.$paasMessage({
@@ -1741,7 +1733,7 @@ export default {
             click: () => window.open(authPageUrl, '_blank'),
           },
         },
-        [h('i', { class: 'paasng-icon paasng-jump-link mr5' }), this.$t('查看授权信息')]
+        [h('i', { class: 'paasng-icon paasng-jump-link mr5' }), this.$t('查看授权信息')],
       );
     },
 

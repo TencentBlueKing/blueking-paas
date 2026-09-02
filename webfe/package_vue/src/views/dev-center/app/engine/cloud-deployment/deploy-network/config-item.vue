@@ -364,11 +364,11 @@ import guideSideslider from './guide-sideslider.vue';
 import { cloneDeep } from 'lodash';
 import riskTip from './risk-tip.vue';
 export default {
-  mixins: [appBaseMixin],
   components: {
     guideSideslider,
     riskTip,
   },
+  mixins: [appBaseMixin],
   props: {
     data: {
       type: Array,
@@ -618,7 +618,7 @@ export default {
         },
         (validator) => {
           console.error(`${validator.field}：${validator.content}`);
-        }
+        },
       );
     },
 
@@ -658,7 +658,7 @@ export default {
 
     // 域名解析数据格式化
     formatdnsRuleData() {
-      return this.dnsRuleFormData.service.map((item) => ({
+      return this.dnsRuleFormData.service.map(item => ({
         ip: item.ip,
         hostnames: item.hostnames,
       }));
@@ -666,7 +666,7 @@ export default {
 
     // DNS服务器数据格式化
     formatdnsServerData() {
-      return this.dnsServerData.service.map((item) => item.name);
+      return this.dnsServerData.service.map(item => item.name);
     },
 
     // 使用指南

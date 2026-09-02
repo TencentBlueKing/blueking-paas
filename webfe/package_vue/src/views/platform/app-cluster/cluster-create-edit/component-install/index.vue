@@ -155,13 +155,6 @@ export default {
       updateTimerId: null,
     };
   },
-  created() {
-    this.init();
-  },
-  beforeDestroy() {
-    clearTimeout(this.initTimerId);
-    clearTimeout(this.updateTimerId);
-  },
   computed: {
     detailSidesliderData() {
       return this.componentDetails[this.curComponentName] ?? {};
@@ -175,6 +168,13 @@ export default {
     isExpanded() {
       return this.activeNames.length > 0;
     },
+  },
+  created() {
+    this.init();
+  },
+  beforeDestroy() {
+    clearTimeout(this.initTimerId);
+    clearTimeout(this.updateTimerId);
   },
   methods: {
     init() {
@@ -219,7 +219,7 @@ export default {
         const requiredOrder = ['bk-ingress-nginx', 'bkpaas-app-operator', 'bkapp-log-collection'];
         // 必要组件排序
         this.requiredComponents = res
-          .filter((v) => v.required)
+          .filter(v => v.required)
           .sort((a, b) => {
             const indexA = requiredOrder.indexOf(a.name);
             const indexB = requiredOrder.indexOf(b.name);
@@ -232,13 +232,13 @@ export default {
             return indexA - indexB;
           });
         // 其他组件按字母排序
-        this.optionalComponents = res.filter((v) => !v.required).sort((a, b) => a.name.localeCompare(b.name));
+        this.optionalComponents = res.filter(v => !v.required).sort((a, b) => a.name.localeCompare(b.name));
         // 使用 Promise.all 并行获取组件详情，required 为必填项 必须安装成功才允许下一步
-        const nextDisabled = res.some((v) => v.required && v.status !== 'installed');
+        const nextDisabled = res.some(v => v.required && v.status !== 'installed');
         this.$emit('change-next-btn', nextDisabled);
         // 关闭容器Loading
         this.isLoading = false;
-        await Promise.all(res.map((component) => this.getComponentDetail(component.name)));
+        await Promise.all(res.map(component => this.getComponentDetail(component.name)));
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -269,7 +269,7 @@ export default {
         });
         this.$set(this.componentDetails, componentName, ret);
         // 存储获取到的 release 初始版本
-        this.$set(this.componentReleaseVersions, componentName, ret.release.version)
+        this.$set(this.componentReleaseVersions, componentName, ret.release.version);
 
         // 状态为 installing 轮询接口
         if (ret.status === 'installing') {

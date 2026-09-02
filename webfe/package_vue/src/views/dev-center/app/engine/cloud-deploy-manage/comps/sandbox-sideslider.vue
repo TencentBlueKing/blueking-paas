@@ -305,9 +305,7 @@ export default {
         branch: '',
         versionInfo: {},
       },
-      disabledContent: this.$t(
-        '<p>同时满足以下条件的模块才能创建沙箱：</p><p>1. 使用 “蓝鲸 Buildpack” 构建</p><p>2. 开发语言为 Python 或 Go</p><p>3. 已经部署到预发布环境</p>'
-      ),
+      disabledContent: this.$t('<p>同时满足以下条件的模块才能创建沙箱：</p><p>1. 使用 “蓝鲸 Buildpack” 构建</p><p>2. 开发语言为 Python 或 Go</p><p>3. 已经部署到预发布环境</p>'),
       errorInfo: {},
       isShowErrorAlert: false,
       dataReady: false,
@@ -329,10 +327,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -347,17 +345,17 @@ export default {
       if (!this.dataReady) return []; // 数据未就绪返回空
       // 过滤和合并模块信息
       const result = this.curAppModuleList.reduce((acc, module) => {
-        const currentModuleDeploy = this.moduleDeployList.find((deploy) => deploy.name === module.name) || {};
+        const currentModuleDeploy = this.moduleDeployList.find(deploy => deploy.name === module.name) || {};
         // 检查该模块是否不在沙箱环境列表中
-        const isNotInSandbox = !this.sandboxEnvList.some((sandbox) => sandbox.module_name === module.name);
+        const isNotInSandbox = !this.sandboxEnvList.some(sandbox => sandbox.module_name === module.name);
         if (isNotInSandbox) {
           const itemData = {
             ...module,
             ...currentModuleDeploy,
             isCreationAllowed:
-              module.web_config?.build_method === 'buildpack' &&
-              ['go', 'python'].includes(module.language?.toLowerCase()) &&
-              currentModuleDeploy?.isDeployed,
+              module.web_config?.build_method === 'buildpack'
+              && ['go', 'python'].includes(module.language?.toLowerCase())
+              && currentModuleDeploy?.isDeployed,
           };
           acc.push(itemData);
         }
@@ -397,10 +395,10 @@ export default {
               h(
                 'p',
                 { class: 'tip-text' },
-                this.$t('沙箱功能正在灰度开放，目前沙箱资源已申请完。如需体验，请联系 BK 助手。')
+                this.$t('沙箱功能正在灰度开放，目前沙箱资源已申请完。如需体验，请联系 BK 助手。'),
               ),
             ]),
-          ]
+          ],
         ),
         extCls: 'sandbox-info-cls',
         width: 360,
@@ -467,9 +465,9 @@ export default {
           moduleId,
         });
         this.isShowErrorAlert = false;
-        this.branchList = res.results.filter((item) => item.type === 'branch');
+        this.branchList = res.results.filter(item => item.type === 'branch');
         // 代码分支默认值
-        const branch = this.branchList.find((v) => v.name === versionName) || this.branchList[0];
+        const branch = this.branchList.find(v => v.name === versionName) || this.branchList[0];
         this.sandboxDialog.branch = branch.name;
       } catch (e) {
         this.branchList = [];
@@ -501,14 +499,14 @@ export default {
         },
         (validator) => {
           console.error(validator);
-        }
+        },
       );
     },
     // 确认创建沙箱
     async confirmSandboxCreation() {
       this.sandboxDialog.btnLoading = true;
       try {
-        const curBranchData = this.branchList.find((v) => v.name === this.sandboxDialog.branch);
+        const curBranchData = this.branchList.find(v => v.name === this.sandboxDialog.branch);
         const data = {
           enable_code_editor: true,
           inject_staging_env_vars: true,
@@ -555,7 +553,7 @@ export default {
         this.servicesConfig = {
           ...this.servicesConfig,
           servicelist: enabledServices,
-          list: enabledServices.map((item) => item.service?.name),
+          list: enabledServices.map(item => item.service?.name),
         };
       } catch (e) {
         this.catchErrorHandler(e);

@@ -72,11 +72,11 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   name: 'EnhancedService',
-  mixins: [appBaseMixin],
   components: {
     CardItem,
     ServiceItem,
   },
+  mixins: [appBaseMixin],
   data() {
     return {
       activeModule: '',
@@ -133,8 +133,8 @@ export default {
       const { bound = [], shared = [], unbound = [] } = data;
 
       // 合并已绑定和共享的服务作为已启用服务
-      const boundServices = bound.map((item) => item.service);
-      const sharedServices = shared.map((item) => ({
+      const boundServices = bound.map(item => item.service);
+      const sharedServices = shared.map(item => ({
         ...item.service,
         type: 'shared',
       }));

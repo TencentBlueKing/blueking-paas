@@ -25,18 +25,18 @@ const titleConfig = {
   'ql-formula': i18n.t('公式'),
   'ql-image': i18n.t('图片'),
   'ql-video': i18n.t('视频'),
-  'ql-clean': i18n.t('清除字体样式')
+  'ql-clean': i18n.t('清除字体样式'),
 };
 
 /**
  * 富文本title提示
  */
-export function addQuillTitle () {
+export function addQuillTitle() {
   const oToolBar = document.querySelector('.ql-toolbar');
   const aButton = oToolBar.querySelectorAll('.ql-formats>button');
   const aSelect = oToolBar.querySelectorAll('.ql-formats>select');
   const aSpan = oToolBar.querySelectorAll('.ql-formats>span.ql-picker');
-  aButton.forEach(function (item) {
+  aButton.forEach((item) => {
     if (item.className === 'ql-script') {
       item.value === 'sub' ? item.title = i18n.t('下标') : item.title = i18n.t('上标');
     } else if (item.className === 'ql-indent') {
@@ -45,10 +45,10 @@ export function addQuillTitle () {
       item.title = titleConfig[item.classList[0]];
     }
   });
-  aSpan.forEach(function (item) {
+  aSpan.forEach((item) => {
     item.title = titleConfig[item.classList[0]];
   });
-  aSelect.forEach(function (item) {
+  aSelect.forEach((item) => {
     item.parentNode.title = titleConfig[item.classList[0]];
   });
 }

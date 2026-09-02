@@ -420,11 +420,11 @@ export default {
     },
     // 是否禁用批量申请按钮
     isApplyDisabled() {
-      return !this.selectedList.some((item) => item.applyDisabled === false);
+      return !this.selectedList.some(item => item.applyDisabled === false);
     },
     // 是否禁用批量续期按钮
     isRenewalDisabled() {
-      return !this.selectedList.some((item) => item.renewDisabled === false);
+      return !this.selectedList.some(item => item.renewDisabled === false);
     },
     statusColumnBindings() {
       if (this.allData.length > 0) {
@@ -482,7 +482,7 @@ export default {
           {
             allow_apply_by_gateway: false,
             reason: '',
-          }
+          },
         );
         if (!value) {
           this.requestQueue = [];
@@ -516,7 +516,7 @@ export default {
     },
   },
   created() {
-    this.compare = (p) => (m, n) => {
+    this.compare = p => (m, n) => {
       const a = m[p].slice(0, 1).charCodeAt();
       const b = n[p].slice(0, 1).charCodeAt();
       return a - b;
@@ -547,7 +547,7 @@ export default {
       if (this.filterStatus.length === 0) {
         this.filterData = this.allData;
       } else {
-        this.filterData = this.allData.filter((item) => this.filterStatus.includes(item.permission_status));
+        this.filterData = this.allData.filter(item => this.filterStatus.includes(item.permission_status));
       }
       this.resetPaginationByData(this.filterData);
       this.updateTableListByPage();
@@ -559,9 +559,9 @@ export default {
      */
     handleClickOutside(event) {
       if (
-        event.target.className.indexOf('advanced-filter') !== -1 ||
-        event.target.className.indexOf('paasng-angle-double-down') !== -1 ||
-        event.target.className.indexOf('paasng-angle-double-up') !== -1
+        event.target.className.indexOf('advanced-filter') !== -1
+        || event.target.className.indexOf('paasng-angle-double-down') !== -1
+        || event.target.className.indexOf('paasng-angle-double-up') !== -1
       ) {
         return;
       }
@@ -610,7 +610,7 @@ export default {
           visiable: false,
           title: '',
           rows: [],
-        }
+        },
       );
     },
 
@@ -624,7 +624,7 @@ export default {
           visiable: false,
           title: '',
           rows: [],
-        }
+        },
       );
     },
 
@@ -643,7 +643,7 @@ export default {
       }
 
       this.allData = actions.length
-        ? this.apiList.filter((item) => actions.includes(item.permission_action))
+        ? this.apiList.filter(item => actions.includes(item.permission_action))
         : this.apiList;
       this.resetPaginationByData();
       this.updateTableListByPage();
@@ -660,16 +660,14 @@ export default {
       this.isFilter = true;
       // 多个API过滤
       if (this.searchValue.indexOf(',') !== -1) {
-        let searchArr = this.searchValue.split(',');
+        const searchArr = this.searchValue.split(',');
         let filterArr = [];
         for (let i = 0; i < searchArr.length; i++) {
           if (searchArr[i] === '') {
             continue;
           }
           const val = [
-            ...this.apiList.filter(
-              (api) => api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1
-            ),
+            ...this.apiList.filter(api => api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1),
           ];
           filterArr.push(...val);
         }
@@ -678,9 +676,7 @@ export default {
         this.allData = filterArr;
       } else {
         this.allData = [
-          ...this.apiList.filter(
-            (api) => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1
-          ),
+          ...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1),
         ];
       }
       this.resetPaginationByData();
@@ -970,8 +966,8 @@ export default {
         // 分割、过滤空字符、去除两端空格，最后转义特殊字符
         const keywords = this.searchValue
           .split(',')
-          .filter((keyword) => keyword.trim() !== '')
-          .map((keyword) => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
+          .filter(keyword => keyword.trim() !== '')
+          .map(keyword => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
 
         if (keywords.length === 0) return name; // 如果没有关键词，直接返回原名
 
@@ -979,7 +975,7 @@ export default {
         const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
 
         // 进行匹配和替换
-        return name.replace(regex, (matched) => `<marked>${matched}</marked>`);
+        return name.replace(regex, matched => `<marked>${matched}</marked>`);
       }
       return name;
     },
@@ -993,11 +989,11 @@ export default {
       if (description !== '' && this.isFilter) {
         const keywords = this.searchValue
           .split(',')
-          .filter((keyword) => keyword.trim() !== '')
-          .map((keyword) => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
+          .filter(keyword => keyword.trim() !== '')
+          .map(keyword => keyword.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'));
         if (keywords.length) {
           const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
-          description = description.replace(regex, (matched) => `<marked>${matched}</marked>`);
+          description = description.replace(regex, matched => `<marked>${matched}</marked>`);
         }
       }
       return description || '--';

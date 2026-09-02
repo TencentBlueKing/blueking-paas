@@ -211,7 +211,8 @@ export default {
       const end = this.dateRange.endTime;
 
       const endSeconds = dayjs(end).valueOf();
-      const oneEndSeconds = dayjs(start).add(1, 'days').valueOf();
+      const oneEndSeconds = dayjs(start).add(1, 'days')
+        .valueOf();
       const isInDay = oneEndSeconds > endSeconds;
 
       switch (this.defaultRange) {
@@ -297,7 +298,8 @@ export default {
         .then((response) => {
           this.operationsList = [];
           for (const item of response.results) {
-            item.at_friendly = dayjs(item.at).startOf('minute').fromNow();
+            item.at_friendly = dayjs(item.at).startOf('minute')
+              .fromNow();
             this.operationsList.push(item);
           }
         });
@@ -452,7 +454,7 @@ export default {
         startTime: date[0],
         endTime: date[1],
       };
-      this.curTime = this.shortcuts.find((t) => t.id === id) || {};
+      this.curTime = this.shortcuts.find(t => t.id === id) || {};
     },
 
     /**

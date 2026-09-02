@@ -132,7 +132,7 @@ export default {
       if (this.activeEnv === 'all') {
         return this.data;
       }
-      return this.data.filter((item) => item.environment_name === this.activeEnv);
+      return this.data.filter(item => item.environment_name === this.activeEnv);
     },
     toggleExpand() {
       this.isExpanded = !this.isExpanded;
@@ -155,7 +155,7 @@ export default {
     },
     formatVarPreset(envVarList, presetList) {
       this.updateIndex += 1;
-      const envVarMap = new Map(envVarList.map((item) => [item.key, item]));
+      const envVarMap = new Map(envVarList.map(item => [item.key, item]));
 
       presetList.forEach((item) => {
         const duplicateItem = envVarMap.get(item.key);

@@ -162,10 +162,10 @@ export default {
     // 递归检测 value 中是否存在有效筛选值，支持 string、number、boolean、array、object 等类型
     hasActiveFilter(value) {
       if (Array.isArray(value)) {
-        return value.some((item) => this.hasActiveFilter(item));
+        return value.some(item => this.hasActiveFilter(item));
       }
       if (value && typeof value === 'object') {
-        return Object.keys(value).some((key) => this.hasActiveFilter(value[key]));
+        return Object.keys(value).some(key => this.hasActiveFilter(value[key]));
       }
       if (typeof value === 'string') {
         return value.trim() !== '';

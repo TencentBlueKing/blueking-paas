@@ -124,218 +124,218 @@
 </template>
 
 <script>
-    import appBaseInfoMixin from '@/mixins/app-base-mixin';
-    import { bus } from '@/common/bus';
-    import UserDisplay from '@/components/user/user-display.vue';
-    export default {
-        components: { UserDisplay },
-        mixins: [appBaseInfoMixin],
-        data () {
-            return {
-                sortIcon: require('@static/images/sort-icon.png'),
-                isFirstLoading: true,
-                orderList: [],
-                filterType: 'done_all',
-                list: [
-                    {
-                        id: 'done_all',
-                        text: this.$t('全部')
-                    },
-                    {
-                        id: 'pass',
-                        text: this.$t('通过')
-                    },
-                    {
-                        id: 'reject',
-                        text: this.$t('驳回')
-                    }
-                ],
-
-                tableLoading: false,
-                is_up: true,
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                currentBackup: 1,
-                tableKey: 0
-            };
+import appBaseInfoMixin from '@/mixins/app-base-mixin';
+import { bus } from '@/common/bus';
+import UserDisplay from '@/components/user/user-display.vue';
+export default {
+  components: { UserDisplay },
+  mixins: [appBaseInfoMixin],
+  data() {
+    return {
+      sortIcon: require('@static/images/sort-icon.png'),
+      isFirstLoading: true,
+      orderList: [],
+      filterType: 'done_all',
+      list: [
+        {
+          id: 'done_all',
+          text: this.$t('全部'),
         },
-        watch: {
-            '$route' () {
-                this.init();
-            },
-            'pagination.current' (value) {
-                this.currentBackup = value;
-            }
+        {
+          id: 'pass',
+          text: this.$t('通过'),
         },
-        mounted () {
-            this.init();
-            bus.$on('update-done-order', () => {
-                this.tableKey = new Date().getTime();
-                this.fetchOrderList();
-            });
+        {
+          id: 'reject',
+          text: this.$t('驳回'),
         },
-        methods: {
-            renderHeader (h, { column }) {
-                return h(
-                    'div',
-                    {
-                        on: {
-                            click: this.sortTab
-                        },
-                        style: {
-                            cursor: this.pagination.count ? 'pointer' : 'not-allowed'
-                        }
-                    },
-                    [
-                        h('span', {
-                            domProps: {
-                                innerHTML: this.$t('申请时间')
-                            }
-                        }),
-                        h('img', {
-                            style: {
-                                position: 'relative',
-                                top: '1px',
-                                left: '1px',
-                                transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)'
-                            },
-                            attrs: {
-                                src: this.sortIcon
-                            }
-                        })
-                    ]
-                );
-            },
+      ],
 
-            rowClick (row, event, column) {
-                row.expanded = !row.expanded;
-                this.$refs.doneTableRef.toggleRowExpansion(row, row.expanded);
+      tableLoading: false,
+      is_up: true,
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      currentBackup: 1,
+      tableKey: 0,
+    };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+    'pagination.current'(value) {
+      this.currentBackup = value;
+    },
+  },
+  mounted() {
+    this.init();
+    bus.$on('update-done-order', () => {
+      this.tableKey = new Date().getTime();
+      this.fetchOrderList();
+    });
+  },
+  methods: {
+    renderHeader(h, { column }) {
+      return h(
+        'div',
+        {
+          on: {
+            click: this.sortTab,
+          },
+          style: {
+            cursor: this.pagination.count ? 'pointer' : 'not-allowed',
+          },
+        },
+        [
+          h('span', {
+            domProps: {
+              innerHTML: this.$t('申请时间'),
             },
-
-            sortTab () {
-                if (!this.pagination.count) {
-                    return;
-                }
-                this.is_up = !this.is_up;
-                this.pagination.limit = 10;
-                this.pagination.current = 1;
-                this.fetchOrderList(true);
+          }),
+          h('img', {
+            style: {
+              position: 'relative',
+              top: '1px',
+              left: '1px',
+              transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
             },
+            attrs: {
+              src: this.sortIcon,
+            },
+          }),
+        ],
+      );
+    },
 
-            /**
+    rowClick(row, event, column) {
+      row.expanded = !row.expanded;
+      this.$refs.doneTableRef.toggleRowExpansion(row, row.expanded);
+    },
+
+    sortTab() {
+      if (!this.pagination.count) {
+        return;
+      }
+      this.is_up = !this.is_up;
+      this.pagination.limit = 10;
+      this.pagination.current = 1;
+      this.fetchOrderList(true);
+    },
+
+    /**
              * 有效期时间显示格式化
              *
              * @param {String} payload 有效期时间字符
              *
              * @return {String} expiresStr 格式化后的有效期时间显示
              */
-            getFormatExpiresDisplay (payload) {
-                if (!payload) {
-                    return this.$t('永久');
-                }
-                const curExpires = Number(payload.split(' ')[0]);
-                const MONTH_DAY = 30;
-                let expiresStr = '';
-                const months = Math.floor(curExpires / MONTH_DAY);
-                switch (months) {
-                    case 3:
-                        expiresStr = this.$t('3个月');
-                        break;
-                    case 6:
-                        expiresStr = this.$t('6个月');
-                        break;
-                    case 12:
-                        expiresStr = this.$t('1年');
-                        break;
-                    default:
-                        expiresStr = `${curExpires}天`;
-                }
+    getFormatExpiresDisplay(payload) {
+      if (!payload) {
+        return this.$t('永久');
+      }
+      const curExpires = Number(payload.split(' ')[0]);
+      const MONTH_DAY = 30;
+      let expiresStr = '';
+      const months = Math.floor(curExpires / MONTH_DAY);
+      switch (months) {
+        case 3:
+          expiresStr = this.$t('3个月');
+          break;
+        case 6:
+          expiresStr = this.$t('6个月');
+          break;
+        case 12:
+          expiresStr = this.$t('1年');
+          break;
+        default:
+          expiresStr = `${curExpires}天`;
+      }
 
-                return expiresStr;
-            },
+      return expiresStr;
+    },
 
-            /**
+    /**
              * 分页页码 chang 回调
              *
              * @param {Number} page 页码
              */
-            pageChange (page) {
-                if (this.currentBackup === page) {
-                    return;
-                }
-                this.pagination.current = page;
-                this.fetchOrderList(true);
-            },
+    pageChange(page) {
+      if (this.currentBackup === page) {
+        return;
+      }
+      this.pagination.current = page;
+      this.fetchOrderList(true);
+    },
 
-            /**
+    /**
              * 分页limit chang 回调
              *
              * @param {Number} currentLimit 新limit
              * @param {Number} prevLimit 旧limit
              */
-            limitChange (currentLimit, prevLimit) {
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-                this.fetchOrderList(true);
-            },
+    limitChange(currentLimit, prevLimit) {
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
+      this.fetchOrderList(true);
+    },
 
-            typeSelected (value, options) {
-                this.filterType = value;
-                this.fetchOrderList(true);
-            },
+    typeSelected(value, options) {
+      this.filterType = value;
+      this.fetchOrderList(true);
+    },
 
-            async fetchOrderList (isTableLoading = false) {
-                this.tableLoading = isTableLoading;
-                try {
-                    const params = {
-                        filterType: this.filterType,
-                        appCode: this.appCode,
-                        limit: this.pagination.limit,
-                        offset: (this.pagination.current - 1) * this.pagination.limit,
-                        order_by: this.is_up ? '-created' : 'created'
-                    };
+    async fetchOrderList(isTableLoading = false) {
+      this.tableLoading = isTableLoading;
+      try {
+        const params = {
+          filterType: this.filterType,
+          appCode: this.appCode,
+          limit: this.pagination.limit,
+          offset: (this.pagination.current - 1) * this.pagination.limit,
+          order_by: this.is_up ? '-created' : 'created',
+        };
 
-                    const res = await this.$store.dispatch('order/getOrderList', params);
-                    this.pagination.count = res.count
-                    ;(res.results || []).forEach(item => {
-                        item.expanded = false;
-                        item.expires = this.getFormatExpiresDisplay(item.expires);
-                        this.$set(item, 'children', [
-                            {
-                                ip: item.ip || '--',
-                                business_interface_user: item.business_interface_user || '--',
-                                reason: item.reason || '--',
-                                auditor: item.auditor || '--',
-                                expires: item.expires || '--'
-                            }
-                        ]);
-                    });
-                    this.orderList.splice(0, this.orderList.length, ...(res.results || []));
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: this.$t('获取已审批单据失败')
-                    });
-                } finally {
-                    if (isTableLoading) {
-                        this.tableLoading = false;
-                    }
-                }
+        const res = await this.$store.dispatch('order/getOrderList', params);
+        this.pagination.count = res.count
+        ;(res.results || []).forEach((item) => {
+          item.expanded = false;
+          item.expires = this.getFormatExpiresDisplay(item.expires);
+          this.$set(item, 'children', [
+            {
+              ip: item.ip || '--',
+              business_interface_user: item.business_interface_user || '--',
+              reason: item.reason || '--',
+              auditor: item.auditor || '--',
+              expires: item.expires || '--',
             },
-            init () {
-                this.isFirstLoading = true;
-                this.fetchOrderList();
-                setTimeout(() => {
-                    this.isFirstLoading = false;
-                    this.$emit('data-ready', 'done-order');
-                }, 1500);
-            }
+          ]);
+        });
+        this.orderList.splice(0, this.orderList.length, ...(res.results || []));
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: this.$t('获取已审批单据失败'),
+        });
+      } finally {
+        if (isTableLoading) {
+          this.tableLoading = false;
         }
-    };
+      }
+    },
+    init() {
+      this.isFirstLoading = true;
+      this.fetchOrderList();
+      setTimeout(() => {
+        this.isFirstLoading = false;
+        this.$emit('data-ready', 'done-order');
+      }, 1500);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

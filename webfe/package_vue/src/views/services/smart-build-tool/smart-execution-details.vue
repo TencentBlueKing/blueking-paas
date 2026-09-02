@@ -117,7 +117,7 @@ export default {
         if (data.end_time && data.start_time) {
           this.buildStatus.timeTaken = calculateTimeDiff(
             dayjs(data.start_time).toDate(),
-            dayjs(data.end_time).toDate()
+            dayjs(data.end_time).toDate(),
           );
         }
         this.updateBuildStatus(data.status);

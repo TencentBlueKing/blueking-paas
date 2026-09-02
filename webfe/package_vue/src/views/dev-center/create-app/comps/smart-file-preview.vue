@@ -25,11 +25,6 @@
 
 export default {
   name: 'SmartFilePreview',
-  data() {
-    return {
-      basicInfoFileImg: require('@static/images/basic-info-file.png'),
-    };
-  },
   props: {
     file: {
       type: Object,
@@ -38,7 +33,7 @@ export default {
     status: {
       type: String,
       default: 'success',
-      validator: (value) => ['success', 'error'].includes(value),
+      validator: value => ['success', 'error'].includes(value),
     },
     statusText: {
       type: String,
@@ -48,6 +43,11 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      basicInfoFileImg: require('@static/images/basic-info-file.png'),
+    };
   },
 };
 </script>

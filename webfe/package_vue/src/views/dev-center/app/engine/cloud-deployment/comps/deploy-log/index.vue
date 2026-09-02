@@ -29,86 +29,86 @@
   </div>
 </template>
 <script>
-    import StageItem from './render-stage';
-    import SkipStageItem from './render-skip-stage';
-    import DeployStageItem from './deploy-stage';
-    export default {
-        name: '',
-        components: {
-            StageItem,
-            SkipStageItem,
-            DeployStageItem
-        },
-        props: {
-            readyList: {
-                type: Array,
-                default: () => []
-            },
-            buildList: {
-                type: Array,
-                default: () => []
-            },
-            processList: {
-                type: Array,
-                default: () => []
-            },
-            stateProcess: {
-                type: Array,
-                default: () => []
-            },
-            isShowSkip: {
-                type: Boolean,
-                default: false
-            },
-            // 部署阶段获取部署进程的loading
-            processLoading: {
-                type: Boolean,
-                default: false
-            },
-            environment: {
-                type: String,
-                default: 'stag'
-            }
-        },
-        data () {
-            return {};
-        },
-        computed: {
-            isShowReady () {
-                return this.stateProcess.includes('preparation');
-            },
-            isShowBuild () {
-                return this.stateProcess.includes('build');
-            },
-            isShowRelease () {
-                return this.stateProcess.includes('release');
-            }
-        },
-        watch: {
-            buildList: {
-                handler () {
-                    this.$nextTick(() => {
-                        this.$refs.buildStageRef && this.$refs.buildStageRef.handleScrollToBottom();
-                    });
-                },
-                immediate: true
-            }
-        },
-        methods: {
-            handleScrollToLocation (type) {
-                const $dom = document.querySelector('.paas-deploy-log-wrapper');
-                if (type === 'preparation') {
-                    $dom.scrollTo(0, 0);
-                    return;
-                }
-                if (type === 'release') {
-                    const $ref = this.$refs.nowStageRef;
-                    const distance = $ref.$el.offsetTop || 0;
-                    $dom.scrollTo(0, distance);
-                }
-            }
-        }
-    };
+import StageItem from './render-stage';
+import SkipStageItem from './render-skip-stage';
+import DeployStageItem from './deploy-stage';
+export default {
+  name: '',
+  components: {
+    StageItem,
+    SkipStageItem,
+    DeployStageItem,
+  },
+  props: {
+    readyList: {
+      type: Array,
+      default: () => [],
+    },
+    buildList: {
+      type: Array,
+      default: () => [],
+    },
+    processList: {
+      type: Array,
+      default: () => [],
+    },
+    stateProcess: {
+      type: Array,
+      default: () => [],
+    },
+    isShowSkip: {
+      type: Boolean,
+      default: false,
+    },
+    // 部署阶段获取部署进程的loading
+    processLoading: {
+      type: Boolean,
+      default: false,
+    },
+    environment: {
+      type: String,
+      default: 'stag',
+    },
+  },
+  data() {
+    return {};
+  },
+  computed: {
+    isShowReady() {
+      return this.stateProcess.includes('preparation');
+    },
+    isShowBuild() {
+      return this.stateProcess.includes('build');
+    },
+    isShowRelease() {
+      return this.stateProcess.includes('release');
+    },
+  },
+  watch: {
+    buildList: {
+      handler() {
+        this.$nextTick(() => {
+          this.$refs.buildStageRef && this.$refs.buildStageRef.handleScrollToBottom();
+        });
+      },
+      immediate: true,
+    },
+  },
+  methods: {
+    handleScrollToLocation(type) {
+      const $dom = document.querySelector('.paas-deploy-log-wrapper');
+      if (type === 'preparation') {
+        $dom.scrollTo(0, 0);
+        return;
+      }
+      if (type === 'release') {
+        const $ref = this.$refs.nowStageRef;
+        const distance = $ref.$el.offsetTop || 0;
+        $dom.scrollTo(0, distance);
+      }
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paas-deploy-log-wrapper {

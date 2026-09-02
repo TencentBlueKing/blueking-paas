@@ -123,10 +123,10 @@ export default {
   },
   computed: {
     dialogVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },

@@ -140,10 +140,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -251,7 +251,7 @@ export default {
     },
     // 转换方案名称到ID
     mapPlanNamesToIds(names = []) {
-      return names.map((name) => this.plansMap[name]).filter(Boolean);
+      return names.map(name => this.plansMap[name]).filter(Boolean);
     },
     // 处理统一分配数据
     async formatUniformParams() {

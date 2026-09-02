@@ -53,5 +53,5 @@ export default {
         window.removeEventListener('resize', _this.resizeEventHandler, false);
       }
     }, 1300);
-  }
+  },
 };

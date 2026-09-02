@@ -21,7 +21,7 @@
  */
 
 export default function (data, color, options = {}) {
-  const allZero = data.every((d) => d.value === 0);
+  const allZero = data.every(d => d.value === 0);
   const { zeroPieColor } = options;
 
   // 为每项数据设置独立的 label 配置，emphasis 时 value 颜色跟随数据项 color
@@ -95,11 +95,11 @@ export default function (data, color, options = {}) {
         };
       }),
       formatter(name) {
-        const item = data.find((d) => d.name === name);
+        const item = data.find(d => d.name === name);
         return `${name}：${item.value}`;
       },
     },
-    color: color,
+    color,
     series: [
       {
         type: 'pie',

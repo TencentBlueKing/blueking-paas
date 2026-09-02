@@ -904,7 +904,7 @@ export default {
     },
     // 获取代码源图片
     getSourceImage() {
-      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
+      return imgSrc => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     sourceControlDisabled() {
       return this.curAppModule.repo && this.curAppModule.repo.type !== 'bk_svn';

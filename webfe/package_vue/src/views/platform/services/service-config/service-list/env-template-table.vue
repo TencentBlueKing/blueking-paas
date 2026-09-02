@@ -47,15 +47,15 @@ export default {
     // 环境变量模板列表：根据配置项和服务ID生成（新建行编辑时也直接生成）
     templateList() {
       return (this.configItems || [])
-        .filter((item) => item.key)
-        .map((item) => ({
+        .filter(item => item.key)
+        .map(item => ({
           key: `${this.serviceId}_${item.key}`.toUpperCase(),
           value: `{{${item.key}}}`,
         }));
     },
     // 环境变量模板数组：用于提交到后端
     templateArray() {
-      return this.templateList.map((item) => ({
+      return this.templateList.map(item => ({
         key: item.key,
         value: item.value,
       }));

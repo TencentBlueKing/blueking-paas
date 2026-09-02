@@ -388,305 +388,305 @@
 </template>
 
 <script type="text/javascript">
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import bkNumInput from '@/components/ui/bkInput';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import bkNumInput from '@/components/ui/bkInput';
 
-    export default {
-        components: {
-            bkNumInput
+export default {
+  components: {
+    bkNumInput,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      env: 'stag',
+      processServices: [],
+      changeEntryDialog: {
+        visiable: false,
+        title: '',
+      },
+      processIngress: {
+        service_name: '',
+      },
+      isConfigLoading: true,
+      portRules: {
+        name: [
+          {
+            required: true,
+            message: this.$t('名称不能为空'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
+            message: this.$t('小写字母或数字开头结尾，中间可以有中划线'),
+            trigger: 'blur',
+          },
+        ],
+        port: [
+          {
+            required: true,
+            message: this.$t('服务端口不能为空'),
+            trigger: 'blur',
+          },
+        ],
+        targetPort: [
+          {
+            required: true,
+            message: this.$t('进程内端口不能为空'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      protocolList: [
+        {
+          id: 'TCP',
+          name: 'TCP',
         },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                env: 'stag',
-                processServices: [],
-                changeEntryDialog: {
-                    visiable: false,
-                    title: ''
-                },
-                processIngress: {
-                    service_name: ''
-                },
-                isConfigLoading: true,
-                portRules: {
-                    name: [
-                        {
-                            required: true,
-                            message: this.$t('名称不能为空'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
-                            message: this.$t('小写字母或数字开头结尾，中间可以有中划线'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    port: [
-                        {
-                            required: true,
-                            message: this.$t('服务端口不能为空'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    targetPort: [
-                        {
-                            required: true,
-                            message: this.$t('进程内端口不能为空'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                protocolList: [
-                    {
-                        id: 'TCP',
-                        name: 'TCP'
-                    },
-                    {
-                        id: 'UDP',
-                        name: 'UDP'
-                    }
-                ],
-                panels: [
-                    { name: 'stag', label: this.$t('预发布环境') },
-                    { name: 'prod', label: this.$t('生产环境') }
-                ]
-            };
+        {
+          id: 'UDP',
+          name: 'UDP',
         },
-        watch: {
-            '$route' () {
-                this.init();
-            },
-            env () {
-                this.init();
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            /**
+      ],
+      panels: [
+        { name: 'stag', label: this.$t('预发布环境') },
+        { name: 'prod', label: this.$t('生产环境') },
+      ],
+    };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+    env() {
+      this.init();
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    /**
              * 数据初始化入口
              */
-            async init () {
-                this.getProcessServices();
-            },
+    async init() {
+      this.getProcessServices();
+    },
 
-            /**
+    /**
              * 获取所有某个部署环境下的所有进程服务
              */
-            async getProcessServices () {
-                this.isConfigLoading = true;
+    async getProcessServices() {
+      this.isConfigLoading = true;
 
-                try {
-                    const params = {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: this.env
-                    };
-                    const res = await this.$store.dispatch('entryConfig/getProcessServices', params);
+      try {
+        const params = {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.env,
+        };
+        const res = await this.$store.dispatch('entryConfig/getProcessServices', params);
 
-                    if (res.default_ingress) {
-                        this.processIngress = res.default_ingress;
-                    }
+        if (res.default_ingress) {
+          this.processIngress = res.default_ingress;
+        }
 
-                    if (res.proc_services) {
-                        this.processServices = res.proc_services.map(service => {
-                            service.ports.forEach(port => {
-                                // 当前端口为主入口
-                                if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
-                                    port.isMainEntry = true;
-                                }
-                            });
-                            return {
-                                isEdited: false,
-                                isExpanded: false,
-                                editPorts: JSON.parse(JSON.stringify(service.ports)), // 编辑时，防止和原数据冲突
-                                ...service
-                            };
-                        });
-                    }
-                } catch (e) {
-                    this.processServices = [];
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    this.isConfigLoading = false;
-                    this.$emit('data-ready', 'port-config');
-                }
-            },
+        if (res.proc_services) {
+          this.processServices = res.proc_services.map((service) => {
+            service.ports.forEach((port) => {
+              // 当前端口为主入口
+              if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
+                port.isMainEntry = true;
+              }
+            });
+            return {
+              isEdited: false,
+              isExpanded: false,
+              editPorts: JSON.parse(JSON.stringify(service.ports)), // 编辑时，防止和原数据冲突
+              ...service,
+            };
+          });
+        }
+      } catch (e) {
+        this.processServices = [];
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.isConfigLoading = false;
+        this.$emit('data-ready', 'port-config');
+      }
+    },
 
-            /**
+    /**
              * 数据校验
              */
-            checkPortData (service) {
-                for (const port of service.editPorts) {
-                    if (!port.name) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('端口名称不能为空！')
-                        });
-                        return false;
-                    }
-                    if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(port.name)) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('端口名称只能以小写字母或数字开头结尾，中间可以有中划线！')
-                        });
-                        return false;
-                    }
-                    if (!port.port) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('服务端口不能为空')
-                        });
-                        return false;
-                    }
-                    if (!port.target_port) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('进程内端口不能为空')
-                        });
-                        return false;
-                    }
-                }
-                return true;
-            },
+    checkPortData(service) {
+      for (const port of service.editPorts) {
+        if (!port.name) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('端口名称不能为空！'),
+          });
+          return false;
+        }
+        if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(port.name)) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('端口名称只能以小写字母或数字开头结尾，中间可以有中划线！'),
+          });
+          return false;
+        }
+        if (!port.port) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('服务端口不能为空'),
+          });
+          return false;
+        }
+        if (!port.target_port) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('进程内端口不能为空'),
+          });
+          return false;
+        }
+      }
+      return true;
+    },
 
-            /**
+    /**
              * 修改进程服务的端口列表
              * @param {Object} service 服务对象
              */
-            async updateServicePorts (service) {
-                if (!this.checkPortData(service)) {
-                    return false;
-                }
-                try {
-                    const ports = service.editPorts;
-                    const params = {
-                        serviceName: service.name,
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: this.env,
-                        ports: ports
-                    };
-                    await this.$store.dispatch('entryConfig/updateServicePorts', params);
-                    service.ports = JSON.parse(JSON.stringify(service.editPorts));
-                    service.isEdited = false;
+    async updateServicePorts(service) {
+      if (!this.checkPortData(service)) {
+        return false;
+      }
+      try {
+        const ports = service.editPorts;
+        const params = {
+          serviceName: service.name,
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.env,
+          ports,
+        };
+        await this.$store.dispatch('entryConfig/updateServicePorts', params);
+        service.ports = JSON.parse(JSON.stringify(service.editPorts));
+        service.isEdited = false;
 
-                    this.updateMainEntry();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('保存成功！')
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
+        this.updateMainEntry();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('保存成功！'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
 
-            /**
+    /**
              * 更新主入口
              */
-            updateMainEntry () {
-                this.processServices.forEach(service => {
-                    service.ports.forEach(port => {
-                        // 当前端口为主入口
-                        if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
-                            port.isMainEntry = true;
-                        } else {
-                            port.isMainEntry = false;
-                        }
-                    });
-                });
-            },
+    updateMainEntry() {
+      this.processServices.forEach((service) => {
+        service.ports.forEach((port) => {
+          // 当前端口为主入口
+          if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
+            port.isMainEntry = true;
+          } else {
+            port.isMainEntry = false;
+          }
+        });
+      });
+    },
 
-            /**
+    /**
              * 添加进程服务编辑的端口
              * @param {Object} service 服务对象
              */
-            addServicePort (service) {
-                service.editPorts.push({
-                    name: '',
-                    protocol: 'TCP',
-                    port: '',
-                    target_port: ''
-                });
-            },
+    addServicePort(service) {
+      service.editPorts.push({
+        name: '',
+        protocol: 'TCP',
+        port: '',
+        target_port: '',
+      });
+    },
 
-            /**
+    /**
              * 删除进程服务端口
              * @param {Object} service 服务对象
              * @param {Number} index 端口索引
              */
-            removeServicePort (service, index) {
-                service.editPorts.splice(index, 1);
-            },
+    removeServicePort(service, index) {
+      service.editPorts.splice(index, 1);
+    },
 
-            /**
+    /**
              * 显示设置主入口确认提示框
              */
-            showDialog (service, port, serviceIndex) {
-                if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
-                    return;
-                }
-                this.changeEntryDialog.title = this.$t(`确认设置{type}进程的{name}端口为主入口？`, { type: service.process_type, name: port.name });
-                this.curService = service;
-                this.curPort = port;
-                this.curServiceIndex = serviceIndex;
-                this.changeEntryDialog.visiable = true;
-            },
+    showDialog(service, port, serviceIndex) {
+      if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
+        return;
+      }
+      this.changeEntryDialog.title = this.$t('确认设置{type}进程的{name}端口为主入口？', { type: service.process_type, name: port.name });
+      this.curService = service;
+      this.curPort = port;
+      this.curServiceIndex = serviceIndex;
+      this.changeEntryDialog.visiable = true;
+    },
 
-            /**
+    /**
              * 设置模块主入口
              * @param {Object} service 服务对象
              * @param {Object} port 端口
              */
-            async setServiceMainEntry () {
-                const service = this.curService;
-                const port = this.curPort;
-                const serviceIndex = this.curServiceIndex;
-                const dropdownKey = `dropdown${serviceIndex}`;
-                if (this.$refs[dropdownKey]) {
-                    this.$refs[dropdownKey][0].hide();
-                }
-                try {
-                    const params = {
-                        serviceName: service.name,
-                        servicePortName: port.name,
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: this.env
-                    };
-                    const res = await this.$store.dispatch('entryConfig/setServiceMainEntry', params);
-                    this.processIngress = res;
+    async setServiceMainEntry() {
+      const service = this.curService;
+      const port = this.curPort;
+      const serviceIndex = this.curServiceIndex;
+      const dropdownKey = `dropdown${serviceIndex}`;
+      if (this.$refs[dropdownKey]) {
+        this.$refs[dropdownKey][0].hide();
+      }
+      try {
+        const params = {
+          serviceName: service.name,
+          servicePortName: port.name,
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.env,
+        };
+        const res = await this.$store.dispatch('entryConfig/setServiceMainEntry', params);
+        this.processIngress = res;
 
-                    this.getProcessServices();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('设置成功！')
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
+        this.getProcessServices();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('设置成功！'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
 
-            /**
+    /**
              * 跳转到部署页面
              */
-            gotoDeploy () {
-                // this.$router
-            },
+    gotoDeploy() {
+      // this.$router
+    },
 
-            stop () {}
-        }
-    };
+    stop() {},
+  },
+};
 </script>
 
 <style lang="scss" scoped>

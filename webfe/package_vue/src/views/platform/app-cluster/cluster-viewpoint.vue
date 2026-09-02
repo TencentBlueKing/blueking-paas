@@ -224,7 +224,7 @@ export default {
   },
   computed: {
     ...mapState('tenant', {
-      clustersStatus: (state) => state.clustersStatus,
+      clustersStatus: state => state.clustersStatus,
     }),
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -249,8 +249,7 @@ export default {
       // 过滤数据，检查 name 和 bcs_cluster_id 是否包含搜索词
       this.displayClusterList = this.tenantList.filter((item) => {
         const nameMatches = item.name && item.name.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-        const clusterIdMatches =
-          item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+        const clusterIdMatches =          item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
         return nameMatches || clusterIdMatches;
       });
     },
@@ -259,15 +258,13 @@ export default {
       this.isTableLoading = true;
       try {
         const res = await this.$store.dispatch('tenant/getClusterList');
-        this.tenantList = res.map((item) => {
-          return {
-            ...item,
-            availableTenants: item.available_tenants,
-            feature: item.feature_flags,
-            availableTenantTagIndex: 0,
-            featureTagIndex: 0,
-          };
-        });
+        this.tenantList = res.map(item => ({
+          ...item,
+          availableTenants: item.available_tenants,
+          feature: item.feature_flags,
+          availableTenantTagIndex: 0,
+          featureTagIndex: 0,
+        }));
         this.displayClusterList = this.tenantList;
         // 获取集群列表状态
         this.$emit('get-status', res);

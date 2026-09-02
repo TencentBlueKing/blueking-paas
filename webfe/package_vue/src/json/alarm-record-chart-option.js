@@ -21,7 +21,7 @@
  */
 export default {
   title: {
-    show: false
+    show: false,
   },
   tooltip: {
     trigger: 'axis',
@@ -29,12 +29,12 @@ export default {
       type: 'line',
       animation: true,
       label: {
-        backgroundColor: '#6a7985'
-      }
+        backgroundColor: '#6a7985',
+      },
     },
-    formatter (params, ticket, callback) {
+    formatter(params, ticket, callback) {
       let ret = `<div>${params[0].axisValueLabel}</div>`;
-      params.forEach(item => {
+      params.forEach((item) => {
         let val = parseFloat(item.value).toFixed(2);
         if (val === '0.00') {
           val = 0;
@@ -42,42 +42,42 @@ export default {
         ret += `<div>${item.seriesName}：${val}</div>`;
       });
       return ret;
-    }
+    },
   },
   toolbox: {
-    show: false
+    show: false,
   },
   grid: {
     top: '3%',
     left: '0%',
     right: '4%',
     bottom: '5%',
-    containLabel: true
+    containLabel: true,
   },
   xAxis: {
     type: 'category',
     // 设置横轴坐标刻度
     axisTick: {
-      show: false
+      show: false,
     },
     axisLine: {
       show: true,
       lineStyle: {
-        color: '#dde3ea'
-      }
+        color: '#dde3ea',
+      },
     },
     // 设置横轴文字
     axisLabel: {
       color: '#8a8f99',
-      formatter (value, index) {
+      formatter(value, index) {
         let ret = value;
         if (value) {
           ret = value.replace(' ', '\n');
         }
         return ret;
-      }
+      },
     },
-    data: []
+    data: [],
   },
   yAxis: {
     boundaryGap: [0, '2%'],
@@ -86,20 +86,20 @@ export default {
     axisLine: {
       show: true,
       lineStyle: {
-        color: '#dde3ea'
-      }
+        color: '#dde3ea',
+      },
     },
     // 设置纵轴刻度
     axisTick: {
-      show: false
+      show: false,
     },
     // 设置纵轴文字
     axisLabel: {
       color: '#8a8f99',
-      formatter (value, index) {
+      formatter(value, index) {
         return `${value}`;
-      }
-    }
+      },
+    },
   },
-  series: []
+  series: [],
 };

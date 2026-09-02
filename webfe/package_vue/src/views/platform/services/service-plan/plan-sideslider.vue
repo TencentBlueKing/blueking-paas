@@ -163,10 +163,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -210,7 +210,7 @@ export default {
             ...this.formData,
           };
           delete params.service_name;
-          const id = this.services.find((v) => v.name === this.formData.service_name)?.uuid;
+          const id = this.services.find(v => v.name === this.formData.service_name)?.uuid;
           if (this.isAdd) {
             // 新建
             this.addPlan(id, params);
@@ -222,7 +222,7 @@ export default {
         },
         (e) => {
           console.warn(e);
-        }
+        },
       );
     },
     // 新建方案

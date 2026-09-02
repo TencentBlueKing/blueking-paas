@@ -19,7 +19,7 @@
 import cookie from 'cookie';
 
 export default {
-  bind (el, binding) {
+  bind(el, binding) {
     if ((typeof binding.value === 'string' && el && el.classList.contains(binding.value)) || cookie.parse(document.cookie).blueking_language !== 'en') {
       return;
     }
@@ -39,5 +39,5 @@ export default {
       });
     }
     el.style.cssText += cssText;
-  }
+  },
 };

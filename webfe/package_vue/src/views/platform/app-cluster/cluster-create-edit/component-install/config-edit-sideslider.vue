@@ -212,10 +212,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -264,12 +264,10 @@ export default {
         this.$nextTick(() => {
           const { nodeSelector = {} } = this.values;
           // 节点标签
-          const nodes = Object.entries(nodeSelector).map(([key, value]) => {
-            return {
-              key: key,
-              value: value,
-            };
-          });
+          const nodes = Object.entries(nodeSelector).map(([key, value]) => ({
+            key,
+            value,
+          }));
           if (nodes.length) {
             this.$refs.keyValueInput[0]?.setData(nodes);
           }
@@ -284,14 +282,14 @@ export default {
     },
     // 伪编辑-不发送请求
     submitData() {
-      let validateArr = [this.$refs.formRef.validate()];
+      const validateArr = [this.$refs.formRef.validate()];
       if (this.isHostNetwork && this.isTagVisible) {
         validateArr.push(this.$refs.keyValueInput[0]?.validate());
       }
       Promise.all(validateArr)
         .then(() => {
           const { hostNetwork, http, https } = this.formData;
-          let data = cloneDeep(this.values);
+          const data = cloneDeep(this.values);
           data.hostNetwork = hostNetwork;
           data.replicaCount = Number(this.formData.replicaCount);
           if (this.isHostNetwork) {

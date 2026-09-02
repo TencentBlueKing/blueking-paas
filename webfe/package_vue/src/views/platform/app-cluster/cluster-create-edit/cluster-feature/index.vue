@@ -89,16 +89,16 @@ import TolerationsForm from './tolerations-form.vue';
 import { cloneDeep } from 'lodash';
 export default {
   name: 'ClusterFeature',
+  components: {
+    Feature,
+    KeyValueInput,
+    TolerationsForm,
+  },
   props: {
     clusterId: {
       type: String,
       default: '',
     },
-  },
-  components: {
-    Feature,
-    KeyValueInput,
-    TolerationsForm,
   },
   data() {
     return {
@@ -138,12 +138,10 @@ export default {
         });
         this.details = ret;
         this.$nextTick(() => {
-          const transformedArray = Object.entries(ret.node_selector).map(([key, value]) => {
-            return {
-              key: key,
-              value: value,
-            };
-          });
+          const transformedArray = Object.entries(ret.node_selector).map(([key, value]) => ({
+            key,
+            value,
+          }));
           this.$refs.keyValueInput?.setData(transformedArray);
           this.editBackfill();
         });
@@ -159,12 +157,10 @@ export default {
       if (Object.keys(node_selector)?.length) {
         this.isNodeVisible = true;
         this.$nextTick(() => {
-          const nodes = Object.entries(node_selector).map(([key, value]) => {
-            return {
-              key: key,
-              value: value,
-            };
-          });
+          const nodes = Object.entries(node_selector).map(([key, value]) => ({
+            key,
+            value,
+          }));
           this.$refs.keyValueInput?.setData(nodes);
         });
         this.activeNames = ['setting'];

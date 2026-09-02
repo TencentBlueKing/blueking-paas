@@ -133,7 +133,7 @@ export default {
     },
     addAll() {
       if (!this.sourceLength) return;
-      this.targetList = this.sourceList.map((item) => item.name);
+      this.targetList = this.sourceList.map(item => item.name);
     },
     removeAll() {
       if (!this.targetLength) return;

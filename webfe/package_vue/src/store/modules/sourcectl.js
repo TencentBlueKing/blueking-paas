@@ -25,44 +25,44 @@ import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
 // store
 const state = {
   source_control_type: DEFAULT_APP_SOURCE_CONTROL_TYPES,
-  updated: false
+  updated: false,
 };
 
 // getters
 const getters = {
-  isMultiSourcectlType: state => state.source_control_type.length > 1
+  isMultiSourcectlType: state => state.source_control_type.length > 1,
 };
 
 // mutations
 const mutations = {
-  updateAccountAllowSourceControlType: function (state, data) {
+  updateAccountAllowSourceControlType(state, data) {
     state.source_control_type = data;
     state.updated = true;
-  }
+  },
 };
 
 // actions
 const actions = {
-  async fetchAccountAllowSourceControlType ({ commit, state }, { force = false }) {
-    return new Promise(resolve => {
+  async fetchAccountAllowSourceControlType({ commit, state }, { force = false }) {
+    return new Promise((resolve) => {
       if (!force && state.updated) {
         resolve(state.source_control_type);
         return;
       }
       const url = `${BACKEND_URL}/api/sourcectl/providers/`;
-      http.get(url).then(resp => {
+      http.get(url).then((resp) => {
         commit('updateAccountAllowSourceControlType', resp.results);
         resolve(state.source_control_type);
-      }, resp => {
+      }, (resp) => {
         resolve(state.source_control_type);
       });
     });
-  }
+  },
 };
 
 export default {
   state,
   getters,
   mutations,
-  actions
+  actions,
 };

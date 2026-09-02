@@ -258,7 +258,7 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter((v) => String(v.name) === String(val));
+              const list = this.portMapList.filter(v => String(v.name) === String(val));
               return list.length < 2;
             },
             message: this.$t('服务名称不允许重复'),
@@ -280,14 +280,14 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter((v) => String(v.port) === String(val));
+              const list = this.portMapList.filter(v => String(v.port) === String(val));
               return list.length < 2;
             },
             message: this.$t('服务端口不允许重复'),
             trigger: 'blur',
           },
           {
-            validator: (val) => this.isValidPort(val),
+            validator: val => this.isValidPort(val),
             message: this.$t('1~65535 或者 $PORT'),
             trigger: 'blur',
           },
@@ -300,14 +300,14 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter((v) => String(v.target_port) === String(val));
+              const list = this.portMapList.filter(v => String(v.target_port) === String(val));
               return list.length < 2;
             },
             message: this.$t('容器端口不允许重复'),
             trigger: 'blur',
           },
           {
-            validator: (val) => this.isValidPort(val),
+            validator: val => this.isValidPort(val),
             message: this.$t('1~65535 或者 $PORT'),
             trigger: 'blur',
           },
@@ -331,7 +331,7 @@ export default {
   watch: {
     services: {
       handler(newValues) {
-        this.portMapList = newValues.map((item) => ({
+        this.portMapList = newValues.map(item => ({
           ...item,
           id: this.generateId(),
           isEdit: false,
@@ -415,7 +415,7 @@ export default {
       });
     },
     replacePortMapItem(name, newItem) {
-      const index = this.portMapList.findIndex((item) => item.name === name);
+      const index = this.portMapList.findIndex(item => item.name === name);
       if (index !== -1) {
         // 同步到父组件
         if (newItem) {

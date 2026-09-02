@@ -447,7 +447,8 @@ export default {
         const end = this.dateRange.endTime;
 
         const endSeconds = dayjs(end).valueOf();
-        const oneEndSeconds = dayjs(start).add(1, 'days').valueOf(); // 一天后
+        const oneEndSeconds = dayjs(start).add(1, 'days')
+          .valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -539,7 +540,7 @@ export default {
     curModuleName(moduleName) {
       // 当前模块下的环境列表
       this.curProcessEnvList = this.getProcessList();
-      const curEnvData = this.curProcessEnvList.filter((env) => env.name === this.curEnvName);
+      const curEnvData = this.curProcessEnvList.filter(env => env.name === this.curEnvName);
       // 若当前模块没有对应环境的进程，默认选中第一个
       if (!curEnvData.length) {
         this.curEnvName = this.curProcessEnvList.length !== 0 ? this.curProcessEnvList[0].name : 'stag';
@@ -547,7 +548,7 @@ export default {
     },
     curAppModuleList: {
       handler(modules) {
-        const isProcessListPresent = modules.find((module) => module.name === this.curModuleName);
+        const isProcessListPresent = modules.find(module => module.name === this.curModuleName);
         // 当前模块没有运行中的进程处理
         if (!isProcessListPresent) {
           this.curModuleName = modules[0].name;
@@ -584,9 +585,7 @@ export default {
     initTopText() {
       if (this.isCloudApp) {
         this.topInfo.type = this.$t('云原生应用');
-        this.topInfo.description = this.$t(
-          '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
-        );
+        this.topInfo.description = this.$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力');
       } else {
         this.topInfo.type = this.$t('普通应用');
         this.topInfo.description = this.$t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能');
@@ -599,7 +598,8 @@ export default {
         .then((response) => {
           this.operationsList = [];
           for (const item of response.results) {
-            item.at_friendly = dayjs(item.at).startOf('minute').fromNow();
+            item.at_friendly = dayjs(item.at).startOf('minute')
+              .fromNow();
             this.operationsList.push(item);
           }
         });
@@ -670,7 +670,7 @@ export default {
      * 显示进程指标数据
      */
     showProcessResource() {
-      const process = this.curEnvProcesses.find((item) => item.name === this.curProcessName);
+      const process = this.curEnvProcesses.find(item => item.name === this.curProcessName);
 
       if (process) {
         this.showProcessLoading();
@@ -1095,7 +1095,7 @@ export default {
       let envs = envMap;
       // 获取对应环境的图表
       if (chartEnv !== 'all') {
-        envs = envMap.filter((env) => env === chartEnv);
+        envs = envMap.filter(env => env === chartEnv);
       }
       envs.forEach((env) => {
         if (this.$refs[env + this.activeModuleId]) {
@@ -1112,7 +1112,7 @@ export default {
       appDeployInfo.deployment = appDeployInfo.deployment || {};
       return `${appDeployInfo.deployment.operator} ${this.$t('于')} ${this.smartTime(
         appDeployInfo.deployment.deploy_time,
-        'smartShorten'
+        'smartShorten',
       )}
                 ${appDeployInfo.is_deployed ? this.$t('部署') : this.$t('下架')}`;
     },
@@ -1129,23 +1129,22 @@ export default {
     handleItemClick(env, type, moduleName, $event) {
       $event && $event.stopPropagation();
 
-      const appRouterInfo =
-        env === 'stag'
-          ? {
-              name: 'appDeploy',
-              params: {
-                id: this.appCode,
-              },
-            }
-          : {
-              name: 'appDeployForProd',
-              params: {
-                id: this.appCode,
-              },
-              query: {
-                focus: 'prod',
-              },
-            };
+      const appRouterInfo =        env === 'stag'
+        ? {
+          name: 'appDeploy',
+          params: {
+            id: this.appCode,
+          },
+        }
+        : {
+          name: 'appDeployForProd',
+          params: {
+            id: this.appCode,
+          },
+          query: {
+            focus: 'prod',
+          },
+        };
       // 访问
       if (type === 'access') {
         const { url } = this.overViewData[moduleName].envs[env].exposed_link;
@@ -1155,7 +1154,7 @@ export default {
           // 应用编排
           this.toAppOrchestration(env);
         } else {
-          const toModule = this.curAppModuleList.find((module) => module.name === moduleName);
+          const toModule = this.curAppModuleList.find(module => module.name === moduleName);
           if (toModule) {
             // 切换对应模块
             this.$refs.appTopBarRef.handleModuleSelect(toModule);
@@ -1187,7 +1186,7 @@ export default {
       const [startTime, endTime] = date;
       this.$set(this.dateRange, 'startTime', startTime);
       this.$set(this.dateRange, 'endTime', endTime);
-      this.curTime = this.dateShortCut.find((t) => t.id === id) || {};
+      this.curTime = this.dateShortCut.find(t => t.id === id) || {};
       this.resourceUsageRange = timeMap[this.curTime.id];
     },
 
@@ -1246,7 +1245,6 @@ export default {
 
       // 默认按扩缩容方式计算所有资源
       Object.values(data).forEach((moduleData) => {
-
         ['stag', 'prod'].forEach((envName) => {
           const processes = moduleData.envs[envName]?.processes || [];
 

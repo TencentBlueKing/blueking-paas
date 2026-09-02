@@ -151,7 +151,8 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {

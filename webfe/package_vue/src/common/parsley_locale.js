@@ -26,7 +26,7 @@ window.Parsley.addMessages('zh-cn', {
     number: '请输入正确的数字',
     integer: '请输入正确的整数',
     digits: '请输入正确的号码',
-    alphanum: '请输入字母或数字'
+    alphanum: '请输入字母或数字',
   },
   notblank: '请输入值',
   required: '必填项',
@@ -40,7 +40,7 @@ window.Parsley.addMessages('zh-cn', {
   mincheck: '请至少选择 %s 个选项',
   maxcheck: '请选择不超过 %s 个选项',
   check: '请选择 %s 到 %s 个选项',
-  equalto: '输入值不同'
+  equalto: '输入值不同',
 });
 
 window.Parsley.setLocale('zh-cn');

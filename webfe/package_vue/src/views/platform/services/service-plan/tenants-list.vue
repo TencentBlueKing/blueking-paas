@@ -52,9 +52,7 @@ export default {
         return this.tenants;
       }
       // 过滤数据，检查 name 是否包含搜索词
-      return this.tenants.filter((item) => {
-        return item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-      });
+      return this.tenants.filter(item => item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm));
     },
   },
   watch: {

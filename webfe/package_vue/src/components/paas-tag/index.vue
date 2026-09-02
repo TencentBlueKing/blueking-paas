@@ -18,9 +18,7 @@ export default {
         const allowedValues = ['small', 'normal'];
         const isValid = allowedValues.includes(value);
         if (!isValid) {
-          console.warn(
-            `Invalid prop: custom validator check failed for prop "size". Expected one of ["small", "normal", "large"], got "${value}".`
-          );
+          console.warn(`Invalid prop: custom validator check failed for prop "size". Expected one of ["small", "normal", "large"], got "${value}".`);
         }
         return isValid;
       },

@@ -27,7 +27,7 @@ const ALLOWED_TAGS = [
   'a', 'img',
   'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
   'marked', 'pasmark', 'filtermark',
-  'sub', 'sup', 'small', 'abbr', 'cite', 'q', 'time'
+  'sub', 'sup', 'small', 'abbr', 'cite', 'q', 'time',
 ];
 const ALLOWED_ATTR = ['class', 'style', 'id', 'src'];
 const ADDITIONAL_ATTR = ['target', 'href'];

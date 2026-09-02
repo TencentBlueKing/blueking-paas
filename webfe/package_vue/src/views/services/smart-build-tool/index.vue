@@ -134,7 +134,7 @@
     <!-- 构建 S-mart 包侧边栏 -->
     <SmartSideslider
       :show.sync="smartSideConfig.visible"
-      :isDetail="smartSideConfig.isDetail"
+      :is-detail="smartSideConfig.isDetail"
       :row-data="smartSideConfig.row"
       @refresh-list="getBuildRecords"
       @close-sideslider="smartSideConfig.visible = false"
@@ -281,7 +281,7 @@ export default {
         fileDownload(
           ret?.download_url,
           `xxxxx
-        ${row.app_code}-${row.app_version}_paas3_${row.uuid?.slice(0, 8)}`
+        ${row.app_code}-${row.app_version}_paas3_${row.uuid?.slice(0, 8)}`,
         );
       } catch {
         this.$bkMessage({
@@ -315,7 +315,7 @@ export default {
       try {
         const params = this.constructQueryParams();
         const res = await this.$store.dispatch('tool/getSmartBuildRecords', { params });
-        this.tableList = res.results.map((item) => ({
+        this.tableList = res.results.map(item => ({
           ...item,
           timeConsuming: calculateTimeDiff(item.start_time, item.end_time),
         }));

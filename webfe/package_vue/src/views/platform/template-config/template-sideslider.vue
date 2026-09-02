@@ -268,19 +268,17 @@ export default {
       saveLoading: false,
       formData: cloneDeep(INITIAL_FORM_DATA),
       // 基本信息 form 配置
-      baseInfoFormItems: BASE_INFO_FORM_CONFIG.map((item) => ({
+      baseInfoFormItems: BASE_INFO_FORM_CONFIG.map(item => ({
         ...item,
         required: true,
         rules: item.rules ? item.rules : [{ ...requiredRule }],
       })),
       // 插件模块 form 配置
-      pluginFormItems: Object.freeze(
-        PLUGIN_FORM_CONFIG.map((item) => ({
-          ...item,
-          required: !nonRequiredFields.includes(item.property),
-          rules: nonRequiredFields.includes(item.property) ? [] : [{ ...requiredRule }],
-        }))
-      ),
+      pluginFormItems: Object.freeze(PLUGIN_FORM_CONFIG.map(item => ({
+        ...item,
+        required: !nonRequiredFields.includes(item.property),
+        rules: nonRequiredFields.includes(item.property) ? [] : [{ ...requiredRule }],
+      }))),
       blobUrlRules: [{ ...requiredRule }],
       runtimeTypeOptions: RUNTIME_TYPE_OPTIONS,
       runtimeTypeRules: [
@@ -298,10 +296,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -419,20 +417,17 @@ export default {
       // 需要处理的json
       const jsonFields = ['preset_services_config', 'required_buildpacks', 'processes'];
 
-      const transformFields = (fields, formData) => {
-        return fields.reduce((acc, field) => {
-          acc[field] = this.toJsonObject(formData[field]);
-          return acc;
-        }, {});
-      };
-      const getUrlFields = () =>
-        this.isPluginType
-          ? { blob_url: '' }
-          : {
-              repo_type: '',
-              repo_url: '',
-              source_dir: '',
-            };
+      const transformFields = (fields, formData) => fields.reduce((acc, field) => {
+        acc[field] = this.toJsonObject(formData[field]);
+        return acc;
+      }, {});
+      const getUrlFields = () => (this.isPluginType
+        ? { blob_url: '' }
+        : {
+          repo_type: '',
+          repo_url: '',
+          source_dir: '',
+        });
       return {
         ...this.formData,
         ...getUrlFields(),

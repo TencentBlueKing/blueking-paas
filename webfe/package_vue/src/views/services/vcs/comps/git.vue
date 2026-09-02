@@ -179,20 +179,17 @@ export default {
       const pairs = scope.split(':');
       if (pairs[0] === 'project') {
         return this.$t('项目: ') + pairs[1];
-      } else if (pairs[0] === 'group') {
+      } if (pairs[0] === 'group') {
         return this.$t('项目组: ') + pairs[1];
-      } else {
-        return scope;
       }
+      return scope;
     },
     auth_associate(authUrl) {
-      this.check_window_close(
-        window.open(
-          authUrl,
-          this.$t('授权窗口'),
-          'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'
-        )
-      );
+      this.check_window_close(window.open(
+        authUrl,
+        this.$t('授权窗口'),
+        'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no',
+      ));
     },
     disconnect(oauth, backendItem) {
       const url = `${BACKEND_URL}/api/oauth/backends/${oauth.name}/${backendItem.id}`;

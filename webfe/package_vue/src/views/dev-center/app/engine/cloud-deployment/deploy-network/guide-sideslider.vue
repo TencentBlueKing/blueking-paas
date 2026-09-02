@@ -25,8 +25,8 @@
 import MarkdownIt from 'markdown-it';
 import appDescription from './app-description.vue';
 export default {
-  components: { appDescription },
   name: 'GuideSideslider',
+  components: { appDescription },
   props: {
     show: {
       type: Boolean,
@@ -52,10 +52,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -74,10 +74,9 @@ export default {
       const md = new MarkdownIt();
       let markdownContent = '';
       // 引入md文件/区分语言环境
-      markdownContent =
-        this.localLanguage === 'en'
-          ? require(`!!raw-loader!@/assets/md/en/${this.md}`).default
-          : require(`!!raw-loader!@/assets/md/${this.md}`).default;
+      markdownContent =        this.localLanguage === 'en'
+        ? require(`!!raw-loader!@/assets/md/en/${this.md}`).default
+        : require(`!!raw-loader!@/assets/md/${this.md}`).default;
       const htmlStr = md.render(markdownContent);
       // 替换a标签属性，使用新标签页打开
       this.markdownContent = htmlStr.replace(/<a/g, '<a target="_blank"');

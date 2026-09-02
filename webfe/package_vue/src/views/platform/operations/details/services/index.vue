@@ -361,18 +361,18 @@ export default {
       if (columnIndex === 0) {
         return row.mergeCellTag
           ? {
-              rowspan: row.mergeCellTag * 2,
-              colspan: 1,
-            }
+            rowspan: row.mergeCellTag * 2,
+            colspan: 1,
+          }
           : defaultSpan;
       }
       // 增强服务、配置信息
       if (columnIndex === 1 || columnIndex === 2) {
         return rowIndex % 2 === 0
           ? {
-              rowspan: 2,
-              colspan: 1,
-            }
+            rowspan: 2,
+            colspan: 1,
+          }
           : defaultSpan;
       }
     },
@@ -387,7 +387,7 @@ export default {
       const searchTerm = this.searchValue && this.searchValue.trim().toLowerCase(); // 去除空格并转小写
       // 如果有搜索条件则进行过滤，否则直接复制
       this.filteredData = searchTerm
-        ? this.serviceList.filter((item) => item.moduleName.toLowerCase()?.includes(searchTerm))
+        ? this.serviceList.filter(item => item.moduleName.toLowerCase()?.includes(searchTerm))
         : [...this.serviceList];
     }, 300),
     // 获取增强服务数据
@@ -399,7 +399,7 @@ export default {
         });
         this.serviceList = res.flatMap((item) => {
           // shared_services 共享服务
-          const sharedServices = item.shared_services.map((service) => ({
+          const sharedServices = item.shared_services.map(service => ({
             ...service,
             sharedModule: true,
           }));
@@ -415,7 +415,7 @@ export default {
               env: 'stag',
               mergeCellTag: index === 0 ? allServices.length : 0,
               // 实例是否分配
-              envInfos: service.provision_infos?.find((v) => v.env_name === 'stag') || {},
+              envInfos: service.provision_infos?.find(v => v.env_name === 'stag') || {},
             },
             {
               ...service,
@@ -423,7 +423,7 @@ export default {
               env: 'prod',
               mergeCellTag: 0,
               // 实例是否分配
-              envInfos: service.provision_infos?.find((v) => v.env_name === 'prod') || {},
+              envInfos: service.provision_infos?.find(v => v.env_name === 'prod') || {},
             },
           ]);
         });
@@ -456,7 +456,7 @@ export default {
         await this.$store.dispatch('tenantOperations/assignEnhancedServiceInstance', {
           appCode: this.appCode,
           moduleId: moduleName,
-          env: env,
+          env,
           serviceId: service?.uuid,
         });
         this.getServices();
@@ -490,7 +490,7 @@ export default {
         await this.$store.dispatch('tenantOperations/unassignServiceInstance', {
           appCode: this.appCode,
           moduleId: moduleName,
-          env: env,
+          env,
           serviceId: service?.uuid,
           instanceId: envInfos?.instance_uuid,
         });
@@ -519,7 +519,7 @@ export default {
         const ret = await this.$store.dispatch('tenantOperations/getCredentials', {
           appCode: this.appCode,
           moduleId: moduleName,
-          env: env,
+          env,
           serviceId: service?.uuid,
           instanceId: envInfos?.instance_uuid,
         });
@@ -565,7 +565,7 @@ export default {
     },
     alertTips(row) {
       if (row.ref_modules?.length) {
-        const names = row.ref_modules.map((v) => v.name)?.join('、');
+        const names = row.ref_modules.map(v => v.name)?.join('、');
         return `${this.$t('该实例被以下模块共享：')}${names}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
       }
       return '';

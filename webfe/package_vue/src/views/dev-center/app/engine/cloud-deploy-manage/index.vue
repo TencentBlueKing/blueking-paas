@@ -136,7 +136,7 @@ export default {
       return this.$route.meta.history;
     },
     currentReplicasPolicy() {
-      return this.smartConfig.options.find((item) => item.value === this.smartConfig.replicasPolicy);
+      return this.smartConfig.options.find(item => item.value === this.smartConfig.replicasPolicy);
     },
   },
   watch: {
@@ -159,7 +159,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find((item) => item.name === name);
+      const curEnv = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curEnv.routeName,
       });

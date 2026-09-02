@@ -454,19 +454,19 @@ export default {
         },
         ...(this.isShowTenant
           ? [
-              {
-                key: 'tenant-mode',
-                label: '租户模式',
-                value: this.$t(this.appTenantMode[this.applicationDetail.app_tenant_mode]),
-                visible: true,
-              },
-              {
-                key: 'tenant-id',
-                label: '租户 ID',
-                value: this.applicationDetail.app_tenant_id,
-                visible: true,
-              },
-            ]
+            {
+              key: 'tenant-mode',
+              label: '租户模式',
+              value: this.$t(this.appTenantMode[this.applicationDetail.app_tenant_mode]),
+              visible: true,
+            },
+            {
+              key: 'tenant-id',
+              label: '租户 ID',
+              value: this.applicationDetail.app_tenant_id,
+              visible: true,
+            },
+          ]
           : []),
         {
           key: 'category',
@@ -486,7 +486,7 @@ export default {
           value: this.applicationDetail.created,
           visible: true,
         },
-      ].filter((item) => item.visible);
+      ].filter(item => item.visible);
     },
   },
   mounted() {
@@ -530,9 +530,7 @@ export default {
       const { logoData } = this.appBaseInfoConfig;
 
       // 添加必填字段
-      Object.entries({ name, tag_id: tagId, availability_level: availabilityLevel }).forEach(
-        ([key, value]) => value !== undefined && formData.append(key, value)
-      );
+      Object.entries({ name, tag_id: tagId, availability_level: availabilityLevel }).forEach(([key, value]) => value !== undefined && formData.append(key, value));
 
       if (logoData) {
         formData.append('logo', logoData);
@@ -684,7 +682,7 @@ export default {
         },
         (e) => {
           console.error(e);
-        }
+        },
       );
     },
 
@@ -717,7 +715,7 @@ export default {
       try {
         const res = await this.$store.dispatch('market/getTags');
         this.tagList = res;
-        this.testTagId = res.find((v) => v.name === '测试')?.id || '';
+        this.testTagId = res.find(v => v.name === '测试')?.id || '';
       } catch (e) {
         this.catchErrorHandler(e);
       }

@@ -103,8 +103,8 @@ const defaultExample = {
 };
 
 export default {
-  components: { titleBar, MonacoEditor, Tools },
   name: 'DescriptionFileConversion',
+  components: { titleBar, MonacoEditor, Tools },
   data() {
     return {
       sourceCode: yamljs.dump(defaultExample, { indent: 2 }),

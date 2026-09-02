@@ -257,7 +257,7 @@ export default {
         (validator) => {
           // 显示第一个出错位置
           console.warn(validator.content);
-        }
+        },
       );
     },
     goBack() {

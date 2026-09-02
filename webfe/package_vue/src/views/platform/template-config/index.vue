@@ -170,7 +170,7 @@ export default {
     ...mapState(['localLanguage']),
     templateTypes() {
       return (
-        this.templateMetadata.template_types?.map((v) => ({
+        this.templateMetadata.template_types?.map(v => ({
           text: v.label,
           value: v.name,
         })) || []
@@ -207,7 +207,7 @@ export default {
       if (!this.filterValue) {
         return this.templateList;
       }
-      return this.templateList.filter((v) => v.type === this.filterValue);
+      return this.templateList.filter(v => v.type === this.filterValue);
     },
     panels() {
       return [

@@ -190,12 +190,12 @@ export default {
         const userGroupList = res.user_group_list || [];
         const strategyConfigLink = res.strategy_config_link || '';
 
-        strategyList.length &&
-          strategyList.forEach((v) => {
+        strategyList.length
+          && strategyList.forEach((v) => {
             // 用户组处理
             v.noticeGroupNames = v.notice_group_ids.map((id) => {
               // eslint-disable-next-line camelcase
-              const foundItem = userGroupList.find((userItem) => +userItem.user_group_id === id);
+              const foundItem = userGroupList.find(userItem => +userItem.user_group_id === id);
               return foundItem ? foundItem.user_group_name : null;
             });
 
@@ -238,10 +238,9 @@ export default {
                 });
               });
 
-              maxThresholdConfig.text =
-                maxThreshold === -1
-                  ? '--'
-                  : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
+              maxThresholdConfig.text =                maxThreshold === -1
+                ? '--'
+                : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
               v.maxThresholdConfig = maxThresholdConfig;
               v.levelText = level;
             }

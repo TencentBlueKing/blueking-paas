@@ -81,7 +81,7 @@ export default {
     async getServiceDiscoveryData() {
       try {
         const res = await this.$store.dispatch('deploy/getServiceDiscoveryData', { appCode: this.appCode });
-        this.serviceData.list = res.bk_saas.map((v) => ({ key: v.bk_app_code, value: v.module_name || '--' }));
+        this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name || '--' }));
         // 服务发现表单数据
         this.serviceFormData = res.bk_saas || [];
         this.serviceData.isRiskPrompted = res.field_manager?.name === 'app_desc';
@@ -95,7 +95,7 @@ export default {
     async getDomainResolutionData() {
       try {
         const res = await this.$store.dispatch('deploy/getDomainResolutionData', { appCode: this.appCode });
-        this.dnsRuleData.list = res.host_aliases.map((v) => ({ key: v.ip, value: v.hostnames }));
+        this.dnsRuleData.list = res.host_aliases.map(v => ({ key: v.ip, value: v.hostnames }));
         // 域名解析规则表单数据
         this.domainRuleDFormData = res.host_aliases || [];
         this.dnsServeData.list = res.nameservers || [];

@@ -4,8 +4,8 @@
     :style="{ transform: `scaleX(${contentWidth / baseWidth})` }"
     :height="350"
     :speed="loadingConf.speed"
-    :primaryColor="loadingConf.primaryColor"
-    :secondaryColor="loadingConf.secondaryColor"
+    :primary-color="loadingConf.primaryColor"
+    :secondary-color="loadingConf.secondaryColor"
   >
     <rect
       x="0"

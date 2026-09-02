@@ -327,7 +327,7 @@ export default {
         if (!this.curAppInfo.web_config.engine_enabled) {
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
             return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
           });
@@ -337,34 +337,34 @@ export default {
         if (this.curAppModule?.region !== 'ieod') {
           navTree.forEach((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
           });
         }
 
         // 迁移中的应用展示迁移信息
         if (!this.userFeature.CNATIVE_MGRLEGACY || !this.isMigrationInfoShown) {
-          navTree = navTree.filter((nav) => nav.name !== 'appMigrationInfo');
+          navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
         }
 
         // 当角色为开发者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'developer') {
-          navTree = navTree.filter((nav) => this.roleAllowRouters.developer.includes(nav.name));
+          navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
         }
 
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
-          navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
+          navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
         }
 
         // smart应用或lesscode应用，包管理
         if (
-          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP &&
-          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
+          && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
         ) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
-              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appPackages')];
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
             }
           });
         }
@@ -567,9 +567,7 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(
-            (nav) => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName
-          );
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -587,7 +585,7 @@ export default {
     },
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
-      const category = navTree.find((item) => item.name === categoryName);
+      const category = navTree.find(item => item.name === categoryName);
       category.children.push({
         categoryName,
         name,
@@ -606,7 +604,7 @@ export default {
      * @param {String} name 名称
      */
     addServiceNavItem(navTree, id, name) {
-      const category = navTree.find((item) => item.name === 'appServices');
+      const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
         name,
@@ -654,7 +652,7 @@ export default {
         },
       };
 
-      const category = navTree.find((item) => item.name === 'appPermissions');
+      const category = navTree.find(item => item.name === 'appPermissions');
       if (category && type && nav[type]) {
         category.children.push(nav[type]);
       }
@@ -728,7 +726,8 @@ export default {
     },
 
     afterEnter(el) {
-      $(el).hide().slideDown(400);
+      $(el).hide()
+        .slideDown(400);
     },
 
     leave(el, done) {

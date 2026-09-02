@@ -28,10 +28,12 @@ export default {
   name: 'ConfigSelectContainer',
   props: {
     formData: {
-      default: () => {},
+      type: Object,
+      default: () => ({}),
     },
     source: {
-      default: () => {},
+      type: Object,
+      default: () => ({}),
     },
     property: {
       type: String,

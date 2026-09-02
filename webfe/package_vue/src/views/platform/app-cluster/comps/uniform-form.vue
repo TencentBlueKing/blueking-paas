@@ -62,12 +62,10 @@
 
 <script>
 import ClusterSelect from './cluster-select.vue';
-import ClusterTransfer from './cluster-transfer.vue';
 export default {
   name: 'UniformForm',
   components: {
     ClusterSelect,
-    ClusterTransfer,
   },
   props: {
     hasEnv: {

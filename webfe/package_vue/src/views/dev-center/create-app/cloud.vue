@@ -1051,12 +1051,12 @@ export default {
     },
     // 根目录
     rootPath() {
-      const { auth_method } = this.curSourceControl || {};
+      const { auth_method: authMethod } = this.curSourceControl || {};
       const authPathMap = {
         oauth: this.formData.buildDir,
         basic: this.curRepoDir,
       };
-      return authPathMap[auth_method] || '';
+      return authPathMap[authMethod] || '';
     },
     appendPath() {
       return this.isDockerfile ? this.formData.dockerfilePath || '' : '';
@@ -1346,10 +1346,10 @@ export default {
         const res = await this.$store.dispatch('createApp/getOptions');
 
         // 提取高级选项信息
-        const { adv_region_clusters = [], allow_adv_options } = res;
+        const { adv_region_clusters: advRegionClusters = [], allow_adv_options: allowAdvOptions } = res;
 
         // 获取对应 region 下的集群信息
-        const curRegionClusters = adv_region_clusters.find(v => v.region === this.GLOBAL.CONFIG.REGION_CHOOSE);
+        const curRegionClusters = advRegionClusters.find(v => v.region === this.GLOBAL.CONFIG.REGION_CHOOSE);
         const hasRequiredClusters = clusters => clusters?.stag?.length > 0 && clusters?.prod?.length > 0;
         // 没有配置集群，无法创建应用
         this.isAllowCreateApp = curRegionClusters
@@ -1357,10 +1357,10 @@ export default {
           : false;
 
         // 高级选项是否可用
-        this.isShowAdvancedOptions = allow_adv_options;
+        this.isShowAdvancedOptions = allowAdvOptions;
 
         // Region 的集群信息
-        adv_region_clusters.forEach((item) => {
+        advRegionClusters.forEach((item) => {
           if (!Object.prototype.hasOwnProperty.call(this.advancedOptionsObj, item.region)) {
             this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
           }

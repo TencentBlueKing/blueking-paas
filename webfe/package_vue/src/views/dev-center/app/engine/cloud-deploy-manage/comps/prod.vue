@@ -66,11 +66,9 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployModuleList from './deploy-module-list.vue';
-import SandboxSideslider from './sandbox-sideslider.vue';
 export default {
   components: {
     deployModuleList,
-    SandboxSideslider,
   },
   mixins: [appBaseMixin],
   props: {

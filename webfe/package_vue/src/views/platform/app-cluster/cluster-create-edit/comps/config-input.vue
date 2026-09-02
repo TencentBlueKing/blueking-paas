@@ -17,6 +17,7 @@ export default {
   name: 'ConfigInputContainer',
   props: {
     type: {
+      type: String,
       default: '',
     },
   },

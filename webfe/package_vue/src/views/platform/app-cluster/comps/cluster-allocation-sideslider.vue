@@ -159,9 +159,9 @@ export default {
   methods: {
     handleShown() {
       if (this.isEdit) {
-        const { type, allocation_policy = {} } = this.curTenantData.policies;
+        const { type, allocation_policy: allocationPolicy = {} } = this.curTenantData.policies;
         this.methodValue = type;
-        this.isAllocatedByEnv = allocation_policy?.env_specific || false;
+        this.isAllocatedByEnv = allocationPolicy?.env_specific || false;
       }
       this.getClusterAllocationPolicyConditionTypes();
       this.$nextTick(() => {

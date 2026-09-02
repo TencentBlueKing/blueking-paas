@@ -325,10 +325,10 @@ export default {
         return {};
       }
       // 过滤 config_items 中的 isEditing、isNew 字段
-      const config_items = (this.formData.config.config_items || []).map(({ isEditing, isNew, ...rest }) => rest);
+      const configItems = (this.formData.config.config_items || []).map(({ isEditing, isNew, ...rest }) => rest);
       return {
         ...this.formData.config,
-        config_items,
+        config_items: configItems,
       };
     },
     // 显示侧栏，数据回填

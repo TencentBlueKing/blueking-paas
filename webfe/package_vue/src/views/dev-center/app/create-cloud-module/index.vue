@@ -833,12 +833,12 @@ export default {
     },
     // 根目录
     rootPath() {
-      const { auth_method } = this.curSourceControl || {};
+      const { auth_method: authMethod } = this.curSourceControl || {};
       const authPathMap = {
         oauth: this.sourceDirVal,
         basic: this.curRepoDir,
       };
-      return authPathMap[auth_method] || '';
+      return authPathMap[authMethod] || '';
     },
     appendPath() {
       return this.isDockerfile ? this.dockerfileData.dockerfilePath : '';

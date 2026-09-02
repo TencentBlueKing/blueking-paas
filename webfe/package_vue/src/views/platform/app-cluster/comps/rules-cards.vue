@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-mutating-props -- This component edits the parent-owned allocation rule object in place. -->
 <template>
   <div class="rules-cards">
     <div class="conditional">{{ getConditionalType(allLength, order) }}</div>
@@ -155,6 +156,7 @@
 </template>
 
 <script>
+/* eslint-disable vue/no-mutating-props -- This component edits the parent-owned allocation rule object in place. */
 import ClusterSelect from './cluster-select.vue';
 export default {
   name: 'RulesCards',

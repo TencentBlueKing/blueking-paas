@@ -344,8 +344,8 @@ export default {
     },
     // OAuth授权信息表单配置项
     oauthFormItems() {
-      const { spec_cls } = this.formData;
-      const isRequired = spec_cls ? !OPTIONAL_FIELDS.includes(spec_cls) : false;
+      const { spec_cls: specCls } = this.formData;
+      const isRequired = specCls ? !OPTIONAL_FIELDS.includes(specCls) : false;
       return OAUTH_FORM_CONFIG.map(field => ({
         ...field,
         required: isRequired,

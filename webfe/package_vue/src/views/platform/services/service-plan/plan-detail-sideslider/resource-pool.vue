@@ -342,17 +342,17 @@ export default {
     handleClone(row) {
       this.prepareCloneHighlight();
       this.dialogConfig.planId = row?.plan_id;
-      const { plan_id, credentials, config, binding_policy } = row;
+      const { plan_id: planId, credentials, config, binding_policy: bindingPolicy } = row;
       const params = {
-        plan: plan_id,
+        plan: planId,
         credentials,
         config,
         // 根据 binding_policy 是否存在判断分配方式
-        allocation_type: binding_policy && Object.keys(binding_policy).length > 0 ? 'policy' : 'fifo',
+        allocation_type: bindingPolicy && Object.keys(bindingPolicy).length > 0 ? 'policy' : 'fifo',
       };
       // 有规则时添加 binding_policy
-      if (binding_policy && Object.keys(binding_policy).length > 0) {
-        params.binding_policy = binding_policy;
+      if (bindingPolicy && Object.keys(bindingPolicy).length > 0) {
+        params.binding_policy = bindingPolicy;
       }
       this.$refs.dialogRef?.cloneResourcePool(params);
     },

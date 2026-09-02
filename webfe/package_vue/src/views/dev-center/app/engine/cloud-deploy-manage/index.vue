@@ -196,11 +196,11 @@ export default {
     // 获取应用副本数策略
     async getAppDeployOptions() {
       try {
-        const { replicas_policy = 'web_form_priority' } = await this.$store.dispatch('deploy/getAppDeployOptions', {
+        const { replicas_policy: replicasPolicy = 'web_form_priority' } = await this.$store.dispatch('deploy/getAppDeployOptions', {
           appCode: this.appCode,
         });
-        this.smartConfig.replicasPolicy = replicas_policy;
-        this.tempReplicasPolicy = replicas_policy;
+        this.smartConfig.replicasPolicy = replicasPolicy;
+        this.tempReplicasPolicy = replicasPolicy;
       } catch (e) {
         this.catchErrorHandler(e);
       }

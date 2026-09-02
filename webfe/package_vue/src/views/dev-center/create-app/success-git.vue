@@ -166,9 +166,9 @@ export default {
       ].join('\n');
     },
     pluginTips() {
-      const { repo_url, source_dir } = this.appTemplateInfo;
-      const baseCommand = `cookiecutter ${repo_url}`;
-      const fullCommand = !source_dir || source_dir === '.' ? baseCommand : `${baseCommand} --directory ${source_dir}`;
+      const { repo_url: repoUrl, source_dir: sourceDir } = this.appTemplateInfo;
+      const baseCommand = `cookiecutter ${repoUrl}`;
+      const fullCommand = !sourceDir || sourceDir === '.' ? baseCommand : `${baseCommand} --directory ${sourceDir}`;
       return `pip install cookiecutter\n${fullCommand}`;
     },
     initTips() {

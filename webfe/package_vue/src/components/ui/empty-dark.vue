@@ -43,13 +43,6 @@
 import i18n from '@/language/i18n';
 
 export default {
-  data() {
-    return {
-      abnormalSvg: require('@static/images/abnormal.svg'),
-      emptyDarkImg: require('@static/images/empty-dark.png'),
-      searchEmptyImg: require('@static/images/search-empty.png'),
-    };
-  },
   props: {
     keyword: {
       type: String,
@@ -65,6 +58,13 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      abnormalSvg: require('@static/images/abnormal.svg'),
+      emptyDarkImg: require('@static/images/empty-dark.png'),
+      searchEmptyImg: require('@static/images/search-empty.png'),
+    };
   },
   methods: {
     handlerClearFilter() {

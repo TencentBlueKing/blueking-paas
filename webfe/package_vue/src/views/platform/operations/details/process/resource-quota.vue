@@ -631,17 +631,14 @@ export default {
           } else {
             this.formData[env].resources = this.createEmptyResources();
           }
-        }
-        // 情况二：自定义资源配额，override_resources: { limits: {}, requests: {} }
-        else if (data.override_resources?.limits || data.override_resources?.requests) {
+        } else if (data.override_resources?.limits || data.override_resources?.requests) {
+          // 情况二：自定义资源配额，override_resources: { limits: {}, requests: {} }
           this.formData[env].plan_name = 'custom';
           this.formData[env].resources = {
             limits: data.override_resources.limits || { cpu: '', memory: '' },
             requests: data.override_resources.requests || { cpu: '', memory: '' },
           };
-        }
-        // 情况一：以描述文件为准
-        else if (data.plan_name) {
+        } else if (data.plan_name) {
           this.formData[env].plan_name = data.plan_name;
           this.handlePlanChange(data.plan_name, env);
         }

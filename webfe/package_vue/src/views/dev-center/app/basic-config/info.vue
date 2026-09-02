@@ -444,7 +444,7 @@ export default {
         : false;
     },
     displayItems() {
-      const { extra_info } = this.applicationDetail;
+      const { extra_info: extraInfo } = this.applicationDetail;
       return [
         {
           key: 'name',
@@ -471,13 +471,13 @@ export default {
         {
           key: 'category',
           label: '应用分类',
-          value: extra_info?.tag?.name,
+          value: extraInfo?.tag?.name,
           visible: true,
         },
         {
           key: 'availability',
           label: '可用性保障登记',
-          value: this.tierMap[extra_info?.availability_level],
+          value: this.tierMap[extraInfo?.availability_level],
           visible: !!this.userFeature.APP_AVAILABILITY_LEVEL,
         },
         {
@@ -596,12 +596,12 @@ export default {
     },
     // 初始化表单数据
     initFromData(data) {
-      const { name, logo_url, extra_info } = data || {};
+      const { name, logo_url: logoUrl, extra_info: extraInfo } = data || {};
       this.localeAppInfo = {
         name,
-        logo: logo_url,
-        tagId: extra_info?.tag?.id || '',
-        availabilityLevel: extra_info?.availability_level || 'standard',
+        logo: logoUrl,
+        tagId: extraInfo?.tag?.id || '',
+        availabilityLevel: extraInfo?.availability_level || 'standard',
       };
     },
     // 获取应用所有信息

@@ -103,7 +103,7 @@ export default defineComponent({
       default: '',
     },
     appCode: {
-      type: String | Number,
+      type: [String, Number],
       default: '',
     },
     curModule: {

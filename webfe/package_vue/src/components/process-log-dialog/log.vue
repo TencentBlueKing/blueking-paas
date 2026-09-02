@@ -137,7 +137,7 @@ export default {
       default: '1h',
     },
     logs: {
-      type: Array | String,
+      type: [Array, String],
       default: () => [],
     },
     // 是否为云原生应用

@@ -161,13 +161,6 @@ export default {
   },
   computed: {
     compiledMarkdown() {
-      this.$nextTick(() => {
-        $('#markdown')
-          .find('a')
-          .each(function () {
-            $(this).attr('target', '_blank');
-          });
-      });
       return marked(this.guide);
     },
   },
@@ -184,8 +177,21 @@ export default {
   },
   mounted() {
     this.setDefault(this.data);
+    this.setMarkdownLinkTarget();
+  },
+  updated() {
+    this.setMarkdownLinkTarget();
   },
   methods: {
+    setMarkdownLinkTarget() {
+      this.$nextTick(() => {
+        $('#markdown')
+          .find('a')
+          .each(function () {
+            $(this).attr('target', '_blank');
+          });
+      });
+    },
     handleOpenGuide() {
       this.isShow = true;
     },

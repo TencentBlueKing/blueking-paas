@@ -303,8 +303,8 @@ export default {
       this.isInit = true;
       try {
         const res = await this.$store.dispatch('tenant/getPlans');
-        this.plansMap = res.reduce((map, { uuid, service_id, name }) => {
-          map[`${uuid}_${service_id}`] = name;
+        this.plansMap = res.reduce((map, { uuid, service_id: serviceId, name }) => {
+          map[`${uuid}_${serviceId}`] = name;
           return map;
         }, {});
       } catch (e) {
@@ -386,11 +386,11 @@ export default {
     },
     // 处理统一分配配置
     handleUniformAllocation(allocationPolicy) {
-      const { plans, env_plans } = allocationPolicy;
+      const { plans, env_plans: envPlans } = allocationPolicy;
       return {
         clusters: this.getPlanNames(plans),
-        env_clusters: this.generateEnvPlan(env_plans),
-        env_specific: !!env_plans,
+        env_clusters: this.generateEnvPlan(envPlans),
+        env_specific: !!envPlans,
       };
     },
     // 处理规则分配配置

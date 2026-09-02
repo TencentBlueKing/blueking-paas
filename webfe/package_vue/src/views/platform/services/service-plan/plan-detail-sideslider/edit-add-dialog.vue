@@ -390,13 +390,13 @@ export default {
       };
       // TLS 配置
       if (this.showTlsConfig) {
-        const { ca, cert, key, insecure_skip_verify } = this.formData.tlsConfig;
-        if (ca || cert || key || insecure_skip_verify) {
+        const { ca, cert, key, insecure_skip_verify: insecureSkipVerify } = this.formData.tlsConfig;
+        if (ca || cert || key || insecureSkipVerify) {
           config.tls = {
             ca,
             cert,
             key,
-            insecure_skip_verify,
+            insecure_skip_verify: insecureSkipVerify,
           };
         } else {
           config.tls = null;

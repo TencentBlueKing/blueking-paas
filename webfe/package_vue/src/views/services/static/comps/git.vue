@@ -83,13 +83,16 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
+import devopsImg from '@static/images/devops.png';
+import devopsInnerImg from '@static/images/devops-inner.png';
+
 export default {
   mixins: [appBaseMixin],
   data() {
     return {
       loading: false,
-      devopsImg: require('@static/images/devops.png'),
-      devopsInnerImg: require('@static/images/devops-inner.png'),
+      devopsImg,
+      devopsInnerImg,
       oauth2Backends: [
         {
           name: 'tc_git',
@@ -120,20 +123,17 @@ export default {
       const pairs = scope.split(':');
       if (pairs[0] === 'project') {
         return this.$t('项目: ') + pairs[1];
-      } else if (pairs[0] === 'group') {
+      } if (pairs[0] === 'group') {
         return this.$t('项目组: ') + pairs[1];
-      } else {
-        return scope;
       }
+      return scope;
     },
     auth_associate(auth) {
-      this.check_window_close(
-        window.open(
-          auth.oauth_url,
-          this.$t('授权窗口'),
-          'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'
-        )
-      );
+      this.check_window_close(window.open(
+        auth.oauth_url,
+        this.$t('授权窗口'),
+        'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no',
+      ));
     },
     async check_window_close(win, sleepTime = 1000) {
       if (win.closed) {

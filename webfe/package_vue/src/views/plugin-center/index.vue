@@ -201,7 +201,9 @@
 <script>
 import { PLUGIN_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
+import pluginDefaultImg from '@static/images/plugin-default.svg';
 import filterSelect from './comps/filter-select.vue';
+
 export default {
   components: { filterSelect },
   data() {
@@ -210,7 +212,7 @@ export default {
       filterKey: '',
       pluginList: [],
       pluginStatus: PLUGIN_STATUS,
-      pluginDefaultImg: require('@static/images/plugin-default.svg'),
+      pluginDefaultImg,
       isDataLoading: true,
       pagination: {
         current: 1,

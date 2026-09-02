@@ -74,8 +74,8 @@
             <div
               v-if="
                 curPluginItem.plugin_type &&
-                curPluginItem.plugin_type.approval_config &&
-                curPluginItem.plugin_type.approval_config.enabled
+                  curPluginItem.plugin_type.approval_config &&
+                  curPluginItem.plugin_type.approval_config.enabled
               "
               class="plugin-info mt15"
             >
@@ -296,6 +296,7 @@ import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
 import { throttle, uniqBy } from 'lodash';
 import i18n from '@/language/i18n';
+import pluginDefaultImg from '@static/images/plugin-default.svg';
 
 const BkSchemaForm = createForm();
 // 必填校验
@@ -312,7 +313,7 @@ export default {
   },
   data() {
     return {
-      pluginDefaultImg: require('@static/images/plugin-default.svg'),
+      pluginDefaultImg,
       form: {
         pd_id: '',
         plugin_id: '',
@@ -365,7 +366,7 @@ export default {
   },
   computed: {
     curPluginInfo() {
-      const curPluginData = this.pluginTypeList.filter((item) => item.plugin_type.id === this.form.pd_id);
+      const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
       return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
     },
     defaultPluginType() {
@@ -394,7 +395,7 @@ export default {
       }
     },
     'form.pd_id'(value) {
-      const selected = this.pluginTypeList.filter((item) => item.plugin_type.id === value);
+      const selected = this.pluginTypeList.filter(item => item.plugin_type.id === value);
       this.curPluginItem = selected[0];
       this.addRules();
       this.changePlaceholder();
@@ -463,8 +464,8 @@ export default {
       }
       for (const key in properties) {
         if (
-          Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') &&
-          Array.isArray(properties[key].default)
+          Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules')
+          && Array.isArray(properties[key].default)
         ) {
           // 多选校验
           properties[key]['ui:rules'] = [
@@ -539,12 +540,8 @@ export default {
       this.rules.name = rulesName;
     },
     changePlaceholder() {
-      this.pdIdPlaceholder =
-        this.$t(this.curPluginInfo.schema.id.description) ||
-        this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-      this.namePlaceholder =
-        this.$t(this.curPluginInfo.schema.name.description) ||
-        this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+      this.pdIdPlaceholder = this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+      this.namePlaceholder = this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
     },
     // 选中具体插件类型
     changePluginType(value) {
@@ -553,7 +550,7 @@ export default {
       this.form.pd_id = value;
 
       // 获取当前选中的插件类型数据
-      this.pluginTypeData = this.pluginTypeList.find((e) => e.plugin_type.id === value);
+      this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
       const { schema } = this.pluginTypeData;
       // 代码仓库链接
       this.form.repositoryTemplateUrl = this.form.plugin_id
@@ -586,9 +583,9 @@ export default {
     },
     // 选中具体插件开发语言
     changePluginLanguage(value) {
-      this.languageData = this.pluginLanguage.find((e) => e.id === value) || {};
+      this.languageData = this.pluginLanguage.find(e => e.id === value) || {};
       // 初始化模板
-      this.pluginTemplateList = this.pluginLanguage.filter((e) => e.language === this.languageData.language);
+      this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
       this.form.templateName = '';
       this.$nextTick(() => {
         this.validatePluginField('plugin_id');
@@ -676,7 +673,7 @@ export default {
       url = `${window.BACKEND_URL}/api/bk_plugin_distributors/`;
       try {
         const data = await http.get(url);
-        return data.map((e) => ({ label: e.name, value: e.code_name }));
+        return data.map(e => ({ label: e.name, value: e.code_name }));
       } catch (error) {
         console.warn(error);
       }
@@ -748,14 +745,14 @@ export default {
         trigger: 'blur',
       };
       // 查找是否已存在前缀规则
-      const hasPrefixRule = validationRules.some((rule) => rule.regex?.source === PREFIX_RULE.regex.source);
+      const hasPrefixRule = validationRules.some(rule => rule.regex?.source === PREFIX_RULE.regex.source);
       // 需要添加前缀但不存在时添加
       if (needPrefix && !hasPrefixRule) {
         return [...validationRules, PREFIX_RULE];
       }
       // 不需要前缀但存在时移除
       if (!needPrefix && hasPrefixRule) {
-        return validationRules.filter((rule) => rule.regex?.source !== PREFIX_RULE.regex.source);
+        return validationRules.filter(rule => rule.regex?.source !== PREFIX_RULE.regex.source);
       }
       // 其他情况返回原规则
       return validationRules;

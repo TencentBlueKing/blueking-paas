@@ -251,6 +251,7 @@ export const PLUGIN_VERSION_MAP = {
   deployAPI: 'deploy',
   subpage: 'test',
   itsm: 'itsm',
+  canaryWithItsm: 'itsm',
 };
 
 /**

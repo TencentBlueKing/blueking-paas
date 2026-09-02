@@ -437,11 +437,25 @@ export default {
 
     toNewVersion(data) {
       if (data.ongoing_release && this.releaseStatusMap[data.ongoing_release.status]) {
+        // Codecc 正式版（从已测版本发布）与版本列表「详情」一致，进 version-details
+        const release = data.ongoing_release;
+        const isCodeccOfficialRelease =
+          data.has_test_version && release.type === 'prod' && release.source_version_type === 'tested_version';
+        if (isCodeccOfficialRelease) {
+          this.$router.push({
+            name: 'pluginReleaseDetails',
+            params: { pluginTypeId: data.pd_id, id: data.id },
+            query: {
+              versionId: release.id,
+            },
+          });
+          return;
+        }
         this.$router.push({
           name: 'pluginVersionRelease',
           params: { pluginTypeId: data.pd_id, id: data.id },
           query: {
-            release_id: data.ongoing_release.id,
+            release_id: release.id,
           },
         });
       } else {

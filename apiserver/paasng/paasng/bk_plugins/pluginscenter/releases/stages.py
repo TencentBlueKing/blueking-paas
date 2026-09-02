@@ -215,6 +215,35 @@ class ItsmStage(BaseStageController):
         }
 
 
+class CanaryWithItsmStage(BaseStageController):
+    """带审批的灰度发布。仅补齐阶段详情渲染，不介入创建/重试/重置。
+
+    审批单据挂在发布策略上，不在 stage.itsm_detail。新建版本仍由
+    PluginReleaseExecutor.execute_gray_release 提单。
+    """
+
+    invoke_method = constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM
+
+    def execute(self, operator: str):
+        raise error_codes.EXECUTE_STAGE_ERROR.f(_("灰度发布请通过发布策略提单，不能按普通步骤重试"))
+
+    def render_to_view(self) -> Dict:
+        basic_info = super().render_to_view()
+        strategy = self.release.latest_release_strategy
+        if not strategy or not strategy.itsm_detail:
+            return {**basic_info, "detail": {}}
+
+        ticket_info = get_ticket_status(strategy.itsm_detail.sn)
+        ticket_info["fields"] = strategy.itsm_detail.fields
+        detail = ItsmTicketInfoSlz(ticket_info).data
+        # 单据号在策略上，不改 ItsmTicketInfoSlz，避免影响普通 itsm 步骤响应
+        detail["sn"] = strategy.itsm_detail.sn
+        return {
+            **basic_info,
+            "detail": detail,
+        }
+
+
 class PipelineStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.PIPELINE
 

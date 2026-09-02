@@ -156,3 +156,35 @@ def init_service_default_policy_job():
             _handel_single_service_default_policy(service, default_tenant_id)
 
         logger.info("Service policy initialization completed.")
+
+
+@scheduler.scheduled_job("interval", minutes=settings.AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES)
+def reconcile_e2b_sandboxes_job():
+    """收敛 e2b 沙箱归属表与底层网关的状态差异
+
+    锁的超时取对账周期，这样某一轮卡死时下一轮仍能接上，而不会因为锁一直不释放
+    让对账彻底停摆。
+    """
+    from paasng.platform.agent_sandbox.e2b.reconcile import archive_terminated_sandboxes, reconcile_all
+
+    lock_key = "lock:reconcile_e2b_sandboxes"
+    with redis_lock(lock_key, timeout=settings.AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES * 60) as acquired:
+        if not acquired:
+            logger.debug("Another instance is reconciling e2b sandboxes, skip.")
+            return
+
+        result = reconcile_all()
+        logger.info(
+            "e2b reconcile done: converged=%d orphans_killed=%d orphans_waiting=%d "
+            "clusters_done=%d clusters_skipped=%d failures=%d",
+            result.converged,
+            result.orphans_killed,
+            result.orphans_waiting,
+            result.clusters_done,
+            result.clusters_skipped,
+            result.failures,
+        )
+
+        # 归档跟着对账一起跑。它只删本地行、不碰网关，放同一轮省一个调度项，
+        # 多跑几次也没有副作用
+        archive_terminated_sandboxes()

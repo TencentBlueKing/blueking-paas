@@ -57,3 +57,6 @@ SERVICE_PROVISION_COUNTER = Counter("service_provision", "", ("environment", "se
 
 # 进程
 PROCESS_OPERATE_COUNTER = Counter("process_operate", "", ("environment", "operate_type"))
+
+# e2b 沙箱对账。outcome 取值见 E2BReconcileOutcome
+E2B_SANDBOX_RECONCILED_COUNTER = Counter("e2b_sandbox_reconciled", "", ("cluster", "outcome"))

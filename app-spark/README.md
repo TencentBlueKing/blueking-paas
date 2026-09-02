@@ -5,4 +5,4 @@ App-Spark 是蓝鲸运营系统 PaaS 平台推出的基于自然语言开发 Saa
 组件：
 
 - app-spark-api：项目主要的后端 API 服务，负责直接处理用户请求。
-- agent：独立的有状态编码 Agent Runtime，负责在指定 workspace 内执行开发任务。
+- agent：沙箱内 Agent，提供 `GET /health` 与 `POST /runs`（AG-UI over SSE）。

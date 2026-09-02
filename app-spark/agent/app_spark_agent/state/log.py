@@ -181,9 +181,7 @@ class AppendLog:
                         continue
                     record = self._decode(line, number)
                     if record.seq != self._last_seq + 1:
-                        raise AppendLogError(
-                            f"{self.path.name} line {number}: seq {record.seq} is not contiguous"
-                        )
+                        raise AppendLogError(f"{self.path.name} line {number}: seq {record.seq} is not contiguous")
                     self._last_seq = record.seq
                     self._run_ids.add(record.run_id)
         except OSError as exc:
@@ -202,6 +200,4 @@ class AppendLog:
         try:
             truncate_durably(self.path, size)
         except OSError as exc:
-            raise AppendLogError(
-                f"unable to discard the interrupted tail of {self.path.name}: {exc}"
-            ) from exc
+            raise AppendLogError(f"unable to discard the interrupted tail of {self.path.name}: {exc}") from exc

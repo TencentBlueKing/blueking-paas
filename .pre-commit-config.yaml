@@ -24,20 +24,20 @@ repos:
         name: ruff-check-fix
         language: system
         types: [python]
-        exclude: '^app-spark/app-spark-api/'
+        exclude: '^app-spark/(app-spark-api|agent)/'
         # 修复包导入顺序问题，类似 isort 工具
         entry: poetry run ruff check --force-exclude --select I --fix --no-cache 
       - id: ruff-format
         name: ruff-format
         language: system
         types: [python]
-        exclude: '^app-spark/app-spark-api/'
+        exclude: '^app-spark/(app-spark-api|agent)/'
         entry: poetry run ruff format --force-exclude --no-cache
       - id: ruff-check
         name: ruff-check
         language: system
         types: [python]
-        exclude: '^app-spark/app-spark-api/'
+        exclude: '^app-spark/(app-spark-api|agent)/'
         entry: poetry run ruff check --force-exclude --no-cache
 
       # === app-spark-api 专用 Python 质量检查（uv 项目）===
@@ -59,6 +59,24 @@ repos:
         types: [python]
         entry: uv run --project app-spark/app-spark-api ruff check --force-exclude --no-cache
         files: '^app-spark/app-spark-api/'
+      - id: ruff-check-fix-app-spark-agent
+        name: ruff-check-fix for "app-spark-agent"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/agent ruff check --force-exclude --select I --fix --no-cache
+        files: '^app-spark/agent/'
+      - id: ruff-format-app-spark-agent
+        name: ruff-format for "app-spark-agent"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/agent ruff format --force-exclude --no-cache
+        files: '^app-spark/agent/'
+      - id: ruff-check-app-spark-agent
+        name: ruff-check for "app-spark-agent"
+        language: system
+        types: [python]
+        entry: uv run --project app-spark/agent ruff check --force-exclude --no-cache
+        files: '^app-spark/agent/'
 
       # === 按项目拆分的类型与依赖边界检查 ===
       # mypy hooks for each Python project, the hooks must be separated because different
@@ -77,6 +95,13 @@ repos:
         pass_filenames: false
         entry: bash -c "cd app-spark/app-spark-api && uv run mypy --config-file=./pyproject.toml"
         files: '^app-spark/app-spark-api/'
+      - id: mypy-app-spark-agent
+        name: run mypy check for "app-spark-agent"
+        language: system
+        types: [python]
+        pass_filenames: false
+        entry: bash -c "cd app-spark/agent && uv run mypy --config-file=./pyproject.toml"
+        files: '^app-spark/agent/'
       - id: import-linter-apiserver
         name: run import-linter check for "apiserver"
         language: system

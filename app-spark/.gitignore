@@ -1,2 +1,7 @@
 # Local settings files
 app-spark-api/settings_local.yaml
+
+# uv / Python
+.venv/
+__pycache__/
+*.pyc

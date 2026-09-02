@@ -183,9 +183,7 @@ class ContextStore:
             if current == context:
                 return current
             if not current.is_empty:
-                raise ConversationStateConflict(
-                    "an active conversation context cannot be overwritten"
-                )
+                raise ConversationStateConflict("an active conversation context cannot be overwritten")
             await self._persist(context)
             return context
 

@@ -57,9 +57,7 @@ def test_mid_run_compaction_does_not_reach_the_raw_transcript(tmp_path: Path) ->
         stored = _tool_return_contents(get_context(client)["messages"])
 
     assert len(logged) == rounds
-    assert all(
-        content.startswith(f"probe-payload-{index}-") for index, content in enumerate(logged)
-    )
+    assert all(content.startswith(f"probe-payload-{index}-") for index, content in enumerate(logged))
 
     # The context kept only the most recent pair intact, which is exactly the content the
     # transcript would have lost had it been derived from the run result.
@@ -71,9 +69,7 @@ def test_compaction_advances_the_context_version_inside_a_run(tmp_path: Path) ->
     client = clearing_client(tmp_path, rounds=3)
 
     with client:
-        assert (
-            run_request(client, conversation_id=str(uuid4()), context_version=0).status_code == 200
-        )
+        assert run_request(client, conversation_id=str(uuid4()), context_version=0).status_code == 200
         health: dict[str, Any] = client.get("/health").json()
         persisted_version = get_context(client)["context_version"]
 
@@ -104,9 +100,7 @@ def test_summary_enters_the_context_but_never_the_transcript(tmp_path: Path) -> 
     )
 
     with client:
-        assert (
-            run_request(client, conversation_id=str(uuid4()), context_version=0).status_code == 200
-        )
+        assert run_request(client, conversation_id=str(uuid4()), context_version=0).status_code == 200
 
         context_messages = get_context(client)["messages"]
         transcript_messages = get_transcript_messages(client)
@@ -153,17 +147,10 @@ def test_replay_detection_survives_compaction_dropping_the_run(tmp_path: Path) -
         assert first.status_code == 200, first.text
 
         version: int = client.get("/health").json()["context_version"]
-        assert (
-            run_request(
-                client, conversation_id=conversation_id, context_version=version
-            ).status_code
-            == 200
-        )
+        assert run_request(client, conversation_id=conversation_id, context_version=version).status_code == 200
 
         current: int = client.get("/health").json()["context_version"]
-        replay = run_request(
-            client, conversation_id=conversation_id, context_version=current, run_id=first_run_id
-        )
+        replay = run_request(client, conversation_id=conversation_id, context_version=current, run_id=first_run_id)
         context_messages = get_context(client)["messages"]
 
     context_run_ids = {message.get("run_id") for message in context_messages}

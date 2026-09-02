@@ -1,37 +1,85 @@
 # App-Spark Agent Runtime
 
-这是一个独立的、有状态的编码 Agent 服务。一个进程绑定一个 Chat 会话和一个 workspace，
-通过 AG-UI HTTP/SSE 接收新消息，并在 workspace 外持久化会话状态。
-
-## TODO
-
-- 支持对 api 主控端回写持久化内容
-- 改造为可以基于独立容器启动
-- 支持在沙箱环境中启动
-- 增加开发蓝鲸 SaaS 相关 SKILL
+沙箱内编码 Agent：一个进程绑定一个会话和一个 workspace，通过 AG-UI HTTP/SSE 接收新消息，
+并在 workspace 外持久化会话状态。本组件与 `app-spark-api` 平级，不引入 Django。
 
 ## 安装与启动
 
-需要 Python 3.14 与 uv。本地运行只需三个配置：workspace、状态目录和模型 API Key，然后启动：
+需要 Python 3.14+ 与 [uv](https://docs.astral.sh/uv/)。
 
 ```bash
+cd app-spark/agent
 uv sync
-export APP_SPARK_AGENT_WORKSPACE=/tmp/app-spark-workspace
-export APP_SPARK_AGENT_STATE_DIR=/tmp/app-spark-state
-export APP_SPARK_AGENT_API_KEY="..."
-
-uv run uvicorn app_spark_agent.server.asgi:app --port 8765
 ```
 
-接口没有鉴权，请保持 uvicorn 默认的回环地址，不要监听 `0.0.0.0`；需要对外暴露时由外层
-基础设施负责鉴权和网络隔离。
+可用命令见 `make help`。
 
-## 配置
+### 启动所需环境变量
 
-全部配置项集中在 `app_spark_agent/settings.py`，由 environs 在导入时从 `APP_SPARK_AGENT_*`
-环境变量解析并校验（`.env` 文件也会自动读取），完整清单以该文件为准。其中 `WORKSPACE` 与
-`STATE_DIR` 没有默认值、真正建应用时才检查；其余项（模型、压缩策略、游标 limit 等）都有
-合理默认值。
+文档只用占位符，不要填真实密钥。
+
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | `GET /health` 的 query `token`，以及 `POST /runs` / 控制面接口的 Bearer |
+| `APP_SPARK_AGENT_MODEL_API_KEY` | 调用 `/runs` 时是 | 模型密钥。缺失则 `model_ready=false`，`POST /runs` 返回 503 |
+| `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
+| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`，到期以退出码 0 退出。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
+| `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/workspace` | Agent 工具可见目录 |
+| `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/state` | 必须在 workspace 外 |
+| `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
+
+示例：
+
+```bash
+export APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me
+export APP_SPARK_AGENT_MODEL_API_KEY=replace-me
+export APP_SPARK_AGENT_WORKSPACE=/tmp/app-spark-workspace
+export APP_SPARK_AGENT_STATE_DIR=/tmp/app-spark-state
+make run
+```
+
+其余压缩策略、游标 limit 等配置见 `app_spark_agent/settings.py`（`APP_SPARK_AGENT_*`）。
+
+## 调用 HTTP
+
+`GET /health` 必须带 query token，缺或错误返回 401，且不返回状态字段：
+
+```bash
+curl -sS "http://127.0.0.1:8090/health?token=${APP_SPARK_AGENT_RUNTIME_TOKEN}"
+```
+
+成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`app_status`，以及会话游标
+`conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube / 接入层探针使用同一 URL。
+
+`POST /runs` 为 AG-UI over SSE，必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
+
+```bash
+curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "threadId": "demo-conversation",
+    "runId": "4c1889a5-0500-4c7d-877a-d933a5a28e51",
+    "state": {},
+    "messages": [{
+      "id": "cb39dbbf-a3db-46ff-bb1d-e15a9003c658",
+      "role": "user",
+      "content": "Create only index.html containing Hello World."
+    }],
+    "tools": [],
+    "context": [],
+    "forwardedProps": {"contextVersion": 0}
+  }' \
+  http://127.0.0.1:8090/runs
+```
+
+错误码：401（Token 缺失或错误）、409（已有运行中 run）、503（模型未就绪）、422（非法 AG-UI 请求）。
+没有独立取消接口；客户端断开 SSE 即取消。
+
+请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
+运行的 `contextVersion` 是 `0`。
+
+`/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer，供控制面读取或迁移会话状态。
 
 ## 会话状态
 
@@ -52,50 +100,26 @@ uv run uvicorn app_spark_agent.server.asgi:app --port 8765
 - `SummarizingCompaction` 是一次不可重放的真实 LLM 调用，冷启动重建上下文的唯一来源是
   `context.json`，绝不能从 `log.jsonl` 拼出来。
 
-## 发起会话
-
-`POST /runs` 接收 AG-UI 请求体，返回一段 SSE 事件流，里面全部是可以直接转发给前端的 AG-UI
-事件：
+## 本地镜像
 
 ```bash
-curl -N http://127.0.0.1:8765/runs \
-  -H 'Accept: text/event-stream' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "threadId": "demo-conversation",
-    "runId": "4c1889a5-0500-4c7d-877a-d933a5a28e51",
-    "state": {},
-    "messages": [{
-      "id": "cb39dbbf-a3db-46ff-bb1d-e15a9003c658",
-      "role": "user",
-      "content": "Create only index.html containing Hello World."
-    }],
-    "tools": [],
-    "context": [],
-    "forwardedProps": {"contextVersion": 0}
-  }'
+make docker-build
+docker run --rm -p 8090:8090 \
+  -e APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me \
+  -e APP_SPARK_AGENT_MODEL_API_KEY=replace-me \
+  app-spark-agent:dev
 ```
 
-请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
-运行的 `contextVersion` 是 `0`。流结束即本轮完成，之后访问 `/health` 确认会话成功：
-`running` 回到 `false`，且 `context_version`、`log_seq`、`ui_event_seq` 都已经前进。
-
-## 游标接口
-
-以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标与运行标志，
-`/log` 与 `/ui-events` 按游标增量读取两条日志，`/context` 导出当前上下文（也可向空 Runtime
-注入冷会话上下文）。
-
-> 具体参数与返回结构以代码实现为准。
+入口为 tini（PID 1）。`make docker-build` 使用 `--load` 写入本地 daemon。镜像内 workspace / state 锁定为 `/workspace` 与 `/state`，二者必须是独立路径，文件工具只能看见 `/workspace`。
 
 ## 开发指南
 
 ### 单元测试
 
-普通测试不请求模型、不需要 API Key、也不需要起进程：
+普通测试不请求模型、不需要真实 API Key、也不需要起进程：
 
 ```bash
-uv run pytest
+make test
 ```
 
 `tests/api/` 跑在假模型上完整覆盖 HTTP 接口的正确与错误分支；状态原语、Agent 组装、压缩、
@@ -107,10 +131,7 @@ uv run pytest
 都走 HTTP。设置好有效配置后：
 
 ```bash
-echo 'APP_SPARK_AGENT_API_KEY=sk-...' > .env   # 已在 .gitignore 中
+export APP_SPARK_AGENT_MODEL_API_KEY=sk-...
+export APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me
 uv run pytest tests/e2e -s
 ```
-
-`-s` 作用：每次模型调用都会实时打到控制台——请求与响应、工具调用与结果、逐 token 出现
-的回答。挑一个 `tests/e2e/test_coding_session.py` 跑起来，看 Agent 读文件、写文件、执行命令、
-流式输出，再配合回读 `/log`、`/ui-events`、`/context`，是掌握这套 Runtime 工作过程最快的方式。

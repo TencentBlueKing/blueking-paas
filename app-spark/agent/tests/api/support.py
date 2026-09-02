@@ -24,9 +24,38 @@ from app_spark_agent.server import create_runtime_app
 from tests.support.ag_ui import SSE_HEADERS, assistant_text, run_body, sse_events
 from tests.support.fake_models import gated_model
 
+RUNTIME_TOKEN = "test-runtime-token"
+MODEL_API_KEY = "test-model-key"
+AUTH_HEADERS = {"Authorization": f"Bearer {RUNTIME_TOKEN}"}
+HEALTH_PARAMS = {"token": RUNTIME_TOKEN}
+HEALTH_FIELDS = {"version", "model_ready", "running", "app_status"}
+
 # `ASGITransport` never opens a socket, so this only has to be an absolute URL httpx can build
 # requests from; nothing ever resolves it.
 ASGI_BASE_URL = "http://runtime.test"
+
+
+class AuthedTestClient(TestClient):
+    """TestClient that attaches the runtime Bearer and health query token."""
+
+    def request(self, method: str, url: str, **kwargs: Any) -> Any:  # type: ignore[override]
+        headers = {str(key): str(value) for key, value in dict(kwargs.get("headers") or {}).items()}
+        # Keep a caller-supplied Authorization so 401 cases can be tested.
+        if not any(key.lower() == "authorization" for key in headers):
+            headers["Authorization"] = AUTH_HEADERS["Authorization"]
+        kwargs["headers"] = headers
+
+        # /health uses a query token, not Bearer. Use a bare TestClient for missing/wrong token.
+        path = str(url).split("?", 1)[0].rstrip("/")
+        if path.endswith("/health"):
+            params = kwargs.get("params")
+            if params is None:
+                kwargs["params"] = dict(HEALTH_PARAMS)
+            elif isinstance(params, dict) and "token" not in params:
+                kwargs["params"] = {**params, **HEALTH_PARAMS}
+
+        return super().request(method, url, **kwargs)
+
 
 # Long enough to survive a loaded machine, short enough that a guard that is never taken fails
 # the test instead of hanging the suite.
@@ -62,7 +91,7 @@ def build_test_client(
         capabilities=list[AbstractCapability[object]](capabilities),
     )
     app = create_runtime_app(workspace=workspace, state_dir=state_dir, agent=agent)
-    return TestClient(app)
+    return AuthedTestClient(app)
 
 
 def run_request(
@@ -181,7 +210,12 @@ async def http_client(test_client: TestClient) -> AsyncGenerator[httpx.AsyncClie
     both requests on one event loop, so the second one arrives while the first is still open.
     """
     transport = httpx.ASGITransport(app=test_client.app)
-    async with httpx.AsyncClient(transport=transport, base_url=ASGI_BASE_URL) as client:
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url=ASGI_BASE_URL,
+        headers=AUTH_HEADERS,
+        params=HEALTH_PARAMS,
+    ) as client:
         yield client
 
 
@@ -245,9 +279,7 @@ async def run_in_flight(tmp_path: Path) -> AsyncGenerator[InFlightRun]:
     test_client = build_test_client(tmp_path, model=gated_model(gate))
     conversation_id = str(uuid4())
     async with http_client(test_client) as client:
-        streaming = asyncio.create_task(
-            post_run_async(client, conversation_id=conversation_id, context_version=0)
-        )
+        streaming = asyncio.create_task(post_run_async(client, conversation_id=conversation_id, context_version=0))
         held = InFlightRun(
             client=client,
             conversation_id=conversation_id,

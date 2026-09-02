@@ -77,6 +77,44 @@ def summarizing_model(summary: str) -> FunctionModel:
     return FunctionModel(respond)
 
 
+def failing_model(*, message: str = "synthetic model failure") -> FunctionModel:
+    """Build a model that fails the first request, so the run never completes."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        raise RuntimeError(message)
+
+    return FunctionModel(respond)
+
+
+def tool_then_fail_model(*, tool_rounds: int = 2) -> FunctionModel:
+    """Call ``probe`` ``tool_rounds`` times, then raise so the run ends unsuccessfully.
+
+    Used to leave a mid-run compaction on disk: the tool rounds succeed and may
+    persist a compacted context, then the next request blows up before
+    ``on_complete``.
+    """
+    issued = 0
+
+    async def stream(
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> AsyncIterator[str | DeltaToolCalls]:
+        nonlocal issued
+        if issued >= tool_rounds:
+            raise RuntimeError("fail after tool rounds")
+        index = issued
+        issued += 1
+        yield {
+            0: DeltaToolCall(
+                name=PROBE_TOOL,
+                json_args=json.dumps({"index": index}),
+                tool_call_id=f"probe-call-{index}",
+            )
+        }
+
+    return FunctionModel(stream_function=stream)
+
+
 def gated_model(gate: asyncio.Event, *, reply: str = "done") -> FunctionModel:
     """Build a model that holds its response open until ``gate`` is set.
 

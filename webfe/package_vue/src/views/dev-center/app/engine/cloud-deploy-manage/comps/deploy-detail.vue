@@ -826,7 +826,7 @@ export default {
     handleUpdateProcess() {
       this.updateProcess();
     },
-    handleExpansionAndContraction(row, i) {
+    handleExpansionAndContraction(row) {
       this.curUpdateProcess = row; // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
@@ -1584,7 +1584,7 @@ export default {
     },
 
     // 重启进程、实例弹窗
-    showRestartPopup(type, row, i) {
+    showRestartPopup(type, row) {
       const restartInstance = type === 'instance';
       this.$bkInfo({
         title: restartInstance ? this.$t('确认重启当前实例？') : this.$t('确认滚动重启当前进程下所有实例？'),

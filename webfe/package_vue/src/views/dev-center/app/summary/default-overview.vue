@@ -537,7 +537,7 @@ export default {
       },
       deep: true,
     },
-    curModuleName(moduleName) {
+    curModuleName() {
       // 当前模块下的环境列表
       this.curProcessEnvList = this.getProcessList();
       const curEnvData = this.curProcessEnvList.filter(env => env.name === this.curEnvName);
@@ -626,7 +626,7 @@ export default {
     /**
      * 切换process时回调
      */
-    handlerProcessSelecte(type) {
+    handlerProcessSelecte() {
       this.showProcessResource();
     },
 
@@ -1182,7 +1182,7 @@ export default {
     },
 
     handleDateChange(date, id) {
-      this.changIndex++;
+      this.changIndex += 1;
       const [startTime, endTime] = date;
       this.$set(this.dateRange, 'startTime', startTime);
       this.$set(this.dateRange, 'endTime', endTime);
@@ -1251,23 +1251,27 @@ export default {
           processes.forEach((processGroup) => {
             Object.keys(processGroup).forEach((processName) => {
               const process = processGroup[processName];
-              const { resource_limit_quota, scaling_config, target_replicas } = process;
+              const {
+                resource_limit_quota: resourceLimitQuota,
+                scaling_config: scalingConfig,
+                target_replicas: targetReplicas,
+              } = process;
 
-              if (!resource_limit_quota) return;
+              if (!resourceLimitQuota) return;
 
-              const cpuQuota = resource_limit_quota.cpu || 0;
-              const memoryQuota = resource_limit_quota.memory || 0;
+              const cpuQuota = resourceLimitQuota.cpu || 0;
+              const memoryQuota = resourceLimitQuota.memory || 0;
 
               // 检查是否有扩缩容配置（用于标识）
-              if (process.autoscaling && scaling_config) {
+              if (process.autoscaling && scalingConfig) {
                 hasAutoscaling = true;
               }
 
               // 默认按扩缩容方式计算
-              if (process.autoscaling && scaling_config) {
+              if (process.autoscaling && scalingConfig) {
                 // 有扩缩容配置的进程
-                const minReplicas = scaling_config.min_replicas || 0;
-                const maxReplicas = scaling_config.max_replicas || minReplicas;
+                const minReplicas = scalingConfig.min_replicas || 0;
+                const maxReplicas = scalingConfig.max_replicas || minReplicas;
 
                 resources[envName].minCpu += cpuQuota * minReplicas;
                 resources[envName].minMemory += memoryQuota * minReplicas;
@@ -1275,7 +1279,7 @@ export default {
                 resources[envName].maxMemory += memoryQuota * maxReplicas;
               } else {
                 // 没有扩缩容配置的进程，用 target_replicas 作为边界值
-                const replicas = target_replicas || 0;
+                const replicas = targetReplicas || 0;
                 resources[envName].minCpu += cpuQuota * replicas;
                 resources[envName].minMemory += memoryQuota * replicas;
                 resources[envName].maxCpu += cpuQuota * replicas;

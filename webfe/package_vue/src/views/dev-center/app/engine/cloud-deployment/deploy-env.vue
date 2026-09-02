@@ -37,7 +37,7 @@
                 :active="switchConfig.active"
                 :has-icon="false"
                 :has-count="false"
-                @change="($event) => (switchConfig.active = $event.name)"
+                @change="$event => (switchConfig.active = $event.name)"
               />
             </template>
           </div>
@@ -446,15 +446,19 @@ export default {
 
       if (!conflictItem) return {};
 
-      const { conflicted_detail, override_conflicted, conflicted_source } = conflictItem;
-      const basicText = override_conflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
-      const conflictSourceMessage =        conflicted_source === 'builtin_addons'
-        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
+      const {
+        conflicted_detail: conflictedDetail,
+        override_conflicted: overrideConflicted,
+        conflicted_source: conflictedSource,
+      } = conflictItem;
+      const basicText = overrideConflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
+      const conflictSourceMessage =        conflictedSource === 'builtin_addons'
+        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflictedDetail })
         : this.$t('和平台的内置环境变量冲突');
 
       return {
         message: `${basicText}，${conflictSourceMessage}`,
-        overrideConflicted: override_conflicted,
+        overrideConflicted,
       };
     },
 

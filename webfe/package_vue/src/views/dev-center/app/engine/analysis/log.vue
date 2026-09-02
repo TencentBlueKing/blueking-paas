@@ -18,12 +18,10 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import appTopBar from '@/components/paas-app-bar';
 import analysis from './comps/analysis.vue';
 
 export default {
   components: {
-    appTopBar,
     appAnalysis: analysis,
   },
   mixins: [appBaseMixin],

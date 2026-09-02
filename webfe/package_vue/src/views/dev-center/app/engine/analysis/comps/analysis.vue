@@ -826,7 +826,7 @@ export default {
     /**
              * 显示实例指标数据
              */
-    showInstanceChart(instance, processes) {
+    showInstanceChart() {
       const chartRef = this.$refs.chart;
 
       chartRef && chartRef.mergeOptions({
@@ -1016,7 +1016,7 @@ export default {
       return Number(uv1) > Number(uv2);
     },
 
-    handleDateChange(date, type) {
+    handleDateChange(date) {
       this.dateRange = {
         startTime: date[0],
         endTime: date[1],
@@ -1061,7 +1061,7 @@ export default {
       this.getPathData();
     },
 
-    handleDimensionChange(value, options) {
+    handleDimensionChange() {
       this.pagination.current = 1;
       this.getPathData();
     },

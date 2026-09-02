@@ -67,7 +67,7 @@ const option = {
       type: 'shadow',
     },
     trigger: 'item',
-    formatter(data) {
+    formatter() {
       return '';
     },
   },

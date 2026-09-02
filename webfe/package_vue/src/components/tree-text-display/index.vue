@@ -122,7 +122,7 @@ export default {
     },
 
     // 不显示根节点时的格式化方法
-    formatChildren(children, prefix = '', isParentLast = true) {
+    formatChildren(children, prefix = '', _isParentLast = true) {
       if (!children || children.length === 0) return '';
 
       let result = '';

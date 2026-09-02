@@ -409,7 +409,7 @@ export default {
         return;
       }
       const len = this.$refs.searchedResultsRef.renderData.length;
-      this.focusItemIndex--;
+      this.focusItemIndex -= 1;
       this.focusItemIndex = this.focusItemIndex < 0 ? -1 : this.focusItemIndex;
       if (this.focusItemIndex === -1) {
         this.focusItemIndex = len - 1;
@@ -478,7 +478,7 @@ export default {
         return;
       }
       const len = this.$refs.searchedResultsRef.renderData.length;
-      this.focusItemIndex++;
+      this.focusItemIndex += 1;
       this.focusItemIndex = this.focusItemIndex > len - 1 ? len : this.focusItemIndex;
       if (this.focusItemIndex === len) {
         this.focusItemIndex = 0;
@@ -647,7 +647,7 @@ export default {
         }
         const treeList = [];
         treeList.splice(0, 0, ...this.treeList);
-        categories.forEach((child, childIndex) => {
+        categories.forEach((child) => {
           child.visiable = true;
           child.loading = false;
           child.showRadio = true;

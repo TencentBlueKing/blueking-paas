@@ -73,7 +73,7 @@ export default {
       this.data.forEach((item) => {
         item.instances.forEach((instanceItem) => {
           if (!['Starting', 'Pending', 'Running'].includes(instanceItem.state)) {
-            ++abnormalLen;
+            abnormalLen += 1;
           }
         });
       });

@@ -312,7 +312,7 @@ export default {
           start.setTime(start.getTime() - 60 * 1000 * 5);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '5m';
           timeShortCutText = i18n.t('最近5分钟');
         },
@@ -325,7 +325,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 1);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1h';
           timeShortCutText = i18n.t('最近1小时');
         },
@@ -338,7 +338,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 3);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '3h';
           timeShortCutText = i18n.t('最近3小时');
         },
@@ -351,7 +351,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 12);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '12h';
           timeShortCutText = i18n.t('最近12小时');
         },
@@ -364,7 +364,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1d';
           timeShortCutText = i18n.t('最近1天');
         },
@@ -377,7 +377,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '7d';
           timeShortCutText = i18n.t('最近7天');
         },
@@ -924,7 +924,7 @@ export default {
       this.getCurrentFun();
     },
 
-    renderTypeHeader(h, { column }) {
+    renderTypeHeader(h, { _column }) {
       return h(
         'div',
         {
@@ -1020,7 +1020,7 @@ export default {
      * @param {Number} currentLimit 新limit
      * @param {Number} prevLimit 旧limit
      */
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       // bcs监控

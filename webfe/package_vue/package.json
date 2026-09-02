@@ -12,7 +12,8 @@
     "build:ee": "cross-env BK_APP_VERSION=ee bk-cli-service-webpack build",
     "build:ce": "cross-env BK_APP_VERSION=ce bk-cli-service-webpack build",
     "build": "cross-env BK_APP_VERSION=$APP_VERSION BK_NODE_ENV=$NODE_ENV bk-cli-service-webpack build",
-    "lint": "eslint --fix --ext .js,.vue src"
+    "lint": "eslint --ext .js,.vue src",
+    "lint:fix": "eslint --fix --ext .js,.vue src"
   },
   "dependencies": {
     "@babel/helper-module-imports": "^7.0.0",

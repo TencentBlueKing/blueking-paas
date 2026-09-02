@@ -501,7 +501,7 @@ export default {
     },
   },
   watch: {
-    'mirrorData.bp_stack_name'(val) {
+    'mirrorData.bp_stack_name'() {
       this.setTools();
     },
   },

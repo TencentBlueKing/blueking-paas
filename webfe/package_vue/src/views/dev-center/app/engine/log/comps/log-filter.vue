@@ -200,16 +200,7 @@ import i18n from '@/language/i18n.js';
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
 const initStartDate = dayjs().subtract(1, 'hours')
   .format('YYYY-MM-DD HH:mm:ss');
-const dateTextMap = {
-  '5m': '最近5分钟',
-  '1h': '最近1小时',
-  '3h': '最近3小时',
-  '12h': '最近12小时',
-  '1d': '最近1天',
-  '7d': '最近7天',
-};
 let timeRangeCache = '';
-let timeShortCutText = '';
 
 export default {
   props: {
@@ -260,9 +251,8 @@ export default {
           start.setTime(start.getTime() - 60 * 1000 * 5);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '5m';
-          timeShortCutText = i18n.t('最近5分钟');
         },
       },
       {
@@ -273,9 +263,8 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 1);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1h';
-          timeShortCutText = i18n.t('最近1小时');
         },
       },
       {
@@ -286,9 +275,8 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 3);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '3h';
-          timeShortCutText = i18n.t('最近3小时');
         },
       },
       {
@@ -299,9 +287,8 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 12);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '12h';
-          timeShortCutText = i18n.t('最近12小时');
         },
       },
       {
@@ -312,9 +299,8 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1d';
-          timeShortCutText = i18n.t('最近1天');
         },
       },
     ];
@@ -328,9 +314,8 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '7d';
-          timeShortCutText = i18n.t('最近7天');
         },
       });
     }
@@ -446,7 +431,7 @@ export default {
     },
     autoTimeConf: {
       deep: true,
-      handler(time) {
+      handler() {
         this.setAutoLoad();
       },
     },
@@ -470,14 +455,16 @@ export default {
     ];
     if (query.time_range) {
       timeRangeCache = query.time_range;
-      timeShortCutText = dateTextMap[timeRangeCache] || '';
     } else if (!query.start_time && !query.end_time) {
       timeRangeCache = '1h';
-      timeShortCutText = '最近1小时';
     }
     this.handlerChange(dates);
     this.$watch('logParams', (newDate, oldDate) => {
-      if (newDate.start_time !== oldDate.start_time || newDate.start_time !== oldDate.end_time || newDate.time_range !== oldDate.time_range) {
+      if (
+        newDate.start_time !== oldDate.start_time
+        || newDate.start_time !== oldDate.end_time
+        || newDate.time_range !== oldDate.time_range
+      ) {
         // 判断日期是否调整，如果改变需要重新加载filter
         this.logParams.isDateChange = true;
       } else {
@@ -488,7 +475,7 @@ export default {
     }, { deep: true });
   },
   methods: {
-    handleInput(payload) {
+    handleInput() {
       this.searchHistoryDisplayList = this.searchHistoryList.filter(item => item.indexOf(this.keyword) > -1);
       if (!this.isShowHistoryPanel) {
         this.isShowHistoryPanel = true;
@@ -507,7 +494,7 @@ export default {
 
     handleKeyup() {
       const len = this.searchHistoryList.length;
-      this.curActiveIndex--;
+      this.curActiveIndex -= 1;
       this.curActiveIndex = this.curActiveIndex < 0 ? -1 : this.curActiveIndex;
       if (this.curActiveIndex === -1) {
         this.curActiveIndex = len - 1;
@@ -517,7 +504,7 @@ export default {
 
     handleKeydown() {
       const len = this.searchHistoryList.length;
-      this.curActiveIndex++;
+      this.curActiveIndex += 1;
       this.curActiveIndex = this.curActiveIndex > len - 1
         ? len
         : this.curActiveIndex;
@@ -587,11 +574,10 @@ export default {
     /**
              * 选择自定义时间
              */
-    handlerChange(dates, type) {
+    handlerChange(dates) {
       this.dateParams.start_time = dates[0];
       this.dateParams.end_time = dates[1];
       this.dateParams.time_range = timeRangeCache || 'customized';
-      timeShortCutText = ''; // 清空
       timeRangeCache = ''; // 清空
     },
 

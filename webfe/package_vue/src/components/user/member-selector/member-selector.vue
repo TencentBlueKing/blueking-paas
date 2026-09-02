@@ -373,7 +373,7 @@ export default {
       }
       return arr.join('&');
     },
-    tagTpl(node, ctx) {
+    tagTpl(node) {
       const parentClass = 'tag';
       const textClass = 'text';
       const avatarClass = 'avatar';
@@ -466,7 +466,7 @@ export default {
     select() {
       this.$emit('select', this.selectedList);
     },
-    remove(data) {
+    remove() {
       this.$emit('remove', this.selectedList);
     },
     blur() {

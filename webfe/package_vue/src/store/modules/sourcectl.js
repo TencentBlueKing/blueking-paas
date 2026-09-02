@@ -53,7 +53,7 @@ const actions = {
       http.get(url).then((resp) => {
         commit('updateAccountAllowSourceControlType', resp.results);
         resolve(state.source_control_type);
-      }, (resp) => {
+      }, () => {
         resolve(state.source_control_type);
       });
     });

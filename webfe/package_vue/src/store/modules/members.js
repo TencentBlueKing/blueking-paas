@@ -28,41 +28,41 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取成员列表
-         */
-    getMemberList({ commit, state }, { appCode }, config = {}) {
+     * 获取成员列表
+     */
+    getMemberList({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
       return http.get(url, config);
     },
 
     /**
-         * 新增成员
-         */
-    addMember({ commit, state }, { appCode, postParams }, config = {}) {
+     * 新增成员
+     */
+    addMember({}, { appCode, postParams }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
       return http.post(url, postParams, config);
     },
 
     /**
-         * 退出应用
-         */
-    quitApplication({ commit, state }, { appCode }, config = {}) {
+     * 退出应用
+     */
+    quitApplication({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/leave/`;
       return http.post(url, {}, config);
     },
 
     /**
-         * 角色更新
-         */
-    updateRole({ commit, state }, { appCode, id, params }, config = {}) {
+     * 角色更新
+     */
+    updateRole({}, { appCode, id, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
       return http.put(url, params, config);
     },
 
     /**
-         * 删除成员
-         */
-    deleteRole({ commit, state }, { appCode, id }, config = {}) {
+     * 删除成员
+     */
+    deleteRole({}, { appCode, id }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
       return http.delete(url, config);
     },

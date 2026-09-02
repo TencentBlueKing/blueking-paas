@@ -740,7 +740,7 @@ export default {
       // 切换接入层
       this.migrateType = this.$t('切接入层');
       const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/confirm/`;
-      this.$http.post(url, {}).then((response) => {
+      this.$http.post(url, {}).then(() => {
         this.pollMigration();
       })
         .catch((e) => {
@@ -1010,7 +1010,7 @@ export default {
       this.processTitle = this.$t('应用[{name}] 正在进行{type}...', { name: this.currentApp.name, type: this.migrateType });
       // 迁移完成列表中的回滚，这时已经切换接入层
       const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${migrationProcessID}/rollback/`;
-      this.$http.post(url, {}).then((response) => {
+      this.$http.post(url, {}).then(() => {
         this.currentMigrationID = migrationProcessID;
         this.migrationState = 'ON_MIGRATION';
         this.pollMigration();

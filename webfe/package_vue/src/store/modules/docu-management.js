@@ -27,21 +27,21 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取当前应用下，所有的文档模板及实例
-         *
-         * @param {Object} params
-         */
-    getDocumentInstance({ commit, state }, params) {
+     * 获取当前应用下，所有的文档模板及实例
+     *
+     * @param {Object} params
+     */
+    getDocumentInstance({}, params) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
       return http.get(url);
     },
 
     /**
-         * 实例不存在时，更新文档实例
-         *
-         * @param {Object} params
-         */
-    updateDocumentInstance({ commit, state }, params) {
+     * 实例不存在时，更新文档实例
+     *
+     * @param {Object} params
+     */
+    updateDocumentInstance({}, params) {
       const requestParams = Object.assign({}, params);
       delete requestParams.appCode;
       const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
@@ -49,11 +49,11 @@ export default {
     },
 
     /**
-         * 实例存在时，更新文档实例
-         *
-         * @param {Object} params
-         */
-    updateDocumentInstanceByExist({ commit, state }, params) {
+     * 实例存在时，更新文档实例
+     *
+     * @param {Object} params
+     */
+    updateDocumentInstanceByExist({}, params) {
       const requestParams = Object.assign({}, params);
       delete requestParams.appCode;
       delete requestParams.id;

@@ -29,11 +29,11 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取代码检查列表
-         * TODO：去掉，不再展示列表，改为直接展示代码检查结果
-         * @param {Object} params 请求参数：appCode, moduleId, env, limit, offset
-         */
-    getCodeReviewList({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
+     * 获取代码检查列表
+     * TODO：去掉，不再展示列表，改为直接展示代码检查结果
+     * @param {Object} params 请求参数：appCode, moduleId, env, limit, offset
+     */
+    getCodeReviewList({}, { appCode, moduleId, env, limit, offset }, config = {}) {
       const params = {
         limit,
         offset,
@@ -43,9 +43,9 @@ export default {
       return http.get(url, config);
     },
     /**
-         * 判断模块的代码仓库是否支持代码检查功能
-         */
-    getCiInfo({ commit, state }, { appCode, moduleId }, config = {}) {
+     * 判断模块的代码仓库是否支持代码检查功能
+     */
+    getCiInfo({}, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/info/`;
       return http.get(url, config);
     },

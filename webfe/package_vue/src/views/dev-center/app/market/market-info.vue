@@ -281,8 +281,8 @@
   </section>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
-import { bus } from '@/common/bus';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 
 export default {
   mixins: [appBaseMixin],

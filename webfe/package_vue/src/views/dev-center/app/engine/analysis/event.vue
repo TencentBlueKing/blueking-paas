@@ -225,7 +225,6 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import appTopBar from '@/components/paas-app-bar';
 
 import dayjs from '@/common/dayjs';
 import ECharts from 'vue-echarts/components/ECharts.vue';
@@ -238,7 +237,6 @@ import { formatDate } from '@/common/tools';
 
 export default {
   components: {
-    appTopBar,
     // appAnalysis: analysis,
     chart: ECharts,
     RenderSideslider,
@@ -702,7 +700,7 @@ export default {
     /**
      * 显示实例指标数据
      */
-    showInstanceChart(instance, processes) {
+    showInstanceChart() {
       const chartRef = this.$refs.chart;
 
       chartRef
@@ -892,7 +890,7 @@ export default {
       return Number(uv1) > Number(uv2);
     },
 
-    handleDateChange(date, type) {
+    handleDateChange(date) {
       this.dateRange = {
         startTime: date[0],
         endTime: date[1],

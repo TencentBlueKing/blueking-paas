@@ -179,7 +179,7 @@ export default {
     });
   },
   methods: {
-    renderHeader(h, { column }) {
+    renderHeader(h, { _column }) {
       return h(
         'div',
         {
@@ -211,7 +211,7 @@ export default {
       );
     },
 
-    rowClick(row, event, column) {
+    rowClick(row) {
       row.expanded = !row.expanded;
       this.$refs.doneTableRef.toggleRowExpansion(row, row.expanded);
     },
@@ -277,13 +277,13 @@ export default {
                * @param {Number} currentLimit 新limit
                * @param {Number} prevLimit 旧limit
                */
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchOrderList(true);
     },
 
-    typeSelected(value, options) {
+    typeSelected(value) {
       this.filterType = value;
       this.fetchOrderList(true);
     },

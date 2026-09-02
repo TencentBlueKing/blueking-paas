@@ -237,12 +237,6 @@ const ROLE_MAPPING = {
   operator: '运营者',
 };
 
-const ROLE_ID_TO_NAME_MAPPING = {
-  2: 'administrator',
-  3: 'developer',
-  4: 'operator',
-};
-
 export default {
   components: {
     user,
@@ -426,17 +420,17 @@ export default {
       }, {});
       // 统计各角色数量
       this.memberList.forEach((member) => {
-        roleCounts.all++;
+        roleCounts.all += 1;
         member.roles.forEach((role) => {
           switch (role.id) {
             case 2:
-              roleCounts.administrator++;
+              roleCounts.administrator += 1;
               break;
             case 3:
-              roleCounts.developer++;
+              roleCounts.developer += 1;
               break;
             case 4:
-              roleCounts.operator++;
+              roleCounts.operator += 1;
               break;
           }
         });

@@ -213,13 +213,13 @@ export default {
     },
     value: {
       immediate: true,
-      handler(value) {
+      handler() {
         this.changeCurValue(this.isLink);
       },
     },
     defaultList: {
       immediate: true,
-      handler(value) {
+      handler() {
         this.changeCurValue(this.isLink);
       },
     },

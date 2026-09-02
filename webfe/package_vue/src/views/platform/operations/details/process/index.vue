@@ -112,7 +112,7 @@ export default {
       }
     },
     // 模块变更
-    handleModuleChange(value) {
+    handleModuleChange() {
       this.curProcess = ''; // 切换模块时清空当前进程
       this.fetchProcessList();
     },

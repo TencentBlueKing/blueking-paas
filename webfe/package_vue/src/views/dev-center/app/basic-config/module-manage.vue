@@ -1376,7 +1376,7 @@ export default {
         this.moduleName = this.curAppModule.name;
         this.initLanguage = this.curAppModule.language;
         this.initTemplateType = this.curAppModule.template_display_name;
-        this.renderRepoInfoIndex++;
+        this.renderRepoInfoIndex += 1;
 
         if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
           this.selectedSourceControlType = this.curAppModule.repo.type;
@@ -1468,7 +1468,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map((repo, index) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -1549,7 +1549,7 @@ export default {
               appCode,
               env,
               moduleName: _self.curAppModule.name,
-            }).then((res) => {
+            }).then(() => {
               _self.gatewayInfos[env] = {
                 created: '',
                 node_ip_addresses: [],
@@ -1563,7 +1563,7 @@ export default {
                   message: res.detail || this.$t('服务暂不可用，请稍后再试'),
                 });
               })
-              .finally((res) => {
+              .finally(() => {
                 _self.isGatewayInfosBeClearing = false;
               });
           },
@@ -1594,7 +1594,7 @@ export default {
         };
         this.gatewayEnabled[env] = true;
       })
-        .catch((res) => {
+        .catch(() => {
           this.gatewayInfos[env] = {
             created: '',
             node_ip_addresses: [],
@@ -1670,7 +1670,7 @@ export default {
       this.selectedSourceControlType = sourceControlType;
       const config = this.gitExtendConfig[this.selectedSourceControlType];
       this.isRepoInfoEdited = ['bare_svn', 'bare_git'].includes(sourceControlType) && sourceControlType !== this.curAppModule.repo.type;
-      this.renderRepoInfoIndex++;
+      this.renderRepoInfoIndex += 1;
       if (sourceControlType === this.curAppModule.repo.type) {
         if (config) {
           config.selectedRepoUrl = this.curAppModule.repo.trunk_url;
@@ -1701,7 +1701,7 @@ export default {
       match.sourceDir = data.sourceDir;
     },
     switchDocker() {
-      this.$refs.validate2.validate().then((validator) => {
+      this.$refs.validate2.validate().then(() => {
         this.switchDockerDialog.visiable = true;
       }, (validator) => {
         console.log(`${validator.field}：${validator.content}`);

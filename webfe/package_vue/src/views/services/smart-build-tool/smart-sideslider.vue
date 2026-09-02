@@ -99,7 +99,7 @@
                 <div
                   slot="custom-error"
                   class="error-links"
-                  slot-scope="{ file }"
+                  slot-scope="{ _file }"
                 >
                   <a
                     class="f12"

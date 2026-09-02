@@ -554,7 +554,7 @@ export default {
       this.renderChart();
     },
 
-    handleDateChange(date, type) {
+    handleDateChange(date) {
       this.dateRange = {
         startTime: date[0],
         endTime: date[1],

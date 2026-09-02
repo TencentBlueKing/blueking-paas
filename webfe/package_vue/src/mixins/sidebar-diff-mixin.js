@@ -12,7 +12,7 @@ export default {
      */
     $isSidebarClosed(targetDataStr) {
       const isEqual = this.initDataStr === targetDataStr;
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         // 未编辑
         if (isEqual) {
           resolve(true);

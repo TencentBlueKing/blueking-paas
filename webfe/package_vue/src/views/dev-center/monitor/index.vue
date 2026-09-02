@@ -226,7 +226,7 @@ export default {
           start.setTime(start.getTime() - 60 * 1000 * 5);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '5m';
           timeShortCutText = this.$t('最近5分钟');
         },
@@ -239,7 +239,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 1);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1h';
           timeShortCutText = this.$t('最近1小时');
         },
@@ -252,7 +252,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 3);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '3h';
           timeShortCutText = this.$t('最近3小时');
         },
@@ -265,7 +265,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 12);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '12h';
           timeShortCutText = this.$t('最近12小时');
         },
@@ -278,7 +278,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1d';
           timeShortCutText = this.$t('最近1天');
         },
@@ -291,7 +291,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '7d';
           timeShortCutText = this.$t('最近7天');
         },
@@ -427,7 +427,8 @@ export default {
              */
     getDataByPage(page) {
       if (!page) {
-        this.pageConf.current = page = 1;
+        page = 1;
+        this.pageConf.current = page;
       }
       let startIndex = (page - 1) * this.pageConf.limit;
       let endIndex = page * this.pageConf.limit;
@@ -478,7 +479,7 @@ export default {
             listMap[key].count = 1;
             listMap[key].list = [item];
           } else {
-            ++listMap[key].count;
+            listMap[key].count += 1;
             listMap[key].list.push(item);
           }
         });
@@ -511,7 +512,8 @@ export default {
       this.pageConf.count = total;
       let page = this.pageConf.current;
       if (!page) {
-        this.pageConf.current = page = 1;
+        page = 1;
+        this.pageConf.current = page;
       }
       let startIndex = (page - 1) * this.pageConf.limit;
       let endIndex = page * this.pageConf.limit;
@@ -525,7 +527,7 @@ export default {
       this.curPageData = this.curSearchData.slice(startIndex, endIndex);
     },
 
-    async fetchMonitorList(page = 1) {
+    async fetchMonitorList() {
       const params = {
         start_after: this.dateParams.start_time,
         start_before: this.dateParams.end_time,

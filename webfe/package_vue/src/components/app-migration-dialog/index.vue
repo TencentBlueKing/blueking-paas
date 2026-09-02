@@ -524,7 +524,7 @@ export default {
     // 确定迁移轮询
     confirmMigrationPolling() {
       this.confirmMigrationIntervalId = setInterval(async () => {
-        this.attempts++;
+        this.attempts += 1;
         this.queryMigrationStatus();
 
         // 检查是否达到最大尝试次数，或已经确定迁移成功

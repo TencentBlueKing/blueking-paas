@@ -44,7 +44,7 @@
         </template>
       </bk-table-column>
       <bk-table-column :width="100">
-        <template slot-scope="{ row }">
+        <template slot-scope="{ _row }">
           {{ $t('否') }}
         </template>
       </bk-table-column>

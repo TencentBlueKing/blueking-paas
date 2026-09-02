@@ -175,7 +175,7 @@ export default {
     'logParams.keyword'(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
         if (this.isFilter) {
-          this.loadData(false);
+          this.loadData();
           this.isFilter = false;
         }
       }
@@ -183,8 +183,8 @@ export default {
     '$route.params'(newVal, oldVal) {
       if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
         this.isLoading = true;
-        this.renderIndex++;
-        this.routeChangeIndex++;
+        this.renderIndex += 1;
+        this.routeChangeIndex += 1;
         this.resetParams();
         this.loadData();
       }
@@ -226,7 +226,7 @@ export default {
       }
     },
 
-    handleTabChange(name) {
+    handleTabChange() {
       this.resetParams();
       this.loadData();
     },
@@ -328,7 +328,7 @@ export default {
     /**
      * 加载所有数据
      */
-    loadData(isLoadFilter = true, isMaskLayer) {
+    loadData(isMaskLayer) {
       // 限制在一天内
       const startDay = dayjs(this.logParams.start_time).add(1, 'day');
       const endDay = dayjs(this.logParams.end_time);
@@ -472,7 +472,7 @@ export default {
       this.logParams = params;
       this.resetStreamLog();
       // 改为获取插件日志
-      this.loadData(params.isDateChange);
+      this.loadData();
 
       const query = Object.assign({}, this.$route.query, params);
       this.$router.push({
@@ -484,7 +484,7 @@ export default {
 
     handleLogReload(params) {
       this.resetStreamLog();
-      this.loadData(false, params);
+      this.loadData(params);
     },
 
     resetStreamLog() {
@@ -508,7 +508,7 @@ export default {
         const selectItem = item.value;
         this.logParams[type] = selectItem.id;
       });
-      this.loadData(false);
+      this.loadData();
     },
 
     handleAddStreamLogFilters(log) {
@@ -518,13 +518,13 @@ export default {
         text: log.podShortName,
       });
       this.resetStreamLog();
-      this.loadData(false);
+      this.loadData();
     },
 
     handleClearStreamLogFilters() {
       this.streamLogFilters = [];
-      this.renderIndex++;
-      this.loadData(false);
+      this.renderIndex += 1;
+      this.loadData();
     },
 
     processIdSlice(str) {

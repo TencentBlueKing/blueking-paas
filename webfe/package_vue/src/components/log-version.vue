@@ -90,7 +90,7 @@ export default {
       this.$emit('update:dialogShow', v);
     },
     // 查看log详情
-    async handleItemClick(index = 0, curEvent) {
+    async handleItemClick(index = 0) {
       this.loading = true;
       this.active = index;
       setTimeout(() => {

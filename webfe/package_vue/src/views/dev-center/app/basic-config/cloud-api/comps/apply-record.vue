@@ -695,7 +695,7 @@ export default {
       return '--';
     },
 
-    handleDateChange(date, _type) {
+    handleDateChange(date) {
       this.dateRange = {
         startTime: `${date[0]} 00:00:00`,
         endTime: `${date[1]} 23:59:59`,
@@ -704,7 +704,7 @@ export default {
       this.fetchList();
     },
 
-    handleSelect(_value, _option) {
+    handleSelect() {
       // 切换类型需清空筛选条件, 赋值会触发 watcher 刷新列表
       this.statusValue = '';
       this.searchSelectValue = [];
@@ -725,7 +725,7 @@ export default {
       this.fetchList();
     },
 
-    limitChange(currentLimit, _prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchList();

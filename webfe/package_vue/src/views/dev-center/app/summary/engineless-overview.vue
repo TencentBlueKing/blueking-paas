@@ -460,7 +460,7 @@ export default {
     /**
      * 显示实例指标数据
      */
-    showInstanceChart(instance, processes) {
+    showInstanceChart() {
       const chartRef = this.$refs.chart;
 
       if (chartRef) {
@@ -578,7 +578,7 @@ export default {
       const gatewayData = {};
       this.gatewayList.forEach((item) => {
         if (gatewayData[item.api_name]) {
-          gatewayData[item.api_name]++;
+          gatewayData[item.api_name] += 1;
         } else {
           gatewayData[item.api_name] = 1;
         }

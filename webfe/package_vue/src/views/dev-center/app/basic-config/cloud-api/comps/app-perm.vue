@@ -470,7 +470,7 @@ export default {
       });
     },
 
-    handleSelect(value, option) {
+    handleSelect() {
       this.pagination = Object.assign(
         {},
         {
@@ -550,7 +550,8 @@ export default {
         dataSource = this.filterAllList;
       }
       if (!page) {
-        this.pagination.current = page = 1;
+        page = 1;
+        this.pagination.current = page;
       }
       let startIndex = (page - 1) * this.pagination.limit;
       let endIndex = page * this.pagination.limit;
@@ -563,7 +564,7 @@ export default {
       return dataSource.slice(startIndex, endIndex);
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.pageChange(this.pagination.current);

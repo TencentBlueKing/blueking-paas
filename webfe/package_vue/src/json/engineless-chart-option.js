@@ -73,7 +73,7 @@ export default {
       // 设置横轴文字
       axisLabel: {
         color: '#979BA5',
-        formatter(value, index) {
+        formatter(value) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
@@ -104,7 +104,7 @@ export default {
         // 设置纵轴文字
         axisLabel: {
           color: '#8a8f99',
-          formatter(value, index) {
+          formatter(value) {
             return `${value}`;
           },
         },

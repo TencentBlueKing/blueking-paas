@@ -355,7 +355,7 @@ export default {
       this.getUnboundAttachments();
     },
     // 合并单元格
-    objectSpanMethod({ row, column, rowIndex, columnIndex }) {
+    objectSpanMethod({ row, _column, rowIndex, columnIndex }) {
       const defaultSpan = { rowspan: 0, colspan: 0 };
       // 模块
       if (columnIndex === 0) {

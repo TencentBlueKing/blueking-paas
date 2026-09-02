@@ -1628,7 +1628,7 @@ export default {
         }
         const branchesData = res.results;
         const branchesList = [];
-        branchesData.forEach((branch, index) => {
+        branchesData.forEach((branch) => {
           const branchId = `${branch.type}:${branch.name}`;
           let branchName = branch.name;
 
@@ -2059,7 +2059,7 @@ export default {
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
         });
 
-        this.serverLogEvent.onerror = (event) => {
+        this.serverLogEvent.onerror = () => {
           this.isLogError = true;
 
           if (this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
@@ -2083,7 +2083,7 @@ export default {
         // 监听到部署结束
         this.serverLogEvent.addEventListener(
           'EOF',
-          (event) => {
+          () => {
             this.reConnectTimes = 0;
             this.serverLogEvent.close();
             this.closeServerPush();
@@ -2211,7 +2211,7 @@ export default {
       return version;
     },
 
-    handleBranchSelect(value, option) {},
+    handleBranchSelect() {},
 
     /**
      * 查看代码提交记录

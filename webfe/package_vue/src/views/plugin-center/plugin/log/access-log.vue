@@ -463,7 +463,7 @@ export default {
     /**
      * 加载所有数据
      */
-    loadData(isLoadFilter = true) {
+    loadData() {
       this.tableSortTypes = {};
       this.$refs.accessLogFilter.setAutoLoad();
       this.pagination.current = 1;
@@ -654,7 +654,7 @@ export default {
       });
     },
 
-    handleLogReload(params) {
+    handleLogReload() {
       this.loadData(false);
     },
 
@@ -725,7 +725,7 @@ export default {
       }
     },
 
-    hideAllFilterPopover(el) {
+    hideAllFilterPopover() {
       for (const key in this.fieldPopoverShow) {
         this.fieldPopoverShow[key] = false;
       }

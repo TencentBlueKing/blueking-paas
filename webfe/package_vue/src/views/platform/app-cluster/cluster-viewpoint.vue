@@ -55,7 +55,7 @@
             class="available-tenants-tags"
           >
             <span
-              v-for="(item, index) in row.availableTenants.slice(
+              v-for="(item, _index) in row.availableTenants.slice(
                 0,
                 row.availableTenantTagIndex < 0 ? 0 : row.availableTenantTagIndex
               )"
@@ -92,7 +92,7 @@
             class="feature-tags no-border"
           >
             <span
-              v-for="(item, index) in row.feature.slice(0, row.featureTagIndex < 0 ? 0 : row.featureTagIndex)"
+              v-for="(item, _index) in row.feature.slice(0, row.featureTagIndex < 0 ? 0 : row.featureTagIndex)"
               class="border-tag"
               :key="item"
             >
@@ -249,7 +249,7 @@ export default {
       // 过滤数据，检查 name 和 bcs_cluster_id 是否包含搜索词
       this.displayClusterList = this.tenantList.filter((item) => {
         const nameMatches = item.name && item.name.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-        const clusterIdMatches =          item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+        const clusterIdMatches = item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
         return nameMatches || clusterIdMatches;
       });
     },
@@ -323,7 +323,7 @@ export default {
     },
     handleResizeObserver() {
       this.$nextTick(() => {
-        this.resizeObserver = new ResizeObserver((entries) => {
+        this.resizeObserver = new ResizeObserver(() => {
           this.calculateVisibleTags();
         });
         const tenantColumn = document.querySelector('.tenant-column');

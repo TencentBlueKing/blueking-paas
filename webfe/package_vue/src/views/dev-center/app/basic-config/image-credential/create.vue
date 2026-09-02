@@ -148,9 +148,6 @@ export default {
   },
 
   watch: {
-    type(newVal) {
-      this.type = newVal;
-    },
     credentialDetail(newVal) {
       if (Object.keys(newVal).length) {
         this.crdlParams = newVal;
@@ -174,7 +171,7 @@ export default {
     // 新增凭证
     handleCreate() {
       // 表单校验，通过传递数据
-      this.$refs.versionForm.validate().then((validator) => {
+      this.$refs.versionForm.validate().then(() => {
         if (this.type === 'new') {
           this.$emit('confirm', this.crdlParams);
         } else {

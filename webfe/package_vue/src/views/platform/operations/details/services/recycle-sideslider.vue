@@ -57,7 +57,7 @@
             prop="ip"
             min-width="380"
           >
-            <template slot-scope="{ row, $index }">
+            <template slot-scope="{ row, _$index }">
               <!-- 凭证信息 -->
               <section class="credential-information">
                 <div
@@ -191,9 +191,9 @@ export default {
     // 未回收实例
     groupData() {
       const servicesMap = this.list.reduce((acc, item) => {
-        const { uuid, display_name } = item.service;
+        const { uuid, display_name: displayName } = item.service;
         if (!acc[uuid]) {
-          acc[uuid] = { id: uuid, displayName: display_name };
+          acc[uuid] = { id: uuid, displayName };
         }
         return acc;
       }, {});

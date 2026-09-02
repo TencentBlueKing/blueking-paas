@@ -220,7 +220,7 @@ export default {
     this.init();
   },
   methods: {
-    renderHeader(h, { column }) {
+    renderHeader(h, { _column }) {
       return h(
         'div',
         {
@@ -252,7 +252,7 @@ export default {
       );
     },
 
-    rowClick(row, event, column) {
+    rowClick(row) {
       row.expanded = !row.expanded;
       this.$refs.processTableRef.toggleRowExpansion(row, row.expanded);
     },
@@ -318,7 +318,7 @@ export default {
              * @param {Number} currentLimit 新limit
              * @param {Number} prevLimit 旧limit
              */
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchOrderList(true);
@@ -330,7 +330,7 @@ export default {
              * @param {Array} selection 选中值列表
              * @param {Array} currentRow 当前选中值
              */
-    itemHandlerChange(selection, currentRow) {
+    itemHandlerChange(selection) {
       this.selectOrderIds.splice(0, this.selectOrderIds.length, ...selection.map(item => item.id));
     },
     /**

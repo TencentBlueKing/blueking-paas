@@ -204,7 +204,7 @@
               :active="switchConfig.active"
               :has-icon="false"
               :has-count="false"
-              @change="($event) => (switchConfig.active = $event.name)"
+              @change="$event => (switchConfig.active = $event.name)"
             />
           </div>
           <div class="filter-list">
@@ -512,7 +512,6 @@
 <script>
 import { cloneDeep, includes } from 'lodash';
 import dropdown from '@/components/ui/Dropdown';
-import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import transferDrag from '@/mixins/transfer-drag';
 import appTopBar from '@/components/paas-app-bar';
@@ -523,7 +522,6 @@ import SwitchDisplay from '@/components/switch-display';
 export default {
   components: {
     dropdown,
-    tooltipConfirm,
     appTopBar,
     BuiltInEnvVarDisplay,
     EnvVarTable,
@@ -960,7 +958,7 @@ export default {
         .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag`
             + '/released_state/?with_processes=true')
         .then(
-          (response) => {
+          () => {
             this.isReleased = true;
             this.availableEnv.push('stag');
           },
@@ -973,7 +971,7 @@ export default {
         .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod`
             + '/released_state/?with_processes=true')
         .then(
-          (response) => {
+          () => {
             this.isReleased = true;
             this.availableEnv.push('prod');
           },
@@ -1079,15 +1077,19 @@ export default {
 
       if (!conflictItem) return {};
 
-      const { conflicted_detail, override_conflicted, conflicted_source } = conflictItem;
-      const basicText = override_conflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
-      const conflictSourceMessage =        conflicted_source === 'builtin_addons'
-        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
+      const {
+        conflicted_detail: conflictedDetail,
+        override_conflicted: overrideConflicted,
+        conflicted_source: conflictedSource,
+      } = conflictItem;
+      const basicText = overrideConflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
+      const conflictSourceMessage =        conflictedSource === 'builtin_addons'
+        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflictedDetail })
         : this.$t('和平台的内置环境变量冲突');
 
       return {
         message: `${basicText}，${conflictSourceMessage}`,
-        overrideConflicted: override_conflicted,
+        overrideConflicted,
       };
     },
     // 获取冲突的环境变量
@@ -1198,7 +1200,7 @@ export default {
       this.$http
         .post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`)
         .then(
-          (response) => {
+          () => {
             this.$paasMessage({
               theme: 'success',
               message: this.$t('发布提交成功，请在进程管理查看发布情况'),

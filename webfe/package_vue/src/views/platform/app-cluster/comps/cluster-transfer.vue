@@ -54,7 +54,7 @@
       </div>
       <div
         slot="target-option"
-        slot-scope="data, index"
+        slot-scope="data, _index"
         class="transfer-source-item"
         :data-id="data.name"
       >

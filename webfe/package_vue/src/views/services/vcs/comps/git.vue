@@ -193,7 +193,7 @@ export default {
     },
     disconnect(oauth, backendItem) {
       const url = `${BACKEND_URL}/api/oauth/backends/${oauth.name}/${backendItem.id}`;
-      this.$http.delete(url).then((resp) => {
+      this.$http.delete(url).then(() => {
         this.fetch_backend_status();
       });
     },
@@ -225,7 +225,7 @@ export default {
             this.$emit('changeTips', 'git');
           }
         })
-        .finally((res) => {
+        .finally(() => {
           this.loading = false;
           this.$emit('ready');
         });

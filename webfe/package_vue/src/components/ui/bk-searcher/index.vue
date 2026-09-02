@@ -152,6 +152,7 @@
 </template>
 
 <script>
+/* eslint-disable vue/no-mutating-props -- This legacy component updates the caller-owned filter collections in place. */
 import clickoutside from './clickoutside';
 
 /**
@@ -186,7 +187,7 @@ function getStringLen(str) {
     if (str.charCodeAt(i) > 127 || str.charCodeAt(i) === 94) {
       len += 2;
     } else {
-      len++;
+      len += 1;
     }
   }
   return len;
@@ -349,7 +350,7 @@ export default {
      * @param {Object} filter 当前选择的 filter
      * @param {number} filterIndex 当前选择的 filter 的索引
      */
-    selectFilter(filter, filterIndex) {
+    selectFilter(filter) {
       // 当前 filter 有可用的值
       this.filterKeyboardIndex = -1;
       if (filter.list && !filter.dynamicData) {
@@ -470,7 +471,7 @@ export default {
      * @param {Object} fsp 当前点击的固定参数对象
      * @param {number} fspIndex 当前点击的固定参数对象 索引
      */
-    fixedSearchParamsClickHandler(e, fsp, fspIndex) {
+    fixedSearchParamsClickHandler(e, fsp) {
       this.hideFilterList();
 
       const target = e.currentTarget;
@@ -506,7 +507,7 @@ export default {
      * @param {Object} sp 当前点击的固定参数对象
      * @param {number} spIndex 当前点击的固定参数对象 索引
      */
-    searchParamsClickHandler(e, sp, spIndex) {
+    searchParamsClickHandler(e, sp) {
       this.hideFilterList();
 
       const target = e.currentTarget;
@@ -535,7 +536,7 @@ export default {
     /**
      * 组件 click 事件
      */
-    foucusSearcher(e) {
+    foucusSearcher() {
       this.$nextTick(() => {
         this.$refs.searchInput.focus();
       });
@@ -563,7 +564,7 @@ export default {
      * @param {Object} sp 当前点击的固定参数对象
      * @param {number} spIndex 当前点击的固定参数对象 索引
      */
-    removeSearchParams(e, sp, spIndex) {
+    removeSearchParams(e, sp) {
       const searchParams = [];
       this.searchParams.forEach((s) => {
         if (s.id !== sp.id) {
@@ -667,13 +668,13 @@ export default {
             // down
             case 40:
               if (this.filterKeyboardIndex < this.filterList.length - 1) {
-                this.filterKeyboardIndex++;
+                this.filterKeyboardIndex += 1;
               }
               break;
             // up
             case 38:
               if (this.filterKeyboardIndex > 0) {
-                this.filterKeyboardIndex--;
+                this.filterKeyboardIndex -= 1;
               }
               break;
             // enter
@@ -700,7 +701,7 @@ export default {
         // down
         case 40:
           if (this.filterValueKeyboardIndex < this.filterValueList.length - 1) {
-            this.filterValueKeyboardIndex++;
+            this.filterValueKeyboardIndex += 1;
             if (this.filterValueKeyboardIndex >= 8) {
               filterValueListNode.scrollTo(0, filterValueListNode.scrollTop + 45);
             }
@@ -709,7 +710,7 @@ export default {
         // up
         case 38:
           if (this.filterValueKeyboardIndex > 0) {
-            this.filterValueKeyboardIndex--;
+            this.filterValueKeyboardIndex -= 1;
             if (this.filterValueKeyboardIndex < Math.ceil((filterValueListNode.scrollHeight - 320) / 42)) {
               filterValueListNode.scrollTo(0, filterValueListNode.scrollTop - 42);
             }

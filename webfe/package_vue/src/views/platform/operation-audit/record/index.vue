@@ -358,10 +358,10 @@ export default {
           keyword,
           tenantId: this.tenantId,
         });
-        return data.map(({ login_name, bk_username, ...rest }) => ({
+        return data.map(({ login_name: loginName, bk_username: bkUsername, ...rest }) => ({
           ...rest,
-          name: login_name,
-          id: bk_username,
+          name: loginName,
+          id: bkUsername,
         }));
       } catch {
         return [];

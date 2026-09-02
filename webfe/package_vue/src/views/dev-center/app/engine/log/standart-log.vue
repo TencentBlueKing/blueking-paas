@@ -258,7 +258,7 @@ export default {
       }
     },
 
-    handleTabChange(name) {
+    handleTabChange() {
       this.resetParams();
       this.loadData();
     },
@@ -592,7 +592,7 @@ export default {
 
     handleClearStreamLogFilters() {
       this.streamLogFilters = [];
-      this.renderIndex++;
+      this.renderIndex += 1;
       this.loadData(false);
     },
 

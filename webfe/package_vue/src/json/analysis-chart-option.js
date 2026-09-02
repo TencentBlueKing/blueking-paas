@@ -36,7 +36,7 @@ export default {
           backgroundColor: '#6a7985',
         },
       },
-      formatter(params, ticket, callback) {
+      formatter(params) {
         let ret = `<div>${params[0].axisValueLabel}</div>`;
         params.forEach((item) => {
           let val = parseInt(item.value);
@@ -82,7 +82,7 @@ export default {
       // 设置横轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter(value, index) {
+        formatter(value) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
@@ -117,7 +117,7 @@ export default {
       // 设置纵轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter(value, index) {
+        formatter(value) {
           return `${value}`;
         },
       },

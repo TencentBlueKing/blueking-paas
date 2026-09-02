@@ -122,7 +122,7 @@ export default {
       }
     },
 
-    handleMouseleave(item) {
+    handleMouseleave() {
       if (this.disabled) {
         return;
       }
@@ -248,7 +248,7 @@ export default {
       }
     },
 
-    makeClass(templateData, index) {
+    makeClass(templateData) {
       const classPrefix = 'paas-timeline-item-';
       const classNames = [];
 

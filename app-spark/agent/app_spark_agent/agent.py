@@ -34,10 +34,10 @@ def build_model() -> Model:
 
     def provider_factory(provider_name: str) -> Provider[Any]:
         provider_class = infer_provider_class(provider_name)
-        if settings.API_KEY is None:
+        if settings.MODEL_API_KEY is None:
             # No configured key: fall back to whatever variable the provider reads itself.
             return provider_class()
-        return cast(ApiKeyProvider, provider_class)(api_key=settings.API_KEY)
+        return cast(ApiKeyProvider, provider_class)(api_key=settings.MODEL_API_KEY)
 
     return infer_model(settings.MODEL, provider_factory=provider_factory)
 

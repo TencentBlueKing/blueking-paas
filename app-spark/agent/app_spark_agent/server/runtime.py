@@ -8,7 +8,7 @@ in :mod:`app_spark_agent.server.routes` is left with nothing but request and res
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +17,7 @@ from typing import Any
 from pydantic_ai import Agent
 
 from app_spark_agent.agent import create_agent
+from app_spark_agent.server.lifecycle import RuntimeLifecycle
 from app_spark_agent.state import AppendLog, ContextStore
 
 # The on-disk names of the three state channels. Deliberately not configurable: they are the
@@ -31,6 +32,38 @@ class RuntimeBusyError(RuntimeError):
     """Raised when an exclusive operation is attempted while another one holds the runtime."""
 
 
+class RunLease:
+    """Hold the single run slot until :meth:`release`.
+
+    If Starlette never iterates the SSE generator, :meth:`release_if_never_started`
+    still frees the slot so a failed handshake cannot leave the Runtime busy.
+    """
+
+    def __init__(self, guard: RunGuard, on_release: Callable[[], None] | None = None) -> None:
+        self._guard = guard
+        self._on_release = on_release
+        self._entered = False
+        self._released = False
+
+    def mark_entered(self) -> None:
+        """Mark that the SSE generator has started."""
+        self._entered = True
+
+    def release(self) -> None:
+        """Release the slot. Safe to call more than once."""
+        if self._released:
+            return
+        self._released = True
+        self._guard.release()
+        if self._on_release is not None:
+            self._on_release()
+
+    def release_if_never_started(self) -> None:
+        """Release only if the SSE generator never started."""
+        if not self._entered:
+            self.release()
+
+
 class RunGuard:
     """Serialize everything that may mutate the conversation.
 
@@ -41,10 +74,15 @@ class RunGuard:
     with another request. Splitting the two across call sites would quietly lose that guarantee.
     """
 
-    # TODO: 基于 asyncio 的锁实际上无法提供跨进程的保护，后续应该替换为文件锁。
+    # TODO: an asyncio lock cannot protect across processes; replace with a file lock.
 
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
+        self._on_run_end: Callable[[], None] | None = None
+
+    def notify_run_end(self, callback: Callable[[], None]) -> None:
+        """Call ``callback`` after each run releases the slot. The idle clock starts here."""
+        self._on_run_end = callback
 
     @property
     def busy(self) -> bool:
@@ -63,6 +101,14 @@ class RunGuard:
             raise RuntimeBusyError("An Agent run is already in progress.")
         await self._lock.acquire()
 
+    async def try_acquire(self) -> RunLease | None:
+        """Take the slot as a :class:`RunLease`, or return ``None`` if it is already held."""
+        try:
+            await self.acquire()
+        except RuntimeBusyError:
+            return None
+        return RunLease(self, on_release=self._on_run_end)
+
     def release(self) -> None:
         """Hand the guard back so the next exclusive operation can be admitted."""
         self._lock.release()
@@ -70,6 +116,9 @@ class RunGuard:
     @asynccontextmanager
     async def exclusive(self) -> AsyncGenerator[None]:
         """Hold the guard for the duration of the block.
+
+        Does not reset the idle clock. Only ``POST /runs`` does that, when its
+        :class:`RunLease` is released.
 
         :raises RuntimeBusyError: If another exclusive operation is in progress.
         """
@@ -89,6 +138,7 @@ class ConversationRuntime:
     :param transcript: Append-only channel holding the raw model messages.
     :param ui_events: Append-only channel holding the AG-UI events the client saw.
     :param run_guard: Guard admitting one mutating operation at a time.
+    :param lifecycle: Idle timeout and the registry of application children.
     """
 
     agent: Agent[Any, Any]
@@ -96,6 +146,7 @@ class ConversationRuntime:
     transcript: AppendLog
     ui_events: AppendLog
     run_guard: RunGuard
+    lifecycle: RuntimeLifecycle
 
     @classmethod
     def open(
@@ -104,6 +155,7 @@ class ConversationRuntime:
         workspace: Path,
         state_dir: Path,
         agent: Agent[Any, Any] | None = None,
+        lifecycle: RuntimeLifecycle | None = None,
     ) -> ConversationRuntime:
         """Validate the two directories and open the conversation's three state channels.
 
@@ -111,6 +163,7 @@ class ConversationRuntime:
         :param state_dir: Directory outside ``workspace`` holding the durable state; created
             with owner-only permissions when missing.
         :param agent: Optional preconfigured agent, primarily for embedding or for tests.
+        :param lifecycle: Optional idle / SIGTERM controller; created from settings when omitted.
         :return: A runtime ready to be served.
         :raises FileNotFoundError: If ``workspace`` does not exist.
         :raises NotADirectoryError: If ``workspace`` is not a directory.
@@ -127,12 +180,17 @@ class ConversationRuntime:
             raise ValueError("state-dir must be outside the workspace")
         resolved_state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
+        run_guard = RunGuard()
+        bound = lifecycle or RuntimeLifecycle.create(is_busy=lambda: run_guard.busy)
+        bound.attach(run_guard)
+
         return cls(
             agent=agent or create_agent(resolved_workspace),
             context_store=ContextStore(resolved_state_dir / CONTEXT_FILENAME),
             transcript=AppendLog(resolved_state_dir / TRANSCRIPT_FILENAME, payload_key="message"),
             ui_events=AppendLog(resolved_state_dir / UI_EVENTS_FILENAME, payload_key="event"),
-            run_guard=RunGuard(),
+            run_guard=run_guard,
+            lifecycle=bound,
         )
 
 

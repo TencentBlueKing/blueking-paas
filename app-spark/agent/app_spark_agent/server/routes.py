@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any, cast
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic_ai.run import AgentRunResult
 from pydantic_ai.ui.ag_ui import AGUIAdapter
-from starlette.background import BackgroundTask
 from starlette.responses import JSONResponse, Response
 
-from app_spark_agent import settings
+from app_spark_agent import VERSION, settings
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
 from app_spark_agent.server.run_input import prepare_run, request_with_body
-from app_spark_agent.server.runtime import ConversationRuntime
+from app_spark_agent.server.runtime import ConversationRuntime, RunLease, RuntimeBusyError
 from app_spark_agent.state import (
     AppendLog,
     AppendLogError,
@@ -24,7 +25,37 @@ from app_spark_agent.state import (
 )
 from app_spark_agent.ui_events import record_ui_events
 
+if TYPE_CHECKING:
+    from starlette.types import Receive, Scope, Send
+
 router = APIRouter()
+
+# Placeholder until the app manager lands and this becomes an enum of real app states.
+APP_STATUS_NOT_STARTED = "not_started"
+SSE_RESPONSE_HEADERS = {
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+}
+
+
+class _HoldStreamingResponse(StreamingResponse):
+    """SSE response that holds a lease and still uses Starlette disconnect handling.
+
+    The parent cancels the generator on ``http.disconnect``; ``generate``'s
+    ``finally`` releases a lease that was entered. This path covers handshake
+    failure when the generator never started.
+    """
+
+    def __init__(self, content: Any, lease: RunLease, **kwargs: Any) -> None:
+        super().__init__(content, **kwargs)
+        self._lease = lease
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            self._lease.release_if_never_started()
 
 
 def attach_runtime(app: FastAPI, runtime: ConversationRuntime) -> None:
@@ -42,6 +73,12 @@ def get_runtime(request: Request) -> ConversationRuntime:
 RuntimeDep = Annotated[ConversationRuntime, Depends(get_runtime)]
 
 
+def require_bearer(request: Request) -> None:
+    """Reject a missing or incorrect Bearer token."""
+    if not settings.matches_bearer(request.headers.get("authorization")):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+
 async def busy_conflict_handler(request: Request, exc: Exception) -> JSONResponse:
     """Answer a refused exclusive operation with a 409.
 
@@ -51,21 +88,28 @@ async def busy_conflict_handler(request: Request, exc: Exception) -> JSONRespons
 
 
 @router.get("/health")
-async def health(runtime: RuntimeDep) -> dict[str, object]:
+async def health(
+    runtime: RuntimeDep,
+    token: str | None = Query(default=None),
+) -> dict[str, object]:
     """Report the conversation's identity and the cursor of every stream."""
+    if not settings.matches_runtime_token(token or ""):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     context = runtime.context_store.context
     return {
-        "status": "ok",
+        "version": VERSION,
+        "model_ready": settings.is_model_ready(),
+        "running": runtime.run_guard.busy,
+        "app_status": APP_STATUS_NOT_STARTED,
         "model": settings.MODEL,
         "conversation_id": context.conversation_id,
         "context_version": context.context_version,
         "log_seq": runtime.transcript.last_seq,
         "ui_event_seq": runtime.ui_events.last_seq,
-        "running": runtime.run_guard.busy,
     }
 
 
-@router.get("/log")
+@router.get("/log", dependencies=[Depends(require_bearer)])
 async def read_log(
     runtime: RuntimeDep,
     since: int = Query(default=0),
@@ -75,7 +119,7 @@ async def read_log(
     return _drain(runtime.transcript, since, limit)
 
 
-@router.get("/ui-events")
+@router.get("/ui-events", dependencies=[Depends(require_bearer)])
 async def read_ui_events(
     runtime: RuntimeDep,
     since: int = Query(default=0),
@@ -85,7 +129,7 @@ async def read_ui_events(
     return _drain(runtime.ui_events, since, limit)
 
 
-@router.get("/context")
+@router.get("/context", dependencies=[Depends(require_bearer)])
 async def read_context(runtime: RuntimeDep) -> JSONResponse:
     """Export the context the next run will be given, tagged with its version."""
     context = runtime.context_store.context
@@ -95,7 +139,7 @@ async def read_context(runtime: RuntimeDep) -> JSONResponse:
     )
 
 
-@router.put("/context")
+@router.put("/context", dependencies=[Depends(require_bearer)])
 async def restore_context(request: Request, runtime: RuntimeDep) -> JSONResponse:
     """Inject a cold context into an empty Runtime."""
     async with runtime.run_guard.exclusive():
@@ -122,33 +166,21 @@ async def restore_context(request: Request, runtime: RuntimeDep) -> JSONResponse
         )
 
 
-@router.post("/runs")
+@router.post("/runs", dependencies=[Depends(require_bearer)])
 async def run(request: Request, runtime: RuntimeDep) -> Response:
     """Run one conversation turn and stream it back as AG-UI events."""
-    # A refusal here becomes a 409 through `busy_conflict_handler`; the guard is not held
-    # yet, so this call must stay outside the release-on-failure block below.
-    await runtime.run_guard.acquire()
+    if not settings.is_model_ready():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not ready")
+    lease = await runtime.run_guard.try_acquire()
+    if lease is None:
+        raise RuntimeBusyError("An Agent run is already in progress.")
 
-    # Held past the end of this handler: the guard is only released once the streaming
-    # response finishes, so it is not a `with` block. Any failure before the response
-    # exists must hand it back here, or the Runtime stays busy forever.
     try:
         response = await _start_run(runtime, request)
     except Exception:
-        runtime.run_guard.release()
+        lease.release()
         raise
-
-    existing_background = response.background
-
-    async def finish_response() -> None:
-        try:
-            if existing_background is not None:
-                await existing_background()
-        finally:
-            runtime.run_guard.release()
-
-    response.background = BackgroundTask(finish_response)
-    return response
+    return _hold_run_stream(response, lease)
 
 
 async def _start_run(runtime: ConversationRuntime, request: Request) -> Response:
@@ -202,8 +234,29 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> Response
         capabilities=[recorder],
         on_complete=commit_context,
     )
-    return adapter.streaming_response(
-        record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)
+    return adapter.streaming_response(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id))
+
+
+def _hold_run_stream(response: Response, lease: RunLease) -> _HoldStreamingResponse:
+    """Wrap the AG-UI stream in a lease: release after enter, or at response end if never entered."""
+    inner = cast(StreamingResponse, response)
+
+    async def generate() -> AsyncIterator[str | bytes | memoryview]:
+        lease.mark_entered()
+        try:
+            async for chunk in inner.body_iterator:
+                yield chunk
+        finally:
+            lease.release()
+
+    headers = {**dict(inner.headers), **SSE_RESPONSE_HEADERS}
+    return _HoldStreamingResponse(
+        generate(),
+        lease,
+        status_code=inner.status_code,
+        media_type=inner.media_type or "text/event-stream",
+        headers=headers,
+        background=inner.background,
     )
 
 

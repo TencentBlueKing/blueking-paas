@@ -83,9 +83,7 @@ def test_a_real_summary_enters_the_context_and_stays_there(
     # Re-read after a further run, which is what makes this a regression test rather than a
     # snapshot: the summary lives in a `SystemPromptPart`, so a system-prompt manager that
     # rewrites the history would drop it on the way into that last request.
-    assert summaries(after["messages"]), (
-        "the summary was discarded by the next request, so every run re-summarizes"
-    )
+    assert summaries(after["messages"]), "the summary was discarded by the next request, so every run re-summarizes"
     assert not summaries(model_messages(transcript)), (
         "a summary is a compaction artifact and must never enter the raw transcript"
     )

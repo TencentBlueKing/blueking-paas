@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+from pydantic_ai.exceptions import ModelRetry
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai_harness import (
@@ -24,7 +26,7 @@ def test_create_agent_scopes_tools_to_workspace(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "API_KEY", "not-used-by-this-test")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
 
     agent = create_agent(tmp_path)
 
@@ -56,10 +58,10 @@ def test_create_agent_scopes_tools_to_workspace(
 def test_the_configured_api_key_reaches_the_provider(monkeypatch: MonkeyPatch) -> None:
     """A key that only exists in the settings must still authenticate the provider.
 
-    This is what lets `.env` work: the value never enters `os.environ`, so a provider left to
-    read the environment itself would come up empty.
+    The value never enters ``os.environ``, so a provider left to read the environment
+    itself would come up empty.
     """
-    monkeypatch.setattr(settings, "API_KEY", "key-only-in-settings")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "key-only-in-settings")
 
     model = build_model()
 
@@ -93,6 +95,35 @@ def test_file_read_key_matches_the_harness_read_tool() -> None:
     assert file_read_key(ToolCallPart(tool_name="write_file", args={"path": "a.py"})) is None
     # `ClampOversizedMessages` replaces oversized arguments, leaving no path to key on.
     assert file_read_key(ToolCallPart(tool_name="read_file", args={"clamped": True})) is None
+
+
+def test_file_tools_cannot_see_sibling_state_dir(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """File tools are rooted at workspace and cannot list or read sibling state."""
+    workspace = tmp_path / "workspace"
+    state_dir = tmp_path / "state"
+    workspace.mkdir()
+    state_dir.mkdir()
+    (state_dir / "context.json").write_text('{"secret": true}')
+
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
+    agent = create_agent(workspace)
+    filesystem = next(item for item in agent.root_capability.capabilities if isinstance(item, FileSystem))
+    assert Path(filesystem.root_dir) == workspace.resolve()
+    toolset = cast(Any, filesystem.get_toolset())
+    inner = getattr(toolset, "wrapped", toolset)
+    while hasattr(inner, "wrapped"):
+        inner = inner.wrapped
+
+    workspace_names = {path.name for path in workspace.iterdir()}
+    assert "context.json" not in workspace_names
+    assert "state" not in workspace_names
+
+    for outside in (f"../{state_dir.name}/context.json", str(state_dir / "context.json")):
+        with pytest.raises((PermissionError, ModelRetry), match="outside"):
+            inner._resolve_path(outside)
 
 
 def test_create_agent_rejects_file_workspace(tmp_path: Path) -> None:

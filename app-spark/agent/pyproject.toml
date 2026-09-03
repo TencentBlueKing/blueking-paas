@@ -5,8 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "app-spark-agent"
 version = "0.1.0"
-description = "Workspace-scoped coding agent runtime for App-Spark"
+description = "Sandbox-side coding agent runtime for App-Spark natural-language SaaS development."
 readme = "README.md"
+authors = [{ name = "blueking", email = "blueking@tencent.com" }]
 requires-python = ">=3.14"
 dependencies = [
     "environs>=15.1.0,<16.0.0",
@@ -22,6 +23,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "mypy>=2.3.0,<3.0.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.3.0",
@@ -35,6 +37,16 @@ packages = ["app_spark_agent"]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
 
+[tool.mypy]
+python_version = "3.14"
+show_error_codes = true
+check_untyped_defs = true
+files = ["app_spark_agent"]
+
+[[tool.mypy.overrides]]
+module = ["ag_ui", "ag_ui.*", "pydantic_ai_harness", "pydantic_ai_harness.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["e2e"]
@@ -45,8 +57,16 @@ markers = [
 ]
 
 [tool.ruff]
-line-length = 100
+extend = "../../pyproject.toml"
 target-version = "py314"
+extend-exclude = [".venv"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+# Agent sources predate the root typing-only import / complexity rules.
+extend-ignore = ["TC", "PLR0911"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app_spark_agent"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "TC", "SIM117", "ASYNC109", "PT013", "PT017"]

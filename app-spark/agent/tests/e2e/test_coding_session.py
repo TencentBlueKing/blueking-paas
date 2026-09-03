@@ -57,9 +57,7 @@ def test_a_coding_session_is_streamed_applied_and_recorded(
     # The transcript is the conversation itself, tool traffic included; the context is only
     # what the model was last given. The two are allowed to differ, and usually do.
     assert len(transcript) >= len(exported["messages"])
-    assert {"user-prompt", "tool-call", "tool-return", "text"} <= part_kinds(
-        model_messages(transcript)
-    )
+    assert {"user-prompt", "tool-call", "tool-return", "text"} <= part_kinds(model_messages(transcript))
 
     # Stored UI events are a replayable stream, with the per-token deltas already coalesced.
     types = [str(event["type"]) for event in stored_events(ui_events)]

@@ -34,6 +34,7 @@ ASGI_TARGET = "app_spark_agent.server.asgi:app"
 ENV_PREFIX = settings.ENV_PREFIX
 
 SSE_HEADERS = {"Accept": "text/event-stream"}
+E2E_RUNTIME_TOKEN = "e2e-runtime-token"
 
 # Startup only waits on a Python import; a turn waits on a real model that may be writing files.
 STARTUP_TIMEOUT_SECONDS = 30.0
@@ -59,11 +60,7 @@ class Turn:
     @property
     def tool_calls(self) -> list[str]:
         """Return the name of every tool the model invoked, in order."""
-        return [
-            str(event["toolCallName"])
-            for event in self.events
-            if event.get("type") == "TOOL_CALL_START"
-        ]
+        return [str(event["toolCallName"]) for event in self.events if event.get("type") == "TOOL_CALL_START"]
 
 
 class LiveRuntime:
@@ -94,8 +91,7 @@ class LiveRuntime:
             "GET  /health",
             200,
             " ".join(
-                f"{key}={health[key]}"
-                for key in ("conversation_id", "context_version", "log_seq", "ui_event_seq")
+                f"{key}={health[key]}" for key in ("conversation_id", "context_version", "log_seq", "ui_event_seq")
             ),
         )
         return health
@@ -237,6 +233,8 @@ def serve(
     port = free_port()
     url = f"http://127.0.0.1:{port}"
     log_path = state_dir.parent / f"{label}-uvicorn.log"
+    runtime_token = os.environ.get(f"{ENV_PREFIX}RUNTIME_TOKEN") or E2E_RUNTIME_TOKEN
+    model_api_key = os.environ.get(f"{ENV_PREFIX}MODEL_API_KEY") or settings.MODEL_API_KEY or ""
 
     console.banner(f"{label}: uvicorn {ASGI_TARGET} on {url}")
     console.note(f"workspace={workspace}")
@@ -258,6 +256,8 @@ def serve(
                 "127.0.0.1",
                 "--port",
                 str(port),
+                "--timeout-graceful-shutdown",
+                str(settings.GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS),
             ],
             stdout=log_handle,
             stderr=subprocess.STDOUT,
@@ -265,6 +265,9 @@ def serve(
                 **os.environ,
                 f"{ENV_PREFIX}WORKSPACE": str(workspace),
                 f"{ENV_PREFIX}STATE_DIR": str(state_dir),
+                f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
+                f"{ENV_PREFIX}MODEL_API_KEY": model_api_key,
+                f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS": "0",
                 **{f"{ENV_PREFIX}{key}": value for key, value in overrides.items()},
             },
         )
@@ -273,7 +276,7 @@ def serve(
 
     started = time.monotonic()
     try:
-        wait_until_healthy(url, process, log_path)
+        wait_until_healthy(url, process, log_path, runtime_token)
     except BaseException:
         terminate(process)
         raise
@@ -284,7 +287,12 @@ def serve(
         url=url,
         state_dir=state_dir,
         process=process,
-        client=httpx.Client(base_url=url, timeout=REQUEST_TIMEOUT_SECONDS),
+        client=httpx.Client(
+            base_url=url,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            headers={"Authorization": f"Bearer {runtime_token}"},
+            params={"token": runtime_token},
+        ),
         log_path=log_path,
     )
     try:
@@ -293,7 +301,12 @@ def serve(
         runtime.stop()
 
 
-def wait_until_healthy(url: str, process: subprocess.Popen[bytes], log_path: Path) -> None:
+def wait_until_healthy(
+    url: str,
+    process: subprocess.Popen[bytes],
+    log_path: Path,
+    runtime_token: str,
+) -> None:
     """Poll ``/health`` until the Runtime answers, or explain why it never will.
 
     A configuration error kills the server during import, long before the deadline, so the
@@ -303,7 +316,14 @@ def wait_until_healthy(url: str, process: subprocess.Popen[bytes], log_path: Pat
     deadline = time.monotonic() + STARTUP_TIMEOUT_SECONDS
     while True:
         try:
-            if httpx.get(f"{url}/health", timeout=0.5).status_code == 200:
+            if (
+                httpx.get(
+                    f"{url}/health",
+                    params={"token": runtime_token},
+                    timeout=0.5,
+                ).status_code
+                == 200
+            ):
                 return
         except httpx.HTTPError:
             pass
@@ -386,10 +406,7 @@ def stored_events(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 def part_contents(messages: Sequence[dict[str, Any]]) -> list[str]:
     """Return the text of every message part that carries string content."""
     return [
-        part["content"]
-        for message in messages
-        for part in message["parts"]
-        if isinstance(part.get("content"), str)
+        part["content"] for message in messages for part in message["parts"] if isinstance(part.get("content"), str)
     ]
 
 

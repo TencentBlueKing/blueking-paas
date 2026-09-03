@@ -14,6 +14,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from app_spark_agent import settings
 from tests.api.support import (
     get_transcript_messages,
     post_run_async,
@@ -184,3 +185,46 @@ async def test_a_second_run_is_refused_while_one_is_in_flight(tmp_path: Path) ->
             "request",
             "response",
         ]
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        pytest.param({}, id="missing"),
+        pytest.param({"Authorization": "Bearer wrong"}, id="wrong"),
+    ],
+)
+def test_runs_rejects_bad_token(api: TestClient, headers: dict[str, str]) -> None:
+    resp = TestClient(api.app).post(
+        "/runs",
+        headers=headers,
+        json=run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0),
+    )
+    assert resp.status_code == 401
+    assert api.get("/health").json()["running"] is False
+
+
+def test_runs_model_not_ready_503(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    resp = api.post(
+        "/runs",
+        headers=SSE_HEADERS,
+        json=run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0),
+    )
+    assert resp.status_code == 503
+    health = api.get("/health").json()
+    assert health["model_ready"] is False
+    assert health["running"] is False
+
+
+def test_control_plane_without_bearer_is_401(api: TestClient) -> None:
+    raw = TestClient(api.app)
+    assert raw.get("/log").status_code == 401
+    assert raw.get("/ui-events").status_code == 401
+    assert raw.get("/context").status_code == 401
+    assert raw.put("/context", json={}).status_code == 401
+
+
+def test_no_independent_cancel_route(api: TestClient) -> None:
+    paths = [getattr(route, "path", "") for route in api.app.routes]
+    assert not any("cancel" in path for path in paths)

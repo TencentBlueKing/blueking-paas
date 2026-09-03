@@ -1,13 +1,22 @@
 """Agent 服务可配置项。"""
 
+from __future__ import annotations
+
+import hmac
+
 from environs import Env, EnvError
 from marshmallow.validate import Length, Range
 
 # 所有配置项共用的环境变量前缀。
 ENV_PREFIX = "APP_SPARK_AGENT_"
 
+DEFAULT_AGENT_PORT = 8090
+DEFAULT_WORKSPACE = "/workspace"
+DEFAULT_STATE_DIR = "/state"
+DEFAULT_IDLE_TIMEOUT_SECONDS = 1800
+GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 1
+
 env = Env(prefix=ENV_PREFIX)
-env.read_env(".env")
 
 # -----------------------------------------------------------------------
 # 运行目标
@@ -20,6 +29,14 @@ WORKSPACE = env.path("WORKSPACE", None)
 # Shell 工具读到、甚至改坏自己的历史。这一点在构建应用时强制检查。
 STATE_DIR = env.path("STATE_DIR", None)
 
+# GET /health 的 query token，以及 POST /runs 和控制面接口的 Bearer。
+RUNTIME_TOKEN = env.str("RUNTIME_TOKEN", "")
+
+PORT = env.int("PORT", DEFAULT_AGENT_PORT)
+
+# 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
+IDLE_TIMEOUT_SECONDS = env.int("IDLE_TIMEOUT_SECONDS", DEFAULT_IDLE_TIMEOUT_SECONDS)
+
 # -----------------------------------------------------------------------
 # 模型
 # -----------------------------------------------------------------------
@@ -27,8 +44,8 @@ STATE_DIR = env.path("STATE_DIR", None)
 # 对话使用的模型，格式是 pydantic-ai 的 ``<provider>:<model>``。
 MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
 
-# 模型 API Key。留空时不会报错，而是退回 provider 自己的环境变量约定。
-API_KEY = env.str("API_KEY", None)
+# 模型密钥，同时交给 provider。缺失时 health 报 model_ready=false，POST /runs 返回 503。
+MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 
 # Agent 的系统提示词。它和 ``agent.py`` 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
@@ -68,9 +85,7 @@ COMPACTION_KEEP_MESSAGES = env.int("COMPACTION_KEEP_MESSAGES", 20, validate=Rang
 
 # 清空工具结果时，最近多少组「工具调用 / 工具结果」保持完整。刚发生的工具结果往往正是模型
 # 下一步要用的，清掉它们省下的 token 换不回这个代价。
-COMPACTION_KEEP_TOOL_RESULT_PAIRS = env.int(
-    "COMPACTION_KEEP_TOOL_RESULT_PAIRS", 3, validate=Range(min=0)
-)
+COMPACTION_KEEP_TOOL_RESULT_PAIRS = env.int("COMPACTION_KEEP_TOOL_RESULT_PAIRS", 3, validate=Range(min=0))
 
 # -----------------------------------------------------------------------
 # HTTP 接口
@@ -85,3 +100,33 @@ if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
         f"{ENV_PREFIX}DEFAULT_DRAIN_LIMIT ({DEFAULT_DRAIN_LIMIT}) must not be greater than "
         f"{ENV_PREFIX}MAX_DRAIN_LIMIT ({MAX_DRAIN_LIMIT})"
     )
+
+
+def is_model_ready() -> bool:
+    """``APP_SPARK_AGENT_MODEL_API_KEY`` 是否已注入。"""
+    return MODEL_API_KEY is not None
+
+
+def _tokens_match(expected: str, actual: str) -> bool:
+    """恒定时间比较；期望值为空时永不匹配。
+
+    先拒绝长度不一致，避免 ``compare_digest`` 把 401 变成 500。
+    """
+    if not expected or not actual or len(expected) != len(actual):
+        return False
+    return hmac.compare_digest(expected, actual)
+
+
+def matches_runtime_token(token: str) -> bool:
+    """``token`` 是否等于 ``APP_SPARK_AGENT_RUNTIME_TOKEN``。"""
+    return _tokens_match(RUNTIME_TOKEN, token)
+
+
+def matches_bearer(authorization: str | None) -> bool:
+    """Authorization 是否为 ``Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>``。"""
+    if not authorization:
+        return False
+    scheme, _, credential = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not credential:
+        return False
+    return matches_runtime_token(credential.strip())

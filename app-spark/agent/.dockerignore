@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.pyc
+.mypy_cache
+.ruff_cache
+.pytest_cache
+# Keep tests in the context: CI unittest image does COPY tests ./tests.
+# The runtime Dockerfile does not copy them into the image.
+AGENTS.md
+.git

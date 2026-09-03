@@ -23,8 +23,8 @@ from tests.e2e.live import LiveRuntime, serve
 @pytest.fixture(autouse=True)
 def require_api_key() -> None:
     """Skip rather than fail when there is no key: these tests spend real money and time."""
-    if not settings.API_KEY:
-        pytest.skip(f"{settings.ENV_PREFIX}API_KEY is required by the live tests")
+    if not settings.MODEL_API_KEY:
+        pytest.skip("APP_SPARK_AGENT_MODEL_API_KEY is required by the live tests")
 
 
 @pytest.fixture

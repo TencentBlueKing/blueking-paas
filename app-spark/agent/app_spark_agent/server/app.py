@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 
-from environs import EnvError
 from fastapi import FastAPI
 from pydantic_ai import Agent
 
-from app_spark_agent import settings
+from app_spark_agent import VERSION, settings
+from app_spark_agent.server.lifecycle import RuntimeLifecycle
 from app_spark_agent.server.routes import attach_runtime, busy_conflict_handler, router
 from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
 
@@ -19,6 +22,7 @@ def create_runtime_app(
     workspace: Path,
     state_dir: Path,
     agent: Agent[Any, Any] | None = None,
+    lifecycle: RuntimeLifecycle | None = None,
 ) -> FastAPI:
     """Create one conversation-exclusive Agent Runtime application.
 
@@ -30,11 +34,28 @@ def create_runtime_app(
     :param workspace: Existing directory exposed to coding tools.
     :param state_dir: Directory outside ``workspace`` holding the conversation's durable state.
     :param agent: Optional preconfigured agent, primarily for embedding the Runtime or for tests.
+    :param lifecycle: Optional idle / SIGTERM controller; created from settings when omitted.
     :return: A FastAPI application exposing health, drain, context, and AG-UI run endpoints.
     """
-    runtime = ConversationRuntime.open(workspace=workspace, state_dir=state_dir, agent=agent)
+    runtime = ConversationRuntime.open(
+        workspace=workspace,
+        state_dir=state_dir,
+        agent=agent,
+        lifecycle=lifecycle,
+    )
 
-    app = FastAPI(title="App-Spark Agent Runtime")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        task = asyncio.create_task(runtime.lifecycle.watch())
+        try:
+            yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+            await asyncio.to_thread(runtime.lifecycle.shutdown)
+
+    app = FastAPI(title="App-Spark Agent Runtime", version=VERSION, lifespan=lifespan)
     # The views read the runtime back through a dependency, which is what keeps them plain
     # module-level functions instead of closures over this factory.
     attach_runtime(app, runtime)
@@ -46,22 +67,11 @@ def create_runtime_app(
 def create_app_from_settings() -> FastAPI:
     """Create the application described entirely by the environment.
 
-    This is the entry point an external ASGI server reaches the Runtime through, so the two
-    directories that have no sensible default are required here rather than at import time --
-    importing the settings must stay possible without them.
+    When `APP_SPARK_AGENT_WORKSPACE` / `APP_SPARK_AGENT_STATE_DIR` are unset, fall
+    back to `/workspace` and `/state`.
 
     :return: A FastAPI application for the configured workspace and state directory.
-    :raises environs.EnvError: If the workspace or state directory is not configured.
     """
-    missing = [
-        f"{settings.ENV_PREFIX}{name}"
-        for name, value in (("WORKSPACE", settings.WORKSPACE), ("STATE_DIR", settings.STATE_DIR))
-        if value is None
-    ]
-    if missing:
-        raise EnvError(f"Required environment variable(s) not set: {', '.join(missing)}")
-
-    # Narrowed by the check above; the settings themselves are deliberately optional.
-    assert settings.WORKSPACE is not None
-    assert settings.STATE_DIR is not None
-    return create_runtime_app(workspace=settings.WORKSPACE, state_dir=settings.STATE_DIR)
+    workspace = settings.WORKSPACE or Path(settings.DEFAULT_WORKSPACE)
+    state_dir = settings.STATE_DIR or Path(settings.DEFAULT_STATE_DIR)
+    return create_runtime_app(workspace=workspace, state_dir=state_dir)

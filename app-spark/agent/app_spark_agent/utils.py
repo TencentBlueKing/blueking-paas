@@ -14,12 +14,15 @@ def write_atomic(path: Path, data: bytes) -> None:
     """Replace ``path`` with ``data`` in a single step.
 
     A reader either sees the previous file or the new one, never a half-written mix: the
-    content is staged in a sibling temporary file and moved into place with ``os.replace``,
-    which is atomic within one filesystem.
+    content is staged in a sibling temporary file, fsynced, and moved into place with
+    ``os.replace``, which is atomic within one filesystem.
     """
     temporary_path = path.with_name(f".{path.name}.tmp")
     try:
-        temporary_path.write_bytes(data)
+        with temporary_path.open("wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
         os.replace(temporary_path, path)
     finally:
         # A no-op after a successful replace; it is what removes the staging file when the

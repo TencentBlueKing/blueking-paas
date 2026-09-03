@@ -13,12 +13,22 @@ from fastapi.testclient import TestClient
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.models.function import FunctionModel
 
-from tests.api.support import ApiFactory, build_test_client
+from app_spark_agent import settings
+from tests.api.support import MODEL_API_KEY, RUNTIME_TOKEN, ApiFactory, build_test_client
 from tests.support.fake_models import text_model
 
 # Split into more than one chunk on purpose: every test inherits a model that actually streams,
 # so a broken delta path cannot pass unnoticed just because the reply arrived in one piece.
 DEFAULT_REPLY: tuple[str, ...] = ("he", "llo")
+
+
+@pytest.fixture(autouse=True)
+def sandbox_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give API tests a sandbox token and model key by default."""
+    monkeypatch.setattr(settings, "RUNTIME_TOKEN", RUNTIME_TOKEN)
+    monkeypatch.setattr(settings, "MODEL_API_KEY", MODEL_API_KEY)
+    # A short idle timeout in the environment must not os._exit during TestClient.
+    monkeypatch.setattr(settings, "IDLE_TIMEOUT_SECONDS", 0)
 
 
 @pytest.fixture

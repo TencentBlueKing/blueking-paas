@@ -6,6 +6,7 @@
   and reduces it to a single new user turn.
 - :mod:`app_spark_agent.server.routes` -- the views, and the only place that deals in status
   codes, headers, and response bodies.
+- :mod:`app_spark_agent.server.lifecycle` -- idle timeout and SIGTERM child-process registry.
 - :mod:`app_spark_agent.server.app` -- assembles the two halves into a FastAPI application.
 - :mod:`app_spark_agent.server.asgi` -- the module an external ASGI server is pointed at.
 """
@@ -17,6 +18,7 @@ from app_spark_agent.server.runtime import (
     UI_EVENTS_FILENAME,
     ConversationRuntime,
     RunGuard,
+    RunLease,
     RuntimeBusyError,
 )
 
@@ -26,6 +28,7 @@ __all__ = [
     "UI_EVENTS_FILENAME",
     "ConversationRuntime",
     "RunGuard",
+    "RunLease",
     "RuntimeBusyError",
     "create_app_from_settings",
     "create_runtime_app",

@@ -3,8 +3,6 @@
 This module owns everything that drives the test application over HTTP.
 """
 
-from __future__ import annotations
-
 import asyncio
 import time
 from collections.abc import AsyncGenerator, Sequence
@@ -24,10 +22,11 @@ from app_spark_agent.server import create_runtime_app
 from tests.support.ag_ui import SSE_HEADERS, assistant_text, run_body, sse_events
 from tests.support.fake_models import gated_model
 
+# Both are at least sixteen characters and share no substring, so a leak test can search for
+# one without matching the other or matching ordinary output.
 RUNTIME_TOKEN = "test-runtime-token"
-MODEL_API_KEY = "test-model-key"
+MODEL_API_KEY = "test-model-api-key"
 AUTH_HEADERS = {"Authorization": f"Bearer {RUNTIME_TOKEN}"}
-HEALTH_PARAMS = {"token": RUNTIME_TOKEN}
 HEALTH_FIELDS = {"version", "model_ready", "running", "app_status"}
 
 # `ASGITransport` never opens a socket, so this only has to be an absolute URL httpx can build
@@ -36,7 +35,7 @@ ASGI_BASE_URL = "http://runtime.test"
 
 
 class AuthedTestClient(TestClient):
-    """TestClient that attaches the runtime Bearer and health query token."""
+    """TestClient that attaches the runtime Bearer."""
 
     def request(self, method: str, url: str, **kwargs: Any) -> Any:  # type: ignore[override]
         headers = {str(key): str(value) for key, value in dict(kwargs.get("headers") or {}).items()}
@@ -44,16 +43,6 @@ class AuthedTestClient(TestClient):
         if not any(key.lower() == "authorization" for key in headers):
             headers["Authorization"] = AUTH_HEADERS["Authorization"]
         kwargs["headers"] = headers
-
-        # /health uses a query token, not Bearer. Use a bare TestClient for missing/wrong token.
-        path = str(url).split("?", 1)[0].rstrip("/")
-        if path.endswith("/health"):
-            params = kwargs.get("params")
-            if params is None:
-                kwargs["params"] = dict(HEALTH_PARAMS)
-            elif isinstance(params, dict) and "token" not in params:
-                kwargs["params"] = {**params, **HEALTH_PARAMS}
-
         return super().request(method, url, **kwargs)
 
 
@@ -214,7 +203,6 @@ async def http_client(test_client: TestClient) -> AsyncGenerator[httpx.AsyncClie
         transport=transport,
         base_url=ASGI_BASE_URL,
         headers=AUTH_HEADERS,
-        params=HEALTH_PARAMS,
     ) as client:
         yield client
 

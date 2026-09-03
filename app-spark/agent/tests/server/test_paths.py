@@ -1,7 +1,5 @@
 """Container path lock: workspace and state stay distinct; overlap refuses to start."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from pathlib import Path
 
@@ -14,8 +12,8 @@ from app_spark_agent.server.runtime import ConversationRuntime
 
 
 def test_container_default_paths_are_locked_siblings() -> None:
-    assert settings.DEFAULT_WORKSPACE == "/workspace"
-    assert settings.DEFAULT_STATE_DIR == "/state"
+    assert settings.DEFAULT_WORKSPACE == "/data/workspace"
+    assert settings.DEFAULT_STATE_DIR == "/data/state"
     assert settings.DEFAULT_WORKSPACE != settings.DEFAULT_STATE_DIR
 
 

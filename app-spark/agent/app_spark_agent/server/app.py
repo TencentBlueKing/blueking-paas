@@ -1,7 +1,5 @@
 """Assembly of the Runtime application from its runtime state and its views."""
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
@@ -12,9 +10,10 @@ from fastapi import FastAPI
 from pydantic_ai import Agent
 
 from app_spark_agent import VERSION, settings
+from app_spark_agent.server.errors import install_error_handlers
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
-from app_spark_agent.server.routes import attach_runtime, busy_conflict_handler, router
-from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
+from app_spark_agent.server.routes import attach_runtime, router
+from app_spark_agent.server.runtime import ConversationRuntime
 
 
 def create_runtime_app(
@@ -59,7 +58,7 @@ def create_runtime_app(
     # The views read the runtime back through a dependency, which is what keeps them plain
     # module-level functions instead of closures over this factory.
     attach_runtime(app, runtime)
-    app.add_exception_handler(RuntimeBusyError, busy_conflict_handler)
+    install_error_handlers(app)
     app.include_router(router)
     return app
 
@@ -68,7 +67,7 @@ def create_app_from_settings() -> FastAPI:
     """Create the application described entirely by the environment.
 
     When `APP_SPARK_AGENT_WORKSPACE` / `APP_SPARK_AGENT_STATE_DIR` are unset, fall
-    back to `/workspace` and `/state`.
+    back to `/data/workspace` and `/data/state`.
 
     :return: A FastAPI application for the configured workspace and state directory.
     """

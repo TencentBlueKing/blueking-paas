@@ -1,10 +1,8 @@
-"""HTTP views: the only module that speaks in requests, responses, and status codes."""
-
-from __future__ import annotations
+"""HTTP views: health, drain, context, and the AG-UI run."""
 
 import json
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Annotated, Any, cast
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -12,7 +10,15 @@ from pydantic_ai.run import AgentRunResult
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.responses import JSONResponse, Response
 
+# Imported at runtime, not under TYPE_CHECKING: this module's annotations are read by tooling
+# and by the framework, and a name that only exists for a type checker turns any such read into
+# a NameError. ``starlette.types`` is a module of aliases, so importing it costs nothing.
+from starlette.types import Receive, Scope, Send
+
 from app_spark_agent import VERSION, settings
+
+# Imported under a different name: `log` already means "append-only channel" in this module.
+from app_spark_agent.observability import log as logger
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
 from app_spark_agent.server.run_input import prepare_run, request_with_body
 from app_spark_agent.server.runtime import ConversationRuntime, RunLease, RuntimeBusyError
@@ -24,9 +30,6 @@ from app_spark_agent.state import (
     ConversationStateError,
 )
 from app_spark_agent.ui_events import record_ui_events
-
-if TYPE_CHECKING:
-    from starlette.types import Receive, Scope, Send
 
 router = APIRouter()
 
@@ -79,22 +82,9 @@ def require_bearer(request: Request) -> None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
-async def busy_conflict_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Answer a refused exclusive operation with a 409.
-
-    Registered on the application rather than repeated in every view.
-    """
-    return JSONResponse({"detail": str(exc)}, status_code=status.HTTP_409_CONFLICT)
-
-
-@router.get("/health")
-async def health(
-    runtime: RuntimeDep,
-    token: str | None = Query(default=None),
-) -> dict[str, object]:
+@router.get("/health", dependencies=[Depends(require_bearer)])
+async def health(runtime: RuntimeDep) -> dict[str, object]:
     """Report the conversation's identity and the cursor of every stream."""
-    if not settings.matches_runtime_token(token or ""):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     context = runtime.context_store.context
     return {
         "version": VERSION,
@@ -176,21 +166,29 @@ async def run(request: Request, runtime: RuntimeDep) -> Response:
         raise RuntimeBusyError("An Agent run is already in progress.")
 
     try:
-        response = await _start_run(runtime, request)
+        response, run_id = await _start_run(runtime, request)
     except Exception:
         lease.release()
         raise
-    return _hold_run_stream(response, lease)
+    return _hold_run_stream(response, lease, run_id=run_id)
 
 
-async def _start_run(runtime: ConversationRuntime, request: Request) -> Response:
+async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Response, str]:
     """Validate one AG-UI run and return its streaming response.
 
     The caller owns the run guard: this only builds the response, and the stream it wraps is
     still running when it returns.
+
+    :return: ``(response, run_id)`` -- the open AG-UI stream, and the id later log lines quote.
     """
     context = runtime.context_store.context
     prepared = prepare_run(await request.body(), context, runtime.transcript)
+    logger.info(
+        "run started run_id=%s conversation_id=%s context_version=%s",
+        prepared.run_id,
+        prepared.conversation_id,
+        prepared.context_version,
+    )
     adapter = await AGUIAdapter.from_request(
         request_with_body(request, prepared.body),
         agent=runtime.agent,
@@ -234,10 +232,13 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> Response
         capabilities=[recorder],
         on_complete=commit_context,
     )
-    return adapter.streaming_response(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id))
+    return (
+        adapter.streaming_response(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)),
+        prepared.run_id,
+    )
 
 
-def _hold_run_stream(response: Response, lease: RunLease) -> _HoldStreamingResponse:
+def _hold_run_stream(response: Response, lease: RunLease, *, run_id: str) -> _HoldStreamingResponse:
     """Wrap the AG-UI stream in a lease: release after enter, or at response end if never entered."""
     inner = cast(StreamingResponse, response)
 
@@ -248,6 +249,9 @@ def _hold_run_stream(response: Response, lease: RunLease) -> _HoldStreamingRespo
                 yield chunk
         finally:
             lease.release()
+            # Reached on a client disconnect as well as on a completed turn, so this says
+            # the stream is over and not that the run succeeded.
+            logger.info("run stream closed run_id=%s", run_id)
 
     headers = {**dict(inner.headers), **SSE_RESPONSE_HEADERS}
     return _HoldStreamingResponse(

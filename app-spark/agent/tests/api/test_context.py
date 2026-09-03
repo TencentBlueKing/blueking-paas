@@ -5,8 +5,6 @@ guarded: the export is tagged with the version it was taken at, and the import r
 that would overwrite a Runtime already holding a conversation of its own.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 from uuid import uuid4

@@ -5,8 +5,6 @@ interesting assertion is not the shape of the document but that its numbers agre
 endpoints they point at.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import uuid4
 
@@ -14,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app_spark_agent import VERSION, settings
-from tests.api.support import HEALTH_FIELDS, drain_channel, run_turn
+from tests.api.support import HEALTH_FIELDS, RUNTIME_TOKEN, drain_channel, run_turn
 
 
 def test_an_empty_runtime_reports_no_conversation(api: TestClient) -> None:
@@ -49,9 +47,46 @@ def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient
     assert reported["running"] is False
 
 
-@pytest.mark.parametrize("params", [None, {"token": ""}, {"token": "wrong"}, {"token": "short"}])
-def test_health_rejects_bad_token(api: TestClient, params: dict[str, str] | None) -> None:
+@pytest.mark.parametrize("missing", ["MODEL_NAME", "MODEL_BASE_URL"])
+def test_readiness_is_latched_only_by_the_api_key(
+    api: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    missing: str,
+) -> None:
+    """The model name and base URL are carried for a later caller, not gates on serving a run.
+
+    Reporting the Runtime unready for a missing name would stall the sandbox on a condition it
+    cannot fix and that stops nothing it currently does.
+    """
+    monkeypatch.setattr(settings, missing, "")
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is True
+
+
+def test_a_missing_api_key_is_reported_as_unready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The one condition that must never be reported as ready."""
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is False
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [None, {"Authorization": "Bearer "}, {"Authorization": "Bearer wrong"}, {"Authorization": "Bearer short"}],
+)
+def test_health_rejects_bad_token(api: TestClient, headers: dict[str, str] | None) -> None:
     # Skip AuthedTestClient so a missing token is not filled in.
-    resp = TestClient(api.app).get("/health", params=params)
+    resp = TestClient(api.app).get("/health", headers=headers)
+    assert resp.status_code == 401
+    assert HEALTH_FIELDS.isdisjoint(resp.json())
+
+
+def test_health_rejects_query_token(api: TestClient) -> None:
+    """A query token is not an alternative to Bearer."""
+    resp = TestClient(api.app).get("/health", params={"token": RUNTIME_TOKEN})
     assert resp.status_code == 401
     assert HEALTH_FIELDS.isdisjoint(resp.json())

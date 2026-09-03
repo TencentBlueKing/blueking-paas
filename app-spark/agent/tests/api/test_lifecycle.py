@@ -1,7 +1,5 @@
 """Idle clock on HTTP: reset only when a run ends; ``/health`` does not extend life."""
 
-from __future__ import annotations
-
 from uuid import uuid4
 
 from fastapi.testclient import TestClient

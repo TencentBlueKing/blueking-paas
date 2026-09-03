@@ -1,7 +1,5 @@
 """AG-UI event logging: forward the live stream, persist a coalesced replayable copy."""
 
-from __future__ import annotations
-
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 

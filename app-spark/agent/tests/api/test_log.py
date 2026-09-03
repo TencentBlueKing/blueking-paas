@@ -6,8 +6,6 @@ What the AG-UI channel stores is its own question and lives in
 :mod:`tests.api.test_ui_events`.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import uuid4
 

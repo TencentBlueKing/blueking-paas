@@ -18,15 +18,25 @@ uv sync
 
 文档只用占位符，不要填真实密钥。
 
+`APP_SPARK_AGENT_*` 由接入层创建沙箱时注入，只从进程环境读取（不读配置文件）；键名与端口数值已锁定。
+
 | 变量 | 必需 | 说明 |
 |------|------|------|
-| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | `GET /health` 的 query `token`，以及 `POST /runs` / 控制面接口的 Bearer |
+| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 所有 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面） |
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 调用 `/runs` 时是 | 模型密钥。缺失则 `model_ready=false`，`POST /runs` 返回 503 |
+| `APP_SPARK_AGENT_MODEL_NAME` | 是 | 不带 vendor 前缀。当前只读入，尚未用于构造模型客户端 |
+| `APP_SPARK_AGENT_MODEL_BASE_URL` | 是 | 自研网关 OpenAI 兼容入口。同上，当前只读入 |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`；本组件只读入，不拉起应用也不校验 |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`，到期以退出码 0 退出。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
-| `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/workspace` | Agent 工具可见目录 |
-| `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/state` | 必须在 workspace 外 |
+| `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
+| `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
+| `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
+| `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/data/state` | 必须在 workspace 外 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
+
+模型凭据取值顺序：`APP_SPARK_AGENT_MODEL_API_KEY` → provider 自有环境变量。
+只注入契约键即可启动并调通。
 
 示例：
 
@@ -38,20 +48,21 @@ export APP_SPARK_AGENT_STATE_DIR=/tmp/app-spark-state
 make run
 ```
 
-其余压缩策略、游标 limit 等配置见 `app_spark_agent/settings.py`（`APP_SPARK_AGENT_*`）。
+其余压缩策略、游标 limit 等配置见 `app_spark_agent/settings.py`（`APP_SPARK_AGENT_*`，`.env` 也会自动读取）。
 
 ## 调用 HTTP
 
-`GET /health` 必须带 query token，缺或错误返回 401，且不返回状态字段：
+`GET /health` 必须带 Bearer，缺或错误返回 401，且不返回状态字段：
 
 ```bash
-curl -sS "http://127.0.0.1:8090/health?token=${APP_SPARK_AGENT_RUNTIME_TOKEN}"
+curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
+  http://127.0.0.1:8090/health
 ```
 
 成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`app_status`，以及会话游标
-`conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube / 接入层探针使用同一 URL。
+`conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube 探针用同一接口，走 `httpHeaders`。
 
-`POST /runs` 为 AG-UI over SSE，必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
+`POST /runs` 为 AG-UI over SSE，同样必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
 
 ```bash
 curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
@@ -81,15 +92,39 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 `/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer，供控制面读取或迁移会话状态。
 
+## 凭据屏蔽
+
+两层。第二层存在的理由是**第一层静默失效**：新增一个密钥键却忘了登记、或 harness 升级改了名单语义，
+测试全绿、功能正常，密钥却已经进了模型能读的环境。
+
+**一、密钥不进子进程**：harness `Shell` 从继承环境里剥掉 `APP_SPARK_AGENT_*` 及各 provider 密钥变量（`agent.py`）。
+
+**二、出站文本脱敏**（`masking.py`），匹配值而非键名，多个密钥按长度降序替换：
+
+| 出口 | 实现位置 |
+|---|---|
+| AG-UI **落盘**事件 | `ui_events.py` |
+| HTTP 错误响应体（401 / 409 / 422 / 503 及异常文本） | `server/errors.py` |
+| 进程日志（含 uvicorn） | `observability.py` |
+
+**实时 SSE 不脱敏**，是有意的：逐 delta 匹配要在每个 token 上跑，而它要防的值只有在第一层已经失效时才可能出现；
+且模型把密钥切成两个 chunk 时它照样漏。落盘副本按消息合并后才脱敏，拿到的是完整字符串，且它才是审计要看的那份。
+客户端在自己的流里看到凭据，本来就是个已经持有凭据的客户端。
+
+第二层是**兜底而非控制措施**，两条限制得清楚：只匹配精确的配置值（变形过的——重编码、截断、拆分——一律穿过）；
+只匹配值不匹配键名（否则 `APP_SPARK_AGENT_MODEL_API_KEY` 这种名字在日志里就没法读了）。
+
+日志每条带 `session_id` / `tenant_id`（缺省 `-`），`POST /runs` 在开始和流结束各打一条。
+
 ## 会话状态
 
 会话状态按「怎么变」分成三类，都由 `app_spark_agent/state/` 下的类型实现：
 
-| 数据 | 文件 | 形态 | 实现类型 | 单测 |
-| --- | --- | --- | --- | --- |
-| 原始对话记录 | `log.jsonl` | append-only，`seq` 连续递增 | `AppendLog` / `LogRecord`（`state/log.py`） | `tests/state/test_log.py` |
-| AG-UI 事件历史 | `ui_events.jsonl` | append-only，`seq` 连续递增 | `AppendLog`（同上） | `tests/state/test_log.py` |
-| 会话上下文 | `context.json` | 可变 blob，原子整体替换，带 `context_version` | `ContextStore` / `ConversationContext`（`state/context.py`） | `tests/state/test_context.py` |
+| 数据         | 文件                | 形态                                 | 实现类型                                                       | 单测                            |
+|------------|-------------------|------------------------------------|------------------------------------------------------------|-------------------------------|
+| 原始对话记录     | `log.jsonl`       | append-only，`seq` 连续递增             | `AppendLog` / `LogRecord`（`state/log.py`）                  | `tests/state/test_log.py`     |
+| AG-UI 事件历史 | `ui_events.jsonl` | append-only，`seq` 连续递增             | `AppendLog`（同上）                                            | `tests/state/test_log.py`     |
+| 会话上下文      | `context.json`    | 可变 blob，原子整体替换，带 `context_version` | `ContextStore` / `ConversationContext`（`state/context.py`） | `tests/state/test_context.py` |
 
 关键点：
 
@@ -110,7 +145,8 @@ docker run --rm -p 8090:8090 \
   app-spark-agent:dev
 ```
 
-入口为 tini（PID 1）。`make docker-build` 使用 `--load` 写入本地 daemon。镜像内 workspace / state 锁定为 `/workspace` 与 `/state`，二者必须是独立路径，文件工具只能看见 `/workspace`。
+入口为 tini（PID 1）。`make docker-build` 使用 `--load` 写入本地 daemon。镜像内 workspace / state 锁定为 `/data/workspace` 与
+`/data/state`，二者必须是独立路径，文件工具只能看见 `/data/workspace`。
 
 ## 开发指南
 

@@ -1,7 +1,5 @@
 """Append-only channel behavior: contiguity, cursors, and crash recovery."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -106,8 +104,7 @@ async def test_appending_after_recovery_stays_contiguous(tmp_path: Path) -> None
 def test_a_gap_in_the_sequence_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "channel.jsonl"
     path.write_text(
-        '{"seq":1,"run_id":"a","timestamp":"t","message":{}}\n'
-        '{"seq":3,"run_id":"a","timestamp":"t","message":{}}\n'
+        '{"seq":1,"run_id":"a","timestamp":"t","message":{}}\n{"seq":3,"run_id":"a","timestamp":"t","message":{}}\n'
     )
 
     with pytest.raises(AppendLogError, match="not contiguous"):

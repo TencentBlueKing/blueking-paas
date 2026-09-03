@@ -1,6 +1,5 @@
-"""Authoritative state is the AG-1 trio: failure is not persisted as success, and no messages.json."""
-
-from __future__ import annotations
+"""Authoritative state is the three durable files: failure is not persisted as success, and no
+messages.json."""
 
 from pathlib import Path
 from typing import Any, cast

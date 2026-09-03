@@ -1,7 +1,10 @@
+import fnmatch
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelRetry
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -55,7 +58,55 @@ def test_create_agent_scopes_tools_to_workspace(
     assert any(isinstance(item, TieredCompaction) for item in capabilities)
 
 
-def test_the_configured_api_key_reaches_the_provider(monkeypatch: MonkeyPatch) -> None:
+def denied(name: str, patterns: Sequence[str]) -> bool:
+    """Whether a subprocess would inherit ``name``, decided the way the harness decides it."""
+    return any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
+
+
+def shell_of(agent: Agent[None, str]) -> Shell:
+    return next(item for item in agent.root_capability.capabilities if isinstance(item, Shell))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "APP_SPARK_AGENT_MODEL_API_KEY",
+        "APP_SPARK_AGENT_RUNTIME_TOKEN",
+    ],
+)
+def test_a_credential_is_stripped_from_the_environment_a_subprocess_inherits(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    name: str,
+) -> None:
+    """The first layer of credential protection: the model's shell never sees the value.
+
+    Asserted against `fnmatch`, the matcher the harness itself uses, rather than against the
+    literal pattern list -- what matters is whether the name is excluded, not how it is spelled.
+    """
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
+
+    patterns = shell_of(create_agent(tmp_path)).denied_env_patterns
+
+    assert denied(name, patterns)
+
+
+def provider_key_of(model: Any) -> str:
+    """Return the credential the built model's provider client will authenticate with."""
+    assert isinstance(model, OpenAIChatModel)
+    return cast(str, cast(Any, model.client).api_key)
+
+
+def test_the_injected_contract_key_reaches_the_provider(monkeypatch: MonkeyPatch) -> None:
+    """`APP_SPARK_AGENT_MODEL_API_KEY` alone must be enough to start the provider."""
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "injected-contract-key")
+
+    assert provider_key_of(build_model()) == "injected-contract-key"
+
+
+def test_the_settings_key_reaches_the_provider_when_it_is_not_in_the_environment(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """A key that only exists in the settings must still authenticate the provider.
 
     The value never enters ``os.environ``, so a provider left to read the environment
@@ -63,11 +114,7 @@ def test_the_configured_api_key_reaches_the_provider(monkeypatch: MonkeyPatch) -
     """
     monkeypatch.setattr(settings, "MODEL_API_KEY", "key-only-in-settings")
 
-    model = build_model()
-
-    assert isinstance(model, OpenAIChatModel)
-    client = cast(Any, model.client)
-    assert client.api_key == "key-only-in-settings"
+    assert provider_key_of(build_model()) == "key-only-in-settings"
 
 
 def test_compaction_escalates_from_cheap_to_expensive() -> None:
@@ -80,7 +127,7 @@ def test_compaction_escalates_from_cheap_to_expensive() -> None:
         ClearToolResults,
         SummarizingCompaction,
     ]
-    # An absolute budget rather than a fraction of the window; `test_settings.py` pins why that
+    # An absolute budget rather than a fraction of the window; `settings.py` pins why that
     # number is what it is.
     assert compaction.target_tokens == settings.COMPACTION_TARGET_TOKENS
 

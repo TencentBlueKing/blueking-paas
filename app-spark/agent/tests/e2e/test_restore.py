@@ -9,8 +9,6 @@ Both are driven here in one chain, because the second only means anything if the
 a conversation worth moving.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

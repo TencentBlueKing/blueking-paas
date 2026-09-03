@@ -1,7 +1,5 @@
 """Started Runtime clients supplied to the API tests as pytest fixtures."""
 
-from __future__ import annotations
-
 from collections.abc import Iterator, Sequence
 from contextlib import ExitStack
 from itertools import count
@@ -24,11 +22,18 @@ DEFAULT_REPLY: tuple[str, ...] = ("he", "llo")
 
 @pytest.fixture(autouse=True)
 def sandbox_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Give API tests a sandbox token and model key by default."""
+    """Give API tests the sandbox contract a real injection would provide."""
     monkeypatch.setattr(settings, "RUNTIME_TOKEN", RUNTIME_TOKEN)
     monkeypatch.setattr(settings, "MODEL_API_KEY", MODEL_API_KEY)
-    # A short idle timeout in the environment must not os._exit during TestClient.
+    monkeypatch.setattr(settings, "MODEL_NAME", "test-model")
+    monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://model-gateway.test/v1")
+    monkeypatch.setattr(settings, "APP_PORT", settings.DEFAULT_APP_PORT)
+    # A short idle timeout in a developer .env must not os._exit during TestClient.
     monkeypatch.setattr(settings, "IDLE_TIMEOUT_SECONDS", 0)
+    # Both labels are optional in the contract, so the default here is the unlabelled case a
+    # test must opt out of rather than the other way round.
+    monkeypatch.setattr(settings, "SESSION_ID", "")
+    monkeypatch.setattr(settings, "TENANT_ID", "")
 
 
 @pytest.fixture

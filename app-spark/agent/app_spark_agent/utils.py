@@ -4,8 +4,6 @@ Currently only crash-safe file writes: both state modules need them, and neither
 Every function here is blocking, so async callers must hand them to ``asyncio.to_thread``.
 """
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 

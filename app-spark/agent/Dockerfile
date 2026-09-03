@@ -21,15 +21,15 @@ ADD ./uv.lock .
 ADD ./README.md .
 ADD ./app_spark_agent ./app_spark_agent
 
-# Frozen runtime deps; workspace and state must be distinct paths
+# Frozen runtime deps; workspace and state must be distinct paths under /data
 RUN uv sync --frozen --no-dev \
-    && mkdir -p /workspace /state
+    && mkdir -p /data/workspace /data/state
 
 ENV PATH="/app/.venv/bin:${PATH}"
 # Listen on 8090; fall back to these paths when APP_SPARK_AGENT_* is unset
 ENV APP_SPARK_AGENT_PORT=8090
-ENV APP_SPARK_AGENT_WORKSPACE=/workspace
-ENV APP_SPARK_AGENT_STATE_DIR=/state
+ENV APP_SPARK_AGENT_WORKSPACE=/data/workspace
+ENV APP_SPARK_AGENT_STATE_DIR=/data/state
 
 EXPOSE 8090
 

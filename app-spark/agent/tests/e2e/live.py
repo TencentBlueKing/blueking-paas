@@ -9,8 +9,6 @@ is only ever read through the endpoints that serve it.
 Every call narrates itself through :mod:`tests.e2e.console`, which makes ``-s`` worth passing.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import socket
@@ -234,7 +232,9 @@ def serve(
     url = f"http://127.0.0.1:{port}"
     log_path = state_dir.parent / f"{label}-uvicorn.log"
     runtime_token = os.environ.get(f"{ENV_PREFIX}RUNTIME_TOKEN") or E2E_RUNTIME_TOKEN
-    model_api_key = os.environ.get(f"{ENV_PREFIX}MODEL_API_KEY") or settings.MODEL_API_KEY or ""
+    # Prefer the already-resolved setting (including `.env`) over `os.environ`: injecting an
+    # empty string would block the child from reading its own `.env` and leave it unready.
+    model_api_key = settings.MODEL_API_KEY or ""
 
     console.banner(f"{label}: uvicorn {ASGI_TARGET} on {url}")
     console.note(f"workspace={workspace}")
@@ -291,7 +291,6 @@ def serve(
             base_url=url,
             timeout=REQUEST_TIMEOUT_SECONDS,
             headers={"Authorization": f"Bearer {runtime_token}"},
-            params={"token": runtime_token},
         ),
         log_path=log_path,
     )
@@ -319,7 +318,7 @@ def wait_until_healthy(
             if (
                 httpx.get(
                     f"{url}/health",
-                    params={"token": runtime_token},
+                    headers={"Authorization": f"Bearer {runtime_token}"},
                     timeout=0.5,
                 ).status_code
                 == 200

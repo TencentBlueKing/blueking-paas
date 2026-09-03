@@ -9,8 +9,6 @@ The direction of every line is readable at a glance: ``>`` is what the client se
 what the Runtime sent back. Nothing in this module ever fails a test; it only reports.
 """
 
-from __future__ import annotations
-
 import sys
 from typing import Any
 

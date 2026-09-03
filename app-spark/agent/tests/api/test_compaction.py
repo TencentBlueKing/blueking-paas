@@ -1,7 +1,5 @@
 """Compaction must never reach the raw transcript, only the context."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 from uuid import uuid4

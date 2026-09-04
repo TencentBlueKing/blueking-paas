@@ -73,6 +73,8 @@ class PluginRequestCreateSLZ(PluginRequestSLZ):
     """创建插件的时候需要初始化可见范围，所以需要将可见范围一起同步"""
 
     visible_range = serializers.SerializerMethodField()
+    # Codecc 插件审批时会把平台管理员添加到插件的管理员中，创建时需同步给第三方
+    administrator = serializers.SerializerMethodField(help_text="平台管理员")
 
     def get_visible_range(self, obj) -> Optional[dict]:
         if not hasattr(obj, "visible_range"):
@@ -81,6 +83,9 @@ class PluginRequestCreateSLZ(PluginRequestSLZ):
             "bkci_project": obj.visible_range.bkci_project,
             "organization": obj.visible_range.organization,
         }
+
+    def get_administrator(self, obj) -> list:
+        return obj.pd.administrator or []
 
 
 @i18n

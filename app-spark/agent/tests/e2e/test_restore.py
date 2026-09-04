@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.e2e import console
-from tests.e2e.conftest import StartRuntime
+from tests.support import console
+from tests.support.live_fixtures import StartRuntime
 
 pytestmark = pytest.mark.live
 

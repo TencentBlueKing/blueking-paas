@@ -20,12 +20,18 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from app_spark_api.repository.storage.backends import BkRepo, HostTmpPath, make_storage_backend
+from app_spark_api.repository.storage.backends import SourceStorage, make_storage_backend
+from app_spark_api.repository.storage.blob_stores import BkRepo, HostTmpPath
 from app_spark_api.repository.storage.constants import StorageBackend
 from app_spark_api.repository.storage.exceptions import StorageConfigurationError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def host_source_storage(package_path: Path) -> SourceStorage:
+    """Return source storage keeping its package at a host path."""
+    return SourceStorage(HostTmpPath(package_path))
 
 
 def write_source(source_dir: Path, files: dict[str, bytes]) -> None:
@@ -60,7 +66,7 @@ def test_host_tmp_path_store_and_get(tmp_path):
     write_source(source_dir, expected_files | vcs_metadata)
 
     package_path = tmp_path / "storage" / "source.tgz"
-    storage = HostTmpPath(package_path)
+    storage = host_source_storage(package_path)
     storage.store(source_dir)
 
     assert package_path.read_bytes().startswith(b"\x1f\x8b")
@@ -71,7 +77,7 @@ def test_host_tmp_path_store_and_get(tmp_path):
 def test_host_tmp_path_store_replaces_previous_snapshot(tmp_path):
     source_dir = tmp_path / "source"
     write_source(source_dir, {"keep.txt": b"old", "removed.txt": b"removed"})
-    storage = HostTmpPath(tmp_path / "source.tgz")
+    storage = host_source_storage(tmp_path / "source.tgz")
     storage.store(source_dir)
 
     (source_dir / "keep.txt").write_bytes(b"new")
@@ -88,7 +94,7 @@ def test_host_tmp_path_store_replaces_previous_snapshot(tmp_path):
 def test_host_tmp_path_can_store_modified_working_copy(tmp_path):
     source_dir = tmp_path / "source"
     write_source(source_dir, {"main.py": b"before\n"})
-    storage = HostTmpPath(tmp_path / "source.tgz")
+    storage = host_source_storage(tmp_path / "source.tgz")
     storage.store(source_dir)
 
     working_dir = storage.get(tmp_path / "working")
@@ -99,7 +105,7 @@ def test_host_tmp_path_can_store_modified_working_copy(tmp_path):
 
 
 def test_store_rejects_missing_source_directory(tmp_path):
-    storage = HostTmpPath(tmp_path / "source.tgz")
+    storage = host_source_storage(tmp_path / "source.tgz")
 
     with pytest.raises(NotADirectoryError, match="Source directory does not exist"):
         storage.store(tmp_path / "missing")
@@ -109,7 +115,7 @@ def test_store_rejects_missing_source_directory(tmp_path):
 def test_get_rejects_invalid_target(tmp_path, target_kind):
     source_dir = tmp_path / "source"
     write_source(source_dir, {"main.py": b"content\n"})
-    storage = HostTmpPath(tmp_path / "source.tgz")
+    storage = host_source_storage(tmp_path / "source.tgz")
     storage.store(source_dir)
 
     target_path = tmp_path / "target"
@@ -169,4 +175,8 @@ def test_make_storage_backend(settings, backend, config, expected_type, error_me
         with pytest.raises(StorageConfigurationError, match=error_message):
             make_storage_backend(backend, config)
     else:
-        assert isinstance(make_storage_backend(backend, config), expected_type)
+        storage = make_storage_backend(backend, config)
+        # The configuration only ever selects where the package goes; the tgz half above it is
+        # the same object either way.
+        assert isinstance(storage, SourceStorage)
+        assert isinstance(storage.blob_store, expected_type)

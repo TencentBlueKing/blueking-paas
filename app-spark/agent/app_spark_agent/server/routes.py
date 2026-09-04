@@ -25,9 +25,11 @@ from app_spark_agent.server.runtime import ConversationRuntime, RunLease, Runtim
 from app_spark_agent.state import (
     AppendLog,
     AppendLogError,
+    Channel,
     ConversationContext,
     ConversationStateConflict,
     ConversationStateError,
+    CursorStateError,
 )
 from app_spark_agent.ui_events import record_ui_events
 
@@ -84,8 +86,19 @@ def require_bearer(request: Request) -> None:
 
 @router.get("/health", dependencies=[Depends(require_bearer)])
 async def health(runtime: RuntimeDep) -> dict[str, object]:
-    """Report the conversation's identity and the cursor of every stream."""
+    """Report the conversation's identity, the cursor of every stream, and replication lag.
+
+    The ``pushed_*`` cursors are what tells the control plane whether this Runtime is safe to
+    discard. They read ``0`` for a Runtime with no control plane configured, where the question
+    does not apply.
+
+    ``replication_pending`` is the same question already answered: ``running`` going false only
+    means no run holds the guard, *not* that the turn reached the control plane, because a flush
+    that times out still hands the guard back. A caller waiting for a turn to be durable
+    elsewhere has to see both flags down.
+    """
     context = runtime.context_store.context
+    replicator = runtime.replicator
     return {
         "version": VERSION,
         "model_ready": settings.is_model_ready(),
@@ -96,6 +109,11 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "context_version": context.context_version,
         "log_seq": runtime.transcript.last_seq,
         "ui_event_seq": runtime.ui_events.last_seq,
+        "replicating": replicator is not None,
+        "replication_pending": replicator is not None and bool(replicator.outstanding()),
+        "pushed_log_seq": runtime.cursors.channel(Channel.MESSAGE).pushed_seq,
+        "pushed_ui_event_seq": runtime.cursors.channel(Channel.UI_EVENT).pushed_seq,
+        "pushed_context_version": runtime.cursors.pushed_context_version,
     }
 
 
@@ -130,8 +148,23 @@ async def read_context(runtime: RuntimeDep) -> JSONResponse:
 
 
 @router.put("/context", dependencies=[Depends(require_bearer)])
-async def restore_context(request: Request, runtime: RuntimeDep) -> JSONResponse:
-    """Inject a cold context into an empty Runtime."""
+async def restore_context(
+    request: Request,
+    runtime: RuntimeDep,
+    log_seq: int = Query(default=0, ge=0),
+    ui_event_seq: int = Query(default=0, ge=0),
+) -> JSONResponse:
+    """Inject a cold context into an empty Runtime, and tell it where its history stands.
+
+    The two cursors ride as query parameters rather than inside the body, because the body has
+    to stay byte-for-byte the document ``GET /context`` produced -- that is what makes a
+    conversation movable by copying one file. They are the sequence numbers the control plane
+    already holds for this conversation; this Runtime's channels continue after them instead of
+    restarting at 1 and colliding.
+
+    :param log_seq: Sequence number the raw transcript should continue from.
+    :param ui_event_seq: Sequence number the AG-UI event history should continue from.
+    """
     async with runtime.run_guard.exclusive():
         current = runtime.context_store.context.context_version
         expected = request.headers.get("if-match")
@@ -143,11 +176,17 @@ async def restore_context(request: Request, runtime: RuntimeDep) -> JSONResponse
         try:
             raw = await request.json()
             context = ConversationContext.from_payload(raw)
-            restored = await runtime.context_store.restore(context)
-        except ConversationStateConflict as exc:
+            restored = await runtime.restore(
+                context,
+                log_seq=log_seq,
+                ui_event_seq=ui_event_seq,
+            )
+        except (ConversationStateConflict, AppendLogError) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ConversationStateError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except CursorStateError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise HTTPException(status_code=422, detail="Invalid JSON context payload.") from exc
         return JSONResponse(
@@ -170,7 +209,7 @@ async def run(request: Request, runtime: RuntimeDep) -> Response:
     except Exception:
         lease.release()
         raise
-    return _hold_run_stream(response, lease, run_id=run_id)
+    return _hold_run_stream(response, lease, runtime=runtime, run_id=run_id)
 
 
 async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Response, str]:
@@ -238,9 +277,16 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Re
     )
 
 
-def _hold_run_stream(response: Response, lease: RunLease, *, run_id: str) -> _HoldStreamingResponse:
-    """Wrap the AG-UI stream in a lease: release after enter, or at response end if never entered."""
+def _hold_run_stream(
+    response: Response,
+    lease: RunLease,
+    *,
+    runtime: ConversationRuntime,
+    run_id: str,
+) -> _HoldStreamingResponse:
+    """Hold the run lease through streaming and the final replication barrier."""
     inner = cast(StreamingResponse, response)
+    existing_background = inner.background
 
     async def generate() -> AsyncIterator[str | bytes | memoryview]:
         lease.mark_entered()
@@ -248,10 +294,22 @@ def _hold_run_stream(response: Response, lease: RunLease, *, run_id: str) -> _Ho
             async for chunk in inner.body_iterator:
                 yield chunk
         finally:
-            lease.release()
-            # Reached on a client disconnect as well as on a completed turn, so this says
-            # the stream is over and not that the run succeeded.
-            logger.info("run stream closed run_id=%s", run_id)
+            # The barrier makes a normally completed Runtime disposable. A failed flush must
+            # still release the lease: local files remain durable and the background replicator
+            # keeps retrying, while `/health` exposes that the control plane is behind.
+            try:
+                if existing_background is not None:
+                    await existing_background()
+                if not await runtime.flush_replication():
+                    logger.warning(
+                        "releasing the run guard while the control plane is still behind; "
+                        "this Runtime is not safe to discard yet"
+                    )
+            finally:
+                lease.release()
+                # Reached on a client disconnect as well as on a completed turn, so this says
+                # the stream is over and not that the run succeeded.
+                logger.info("run stream closed run_id=%s", run_id)
 
     headers = {**dict(inner.headers), **SSE_RESPONSE_HEADERS}
     return _HoldStreamingResponse(
@@ -260,7 +318,6 @@ def _hold_run_stream(response: Response, lease: RunLease, *, run_id: str) -> _Ho
         status_code=inner.status_code,
         media_type=inner.media_type or "text/event-stream",
         headers=headers,
-        background=inner.background,
     )
 
 

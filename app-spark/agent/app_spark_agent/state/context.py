@@ -15,6 +15,7 @@ from pydantic import (
 )
 from pydantic_ai import ModelMessage
 
+from app_spark_agent.state.signal import ChangeSignal
 from app_spark_agent.utils import write_atomic
 
 # Annotated so a bump that forgets one of the two halves fails type checking rather than
@@ -146,11 +147,15 @@ class ContextStore:
     by concatenating the raw transcript: ``SummarizingCompaction`` replaces history with an LLM
     call, which is neither replayable nor deterministic, so a rebuilt context would differ from
     the one the model was actually given.
+
+    :param path: JSON document backing the context; created on first commit.
+    :param signal: Flag raised after every durable replacement, for whoever replicates it.
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, signal: ChangeSignal | None = None) -> None:
         self.path = path
         self._lock = asyncio.Lock()
+        self._signal = signal or ChangeSignal()
         self._context = self._load()
 
     @property
@@ -188,6 +193,7 @@ class ContextStore:
     async def _persist(self, context: ConversationContext) -> None:
         await asyncio.to_thread(write_atomic, self.path, context.as_document())
         self._context = context
+        self._signal.notify()
 
     def _load(self) -> ConversationContext:
         if not self.path.exists():

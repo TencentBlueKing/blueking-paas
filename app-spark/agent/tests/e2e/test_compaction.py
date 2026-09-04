@@ -14,9 +14,9 @@ from typing import Any
 
 import pytest
 
-from tests.e2e import console
-from tests.e2e.conftest import StartRuntime
-from tests.e2e.live import LiveRuntime, model_messages, part_contents
+from tests.support import console
+from tests.support.live import LiveRuntime, model_messages, part_contents
+from tests.support.live_fixtures import StartRuntime
 
 pytestmark = pytest.mark.live
 

@@ -12,6 +12,9 @@ requires-python = ">=3.14"
 dependencies = [
     "environs>=15.1.0,<16.0.0",
     "fastapi>=0.116.0",
+    # Pulled in transitively anyway, but declared because `replication/client.py` imports it
+    # directly to push state to the control plane.
+    "httpx>=0.28.1",
     # Required by environs; declared explicitly because `settings.py` imports its validators
     # directly rather than through the untyped `environs.validate` alias.
     "marshmallow>=4.0.0,<5.0.0",

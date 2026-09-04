@@ -36,6 +36,28 @@
 #   USERNAME: ''
 #   PASSWORD: ''
 
+## ---------------------------------- Agent Runtime 驱动相关配置 ----------------------------------
+
+## 用什么方式为一个会话拉起 Agent Runtime，目前只有 local_process
+## （在本机 spawn 一个 agent 进程，仅供开发与测试；需先在 agent 目录执行过 uv sync）
+# AGENT_RUNTIME_PROVIDER: local_process
+
+## 上述驱动方式各自的配置，字段以对应的 config 类为准（local_process 见 LocalProcessConfig）
+# AGENT_RUNTIME_PROVIDER_CONFIG:
+#   ## agent 项目目录，即 agent 的 pyproject.toml 所在处
+#   agent_project_dir: ''
+#   ## 各 Project 的 workspace 的父目录
+#   workspace_root: ''
+#   ## 各会话的状态目录的父目录，必须在 workspace_root 之外，否则 agent 可能用自己的文件工具毁掉自己的历史
+#   state_root: ''
+#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL / APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值
+#   model: ''
+#   model_api_key: ''
+#   ## 等待新起的 Runtime 变健康的超时秒数
+#   startup_timeout_seconds: 60
+#   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量
+#   extra_env: {}
+
 ## 是否启用多租户模式，仅支持在初次部署时配置，部署后不支持动态调整
 # ENABLE_MULTI_TENANT_MODE: false
 

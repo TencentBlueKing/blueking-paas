@@ -16,6 +16,6 @@
 
 """Shared utilities for app-spark-api."""
 
-from app_spark_api.utils.attrs import cattrs_converter, validate_non_empty_string
+from app_spark_api.utils.attrs import cattrs_converter, structure_config, validate_non_empty_string
 
-__all__ = ["cattrs_converter", "validate_non_empty_string"]
+__all__ = ["cattrs_converter", "structure_config", "validate_non_empty_string"]

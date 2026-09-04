@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "bkpaas_auth",
     "app_spark_api.infras.accounts.apps.AccountsConfig",
     "app_spark_api.core.projects.apps.ProjectsConfig",
+    "app_spark_api.agent.conversations.apps.ConversationsConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
 ]
 
@@ -238,6 +239,30 @@ BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get("BKAUTH_TOKEN_USER_INFO_ENDPOINT"
 
 ## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
+
+
+# --------
+# Agent Runtime 驱动相关配置
+# --------
+
+## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
+## 目前只有 local_process（在本机 spawn 一个 agent 进程，仅供开发与测试）
+AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
+
+## 上述驱动方式各自的配置，字段以对应的 config 类为准（local_process 见 LocalProcessConfig）
+AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
+
+## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
+## 存储而不是塞进 MySQL 行里。会话冷启动就是从这里把文档取回来再注入新 Runtime。
+AGENT_CONTEXT_STORAGE = settings.get(
+    "AGENT_CONTEXT_STORAGE",
+    {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
+)
+
+## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走的是普通 JSON 请求体，而一份
+## context 的压缩预算是 480,000 token（见 agent 侧 COMPACTION_TARGET_TOKENS），序列化之后远超
+## Django 默认的 2.5MB。
+DATA_UPLOAD_MAX_MEMORY_SIZE = settings.get("DATA_UPLOAD_MAX_MEMORY_SIZE", 64 * 1024 * 1024)
 
 
 # Static files (CSS, JavaScript, Images)

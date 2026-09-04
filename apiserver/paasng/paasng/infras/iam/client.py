@@ -454,7 +454,9 @@ class BKIAMClient:
             "authorization_scopes": [
                 utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)
             ]
-            + utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name, include_system=True)
+            + utils.get_bk_monitor_authorization_scope_list(
+                bk_space_id, app_name, include_system=True, include_mcp=True
+            )
             + utils.get_bk_log_authorization_scope_list(bk_space_id, app_name, include_system=True),
             # 可授权的人员范围为公司任意人
             "subject_scopes": [
@@ -494,7 +496,9 @@ class BKIAMClient:
         for group in groups:
             path_params = {"system_id": BK_MONITOR_SYSTEM_ID, "group_id": group["id"]}
 
-            scope_list = utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name)
+            # 监控 MCP 仅默认授予管理员用户组；开发者 / 运营者仍用原最小化权限
+            include_mcp = group["role"] == ApplicationRole.ADMINISTRATOR
+            scope_list = utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name, include_mcp=include_mcp)
             for scope in scope_list:
                 try:
                     resp = self.client.v2_management_groups_policies_grant(

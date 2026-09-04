@@ -153,7 +153,9 @@ def get_paas_authorization_scopes(app_code: str, app_name: str, role: Applicatio
     return scopes
 
 
-def get_bk_monitor_authorization_scope_list(bk_space_id: str, app_name: str, include_system: bool = False) -> list:
+def get_bk_monitor_authorization_scope_list(
+    bk_space_id: str, app_name: str, include_system: bool = False, include_mcp: bool = False
+) -> list:
     """
     应用在蓝鲸监控平台的授权信息
 
@@ -161,11 +163,16 @@ def get_bk_monitor_authorization_scope_list(bk_space_id: str, app_name: str, inc
     :param app_name: 应用名称，也是蓝鲸监控空间的名称
     :param include_system: 创建、更新分级管理员时的授权范围中需要包含系统ID(system);
                            给用户组授权时系统信息在路径参数中，授权范围中不需要包含系统信息
+    :param include_mcp: 是否附带监控 MCP action。分级管理员授权范围必须带上，
+                        用户组授权仅管理员需要
     """
     scope_list = []
     for resource_type, actions in constants.APP_MINI_ACTIONS_IN_BK_MONITOR.items():
+        action_ids = list(actions)
+        if include_mcp and resource_type == constants.ResourceType.BkMonitorSpace:
+            action_ids.extend(constants.APP_MCP_ACTIONS_IN_BK_MONITOR)
         scopes = {
-            "actions": [{"id": action} for action in actions],
+            "actions": [{"id": action} for action in action_ids],
             "resources": [
                 {
                     "system": constants.BK_MONITOR_SYSTEM_ID,

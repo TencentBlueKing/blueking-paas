@@ -6,8 +6,6 @@ Runtime holds rather than from anything the client resent, and afterwards the th
 channels have to agree with the cursors ``/health`` reports.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

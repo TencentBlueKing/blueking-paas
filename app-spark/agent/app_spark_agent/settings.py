@@ -7,16 +7,18 @@ import hmac
 from environs import Env, EnvError
 from marshmallow.validate import Length, Range
 
-# 所有配置项共用的环境变量前缀。
+# 所有配置项共用的环境变量前缀。接入层与本地开发都只下这一套。
 ENV_PREFIX = "APP_SPARK_AGENT_"
 
 DEFAULT_AGENT_PORT = 8090
-DEFAULT_WORKSPACE = "/workspace"
-DEFAULT_STATE_DIR = "/state"
+DEFAULT_APP_PORT = 8000
+DEFAULT_WORKSPACE = "/data/workspace"
+DEFAULT_STATE_DIR = "/data/state"
 DEFAULT_IDLE_TIMEOUT_SECONDS = 1800
 GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 1
 
 env = Env(prefix=ENV_PREFIX)
+env.read_env(".env")
 
 # -----------------------------------------------------------------------
 # 运行目标
@@ -29,13 +31,23 @@ WORKSPACE = env.path("WORKSPACE", None)
 # Shell 工具读到、甚至改坏自己的历史。这一点在构建应用时强制检查。
 STATE_DIR = env.path("STATE_DIR", None)
 
-# GET /health 的 query token，以及 POST /runs 和控制面接口的 Bearer。
+# GET /health、POST /runs 和控制面接口共用的 Bearer。
 RUNTIME_TOKEN = env.str("RUNTIME_TOKEN", "")
 
 PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 
+# 用户应用约定端口。本组件只读入并留给后续子进程，不拉起应用，也不因不是 8000
+# 而拒绝启动——数值由接入层锁定，端口是否在听属于应用管理。
+APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
+
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
+# 从未收到 /runs 也会到期退出。
 IDLE_TIMEOUT_SECONDS = env.int("IDLE_TIMEOUT_SECONDS", DEFAULT_IDLE_TIMEOUT_SECONDS)
+
+# 只进日志与指标。不做业务分支：一个沙箱服务一个租户，这里按租户分流等于多造一套
+# 别处没有的策略。
+SESSION_ID = env.str("SESSION_ID", "")
+TENANT_ID = env.str("TENANT_ID", "")
 
 # -----------------------------------------------------------------------
 # 模型
@@ -45,7 +57,13 @@ IDLE_TIMEOUT_SECONDS = env.int("IDLE_TIMEOUT_SECONDS", DEFAULT_IDLE_TIMEOUT_SECO
 MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
 
 # 模型密钥，同时交给 provider。缺失时 health 报 model_ready=false，POST /runs 返回 503。
+# 这是唯一的就绪门闩：模型名或网关地址缺失不让 Runtime 报未就绪。
 MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
+
+# 网关目标，读入是为了契约落在同一处。当前还不拿它们去拨号：模型客户端仍由
+# ``MODEL`` 与 ``MODEL_API_KEY`` 构造。
+MODEL_NAME = env.str("MODEL_NAME", "")
+MODEL_BASE_URL = env.str("MODEL_BASE_URL", "")
 
 # Agent 的系统提示词。它和 ``agent.py`` 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。

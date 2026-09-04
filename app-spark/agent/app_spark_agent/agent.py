@@ -37,6 +37,7 @@ def build_model() -> Model:
         if settings.MODEL_API_KEY is None:
             # No configured key: fall back to whatever variable the provider reads itself.
             return provider_class()
+
         return cast(ApiKeyProvider, provider_class)(api_key=settings.MODEL_API_KEY)
 
     return infer_model(settings.MODEL, provider_factory=provider_factory)

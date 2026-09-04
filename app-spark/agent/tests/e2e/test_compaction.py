@@ -10,8 +10,6 @@ discarded on the request after the one that paid for it and the history re-summa
 Only a real model can produce a real summary, so this is the only place that regression shows.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 import pytest

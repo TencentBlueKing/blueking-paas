@@ -5,8 +5,6 @@ to act on: a single new user turn. The trusted history comes from the Runtime's 
 no display history, tool list, or system prompt submitted by the caller ever reaches the model.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import cast
 from uuid import UUID

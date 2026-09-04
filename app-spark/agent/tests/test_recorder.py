@@ -1,7 +1,5 @@
 """Raw transcript capture: record before compaction, persist when it rewrites history."""
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -70,9 +68,7 @@ def assistant_turn(content: str) -> ModelResponse:
 
 
 def recorded(log: AppendLog) -> list[ModelMessage]:
-    return ModelMessagesTypeAdapter.validate_python(
-        [record.payload for record in log.read_since(0, 1_000)]
-    )
+    return ModelMessagesTypeAdapter.validate_python([record.payload for record in log.read_since(0, 1_000)])
 
 
 async def test_record_messages_skips_an_empty_sequence(tmp_path: Path) -> None:

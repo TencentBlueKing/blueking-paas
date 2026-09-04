@@ -1,7 +1,5 @@
 """Pure AG-UI request and event helpers shared by in-process and live tests."""
 
-from __future__ import annotations
-
 import json
 from collections.abc import Sequence
 from typing import Any, cast
@@ -44,9 +42,7 @@ def sse_events(body: str) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
     for frame in body.replace("\r\n", "\n").split("\n\n"):
         data = "\n".join(
-            line.removeprefix("data:").lstrip()
-            for line in frame.splitlines()
-            if line.startswith("data:")
+            line.removeprefix("data:").lstrip() for line in frame.splitlines() if line.startswith("data:")
         )
         if data:
             events.append(cast(dict[str, Any], json.loads(data)))

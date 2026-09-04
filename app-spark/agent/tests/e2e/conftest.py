@@ -5,8 +5,6 @@ starts for itself: the restart and cold-restore stories run two and three proces
 scenario that fails halfway must not leave any of them behind.
 """
 
-from __future__ import annotations
-
 from collections.abc import Iterator
 from contextlib import ExitStack
 from pathlib import Path

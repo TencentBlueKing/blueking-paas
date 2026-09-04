@@ -6,8 +6,6 @@
 - event：AG-UI 协议的 UI 层 Client 对话
 """
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import Sequence
 from datetime import UTC, datetime

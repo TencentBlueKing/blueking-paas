@@ -5,8 +5,6 @@ state channels, the agent, and the guard that keeps runs from overlapping -- so 
 in :mod:`app_spark_agent.server.routes` is left with nothing but request and response handling.
 """
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager

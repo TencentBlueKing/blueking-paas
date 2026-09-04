@@ -1,7 +1,5 @@
 """RunLease: releasing a never-started generator must not drop the next run."""
 
-from __future__ import annotations
-
 from app_spark_agent.server.runtime import RunGuard
 
 

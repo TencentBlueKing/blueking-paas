@@ -1,7 +1,5 @@
 """The mutable conversation context: the history actually sent to the model."""
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import Sequence
 from pathlib import Path

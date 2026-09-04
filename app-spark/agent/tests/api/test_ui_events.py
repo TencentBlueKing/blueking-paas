@@ -1,7 +1,5 @@
 """``GET /ui-events``: the stored, replayable copy of what the client saw."""
 
-from __future__ import annotations
-
 import json
 from typing import Any
 from uuid import uuid4

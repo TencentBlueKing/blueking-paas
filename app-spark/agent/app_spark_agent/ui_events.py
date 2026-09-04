@@ -1,6 +1,13 @@
-"""Persist the AG-UI event history the client actually saw."""
+"""Persist the AG-UI event history the client actually saw.
 
-from __future__ import annotations
+The stored copy is masked; the live stream is forwarded untouched. That split is deliberate.
+Masking each delta as it goes past would run on every streamed token to catch a value that can
+only be there if credential stripping had already failed, and it would still miss the value
+whenever the model happened to split it across two chunks. The stored copy is coalesced per
+message before it is masked, so it has the whole string to match against, and it is the copy an
+audit reads. A client that sees a credential in its own stream is a client that already holds
+one.
+"""
 
 from collections.abc import AsyncIterator, Sequence
 from enum import StrEnum
@@ -17,6 +24,7 @@ from ag_ui.core import (
     ToolCallEndEvent,
 )
 
+from app_spark_agent.masking import mask_payload
 from app_spark_agent.state import AppendLog
 
 
@@ -137,8 +145,10 @@ async def _persist(events: Sequence[BaseEvent], *, log: AppendLog, run_id: str) 
     if not events:
         return
     # Matches how the AG-UI encoder puts an event on the wire, so a stored event and a streamed
-    # one are the same JSON document.
+    # one are the same JSON document, apart from the masking. Masked whole rather than per
+    # field: by this point the deltas of one message are joined, so however the model chose to
+    # chunk a credential, it is a single string here.
     await log.append(
         run_id,
-        [event.model_dump(mode="json", by_alias=True, exclude_none=True) for event in events],
+        [mask_payload(event.model_dump(mode="json", by_alias=True, exclude_none=True)) for event in events],
     )

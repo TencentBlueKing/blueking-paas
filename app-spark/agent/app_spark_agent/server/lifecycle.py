@@ -1,7 +1,5 @@
 """Process lifecycle: idle-timeout exit, and stop registered app children on SIGTERM."""
 
-from __future__ import annotations
-
 import asyncio
 import os
 import subprocess

@@ -5,8 +5,6 @@ Runtime streams back, and what happens to a second caller who arrives while a ru
 flight.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 from uuid import uuid4

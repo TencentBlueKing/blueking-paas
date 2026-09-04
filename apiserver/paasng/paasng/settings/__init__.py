@@ -1710,6 +1710,20 @@ AGENT_SANDBOX_MOUNT_PATH_DENY_PREFIXES = settings.get(
     ["/proc", "/sys", "/dev", "/boot", "/etc", "/var", "/usr", "/lib", "/lib64", "/bin", "/sbin", "/root", "/tmp"],
 )
 
+# ---------------------------------------------
+# e2b 沙箱状态对账
+# ---------------------------------------------
+# 对账周期。沙箱由网关按空闲超时自行回收，本地记录靠这个任务收敛，
+# 周期即用户看到的状态最大滞后时间
+AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES = settings.get("AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES", 5)
+# 是否清理网关侧无人认领的孤儿实例。
+AGENT_SANDBOX_E2B_ORPHAN_CLEANUP_ENABLED = settings.get("AGENT_SANDBOX_E2B_ORPHAN_CLEANUP_ENABLED", True)
+# 孤儿实例的安全窗口。从对账任务首次观察到该实例起算，用于避开
+# 「网关已创建、本地尚未落库」的时间差，防止误删正在创建的沙箱
+AGENT_SANDBOX_E2B_ORPHAN_SAFETY_WINDOW_MINUTES = settings.get("AGENT_SANDBOX_E2B_ORPHAN_SAFETY_WINDOW_MINUTES", 10)
+# 已终止记录的保留天数，超过则从主表删除
+AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS = settings.get("AGENT_SANDBOX_E2B_TERMINATED_RETENTION_DAYS", 30)
+
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限

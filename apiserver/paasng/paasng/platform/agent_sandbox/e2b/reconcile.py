@@ -55,8 +55,11 @@ _ORPHAN_SEEN_KEY = "e2b:orphan-first-seen:{sandbox_id}"
 
 
 @dataclass
-class ReconcileResult:
-    """一轮对账的产出，同时用于日志、指标与命令行输出。"""
+class ClusterReconcileResult:
+    """单个集群的对账产出。"""
+
+    skipped: bool = False
+    """网关不可达或未登记配置时为 True，其余字段无意义"""
 
     converged: int = 0
     """状态被收敛的本地记录数"""
@@ -67,25 +70,46 @@ class ReconcileResult:
     orphans_waiting: int = 0
     """已观察到但尚未过安全窗口的孤儿实例数"""
 
-    clusters_done: int = 0
-    """本轮成功对账的集群数"""
-
-    clusters_skipped: int = 0
-    """因网关不可达而跳过的集群数"""
-
     failures: int = 0
     """单条处理失败的次数，目前只有销毁孤儿会计入"""
 
-    skipped_cluster_names: list[str] = field(default_factory=list)
 
-    def merge(self, other: "ReconcileResult") -> None:
-        self.converged += other.converged
-        self.orphans_killed += other.orphans_killed
-        self.orphans_waiting += other.orphans_waiting
-        self.clusters_done += other.clusters_done
-        self.clusters_skipped += other.clusters_skipped
-        self.failures += other.failures
-        self.skipped_cluster_names.extend(other.skipped_cluster_names)
+@dataclass
+class ReconcileResult:
+    """一轮对账的产出，同时用于日志、指标与命令行输出。
+
+    只存各集群结果，聚合数字由 property 按需计算。
+    """
+
+    clusters: dict[str, ClusterReconcileResult] = field(default_factory=dict)
+
+    @property
+    def clusters_done(self) -> int:
+        return sum(1 for r in self.clusters.values() if not r.skipped)
+
+    @property
+    def clusters_skipped(self) -> int:
+        return sum(1 for r in self.clusters.values() if r.skipped)
+
+    @property
+    def skipped_cluster_names(self) -> list[str]:
+        return [name for name, r in self.clusters.items() if r.skipped]
+
+    @property
+    def converged(self) -> int:
+        return sum(r.converged for r in self.clusters.values())
+
+    @property
+    def orphans_killed(self) -> int:
+        return sum(r.orphans_killed for r in self.clusters.values())
+
+    @property
+    def orphans_waiting(self) -> int:
+        return sum(r.orphans_waiting for r in self.clusters.values())
+
+    @property
+    def failures(self) -> int:
+        return sum(r.failures for r in self.clusters.values())
 
 
 def reconcile_all(dry_run: bool = False) -> ReconcileResult:
@@ -96,46 +120,40 @@ def reconcile_all(dry_run: bool = False) -> ReconcileResult:
 
     :param dry_run: 只计算不写入，用于上线前确认清理范围
     """
-    result = ReconcileResult()
+    return ReconcileResult(
+        clusters={
+            cluster_name: reconcile_cluster(cluster_name, dry_run=dry_run) for cluster_name in _enabled_cluster_names()
+        }
+    )
 
-    for cluster_name in _enabled_cluster_names():
-        result.merge(reconcile_cluster(cluster_name, dry_run=dry_run))
 
-    return result
-
-
-def reconcile_cluster(cluster_name: str, dry_run: bool = False) -> ReconcileResult:
+def reconcile_cluster(cluster_name: str, dry_run: bool = False) -> ClusterReconcileResult:
     """对单个集群做一轮对账。
 
     某个集群失败不影响其余集群：网关拉不到清单时整个集群跳过，
     这一轮不改动它名下的任何记录。避免由于网关不可达而影响数据面
     """
-    result = ReconcileResult()
-
     try:
         with E2BGatewayClient.for_cluster(cluster_name) as client:
             gateway_items = client.list_sandboxes()
     except (E2BGatewayError, E2BClusterNotConfigured) as exc:
         logger.warning("skip reconciling cluster %s: %s", cluster_name, exc)
-        result.clusters_skipped = 1
-        result.skipped_cluster_names.append(cluster_name)
         E2B_SANDBOX_RECONCILED_COUNTER.labels(
             cluster=cluster_name, outcome=E2BReconcileOutcome.CLUSTER_SKIPPED.value
         ).inc()
-        return result
+        return ClusterReconcileResult(skipped=True)
 
     gateway_states = {
         item[SANDBOX_ID_FIELD]: item.get(SANDBOX_STATE_FIELD) for item in gateway_items if item.get(SANDBOX_ID_FIELD)
     }
 
-    result.converged = _converge_local_states(cluster_name, gateway_states, dry_run=dry_run)
     killed, waiting, failures = _handle_orphans(cluster_name, set(gateway_states), dry_run=dry_run)
-    result.orphans_killed = killed
-    result.orphans_waiting = waiting
-    result.failures = failures
-    result.clusters_done = 1
-
-    return result
+    return ClusterReconcileResult(
+        converged=_converge_local_states(cluster_name, gateway_states, dry_run=dry_run),
+        orphans_killed=killed,
+        orphans_waiting=waiting,
+        failures=failures,
+    )
 
 
 def archive_terminated_sandboxes(retention_days: int | None = None, dry_run: bool = False) -> int:
@@ -177,6 +195,7 @@ def _converge_local_states(cluster_name: str, gateway_states: dict[str, str | No
     不在其中就说明它已经被回收了。
     """
     changed: list[E2BSandbox] = []
+    now = timezone.now()
 
     for record in E2BSandbox.objects.filter(cluster_name=cluster_name, status__in=E2BSandboxStatus.active_values()):
         target = _target_status(gateway_states, record.sandbox_id)
@@ -187,6 +206,8 @@ def _converge_local_states(cluster_name: str, gateway_states: dict[str, str | No
             "converging e2b sandbox %s on cluster %s: %s -> %s", record.sandbox_id, cluster_name, record.status, target
         )
         record.status = target
+        # bulk_update 不走 save()，auto_now 不会刷新；归档又按 updated 算保留期，必须显式写
+        record.updated = now
         changed.append(record)
 
     if changed and not dry_run:
@@ -218,7 +239,7 @@ def _handle_orphans(cluster_name: str, gateway_ids: set[str], dry_run: bool) -> 
     这类实例不会被任何人列举到，也没人会去销毁它，只会一直占着集群资源。
     一般只会有两类来源：
     1. 网关侧创建成功但本地落库失败 or 回滚销毁失败，这类实例用户无法正常使用
-    2. 绕过控制面直接用相同 apiKey 创建的实例，非预期情况， ApiKey 只应由平台使用
+    2. 绕过控制面直接用相同 ApiKey 创建的实例，非预期情况， ApiKey 只应由平台使用
 
     :returns: (已销毁数, 观察中数, 失败数)
     """

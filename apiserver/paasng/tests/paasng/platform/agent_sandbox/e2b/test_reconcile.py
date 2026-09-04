@@ -159,6 +159,19 @@ class TestStateConvergence:
         assert reconcile.reconcile_all(dry_run=True).converged == 1
         assert E2BSandbox.objects.get(sandbox_id="reclaimed").status == E2BSandboxStatus.RUNNING.value
 
+    def test_bulk_update_refreshes_updated(self, gateway, bk_app):
+        """bulk_update 不走 save()，必须显式写 updated，否则归档会按旧时间立刻清掉刚收敛的记录。"""
+        record = _record(bk_app, "reclaimed")
+        stale = timezone.now() - timezone.timedelta(days=60)
+        E2BSandbox.objects.filter(pk=record.pk).update(updated=stale)
+
+        before = timezone.now()
+        reconcile.reconcile_all()
+
+        refreshed = E2BSandbox.objects.get(sandbox_id="reclaimed")
+        assert refreshed.status == E2BSandboxStatus.TERMINATED.value
+        assert refreshed.updated >= before
+
 
 class TestClusterFailureIsolation:
     def test_unreachable_gateway_leaves_records_untouched(self, gateway, bk_app):

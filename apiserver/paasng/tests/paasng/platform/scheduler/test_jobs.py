@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from django.utils.timezone import now
@@ -29,7 +29,7 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import OP_TYPE_TENANT_ID
-from paasng.platform.scheduler.jobs import _handel_single_service_default_policy, redis_lock
+from paasng.platform.scheduler.jobs import _handel_single_service_default_policy, reconcile_e2b_sandboxes_job
 
 pytestmark = pytest.mark.django_db
 
@@ -84,34 +84,33 @@ class TestServiceDefaultPolicyInitialization:
         assert DefaultPolicyCreationRecord.objects.filter(service_id=local_service.uuid).exists()
 
 
-class TestRedisLockBehavior:
-    def test_lock_acquire_and_release(self):
-        """测试锁的正常获取和释放"""
-        mock_redis = MagicMock()
-        mock_lock = MagicMock()
-        # 正确模拟锁的获取结果和上下文管理器行为
-        mock_lock.acquire.return_value = True
-        mock_lock.__enter__.return_value = True
-        mock_redis.lock.return_value = mock_lock
+class TestReconcileE2BSandboxesDispatch:
+    """e2b 对账只在这里投递，重活由 celery worker 执行。"""
 
-        with patch("paasng.platform.scheduler.jobs.get_default_redis", return_value=mock_redis):
-            lock_key = "test:lock:key"
-            with redis_lock(lock_key) as acquired:
-                assert acquired is True
-                mock_redis.lock.assert_called_once_with(
-                    name=lock_key, timeout=300, blocking_timeout=0, thread_local=False
-                )
-            # 验证锁释放
-            mock_lock.release.assert_called_once()
+    @pytest.fixture()
+    def delay(self):
+        """拦下投递动作，避免测试依赖 broker。"""
+        with patch("paasng.platform.agent_sandbox.e2b.tasks.reconcile_e2b_sandboxes_task.delay") as stub:
+            yield stub
 
-    def test_lock_not_acquired(self):
-        """测试未能获取锁的情况"""
-        mock_redis = MagicMock()
-        mock_lock = MagicMock()
-        mock_lock.acquire.return_value = False
-        mock_redis.lock.return_value = mock_lock
+    def test_dispatches_when_the_period_is_claimed(self, delay):
+        with patch("paasng.platform.scheduler.jobs.acquire_once_per_period", return_value=True):
+            reconcile_e2b_sandboxes_job()
 
-        with patch("paasng.platform.scheduler.jobs.get_default_redis", return_value=mock_redis):
-            lock_key = "test:lock:key"
-            with redis_lock(lock_key) as acquired:
-                assert acquired is False
+        delay.assert_called_once_with()
+
+    def test_skips_when_another_process_already_dispatched(self, delay):
+        """同一周期内其他进程已经投过，这里不能再投一条。"""
+        with patch("paasng.platform.scheduler.jobs.acquire_once_per_period", return_value=False):
+            reconcile_e2b_sandboxes_job()
+
+        delay.assert_not_called()
+
+    def test_period_follows_reconcile_interval(self, settings, delay):
+        """周期键的存活时间必须与对账周期一致，否则一轮里会投出多条消息。"""
+        settings.AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES = 7
+
+        with patch("paasng.platform.scheduler.jobs.acquire_once_per_period", return_value=True) as claim:
+            reconcile_e2b_sandboxes_job()
+
+        claim.assert_called_once_with("periodic:reconcile_e2b_sandboxes", 7 * 60)

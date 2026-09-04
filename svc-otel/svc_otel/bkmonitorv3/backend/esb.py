@@ -28,6 +28,13 @@ class MonitorV3Group(OperationGroup):
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/apm/create_application/",
     )
+    # 查询 APM 应用详情
+    detail_apm_application = bind_property(
+        Operation,
+        name="detail_apm_application",
+        method="GET",
+        path="/api/c/compapi/v2/monitor_v3/apm/detail_apm_application/",
+    )
     # 创建空间
     metadata_create_space = bind_property(
         Operation,

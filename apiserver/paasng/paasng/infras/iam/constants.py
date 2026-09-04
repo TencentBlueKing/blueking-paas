@@ -108,6 +108,19 @@ APP_MINI_ACTIONS_IN_BK_MONITOR = {
     ],
 }
 
+# 监控平台 MCP，资源类型均为 space。仅管理员用户组默认授予；
+# 分级管理员授权范围必须包含这些 action，否则无法向用户组授权。
+APP_MCP_ACTIONS_IN_BK_MONITOR = [
+    "using_dashboard_mcp",
+    "using_metrics_mcp",
+    "using_log_mcp",
+    "using_alarm_mcp",
+    "using_alarm_handling_mcp",
+    "using_metadata_mcp",
+    "using_apm_mcp",
+    "using_operation_mcp",
+]
+
 # 蓝鲸应用在日志平台的最小化权限列表
 # 日志平台给空间相关的 resource_system 为监控，其他的为日志
 APP_MINI_ACTIONS_IN_BK_LOG = {

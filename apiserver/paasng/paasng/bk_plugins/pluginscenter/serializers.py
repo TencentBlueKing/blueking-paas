@@ -35,6 +35,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     PluginReleaseVersionRule,
     PluginRevisionType,
     PluginRole,
+    ReleaseProcess,
     ReleaseStrategy,
     SemverAutomaticType,
     SubjectTypes,
@@ -246,6 +247,11 @@ class ReleaseStrategyCreateSLZ(serializers.Serializer):
     strategy = serializers.ChoiceField(choices=ReleaseStrategy.get_choices(), help_text="发布策略")
     bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
     organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
+    release_process = serializers.ChoiceField(
+        choices=ReleaseProcess.get_choices(),
+        required=False,
+        help_text="发布流程类型，仅新建版本时生效",
+    )
 
 
 class PluginReleaseStrategySLZ(serializers.ModelSerializer):
@@ -271,6 +277,10 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     release_result_url = serializers.SerializerMethodField(read_only=True)
     latest_release_strategy = PluginReleaseStrategySLZ()
     display_status = serializers.CharField(source="gray_status", read_only=True)
+    has_pre_prod = serializers.SerializerMethodField()
+
+    def get_has_pre_prod(self, instance) -> bool:
+        return instance.release_strategies.filter(strategy=ReleaseStrategy.PRE_PROD).exists()
 
     def get_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)

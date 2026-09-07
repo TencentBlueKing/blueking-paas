@@ -493,8 +493,9 @@ const actions = {
   /**
    * 获取进程资源配额方案
    */
-  fetchQuotaPlans({}, {}, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/quota_plans/`;
+  fetchQuotaPlans({}, { appCode } = {}, config = {}) {
+    const query = appCode ? `?app_code=${encodeURIComponent(appCode)}` : '';
+    const url = `${BACKEND_URL}/api/bkapps/quota_plans/${query}`;
     return http.get(url, config);
   },
 

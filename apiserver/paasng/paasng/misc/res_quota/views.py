@@ -20,16 +20,19 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 
-from .serializers import ResQuotaPlanSLZ
+from .serializers import ResQuotaPlanListInputSLZ, ResQuotaPlanSLZ
 
 
 class ResQuotaPlanOptionsView(APIView):
     """资源配额方案 选项视图"""
 
-    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    @swagger_auto_schema(query_serializer=ResQuotaPlanListInputSLZ(), response_serializer=ResQuotaPlanSLZ(many=True))
     def get(self, request):
+        slz = ResQuotaPlanListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        app_code = slz.validated_data.get("app_code") or None
         return Response(
             data=ResQuotaPlanSLZ(
                 [
@@ -38,7 +41,7 @@ class ResQuotaPlanOptionsView(APIView):
                         "limit": plan_obj.limits,
                         "request": plan_obj.requests,
                     }
-                    for plan_obj in ResQuotaPlan.objects.filter(is_active=True)
+                    for plan_obj in ResQuotaPlanPolicy().list_selectable(app_code)
                 ],
                 many=True,
             ).data

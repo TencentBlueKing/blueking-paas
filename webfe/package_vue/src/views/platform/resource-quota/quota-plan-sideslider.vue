@@ -112,6 +112,20 @@
             theme="primary"
           ></bk-switcher>
         </bk-form-item>
+
+        <bk-form-item
+          :label="$t('专用应用')"
+          :desc="$t('留空表示全部应用可见')"
+        >
+          <bk-tag-input
+            v-model="formData.allowed_app_codes"
+            :list="[]"
+            allow-create
+            allow-auto-match
+            has-delete-icon
+            :placeholder="$t('请输入 app_code，回车确认')"
+          />
+        </bk-form-item>
       </bk-form>
       <div class="mt-24">
         <bk-button
@@ -200,6 +214,7 @@ export default {
         memory_request: '',
         name: '',
         is_active: true,
+        allowed_app_codes: [],
       },
       // 表单校验规则
       formRules: {
@@ -264,6 +279,7 @@ export default {
           memory_request: this.editData.requests?.memory || '',
           name: this.editData.name || '',
           is_active: this.editData.is_active ?? true,
+          allowed_app_codes: [...(this.editData.allowed_app_codes || [])],
         };
       } else {
         // 新增模式,重置表单
@@ -274,6 +290,7 @@ export default {
           memory_request: '',
           name: '',
           is_active: true,
+          allowed_app_codes: [],
         };
       }
       this.$nextTick(() => {
@@ -363,6 +380,7 @@ export default {
             memory: this.formData.memory_request,
           },
           is_active: this.formData.is_active,
+          allowed_app_codes: this.formData.allowed_app_codes || [],
         };
 
         // 调用实际的 API

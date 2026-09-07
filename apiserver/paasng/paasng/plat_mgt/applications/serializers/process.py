@@ -20,7 +20,7 @@ from rest_framework import serializers
 
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.bkapp_model.models import ResQuotaPlan
-from paasng.platform.bkapp_model.serializers.serializers import validate_res_quota_plan
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.engine.constants import AppEnvName
 
 
@@ -107,7 +107,6 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         help_text="资源配额方案名称",
         allow_null=True,
         required=False,
-        validators=[validate_res_quota_plan],
     )
     override_resources = ResourcesSLZ(
         help_text="资源配额",
@@ -124,6 +123,16 @@ class EnvOverlayInputSLZ(serializers.Serializer):
             raise serializers.ValidationError(_("只能提供 override_plan_name 或 override_resources 其中之一"))
 
         return attrs
+
+
+class ProcessQuotaPlanListInputSLZ(serializers.Serializer):
+    """运营侧进程资源配额方案可选列表查询参数"""
+
+    app_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="应用 ID，传入后按可见范围过滤；不传则只返回全局可用的资源套餐方案",
+    )
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):
@@ -144,6 +153,16 @@ class ProcessSpecInputSLZ(serializers.Serializer):
                     invalid_keys=", ".join(invalid_keys),
                     valid_keys=", ".join(valid_env_names),
                 )
+            )
+
+        policy = ResQuotaPlanPolicy()
+        current_plans = self.context.get("current_override_plans") or {}
+        app_code = self.context.get("app_code")
+        for env_name, overlay in value.items():
+            policy.ensure_assignable(
+                overlay.get("override_plan_name"),
+                app_code,
+                current_plans.get(env_name),
             )
 
         return value

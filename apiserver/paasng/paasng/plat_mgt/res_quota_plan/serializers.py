@@ -23,6 +23,7 @@ from rest_framework.validators import UniqueValidator
 
 from paasng.platform.bkapp_model.constants import MAX_PROC_CPU, MAX_PROC_MEM
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 
 CPU_PATTERN = re.compile(r"^([1-9][0-9]*)(m)$")
 MEMORY_PATTERN = re.compile(r"^([1-9][0-9]*)(Mi|Gi)$")
@@ -37,6 +38,7 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
     requests = serializers.DictField()
     is_active = serializers.BooleanField()
     is_builtin = serializers.BooleanField()
+    allowed_app_codes = serializers.ListField(child=serializers.CharField(), default=list)
 
 
 class ResQuotaPlanUsedByProcessSLZ(serializers.Serializer):
@@ -100,6 +102,11 @@ class ResQuotaPlanInputSLZ(serializers.Serializer):
     limits = ResourceQuotaSLZ()
     requests = ResourceQuotaSLZ()
     is_active = serializers.BooleanField(required=False, default=True)
+    allowed_app_codes = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        help_text="专用应用列表，空表示公开方案",
+    )
 
     def validate(self, attrs):
         """Validate that requests do not exceed limits."""
@@ -114,6 +121,12 @@ class ResQuotaPlanInputSLZ(serializers.Serializer):
         memory_requests = parse_memory_to_mi(requests["memory"])
         if memory_requests > memory_limits:
             raise serializers.ValidationError({"requests": {"memory": _("memory requests 不能超过 memory limits")}})
+
+        if "allowed_app_codes" in attrs:
+            normalized = ResQuotaPlanPolicy().normalize_allowed_app_codes(attrs["allowed_app_codes"])
+            if self.instance and self.instance.is_builtin and normalized:
+                raise serializers.ValidationError({"allowed_app_codes": _("内置方案不支持配置专用应用")})
+            attrs["allowed_app_codes"] = normalized
 
         return attrs
 

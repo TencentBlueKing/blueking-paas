@@ -37,6 +37,7 @@ from paasng.platform.bkapp_model.entities_syncer import (
     sync_svc_discovery,
 )
 from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.bkapp_model.serializers import v1alpha2 as v1alpha2_slz
 from paasng.platform.modules.models import Module
 from paasng.utils.structure import NOTSET, NotSetType
@@ -58,7 +59,13 @@ def import_manifest(module: Module, input_data: Dict, manager: FieldMgrName):
     :param manager: The manager performing this action.
     :raises ManifestImportError: When unexpected error happened.
     """
-    spec_slz = v1alpha2_slz.BkAppSpecInputSLZ(data=input_data["spec"])
+    spec_slz = v1alpha2_slz.BkAppSpecInputSLZ(
+        data=input_data["spec"],
+        context={
+            "app_code": module.application.code,
+            "current_plans": ResQuotaPlanPolicy().bound_plans(module),
+        },
+    )
     try:
         spec_slz.is_valid(raise_exception=True)
     except ValidationError as e:

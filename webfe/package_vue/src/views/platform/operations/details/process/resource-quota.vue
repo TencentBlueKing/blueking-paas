@@ -132,7 +132,7 @@
                   @change="(value) => handlePlanChange(value, 'stag')"
                 >
                   <bk-option
-                    v-for="option in planList"
+                    v-for="option in planOptions('stag')"
                     :key="option.name"
                     :id="option.name"
                     :name="option.name === 'custom' ? $t('自定义') : option.name"
@@ -235,7 +235,7 @@
                   @change="(value) => handlePlanChange(value, 'prod')"
                 >
                   <bk-option
-                    v-for="option in planList"
+                    v-for="option in planOptions('prod')"
                     :key="option.name"
                     :id="option.name"
                     :name="option.name === 'custom' ? $t('自定义') : option.name"
@@ -671,10 +671,18 @@ export default {
       }
       this.isEdit = false;
     },
+    planOptions(env) {
+      const list = [...(this.planList || [])];
+      const current = this.formData?.[env]?.plan_name;
+      if (current && !list.find(item => item.name === current)) {
+        list.push({ name: current });
+      }
+      return list;
+    },
     // 获取资源配额方案
     async fetchPlanList() {
       try {
-        const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', {});
+        const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', { appCode: this.appCode });
         this.planList = res;
         this.planList.push({ name: 'custom' });
       } catch (e) {

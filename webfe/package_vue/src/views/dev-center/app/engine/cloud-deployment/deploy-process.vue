@@ -290,7 +290,7 @@
                             @change="handleChange($event, 'stag')"
                           >
                             <bk-option
-                              v-for="option in allQuotaList"
+                              v-for="option in quotaOptions('stag')"
                               :id="option.name"
                               :key="option.name"
                               :name="option.name"
@@ -471,7 +471,7 @@
                             @change="handleChange($event, 'prod')"
                           >
                             <bk-option
-                              v-for="option in allQuotaList"
+                              v-for="option in quotaOptions('prod')"
                               :id="option.name"
                               :key="option.name"
                               :name="option.name"
@@ -1545,11 +1545,19 @@ export default {
       this.btnIndex = 0;
     },
 
+    quotaOptions(env) {
+      const list = [...(this.allQuotaList || [])];
+      const current = this.formData?.env_overlay?.[env]?.plan_name;
+      if (current && !list.find(item => item.name === current)) {
+        list.push({ name: current });
+      }
+      return list;
+    },
     // 获取资源配额信息
     async getQuotaPlans() {
       try {
         this.quotaPlansFlag = true;
-        const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
+        const res = await this.$store.dispatch('deploy/fetchQuotaPlans', { appCode: this.appCode });
 
         // 资源配额数据
         this.allQuotaList = res;

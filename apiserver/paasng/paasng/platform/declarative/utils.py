@@ -19,25 +19,39 @@ import logging
 from typing import Any
 
 from blue_krill.cubing_case import shortcuts
+from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.platform.bkapp_model.res_quota import PLAN_UNAVAILABLE, ResQuotaPlanPolicy
 
 logger = logging.getLogger(__name__)
 
 
-def get_quota_plan(spec_plan_name: str) -> str:
-    """Get ProcessSpecPlan by name"""
+def get_quota_plan(spec_plan_name: str, app_code: str | None = None, current_plan_name: str | None = None) -> str:
+    """Resolve a process plan name to a ResQuotaPlan name.
+
+    If the name hits an existing ResQuotaPlan but is not assignable for the app,
+    raise ValidationError instead of falling back to default.
+    Unknown names still follow the legacy ProcessSpecPlan / default fallback.
+    """
     # TODO: fix circular import
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
-    # Note: First try to find in ResQuotaPlan, then fallback to ProcessSpecPlan
-    active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
-    if plan_obj := active_plans.get(spec_plan_name):
-        return plan_obj.name
+    existing = ResQuotaPlan.objects.filter(name=spec_plan_name).first()
+    if existing:
+        # 无应用上下文时保持旧行为：只认启用方案，避免读 source_dir / Procfile 被白名单误伤
+        if app_code is None and current_plan_name is None:
+            if existing.is_active:
+                return existing.name
+        elif ResQuotaPlanPolicy().can_assign(spec_plan_name, app_code, current_plan_name):
+            return existing.name
+        else:
+            raise ValidationError(PLAN_UNAVAILABLE)
 
     logger.debug("unknown ResQuotaPlan name `%s`, try to get ProcessSpecPlan", spec_plan_name)
 
+    active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
     try:
         spec_plan: ProcessSpecPlan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
     except ProcessSpecPlan.DoesNotExist:

@@ -23,6 +23,16 @@ class ResourceQuotaSLZ(serializers.Serializer):
     memory = serializers.CharField()
 
 
+class ResQuotaPlanListInputSLZ(serializers.Serializer):
+    """资源配额方案可选列表查询参数"""
+
+    app_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="应用 ID，传入后按可见范围过滤；不传则只返回全局可用的资源套餐方案",
+    )
+
+
 class ResQuotaPlanSLZ(serializers.Serializer):
     """Serializer for ResQuotaPlan option"""
 

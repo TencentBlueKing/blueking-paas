@@ -35,6 +35,7 @@ from app_spark_agent.bkaidev.auth import (
     authorization_headers,
 )
 from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
+from app_spark_agent.skills import SKILLS_DIR
 
 
 class ApiKeyProvider(Protocol):
@@ -201,6 +202,12 @@ def create_agent(workspace: str | Path, *, state_dir: Path | None = None) -> Age
             workspace_dir=workspace_path,
             filenames=("AGENTS.md",),
             nested_traversal=True,
+        ),
+        RepoContext(
+            workspace_dir=SKILLS_DIR,
+            filenames=("fastapi_http.md",),
+            nested_traversal=False,
+            expose_inventory_tool=False,
         ),
         build_compaction(),
     ]

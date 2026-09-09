@@ -36,6 +36,9 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["app_spark_agent"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"app_spark_agent/skills/fastapi_http.md" = "app_spark_agent/skills/fastapi_http.md"
+
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"

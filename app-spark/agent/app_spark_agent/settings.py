@@ -51,9 +51,13 @@ RUNTIME_TOKEN = env.str("RUNTIME_TOKEN", "")
 
 PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 
-# 用户应用约定端口。本组件只读入并留给后续子进程，不拉起应用，也不因不是 8000
-# 而拒绝启动——数值由接入层锁定，端口是否在听属于应用管理。
+# 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
+
+# 平台给这个沙箱预览入口的基址，带 scheme，不含 path。例如
+# https://preview-session.example.com 。拼进 app.launched.url，不改变本机监听端口。
+# 未注入时本机联调用 http://127.0.0.1:<APP_PORT>。
+PREVIEW_BASE_URL = env.str("PREVIEW_BASE_URL", "")
 
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
 # 从未收到 /runs 也会到期退出。
@@ -257,6 +261,14 @@ if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
         f"{ENV_PREFIX}DEFAULT_DRAIN_LIMIT ({DEFAULT_DRAIN_LIMIT}) must not be greater than "
         f"{ENV_PREFIX}MAX_DRAIN_LIMIT ({MAX_DRAIN_LIMIT})"
     )
+
+
+def preview_base_url() -> str:
+    """平台预览基址；未注入时用本机 APP_PORT。"""
+    stripped = PREVIEW_BASE_URL.strip().rstrip("/")
+    if stripped:
+        return stripped
+    return f"http://127.0.0.1:{APP_PORT}"
 
 
 def _stripped(value: str | None) -> str | None:

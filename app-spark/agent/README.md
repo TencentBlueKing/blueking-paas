@@ -28,15 +28,16 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 兼容回落。未注入上面的 token 时当作 access_token 用。`fake:*` 不需要 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 调用真实模型时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
-| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`；本组件只读入，不拉起应用也不校验 |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`。`POST /app/launch` 拉起应用时注入同名环境变量；健康只认该端口是否实听 |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
 | `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/data/state` | 必须在 workspace 外 |
-| `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条 |
+| `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条。launch 会把应用 stdout/stderr 接到这里，打开失败不阻止已实听的成功 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
+| `APP_SPARK_AGENT_PREVIEW_BASE_URL` | 否 | 平台分配的预览基址（`https://<平台给的主机>`，不要 path）。拼进 `app.launched.url`。空则本机用 `http://127.0.0.1:<APP_PORT>`。只改 url 字符串，应用仍听 `APP_PORT` |
 
 就绪门闩：`fake:*` 直接就绪；真实模型要 access_token 非空 **且** `MODEL_BASE_URL` 非空 **且** `MODEL_NAME` 在对照表。
 access_token 取值：`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` → `APP_SPARK_AGENT_MODEL_API_KEY`。
@@ -79,6 +80,7 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`app_status`，以及会话游标
 `conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube 探针用同一接口，走 `httpHeaders`。
+`app_status` 是 `not_started` / `unhealthy` / `healthy`（看约定端口是否实听），不含预览 `url`。
 
 `POST /runs` 为 AG-UI over SSE，同样必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
 
@@ -108,19 +110,45 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
 运行的 `contextVersion` 是 `0`。
 
-`/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer，供控制面读取或迁移会话状态。
+`/log`、`/ui-events`、`GET/PUT /context`、`POST /app/launch` 同样需要 Bearer。
 
 以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标、运行标志，以及
 `pushed_*` 复制游标与 `replication_pending`（都只在配了控制面时才有意义），`/log` 与
 `/ui-events` 按游标增量读取两条日志，`/context` 导出当前上下文（也可向空 Runtime 注入冷会话
 上下文并播种 seq）。
 
+## 拉起用户应用
+
+这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。控制面调 `POST /app/launch`，模型没有对应工具。
+
+```bash
+curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  http://127.0.0.1:8090/app/launch
+```
+
+成功 2xx：`port`、`path`、`label`、`url`、`app_status`（`healthy`）。缺省 `path=/`、`label=Preview`。
+同一份四要素会落一条 `app.launched` 到 `ui_events`，`GET /ui-events` 可 drain；不往进行中的 `/runs` SSE 里插。
+
+启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`。
+skill `fastapi_http.md` 要求生成 `main:app`，端口只读 `APP_SPARK_AGENT_APP_PORT`。
+
+规则：
+
+- 健康只认 `127.0.0.1:<APP_PORT>` 能 TCP 连上，最多等 30 秒。
+- 进行中的 launch 再打一次，或端口被非本监督器进程占用：409，不杀、不发事件。
+- 已是监督器进程：再次 launch 一律重启（加载新代码），请求没带的 path/label 沿用上次。
+- 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再手动 launch。
+- run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。
+- 子进程注入 `APP_SPARK_AGENT_APP_PORT`，只剥 `RUNTIME_TOKEN` / `MODEL_API_KEY` / `AIDEV_ACCESS_TOKEN` / `CONTROL_PLANE_TOKEN`。不要按「屏蔽全部 `APP_SPARK_AGENT_*`」理解这条路径——那是给模型 Shell 的。
+
 ## 凭据屏蔽
 
 两层。第二层存在的理由是**第一层静默失效**：新增一个密钥键却忘了登记、或 harness 升级改了名单语义，
 测试全绿、功能正常，密钥却已经进了模型能读的环境。
 
-**一、密钥不进子进程**：harness `Shell` 从继承环境里剥掉 `APP_SPARK_AGENT_*` 及各 provider 密钥变量（`agent.py`）。
+**一、密钥不进模型能用的环境**：harness `Shell` 从继承环境里剥掉 `APP_SPARK_AGENT_*` 及各 provider 密钥变量（`agent.py`）。`POST /app/launch` 拉起的用户应用另算：注入 `APP_SPARK_AGENT_APP_PORT`，只剥上面四个密钥，不能套用「全部 `APP_SPARK_AGENT_*` 都剥掉」。
 
 **二、出站文本脱敏**（`masking.py`），匹配值而非键名，多个密钥按长度降序替换：
 

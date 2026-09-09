@@ -18,6 +18,7 @@ from pydantic_ai import Agent
 
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
+from app_spark_agent.app_supervisor import AppSupervisor
 from app_spark_agent.git.saver import WorkspaceSaver
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
@@ -160,6 +161,7 @@ class ConversationRuntime:
     :param cursors: Where each channel's numbering starts and how far it has been replicated.
     :param run_guard: Guard admitting one mutating operation at a time.
     :param lifecycle: Idle timeout and the registry of application children.
+    :param app_supervisor: Starts and watches the workspace application process.
     :param replicator: Pushes the durable state to the control plane, or ``None`` when this
         Runtime has no control plane and its state directory is all there is.
     :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
@@ -173,6 +175,7 @@ class ConversationRuntime:
     cursors: CursorStore
     run_guard: RunGuard
     lifecycle: RuntimeLifecycle
+    app_supervisor: AppSupervisor
     replicator: StateReplicator | None
     saver: WorkspaceSaver | None = None
 
@@ -259,6 +262,11 @@ class ConversationRuntime:
             cursors=cursors,
             run_guard=run_guard,
             lifecycle=bound,
+            app_supervisor=AppSupervisor(
+                resolved_workspace,
+                bound.processes,
+                ui_events,
+            ),
             replicator=replicator,
             saver=saver,
         )

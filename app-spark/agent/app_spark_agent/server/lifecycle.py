@@ -81,11 +81,7 @@ class IdleWatch:
 
 
 class AppProcessRegistry:
-    """Track application children started by the Agent so SIGTERM can stop them.
-
-    Empty until the app manager lands: :meth:`stop_all` is then a no-op
-    ("no apps means zero children").
-    """
+    """Track application children started by the Agent so SIGTERM can stop them."""
 
     def __init__(self) -> None:
         self._processes: list[subprocess.Popen[bytes]] = []

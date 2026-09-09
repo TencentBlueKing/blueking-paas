@@ -75,10 +75,14 @@ def create_runtime_app(
             # Adopts the remote branch into the workspace before any run can touch a file.
             await runtime.saver.start()
         lifecycle_task = asyncio.create_task(runtime.lifecycle.watch())
+        app_watch_task = asyncio.create_task(runtime.app_supervisor.watch())
         try:
             yield
         finally:
+            app_watch_task.cancel()
             lifecycle_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await app_watch_task
             with suppress(asyncio.CancelledError):
                 await lifecycle_task
             try:

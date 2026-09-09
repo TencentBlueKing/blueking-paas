@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ag_ui.core import (
     BaseEvent,
+    CustomEvent,
     ReasoningMessageContentEvent,
     ReasoningMessageEndEvent,
     RunStartedEvent,
@@ -19,7 +20,7 @@ from ag_ui.core import (
 )
 
 from app_spark_agent.state import AppendLog
-from app_spark_agent.ui_events import record_ui_events
+from app_spark_agent.ui_events import persist_ui_events, record_ui_events
 
 RUN_ID = "run-a"
 
@@ -166,3 +167,14 @@ async def test_a_truncated_stream_is_closed_so_replay_stays_valid(tmp_path: Path
         dump_event(ToolCallArgsEvent(tool_call_id="t1", delta="{")),
         dump_event(ToolCallEndEvent(tool_call_id="t1")),
     ]
+
+
+async def test_persist_ui_events_writes_without_a_stream(tmp_path: Path) -> None:
+    log = make_log(tmp_path)
+    event = CustomEvent(
+        name="app.launched", value={"port": 8000, "path": "/", "label": "Preview", "url": "http://127.0.0.1:8000/"}
+    )
+
+    await persist_ui_events([event], log=log, run_id=RUN_ID)
+
+    assert stored_events(log) == [dump_event(event)]

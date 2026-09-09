@@ -53,7 +53,7 @@ def test_create_agent_scopes_tools_to_workspace(
     capabilities = agent.root_capability.capabilities
     filesystem = next(item for item in capabilities if isinstance(item, FileSystem))
     shell = next(item for item in capabilities if isinstance(item, Shell))
-    repo_context = next(item for item in capabilities if isinstance(item, RepoContext))
+    repo_contexts = [item for item in capabilities if isinstance(item, RepoContext)]
 
     assert Path(filesystem.root_dir) == tmp_path
     assert Path(shell.cwd) == tmp_path
@@ -63,9 +63,12 @@ def test_create_agent_scopes_tools_to_workspace(
     # silently hand every provider key to the model's shell commands.
     assert set(LLM_API_KEY_ENV_PATTERNS) <= set(shell.denied_env_patterns)
     assert "APP_SPARK_AGENT_*" in shell.denied_env_patterns
-    assert repo_context.workspace_dir == tmp_path
-    assert repo_context.nested_traversal is True
-    assert tuple(repo_context.filenames) == ("AGENTS.md",)
+    workspace_context = next(item for item in repo_contexts if tuple(item.filenames) == ("AGENTS.md",))
+    skill_context = next(item for item in repo_contexts if tuple(item.filenames) == ("fastapi_http.md",))
+    assert workspace_context.workspace_dir == tmp_path
+    assert workspace_context.nested_traversal is True
+    assert skill_context.nested_traversal is False
+    assert skill_context.expose_inventory_tool is False
     assert any(isinstance(item, TieredCompaction) for item in capabilities)
     log_tool = function_tools(agent)["read_app_log"]
     assert log_tool.function_schema.json_schema["properties"] == {}

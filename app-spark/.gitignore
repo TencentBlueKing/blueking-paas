@@ -1,2 +1,9 @@
 # Local settings files
 app-spark-api/settings_local.yaml
+app-spark-ui/.env.local
+app-spark-ui/template/*
+app-spark-ui/.bk.local.env
+.impeccable/
+.cursor/skills/
+.cursor/agents/
+.cursor/hooks.json

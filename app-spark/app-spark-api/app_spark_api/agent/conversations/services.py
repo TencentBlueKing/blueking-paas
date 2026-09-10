@@ -45,6 +45,7 @@ from app_spark_api.agent.runtime import (
     StateCallback,
     get_agent_runtime_provider,
 )
+from app_spark_api.repository.git.services import arequire_project_git_ready
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -146,7 +147,9 @@ async def open_client(conversation: Conversation) -> AgentRuntimeClient:
     :return: A client pointed at a Runtime that has answered ``/health``.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
+    :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
     """
+    await arequire_project_git_ready(conversation.project_id)
     provider = get_agent_runtime_provider()
     # `project_id` rather than `project`, so this never lazily loads the related row -- an
     # implicit query here would be a synchronous one in an async view.

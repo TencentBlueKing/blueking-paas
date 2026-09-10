@@ -13,3 +13,23 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+from django.apps import AppConfig
+from django.core.exceptions import ImproperlyConfigured
+
+
+class GitConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "app_spark_api.repository.git"
+    label = "git"
+
+    def ready(self) -> None:
+        from django.conf import settings
+
+        from app_spark_api.repository.git.entities import structure_repo_server_config
+        from app_spark_api.repository.git.exceptions import RepoServerConfigurationError
+
+        try:
+            structure_repo_server_config(getattr(settings, "REPO_SERVER", None))
+        except RepoServerConfigurationError as exc:
+            raise ImproperlyConfigured(str(exc)) from exc

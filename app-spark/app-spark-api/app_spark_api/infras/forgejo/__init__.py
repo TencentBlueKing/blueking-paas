@@ -13,3 +13,18 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+"""Forgejo HTTP client used by Git persistence."""
+
+from app_spark_api.infras.forgejo.client import ForgejoClient
+from app_spark_api.infras.forgejo.entities import AccessToken, ForgejoClientConfig, RemoteRepository
+from app_spark_api.infras.forgejo.exceptions import ForgejoError, ForgejoUnavailableError
+
+__all__ = [
+    "AccessToken",
+    "ForgejoClient",
+    "ForgejoClientConfig",
+    "ForgejoError",
+    "ForgejoUnavailableError",
+    "RemoteRepository",
+]

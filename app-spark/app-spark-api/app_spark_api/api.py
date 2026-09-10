@@ -32,6 +32,8 @@ from app_spark_api.agent.runtime import (
 )
 from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.infras.accounts.api import router as accounts_router
+from app_spark_api.repository.git.api import router as git_repository_router
+from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
 
 if TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
@@ -41,6 +43,7 @@ logger = logging.getLogger(__name__)
 root_router = Router()
 root_router.add_router("/accounts/", accounts_router)
 root_router.add_router("/projects/", projects_router)
+root_router.add_router("/projects/{project_id}/git-repository/", git_repository_router)
 root_router.add_router("/projects/{project_id}/conversations/", conversations_router)
 # Mounted under `/internal/` and addressed by conversation id rather than by project and
 # number: the caller is an Agent Runtime this service started, it has no user and no project
@@ -50,6 +53,16 @@ root_router.add_router("/internal/conversations/", conversation_state_router)
 
 api = NinjaAPI(title="App Spark API", urls_namespace="api")
 api.add_router("", root_router)
+
+
+@api.exception_handler(GitRepositoryNotReadyError)
+def handle_git_repository_not_ready(request: HttpRequest, exc: GitRepositoryNotReadyError) -> HttpResponse:
+    """Agent 启动要求仓库 ready；调用方应先走补建入口。"""
+    return api.create_response(
+        request,
+        {"detail": str(exc) or "This project's Git repository is not ready."},
+        status=HTTPStatus.CONFLICT,
+    )
 
 
 @api.exception_handler(ConversationClosedError)

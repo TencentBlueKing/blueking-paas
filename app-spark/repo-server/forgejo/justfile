@@ -1,0 +1,53 @@
+# Local/dev Forgejo. Production will use charts/ (MySQL 8 + PVC).
+
+compose := "docker compose"
+cli := "uv run app-spark-forgejo"
+test_http_port := env("TEST_HTTP_PORT", "3001")
+here := justfile_directory()
+
+export FORGEJO_HTTP_PORT := env("FORGEJO_HTTP_PORT", "3000")
+export FORGEJO_ROOT_URL := env("FORGEJO_ROOT_URL", "http://127.0.0.1:" + FORGEJO_HTTP_PORT)
+
+# List recipes
+default:
+    @just --list
+
+# Start Forgejo (keeps the development volume) and initialise it
+start: up ready init
+
+# Create or start the server container
+up:
+    {{ compose }} up -d server
+
+# Stop containers; development data is kept
+stop:
+    {{ compose }} stop
+
+# Wait until /api/healthz answers
+ready:
+    {{ cli }} ready
+
+# Create admin, service account and org (idempotent)
+init:
+    {{ cli }} init
+
+# Follow Forgejo logs
+logs:
+    {{ compose }} logs -f server
+
+# Dev-mode acceptance: force-push rejected, no push-to-create, Basic Auth, private
+verify:
+    {{ cli }} verify
+
+# Isolated test instance (port 3001, own volume and secrets/test)
+test-up:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} FORGEJO_ROOT_URL=http://127.0.0.1:{{ test_http_port }} FORGEJO_SECRETS_DIR={{ here }}/secrets/test just start
+
+# Acceptance checks against the test instance
+test-verify:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} FORGEJO_ROOT_URL=http://127.0.0.1:{{ test_http_port }} FORGEJO_SECRETS_DIR={{ here }}/secrets/test just verify
+
+# Stop the test instance and delete its volume
+test-clean:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} {{ compose }} down -v --remove-orphans
+    rm -rf {{ here }}/secrets/test

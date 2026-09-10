@@ -41,7 +41,7 @@ known-first-party = ["app_spark_api"]
 [tool.ruff.lint.flake8-type-checking]
 # pydantic 会在运行时解析这些基类的字段注解，把它们的 import 挪进 TYPE_CHECKING 块会直接让
 # 模型构建失败，所以这里声明清楚，让 TC 规则不要对它们提出这种建议。
-runtime-evaluated-base-classes = ["ninja.Schema", "pydantic.BaseModel"]
+runtime-evaluated-base-classes = ["ninja.Schema", "ninja.ModelSchema", "pydantic.BaseModel"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -51,7 +51,7 @@ files = ["app_spark_api", "manage.py"]
 plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
-module = ["dynaconf", "dynaconf.*", "pymysql"]
+module = ["dynaconf", "dynaconf.*", "pymysql", "blue_krill", "blue_krill.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -59,10 +59,13 @@ module = "*.migrations.*"
 ignore_errors = true
 
 [tool.django-stubs]
-django_settings_module = "app_spark_api.settings"
+django_settings_module = "app_spark_api.typecheck_settings"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "app_spark_api.settings"
 addopts = "-p no:cacheprovider"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
+]

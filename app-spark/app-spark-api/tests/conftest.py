@@ -16,10 +16,33 @@
 
 """pytest fixtures for app-spark-api tests."""
 
+from __future__ import annotations
+
+import os
+
 import pytest
 
 from app_spark_api.core.projects.models import Project
 from tests.helpers import create_user
+from tests.infras.forgejo.fake import FakeForgejo, repo_server_config
+
+if os.environ.get("APP_SPARK_FORGEJO_LIVE") != "1":
+    collect_ignore = ["api/live_forgejo"]
+
+
+@pytest.fixture(autouse=True)
+def fake_forgejo(settings, monkeypatch, request):
+    """Git persistence is always on. Unit tests talk to an in-memory Forgejo.
+
+    Live Forgejo jobs (``@pytest.mark.forgejo``) keep the real client.
+    """
+    fake = FakeForgejo()
+    if request.node.get_closest_marker("forgejo"):
+        yield fake
+        return
+    settings.REPO_SERVER = repo_server_config()
+    monkeypatch.setattr("app_spark_api.repository.git.services.make_forgejo_client", fake.client)
+    yield fake
 
 
 @pytest.fixture()

@@ -41,7 +41,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 from pathlib import Path
 
 import pymysql
-from dynaconf import LazySettings
+from dynaconf import LazySettings, Validator
 
 from .utils import get_database_conf
 
@@ -58,8 +58,9 @@ settings = LazySettings(
     environments=False,
     load_dotenv=True,
     includes=[SETTINGS_FILES_GLOB, LOCAL_SETTINGS],
-    # Configure minimal required settings, use `Validator()`
-    # validators=[],
+    validators=[
+        Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
+    ],
     ENVVAR_PREFIX_FOR_DYNACONF="APP_SPARK_API",
     ENVVAR_FOR_DYNACONF="APP_SPARK_API_SETTINGS",
 )
@@ -88,6 +89,7 @@ INSTALLED_APPS = [
     "app_spark_api.core.projects.apps.ProjectsConfig",
     "app_spark_api.agent.conversations.apps.ConversationsConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
+    "app_spark_api.repository.git.apps.GitConfig",
 ]
 
 
@@ -250,6 +252,28 @@ BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get("BKAUTH_TOKEN_USER_INFO_ENDPOINT"
 
 ## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
+
+## 蓝鲸数据库内容加密私钥（EncryptField）。进程启动必须配置，没有默认值。
+## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+_encrypt_key = settings.get("BKKRILL_ENCRYPT_SECRET_KEY")
+BKKRILL_ENCRYPT_SECRET_KEY = _encrypt_key if isinstance(_encrypt_key, bytes) else str(_encrypt_key).encode()
+ENCRYPT_CIPHER_TYPE = settings.get("ENCRYPT_CIPHER_TYPE", "FernetCipher")
+
+## Git 持久化（repo-server）。字段见 RepoServerConfig。clone_url 是 Agent 侧地址，
+## 与 base_url（本服务调 API）可以不同。
+## 默认值仅用于让配置结构校验通过（typecheck、以及缺少配置时仍能启动）。repo-server.invalid
+## 无法解析，真正使用时会连接失败。生产环境必须显式配置 REPO_SERVER。
+REPO_SERVER = settings.get(
+    "REPO_SERVER",
+    {
+        "type": "forgejo",
+        "base_url": "http://repo-server.invalid",
+        "clone_url": "http://repo-server.invalid",
+        "org": "app-spark",
+        "service_account": "app-spark-bot",
+        "service_account_password": "unset",
+    },
+)
 
 
 # --------

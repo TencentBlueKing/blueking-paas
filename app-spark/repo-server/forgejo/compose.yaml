@@ -1,0 +1,98 @@
+# Dev 模式 Forgejo（SQLite + named volume）。
+#
+# 这是 repo-server 的本地/开发部署。生产用 charts/ 部署同一镜像，数据库换成 MySQL 8，
+# /data 换成 PVC。下面标了「不变量」的项，chart 必须原样保留，不能当调优随便改。
+#
+# 地址（不要把 localhost 当成通用地址）：
+#   宿主机 API / git CLI / 浏览器：http://127.0.0.1:${FORGEJO_HTTP_PORT}
+#   同一 Compose 网络里的容器：http://server:3000
+#   别的网络里的 Agent 沙箱：要把本服务接到那个网络，或把 clone_url 配成沙箱能解析的主机名
+#
+# 镜像：Forgejo 15.0.7 LTS，钉死多架构 digest。升补丁前看 https://forgejo.org/releases/15.x/
+
+name: ${COMPOSE_PROJECT_NAME:-app-spark-forgejo}
+
+services:
+  server:
+    image: codeberg.org/forgejo/forgejo:15.0.7@sha256:1f9c1a9880425614267832ce437f8ae5f5b69e1f3219f38fc468fc37e48c1919
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+
+      # —— 数据库 ——
+      # 作用：Forgejo 元数据（用户、仓库、token、分支保护）的存储引擎。
+      # 必要性：没有库就没有仓库记录和授权。dev 用 SQLite 减少依赖；生产必须换 MySQL 8，
+      # 不能把 SQLite 文件当生产库。HOST/NAME/USER/PASSWD 仅在 DB_TYPE=mysql 时有意义。
+      FORGEJO__database__DB_TYPE: ${FORGEJO_DB_TYPE:-sqlite3}
+      FORGEJO__database__HOST: ${FORGEJO_DB_HOST:-}
+      FORGEJO__database__NAME: ${FORGEJO_DB_NAME:-forgejo}
+      FORGEJO__database__USER: ${FORGEJO_DB_USER:-}
+      FORGEJO__database__PASSWD: ${FORGEJO_DB_PASSWORD:-}
+
+      # —— 对外身份 ——
+      # 作用：Forgejo 生成 clone URL、跳转、邮件链接时用的对外主机名和根地址。
+      # 必要性：配成 localhost 时，Agent 沙箱里的 git 会打到沙箱自己而不是 Git 宿主。
+      # 容器内 HTTP 端口固定 3000，宿主机映射见 ports。
+      FORGEJO__server__DOMAIN: ${FORGEJO_DOMAIN:-127.0.0.1}
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__ROOT_URL: ${FORGEJO_ROOT_URL:-http://127.0.0.1:3000}
+
+      # 作用：关掉 Git over SSH，只走 HTTP + token。
+      # 必要性：本产品不发 SSH 密钥；少一个协议就少一套密钥和防火墙开口。
+      FORGEJO__server__DISABLE_SSH: "true"
+
+      # 作用：跳过首次访问的安装向导，认为实例已经「装好了」。
+      # 必要性：空卷启动否则会卡在 web 安装页，init CLI / API 都进不去。
+      FORGEJO__security__INSTALL_LOCK: "true"
+
+      # —— 仓库不变量（chart 必须保持）——
+      # 作用：禁止「push 一个不存在的仓库名就自动建仓」。
+      # 必要性：仓库名写错必须失败。否则会静默冒出一个新仓，Project 对不上，
+      # 检查点也会绑到错误历史上。
+      FORGEJO__repository__ENABLE_PUSH_CREATE_USER: "false"
+      FORGEJO__repository__ENABLE_PUSH_CREATE_ORG: "false"
+
+      # 作用：新建仓库默认 private。
+      # 必要性：仓库范围 token 对所有公开仓仍有只读权限。公开不是偏好，是隔离性漏洞。
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+
+      # 作用：默认工作分支名。
+      # 必要性：建仓、分支保护、Agent push、检查点都钉在这一条上，改名要三处一起改。
+      FORGEJO__repository__DEFAULT_BRANCH: main
+
+      # —— 访问不变量（chart 必须保持）——
+      # 作用：关闭公开注册。
+      # 必要性：Git 宿主不是给终端用户开账号的。能注册就能在组织外建仓，绕过「一项目一私有仓」。
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+
+      # 作用：未登录不能浏览页面和大部分 API（/api/healthz 除外）。
+      # 必要性：避免仓库列表、clone URL、默认分支被匿名扫到。
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+
+      # 作用：登录用户默认不能自建组织。
+      # 必要性：所有 Project 仓必须落在受控的 app-spark 组织下，不能让服务账号以外的身份另起炉灶。
+      FORGEJO__service__DEFAULT_ALLOW_CREATE_ORGANIZATION: "false"
+    volumes:
+      # 本地：Docker named volume。生产 chart：PVC 挂到 /data（Git 对象和 SQLite/附件）。
+      - forgejo-data:/data
+    ports:
+      - "${FORGEJO_HTTP_PORT:-3000}:3000"
+    restart: unless-stopped
+    healthcheck:
+      # REQUIRE_SIGNIN_VIEW 下 /api/v1/version 是 403；healthz 保持公开，用来判断进程活着。
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/healthz >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # `app-spark-forgejo verify` 用来证明同一 Compose 网络里的容器能访问 Git HTTP。
+  # 不随 `up` 启动；`docker compose run --rm git-client ...` 才拉起来。
+  git-client:
+    image: alpine/git:v2.47.2
+    profiles: ["verify"]
+    working_dir: /work
+    entrypoint: ["git"]
+
+volumes:
+  forgejo-data:

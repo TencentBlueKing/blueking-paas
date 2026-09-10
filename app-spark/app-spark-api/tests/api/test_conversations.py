@@ -48,6 +48,7 @@ from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.repository.git.services import provision_project_repository
 
 if TYPE_CHECKING:
     from django.http import StreamingHttpResponse
@@ -84,13 +85,15 @@ def project(bk_user) -> Project:
     random ``tenant_id``, while the API scopes by ``get_tenant()``, which is ``default`` unless
     multi-tenant mode is on.
     """
-    return Project.objects.create(
+    project = Project.objects.create(
         id=PROJECT_ID,
         name="Spark Demo",
         creator=bk_user,
         owner=bk_user,
         tenant_id=get_tenant(bk_user).id,
     )
+    provision_project_repository(project)
+    return project
 
 
 @pytest.fixture

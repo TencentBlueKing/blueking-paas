@@ -21,6 +21,10 @@ DATABASE_USER: ...
 DATABASE_PASSWORD: ...
 DATABASE_HOST: ...
 DATABASE_PORT: ...
+
+# 必选：EncryptField 使用的 Fernet key，必须自己生成且保持稳定
+# python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+BKKRILL_ENCRYPT_SECRET_KEY: ...
 ```
 
 ### 启动服务
@@ -111,8 +115,35 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 Runtime 的 `/health` 的 `pushed_*` 游标看。
 
 **已知缺口**：冷启动不恢复 workspace 源码。恢复出来的上下文会引用一堆不存在的文件，所以
-「换一个全新 Runtime 继续对话」目前只在讨论层面成立，不在继续编码层面成立。衔接点是
-`ProjectSourceStorage`：注入 context 之前先把源码 `get()` 回来。
+### Git 源码仓库
+
+每个 Project 对应组织下的一个**私有**仓库、一条工作分支。API 负责建仓和签发仓库范围的长期
+读写 token。
+
+本地 Forgejo 见 [repo-server/forgejo](../repo-server/forgejo/README.md)。配置示例：
+
+```yaml
+BKKRILL_ENCRYPT_SECRET_KEY: ''  # Fernet key；进程启动必须配置，不要留空
+REPO_SERVER:
+  type: forgejo
+  base_url: http://127.0.0.1:3000   # 本服务调 Forgejo API
+  clone_url: http://127.0.0.1:3000  # Agent/git 看到的地址，可以和 base_url 不同
+  org: app-spark
+  service_account: app-spark-bot
+  service_account_password: ...     # 不要提交；init 写在 secrets/
+  default_branch: main
+  commit_author_name: App-Spark
+  commit_author_email: app-spark@localhost.invalid
+```
+
+真实 Forgejo 测试不在默认 `pytest tests/` 里。CI 或本地验收由本项目驱动（会 `just test-up` 拉起
+`repo-server/forgejo` 测试实例，和会话测试拉起 Agent 同一模式）：
+
+```bash
+APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
+```
+
+未设置 `APP_SPARK_FORGEJO_LIVE=1` 时该目录不会被收集；一旦设置，缺少 Forgejo 会失败而不是跳过。
 
 ### 会话的生命周期
 

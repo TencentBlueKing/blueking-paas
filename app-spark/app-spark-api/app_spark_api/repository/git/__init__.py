@@ -13,3 +13,5 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+"""Git 仓库生命周期。"""

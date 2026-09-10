@@ -13,3 +13,13 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+"""Failures talking to a Forgejo HTTP API."""
+
+
+class ForgejoError(Exception):
+    """A Forgejo call failed."""
+
+
+class ForgejoUnavailableError(ForgejoError):
+    """Forgejo was unreachable, or returned a body this client cannot interpret."""

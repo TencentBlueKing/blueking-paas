@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, cast
 
 import arrow
 import cattr
@@ -531,8 +531,10 @@ def make_release_validator(  # noqa: C901
         if not policy:
             return True
 
+        # REVISION_POLICIES 值类型不齐，filter 被推断成 object，** 拆不开。
+        filter_kwargs = cast("Dict[str, Any]", policy["filter"])
         source_version_exists = PluginRelease.objects.filter(
-            plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
+            plugin=plugin, source_version_name=source_version_name, type=release_type, **filter_kwargs
         ).exists()
         if source_version_exists:
             raise policy["error"]  # type: ignore[misc]

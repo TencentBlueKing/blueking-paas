@@ -231,7 +231,7 @@ class ReleaseStageDefinition(BaseModel):
         constants.ReleaseStageInvokeMethod.BUILTIN,
     ] = Field(description="触发方式")
     statusPollingMethod: Literal[constants.StatusPollingMethod.API, constants.StatusPollingMethod.FRONTEND] = Field(
-        default="api", description="阶段的状态轮询方式"
+        default=constants.StatusPollingMethod.API, description="阶段的状态轮询方式"
     )
     api: Optional[PluginReleaseAPI] = Field(
         description="invokeMethod 为 deployAPI 时必填，invokeMethod 为 subpage 且 statusPollingMethod 为 api 时必填"

@@ -125,24 +125,16 @@ grimp = "3.14"
 requests-mock = "*"
 
 [tool.mypy]
-# 单测镜像是 3.14，检查目标仍按项目下限，避免新语法检查把存量代码打爆。
-python_version = "3.11"
+# 单测镜像已是 3.14，检查目标与运行环境对齐。
+python_version = "3.14"
+# pydantic v1 的 __init__ 是解析器（嵌套 dict、str→int 都会收），不是按字段静态类型的工厂。
+# mypy 1.20 不靠插件时会按注解合成签名，把合法的 parse 入参打成 arg-type。
+# 插件默认 init_typed=false，构造参数标成 Any，和运行时一致；不要开 init_typed。
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 show_error_codes = true
 check_untyped_defs = true
 namespace_packages = true
-# mypy 1.0 在 3.14 上会加载已停更的 typed-ast。1.20 对 attrs/pydantic 构造和 override 更严，
-# 这几类在存量里一次打出 90 处，先关掉，不和 3.14 升级绑在一起清。
-disable_error_code = [
-  "arg-type",
-  "call-arg",
-  "list-item",
-  "override",
-  "var-annotated",
-  "misc",
-  "call-overload",
-  "truthy-function",
-]
 exclude = [
   '^paasng/ee/.*$',
   '^paasng/te/.*$',

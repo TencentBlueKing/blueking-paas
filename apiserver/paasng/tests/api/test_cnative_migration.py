@@ -139,12 +139,11 @@ class TestQueryProcessCNativeMigrationViewSet:
 
     def list_processes(self, api_client, bk_app, bk_user):
         migrations = [
-            MigrationResult(migrator_name="ApplicationTypeMigrator", is_successful=True),
-            MigrationResult(migrator_name="BoundClusterMigrator", is_successful=True),
+            MigrationResult(migrator_name="ApplicationTypeMigrator", is_succeeded=True),
+            MigrationResult(migrator_name="BoundClusterMigrator", is_succeeded=True),
             MigrationResult(
                 migrator_name="BuildConfigMigrator",
-                is_successful=False,
-                is_finished=True,
+                is_succeeded=False,
                 error_msg="cnb buildpacks versions incompatible",
             ),
         ]

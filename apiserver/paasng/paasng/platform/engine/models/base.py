@@ -74,8 +74,7 @@ class MarkStatusMixin:
     def get_event_type(cls) -> str:
         raise NotImplementedError
 
-    @classmethod
-    def to_dict(cls) -> dict:
+    def to_dict(self) -> dict:
         raise NotImplementedError
 
     def mark_procedure_status(self, status: "JobStatus"):

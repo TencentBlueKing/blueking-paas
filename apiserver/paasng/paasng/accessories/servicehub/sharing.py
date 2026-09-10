@@ -105,7 +105,7 @@ class ServiceSharingManager:
 
     def list_shared_info(self, category: int) -> Sequence[SharedServiceInfo]:
         """List all shared service infos by service category"""
-        results = []
+        results: list[SharedServiceInfo] = []
         for referenced_info in self.list_all_shared_info():
             if referenced_info.service.category_id == category:
                 results.append(referenced_info)

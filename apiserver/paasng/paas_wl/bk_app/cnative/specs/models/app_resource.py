@@ -221,7 +221,7 @@ def create_app_resource(
     :returns: `BkAppResource` object
     """
     obj = BkAppResource(
-        apiVersion=api_version,
+        apiVersion=api_version or ApiVersion.V1ALPHA2,
         metadata=ObjectMetadata(name=name),
         spec=BkAppSpec(
             build=BkAppBuildConfig(

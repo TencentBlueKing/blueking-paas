@@ -80,7 +80,7 @@ class DummyDB:
 
 
 class SADBManager:
-    _INSTANCES: ClassVar = dict()
+    _INSTANCES: ClassVar[dict[str, "SADBManager"]] = {}
     _engine: Optional[Engine]
 
     @classmethod

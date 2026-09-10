@@ -20,7 +20,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.platform.bkapp_model.models import ResQuotaPlan
-from paasng.platform.bkapp_model.res_quota import PLAN_UNAVAILABLE, ResQuotaPlanPolicy
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.declarative.utils import get_quota_plan
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -73,7 +73,7 @@ class TestResQuotaPlanPolicy:
         _create_plan("dedicated-plan", allowed_app_codes=["secret-app"])
         with pytest.raises(ValidationError) as exc:
             policy.ensure_assignable("dedicated-plan", "other-app")
-        assert str(PLAN_UNAVAILABLE) in str(exc.value)
+        assert "资源配额方案不可用" in str(exc.value)
         assert "secret-app" not in str(exc.value)
 
 

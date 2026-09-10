@@ -16,8 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.urls import reverse
 
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db
 
@@ -47,21 +49,17 @@ class TestResQuotaPlanOptionsView:
         )
         return public, dedicated, other
 
-    def test_without_app_code_only_public(self, api_client, plans):
+    def test_includes_dedicated_for_current_app(self, api_client, bk_app, plans):
         public, dedicated, other = plans
-        response = api_client.get("/api/bkapps/quota_plans/")
-        assert response.status_code == 200
-        names = {item["name"] for item in response.data}
-        assert public.name in names
-        assert dedicated.name not in names
-        assert other.name not in names
-        assert all("allowed_app_codes" not in item for item in response.data)
-
-    def test_with_app_code_includes_dedicated(self, api_client, bk_app, plans):
-        public, dedicated, other = plans
-        response = api_client.get("/api/bkapps/quota_plans/", {"app_code": bk_app.code})
+        response = api_client.get(reverse("api.bkapps.quota_plans", kwargs={"code": bk_app.code}))
         assert response.status_code == 200
         names = {item["name"] for item in response.data}
         assert public.name in names
         assert dedicated.name in names
         assert other.name not in names
+        assert all("allowed_app_codes" not in item for item in response.data)
+
+    def test_without_permission_forbidden(self, api_client, bk_app, plans):
+        api_client.force_authenticate(user=create_user())
+        response = api_client.get(reverse("api.bkapps.quota_plans", kwargs={"code": bk_app.code}))
+        assert response.status_code == 403

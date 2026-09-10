@@ -1549,7 +1549,11 @@ export default {
       const list = [...(this.allQuotaList || [])];
       const current = this.formData?.env_overlay?.[env]?.plan_name;
       if (current && !list.find(item => item.name === current)) {
-        list.push({ name: current });
+        list.push({
+          name: current,
+          limit: { cpu: '--', memory: '--' },
+          request: { cpu: '--', memory: '--' },
+        });
       }
       return list;
     },
@@ -1699,10 +1703,14 @@ export default {
 
     // 资源配额方案change回调
     handleChange(name, env) {
+      const option = this.quotaOptions(env).find(v => v.name === name) || {
+        limit: { cpu: '--', memory: '--' },
+        request: { cpu: '--', memory: '--' },
+      };
       if (env === 'stag') {
-        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.stagQuotaData = option;
       } else {
-        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.prodQuotaData = option;
       }
     },
     // 设置对应探测数据

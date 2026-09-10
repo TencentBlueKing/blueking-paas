@@ -181,9 +181,8 @@ export default {
      * 平台-获取进程资源配额方案
      */
     getProcessQuotaPlans({}, { appCode } = {}) {
-      const query = appCode ? `?app_code=${encodeURIComponent(appCode)}` : '';
-      const url = `${BACKEND_URL}/api/plat_mgt/processes/quota_plans/${query}`;
-      return http.get(url);
+      const url = `${BACKEND_URL}/api/plat_mgt/processes/quota_plans/`;
+      return http.get(url, {}, { params: appCode ? { app_code: appCode } : {} });
     },
     /**
      * 创建资源配额方案

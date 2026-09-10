@@ -19,11 +19,12 @@ import logging
 from typing import Any
 
 from blue_krill.cubing_case import shortcuts
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model.models import ResQuotaPlan
-from paasng.platform.bkapp_model.res_quota import PLAN_UNAVAILABLE, ResQuotaPlanPolicy
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def get_quota_plan(spec_plan_name: str, app_code: str | None = None, current_pla
         elif ResQuotaPlanPolicy().can_assign(spec_plan_name, app_code, current_plan_name):
             return existing.name
         else:
-            raise ValidationError(PLAN_UNAVAILABLE)
+            raise ValidationError(_("资源配额方案不可用"))
 
     logger.debug("unknown ResQuotaPlan name `%s`, try to get ProcessSpecPlan", spec_plan_name)
 

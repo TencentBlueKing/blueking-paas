@@ -675,7 +675,12 @@ export default {
       const list = [...(this.planList || [])];
       const current = this.formData?.[env]?.plan_name;
       if (current && !list.find(item => item.name === current)) {
-        list.push({ name: current });
+        const resources = this.formData?.[env]?.resources;
+        list.push({
+          name: current,
+          limits: resources?.limits || { cpu: '', memory: '' },
+          requests: resources?.requests || { cpu: '', memory: '' },
+        });
       }
       return list;
     },
@@ -711,7 +716,7 @@ export default {
         this.formData[env].resources = this.createEmptyResources();
       } else {
         // 预设方案，填充预设值
-        const plan = this.planList.find((item) => item.name === value);
+        const plan = this.planOptions(env).find((item) => item.name === value);
         if (plan) {
           this.formData[env].plan_name = value;
           this.formData[env].resources = {

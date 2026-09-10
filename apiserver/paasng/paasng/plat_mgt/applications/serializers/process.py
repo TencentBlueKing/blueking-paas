@@ -19,7 +19,6 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
-from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.engine.constants import AppEnvName
 
@@ -54,18 +53,6 @@ class ResourcesSLZ(serializers.Serializer):
             raise serializers.ValidationError(_("Memory requests 不能大于 limits"))
 
         return attrs
-
-
-class PlanResourcesSLZ(serializers.Serializer):
-    """资源配置 - 方案名称"""
-
-    plan = serializers.CharField(help_text="资源配额方案名称")
-
-    def validate_plan(self, value):
-        """验证 plan 字段"""
-        if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
-            raise serializers.ValidationError(_("资源配额方案 {plan} 不存在或未启用").format(plan=value))
-        return value
 
 
 # ============= Output Serializers =============

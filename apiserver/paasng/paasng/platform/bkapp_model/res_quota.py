@@ -24,9 +24,6 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec, ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
 
-# 统一错误语义：不存在 / 停用 / 不在白名单，都不泄露名单内容
-PLAN_UNAVAILABLE = _("资源配额方案不可用")
-
 
 class ResQuotaPlanPolicy:
     """资源配额方案的可见与分配策略。
@@ -81,7 +78,7 @@ class ResQuotaPlanPolicy:
         if not plan_name:
             return
         if not self.can_assign(plan_name, app_code, current_plan_name):
-            raise ValidationError(PLAN_UNAVAILABLE)
+            raise ValidationError(_("资源配额方案不可用"))
 
     def list_selectable(self, app_code: str | None = None) -> list[ResQuotaPlan]:
         """已启用且对该应用可新选的方案。无 app_code 时只返回公开方案。"""

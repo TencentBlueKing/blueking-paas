@@ -25,7 +25,10 @@ from django.conf import settings
 
 from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.basic import generate_random_string
@@ -244,3 +247,49 @@ class TestAIAgentViewSet:
             )
 
         assert response.status_code == 200
+
+    def test_upload_can_switch_build_method(self, api_client, bk_app, bk_module, tar_path, settings):
+        """不传保持 buildpack；传 dockerfile 落库；再切回 buildpack。"""
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+        bk_module.source_origin = SourceOrigin.AI_AGENT
+        bk_module.save()
+        url = "/api/bkapps/applications/{code}/modules/{module_name}/source_package/link/".format(
+            code=bk_app.code, module_name=bk_module.name
+        )
+
+        def download_file_via_url(url, local_path: Path):
+            local_path.write_bytes(tar_path.read_bytes())
+
+        def post(extra):
+            data = {"package_url": "https://example.com", "allow_overwrite": True, **extra}
+            with mock.patch(
+                "paasng.platform.sourcectl.package.uploader.download_file_via_url",
+                side_effect=download_file_via_url,
+            ):
+                return api_client.post(url, data=data, format="json")
+
+        assert post({"version": "0.0.1"}).status_code == 200
+        build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
+        assert build_config.build_method == RuntimeType.BUILDPACK
+
+        assert (
+            post(
+                {
+                    "version": "0.0.2",
+                    "build_method": RuntimeType.DOCKERFILE.value,
+                    "dockerfile_path": "docker/Dockerfile",
+                    "docker_build_args": {"FOO": "bar"},
+                }
+            ).status_code
+            == 200
+        )
+        build_config.refresh_from_db()
+        assert build_config.build_method == RuntimeType.DOCKERFILE
+        assert build_config.dockerfile_path == "docker/Dockerfile"
+        assert build_config.docker_build_args == {"FOO": "bar"}
+        assert ModuleSpecs(bk_module).runtime_type == RuntimeType.DOCKERFILE
+
+        assert post({"version": "0.0.3", "build_method": RuntimeType.BUILDPACK.value}).status_code == 200
+        build_config.refresh_from_db()
+        assert build_config.build_method == RuntimeType.BUILDPACK
+        assert ModuleSpecs(bk_module).runtime_type == RuntimeType.BUILDPACK

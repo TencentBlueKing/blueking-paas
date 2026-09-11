@@ -17,10 +17,12 @@
 
 import logging
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.applications.serializers.fields import SourceDirField
+from paasng.platform.applications.serializers.fields import DockerfilePathField, SourceDirField
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
@@ -199,10 +201,43 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     package_url = serializers.URLField(help_text="源码包下载路径")
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
     allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
+    # 仅 AI Agent 应用支持在上传时切换构建方式；不传则保持模块当前配置
+    build_method = serializers.ChoiceField(
+        help_text="构建方式，仅 AI Agent 应用支持。不传则保持模块当前配置",
+        choices=[
+            (RuntimeType.BUILDPACK.value, RuntimeType.BUILDPACK.label),
+            (RuntimeType.DOCKERFILE.value, RuntimeType.DOCKERFILE.label),
+        ],
+        required=False,
+    )
+    dockerfile_path = DockerfilePathField(
+        help_text="Dockerfile 路径，build_method 为 dockerfile 时生效", required=False
+    )
+    docker_build_args = serializers.DictField(
+        child=serializers.CharField(allow_blank=False),
+        allow_empty=True,
+        allow_null=True,
+        required=False,
+        help_text="Docker 构建参数，build_method 为 dockerfile 时生效",
+    )
 
     def validate_package_url(self, value: str) -> str:
         validate_download_url(value)
         return value
+
+    def validate(self, attrs):
+        build_method = attrs.get("build_method")
+        has_dockerfile_path = attrs.get("dockerfile_path") not in (None, "")
+        has_docker_build_args = "docker_build_args" in attrs and attrs.get("docker_build_args") is not None
+        if not build_method and (has_dockerfile_path or has_docker_build_args):
+            raise ValidationError(_("指定 dockerfile_path / docker_build_args 时必须同时提供 build_method"))
+
+        if build_method == RuntimeType.DOCKERFILE:
+            if not attrs.get("dockerfile_path"):
+                attrs["dockerfile_path"] = "Dockerfile"
+            if attrs.get("docker_build_args") is None:
+                attrs["docker_build_args"] = {}
+        return attrs
 
 
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):

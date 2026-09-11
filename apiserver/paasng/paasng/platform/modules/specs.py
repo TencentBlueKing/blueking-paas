@@ -164,9 +164,18 @@ class BkLessCodeSpecs(PackageMixin, SourceOriginSpecs):
 
 
 class AIAgentSpecs(PackageMixin, SourceOriginSpecs):
-    """Specs for source_origin: AI_AGENT"""
+    """Specs for source_origin: AI_AGENT
+
+    构建方式由模块 BuildConfig 决定，支持 buildpack / dockerfile 来回切换。
+    """
 
     source_origin = SourceOrigin.AI_AGENT
+    # 覆盖 PackageMixin 的写死值，让 ModuleSpecs 回落到 BuildConfig.build_method
+    runtime_type = None  # type: ignore[assignment]
+
+    @classmethod
+    def supported_runtime_types(cls) -> List[RuntimeType]:
+        return [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]
 
 
 class SMartSpecs(PackageMixin, SourceOriginSpecs):

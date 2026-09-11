@@ -45,8 +45,10 @@ from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.helpers import update_build_config_with_method
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl import serializers as slzs
@@ -282,7 +284,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         request_body=slzs.SourcePackageUploadViaUrlSLZ,
         responses={200: slzs.SourcePackageSLZ()},
         tags=["源码包管理"],
-        operation_description="目前仅提供给 lesscode 项目使用",
+        operation_description="提供给 lesscode / AI Agent 使用，AI Agent 可指定构建方式",
     )
     def upload_via_url(self, request, code, module_name):
         """根据 URL 方式上传源码包, 目前不校验 app_desc.yaml"""
@@ -293,6 +295,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         allow_overwrite = data["allow_overwrite"]
         version = data["version"]
         package_url = data["package_url"]
+        self._validate_optional_build_method(module, data)
 
         # 提取文件名
         filename = Path(urlparse(package_url).path).name.split(".")[0]
@@ -301,7 +304,43 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         source_package = upload_package_via_url(
             module, package_url, version, filename, request.user, allow_overwrite=allow_overwrite, need_patch=False
         )
+        self._apply_optional_build_method(module, data)
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
+
+    def _validate_optional_build_method(self, module: Module, data: dict) -> None:
+        """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
+        has_build_method_fields = bool(
+            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
+        )
+        if not has_build_method_fields:
+            return
+        if module.get_source_origin() != SourceOrigin.AI_AGENT:
+            raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
+
+    def _apply_optional_build_method(self, module: Module, data: dict) -> None:
+        """按上传参数更新模块构建方式。
+
+        不传 build_method 则保持当前配置。
+        buildpack / dockerfile 可多次上传来回切换，切换回 buildpack 时复用模块已有运行时绑定。
+        """
+        build_method = data.get("build_method")
+        if not build_method:
+            return
+
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        if build_method == RuntimeType.DOCKERFILE:
+            update_build_config_with_method(
+                build_config,
+                RuntimeType.DOCKERFILE,
+                {
+                    "dockerfile_path": data.get("dockerfile_path") or "Dockerfile",
+                    "docker_build_args": data.get("docker_build_args") or {},
+                },
+            )
+            return
+
+        build_config.build_method = RuntimeType.BUILDPACK
+        build_config.save(update_fields=["build_method", "updated"])
 
 
 class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

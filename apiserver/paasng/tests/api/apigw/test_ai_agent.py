@@ -23,6 +23,8 @@ import pytest
 import yaml
 from django.conf import settings
 
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import RuntimeType
@@ -271,6 +273,9 @@ class TestAIAgentViewSet:
         assert post({"version": "0.0.1"}).status_code == 200
         build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert build_config.build_method == RuntimeType.BUILDPACK
+        assert (
+            AppOperationRecord.objects.filter(app_code=bk_app.code, target=OperationTarget.BUILD_CONFIG).count() == 0
+        )
 
         assert (
             post(
@@ -288,8 +293,21 @@ class TestAIAgentViewSet:
         assert build_config.dockerfile_path == "docker/Dockerfile"
         assert build_config.docker_build_args == {"FOO": "bar"}
         assert ModuleSpecs(bk_module).runtime_type == RuntimeType.DOCKERFILE
+        records = AppOperationRecord.objects.filter(app_code=bk_app.code, target=OperationTarget.BUILD_CONFIG)
+        assert records.count() == 1
+        dockerfile_record = records.latest("created")
+        assert dockerfile_record.operation == OperationEnum.MODIFY
+        assert dockerfile_record.data_after["data"]["build_method"] == RuntimeType.DOCKERFILE
+        assert dockerfile_record.data_after["data"]["dockerfile_path"] == "docker/Dockerfile"
 
         assert post({"version": "0.0.3", "build_method": RuntimeType.BUILDPACK.value}).status_code == 200
         build_config.refresh_from_db()
         assert build_config.build_method == RuntimeType.BUILDPACK
+        assert build_config.dockerfile_path is None
+        assert build_config.docker_build_args == {}
         assert ModuleSpecs(bk_module).runtime_type == RuntimeType.BUILDPACK
+        records = AppOperationRecord.objects.filter(app_code=bk_app.code, target=OperationTarget.BUILD_CONFIG)
+        assert records.count() == 2
+        buildpack_record = records.latest("created")
+        assert buildpack_record.data_after["data"]["build_method"] == RuntimeType.BUILDPACK
+        assert buildpack_record.data_after["data"]["dockerfile_path"] is None

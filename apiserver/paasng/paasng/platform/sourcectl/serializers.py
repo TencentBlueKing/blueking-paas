@@ -234,6 +234,10 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
         if not build_method and (has_dockerfile_path or has_docker_build_args):
             raise ValidationError(_("指定 dockerfile_path / docker_build_args 时必须同时提供 build_method"))
 
+        # buildpack 用不上 Dockerfile 字段，带着只会被静默丢掉，调用方会以为已经生效。
+        if build_method == RuntimeType.BUILDPACK and (has_dockerfile_path or has_docker_build_args):
+            raise ValidationError(_("build_method 为 buildpack 时不能指定 dockerfile_path / docker_build_args"))
+
         if build_method == RuntimeType.DOCKERFILE:
             if not attrs.get("dockerfile_path"):
                 attrs["dockerfile_path"] = "Dockerfile"

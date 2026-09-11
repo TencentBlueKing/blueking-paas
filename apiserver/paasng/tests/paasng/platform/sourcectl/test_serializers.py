@@ -113,7 +113,10 @@ class TestSourcePackageUploadViaUrlSLZ:
                 True,
                 {"build_method": RuntimeType.DOCKERFILE, "dockerfile_path": "Dockerfile", "docker_build_args": {}},
             ),
+            ({"build_method": RuntimeType.BUILDPACK}, True, {"build_method": RuntimeType.BUILDPACK}),
             ({"dockerfile_path": "Dockerfile"}, False, None),
+            ({"build_method": RuntimeType.BUILDPACK, "dockerfile_path": "Dockerfile"}, False, None),
+            ({"build_method": RuntimeType.BUILDPACK, "docker_build_args": {"FOO": "bar"}}, False, None),
             ({"build_method": RuntimeType.CUSTOM_IMAGE}, False, None),
         ],
     )

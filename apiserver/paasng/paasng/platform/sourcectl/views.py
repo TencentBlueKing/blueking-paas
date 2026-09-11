@@ -304,7 +304,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         source_package = upload_package_via_url(
             module, package_url, version, filename, request.user, allow_overwrite=allow_overwrite, need_patch=False
         )
-        self._apply_optional_build_method(module, data)
+        self._apply_optional_build_method(request, module, data)
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
 
     def _validate_optional_build_method(self, module: Module, data: dict) -> None:
@@ -317,17 +317,29 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         if module.get_source_origin() != SourceOrigin.AI_AGENT:
             raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
 
-    def _apply_optional_build_method(self, module: Module, data: dict) -> None:
+    @staticmethod
+    def _build_config_audit_data(build_config: BuildConfig) -> dict:
+        """审计只记本接口会改的字段，不拼完整 ModuleBuildConfigSLZ。"""
+        return {
+            "build_method": build_config.build_method,
+            "dockerfile_path": build_config.dockerfile_path,
+            "docker_build_args": build_config.docker_build_args or {},
+        }
+
+    def _apply_optional_build_method(self, request, module: Module, data: dict) -> None:
         """按上传参数更新模块构建方式。
 
         不传 build_method 则保持当前配置。
-        buildpack / dockerfile 可多次上传来回切换，切换回 buildpack 时复用模块已有运行时绑定。
+        buildpack / dockerfile 可多次上传来回切换。
+        切回 buildpack 时复用已有 slugbuilder 绑定，并清空 dockerfile 残留字段。
         """
         build_method = data.get("build_method")
         if not build_method:
             return
 
         build_config = BuildConfig.objects.get_or_create_by_module(module)
+        data_before = DataDetail(data=self._build_config_audit_data(build_config))
+
         if build_method == RuntimeType.DOCKERFILE:
             update_build_config_with_method(
                 build_config,
@@ -337,10 +349,26 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
                     "docker_build_args": data.get("docker_build_args") or {},
                 },
             )
-            return
 
-        build_config.build_method = RuntimeType.BUILDPACK
-        build_config.save(update_fields=["build_method", "updated"])
+        else:
+            # 不走 update_build_config_with_method：它要求 buildpacks / bp_stack_name。
+            # 清空 path/args，避免下次读配置或再切 dockerfile 时看到过期值。
+            build_config.build_method = RuntimeType.BUILDPACK
+            build_config.dockerfile_path = None
+            build_config.docker_build_args = {}
+            build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
+
+        add_app_audit_record(
+            app_code=module.application.code,
+            tenant_id=module.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_CONFIG,
+            module_name=module.name,
+            data_before=data_before,
+            data_after=DataDetail(data=self._build_config_audit_data(build_config)),
+        )
 
 
 class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

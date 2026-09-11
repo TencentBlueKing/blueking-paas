@@ -31,7 +31,15 @@ from uuid import uuid4
 import httpx2
 
 from app_spark_api.agent.runtime.entities import EventPage, RuntimeHealth
-from app_spark_api.agent.runtime.exceptions import AgentBusyError, AgentUnavailableError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentBusyError,
+    AgentUnavailableError,
+    AgentWorkspaceSavePendingError,
+)
+
+# The Runtime's own name for "the previous turn's files are not on the Git remote yet". Kept as
+# a constant because it is a wire contract with the agent, not a message.
+WORKSPACE_SAVE_PENDING_CODE = "workspace_save_pending"
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -200,6 +208,39 @@ class AgentRuntimeClient:
             raise AgentUnavailableError(f"The Agent Runtime refused the context with {response.status_code}: {detail}")
         return _restored_version(response)
 
+    async def restore_workspace(self, commit: str) -> str:
+        """Put the Runtime's files back to one commit, before any conversation is injected.
+
+        Files first, context second. The other order would leave a window in which the Runtime
+        remembers writing code that is not on disk yet -- and if a run slipped in during that
+        window, the model would act on that mismatch.
+
+        The Runtime decides what "put back" means, and may well decide it means nothing: a
+        workspace already carrying that commit, or newer work built on top of it, is left alone
+        rather than rolled back. That is what lets a Project's later code survive an older
+        conversation being reopened.
+
+        :param commit: The checkpoint's commit SHA.
+        :return: What the Runtime did, as one of its ``RestoreOutcome`` values.
+        :raises AgentBusyError: If a run is occupying the Runtime.
+        :raises AgentUnavailableError: If the Runtime cannot be reached, has no Git workspace,
+            or cannot reach that commit.
+        """
+        try:
+            async with self._new_http_client(self._context_timeout_seconds) as client:
+                response = await client.post("/workspace/restore", params={"commit": commit})
+        except httpx2.HTTPError as exc:
+            raise AgentUnavailableError(f"Could not restore the workspace on the Agent Runtime: {exc}") from exc
+
+        if response.status_code == HTTPStatus.CONFLICT:
+            raise AgentBusyError(await self._read_error(response))
+        if response.status_code != HTTPStatus.OK:
+            detail = await self._read_error(response)
+            raise AgentUnavailableError(
+                f"The Agent Runtime could not restore the workspace to {commit} ({response.status_code}): {detail}"
+            )
+        return _restore_outcome(response)
+
     async def start_run(
         self,
         *,
@@ -249,9 +290,14 @@ class AgentRuntimeClient:
 
         if response.status_code != HTTPStatus.OK:
             detail = await self._read_error(response)
+            code = _refusal_code(response)
             await response.aclose()
             await client.aclose()
             if response.status_code == HTTPStatus.CONFLICT:
+                # The Runtime refuses a turn for two unrelated reasons and reports both as 409;
+                # only the code tells them apart, and the caller needs to know which it was.
+                if code == WORKSPACE_SAVE_PENDING_CODE:
+                    raise AgentWorkspaceSavePendingError(detail)
                 raise AgentBusyError(detail)
             raise AgentUnavailableError(f"The Agent Runtime refused the run with {response.status_code}: {detail}")
 
@@ -284,8 +330,40 @@ class AgentRuntimeClient:
         except json.JSONDecodeError, UnicodeDecodeError:
             return response.text[:200]
         if isinstance(payload, dict) and "detail" in payload:
-            return str(payload["detail"])
+            detail = payload["detail"]
+            # The Runtime answers some refusals with a structured detail so the caller can branch
+            # on a code; its `message` is the part meant to be read.
+            if isinstance(detail, dict) and "message" in detail:
+                return str(detail["message"])
+            return str(detail)
         return response.text[:200]
+
+
+def _refusal_code(response: httpx2.Response) -> str:
+    """Return the machine-readable code the Runtime tagged a refusal with, if it did.
+
+    Reads an already-buffered body: :meth:`_read_error` is called first and is what reads it.
+    """
+    try:
+        payload = response.json()
+    except json.JSONDecodeError, UnicodeDecodeError:
+        return ""
+    detail = payload.get("detail") if isinstance(payload, dict) else None
+    return str(detail.get("code", "")) if isinstance(detail, dict) else ""
+
+
+def _restore_outcome(response: httpx2.Response) -> str:
+    """Read what the Runtime says it did with a restore request.
+
+    Only ever logged, so an unreadable body degrades to a placeholder rather than turning a
+    restore that did succeed into a failure.
+    """
+    try:
+        payload = response.json()
+    except json.JSONDecodeError, UnicodeDecodeError:
+        return "unknown"
+    outcome = payload.get("outcome") if isinstance(payload, dict) else None
+    return str(outcome) if outcome else "unknown"
 
 
 def _restored_version(response: httpx2.Response) -> int:

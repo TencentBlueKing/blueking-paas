@@ -36,7 +36,7 @@ from django.shortcuts import aget_object_or_404
 from ninja import Field, Path, Router, Schema
 from ninja.errors import HttpError
 
-from app_spark_api.agent.conversations import state
+from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import (
     InvalidStateToken,
@@ -59,6 +59,7 @@ BEARER_PREFIX = "Bearer "
 MESSAGES_SEGMENT = "messages"
 UI_EVENTS_SEGMENT = "ui-events"
 CONTEXT_SEGMENT = "context"
+CHECKPOINT_SEGMENT = "checkpoint"
 
 APPEND_MESSAGES_URL_NAME = "internal-append-messages"
 
@@ -146,6 +147,21 @@ class ContextResponse(Schema):
     context_version: int = Field(description="已归档的上下文版本")
 
 
+class CheckpointRequest(Schema):
+    """一个已经到达远端的提交，以及它配套的会话位置。"""
+
+    commit: str = Field(min_length=7, max_length=64, description="已推送的提交 SHA")
+    tag: str = Field(min_length=1, max_length=255, description="钉住该提交的远端 tag")
+    run_id: str = Field(min_length=1, max_length=64, description="产生这次提交的 run")
+    context_version: int = Field(ge=0, description="和这次提交配套的上下文版本")
+
+
+class CheckpointResponse(Schema):
+    """这个检查点此刻能不能用来恢复。"""
+
+    restorable: bool = Field(description="代码和配套上下文是否都已就位")
+
+
 @router.post(
     f"{{conversation_id}}/state/{MESSAGES_SEGMENT}",
     response=AppendResponse,
@@ -197,6 +213,39 @@ async def put_context(
     except state.ConversationStateError as exc:
         raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc)) from exc
     return ContextResponse(context_version=version)
+
+
+@router.put(
+    f"{{conversation_id}}/state/{CHECKPOINT_SEGMENT}",
+    response=CheckpointResponse,
+    url_name="internal-put-checkpoint",
+    summary="登记一个已推送到远端的可恢复点",
+)
+async def put_checkpoint(
+    request: HttpRequest,
+    payload: CheckpointRequest,
+    conversation_id: UUID = CONVERSATION_ID,
+):
+    """记下 Runtime 刚推上去的那次提交，并回答它现在能不能用来恢复。
+
+    游标不由 Runtime 报，而是在这里就地读当前已存到哪：Runtime 报的是它自己以为推到了哪，一旦
+    某个批次其实没落库，恢复就会从一个并不存在的位置继续。这里读到的是真的存下来的。
+
+    ``restorable`` 为 false 不是错误，是「代码到了、上下文还没到」这个正常的中间态。Runtime 之后
+    重报同一个检查点即可，不需要——也不应该——再做一次提交。
+    """
+    conversation = await _authorized_conversation(request, conversation_id)
+    restorable = await checkpoints.arecord(
+        conversation_id,
+        run_id=payload.run_id,
+        commit=payload.commit,
+        tag=payload.tag,
+        context_version=payload.context_version,
+        log_seq=await state.alast_seq(conversation_id, state.MESSAGE_CHANNEL),
+        ui_event_seq=await state.alast_seq(conversation_id, state.UI_EVENT_CHANNEL),
+        state_epoch=conversation.state_epoch,
+    )
+    return CheckpointResponse(restorable=restorable)
 
 
 async def _append(

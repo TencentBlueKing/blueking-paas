@@ -29,6 +29,7 @@ from app_spark_api.agent.runtime import (
     AgentBusyError,
     AgentRuntimeError,
     AgentWorkspaceBusyError,
+    AgentWorkspaceSavePendingError,
 )
 from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.infras.accounts.api import router as accounts_router
@@ -104,6 +105,15 @@ def handle_agent_runtime_error(request: HttpRequest, exc: AgentRuntimeError) -> 
         return api.create_response(
             request,
             {"detail": "Another conversation already has a running Agent on this project."},
+            status=HTTPStatus.CONFLICT,
+        )
+    if isinstance(exc, AgentWorkspaceSavePendingError):
+        # Says which layer refused and why, because "busy" would send the reader looking for a
+        # run that is not there. The Agent's own escape hatch is not offered here yet: exposing
+        # "continue without saving this turn" is a product decision, not an error-handling one.
+        return api.create_response(
+            request,
+            {"detail": "The previous turn's files have not been saved to this project's repository yet."},
             status=HTTPStatus.CONFLICT,
         )
 

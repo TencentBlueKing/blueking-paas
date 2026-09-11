@@ -32,6 +32,7 @@ from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
     EventPage,
+    GitRemote,
     LocalProcessConfig,
     RuntimeHealth,
     StateCallback,
@@ -43,6 +44,7 @@ from app_spark_api.agent.runtime.exceptions import (
     AgentRuntimeError,
     AgentUnavailableError,
     AgentWorkspaceBusyError,
+    AgentWorkspaceSavePendingError,
 )
 from app_spark_api.agent.runtime.factory import (
     get_agent_runtime_provider,
@@ -62,7 +64,9 @@ __all__ = [
     "AgentRuntimeProviderType",
     "AgentUnavailableError",
     "AgentWorkspaceBusyError",
+    "AgentWorkspaceSavePendingError",
     "EventPage",
+    "GitRemote",
     "LocalProcessConfig",
     "RuntimeHealth",
     "StateCallback",

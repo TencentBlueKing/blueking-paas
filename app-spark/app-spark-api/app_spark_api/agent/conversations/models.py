@@ -23,7 +23,6 @@ from django.db import models, transaction
 from django.db.models import F
 
 from app_spark_api.agent.conversations.state_models import (
-    ConversationContextSnapshot,
     ConversationMessage,
     ConversationUiEvent,
 )
@@ -37,7 +36,6 @@ if TYPE_CHECKING:
 # 它们通过字符串引用 Conversation，因此这个方向的 import 不会成环。
 __all__ = [
     "Conversation",
-    "ConversationContextSnapshot",
     "ConversationManager",
     "ConversationMessage",
     "ConversationNumber",

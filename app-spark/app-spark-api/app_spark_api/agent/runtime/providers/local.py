@@ -36,7 +36,12 @@ from pathlib import Path
 
 import httpx2
 
-from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, LocalProcessConfig, StateCallback
+from app_spark_api.agent.runtime.entities import (
+    AgentRuntimeHandle,
+    GitRemote,
+    LocalProcessConfig,
+    StateCallback,
+)
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 from app_spark_api.utils.urls import to_path_info
@@ -136,6 +141,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         project_id: str,
         conversation_id: str,
         state_callback: StateCallback | None = None,
+        git_remote: GitRemote | None = None,
     ) -> AgentRuntimeHandle:
         async with self._lock:
             existing = self._runtimes.get(conversation_id)
@@ -154,9 +160,11 @@ class LocalProcessProvider(AgentRuntimeProvider):
             self._reject_workspace_conflict(conversation_id, workspace_dir)
             runtime = await self._spawn(
                 conversation_id=conversation_id,
+                project_id=project_id,
                 workspace_dir=workspace_dir,
                 state_dir=self.state_dir(conversation_id),
                 state_callback=state_callback,
+                git_remote=git_remote,
             )
             self._runtimes[conversation_id] = runtime
             return runtime.handle
@@ -206,9 +214,11 @@ class LocalProcessProvider(AgentRuntimeProvider):
         self,
         *,
         conversation_id: str,
+        project_id: str,
         workspace_dir: Path,
         state_dir: Path,
         state_callback: StateCallback | None,
+        git_remote: GitRemote | None,
     ) -> _LocalRuntime:
         """Start one Runtime and return it once it answers ``/health``."""
         port = _free_port()
@@ -221,11 +231,13 @@ class LocalProcessProvider(AgentRuntimeProvider):
         process = await asyncio.to_thread(
             self._start_process,
             port=port,
+            project_id=project_id,
             workspace_dir=workspace_dir,
             state_dir=state_dir,
             log_path=log_path,
             runtime_token=runtime_token,
             state_callback=state_callback,
+            git_remote=git_remote,
         )
 
         _spawned.append(process)
@@ -253,11 +265,13 @@ class LocalProcessProvider(AgentRuntimeProvider):
         self,
         *,
         port: int,
+        project_id: str,
         workspace_dir: Path,
         state_dir: Path,
         log_path: Path,
         runtime_token: str,
         state_callback: StateCallback | None,
+        git_remote: GitRemote | None,
     ) -> subprocess.Popen[bytes]:
         """Prepare the directories and fork the Runtime.
 
@@ -299,10 +313,12 @@ class LocalProcessProvider(AgentRuntimeProvider):
                     stdout=log_handle,
                     stderr=subprocess.STDOUT,
                     env=self._build_env(
+                        project_id=project_id,
                         workspace_dir=workspace_dir,
                         state_dir=state_dir,
                         runtime_token=runtime_token,
                         state_callback=state_callback,
+                        git_remote=git_remote,
                     ),
                 )
             except OSError as exc:
@@ -311,10 +327,12 @@ class LocalProcessProvider(AgentRuntimeProvider):
     def _build_env(
         self,
         *,
+        project_id: str,
         workspace_dir: Path,
         state_dir: Path,
         runtime_token: str,
         state_callback: StateCallback | None,
+        git_remote: GitRemote | None,
     ) -> dict[str, str]:
         """Build the child's environment from this service's own plus the agent's settings."""
         # Provider-owned values are applied after `extra_env`: callers may extend the Runtime's
@@ -325,6 +343,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
             f"{ENV_PREFIX}WORKSPACE": str(workspace_dir),
             f"{ENV_PREFIX}STATE_DIR": str(state_dir),
             f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
+            f"{ENV_PREFIX}PROJECT_ID": project_id,
         }
         if state_callback is not None:
             # An address already scoped to one conversation, plus a token that authorizes only
@@ -337,6 +356,13 @@ class LocalProcessProvider(AgentRuntimeProvider):
                 f"{self.config.callback_base_url.rstrip('/')}{to_path_info(state_callback.path)}"
             )
             env[f"{ENV_PREFIX}CONTROL_PLANE_TOKEN"] = state_callback.token
+        if git_remote is not None:
+            # Absent these the Runtime keeps its workspace on local disk and says so on
+            # `/health`; it does not quietly behave as though the files were being saved.
+            env[f"{ENV_PREFIX}GIT_REMOTE_URL"] = git_remote.clone_url
+            env[f"{ENV_PREFIX}GIT_BRANCH"] = git_remote.branch
+            env[f"{ENV_PREFIX}GIT_USERNAME"] = git_remote.username
+            env[f"{ENV_PREFIX}GIT_TOKEN"] = git_remote.token
         if self.config.model is not None:
             env[f"{ENV_PREFIX}MODEL"] = self.config.model
         if self.config.model_api_key is not None:

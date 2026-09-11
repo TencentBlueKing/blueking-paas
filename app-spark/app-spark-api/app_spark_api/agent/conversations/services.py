@@ -34,17 +34,20 @@ from asgiref.sync import sync_to_async
 from django.db.models import F
 from django.utils import timezone
 
-from app_spark_api.agent.conversations import state
+from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
+    AgentUnavailableError,
     EventPage,
+    GitRemote,
     StateCallback,
     get_agent_runtime_provider,
 )
+from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
 if TYPE_CHECKING:
@@ -53,6 +56,7 @@ if TYPE_CHECKING:
 
     from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
     from app_spark_api.core.projects.models import Project
+    from app_spark_api.repository.git.models import ProjectGitRepository
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +153,7 @@ async def open_client(conversation: Conversation) -> AgentRuntimeClient:
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
     :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
     """
-    await arequire_project_git_ready(conversation.project_id)
+    repo = await arequire_project_git_ready(conversation.project_id)
     provider = get_agent_runtime_provider()
     # `project_id` rather than `project`, so this never lazily loads the related row -- an
     # implicit query here would be a synchronous one in an async view.
@@ -157,8 +161,30 @@ async def open_client(conversation: Conversation) -> AgentRuntimeClient:
         project_id=conversation.project_id,
         conversation_id=str(conversation.id),
         state_callback=_state_callback(conversation),
+        git_remote=await sync_to_async(_git_remote)(repo),
     )
     return AgentRuntimeClient(handle)
+
+
+def _git_remote(repo: ProjectGitRepository) -> GitRemote:
+    """Describe the Project's repository for the Runtime that will write to it.
+
+    The clone URL is the one recorded at provisioning time, which is the host as the *sandbox*
+    sees it rather than as this process does. The two are the same only while everything runs on
+    one machine, and the moment they are not, using this process's own address would point every
+    Runtime at itself.
+
+    Wrapped in ``sync_to_async`` by the caller because reading ``write_token`` decrypts it, and
+    ``EncryptField`` is not safe to touch from the event loop.
+    """
+    # `require_project_git_ready` refuses anything without a token, so this cannot be None here.
+    assert repo.write_token is not None
+    return GitRemote(
+        clone_url=repo.clone_url,
+        branch=repo.default_branch,
+        username=get_repo_server_config().service_account,
+        token=repo.write_token,
+    )
 
 
 async def terminate_runtime(conversation: Conversation) -> None:
@@ -321,15 +347,29 @@ async def _resume_if_cold(
     Either alone would be ambiguous, and injecting into a Runtime that already holds a
     conversation would be destroying one.
 
+    Files come back before the conversation does. In between the two, the Runtime is a process
+    that remembers writing code which is not on disk yet, and a run arriving in that window
+    would have the model act on the mismatch. Nothing accepts runs until both are done, which
+    is what the caller's ordering gives us for free.
+
     :return: The health to start the run against, unchanged when there was nothing to resume.
+    :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
     if health.conversation_id is not None or health.context_version != 0:
         return health
 
-    document = await state.aload_context(conversation.id)
+    document = await _restore_files(conversation, client)
+    if document is None:
+        document = await state.aload_context(conversation.id)
     if document is None:
         return health
 
+    # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
+    # its commit reached the remote, which is before that turn's events have finished being
+    # replicated here -- and seeding a Runtime below the real cursor makes it number its first
+    # entry over one that already exists, where the ingest's own idempotency silently drops it.
+    # The channels are append-only and nothing truncates them, so "where we are now" is always
+    # the right place for the next entry to go.
     log_seq = await state.alast_seq(conversation.id, state.MESSAGE_CHANNEL)
     ui_event_seq = await state.alast_seq(conversation.id, state.UI_EVENT_CHANNEL)
     restored_version = await client.restore_context(
@@ -347,6 +387,56 @@ async def _resume_if_cold(
         ui_event_seq,
     )
     return attrs.evolve(health, context_version=restored_version)
+
+
+async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
+    """Put the workspace back to this conversation's checkpoint, and return its paired context.
+
+    ``None`` means there was no checkpoint to restore from and the files were left alone, which
+    covers both "this Project has no repository" and "the last turn only got half-way saved".
+    Neither is an error: a half-saved turn is not a restore point, and continuing from a slightly
+    older place beats continuing with files and memory that disagree.
+
+    :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
+    """
+    checkpoint = await checkpoints.alatest_restorable(conversation.id)
+    if checkpoint is None:
+        return None
+
+    # A checkpoint the conversation has already moved past is not usable, even though both its
+    # halves are here. Seeding the Runtime with an older version would have it re-issue version
+    # numbers this service has already archived, and `save_context` refuses to go backwards --
+    # so every turn from then on would be silently dropped. This happens only when a later turn
+    # took the "continue without saving" escape hatch, and in that case the branch tip is this
+    # checkpoint's commit anyway, so leaving the files alone lands in the same place.
+    newest = await state.acontext_version(conversation.id)
+    if checkpoint.context_version != newest:
+        logger.warning(
+            "Conversation %s has a checkpoint at context version %d but has since archived "
+            "version %d, so its files are being left as they are",
+            conversation.id,
+            checkpoint.context_version,
+            newest,
+        )
+        return None
+
+    outcome = await client.restore_workspace(checkpoint.commit)
+    document = await state.aload_context_version(conversation.id, checkpoint.context_version)
+    if document is None:
+        # The checkpoint was found *because* its version row exists, so failing to read the
+        # document means the row and the blob disagree. Carrying on would pair files we have
+        # just restored with a context from somewhere else, so this fails out loud.
+        raise AgentUnavailableError(
+            f"The checkpoint at {checkpoint.commit} names context version "
+            f"{checkpoint.context_version}, which is no longer readable."
+        )
+    logger.info(
+        "Conversation %s restored its workspace to checkpoint %s (%s)",
+        conversation.id,
+        checkpoint.commit,
+        outcome,
+    )
+    return document
 
 
 def _state_callback(conversation: Conversation) -> StateCallback:

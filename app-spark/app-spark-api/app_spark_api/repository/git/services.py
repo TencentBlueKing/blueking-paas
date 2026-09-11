@@ -162,9 +162,9 @@ def require_project_git_ready(project_id: str) -> ProjectGitRepository:
     return repo
 
 
-async def arequire_project_git_ready(project_id: str) -> None:
+async def arequire_project_git_ready(project_id: str) -> ProjectGitRepository:
     """Async wrapper for :func:`require_project_git_ready`."""
-    await sync_to_async(require_project_git_ready)(project_id)
+    return await sync_to_async(require_project_git_ready)(project_id)
 
 
 async def aprovision_project_repository(project: Project) -> ProjectGitRepository:

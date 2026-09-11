@@ -294,6 +294,18 @@ AGENT_CONTEXT_STORAGE = settings.get(
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
 )
 
+## 除被检查点引用的版本外，一个会话还额外保留多少个最近的上下文版本。每一版单独存一份 blob，
+## 检查点才够得到「和它的提交配套的那一版」；代价是版本会累积，所以保留策略是硬性配套的。
+## 给的是「回收得不那么激进」的余量：正在进行的一轮可能已经推了新上下文但检查点还没到。
+## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
+AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
+
+## 一个会话保留多少个最近的检查点。检查点行本身很小，真正的成本在它钉住的上下文版本——每个
+## 检查点都让一份 blob 不能被回收，所以不限量的检查点等于不限量的 blob。
+## 3 是余量而不是刚好够用：实际能被用上的只有「和最新上下文版本配套」的那一个（见
+## services._restore_files），多留两个是为了容忍上报与归档之间的乱序。
+AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
+
 ## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走的是普通 JSON 请求体，而一份
 ## context 的压缩预算是 480,000 token（见 agent 侧 COMPACTION_TARGET_TOKENS），序列化之后远超
 ## Django 默认的 2.5MB。

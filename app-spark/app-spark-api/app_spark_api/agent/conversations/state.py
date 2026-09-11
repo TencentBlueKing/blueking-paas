@@ -41,19 +41,24 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils.dateparse import parse_datetime
 
+from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations.context_storage import blob_location
 
 # `models` imports `state_models`, never this module, so this direction cannot cycle.
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.state_models import (
-    ConversationContextSnapshot,
+    ConversationCheckpoint,
+    ConversationContextVersion,
     ConversationMessage,
     ConversationUiEvent,
 )
+from app_spark_api.repository.storage.blob_stores import make_blob_store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from datetime import datetime
+
+    from app_spark_api.repository.storage.blob_stores import BlobStore
 
 # Union rather than the shared abstract base: only the concrete models have a manager and a
 # `conversation` field, so this is the type that lets a query be written once for both.
@@ -171,16 +176,18 @@ def save_context(conversation_id: Any, payload: dict[str, Any]) -> int:
 
     Last-write-wins by version, and a version at or below the stored one is a no-op rather than
     a refusal: the Runtime may retry a push whose acknowledgement was lost, and there is nothing
-    wrong with that.
+    wrong with that. Skipping it also matters for more than bandwidth -- re-archiving a version
+    that retention has already taken away would put the row and its blob back for good.
 
     The blob is written before the row, never the other way round. A row naming a version whose
     document never arrived would send a cold start off to restore something that is not there,
     whereas a document with no row pointing at it is simply retried and overwritten.
 
-    Both the version check and the blob write happen under the row's lock. Every version of a
-    conversation's context shares one blob key, so an unlocked write is exactly what lets a
-    slower writer carrying an older document land on top of a newer one -- and then walk the
-    row's version back to match it, which is the one outcome a cold start cannot detect.
+    Deliberately unlocked, and deliberately not in a transaction: each version owns its key and
+    its row, so there is no single mutable pointer for a slow writer to walk backwards. Two
+    writers landing at once each archive their own version, and "the newest" is whichever of
+    them turns out to be higher -- which is what :func:`context_version` reads. That is also
+    what keeps a multi-megabyte upload to a remote blob store out of any database transaction.
 
     :param conversation_id: Conversation the context belongs to.
     :param payload: Context document as ``ConversationContext.as_payload`` produced it.
@@ -191,42 +198,85 @@ def save_context(conversation_id: Any, payload: dict[str, Any]) -> int:
     if isinstance(version, bool) or not isinstance(version, int) or version < 0:
         raise ConversationStateError("the context document has no non-negative context_version")
 
-    backend, config = blob_location(conversation_id)
-    with transaction.atomic():
-        snapshot = _locked_snapshot(conversation_id, backend, config)
-        # Re-read under the lock: whoever held it before us may have archived a newer version
-        # while this call was waiting, and that one must not be walked back.
-        if version <= snapshot.context_version:
-            return snapshot.context_version
+    archived = context_version(conversation_id)
+    if version <= archived:
+        return archived
 
-        snapshot.get_blob_store().put_bytes(json.dumps(payload).encode())
-        snapshot.context_version = version
-        snapshot.save(update_fields=["context_version", "updated"])
-        return version
+    backend, config = blob_location(conversation_id, version)
+    make_blob_store(backend, config).put_bytes(json.dumps(payload).encode())
+    # `update_or_create` settles a re-push of the same version against the unique constraint
+    # rather than raising, which is what makes this safe without a lock of its own.
+    ConversationContextVersion.objects.update_or_create(
+        conversation_id=conversation_id,
+        context_version=version,
+        defaults={"backend": backend, "config": config},
+    )
+
+    # Archiving a version is what makes older ones reclaimable, so this is the moment to look.
+    checkpoints.reclaim_quietly(conversation_id)
+    return version
 
 
 def context_version(conversation_id: Any) -> int:
-    """Return the archived context version, or ``0`` when nothing has been archived yet.
+    """Return the newest archived context version, or ``0`` when nothing has been archived yet.
+
+    The highest version still held, not a stored pointer to it. Retention never takes the newest
+    one away (see :func:`~app_spark_api.agent.conversations.checkpoints.versions_kept`), so this
+    only ever moves forwards.
 
     :param conversation_id: Conversation to look at.
     :return: The version a cold start would resume from.
     """
-    snapshot = ConversationContextSnapshot.objects.filter(conversation_id=conversation_id).first()
-    return 0 if snapshot is None else snapshot.context_version
+    highest = ConversationContextVersion.objects.filter(conversation_id=conversation_id).aggregate(
+        Max("context_version")
+    )
+    return highest["context_version__max"] or 0
 
 
 def load_context(conversation_id: Any) -> dict[str, Any] | None:
-    """Return the archived context document, or ``None`` when there is none.
+    """Return the newest archived context document, or ``None`` when there is none.
+
+    This is the ordinary cold start, the one that has no checkpoint to pair with -- see
+    :func:`load_context_version` for the one that does.
 
     :param conversation_id: Conversation to restore.
     :return: The document a cold Runtime can be seeded with.
     :raises ConversationStateError: If the row exists but its document cannot be read back.
     """
-    snapshot = ConversationContextSnapshot.objects.filter(conversation_id=conversation_id).first()
-    if snapshot is None or snapshot.context_version == 0:
-        return None
+    row = (
+        ConversationContextVersion.objects.filter(conversation_id=conversation_id).order_by("-context_version").first()
+    )
+    return None if row is None else _read_document(row.get_blob_store())
+
+
+def load_context_version(conversation_id: Any, version: int) -> dict[str, Any] | None:
+    """Return one specific archived context version, or ``None`` when it is no longer kept.
+
+    What a checkpoint restore reads. It must be this version and not the newest one: the point
+    of a checkpoint is that the files and the conversation describe the same moment, and the
+    newest context may well have moved on past the commit being restored.
+
+    :param conversation_id: Conversation to restore.
+    :param version: The exact version wanted.
+    :return: The document, or ``None`` if that version has been reclaimed.
+    :raises ConversationStateError: If the row exists but its document cannot be read back.
+    """
+    row = ConversationContextVersion.objects.filter(
+        conversation_id=conversation_id,
+        context_version=version,
+    ).first()
+    return None if row is None else _read_document(row.get_blob_store())
+
+
+def _read_document(store: BlobStore) -> dict[str, Any]:
+    """Read one stored context document back, insisting it is still a JSON object.
+
+    :param store: Where the document sits.
+    :return: The decoded document.
+    :raises ConversationStateError: If it cannot be fetched or is not a JSON object.
+    """
     try:
-        raw = snapshot.get_blob_store().get_bytes()
+        raw = store.get_bytes()
     except OSError as exc:
         raise ConversationStateError(f"the archived context could not be read: {exc}") from exc
     try:
@@ -254,7 +304,10 @@ def clear(conversation_id: Any) -> None:
     """
     ConversationMessage.objects.filter(conversation_id=conversation_id).delete()
     ConversationUiEvent.objects.filter(conversation_id=conversation_id).delete()
-    ConversationContextSnapshot.objects.filter(conversation_id=conversation_id).delete()
+    # Checkpoints go too: they name context versions that are about to stop existing, and a
+    # checkpoint whose context cannot be read is exactly the half-state cold start must not see.
+    ConversationCheckpoint.objects.filter(conversation_id=conversation_id).delete()
+    ConversationContextVersion.objects.filter(conversation_id=conversation_id).delete()
 
 
 # Async wrappers. Every view that touches this runs on the event loop, and Django's async ORM
@@ -264,6 +317,7 @@ aappend_records = sync_to_async(append_records)
 aread_ui_events = sync_to_async(read_ui_events)
 asave_context = sync_to_async(save_context)
 aload_context = sync_to_async(load_context)
+aload_context_version = sync_to_async(load_context_version)
 alast_seq = sync_to_async(last_seq)
 acontext_version = sync_to_async(context_version)
 
@@ -284,34 +338,6 @@ def _lock_conversation(conversation_id: Any) -> None:
     locked = Conversation.objects.select_for_update().filter(id=conversation_id).values_list("pk", flat=True).first()
     if locked is None:
         raise ConversationStateError(f"conversation {conversation_id} no longer exists")
-
-
-def _locked_snapshot(
-    conversation_id: Any,
-    backend: str,
-    config: dict[str, Any],
-) -> ConversationContextSnapshot:
-    """Return this conversation's context row with its lock held, creating it when missing.
-
-    Created in a separate statement first, because a row that does not exist yet cannot be
-    locked. Two writers racing to create it are settled by the primary key, and both then
-    contend for the same lock on the survivor.
-
-    Deliberately a different row from the one :func:`_lock_conversation` takes. The context is
-    one row that already exists to be locked, so it needs no stand-in -- and keeping the two
-    apart means a multi-megabyte blob upload cannot stall the channel appends of a run in
-    progress. Neither path takes both locks, so there is no order for them to disagree on.
-
-    :param conversation_id: Conversation whose context row is wanted.
-    :param backend: Blob backend to record on a freshly created row.
-    :param config: Blob backend configuration to record on a freshly created row.
-    :return: The locked row. Must be called inside a transaction.
-    """
-    ConversationContextSnapshot.objects.get_or_create(
-        conversation_id=conversation_id,
-        defaults={"backend": backend, "config": config},
-    )
-    return ConversationContextSnapshot.objects.select_for_update().get(conversation_id=conversation_id)
 
 
 def _structure_record(

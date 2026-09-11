@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import abc
 import io
+import logging
 import os
 import shutil
 import tempfile
@@ -37,7 +38,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO
 
-from blue_krill.storages.blobstore.bkrepo import BKGenericRepo
+from blue_krill.storages.blobstore.bkrepo import BKGenericRepo, RequestError
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -53,6 +54,8 @@ if TYPE_CHECKING:
     from os import PathLike
 
     StrPath = str | PathLike[str]
+
+logger = logging.getLogger(__name__)
 
 
 class BlobStore(abc.ABC):
@@ -76,6 +79,15 @@ class BlobStore(abc.ABC):
         """Write the blob into ``handle``.
 
         :param handle: Writable binary stream.
+        """
+
+    @abc.abstractmethod
+    def delete(self) -> None:
+        """Remove the blob, succeeding if it is already gone.
+
+        Idempotent by contract, because the only caller is reclamation: it runs after the row
+        that pointed here has been dropped, may be retried, and must never fail a request just
+        because a previous attempt got further than its bookkeeping recorded.
         """
 
     def put(self, path: StrPath) -> None:
@@ -141,6 +153,9 @@ class HostTmpPath(BlobStore):
         with self.path.open("rb") as stored:
             shutil.copyfileobj(stored, handle)
 
+    def delete(self) -> None:
+        self.path.unlink(missing_ok=True)
+
 
 class BkRepo(BlobStore):
     """Keep a blob in a BlueKing generic artifact repository.
@@ -173,6 +188,17 @@ class BkRepo(BlobStore):
 
     def download(self, handle: BinaryIO) -> None:
         self.client.download_fileobj(key=self.key, fh=handle)
+
+    def delete(self) -> None:
+        # BkRepo reports "no such object" as an ordinary non-zero code, which `blue_krill` turns
+        # into `RequestError` -- the same exception it uses for a genuine failure. Since the two
+        # cannot be told apart from here and reclamation must be idempotent, this logs and moves
+        # on: an orphaned blob costs storage, whereas raising would fail a request over a blob
+        # nobody needs.
+        try:
+            self.client.delete_file(key=self.key)
+        except RequestError:
+            logger.warning("Could not delete the blob at %s; it may already be gone", self.key)
 
 
 def make_blob_store(backend: str, config: object) -> BlobStore:

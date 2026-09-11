@@ -36,6 +36,7 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
+import subprocess
 import time
 from collections.abc import AsyncIterator
 from http import HTTPStatus
@@ -44,16 +45,19 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.repository.git.services import provision_project_repository
+from tests.infras.forgejo.fake import ORG, repo_server_config
 
 if TYPE_CHECKING:
     from django.http import StreamingHttpResponse
     from django.test import AsyncClient
 
+    from app_spark_api.agent.conversations.state_models import ConversationCheckpoint
     from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -78,7 +82,30 @@ REPLICATION_POLL_INTERVAL_SECONDS = 0.05
 
 
 @pytest.fixture
-def project(bk_user) -> Project:
+def git_remote_root(settings, fake_forgejo, tmp_path) -> Path:
+    """Give the spawned Runtimes a Git remote that really exists.
+
+    The shared fake Forgejo answers the provisioning API calls, but the ``clone_url`` it is
+    configured with points nowhere -- which is right for tests that never start an Agent, and
+    wrong for these. A Runtime here clones and pushes for real, so without a real repository
+    behind the URL these tests would be asserting on a feature that could not work.
+
+    A bare repository on disk is enough: what a local remote cannot reproduce is authentication
+    and transport, and those are covered by the agent's own live-Forgejo tests.
+    """
+    root = tmp_path / "remotes"
+    (root / ORG).mkdir(parents=True)
+    subprocess.run(
+        ["git", "init", "--bare", "--initial-branch", "main", str(root / ORG / f"{PROJECT_ID}.git")],  # noqa: S607
+        check=True,
+        capture_output=True,
+    )
+    settings.REPO_SERVER = repo_server_config(clone_url=str(root))
+    return root
+
+
+@pytest.fixture
+def project(bk_user, git_remote_root) -> Project:
     """A Project the logged-in user's tenant can reach.
 
     Deliberately not the shared ``project`` fixture: that one is created under the user's own
@@ -92,6 +119,8 @@ def project(bk_user) -> Project:
         owner=bk_user,
         tenant_id=get_tenant(bk_user).id,
     )
+    # Records the clone URL from `git_remote_root`, so the Runtime is pointed at the bare
+    # repository that fixture created.
     provision_project_repository(project)
     return project
 
@@ -256,6 +285,24 @@ async def wait_for_replication(
         await asyncio.sleep(REPLICATION_POLL_INTERVAL_SECONDS)
 
 
+async def wait_for_checkpoint(conversation_id: str) -> ConversationCheckpoint:
+    """Wait until the last turn is both pushed to the repository and paired with its context.
+
+    A separate wait from :func:`wait_for_replication`, and deliberately so: the push runs behind
+    the run's own barrier precisely so that a network round trip cannot hold up an answer to the
+    user. "The turn is stored here" and "the turn is on the remote" are two different moments,
+    and a restore needs the second one.
+    """
+    deadline = time.monotonic() + REPLICATION_TIMEOUT_SECONDS
+    while True:
+        checkpoint = await checkpoints.alatest_restorable(conversation_id)
+        if checkpoint is not None:
+            return checkpoint
+        if time.monotonic() >= deadline:
+            pytest.fail(f"No restorable checkpoint appeared within {REPLICATION_TIMEOUT_SECONDS}s")
+        await asyncio.sleep(REPLICATION_POLL_INTERVAL_SECONDS)
+
+
 # --- The tests ---------------------------------------------------------------------------
 
 
@@ -395,6 +442,44 @@ async def test_a_conversation_outlives_the_runtime_that_held_it(
     page = await read_ui_events(aapi_client, number)
     assert [record["seq"] for record in page["records"]] == list(range(1, after["ui_event_seq"] + 1))
     assert after["ui_event_seq"] > first["ui_event_seq"]
+
+
+async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(
+    aapi_client,
+    project,
+    agent,
+    workspace_root,
+):
+    """The whole point of persisting to Git: the files outlive the machine they were written on.
+
+    Everything the Runtime had is destroyed -- the process, its state directory, *and* the
+    workspace itself. What comes back has to come back from two places at once: the files from
+    the repository, the conversation from this service. Asserting on both together is what
+    distinguishes a real restore from a Runtime that merely re-ran the first turn.
+    """
+    state = await create_conversation(aapi_client)
+    number, conversation_id = state["number"], state["conversation_id"]
+    await run_turn(aapi_client, number, "write my first note")
+    first = await wait_for_replication(aapi_client, number)
+    checkpoint = await wait_for_checkpoint(conversation_id)
+
+    workspace = workspace_root / PROJECT_ID
+    original = (workspace / FIRST_NOTE).read_text()
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace)
+
+    await run_turn(aapi_client, number, "write my second note")
+
+    # The first turn's file is back, byte for byte, from a commit the checkpoint pinned.
+    assert (workspace / FIRST_NOTE).read_text() == original
+    # And the second turn continued the conversation rather than restarting it, which is what
+    # says the context came back paired with those files rather than instead of them.
+    assert (workspace / SECOND_NOTE).exists()
+
+    after = await wait_for_replication(aapi_client, number, after=first)
+    assert after["context_version"] > checkpoint.context_version
 
 
 async def test_a_turn_is_refused_while_another_is_still_running(

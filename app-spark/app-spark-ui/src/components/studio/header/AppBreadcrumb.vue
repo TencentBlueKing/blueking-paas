@@ -1,4 +1,5 @@
 <template>
+  <!-- TODO: Studio 占位面包屑，待接入真实项目名 -->
   <bk-breadcrumb class="app-breadcrumb" separator="/">
     <bk-breadcrumb-item :to="{ name: 'home' }">我的应用</bk-breadcrumb-item>
     <bk-breadcrumb-item>新品预约活动页</bk-breadcrumb-item>

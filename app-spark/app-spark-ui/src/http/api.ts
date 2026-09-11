@@ -1,4 +1,4 @@
-import http from './fetch';
+import http, { resolveApiUrl } from './fetch';
 import RequestError from './fetch/request-error';
 import type {
   AuthenticatedUserResponse,
@@ -35,19 +35,8 @@ export type {
   UserInfoResponse,
 } from './types';
 
-const API_PATH = '/api-svc/api';
-
-const getApiPrefix = () => {
-  const raw = (typeof window !== 'undefined' && window.BK_API_URL) || process.env.BK_API_URL || '';
-  const base = String(raw).trim().replace(/\/$/, '');
-  // 绝对地址只作为本地代理目标，页面始终打同源 /api-svc，避免跨域
-  if (!base || /^https?:\/\//.test(base)) {
-    return API_PATH;
-  }
-  return `${base}${API_PATH}`;
-};
-
-const apiPrefix = getApiPrefix();
+// 业务 API 前缀，不含 SITE_URL。绝对 BK_API_URL 只给本地 webpack 代理用
+const apiPrefix = '/api-svc/api';
 
 export const getUserInfo = (): Promise<AuthenticatedUserResponse> => (
   http.get(`${apiPrefix}/accounts/userinfo/`, {}, { globalError: false })
@@ -93,14 +82,6 @@ export const listUiEvents = (
 ): Promise<UiEventPageResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query)
 );
-
-const resolveApiUrl = (path: string) => {
-  if (/^https?:\/\//.test(path)) return path;
-  const site = String(window.SITE_URL || '').replace(/\/$/, '');
-  const ajax = String(process.env.BK_AJAX_URL_PREFIX || '').replace(/\/$/, '');
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${location.origin}${site}${ajax}${normalized}`;
-};
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */
 export const startConversationRun = async (

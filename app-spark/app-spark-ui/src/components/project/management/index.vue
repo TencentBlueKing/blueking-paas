@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+// TODO: 待接入版本 API，当前为占位数据
 import { ref } from 'vue';
 import DataPanel from './DataPanel.vue';
 import VersionTimeline from './VersionTimeline.vue';

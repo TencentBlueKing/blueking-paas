@@ -1,3 +1,4 @@
+<!-- /studio mock 实验面，组件约定见 src/components/studio/README.md -->
 <template>
   <StudioLayout>
     <InteractionPanel />

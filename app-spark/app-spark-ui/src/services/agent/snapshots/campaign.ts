@@ -1,3 +1,4 @@
+// TODO: Studio mock 活动页快照，待接入真实生成后再移除
 export interface CampaignOptions {
   ctaStrong?: boolean;
   countdown?: boolean;

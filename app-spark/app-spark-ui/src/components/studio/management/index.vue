@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+// TODO: Studio 占位版本列表，待接入真实版本 API
 import { ref } from 'vue';
 import DataPanel from './DataPanel.vue';
 import VersionTimeline from './VersionTimeline.vue';

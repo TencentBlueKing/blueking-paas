@@ -18,10 +18,12 @@ bin 目录下有 2 个钩子文件，可以在项目在开发者中心构建前�
 前端框架提供了 mock 服务，可以在 mock-server 编写 mock 服务。
 
 ### paas-server 目录
-该目录使用 express 启动 web 服务。在开发者中心部署后，会使用 paas-server 启动 web 服务。该服务会处理统一登录的逻辑，详见 paas-server -> middleware -> user.js 文件
+该目录使用 express 启动 web 服务。在开发者中心部署后，会使用 paas-server 启动 web 服务。登录态由后端 `/api-svc/api/accounts/userinfo/` 处理。
 
 ### src 目录
-该目录编写 vue 相关代码，包含了 vue、vue-router、vue-store、pinia、api 等能力，详细编写语法可以参阅官方文档
+该目录编写 vue 相关代码，包含了 vue、vue-router、vue-store、pinia、api 等能力，详细编写语法可以参阅官方文档。
+
+`src/components/project/` 是真实项目工作室。`src/components/studio/` 是 `/studio` 的 mock 实验面，和 project 的重复是有意保留的副本，删除前不要抽公共层。说明见该目录 [README](src/components/studio/README.md)。
 
 ### static 目录
 如果项目中有些资源不参与打包构建，可以放到这个文件下。在项目中使用该文件的时候，使用 `/文件名` 这样的形式。

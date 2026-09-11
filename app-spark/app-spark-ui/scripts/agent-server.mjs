@@ -90,13 +90,38 @@ const appendAssistantText = (state, text, res) => {
     if (extra) writeSse(res, { type: 'delta', text: extra });
     return;
   }
-  if (state.text.includes(text)) return;
   state.text += text;
   writeSse(res, { type: 'delta', text });
 };
 
-const setCors = (res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+// 额外 Origin 只从本机环境读，不要把公司域名写进仓库。
+// 例：.env.local 里 AGENT_CORS_ORIGINS=http://127.0.0.1:5002
+const extraCorsOrigins = new Set(
+  String(process.env.AGENT_CORS_ORIGINS || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean),
+);
+
+// 允许 localhost、回环、以及 hosts 里指向本机的 localhost.*（本地 cookie 域常用）
+const isLocalDevOrigin = (origin = '') => {
+  if (extraCorsOrigins.has(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '::1'
+      || hostname.endsWith('.localhost')
+      || hostname.startsWith('localhost.');
+  } catch {
+    return false;
+  }
+};
+
+const setCors = (req, res) => {
+  const origin = req.headers.origin;
+  if (!origin || !isLocalDevOrigin(origin)) return;
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 };
@@ -122,17 +147,16 @@ const handleChat = async (req, res) => {
   }
 
   sending = true;
-  setCors(res);
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-
-  const assistant = { text: '' };
-
   try {
+    setCors(req, res);
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const assistant = { text: '' };
     const currentAgent = await getAgent();
     const prompt = `${SYSTEM_PROMPT}\n\n${images.length ? `${IMAGE_PROMPT}\n\n` : ''}用户需求：\n${message}`;
     const run = await currentAgent.send(images.length ? { text: prompt, images } : prompt, {
@@ -207,7 +231,7 @@ const handleChat = async (req, res) => {
 };
 
 const server = http.createServer((req, res) => {
-  setCors(res);
+  setCors(req, res);
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();

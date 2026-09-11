@@ -1,3 +1,4 @@
+// TODO: Studio 本地 mock Agent，仅 /studio 使用
 import { buildCampaignHtml } from './snapshots/campaign';
 import type { AgentEvent } from './types';
 

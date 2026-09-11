@@ -5,7 +5,7 @@ import RequestError from './request-error';
 
 export interface IFetchConfig extends RequestInit {
   responseType?: 'json' | 'text' | 'arrayBuffer' | 'blob' | 'formData',
-  globalError?: Boolean
+  globalError?: boolean
 }
 
 type HttpMethod = (url: string, payload?: any, config?: IFetchConfig) => Promise<any>;
@@ -50,22 +50,25 @@ const getFetchConfig = (method: string, payload: any, config: IFetchConfig) => {
     },
     config,
   );
-  // merge payload
   if (methodsWithData.includes(method)) {
     fetchConfig = deepMerge(fetchConfig, { body: JSON.stringify(payload) });
-  } else {
-    fetchConfig = deepMerge(fetchConfig, payload);
   }
   return fetchConfig;
+};
+
+/** 同源 API 地址：origin + SITE_URL + 业务 path，避免调用方二次拼接站点前缀 */
+export const resolveApiUrl = (path: string) => {
+  if (/^https?:\/\//.test(path)) return path;
+  const site = String(window.SITE_URL || '').replace(/\/$/, '');
+  const ajax = String(process.env.BK_AJAX_URL_PREFIX || '').replace(/\/$/, '');
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${location.origin}${site}${ajax}${normalized}`;
 };
 
 // 拼装发送请求 url
 const getFetchUrl = (url: string, method: string, payload = {}) => {
   try {
-    // 基础 url
-    const baseUrl = location.origin + window.SITE_URL + process.env.BK_AJAX_URL_PREFIX;
-    // 构造 url 对象
-    const urlObject: URL = new URL(url, baseUrl);
+    const urlObject: URL = new URL(resolveApiUrl(url));
     // get 请求需要将参数拼接到url上
     if (methodsWithoutData.includes(method)) {
       Object.keys(payload).forEach((key) => {

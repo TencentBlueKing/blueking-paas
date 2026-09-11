@@ -74,11 +74,13 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.byId = new Map();
   };
 
-  const applyResult = (
-    result: ReturnType<typeof applyAgUiEvent>,
-    assistant?: ChatMessage,
-  ) => {
+  const latestAssistant = () => (
+    [...applyCtx.messages].reverse().find(item => item.role === 'assistant')
+  );
+
+  const applyResult = (result: ReturnType<typeof applyAgUiEvent>) => {
     if (result.status) status.value = result.status;
+    const assistant = latestAssistant();
     if (assistant && result.progress !== undefined) {
       assistant.progress = result.progress;
     }
@@ -93,33 +95,40 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
+  const advanceUiEventSeq = (seq: number | null | undefined) => {
+    const value = Number(seq);
+    if (Number.isFinite(value) && value > uiEventSeq.value) {
+      uiEventSeq.value = value;
+    }
+  };
+
+  const UI_EVENT_PAGE_LIMIT = 30;
+
   const pullUiEvents = async (ignoreUser = false) => {
     if (!projectId.value || conversationNumber.value == null) return;
     let since = uiEventSeq.value;
-    const assistant = [...messages.value].reverse().find(item => item.role === 'assistant');
 
-    for (let page = 0; page < 30; page++) {
+    for (let page = 0; page < UI_EVENT_PAGE_LIMIT; page++) {
       const data = await listUiEvents(projectId.value, conversationNumber.value, {
         since,
         limit: 200,
       });
+      const records = data.records || [];
       syncApplyCtx();
-      for (const record of data.records || []) {
-        const seq = getRecordSeq(record);
-        applyResult(applyAgUiEvent(applyCtx, record, { ignoreUser }), assistant);
-        if (seq != null && seq > uiEventSeq.value) {
-          uiEventSeq.value = seq;
-        }
+      for (const record of records) {
+        applyResult(applyAgUiEvent(applyCtx, record, { ignoreUser }));
+        advanceUiEventSeq(getRecordSeq(record));
       }
-      if (data.last_seq > uiEventSeq.value) {
-        uiEventSeq.value = data.last_seq;
-      } else if ((data.records || []).length && uiEventSeq.value <= since) {
-        uiEventSeq.value = since + data.records.length;
-      }
-      if (data.exhausted || !(data.records || []).length) break;
-      const lastSeq = getRecordSeq((data.records || []).slice(-1)[0]);
-      const nextSince = lastSeq != null ? lastSeq : data.last_seq;
+      advanceUiEventSeq(data.last_seq);
+
+      if (data.exhausted || !records.length) break;
+      const lastRecordSeq = getRecordSeq(records[records.length - 1]);
+      const nextSince = Math.max(lastRecordSeq ?? 0, Number(data.last_seq) || 0);
       if (nextSince <= since) break;
+      if (page === UI_EVENT_PAGE_LIMIT - 1) {
+        console.warn(`[project] ui-events 已拉取 ${UI_EVENT_PAGE_LIMIT} 页仍未结束，停止追赶`);
+        break;
+      }
       since = nextSince;
     }
 
@@ -252,7 +261,9 @@ export const useProjectStore = defineStore('project', () => {
     });
   };
 
-  const sendMessage = async (text: string, _images: ChatImage[] = []) => {
+  // TODO: 项目对话暂不上传图片，后续再接入
+  const sendMessage = async (text: string, images: ChatImage[] = []) => {
+    void images;
     const content = text.trim();
     if (!content || busy.value || !projectId.value || conversationNumber.value == null || !isLive.value) {
       return;
@@ -280,7 +291,7 @@ export const useProjectStore = defineStore('project', () => {
       );
       for await (const event of readSseEvents(response)) {
         syncApplyCtx();
-        applyResult(applyAgUiEvent(applyCtx, event, { ignoreUser: true }), assistantMessage);
+        applyResult(applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
     } catch (error) {
       const textBlock = assistantMessage.blocks.find(block => block.type === 'text');

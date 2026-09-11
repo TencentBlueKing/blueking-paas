@@ -8,9 +8,7 @@
 const Express = require('express');
 const path = require('path');
 const artTemplate = require('express-art-template');
-const cookieParser = require('cookie-parser');
 const history = require('connect-history-api-fallback');
-const user = require('./middleware/user');
 
 const mockTable = require('./api/table');
 
@@ -20,9 +18,6 @@ const PORT = process.env.PORT || 5000;
 
 /** 仅解决空模版直接部署时，模拟的接口，防止直接部署接口404，实际项目可删除 */
 mockTable(app);
-
-app.use(cookieParser());
-app.use(user);
 
 // 注入全局变量
 const GLOBAL_VAR = {
@@ -79,7 +74,7 @@ app.get('/', (req, res) => {
 });
 
 
-app.use('/static', Express.static(path.join(distDir, '../dist/static')));
+app.use('/static', Express.static(path.join(distDir, 'static')));
 // 配置视图
 app.set('views', path.join(__dirname, '../dist'));
 

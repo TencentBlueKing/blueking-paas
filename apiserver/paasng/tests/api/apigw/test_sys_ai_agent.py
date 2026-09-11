@@ -362,6 +362,7 @@ class TestSysCreateAIAgentApp:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "VALIDATION_ERROR"
+        assert "operator" in resp.json()["fields_detail"]
         assert not Application.objects.filter(code=bk_app_code).exists()
 
     @override_settings(ENABLE_MULTI_TENANT_MODE=True)

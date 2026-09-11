@@ -101,7 +101,7 @@ def test_build_child_environ_injects_port_and_drops_secrets(tmp_path: Path, monk
         "APP_SPARK_AGENT_WORKSPACE": "/data/workspace",
         "APP_SPARK_AGENT_RUNTIME_TOKEN": "runtime-secret",
         "APP_SPARK_AGENT_MODEL_API_KEY": "model-secret",
-        "APP_SPARK_AGENT_AIDEV_ACCESS_TOKEN": "aidev-secret",
+        "APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN": "aidev-secret",
         "APP_SPARK_AGENT_CONTROL_PLANE_TOKEN": "plane-secret",
     }
 

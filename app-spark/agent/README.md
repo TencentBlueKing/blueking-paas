@@ -141,7 +141,7 @@ skill `fastapi_http.md` 要求生成 `main:app`，端口只读 `APP_SPARK_AGENT_
 - 已是监督器进程：再次 launch 一律重启（加载新代码），请求没带的 path/label 沿用上次。
 - 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再手动 launch。
 - run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。
-- 子进程注入 `APP_SPARK_AGENT_APP_PORT`，只剥 `RUNTIME_TOKEN` / `MODEL_API_KEY` / `AIDEV_ACCESS_TOKEN` / `CONTROL_PLANE_TOKEN`。不要按「屏蔽全部 `APP_SPARK_AGENT_*`」理解这条路径——那是给模型 Shell 的。
+- 子进程注入 `APP_SPARK_AGENT_APP_PORT`，只剥 `RUNTIME_TOKEN` / `MODEL_API_KEY` / `BK_AIDEV_ACCESS_TOKEN` / `CONTROL_PLANE_TOKEN`。不要按「屏蔽全部 `APP_SPARK_AGENT_*`」理解这条路径——那是给模型 Shell 的。
 
 ## 凭据屏蔽
 

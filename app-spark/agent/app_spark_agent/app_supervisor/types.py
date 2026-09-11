@@ -68,7 +68,7 @@ LAUNCHED_EVENT_NAME = "app.launched"
 SECRET_ENV_KEYS = (
     f"{settings.ENV_PREFIX}RUNTIME_TOKEN",
     f"{settings.ENV_PREFIX}MODEL_API_KEY",
-    f"{settings.ENV_PREFIX}AIDEV_ACCESS_TOKEN",
+    f"{settings.ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN",
     f"{settings.ENV_PREFIX}CONTROL_PLANE_TOKEN",
 )
 

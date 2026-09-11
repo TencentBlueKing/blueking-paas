@@ -6,6 +6,7 @@ in :mod:`app_spark_agent.server.routes` is left with nothing but request and res
 """
 
 import asyncio
+import time
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from pydantic_ai import Agent
 
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
+from app_spark_agent.git.saver import WorkspaceSaver
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
 from app_spark_agent.state import (
@@ -37,6 +39,10 @@ UI_EVENTS_FILENAME = "ui_events.jsonl"
 # Where the sequence bookkeeping lives: which numbers this incarnation continues from, and how
 # far replication has got. Not a fourth channel -- it is metadata *about* the three.
 CURSORS_FILENAME = "cursors.json"
+
+# How often the pre-run gate re-checks whether the previous turn has been saved. Short enough
+# that a push landing does not add noticeable latency to the next turn.
+_SAVE_POLL_INTERVAL_SECONDS = 0.1
 
 
 class RuntimeBusyError(RuntimeError):
@@ -153,6 +159,8 @@ class ConversationRuntime:
     :param lifecycle: Idle timeout and the registry of application children.
     :param replicator: Pushes the durable state to the control plane, or ``None`` when this
         Runtime has no control plane and its state directory is all there is.
+    :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
+        this Runtime has no repository configured and the workspace is local-only.
     """
 
     agent: Agent[Any, Any]
@@ -163,6 +171,7 @@ class ConversationRuntime:
     run_guard: RunGuard
     lifecycle: RuntimeLifecycle
     replicator: StateReplicator | None
+    saver: WorkspaceSaver | None = None
 
     @classmethod
     def open(
@@ -173,6 +182,7 @@ class ConversationRuntime:
         agent: Agent[Any, Any] | None = None,
         lifecycle: RuntimeLifecycle | None = None,
         control_plane: ControlPlaneClient | None = None,
+        saver: WorkspaceSaver | None = None,
     ) -> ConversationRuntime:
         """Validate the two directories and open the conversation's three state channels.
 
@@ -188,6 +198,8 @@ class ConversationRuntime:
         :param control_plane: Where to replicate the durable state. Passed in rather than read
             from settings here, because this class is also how tests and embedders assemble a
             Runtime -- and passing a client is the only thing they need to say to opt in.
+        :param saver: Where the workspace files are persisted. Passed in for the same reason as
+            ``control_plane``: opting in is one argument, and the default is a local workspace.
         :return: A runtime ready to be served.
         :raises FileNotFoundError: If ``workspace`` does not exist.
         :raises NotADirectoryError: If ``workspace`` is not a directory.
@@ -245,6 +257,7 @@ class ConversationRuntime:
             run_guard=run_guard,
             lifecycle=bound,
             replicator=replicator,
+            saver=saver,
         )
 
     async def restore(
@@ -290,6 +303,48 @@ class ConversationRuntime:
         if self.replicator is None:
             return True
         return await self.replicator.flush(timeout_seconds=settings.PUSH_FLUSH_TIMEOUT_SECONDS)
+
+    async def save_workspace(self, *, run_id: str, conversation_id: str, completed: bool = True) -> None:
+        """Commit this turn's file changes locally. Pushing happens behind the barrier.
+
+        Deliberately does not wait for the push: see :mod:`app_spark_agent.git.saver` for why a
+        network round trip does not belong at the end of a run.
+
+        The context version is read here, at the end of the turn that produced these files, and
+        travels with the commit from then on. That is the version the files go with; whatever the
+        conversation is at when the push eventually lands may be a later turn's.
+        """
+        if self.saver is None:
+            return
+        await self.saver.commit_turn(
+            run_id=run_id,
+            conversation_id=conversation_id,
+            context_version=self.context_store.context.context_version,
+            completed=completed,
+        )
+
+    async def await_workspace_saved(self, *, timeout_seconds: float) -> bool:
+        """Wait, up to a bound, for the previous turn's files to reach the remote.
+
+        The bound is the escape hatch, and it is not optional: under a network partition the
+        push may never land, and a Runtime that waited forever would lock the user out of their
+        own conversation rather than merely failing to back it up.
+
+        :param timeout_seconds: How long to wait; ``<= 0`` does not wait at all.
+        :return: Whether the workspace is now saved remotely. ``True`` when there is no
+            repository configured, where the question does not arise.
+        """
+        if self.saver is None:
+            return True
+        if not self.saver.status.outstanding:
+            return True
+        deadline = time.monotonic() + timeout_seconds
+        while self.saver.status.outstanding and time.monotonic() < deadline:
+            if not self.saver.status.retriable:
+                # Waiting cannot help: this failure needs somebody to act on it.
+                return False
+            await asyncio.sleep(_SAVE_POLL_INTERVAL_SECONDS)
+        return not self.saver.status.outstanding
 
 
 def _paths_overlap(first: Path, second: Path) -> bool:

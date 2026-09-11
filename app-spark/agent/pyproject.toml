@@ -57,6 +57,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "live: exercises the real DeepSeek API",
+    "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
 ]
 
 [tool.ruff]

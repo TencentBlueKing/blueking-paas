@@ -2,9 +2,10 @@
 FROM python:3.14-slim-bookworm
 USER root
 
-# tini is PID 1: forwards SIGTERM and reaps zombies
+# tini is PID 1: forwards SIGTERM and reaps zombies.
+# git persists the workspace; ca-certificates is what lets it reach an https remote at all.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tini \
+    && apt-get install -y --no-install-recommends tini git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Same Tencent Cloud pip index as apiserver

@@ -32,6 +32,7 @@ _CHANNEL_PATHS = {
 }
 
 CONTEXT_PATH = "context"
+CHECKPOINT_PATH = "checkpoint"
 
 
 class ControlPlaneError(RuntimeError):
@@ -103,6 +104,23 @@ class ControlPlaneClient:
         """
         payload = await self._send("PUT", CONTEXT_PATH, context)
         return _read_int(payload, "context_version")
+
+    async def put_checkpoint(self, checkpoint: dict[str, Any]) -> bool:
+        """Record a restore point: a commit and tag that are both on the Git remote.
+
+        Safe to repeat, and repeated on purpose. A checkpoint whose acknowledgement was lost has
+        to be re-reported rather than re-made: the commit is already on the remote, and making
+        another would add an identical tree under a new SHA for no reason.
+
+        Whether it is *restorable* is not this Runtime's call. The control plane also has to hold
+        the matching context version, and it is the only side that knows whether it does.
+
+        :param checkpoint: ``commit``, ``tag``, ``run_id`` and ``context_version``.
+        :return: Whether the control plane considers the checkpoint restorable yet.
+        :raises ControlPlaneError: If the control plane cannot be reached or refused the write.
+        """
+        payload = await self._send("PUT", CHECKPOINT_PATH, checkpoint)
+        return bool(payload.get("restorable", False))
 
     async def aclose(self) -> None:
         """Release the underlying connection pool."""

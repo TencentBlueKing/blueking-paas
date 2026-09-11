@@ -5,7 +5,7 @@ This module owns everything that drives the test application over HTTP.
 
 import asyncio
 import time
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Callable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +19,7 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
+from app_spark_agent.git import WorkspaceSaver
 from app_spark_agent.server import create_runtime_app
 from app_spark_agent.state import ConversationContext
 from tests.support.ag_ui import SSE_HEADERS, assistant_text, run_body, sse_events
@@ -76,8 +77,14 @@ def build_test_client(
     model: FunctionModel,
     capabilities: Sequence[AbstractCapability[object]] = (),
     tools: Sequence[Any] = (),
+    make_saver: Callable[[Path], WorkspaceSaver] | None = None,
 ) -> TestClient:
-    """Create a Runtime wired to a fake model, bypassing the real DeepSeek agent."""
+    """Create a Runtime wired to a fake model, bypassing the real DeepSeek agent.
+
+    :param make_saver: Called with the workspace directory to build the Git saver. A factory
+        rather than an instance because the workspace path is decided here, and the saver has to
+        be pointed at that exact directory. Omitted for the default local-only Runtime.
+    """
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     state_dir = tmp_path / "state"
@@ -86,7 +93,12 @@ def build_test_client(
         tools=list(tools),
         capabilities=list[AbstractCapability[object]](capabilities),
     )
-    app = create_runtime_app(workspace=workspace, state_dir=state_dir, agent=agent)
+    app = create_runtime_app(
+        workspace=workspace,
+        state_dir=state_dir,
+        agent=agent,
+        saver=make_saver(workspace) if make_saver is not None else None,
+    )
     return AuthedTestClient(app)
 
 

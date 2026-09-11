@@ -185,6 +185,53 @@ if CONTROL_PLANE_URL and not CONTROL_PLANE_TOKEN:
     raise EnvError(f"{ENV_PREFIX}CONTROL_PLANE_TOKEN must be set whenever {ENV_PREFIX}CONTROL_PLANE_URL is")
 
 # -----------------------------------------------------------------------
+# Workspace 工作区持久化（基于 Git）
+# -----------------------------------------------------------------------
+
+# Project 私有仓库的 HTTP clone 地址，由控制面在拉起 Runtime 时注入，且必须是**沙箱能解析的**
+# 地址：控制面自己用的 `localhost` 拿到这里只会打到沙箱自己。
+#
+# 留空即关闭 Git 持久化：此时 workspace 只存在于本地磁盘，也就是单测与本地开发的形态。
+GIT_REMOTE_URL = env.str("GIT_REMOTE_URL", "")
+
+# 仓库范围的读写 token，作为 HTTP Basic 的密码。长期有效、不随 Runtime 代次轮换，因此它
+# 只在受控的 git 子进程环境里出现，不进命令行、不写进 .git/config、不进提交内容。
+GIT_TOKEN = env.str("GIT_TOKEN", "")
+
+# Basic 认证的用户名，对 Forgejo 是签发 token 的那个服务账号。
+GIT_USERNAME = env.str("GIT_USERNAME", "")
+
+# 唯一的工作分支。推送与恢复都只认它。
+GIT_BRANCH = env.str("GIT_BRANCH", "main")
+
+# 提交身份。是机器人而不是终端用户：提交发生在 Agent 里，而蓝鲸用户未必有 Git 能接受的邮箱。
+# Git 在缺少这两项时直接拒绝提交，所以它们有缺省值而不是留空。
+GIT_AUTHOR_NAME = env.str("GIT_AUTHOR_NAME", "App-Spark")
+GIT_AUTHOR_EMAIL = env.str("GIT_AUTHOR_EMAIL", "app-spark@localhost.invalid")
+
+# 单条 git 命令的超时秒数。必须有限：本地提交发生在 run 收尾屏障里，一条挂住的命令等于挂住
+# 这一轮对话。给到 120 秒是因为首次 clone 要走网络。
+GIT_COMMAND_TIMEOUT_SECONDS = env.float("GIT_COMMAND_TIMEOUT_SECONDS", 120.0, validate=Range(min=0))
+
+# 文件策略的硬性体积上限，超限时提交明确失败并报出是哪些路径。见 ``git/policy.py``。
+GIT_MAX_FILE_BYTES = env.int("GIT_MAX_FILE_BYTES", 10 * 1024 * 1024, validate=Range(min=1))
+GIT_MAX_TOTAL_BYTES = env.int("GIT_MAX_TOTAL_BYTES", 200 * 1024 * 1024, validate=Range(min=1))
+
+# push 失败后重试的间隔秒数。网络分区可能持续很久，退避太短只是把失败刷进日志。
+GIT_PUSH_RETRY_BACKOFF_SECONDS = env.float("GIT_PUSH_RETRY_BACKOFF_SECONDS", 5.0, validate=Range(min=0))
+
+# 开始下一轮前，等待上一轮文件推送到远端的时间上限。这是逃生口的那个「有界」：网络断了时
+# push 可能永远落不了地，无限等待等于把用户锁在自己的会话外面。超时后接口返回 409，客户端
+# 可以带 ``?allow_unsaved=true`` 明确选择继续。
+GIT_SAVE_WAIT_TIMEOUT_SECONDS = env.float("GIT_SAVE_WAIT_TIMEOUT_SECONDS", 10.0, validate=Range(min=0))
+
+# 这个 Runtime 属于哪个 Project，仅用于写进 commit trailer 便于追溯。留空不影响保存。
+PROJECT_ID = env.str("PROJECT_ID", "")
+
+if GIT_REMOTE_URL and not GIT_TOKEN:
+    raise EnvError(f"{ENV_PREFIX}GIT_TOKEN must be set whenever {ENV_PREFIX}GIT_REMOTE_URL is")
+
+# -----------------------------------------------------------------------
 # HTTP 接口
 # -----------------------------------------------------------------------
 
@@ -251,6 +298,11 @@ def is_model_ready() -> bool:
     if MODEL.startswith("fake:"):
         return True
     return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+
+
+def is_git_configured() -> bool:
+    """是否给了远端仓库地址和凭据。为假时 workspace 只存在于本地磁盘。"""
+    return bool(GIT_REMOTE_URL and GIT_TOKEN)
 
 
 def _tokens_match(expected: str, actual: str) -> bool:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app_spark_agent.git import GitPolicyError, WorkspaceFile, WorkspacePolicy
+from app_spark_agent.git import GitPolicyError, WorkspaceFile, WorkspacePolicy, get_default_excludes
 from app_spark_agent.git.policy import measure
 
 
@@ -45,12 +45,24 @@ class TestCeilings:
 class TestExcludeDocument:
     def test_it_lists_the_rebuildable_directories(self):
         document = WorkspacePolicy().exclude_document()
-        assert ".venv/" in document
-        assert "node_modules/" in document
+        assert ".venv" in document
+        assert "node_modules" in document
+        assert "__pycache__" in document
+
+    def test_it_keeps_env_files_the_templates_would_drop(self):
+        """github/gitignore ignores `.env`; a restore that dropped it is the worse bug."""
+        lines = WorkspacePolicy().exclude_document().splitlines()
+        assert "!.env" in lines
+        assert "!.python-version" in lines
 
     def test_it_says_it_is_generated(self):
         """Anyone who finds this file has to know that editing it achieves nothing."""
         assert "App-Spark" in WorkspacePolicy().exclude_document().splitlines()[0]
+
+    def test_default_excludes_is_exported_from_the_package(self):
+        excludes = get_default_excludes()
+        assert ".venv" in excludes
+        assert "node_modules/" in excludes
 
 
 class TestMeasure:

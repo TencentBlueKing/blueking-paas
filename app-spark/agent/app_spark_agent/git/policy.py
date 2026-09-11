@@ -10,7 +10,7 @@ is private and per-Project, and a restore that quietly dropped the app's configu
 a worse failure than storing it. The one exception git makes for us is ``.git`` itself.
 
 **Excluded by default.** Directories that are derived from files we do keep, listed in
-:data:`DEFAULT_EXCLUDES`. Losing them costs a reinstall; keeping them costs the whole latency and
+:func:`get_default_excludes`. Losing them costs a reinstall; keeping them costs the whole latency and
 size budget.
 
 **Binary files** are committed as-is. Git stores them whole rather than as deltas, which is what
@@ -34,42 +34,23 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 
 from app_spark_agent.git.errors import GitPolicyError
+from app_spark_agent.git.ignores import load_default_excludes
 
-# Rebuildable outputs, kept out of every Project's history. Entries are ``.gitignore`` patterns
-# and are applied through git itself, so a project that deliberately wants one of these can
-# override it with a negating rule in its own ``.gitignore`` -- which git reads afterwards.
-#
-# Only genuinely derived paths belong here. Excluding something a project cannot regenerate
-# would lose it silently on the next cold start, which is the one failure this whole feature
-# exists to prevent.
-DEFAULT_EXCLUDES: tuple[str, ...] = (
-    # Python
-    ".venv/",
-    "venv/",
-    "__pycache__/",
-    "*.py[cod]",
-    "*.egg-info/",
-    ".mypy_cache/",
-    ".pytest_cache/",
-    ".ruff_cache/",
-    ".tox/",
-    # JavaScript
-    "node_modules/",
-    ".next/",
-    ".nuxt/",
-    ".parcel-cache/",
-    # Build output and caches
-    "dist/",
-    "build/",
-    "target/",
-    ".cache/",
-    # Editor and OS noise
-    ".DS_Store",
-    "Thumbs.db",
-)
+
+@cache
+def get_default_excludes() -> tuple[str, ...]:
+    """Return the platform ignore list, reading vendored templates on first call.
+
+    Importing this module does not touch ``git/assets``, so
+    ``make update-gitignore-assets`` can run against an empty directory. The
+    result is cached: every :class:`WorkspacePolicy` shares one tuple.
+    """
+    return load_default_excludes()
+
 
 # Header written above the generated exclude list, so a developer who opens the file knows why it
 # is there and that editing it is pointless.
@@ -114,7 +95,7 @@ class WorkspacePolicy:
 
     max_file_bytes: int = DEFAULT_MAX_FILE_BYTES
     max_total_bytes: int = DEFAULT_MAX_TOTAL_BYTES
-    excludes: tuple[str, ...] = field(default=DEFAULT_EXCLUDES)
+    excludes: tuple[str, ...] = field(default_factory=get_default_excludes)
 
     def exclude_document(self) -> str:
         """Return the full text of the ``.git/info/exclude`` file this policy implies."""

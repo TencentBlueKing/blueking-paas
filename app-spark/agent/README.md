@@ -218,9 +218,9 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 
 - **保留**：源码、配置、静态资源、锁文件，**包含隐藏文件**（`.env`、`.python-version` 一类）。
   仓库是每个 Project 私有的，恢复时悄悄丢掉应用配置比存下来更糟。
-- **默认忽略**：`.venv`、`node_modules`、`__pycache__`、各类缓存与构建产物，清单见
-  `git/policy.py` 的 `DEFAULT_EXCLUDES`。这些规则写进 `.git/info/exclude` 而不是 workspace 里的
-  `.gitignore`——后者属于项目本身，导入已有工作目录时不能被平台覆盖掉。
+- **默认忽略**：语言相关的构建产物与依赖目录（`.venv`、`node_modules`、`__pycache__` 等），来自
+  vendored 的 [github/gitignore](https://github.com/github/gitignore) 模板，目前覆盖 Python 与
+  Node，更新模板：`make update-gitignore-assets`。
 - **二进制**原样提交；**符号链接**按链接本身提交（git 存的是链接文本，不是目标内容），恢复
   时重建的也是链接。
 - **体积上限**：单文件 10MiB、总量 200MiB。超限时提交明确失败并报出是哪些路径，而不是安静地

@@ -22,9 +22,9 @@ from app_spark_agent.git.errors import (
     GitWorkspaceConflictError,
 )
 from app_spark_agent.git.policy import (
-    DEFAULT_EXCLUDES,
     WorkspaceFile,
     WorkspacePolicy,
+    get_default_excludes,
 )
 from app_spark_agent.git.runner import GitIdentity, GitResult, GitRunner, RemoteConfig
 from app_spark_agent.git.saver import (
@@ -41,7 +41,6 @@ from app_spark_agent.git.workspace import GitWorkspace, StatusEntry, WorkspaceSt
 
 __all__ = [
     "CHECKPOINT_TAG_PREFIX",
-    "DEFAULT_EXCLUDES",
     "Checkpoint",
     "CheckpointReporter",
     "GitAuthError",
@@ -67,4 +66,5 @@ __all__ = [
     "WorkspaceSaver",
     "WorkspaceStatus",
     "checkpoint_tag",
+    "get_default_excludes",
 ]

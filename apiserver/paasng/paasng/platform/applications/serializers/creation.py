@@ -66,24 +66,44 @@ def apply_ai_agent_create_defaults(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def validate_ai_agent_create_mode(attrs: Dict[str, Any]) -> Dict[str, Any]:
     """校验 git / 外链 / 模板包三种模式的互斥字段。"""
-    # 外链模式无需校验 source_config / bkapp_spec
+
+    # 外链与 git / 隔离部署互斥，避免静默丢掉调用方传入的源码或构建配置。
     if attrs.get("is_engineless"):
+        conflicts = [
+            name for name in ("source_config", "bkapp_spec") if attrs.get(name)
+        ]
+        if attrs.get("is_isolated"):
+            conflicts.append("is_isolated")
+
+        if conflicts:
+            raise ValidationError(
+                {name: _("外链模式不能同时指定该字段") for name in conflicts}
+            )
+
         return attrs
 
-    # 仅当使用 git 仓库部署时，才校验构建方式与源码来源的兼容性
     source_config = attrs.get("source_config")
-    if source_config:
-        if not attrs.get("bkapp_spec"):
-            raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
+    if not source_config:
+        return attrs
 
-        build_cfg = attrs["bkapp_spec"]["build_config"]
+    # 空 source_config 会带上 AUTHORIZED_VCS 默认值，必须再核对来源和仓库地址，避免半成品进创建链路。
+    if SourceOrigin(source_config["source_origin"]) != SourceOrigin.AUTHORIZED_VCS:
+        raise ValidationError(_("使用 git 仓库部署时 source_origin 必须为授权代码库"))
 
-        # AI Agent 应用不支持 custom_image（纯镜像托管）
-        if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
-            raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
+    # 用户态允许 auto_create_repo 由平台建仓；未代建时必须自带仓库地址。
+    if not source_config.get("auto_create_repo") and not source_config.get("source_repo_url"):
+        raise ValidationError(_("使用 git 仓库部署时必须提供 source_repo_url"))
 
-        validate_build_method(build_cfg.build_method, source_config["source_origin"])
+    if not attrs.get("bkapp_spec"):
+        raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
 
+    build_cfg = attrs["bkapp_spec"]["build_config"]
+
+    # AI Agent 应用不支持 custom_image（纯镜像托管）
+    if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+        raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
+
+    validate_build_method(build_cfg.build_method, source_config["source_origin"])
     return attrs
 
 

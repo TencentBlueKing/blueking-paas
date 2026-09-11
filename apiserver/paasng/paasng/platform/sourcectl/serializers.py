@@ -201,12 +201,14 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     package_url = serializers.URLField(help_text="源码包下载路径")
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
     allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
-    # 仅 AI Agent 应用支持在上传时切换构建方式；不传则保持模块当前配置
+    # 只列 AI Agent 能切的两种。不能用 get_choices() 全量：custom_image 是镜像应用的方式；
+    # S-Mart 固定 buildpack，上传包时也不允许改构建方式（由视图按 source_origin 拦截）。
     build_method = serializers.ChoiceField(
         help_text="构建方式，仅 AI Agent 应用支持。不传则保持模块当前配置",
         choices=[
-            (RuntimeType.BUILDPACK.value, RuntimeType.BUILDPACK.label),
-            (RuntimeType.DOCKERFILE.value, RuntimeType.DOCKERFILE.label),
+            (choice, label)
+            for choice, label in RuntimeType.get_choices()
+            if choice in (RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE)
         ],
         required=False,
     )

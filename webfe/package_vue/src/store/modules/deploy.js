@@ -22,6 +22,9 @@
 import http from '@/api';
 import { json2Query } from '@/common/tools';
 
+// 判断当前用户是否允许使用构建调试功能
+const isBuildDebugAllowed = rootState => rootState.userFeature?.ALLOW_BUILD_DEBUG === true;
+
 const state = {
   // 是否允许推广到应用市场, 一般只有接入登录的应用才允许
   // canPublishToMarket: false,
@@ -320,18 +323,45 @@ const actions = {
   },
 
   /**
-     * 获取部署后日志
-     * @param {Object} params 请求参数：appCode, moduleId, env, deployId
-     */
+   * 获取部署后日志
+   * @param {Object} params 请求参数：appCode, moduleId, env, deployId
+   */
   getDeployLog({}, { appCode, moduleId, deployId }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/?include_ansi_codes=true`;
     return http.get(url, config);
   },
 
   /**
-     * 获取应用文档列表
-     * @param {Object} params 请求参数：appCode, params
-     */
+   * 获取构建调试窗口状态
+   * @param {Object} params 请求参数：appCode, moduleId, deployId
+   */
+  getBuildDebugStatus({ rootState }, { appCode, moduleId, deployId }, config = {}) {
+    if (!isBuildDebugAllowed(rootState)) {
+      return {
+        enabled: false,
+        available: false,
+      };
+    }
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/build_debug/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 创建构建调试控制台会话
+   * @param {Object} params 请求参数：appCode, moduleId, deployId
+   */
+  createBuildDebugConsole({ rootState }, { appCode, moduleId, deployId }, config = {}) {
+    if (!isBuildDebugAllowed(rootState)) {
+      return null;
+    }
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/build_debug/console/`;
+    return http.post(url, {}, config);
+  },
+
+  /**
+   * 获取应用文档列表
+   * @param {Object} params 请求参数：appCode, params
+   */
   async getAppDocLinks({ rootState }, { appCode, params }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/accessories/advised_documentary_links/?${json2Query(params)}`;
     try {

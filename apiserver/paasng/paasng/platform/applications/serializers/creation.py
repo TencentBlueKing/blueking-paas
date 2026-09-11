@@ -17,17 +17,94 @@
 
 from typing import Any, Dict
 
+from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+from paasng.core.tenant.utils import AppTenantInfo, stub_app_tenant_info
+from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.constants import ApplicationType, DeployPolicy
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
+from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 from .app import ApplicationSLZ
-from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
+from .fields import AppIDField, AppNameField
+from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, AppTenantMixin, MarketParamsMixin
+
+# 应用态创建 AI Agent 时要求的 code 前缀。不写入 RESERVED_APP_CODE_PREFIXES，用户态规则保持不变。
+AI_AGENT_APP_CODE_PREFIX = "ai-"
+
+
+def apply_ai_agent_create_defaults(data: Dict[str, Any]) -> Dict[str, Any]:
+    """按 is_engineless / is_isolated 写入与用户态一致的应用标记。"""
+    # 两种 AI Agent 应用都标记 is_ai_agent_app=True
+    data["is_ai_agent_app"] = True
+
+    if data.get("is_engineless"):
+        # 占位外链应用：无引擎、非插件、不可部署
+        data["is_plugin_app"] = False
+        data["type"] = ApplicationType.ENGINELESS_APP.value
+        data["engine_enabled"] = False
+    else:
+        # 可部署的插件应用：部署时会自动注册网关（bp-{app_code}）
+        data["is_plugin_app"] = True
+        data["type"] = ApplicationType.CLOUD_NATIVE.value
+        data["engine_enabled"] = True
+        data["deploy_policy"] = (
+            DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
+        )
+
+    return data
+
+
+def validate_ai_agent_create_mode(attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """校验 git / 外链 / 模板包三种模式的互斥字段。"""
+
+    # 外链与 git / 隔离部署互斥，避免静默丢掉调用方传入的源码或构建配置。
+    if attrs.get("is_engineless"):
+        conflicts = [
+            name for name in ("source_config", "bkapp_spec") if attrs.get(name)
+        ]
+        if attrs.get("is_isolated"):
+            conflicts.append("is_isolated")
+
+        if conflicts:
+            raise ValidationError(
+                {name: _("外链模式不能同时指定该字段") for name in conflicts}
+            )
+
+        return attrs
+
+    source_config = attrs.get("source_config")
+    if not source_config:
+        return attrs
+
+    # 空 source_config 会带上 AUTHORIZED_VCS 默认值，必须再核对来源和仓库地址，避免半成品进创建链路。
+    if SourceOrigin(source_config["source_origin"]) != SourceOrigin.AUTHORIZED_VCS:
+        raise ValidationError(_("使用 git 仓库部署时 source_origin 必须为授权代码库"))
+
+    # 用户态允许 auto_create_repo 由平台建仓；未代建时必须自带仓库地址。
+    if not source_config.get("auto_create_repo") and not source_config.get("source_repo_url"):
+        raise ValidationError(_("使用 git 仓库部署时必须提供 source_repo_url"))
+
+    if not attrs.get("bkapp_spec"):
+        raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
+
+    build_cfg = attrs["bkapp_spec"]["build_config"]
+
+    # AI Agent 应用不支持 custom_image（纯镜像托管）
+    if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+        raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
+
+    validate_build_method(build_cfg.build_method, source_config["source_origin"])
+    return attrs
 
 
 class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
@@ -137,44 +214,102 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-
-        # 两种 AI Agent 应用都标记 is_ai_agent_app=True
-        data["is_ai_agent_app"] = True
-        if data.get("is_engineless"):
-            # 占位外链应用：无引擎、非插件、不可部署
-            data["is_plugin_app"] = False
-            data["type"] = ApplicationType.ENGINELESS_APP.value
-            data["engine_enabled"] = False
-        else:
-            # 可部署的插件应用：部署时会自动注册网关（bp-{app_code}）
-            data["is_plugin_app"] = True
-            data["type"] = ApplicationType.CLOUD_NATIVE.value
-            data["engine_enabled"] = True
-            data["deploy_policy"] = (
-                DeployPolicy.ISOLATED.value if data.pop("is_isolated", False) else DeployPolicy.DEFAULT.value
-            )
-
-        return data
+        return apply_ai_agent_create_defaults(data)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         attrs = super().validate(attrs)
+        return validate_ai_agent_create_mode(attrs)
 
-        # 外链模式无需校验 source_config / bkapp_spec
-        if attrs.get("is_engineless"):
-            return attrs
 
-        # 仅当使用 git 仓库部署时，才校验构建方式与源码来源的兼容性
-        source_config = attrs.get("source_config")
-        if source_config:
-            if not attrs.get("bkapp_spec"):
-                raise ValidationError(_("使用 git 仓库部署时必须提供 bkapp_spec 构建配置"))
-            build_cfg = attrs["bkapp_spec"]["build_config"]
-            # AI Agent 应用不支持 custom_image（纯镜像托管）
-            if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
-                raise ValidationError(_("AI Agent 应用不支持 custom_image 构建方式"))
-            validate_build_method(build_cfg.build_method, source_config["source_origin"])
+@i18n
+class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
+    """应用态创建 AI Agent 应用，管理员取已注册的 operator。"""
 
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
+    operator = serializers.CharField(required=True, help_text="已在开发者中心注册的管理员用户名")
+    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境")
+    is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
+    source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
+    bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
+
+    def to_internal_value(self, data):
+        # AppNameField 在字段校验阶段就要租户范围，AppTenantMixin.validate 发生在字段校验之后。
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            self.context["app_tenant_id"] = stub_app_tenant_info().app_tenant_id
+        else:
+            self.context["app_tenant_id"] = data.get("app_tenant_id", "")
+
+        ret = super().to_internal_value(data)
+        return apply_ai_agent_create_defaults(ret)
+
+    def validate_code(self, code: str) -> str:
+        # 应用态单独要求 ai- 前缀，不写入保留前缀列表，避免改变用户态创建规则。
+        if not code.startswith(AI_AGENT_APP_CODE_PREFIX):
+            raise ValidationError(_("应用 ID 必须以 {prefix} 开头").format(prefix=AI_AGENT_APP_CODE_PREFIX))
+
+        return code
+
+    def validate_operator(self, operator: str) -> str:
+        user_id = user_id_encoder.encode(settings.USER_TYPE, operator)
+
+        # UserProfile 在用户首次访问开发者中心时创建，用它判定已登录/注册过。不造虚拟用户。
+        if not UserProfile.objects.filter(user=user_id).exists():
+            raise ValidationError(_("用户未在开发者中心注册"))
+
+        return operator
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        attrs = super().validate(attrs)
+        attrs = validate_ai_agent_create_mode(attrs)
+        self._reject_vcs_delegation(attrs)
+
+        # AppTenantMixin 已写入 mode/id/tenant_id，组装给创建链路使用。
+        app_tenant_info = AppTenantInfo(
+            app_tenant_mode=attrs["app_tenant_mode"],
+            app_tenant_id=attrs["app_tenant_id"],
+            tenant_id=attrs["tenant_id"],
+        )
+        attrs["app_tenant_info"] = app_tenant_info
+
+        user_id = user_id_encoder.encode(settings.USER_TYPE, attrs["operator"])
+        profile = UserProfile.objects.get(user=user_id)
+        self._validate_operator_tenant(profile, app_tenant_info)
+        attrs["operator_user"] = get_user_by_user_id(user_id)
         return attrs
+
+    def _reject_vcs_delegation(self, attrs: Dict[str, Any]) -> None:
+        """拒绝借 operator 的 VCS OAuth 代建仓或写模板。"""
+
+        source_config = attrs.get("source_config")
+        if not source_config:
+            return
+
+        if source_config.get("auto_create_repo"):
+            raise ValidationError({"source_config": _("应用态创建不支持由平台代建代码仓库")})
+
+        if source_config.get("write_template_to_repo"):
+            raise ValidationError({"source_config": _("应用态创建不支持将模板写入代码仓库")})
+
+        if source_config.get("repo_group") or source_config.get("repo_name"):
+            raise ValidationError({"source_config": _("应用态创建不支持指定新建仓库的项目组或名称")})
+
+    def _validate_operator_tenant(self, profile: UserProfile, app_tenant_info: AppTenantInfo) -> None:
+        """校验 operator 所属租户与将要创建的应用租户一致。"""
+
+        # 非多租户没有跨租户面，profile 与 stub 租户都是 default。
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return
+
+        # 全租户应用只允许运营租户用户当管理员，对齐用户态 validate_app_tenant_params。
+        if app_tenant_info.app_tenant_mode == AppTenantMode.GLOBAL:
+            if profile.tenant_id != OP_TYPE_TENANT_ID:
+                raise ValidationError({"operator": _("当前不允许创建全租户可用的应用")})
+            return
+
+        # 单租户应用的管理员必须属于该应用所属租户。
+        if profile.tenant_id != app_tenant_info.tenant_id:
+            raise ValidationError({"operator": _("operator 与应用不属于同一租户")})
 
 
 class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):

@@ -208,6 +208,11 @@ urlpatterns += [
     ),
     # 系统 API，给固定的系统使用
     re_path(
+        r"^sys/api/bkapps/ai_agent/$",
+        views.SysAppViewSet.as_view({"post": "create_ai_agent_app"}),
+        name="sys.applications.create_ai_agent_app",
+    ),
+    re_path(
         r"^sys/api/bkapps/(?P<sys_id>[^/]+)/third_app/$",
         views.SysAppViewSet.as_view({"post": "create_sys_third_app"}),
         name="sys.applications.create_third_app.sys",

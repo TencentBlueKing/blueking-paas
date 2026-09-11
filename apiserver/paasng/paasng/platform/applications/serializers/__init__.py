@@ -60,6 +60,7 @@ from .creation import (
     CloudNativeAppCreateInputSLZ,
     CreationOptionsOutputSLZ,
     LessCodeAppCreateInputSLZ,
+    SysAIAgentAppCreateInputSLZ,
     ThirdPartyAppCreateInputSLZ,
 )
 from .fields import AppIDField, AppIDSMartField, ApplicationField, AppNameField
@@ -120,6 +121,7 @@ __all__ = [
     "ProtectionStatusSLZ",
     "RoleField",
     "SearchApplicationSLZ",
+    "SysAIAgentAppCreateInputSLZ",
     "SysThirdPartyApplicationSLZ",
     "ThirdPartyAppCreateInputSLZ",
     "UpdateApplicationNameSLZ",

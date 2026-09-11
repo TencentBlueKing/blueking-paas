@@ -3,16 +3,18 @@
     <stage-item
       v-if="isShowReady"
       ref="readyStageRef"
+      :class="{ 'fill-remaining-stage': !isShowBuild && !isShowRelease }"
       :title="$t('准备阶段')"
       :data="readyList"
     />
     <stage-item
       v-if="isShowBuild"
       ref="buildStageRef"
+      :class="{ 'fill-remaining-stage': !isShowRelease }"
       :title="$t('构建阶段')"
       can-full-screen
       :data="buildList"
-      style="margin-top: 8px;"
+      style="margin-top: 8px"
     />
     <deploy-stage-item
       v-if="isShowRelease"
@@ -20,12 +22,12 @@
       :loading="processLoading"
       :release-list="releaseList"
       :data="processList"
-      style="margin-top: 8px;"
+      style="margin-top: 8px"
       :environment="environment"
     />
     <skip-stage-item
       v-if="isShowSkip"
-      style="margin-top: 8px;"
+      style="margin-top: 8px"
     />
   </div>
 </template>
@@ -116,21 +118,40 @@ export default {
 };
 </script>
 <style lang="scss">
-    .paas-deploy-log-wrapper {
-        margin-left: 20px;
-        padding: 17px 30px;
-        width: calc(100% - 250px);
-        height: 670px;
-        background: #313238;
-        overflow-y: auto;
-        &::-webkit-scrollbar {
-            width: 4px;
-            background-color: lighten(transparent, 80%);
-        }
-        &::-webkit-scrollbar-thumb {
-            height: 5px;
-            border-radius: 2px;
-            background-color: #63656e;
-        }
+.paas-deploy-log-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-left: 20px;
+  padding: 17px 30px;
+  width: calc(100% - 250px);
+  height: 670px;
+  background: #313238;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 4px;
+    background-color: lighten(transparent, 80%);
+  }
+  &::-webkit-scrollbar-thumb {
+    height: 5px;
+    border-radius: 2px;
+    background-color: #63656e;
+  }
+  .paas-deploy-log-stage-wrapper.fill-remaining-stage {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    .content-wrapper {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
+    .content {
+      flex: 1;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+}
 </style>

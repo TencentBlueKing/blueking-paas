@@ -385,7 +385,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         # 描述文件的环境变量无“敏感“概念，无需要加密处理
         g_preset_vars = [
-            crd.EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
+            crd.EnvVar(name=var.key, value=var.value)
             for var in PresetEnvVariable.objects.filter(
                 module=module, environment_name=ConfigVarEnvName.GLOBAL
             ).order_by("key")

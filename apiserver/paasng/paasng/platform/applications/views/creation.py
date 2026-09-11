@@ -128,7 +128,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         if advanced_options := params.get("advanced_options"):
             env_cluster_names = advanced_options.get("env_cluster_names", {})
 
-        return self._init_cloud_native_app_from_source(request, params, env_cluster_names=env_cluster_names)
+        return self._init_cloud_native_app_from_source(request.user, params, env_cluster_names=env_cluster_names)
 
     @swagger_auto_schema(
         tags=["platform.applications.creation"],
@@ -198,7 +198,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     def create_ai_agent_app(self, request):
         serializer = AIAgentAppCreateInputSLZ(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
-        params = serializer.validated_data
+        return self.create_ai_agent_app_for_user(request.user, serializer.validated_data)
+
+    def create_ai_agent_app_for_user(self, user: User, params: Dict) -> Response:
+        """按模板包 / git / 外链三种模式为指定用户创建 AI Agent 应用。"""
 
         # 外链模式: 创建用户不可见的 Engineless AI Agent 应用, 非插件
         # is_ai_agent_app=True + type=engineless_app 的组合会自动在用户列表中隐藏
@@ -207,7 +210,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 code=params["code"],
                 name=params["name_zh_cn"],
                 name_en=params["name_en"],
-                operator=request.user.pk,
+                operator=user.pk,
                 app_tenant_info=params["app_tenant_info"],
                 is_ai_agent_app=True,
             )
@@ -218,7 +221,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         # 若传入 git 源码配置，则走 git 仓库部署（支持 buildpack / dockerfile）
         if params.get("source_config"):
-            return self._init_ai_agent_app_via_git(request, params)
+            return self._init_ai_agent_app_via_git(user, params)
 
         # 否则使用固定模板包 + buildpack 部署
         source_origin = SourceOrigin.AI_AGENT
@@ -230,17 +233,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # ai-agent-app 不支持指定集群（使用默认集群）
         env_cluster_names: Dict[str, str] = {}
 
-        return self._init_application(request.user, params, engine_params, source_origin, env_cluster_names)
+        return self._init_application(user, params, engine_params, source_origin, env_cluster_names)
 
-    def _init_ai_agent_app_via_git(self, request, params: Dict) -> Response:
-        """
-        使用 git 仓库源码部署创建 AI Agent 应用，支持 buildpack / dockerfile 构建。
-
-        集群使用默认集群（不支持指定集群）。
-        """
+    def _init_ai_agent_app_via_git(self, user: User, params: Dict) -> Response:
+        """使用 git 仓库源码部署创建 AI Agent 应用，支持 buildpack / dockerfile 构建。"""
         # AI Agent 应用不支持指定集群，使用默认集群（env_cluster_names 传空）
         return self._init_cloud_native_app_from_source(
-            request,
+            user,
             params,
             env_cluster_names={},
             is_ai_agent_app=params["is_ai_agent_app"],
@@ -249,7 +248,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def _init_cloud_native_app_from_source(
         self,
-        request,
+        user: User,
         params: Dict,
         *,
         env_cluster_names: Dict[str, str],
@@ -278,7 +277,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name=params["name_zh_cn"],
             name_en=params["name_en"],
             app_type=ApplicationType.CLOUD_NATIVE.value,
-            operator=request.user.pk,
+            operator=user.pk,
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=is_ai_agent_app,
             deploy_policy=deploy_policy,
@@ -299,7 +298,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         repo_url = src_cfg.get("source_repo_url")
         repo_group = src_cfg.get("repo_group")
         repo_name = src_cfg.get("repo_name")
-        username = request.user.username
+        username = user.username
         # 由平台创建代码仓库
         auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
@@ -310,7 +309,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
             repo_url = auto_repo_url
 
-        user_id = request.user.pk
+        user_id = user.pk
         with delete_repo_on_error(user_id, repo_type, auto_repo_url):
             source_init_result = init_module_in_view(
                 module,
@@ -334,6 +333,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                     application,
                     env_cluster_names.get(AppEnvironment.PRODUCTION),
                     ExposedURLType(module.exposed_url_type),
+                    username,
                 ),
             )
         return Response(
@@ -371,14 +371,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         return Response(CreationOptionsOutputSLZ(resp_data).data)
 
     def _get_cluster_entrance_https_enabled(
-        self, app: Application, cluster_name: str | None, exposed_url_type: ExposedURLType
+        self, app: Application, cluster_name: str | None, exposed_url_type: ExposedURLType, username: str
     ) -> bool:
         ctx = AllocationContext(
             tenant_id=app.tenant_id,
             region=app.region,
             # 注：这里用途是创建市场配置，因此固定为生产环境
             environment=AppEnvironment.PRODUCTION,
-            username=self.request.user.username,
+            username=username,
         )
         cluster = ClusterAllocator(ctx).get(cluster_name)
 
@@ -460,6 +460,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 application,
                 env_cluster_names.get(AppEnvironment.PRODUCTION),
                 ExposedURLType(module.exposed_url_type),
+                request_user.username,
             ),
         )
 

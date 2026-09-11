@@ -20,7 +20,8 @@ import pytest
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 
 pytestmark = pytest.mark.django_db
 
@@ -77,3 +78,18 @@ class TestModuleSpecs:
         assert spec.runtime_type == runtime_type
         assert spec.has_template_code == has_template_code
         assert spec.deploy_via_package == deploy_via_package
+
+    def test_ai_agent_runtime_type_follows_build_config(self, bk_module):
+        bk_module.source_origin = SourceOrigin.AI_AGENT
+        bk_module.save(update_fields=["source_origin"])
+
+        build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
+        build_config.build_method = RuntimeType.DOCKERFILE
+        build_config.save(update_fields=["build_method"])
+
+        spec = ModuleSpecs(bk_module)
+        assert spec.runtime_type == RuntimeType.DOCKERFILE
+        assert SourceOriginSpecs.get(SourceOrigin.AI_AGENT).supported_runtime_types() == [
+            RuntimeType.BUILDPACK,
+            RuntimeType.DOCKERFILE,
+        ]

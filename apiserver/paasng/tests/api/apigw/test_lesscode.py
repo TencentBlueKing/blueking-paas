@@ -114,3 +114,32 @@ class TestModuleSourcePackageViewSet:
             )
 
         assert response.status_code == 200
+
+    def test_upload_reject_build_method_for_lesscode(self, api_client, bk_app, bk_module, tar_path, settings):
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+
+        bk_module.source_origin = SourceOrigin.BK_LESS_CODE
+        bk_module.save()
+        url = "/api/bkapps/applications/{code}/modules/{module_name}/source_package/link/".format(
+            code=bk_app.code, module_name=bk_module.name
+        )
+
+        def download_file_via_url(url, local_path: Path):
+            local_path.write_bytes(tar_path.read_bytes())
+
+        with mock.patch(
+            "paasng.platform.sourcectl.package.uploader.download_file_via_url",
+            side_effect=download_file_via_url,
+        ):
+            response = api_client.post(
+                url,
+                data={
+                    "package_url": "https://example.com",
+                    "version": "0.0.1",
+                    "allow_overwrite": True,
+                    "build_method": "dockerfile",
+                },
+            )
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"

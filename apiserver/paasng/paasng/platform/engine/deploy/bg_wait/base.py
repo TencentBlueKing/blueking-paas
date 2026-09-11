@@ -35,8 +35,9 @@ class AbortedDetails(BaseModel):
     """
 
     aborted: bool
-    policy: Optional[AbortedDetailsPolicy]
-    extra_data: Optional[Any]
+    # Optional 没有默认值时，mypy 仍把构造参数当成必填。
+    policy: Optional[AbortedDetailsPolicy] = None
+    extra_data: Optional[Any] = None
 
     @validator("policy", always=True)
     def data_not_empty(cls, v, values, **kwargs):  # noqa: N805

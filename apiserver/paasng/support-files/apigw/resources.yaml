@@ -1604,6 +1604,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn:
+  /system/bkapps/ai_agent/:
+    post:
+      operationId: create_sys_ai_agent_app
+      description: 应用态创建 AI Agent 应用
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/ai_agent/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Create an AI Agent application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/aggregate_by_interval:
     get:
       operationId: aggregate_by_interval

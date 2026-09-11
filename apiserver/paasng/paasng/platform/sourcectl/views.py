@@ -47,7 +47,6 @@ from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.helpers import update_build_config_with_method
 from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.modules.utils import get_module_init_repo_context
@@ -330,8 +329,8 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         """按上传参数更新模块构建方式。
 
         不传 build_method 则保持当前配置。
-        buildpack / dockerfile 可多次上传来回切换。
-        切回 buildpack 时复用已有 slugbuilder 绑定，并清空 dockerfile 残留字段。
+        本接口只改 build_method 和 dockerfile 字段，不重绑 slugbuilder / buildpacks。
+        切回 buildpack 时清空 path/args，避免下次读到过期值。
         """
         build_method = data.get("build_method")
         if not build_method:
@@ -340,23 +339,17 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         build_config = BuildConfig.objects.get_or_create_by_module(module)
         data_before = DataDetail(data=self._build_config_audit_data(build_config))
 
+        # 不走 update_build_config_with_method：那是完整构建配置入口，切 buildpack 还要重绑 bp stack。
+        build_config.build_method = build_method
         if build_method == RuntimeType.DOCKERFILE:
-            update_build_config_with_method(
-                build_config,
-                RuntimeType.DOCKERFILE,
-                {
-                    "dockerfile_path": data.get("dockerfile_path") or "Dockerfile",
-                    "docker_build_args": data.get("docker_build_args") or {},
-                },
-            )
+            build_config.dockerfile_path = data.get("dockerfile_path") or "Dockerfile"
+            build_config.docker_build_args = data.get("docker_build_args") or {}
 
         else:
-            # 不走 update_build_config_with_method：它要求 buildpacks / bp_stack_name。
-            # 清空 path/args，避免下次读配置或再切 dockerfile 时看到过期值。
-            build_config.build_method = RuntimeType.BUILDPACK
             build_config.dockerfile_path = None
             build_config.docker_build_args = {}
-            build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
+
+        build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
 
         add_app_audit_record(
             app_code=module.application.code,

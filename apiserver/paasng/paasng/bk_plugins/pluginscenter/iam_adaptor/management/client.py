@@ -35,9 +35,9 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import (
 )
 from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
-from paasng.infras.iam.apigw.client import Client
-from paasng.infras.iam.apigw.client import Group as BKIAMGroup
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
+from paasng.infras.iam.v3.apigw.client import Client
+from paasng.infras.iam.v3.apigw.client import Group as BKIAMGroup
 
 logger = logging.getLogger(__name__)
 

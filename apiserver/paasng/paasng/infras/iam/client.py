@@ -24,8 +24,6 @@ from django.conf import settings
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam import utils
-from paasng.infras.iam.apigw.client import Client
-from paasng.infras.iam.apigw.client import Group as BKIAMGroup
 from paasng.infras.iam.constants import (
     APP_DEFAULT_ROLES,
     BK_LOG_SYSTEM_ID,
@@ -36,7 +34,8 @@ from paasng.infras.iam.constants import (
     IAMErrorCodes,
 )
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.iam.v3.apigw.client import Client
+from paasng.infras.iam.v3.apigw.client import Group as BKIAMGroup
 from paasng.platform.applications.constants import ApplicationRole
 
 logger = logging.getLogger(__name__)
@@ -409,7 +408,7 @@ class BKIAMClient:
                 )
                 raise BKIAMApiError(resp["message"], resp["code"])
 
-    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[str]):
         """
         回收指定用户组的指定 action 权限
 
@@ -436,7 +435,7 @@ class BKIAMClient:
             raise BKIAMApiError(resp["message"], resp["code"])
 
     def update_grade_managers_with_bksaas_space(
-        self, grade_manager_id: str, app_code: str, app_name: str, bk_space_id: str
+        self, grade_manager_id: int, app_code: str, app_name: str, bk_space_id: str
     ):
         """
         给分级管理员添加监控、日志空间的授权范围

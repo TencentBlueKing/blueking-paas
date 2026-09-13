@@ -34,7 +34,7 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.exceptions import (
 from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
 
 if TYPE_CHECKING:
-    from paasng.infras.iam.apigw.client import Group as ItsmGroup
+    from paasng.bk_plugins.pluginscenter.itsm_adaptor.apigw.client import Group as ItsmGroup
 
 # from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
 

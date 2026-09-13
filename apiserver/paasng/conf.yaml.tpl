@@ -140,6 +140,20 @@ BK_CMSI_ENABLED_METHODS: ["send_mail", "send_sms", "send_weixin"]
 ## 跳过初始化已有应用数据到权限中心
 # BK_IAM_SKIP: false
 
+## 本部署环境对接的权限中心版本，可选值 v3 / v4
+# BK_IAM_VERSION: v3
+## 权限中心 V4 的网关环境
+# BK_IAM_V4_APIGW_SERVICE_STAGE: prod
+## 权限中心 V4 服务地址，BK_IAM_VERSION 为 v4 时必填
+# BK_IAM_V4_URL: ''
+## 请求权限中心 V4 的 App Code / Secret，默认值与 BK_APP_CODE / BK_APP_SECRET 相同
+# BK_IAM_V4_APP_CODE: ''
+# BK_IAM_V4_APP_SECRET: ''
+## 开发者中心在权限中心 V4 注册的系统 ID
+# IAM_PAAS_V4_SYSTEM_ID: bk_paas3
+## 插件开发中心在权限中心 V4 注册的系统 ID
+# IAM_PLUGINS_CENTER_V4_SYSTEM_ID: bk_plugins
+
 ## 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
 # ENABLE_MULTI_TENANT_MODE: false
 

@@ -335,7 +335,7 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
         sys_var("CONSOLE_URL", settings.BK_CONSOLE_URL, _("蓝鲸桌面访问地址")),
         sys_var("CC_URL", settings.BK_CC_URL, _("蓝鲸配置平台访问地址")),
         sys_var("JOB_URL", settings.BK_JOB_URL, _("蓝鲸作业平台访问地址")),
-        sys_var("IAM_URL", settings.BK_IAM_URL, _("蓝鲸权限中心访问地址")),
+        sys_var("IAM_URL", settings.BK_IAM_EFFECTIVE_URL, _("蓝鲸权限中心访问地址")),
         sys_var("USER_URL", settings.BK_USER_URL, _("蓝鲸用户管理访问地址")),
         sys_var("MONITORV3_URL", settings.BK_MONITORV3_URL, _("蓝鲸监控平台访问地址")),
         sys_var("LOG_URL", settings.BK_LOG_URL, _("蓝鲸日志平台访问地址")),

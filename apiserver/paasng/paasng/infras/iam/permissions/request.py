@@ -19,8 +19,10 @@ from abc import ABC
 from typing import Dict, List, NamedTuple, Optional, Union
 
 from django.conf import settings
-from iam import Resource
 from iam.apply import models
+
+from paasng.infras.iam.base.dto import AuthResource
+from paasng.infras.iam.shim import get_paas_system_id
 
 
 class ResourceRequest(ABC):  # noqa: B024
@@ -31,7 +33,7 @@ class ResourceRequest(ABC):  # noqa: B024
         """从字典构建对象"""
         raise NotImplementedError
 
-    def make_resources(self, res_ids: Union[List[str], str]) -> List[Resource]:
+    def make_resources(self, res_ids: Union[List[str], str]) -> List[AuthResource]:
         """
         :param res_ids: 单个资源 ID 或资源 ID 列表
         """
@@ -39,11 +41,9 @@ class ResourceRequest(ABC):  # noqa: B024
             res_ids = [res_ids]
 
         res_ids = [str(_id) for _id in res_ids]
+        system_id = get_paas_system_id()
 
-        return [
-            Resource(settings.IAM_PAAS_V3_SYSTEM_ID, self.resource_type, _id, self._make_attribute(_id))
-            for _id in res_ids
-        ]
+        return [AuthResource(system_id, self.resource_type, _id, self._make_attribute(_id)) for _id in res_ids]
 
     def _make_attribute(self, res_id: str) -> Dict:
         return {}

@@ -34,7 +34,8 @@ from app_spark_api.agent.conversations.entities import (
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
-from app_spark_api.entities import ErrorResponse
+from app_spark_api.entities import ERROR_RESPONSES
+from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 
 if TYPE_CHECKING:
@@ -57,7 +58,7 @@ PROJECT_ID = Path(..., description="项目 ID")
 
 @router.post(
     "",
-    response={HTTPStatus.CREATED: RuntimeStateResponse, HTTPStatus.CONFLICT: ErrorResponse},
+    response={**ERROR_RESPONSES, HTTPStatus.CREATED: RuntimeStateResponse},
     url_name="conversations-create",
     summary="开始一个新会话",
 )
@@ -75,7 +76,7 @@ async def create_conversation(request: HttpRequest, project_id: str = PROJECT_ID
 
 @router.get(
     "",
-    response=list[ConversationResponse],
+    response={**ERROR_RESPONSES, HTTPStatus.OK: list[ConversationResponse]},
     url_name="conversations-list",
     summary="列出一个 Project 下的会话",
 )
@@ -97,7 +98,7 @@ async def list_conversations(
 
 @router.get(
     "{number}/",
-    response=RuntimeStateResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: RuntimeStateResponse},
     url_name="conversations-retrieve",
     summary="查看会话状态",
 )
@@ -116,7 +117,7 @@ async def get_conversation(
 
 @router.post(
     "{number}/runs/",
-    response={HTTPStatus.OK: None, HTTPStatus.CONFLICT: ErrorResponse},
+    response={**ERROR_RESPONSES, HTTPStatus.OK: None},
     url_name="conversations-start-run",
     summary="发起一轮对话，返回 AG-UI 事件流",
 )
@@ -150,7 +151,7 @@ async def start_run(
 
 @router.post(
     "{number}/close/",
-    response={HTTPStatus.OK: ConversationResponse, HTTPStatus.CONFLICT: ErrorResponse},
+    response={**ERROR_RESPONSES, HTTPStatus.OK: ConversationResponse},
     url_name="conversations-close",
     summary="结束一个仍然活跃的会话",
 )
@@ -173,7 +174,7 @@ async def close_conversation(
 
 @router.get(
     "{number}/ui-events/",
-    response=UiEventPageResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: UiEventPageResponse},
     url_name="conversations-ui-events",
     summary="拉取已入库的 AG-UI 事件历史",
 )
@@ -215,11 +216,10 @@ async def _get_conversation(request: HttpRequest, project_id: str, number: int) 
     within a Project, that check is also what makes this lookup unambiguous.
     """
     project = await _get_project(request, project_id)
-    return await aget_object_or_404(
-        Conversation.objects,
-        number=number,
-        project=project,
-    )
+    try:
+        return await Conversation.objects.aget(number=number, project=project)
+    except Conversation.DoesNotExist as exc:
+        raise error_codes.CONVERSATION_NOT_FOUND from exc
 
 
 def _to_state(conversation: Conversation, state: ConversationState) -> RuntimeStateResponse:

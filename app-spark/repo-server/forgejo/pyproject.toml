@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.29"]
+build-backend = "hatchling.build"
+
+[project]
+name = "app-spark-forgejo"
+version = "0.1.0"
+description = "Init and verify the App-Spark Forgejo Git host (dev Compose and later chart init Job)."
+readme = "README.md"
+authors = [{ name = "blueking", email = "blueking@tencent.com" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+app-spark-forgejo = "app_spark_forgejo.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0,<3.0.0",
+    "ruff>=0.16.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app_spark_forgejo"]
+
+[tool.mypy]
+python_version = "3.14"
+show_error_codes = true
+check_untyped_defs = true
+files = ["app_spark_forgejo"]
+
+[tool.ruff]
+extend = "../../../pyproject.toml"
+target-version = "py314"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# CLI 用 print 跟操作者说话。urlopen 的目标已由 require_http_url 限制为 http(s)。
+extend-ignore = ["T20", "S310"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app_spark_forgejo"]

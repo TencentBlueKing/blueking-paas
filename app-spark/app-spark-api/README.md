@@ -21,6 +21,10 @@ DATABASE_USER: ...
 DATABASE_PASSWORD: ...
 DATABASE_HOST: ...
 DATABASE_PORT: ...
+
+# 必选：EncryptField 使用的 Fernet key，必须自己生成且保持稳定
+# python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+BKKRILL_ENCRYPT_SECRET_KEY: ...
 ```
 
 ### 启动服务
@@ -41,6 +45,15 @@ uv run pytest --reuse-db tests/
 ```
 
 会话相关的测试不 mock agent，而是真的 spawn agent 进程、走真实 HTTP。
+
+## API 错误响应
+
+所有已匹配 API 路由的失败响应使用 `blue_krill.web.std_error` 的 `APIError`，保留原有 HTTP
+状态语义，响应包含稳定的 `code` 和可展示的 `detail`：
+
+```json
+{"code": "PROJECT_ID_TAKEN", "detail": "Project id `demo` is already taken."}
+```
 
 ## 驱动 Agent
 
@@ -99,7 +112,8 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 | --- | --- | --- |
 | 原始对话记录 | `ConversationMessage` 表 | 暂无对外读接口 |
 | AG-UI 事件历史 | `ConversationUiEvent` 表 | `GET .../ui-events/`，直接读库、不起容器 |
-| 会话上下文 | 制品库 blob + `ConversationContextSnapshot` 行 | 冷启动时注入回 Runtime |
+| 会话上下文 | 制品库 blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
+| 可恢复检查点 | `ConversationCheckpoint` 行 | 冷启动时先据此把文件放回去 |
 
 **一致性是最终一致的**：Runtime 是在把 AG-UI 事件流全部发完之后才 flush 的，所以客户端收到
 `RUN_FINISHED` 的那一刻，本服务的库可能还差几十毫秒。要等一轮真正落定，看
@@ -110,9 +124,102 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 「Runtime 空闲，但库里还差一截」。`replication_pending` 报的就是那一截，落后到什么程度可以从
 Runtime 的 `/health` 的 `pushed_*` 游标看。
 
-**已知缺口**：冷启动不恢复 workspace 源码。恢复出来的上下文会引用一堆不存在的文件，所以
-「换一个全新 Runtime 继续对话」目前只在讨论层面成立，不在继续编码层面成立。衔接点是
-`ProjectSourceStorage`：注入 context 之前先把源码 `get()` 回来。
+#### 冷恢复：先文件，后上下文
+
+冷启动恢复的依据是**检查点**，不是「最新的上下文」。一个检查点由一个仓库提交（连同钉住它的
+远端 tag）和一个上下文版本组成，两者必须描述**同一个时刻**。
+
+两半从两条路、按不确定的先后到达本服务：提交由 Runtime 的后台 push 上报，上下文由复制通道推
+过来。所以「可恢复」不做成一个由某条路径去置位的字段，而是一个查询——检查点行在、且它引用的那
+一版上下文行也在。字段要两条路径都记得置位，还要防住两者交错到达；查询没有这个时序问题。
+
+由此，**「代码已推送、上下文尚未保存」和反过来的情况都不算恢复点**。这不是保守，是必要的：文
+件和记忆描述的不是同一个时刻时，恢复出来的 Runtime 不会崩，它只会拿着记得别的文件的模型接着
+写代码，而错误要到好几轮之后才看得出来。因此，有可恢复检查点时，它必须与最新上下文版本匹配，
+否则冷恢复会显式拒绝。没有可恢复检查点时——例如只做问答、读文件或与工作区无关的文档工作——
+则不恢复文件，只恢复最新上下文。
+
+恢复顺序是**先文件、后上下文、最后才接受新 run**（`_resume_if_cold`）。反过来会留下一个窗口：
+Runtime 记得自己写过一些还没落盘的代码，这时进来一轮 run，模型就会基于这个错位行动。
+
+- **同一会话**冷恢复用它自己配套的那个检查点，游标也取自检查点，而不是「现在库里存到哪」。
+- **换会话**继承 Project 最新的代码：Agent 侧发现工作区已经在检查点**之后**，会保留较新的工作
+  并回 `superseded`，不会被旧会话的检查点回滚掉。恢复前会先 fetch，避免本地旧 workspace 把已
+  经推进的远端分支误判成“就在检查点”。
+- 远端不可用、提交找不到、或检查点引用的上下文版本读不出来时**显式失败**，不静默从空工作区开
+  始。
+
+#### 上下文版本的保留与回收
+
+每一版上下文单独存一份 blob（key 里带版本号），否则检查点够不到「和它的提交配套的那一版」——
+就地覆盖的 blob 只能回答「最新是什么」。普通冷启动要的「最新一版」不另记指针，就是版本号最大
+的那一行。代价是版本会累积，所以保留策略是硬性配套的：
+
+```yaml
+AGENT_CONTEXT_VERSIONS_KEPT: 5   # 除被检查点引用的版本外，额外保留的最近版本数
+AGENT_CHECKPOINTS_KEPT: 3        # 一个会话保留的最近检查点数
+```
+
+两个数缺一不可。检查点会钉住它引用的那一版不让回收，所以只限版本数、不限检查点数的话，blob
+仍然会无上限增长——真正兜底的是检查点这一侧。留 3 个是余量：实际能被用上的只有「和最新上下文
+版本配套」的那一个，多留两个是为了容忍提交上报与上下文归档之间的乱序。两个值都会被抬到至少
+1，配成 0 等于关掉冷启动。
+
+回收在归档新版本之后顺带做，顺序是**先淘汰检查点、再删版本**（先删检查点，被它钉住的版本才能
+在同一次回收里一起走），删版本时**先删行、再删 blob**。反过来的话，一次失败的远端删除会留下一
+行指向已经不存在的文档，而那正好是冷启动最没法处理的状态——行说有，读出来没有。孤儿 blob 只是
+占空间。被淘汰的检查点在远端留下的 tag 不跟着删：删远端引用是一次可能失败的网络操作，不该让本
+地回收依赖它，而一个没人引用的 tag 只占几十字节。
+
+### Git 源码仓库
+
+每个 Project 对应组织下的一个**私有**仓库、一条工作分支。API 负责建仓和签发仓库范围的长期
+读写 token。源码持久化已由 Git 承担；会话冷恢复按上方「冷恢复：先文件，后上下文」使用检查点。
+
+本地 Forgejo 见 [repo-server/forgejo](../repo-server/forgejo/README.md)。配置示例：
+
+```yaml
+BKKRILL_ENCRYPT_SECRET_KEY: ''  # Fernet key；进程启动必须配置，不要留空
+REPO_SERVER:
+  type: forgejo
+  base_url: http://127.0.0.1:3000   # 本服务调 Forgejo API
+  clone_url: http://127.0.0.1:3000  # Agent/git 看到的地址，可以和 base_url 不同
+  org: app-spark
+  service_account: app-spark-bot
+  service_account_password: ...     # 不要提交；init 写在 secrets/
+  default_branch: main
+  commit_author_name: App-Spark
+  commit_author_email: app-spark@localhost.invalid
+```
+
+真实 Forgejo 测试不在默认 `pytest tests/` 里。CI 或本地验收由本项目驱动（会 `just test-up` 拉起
+`repo-server/forgejo` 测试实例，和会话测试拉起 Agent 同一模式）：
+
+```bash
+APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
+```
+
+未设置 `APP_SPARK_FORGEJO_LIVE=1` 时该目录不会被收集；一旦设置，缺少 Forgejo 会失败而不是跳过。
+
+#### Runtime 怎么拿到仓库
+
+起 Runtime 时把 `GitRemote`（clone 地址、分支、服务账号、写 token）交给 provider，由它写进子进程
+环境。传的是 `clone_url` 而不是 `base_url`——两者只在「所有东西都在同一台机器上」时相同，一旦不
+是，用本进程自己的地址会把每个 Runtime 指向它自己。
+
+和状态回写 token 不同，**仓库 token 不会在 Runtime 停止时吊销**：它长期有效、被这个 Project 的
+每个 Runtime 共用。拦住一个被替换掉的旧 Runtime 推送的，是服务端拒绝非快进推送，不是收回凭据。
+
+没有仓库时不下发这几个变量，Runtime 的 workspace 就只留在本地磁盘，并在 `/health` 上如实报出来，
+而不是假装文件已经存好了。
+
+#### 未保存时下一轮被拒
+
+Runtime 会用 409 拒绝两种完全不同的情况：正在跑另一轮（`AgentBusyError`），和上一轮的文件还没
+推到仓库（`AgentWorkspaceSavePendingError`）。两者靠 Runtime 返回的 `detail.code` 区分，对外也是
+`AGENT_BUSY` 与 `AGENT_WORKSPACE_SAVE_PENDING` 两个错误码及不同提示——把它们合并会在 Agent 明明
+空闲、只是存不上的时候告诉用户「正忙」。Agent 侧的逃生口（`?allow_unsaved=true`）目前不透传给
+终端用户：要不要提供「本轮不保存也继续」是产品决定。
 
 ### 会话的生命周期
 

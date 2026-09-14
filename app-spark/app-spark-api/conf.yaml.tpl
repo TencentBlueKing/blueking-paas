@@ -42,6 +42,25 @@
 #   USERNAME: ''
 #   PASSWORD: ''
 
+## EncryptField 使用的 Fernet key。进程启动必须配置，不要留空：
+## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# BKKRILL_ENCRYPT_SECRET_KEY: ''
+# ENCRYPT_CIPHER_TYPE: FernetCipher
+
+## Git 持久化（repo-server）。进程启动必须配置，没有关闭开关。
+## clone_url 是 Agent 侧地址，不要默认写成 localhost。
+# REPO_SERVER:
+#   type: forgejo
+#   base_url: ''
+#   clone_url: ''
+#   org: app-spark
+#   service_account: app-spark-bot
+#   service_account_password: ''
+#   default_branch: main
+#   timeout_seconds: 30.0
+#   commit_author_name: App-Spark
+#   commit_author_email: app-spark@localhost.invalid
+
 ## ---------------------------------- Agent Runtime 驱动相关配置 ----------------------------------
 
 ## 用什么方式为一个会话拉起 Agent Runtime，目前只有 local_process

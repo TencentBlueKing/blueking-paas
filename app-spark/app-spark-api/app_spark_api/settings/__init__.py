@@ -41,7 +41,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 from pathlib import Path
 
 import pymysql
-from dynaconf import LazySettings
+from dynaconf import LazySettings, Validator
 
 from .utils import get_database_conf
 
@@ -58,8 +58,9 @@ settings = LazySettings(
     environments=False,
     load_dotenv=True,
     includes=[SETTINGS_FILES_GLOB, LOCAL_SETTINGS],
-    # Configure minimal required settings, use `Validator()`
-    # validators=[],
+    validators=[
+        Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
+    ],
     ENVVAR_PREFIX_FOR_DYNACONF="APP_SPARK_API",
     ENVVAR_FOR_DYNACONF="APP_SPARK_API_SETTINGS",
 )
@@ -88,6 +89,7 @@ INSTALLED_APPS = [
     "app_spark_api.core.projects.apps.ProjectsConfig",
     "app_spark_api.agent.conversations.apps.ConversationsConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
+    "app_spark_api.repository.git.apps.GitConfig",
 ]
 
 
@@ -251,6 +253,28 @@ BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get("BKAUTH_TOKEN_USER_INFO_ENDPOINT"
 ## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
 
+## 蓝鲸数据库内容加密私钥（EncryptField）。进程启动必须配置，没有默认值。
+## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+_encrypt_key = settings.get("BKKRILL_ENCRYPT_SECRET_KEY")
+BKKRILL_ENCRYPT_SECRET_KEY = _encrypt_key if isinstance(_encrypt_key, bytes) else str(_encrypt_key).encode()
+ENCRYPT_CIPHER_TYPE = settings.get("ENCRYPT_CIPHER_TYPE", "FernetCipher")
+
+## Git 持久化（repo-server）。字段见 RepoServerConfig。clone_url 是 Agent 侧地址，
+## 与 base_url（本服务调 API）可以不同。
+## 默认值仅用于让配置结构校验通过（typecheck、以及缺少配置时仍能启动）。repo-server.invalid
+## 无法解析，真正使用时会连接失败。生产环境必须显式配置 REPO_SERVER。
+REPO_SERVER = settings.get(
+    "REPO_SERVER",
+    {
+        "type": "forgejo",
+        "base_url": "http://repo-server.invalid",
+        "clone_url": "http://repo-server.invalid",
+        "org": "app-spark",
+        "service_account": "app-spark-bot",
+        "service_account_password": "unset",
+    },
+)
+
 
 # --------
 # Agent Runtime 驱动相关配置
@@ -269,6 +293,18 @@ AGENT_CONTEXT_STORAGE = settings.get(
     "AGENT_CONTEXT_STORAGE",
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
 )
+
+## 除被检查点引用的版本外，一个会话还额外保留多少个最近的上下文版本。每一版单独存一份 blob，
+## 检查点才够得到「和它的提交配套的那一版」；代价是版本会累积，所以保留策略是硬性配套的。
+## 给的是「回收得不那么激进」的余量：正在进行的一轮可能已经推了新上下文但检查点还没到。
+## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
+AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
+
+## 一个会话保留多少个最近的检查点。检查点行本身很小，真正的成本在它钉住的上下文版本——每个
+## 检查点都让一份 blob 不能被回收，所以不限量的检查点等于不限量的 blob。
+## 3 是余量而不是刚好够用：实际能被用上的只有「和最新上下文版本配套」的那一个（见
+## services._restore_files），多留两个是为了容忍上报与归档之间的乱序。
+AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
 
 ## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走的是普通 JSON 请求体，而一份
 ## context 的压缩预算是 480,000 token（见 agent 侧 COMPACTION_TARGET_TOKENS），序列化之后远超

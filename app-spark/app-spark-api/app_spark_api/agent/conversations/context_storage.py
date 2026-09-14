@@ -71,15 +71,22 @@ def get_context_storage_config() -> ContextStorageConfig:
     )
 
 
-def blob_location(conversation_id: UUID) -> tuple[str, dict[str, str]]:
-    """Return the backend name and blob-store configuration for one conversation's context.
+def blob_location(conversation_id: UUID, version: int) -> tuple[str, dict[str, str]]:
+    """Return the backend name and blob-store configuration for one context version.
+
+    Every version gets its own key. Sharing one key per conversation would be smaller, but a
+    checkpoint has to be able to reach *the version its commit goes with*, and an overwritten
+    blob cannot answer that -- restoring would pair a commit with whatever context happened to
+    be written last. What bounds the growth is retention, not overwriting; see
+    :mod:`app_spark_api.agent.conversations.checkpoints`.
 
     Example::
 
-        backend, config = blob_location(conversation.id)
-        snapshot = ConversationContextSnapshot(backend=backend, config=config, ...)
+        backend, config = blob_location(conversation.id, 7)
+        row = ConversationContextVersion(backend=backend, config=config, context_version=7, ...)
 
     :param conversation_id: Conversation whose context document is being addressed.
+    :param version: The context version being stored or read.
     :return: The backend name and the configuration
         :func:`~app_spark_api.repository.storage.blob_stores.make_blob_store` expects.
     :raises StorageConfigurationError: If the configured backend is unknown.
@@ -91,12 +98,12 @@ def blob_location(conversation_id: UUID) -> tuple[str, dict[str, str]]:
         raise StorageConfigurationError(f"Unknown storage backend: {config.backend}") from exc
 
     if backend == StorageBackend.HOST_TMP_PATH:
-        return backend.value, {"path": f"{config.root.rstrip('/')}/{conversation_id}.json"}
+        return backend.value, {"path": f"{config.root.rstrip('/')}/{conversation_id}-v{version}.json"}
 
     if backend == StorageBackend.BK_REPO:
         return backend.value, {
             "bucket": config.root,
-            "key": f"{BK_REPO_KEY_PREFIX}/{conversation_id}/{CONTEXT_DOCUMENT_NAME}",
+            "key": f"{BK_REPO_KEY_PREFIX}/{conversation_id}/v{version}/{CONTEXT_DOCUMENT_NAME}",
         }
 
     raise StorageConfigurationError(f"Unsupported storage backend: {backend}")

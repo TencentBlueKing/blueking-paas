@@ -38,6 +38,8 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "BKAUTH_USER_COOKIE_VERIFY_URL" $bkAuth.userCookieVerifyUrl
   "BKAUTH_TOKEN_USER_INFO_ENDPOINT" $bkAuth.tokenUserInfoEndpoint
   "BLOBSTORE_BKREPO_CONFIG" .Values.blobstoreBkrepoConfig
+  "BKKRILL_ENCRYPT_SECRET_KEY" $django.encryptSecretKey
+  "REPO_SERVER" .Values.repoServer
   "AGENT_RUNTIME_PROVIDER" $agent.runtimeProvider
   "AGENT_RUNTIME_PROVIDER_CONFIG" $agent.runtimeProviderConfig
   "AGENT_CONTEXT_STORAGE" $agent.contextStorage

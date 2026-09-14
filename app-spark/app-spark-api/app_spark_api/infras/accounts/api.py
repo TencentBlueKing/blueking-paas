@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from ninja import Router, Status
 
+from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.entities import (
     AnonymousUserResponse,
     AuthenticatedUserResponse,
@@ -35,7 +36,7 @@ router = Router(tags=["accounts"])
 
 @router.get(
     "/userinfo/",
-    response={200: AuthenticatedUserResponse, 401: AnonymousUserResponse},
+    response={**ERROR_RESPONSES, 200: AuthenticatedUserResponse, 401: AnonymousUserResponse},
     url_name="accounts-userinfo",
     summary="获取当前登录的用户信息",
 )
@@ -43,6 +44,8 @@ async def get_user_info(request: HttpRequest):
     """获取当前已登录的用户信息，如未登录将返回 401 错误。"""
     user = await request.auser()
     if not user.is_authenticated:
+        # 不走统一错误码：这个 401 是「你是谁」的正常答复，调用方拿它去跳登录页，
+        # 而不是一次需要按 code 分支处理的失败。
         return Status(
             HTTPStatus.UNAUTHORIZED,
             {

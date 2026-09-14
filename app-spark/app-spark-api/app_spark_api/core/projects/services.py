@@ -23,6 +23,7 @@ from django.db import IntegrityError, transaction
 
 from app_spark_api.core.projects.exceptions import ProjectIdTakenError, ProjectNameTakenError
 from app_spark_api.core.projects.models import Project
+from app_spark_api.repository.git.services import aprovision_project_repository
 
 
 async def create_project(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:
@@ -39,7 +40,7 @@ async def create_project(*, project_id: str, name: str, owner: str, tenant_id: s
     await _reject_taken(project_id=project_id, name=name, tenant_id=tenant_id)
 
     try:
-        return await sync_to_async(_insert)(
+        project = await sync_to_async(_insert)(
             project_id=project_id,
             name=name,
             owner=owner,
@@ -50,6 +51,10 @@ async def create_project(*, project_id: str, name: str, owner: str, tenant_id: s
         # 唯一约束是这里真正的保证，前面那次检查只负责把话说清楚。
         await _reject_taken(project_id=project_id, name=name, tenant_id=tenant_id)
         raise
+
+    # 建仓在事务外：远端失败必须留下 Project 和 failed 状态，而不是把刚建成的行回滚掉。
+    await aprovision_project_repository(project)
+    return project
 
 
 async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:

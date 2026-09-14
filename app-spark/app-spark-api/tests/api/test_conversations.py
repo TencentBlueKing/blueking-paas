@@ -36,6 +36,7 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
+import subprocess
 import time
 from collections.abc import AsyncIterator
 from http import HTTPStatus
@@ -44,15 +45,22 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from app_spark_api.agent.conversations import checkpoints
+from app_spark_api.agent.conversations import services as conversation_services
+from app_spark_api.agent.conversations import state as conversation_state
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.runtime import get_agent_runtime_provider
+from app_spark_api.agent.runtime import AgentUnavailableError, get_agent_runtime_provider
+from app_spark_api.agent.runtime.entities import RuntimeHealth
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.repository.git.services import provision_project_repository
+from tests.infras.forgejo.fake import ORG, repo_server_config
 
 if TYPE_CHECKING:
     from django.http import StreamingHttpResponse
     from django.test import AsyncClient
 
+    from app_spark_api.agent.conversations.state_models import ConversationCheckpoint
     from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -77,20 +85,47 @@ REPLICATION_POLL_INTERVAL_SECONDS = 0.05
 
 
 @pytest.fixture
-def project(bk_user) -> Project:
+def git_remote_root(settings, fake_forgejo, tmp_path) -> Path:
+    """Give the spawned Runtimes a Git remote that really exists.
+
+    The shared fake Forgejo answers the provisioning API calls, but the ``clone_url`` it is
+    configured with points nowhere -- which is right for tests that never start an Agent, and
+    wrong for these. A Runtime here clones and pushes for real, so without a real repository
+    behind the URL these tests would be asserting on a feature that could not work.
+
+    A bare repository on disk is enough: what a local remote cannot reproduce is authentication
+    and transport, and those are covered by the agent's own live-Forgejo tests.
+    """
+    root = tmp_path / "remotes"
+    (root / ORG).mkdir(parents=True)
+    subprocess.run(
+        ["git", "init", "--bare", "--initial-branch", "main", str(root / ORG / f"{PROJECT_ID}.git")],  # noqa: S607
+        check=True,
+        capture_output=True,
+    )
+    settings.REPO_SERVER = repo_server_config(clone_url=str(root))
+    return root
+
+
+@pytest.fixture
+def project(bk_user, git_remote_root) -> Project:
     """A Project the logged-in user's tenant can reach.
 
     Deliberately not the shared ``project`` fixture: that one is created under the user's own
     random ``tenant_id``, while the API scopes by ``get_tenant()``, which is ``default`` unless
     multi-tenant mode is on.
     """
-    return Project.objects.create(
+    project = Project.objects.create(
         id=PROJECT_ID,
         name="Spark Demo",
         creator=bk_user,
         owner=bk_user,
         tenant_id=get_tenant(bk_user).id,
     )
+    # Records the clone URL from `git_remote_root`, so the Runtime is pointed at the bare
+    # repository that fixture created.
+    provision_project_repository(project)
+    return project
 
 
 @pytest.fixture
@@ -109,6 +144,13 @@ async def agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterato
 async def slow_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterator[None]:
     """Point the service at an agent that keeps a run open long enough to collide with."""
     async for _ in _configured_agent(settings, tmp_path, workspace_root, live_server, "fake:slow"):
+        yield None
+
+
+@pytest.fixture
+async def chat_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterator[None]:
+    """Point the service at an agent that answers without changing workspace files."""
+    async for _ in _configured_agent(settings, tmp_path, workspace_root, live_server, "fake:chat"):
         yield None
 
 
@@ -253,6 +295,24 @@ async def wait_for_replication(
         await asyncio.sleep(REPLICATION_POLL_INTERVAL_SECONDS)
 
 
+async def wait_for_checkpoint(conversation_id: str) -> ConversationCheckpoint:
+    """Wait until the last turn is both pushed to the repository and paired with its context.
+
+    A separate wait from :func:`wait_for_replication`, and deliberately so: the push runs behind
+    the run's own barrier precisely so that a network round trip cannot hold up an answer to the
+    user. "The turn is stored here" and "the turn is on the remote" are two different moments,
+    and a restore needs the second one.
+    """
+    deadline = time.monotonic() + REPLICATION_TIMEOUT_SECONDS
+    while True:
+        checkpoint = await checkpoints.alatest_restorable(conversation_id)
+        if checkpoint is not None:
+            return checkpoint
+        if time.monotonic() >= deadline:
+            pytest.fail(f"No restorable checkpoint appeared within {REPLICATION_TIMEOUT_SECONDS}s")
+        await asyncio.sleep(REPLICATION_POLL_INTERVAL_SECONDS)
+
+
 # --- The tests ---------------------------------------------------------------------------
 
 
@@ -392,6 +452,213 @@ async def test_a_conversation_outlives_the_runtime_that_held_it(
     page = await read_ui_events(aapi_client, number)
     assert [record["seq"] for record in page["records"]] == list(range(1, after["ui_event_seq"] + 1))
     assert after["ui_event_seq"] > first["ui_event_seq"]
+
+
+async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(
+    aapi_client,
+    project,
+    agent,
+    workspace_root,
+):
+    """The whole point of persisting to Git: the files outlive the machine they were written on.
+
+    Everything the Runtime had is destroyed -- the process, its state directory, *and* the
+    workspace itself. What comes back has to come back from two places at once: the files from
+    the repository, the conversation from this service. Asserting on both together is what
+    distinguishes a real restore from a Runtime that merely re-ran the first turn.
+    """
+    state = await create_conversation(aapi_client)
+    number, conversation_id = state["number"], state["conversation_id"]
+    await run_turn(aapi_client, number, "write my first note")
+    first = await wait_for_replication(aapi_client, number)
+    checkpoint = await wait_for_checkpoint(conversation_id)
+
+    workspace = workspace_root / PROJECT_ID
+    original = (workspace / FIRST_NOTE).read_text()
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace)
+
+    await run_turn(aapi_client, number, "write my second note")
+
+    # The first turn's file is back, byte for byte, from a commit the checkpoint pinned.
+    assert (workspace / FIRST_NOTE).read_text() == original
+    # And the second turn continued the conversation rather than restarting it, which is what
+    # says the context came back paired with those files rather than instead of them.
+    assert (workspace / SECOND_NOTE).exists()
+
+    after = await wait_for_replication(aapi_client, number, after=first)
+    assert after["context_version"] > checkpoint.context_version
+
+
+async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
+    aapi_client,
+    project,
+    chat_agent,
+    workspace_root,
+):
+    """A conversation that never changed files needs no Git checkpoint to resume.
+
+    Destroying the process, its state and its empty workspace makes the archived context the
+    only place the first turn can come back from. The second turn advancing beyond the first
+    version proves the replacement Runtime restored that context instead of starting at zero.
+    """
+    created = await create_conversation(aapi_client)
+    number, conversation_id = created["number"], created["conversation_id"]
+
+    first_events = await run_turn(aapi_client, number, "answer without editing files")
+    first = await wait_for_replication(aapi_client, number)
+
+    assert "You said: answer without editing files" in assistant_reply(first_events)
+    assert await checkpoints.alatest_restorable(conversation_id) is None
+
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace_root / PROJECT_ID)
+
+    second_events = await run_turn(aapi_client, number, "continue after the cold start")
+    after = await wait_for_replication(aapi_client, number, after=first)
+
+    assert "You said: continue after the cold start" in assistant_reply(second_events)
+    assert after["context_version"] > first["context_version"]
+    assert await checkpoints.alatest_restorable(conversation_id) is None
+    workspace = workspace_root / PROJECT_ID
+    assert not any(path for path in workspace.iterdir() if path.name != ".git")
+
+
+async def test_cold_restore_refuses_a_context_newer_than_the_latest_checkpoint(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    await conversation_state.asave_context(conversation.id, {"context_version": 1, "messages": []})
+    await checkpoints.arecord(
+        conversation.id,
+        run_id="run-1",
+        commit="a" * 40,
+        tag="app-spark/checkpoint/run-1",
+        context_version=1,
+        completed=True,
+        log_seq=0,
+        ui_event_seq=0,
+        state_epoch=conversation.state_epoch,
+    )
+    await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"workspace restore must not run for stale checkpoint {commit}")
+
+    with pytest.raises(AgentUnavailableError, match="refusing to combine mismatched"):
+        await conversation_services._resume_if_cold(
+            conversation,
+            Client(),  # type: ignore[arg-type]
+            RuntimeHealth(
+                model="fake:test",
+                conversation_id=None,
+                context_version=0,
+                log_seq=0,
+                ui_event_seq=0,
+                running=False,
+                replication_pending=False,
+            ),
+        )
+
+
+async def test_cold_restore_accepts_context_when_no_checkpoint_was_ever_needed(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    document = {"context_version": 1, "messages": []}
+    await conversation_state.asave_context(conversation.id, document)
+    restored_contexts: list[dict[str, Any]] = []
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"workspace restore must not run without a checkpoint: {commit}")
+
+        async def restore_context(
+            self,
+            restored: dict[str, Any],
+            *,
+            if_match: int,
+            log_seq: int,
+            ui_event_seq: int,
+        ) -> int:
+            restored_contexts.append(restored)
+            assert if_match == 0
+            assert log_seq == 0
+            assert ui_event_seq == 0
+            return restored["context_version"]
+
+    health = await conversation_services._resume_if_cold(
+        conversation,
+        Client(),  # type: ignore[arg-type]
+        RuntimeHealth(
+            model="fake:test",
+            conversation_id=None,
+            context_version=0,
+            log_seq=0,
+            ui_event_seq=0,
+            running=False,
+            replication_pending=False,
+        ),
+    )
+
+    assert restored_contexts == [document]
+    assert health.context_version == 1
+
+
+async def test_cold_restore_accepts_context_when_no_checkpoint_is_restorable(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    document = {"context_version": 1, "messages": []}
+    await conversation_state.asave_context(conversation.id, document)
+    await checkpoints.arecord(
+        conversation.id,
+        run_id="interrupted-run",
+        commit="a" * 40,
+        tag="app-spark/checkpoint/interrupted-run",
+        context_version=1,
+        completed=False,
+        log_seq=0,
+        ui_event_seq=0,
+        state_epoch=conversation.state_epoch,
+    )
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"incomplete checkpoint must not restore workspace: {commit}")
+
+    restored = await conversation_services._restore_files(
+        conversation,
+        Client(),  # type: ignore[arg-type]
+    )
+
+    assert restored == document
 
 
 async def test_a_turn_is_refused_while_another_is_still_running(

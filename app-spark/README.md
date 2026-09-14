@@ -6,3 +6,4 @@ App-Spark 是蓝鲸运营系统 PaaS 平台推出的基于自然语言开发 Saa
 
 - app-spark-api：项目主要的后端 API 服务，负责直接处理用户请求。
 - agent：沙箱内 Agent，提供 `GET /health` 与 `POST /runs`（AG-UI over SSE）。
+- repo-server：项目 Git 托管（当前实现是 Forgejo）。本地 `cd repo-server/forgejo && just start`；生产环境走 chart 部署。

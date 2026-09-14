@@ -16,11 +16,12 @@ from starlette.responses import JSONResponse, Response
 from starlette.types import Receive, Scope, Send
 
 from app_spark_agent import VERSION, settings
+from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
 from app_spark_agent.observability import log as logger
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
-from app_spark_agent.server.run_input import prepare_run, request_with_body
+from app_spark_agent.server.run_input import PreparedRun, prepare_run, request_with_body
 from app_spark_agent.server.runtime import ConversationRuntime, RunLease, RuntimeBusyError
 from app_spark_agent.state import (
     AppendLog,
@@ -96,9 +97,15 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
     means no run holds the guard, *not* that the turn reached the control plane, because a flush
     that times out still hands the guard back. A caller waiting for a turn to be durable
     elsewhere has to see both flags down.
+
+    ``workspace`` answers the same question for the files rather than the conversation, and it
+    has to be asked separately: a turn's stream ending means its files are *committed locally*,
+    never that they reached the Git remote. Its ``unsaved_seconds`` and ``push_failures`` are
+    there so that "is this Runtime falling behind" is a query rather than a log-reading exercise.
     """
     context = runtime.context_store.context
     replicator = runtime.replicator
+    saver = runtime.saver
     return {
         "version": VERSION,
         "model_ready": settings.is_model_ready(),
@@ -114,6 +121,9 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "pushed_log_seq": runtime.cursors.channel(Channel.MESSAGE).pushed_seq,
         "pushed_ui_event_seq": runtime.cursors.channel(Channel.UI_EVENT).pushed_seq,
         "pushed_context_version": runtime.cursors.pushed_context_version,
+        "workspace_persisted": saver is not None,
+        "workspace_save_pending": saver is not None and saver.status.outstanding,
+        "workspace": saver.status.as_payload() if saver is not None else None,
     }
 
 
@@ -195,30 +205,118 @@ async def restore_context(
         )
 
 
+@router.post("/workspace/restore", dependencies=[Depends(require_bearer)])
+async def restore_workspace(runtime: RuntimeDep, commit: str = Query(min_length=7)) -> JSONResponse:
+    """Bring the workspace to a checkpoint, before any context is injected or any run accepted.
+
+    Files first is not a preference, it is the order the restore has to happen in: injecting the
+    conversation first would leave a window in which the Runtime would accept a turn whose model
+    remembers files that are not on disk yet.
+
+    Held under the run guard for the same reason ``PUT /context`` is -- rewriting the working
+    tree underneath a run in progress would corrupt both.
+
+    :param commit: The checkpoint's commit SHA.
+    :return: What had to be done; see ``RestoreOutcome``. ``superseded`` is a success, and means
+        the Project has been developed in another conversation since and that work was kept.
+    """
+    if runtime.saver is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Runtime has no Git repository, so it has nothing to restore from.",
+        )
+    async with runtime.run_guard.exclusive():
+        try:
+            outcome = await runtime.saver.restore_to(commit)
+        except GitError as exc:
+            # Deliberately loud, and deliberately not a silent empty workspace: a Runtime that
+            # started on the wrong files does not show it until several turns later.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"The workspace could not be restored to {commit}: {exc}",
+            ) from exc
+    return JSONResponse({"outcome": str(outcome), "head": runtime.saver.status.local_sha})
+
+
 @router.post("/runs", dependencies=[Depends(require_bearer)])
-async def run(request: Request, runtime: RuntimeDep) -> Response:
-    """Run one conversation turn and stream it back as AG-UI events."""
+async def run(
+    request: Request,
+    runtime: RuntimeDep,
+    allow_unsaved: bool = Query(default=False),
+) -> Response:
+    """Run one conversation turn and stream it back as AG-UI events.
+
+    :param allow_unsaved: Proceed even though the previous turn's files have not reached the Git
+        remote. The escape hatch from the gate below; the next turn's changes pile on top of the
+        unsaved ones, which is a choice for the user to make rather than one to make for them.
+    """
     if not settings.is_model_ready():
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not ready")
+    if not allow_unsaved:
+        await _require_previous_turn_saved(runtime)
     lease = await runtime.run_guard.try_acquire()
     if lease is None:
         raise RuntimeBusyError("An Agent run is already in progress.")
 
     try:
-        response, run_id = await _start_run(runtime, request)
+        response, prepared = await _start_run(runtime, request)
     except Exception:
         lease.release()
         raise
-    return _hold_run_stream(response, lease, runtime=runtime, run_id=run_id)
+    return _hold_run_stream(
+        response,
+        lease,
+        runtime=runtime,
+        run_id=prepared.run_id,
+        conversation_id=prepared.conversation_id,
+    )
 
 
-async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Response, str]:
+async def _require_previous_turn_saved(runtime: ConversationRuntime) -> None:
+    """Hold the next turn back until the previous one's files are on the Git remote.
+
+    The first version keeps one writer's worth of change in flight at a time: letting a second
+    turn edit files whose predecessor has not been saved makes "what does this checkpoint
+    contain" a much harder question than it needs to be.
+
+    Refused with the same 409 the run guard uses, because from the client's side both mean "not
+    now, try again" -- but with a distinct ``code`` and an explicit way out, since a network
+    partition would otherwise make this rule an indefinite lockout rather than a delay.
+
+    :raises HTTPException: 409 when the previous turn is still unsaved after the wait.
+    """
+    if runtime.saver is None:
+        return
+    if await runtime.await_workspace_saved(timeout_seconds=settings.GIT_SAVE_WAIT_TIMEOUT_SECONDS):
+        return
+    status_payload = runtime.saver.status
+    logger.warning(
+        "refusing a new run: the previous turn is still unsaved after %.0fs (%s)",
+        settings.GIT_SAVE_WAIT_TIMEOUT_SECONDS,
+        status_payload.state,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "workspace_save_pending",
+            "message": (
+                "The previous turn's files have not reached the Git repository yet. Wait and "
+                "retry, or repeat this request with ?allow_unsaved=true to continue without "
+                "saving that work first."
+            ),
+            "workspace": status_payload.as_payload(),
+        },
+    )
+
+
+async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Response, PreparedRun]:
     """Validate one AG-UI run and return its streaming response.
 
     The caller owns the run guard: this only builds the response, and the stream it wraps is
     still running when it returns.
 
-    :return: ``(response, run_id)`` -- the open AG-UI stream, and the id later log lines quote.
+    :return: ``(response, prepared)`` -- the open AG-UI stream, and the validated run whose ids
+        the barrier records on the commit.
     """
     context = runtime.context_store.context
     prepared = prepare_run(await request.body(), context, runtime.transcript)
@@ -273,7 +371,7 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Re
     )
     return (
         adapter.streaming_response(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)),
-        prepared.run_id,
+        prepared,
     )
 
 
@@ -283,16 +381,22 @@ def _hold_run_stream(
     *,
     runtime: ConversationRuntime,
     run_id: str,
+    conversation_id: str,
 ) -> _HoldStreamingResponse:
-    """Hold the run lease through streaming and the final replication barrier."""
+    """Hold the run lease through streaming, the workspace commit, and the replication barrier."""
     inner = cast(StreamingResponse, response)
     existing_background = inner.background
 
     async def generate() -> AsyncIterator[str | bytes | memoryview]:
         lease.mark_entered()
+        completed = False
         try:
             async for chunk in inner.body_iterator:
                 yield chunk
+            # Only reached when the event stream ran to its end. A client that hung up leaves
+            # this false, and the commit message says so. Whether the *model* succeeded is a
+            # different question, answered by the transcript rather than by the repository.
+            completed = True
         finally:
             # The barrier makes a normally completed Runtime disposable. A failed flush must
             # still release the lease: local files remain durable and the background replicator
@@ -300,6 +404,14 @@ def _hold_run_stream(
             try:
                 if existing_background is not None:
                     await existing_background()
+                # Local, fast, and deterministic, which is what makes it safe here: this runs on
+                # a client disconnect too, where a network push could not be relied on to finish.
+                # Pushing is the background saver's job.
+                await runtime.save_workspace(
+                    run_id=run_id,
+                    conversation_id=conversation_id,
+                    completed=completed,
+                )
                 if not await runtime.flush_replication():
                     logger.warning(
                         "releasing the run guard while the control plane is still behind; "

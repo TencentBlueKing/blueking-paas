@@ -1,5 +1,11 @@
 FROM python:3.14-slim-bookworm
 ENV UV_NO_DEV=0
+
+# Git is required for running unit-tests
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
 RUN pip install --no-cache-dir uv==0.10.0
 WORKDIR /app

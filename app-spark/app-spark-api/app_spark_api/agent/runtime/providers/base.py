@@ -22,7 +22,7 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, StateCallback
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, StateCallback
 
 
 class AgentRuntimeProvider(abc.ABC):
@@ -42,6 +42,7 @@ class AgentRuntimeProvider(abc.ABC):
         project_id: str,
         conversation_id: str,
         state_callback: StateCallback | None = None,
+        git_remote: GitRemote | None = None,
     ) -> AgentRuntimeHandle:
         """Return a live Runtime for ``conversation_id``, starting one if needed.
 
@@ -52,14 +53,16 @@ class AgentRuntimeProvider(abc.ABC):
 
         Implementations must be idempotent: a second call for a conversation that is already
         served has to return the running Runtime rather than start a rival one. A consequence
-        worth stating: ``state_callback`` is only read when a Runtime is actually started, so a
-        caller cannot use it to re-point a Runtime that is already up.
+        worth stating: ``state_callback`` and ``git_remote`` are only read when a Runtime is
+        actually started, so a caller cannot use either to re-point a Runtime that is already up.
 
         :param project_id: Project being developed; its workspace is shared by every one of its
             conversations.
         :param conversation_id: Conversation the Runtime is bound to, one per Runtime.
         :param state_callback: Where the Runtime should replicate its durable state, and the
             token to do it with. Omitted for a Runtime that is to keep its state to itself.
+        :param git_remote: Where the Runtime should persist its workspace files. Omitted for a
+            Runtime whose workspace is to live only on local disk.
         :return: Where the Runtime can be reached.
         :raises AgentProvisionError: If no Runtime could be brought up.
         :raises AgentWorkspaceBusyError: If another conversation of the same Project already

@@ -1,13 +1,18 @@
 """Process lifecycle: idle-timeout exit, and stop registered app children on SIGTERM."""
 
 import asyncio
+import logging
 import os
+import signal
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
 
 from app_spark_agent import settings
+
+logger = logging.getLogger(__name__)
 
 
 class IdleWatch:
@@ -20,8 +25,8 @@ class IdleWatch:
     :param timeout_seconds: Idle seconds; ``<= 0`` disables exit.
     :param is_busy: Whether a run is still open; when true, timeout does not exit.
     :param clock: Monotonic clock; tests may inject one.
-    :param on_timeout: Fired when due; defaults to ``os._exit(0)``. Production wraps
-        this in :meth:`RuntimeLifecycle.create` so children stop first.
+    :param on_timeout: Fired when due; defaults to ``os._exit(0)``. Production replaces
+        this in :meth:`RuntimeLifecycle.create` with an orderly shutdown request.
     :param poll_interval: Sleep between watch-loop checks.
     """
 
@@ -140,16 +145,40 @@ class RuntimeLifecycle:
         seconds = settings.IDLE_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
         processes = AppProcessRegistry()
 
-        def stop_then_exit() -> None:
-            processes.stop_all()
+        def hard_exit() -> None:
+            """Leave now, having stopped the children nothing else will reap."""
+            try:
+                processes.stop_all()
+            except Exception:
+                # Nothing here may keep the process alive: this is the path that exists because
+                # something else already failed to finish.
+                logger.exception("could not stop the application children before the hard exit")
             os._exit(0)
+
+        def request_orderly_shutdown() -> None:
+            """Ask the server to stop the way a SIGTERM does, and leave anyway if it will not.
+
+            Signalling rather than exiting outright is the whole point. ``os._exit`` skips the
+            lifespan shutdown, and the lifespan shutdown is where an unpushed workspace commit
+            and un-replicated state get their last chance to leave the sandbox -- so idling out
+            used to discard exactly the work this timeout exists to stop paying for. Going
+            through the server's own path also means teardown added later is teardown this path
+            inherits, instead of the next thing it quietly skips.
+
+            The watchdog keeps the guarantee the old ``os._exit`` provided: however wedged the
+            shutdown gets, an idle Runtime stops costing money.
+            """
+            _exit_after(settings.IDLE_EXIT_DEADLINE_SECONDS, hard_exit)
+            # Delivered to this process, whose uvicorn installed the handler that turns it into
+            # a graceful shutdown. tini is PID 1 in the image, so this is never PID 1.
+            os.kill(os.getpid(), signal.SIGTERM)
 
         return cls(
             idle=IdleWatch(
                 seconds,
                 is_busy=is_busy,
                 clock=clock,
-                on_timeout=on_timeout or stop_then_exit,
+                on_timeout=on_timeout or request_orderly_shutdown,
                 poll_interval=poll_interval,
             ),
             processes=processes,
@@ -173,3 +202,26 @@ class RuntimeLifecycle:
     def shutdown(self) -> None:
         """Stop registered application children. Does not commit conversation context."""
         self.processes.stop_all()
+
+
+def _exit_after(seconds: float, exit_now: Callable[[], None]) -> threading.Thread:
+    """Run ``exit_now`` once ``seconds`` have passed, unless the process is gone by then.
+
+    A daemon thread rather than a task, because the event loop is precisely what may be wedged
+    -- or have had its tasks cancelled -- by the time this matters. When the orderly shutdown
+    wins the race, which is the ordinary outcome, the thread dies with the process and never
+    runs. That is why it may not do anything but exit: it cannot tell the two cases apart.
+
+    :param seconds: How long the orderly shutdown gets before it is overruled.
+    :param exit_now: What to call when it runs out of time.
+    :return: The started thread, so tests can wait for it.
+    """
+
+    def wait_then_exit() -> None:
+        time.sleep(seconds)
+        logger.warning("the orderly shutdown did not finish within %.0fs; exiting the hard way", seconds)
+        exit_now()
+
+    thread = threading.Thread(target=wait_then_exit, name="idle-exit-watchdog", daemon=True)
+    thread.start()
+    return thread

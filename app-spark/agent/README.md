@@ -30,7 +30,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`；本组件只读入，不拉起应用也不校验 |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
-| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`，到期以退出码 0 退出。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
+| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
@@ -183,8 +183,163 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 - **冷启动必须播种 seq**：`PUT /context?log_seq=40&ui_event_seq=55` 会让新记录从 41 和 56
   继续，避免与控制面已有记录撞号。
 
-已知缺口：冷启动只恢复上下文，不恢复 workspace 源码；旧 Runtime 的 `run_id` 也不会在空状态
-目录中参与重放检测。控制面应先恢复源码，并始终为每轮生成新的 UUID。
+已知缺口：旧 Runtime 的 `run_id` 不会在空状态目录中参与重放检测，控制面应始终为每轮生成新的
+UUID。workspace 源码的持久化见下一节。
+
+## workspace 的 Git 持久化
+
+状态目录之外，workspace 里的源码由 `app_spark_agent/git/` 存进 Project 的私有 Git 仓库。
+
+| 配置项 | 作用 |
+| --- | --- |
+| `GIT_REMOTE_URL` | Project 私有仓库的 clone 地址。必须是**沙箱能解析的**地址：控制面自己用的 `localhost` 拿到这里只会打到沙箱自己。留空即关闭 Git 持久化 |
+| `GIT_TOKEN` | 仓库范围的读写 token |
+| `GIT_USERNAME` | HTTP Basic 的用户名，对 Forgejo 是签发 token 的服务账号 |
+| `GIT_BRANCH` | 唯一的工作分支，缺省 `main` |
+| `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` | 提交身份。是机器人不是终端用户 |
+| `GIT_COMMAND_TIMEOUT_SECONDS` | 单条 git 命令超时，缺省 120 |
+| `GIT_MAX_FILE_BYTES` / `GIT_MAX_TOTAL_BYTES` | 文件策略的硬性体积上限，缺省 10MiB / 200MiB |
+| `GIT_PUSH_RETRY_BACKOFF_SECONDS` | push 失败后的重试间隔，缺省 5 |
+| `GIT_SAVE_WAIT_TIMEOUT_SECONDS` | 开始下一轮前等待上一轮推送落地的上限，缺省 10。见下面的逃生口 |
+| `PROJECT_ID` | 只写进 commit trailer 便于追溯，留空不影响保存 |
+
+### 凭据只在一个进程的环境里
+
+token 走 `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` 交给 git，**不进命令行**。
+常见写法 `git -c http.extraHeader=...` 会把凭据放进 `argv`，而同一个容器里、同一个用户下的
+任何进程都能从 `/proc` 读到它——包括模型通过 Shell 能力跑起来的每一条命令。第一层的
+「密钥不进子进程」会因此被一个 `ps` 抵消掉。
+
+配套的三条：header 按 URL 限定（`http.<remote>.extraHeader`），重定向到别处不会带上；
+`.git/config` 里只有不含凭据的 remote URL；系统与用户级 git 配置、以及任何继承来的
+credential helper 全部关掉——helper 有权把凭据写到磁盘上，那正好是上面所有选择要避免的。
+
+### 文件策略（本阶段定稿）
+
+- **保留**：源码、配置、静态资源、锁文件，**包含隐藏文件**（`.env`、`.python-version` 一类）。
+  仓库是每个 Project 私有的，恢复时悄悄丢掉应用配置比存下来更糟。
+- **默认忽略**：语言相关的构建产物与依赖目录（`.venv`、`node_modules`、`__pycache__` 等），来自
+  vendored 的 [github/gitignore](https://github.com/github/gitignore) 模板，目前覆盖 Python 与
+  Node，更新模板：`make update-gitignore-assets`。
+- **二进制**原样提交；**符号链接**按链接本身提交（git 存的是链接文本，不是目标内容），恢复
+  时重建的也是链接。
+- **体积上限**：单文件 10MiB、总量 200MiB。超限时提交明确失败并报出是哪些路径，而不是安静地
+  把几百 MB 推上去。检查发生在 `git add` 之前，所以失败不会留下半个暂存区。
+
+### 不变量
+
+- **一个远端、一条分支**。推送目标固定是 `origin` 的 `refs/heads/<branch>`。
+- **永不强推**。远端有本地没有的提交时，推送报 `GitDivergedError` 交给上层，不会加 `--force`。
+  仓库 token 是长期有效的，所以拦住一个跟丢的旧 Runtime 的唯一防线就是服务端拒绝非快进推送；
+  这里留一个 force 开关等于给那道防线开后门。
+- **工作区有文件、远端也有历史时拒绝合并**。两种做法都会丢数据（覆盖工作区丢未推送的工作，
+  在远端 tip 上提交则把远端有、本地没有的文件记成删除），所以这个选择留给调用方。
+
+### 每轮 run 怎么保存
+
+拆成两半，位置不同：
+
+- **屏障内**（`_hold_run_stream` 的 `finally`）只做**本地 commit**。纯本地、快、确定性强。
+  它跑在工作线程上，而线程不可取消，所以即使这个 `finally` 是在一个已被取消的任务里执行的，
+  commit 也能落地。
+- **屏障外**由后台任务做 **push**，自带重试。
+
+为什么 push 不能放屏障里：那个 `finally` 在客户端断开时同样会执行，而 uvicorn 的
+`GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS` 是 1 秒、会主动切断 SSE——相当大一部分保存动作发生在
+已取消的任务里，一次网络往返在那个位置没法保证做完。何况它还会把一轮对话挂在网络上，用户
+看到的就是「卡住了」。
+
+由此得到一条必须说清楚的结论：**一轮 run 的流结束，只代表代码已在本地提交，不代表已经存到
+远端。** 两者是不同的状态，`/health` 分别报：
+
+| 字段 | 含义 |
+| --- | --- |
+| `workspace_persisted` | 这个 Runtime 是否配了仓库。没配和「已保存」必须能区分开 |
+| `workspace_save_pending` | 是否还有未提交的工作区改动、未推送提交或未上报检查点 |
+| `workspace.state` | `idle` / `pending` / `pushing` / `saved` / `failed` |
+| `workspace.local_sha` / `workspace.pushed_sha` | 本地提交与远端确认的提交 |
+| `workspace.unsaved_seconds` | **最早**一个未保存提交等了多久，不是最近那个 |
+| `workspace.push_failures` | 连续失败次数，成功即清零 |
+| `workspace.needs_attention` | 重试也过不去的失败：分叉、token 被拒、超出体积上限 |
+| `workspace.uncommitted` | 上一次本地提交失败后，工作区是否仍有未记录的改动 |
+
+一轮 run 无论成败都会 commit：客户端中途断开时写了一半的文件也值得留着，但 commit message
+会写成 `(interrupted)` 且带 `Turn-Status: interrupted`。这类提交仍会推到工作分支并上报给控制
+面，供后续人工检查或继续修改，但上报会标记 `completed=false`，不能成为自动恢复点：
+`on_complete` 尚未提交新上下文时，上一版上下文并不能准确描述这些半成品文件。
+
+### 关停时多等一步
+
+普通路径从不在屏障里等 push——那是后台任务的事。关停是唯一的例外：进程一走，workspace 盘和
+状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时会调
+`ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去：
+
+### 未保存时的下一轮：有界等待与逃生口
+
+第一版只允许一份改动在途：上一轮还没推上去时，`POST /runs` 会先等，等满
+`GIT_SAVE_WAIT_TIMEOUT_SECONDS` 仍未落地就由 **Agent 侧的路由**拒绝，返回 **409**，
+`detail.code` 为 `workspace_save_pending`（与 `RunGuard` 的 409 靠 `code` 区分）。
+
+**必须有逃生口**：网络断了 push 可能永远落不了地，无限等待等于把用户锁在自己的会话外面。
+客户端可以显式选择继续：
+
+```
+POST /runs?allow_unsaved=true
+```
+
+这一轮的改动会叠在未保存的改动上；这是要让用户明确做的选择，而不是替他做的选择。选择继续
+之后 `/health` 依然报 `workspace_save_pending`——继续不等于假装已经存好了。
+
+### 检查点：commit 必须配一个 tag
+
+push 成功之后，这一轮的提交会被打上一个**不可移动的远端 tag**
+（`app-spark/checkpoint/<run_id>`），然后才上报给控制面。
+
+为什么不能只存一个 SHA：分支保护挡的是强推，挡不住「这个提交曾经存在、后来被回收了」。
+一个没有任何 ref 指向的提交是可回收对象，等到真要恢复的时候，检查点指向的可能已经什么都不是
+了。tag 是让它永远可达的那个 ref，一个检查点一个。
+
+上报的内容是 `commit` + `tag` + `run_id` + `context_version` + `completed`。其中
+`context_version` 取自
+**做 commit 的那一刻**，不是 push 落地的那一刻：push 可能几秒后才回来，那时会话可能已经是下
+一轮了，拿那个版本配这一轮的文件就是错的配对。
+
+控制面的回答 `restorable=false` **不是错误**，它表示「代码到了、配套上下文还没到」这个正常的
+中间态；上下文到了之后控制面自己会认。相对地，只要检查点还没上报成功，这一轮就仍然算
+`outstanding`——「已保存」的含义是**可恢复**，不只是**已落盘**。上报失败时重试的是**同一个检
+查点**，绝不重新 commit 一次：代码已经在远端了，再提交只会多出一个内容相同的 SHA。
+
+### 恢复：先文件，后上下文
+
+`POST /workspace/restore?commit=<sha>`（需要 bearer token，且会拿 `run_guard.exclusive()`）
+把工作区放回某个检查点。三种结果：
+
+| `outcome` | 含义 |
+| --- | --- |
+| `already_there` | 工作区已经在这个提交上，什么都不用做 |
+| `superseded` | 本地或远端工作分支在这个提交**之后**，切到/保留较新的工作，**不回滚** |
+| `restored` | 工作区落后或分叉，移到这个提交上 |
+
+`superseded` 是有意为之：检查点记录的是**那个会话**把文件写到了哪，不是 Project 现在在哪。
+换会话时把工作区回滚到旧会话的检查点，会删掉另一个会话的成果——这比「模型看到一些它不记得写
+过的文件」严重得多。
+
+提交在远端找不到时抛 `GitError`，由控制面转成显式失败。**不会**静默地从一个空工作区开始：
+那样模型会以为自己从没写过任何东西，然后把已经存在的文件重写一遍。
+
+### 测试
+
+`tests/git/` 用真实 git 进程和真实仓库跑，不 mock 命令输出，覆盖提交、推送、打 tag 上报和上面
+那三种恢复结果。`tests/api/test_workspace_save.py` 用真实 Runtime + fake 模型驱动完整一轮，验
+证提交、状态上报和上面那个逃生口。认证与传输是本地裸仓库假不出来的部分（tag 走的是另一个 ref
+命名空间，权限可能和分支不同），放在 `tests/live_forgejo/`，需要真实 Forgejo：
+
+```bash
+APP_SPARK_FORGEJO_LIVE=1 uv run pytest tests/live_forgejo
+```
+
+未设置该变量时这个目录不会被收集；一旦设置，测试自己会去 `repo-server/forgejo` 起实例，
+Forgejo 起不来就失败，不会 skip。
 
 ## 本地镜像
 

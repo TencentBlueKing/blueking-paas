@@ -213,6 +213,9 @@ async def test_no_conversation_endpoint_reaches_another_users_project(
     response = await getattr(aapi_client, method)(url)
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    # Never CONVERSATION_NOT_FOUND: naming the inner resource on the endpoints that take a
+    # number would confirm the Project is there to be guessed at.
+    assert response.json()["code"] == "RESOURCE_NOT_FOUND"
     await someone_elses_conversation.arefresh_from_db()
     assert someone_elses_conversation.is_live
 
@@ -279,7 +282,7 @@ async def test_ending_a_conversation_twice_is_refused(aapi_client, conversation)
     response = await aapi_client.post(close_url(conversation.number))
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {"detail": "This conversation has been closed."}
+    assert response.json() == {"code": "CONVERSATION_CLOSED", "detail": "This conversation has been closed."}
 
 
 async def test_ending_a_conversation_revokes_its_runtimes_authority_to_write(aapi_client, conversation):
@@ -372,7 +375,7 @@ async def test_a_closed_conversation_cannot_be_advanced(aapi_client, conversatio
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {"detail": "This conversation has been closed."}
+    assert response.json() == {"code": "CONVERSATION_CLOSED", "detail": "This conversation has been closed."}
 
 
 async def test_a_closed_conversation_still_reports_its_state(aapi_client, conversation):
@@ -390,6 +393,7 @@ async def test_ending_a_conversation_that_does_not_exist_is_not_found(aapi_clien
     response = await aapi_client.post(close_url(404))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()["code"] == "CONVERSATION_NOT_FOUND"
 
 
 async def test_an_anonymous_caller_can_neither_list_nor_end(aanonymous_api_client, conversation):

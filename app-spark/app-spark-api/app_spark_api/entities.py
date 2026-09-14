@@ -21,10 +21,32 @@ conversations 各自定义一个字段一模一样的 `ErrorResponse`，除了�
 不同源的 schema 之外没有任何好处。
 """
 
+from http import HTTPStatus
+
 from ninja import Field, Schema
 
 
 class ErrorResponse(Schema):
     """一次失败的请求，`detail` 是可以直接展示给调用方的说明。"""
 
+    code: str = Field(description="稳定的业务错误码，调用方应按此字段判断错误类型")
     detail: str = Field(description="面向调用方的错误描述，可直接展示")
+
+
+# These errors are handled globally, including for operations that only declare
+# a success schema. Keep their OpenAPI responses on the same public contract.
+ERROR_RESPONSES = dict.fromkeys(
+    (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.UNAUTHORIZED,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.CONFLICT,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+        HTTPStatus.TOO_MANY_REQUESTS,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        HTTPStatus.BAD_GATEWAY,
+        HTTPStatus.SERVICE_UNAVAILABLE,
+    ),
+    ErrorResponse,
+)

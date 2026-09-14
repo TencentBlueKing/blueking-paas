@@ -32,9 +32,7 @@ from typing import TYPE_CHECKING, Any
 # a type used in a path parameter cannot live in the TYPE_CHECKING block below.
 from uuid import UUID  # noqa: TC003
 
-from django.shortcuts import aget_object_or_404
 from ninja import Field, Path, Router, Schema
-from ninja.errors import HttpError
 
 from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.models import Conversation
@@ -43,6 +41,8 @@ from app_spark_api.agent.conversations.tokens import (
     StateTokenClaims,
     read_state_token,
 )
+from app_spark_api.entities import ERROR_RESPONSES
+from app_spark_api.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:
@@ -165,7 +165,7 @@ class CheckpointResponse(Schema):
 
 @router.post(
     f"{{conversation_id}}/state/{MESSAGES_SEGMENT}",
-    response=AppendResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppendResponse},
     url_name=APPEND_MESSAGES_URL_NAME,
     summary="回写原始对话记录",
 )
@@ -179,7 +179,7 @@ async def append_messages(
 
 @router.post(
     f"{{conversation_id}}/state/{UI_EVENTS_SEGMENT}",
-    response=AppendResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppendResponse},
     url_name="internal-append-ui-events",
     summary="回写 AG-UI 事件历史",
 )
@@ -193,7 +193,7 @@ async def append_ui_events(
 
 @router.put(
     f"{{conversation_id}}/state/{CONTEXT_SEGMENT}",
-    response=ContextResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: ContextResponse},
     url_name="internal-put-context",
     summary="回写会话上下文文档",
 )
@@ -212,13 +212,13 @@ async def put_context(
         document = _json_object(await _read_json(request))
         version = await state.asave_context(conversation_id, document)
     except state.ConversationStateError as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise error_codes.INVALID_CONVERSATION_STATE from exc
     return ContextResponse(context_version=version)
 
 
 @router.put(
     f"{{conversation_id}}/state/{CHECKPOINT_SEGMENT}",
-    response=CheckpointResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: CheckpointResponse},
     url_name="internal-put-checkpoint",
     summary="登记一个已推送到远端的可恢复点",
 )
@@ -262,7 +262,7 @@ async def _append(
     try:
         stored_through = await state.aappend_records(conversation_id, channel, records)
     except state.ConversationStateError as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise error_codes.INVALID_CONVERSATION_STATE from exc
     return AppendResponse(last_seq=stored_through)
 
 
@@ -277,12 +277,15 @@ async def _authorized_conversation(request: HttpRequest, conversation_id: UUID) 
     # `HttpRequest` knows nothing about it.
     claims: StateTokenClaims = request.auth  # type: ignore[attr-defined]
     if claims.conversation_id != str(conversation_id):
-        raise HttpError(HTTPStatus.NOT_FOUND, "No such conversation.")
-    conversation = await aget_object_or_404(Conversation.objects, id=conversation_id)
+        raise error_codes.CONVERSATION_NOT_FOUND
+    try:
+        conversation = await Conversation.objects.aget(id=conversation_id)
+    except Conversation.DoesNotExist as exc:
+        raise error_codes.CONVERSATION_NOT_FOUND from exc
     if claims.epoch != conversation.state_epoch:
         # 这张 token 属于已经被吊销的那一代（比如上一代 Runtime 被显式终止过）。这个 Runtime
         # 可能还活着、还在推，但它写的已经不是当前这个会话该收的东西了。
-        raise HttpError(HTTPStatus.NOT_FOUND, "No such conversation.")
+        raise error_codes.CONVERSATION_NOT_FOUND
     return conversation
 
 
@@ -291,11 +294,11 @@ async def _read_json(request: HttpRequest) -> Any:
     try:
         return json.loads(request.body)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, "Invalid JSON body.") from exc
+        raise error_codes.INVALID_JSON_BODY from exc
 
 
 def _json_object(payload: Any) -> dict[str, Any]:
     """Insist that a forwarded body is a JSON object."""
     if not isinstance(payload, dict):
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, "Expected a JSON object.")
+        raise error_codes.JSON_OBJECT_REQUIRED
     return payload

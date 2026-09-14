@@ -36,7 +36,26 @@ CHECKPOINT_PATH = "checkpoint"
 
 
 class ControlPlaneError(RuntimeError):
-    """Raised when the control plane cannot be reached or refused a write."""
+    """A failed control-plane operation with optional structured API details.
+
+    :param message: Local diagnostic context.
+    :param status_code: HTTP status when a response was received.
+    :param code: Stable control-plane error code, independent of translated text.
+    :param detail: Public explanation returned by the control plane.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        code: str | None = None,
+        detail: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.detail = detail
 
 
 class ControlPlaneClient:
@@ -134,9 +153,7 @@ class ControlPlaneClient:
             raise ControlPlaneError(f"could not reach the control plane at {path}: {exc}") from exc
 
         if response.status_code != HTTPStatus.OK:
-            raise ControlPlaneError(
-                f"the control plane answered {path} with {response.status_code}: {response.text[:200]}"
-            )
+            raise _response_error(path, response)
         try:
             payload = response.json()
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
@@ -154,3 +171,23 @@ def _read_int(payload: dict[str, Any], key: str) -> int:
         return int(payload[key])
     except (KeyError, TypeError, ValueError) as exc:
         raise ControlPlaneError(f"unreadable ingest response, {key} is missing or not an integer: {exc}") from exc
+
+
+def _response_error(path: str, response: httpx.Response) -> ControlPlaneError:
+    """Read the API error envelope without depending on Django or blue-krill."""
+    try:
+        payload = response.json()
+    except ValueError, UnicodeDecodeError:
+        payload = None
+    code = payload.get("code") if isinstance(payload, dict) else None
+    detail = payload.get("detail") if isinstance(payload, dict) else None
+    code = code if isinstance(code, str) and code else None
+    detail = detail if isinstance(detail, str) else None
+    # Older servers may return only detail; proxies may return HTML. Preserve
+    # the HTTP status in both cases, but never copy an arbitrary response body.
+    message = f"the control plane answered {path} with {response.status_code}"
+    if code:
+        message += f" [{code}]"
+    if detail:
+        message += f": {detail}"
+    return ControlPlaneError(message, status_code=response.status_code, code=code, detail=detail)

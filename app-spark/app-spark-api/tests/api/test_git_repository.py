@@ -120,6 +120,7 @@ async def test_get_is_not_found_when_the_project_has_no_repository(aapi_client, 
 
     response = await aapi_client.get(git_url())
     assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()["code"] == "GIT_REPOSITORY_NOT_FOUND"
 
 
 @pytest.mark.parametrize("operation", ["get", "provision/", "revoke-credentials/"])
@@ -145,7 +146,8 @@ async def test_configuration_errors_have_a_safe_service_unavailable_response(
 
     assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
     assert response.json() == {
-        "detail": "Git repository service is not configured correctly. Please contact an administrator."
+        "code": "REPO_SERVER_CONFIGURATION_ERROR",
+        "detail": "Git repository service is not configured correctly. Please contact an administrator.",
     }
 
 
@@ -165,7 +167,7 @@ async def test_legacy_status_details_are_hidden_from_queries_and_agent_start(aap
     assert queried.json()["status_detail"] == REPOSITORY_ERROR_DETAIL
     started = await aapi_client.post(f"/api/projects/{PROJECT_ID}/conversations/")
     assert started.status_code == HTTPStatus.CONFLICT
-    assert REPOSITORY_ERROR_DETAIL in started.json()["detail"]
+    assert started.json()["code"] == "GIT_REPOSITORY_NOT_READY"
     assert "private-secret" not in started.content.decode()
     assert "internal-forgejo" not in started.content.decode()
 
@@ -215,5 +217,8 @@ async def test_remote_revoke_errors_return_a_safe_bad_gateway_response(
     response = await aapi_client.post(git_url() + "revoke-credentials/")
 
     assert response.status_code == HTTPStatus.BAD_GATEWAY
-    assert response.json() == {"detail": "Git repository service is unavailable. Please retry later."}
+    assert response.json() == {
+        "code": "REPO_SERVER_UNAVAILABLE",
+        "detail": "Git repository service is unavailable. Please retry later.",
+    }
     assert "private-secret" in caplog.text

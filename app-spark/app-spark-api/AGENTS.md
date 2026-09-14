@@ -18,6 +18,9 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
     - Translate library validation failures into domain-level exceptions at module boundaries.
 * Avoid Django `choices=<values>` when defining models if the values might change in the future, document the supported values instead.
 * Put pure queries on the model's manager/queryset, not in services; services orchestrate (transactions, translating database errors into domain exceptions).
+* Failures leave the API as `{"code", "detail"}`. Raise an `error_codes.*` entry at the boundary, or
+  map a domain exception in `api.py`; do not raise `HttpError` or hand-build a `{"detail": ...}` body.
+  Routes declare `**ERROR_RESPONSES` so OpenAPI matches. See the README's 「API 错误响应」 section.
 
 ### Running tests
 

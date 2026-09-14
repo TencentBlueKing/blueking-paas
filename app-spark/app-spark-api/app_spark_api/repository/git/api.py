@@ -20,11 +20,12 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from django.shortcuts import aget_object_or_404
-from ninja import Path, Router, Status
+from ninja import Path, Router
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
-from app_spark_api.entities import ErrorResponse
+from app_spark_api.entities import ERROR_RESPONSES
+from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.repository.git import services
 from app_spark_api.repository.git.entities import GitRepositoryResponse
@@ -43,9 +44,8 @@ PROJECT_ID = Path(..., description="项目 ID")
 @router.get(
     "",
     response={
+        **ERROR_RESPONSES,
         HTTPStatus.OK: GitRepositoryResponse,
-        HTTPStatus.NOT_FOUND: ErrorResponse,
-        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
     },
     url_name="git-repository-retrieve",
     summary="查看 Project 的 Git 仓库状态",
@@ -55,17 +55,16 @@ async def get_git_repository(request: HttpRequest, project_id: str = PROJECT_ID)
     project = await _get_project(request, project_id)
     try:
         repo = await ProjectGitRepository.objects.aget(project=project)
-    except ProjectGitRepository.DoesNotExist:
-        return Status(HTTPStatus.NOT_FOUND, {"detail": "This project has no Git repository."})
+    except ProjectGitRepository.DoesNotExist as exc:
+        raise error_codes.GIT_REPOSITORY_NOT_FOUND from exc
     return _to_response(repo)
 
 
 @router.post(
     "provision/",
     response={
+        **ERROR_RESPONSES,
         HTTPStatus.OK: GitRepositoryResponse,
-        HTTPStatus.CONFLICT: ErrorResponse,
-        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
     },
     url_name="git-repository-provision",
     summary="为 Project 补建或重试 Git 仓库",
@@ -80,11 +79,8 @@ async def provision_git_repository(request: HttpRequest, project_id: str = PROJE
 @router.post(
     "revoke-credentials/",
     response={
+        **ERROR_RESPONSES,
         HTTPStatus.OK: GitRepositoryResponse,
-        HTTPStatus.CONFLICT: ErrorResponse,
-        HTTPStatus.NOT_FOUND: ErrorResponse,
-        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
-        HTTPStatus.BAD_GATEWAY: ErrorResponse,
     },
     url_name="git-repository-revoke",
     summary="撤销 Project 的 Git 仓库 token（应急）",
@@ -94,8 +90,8 @@ async def revoke_git_credentials(request: HttpRequest, project_id: str = PROJECT
     project = await _get_project(request, project_id)
     try:
         repo = await services.arevoke_project_credentials(project)
-    except GitRepositoryNotReadyError:
-        return Status(HTTPStatus.NOT_FOUND, {"detail": "This project has no Git repository."})
+    except GitRepositoryNotReadyError as exc:
+        raise error_codes.GIT_REPOSITORY_NOT_FOUND from exc
     return _to_response(repo)
 
 

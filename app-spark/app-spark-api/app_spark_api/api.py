@@ -20,11 +20,17 @@ import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from blue_krill.web.std_error import APIError
+from django.core.exceptions import PermissionDenied
+from django.db import connections
+from django.http import Http404
 from ninja import NinjaAPI, Router
+from ninja.errors import AuthenticationError, HttpError, ValidationError
 
 from app_spark_api.agent.conversations.api import router as conversations_router
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import router as conversation_state_router
+from app_spark_api.agent.conversations.state import ConversationStateError
 from app_spark_api.agent.runtime import (
     AgentBusyError,
     AgentRuntimeError,
@@ -32,10 +38,12 @@ from app_spark_api.agent.runtime import (
     AgentWorkspaceSavePendingError,
 )
 from app_spark_api.core.projects.api import router as projects_router
+from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.api import router as accounts_router
 from app_spark_api.infras.forgejo.exceptions import ForgejoError
 from app_spark_api.repository.git.api import router as git_repository_router
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
+from app_spark_api.repository.storage.exceptions import StorageConfigurationError
 
 if TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
@@ -57,92 +65,76 @@ api = NinjaAPI(title="App Spark API", urls_namespace="api")
 api.add_router("", root_router)
 
 
-@api.exception_handler(RepoServerConfigurationError)
-def handle_repo_server_configuration_error(request: HttpRequest, exc: RepoServerConfigurationError) -> HttpResponse:
-    """Report unusable Git host configuration without exposing its values."""
-    logger.error("Git repository server configuration is invalid", exc_info=exc)
-    return api.create_response(
-        request,
-        {"detail": "Git repository service is not configured correctly. Please contact an administrator."},
-        status=HTTPStatus.SERVICE_UNAVAILABLE,
+# Translate integration failures at the API boundary. The original message is
+# for operators, not callers: it may name a sibling conversation, quote the
+# Agent's own body, or include a process log tail.
+_EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
+    RepoServerConfigurationError: error_codes.REPO_SERVER_CONFIGURATION_ERROR,
+    ForgejoError: error_codes.REPO_SERVER_UNAVAILABLE,
+    GitRepositoryNotReadyError: error_codes.GIT_REPOSITORY_NOT_READY,
+    # Both closing and advancing a conversation can fail this way; retrying
+    # cannot reopen a closed conversation.
+    ConversationClosedError: error_codes.CONVERSATION_CLOSED,
+    ConversationStateError: error_codes.CONVERSATION_STATE_UNAVAILABLE,
+    StorageConfigurationError: error_codes.STORAGE_CONFIGURATION_ERROR,
+    AgentBusyError: error_codes.AGENT_BUSY,
+    AgentWorkspaceBusyError: error_codes.AGENT_WORKSPACE_BUSY,
+    AgentWorkspaceSavePendingError: error_codes.AGENT_WORKSPACE_SAVE_PENDING,
+    AgentRuntimeError: error_codes.AGENT_UNAVAILABLE,
+    AuthenticationError: error_codes.AUTHENTICATION_REQUIRED,
+    PermissionDenied: error_codes.PERMISSION_DENIED,
+    Http404: error_codes.RESOURCE_NOT_FOUND,
+    ValidationError: error_codes.VALIDATION_ERROR,
+    Exception: error_codes.INTERNAL_SERVER_ERROR,
+}
+_HTTP_ERROR_CODES: dict[int, APIError] = {
+    error.status_code: error
+    for error in (
+        error_codes.BAD_REQUEST,
+        error_codes.AUTHENTICATION_REQUIRED,
+        error_codes.PERMISSION_DENIED,
+        error_codes.RESOURCE_NOT_FOUND,
+        error_codes.METHOD_NOT_ALLOWED,
+        error_codes.VALIDATION_ERROR,
+        error_codes.THROTTLED,
     )
+}
 
 
-@api.exception_handler(ForgejoError)
-def handle_forgejo_error(request: HttpRequest, exc: ForgejoError) -> HttpResponse:
-    """Keep remote response bodies in logs when a Git operation fails."""
-    logger.error("Git repository server request failed", exc_info=exc)
-    return api.create_response(
-        request,
-        {"detail": "Git repository service is unavailable. Please retry later."},
-        status=HTTPStatus.BAD_GATEWAY,
-    )
+@api.exception_handler(APIError)
+def handle_api_error(request: HttpRequest, exc: APIError) -> HttpResponse:
+    """Serialize a public error and preserve request-transaction rollback.
 
-
-@api.exception_handler(GitRepositoryNotReadyError)
-def handle_git_repository_not_ready(request: HttpRequest, exc: GitRepositoryNotReadyError) -> HttpResponse:
-    """Agent 启动要求仓库 ready；调用方应先走补建入口。"""
-    return api.create_response(
-        request,
-        {"detail": str(exc) or "This project's Git repository is not ready."},
-        status=HTTPStatus.CONFLICT,
-    )
-
-
-@api.exception_handler(ConversationClosedError)
-def handle_conversation_closed(request: HttpRequest, exc: ConversationClosedError) -> HttpResponse:
-    """Report an operation that a closed conversation cannot take part in.
-
-    Handled centrally for the same reason as the Agent Runtime failures below: both closing a
-    conversation and advancing one hit this, and what the caller should do about it is the same
-    either way -- nothing, the conversation is over. Retrying will not change that.
+    Like DRF's set_rollback, only mark an active ATOMIC_REQUESTS transaction.
+    Async operations keep their explicit transactions in synchronous services;
+    those unwind before reaching this handler.
     """
-    return api.create_response(
-        request,
-        {"detail": "This conversation has been closed."},
-        status=HTTPStatus.CONFLICT,
-    )
+    for connection in connections.all(initialized_only=True):
+        if connection.settings_dict["ATOMIC_REQUESTS"] and connection.in_atomic_block:
+            connection.set_rollback(True)
+    data = {"code": exc.code, "detail": str(exc.message)}
+    if exc.data is not None:
+        data["data"] = exc.data
+    return api.create_response(request, data, status=exc.status_code)
 
 
-@api.exception_handler(AgentRuntimeError)
-def handle_agent_runtime_error(request: HttpRequest, exc: AgentRuntimeError) -> HttpResponse:
-    """Translate a failure of the Agent Runtime integration into a status the caller can act on.
+def handle_exception(request: HttpRequest, exc: Exception) -> HttpResponse:
+    """Translate a domain/framework exception, then use the APIError handler.
 
-    Handled centrally rather than per view because every conversation endpoint can raise the
-    same set, and because the distinction that matters -- "try again in a moment" versus "this
-    service is broken" -- belongs to the exception type, not to the operation that hit it.
-
-    Note that this only covers failures raised before a response has begun. Once an event stream
-    is under way its status code is already sent, and a break there is reported as an AG-UI
-    ``RUN_ERROR`` event instead.
+    This only covers failures before a response begins. Once an event stream
+    is underway, its status is already sent and errors remain AG-UI RUN_ERROR
+    events instead.
     """
-    # The original message is for operators, not callers: it may name a sibling conversation,
-    # quote the Agent's own body, or include a process log tail.
-    if isinstance(exc, AgentBusyError):
-        return api.create_response(
-            request,
-            {"detail": "The Agent Runtime is already executing a run for this conversation."},
-            status=HTTPStatus.CONFLICT,
-        )
-    if isinstance(exc, AgentWorkspaceBusyError):
-        return api.create_response(
-            request,
-            {"detail": "Another conversation already has a running Agent on this project."},
-            status=HTTPStatus.CONFLICT,
-        )
-    if isinstance(exc, AgentWorkspaceSavePendingError):
-        # Says which layer refused and why, because "busy" would send the reader looking for a
-        # run that is not there. The Agent's own escape hatch is not offered here yet: exposing
-        # "continue without saving this turn" is a product decision, not an error-handling one.
-        return api.create_response(
-            request,
-            {"detail": "The previous turn's files have not been saved to this project's repository yet."},
-            status=HTTPStatus.CONFLICT,
-        )
+    if isinstance(exc, HttpError):
+        error = _HTTP_ERROR_CODES.get(exc.status_code, error_codes.INTERNAL_SERVER_ERROR)
+    else:
+        # Match the nearest base class, not dictionary insertion order: a busy
+        # Runtime must stay a conflict even though it is also an integration error.
+        error = next(_EXCEPTION_ERROR_CODES[base] for base in type(exc).__mro__ if base in _EXCEPTION_ERROR_CODES)
+    if error.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        logger.error("API request failed (%s)", error.code, exc_info=exc)
+    return handle_api_error(request, error.format())
 
-    logger.error("The Agent Runtime integration failed", exc_info=exc)
-    return api.create_response(
-        request,
-        {"detail": "The Agent Runtime is unavailable."},
-        status=HTTPStatus.BAD_GATEWAY,
-    )
+
+for exception_type in (*_EXCEPTION_ERROR_CODES, HttpError):
+    api.exception_handler(exception_type)(handle_exception)

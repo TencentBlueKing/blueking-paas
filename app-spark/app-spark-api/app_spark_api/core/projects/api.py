@@ -27,7 +27,8 @@ from app_spark_api.core.projects.entities import ProjectCreateRequest, ProjectRe
 from app_spark_api.core.projects.exceptions import ProjectIdTakenError, ProjectNameTakenError
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
-from app_spark_api.entities import ErrorResponse
+from app_spark_api.entities import ERROR_RESPONSES
+from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ router = Router(tags=["projects"], auth=login_required)
 
 @router.post(
     "",
-    response={HTTPStatus.CREATED: ProjectResponse, HTTPStatus.CONFLICT: ErrorResponse},
+    response={**ERROR_RESPONSES, HTTPStatus.CREATED: ProjectResponse},
     url_name="projects-create",
     summary="创建一个 Project",
 )
@@ -52,16 +53,16 @@ async def create_project(request: HttpRequest, payload: ProjectCreateRequest):
             owner=user.pk,
             tenant_id=get_tenant(user).id,
         )
-    except ProjectIdTakenError:
-        return Status(HTTPStatus.CONFLICT, {"detail": f"Project id `{payload.id}` is already taken."})
-    except ProjectNameTakenError:
-        return Status(HTTPStatus.CONFLICT, {"detail": f"Project name `{payload.name}` is already taken."})
+    except ProjectIdTakenError as exc:
+        raise error_codes.PROJECT_ID_TAKEN.f(project_id=payload.id) from exc
+    except ProjectNameTakenError as exc:
+        raise error_codes.PROJECT_NAME_TAKEN.f(name=payload.name) from exc
     return Status(HTTPStatus.CREATED, project)
 
 
 @router.get(
     "",
-    response=list[ProjectResponse],
+    response={**ERROR_RESPONSES, HTTPStatus.OK: list[ProjectResponse]},
     url_name="projects-list",
     summary="列出当前用户的 Project",
 )

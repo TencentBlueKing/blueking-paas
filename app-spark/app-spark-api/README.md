@@ -46,6 +46,15 @@ uv run pytest --reuse-db tests/
 
 会话相关的测试不 mock agent，而是真的 spawn agent 进程、走真实 HTTP。
 
+## API 错误响应
+
+所有已匹配 API 路由的失败响应使用 `blue_krill.web.std_error` 的 `APIError`，保留原有 HTTP
+状态语义，响应包含稳定的 `code` 和可展示的 `detail`：
+
+```json
+{"code": "PROJECT_ID_TAKEN", "detail": "Project id `demo` is already taken."}
+```
+
 ## 驱动 Agent
 
 一个会话（conversation）对应一个 Agent Runtime 进程。API 负责建会话、按需拉起 Runtime、
@@ -208,8 +217,9 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 
 Runtime 会用 409 拒绝两种完全不同的情况：正在跑另一轮（`AgentBusyError`），和上一轮的文件还没
 推到仓库（`AgentWorkspaceSavePendingError`）。两者靠 Runtime 返回的 `detail.code` 区分，对外也是
-两条不同的提示——把它们合并会在 Agent 明明空闲、只是存不上的时候告诉用户「正忙」。Agent 侧的
-逃生口（`?allow_unsaved=true`）目前不透传给终端用户：要不要提供「本轮不保存也继续」是产品决定。
+`AGENT_BUSY` 与 `AGENT_WORKSPACE_SAVE_PENDING` 两个错误码及不同提示——把它们合并会在 Agent 明明
+空闲、只是存不上的时候告诉用户「正忙」。Agent 侧的逃生口（`?allow_unsaved=true`）目前不透传给
+终端用户：要不要提供「本轮不保存也继续」是产品决定。
 
 ### 会话的生命周期
 

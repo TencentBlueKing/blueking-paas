@@ -17,11 +17,11 @@
 
 import copy
 import logging
-from typing import Callable, Dict, Literal, Optional, TextIO
+from typing import Dict, Literal, Optional, TextIO
 
 import yaml
 from django.utils.translation import gettext as _
-from typing_extensions import Protocol, TypeAlias
+from typing_extensions import Protocol
 
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.accounts.models import User
@@ -29,6 +29,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities.proc_env_overlays import ReplicasOverlay
 from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppEnvOverlay
 from paasng.platform.bkapp_model.form_overrides.replicas import generate_replica_overrides
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD, CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
@@ -318,6 +319,13 @@ def get_source_dir_from_desc(desc_data: Dict, module_name: str) -> str:
     return _func(desc_data, module_name).source_dir
 
 
+def _res_quota_context(module) -> Dict:
+    return {
+        "app_code": module.application.code,
+        "current_plans": ResQuotaPlanPolicy().bound_plans(module),
+    }
+
+
 class DeployDescHandler(Protocol):
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         """Handle a deployment object.
@@ -327,8 +335,10 @@ class DeployDescHandler(Protocol):
         ...
 
 
-# A simple function type that get the deploy description object from the json data.
-DescGetterFunc: TypeAlias = Callable[[Dict, str], DeploymentDesc]
+class DescGetterFunc(Protocol):
+    """A simple function type that get the deploy description object from the json data."""
+
+    def __call__(self, json_data: Dict, module_name: str, context: Dict | None = None) -> DeploymentDesc: ...
 
 
 def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
@@ -366,7 +376,8 @@ class DefaultDeployDescHandler:
         self.desc_getter = desc_getter
 
     def handle(self, deployment: Deployment) -> DeployHandleResult:
-        desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
+        module = deployment.app_environment.module
+        desc = self.desc_getter(self.json_data, module.name, _res_quota_context(module))
 
         if deployment.advanced_options.replicas_policy == ReplicasPolicy.WEB_FORM_PRIORITY:
             apply_form_replicas_overrides(desc, deployment.app_environment)
@@ -389,17 +400,17 @@ class ProcfileOnlyDeployDescHandler:
         return handle_procfile_procs(deployment, procfile_procs)
 
 
-def deploy_desc_getter_v2(json_data: Dict, module_name: str) -> DeploymentDesc:
+def deploy_desc_getter_v2(json_data: Dict, module_name: str, context: Dict | None = None) -> DeploymentDesc:
     """Get the deployment desc object, spec ver 2."""
     validate_desc(UniConfigSLZ, json_data)
     desc_data = _find_module_desc_data(json_data, module_name, "dict")
-    return validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data)
+    return validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data, context=context)
 
 
-def deploy_desc_getter_v3(json_data: Dict, module_name: str) -> DeploymentDesc:
+def deploy_desc_getter_v3(json_data: Dict, module_name: str, context: Dict | None = None) -> DeploymentDesc:
     """Get the deployment desc object, spec ver 3."""
     desc_data = _find_module_desc_data(json_data, module_name, "list")
-    return validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
+    return validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data, context=context)
 
 
 def apply_form_replicas_overrides(desc: DeploymentDesc, env: ModuleEnvironment):

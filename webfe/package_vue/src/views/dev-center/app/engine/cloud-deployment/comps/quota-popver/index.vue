@@ -7,13 +7,13 @@
     <div slot="content">
       <div>
         {{$t('最大资源限制')}}：
-        <span>cpu：{{data.limit?.cpu}} </span>
-        <span>{{$t('内存')}}：{{data.limit?.memory}} </span>
+        <span>cpu：{{ data.limit?.cpu || '--' }} </span>
+        <span>{{$t('内存')}}：{{ data.limit?.memory || '--' }} </span>
       </div>
       <div>
         {{$t('最小资源请求')}}：
-        <span>cpu：{{data.request?.cpu}} </span>
-        <span>{{$t('内存')}}：{{data.request?.memory}} </span>
+        <span>cpu：{{ data.request?.cpu || '--' }} </span>
+        <span>{{$t('内存')}}：{{ data.request?.memory || '--' }} </span>
       </div>
     </div>
   </bk-popover>

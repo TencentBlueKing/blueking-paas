@@ -37,6 +37,13 @@
               ></bk-switcher>
             </span>
           </span>
+          <span v-else-if="column.prop === 'allowed_app_codes'">
+            <span v-if="!row.allowed_app_codes || !row.allowed_app_codes.length">{{ $t('全部应用') }}</span>
+            <span
+              v-else
+              v-bk-overflow-tips
+            >{{ row.allowed_app_codes.join(', ') }}</span>
+          </span>
           <span v-else>{{ getCellValue(row, column.prop) || '--' }}</span>
         </template>
       </bk-table-column>
@@ -129,6 +136,11 @@ export default {
           label: '是否启用',
           prop: 'is_active',
           'render-header': this.renderHeader,
+        },
+        {
+          label: '可见范围',
+          prop: 'allowed_app_codes',
+          minWidth: 160,
         },
       ];
     },
@@ -282,6 +294,7 @@ export default {
             memory: row.requests.memory,
           },
           is_active: value,
+          allowed_app_codes: row.allowed_app_codes || [],
         };
 
         await this.$store.dispatch('tenantConfig/updateQuotaPlan', {

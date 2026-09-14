@@ -25,7 +25,7 @@ from paasng.platform.bkapp_model.constants import ScalingPolicy
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer import import_manifest
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, SvcDiscConfig
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, ResQuotaPlan, SvcDiscConfig
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.utils.camel_converter import dict_to_camel
 
@@ -390,3 +390,32 @@ class TestObservability:
         with pytest.raises(ManifestImportError) as e:
             import_manifest_app_desc(bk_module, manifest)
         assert "not match any process" in str(e)
+
+
+class TestResQuotaPlanVisibility:
+    def test_dedicated_plan_rejected_for_other_app(self, bk_module, base_manifest):
+        ResQuotaPlan.objects.create(
+            name="hids-only-import",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        base_manifest["spec"]["processes"][0]["resQuotaPlan"] = "hids-only-import"
+        with pytest.raises(ManifestImportError) as exc:
+            import_manifest_app_desc(bk_module, base_manifest)
+        assert "someone-else" not in str(exc.value)
+        assert "指定" not in str(exc.value)
+
+    def test_dedicated_plan_allowed_for_whitelist_app(self, bk_module, bk_app, base_manifest):
+        ResQuotaPlan.objects.create(
+            name="hids-only-import-ok",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=[bk_app.code],
+        )
+        base_manifest["spec"]["processes"][0]["resQuotaPlan"] = "hids-only-import-ok"
+        import_manifest_app_desc(bk_module, base_manifest)
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.plan_name == "hids-only-import-ok"

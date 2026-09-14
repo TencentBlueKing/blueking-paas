@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from bkapi_client_core.apigateway import APIGatewayClient, OperationGroup, bind_property
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
 class Group(OperationGroup):
@@ -27,12 +27,77 @@ class Group(OperationGroup):
     以复用其 header 注入、翻页、分批与错误处理逻辑。
     """
 
+    # ---------------- 模型注册：系统 ----------------
+    create_system = bind_property(
+        Operation, name="create_system", method="POST", path="/api/v1/open/rbac/model/systems/"
+    )
+    retrieve_system = bind_property(
+        Operation, name="retrieve_system", method="GET", path="/api/v1/open/rbac/model/systems/{system_id}/"
+    )
+    update_system = bind_property(
+        Operation, name="update_system", method="PUT", path="/api/v1/open/rbac/model/systems/{system_id}/"
+    )
+
+    # ---------------- 模型注册：资源类型 ----------------
+    list_resource_type = bind_property(
+        Operation,
+        name="list_resource_type",
+        method="GET",
+        path="/api/v1/open/rbac/model/systems/{system_id}/resource-types/",
+    )
+    batch_create_resource_type = bind_property(
+        Operation,
+        name="batch_create_resource_type",
+        method="POST",
+        path="/api/v1/open/rbac/model/systems/{system_id}/resource-types/",
+    )
+    update_resource_type = bind_property(
+        Operation,
+        name="update_resource_type",
+        method="PUT",
+        path="/api/v1/open/rbac/model/systems/{system_id}/resource-types/{resource_type_id}/",
+    )
+
+    # ---------------- 模型注册：操作 ----------------
+    list_action = bind_property(
+        Operation, name="list_action", method="GET", path="/api/v1/open/rbac/model/systems/{system_id}/actions/"
+    )
+    batch_create_action = bind_property(
+        Operation,
+        name="batch_create_action",
+        method="POST",
+        path="/api/v1/open/rbac/model/systems/{system_id}/actions/",
+    )
+    update_action = bind_property(
+        Operation,
+        name="update_action",
+        method="PUT",
+        path="/api/v1/open/rbac/model/systems/{system_id}/actions/{action_id}/",
+    )
+
+    # ---------------- 模型注册：角色 ----------------
+    list_role = bind_property(
+        Operation, name="list_role", method="GET", path="/api/v1/open/rbac/model/systems/{system_id}/roles/"
+    )
+    batch_create_role = bind_property(
+        Operation, name="batch_create_role", method="POST", path="/api/v1/open/rbac/model/systems/{system_id}/roles/"
+    )
+    update_role = bind_property(
+        Operation,
+        name="update_role",
+        method="PUT",
+        path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/",
+    )
+    batch_create_role_action = bind_property(
+        Operation,
+        name="batch_create_role_action",
+        method="POST",
+        path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/actions/",
+    )
+
 
 class Client(APIGatewayClient):
-    """蓝鲸权限中心 V4 提供的 OpenAPI
-
-    note: V4 的网关名为 `bkiam`，与 V3 的 `bk-iam` 是两个独立网关，授权数据互不相通
-    """
+    """蓝鲸权限中心 V4 提供的 OpenAPI"""
 
     _api_name = "bkiam"
 

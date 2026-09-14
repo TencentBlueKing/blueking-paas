@@ -23,19 +23,18 @@ from typing import List
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
-from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor import definitions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import (
     DEFAULT_PAGE,
     FETCH_USER_GROUP_MEMBERS_LIMIT,
     NEVER_EXPIRE_TIMESTAMP,
     ONE_DAY_SECONDS,
-    PluginPermissionActions,
     ResourceType,
 )
 from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
+from paasng.infras.iam.permissions.resources.plugin import PluginIAMRole
 from paasng.infras.iam.v3.apigw.client import Client
 from paasng.infras.iam.v3.apigw.client import Group as BKIAMGroup
 
@@ -76,10 +75,7 @@ class BKIAMClient:
             "authorization_scopes": [
                 {
                     "system": settings.IAM_PLUGINS_CENTER_SYSTEM_ID,
-                    "actions": [
-                        {"id": action}
-                        for action in PluginPermissionActions.get_choices_by_role(PluginRole.ADMINISTRATOR)
-                    ],
+                    "actions": [{"id": action} for action in PluginIAMRole.get_actions(PluginIAMRole.ADMINISTRATOR)],
                     "resources": [
                         {
                             "system": settings.IAM_PLUGINS_CENTER_SYSTEM_ID,
@@ -347,7 +343,7 @@ class BKIAMClient:
         for group in groups:
             path_params = {"system_id": settings.IAM_PLUGINS_CENTER_SYSTEM_ID, "group_id": group.id}
             data = {
-                "actions": [{"id": action} for action in PluginPermissionActions.get_choices_by_role(group.role)],
+                "actions": [{"id": action} for action in PluginIAMRole.get_actions(PluginIAMRole[group.role.name])],
                 "resources": [
                     {
                         "system": settings.IAM_PLUGINS_CENTER_SYSTEM_ID,

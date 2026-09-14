@@ -21,11 +21,11 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.definitions import gen_iam_resource
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import user_group_apply_url
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.infras.iam.permissions.resources.plugin import PluginPermissionActions
 
 
 def plugin_action_permission_class(actions: List[PluginPermissionActions], use_cache: bool = False):

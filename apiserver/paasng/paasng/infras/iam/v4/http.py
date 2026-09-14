@@ -99,7 +99,7 @@ class BKIAMV4BaseClient:
             raise BKIAMGatewayServiceError(f"request bkiam api {name} error, detail: {e}") from e
 
         self._validate_resp(resp, name)
-        return resp
+        return {} if resp in (None, "") else resp
 
     def paginate(
         self,
@@ -179,6 +179,10 @@ class BKIAMV4BaseClient:
         note: V4 成功响应体中没有 code 字段，错误主要经 HTTP 状态码表达。此处兼容
             网关层或后续版本可能返回的 code 字段，非 0 时按业务错误处理
         """
+        # 204 No Content：更新/删除成功时没有响应体
+        if resp in (None, ""):
+            return
+
         if not isinstance(resp, dict):
             raise BKIAMGatewayServiceError(f"request bkiam api {operation_name} got unexpected response: {resp!r}")
 

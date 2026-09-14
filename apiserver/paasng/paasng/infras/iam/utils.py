@@ -22,7 +22,7 @@ from django.conf import settings
 from django.utils.translation import gettext as _
 
 from paasng.infras.iam import constants
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.iam.permissions.resources.application import AppAction, AppRole
 from paasng.platform.applications.constants import ApplicationRole
 
 
@@ -92,34 +92,11 @@ def calc_expired_at(expire_after_days: int) -> int:
 
 
 def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
-    """根据角色类型，获取他们拥有的 APP 权限"""
-    # 管理者
-    if role == ApplicationRole.ADMINISTRATOR:
-        return list(AppAction.get_values())
-    # 开发者
-    elif role == ApplicationRole.DEVELOPER:
-        return [
-            AppAction.VIEW_BASIC_INFO,
-            AppAction.EDIT_BASIC_INFO,
-            AppAction.MANAGE_APP_MARKET,
-            AppAction.DATA_STATISTICS,
-            AppAction.BASIC_DEVELOP,
-            AppAction.MANAGE_CLOUD_API,
-            AppAction.VIEW_ALERT_RECORDS,
-            AppAction.EDIT_ALERT_POLICY,
-        ]
-    # 运营者
-    elif role == ApplicationRole.OPERATOR:
-        return [
-            AppAction.VIEW_BASIC_INFO,
-            AppAction.EDIT_BASIC_INFO,
-            AppAction.MANAGE_ACCESS_CONTROL,
-            AppAction.MANAGE_APP_MARKET,
-            AppAction.DATA_STATISTICS,
-            AppAction.VIEW_ALERT_RECORDS,
-        ]
+    """根据角色类型，获取他们拥有的 APP 权限。NOBODY / COLLABORATOR 没有对应的 IAM 角色"""
+    if role.name not in AppRole.__members__:
+        return []
 
-    return []
+    return list(AppRole.get_actions(AppRole[role.name]))
 
 
 def get_paas_authorization_scopes(app_code: str, app_name: str, role: ApplicationRole) -> dict:

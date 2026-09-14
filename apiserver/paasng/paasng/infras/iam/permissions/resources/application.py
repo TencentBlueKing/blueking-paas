@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from datetime import datetime, timedelta
-from typing import Dict, Type
+from typing import Dict, List, Type
 
 from attrs import define, field, validators
 from bkpaas_auth.core.encoder import user_id_encoder
@@ -61,6 +61,53 @@ class AppAction(StrStructuredEnum):
     MANAGE_ENV_PROTECTION = EnumField("manage_env_protection", label=_("部署环境限制管理"))
     # 模块管理（新建/删除等）
     MANAGE_MODULE = EnumField("manage_module", label=_("模块管理"))
+
+
+class AppRole(StrStructuredEnum):
+    """应用在 IAM V4 上注册的角色
+
+    与 `ApplicationRole`不同：本枚举的值是提交给权限中心的字符串 ID。平台侧对外仍使用数值角色，仅在模型注册与 V4 适配层转换。
+    """
+
+    ADMINISTRATOR = EnumField("app_administrator", label=_("应用管理员"))
+    DEVELOPER = EnumField("app_developer", label=_("应用开发者"))
+    OPERATOR = EnumField("app_operator", label=_("应用运营者"))
+
+    @classmethod
+    def get_description(cls, role: "AppRole") -> str:
+        return {
+            cls.ADMINISTRATOR: "应用负责人，可管理成员、删除应用、配置全部能力",
+            cls.DEVELOPER: "负责应用开发与部署，可部署、查日志、管进程、配增强服务",
+            cls.OPERATOR: "负责应用运营，可配市场信息、访问控制、查看数据统计与告警",
+        }[role]
+
+    @classmethod
+    def get_actions(cls, role: "AppRole") -> List[AppAction]:
+        """角色对应的操作清单，以 get_app_actions_by_role 历史生效定义为准。
+
+        开发者 8 项（含 edit_basic_info），不用界面预设模板中的较小集合。
+        """
+        return {
+            cls.ADMINISTRATOR: list(AppAction.get_values()),
+            cls.DEVELOPER: [
+                AppAction.VIEW_BASIC_INFO,
+                AppAction.EDIT_BASIC_INFO,
+                AppAction.MANAGE_APP_MARKET,
+                AppAction.DATA_STATISTICS,
+                AppAction.BASIC_DEVELOP,
+                AppAction.MANAGE_CLOUD_API,
+                AppAction.VIEW_ALERT_RECORDS,
+                AppAction.EDIT_ALERT_POLICY,
+            ],
+            cls.OPERATOR: [
+                AppAction.VIEW_BASIC_INFO,
+                AppAction.EDIT_BASIC_INFO,
+                AppAction.MANAGE_ACCESS_CONTROL,
+                AppAction.MANAGE_APP_MARKET,
+                AppAction.DATA_STATISTICS,
+                AppAction.VIEW_ALERT_RECORDS,
+            ],
+        }[role]
 
 
 @define

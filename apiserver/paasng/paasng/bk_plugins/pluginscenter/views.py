@@ -46,7 +46,6 @@ from paasng.bk_plugins.pluginscenter.configuration import PluginConfigManager
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.bk_plugins.pluginscenter.filters import PluginInstancePermissionFilter
-from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import (
     plugin_action_permission_class,
@@ -83,6 +82,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
+from paasng.infras.iam.permissions.resources.plugin import PluginPermissionActions as Actions
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field

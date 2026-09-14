@@ -22,8 +22,8 @@ from rest_framework.decorators import APIView
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 
-from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
+from paasng.infras.iam.permissions.resources.plugin import PluginPermissionActions
 
 pytestmark = pytest.mark.django_db
 

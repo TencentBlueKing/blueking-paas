@@ -62,6 +62,8 @@ from dynaconf import LazySettings, Validator
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
 from .utils import (
+    IAM_VERSION_V3,
+    IAM_VERSION_V4,
     cache_from_redis_sentinel_url,
     cache_from_redis_url,
     extract_host_from_url,
@@ -72,6 +74,7 @@ from .utils import (
     is_in_celery_worker,
     is_redis_backend,
     is_redis_sentinel_backend,
+    validate_iam_settings,
 )
 
 BASE_DIR = Path(__file__).parents[2]
@@ -884,6 +887,24 @@ BK_IAM_V3_INNER_URL = settings.get("BK_IAM_V3_INNER_URL", "http://localhost:8080
 # 访问的权限中心 APIGW 版本
 BK_IAM_APIGW_SERVICE_STAGE = settings.get("BK_IAM_APIGW_SERVICE_STAGE", "stage")
 
+# 本部署环境对接的权限中心版本，取值需与 paasng.infras.iam.base.constants.IAMVersion 一致
+# note: V3 与 V4 的授权数据完全隔离，配置粒度是整个部署环境，不支持按功能模块或按应用混用
+BK_IAM_VERSION = settings.get("BK_IAM_VERSION", IAM_VERSION_V3)
+
+# 权限中心 V4 的网关环境。V4 的网关名为 bkiam，与 V3 的 bk-iam 是两个独立网关
+BK_IAM_V4_APIGW_SERVICE_STAGE = settings.get("BK_IAM_V4_APIGW_SERVICE_STAGE", "prod")
+
+# 权限中心 V4 的访问地址，用于注入应用内置环境变量与生成权限申请链接
+BK_IAM_V4_URL = settings.get("BK_IAM_V4_URL", "")
+
+# 版本开关取值非法、或所选版本的必填配置缺失时，启动即失败，不留到运行时才暴露
+validate_iam_settings(
+    BK_IAM_VERSION,
+    {
+        "BK_IAM_V4_URL": BK_IAM_V4_URL,
+    },
+)
+
 # 参数说明 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#22-config
 # bk-iam sdk version >= 2.0.2 时, 只能通过 apigateway 访问 iam
 BK_IAM_USE_APIGATEWAY = True
@@ -935,6 +956,8 @@ BK_PAAS2_PLATFORM_ENVS = settings.get(
             "value": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
             "description": _("蓝鲸权限中心的应用ID"),
         },
+        # note: PaaS 2.0 遗留的兼容变量，语义固定为 V3 地址，不随 BK_IAM_VERSION 变化。
+        # 应用应改用随版本生效的 BKPAAS_IAM_URL
         "BK_IAM_V3_INNER_HOST": {
             "value": BK_IAM_V3_INNER_URL,
             "description": _("蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"),
@@ -944,8 +967,12 @@ BK_PAAS2_PLATFORM_ENVS = settings.get(
     },
 )
 
+# 当前环境实际生效的权限中心访问地址，随 BK_IAM_VERSION 取对应版本的值。
+# 注入应用的内置环境变量 BKPAAS_IAM_URL 与权限申请链接均使用该值
+BK_IAM_EFFECTIVE_URL = BK_IAM_V4_URL if BK_IAM_VERSION == IAM_VERSION_V4 else BK_IAM_URL
+
 # 权限中心用户组申请链接
-BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_URL + "/apply-join-user-group?id={user_group_id}"
+BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_EFFECTIVE_URL + "/apply-join-user-group?id={user_group_id}"
 
 # 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 BKPAAS_WEIXIN_URL_MAP = settings.get(

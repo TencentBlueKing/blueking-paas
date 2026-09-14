@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from datetime import datetime, timedelta
 from typing import Dict, Type
 
@@ -25,13 +24,10 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
-from iam.exceptions import AuthAPIError
 
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.infras.iam.permissions.request import ResourceRequest
-
-logger = logging.getLogger(__name__)
 
 
 class AppAction(StrStructuredEnum):
@@ -203,8 +199,7 @@ class ApplicationPermission(Permission):
 
         所有应用的角色都会有基础信息查看权限
         """
-        request = self._make_request(username, AppAction.VIEW_BASIC_INFO)
-        return self._gen_app_filters_by_request(request, tenant_id)
+        return self._gen_app_filters(username, tenant_id, AppAction.VIEW_BASIC_INFO)
 
     def gen_develop_app_filters(self, username: str, tenant_id: str):
         """
@@ -212,23 +207,16 @@ class ApplicationPermission(Permission):
 
         管理者，开发者才会有基础开发权限
         """
-        request = self._make_request(username, AppAction.BASIC_DEVELOP)
-        return self._gen_app_filters_by_request(request, tenant_id)
+        return self._gen_app_filters(username, tenant_id, AppAction.BASIC_DEVELOP)
 
-    def _gen_app_filters_by_request(self, request, tenant_id: str):
-        """根据 IAM Auth Request 生成 Django 的过滤器"""
-        key_mapping = {"application.id": "code"}
-
-        try:
-            filters = self._make_iam(tenant_id).make_filter(request, key_mapping=key_mapping)
-        except AuthAPIError as e:
-            logger.warning("generate user app filters failed: %s", str(e))
-            return None
+    def _gen_app_filters(self, username: str, tenant_id: str, action_id: str):
+        """将用户在某操作上的权限策略下推为应用查询的 Django 过滤器"""
+        filters = self.build_resource_filter(username, tenant_id, action_id, key_mapping={"application.id": "code"})
 
         # 因权限中心同步（用户组成员信息 —> 具体的权限策略）存在时延（约 20s），
         # 因此在应用创建后的短时间内，需特殊豁免以免在列表页无法查询到最新的应用
         perm_exempt_filter = Q(
-            owner=user_id_encoder.encode(settings.USER_TYPE, request.subject.id),
+            owner=user_id_encoder.encode(settings.USER_TYPE, username),
             created__gt=datetime.now() - timedelta(seconds=settings.IAM_PERM_EFFECTIVE_TIMEDELTA),
         )
         if not filters:

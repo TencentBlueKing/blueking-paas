@@ -143,7 +143,10 @@ class Group(OperationGroup):
 
 
 class Client(APIGatewayClient):
-    """蓝鲸权限中心提供的 OpenAPI"""
+    """蓝鲸权限中心 V3 提供的 OpenAPI
+
+    note: V3 的网关名为 `bk-iam`，与 V4 的 `bkiam` 是两个独立网关，授权数据互不相通
+    """
 
     _api_name = "bk-iam"
 

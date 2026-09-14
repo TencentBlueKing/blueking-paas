@@ -2674,3 +2674,390 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /cloudapi-v2/apps/{app_code}/inner/gateways/:
+    get:
+      operationId: list_gateways
+      description: 获取可申请权限的网关列表，可用 name 按网关名搜索
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: query
+        name: name
+        schema:
+          type: string
+        required: false
+        description: 网关名称，如 paasv3
+      - in: query
+        name: fuzzy
+        schema:
+          type: boolean
+          default: true
+        required: false
+        description: 是否按名称模糊匹配，默认 true
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: List available API gateways for permission apply
+  /cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/resources/:
+    get:
+      operationId: list_gateway_permission_resources
+      description: 获取指定网关下的资源列表及当前应用的权限状态。permission_status 为 owned/need_apply/pending/expired/rejected，permission_action 为 apply/renew
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称，如 paasv3
+      - in: query
+        name: keyword
+        schema:
+          type: string
+        required: false
+        description: 资源名称关键字
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/resources/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: List gateway resources and current permission status
+  /cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/allow-apply-by-gateway/:
+    get:
+      operationId: check_is_allowed_apply_by_gateway
+      description: 检查是否允许按整个网关申请权限。allow_apply_by_gateway=true 时，申请接口 grant_dimension 可传 api
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称，如 paasv3
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/allow-apply-by-gateway/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: Check whether applying permission by whole gateway is allowed
+  /cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/apply/:
+    post:
+      operationId: apply_gateway_resource_permission
+      description: 申请网关资源权限。按资源申请时 grant_dimension=resource 并传 resource_ids；按网关申请时 grant_dimension=api 且 resource_ids 传空数组
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称，如 paasv3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - expire_days
+              - grant_dimension
+              properties:
+                resource_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: 资源 ID 列表，来自 list_gateway_permission_resources。按网关申请时传空数组
+                reason:
+                  type: string
+                  description: 申请原因
+                expire_days:
+                  type: integer
+                  enum:
+                  - 0
+                  - 180
+                  - 360
+                  description: 有效期，0=永久，180=6个月，360=12个月
+                grant_dimension:
+                  type: string
+                  enum:
+                  - resource
+                  - api
+                  description: 授权维度。resource=按资源，api=按整个网关
+        required: true
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/{gateway_name}/permissions/apply/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: Apply for gateway resource permissions
+  /cloudapi-v2/apps/{app_code}/inner/gateways/permissions/app-permissions/:
+    get:
+      operationId: list_app_resource_permissions
+      description: 获取当前应用已申请的网关资源权限列表
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/permissions/app-permissions/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: List granted gateway resource permissions of the app
+  /cloudapi-v2/apps/{app_code}/inner/gateways/permissions/renew/:
+    post:
+      operationId: renew_resource_permission
+      description: 续期已有网关资源权限。resource_ids 来自 list_app_resource_permissions 或 list_gateway_permission_resources 中 permission_action=renew 的资源
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - resource_ids
+              - expire_days
+              properties:
+                resource_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: 需要续期的资源 ID 列表，最多 100 个
+                expire_days:
+                  type: integer
+                  enum:
+                  - 0
+                  - 180
+                  - 360
+                  description: 续期有效期，0=永久，180=6个月，360=12个月
+        required: true
+        description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/permissions/renew/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: Renew granted gateway resource permissions
+  /cloudapi-v2/apps/{app_code}/inner/gateways/permissions/apply-records/:
+    get:
+      operationId: list_resource_permission_apply_records
+      description: 获取网关资源权限申请记录，可用于查询申请单是否通过
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: query
+        name: applied_by
+        schema:
+          type: string
+        required: false
+        description: 申请人
+      - in: query
+        name: applied_time_start
+        schema:
+          type: integer
+        required: false
+        description: 申请开始时间，Unix 时间戳
+      - in: query
+        name: applied_time_end
+        schema:
+          type: integer
+        required: false
+        description: 申请结束时间，Unix 时间戳
+      - in: query
+        name: apply_status
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          - partial_approved
+        required: false
+        description: 申请状态
+      - in: query
+        name: query
+        schema:
+          type: string
+        required: false
+        description: 搜索关键字
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 10
+        required: false
+        description: 分页大小，默认 10
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+        required: false
+        description: 分页偏移，默认 0
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/permissions/apply-records/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: List gateway resource permission apply records
+  /cloudapi-v2/apps/{app_code}/inner/gateways/permissions/apply-records/{record_id}/:
+    get:
+      operationId: retrieve_resource_permission_apply_record
+      description: 获取网关资源权限申请记录详情，含本次申请的资源及审批结果
+      tags:
+      - 云API权限
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: record_id
+        schema:
+          type: integer
+        required: true
+        description: 申请记录 ID，来自 apply_gateway_resource_permission 或 list_resource_permission_apply_records
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/api/cloudapi-v2/apps/{app_code}/inner/gateways/permissions/apply-records/{record_id}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: false
+        descriptionEn: Get gateway resource permission apply record detail

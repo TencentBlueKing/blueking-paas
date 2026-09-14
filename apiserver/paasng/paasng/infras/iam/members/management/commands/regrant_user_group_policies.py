@@ -83,7 +83,7 @@ class Command(BaseCommand):
             iam_client = BKIAMClient(tenant_id)
             try:
                 # 先回收用户组所有权限，再重新授权
-                iam_client.revoke_user_group_policies(group.user_group_id, list(AppAction.get_values()))
+                iam_client.revoke_user_group_policies(group.user_group_id, list(AppAction))
                 iam_client.grant_user_group_policies(
                     group.app_code,
                     app_code_name_map[group.app_code],

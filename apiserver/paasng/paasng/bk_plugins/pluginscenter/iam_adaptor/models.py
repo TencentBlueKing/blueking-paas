@@ -34,15 +34,19 @@ class PluginRelativeManager(models.Manager):
 
 class PluginGradeManager(AuditedModel):
     """
-    IAM 分级管理员与插件的关系
+    IAM 分级管理员（V4 语义为管理空间）与插件的关系
 
     分级管理员管理用户加入用户组的申请，理论上来说，某个应用的分级管理员与管理者的成员是一致的
+
+    note: 每个部署环境只对接一个 IAM 版本，grade_manager_id 的取值语义由该环境的
+        BK_IAM_VERSION 决定，同一行记录不会同时持有 V3 与 V4 的 ID
 
     [multi-tenancy] This model is not tenant-aware.
     """
 
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
+    # V4 环境下该字段存管理空间 ID，取值语义由环境的 BK_IAM_VERSION 决定
     grade_manager_id = models.IntegerField(help_text="分级管理员 ID")
     tenant_id = tenant_id_field_factory()
 
@@ -58,12 +62,16 @@ class PluginUserGroup(AuditedModel):
 
     每个插件默认会有 2 个用户组（不可删除）：管理者，开发者
 
+    note: 每个部署环境只对接一个 IAM 版本，user_group_id 的取值来自该环境的权限中心，
+        同一行记录不会同时持有 V3 与 V4 的 ID
+
     [multi-tenancy] This model is not tenant-aware.
     """
 
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
     role = models.IntegerField(default=PluginRole.DEVELOPER.value)
+    # V3/V4 语义均为用户组 ID，取值来自当前环境对接的权限中心
     user_group_id = models.IntegerField(help_text="权限中心用户组 ID")
     tenant_id = tenant_id_field_factory()
 

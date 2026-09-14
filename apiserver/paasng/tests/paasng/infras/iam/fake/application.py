@@ -17,10 +17,12 @@
 
 from typing import Dict, List
 
-from iam import Request, Resource
+from iam import Request
 
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.permissions.perm import Permission
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.iam.v3.auth import BKIAMV3AuthBackend
 from tests.paasng.infras.iam.permissions import roles
 
 app_admin_allowed_actions = AppAction.get_values()
@@ -57,14 +59,23 @@ class FakeApplicationIAM:
     def is_allowed_with_cache(self, request: Request) -> bool:
         return self.is_allowed(request)
 
+    def make_filter(self, request: Request, key_mapping=None):
+        """fake 不做策略下推，返回 None 表示未取得策略"""
+        return
 
-class FakeApplicationPermission(Permission):
+
+class FakeApplicationAuthBackend(BKIAMV3AuthBackend):
     @staticmethod
     def _make_iam(tenant_id: str):
         return FakeApplicationIAM()
 
+
+class FakeApplicationPermission(Permission):
+    def _get_auth_backend(self) -> BKIAMV3AuthBackend:
+        return FakeApplicationAuthBackend()
+
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
+        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
     ) -> Dict[str, bool]:
         if username in [roles.ADMIN_USER, roles.APP_ADMIN_USER]:
             return dict.fromkeys(action_ids, True)
@@ -81,7 +92,7 @@ class FakeApplicationPermission(Permission):
         return multi
 
     def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
+        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
     ) -> Dict[str, Dict[str, bool]]:
         perms = {}
         for _, r_id in enumerate([res.id for res in resources]):

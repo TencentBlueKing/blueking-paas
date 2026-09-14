@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import re
-from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
 
@@ -35,9 +34,17 @@ class BKIAMApiError(BKIAMGatewayServiceError):
     which needs to be captured and displayed to the user on the page
     """
 
-    def __init__(self, message: str, code: Optional[int] = None):
+    def __init__(self, message: str, code: int | None = None, request_id: str | None = None):
         super().__init__(self.parse_quota_message(message))
         self.code = code
+        # 权限中心侧的请求 ID，用于跨系统排查。仅在字符串化时附加，
+        # 以保证 message 仍是可直接展示给用户的内容
+        self.request_id = request_id
+
+    def __str__(self) -> str:
+        if self.request_id:
+            return f"{self.message} (iam request_id: {self.request_id})"
+        return str(self.message)
 
     def parse_quota_message(self, message: str) -> str:
         """权限中心给多个用户添加用户组权限时，会因为其中一个用户的额度超限导致添加失败，权限中心未针对用户超限定义单独的错误码，超限的用户也只能从错误信息中提取。
@@ -60,3 +67,30 @@ class BKIAMApiError(BKIAMGatewayServiceError):
         else:
             # 没匹配到则返回原始的错误信息
             return message
+
+
+class BKIAMApiHTTPError(BKIAMApiError):
+    """权限中心返回了非 2xx 的 HTTP 状态码
+
+    V4 以 HTTP 状态码表达错误语义（如 409 表示资源已存在），调用方需要据此走幂等分支时，
+    可通过 `status_code` 判断，而不必解析错误信息。
+    """
+
+    def __init__(self, message: str, status_code: int | None, request_id: str | None = None):
+        super().__init__(message, request_id=request_id)
+        self.status_code = status_code
+
+
+class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
+    """目标权限中心版本尚未提供所需的能力
+
+    用于 V4 尚未补齐的管理接口：抽象接口保留方法定义，V4 实现抛出该异常而非静默返回成功，
+    使缺失能力在调用时立即暴露。待权限中心补齐接口后，将实现替换为真实调用即可。
+    """
+
+    def __init__(self, capability: str, detail: str = ""):
+        message = _("权限中心 V4 暂未提供该能力：{capability}").format(capability=capability)
+        if detail:
+            message = f"{message}（{detail}）"
+        super().__init__(message)
+        self.capability = capability

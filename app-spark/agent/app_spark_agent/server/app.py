@@ -79,22 +79,23 @@ def create_runtime_app(
             yield
         finally:
             lifecycle_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await lifecycle_task
             try:
-                with suppress(asyncio.CancelledError):
-                    await lifecycle_task
+                # The last attempt to hand over whatever the background tasks had not reached,
+                # and the only one: both the workspace disk and the state directory go away with
+                # this process. Bounded, so it cannot turn an orderly stop into a SIGKILL --
+                # see `ConversationRuntime.drain`.
+                if not await runtime.drain(timeout_seconds=settings.SHUTDOWN_DRAIN_TIMEOUT_SECONDS):
+                    logger.warning(
+                        "this Runtime is shutting down while still behind; the warnings above "
+                        "say what did not reach its destination"
+                    )
+            finally:
                 if runtime.saver is not None:
-                    # Closed before the state flush and without waiting for the push: an
-                    # unsaved commit is durable on local disk, and blocking shutdown on the
-                    # network would just get this process killed mid-push instead.
                     await runtime.saver.aclose()
                 if runtime.replicator is not None:
-                    try:
-                        # A last attempt to hand over whatever the background task had not
-                        # reached, so an orderly shutdown does not strand a completed turn.
-                        await runtime.flush_replication()
-                    finally:
-                        await runtime.replicator.aclose()
-            finally:
+                    await runtime.replicator.aclose()
                 await asyncio.to_thread(runtime.lifecycle.shutdown)
 
     app = FastAPI(title="App-Spark Agent Runtime", version=VERSION, lifespan=lifespan)

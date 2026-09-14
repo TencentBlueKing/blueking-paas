@@ -60,7 +60,13 @@ HEALTH_PROBE_TIMEOUT_SECONDS = 0.5
 # import, and its traceback is the only thing that can say why.
 LOG_TAIL_LINES = 40
 
-SHUTDOWN_GRACE_SECONDS = 10
+# How long a Runtime gets to stop on its own before it is killed. It has to cover the Agent's
+# whole orderly shutdown, because that is where an unpushed workspace commit and un-replicated
+# state get their last chance to leave the sandbox -- killing it early throws away exactly the
+# work this service asked it to persist. The Agent's own budget is the sum documented on
+# `SHUTDOWN_DRAIN_TIMEOUT_SECONDS` in the agent settings: 1s to drop connections, 8s to drain,
+# 5s to stop application children. Raising any of those means raising this.
+SHUTDOWN_GRACE_SECONDS = 20
 
 
 @dataclass(frozen=True)
@@ -183,13 +189,16 @@ class LocalProcessProvider(AgentRuntimeProvider):
             runtime = self._runtimes.get(conversation_id)
             if runtime is None:
                 return
-            _terminate(runtime.process)
+            # On a worker thread because `_terminate` waits on the process for as long as
+            # `SHUTDOWN_GRACE_SECONDS`, and that is now long enough that blocking the event loop
+            # on it would stall every other request this worker is serving.
+            await asyncio.to_thread(_terminate, runtime.process)
             self._forget(conversation_id)
 
     async def shutdown(self) -> None:
         async with self._lock:
             for conversation_id in list(self._runtimes):
-                _terminate(self._runtimes[conversation_id].process)
+                await asyncio.to_thread(_terminate, self._runtimes[conversation_id].process)
                 self._forget(conversation_id)
 
     def _forget(self, conversation_id: str) -> None:

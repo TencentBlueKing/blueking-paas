@@ -201,13 +201,18 @@ DELETE /api/v1/users/{service_account}/tokens/{id}
 
 ### 开发内容
 
-- 修正当前空闲退出直接 `os._exit()` 的路径，并协调现有退出超时，让 Git 保存有实际执行机会。
+- ~~修正当前空闲退出直接 `os._exit()` 的路径，并协调现有退出超时，让 Git 保存有实际执行机会。~~
+  **已落地（agent `ConversationRuntime.drain` + lifespan；空闲退出改发 SIGTERM，硬退变成兜底）。**
+  控制面 `SHUTDOWN_GRACE_SECONDS` 已抬到 20s 与之对齐。
 - 同步失败时阻止正常回收；强制销毁需要明确记录未保存状态。
 - 将 Project 写入者所有权持久化，解决现有进程内 Runtime 列表无法覆盖多 API worker、API 重启的问题。
-- 检查点回写校验写入者租约与既有 `state_epoch`，非属主的回写一律拒绝。**不要再引入一个平行的“Runtime 代次”计数器**——`state_epoch` 已经是这个概念，直接复用。
+- ~~检查点回写校验写入者租约与既有 `state_epoch`，非属主的回写一律拒绝。~~
+  **已落地**（`internal_api._authorized_conversation` 用 `state_epoch` 拒过期 token）。
+  **不要再引入一个平行的“Runtime 代次”计数器**——`state_epoch` 已经是这个概念，直接复用。
 - 即使 Runtime 已消失，API 仍保留最后确认的保存状态，不能自动把“不知道是否保存”变成“保存成功”。
 - 提供已有项目导入、失败任务修复、仓库备份恢复及配置文档。
 - 把 Git 持久化的开关显式化，并支持按 Project 覆盖。第 4 阶段的行为会阻塞对话，出问题时必须能关掉而不必回滚部署。
+  （当前代码立场是“没有关闭开关”；是否按本条实现待定。）
 
 ### 关停顺序要和现有的吊销优先不变量对齐
 

@@ -12,7 +12,9 @@ def main() -> None:
     configure_logging()
     # Default drain wait is unbounded; an in-flight SSE would hold SIGTERM until the
     # run ends and might persist that turn as success. A short timeout drops the
-    # connection, then lifespan calls stop_all. A cancelled run skips on_complete.
+    # connection, then lifespan drains and calls stop_all. A cancelled run skips
+    # on_complete. This bounds waiting for *connections* only -- uvicorn gives the
+    # lifespan shutdown itself no deadline, which is why the drain brings its own.
     uvicorn.run(
         create_app_from_settings(),
         host="0.0.0.0",

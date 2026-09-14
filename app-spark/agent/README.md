@@ -30,7 +30,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`；本组件只读入，不拉起应用也不校验 |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
-| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`，到期以退出码 0 退出。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
+| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
@@ -264,6 +264,12 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 
 一轮 run 无论成败都会 commit：客户端中途断开时写了一半的文件也值得留着，但 commit message
 会写成 `(interrupted)` 且带 `Turn-Status: interrupted`，不会被后来的人误当成完整产出。
+
+### 关停时多等一步
+
+普通路径从不在屏障里等 push——那是后台任务的事。关停是唯一的例外：进程一走，workspace 盘和
+状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时会调
+`ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去：
 
 ### 未保存时的下一轮：有界等待与逃生口
 

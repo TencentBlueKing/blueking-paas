@@ -6,6 +6,7 @@ in :mod:`app_spark_agent.server.routes` is left with nothing but request and res
 """
 
 import asyncio
+import logging
 import time
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
@@ -28,6 +29,8 @@ from app_spark_agent.state import (
     ConversationContext,
     CursorStore,
 )
+
+logger = logging.getLogger(__name__)
 
 # The on-disk names of the three state channels. Deliberately not configurable: they are the
 # contract the control plane reads a state directory by, so renaming one is a migration rather
@@ -294,15 +297,64 @@ class ConversationRuntime:
         await self.cursors.record_context_push(context.context_version)
         return await self.context_store.restore(context)
 
-    async def flush_replication(self) -> bool:
+    async def flush_replication(self, *, timeout_seconds: float | None = None) -> bool:
         """Wait for the control plane to catch up, if there is one to catch up.
 
+        :param timeout_seconds: How long to wait; ``None`` uses ``PUSH_FLUSH_TIMEOUT_SECONDS``.
+            Shutdown passes its own, because the generous per-turn bound would there be spent
+            waiting for a control plane this process will not outlive.
         :return: Whether the control plane holds everything committed so far. Always ``True``
             for a Runtime with no control plane, whose state directory is the whole story.
         """
         if self.replicator is None:
             return True
-        return await self.replicator.flush(timeout_seconds=settings.PUSH_FLUSH_TIMEOUT_SECONDS)
+        bound = settings.PUSH_FLUSH_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
+        return await self.replicator.flush(timeout_seconds=bound)
+
+    async def drain(self, *, timeout_seconds: float) -> bool:
+        """Make one bounded attempt to get this Runtime's work out before the process ends.
+
+        No ordinary path needs this: pushing is the background saver's job and a turn does not
+        wait for it. Shutdown is the exception, because there is no "later" left. The workspace
+        disk and the state directory are disposable by design, so a commit that only exists
+        locally is a turn the user loses.
+
+        Bounded, because being behind beats the alternative: the control plane SIGKILLs a
+        Runtime that overstays its grace period, and a drain that outran that budget would be
+        killed part-way through having delivered nothing at all.
+
+        The workspace goes first and the two share one deadline rather than each getting its own
+        timeout. A push is usually kilobytes while a context blob runs to megabytes, so spending
+        the budget on the cheap half first is what makes it likely that both halves fit.
+
+        :param timeout_seconds: Wall-clock bound for the whole attempt.
+        :return: Whether everything reached its destination. ``False`` means this Runtime is
+            being discarded while behind, which the caller should report rather than swallow.
+        """
+        deadline = time.monotonic() + timeout_seconds
+        saved = await self._push_workspace(timeout_seconds=timeout_seconds)
+        remaining = max(0.0, deadline - time.monotonic())
+        caught_up = await self.flush_replication(timeout_seconds=remaining)
+        return saved and caught_up
+
+    async def _push_workspace(self, *, timeout_seconds: float) -> bool:
+        """Push whatever the background saver has not, within the time given.
+
+        Every failure means the same thing here -- the commits stayed local -- and none of them
+        may stop the rest of the shutdown, so they are reported rather than raised. A push
+        abandoned at the deadline may still land on the remote; that is harmless, because the
+        next Runtime to open this workspace reads its position from Git rather than from any
+        claim this one recorded.
+        """
+        if self.saver is None or not self.saver.status.outstanding:
+            return True
+        try:
+            return await asyncio.wait_for(self.saver.push_now(), timeout=timeout_seconds)
+        except TimeoutError:
+            logger.warning("the workspace push did not finish within the shutdown budget")
+        except Exception:
+            logger.exception("the workspace could not be pushed during shutdown")
+        return False
 
     async def save_workspace(self, *, run_id: str, conversation_id: str, completed: bool = True) -> None:
         """Commit this turn's file changes locally. Pushing happens behind the barrier.

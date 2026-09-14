@@ -342,6 +342,12 @@ class GitWorkspace:
         first = result.stdout.split()
         return first[0] if first else None
 
+    def remote_tracking_head(self) -> str | None:
+        """Return the fetched tip of the configured working branch."""
+        remote_ref = f"refs/remotes/origin/{self.branch}"
+        result = self.runner.run("rev-parse", "--verify", "--quiet", remote_ref, check=False)
+        return result.stdout.strip() or None
+
     def has_commit(self, commit: str) -> bool:
         """Whether ``commit`` is present in this repository."""
         return self.runner.run("cat-file", "-e", f"{commit}^{{commit}}", check=False).ok

@@ -46,8 +46,11 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 from app_spark_api.agent.conversations import checkpoints
+from app_spark_api.agent.conversations import services as conversation_services
+from app_spark_api.agent.conversations import state as conversation_state
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.runtime import get_agent_runtime_provider
+from app_spark_api.agent.runtime import AgentUnavailableError, get_agent_runtime_provider
+from app_spark_api.agent.runtime.entities import RuntimeHealth
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.repository.git.services import provision_project_repository
@@ -141,6 +144,13 @@ async def agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterato
 async def slow_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterator[None]:
     """Point the service at an agent that keeps a run open long enough to collide with."""
     async for _ in _configured_agent(settings, tmp_path, workspace_root, live_server, "fake:slow"):
+        yield None
+
+
+@pytest.fixture
+async def chat_agent(settings, tmp_path, workspace_root, live_server) -> AsyncIterator[None]:
+    """Point the service at an agent that answers without changing workspace files."""
+    async for _ in _configured_agent(settings, tmp_path, workspace_root, live_server, "fake:chat"):
         yield None
 
 
@@ -480,6 +490,175 @@ async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(
 
     after = await wait_for_replication(aapi_client, number, after=first)
     assert after["context_version"] > checkpoint.context_version
+
+
+async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
+    aapi_client,
+    project,
+    chat_agent,
+    workspace_root,
+):
+    """A conversation that never changed files needs no Git checkpoint to resume.
+
+    Destroying the process, its state and its empty workspace makes the archived context the
+    only place the first turn can come back from. The second turn advancing beyond the first
+    version proves the replacement Runtime restored that context instead of starting at zero.
+    """
+    created = await create_conversation(aapi_client)
+    number, conversation_id = created["number"], created["conversation_id"]
+
+    first_events = await run_turn(aapi_client, number, "answer without editing files")
+    first = await wait_for_replication(aapi_client, number)
+
+    assert "You said: answer without editing files" in assistant_reply(first_events)
+    assert await checkpoints.alatest_restorable(conversation_id) is None
+
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace_root / PROJECT_ID)
+
+    second_events = await run_turn(aapi_client, number, "continue after the cold start")
+    after = await wait_for_replication(aapi_client, number, after=first)
+
+    assert "You said: continue after the cold start" in assistant_reply(second_events)
+    assert after["context_version"] > first["context_version"]
+    assert await checkpoints.alatest_restorable(conversation_id) is None
+    workspace = workspace_root / PROJECT_ID
+    assert not any(path for path in workspace.iterdir() if path.name != ".git")
+
+
+async def test_cold_restore_refuses_a_context_newer_than_the_latest_checkpoint(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    await conversation_state.asave_context(conversation.id, {"context_version": 1, "messages": []})
+    await checkpoints.arecord(
+        conversation.id,
+        run_id="run-1",
+        commit="a" * 40,
+        tag="app-spark/checkpoint/run-1",
+        context_version=1,
+        completed=True,
+        log_seq=0,
+        ui_event_seq=0,
+        state_epoch=conversation.state_epoch,
+    )
+    await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"workspace restore must not run for stale checkpoint {commit}")
+
+    with pytest.raises(AgentUnavailableError, match="refusing to combine mismatched"):
+        await conversation_services._resume_if_cold(
+            conversation,
+            Client(),  # type: ignore[arg-type]
+            RuntimeHealth(
+                model="fake:test",
+                conversation_id=None,
+                context_version=0,
+                log_seq=0,
+                ui_event_seq=0,
+                running=False,
+                replication_pending=False,
+            ),
+        )
+
+
+async def test_cold_restore_accepts_context_when_no_checkpoint_was_ever_needed(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    document = {"context_version": 1, "messages": []}
+    await conversation_state.asave_context(conversation.id, document)
+    restored_contexts: list[dict[str, Any]] = []
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"workspace restore must not run without a checkpoint: {commit}")
+
+        async def restore_context(
+            self,
+            restored: dict[str, Any],
+            *,
+            if_match: int,
+            log_seq: int,
+            ui_event_seq: int,
+        ) -> int:
+            restored_contexts.append(restored)
+            assert if_match == 0
+            assert log_seq == 0
+            assert ui_event_seq == 0
+            return restored["context_version"]
+
+    health = await conversation_services._resume_if_cold(
+        conversation,
+        Client(),  # type: ignore[arg-type]
+        RuntimeHealth(
+            model="fake:test",
+            conversation_id=None,
+            context_version=0,
+            log_seq=0,
+            ui_event_seq=0,
+            running=False,
+            replication_pending=False,
+        ),
+    )
+
+    assert restored_contexts == [document]
+    assert health.context_version == 1
+
+
+async def test_cold_restore_accepts_context_when_no_checkpoint_is_restorable(
+    project,
+    bk_user,
+    settings,
+    tmp_path,
+):
+    settings.AGENT_CONTEXT_STORAGE = {
+        "backend": "host_tmp_path",
+        "root": str(tmp_path / "contexts"),
+    }
+    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
+    document = {"context_version": 1, "messages": []}
+    await conversation_state.asave_context(conversation.id, document)
+    await checkpoints.arecord(
+        conversation.id,
+        run_id="interrupted-run",
+        commit="a" * 40,
+        tag="app-spark/checkpoint/interrupted-run",
+        context_version=1,
+        completed=False,
+        log_seq=0,
+        ui_event_seq=0,
+        state_epoch=conversation.state_epoch,
+    )
+
+    class Client:
+        async def restore_workspace(self, commit: str) -> str:
+            pytest.fail(f"incomplete checkpoint must not restore workspace: {commit}")
+
+    restored = await conversation_services._restore_files(
+        conversation,
+        Client(),  # type: ignore[arg-type]
+    )
+
+    assert restored == document
 
 
 async def test_a_turn_is_refused_while_another_is_still_running(

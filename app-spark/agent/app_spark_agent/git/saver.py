@@ -62,6 +62,7 @@ class Checkpoint:
     :param commit: The commit SHA, confirmed on the remote.
     :param tag: The immovable remote tag keeping that commit reachable.
     :param context_version: The conversation version these files go with.
+    :param completed: Whether the run committed a final context matching these files.
     """
 
     run_id: str
@@ -69,6 +70,7 @@ class Checkpoint:
     commit: str
     tag: str
     context_version: int
+    completed: bool
 
 
 # Told about a checkpoint once its commit and tag are both on the remote. Async because the only
@@ -88,6 +90,7 @@ class _Turn:
     run_id: str
     conversation_id: str
     context_version: int
+    completed: bool
 
 
 class RestoreOutcome(StrEnum):
@@ -136,6 +139,8 @@ class SaveStatus:
     :param unreported: A checkpoint that is on the remote but that the control plane has not
         acknowledged. Tracked separately from the push because the fix is different: the work is
         safe, but nothing can yet restore to it.
+    :param uncommitted: The working tree contains changes that the last commit attempt failed to
+        record. This must remain outstanding even though there is no new SHA yet.
     """
 
     state: SaveState = SaveState.IDLE
@@ -146,6 +151,7 @@ class SaveStatus:
     detail: str = ""
     retriable: bool = True
     unreported: Checkpoint | None = None
+    uncommitted: bool = False
 
     @property
     def outstanding(self) -> bool:
@@ -155,7 +161,11 @@ class SaveStatus:
         safe from loss but cannot be restored to, and treating that as finished would let the
         next turn build on a point nothing can come back to.
         """
-        return (self.local_sha is not None and self.local_sha != self.pushed_sha) or self.unreported is not None
+        return (
+            self.uncommitted
+            or (self.local_sha is not None and self.local_sha != self.pushed_sha)
+            or self.unreported is not None
+        )
 
     def unsaved_seconds(self, now: float | None = None) -> float:
         """Age of the oldest unsaved commit, ``0`` when there is none.
@@ -178,6 +188,7 @@ class SaveStatus:
             "detail": self.detail,
             "needs_attention": self.state is SaveState.FAILED and not self.retriable,
             "checkpoint_reported": self.unreported is None,
+            "uncommitted": self.uncommitted,
         }
 
 
@@ -286,7 +297,43 @@ class WorkspaceSaver:
         :raises GitError: The commit could not be found, or the remote could not be reached.
         """
         async with self._git_lock:
+            # An existing workspace may be older than the remote because another conversation
+            # advanced the Project while this Runtime was stopped. Refresh before comparing;
+            # otherwise `head == commit` would incorrectly bless stale files as current.
+            await asyncio.to_thread(self.workspace.fetch)
             head = await asyncio.to_thread(self.workspace.head)
+            remote_head = await asyncio.to_thread(self.workspace.remote_tracking_head)
+            if remote_head is not None and remote_head != commit:
+                if not await asyncio.to_thread(self.workspace.is_ancestor, commit, remote_head):
+                    raise GitDivergedError(
+                        f"checkpoint {commit} is not an ancestor of the remote {self.workspace.branch} "
+                        f"tip {remote_head}; refusing to choose one history implicitly"
+                    )
+                if head != remote_head:
+                    local_is_older = head is None
+                    if head is not None:
+                        local_is_older = await asyncio.to_thread(self.workspace.is_ancestor, head, remote_head)
+                    if local_is_older:
+                        await asyncio.to_thread(self.workspace.restore, remote_head)
+                        self._status = SaveStatus(
+                            state=SaveState.SAVED,
+                            local_sha=remote_head,
+                            pushed_sha=remote_head,
+                        )
+                    elif head is not None and not await asyncio.to_thread(
+                        self.workspace.is_ancestor, remote_head, head
+                    ):
+                        raise GitDivergedError(
+                            f"local workspace tip {head} and remote {self.workspace.branch} tip "
+                            f"{remote_head} have diverged; refusing to discard local work"
+                        )
+                logger.info(
+                    "not restoring to checkpoint %s: the remote branch has advanced to %s",
+                    commit,
+                    remote_head,
+                )
+                return RestoreOutcome.SUPERSEDED
+
             if head == commit:
                 return RestoreOutcome.ALREADY_THERE
             if head is not None and await asyncio.to_thread(self.workspace.is_ancestor, commit, head):
@@ -345,6 +392,42 @@ class WorkspaceSaver:
             **({"Project-Id": self.project_id} if self.project_id else {}),
             "Turn-Status": "completed" if completed else "interrupted",
         }
+        # Cancellation must not split the blocking commit from the state update after it. The
+        # worker thread would keep running after the awaiting SSE task was cancelled, leaving a
+        # real commit at HEAD that neither the background pusher nor shutdown knew existed.
+        operation = asyncio.create_task(
+            self._commit_and_record(
+                subject=subject,
+                trailers=trailers,
+                turn=_Turn(
+                    run_id=run_id,
+                    conversation_id=conversation_id,
+                    context_version=context_version,
+                    completed=completed,
+                ),
+            )
+        )
+        try:
+            return await asyncio.shield(operation)
+        except asyncio.CancelledError:
+            # Finish registering the commit before propagating cancellation. The caller may be
+            # going away, but the saver and shutdown drain still need an accurate durable state.
+            try:
+                await operation
+            except GitError:
+                # A Git failure is already reflected in SaveStatus by `_commit_and_record`.
+                # Cancellation remains the reason this caller is unwinding.
+                pass
+            raise
+
+    async def _commit_and_record(
+        self,
+        *,
+        subject: str,
+        trailers: dict[str, str],
+        turn: _Turn,
+    ) -> str | None:
+        """Commit and publish its in-memory bookkeeping as one cancellation-safe operation."""
         # The lock covers recording the outcome as well as the git call itself: releasing it in
         # between would let the background push observe -- and confirm -- a commit this object
         # has not registered yet, and then have the registration overwrite the confirmation.
@@ -352,17 +435,38 @@ class WorkspaceSaver:
             try:
                 sha = await asyncio.to_thread(self.workspace.commit, subject, trailers=trailers)
             except GitError as exc:
-                self._fail(f"the workspace could not be committed: {exc}")
-                logger.exception("committing the workspace failed for run %s", run_id)
+                # Commit failures leave dirty files behind. They are not automatically retried by
+                # the push loop, so keep the next-run gate closed until an explicit turn retries.
+                self._fail(
+                    f"the workspace could not be committed: {exc}",
+                    retriable=False,
+                    uncommitted=True,
+                )
+                logger.exception("committing the workspace failed for run %s", turn.run_id)
                 return None
             if sha is None:
-                logger.info("run %s changed no files; nothing to save", run_id)
+                logger.info("run %s changed no files; nothing to save", turn.run_id)
+                if self._status.uncommitted:
+                    state = (
+                        SaveState.PENDING
+                        if self._status.local_sha != self._status.pushed_sha
+                        else SaveState.SAVED
+                        if self._status.local_sha is not None
+                        else SaveState.IDLE
+                    )
+                    self._status = replace(
+                        self._status,
+                        state=state,
+                        uncommitted=False,
+                        unsaved_since=None
+                        if state in {SaveState.IDLE, SaveState.SAVED}
+                        else self._status.unsaved_since,
+                        push_failures=0,
+                        detail="",
+                        retriable=True,
+                    )
                 return None
-            self._pending_turn = _Turn(
-                run_id=run_id,
-                conversation_id=conversation_id,
-                context_version=context_version,
-            )
+            self._pending_turn = turn
             self._record_commit(sha)
         self._wake.set()
         return sha
@@ -466,11 +570,12 @@ class WorkspaceSaver:
             return
         self._status = replace(
             self._status,
-            state=SaveState.SAVED,
+            state=SaveState.FAILED if self._status.uncommitted else SaveState.SAVED,
             unreported=None,
-            unsaved_since=None,
+            unsaved_since=self._status.unsaved_since if self._status.uncommitted else None,
             push_failures=0,
-            detail="",
+            detail=self._status.detail if self._status.uncommitted else "",
+            retriable=not self._status.uncommitted,
         )
         logger.info("checkpoint %s at %s is restorable", checkpoint.tag, checkpoint.commit)
 
@@ -505,6 +610,7 @@ class WorkspaceSaver:
             unsaved_since=self._status.unsaved_since if self._status.outstanding else time.monotonic(),
             detail="",
             retriable=True,
+            uncommitted=False,
         )
 
     def _record_push(self, sha: str, *, turn: _Turn | None, tag: str) -> None:
@@ -516,22 +622,32 @@ class WorkspaceSaver:
                 commit=sha,
                 tag=tag,
                 context_version=turn.context_version,
+                completed=turn.completed,
             )
             if turn is not None and tag
             else None
         )
         self._status = SaveStatus(
-            state=SaveState.PUSHING if checkpoint is not None else SaveState.SAVED,
+            state=(
+                SaveState.FAILED
+                if self._status.uncommitted
+                else SaveState.PUSHING
+                if checkpoint is not None
+                else SaveState.SAVED
+            ),
             local_sha=self._status.local_sha or sha,
             pushed_sha=sha,
             # Kept until the checkpoint is reported: until then there is still work whose age is
             # worth watching, even though the files themselves are safe.
             unsaved_since=self._status.unsaved_since if checkpoint is not None else None,
             push_failures=0,
+            detail=self._status.detail if self._status.uncommitted else "",
+            retriable=self._status.retriable if self._status.uncommitted else True,
             unreported=checkpoint,
+            uncommitted=self._status.uncommitted,
         )
 
-    def _fail(self, detail: str, *, retriable: bool = True) -> None:
+    def _fail(self, detail: str, *, retriable: bool = True, uncommitted: bool | None = None) -> None:
         self._status = replace(
             self._status,
             state=SaveState.FAILED,
@@ -539,4 +655,5 @@ class WorkspaceSaver:
             detail=detail,
             retriable=retriable,
             unsaved_since=self._status.unsaved_since or time.monotonic(),
+            uncommitted=self._status.uncommitted if uncommitted is None else uncommitted,
         )

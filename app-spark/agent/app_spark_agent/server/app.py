@@ -144,6 +144,7 @@ def _checkpoint_reporter(control_plane: ControlPlaneClient) -> CheckpointReporte
                 "tag": checkpoint.tag,
                 "run_id": checkpoint.run_id,
                 "context_version": checkpoint.context_version,
+                "completed": checkpoint.completed,
             }
         )
         if not restorable:

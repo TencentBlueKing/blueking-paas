@@ -40,6 +40,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 
+from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.state_models import (
     ConversationCheckpoint,
     ConversationContextVersion,
@@ -89,7 +90,9 @@ def restorable_checkpoints(conversation_id: Any) -> QuerySet[ConversationCheckpo
         conversation_id=OuterRef("conversation_id"),
         context_version=OuterRef("context_version"),
     )
-    return ConversationCheckpoint.objects.filter(conversation_id=conversation_id).filter(Exists(has_context))
+    return ConversationCheckpoint.objects.filter(conversation_id=conversation_id, completed=True).filter(
+        Exists(has_context)
+    )
 
 
 def record(
@@ -99,6 +102,7 @@ def record(
     commit: str,
     tag: str,
     context_version: int,
+    completed: bool,
     log_seq: int,
     ui_event_seq: int,
     state_epoch: int,
@@ -113,12 +117,14 @@ def record(
     :param commit: 已在远端的提交 SHA。
     :param tag: 钉住该提交的不可移动远端 tag。
     :param context_version: 和这次提交配套的上下文版本。
+    :param completed: 该 run 是否完整结束并提交了最终上下文。
     :param log_seq: 原始记录游标。
     :param ui_event_seq: AG-UI 事件游标。
     :param state_epoch: 写入时的状态回写代次。
     :return: 该检查点此刻是否已可恢复。
     """
     with transaction.atomic():
+        _lock_conversation(conversation_id)
         ConversationCheckpoint.objects.update_or_create(
             conversation_id=conversation_id,
             commit=commit,
@@ -126,16 +132,21 @@ def record(
                 "run_id": run_id,
                 "tag": tag,
                 "context_version": context_version,
+                "completed": completed,
                 "log_seq": log_seq,
                 "ui_event_seq": ui_event_seq,
                 "state_epoch": state_epoch,
             },
         )
-    # 只问上下文行在不在，不去读 blob：这条路径在请求里，而 blob 可能在远端对象存储上。
-    stored = ConversationContextVersion.objects.filter(
-        conversation_id=conversation_id,
-        context_version=context_version,
-    ).exists()
+        # 只问上下文行在不在，不去读 blob：这条路径在请求里，而 blob 可能在远端对象存储上。
+        # 查询必须仍在会话锁内，避免并发回收在返回 true 后删掉刚被引用的版本。
+        stored = (
+            completed
+            and ConversationContextVersion.objects.filter(
+                conversation_id=conversation_id,
+                context_version=context_version,
+            ).exists()
+        )
     if not stored:
         logger.info(
             "Checkpoint %s of conversation %s is on the remote but its context version %d has "
@@ -169,10 +180,17 @@ def reclaim(conversation_id: Any) -> Reclaimed:
     :param conversation_id: 要回收的会话。
     :return: 这次各删掉了多少。
     """
-    return Reclaimed(
-        checkpoints=_reclaim_checkpoints(conversation_id),
-        versions=_reclaim_versions(conversation_id),
-    )
+    with transaction.atomic():
+        _lock_conversation(conversation_id)
+        return Reclaimed(
+            checkpoints=_reclaim_checkpoints(conversation_id),
+            versions=_reclaim_versions(conversation_id),
+        )
+
+
+def _lock_conversation(conversation_id: Any) -> None:
+    """Serialize checkpoint registration and retention for one conversation."""
+    Conversation.objects.select_for_update().only("pk").get(pk=conversation_id)
 
 
 def _reclaim_checkpoints(conversation_id: Any) -> int:

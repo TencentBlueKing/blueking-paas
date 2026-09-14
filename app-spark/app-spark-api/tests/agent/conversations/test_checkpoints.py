@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from django.db import transaction
 
 from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.models import Conversation
@@ -75,6 +76,7 @@ def record(conversation: Conversation, *, commit: str, context_version: int, run
         commit=commit,
         tag=f"app-spark/checkpoint/{run_id}",
         context_version=context_version,
+        completed=True,
         log_seq=0,
         ui_event_seq=0,
         state_epoch=conversation.state_epoch,
@@ -99,6 +101,24 @@ class TestRestorability:
         """The mirror image, and the one a cold start would otherwise silently accept."""
         state.save_context(conversation.id, context(1))
 
+        assert checkpoints.latest_restorable(conversation.id) is None
+
+    def test_an_interrupted_commit_is_not_restorable(self, conversation):
+        state.save_context(conversation.id, context(1))
+
+        restorable = checkpoints.record(
+            conversation.id,
+            run_id="run-interrupted",
+            commit="9" * 40,
+            tag="app-spark/checkpoint/run-interrupted",
+            context_version=1,
+            completed=False,
+            log_seq=0,
+            ui_event_seq=0,
+            state_epoch=conversation.state_epoch,
+        )
+
+        assert restorable is False
         assert checkpoints.latest_restorable(conversation.id) is None
 
     def test_a_late_context_makes_an_earlier_commit_restorable(self, conversation):
@@ -226,6 +246,37 @@ class TestRetention:
         assert state.context_version(conversation.id) == 2
         assert state.load_context(conversation.id) == context(2)
         assert checkpoints.latest_restorable(conversation.id).commit == "a" * 40
+
+    def test_registration_and_retention_take_the_same_conversation_lock(
+        self,
+        conversation,
+        monkeypatch,
+    ):
+        calls: list[tuple[str, Any]] = []
+        lock_in_state = state._lock_conversation
+        lock_in_checkpoints = checkpoints._lock_conversation
+
+        def observe_state_lock(conversation_id: Any) -> None:
+            assert transaction.get_connection().in_atomic_block
+            calls.append(("state", conversation_id))
+            lock_in_state(conversation_id)
+
+        def observe_checkpoint_lock(conversation_id: Any) -> None:
+            assert transaction.get_connection().in_atomic_block
+            calls.append(("checkpoint", conversation_id))
+            lock_in_checkpoints(conversation_id)
+
+        monkeypatch.setattr(state, "_lock_conversation", observe_state_lock)
+        monkeypatch.setattr(checkpoints, "_lock_conversation", observe_checkpoint_lock)
+
+        state.save_context(conversation.id, context(1))
+        record(conversation, commit="a" * 40, context_version=1)
+
+        assert calls == [
+            ("state", conversation.id),
+            ("checkpoint", conversation.id),
+            ("checkpoint", conversation.id),
+        ]
 
 
 class TestVersionedDocuments:

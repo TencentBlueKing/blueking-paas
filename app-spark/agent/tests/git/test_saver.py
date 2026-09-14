@@ -9,6 +9,7 @@ only meaningful against the errors git actually emits.
 from __future__ import annotations
 
 import asyncio
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -138,6 +139,59 @@ class TestCommitTurn:
         assert "Turn-Status: interrupted" in message
         await saver.aclose()
 
+    async def test_cancelling_during_commit_still_registers_the_new_commit(
+        self,
+        saver: WorkspaceSaver,
+        workspace_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        saver.workspace.ensure_ready()
+        (workspace_dir / "app.py").write_text("work worth preserving\n")
+        started = threading.Event()
+        release = threading.Event()
+        original_commit = saver.workspace.commit
+
+        def slow_commit(message: str, **kwargs) -> str | None:
+            started.set()
+            assert release.wait(timeout=10)
+            return original_commit(message, **kwargs)
+
+        monkeypatch.setattr(saver.workspace, "commit", slow_commit)
+        committing = asyncio.create_task(commit_turn(saver, run_id="run-1", conversation_id="conv-1"))
+        assert await asyncio.to_thread(started.wait, 10)
+
+        committing.cancel()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await committing
+
+        assert saver.status.local_sha == saver.workspace.head()
+        assert saver.status.outstanding
+
+    async def test_an_interrupted_turn_is_reported_as_non_restorable(
+        self, saver: WorkspaceSaver, workspace_dir: Path, bare_remote: Path
+    ) -> None:
+        reported: list[Checkpoint] = []
+        saver.bind_reporter(_collect(reported))
+        await saver.start()
+        (workspace_dir / "half.py").write_text("def unfinished(\n")
+
+        sha = await commit_turn(
+            saver,
+            run_id="run-interrupted",
+            conversation_id="conv-1",
+            completed=False,
+        )
+        await wait_for_saved(saver)
+
+        assert sha is not None
+        assert len(reported) == 1
+        assert reported[0].commit == sha
+        assert reported[0].completed is False
+        pinned = plain_git("rev-parse", "app-spark/checkpoint/run-interrupted^{commit}", cwd=bare_remote)
+        assert pinned.strip() == sha
+        await saver.aclose()
+
     async def test_consecutive_turns_each_produce_a_commit(
         self, saver: WorkspaceSaver, workspace_dir: Path, bare_remote: Path, tmp_path: Path
     ) -> None:
@@ -245,6 +299,10 @@ class TestUnsavedReporting:
         assert saver.status.state is SaveState.FAILED
         # Names the offending path, so the message is actionable without opening a shell.
         assert "huge.bin" in saver.status.detail
+        assert saver.status.outstanding
+        assert saver.status.uncommitted
+        assert not saver.status.retriable
+        assert saver.status.as_payload()["needs_attention"] is True
         await saver.aclose()
 
 
@@ -422,6 +480,27 @@ class TestRestore:
 
         assert sha is not None
         assert await saver.restore_to(sha) is RestoreOutcome.ALREADY_THERE
+
+    async def test_a_stale_local_workspace_adopts_the_newer_remote_tip(
+        self, saver: WorkspaceSaver, workspace_dir: Path, bare_remote: Path, tmp_path: Path
+    ) -> None:
+        await saver.start()
+        (workspace_dir / "app.py").write_text("checkpoint\n")
+        checkpoint = await commit_turn(saver, run_id="run-1")
+        await wait_for_saved(saver)
+        await saver.aclose()
+
+        assert checkpoint is not None
+        other = clone_to(bare_remote, tmp_path / "other")
+        (other / "later.py").write_text("newer project work\n")
+        plain_git("add", "--all", cwd=other)
+        plain_git("commit", "--message", "later", cwd=other)
+        plain_git("push", "origin", "HEAD:main", cwd=other)
+
+        outcome = await saver.restore_to(checkpoint)
+
+        assert outcome is RestoreOutcome.SUPERSEDED
+        assert (workspace_dir / "later.py").read_text() == "newer project work\n"
 
     async def test_newer_work_is_not_rolled_back_to_an_older_checkpoint(
         self, saver: WorkspaceSaver, workspace_dir: Path

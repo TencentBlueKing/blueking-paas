@@ -360,8 +360,6 @@ async def _resume_if_cold(
 
     document = await _restore_files(conversation, client)
     if document is None:
-        document = await state.aload_context(conversation.id)
-    if document is None:
         return health
 
     # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
@@ -392,33 +390,31 @@ async def _resume_if_cold(
 async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
     """Put the workspace back to this conversation's checkpoint, and return its paired context.
 
-    ``None`` means there was no checkpoint to restore from and the files were left alone, which
-    covers both "this Project has no repository" and "the last turn only got half-way saved".
-    Neither is an error: a half-saved turn is not a restore point, and continuing from a slightly
-    older place beats continuing with files and memory that disagree.
+    When there is no restorable checkpoint, the files are left alone and the newest archived
+    context is returned. If a checkpoint exists but the conversation has advanced past it,
+    restoration fails instead of combining files from the checkpoint with newer memory.
 
     :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
     """
     checkpoint = await checkpoints.alatest_restorable(conversation.id)
     if checkpoint is None:
-        return None
+        # There is no file snapshot that this service can restore or compare. This is the normal
+        # shape for conversations that only read files or do non-code work, and it is also the
+        # safest useful fallback when an incomplete checkpoint cannot be restored.
+        return await state.aload_context(conversation.id)
 
+    newest = await state.acontext_version(conversation.id)
     # A checkpoint the conversation has already moved past is not usable, even though both its
     # halves are here. Seeding the Runtime with an older version would have it re-issue version
-    # numbers this service has already archived, and `save_context` refuses to go backwards --
-    # so every turn from then on would be silently dropped. This happens only when a later turn
-    # took the "continue without saving" escape hatch, and in that case the branch tip is this
-    # checkpoint's commit anyway, so leaving the files alone lands in the same place.
-    newest = await state.acontext_version(conversation.id)
+    # numbers this service has already archived, and pairing the newest context with this older
+    # commit would violate the restore invariant instead. Refuse until an operator recovers or
+    # deliberately discards the unmatched state.
     if checkpoint.context_version != newest:
-        logger.warning(
-            "Conversation %s has a checkpoint at context version %d but has since archived "
-            "version %d, so its files are being left as they are",
-            conversation.id,
-            checkpoint.context_version,
-            newest,
+        raise AgentUnavailableError(
+            f"Conversation {conversation.id} has archived context version {newest}, but its "
+            f"latest restorable workspace checkpoint only covers version "
+            f"{checkpoint.context_version}; refusing to combine mismatched files and context."
         )
-        return None
 
     outcome = await client.restore_workspace(checkpoint.commit)
     document = await state.aload_context_version(conversation.id, checkpoint.context_version)

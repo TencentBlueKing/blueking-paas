@@ -173,6 +173,7 @@ class ConversationCheckpoint(TimestampedModel):
     commit = models.CharField(verbose_name="仓库提交", max_length=64)
     tag = models.CharField(verbose_name="钉住该提交的远端 tag", max_length=255)
     context_version = models.PositiveIntegerField(verbose_name="配套的上下文版本")
+    completed = models.BooleanField(verbose_name="该 run 是否完整结束", default=True)
     # 提交到达远端那一刻，两条频道各自存到了哪。记的是**当时的位置**，供排查「这个检查点落后
     # 了多少」用；冷恢复给新 Runtime 的游标不取自这里，取的是恢复那一刻的真实位置——频道只增不
     # 删，从一个旧位置续写只会撞上已经存在的序号。理由见 services._resume_if_cold。

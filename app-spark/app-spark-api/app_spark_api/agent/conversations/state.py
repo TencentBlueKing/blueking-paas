@@ -204,13 +204,20 @@ def save_context(conversation_id: Any, payload: dict[str, Any]) -> int:
 
     backend, config = blob_location(conversation_id, version)
     make_blob_store(backend, config).put_bytes(json.dumps(payload).encode())
-    # `update_or_create` settles a re-push of the same version against the unique constraint
-    # rather than raising, which is what makes this safe without a lock of its own.
-    ConversationContextVersion.objects.update_or_create(
-        conversation_id=conversation_id,
-        context_version=version,
-        defaults={"backend": backend, "config": config},
-    )
+    # Checkpoint registration and retention use this same conversation lock. Taking it before
+    # publishing the row prevents a concurrent reclaim from computing its keep-set without this
+    # version and then deleting it immediately after it becomes checkpoint-referenced.
+    with transaction.atomic():
+        _lock_conversation(conversation_id)
+        archived = context_version(conversation_id)
+        if version <= archived:
+            return archived
+        # `update_or_create` settles a re-push of the same version against the unique constraint.
+        ConversationContextVersion.objects.update_or_create(
+            conversation_id=conversation_id,
+            context_version=version,
+            defaults={"backend": backend, "config": config},
+        )
 
     # Archiving a version is what makes older ones reclaimable, so this is the moment to look.
     checkpoints.reclaim_quietly(conversation_id)

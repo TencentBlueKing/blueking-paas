@@ -255,15 +255,18 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 | 字段 | 含义 |
 | --- | --- |
 | `workspace_persisted` | 这个 Runtime 是否配了仓库。没配和「已保存」必须能区分开 |
-| `workspace_save_pending` | 是否还有本地有、远端没有的提交 |
+| `workspace_save_pending` | 是否还有未提交的工作区改动、未推送提交或未上报检查点 |
 | `workspace.state` | `idle` / `pending` / `pushing` / `saved` / `failed` |
 | `workspace.local_sha` / `workspace.pushed_sha` | 本地提交与远端确认的提交 |
 | `workspace.unsaved_seconds` | **最早**一个未保存提交等了多久，不是最近那个 |
 | `workspace.push_failures` | 连续失败次数，成功即清零 |
 | `workspace.needs_attention` | 重试也过不去的失败：分叉、token 被拒、超出体积上限 |
+| `workspace.uncommitted` | 上一次本地提交失败后，工作区是否仍有未记录的改动 |
 
 一轮 run 无论成败都会 commit：客户端中途断开时写了一半的文件也值得留着，但 commit message
-会写成 `(interrupted)` 且带 `Turn-Status: interrupted`，不会被后来的人误当成完整产出。
+会写成 `(interrupted)` 且带 `Turn-Status: interrupted`。这类提交仍会推到工作分支并上报给控制
+面，供后续人工检查或继续修改，但上报会标记 `completed=false`，不能成为自动恢复点：
+`on_complete` 尚未提交新上下文时，上一版上下文并不能准确描述这些半成品文件。
 
 ### 关停时多等一步
 
@@ -296,7 +299,8 @@ push 成功之后，这一轮的提交会被打上一个**不可移动的远端 
 一个没有任何 ref 指向的提交是可回收对象，等到真要恢复的时候，检查点指向的可能已经什么都不是
 了。tag 是让它永远可达的那个 ref，一个检查点一个。
 
-上报的内容是 `commit` + `tag` + `run_id` + `context_version`。其中 `context_version` 取自
+上报的内容是 `commit` + `tag` + `run_id` + `context_version` + `completed`。其中
+`context_version` 取自
 **做 commit 的那一刻**，不是 push 落地的那一刻：push 可能几秒后才回来，那时会话可能已经是下
 一轮了，拿那个版本配这一轮的文件就是错的配对。
 
@@ -313,7 +317,7 @@ push 成功之后，这一轮的提交会被打上一个**不可移动的远端 
 | `outcome` | 含义 |
 | --- | --- |
 | `already_there` | 工作区已经在这个提交上，什么都不用做 |
-| `superseded` | 工作区在这个提交**之后**，保留较新的工作，**不回滚** |
+| `superseded` | 本地或远端工作分支在这个提交**之后**，切到/保留较新的工作，**不回滚** |
 | `restored` | 工作区落后或分叉，移到这个提交上 |
 
 `superseded` 是有意为之：检查点记录的是**那个会话**把文件写到了哪，不是 Project 现在在哪。

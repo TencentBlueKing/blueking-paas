@@ -154,6 +154,7 @@ class CheckpointRequest(Schema):
     tag: str = Field(min_length=1, max_length=255, description="钉住该提交的远端 tag")
     run_id: str = Field(min_length=1, max_length=64, description="产生这次提交的 run")
     context_version: int = Field(ge=0, description="和这次提交配套的上下文版本")
+    completed: bool = Field(description="该 run 是否完整结束并提交了最终上下文")
 
 
 class CheckpointResponse(Schema):
@@ -241,6 +242,7 @@ async def put_checkpoint(
         commit=payload.commit,
         tag=payload.tag,
         context_version=payload.context_version,
+        completed=payload.completed,
         log_seq=await state.alast_seq(conversation_id, state.MESSAGE_CHANNEL),
         ui_event_seq=await state.alast_seq(conversation_id, state.UI_EVENT_CHANNEL),
         state_epoch=conversation.state_epoch,

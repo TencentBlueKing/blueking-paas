@@ -36,6 +36,8 @@ from asgiref.sync import sync_to_async
 from django.db import connection
 
 from app_spark_api.infras.forgejo import ForgejoClient
+from app_spark_api.infras.forgejo.entities import AccessToken
+from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git.constants import READ_TOKEN_SCOPE, STATUS_READY, read_token_name
 from app_spark_api.repository.git.entities import RepoServerConfig
 from app_spark_api.repository.git.models import ProjectGitRepository
@@ -169,6 +171,9 @@ async def test_two_projects_get_isolated_private_repositories(aapi_client, forge
 
     # Read token: clone yes, push no.
     with ForgejoClient(forgejo_settings.forgejo_client_config()) as client:
+        # The existing rule must be patched: Forgejo 15 rejects a duplicate POST
+        # with 403, the same code it uses for permission errors.
+        client.ensure_branch_protection(forgejo_settings.org, id_a, "main")
         read = client.reissue_repo_token(
             name=read_token_name(id_a) + "-live",
             scopes=[READ_TOKEN_SCOPE],
@@ -176,11 +181,15 @@ async def test_two_projects_get_isolated_private_repositories(aapi_client, forge
             repo_name=id_a,
         )
         assert read.sha1
+        client.verify_read_token_cannot_write(read, forgejo_settings.org, id_a)
         cloned = _git(read.sha1, "clone", row_a.clone_url, str(work / "read"), cwd=work, username=username)
         assert cloned.returncode == 0, cloned.stderr
         pushed_read = _clone_and_push(row_a.clone_url, read.sha1, username, "from-read.txt")
         assert pushed_read.returncode != 0
-        client.delete_token(read.token_id)
+        client.delete_tokens_named(read.name)
+        client.delete_tokens_named(read.name)
+        after_read_revoke = _git(read.sha1, "ls-remote", row_a.clone_url, cwd=work, username=username)
+        assert after_read_revoke.returncode != 0
 
     anonymous = subprocess.run(  # noqa: ASYNC221
         [GIT, "ls-remote", row_a.clone_url],
@@ -195,3 +204,30 @@ async def test_two_projects_get_isolated_private_repositories(aapi_client, forge
     assert revoked.status_code == HTTPStatus.OK
     after = _git(row_a.write_token, "ls-remote", row_a.clone_url, cwd=work, username=username)
     assert after.returncode != 0
+
+
+async def test_a_mis_scoped_probe_is_removed_from_the_working_tree(aapi_client, forgejo_settings, tmp_path):
+    project_id = _project_id("probe")
+    repository = await _create_project(aapi_client, project_id)
+    assert repository["status"] == STATUS_READY
+    row = await ProjectGitRepository.objects.aget(project_id=project_id)
+    assert row.write_token
+    assert row.write_token_id
+    # Deliberately supply write credentials to exercise the permission-violation
+    # cleanup with the real contents API and its returned blob SHA.
+    token = AccessToken(token_id=row.write_token_id, name="probe", sha1=row.write_token)
+    with (
+        ForgejoClient(forgejo_settings.forgejo_client_config()) as client,
+        pytest.raises(ForgejoUnavailableError, match="read token was allowed to write"),
+    ):
+        client.verify_read_token_cannot_write(token, row.owner, row.name)
+    cloned = _git(
+        row.write_token,
+        "clone",
+        row.clone_url,
+        str(tmp_path / "repo"),
+        cwd=tmp_path,
+        username=forgejo_settings.service_account,
+    )
+    assert cloned.returncode == 0, cloned.stderr
+    assert not list((tmp_path / "repo").glob(".app-spark-read-token-probe*"))

@@ -42,7 +42,11 @@ PROJECT_ID = Path(..., description="项目 ID")
 
 @router.get(
     "",
-    response={HTTPStatus.OK: GitRepositoryResponse, HTTPStatus.NOT_FOUND: ErrorResponse},
+    response={
+        HTTPStatus.OK: GitRepositoryResponse,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
+    },
     url_name="git-repository-retrieve",
     summary="查看 Project 的 Git 仓库状态",
 )
@@ -61,6 +65,7 @@ async def get_git_repository(request: HttpRequest, project_id: str = PROJECT_ID)
     response={
         HTTPStatus.OK: GitRepositoryResponse,
         HTTPStatus.CONFLICT: ErrorResponse,
+        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
     },
     url_name="git-repository-provision",
     summary="为 Project 补建或重试 Git 仓库",
@@ -78,6 +83,8 @@ async def provision_git_repository(request: HttpRequest, project_id: str = PROJE
         HTTPStatus.OK: GitRepositoryResponse,
         HTTPStatus.CONFLICT: ErrorResponse,
         HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.SERVICE_UNAVAILABLE: ErrorResponse,
+        HTTPStatus.BAD_GATEWAY: ErrorResponse,
     },
     url_name="git-repository-revoke",
     summary="撤销 Project 的 Git 仓库 token（应急）",

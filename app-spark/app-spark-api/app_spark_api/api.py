@@ -33,8 +33,9 @@ from app_spark_api.agent.runtime import (
 )
 from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.infras.accounts.api import router as accounts_router
+from app_spark_api.infras.forgejo.exceptions import ForgejoError
 from app_spark_api.repository.git.api import router as git_repository_router
-from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
+from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
 
 if TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
@@ -54,6 +55,28 @@ root_router.add_router("/internal/conversations/", conversation_state_router)
 
 api = NinjaAPI(title="App Spark API", urls_namespace="api")
 api.add_router("", root_router)
+
+
+@api.exception_handler(RepoServerConfigurationError)
+def handle_repo_server_configuration_error(request: HttpRequest, exc: RepoServerConfigurationError) -> HttpResponse:
+    """Report unusable Git host configuration without exposing its values."""
+    logger.error("Git repository server configuration is invalid", exc_info=exc)
+    return api.create_response(
+        request,
+        {"detail": "Git repository service is not configured correctly. Please contact an administrator."},
+        status=HTTPStatus.SERVICE_UNAVAILABLE,
+    )
+
+
+@api.exception_handler(ForgejoError)
+def handle_forgejo_error(request: HttpRequest, exc: ForgejoError) -> HttpResponse:
+    """Keep remote response bodies in logs when a Git operation fails."""
+    logger.error("Git repository server request failed", exc_info=exc)
+    return api.create_response(
+        request,
+        {"detail": "Git repository service is unavailable. Please retry later."},
+        status=HTTPStatus.BAD_GATEWAY,
+    )
 
 
 @api.exception_handler(GitRepositoryNotReadyError)

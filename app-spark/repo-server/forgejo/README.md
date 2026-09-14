@@ -50,6 +50,9 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 
 未设置 `APP_SPARK_FORGEJO_LIVE=1` 时该目录不会被收集。一旦设置，测试自己会 `just test-up`；Forgejo 起不来就失败，不会 skip。
 
+验收脚本配置分支保护时先查询规则，已有规则走 PATCH，缺失才走 POST。固定的 Forgejo 15 版本对
+重复创建规则也返回 403，因此不再用 403 猜测规则存在；真正的鉴权失败会直接报错。
+
 ## 初始化写什么
 
 `just init` 会：

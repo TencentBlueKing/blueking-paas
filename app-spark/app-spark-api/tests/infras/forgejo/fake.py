@@ -50,7 +50,7 @@ def repo_server_config(**overrides: Any) -> dict[str, Any]:
 
 
 def forgejo_client_config(**overrides: Any) -> ForgejoClientConfig:
-    payload = {
+    payload: dict[str, Any] = {
         "base_url": "http://forgejo.invalid",
         "username": SERVICE_ACCOUNT,
         "password": SERVICE_PASSWORD,
@@ -106,6 +106,10 @@ class FakeForgejo:
             return self._create_repo(rest[1], body)
         if method == "POST" and len(rest) == 4 and rest[0] == "repos" and rest[3] == "branch_protections":
             return self._protect(rest[1], rest[2], body)
+        if method == "GET" and len(rest) == 5 and rest[0] == "repos" and rest[3] == "branch_protections":
+            if (rest[1], rest[2], rest[4]) in self.protections:
+                return self._json(HTTPStatus.OK, {"rule_name": rest[4]})
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
         if method == "PATCH" and len(rest) == 5 and rest[0] == "repos" and rest[3] == "branch_protections":
             return self._protect(rest[1], rest[2], body, branch=rest[4])
         if method == "GET" and rest[:1] == ["users"] and rest[-1:] == ["tokens"]:
@@ -162,7 +166,8 @@ class FakeForgejo:
         key = (owner, name, rule)
         existed = key in self.protections
         if existed and branch is None:
-            return self._json(HTTPStatus.CONFLICT, {"message": "exist"})
+            # The pinned Forgejo uses 403 for duplicate protection rules.
+            return self._json(HTTPStatus.FORBIDDEN, {"message": "exist"})
         self.protections.add(key)
         status = HTTPStatus.OK if existed else HTTPStatus.CREATED
         return self._json(status, {"rule_name": rule, "enable_force_push": False})

@@ -18,8 +18,10 @@
 
 from __future__ import annotations
 
+import logging
 from http import HTTPStatus
 from typing import Any, Self
+from uuid import uuid4
 
 import httpx2
 
@@ -29,6 +31,7 @@ from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 # A probe file written with a read token must be refused; the name is not a real project file.
 # 该探针文件将被写入到项目中，作为 token 读写能力测试的一部分。
 _READ_PROBE_PATH = ".app-spark-read-token-probe"
+logger = logging.getLogger(__name__)
 
 
 class ForgejoClient:
@@ -135,14 +138,24 @@ class ForgejoClient:
             "enable_force_push": False,
             "enable_force_push_allowlist": False,
         }
+        path = f"api/v1/repos/{owner}/{name}/branch_protections"
+        # Forgejo 15 returns 403 both for an existing rule and for denied access.
+        # Query first so a permission failure on create is never guessed away.
+        existing = self._request("GET", f"{path}/{branch}")
+        if existing.status_code == HTTPStatus.OK:
+            response = self._request("PATCH", f"{path}/{branch}", json=payload)
+            self._raise_for_status(response, f"PATCH branch protection {owner}/{name} {branch}")
+            return
+        if existing.status_code != HTTPStatus.NOT_FOUND:
+            self._raise_for_status(existing, f"GET branch protection {owner}/{name} {branch}")
         response = self._request(
             "POST",
-            f"api/v1/repos/{owner}/{name}/branch_protections",
+            path,
             json=payload,
         )
         if response.status_code in {HTTPStatus.CREATED, HTTPStatus.OK}:
             return
-        if response.status_code in {HTTPStatus.CONFLICT, HTTPStatus.UNPROCESSABLE_ENTITY, HTTPStatus.FORBIDDEN}:
+        if response.status_code in {HTTPStatus.CONFLICT, HTTPStatus.UNPROCESSABLE_ENTITY}:
             patch = self._request(
                 "PATCH",
                 f"api/v1/repos/{owner}/{name}/branch_protections/{branch}",
@@ -153,14 +166,6 @@ class ForgejoClient:
             self._raise_for_status(patch, f"PATCH branch protection {owner}/{name} {branch}")
             return
         self._raise_for_status(response, f"POST branch protection {owner}/{name} {branch}")
-
-    def list_tokens(self) -> list[AccessToken]:
-        response = self._request("GET", f"api/v1/users/{self._config.username}/tokens")
-        self._raise_for_status(response, "GET tokens")
-        payload = response.json()
-        if not isinstance(payload, list):
-            raise ForgejoUnavailableError(f"Expected a token list, got {payload!r}")
-        return [AccessToken.from_payload(item) for item in payload]
 
     def create_token(
         self,
@@ -196,11 +201,12 @@ class ForgejoClient:
         self._raise_for_status(response, f"DELETE token {token_id}")
 
     def delete_tokens_named(self, name: str) -> None:
-        """Drop leftover tokens of this name so a re-issue cannot collide."""
-        for token in self.list_tokens():
-            if token.name == name:
-                self.delete_token(token.token_id)
-        # Forgejo also accepts delete-by-name; cover the case list was stale.
+        """Drop the token of this name so a re-issue cannot collide.
+
+        Forgejo token names are unique per user and DELETE accepts a name. Our
+        generated names are nonnumeric, so they cannot be mistaken for an ID.
+        No paginated account-wide list is needed to revoke a project's token.
+        """
         response = self._request(
             "DELETE",
             f"api/v1/users/{self._config.username}/tokens/{name}",
@@ -230,6 +236,11 @@ class ForgejoClient:
         Uses the contents API rather than git(1): provision runs in the API
         process, which does not yet install Git (that is stage 3). Live tests
         still exercise clone/push with real git.
+
+        The pinned Forgejo accepts GET with read:repository (HTTP 200) and
+        rejects a contents POST (HTTP 403). A 403/404 on GET does not prove read
+        access; a 404/409/422/5xx on POST does not prove write protection either.
+        Keep these checks strict; verify other versions with the live Git tests.
         """
         if not token.sha1:
             raise ForgejoUnavailableError("read token has no secret to verify")
@@ -239,17 +250,44 @@ class ForgejoClient:
             transport=self._transport,
             headers={"Authorization": f"token {token.sha1}", "Accept": "application/json"},
         ) as scoped:
-            seen = scoped.get(f"api/v1/repos/{owner}/{repo_name}")
-            if seen.status_code != HTTPStatus.OK:
-                raise ForgejoUnavailableError(f"read token could not GET {owner}/{repo_name}: HTTP {seen.status_code}")
-            probe = scoped.post(
-                f"api/v1/repos/{owner}/{repo_name}/contents/{_READ_PROBE_PATH}",
-                json={"content": "dGVzdA==", "message": "read-token probe"},
+            try:
+                self._verify_read_token(scoped, owner, repo_name)
+            except httpx2.HTTPError as exc:
+                raise ForgejoUnavailableError(f"Read-token verification failed for {owner}/{repo_name}") from exc
+
+    def _verify_read_token(self, scoped: httpx2.Client, owner: str, repo_name: str) -> None:
+        seen = scoped.get(f"api/v1/repos/{owner}/{repo_name}")
+        if seen.status_code != HTTPStatus.OK:
+            raise ForgejoUnavailableError(f"read token could not GET {owner}/{repo_name}: HTTP {seen.status_code}")
+        # A unique name avoids touching project files or mistaking a stale
+        # probe's create conflict for evidence that writes are forbidden.
+        path = f"api/v1/repos/{owner}/{repo_name}/contents/{_READ_PROBE_PATH}-{uuid4().hex}"
+        probe = scoped.post(
+            path,
+            json={"content": "dGVzdA==", "message": "read-token probe"},
+        )
+        if probe.status_code < 400:
+            self._cleanup_read_probe(path, probe)
+            raise ForgejoUnavailableError(
+                f"read token was allowed to write {owner}/{repo_name}: HTTP {probe.status_code}"
             )
-            if probe.status_code < 400:
-                raise ForgejoUnavailableError(
-                    f"read token was allowed to write {owner}/{repo_name}: HTTP {probe.status_code}"
-                )
+        if probe.status_code != HTTPStatus.FORBIDDEN:
+            raise ForgejoUnavailableError(
+                f"read-token write check was inconclusive for {owner}/{repo_name}: HTTP {probe.status_code}"
+            )
+
+    def _cleanup_read_probe(self, path: str, probe: httpx2.Response) -> None:
+        # Use the service account, whose write access does not depend on the
+        # broken read-token restriction. Delete only the blob this probe wrote.
+        # This leaves an ordinary cleanup commit; never rewrite project history.
+        try:
+            sha = probe.json()["content"]["sha"]
+            response = self._request("DELETE", path, json={"sha": sha, "message": "remove read-token probe"})
+            self._raise_for_status(response, "DELETE read-token probe")
+        except ForgejoUnavailableError, ValueError, KeyError, TypeError:
+            # Keep the permission violation as the primary failure even when
+            # cleanup fails. Operators still get the complete cleanup error.
+            logger.exception("Could not clean up read-token probe %s", path)
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx2.Response:
         try:

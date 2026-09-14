@@ -143,6 +143,7 @@ class GitRepositoryResponse(ModelSchema):
         """
         model_names = {field.name for field in repo._meta.fields}
         data: dict[str, Any] = {name: getattr(repo, name) for name in cls.model_fields if name in model_names}
+        data["status_detail"] = repo.public_status_detail
         data["commit"] = commit
         return cls.model_validate(data)
 

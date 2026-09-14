@@ -95,16 +95,38 @@ def ensure_branch_protection(password: str) -> None:
         "enable_force_push": False,
         "enable_force_push_allowlist": False,
     }
+    path = f"/api/v1/repos/{ORG_NAME}/{VERIFY_REPO}/branch_protections"
+    # Forgejo 15 also uses 403 for duplicate rules; query before choosing PATCH
+    # so an actual permission error on POST remains visible.
+    existing_status, existing_body = request_json(
+        "GET",
+        f"{path}/{DEFAULT_BRANCH}",
+        username=SERVICE_USERNAME,
+        password=password,
+    )
+    if existing_status == 200:
+        status, body = request_json(
+            "PATCH",
+            f"{path}/{DEFAULT_BRANCH}",
+            username=SERVICE_USERNAME,
+            password=password,
+            payload=payload,
+        )
+        if status not in {200, 201}:
+            fail(f"updating branch protection failed: HTTP {status} {body}")
+        return
+    if existing_status != 404:
+        fail(f"reading branch protection failed: HTTP {existing_status} {existing_body}")
     status, body = request_json(
         "POST",
-        f"/api/v1/repos/{ORG_NAME}/{VERIFY_REPO}/branch_protections",
+        path,
         username=SERVICE_USERNAME,
         password=password,
         payload=payload,
     )
     if status in {201, 200}:
         return
-    if status in {403, 404, 409, 422}:
+    if status in {409, 422}:
         # Already protected, or this Forgejo wants PATCH on an existing rule.
         patch, _ = request_json(
             "PATCH",

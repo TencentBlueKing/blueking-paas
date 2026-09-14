@@ -25,6 +25,7 @@ STATUS_PENDING = "pending"
 STATUS_READY = "ready"
 # STATUS_FAILED git 项目初始化失败。
 STATUS_FAILED = "failed"
+REPOSITORY_ERROR_DETAIL = "Git repository operation failed. Please retry or contact an administrator."
 
 WRITE_TOKEN_SCOPE = "write:repository"
 READ_TOKEN_SCOPE = "read:repository"

@@ -16,8 +16,14 @@
 
 from __future__ import annotations
 
+import json
+from http import HTTPStatus
+
+import httpx2
 import pytest
 
+from app_spark_api.infras.forgejo.client import ForgejoClient
+from app_spark_api.infras.forgejo.entities import AccessToken
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git.constants import READ_TOKEN_SCOPE, WRITE_TOKEN_SCOPE
 from tests.infras.forgejo.fake import ORG, SERVICE_ACCOUNT, SERVICE_PASSWORD, FakeForgejo, forgejo_client_config
@@ -147,3 +153,129 @@ def test_service_account_credentials_are_not_in_repr():
     config = forgejo_client_config()
     assert SERVICE_ACCOUNT in repr(config)
     assert SERVICE_PASSWORD not in repr(config)
+
+
+@pytest.mark.parametrize("create_status", [403, 404, 409, 422])
+def test_only_create_conflicts_fall_back_to_patching_branch_protection(create_status):
+    methods = []
+
+    def respond(request):
+        methods.append(request.method)
+        if request.method == "GET":
+            return httpx2.Response(404)
+        if request.method == "POST":
+            return httpx2.Response(create_status, text="original create error")
+        return httpx2.Response(200)
+
+    with ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client:
+        if create_status in {409, 422}:
+            client.ensure_branch_protection(ORG, "spark-a", "main")
+            assert methods == ["GET", "POST", "PATCH"]
+        else:
+            with pytest.raises(ForgejoUnavailableError, match=f"POST branch protection.*HTTP {create_status}"):
+                client.ensure_branch_protection(ORG, "spark-a", "main")
+            assert methods == ["GET", "POST"]
+
+
+def test_an_existing_branch_rule_is_patched_without_trying_to_create_it():
+    methods = []
+
+    def respond(request):
+        methods.append(request.method)
+        return httpx2.Response(403 if request.method == "POST" else 200)
+
+    with ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client:
+        client.ensure_branch_protection(ORG, "spark-a", "main")
+    assert methods == ["GET", "PATCH"]
+
+
+def test_branch_rule_query_permission_error_does_not_attempt_a_write():
+    def respond(request):
+        assert request.method == "GET"
+        return httpx2.Response(403)
+
+    with (
+        ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client,
+        pytest.raises(ForgejoUnavailableError, match=r"GET branch protection.*403"),
+    ):
+        client.ensure_branch_protection(ORG, "spark-a", "main")
+
+
+@pytest.mark.parametrize("status", [204, 404, 403, 500])
+def test_delete_by_name_never_lists_account_tokens(status):
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx2.Response(status)
+
+    with ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client:
+        if status in {204, 404}:
+            client.delete_tokens_named("app-spark-spark-a-write")
+        else:
+            with pytest.raises(ForgejoUnavailableError, match=f"HTTP {status}"):
+                client.delete_tokens_named("app-spark-spark-a-write")
+    assert [(r.method, r.url.path) for r in requests] == [
+        ("DELETE", f"/api/v1/users/{SERVICE_ACCOUNT}/tokens/app-spark-spark-a-write")
+    ]
+
+
+@pytest.mark.parametrize("read_status", [403, 404])
+def test_read_permission_requires_a_successful_repo_query(read_status):
+    def respond(request):
+        assert request.method == "GET"
+        return httpx2.Response(read_status)
+
+    with (
+        ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client,
+        pytest.raises(ForgejoUnavailableError, match=f"read token could not GET.*{read_status}"),
+    ):
+        client.verify_read_token_cannot_write(AccessToken(token_id=1, name="read", sha1="read-secret"), ORG, "a")
+
+
+@pytest.mark.parametrize("write_status", [401, 404, 409, 422, 500, 503])
+def test_inconclusive_write_probe_does_not_pass_verification(write_status):
+    def respond(request):
+        return httpx2.Response(200 if request.method == "GET" else write_status)
+
+    with (
+        ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client,
+        pytest.raises(ForgejoUnavailableError, match=f"inconclusive.*{write_status}"),
+    ):
+        client.verify_read_token_cannot_write(AccessToken(token_id=1, name="read", sha1="read-secret"), ORG, "a")
+
+
+@pytest.mark.parametrize("cleanup_status", [200, 500])
+def test_a_successful_write_probe_is_cleaned_up_and_still_fails_verification(cleanup_status, caplog):
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        if request.method == "POST":
+            return httpx2.Response(HTTPStatus.CREATED, json={"content": {"sha": "probe-blob-sha"}})
+        return httpx2.Response(cleanup_status if request.method == "DELETE" else 200)
+
+    with (
+        ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client,
+        pytest.raises(ForgejoUnavailableError, match="read token was allowed to write"),
+    ):
+        client.verify_read_token_cannot_write(AccessToken(token_id=1, name="read", sha1="read-secret"), ORG, "a")
+
+    assert [r.method for r in requests] == ["GET", "POST", "DELETE"]
+    assert requests[1].url.path == requests[2].url.path
+    assert "/contents/.app-spark-read-token-probe-" in requests[2].url.path
+    assert requests[1].headers["authorization"] == "token read-secret"
+    assert requests[2].headers["authorization"].startswith("Basic ")
+    assert json.loads(requests[2].content)["sha"] == "probe-blob-sha"
+    assert ("Could not clean up read-token probe" in caplog.text) == (cleanup_status == 500)
+
+
+def test_read_probe_connection_errors_become_client_errors():
+    def respond(request):
+        raise httpx2.ConnectError("connection refused")
+
+    with (
+        ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client,
+        pytest.raises(ForgejoUnavailableError, match="Read-token verification failed"),
+    ):
+        client.verify_read_token_cannot_write(AccessToken(token_id=1, name="read", sha1="read-secret"), ORG, "a")

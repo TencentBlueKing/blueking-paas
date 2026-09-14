@@ -19,7 +19,7 @@
 from blue_krill.models.fields import EncryptField
 from django.db import models
 
-from app_spark_api.repository.git.constants import DEFAULT_BRANCH, STATUS_PENDING
+from app_spark_api.repository.git.constants import DEFAULT_BRANCH, REPOSITORY_ERROR_DETAIL, STATUS_PENDING
 from app_spark_api.utils.models import TimestampedModel
 
 
@@ -40,3 +40,12 @@ class ProjectGitRepository(TimestampedModel):
     write_token = EncryptField(null=True, blank=True, help_text="仓库范围的读写 token 明文（加密存储）")
     write_token_id = models.PositiveIntegerField(null=True, blank=True, help_text="远端 token ID，用于撤销")
     clone_url = models.CharField(max_length=512, blank=True, default="")
+
+    @property
+    def public_status_detail(self) -> str:
+        """Return a safe summary, including for rows containing legacy errors."""
+        # Older rows may contain remote response bodies or internal URLs. Only
+        # pass through known safe messages; substring redaction is too fragile.
+        if self.status_detail in {"", "credentials revoked"}:
+            return self.status_detail
+        return REPOSITORY_ERROR_DETAIL

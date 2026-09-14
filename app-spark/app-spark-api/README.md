@@ -165,7 +165,7 @@ AGENT_CHECKPOINTS_KEPT: 3        # 一个会话保留的最近检查点数
 ### Git 源码仓库
 
 每个 Project 对应组织下的一个**私有**仓库、一条工作分支。API 负责建仓和签发仓库范围的长期
-读写 token。
+读写 token。源码持久化已由 Git 承担；会话冷恢复按上方「冷恢复：先文件，后上下文」使用检查点。
 
 本地 Forgejo 见 [repo-server/forgejo](../repo-server/forgejo/README.md)。配置示例：
 

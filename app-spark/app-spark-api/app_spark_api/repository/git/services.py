@@ -32,6 +32,7 @@ from django.db import transaction
 from app_spark_api.infras.forgejo.exceptions import ForgejoError
 from app_spark_api.repository.git.constants import (
     READ_TOKEN_SCOPE,
+    REPOSITORY_ERROR_DETAIL,
     STATUS_FAILED,
     STATUS_PENDING,
     STATUS_READY,
@@ -92,9 +93,9 @@ def provision_project_repository(
         forgejo = client or make_forgejo_client(config)
         try:
             _provision_remote(repo, config, forgejo)
-        except _REMOTE_ERRORS as exc:
+        except _REMOTE_ERRORS:
             repo.status = STATUS_FAILED
-            repo.status_detail = str(exc)
+            repo.status_detail = REPOSITORY_ERROR_DETAIL
             repo.save()
             logger.exception("Provisioning Git repository for project %s failed", project.id)
             return repo
@@ -127,10 +128,11 @@ def revoke_project_credentials(
             if repo.write_token_id is not None:
                 forgejo.delete_token(repo.write_token_id)
             forgejo.delete_tokens_named(write_token_name(project.id))
-        except _REMOTE_ERRORS as exc:
+        except _REMOTE_ERRORS:
             repo.status = STATUS_FAILED
-            repo.status_detail = f"revoke failed: {exc}"
+            repo.status_detail = REPOSITORY_ERROR_DETAIL
             repo.save()
+            logger.exception("Revoking Git credentials for project %s failed", project.id)
             raise
         finally:
             if owned_client:
@@ -157,7 +159,7 @@ def require_project_git_ready(project_id: str) -> ProjectGitRepository:
     if repo.status != STATUS_READY or not repo.write_token:
         raise GitRepositoryNotReadyError(
             f"Project {project_id} Git repository is {repo.status}"
-            + (f": {repo.status_detail}" if repo.status_detail else "")
+            + (f": {repo.public_status_detail}" if repo.public_status_detail else "")
         )
     return repo
 

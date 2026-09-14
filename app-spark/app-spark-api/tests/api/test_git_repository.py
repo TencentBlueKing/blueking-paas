@@ -21,7 +21,8 @@ from http import HTTPStatus
 import pytest
 
 from app_spark_api.core.tenant.user import get_tenant
-from app_spark_api.repository.git.constants import STATUS_READY
+from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
+from app_spark_api.repository.git.constants import REPOSITORY_ERROR_DETAIL, STATUS_FAILED, STATUS_READY
 from app_spark_api.repository.git.models import ProjectGitRepository
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -119,3 +120,100 @@ async def test_get_is_not_found_when_the_project_has_no_repository(aapi_client, 
 
     response = await aapi_client.get(git_url())
     assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.parametrize("operation", ["get", "provision/", "revoke-credentials/"])
+@pytest.mark.parametrize("bad_config", [None, {}, {"type": "unsupported-private-backend"}])
+async def test_configuration_errors_have_a_safe_service_unavailable_response(
+    aapi_client,
+    fake_forgejo,
+    settings,
+    operation,
+    bad_config,
+):
+    await aapi_client.post(
+        "/api/projects/",
+        data={"id": PROJECT_ID, "name": "Spark Demo"},
+        content_type="application/json",
+    )
+    settings.REPO_SERVER = bad_config
+
+    if operation == "get":
+        response = await aapi_client.get(git_url())
+    else:
+        response = await aapi_client.post(git_url() + operation)
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json() == {
+        "detail": "Git repository service is not configured correctly. Please contact an administrator."
+    }
+
+
+async def test_legacy_status_details_are_hidden_from_queries_and_agent_start(aapi_client, fake_forgejo):
+    await aapi_client.post(
+        "/api/projects/",
+        data={"id": PROJECT_ID, "name": "Spark Demo"},
+        content_type="application/json",
+    )
+    await ProjectGitRepository.objects.filter(project_id=PROJECT_ID).aupdate(
+        status=STATUS_FAILED,
+        status_detail="HTTP 403 http://internal-forgejo.invalid/ token=private-secret",
+    )
+
+    queried = await aapi_client.get(git_url())
+    assert queried.status_code == HTTPStatus.OK
+    assert queried.json()["status_detail"] == REPOSITORY_ERROR_DETAIL
+    started = await aapi_client.post(f"/api/projects/{PROJECT_ID}/conversations/")
+    assert started.status_code == HTTPStatus.CONFLICT
+    assert REPOSITORY_ERROR_DETAIL in started.json()["detail"]
+    assert "private-secret" not in started.content.decode()
+    assert "internal-forgejo" not in started.content.decode()
+
+
+async def test_remote_provision_errors_are_logged_without_storing_or_returning_them(
+    aapi_client,
+    fake_forgejo,
+    monkeypatch,
+    caplog,
+):
+    from app_spark_api.infras.forgejo.client import ForgejoClient
+
+    def fail(*args, **kwargs):
+        raise ForgejoUnavailableError("HTTP 403 http://internal-forgejo.invalid/ private-secret")
+
+    monkeypatch.setattr(ForgejoClient, "ensure_private_repo", fail)
+    await aapi_client.post(
+        "/api/projects/",
+        data={"id": PROJECT_ID, "name": "Spark Demo"},
+        content_type="application/json",
+    )
+    repo = await ProjectGitRepository.objects.aget(project_id=PROJECT_ID)
+    assert repo.status_detail == REPOSITORY_ERROR_DETAIL
+    queried = await aapi_client.get(git_url())
+    assert queried.json()["status_detail"] == REPOSITORY_ERROR_DETAIL
+    assert "private-secret" in caplog.text
+
+
+async def test_remote_revoke_errors_return_a_safe_bad_gateway_response(
+    aapi_client,
+    fake_forgejo,
+    monkeypatch,
+    caplog,
+):
+    from app_spark_api.infras.forgejo.client import ForgejoClient
+
+    await aapi_client.post(
+        "/api/projects/",
+        data={"id": PROJECT_ID, "name": "Spark Demo"},
+        content_type="application/json",
+    )
+
+    def fail(*args, **kwargs):
+        raise ForgejoUnavailableError("HTTP 403 http://internal-forgejo.invalid/ private-secret")
+
+    monkeypatch.setattr(ForgejoClient, "delete_token", fail)
+    response = await aapi_client.post(git_url() + "revoke-credentials/")
+
+    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.json() == {"detail": "Git repository service is unavailable. Please retry later."}
+    assert "private-secret" in caplog.text

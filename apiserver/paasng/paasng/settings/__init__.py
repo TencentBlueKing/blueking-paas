@@ -897,23 +897,11 @@ BK_IAM_V4_APIGW_SERVICE_STAGE = settings.get("BK_IAM_V4_APIGW_SERVICE_STAGE", "p
 # 权限中心 V4 的访问地址，用于注入应用内置环境变量与生成权限申请链接
 BK_IAM_V4_URL = settings.get("BK_IAM_V4_URL", "")
 
-# 请求权限中心 V4 的应用凭证，默认复用平台自身的凭证
-BK_IAM_V4_APP_CODE = settings.get("BK_IAM_V4_APP_CODE", BK_APP_CODE)
-BK_IAM_V4_APP_SECRET = settings.get("BK_IAM_V4_APP_SECRET", BK_APP_SECRET)
-
-# 开发者中心在权限中心 V4 上注册的系统 ID
-IAM_PAAS_V4_SYSTEM_ID = settings.get("IAM_PAAS_V4_SYSTEM_ID", default="bk_paas3")
-# 插件开发中心在权限中心 V4 上注册的系统 ID
-IAM_PLUGINS_CENTER_V4_SYSTEM_ID = settings.get("IAM_PLUGINS_CENTER_V4_SYSTEM_ID", default="bk_plugins")
-
 # 版本开关取值非法、或所选版本的必填配置缺失时，启动即失败，不留到运行时才暴露
 validate_iam_settings(
     BK_IAM_VERSION,
     {
         "BK_IAM_V4_URL": BK_IAM_V4_URL,
-        "BK_IAM_V4_APP_CODE": BK_IAM_V4_APP_CODE,
-        "BK_IAM_V4_APP_SECRET": BK_IAM_V4_APP_SECRET,
-        "IAM_PAAS_V4_SYSTEM_ID": IAM_PAAS_V4_SYSTEM_ID,
     },
 )
 

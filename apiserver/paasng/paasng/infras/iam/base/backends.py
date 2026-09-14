@@ -29,11 +29,14 @@ note: 鉴权类调用的异常类型目前尚未跨版本统一——V3 直接�
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.db.models import Q
 
 from paasng.infras.iam.base.dto import ActionRequest, AuthResource, UserGroup
+
+if TYPE_CHECKING:
+    from paasng.infras.iam.permissions.resources.application import AppAction
 
 
 class BaseAuthBackend(ABC):
@@ -189,8 +192,8 @@ class BaseManagementBackend(ABC):
         """为内建用户组授予开发者中心的权限"""
 
     @abstractmethod
-    def revoke_user_group_policies(self, user_group_id: int, actions: List[str]):
-        """回收用户组的指定操作权限"""
+    def revoke_user_group_policies(self, user_group_id: int, actions: List["AppAction"]):
+        """回收用户组的指定应用操作权限"""
 
     @abstractmethod
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):

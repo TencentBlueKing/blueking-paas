@@ -20,6 +20,7 @@ from typing import List, Optional
 from paasng.infras.iam.base.backends import BaseManagementBackend
 from paasng.infras.iam.base.dto import UserGroup
 from paasng.infras.iam.exceptions import BKIAMCapabilityNotSupportedError
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 
 
@@ -91,7 +92,7 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
     def grant_user_group_policies(self, app_code: str, app_name: str, groups: List[UserGroup]):
         raise NotImplementedError("V4 用户组授权由子需求 #6 实现")
 
-    def revoke_user_group_policies(self, user_group_id: int, actions: List[str]):
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
         raise NotImplementedError("V4 用户组权限回收由子需求 #6 实现")
 
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):

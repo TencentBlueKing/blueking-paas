@@ -162,8 +162,8 @@ class BKIAMV4BaseClient:
         headers = {
             "x-bkapi-authorization": json.dumps(
                 {
-                    "bk_app_code": settings.BK_IAM_V4_APP_CODE,
-                    "bk_app_secret": settings.BK_IAM_V4_APP_SECRET,
+                    "bk_app_code": settings.IAM_APP_CODE,
+                    "bk_app_secret": settings.IAM_APP_SECRET,
                 }
             ),
             API_HERDER_TENANT_ID: self.tenant_id,

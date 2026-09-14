@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import re
-from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
 
@@ -35,7 +34,7 @@ class BKIAMApiError(BKIAMGatewayServiceError):
     which needs to be captured and displayed to the user on the page
     """
 
-    def __init__(self, message: str, code: Optional[int] = None, request_id: Optional[str] = None):
+    def __init__(self, message: str, code: int | None = None, request_id: str | None = None):
         super().__init__(self.parse_quota_message(message))
         self.code = code
         # 权限中心侧的请求 ID，用于跨系统排查。仅在字符串化时附加，
@@ -77,7 +76,7 @@ class BKIAMApiHTTPError(BKIAMApiError):
     可通过 `status_code` 判断，而不必解析错误信息。
     """
 
-    def __init__(self, message: str, status_code: Optional[int], request_id: Optional[str] = None):
+    def __init__(self, message: str, status_code: int | None, request_id: str | None = None):
         super().__init__(message, request_id=request_id)
         self.status_code = status_code
 

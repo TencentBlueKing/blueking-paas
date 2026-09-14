@@ -22,9 +22,6 @@ from paasng.settings.utils import IAM_VERSION_V3, IAM_VERSION_V4, validate_iam_s
 
 COMPLETE_V4_SETTINGS = {
     "BK_IAM_V4_URL": "http://bkiam.example.com",
-    "BK_IAM_V4_APP_CODE": "bk_paas3",
-    "BK_IAM_V4_APP_SECRET": "secret",
-    "IAM_PAAS_V4_SYSTEM_ID": "bk_paas3",
 }
 
 
@@ -42,27 +39,12 @@ class TestVersionValidation:
 
 
 class TestV4RequiredSettings:
-    """版本为 V4 时，必填配置缺失须启动即失败并指明缺失项"""
+    """版本为 V4 时，V4 服务地址缺失须启动即失败"""
 
-    @pytest.mark.parametrize(
-        "missing_name",
-        ["BK_IAM_V4_URL", "BK_IAM_V4_APP_CODE", "BK_IAM_V4_APP_SECRET", "IAM_PAAS_V4_SYSTEM_ID"],
-    )
-    def test_single_missing_setting(self, missing_name):
-        v4_settings = {**COMPLETE_V4_SETTINGS, missing_name: ""}
-
-        with pytest.raises(ImproperlyConfigured, match=missing_name):
-            validate_iam_settings(IAM_VERSION_V4, v4_settings)
-
-    def test_reports_all_missing_settings(self):
-        v4_settings = {**COMPLETE_V4_SETTINGS, "BK_IAM_V4_URL": "", "BK_IAM_V4_APP_SECRET": None}
-
-        with pytest.raises(ImproperlyConfigured) as exc_info:
-            validate_iam_settings(IAM_VERSION_V4, v4_settings)
-
-        assert "BK_IAM_V4_URL" in str(exc_info.value)
-        assert "BK_IAM_V4_APP_SECRET" in str(exc_info.value)
+    def test_missing_v4_url(self):
+        with pytest.raises(ImproperlyConfigured, match="BK_IAM_V4_URL"):
+            validate_iam_settings(IAM_VERSION_V4, {"BK_IAM_V4_URL": ""})
 
     def test_v3_does_not_require_v4_settings(self):
         """V3 环境无需配置 V4 相关项"""
-        validate_iam_settings(IAM_VERSION_V3, dict.fromkeys(COMPLETE_V4_SETTINGS, ""))
+        validate_iam_settings(IAM_VERSION_V3, {"BK_IAM_V4_URL": ""})

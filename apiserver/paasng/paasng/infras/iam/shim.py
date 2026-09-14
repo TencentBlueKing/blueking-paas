@@ -40,16 +40,12 @@ def get_iam_version() -> IAMVersion:
 
 
 def get_paas_system_id() -> str:
-    """开发者中心在当前环境的权限中心上注册的系统 ID"""
-    if get_iam_version() == IAMVersion.V4:
-        return settings.IAM_PAAS_V4_SYSTEM_ID
+    """开发者中心在权限中心上注册的系统 ID。V3 与 V4 使用同一套系统 ID"""
     return settings.IAM_PAAS_V3_SYSTEM_ID
 
 
 def get_plugin_system_id() -> str:
-    """插件开发中心在当前环境的权限中心上注册的系统 ID"""
-    if get_iam_version() == IAMVersion.V4:
-        return settings.IAM_PLUGINS_CENTER_V4_SYSTEM_ID
+    """插件开发中心在权限中心上注册的系统 ID。V3 与 V4 使用同一套系统 ID"""
     return settings.IAM_PLUGINS_CENTER_SYSTEM_ID
 
 

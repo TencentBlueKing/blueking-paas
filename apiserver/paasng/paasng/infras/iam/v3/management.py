@@ -20,6 +20,7 @@ from typing import Dict, List, Optional
 from paasng.infras.iam.base.backends import BaseManagementBackend
 from paasng.infras.iam.base.dto import UserGroup
 from paasng.infras.iam.client import BKIAMClient
+from paasng.infras.iam.permissions.resources.application import AppAction
 
 
 class BKIAMV3ManagementBackend(BaseManagementBackend):
@@ -86,7 +87,7 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
     def grant_user_group_policies(self, app_code: str, app_name: str, groups: List[UserGroup]):
         return self._client.grant_user_group_policies(app_code, app_name, self._to_group_dicts(groups))
 
-    def revoke_user_group_policies(self, user_group_id: int, actions: List[str]):
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
         return self._client.revoke_user_group_policies(user_group_id, actions)
 
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):

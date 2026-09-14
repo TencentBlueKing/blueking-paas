@@ -34,6 +34,7 @@ from paasng.infras.iam.constants import (
     IAMErrorCodes,
 )
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.iam.v3.apigw.client import Client
 from paasng.infras.iam.v3.apigw.client import Group as BKIAMGroup
 from paasng.platform.applications.constants import ApplicationRole
@@ -408,12 +409,12 @@ class BKIAMClient:
                 )
                 raise BKIAMApiError(resp["message"], resp["code"])
 
-    def revoke_user_group_policies(self, user_group_id: int, actions: List[str]):
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
         """
         回收指定用户组的指定 action 权限
 
         :param user_group_id: 用户组 ID
-        :param actions: 要回收的 action 列表
+        :param actions: 要回收的 AppAction
         """
         path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
         data = {"actions": [{"id": action} for action in actions]}

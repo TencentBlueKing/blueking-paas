@@ -19,8 +19,26 @@ def probe(index: int) -> str:
     return f"probe-payload-{index}-{PROBE_PAYLOAD}"
 
 
+def log_calling_model() -> FunctionModel:
+    """Call read_app_log once, then answer after the structured result comes back."""
+    issued = False
+
+    async def stream(
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> AsyncIterator[str | DeltaToolCalls]:
+        nonlocal issued
+        if not issued:
+            issued = True
+            yield {0: DeltaToolCall(name="read_app_log", json_args="{}", tool_call_id="app-log-1")}
+            return
+        yield "log-consumed"
+
+    return FunctionModel(stream_function=stream)
+
+
 def tool_calling_model(rounds: int) -> FunctionModel:
-    """Build a model that calls ``probe`` ``rounds`` times and then answers with text.
+    """Build a model that calls probe rounds times and then answers with text.
 
     The remaining rounds are tracked in the closure rather than counted from the history: a
     compaction tier that drops or blanks the earlier turns would otherwise reset the count and
@@ -50,7 +68,7 @@ def tool_calling_model(rounds: int) -> FunctionModel:
 
 
 def text_model(chunks: Sequence[str]) -> FunctionModel:
-    """Build a model that streams ``chunks`` as one assistant message."""
+    """Build a model that streams chunks as one assistant message."""
 
     async def stream(
         messages: list[ModelMessage],
@@ -85,11 +103,11 @@ def failing_model(*, message: str = "synthetic model failure") -> FunctionModel:
 
 
 def tool_then_fail_model(*, tool_rounds: int = 2) -> FunctionModel:
-    """Call ``probe`` ``tool_rounds`` times, then raise so the run ends unsuccessfully.
+    """Call probe tool_rounds times, then raise so the run ends unsuccessfully.
 
     Used to leave a mid-run compaction on disk: the tool rounds succeed and may
     persist a compacted context, then the next request blows up before
-    ``on_complete``.
+    on_complete.
     """
     issued = 0
 
@@ -114,7 +132,7 @@ def tool_then_fail_model(*, tool_rounds: int = 2) -> FunctionModel:
 
 
 def gated_model(gate: asyncio.Event, *, reply: str = "done") -> FunctionModel:
-    """Build a model that holds its response open until ``gate`` is set.
+    """Build a model that holds its response open until gate is set.
 
     A run occupies the Runtime for exactly as long as its model keeps producing output, so this
     is what lets a test send a request *while* a run is in flight rather than after it ended.

@@ -1,0 +1,33 @@
+{{- if .Values.migrate.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "app-spark-api.migrateJobName" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: {{ .Values.migrate.timeoutSeconds | default 300 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      {{- include "app-spark-api.imagePullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ include "app-spark-api.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          command: [uv, run, --no-sync, python, manage.py, migrate, --noinput]
+          envFrom:
+            - configMapRef:
+                name: {{ include "app-spark-api.fullname" . }}
+          {{- with .Values.migrate.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

@@ -12,11 +12,14 @@
 
 #### 2、接口参数：
 
-| 字段            | 类型    | 是否必填 | 描述                   |
-| --------------- | ------- | -------- | ---------------------- |
-| package_url     | string  | 是       | 源码包下载路径         |
-| version         | string  | 否       | 源码包版本号           |
-| allow_overwrite | boolean | 否       | 是否允许覆盖原有的源码包 |
+| 字段               | 类型    | 是否必填 | 描述                                                                 |
+| ------------------ | ------- | -------- | -------------------------------------------------------------------- |
+| package_url        | string  | 是       | 源码包下载路径                                                       |
+| version            | string  | 否       | 源码包版本号                                                         |
+| allow_overwrite    | boolean | 否       | 是否允许覆盖原有的源码包                                             |
+| build_method       | string  | 否       | 构建方式，仅 AI Agent 应用支持。可选值：buildpack、dockerfile。不传则保持模块当前配置 |
+| dockerfile_path    | string  | 否       | Dockerfile 路径，build_method 为 dockerfile 时生效，默认 Dockerfile  |
+| docker_build_args  | object  | 否       | Docker 构建参数，build_method 为 dockerfile 时生效，默认 {}          |
 
 ### 请求示例
 ```bash

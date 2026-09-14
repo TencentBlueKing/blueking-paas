@@ -38,6 +38,7 @@ from .member import (
 )
 from .process import (
     ModuleProcessSpecOutputSLZ,
+    ProcessQuotaPlanListInputSLZ,
     ProcessSpecInputSLZ,
 )
 from .services import (
@@ -64,6 +65,7 @@ __all__ = [
     "DeletedApplicationListOutputSLZ",
     "ModuleProcessSpecOutputSLZ",
     # process
+    "ProcessQuotaPlanListInputSLZ",
     "ProcessSpecInputSLZ",
     "ServiceListOutputSLZ",
     "TenantAppStatisticsOutputSLZ",

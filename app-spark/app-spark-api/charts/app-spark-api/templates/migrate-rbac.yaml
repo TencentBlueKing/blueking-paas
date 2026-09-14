@@ -1,0 +1,39 @@
+{{- if .Values.migrate.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [batch]
+    resources: [jobs]
+    resourceNames: [{{ include "app-spark-api.migrateJobName" . | quote }}]
+    verbs: [get]
+  # k8s-wait-for uses kubectl describe job, which also reads namespace events.
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "app-spark-api.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "app-spark-api.fullname" . }}
+{{- end }}

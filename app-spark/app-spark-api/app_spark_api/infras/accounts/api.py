@@ -37,8 +37,10 @@ router = Router(tags=["accounts"])
     "/userinfo/",
     response={200: AuthenticatedUserResponse, 401: AnonymousUserResponse},
     url_name="accounts-userinfo",
+    summary="获取当前登录的用户信息",
 )
 async def get_user_info(request: HttpRequest):
+    """获取当前已登录的用户信息，如未登录将返回 401 错误。"""
     user = await request.auser()
     if not user.is_authenticated:
         return Status(

@@ -149,9 +149,7 @@ class CursorStore:
         async with self._lock:
             if version <= self._payload.pushed_context_version:
                 return
-            await self._persist(
-                self._payload.model_copy(update={"pushed_context_version": version})
-            )
+            await self._persist(self._payload.model_copy(update={"pushed_context_version": version}))
 
     async def _persist(self, payload: CursorsPayload) -> None:
         try:

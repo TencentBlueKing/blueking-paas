@@ -28,6 +28,7 @@ from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
     ProcessSpecEnvOverlay,
+    ResQuotaPlan,
 )
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
@@ -674,3 +675,54 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                 "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             }
         ]
+
+
+class TestResQuotaPlanAssignOnProcessSpecs:
+    """开发者进程保存：专用方案不可新选，已绑定可保留。"""
+
+    def _url(self, bk_cnative_app, bk_module):
+        return f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+
+    def _payload(self, plan_name, process_name="web"):
+        return {
+            "proc_specs": [
+                {
+                    "name": process_name,
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "env_overlay": {
+                        "stag": {"plan_name": plan_name, "target_replicas": 1},
+                        "prod": {"plan_name": plan_name, "target_replicas": 1},
+                    },
+                }
+            ]
+        }
+
+    def test_save_rejects_dedicated_plan(self, api_client, bk_cnative_app, bk_module):
+        ResQuotaPlan.objects.create(
+            name="hids-only-save",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        resp = api_client.post(self._url(bk_cnative_app, bk_module), data=self._payload("hids-only-save"))
+        assert resp.status_code == 400
+        body = str(resp.data)
+        assert "someone-else" not in body
+        assert "指定" not in body
+
+    def test_save_retains_current_dedicated_plan(self, api_client, bk_cnative_app, bk_module):
+        ResQuotaPlan.objects.create(
+            name="hids-only-retain",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        G(ModuleProcessSpec, module=bk_module, name="web", plan_name="hids-only-retain", command=["python"])
+
+        resp = api_client.post(self._url(bk_cnative_app, bk_module), data=self._payload("hids-only-retain"))
+        assert resp.status_code == 200
+        spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert spec.get_plan_name("stag") == "hids-only-retain"

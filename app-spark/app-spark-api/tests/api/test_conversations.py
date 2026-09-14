@@ -428,6 +428,31 @@ async def test_a_second_conversation_on_one_project_is_refused(aapi_client, proj
     )
 
 
+async def test_ending_a_conversation_hands_the_project_back(aapi_client, project, agent):
+    """The counterpart of the refusal above, and the reason ending a conversation exists.
+
+    Nothing else reclaims a Runtime, so without this a Project would be stuck on its first
+    conversation for as long as this service stayed up.
+
+    Asserted against a real process rather than through the API alone: the point of closing is
+    that the Runtime is actually gone, and a test that only read ``is_live`` back would pass
+    just as well if the row were marked and the process left running.
+    """
+    first = await create_conversation(aapi_client)
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    assert await provider.peek(first["conversation_id"]) is not None
+
+    closed = await aapi_client.post(f"/api/projects/{PROJECT_ID}/conversations/{first['number']}/close/")
+
+    assert closed.status_code == HTTPStatus.OK
+    assert json.loads(closed.content)["is_live"] is False
+    assert await provider.peek(first["conversation_id"]) is None
+
+    # And the freed workspace is genuinely usable again, which is what the caller came for.
+    second = await create_conversation(aapi_client)
+    assert second["number"] == first["number"] + 1
+
+
 async def test_anonymous_callers_are_refused(aanonymous_api_client, project):
     response = await aanonymous_api_client.post(f"/api/projects/{PROJECT_ID}/conversations/")
 

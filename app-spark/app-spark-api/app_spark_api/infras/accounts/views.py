@@ -16,17 +16,21 @@
 
 from django.conf import settings
 from django.template.response import TemplateResponse
-from django.urls import reverse
 from django.views import View
+
+from app_spark_api.utils.urls import reverse_public
 
 
 class HomeView(View):
     def get(self, request):
+        # reverse_public() includes FORCE_SCRIPT_NAME so the browser calls the API
+        # under the ingress prefix. reverse() itself is not enough: this is a sync
+        # view served over ASGI, and the thread-local script prefix does not follow.
         return TemplateResponse(
             request,
             "accounts/home.html",
             {
-                "api_userinfo_url": reverse("api:accounts-userinfo"),
+                "api_userinfo_url": reverse_public("api:accounts-userinfo"),
                 "default_login_url": settings.LOGIN_FULL,
             },
         )

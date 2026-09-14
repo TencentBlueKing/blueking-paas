@@ -31,6 +31,7 @@ from paasng.platform.bkapp_model.constants import (
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -47,7 +48,6 @@ from .serializers import (
     HTTPHeaderSLZ,
     MetricSpecSLZ,
     TCPSocketProbeActionSLZ,
-    validate_res_quota_plan,
 )
 
 
@@ -124,7 +124,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-    plan = serializers.CharField(allow_null=True, default=None, validators=[validate_res_quota_plan])
+    plan = serializers.CharField(allow_null=True, default=None)
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -274,9 +274,7 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
-    resQuotaPlan = serializers.CharField(
-        allow_null=True, default=None, source="res_quota_plan", validators=[validate_res_quota_plan]
-    )
+    resQuotaPlan = serializers.CharField(allow_null=True, default=None, source="res_quota_plan")
     targetPort = serializers.IntegerField(
         min_value=1,
         max_value=65535,
@@ -367,7 +365,32 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     def validate(self, data: v1alpha2.BkAppSpec):
         self._validate_proc_services(data.processes)
         self._validate_observability(data)
+        self._validate_res_quota_plans(data)
         return data
+
+    def _validate_res_quota_plans(self, data: v1alpha2.BkAppSpec):
+        """按应用可见范围校验进程方案与环境 overlay。
+
+        无 app_code 时跳过（读 source_dir / Procfile 等非写入路径），由 import / 部署注入上下文。
+        """
+        policy = ResQuotaPlanPolicy()
+        app_code = self.context.get("app_code")
+        current_plans = self.context.get("current_plans") or {}
+        if app_code is None and not current_plans:
+            return
+        for proc in data.processes:
+            if proc.res_quota_plan:
+                policy.ensure_assignable(proc.res_quota_plan, app_code, current_plans.get((proc.name, None)))
+
+        env_overlay = data.env_overlay
+        if not env_overlay or env_overlay is NOTSET:
+            return
+        res_quotas = getattr(env_overlay, "res_quotas", None)
+        if not res_quotas or res_quotas is NOTSET:
+            return
+        for item in res_quotas:
+            if item.plan:
+                policy.ensure_assignable(item.plan, app_code, current_plans.get((item.process, item.env_name)))
 
     def _validate_proc_services(self, processes: List[Process]):
         """validate process services by two rules as below:

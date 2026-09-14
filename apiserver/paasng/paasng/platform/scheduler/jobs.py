@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from contextlib import contextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler as Scheduler
 from django.conf import settings
@@ -32,8 +31,8 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.servicehub.remote.collector import fetch_all_remote_services
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.user import get_init_tenant_id
+from paasng.utils.lock import acquire_once_per_period, redis_lock
 
 logger = logging.getLogger(__name__)
 scheduler = Scheduler()
@@ -46,35 +45,6 @@ def update_remote_services():
     logger.debug("Start updating remote services...")
     for ret in fetch_all_remote_services():
         remote_store.bulk_upsert(ret.data, meta_info=ret.meta_info, source_config=ret.config)
-
-
-@contextmanager
-def redis_lock(lock_key: str, timeout: int = 300):
-    """Redis 分布式锁上下文管理器，确保跨进程的原子操作
-
-    :param lock_key: 锁的唯一标识键，建议遵循命名规范如 lock:<业务场景>
-    :param timeout: 锁自动释放的超时时间（秒），预防死锁
-    """
-    redis_conn = get_default_redis()
-    lock = redis_conn.lock(
-        name=lock_key,
-        timeout=timeout,
-        blocking_timeout=0,  # 非阻塞模式，立即返回
-        thread_local=False,
-    )
-
-    acquired = lock.acquire()
-    try:
-        if acquired:
-            logger.debug("Successfully acquired lock for %s", lock_key)
-        else:
-            logger.debug("Failed to acquire lock for %s", lock_key)
-        yield acquired
-    finally:
-        # 只有当前进程持有的锁才释放
-        if acquired:
-            lock.release()
-            logger.debug("Released lock for %s", lock_key)
 
 
 def _handel_single_service_default_policy(service, default_tenant_id):
@@ -156,3 +126,24 @@ def init_service_default_policy_job():
             _handel_single_service_default_policy(service, default_tenant_id)
 
         logger.info("Service policy initialization completed.")
+
+
+@scheduler.scheduled_job("interval", minutes=settings.AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES)
+def reconcile_e2b_sandboxes_job():
+    """把 e2b 沙箱对账投递给 celery worker 执行
+
+    实际执行见 `paasng.platform.agent_sandbox.e2b.tasks.reconcile_e2b_sandboxes_task`。
+
+    每个加载 Django 的进程都会起一份调度器并各自到点触发，而触发时刻取决于进程的
+    启动时间、彼此并不重合，用一把随即归还的锁是去重不掉的。因此这里改用按周期过期
+    的键：一个周期内只有最先到点的那个进程能把消息投出去。
+    """
+    from paasng.platform.agent_sandbox.e2b.tasks import reconcile_e2b_sandboxes_task
+
+    period = settings.AGENT_SANDBOX_E2B_RECONCILE_INTERVAL_MINUTES * 60
+    if not acquire_once_per_period("periodic:reconcile_e2b_sandboxes", period):
+        logger.debug("e2b sandbox reconcile has been dispatched in this period, skip.")
+        return
+
+    reconcile_e2b_sandboxes_task.delay()
+    logger.info("dispatched e2b sandbox reconcile task")

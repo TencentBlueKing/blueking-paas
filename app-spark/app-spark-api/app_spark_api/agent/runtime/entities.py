@@ -61,8 +61,11 @@ class LocalProcessConfig:
 class StateCallback:
     """How a Runtime is told to write its state back to this service.
 
-    :param path: Conversation-scoped root, relative to this service's root. The Runtime appends
-        its own channel names to it and never has to parse it.
+    :param path: Conversation-scoped public root, including FORCE_SCRIPT_NAME when the
+        service is published under a sub-path. The Runtime appends its own channel names
+        and never has to parse it. A provider that reaches this process without going
+        through Ingress must strip the prefix; one that calls in through the public
+        prefix must keep it.
     :param token: Bearer token authorizing writes to that one conversation.
     """
 

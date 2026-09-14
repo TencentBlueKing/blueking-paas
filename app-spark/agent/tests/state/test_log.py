@@ -230,9 +230,7 @@ async def test_a_based_channel_reopens_with_the_same_base(tmp_path: Path) -> Non
     assert await reopened.append("run-b", [{"n": 2}]) == 42
     # The base is subtracted before counting lines, so seeking past seq 41 lands on the second
     # entry rather than running off the end of a two-line file.
-    assert [record.seq for record in reopened.read_from(reopened.offset_after(41), 10).records] == [
-        42
-    ]
+    assert [record.seq for record in reopened.read_from(reopened.offset_after(41), 10).records] == [42]
 
 
 def test_reopening_a_based_channel_with_the_wrong_base_is_rejected(tmp_path: Path) -> None:

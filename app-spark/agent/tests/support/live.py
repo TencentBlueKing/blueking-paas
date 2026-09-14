@@ -130,9 +130,7 @@ class LiveRuntime:
         """
         headers = {"If-Match": if_match} if if_match is not None else {}
         params = {
-            name: value
-            for name, value in (("log_seq", log_seq), ("ui_event_seq", ui_event_seq))
-            if value is not None
+            name: value for name, value in (("log_seq", log_seq), ("ui_event_seq", ui_event_seq)) if value is not None
         }
         response = self._client.put("/context", json=context, headers=headers, params=params)
         described = " ".join(

@@ -1,0 +1,142 @@
+# 当前 local_process provider 在进程内维护 Runtime，只支持单副本、单 worker。
+replicaCount: 1
+
+# 可统一指定 API 和等待迁移镜像的仓库、拉取凭据。
+# global:
+#   imageRegistry: ""
+#   imagePullSecrets: []
+
+image:
+  # 替换为实际镜像；镜像要求见 README.md。
+  # registry: ""
+  repository: app-spark-api
+  # pullPolicy: IfNotPresent
+  tag: ""
+  # digest 优先于 tag；pullSecrets 支持名称字符串或 {name: ...}。
+  # digest: ""
+  # pullSecrets: []
+# Pod 级拉取凭据，兼容已有配置，并与 global、各镜像的 pullSecrets 合并去重。
+# imagePullSecrets: []
+
+# nameOverride: ""
+# fullnameOverride: ""
+
+service:
+  # type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  # 显式指定时优先于 annotations 中的 kubernetes.io/ingress.class。
+  # ingressClass: ""
+  # 外部访问前缀。Ingress 匹配该前缀并 rewrite 去掉；须与 django.forceScriptName 一致。
+  pathPrefix: /api-svc
+  host: app-spark-api.example.com
+  # annotations 和 tls 支持 Helm 模板表达式（例如 {{ .Release.Name }}）。
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    # 会话接口使用 SSE，关闭缓冲并允许长连接。
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+  # tls: []
+
+# resources: {}
+
+# 每次安装/升级创建独立的迁移 Job，API 等待该 Job 成功后才启动。
+# 由外部流程管理迁移时可关闭。
+migrate:
+  enabled: true
+  # timeoutSeconds: 300
+  # resources: {}
+
+# 与参考 Chart 一样，使用外部镜像等待迁移 Job；支持替换为内网镜像地址。
+utility:
+  images:
+    k8sWaitFor:
+      # registry: ""
+      repository: groundnuty/k8s-wait-for
+      tag: v1.5.1
+      # digest: ""
+      # pullSecrets: []
+      # pullPolicy: IfNotPresent
+  # resources: {}
+
+# 挂载到 /data/app-spark，存放 workspace、Runtime 状态和本地上下文。
+# 留空使用 emptyDir（Pod 删除后丢失）；需要保留数据时填写同 namespace 下已有的 PVC。
+persistence:
+  existingClaim: ""
+
+# 以下配置统一转换为 APP_SPARK_API_* 环境变量，放在一个 ConfigMap 中。
+# 未定义或为 null 的配置不会注入；注释中的值仅供参考，默认值由应用 settings 提供。
+django:
+  # 必填：部署时设置随机生成且保持稳定的 SECRET_KEY。
+  secretKey: ""
+  allowedHosts: ["*"]
+  # debug: false
+  # autoCreateRegularUser: true
+  # languageCode: zh-hans
+  # languages:
+  #   - [zh-hans, 简体中文]
+  #   - [en, English]
+  # timeZone: Asia/Shanghai
+  # languageCookieName: blueking_language
+  # languageCookiePath: /
+  # null 表示不覆盖，继续使用 settings 中 BK_COOKIE_DOMAIN 的回退逻辑。
+  # languageCookieDomain: null
+  # bkCookieDomain: null
+  # dataUploadMaxMemorySize: 67108864
+  # staticUrl: /static/
+  # 与 ingress.pathPrefix 保持一致。部署在站点根路径时设为 null 或 ""。
+  forceScriptName: /api-svc
+
+# 使用外部 MySQL 8.x+，不安装数据库，也不检测 MariaDB 是否存在。
+externalDatabase:
+  host: ""
+  port: 3306
+  name: app_spark
+  user: app_spark
+  password: ""
+  options:
+    charset: utf8mb4
+
+# 对应 Django CACHES.default；null 使用项目的文件缓存默认值。
+# defaultCacheConfig: null
+
+# 仅允许在初次部署时设置，部署后不要切换。
+enableMultiTenantMode: false
+loginFull: ""
+bkAuth:
+  backendType: bk_token
+  appCode: ""
+  appSecret: ""
+  bkLoginApigwStage: prod
+  userInfoApigwUrl: ""
+  userCookieVerifyUrl: ""
+  tokenUserInfoEndpoint: ""
+
+# 使用 bk_repo 存储时填写 PROJECT、ENDPOINT、USERNAME、PASSWORD。
+# blobstoreBkrepoConfig:
+#   PROJECT: ""
+#   ENDPOINT: ""
+#   USERNAME: ""
+#   PASSWORD: ""
+
+agent:
+  # runtimeProvider: local_process
+  runtimeProviderConfig:
+    # 镜像中必须包含该项目及提前 uv sync 创建的虚拟环境。
+    agent_project_dir: /app/agent
+    workspace_root: /data/app-spark/workspaces
+    # state_root 必须在 workspace_root 之外。
+    state_root: /data/app-spark/agent-state
+    # callback_base_url: http://127.0.0.1:8000
+    # null 使用 Agent 自身默认值；本地验证可设为 fake:write-file。
+    model: null
+    model_api_key: null
+    # startup_timeout_seconds: 60.0
+    # extra_env: {}
+  contextStorage:
+    backend: host_tmp_path
+    root: /data/app-spark/agent-contexts

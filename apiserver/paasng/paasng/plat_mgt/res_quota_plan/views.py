@@ -64,6 +64,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
+        data.setdefault("allowed_app_codes", [])
         ResQuotaPlan.objects.create(**data)
 
         add_plat_mgt_audit_record(
@@ -98,6 +99,9 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         # 内置方案不可修改启用性
         if not plan_obj.is_builtin:
             plan_obj.is_active = data.get("is_active", plan_obj.is_active)
+        # 缺省 allowed_app_codes 时保持原值，避免列表页只改启用状态时把名单清空
+        if "allowed_app_codes" in data:
+            plan_obj.allowed_app_codes = data["allowed_app_codes"]
         plan_obj.save()
 
         data_after = ResQuotaPlanInputSLZ(plan_obj).data

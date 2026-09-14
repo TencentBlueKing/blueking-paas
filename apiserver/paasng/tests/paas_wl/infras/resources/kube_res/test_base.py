@@ -52,7 +52,7 @@ def test_initialize_non_applicable_type():
 
 
 class DummySerializer(AppEntitySerializer):
-    def serialize(self, obj, original_obj=None):
+    def serialize(self, obj, original_obj=None, **kwargs):
         return {"metadata": {"name": f"new-{obj.name}"}, "apiversion": self.gvk_config.preferred_apiversion}
 
 

@@ -150,8 +150,9 @@ class AppTenantMixin(serializers.Serializer):
     app_tenant_mode = serializers.ChoiceField(
         help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
     )
+    # 全租户应用约定 app_tenant_id 为空字符串，不能用 CharField 默认的 allow_blank=False。
     app_tenant_id = serializers.CharField(
-        required=False, default="", help_text="租户ID，全租户应用则租户 ID 为空字符串"
+        required=False, default="", allow_blank=True, help_text="租户ID，全租户应用则租户 ID 为空字符串"
     )
 
     def validate(self, data):

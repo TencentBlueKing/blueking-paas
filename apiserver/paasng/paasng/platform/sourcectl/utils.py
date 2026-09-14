@@ -125,9 +125,12 @@ def compress_directory_ext(
     if should_ignore is None:
         return compress_directory(source_path, target_path)
 
+    # 上面已经排除 None，再写成 should_ignore and ... 会被判成恒真。
+    ignore = should_ignore
+
     def compress_core(tarball: tarfile.TarFile, p: Path):
         arcname = str(p.relative_to(source_path))
-        if should_ignore and should_ignore(arcname):
+        if ignore(arcname):
             return
         if p.is_dir():
             for sub in p.iterdir():

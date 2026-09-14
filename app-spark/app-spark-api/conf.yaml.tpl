@@ -29,6 +29,12 @@
 ## 生产环境请配置远程服务缓存（如 RedisCache、DatabaseCache），以保证多副本多 worker 时缓存数据一致
 # DEFAULT_CACHE_CONFIG:
 
+## 列表接口翻页（翻页方式固定为「页码 + 每页条数」，不可配置）
+## 默认每页条数，客户端可用 page_size 参数覆盖，但不能超过下面的上限
+# NINJA_PAGINATION_PER_PAGE: 20
+## 每页条数上限，客户端传更大的值会被压回这个数
+# NINJA_MAX_PER_PAGE_SIZE: 100
+
 ## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: ''
@@ -88,5 +94,8 @@
 ## 通过 Token 获取用户信息 API
 # BKAUTH_TOKEN_USER_INFO_ENDPOINT: ''
 
-## 静态资源
+## 更多参考：https://docs.djangoproject.com/zh-hans/6.1/ref/settings/#force-script-name
+# FORCE_SCRIPT_NAME: ''
+
+## 静态资源。未配置时：有 FORCE_SCRIPT_NAME 则为 {FORCE_SCRIPT_NAME}/static/，否则为 /static/
 # STATIC_URL: /static/

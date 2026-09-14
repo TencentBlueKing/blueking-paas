@@ -1,0 +1,17 @@
+# app-spark-api/Dockerfile builds from this directory to include the sibling Agent.
+# Keep developer configuration and virtualenvs out of the build context, including
+# when using the legacy Docker builder (which ignores Dockerfile.dockerignore).
+**/.venv
+**/.git
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.env
+**/.env.*
+**/settings_local.yaml
+**/settings_files
+**/values-production.yaml
+**/manifests_ref

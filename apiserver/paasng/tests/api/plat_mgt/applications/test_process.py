@@ -19,7 +19,7 @@
 import pytest
 from django.urls import reverse
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay, ResQuotaPlan
 from paasng.platform.modules.constants import SourceOrigin
 
 pytestmark = pytest.mark.django_db
@@ -182,3 +182,64 @@ class TestApplicationProcessViewSet:
             assert "requests" in plan
             assert isinstance(plan["limits"], dict)
             assert isinstance(plan["requests"], dict)
+            assert "allowed_app_codes" not in plan
+
+    def test_list_quota_plans_filters_by_app_code(self, plat_mgt_api_client, bk_app):
+        dedicated = ResQuotaPlan.objects.create(
+            name="hids-only-plan",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=[bk_app.code],
+        )
+        other = ResQuotaPlan.objects.create(
+            name="other-only-plan",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        url = reverse("plat_mgt.process.list_quota_plans")
+
+        public_names = {item["name"] for item in plat_mgt_api_client.get(url).data}
+        assert dedicated.name not in public_names
+        assert other.name not in public_names
+
+        visible_names = {item["name"] for item in plat_mgt_api_client.get(url, {"app_code": bk_app.code}).data}
+        assert dedicated.name in visible_names
+        assert other.name not in visible_names
+
+    def test_update_resource_dedicated_plan_forbidden(self, plat_mgt_api_client, bk_app, update_url):
+        ResQuotaPlan.objects.create(
+            name="hids-only-plan",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        response = plat_mgt_api_client.put(
+            update_url("web"), data=self._make_update_data(override_plan_name="hids-only-plan")
+        )
+        assert response.status_code == 400
+        body = str(response.data)
+        assert "someone-else" not in body
+        assert "指定" not in body
+
+    def test_update_resource_retains_current_dedicated_plan(self, plat_mgt_api_client, bk_module, update_url):
+        ResQuotaPlan.objects.create(
+            name="hids-only-plan",
+            limits={"cpu": "2000m", "memory": "4096Mi"},
+            requests={"cpu": "2000m", "memory": "4096Mi"},
+            is_active=True,
+            allowed_app_codes=["someone-else"],
+        )
+        overlay = ProcessSpecEnvOverlay.objects.get(
+            proc_spec__module=bk_module, proc_spec__name="web", environment_name="stag"
+        )
+        overlay.override_plan_name = "hids-only-plan"
+        overlay.save(update_fields=["override_plan_name"])
+
+        response = plat_mgt_api_client.put(
+            update_url("web"), data=self._make_update_data(override_plan_name="hids-only-plan")
+        )
+        assert response.status_code == 204

@@ -181,7 +181,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     application = handler.handle_app(request.user)
                 except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
                     # 清理 v2 中创建的应用
-                    cascade_delete_legacy_app("code", application.code, False)
+                    cascade_delete_legacy_app("code", validated_data["code"], False)
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
                 else:

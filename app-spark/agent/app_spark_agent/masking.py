@@ -51,7 +51,9 @@ def secret_values() -> tuple[str, ...]:
     """
     return _ordered(
         (
+            settings.BK_AIDEV_ACCESS_TOKEN,
             settings.MODEL_API_KEY,
+            settings.CONTROL_PLANE_TOKEN,
             settings.RUNTIME_TOKEN,
         )
     )

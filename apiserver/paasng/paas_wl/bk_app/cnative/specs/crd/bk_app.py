@@ -433,7 +433,7 @@ class BkAppStatus(BaseModel):
     phase: str = MResPhaseType.AppPending.value
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
-    lastUpdate: datetime.datetime | None
+    lastUpdate: datetime.datetime | None = None
     deployId: str = ""
 
 

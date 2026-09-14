@@ -237,7 +237,7 @@ class ConversationRuntime:
             )
 
         return cls(
-            agent=agent or create_agent(resolved_workspace),
+            agent=agent or create_agent(resolved_workspace, state_dir=resolved_state_dir),
             context_store=context_store,
             transcript=transcript,
             ui_events=ui_events,

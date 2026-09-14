@@ -39,6 +39,7 @@ import httpx2
 from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, LocalProcessConfig, StateCallback
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
+from app_spark_api.utils.urls import to_path_info
 
 logger = logging.getLogger(__name__)
 
@@ -329,7 +330,12 @@ class LocalProcessProvider(AgentRuntimeProvider):
             # An address already scoped to one conversation, plus a token that authorizes only
             # that one. Deliberately all the Runtime learns: it replicates to a URL it was
             # handed, and never has to know what a conversation is or which one it is serving.
-            env[f"{ENV_PREFIX}CONTROL_PLANE_URL"] = f"{self.config.callback_base_url.rstrip('/')}{state_callback.path}"
+            # The callback path is public (it may include FORCE_SCRIPT_NAME). This provider
+            # talks to uvicorn on loopback, so Ingress never sees the request and the prefix
+            # must come off. A remote sandbox provider would keep it.
+            env[f"{ENV_PREFIX}CONTROL_PLANE_URL"] = (
+                f"{self.config.callback_base_url.rstrip('/')}{to_path_info(state_callback.path)}"
+            )
             env[f"{ENV_PREFIX}CONTROL_PLANE_TOKEN"] = state_callback.token
         if self.config.model is not None:
             env[f"{ENV_PREFIX}MODEL"] = self.config.model

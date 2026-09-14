@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "app-spark-api.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api

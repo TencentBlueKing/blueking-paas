@@ -285,6 +285,36 @@
         </div>
       </div>
 
+      <!-- 构建调试 -->
+      <div
+        v-if="isShowBuildDebug"
+        class="advanced-options"
+      >
+        <div
+          class="advanced-options-header"
+          @click="isAdvancedOptionsExpanded = !isAdvancedOptionsExpanded"
+        >
+          <i
+            class="paasng-icon paasng-angle-line-down"
+            :class="{ collapsed: !isAdvancedOptionsExpanded }"
+          />
+          <span>{{ $t('高级选项') }}</span>
+        </div>
+        <div
+          v-show="isAdvancedOptionsExpanded"
+          class="build-debug-option"
+        >
+          <div class="label">{{ $t('构建调试') }}</div>
+          <p class="tips mt-4 mb-6">
+            {{ $t('开启后，本次构建结束前会进入调试模式（最长 30 分钟），期间可登录构建环境进行调试') }}
+          </p>
+          <bk-switcher
+            v-model="debugEnabled"
+            theme="primary"
+          />
+        </div>
+      </div>
+
       <div
         class="v1-container"
         v-if="isShowImagePullStrategy || isSmartApp"
@@ -369,6 +399,8 @@
         </div>
       </section>
     </bk-dialog>
+
+    <!-- 部署日志侧栏 -->
     <bk-sideslider
       :is-show.sync="isShowSideslider"
       :title="$t('部署日志')"
@@ -376,14 +408,19 @@
       :quick-close="true"
       :before-close="handleCloseProcessWatch"
     >
-      <div slot="content">
+      <div
+        slot="content"
+        class="deploy-status-detail"
+      >
         <deploy-status-detail
           ref="deployStatusRef"
           :environment="environment"
           :deployment-id="deploymentId"
           :deployment-info="deploymentInfoBackUp"
           :rv-data="rvData"
+          :show-debug-action="deployedDebugEnabled"
           @close="handleCloseSideslider"
+          @redeploy="handleRedeploy"
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
@@ -489,6 +526,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
+import { mapState } from 'vuex';
 
 // 当前状态，禁用部署按钮
 const DEPLOY_ERROR_STATES = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO', 'FILL_EXTRA_INFO'];
@@ -583,6 +621,9 @@ export default {
       },
       deployRefreshLoading: false,
       codeRefreshLoading: false,
+      isAdvancedOptionsExpanded: false,
+      debugEnabled: false,
+      deployedDebugEnabled: false,
       commitDialog: {
         visiable: false,
         isLoading: false,
@@ -597,8 +638,9 @@ export default {
     };
   },
   computed: {
+    ...mapState(['userFeature']),
     curAppModule() {
-      return this.curAppModuleList.find((e) => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
+      return this.curAppModuleList.find(e => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
     },
     branchEmptyText() {
       const sourceType = this.overview.repo && this.overview.repo.source_type;
@@ -644,6 +686,15 @@ export default {
         return this.buttonActive === 'image';
       }
       return !this.allowMultipleImage;
+    },
+
+    // 蓝鲸 Buildpack 从源码构建时支持构建调试
+    isShowBuildDebug() {
+      return (
+        this.userFeature.ALLOW_BUILD_DEBUG === true
+        && this.deploymentInfoBackUp.build_method === 'buildpack'
+        && this.buttonActive === 'branch'
+      );
     },
 
     // 上一次选择的镜像拉取策略
@@ -712,6 +763,9 @@ export default {
         const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = activeImageSource || 'branch';
+        this.isAdvancedOptionsExpanded = this.deploymentInfoBackUp.isRedeploy === true;
+        this.debugEnabled = false;
+        this.deployedDebugEnabled = false;
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -757,7 +811,7 @@ export default {
     // 获取第一个匹配的错误数据
     getFirstErrorData(errorStates) {
       const failedConditions = this.deployPreparations.failed_conditions || [];
-      const errorList = failedConditions.find((v) => errorStates.includes(v.action_name));
+      const errorList = failedConditions.find(v => errorStates.includes(v.action_name));
       return errorList || {};
     },
     setCurData() {
@@ -835,7 +889,7 @@ export default {
           };
 
           // 组装数据，实现分组
-          if (!branchesList.map((item) => item.id).includes(branch.type)) {
+          if (!branchesList.map(item => item.id).includes(branch.type)) {
             branchesList.push({
               id: branch.type,
               name: branch.type,
@@ -843,7 +897,7 @@ export default {
               children: [obj],
             });
           } else {
-            const curData = branchesList.find((item) => item.id === branch.type);
+            const curData = branchesList.find(item => item.id === branch.type);
             curData.children.push(obj);
           }
 
@@ -1068,6 +1122,7 @@ export default {
         // V1alpha1与V1alpha2都添加镜像拉取策略
         const advancedOptions = {
           image_pull_policy: this.imagePullStrategy,
+          debug_enabled: this.isShowBuildDebug && this.debugEnabled,
         };
         // 源码构建
         if (this.isSourceCodeBuild) {
@@ -1110,6 +1165,7 @@ export default {
         });
         this.deployAppDialog.visiable = false;
         this.deploymentId = res.deployment_id;
+        this.deployedDebugEnabled = advancedOptions.debug_enabled;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true; // 打开侧边栏
         this.$emit('showSideslider');
@@ -1218,6 +1274,12 @@ export default {
       this.handleCloseProcessWatch();
     },
 
+    // 关闭当前部署详情并通知父组件重新打开部署弹窗
+    handleRedeploy() {
+      this.handleCloseProcessWatch();
+      this.$emit('redeploy');
+    },
+
     handleScrollToBottom() {
       if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
       this.pagination.limit += 10;
@@ -1251,7 +1313,7 @@ export default {
           };
 
           Object.keys(errorTypes).forEach((type) => {
-            const errorList = ret.failed_conditions.filter((v) => errorTypes[type].includes(v.action_name));
+            const errorList = ret.failed_conditions.filter(v => errorTypes[type].includes(v.action_name));
             this.isShowErrorAlert[type] = errorList.length > 0;
           });
         } else {
@@ -1414,6 +1476,34 @@ export default {
   }
 }
 
+.advanced-options {
+  margin-top: 24px;
+  .advanced-options-header {
+    display: inline-flex;
+    align-items: center;
+    color: #3a84ff;
+    cursor: pointer;
+    .paasng-icon {
+      margin-right: 8px;
+      font-size: 12px;
+      transition: transform 0.2s ease;
+      &.collapsed {
+        transform: rotate(-90deg);
+      }
+    }
+  }
+  .build-debug-option {
+    margin-top: 24px;
+    .label {
+      color: #4d4f56;
+    }
+    .tips {
+      font-size: 12px;
+      color: #979ba5;
+    }
+  }
+}
+
 .image-tag-cls {
   /deep/ .bk-label::after {
     display: none;
@@ -1495,11 +1585,12 @@ export default {
   transform: translateY(-1px);
 }
 .deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
-  overflow: unset;
-  .paas-deploy-log-wrapper {
+  overflow: hidden;
+  .bk-sideslider-content {
+    overflow: hidden;
+  }
+  .deploy-status-detail {
     height: 100%;
-    margin-bottom: 24px;
-    min-height: 620px;
   }
 }
 .code-depot {

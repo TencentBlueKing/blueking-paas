@@ -74,6 +74,7 @@ def test_a_refused_run_names_no_credential(api: TestClient, monkeypatch: pytest.
     conflict = run_request(api, conversation_id=str(uuid4()), context_version=0)
 
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     unready = run_request(api, conversation_id=str(uuid4()), context_version=0)
 
     assert conflict.status_code == 409, conflict.text

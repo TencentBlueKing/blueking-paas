@@ -1,0 +1,17 @@
+# Disposable test environment only. Never use these credentials in production.
+image:
+  repository: app-spark-api
+  tag: helm-test-external-wait
+  pullPolicy: Never
+django:
+  secretKey: spark-helm-test-only-not-for-production
+externalDatabase:
+  host: mysql
+  password: spark-test-only
+ingress:
+  host: app-spark-helm-test.example.com
+persistence:
+  existingClaim: app-spark-data
+agent:
+  runtimeProviderConfig:
+    model: fake:write-file

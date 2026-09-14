@@ -46,7 +46,9 @@
     </main>
 
     <script>
-        const apiUserinfoUrl = "{{ api_userinfo_url|escapejs }}";
+        // reverse_public() already includes FORCE_SCRIPT_NAME, so this is the public path
+        // even when Ingress strips the prefix before Django sees the request.
+        const apiUserinfoUrl = new URL("{{ api_userinfo_url|escapejs }}", window.location.origin);
         const defaultLoginUrl = "{{ default_login_url|escapejs }}";
 
         function isSafeHttpUrl(url) {

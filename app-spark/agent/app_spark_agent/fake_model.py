@@ -102,9 +102,7 @@ def build_fake_model(scenario: str) -> Model:
     name = scenario or DEFAULT_SCENARIO
     if name not in SCENARIOS:
         supported = ", ".join(SCENARIOS)
-        raise UnknownFakeScenarioError(
-            f"Unknown fake model scenario: {name!r}. Supported scenarios: {supported}."
-        )
+        raise UnknownFakeScenarioError(f"Unknown fake model scenario: {name!r}. Supported scenarios: {supported}.")
 
     async def stream(
         messages: list[ModelMessage],

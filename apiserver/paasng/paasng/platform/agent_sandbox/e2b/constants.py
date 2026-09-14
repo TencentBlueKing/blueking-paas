@@ -48,6 +48,13 @@ DATA_PLANE_DOMAIN_FIELD = "domain"
 # 网关响应中的沙箱标识字段
 SANDBOX_ID_FIELD = "sandboxID"
 
+# 网关响应中的运行状态字段，对账时以它为权威值
+SANDBOX_STATE_FIELD = "state"
+
+# 归档时的单批删除条数。终止记录没有关联对象，删除很轻，
+# 分批只是为了不在一条语句里锁住过多行
+ARCHIVE_BATCH_SIZE = 500
+
 
 class E2BSandboxStatus(StrStructuredEnum):
     """E2B 标准沙箱状态"""
@@ -61,3 +68,14 @@ class E2BSandboxStatus(StrStructuredEnum):
     def active_values(cls) -> list[str]:
         """仍占用底层资源、需要参与对账的状态。"""
         return [cls.RUNNING.value, cls.PAUSED.value]
+
+
+class E2BReconcileOutcome(StrStructuredEnum):
+    """对账指标 ``e2b_sandbox_reconciled`` 的 outcome 取值"""
+
+    CONVERGED = EnumField("converged", label="本地状态已收敛")
+    # 网关返回了本枚举之外的状态，说明平台的状态定义落后于网关版本。
+    UNKNOWN_STATE = EnumField("unknown_state", label="网关状态无法识别")
+    ORPHAN_KILLED = EnumField("orphan_killed", label="已销毁孤儿实例")
+    ORPHAN_KILL_FAILED = EnumField("orphan_kill_failed", label="销毁孤儿失败")
+    CLUSTER_SKIPPED = EnumField("cluster_skipped", label="集群被跳过")

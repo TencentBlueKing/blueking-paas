@@ -163,10 +163,10 @@
                   size="small"
                   @click="handleOfflineApp(deploymentInfo)"
                   :disabled="
-                    !!deploymentInfo.state.offline.pending ||
-                    !!deploymentInfo.state.deployment.pending ||
-                    !deploymentInfo.state.deployment.latest ||
-                    deploymentInfo.state.offline.latest_succeeded
+                    !!deploymentInfo.state.offline.pending
+                    || !!deploymentInfo.state.deployment.pending
+                    || !deploymentInfo.state.deployment.latest
+                    || deploymentInfo.state.offline.latest_succeeded
                   "
                   :loading="!!deploymentInfo.state.offline.pending"
                 >
@@ -251,6 +251,7 @@
       :rv-data="rvData"
       @refresh="handleListRefresh"
       @showSideslider="isDialogShowSideslider = true"
+      @redeploy="handleRedeploy"
     ></deploy-dialog>
 
     <bk-sideslider
@@ -268,7 +269,11 @@
           :deployment-id="curDeploymentInfoItem.state?.deployment?.pending?.id"
           :deployment-info="curDeploymentInfoItem"
           :rv-data="rvData"
+          :show-debug-action="
+            curDeploymentInfoItem.state?.deployment?.pending?.advanced_options?.debug_enabled === true
+          "
           @close="handleCloseSideslider"
+          @redeploy="handleStatusRedeploy"
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
@@ -420,6 +425,25 @@ export default {
       this.$nextTick(() => {
         this.isShowDialog = true;
       });
+    },
+
+    // 处理部署弹窗内详情侧栏发起的重新部署
+    handleRedeploy() {
+      this.isDialogShowSideslider = false;
+      this.openRedeployDialog();
+    },
+
+    // 处理模块列表部署详情侧栏发起的重新部署
+    handleStatusRedeploy() {
+      this.handleCloseProcessWatch();
+      this.openRedeployDialog();
+    },
+
+    // 打开重新部署弹窗并标记高级选项默认展开
+    openRedeployDialog() {
+      const moduleName = this.curDeploymentInfoItem.module_name;
+      const index = this.deploymentInfoData.findIndex((item) => item.module_name === moduleName);
+      this.handleDeploy({ ...this.curDeploymentInfoItem, isRedeploy: true }, index);
     },
 
     // 部署侧边栏
@@ -693,6 +717,7 @@ export default {
         const deployData = {
           ...this.deploymentInfoData[deployIndex],
           ...additionalData,
+          isRedeploy: true,
         };
         this.handleDeploy(deployData, deployIndex);
       }
@@ -816,7 +841,9 @@ export default {
   }
   .main {
     background: #fff;
-    box-shadow: 0 2px 4px 0 #0000001a, 0 2px 4px 0 #1919290d;
+    box-shadow:
+      0 2px 4px 0 #0000001a,
+      0 2px 4px 0 #1919290d;
     border-radius: 0 0 2px 2px;
   }
   .operation-wrapper {

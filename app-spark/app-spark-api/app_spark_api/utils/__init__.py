@@ -17,5 +17,13 @@
 """Shared utilities for app-spark-api."""
 
 from app_spark_api.utils.attrs import cattrs_converter, structure_config, validate_non_empty_string
+from app_spark_api.utils.urls import reverse_path_info, reverse_public, to_path_info
 
-__all__ = ["cattrs_converter", "structure_config", "validate_non_empty_string"]
+__all__ = [
+    "cattrs_converter",
+    "reverse_path_info",
+    "reverse_public",
+    "structure_config",
+    "to_path_info",
+    "validate_non_empty_string",
+]

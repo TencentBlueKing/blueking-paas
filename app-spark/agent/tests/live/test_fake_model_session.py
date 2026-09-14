@@ -61,9 +61,7 @@ def test_a_fake_model_runs_a_real_session_without_an_api_key(
 
     # A scripted model still has to produce a real conversation shape, or the control plane
     # would be reading a stream no live session ever looks like.
-    assert {"user-prompt", "tool-call", "tool-return", "text"} <= part_kinds(
-        model_messages(transcript)
-    )
+    assert {"user-prompt", "tool-call", "tool-return", "text"} <= part_kinds(model_messages(transcript))
     types = [str(event["type"]) for event in stored_events(ui_events)]
     assert types[0] == "RUN_STARTED"
     assert types[-1] == "RUN_FINISHED"

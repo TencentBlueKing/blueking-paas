@@ -132,6 +132,17 @@ TEMPLATES = [
 WSGI_APPLICATION = "app_spark_api.wsgi.application"
 ASGI_APPLICATION = "app_spark_api.asgi.application"
 
+# --------
+# django-ninja 相关配置
+# --------
+
+# 列表接口统一用「页码 + 每页条数」翻页，而不是 django-ninja 默认的 limit/offset：翻页参数
+# 是所有列表接口的公共契约，定在这里而不是让每个 `@paginate` 各自传一遍，新接口默认就是对的。
+NINJA_PAGINATION_CLASS = "ninja.pagination.PageNumberPagination"
+# 默认每页条数（客户端可用 page_size 覆盖），上限见 NINJA_MAX_PER_PAGE_SIZE。
+NINJA_PAGINATION_PER_PAGE = settings.get("NINJA_PAGINATION_PER_PAGE", 20)
+NINJA_MAX_PER_PAGE_SIZE = settings.get("NINJA_MAX_PER_PAGE_SIZE", 100)
+
 # ------------------------
 # Django 基础配置（自定义）
 # ------------------------
@@ -265,7 +276,17 @@ AGENT_CONTEXT_STORAGE = settings.get(
 DATA_UPLOAD_MAX_MEMORY_SIZE = settings.get("DATA_UPLOAD_MAX_MEMORY_SIZE", 64 * 1024 * 1024)
 
 
+# 子路径部署：Ingress 会把此外前缀剥掉再转给应用（见 charts 中的 ingress.yaml）。
+# 对外 URL 用 reverse_public()。Agent Runtime 回写地址是否带此外前缀由各 provider 决定。
+# 空字符串视为未配置，与部署在站点根路径等价。
+FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME") or None
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.2/howto/static-files/
 STATIC_ROOT = str(BASE_DIR / "public" / "static")
-STATIC_URL = settings.get("STATIC_URL", "/static/")
+# 未显式配置时跟 FORCE_SCRIPT_NAME 走，避免静态资源仍指向站点根路径。
+_static_url = settings.get("STATIC_URL")
+if _static_url is None:
+    STATIC_URL = f"{FORCE_SCRIPT_NAME.rstrip('/')}/static/" if FORCE_SCRIPT_NAME else "/static/"
+else:
+    STATIC_URL = _static_url

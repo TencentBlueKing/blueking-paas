@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID  # noqa: TC003
 
 from django.shortcuts import aget_object_or_404
-from django.urls import reverse
 from ninja import Field, Path, Router, Schema
 from ninja.errors import HttpError
 
@@ -44,6 +43,7 @@ from app_spark_api.agent.conversations.tokens import (
     StateTokenClaims,
     read_state_token,
 )
+from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -94,11 +94,16 @@ def state_ingest_path(conversation_id: UUID) -> str:
     it is a prefix, not an endpoint -- so the one route that does exist is reversed and its own
     last segment taken back off.
 
+    The path is the public route, including FORCE_SCRIPT_NAME when the service is published
+    under a sub-path. Whether that prefix should be kept is the provider's decision: a local
+    process talks to uvicorn on loopback and must strip it; a remote sandbox that comes in
+    through Ingress must keep it.
+
     :param conversation_id: Conversation the Runtime will be serving.
     :return: An absolute path, ending in a slash so the Runtime's own relative channel names
         resolve underneath it rather than replacing its last segment.
     """
-    url = reverse(
+    url = reverse_public(
         f"api:{APPEND_MESSAGES_URL_NAME}",
         kwargs={"conversation_id": conversation_id},
     )

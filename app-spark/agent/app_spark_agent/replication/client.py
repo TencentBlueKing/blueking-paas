@@ -117,8 +117,7 @@ class ControlPlaneClient:
 
         if response.status_code != HTTPStatus.OK:
             raise ControlPlaneError(
-                f"the control plane answered {path} with {response.status_code}: "
-                f"{response.text[:200]}"
+                f"the control plane answered {path} with {response.status_code}: {response.text[:200]}"
             )
         try:
             payload = response.json()
@@ -136,6 +135,4 @@ def _read_int(payload: dict[str, Any], key: str) -> int:
     try:
         return int(payload[key])
     except (KeyError, TypeError, ValueError) as exc:
-        raise ControlPlaneError(
-            f"unreadable ingest response, {key} is missing or not an integer: {exc}"
-        ) from exc
+        raise ControlPlaneError(f"unreadable ingest response, {key} is missing or not an integer: {exc}") from exc

@@ -1,0 +1,58 @@
+{{- $django := .Values.django | default dict -}}
+{{- $database := .Values.externalDatabase | default dict -}}
+{{- $bkAuth := .Values.bkAuth | default dict -}}
+{{- $agent := .Values.agent | default dict -}}
+{{/*
+Keep the mapping explicit; missing groups and keys all resolve to nil.
+Only omit nil: false, 0, empty strings and empty collections are explicit overrides.
+*/}}
+{{- $envs := dict
+  "SECRET_KEY" $django.secretKey
+  "DEBUG" $django.debug
+  "ALLOWED_HOSTS" $django.allowedHosts
+  "AUTO_CREATE_REGULAR_USER" $django.autoCreateRegularUser
+  "LANGUAGE_CODE" $django.languageCode
+  "LANGUAGES" $django.languages
+  "TIME_ZONE" $django.timeZone
+  "LANGUAGE_COOKIE_NAME" $django.languageCookieName
+  "LANGUAGE_COOKIE_PATH" $django.languageCookiePath
+  "LANGUAGE_COOKIE_DOMAIN" $django.languageCookieDomain
+  "BK_COOKIE_DOMAIN" $django.bkCookieDomain
+  "DATA_UPLOAD_MAX_MEMORY_SIZE" $django.dataUploadMaxMemorySize
+  "STATIC_URL" $django.staticUrl
+  "FORCE_SCRIPT_NAME" $django.forceScriptName
+  "DATABASE_HOST" $database.host
+  "DATABASE_PORT" $database.port
+  "DATABASE_NAME" $database.name
+  "DATABASE_USER" $database.user
+  "DATABASE_PASSWORD" $database.password
+  "DATABASE_OPTIONS" $database.options
+  "DEFAULT_CACHE_CONFIG" .Values.defaultCacheConfig
+  "ENABLE_MULTI_TENANT_MODE" .Values.enableMultiTenantMode
+  "LOGIN_FULL" .Values.loginFull
+  "BKAUTH_BACKEND_TYPE" $bkAuth.backendType
+  "BKAUTH_TOKEN_APP_CODE" $bkAuth.appCode
+  "BKAUTH_TOKEN_SECRET_KEY" $bkAuth.appSecret
+  "BKAUTH_BK_LOGIN_APIGW_STAGE" $bkAuth.bkLoginApigwStage
+  "BKAUTH_USER_INFO_APIGW_URL" $bkAuth.userInfoApigwUrl
+  "BKAUTH_USER_COOKIE_VERIFY_URL" $bkAuth.userCookieVerifyUrl
+  "BKAUTH_TOKEN_USER_INFO_ENDPOINT" $bkAuth.tokenUserInfoEndpoint
+  "BLOBSTORE_BKREPO_CONFIG" .Values.blobstoreBkrepoConfig
+  "AGENT_RUNTIME_PROVIDER" $agent.runtimeProvider
+  "AGENT_RUNTIME_PROVIDER_CONFIG" $agent.runtimeProviderConfig
+  "AGENT_CONTEXT_STORAGE" $agent.contextStorage
+-}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+data:
+  DJANGO_SETTINGS_MODULE: app_spark_api.settings
+  PYTHONUNBUFFERED: "1"
+  {{- range $name, $value := $envs }}
+  {{- if ne $value nil }}
+  APP_SPARK_API_{{ $name }}: {{ include "app-spark-api.envValue" $value }}
+  {{- end }}
+  {{- end }}

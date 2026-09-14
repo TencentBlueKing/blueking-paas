@@ -40,9 +40,7 @@ class FakeControlPlane:
         believe over its own version number.
     """
 
-    channels: dict[str, list[dict[str, Any]]] = field(
-        default_factory=dict[str, list[dict[str, Any]]]
-    )
+    channels: dict[str, list[dict[str, Any]]] = field(default_factory=dict[str, list[dict[str, Any]]])
     context: dict[str, Any] | None = None
     calls: list[tuple[str, int]] = field(default_factory=list[tuple[str, int]])
     failures: int = 0

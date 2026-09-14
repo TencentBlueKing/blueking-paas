@@ -145,8 +145,7 @@ class AppendLog:
             raise AppendLogError("base_seq must be a non-negative integer")
         if not self.is_empty:
             raise AppendLogError(
-                f"{self.path.name} already holds entries up to seq {self._last_seq} "
-                "and cannot be rebased"
+                f"{self.path.name} already holds entries up to seq {self._last_seq} and cannot be rebased"
             )
         self._base_seq = base_seq
         self._last_seq = base_seq

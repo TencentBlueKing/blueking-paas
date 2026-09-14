@@ -114,5 +114,34 @@ Runtime 的 `/health` 的 `pushed_*` 游标看。
 「换一个全新 Runtime 继续对话」目前只在讨论层面成立，不在继续编码层面成立。衔接点是
 `ProjectSourceStorage`：注入 context 之前先把源码 `get()` 回来。
 
-另一个缺口是目前没有任何对外接口会终止 Runtime，所以上面那套吊销机制装好了但还没有调用点；
-真正开始回收 Runtime（尤其换成沙箱之后）时，回收路径必须走 `terminate_runtime()`。
+### 会话的生命周期
+
+一个会话只有两种状态，由 `Conversation.closed_at` 一个字段决定：`null` 表示还活着（live，还能
+继续推进），有值表示已经结束。`POST .../conversations/<n>/close/` 是唯一的结束入口，重复调用
+返回 409。
+
+**live 说的不是「此刻有没有 Runtime 在跑」**，这点容易搞混。Runtime 是可丢弃的，会被反复回收和
+重新拉起，而且它的进程句柄只在内存里、本服务一重启就全没了——拿它当会话状态的话，同一个会话会
+因为一次无关的重启从 live 变成非 live，下一轮对话又把它变回来。要看某个会话此刻的运行情况，看
+`GET .../conversations/<n>/` 的 `running` 与 `replication_pending`；会话列表刻意不报这些，否则
+一页 20 条就是 20 次 `/health` 请求。
+
+结束会话同时也是 Runtime 唯一的对外回收入口，走的就是 `terminate_runtime()`：先把上面那套
+`state_epoch` 吊销机制真正用上，让之前签发的回写 token 全部作废，**然后**才去停进程。这个顺序
+是有讲究的：停进程是尽力而为（进程可能已经没了、可能不理信号、也可能本服务早就跟丢了），吊销
+token 才是「不会再有东西以这个会话的名义写进来」的保证——所以停不掉只记日志，而不是把吊销挡在
+后面。停掉之后它占着的 Project workspace 被交还，同一个 Project 的下一个会话才能开起来（一个
+workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话在跑，它会被打断，客户端那条 SSE 流
+上会收到一个 AG-UI `RUN_ERROR` 事件。
+
+会话结束后历史仍然可读，只是不能再发起新的一轮对话——`start_run` 里有闸门拦着，否则「结束」
+只是杀掉了一个进程，下一轮对话会照常把 Runtime 重新拉起来。闸门有两道，因为拉起 Runtime 要花
+好几秒，够另一个请求在这中间把会话结束掉：进来时看一次，Runtime 拉起来之后再回库确认一次，
+确认没过就把刚拉起来的 Runtime 收掉并返回 409（见 `_reject_if_closed_meanwhile()`）。
+
+## 部署相关
+
+### 镜像构建
+
+项目提供 [Dockerfile](Dockerfile)，以父目录 `app-spark/` 为构建上下文，
+包含 API 和 Agent 各自的生产依赖。**镜像中包含 Agent 是为了支持当前的 `local_process` 驱动。**

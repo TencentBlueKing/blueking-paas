@@ -41,6 +41,7 @@ __all__ = [
     "ConversationManager",
     "ConversationMessage",
     "ConversationNumber",
+    "ConversationQuerySet",
     "ConversationUiEvent",
 ]
 
@@ -86,8 +87,37 @@ class ConversationNumber(models.Model):
         return cls.objects.values_list("last_number", flat=True).get(project_id=project_id)
 
 
+class ConversationQuerySet(models.QuerySet["Conversation"]):
+    """Conversation 的查询集"""
+
+    def live(self) -> "ConversationQuerySet":
+        """只留下还活着的会话，也就是尚未被结束、还可以继续推进的那些。"""
+        return self.filter(closed_at__isnull=True)
+
+    def closed(self) -> "ConversationQuerySet":
+        """只留下已经结束的会话。它们的历史仍可读，但不能再推进。"""
+        return self.filter(closed_at__isnull=False)
+
+
 class ConversationManager(models.Manager["Conversation"]):
     """Conversation 的管理器，建会话必须走这里，序号才有人发。"""
+
+    def get_queryset(self) -> ConversationQuerySet:
+        return ConversationQuerySet(self.model, using=self._db)
+
+    def for_project(self, project: Project, *, is_live: bool | None = None) -> ConversationQuerySet:
+        """列出一个 Project 的会话，按创建时间倒序。
+
+        :param project: 要列出会话的 Project。
+        :param is_live: ``True`` 只要还活着的，``False`` 只要已结束的，``None``（默认）全都要。
+        :return: 排好序、尚未取值的 queryset，翻页交给调用方。
+        """
+        queryset = self.get_queryset().filter(project=project)
+        if is_live is True:
+            queryset = queryset.live()
+        elif is_live is False:
+            queryset = queryset.closed()
+        return queryset.order_by("-created", "-number")
 
     def create_for_project(self, project: Project, *, owner: str | None) -> Conversation:
         """建一个会话，并给它分配所属 Project 内的下一个序号。
@@ -142,6 +172,14 @@ class Conversation(OwnerTimestampedModel):
     # 上一代残留的 Runtime 手里那张 token 依然有效。
     state_epoch = models.PositiveIntegerField(verbose_name="状态回写授权代次", default=1)
 
+    # 会话的生命周期就这一个字段：null 表示还活着（live），有值表示已经结束。
+    #
+    # 之所以落库，而不是拿「当前有没有 Runtime 在跑」当作 live：Runtime 是可丢弃的，进程句柄
+    # 只在内存里（见 local provider 的注释），本服务一重启就全没了。用它当 live 的话，同一个
+    # 会话会因为一次无关的重启从 live 变成非 live，而下一轮对话又会把它变回来——这种会自己反复
+    # 翻转的状态没法当契约用，也没法回答「这个会话是不是已经被用户结束了」。
+    closed_at = models.DateTimeField(verbose_name="结束时间", null=True, default=None)
+
     tenant_id = tenant_id_field_factory(db_index=False)
 
     objects = ConversationManager()
@@ -151,3 +189,8 @@ class Conversation(OwnerTimestampedModel):
             models.UniqueConstraint(fields=["project", "number"], name="uniq_conversation_number_per_project"),
         ]
         indexes = [models.Index(fields=["project", "-created"])]
+
+    @property
+    def is_live(self) -> bool:
+        """这个会话是否还活着，也就是还能不能继续推进。"""
+        return self.closed_at is None

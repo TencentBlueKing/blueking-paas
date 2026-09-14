@@ -1,0 +1,97 @@
+{{- if ne (int .Values.replicaCount) 1 }}
+{{- fail "The local_process runtime currently requires replicaCount=1." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # 避免升级期间两个 API 进程同时操作同一份 workspace 和 Runtime 状态。
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "app-spark-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/general-envs-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- $images := list .Values.image }}
+      {{- if .Values.migrate.enabled }}
+        {{- $images = append $images .Values.utility.images.k8sWaitFor }}
+      {{- end }}
+      {{- include "app-spark-api.imagePullSecrets" (dict "images" $images "context" $) | nindent 6 }}
+      terminationGracePeriodSeconds: 60
+      {{- if .Values.migrate.enabled }}
+      serviceAccountName: {{ include "app-spark-api.fullname" . }}
+      initContainers:
+        # Only the revision's Job performs migrations; API startup waits for its success.
+        - name: wait-for-migrate
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.utility.images.k8sWaitFor "global" .Values.global) | quote }}
+          imagePullPolicy: {{ .Values.utility.images.k8sWaitFor.pullPolicy | default "IfNotPresent" }}
+          args:
+            - job
+            - {{ include "app-spark-api.migrateJobName" . | quote }}
+          {{- with .Values.utility.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "app-spark-api.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          # Kubernetes command replaces the image ENTRYPOINT, so keep tini explicitly.
+          command: [/usr/bin/tini, --, uv, run, --no-sync, uvicorn]
+          args:
+            - app_spark_api.asgi:application
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+            - --workers
+            - "1"
+            - --timeout-graceful-shutdown
+            - "30"
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "app-spark-api.fullname" . }}
+          # 项目尚无匿名健康检查接口；TCP 探针避免被登录跳转和 Host 校验干扰。
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
+          readinessProbe:
+            tcpSocket:
+              port: http
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: agent-data
+              mountPath: /data/app-spark
+      volumes:
+        - name: agent-data
+          {{- if .Values.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | quote }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

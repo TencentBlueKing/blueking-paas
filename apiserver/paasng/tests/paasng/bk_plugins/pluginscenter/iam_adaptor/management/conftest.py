@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -23,6 +24,9 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import BKIAMC
 
 
 class FakeIAMClient(BKIAMClient):
+    # 基类 client 是实例属性，fixture 挂在 class 上，先占位才能赋值。
+    client: Any = None
+
     def __init__(self, tenant_id: str): ...
 
 

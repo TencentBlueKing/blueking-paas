@@ -1,0 +1,83 @@
+# Only for the isolated kind smoke test; these are disposable test credentials.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-spark-helm-test
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-data
+  namespace: app-spark-helm-test
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-spark-data
+  namespace: app-spark-helm-test
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: app-spark-helm-test
+spec:
+  selector:
+    app: spark-test-mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: app-spark-helm-test
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: spark-test-mysql
+  template:
+    metadata:
+      labels:
+        app: spark-test-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4.11
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: spark-test-root-only
+            - name: MYSQL_DATABASE
+              value: app_spark
+            - name: MYSQL_USER
+              value: app_spark
+            - name: MYSQL_PASSWORD
+              value: spark-test-only
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            periodSeconds: 2
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-data

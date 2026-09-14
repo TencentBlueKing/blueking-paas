@@ -23,12 +23,14 @@ from typing import TYPE_CHECKING
 from ninja import NinjaAPI, Router
 
 from app_spark_api.agent.conversations.api import router as conversations_router
+from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import router as conversation_state_router
 from app_spark_api.agent.runtime import (
     AgentBusyError,
     AgentRuntimeError,
     AgentWorkspaceBusyError,
 )
+from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.infras.accounts.api import router as accounts_router
 
 if TYPE_CHECKING:
@@ -38,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 root_router = Router()
 root_router.add_router("/accounts/", accounts_router)
+root_router.add_router("/projects/", projects_router)
 root_router.add_router("/projects/{project_id}/conversations/", conversations_router)
 # Mounted under `/internal/` and addressed by conversation id rather than by project and
 # number: the caller is an Agent Runtime this service started, it has no user and no project
@@ -47,6 +50,21 @@ root_router.add_router("/internal/conversations/", conversation_state_router)
 
 api = NinjaAPI(title="App Spark API", urls_namespace="api")
 api.add_router("", root_router)
+
+
+@api.exception_handler(ConversationClosedError)
+def handle_conversation_closed(request: HttpRequest, exc: ConversationClosedError) -> HttpResponse:
+    """Report an operation that a closed conversation cannot take part in.
+
+    Handled centrally for the same reason as the Agent Runtime failures below: both closing a
+    conversation and advancing one hit this, and what the caller should do about it is the same
+    either way -- nothing, the conversation is over. Retrying will not change that.
+    """
+    return api.create_response(
+        request,
+        {"detail": "This conversation has been closed."},
+        status=HTTPStatus.CONFLICT,
+    )
 
 
 @api.exception_handler(AgentRuntimeError)

@@ -38,6 +38,13 @@ def get_server_address():
     return "localhost", random.randint(10000, 40000)
 
 
+def _wrap_https_socket(sock, certfile):
+    # ssl.wrap_socket 在 3.12 已移除，服务端改用 SSLContext。
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile)
+    return context.wrap_socket(sock, server_side=True)
+
+
 @pytest.fixture()
 def certfile(tmp_path: pathlib.Path):
     """generate a self-signed certificate"""
@@ -110,7 +117,7 @@ def http_server(httpd):
 
 @pytest.fixture()
 def https_server(httpd, certfile):
-    httpd.socket = ssl.wrap_socket(httpd.socket, server_side=True, ssl_version=ssl.PROTOCOL_TLS, certfile=certfile)
+    httpd.socket = _wrap_https_socket(httpd.socket, certfile)
     sa = httpd.socket.getsockname()
     t = threading.Thread(target=httpd.serve_forever)
     t.start()
@@ -121,7 +128,7 @@ def https_server(httpd, certfile):
 @pytest.fixture()
 def blocking_https_server(httpd, certfile):
     """start a not running https server, will always block every request"""
-    httpd.socket = ssl.wrap_socket(httpd.socket, server_side=True, ssl_version=ssl.PROTOCOL_TLS, certfile=certfile)
+    httpd.socket = _wrap_https_socket(httpd.socket, certfile)
     sa = httpd.socket.getsockname()
     # t = threading.Thread(target=httpd.serve_forever)
     # t.start()

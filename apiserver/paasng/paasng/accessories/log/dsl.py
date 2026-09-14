@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -32,7 +32,7 @@ class SearchQueryItem(BaseModel):
     :param exclude: 精确过滤(根据 field 过滤 的场景)
     """
 
-    query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")
+    query_string: Optional[str] = Field(None, description="使用 `query_string` 语法进行搜索")
     terms: Dict[str, List[str]] = Field({}, description="多值精准匹配")
     exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 ES DSL")
 

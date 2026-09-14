@@ -12,6 +12,9 @@ After editing Python files, run `uv run ruff format {filename}` and `uv run mypy
 
 * For Python files, follow PEP-8.
 * Do not introduce Django. HTTP is FastAPI.
+* Python comments and docstrings are not rendered. Write identifiers as-is
+  (`fake_model.py`); do not wrap them in RST/Markdown double backticks
+  (``fake_model.py``).
 
 ## Spike vs formal work
 

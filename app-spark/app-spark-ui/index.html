@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.png" type="image/x-icon" />
+    <link rel="shortcut icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.png" type="image/x-icon" />
+    <meta charset="utf-8">
+    <title> index </title>
+  </head>
+    <body>
+      <div class="app"></div>
+      <script>
+        var SITE_URL = '<%= process.env.BK_SITE_URL %>'
+        var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>'
+        var BK_API_URL = '<%= process.env.BK_API_URL %>'
+        // 当前应用的环境，预发布环境为 stag，正式环境为 prod
+        var BKPAAS_ENVIRONMENT = '<%= process.env.BK_PAAS_ENVIRONMENT %>'
+        // EngineApp名称，拼接规则：bkapp-{appcode}-{BKPAAS_ENVIRONMENT}
+        var BKPAAS_ENGINE_APP_NAME = '<%= process.env.BK_PAAS_ENGINE_APP_NAME %>'
+        // 内部版对应ieod，外部版对应tencent，混合云版对应clouds
+        var BKPAAS_ENGINE_REGION = '<%= process.env.BK_PAAS_ENGINE_REGION %>'
+        // APP ID
+        var BKPAAS_APP_ID = '<%= process.env.BK_PAAS_APP_ID %>'
+        var BKPAAS_APP_SECRET = ''
+        var BK_LOGIN_URL = '<%= process.env.BK_LOGIN_URL %>'
+      </script>
+    </body>
+</html>

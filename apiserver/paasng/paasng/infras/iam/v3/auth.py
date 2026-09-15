@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from functools import wraps
 from typing import Dict, List, Optional
 
 from django.conf import settings
@@ -25,13 +26,32 @@ from iam.exceptions import AuthAPIError
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
 from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.exceptions import BKIAMAuthCheckError
 
 logger = logging.getLogger(__name__)
+
+
+def _reraise_as_auth_check_error(func):
+    """把 SDK 抛出的 AuthAPIError 转换为平台自身的鉴权异常
+
+    V4 无 SDK，鉴权失败抛的是 BKIAMGatewayServiceError 的子类。两版须对调用方呈现同一种
+    异常类型，调用方才能在不感知版本、也不 import SDK 异常的前提下捕获。
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except AuthAPIError as e:
+            raise BKIAMAuthCheckError(f"request bk-iam auth api failed: {e}") from e
+
+    return wrapper
 
 
 class BKIAMV3AuthBackend(BaseAuthBackend):
     """基于 bk-iam Python SDK 的 V3 鉴权实现"""
 
+    @_reraise_as_auth_check_error
     def resource_type_allowed(self, username: str, tenant_id: str, action_id: str, use_cache: bool = False) -> bool:
         _iam = self._make_iam(tenant_id)
         request = self._make_request(username, action_id)
@@ -39,6 +59,7 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
             return _iam.is_allowed(request)
         return _iam.is_allowed_with_cache(request)
 
+    @_reraise_as_auth_check_error
     def resource_inst_allowed(
         self,
         username: str,
@@ -53,6 +74,7 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
             return _iam.is_allowed(request)
         return _iam.is_allowed_with_cache(request)
 
+    @_reraise_as_auth_check_error
     def resource_inst_multi_actions_allowed(
         self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
     ) -> Dict[str, bool]:
@@ -62,6 +84,7 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
         )
         return self._make_iam(tenant_id).resource_multi_actions_allowed(request)
 
+    @_reraise_as_auth_check_error
     def batch_resource_multi_actions_allowed(
         self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
     ) -> Dict[str, Dict[str, bool]]:

@@ -92,6 +92,17 @@ class InvalidIAMIdentifierError(ValueError):
         super().__init__(f"以下标识符不满足 IAM V4 命名约束: {', '.join(identifiers)}")
 
 
+class BKIAMAuthCheckError(BKIAMGatewayServiceError):
+    """鉴权判定调用失败
+
+    V3 经 SDK 鉴权、V4 经 HTTP 鉴权，两者原始的异常类型不同。V3 实现将 SDK 的 AuthAPIError
+    包装为本异常，V4 实现抛出的 BKIAMApiError 系列同属 BKIAMGatewayServiceError，
+    调用方据此捕获基类即可，无需感知版本差异，也不必再 import SDK 的异常。
+
+    note: 判定失败不等于无权限。捕获方须按未授权处理，不得因调用失败而放行
+    """
+
+
 class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
     """目标权限中心版本尚未提供所需的能力
 

@@ -35,6 +35,17 @@ class LegacyAction(StrStructuredEnum):
 
 
 class Permission:
+    """PaaS 2.0 遗留系统（`bk_paas`）的鉴权
+
+    本类不接入 `shim` 的版本分发，始终直连 V3 SDK，即便部署环境的 BK_IAM_VERSION 配置为 v4。
+    原因是 `bk_paas` 系统在 V4 侧是否存在尚未确认：平台只对它鉴权、从不注册其权限模型，
+    若 V4 环境没有该系统，切过去只会让遗留应用的判定全部失败。
+
+    待权限中心确认后按结论处理：该系统在 V4 存在则把这两个方法改为经 `shim.get_auth_backend()`
+    分发（注意 `app_filters` 依赖 SDK 的 SQLConverter，V4 需另找等价实现，见 base.backends 的说明）；
+    若确认只存在于 V3 或可直接停用，则连同 `paasng.infras.legacydb` 的调用点一起下线。
+    """
+
     def __init__(self):
         self._iam = IAM(
             settings.IAM_APP_CODE,

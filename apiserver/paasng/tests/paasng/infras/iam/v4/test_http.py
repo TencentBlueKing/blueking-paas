@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
+import requests
 from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
 
 from paasng.infras.iam.exceptions import BKIAMApiHTTPError, BKIAMGatewayServiceError
@@ -61,6 +62,8 @@ def client() -> BKIAMV4BaseClient:
 
 
 class TestCall:
+    """调用失败必须收敛为平台异常，调用方才能按「判定失败」统一处理"""
+
     def test_treats_204_empty_body_as_success(self, client):
         """update_* 成功返回 204 无 body。SDK 会抛 JSONResponseError，应视为写入成功。"""
         operation = StubOperation(make_json_response_error(204))
@@ -74,6 +77,7 @@ class TestCall:
             client.call(operation)
 
     def test_http_error_is_wrapped(self, client):
+        """非 2xx 仍要抛出带状态码的 BKIAMApiHTTPError，不能被兜底分支吞成通用网关错误"""
         response = Mock(status_code=409, headers={})
         operation = StubOperation(HTTPResponseError("conflict", response=response))
 
@@ -86,6 +90,19 @@ class TestCall:
         operation = StubOperation(APIGatewayResponseError("gateway down"))
 
         with pytest.raises(BKIAMGatewayServiceError, match="gateway down"):
+            client.call(operation)
+
+    def test_wraps_connection_error(self, client):
+        """权限中心不可达时不能把原始的 requests 异常漏出去，否则调用方的捕获会失效"""
+        operation = StubOperation(requests.exceptions.ConnectionError("connection refused"))
+
+        with pytest.raises(BKIAMGatewayServiceError, match="stub_operation"):
+            client.call(operation)
+
+    def test_wraps_read_timeout(self, client):
+        operation = StubOperation(requests.exceptions.ReadTimeout("read timed out"))
+
+        with pytest.raises(BKIAMGatewayServiceError):
             client.call(operation)
 
 

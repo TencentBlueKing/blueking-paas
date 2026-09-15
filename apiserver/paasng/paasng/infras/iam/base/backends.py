@@ -23,9 +23,9 @@
 - 目标版本尚未提供的能力，实现须抛 `BKIAMCapabilityNotSupportedError`，不得静默返回成功
 - 管理类调用失败时抛 `paasng.infras.iam.exceptions` 中的异常，并携带 IAM 侧 request_id
 
-note: 鉴权类调用的异常类型目前尚未跨版本统一——V3 直接透传 SDK 的 `iam.exceptions.AuthAPIError`，
-    调用方（如 `paasng.infras.accounts.permissions.application`）也按该类型捕获。V4 实现落地时
-    需在 `#3 鉴权判定 V4 实现` 中统一为平台自身的异常类型，并同步调整调用方的捕获逻辑。
+note: 鉴权类调用的异常已跨版本统一到 `BKIAMGatewayServiceError` 之下——V3 将 SDK 的
+    `iam.exceptions.AuthAPIError` 包装为 `BKIAMAuthCheckError`，V4 抛出的 `BKIAMApiError`
+    系列同属该基类。调用方捕获基类即可，不再 import SDK 的异常类型。
 """
 
 from abc import ABC, abstractmethod

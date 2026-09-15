@@ -33,17 +33,12 @@ class ResourceRequest(ABC):  # noqa: B024
         """从字典构建对象"""
         raise NotImplementedError
 
-    def make_resources(self, res_ids: Union[List[str], str]) -> List[AuthResource]:
-        """
-        :param res_ids: 单个资源 ID 或资源 ID 列表
-        """
-        if isinstance(res_ids, (str, int)):
-            res_ids = [res_ids]
+    def make_resource(self, res_id: str) -> AuthResource:
+        """构造鉴权用的资源实例
 
-        res_ids = [str(_id) for _id in res_ids]
-        system_id = get_paas_system_id()
-
-        return [AuthResource(system_id, self.resource_type, _id, self._make_attribute(_id)) for _id in res_ids]
+        :param res_id: 单个资源实例 ID
+        """
+        return AuthResource(get_paas_system_id(), self.resource_type, res_id, self._make_attribute(res_id))
 
     def _make_attribute(self, res_id: str) -> Dict:
         return {}

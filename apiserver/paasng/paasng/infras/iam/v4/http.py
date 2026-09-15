@@ -20,8 +20,9 @@ import logging
 from itertools import islice
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, TypeVar
 
-from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
+from bkapi_client_core.exceptions import HTTPResponseError, JSONResponseError
 from django.conf import settings
+from requests.exceptions import RequestException
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam.base.constants import V4_BATCH_OPERATION_LIMIT, V4_LIST_PAGE_SIZE_LIMIT, V4_OPERATOR_HEADER
@@ -94,13 +95,24 @@ class BKIAMV4BaseClient:
                 return {}
             raise BKIAMGatewayServiceError(f"request bkiam api {name} got invalid json response, detail: {e}") from e
         except HTTPResponseError as e:
+            message = f"request bkiam api {name} failed: {e}"
+
+            # 错误体里的 code 与 message 比 SDK 拼出的整串响应更贴近失败原因，单独附在末尾
+            detail = self._extract_error_detail(e)
+            if detail:
+                message = f"{message}, detail: {detail}"
+
             raise BKIAMApiHTTPError(
-                f"request bkiam api {name} failed: {e}",
+                message,
                 status_code=e.response_status_code,
                 request_id=self._extract_request_id(e),
             ) from e
-        except APIGatewayResponseError as e:
-            # 网关不可达或超时。不做默认放行，由调用方决定重试与告警
+        except RequestException as e:
+            # 网关返回错误头（APIGatewayResponseError）、连接失败、读超时都落在这里——
+            # SDK 的异常与 requests 的异常同为 RequestException 的子类，兜底一处即可。
+            # 这些情况都拿不到权限中心的判定结果，必须收敛为平台异常，否则原始的 requests 异常
+            # 会越过调用方的 except BKIAMGatewayServiceError 一路抛到请求栈顶，
+            # 让「权限中心不可用」从拒绝降级成 500。不做默认放行，由调用方决定重试与告警
             raise BKIAMGatewayServiceError(f"request bkiam api {name} error, detail: {e}") from e
 
         self._validate_resp(resp, name)
@@ -220,3 +232,28 @@ class BKIAMV4BaseClient:
         except (ValueError, AttributeError):
             # 响应体不是 JSON，或不是对象结构
             return None
+
+    @staticmethod
+    def _extract_error_detail(exc: HTTPResponseError) -> Optional[str]:
+        """从错误响应体中取出权限中心的错误码与描述
+
+        V4 的错误体形如 {"error": {"code": "INVALID_REQUEST", "message": "..."}}：
+        错误码是字符串且嵌在 error 对象内，与成功响应顶层的结构不同，因此单独解析。
+        """
+        if exc.response is None:
+            return None
+
+        try:
+            error = (exc.response.json() or {}).get("error")
+        except (ValueError, AttributeError):
+            # 响应体不是 JSON，或不是对象结构
+            return None
+
+        if not isinstance(error, dict):
+            return None
+
+        code, message = error.get("code"), error.get("message")
+        if code and message:
+            return f"{code}: {message}"
+
+        return message or code

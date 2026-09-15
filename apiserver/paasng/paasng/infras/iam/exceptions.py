@@ -81,6 +81,17 @@ class BKIAMApiHTTPError(BKIAMApiError):
         self.status_code = status_code
 
 
+class InvalidIAMIdentifierError(ValueError):
+    """本地模型标识符不满足权限中心 V4 的命名约束
+
+    同步命令在提交到 V4 之前校验，命中时立即失败并列出全部违规标识符。
+    """
+
+    def __init__(self, identifiers: list[str]):
+        self.identifiers = identifiers
+        super().__init__(f"以下标识符不满足 IAM V4 命名约束: {', '.join(identifiers)}")
+
+
 class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
     """目标权限中心版本尚未提供所需的能力
 

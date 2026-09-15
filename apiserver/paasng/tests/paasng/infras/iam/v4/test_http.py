@@ -16,9 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 from typing import Any, Dict, List, Optional, Union
+from unittest.mock import Mock
 
 import pytest
+from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
 
+from paasng.infras.iam.exceptions import BKIAMApiHTTPError, BKIAMGatewayServiceError
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 
 
@@ -44,9 +47,46 @@ def make_page(results: List[Dict], count: Optional[int] = None) -> Dict:
     return {"data": data, "request_id": "req-ok"}
 
 
+def make_json_response_error(status_code: int) -> JSONResponseError:
+    """模拟 SDK 对空/非法 JSON 响应抛出的 JSONResponseError"""
+    response = Mock()
+    response.status_code = status_code
+    response.headers = {}
+    return JSONResponseError("The response is not a valid JSON", response=response)
+
+
 @pytest.fixture()
 def client() -> BKIAMV4BaseClient:
     return BKIAMV4BaseClient("tenant-foo", operator="someone")
+
+
+class TestCall:
+    def test_treats_204_empty_body_as_success(self, client):
+        """update_* 成功返回 204 无 body。SDK 会抛 JSONResponseError，应视为写入成功。"""
+        operation = StubOperation(make_json_response_error(204))
+
+        assert client.call(operation) == {}
+
+    def test_invalid_json_on_non_204_raises_gateway_error(self, client):
+        operation = StubOperation(make_json_response_error(200))
+
+        with pytest.raises(BKIAMGatewayServiceError, match="invalid json"):
+            client.call(operation)
+
+    def test_http_error_is_wrapped(self, client):
+        response = Mock(status_code=409, headers={})
+        operation = StubOperation(HTTPResponseError("conflict", response=response))
+
+        with pytest.raises(BKIAMApiHTTPError) as exc_info:
+            client.call(operation)
+
+        assert exc_info.value.status_code == 409
+
+    def test_apigw_error_is_wrapped(self, client):
+        operation = StubOperation(APIGatewayResponseError("gateway down"))
+
+        with pytest.raises(BKIAMGatewayServiceError, match="gateway down"):
+            client.call(operation)
 
 
 class TestPaginate:

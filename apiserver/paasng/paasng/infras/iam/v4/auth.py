@@ -16,12 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Set
 
 from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
 from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.constants import ResourceType
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 
@@ -30,6 +32,24 @@ logger = logging.getLogger(__name__)
 # V4 的鉴权对象类型。权限中心当前只支持 user，与 V3 SDK 的 Subject("user", username) 一致
 V4_SUBJECT_TYPE_USER = "user"
 
+# 策略下推当前只服务应用列表，因此只认应用资源类型。插件列表仍走 V3：插件中心有独立的
+# 客户端、且其资源实例 ID 是 `{pd_id}:{plugin_id}` 的层级结构，而下推接口只支持顶层资源类型
+V4_PUSHDOWN_RESOURCE_TYPE = ResourceType.Application
+
+# 应用在权限中心注册的资源实例 ID 即应用 code。V4 只返回 {type, ids}，没有 V3 那种
+# 「IAM 字段名」的概念，调用方传入的 key_mapping 无从对应，落库字段改由此处按资源类型固定
+V4_PUSHDOWN_ORM_FIELD = "code"
+
+# 该类型的任意资源都有权限
+V4_WILDCARD_RESOURCE_ID = "*"
+
+# 有权限的实例数超过该值时留痕。下推接口没有分页参数，ID 只能整体拼入 IN 子句，
+# 这里不截断也不改写查询方式，仅记录便于事后观察
+V4_AUTHORIZED_IDS_WARN_THRESHOLD = 2000
+
+# 畸形内容写进日志时的最大长度。响应体可能很大，不截断会把整个对象灌进单条日志
+V4_MALFORMED_REPR_LIMIT = 200
+
 
 class BKIAMV4AuthBackend(BaseAuthBackend):
     """权限中心 V4 的鉴权实现
@@ -37,7 +57,8 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
     鉴权经两个 HTTP 接口完成：`direct_auth` 判定单资源单操作，`direct_auth_by_actions`
     判定单资源多操作。后者单次上限为 20 个操作，超出由客户端基座自动分批。
 
-    策略下推见 `#4 列表策略下推 V4 实现`，申请链接见 `#7 资源回调与申请链接 V4 适配`。
+    列表场景的策略下推走 `list_authorized_resource`，见 `build_resource_filter`。
+    申请链接见 `#7 资源回调与申请链接 V4 适配`。
 
     note: 租户标识逐请求传入，因此客户端按请求创建，不在实例上缓存租户上下文
     """
@@ -103,7 +124,121 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
     def build_resource_filter(
         self, username: str, tenant_id: str, action_id: str, key_mapping: Optional[Dict[str, str]] = None
     ) -> Optional[Q]:
-        raise NotImplementedError("V4 策略下推由子需求 #4 实现")
+        """策略下推：查询用户有权限的应用实例，翻译为列表查询的过滤条件
+
+        V3 由 SDK 的 `make_filter` 把策略表达式翻译成 ORM 条件，V4 没有 SDK，改为消费
+        `list_authorized_resource` 返回的资源实例 ID 列表，翻译逻辑由本类承担。
+
+        :param key_mapping: 在 V4 下被忽略，原因见 `V4_PUSHDOWN_ORM_FIELD`
+        """
+        client = self._make_client(tenant_id)
+
+        try:
+            # 该接口按用户与操作查询，请求体不含资源实例，没有资源可依据，
+            # 系统标识只能取开发者中心自身的
+            resp = client.call(
+                client.client.list_authorized_resource,
+                path_params={"system_id": self._resolve_system_id(None)},
+                data={"subject": self._make_subject(username), "action_id": action_id},
+                for_write=False,
+            )
+        except BKIAMGatewayServiceError as e:
+            # 与 V3 的 `except AuthAPIError: return None` 对齐：拿不到策略就交回 None，由调用方
+            # 落到豁免过滤器分支。不上抛，否则列表页会从「少显应用」恶化成 500
+            logger.warning("build resource filter for action %s failed: %s", action_id, e)
+            return None
+
+        return self._to_orm_filter(self._collect_authorized_ids(resp, action_id), action_id)
+
+    @staticmethod
+    def _collect_authorized_ids(resp: Dict, action_id: str) -> List[str]:
+        """从响应中取出应用资源类型的实例 ID
+
+        结构与契约不符的部分一律跳过，不猜测其语义：这里每一次「猜」都会直接变成可见范围的
+        偏差，而少显只是体验问题、多显是越权。被跳过的内容按整次响应聚合成一条日志——契约
+        允许响应稳定携带上级资源类型条目，逐条打日志会让最高频的列表页按 QPS 刷屏。
+        """
+        data = resp.get("data") or []
+
+        # data 必须是数组。不校验就直接迭代的话，真值标量（如 True）会抛 TypeError，
+        # 字符串则会被逐字符迭代。两者都绕过 build_resource_filter 的异常收敛，
+        # 把列表页打成 500 或刷满日志
+        if not isinstance(data, list):
+            logger.warning(
+                "bkiam api list_authorized_resource returned non-list data (%s) for action %s, treated as no policy",
+                type(data).__name__,
+                action_id,
+            )
+            return []
+
+        resource_ids: List[str] = []
+        ignored_types: Set[str] = set()
+        malformed: List[str] = []
+
+        for entry in data:
+            if not isinstance(entry, dict):
+                malformed.append(repr(entry)[:V4_MALFORMED_REPR_LIMIT])
+                continue
+
+            # 响应可能带上级资源类型的条目（语义为「这些上级资源下的任意资源都有权限」）。
+            # 应用资源只有一层、不存在上级类型，出现别的类型说明权限模型或调用有偏差，
+            # 留痕后忽略而不猜测其展开语义
+            resource_type = entry.get("type")
+            if resource_type != V4_PUSHDOWN_RESOURCE_TYPE:
+                ignored_types.add(str(resource_type))
+                continue
+
+            # ids 必须是字符串数组。字符串会被 extend 逐字符展开，其中 "*" 恰好变成 ["*"]
+            # 命中通配符分支、让用户看到全部应用——那是整段实现里唯一一条会放宽可见范围的
+            # 路径。非字符串元素也要在此处拦掉，留到 ORM 编译 SQL 时才抛错就已在收敛之外了。
+            # 整条丢弃而不是逐个挑，是为了让偏差方向始终是少显
+            ids = entry.get("ids")
+            if not isinstance(ids, list) or not all(isinstance(res_id, str) for res_id in ids):
+                malformed.append(repr(ids)[:V4_MALFORMED_REPR_LIMIT])
+                continue
+
+            resource_ids.extend(ids)
+
+        if ignored_types or malformed:
+            logger.warning(
+                "bkiam api list_authorized_resource returned unusable entries for action %s, "
+                "ignored resource types: %s, malformed ids or entries: %s",
+                action_id,
+                sorted(ignored_types),
+                malformed,
+            )
+
+        return resource_ids
+
+    @staticmethod
+    def _to_orm_filter(resource_ids: List[str], action_id: str) -> Optional[Q]:
+        """把有权限的应用实例 ID 翻译为 Django 过滤条件"""
+        # 通配符表示对任意应用都有权限。这里必须返回恒真且 truthy 的条件：调用方一律以
+        # `if not filters` 判断有无策略，而空 Q() 是 falsy，会让「全部可见」塌缩成豁免窗口。
+        # 取 ~Q(pk=None) 与 V3 SDK 的 DjangoQuerySetConverter._any 保持同一形态，
+        # 落到 SQL 只是 NOT (id IS NULL)，不产生 ID 枚举条件
+        if V4_WILDCARD_RESOURCE_ID in resource_ids:
+            return ~Q(pk=None)
+
+        # 未取得可用策略。返回 None 而非恒假条件，与 V3 的 make_filter 在无策略时返回 None
+        # 一致，使调用方走同一个豁免过滤器分支
+        if not resource_ids:
+            return None
+
+        # 多个条目、或权限中心自身都可能给出重复 ID，重复项既会无谓放大 IN 子句，
+        # 也会让下面的阈值日志虚高。dict.fromkeys 保序，便于比对与复现
+        unique_ids = list(dict.fromkeys(resource_ids))
+
+        # 接口无分页参数，超长列表无法靠分页规避，只能整体拼入 IN 子句。不截断，仅留痕
+        if len(unique_ids) > V4_AUTHORIZED_IDS_WARN_THRESHOLD:
+            logger.warning(
+                "action %s has %d authorized resources, exceeding the threshold %d",
+                action_id,
+                len(unique_ids),
+                V4_AUTHORIZED_IDS_WARN_THRESHOLD,
+            )
+
+        return Q(**{f"{V4_PUSHDOWN_ORM_FIELD}__in": unique_ids})
 
     def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
         raise NotImplementedError("V4 申请链接生成由子需求 #7 实现")

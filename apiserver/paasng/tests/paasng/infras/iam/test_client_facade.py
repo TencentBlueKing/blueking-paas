@@ -18,6 +18,7 @@
 from unittest import mock
 
 import pytest
+from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
 from paasng.infras.iam.base.dto import ActionRequest, AuthResource
@@ -96,6 +97,61 @@ class TestPermissionFollowsVersion:
         ApplicationPermission().gen_develop_app_filters("user-0", "tenant-foo")
 
         assert mocked_backend.build_resource_filter.call_args.args[2] == AppAction.BASIC_DEVELOP
+
+
+class TestAppFiltersComposition:
+    """`_gen_app_filters` 如何把权限条件、租户条件与豁免窗口组合成列表查询的过滤器
+
+    断言 Q 的结构而不是编译出的 SQL：条件进不进 WHERE 是 Django 的事，我们要守的是组合
+    方式。而 SQL 文本里「出现过 tenant_id」区分不了 `权限 AND 租户` 与 `权限 OR 租户`，
+    后者会让恒真的通配符条件放通所有租户的应用。
+    """
+
+    @staticmethod
+    def _permission_branch(filters: Q) -> Q:
+        """取出 `_gen_app_filters` 产出的权限分支
+
+        它的形状是 `(权限条件 & 租户条件) | 豁免窗口`，即顶层 OR 的第一个子节点。
+        """
+        assert filters.connector == Q.OR, f"顶层应为 OR（权限分支与豁免窗口并列），实际是 {filters.connector}"
+        return filters.children[0]
+
+    def test_permission_is_anded_with_tenant(self, mocked_backend):
+        """具体实例授权时，权限条件与租户条件必须是 AND
+
+        改成 OR 会让任一条件单独成立即可见，直接造成跨租户越权。
+        """
+        mocked_backend.build_resource_filter.return_value = Q(code__in=["app-foo", "app-bar"])
+
+        branch = self._permission_branch(ApplicationPermission().gen_user_app_filters("user-0", "tenant-foo"))
+
+        assert branch.connector == Q.AND
+        assert ("code__in", ["app-foo", "app-bar"]) in branch.children
+        assert ("tenant_id", "tenant-foo") in branch.children
+
+    def test_wildcard_is_treated_as_a_policy(self, mocked_backend):
+        """通配符条件要被当成有效策略，而不是落进「未取得策略」分支
+
+        `_gen_app_filters` 用 `if not filters` 判断有无策略，所以「全部可见」必须由一个
+        truthy 的恒真条件表达；若实现改成返回空 Q()，这里会退到只剩豁免窗口。
+        """
+        mocked_backend.build_resource_filter.return_value = ~Q(pk=None)
+
+        branch = self._permission_branch(ApplicationPermission().gen_user_app_filters("user-0", "tenant-foo"))
+
+        assert ~Q(pk=None) in branch.children
+
+    def test_no_policy_falls_back_to_exempt_window_only(self, mocked_backend):
+        """未取得策略时只剩豁免窗口条件，不产出无过滤的全量查询"""
+        mocked_backend.build_resource_filter.return_value = None
+
+        filters = ApplicationPermission().gen_user_app_filters("user-0", "tenant-foo")
+
+        # 没有权限分支可并列，顶层直接就是豁免窗口本身
+        assert filters.connector == Q.AND
+        # 豁免窗口限定为「本人创建且在时间窗内」，两个条件缺一都会放宽可见范围
+        field_names = {child[0] for child in filters.children if isinstance(child, tuple)}
+        assert field_names == {"owner", "created__gt"}
 
 
 class TestGatewayIsolation:

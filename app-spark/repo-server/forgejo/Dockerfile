@@ -5,7 +5,7 @@
 # 这一份代码，而不是在 chart 里另写一遍 shell —— 初始化逻辑只有一个实现。
 #
 # 构建上下文就是本目录：
-#   docker build -t app-spark-forgejo:15.0.7 repo-server/forgejo
+#   docker build -t app-spark-forgejo:15.0.7-alpha.1 .
 FROM codeberg.org/forgejo/forgejo:15.0.7@sha256:1f9c1a9880425614267832ce437f8ae5f5b69e1f3219f38fc468fc37e48c1919
 
 # Alpine 把发行版 Python 标成 externally-managed，pip 装 uv 需要显式放行。

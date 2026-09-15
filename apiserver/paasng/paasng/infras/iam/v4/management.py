@@ -15,13 +15,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List, Optional
+import logging
+from http import HTTPStatus
+from typing import Dict, Iterable, List, Sequence
 
+from paasng.infras.iam import utils
 from paasng.infras.iam.base.backends import BaseManagementBackend
 from paasng.infras.iam.base.dto import UserGroup
-from paasng.infras.iam.exceptions import BKIAMCapabilityNotSupportedError
+from paasng.infras.iam.exceptions import (
+    BKIAMApiError,
+    BKIAMApiHTTPError,
+    BKIAMCapabilityNotSupportedError,
+)
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
+from paasng.infras.iam.v4.spaces import (
+    build_log_permission_scope,
+    build_monitor_permission_scope,
+    build_paas_permission_scope,
+    build_subject_scope,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
@@ -33,39 +49,77 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
 
     # ---------------- 管理空间 ----------------
 
-    def create_management_space(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
-        raise NotImplementedError("V4 管理空间创建由子需求 #5 实现")
+    def create_management_space(
+        self,
+        app_code: str,
+        app_name: str,
+        init_member: str | None = None,
+        bk_space_id: str | None = None,
+    ) -> int:
+        """创建应用管理空间，写入 paas/监控/日志 权限范围"""
+        system_id = get_paas_system_id()
+        permission_scope = build_paas_permission_scope(app_code, system_id)
+        if bk_space_id:
+            permission_scope.extend(self._build_observability_permission_scope(bk_space_id))
+
+        return self._create_space(
+            system_id=system_id,
+            name=utils.gen_grade_manager_name(app_code),
+            description=utils.gen_grade_manager_desc(app_code),
+            init_member=init_member,
+            permission_scope=permission_scope,
+            reuse_on_conflict=lambda: self.fetch_management_space(app_code),
+        )
 
     def fetch_management_space(self, app_code: str) -> int:
-        raise NotImplementedError("V4 管理空间查询由子需求 #5 实现")
+        """按名称查询应用管理空间 ID"""
+        return self._fetch_space_id(get_paas_system_id(), utils.gen_grade_manager_name(app_code), app_code)
+
+    def list_management_spaces(self, system_id: str | None = None) -> List[Dict]:
+        """查询指定系统下的全部管理空间，超出单页上限 100 时自动翻页"""
+        return list(self._iter_spaces(system_id or get_paas_system_id()))
 
     def delete_management_space(self, space_id: int):
-        raise NotImplementedError("V4 管理空间删除由子需求 #5 实现")
+        """删除管理空间
+
+        TODO: 待 IAM 补齐删除管理空间接口后在此接入（V3 对应 `v2_management_delete_grade_manager`）。
+            受影响：应用删除、强制删除、平台管理下架时 IAM 侧空间不回收，会累积脏数据。
+        """
+        raise BKIAMCapabilityNotSupportedError("删除管理空间")
 
     def fetch_management_space_members(self, space_id: int) -> List[str]:
-        raise NotImplementedError("V4 管理空间成员查询由子需求 #5 实现")
+        """查询管理空间管理员，对应 V3 的分级管理员成员列表"""
+        return self._retrieve_space_managers(get_paas_system_id(), space_id)
 
-    def add_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
-        raise NotImplementedError("V4 管理空间成员添加由子需求 #5 实现")
+    def add_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
+        """向管理空间添加管理员
 
-    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
-        raise NotImplementedError("V4 管理空间成员删除由子需求 #5 实现")
+        TODO: 待 IAM 补齐空间成员增删接口后在此接入。当前 `managers` 仅能在创建空间时指定。
+            受影响：后续把用户提升为应用管理员时，无法同步为空间管理员。
+        """
+        raise BKIAMCapabilityNotSupportedError("添加管理空间成员")
+
+    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
+        """删除管理空间管理员
+
+        TODO: 待 IAM 补齐空间成员增删接口后在此接入。
+            受影响：移除应用管理员后对方仍保留空间管理员身份，可继续审批授权。
+        """
+        raise BKIAMCapabilityNotSupportedError("删除管理空间成员")
 
     def update_management_space_scopes(
-        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: Optional[str] = None
+        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: str | None = None
     ):
         """为管理空间追加监控、日志空间的授权范围
 
-        V4 尚未提供管理空间的更新接口（V3 对应 `management_grade_managers_update`）。
-        受影响的业务场景：V3 下应用创建后再申请监控/日志空间时，需要回头给分级管理员补授权范围。
-        V4 的做法是在创建管理空间时一次性写齐监控与日志的授权范围（见 `#5`），
-        因此正常链路不会走到这里；仅当出现空间创建后才需要变更授权范围的场景时才会触发。
-        待权限中心补齐更新接口后，在此处接入即可。
+        V4 不需要该能力：管理空间均为新建，创建时已一次性写齐 bk_paas3、
+        bk_monitorv3、bk_log_search 三个系统的权限范围（见 `create_management_space`），
+        不存在 V3 那种「事后给存量分级管理员补授权范围」的场景。
+        V3 对应接口为 `management_grade_managers_update`。
+        仅当出现空间创建后才需要变更授权范围的新场景时才会走到这里；
+        待权限中心补齐更新接口后再评估是否接入。不实现绕行方案。
         """
-        raise BKIAMCapabilityNotSupportedError(
-            "更新管理空间的授权范围",
-            "V4 应在创建管理空间时一次性写齐监控、日志的授权范围",
-        )
+        raise BKIAMCapabilityNotSupportedError("更新管理空间的授权范围")
 
     # ---------------- 用户组与成员 ----------------
 
@@ -80,11 +134,11 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         raise NotImplementedError("V4 用户组成员查询由子需求 #6 实现")
 
     def add_user_group_members(
-        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: Optional[str] = None
+        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: str | None = None
     ):
         raise NotImplementedError("V4 用户组成员添加由子需求 #6 实现")
 
-    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: Optional[str] = None):
+    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: str | None = None):
         raise NotImplementedError("V4 用户组成员删除由子需求 #6 实现")
 
     # ---------------- 授权 ----------------
@@ -100,3 +154,75 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
 
     def grant_user_group_policies_in_bk_log(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):
         raise NotImplementedError("V4 日志平台空间授权由子需求 #6 实现")
+
+    # ---------------- 内部方法 ----------------
+
+    def _create_space(
+        self,
+        system_id: str,
+        name: str,
+        description: str,
+        init_member: str | None,
+        permission_scope: Sequence[Dict],
+        reuse_on_conflict,
+    ) -> int:
+        data = {
+            "name": name,
+            "description": description,
+            "managers": self._resolve_managers(init_member),
+            "permission_scope": list(permission_scope),
+            "subject_scope": build_subject_scope(),
+        }
+        try:
+            resp = self.call(
+                self.client.create_space,
+                path_params={"system_id": system_id},
+                data=data,
+                for_write=True,
+            )
+        except BKIAMApiHTTPError as exc:
+            if exc.status_code == HTTPStatus.CONFLICT:
+                return reuse_on_conflict()
+            raise
+        except BKIAMApiError:
+            # 配额超限等业务错误已由 BKIAMApiError 转成可读信息，不重试
+            raise
+
+        space_id = (resp.get("data") or {}).get("id")
+        if space_id is None:
+            raise BKIAMApiError(f"create management space got unexpected response: {resp!r}")
+        return int(space_id)
+
+    def _build_observability_permission_scope(self, bk_space_id: str) -> List[Dict]:
+        """写入监控 / 日志空间的业务运维角色，不实时拉取远端角色列表"""
+        return [
+            *build_monitor_permission_scope(bk_space_id),
+            *build_log_permission_scope(bk_space_id),
+        ]
+
+    def _iter_spaces(self, system_id: str) -> Iterable[Dict]:
+        return self.paginate(self.client.list_space, path_params={"system_id": system_id})
+
+    def _fetch_space_id(self, system_id: str, space_name: str, resource_id: str) -> int:
+        """按名称查询管理空间 ID
+
+        TODO: 目前 IAM V4 不支持按名称查询，所以是遍历后匹配。 待权限中心支持后修改这里的实现。
+        """
+
+        for space in self._iter_spaces(system_id):
+            if space.get("name") == space_name:
+                return int(space["id"])
+        raise BKIAMApiError(f"failed to find management space [{resource_id}]")
+
+    def _retrieve_space_managers(self, system_id: str, space_id: int) -> List[str]:
+        resp = self.call(
+            self.client.retrieve_space,
+            path_params={"system_id": system_id, "space_id": space_id},
+        )
+        return list((resp.get("data") or {}).get("managers") or [])
+
+    def _resolve_managers(self, init_member: str | None) -> List[str]:
+        """V4 要求 managers 不能为空；无初始管理员时回退到本次写操作的操作人"""
+        if init_member:
+            return [init_member]
+        return [self.operator]

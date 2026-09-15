@@ -39,7 +39,13 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
 
     # ---------------- 管理空间（V3 语义为分级管理员） ----------------
 
-    def create_management_space(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
+    def create_management_space(
+        self,
+        app_code: str,
+        app_name: str,
+        init_member: Optional[str] = None,
+        bk_space_id: Optional[str] = None,
+    ) -> int:
         return self._client.create_grade_managers(app_code, app_name, init_member)
 
     def fetch_management_space(self, app_code: str) -> int:

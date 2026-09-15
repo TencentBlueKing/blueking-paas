@@ -402,6 +402,7 @@ def _mock_iam():
 
     with (
         mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient),
+        mock.patch("paasng.infras.iam.v3.management.BKIAMClient", new=StubBKIAMClient),
         mock.patch(
             "paasng.infras.iam.helpers.BKIAMClient",
             new=StubBKIAMClient,

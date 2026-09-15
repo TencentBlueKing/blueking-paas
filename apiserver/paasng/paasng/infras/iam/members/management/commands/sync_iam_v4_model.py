@@ -21,7 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.iam.exceptions import InvalidIAMIdentifierError
-from paasng.infras.iam.v4.definitions import iter_system_definitions
+from paasng.infras.iam.v4.definitions import build_paas_system_definition
 from paasng.infras.iam.v4.registry import AggregatedSyncResult, ModelSyncResult, SyncItem, sync_iam_v4_models
 
 
@@ -31,19 +31,28 @@ class Command(BaseCommand):
     使用示例：
     python manage.py sync_iam_v4_model
     python manage.py sync_iam_v4_model --dry-run
+    python manage.py sync_iam_v4_model --prune
+    python manage.py sync_iam_v4_model --prune --dry-run
 
     请求头中的租户标识与 V3 模型 migration 一致，由 get_init_tenant_id() 决定：
     多租户为 system，非多租户为 default。模型注册是平台级初始化，不按业务租户拆分。
     """
 
-    help = "将开发者中心的权限模型同步到 IAM V4（只新增/更新，多余项告警）"
+    help = "将开发者中心的权限模型同步到 IAM V4（默认只新增/更新；--prune 删除多余项）"
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true", help="只输出将要执行的差异，不写入 V4")
+        parser.add_argument(
+            "--prune",
+            action="store_true",
+            help="删除 V4 侧本地已无的多余模型。存量授权会挡住删除。",
+        )
 
-    def handle(self, dry_run: bool, *args, **options):
+    def handle(self, dry_run: bool, prune: bool, *args, **options):
         try:
-            result = sync_iam_v4_models(iter_system_definitions(), tenant_id=get_init_tenant_id(), dry_run=dry_run)
+            result = sync_iam_v4_models(
+                [build_paas_system_definition()], tenant_id=get_init_tenant_id(), dry_run=dry_run, prune=prune
+            )
         except InvalidIAMIdentifierError as exc:
             self.stderr.write(self.style.ERROR("标识符不满足 IAM V4 命名约束，未向 V4 提交任何请求："))
             for identifier in exc.identifiers:
@@ -54,7 +63,7 @@ class Command(BaseCommand):
         if result.has_failures:
             raise CommandError(
                 f"模型同步存在失败项: 新增={result.created_count} 更新={result.updated_count} "
-                f"告警={result.warning_count} 失败={result.failure_count}"
+                f"删除={result.deleted_count} 告警={result.warning_count} 失败={result.failure_count}"
             )
 
     def _print_result(self, aggregated: AggregatedSyncResult, dry_run: bool):
@@ -66,7 +75,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.NOTICE(
                 f"{prefix}合计: 新增={counts['created']} 更新={counts['updated']} "
-                f"告警={counts['warnings']} 失败={counts['failures']}"
+                f"删除={counts['deleted']} 告警={counts['warnings']} 失败={counts['failures']}"
             )
         )
 
@@ -74,10 +83,11 @@ class Command(BaseCommand):
         counts = result.counts()
         self.stdout.write(
             f"{prefix}系统 {result.system_id}: 新增={counts['created']} 更新={counts['updated']} "
-            f"告警={counts['warnings']} 失败={counts['failures']}"
+            f"删除={counts['deleted']} 告警={counts['warnings']} 失败={counts['failures']}"
         )
         self._print_items("+", result.created)
         self._print_items("*", result.updated)
+        self._print_items("-", result.deleted)
         self._print_items("!", result.warnings, style=self.style.WARNING)
         self._print_items("x", result.failures, style=self.style.ERROR, with_request_id=True)
 

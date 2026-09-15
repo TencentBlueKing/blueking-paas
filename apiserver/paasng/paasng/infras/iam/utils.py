@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import time
-from typing import List
+from typing import Dict, List, Union
 
 from django.conf import settings
 from django.utils.translation import gettext as _
@@ -24,6 +24,13 @@ from django.utils.translation import gettext as _
 from paasng.infras.iam import constants
 from paasng.infras.iam.permissions.resources.application import AppAction, AppRole
 from paasng.platform.applications.constants import ApplicationRole
+
+# 平台数值角色 → IAM 字符串角色。不用枚举名隐式对齐，避免改名后静默返回空权限
+APPLICATION_ROLE_TO_APP_ROLE: Dict[ApplicationRole, AppRole] = {
+    ApplicationRole.ADMINISTRATOR: AppRole.ADMINISTRATOR,
+    ApplicationRole.DEVELOPER: AppRole.DEVELOPER,
+    ApplicationRole.OPERATOR: AppRole.OPERATOR,
+}
 
 
 def gen_grade_manager_name(app_code: str) -> str:
@@ -91,12 +98,17 @@ def calc_expired_at(expire_after_days: int) -> int:
     return int(time.time()) + expire_after_days * constants.ONE_DAY_SECONDS
 
 
-def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
-    """根据角色类型，获取他们拥有的 APP 权限。NOBODY / COLLABORATOR 没有对应的 IAM 角色"""
-    if role.name not in AppRole.__members__:
+def get_app_actions_by_role(role: Union[ApplicationRole, int]) -> List[AppAction]:
+    """根据角色类型，获取他们拥有的 APP 权限。NOBODY / COLLABORATOR 没有对应的 IAM 角色
+
+    `ApplicationUserGroup.role` 是 IntegerField，从库中取出是裸 int，须先规范化。
+    """
+    role = ApplicationRole(role)
+    app_role = APPLICATION_ROLE_TO_APP_ROLE.get(role)
+    if app_role is None:
         return []
 
-    return list(AppRole.get_actions(AppRole[role.name]))
+    return list(AppRole.get_actions(app_role))
 
 
 def get_paas_authorization_scopes(app_code: str, app_name: str, role: ApplicationRole) -> dict:

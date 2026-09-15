@@ -57,6 +57,12 @@ class Group(OperationGroup):
         method="PUT",
         path="/api/v1/open/rbac/model/systems/{system_id}/resource-types/{resource_type_id}/",
     )
+    delete_resource_type = bind_property(
+        Operation,
+        name="delete_resource_type",
+        method="DELETE",
+        path="/api/v1/open/rbac/model/systems/{system_id}/resource-types/{resource_type_id}/",
+    )
 
     # ---------------- 模型注册：操作 ----------------
     list_action = bind_property(
@@ -74,6 +80,12 @@ class Group(OperationGroup):
         method="PUT",
         path="/api/v1/open/rbac/model/systems/{system_id}/actions/{action_id}/",
     )
+    delete_action = bind_property(
+        Operation,
+        name="delete_action",
+        method="DELETE",
+        path="/api/v1/open/rbac/model/systems/{system_id}/actions/{action_id}/",
+    )
 
     # ---------------- 模型注册：角色 ----------------
     list_role = bind_property(
@@ -88,10 +100,22 @@ class Group(OperationGroup):
         method="PUT",
         path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/",
     )
+    delete_role = bind_property(
+        Operation,
+        name="delete_role",
+        method="DELETE",
+        path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/",
+    )
     batch_create_role_action = bind_property(
         Operation,
         name="batch_create_role_action",
         method="POST",
+        path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/actions/",
+    )
+    batch_delete_role_action = bind_property(
+        Operation,
+        name="batch_delete_role_action",
+        method="DELETE",
         path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/actions/",
     )
 

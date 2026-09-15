@@ -83,6 +83,7 @@ class FakeIAM:
         roles: Optional[List[Dict]] = None,
         system_missing: bool = False,
         fail_create_action_ids: Optional[List[str]] = None,
+        fail_delete_ids: Optional[List[str]] = None,
         fail_list: bool = False,
     ):
         self.system = system
@@ -91,6 +92,7 @@ class FakeIAM:
         self.roles = roles or []
         self.system_missing = system_missing
         self.fail_create_action_ids = set(fail_create_action_ids or [])
+        self.fail_delete_ids = set(fail_delete_ids or [])
         self.fail_list = fail_list
         self.writes: List[Dict] = []
 
@@ -111,16 +113,36 @@ class FakeIAM:
             "update_system",
             "batch_create_resource_type",
             "update_resource_type",
+            "delete_resource_type",
             "batch_create_action",
             "update_action",
+            "delete_action",
             "batch_create_role",
             "update_role",
+            "delete_role",
             "batch_create_role_action",
+            "batch_delete_role_action",
         }:
+            deleted_id = self._deleted_identifier(name, kwargs)
+            if deleted_id and deleted_id in self.fail_delete_ids:
+                raise BKIAMApiError("delete blocked", request_id="req-del-fail")
             self.writes.append({"name": name, **kwargs})
             return {"data": {}, "request_id": "req-ok"}
 
         raise AssertionError(f"unexpected call: {name}")
+
+    @staticmethod
+    def _deleted_identifier(name: str, kwargs: Dict) -> Optional[str]:
+        path_params = kwargs.get("path_params") or {}
+        if name == "delete_action":
+            return path_params.get("action_id")
+        if name == "delete_role":
+            return path_params.get("role_id")
+        if name == "delete_resource_type":
+            return path_params.get("resource_type_id")
+        if name == "batch_delete_role_action":
+            return (kwargs.get("params") or {}).get("ids")
+        return None
 
     def paginate(self, operation, **kwargs):
         if self.fail_list:
@@ -161,7 +183,7 @@ class TestIdempotentSync:
             ("action", "edit_basic_info"),
             ("role", "app_administrator"),
         }
-        assert result.counts() == {"created": 5, "updated": 0, "warnings": 0, "failures": 0}
+        assert result.counts() == {"created": 5, "updated": 0, "deleted": 0, "warnings": 0, "failures": 0}
         assert {item["name"] for item in fake.writes} == {
             "create_system",
             "batch_create_resource_type",
@@ -179,7 +201,7 @@ class TestIdempotentSync:
 
         result = backend.sync_definition(definition)
 
-        assert result.counts() == {"created": 0, "updated": 0, "warnings": 0, "failures": 0}
+        assert result.counts() == {"created": 0, "updated": 0, "deleted": 0, "warnings": 0, "failures": 0}
         assert fake.writes == []
 
     def test_creates_only_new_action(self, backend):
@@ -214,6 +236,72 @@ class TestIdempotentSync:
         assert [(item.kind, item.identifier) for item in result.warnings] == [("action", "obsolete_action")]
         assert "未执行删除" in result.warnings[0].detail
         assert all(item["name"] != "delete_action" for item in fake.writes)
+        assert fake.writes == []
+        assert result.deleted == []
+
+    def test_prune_deletes_extras_in_constraint_order(self, backend):
+        """prune 按解绑角色操作 → 删角色 → 删操作 → 删资源类型的顺序清理多余项"""
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["types"].append({"id": "obsolete_type", "name": "废弃类型"})
+        remote["actions"].append({"id": "obsolete_action", "name": "已废弃", "resource_type_id": "application"})
+        remote["roles"][0]["actions"].append({"id": "obsolete_action", "resource_type_id": "application"})
+        remote["roles"].append({"id": "obsolete_role", "name": "废弃角色", "description": "", "actions": []})
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition, prune=True)
+
+        assert [(item.kind, item.identifier) for item in result.deleted] == [
+            ("role_action", "app_administrator:obsolete_action"),
+            ("role", "obsolete_role"),
+            ("action", "obsolete_action"),
+            ("resource_type", "obsolete_type"),
+        ]
+        assert result.warnings == []
+        assert [item["name"] for item in fake.writes] == [
+            "batch_delete_role_action",
+            "delete_role",
+            "delete_action",
+            "delete_resource_type",
+        ]
+
+    def test_prune_records_failure_and_continues(self, backend):
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["actions"].append({"id": "obsolete_action", "name": "已废弃", "resource_type_id": "application"})
+        remote["roles"].append({"id": "obsolete_role", "name": "废弃角色", "description": "", "actions": []})
+        fake = FakeIAM(
+            system=remote["system"],
+            types=remote["types"],
+            actions=remote["actions"],
+            roles=remote["roles"],
+            fail_delete_ids=["obsolete_role"],
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition, prune=True)
+
+        assert [(item.kind, item.identifier) for item in result.failures] == [("role", "obsolete_role")]
+        assert result.failures[0].request_id == "req-del-fail"
+        assert [(item.kind, item.identifier) for item in result.deleted] == [("action", "obsolete_action")]
+        assert [item["name"] for item in fake.writes] == ["delete_action"]
+
+    def test_prune_dry_run_does_not_write(self, backend):
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["actions"].append({"id": "obsolete_action", "name": "已废弃", "resource_type_id": "application"})
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition, dry_run=True, prune=True)
+
+        assert [(item.kind, item.identifier) for item in result.deleted] == [("action", "obsolete_action")]
+        assert result.warnings == []
         assert fake.writes == []
 
     def test_continues_after_single_action_failure(self, backend):
@@ -309,3 +397,69 @@ class TestIdempotentSync:
 
         assert [(item.kind, item.identifier) for item in result.updated] == [("action", "view_basic_info")]
         assert fake.writes[0]["name"] == "update_action"
+
+    def test_fails_when_action_resource_type_id_drifts(self, backend):
+        """resource_type_id 创建后不可变，同 ID 同名但授权维度不一致时不得当成功、不得走 update"""
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["actions"][0]["resource_type_id"] = "wrong_type"
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition)
+
+        assert [(item.kind, item.identifier) for item in result.failures] == [("action", "view_basic_info")]
+        assert "resource_type_id" in result.failures[0].detail
+        assert "wrong_type" in result.failures[0].detail
+        assert result.updated == []
+        assert fake.writes == []
+
+    def test_updates_changed_role_meta(self, backend):
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["roles"][0]["name"] = "旧角色名"
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition)
+
+        assert [(item.kind, item.identifier) for item in result.updated] == [("role", "app_administrator")]
+        assert [item["name"] for item in fake.writes] == ["update_role"]
+        assert fake.writes[0]["data"]["name"] == "应用管理员"
+
+    def test_adds_missing_role_actions(self, backend):
+        """角色元信息一致但缺操作时，补齐操作并记一条 updated"""
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["roles"][0]["actions"] = []
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition)
+
+        assert [(item.kind, item.identifier) for item in result.updated] == [("role", "app_administrator")]
+        assert result.updated[0].detail == "补充角色操作: view_basic_info"
+        assert [item["name"] for item in fake.writes] == ["batch_create_role_action"]
+        assert fake.writes[0]["data"] == [{"id": "view_basic_info", "resource_type_id": "application"}]
+
+    def test_role_meta_and_actions_change_recorded_once(self, backend):
+        """元信息与操作同时变更时发两次写，但同一角色只记一条 updated"""
+        definition = sample_definition()
+        remote = matching_remote(definition)
+        remote["roles"][0]["name"] = "旧角色名"
+        remote["roles"][0]["actions"] = []
+        fake = FakeIAM(
+            system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
+        )
+        bind_fake(backend, fake)
+
+        result = backend.sync_definition(definition)
+
+        assert [(item.kind, item.identifier) for item in result.updated] == [("role", "app_administrator")]
+        assert [item["name"] for item in fake.writes] == ["update_role", "batch_create_role_action"]

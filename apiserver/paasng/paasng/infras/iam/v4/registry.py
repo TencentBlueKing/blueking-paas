@@ -17,12 +17,13 @@
 
 """权限中心 V4 的模型注册与幂等同步
 
-查询 V4 现有模型、与本地定义比对，按差异执行新增与更新；多余项只告警不删除。
+查询 V4 现有模型、与本地定义比对，按差异执行新增与更新。
+多余项默认只告警不删除；显式 prune 时按约束顺序尝试删除。
 单个条目失败时记录后继续处理其余条目。
 """
 
 import logging
-from typing import Callable, Dict, Iterable, List, Optional, Sequence
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from attrs import define, field
 
@@ -32,7 +33,7 @@ from paasng.infras.iam.v4.definitions import (
     ActionDefinition,
     ResourceTypeDefinition,
     SystemDefinition,
-    iter_system_definitions,
+    build_paas_system_definition,
     validate_identifiers,
 )
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
@@ -58,6 +59,7 @@ class ModelSyncResult:
     system_id: str
     created: List[SyncItem] = field(factory=list)
     updated: List[SyncItem] = field(factory=list)
+    deleted: List[SyncItem] = field(factory=list)
     warnings: List[SyncItem] = field(factory=list)
     failures: List[SyncItem] = field(factory=list)
 
@@ -69,6 +71,7 @@ class ModelSyncResult:
         return {
             "created": len(self.created),
             "updated": len(self.updated),
+            "deleted": len(self.deleted),
             "warnings": len(self.warnings),
             "failures": len(self.failures),
         }
@@ -89,6 +92,10 @@ class AggregatedSyncResult:
         return sum(len(item.updated) for item in self.results)
 
     @property
+    def deleted_count(self) -> int:
+        return sum(len(item.deleted) for item in self.results)
+
+    @property
     def warning_count(self) -> int:
         return sum(len(item.warnings) for item in self.results)
 
@@ -104,6 +111,7 @@ class AggregatedSyncResult:
         return {
             "created": self.created_count,
             "updated": self.updated_count,
+            "deleted": self.deleted_count,
             "warnings": self.warning_count,
             "failures": self.failure_count,
         }
@@ -113,23 +121,22 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
     """权限中心 V4 的模型注册实现
 
     V3 经 SDK 的 migration JSON 模板以 upsert 语义注册模型，V4 改为标准 REST 接口，
-    由本实现自行保证幂等（先查后建、已存在则更新，多余项只告警）。
+    由本实现自行保证幂等（先查后建、已存在则更新；多余项默认只告警，prune 时再删）。
     """
 
     def sync_definitions(
-        self, definitions: Sequence[SystemDefinition], *, dry_run: bool = False
+        self, definitions: Sequence[SystemDefinition], *, dry_run: bool = False, prune: bool = False
     ) -> AggregatedSyncResult:
-        """同步给定系统的完整模型。标识符校验在任何写操作之前执行。
-
-        运维命令目前只传入 bk_paas3。
-        """
+        """同步给定系统的完整模型。标识符校验在任何写操作之前执行。"""
         validate_identifiers(definitions)
         aggregated = AggregatedSyncResult()
         for definition in definitions:
-            aggregated.results.append(self.sync_definition(definition, dry_run=dry_run))
+            aggregated.results.append(self.sync_definition(definition, dry_run=dry_run, prune=prune))
         return aggregated
 
-    def sync_definition(self, definition: SystemDefinition, *, dry_run: bool = False) -> ModelSyncResult:
+    def sync_definition(
+        self, definition: SystemDefinition, *, dry_run: bool = False, prune: bool = False
+    ) -> ModelSyncResult:
         result = ModelSyncResult(system_id=definition.id)
         remote_system = self._retrieve_system(definition.id, result)
         if remote_system is None and self._has_kind_failure(result, "system"):
@@ -148,52 +155,79 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
         else:
             remote_types, remote_actions, remote_roles = {}, {}, {}
 
+        extra_types: List[str] = []
+        extra_actions: List[str] = []
+        extra_role_actions: List[Tuple[str, str]] = []
+        extra_roles: List[str] = []
+
         if remote_types is not None:
-            self._sync_resource_types(definition, remote_types, result, dry_run)
+            extra_types = self._sync_resource_types(definition, remote_types, result, dry_run)
         if remote_actions is not None:
-            self._sync_actions(definition, remote_actions, result, dry_run)
+            extra_actions = self._sync_actions(definition, remote_actions, result, dry_run)
         if remote_roles is not None:
-            self._sync_roles(definition, remote_roles, result, dry_run)
+            extra_role_actions, extra_roles = self._sync_roles(definition, remote_roles, result, dry_run)
+
+        # 删除须按约束顺序：先解绑角色操作，再删角色，再删操作，最后删资源类型
+        self._sync_extras(
+            definition,
+            result,
+            dry_run=dry_run,
+            prune=prune,
+            extra_role_actions=extra_role_actions,
+            extra_roles=extra_roles,
+            extra_actions=extra_actions,
+            extra_types=extra_types,
+        )
         return result
 
     def sync_system(self):
-        for definition in iter_system_definitions():
-            result = ModelSyncResult(system_id=definition.id)
-            remote = self._retrieve_system(definition.id, result)
-            if remote is None and self._has_kind_failure(result, "system"):
-                self._raise_if_failed(result)
-            self._sync_system(definition, remote, result, dry_run=False)
+        definition = build_paas_system_definition()
+        result = ModelSyncResult(system_id=definition.id)
+        remote = self._retrieve_system(definition.id, result)
+        if remote is None and self._has_kind_failure(result, "system"):
             self._raise_if_failed(result)
+        self._sync_system(definition, remote, result, dry_run=False)
+        self._raise_if_failed(result)
 
     def sync_resource_types(self):
-        for definition in iter_system_definitions():
-            result = ModelSyncResult(system_id=definition.id)
-            remote = self._list_by_id(self.client.list_resource_type, definition.id, result, "resource_type")
-            if remote is None:
-                self._raise_if_failed(result)
-                continue
-            self._sync_resource_types(definition, remote, result, dry_run=False)
+        definition = build_paas_system_definition()
+        result = ModelSyncResult(system_id=definition.id)
+        remote = self._list_by_id(self.client.list_resource_type, definition.id, result, "resource_type")
+        if remote is None:
             self._raise_if_failed(result)
+            return
+        extra_types = self._sync_resource_types(definition, remote, result, dry_run=False)
+        self._sync_extras(definition, result, dry_run=False, prune=False, extra_types=extra_types)
+        self._raise_if_failed(result)
 
     def sync_actions(self):
-        for definition in iter_system_definitions():
-            result = ModelSyncResult(system_id=definition.id)
-            remote = self._list_by_id(self.client.list_action, definition.id, result, "action")
-            if remote is None:
-                self._raise_if_failed(result)
-                continue
-            self._sync_actions(definition, remote, result, dry_run=False)
+        definition = build_paas_system_definition()
+        result = ModelSyncResult(system_id=definition.id)
+        remote = self._list_by_id(self.client.list_action, definition.id, result, "action")
+        if remote is None:
             self._raise_if_failed(result)
+            return
+        extra_actions = self._sync_actions(definition, remote, result, dry_run=False)
+        self._sync_extras(definition, result, dry_run=False, prune=False, extra_actions=extra_actions)
+        self._raise_if_failed(result)
 
     def sync_roles(self):
-        for definition in iter_system_definitions():
-            result = ModelSyncResult(system_id=definition.id)
-            remote = self._list_by_id(self.client.list_role, definition.id, result, "role")
-            if remote is None:
-                self._raise_if_failed(result)
-                continue
-            self._sync_roles(definition, remote, result, dry_run=False)
+        definition = build_paas_system_definition()
+        result = ModelSyncResult(system_id=definition.id)
+        remote = self._list_by_id(self.client.list_role, definition.id, result, "role")
+        if remote is None:
             self._raise_if_failed(result)
+            return
+        extra_role_actions, extra_roles = self._sync_roles(definition, remote, result, dry_run=False)
+        self._sync_extras(
+            definition,
+            result,
+            dry_run=False,
+            prune=False,
+            extra_role_actions=extra_role_actions,
+            extra_roles=extra_roles,
+        )
+        self._raise_if_failed(result)
 
     # ---------------- 各类模型同步 ----------------
 
@@ -232,8 +266,8 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
     def _sync_resource_types(
         self, definition: SystemDefinition, remote_map: Dict[str, Dict], result: ModelSyncResult, dry_run: bool
-    ):
-        self._sync_named_items(
+    ) -> List[str]:
+        return self._sync_named_items(
             definition=definition,
             locals_=definition.resource_types,
             remote_map=remote_map,
@@ -247,8 +281,8 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
     def _sync_actions(
         self, definition: SystemDefinition, remote_map: Dict[str, Dict], result: ModelSyncResult, dry_run: bool
-    ):
-        self._sync_named_items(
+    ) -> List[str]:
+        return self._sync_named_items(
             definition=definition,
             locals_=definition.actions,
             remote_map=remote_map,
@@ -262,7 +296,8 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
     def _sync_roles(
         self, definition: SystemDefinition, remote_map: Dict[str, Dict], result: ModelSyncResult, dry_run: bool
-    ):
+    ) -> Tuple[List[Tuple[str, str]], List[str]]:
+        extra_role_actions: List[Tuple[str, str]] = []
         local_ids = {role.id for role in definition.roles}
         for role in definition.roles:
             remote = remote_map.get(role.id)
@@ -283,7 +318,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
                 action for action in role.actions if action.identity() not in role.remote_action_ids(remote)
             ]
             if changed:
-                updated = self._try_write(
+                self._try_write(
                     result,
                     kind="role",
                     identifier=role.id,
@@ -292,11 +327,9 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
                     dry_run=dry_run,
                     write_fn=self._update_role_writer(definition.id, role.id, role.to_update_payload()),
                 )
-                if not updated:
-                    continue
 
             if missing_actions:
-                added = self._try_write(
+                self._try_write(
                     result,
                     kind="role",
                     identifier=role.id,
@@ -308,27 +341,11 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
                     ),
                     detail="补充角色操作: " + ",".join(action.id for action in missing_actions),
                 )
-                if added is False:
-                    continue
 
             extra_actions = role.remote_action_ids(remote) - role.local_action_ids()
-            for action_id, _resource_type_id in sorted(extra_actions):
-                self._warn(
-                    result,
-                    kind="role_action",
-                    identifier=f"{role.id}:{action_id}",
-                    system_id=definition.id,
-                    detail="V4 侧角色存在本地已无的操作，未执行删除",
-                )
+            extra_role_actions.extend((role.id, action_id) for action_id, _ in sorted(extra_actions))
 
-        for extra_id in sorted(set(remote_map) - local_ids):
-            self._warn(
-                result,
-                kind="role",
-                identifier=extra_id,
-                system_id=definition.id,
-                detail="V4 侧存在本地已无的角色，未执行删除",
-            )
+        return extra_role_actions, sorted(set(remote_map) - local_ids)
 
     def _sync_named_items(
         self,
@@ -342,7 +359,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
         create_op,
         update_op,
         update_path_key: str,
-    ):
+    ) -> List[str]:
         local_ids = {item.id for item in locals_}
         for item in locals_:
             remote = remote_map.get(item.id)
@@ -355,6 +372,20 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
                     bucket="created",
                     dry_run=dry_run,
                     write_fn=self._batch_create_writer(create_op, definition.id, item.to_create_payload()),
+                )
+                continue
+
+            if isinstance(item, ActionDefinition) and item.has_immutable_mismatch(remote):
+                remote_type = remote.get("resource_type_id") or ""
+                self._fail(
+                    result,
+                    kind=kind,
+                    identifier=item.id,
+                    system_id=definition.id,
+                    detail=(
+                        f"V4 侧操作的 resource_type_id={remote_type!r} 与本地 {item.resource_type_id!r} "
+                        "不一致，且创建后不可变，需删除后重建"
+                    ),
                 )
                 continue
 
@@ -371,15 +402,92 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
                     ),
                 )
 
-        extra_label = {"resource_type": "资源类型", "action": "操作"}.get(kind, kind)
-        for extra_id in sorted(set(remote_map) - local_ids):
-            self._warn(
+        return sorted(set(remote_map) - local_ids)
+
+    def _sync_extras(
+        self,
+        definition: SystemDefinition,
+        result: ModelSyncResult,
+        *,
+        dry_run: bool,
+        prune: bool,
+        extra_role_actions: Optional[List[Tuple[str, str]]] = None,
+        extra_roles: Optional[List[str]] = None,
+        extra_actions: Optional[List[str]] = None,
+        extra_types: Optional[List[str]] = None,
+    ):
+        """处理 V4 侧本地已无的多余项。默认告警；prune 时按约束顺序删除。"""
+        for role_id, action_id in extra_role_actions or []:
+            self._reconcile_extra(
                 result,
-                kind=kind,
+                kind="role_action",
+                identifier=f"{role_id}:{action_id}",
+                system_id=definition.id,
+                dry_run=dry_run,
+                prune=prune,
+                warn_detail="V4 侧角色存在本地已无的操作，未执行删除",
+                write_fn=self._delete_role_actions_writer(definition.id, role_id, [action_id]),
+            )
+        for extra_id in extra_roles or []:
+            self._reconcile_extra(
+                result,
+                kind="role",
                 identifier=extra_id,
                 system_id=definition.id,
-                detail=f"V4 侧存在本地已无的{extra_label}，未执行删除",
+                dry_run=dry_run,
+                prune=prune,
+                warn_detail="V4 侧存在本地已无的角色，未执行删除",
+                write_fn=self._delete_item_writer(self.client.delete_role, definition.id, "role_id", extra_id),
             )
+        for extra_id in extra_actions or []:
+            self._reconcile_extra(
+                result,
+                kind="action",
+                identifier=extra_id,
+                system_id=definition.id,
+                dry_run=dry_run,
+                prune=prune,
+                warn_detail="V4 侧存在本地已无的操作，未执行删除",
+                write_fn=self._delete_item_writer(self.client.delete_action, definition.id, "action_id", extra_id),
+            )
+        for extra_id in extra_types or []:
+            self._reconcile_extra(
+                result,
+                kind="resource_type",
+                identifier=extra_id,
+                system_id=definition.id,
+                dry_run=dry_run,
+                prune=prune,
+                warn_detail="V4 侧存在本地已无的资源类型，未执行删除",
+                write_fn=self._delete_item_writer(
+                    self.client.delete_resource_type, definition.id, "resource_type_id", extra_id
+                ),
+            )
+
+    def _reconcile_extra(
+        self,
+        result: ModelSyncResult,
+        *,
+        kind: str,
+        identifier: str,
+        system_id: str,
+        dry_run: bool,
+        prune: bool,
+        warn_detail: str,
+        write_fn: Callable,
+    ):
+        if not prune:
+            self._warn(result, kind=kind, identifier=identifier, system_id=system_id, detail=warn_detail)
+            return
+        self._try_write(
+            result,
+            kind=kind,
+            identifier=identifier,
+            system_id=system_id,
+            bucket="deleted",
+            dry_run=dry_run,
+            write_fn=write_fn,
+        )
 
     # ---------------- 查询与错误处理 ----------------
 
@@ -454,6 +562,27 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
         return _write
 
+    def _delete_item_writer(self, operation, system_id: str, path_key: str, item_id: str) -> Callable:
+        def _write():
+            self.call(
+                operation,
+                path_params={"system_id": system_id, path_key: item_id},
+                for_write=True,
+            )
+
+        return _write
+
+    def _delete_role_actions_writer(self, system_id: str, role_id: str, action_ids: List[str]) -> Callable:
+        def _write():
+            self.call(
+                self.client.batch_delete_role_action,
+                path_params={"system_id": system_id, "role_id": role_id},
+                params={"ids": ",".join(action_ids)},
+                for_write=True,
+            )
+
+        return _write
+
     def _try_write(
         self,
         result: ModelSyncResult,
@@ -468,7 +597,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
     ) -> Optional[bool]:
         """执行一条写操作。dry-run 只记账；失败记入 failures 并继续。
 
-        :param bucket: created / updated；为 None 时表示该写操作从属于已记账的更新
+        :param bucket: created / updated / deleted；为 None 时表示该写操作从属于已记账的更新
         :returns: True 成功，False 失败，None 表示无需单独记账的附属写操作成功
         """
         item = SyncItem(kind=kind, identifier=identifier, system_id=system_id, detail=detail)
@@ -492,6 +621,10 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
         item = SyncItem(kind=kind, identifier=identifier, system_id=system_id, detail=detail)
         result.warnings.append(item)
         logger.warning("iam v4 model sync warning: system=%s %s=%s %s", system_id, kind, identifier, detail)
+
+    def _fail(self, result: ModelSyncResult, *, kind: str, identifier: str, system_id: str, detail: str):
+        result.failures.append(SyncItem(kind=kind, identifier=identifier, system_id=system_id, detail=detail))
+        logger.error("iam v4 model sync failed: system=%s %s=%s detail=%s", system_id, kind, identifier, detail)
 
     def _record_failure(
         self,
@@ -539,8 +672,9 @@ def sync_iam_v4_models(
     *,
     tenant_id: str,
     dry_run: bool = False,
+    prune: bool = False,
     operator: Optional[str] = None,
 ) -> AggregatedSyncResult:
     """运维命令入口：校验标识符后按系统执行幂等同步"""
     backend = BKIAMV4ModelRegistryBackend(tenant_id, operator)
-    return backend.sync_definitions(list(definitions), dry_run=dry_run)
+    return backend.sync_definitions(list(definitions), dry_run=dry_run, prune=prune)

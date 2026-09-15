@@ -46,6 +46,7 @@ class TestSyncIAMV4ModelCommand:
         output = stdout.getvalue()
         assert "新增=1" in output
         assert "更新=0" in output
+        assert "删除=0" in output
         assert "告警=0" in output
         assert "失败=0" in output
         assert "view_basic_info" in output
@@ -90,4 +91,23 @@ class TestSyncIAMV4ModelCommand:
             call_command("sync_iam_v4_model", "--dry-run", stdout=stdout)
 
         assert mocked.call_args.kwargs["dry_run"] is True
+        assert mocked.call_args.kwargs["prune"] is False
         assert "[dry-run]" in stdout.getvalue()
+
+    def test_prune_flag_is_forwarded(self):
+        aggregated = _aggregated(
+            deleted=[SyncItem(kind="action", identifier="obsolete_action", system_id="bk_paas3")],
+        )
+        stdout = StringIO()
+
+        with mock.patch(
+            "paasng.infras.iam.members.management.commands.sync_iam_v4_model.sync_iam_v4_models",
+            return_value=aggregated,
+        ) as mocked:
+            call_command("sync_iam_v4_model", "--prune", stdout=stdout)
+
+        assert mocked.call_args.kwargs["prune"] is True
+        assert mocked.call_args.kwargs["dry_run"] is False
+        output = stdout.getvalue()
+        assert "删除=1" in output
+        assert "obsolete_action" in output

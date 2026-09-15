@@ -78,6 +78,10 @@ class ActionDefinition:
     def differs_from(self, remote: Dict) -> bool:
         return self.name != remote.get("name")
 
+    def has_immutable_mismatch(self, remote: Dict) -> bool:
+        """授权维度创建后不可改。远端缺字段视为空串。"""
+        return self.resource_type_id != (remote.get("resource_type_id") or "")
+
 
 @define(frozen=True)
 class RoleActionDefinition:
@@ -237,7 +241,3 @@ def build_paas_system_definition() -> SystemDefinition:
         actions=actions,
         roles=roles,
     )
-
-
-def iter_system_definitions() -> List[SystemDefinition]:
-    return [build_paas_system_definition()]

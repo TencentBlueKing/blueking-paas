@@ -20,7 +20,7 @@ import logging
 from itertools import islice
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, TypeVar
 
-from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError
+from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
 from django.conf import settings
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
@@ -88,6 +88,11 @@ class BKIAMV4BaseClient:
         name = getattr(operation, "name", repr(operation))
         try:
             resp = operation(**kwargs)
+        except JSONResponseError as e:
+            # update_* 成功时返回 204 无 body。SDK 对任何 2xx 都无条件 json()，空体会抛 JSONResponseError
+            if e.response_status_code == 204:
+                return {}
+            raise BKIAMGatewayServiceError(f"request bkiam api {name} got invalid json response, detail: {e}") from e
         except HTTPResponseError as e:
             raise BKIAMApiHTTPError(
                 f"request bkiam api {name} failed: {e}",
@@ -99,7 +104,7 @@ class BKIAMV4BaseClient:
             raise BKIAMGatewayServiceError(f"request bkiam api {name} error, detail: {e}") from e
 
         self._validate_resp(resp, name)
-        return {} if resp in (None, "") else resp
+        return resp
 
     def paginate(
         self,
@@ -177,12 +182,8 @@ class BKIAMV4BaseClient:
         """校验响应内容
 
         note: V4 成功响应体中没有 code 字段，错误主要经 HTTP 状态码表达。此处兼容
-            网关层或后续版本可能返回的 code 字段，非 0 时按业务错误处理
+            网关层或后续版本可能返回的 code 字段，非 0 时按业务错误处理。
         """
-        # 204 No Content：更新/删除成功时没有响应体
-        if resp in (None, ""):
-            return
-
         if not isinstance(resp, dict):
             raise BKIAMGatewayServiceError(f"request bkiam api {operation_name} got unexpected response: {resp!r}")
 

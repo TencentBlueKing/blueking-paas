@@ -25,7 +25,6 @@ from paasng.infras.iam.v4.definitions import (
     SystemDefinition,
     build_paas_system_definition,
     is_valid_v4_identifier,
-    iter_system_definitions,
     validate_identifiers,
 )
 
@@ -77,9 +76,3 @@ class TestIdentifierValidation:
             validate_identifiers([definition])
 
         assert exc_info.value.identifiers == ["BadSystem", "1bad"]
-
-
-class TestIterSystemDefinitions:
-    def test_covers_paas_only(self, iam_v4_settings):
-        """插件开发中心本期不接入 V4，全量同步只含 bk_paas3"""
-        assert [item.id for item in iter_system_definitions()] == ["bk_paas3"]

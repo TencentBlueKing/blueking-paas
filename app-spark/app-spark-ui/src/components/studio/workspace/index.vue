@@ -21,7 +21,9 @@ import PreviewCanvas from './PreviewCanvas.vue';
 import WorkspaceToolbar from './WorkspaceToolbar.vue';
 import type { WorkspaceDevice, WorkspaceView } from './types';
 
-const previewUrl = process.env.BK_TEMPLATE_DEV_URL || 'http://localhost:5173';
+const previewUrl = process.env.BK_TEMPLATE_URL || (process.env.NODE_ENV === 'development'
+  ? process.env.BK_TEMPLATE_DEV_URL || 'http://localhost:5173'
+  : 'about:blank');
 const view = ref<WorkspaceView>('preview');
 const device = ref<WorkspaceDevice>('desktop');
 const { busy } = storeToRefs(useStudioStore());

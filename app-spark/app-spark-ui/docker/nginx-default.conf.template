@@ -1,0 +1,36 @@
+server {
+    listen 5000;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    server_tokens off;
+    autoindex off;
+
+    # 支持 history 路由的子路径部署；Ingress 原样转发 UI 路径。
+    rewrite ^__APP_SPARK_RT_BK_SITE_URL__/(.*)$ /$1 last;
+
+    # 注入后内容变更但文件名 hash 不变，禁止缓存旧配置或错误返回 304。
+    add_header Cache-Control "no-cache" always;
+    etag off;
+    if_modified_since off;
+    include /etc/nginx/security_headers.conf;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location ~* \.map$ { return 404; }
+    location ~ /\. { return 404; }
+
+    # API/本地 Agent 应由上层网关转发，漏配时返回 404 而非 SPA HTML。
+    location ~ ^/(api-svc|agent)(/|$) { return 404; }
+    location /static/ { try_files $uri =404; }
+    location / { try_files $uri /index.html; }
+}

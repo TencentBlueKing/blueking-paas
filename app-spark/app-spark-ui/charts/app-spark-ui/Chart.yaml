@@ -1,0 +1,11 @@
+apiVersion: v2
+name: app-spark-ui
+description: App Spark UI served by nginx with runtime configuration
+type: application
+version: 0.1.0-alpha.1
+appVersion: "1.0.3"
+kubeVersion: ">=1.19.0-0"
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    version: 2.13.3

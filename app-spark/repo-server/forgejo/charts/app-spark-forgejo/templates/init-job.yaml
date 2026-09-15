@@ -1,0 +1,68 @@
+{{- if .Values.init.enabled }}
+{{/*
+初始化跑的是 app_spark_forgejo init（与本地 `just init` 同一份代码，可重复执行）：
+先等 /api/healthz，再用 forgejo CLI 建管理员和服务账号，然后用 HTTP API 建 app-spark 组织。
+
+这个 Job 独立于 server Pod，因此不挂业务 PVC（RWO 卷同时被两个 Pod 挂会调度失败）。
+建用户只写数据库，用不到 /data 上的仓库和 SECRET_KEY，所以给它一个临时 emptyDir 当
+工作目录：environment-to-ini 从同一份 ConfigMap 生成一份一次性 app.ini，数据库连接
+因此和 server 完全一致。forgejo CLI 拒绝以 root 身份运行，Pod 按镜像里的 git 用户跑。
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "app-spark-forgejo.initJobName" . }}
+  labels:
+    {{- include "app-spark-forgejo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: init
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: {{ .Values.init.timeoutSeconds | default 600 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-forgejo.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: init
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      {{- include "app-spark-forgejo.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        # emptyDir 默认属 root，fsGroup 让 git 用户能在里面建 conf 和 data 目录。
+        fsGroup: 1000
+      containers:
+        - name: init
+          image: {{ include "app-spark-forgejo.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              mkdir -p "$GITEA_CUSTOM/conf"
+              environment-to-ini --config "$GITEA_CUSTOM/conf/app.ini"
+              exec uv run --directory /opt/app-spark-forgejo --no-sync app-spark-forgejo init
+          envFrom:
+            - configMapRef:
+                name: {{ include "app-spark-forgejo.fullname" . }}
+            - secretRef:
+                name: {{ include "app-spark-forgejo.fullname" . }}
+          env:
+            # CLI 自己调 HTTP API，走集群内地址：Ingress 和 TLS 此刻可能还没生效，
+            # 而 FORGEJO__server__ROOT_URL 指向的是对外地址。
+            - name: FORGEJO_ROOT_URL
+              value: {{ include "app-spark-forgejo.clusterUrl" . | quote }}
+            # 本进程就在 Forgejo 镜像里，CLI 直接调本地二进制，不走 docker compose exec。
+            - name: FORGEJO_CLI
+              value: forgejo
+          {{- with .Values.init.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: scratch
+              mountPath: /data
+      volumes:
+        - name: scratch
+          emptyDir: {}
+{{- end }}

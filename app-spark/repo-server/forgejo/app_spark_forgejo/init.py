@@ -165,7 +165,9 @@ def initialise() -> None:
         write_api_settings_snippet(creds["SERVICE_ACCOUNT_PASSWORD"])
         secrets = Path(credentials_path())
         print(f"Forgejo initialised. Credentials: {secrets} (not printed).")
+        print(f"Host API: {base_url()}")
+        # Only dev mode runs Compose; the chart's init Job has no `server` hostname.
+        print("Compose-network API: http://server:3000")
     else:
         print("Forgejo initialised. Credentials taken from the environment (not written).")
-    print(f"Host API: {base_url()}")
-    print("Compose-network API: http://server:3000")
+        print(f"Forgejo API: {base_url()}")

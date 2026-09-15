@@ -1,9 +1,14 @@
-# Local/dev Forgejo. Production will use charts/ (MySQL 8 + PVC).
+# Local/dev Forgejo (Compose + SQLite). Production uses charts/ (MySQL 8 + PVC).
 
 compose := "docker compose"
 cli := "uv run app-spark-forgejo"
 test_http_port := env("TEST_HTTP_PORT", "3001")
 here := justfile_directory()
+
+# 线上镜像：官方 Forgejo 加上 init CLI 需要的 Python。tag 默认与 Chart.appVersion 一致。
+registry := env("REGISTRY", "")
+image_tag := env("IMAGE_TAG", "15.0.7")
+image_ref := if registry == "" { "app-spark-forgejo:" + image_tag } else { registry + "/app-spark-forgejo:" + image_tag }
 
 export FORGEJO_HTTP_PORT := env("FORGEJO_HTTP_PORT", "3000")
 export FORGEJO_ROOT_URL := env("FORGEJO_ROOT_URL", "http://127.0.0.1:" + FORGEJO_HTTP_PORT)
@@ -46,6 +51,17 @@ test-up:
 # Acceptance checks against the test instance
 test-verify:
     COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} FORGEJO_ROOT_URL=http://127.0.0.1:{{ test_http_port }} FORGEJO_SECRETS_DIR={{ here }}/secrets/test just verify
+
+# Build the production image (charts/) and self-check it
+image: image-build image-check
+
+# Build the production image; REGISTRY / IMAGE_TAG override the tag
+image-build:
+    docker build -t {{ image_ref }} {{ here }}
+
+# Run the CLI in the image as the git user the init Job uses (catches venv/uv wiring)
+image-check:
+    docker run --rm --user 1000:1000 --entrypoint uv {{ image_ref }} run --directory /opt/app-spark-forgejo --no-sync app-spark-forgejo --help
 
 # Stop the test instance and delete its volume
 test-clean:

@@ -27,6 +27,28 @@ class Group(OperationGroup):
     以复用其 header 注入、翻页、分批与错误处理逻辑。
     """
 
+    # ---------------- 鉴权 ----------------
+    # 两个鉴权接口均为读操作，调用时不注入操作人 header。
+    # 系统标识由 path 参数 system_id 承载，资源类型由 action 隐含，故请求体中的资源实例只有 id。
+    # 权限中心还提供了 auth-by-resources（单操作多资源），平台暂无调用场景，待有需要时再补。
+
+    # 直接鉴权：单个用户对单个资源实例的单个操作
+    direct_auth = bind_property(
+        Operation,
+        name="direct_auth",
+        method="POST",
+        path="/api/v1/open/rbac/authorization/systems/{system_id}/auth/",
+    )
+
+    # 批量操作鉴权：单个资源实例上一次判定多个操作，单次上限 20 个操作，
+    # 且这些操作须关联相同的资源类型或均为资源无关的操作
+    direct_auth_by_actions = bind_property(
+        Operation,
+        name="direct_auth_by_actions",
+        method="POST",
+        path="/api/v1/open/rbac/authorization/systems/{system_id}/auth-by-actions/",
+    )
+
     # ---------------- 模型注册：系统 ----------------
     create_system = bind_property(
         Operation, name="create_system", method="POST", path="/api/v1/open/rbac/model/systems/"

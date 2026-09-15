@@ -46,26 +46,21 @@ class TestFacadeDelegation:
         )
 
     def test_resource_inst_allowed(self, mocked_backend):
-        resources = [AuthResource("bk_paas3", "application", "app-code")]
+        resource = AuthResource("bk_paas3", "application", "app-code")
 
-        IAMClient().resource_inst_allowed("user-0", "tenant-foo", AppAction.VIEW_BASIC_INFO, resources, True)
+        IAMClient().resource_inst_allowed("user-0", "tenant-foo", AppAction.VIEW_BASIC_INFO, resource, True)
 
         mocked_backend.resource_inst_allowed.assert_called_once_with(
-            "user-0", "tenant-foo", AppAction.VIEW_BASIC_INFO, resources, True
+            "user-0", "tenant-foo", AppAction.VIEW_BASIC_INFO, resource, True
         )
 
     def test_resource_inst_multi_actions_allowed(self, mocked_backend):
-        IAMClient().resource_inst_multi_actions_allowed("user-0", "tenant-foo", ["view_basic_info"], [])
+        resource = AuthResource("bk_paas3", "application", "app-code")
+
+        IAMClient().resource_inst_multi_actions_allowed("user-0", "tenant-foo", ["view_basic_info"], resource)
 
         mocked_backend.resource_inst_multi_actions_allowed.assert_called_once_with(
-            "user-0", "tenant-foo", ["view_basic_info"], []
-        )
-
-    def test_batch_resource_multi_actions_allowed(self, mocked_backend):
-        IAMClient().batch_resource_multi_actions_allowed("user-0", "tenant-foo", ["view_basic_info"], [])
-
-        mocked_backend.batch_resource_multi_actions_allowed.assert_called_once_with(
-            "user-0", "tenant-foo", ["view_basic_info"], []
+            "user-0", "tenant-foo", ["view_basic_info"], resource
         )
 
     def test_build_resource_filter(self, mocked_backend):

@@ -42,16 +42,16 @@ class IAMClient:
         return self._get_auth_backend().resource_type_allowed(username, tenant_id, action_id, use_cache)
 
     def resource_inst_allowed(
-        self, username: str, tenant_id: str, action_id: str, resources: List[AuthResource], use_cache: bool = False
+        self, username: str, tenant_id: str, action_id: str, resource: AuthResource, use_cache: bool = False
     ) -> bool:
         """
         判断用户对某个资源实例是否具有指定操作的权限
         note: 权限判断与资源实例有关，如更新某个具体资源
         """
-        return self._get_auth_backend().resource_inst_allowed(username, tenant_id, action_id, resources, use_cache)
+        return self._get_auth_backend().resource_inst_allowed(username, tenant_id, action_id, resource, use_cache)
 
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
+        self, username: str, tenant_id: str, action_ids: List[str], resource: AuthResource
     ) -> Dict[str, bool]:
         """
         判断用户对某个(单个)资源实例是否具有多个操作的权限.
@@ -59,19 +59,7 @@ class IAMClient:
 
         :returns: 示例 {'view_basic_info': True, 'edit_basic_info': False}
         """
-        return self._get_auth_backend().resource_inst_multi_actions_allowed(username, tenant_id, action_ids, resources)
-
-    def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
-    ) -> Dict[str, Dict[str, bool]]:
-        """
-        判断用户对某些资源是否具有多个指定操作的权限. 当前仅支持同类型的资源
-
-        :returns: 示例 {'app_code_test': {'view_basic_info': True, 'edit_basic_info': False}}
-        """
-        return self._get_auth_backend().batch_resource_multi_actions_allowed(
-            username, tenant_id, action_ids, resources
-        )
+        return self._get_auth_backend().resource_inst_multi_actions_allowed(username, tenant_id, action_ids, resource)
 
     def build_resource_filter(
         self, username: str, tenant_id: str, action_id: str, key_mapping: Optional[Dict[str, str]] = None

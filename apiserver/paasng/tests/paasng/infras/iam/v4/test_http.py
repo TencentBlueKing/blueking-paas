@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from typing import Any, Dict, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
+import requests
 from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
 
 from paasng.infras.iam.exceptions import BKIAMApiHTTPError, BKIAMGatewayServiceError
@@ -61,6 +63,8 @@ def client() -> BKIAMV4BaseClient:
 
 
 class TestCall:
+    """调用失败必须收敛为平台异常，调用方才能按「判定失败」统一处理"""
+
     def test_treats_204_empty_body_as_success(self, client):
         """update_* 成功返回 204 无 body。SDK 会抛 JSONResponseError，应视为写入成功。"""
         operation = StubOperation(make_json_response_error(204))
@@ -74,6 +78,7 @@ class TestCall:
             client.call(operation)
 
     def test_http_error_is_wrapped(self, client):
+        """非 2xx 仍要抛出带状态码的 BKIAMApiHTTPError，不能被兜底分支吞成通用网关错误"""
         response = Mock(status_code=409, headers={})
         operation = StubOperation(HTTPResponseError("conflict", response=response))
 
@@ -87,6 +92,57 @@ class TestCall:
 
         with pytest.raises(BKIAMGatewayServiceError, match="gateway down"):
             client.call(operation)
+
+    def test_wraps_connection_error(self, client):
+        """权限中心不可达时不能把原始的 requests 异常漏出去，否则调用方的捕获会失效"""
+        operation = StubOperation(requests.exceptions.ConnectionError("connection refused"))
+
+        with pytest.raises(BKIAMGatewayServiceError, match="stub_operation"):
+            client.call(operation)
+
+    def test_wraps_read_timeout(self, client):
+        operation = StubOperation(requests.exceptions.ReadTimeout("read timed out"))
+
+        with pytest.raises(BKIAMGatewayServiceError):
+            client.call(operation)
+
+
+class TestExtractErrorDetail:
+    """错误体里的 code 与 message 要尽量拼进异常消息，缺项时不能拼出误导性的内容"""
+
+    @pytest.mark.parametrize(
+        ("body", "expected"),
+        [
+            (
+                {"error": {"code": "INVALID_REQUEST", "message": "action not found"}},
+                "INVALID_REQUEST: action not found",
+            ),
+            # 只给出一项时单独返回该项，不拼接出 "None: xxx" 这类内容
+            ({"error": {"message": "action not found"}}, "action not found"),
+            ({"error": {"code": "INVALID_REQUEST"}}, "INVALID_REQUEST"),
+            # 两项都缺、error 不是对象、没有 error 字段：无可用信息，调用方只拼 SDK 的原始消息
+            ({"error": {}}, None),
+            ({"error": "invalid request"}, None),
+            ({"request_id": "req-err"}, None),
+        ],
+    )
+    def test_combines_code_and_message(self, body, expected):
+        response = requests.Response()
+        response.status_code = 400
+        response._content = json.dumps(body).encode()
+
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad request", response=response)) == expected
+
+    def test_returns_none_without_response(self):
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad request")) is None
+
+    def test_returns_none_for_non_json_body(self):
+        """网关返回 HTML 错误页时不应抛异常，取不到 detail 即可"""
+        response = requests.Response()
+        response.status_code = 502
+        response._content = b"<html>502 Bad Gateway</html>"
+
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad gateway", response=response)) is None
 
 
 class TestPaginate:

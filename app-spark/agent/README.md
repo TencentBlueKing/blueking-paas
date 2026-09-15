@@ -129,7 +129,8 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 ```
 
 成功 2xx：`port`、`path`、`label`、`url`、`app_status`（`healthy`）。缺省 `path=/`、`label=Preview`。
-同一份四要素会落一条 `app.launched` 到 `ui_events`，`GET /ui-events` 可 drain；不往进行中的 `/runs` SSE 里插。
+预览地址以响应体的 `url` 为准。同一份四要素会落一条 `app.launched` 到 `ui_events`，`GET /ui-events` 可 drain；
+这条事件和控制面最终一致，launch 刚返回时立刻去读可能还看不到。不往进行中的 `/runs` SSE 里插。
 
 启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`。
 skill `fastapi_http.md` 要求生成 `main:app`，端口只读 `APP_SPARK_AGENT_APP_PORT`。

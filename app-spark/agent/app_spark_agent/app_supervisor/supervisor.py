@@ -20,17 +20,17 @@ import asyncio
 import time
 from collections.abc import Callable
 from pathlib import Path
-from uuid import uuid4
 
 from ag_ui.core import CustomEvent
 
-from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry, ProcessSpawn
+from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry
 from app_spark_agent.app_supervisor.types import (
     CRASH_RETRY_INTERVAL_SECONDS,
     CRASH_RETRY_LIMIT,
     CRASH_WATCH_POLL_SECONDS,
     DEFAULT_LAUNCH_LABEL,
     DEFAULT_LAUNCH_PATH,
+    LAUNCH_EVENT_RUN_ID,
     LAUNCHED_EVENT_NAME,
     LISTEN_TIMEOUT_SECONDS,
     PORT_FREE_TIMEOUT_SECONDS,
@@ -49,26 +49,16 @@ from app_spark_agent.ui_events import persist_ui_events
 class AppSupervisor:
     """Launch, restart, and watch the single workspace application process."""
 
-    def __init__(
-        self,
-        workspace: Path,
-        processes: ProcessRegistry,
-        ui_events: AppendLog,
-        *,
-        connect: Callable[[], bool] | None = None,
-        spawn: ProcessSpawn | None = None,
-        listen_timeout: float = LISTEN_TIMEOUT_SECONDS,
-        crash_retry_delay: float = CRASH_RETRY_INTERVAL_SECONDS,
-        crash_retry_limit: int = CRASH_RETRY_LIMIT,
-        watch_poll: float = CRASH_WATCH_POLL_SECONDS,
-    ) -> None:
+    def __init__(self, workspace: Path, processes: ProcessRegistry, ui_events: AppendLog) -> None:
+        # uvicorn 的 cwd，必须能 import 到 main:app。
         self.workspace = workspace
+
+        # 只落 app.launched，给控制面 drain；不往 /runs SSE 里插。
         self._ui_events = ui_events
-        self._process = AppProcess(workspace, processes, connect=connect, spawn=spawn)
-        self._listen_timeout = listen_timeout
-        self._crash_retry_delay = crash_retry_delay
-        self._crash_retry_limit = crash_retry_limit
-        self._watch_poll = watch_poll
+
+        # processes 把子进程挂到 Runtime 的 SIGTERM / 空闲退出名单上。
+        self._process = AppProcess(workspace, processes)
+
         # 与 RunGuard 分开：run 进行中仍允许 launch，第二次 launch 才 409。
         self._lock = asyncio.Lock()
         self._status = AppStatus.NOT_STARTED
@@ -139,9 +129,9 @@ class AppSupervisor:
             return result
 
     async def watch(self) -> None:
-        """Restart a dropped application up to crash_retry_limit times, then leave it unhealthy."""
+        """Restart a dropped application up to CRASH_RETRY_LIMIT times, then leave it unhealthy."""
         while True:
-            await asyncio.sleep(self._watch_poll)
+            await asyncio.sleep(CRASH_WATCH_POLL_SECONDS)
 
             # 用户正在 launch，或从未拉起过：监督不插手。
             if self._lock.locked() or self._status == AppStatus.NOT_STARTED:
@@ -157,7 +147,7 @@ class AppSupervisor:
                 continue
 
             # 掉听后先等一段，避免进程刚退出就立刻拉起。
-            await asyncio.sleep(self._crash_retry_delay)
+            await asyncio.sleep(CRASH_RETRY_INTERVAL_SECONDS)
 
             # 等待期间用户可能已经手动 launch，或应用自己又听上了。
             if self._lock.locked() or self._is_up():
@@ -182,8 +172,9 @@ class AppSupervisor:
                     self._process.stop()
                     await self._start_and_wait()
                     await self._emit_launched(self._result())
-            except AppLaunchFailed:
-                # 这次没听上。次数未满则下一轮还会再试。
+            except Exception:  # noqa: BLE001
+                # AppLaunchFailed 之外，spawn / 写事件也可能抛。只捕前者会拆掉整条 watch。
+                # 标 unhealthy 后继续转；额度未满下一轮还会再试。
                 self._status = AppStatus.UNHEALTHY
 
     def _is_up(self) -> bool:
@@ -192,7 +183,7 @@ class AppSupervisor:
 
     def _retries_exhausted(self) -> bool:
         """Return whether automatic restarts since the last manual launch are used up."""
-        return self._auto_restarts >= self._crash_retry_limit
+        return self._auto_restarts >= CRASH_RETRY_LIMIT
 
     def _resolve_path(self, path: str | None) -> str:
         # 请求没带 path 就沿用上次；第一次是缺省 /。
@@ -227,12 +218,12 @@ class AppSupervisor:
                 "url": result.url,
             },
         )
-        await persist_ui_events([event], log=self._ui_events, run_id=str(uuid4()))
+        await persist_ui_events([event], log=self._ui_events, run_id=LAUNCH_EVENT_RUN_ID)
 
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until the port listens, or fail the launch."""
         self._process.start()
-        deadline = time.monotonic() + self._listen_timeout
+        deadline = time.monotonic() + LISTEN_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
             # 进程先死了就不必再空等超时。
             if not self._process.living():

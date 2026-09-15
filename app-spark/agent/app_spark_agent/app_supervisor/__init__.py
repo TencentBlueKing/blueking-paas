@@ -16,10 +16,11 @@
 
 """Start and restart the workspace application so a caller can open it over HTTP."""
 
-from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry, ProcessSpawn
+from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry
 from app_spark_agent.app_supervisor.supervisor import AppSupervisor
 from app_spark_agent.app_supervisor.types import (
     APP_PORT_ENV,
+    LAUNCH_EVENT_RUN_ID,
     LAUNCHED_EVENT_NAME,
     SECRET_ENV_KEYS,
     AppLaunchConflict,
@@ -35,6 +36,7 @@ from app_spark_agent.app_supervisor.types import (
 __all__ = [
     "APP_PORT_ENV",
     "LAUNCHED_EVENT_NAME",
+    "LAUNCH_EVENT_RUN_ID",
     "SECRET_ENV_KEYS",
     "AppLaunchConflict",
     "AppLaunchError",
@@ -45,7 +47,6 @@ __all__ = [
     "AppSupervisor",
     "LaunchResult",
     "ProcessRegistry",
-    "ProcessSpawn",
     "validate_launch_label",
     "validate_launch_path",
 ]

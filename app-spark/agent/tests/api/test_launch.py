@@ -27,6 +27,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app_spark_agent import settings
+from app_spark_agent.app_supervisor import LAUNCH_EVENT_RUN_ID
 from tests.api.support import (
     ApiFactory,
     drain_channel,
@@ -64,12 +65,12 @@ def write_minimal_app(workspace: Path) -> None:
     (workspace / "main.py").write_text(MINIMAL_APP)
 
 
+def launched_records(client: TestClient) -> list[dict[str, Any]]:
+    return [record for record in drain_channel(client, "/ui-events") if record["event"].get("name") == "app.launched"]
+
+
 def launched_events(client: TestClient) -> list[dict[str, Any]]:
-    return [
-        record["event"]
-        for record in drain_channel(client, "/ui-events")
-        if record["event"].get("name") == "app.launched"
-    ]
+    return [record["event"] for record in launched_records(client)]
 
 
 @pytest.fixture
@@ -124,10 +125,11 @@ def test_launch_starts_the_app_and_records_the_event(api: TestClient, launch_por
     assert opened.json()["port"] == str(launch_port)
     assert api.get("/health").json()["app_status"] == "healthy"
 
-    events = launched_events(api)
-    assert len(events) == 1
-    assert events[0]["type"] == "CUSTOM"
-    assert events[0]["value"] == {
+    records = launched_records(api)
+    assert len(records) == 1
+    assert records[0]["run_id"] == LAUNCH_EVENT_RUN_ID
+    assert records[0]["event"]["type"] == "CUSTOM"
+    assert records[0]["event"]["value"] == {
         "port": launch_port,
         "path": "/",
         "label": "Preview",

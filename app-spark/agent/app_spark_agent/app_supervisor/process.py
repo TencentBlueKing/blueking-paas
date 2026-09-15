@@ -21,7 +21,6 @@ import signal
 import socket
 import subprocess
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import IO, Protocol
 
@@ -35,36 +34,15 @@ class ProcessRegistry(Protocol):
     def register(self, process: subprocess.Popen[bytes]) -> None: ...
 
 
-class ProcessSpawn(Protocol):
-    """Start one application child. Tests inject a fake."""
-
-    def __call__(
-        self,
-        argv: list[str],
-        *,
-        cwd: Path,
-        env: dict[str, str],
-        stdout: int | IO[bytes],
-        stderr: int,
-        start_new_session: bool,
-    ) -> subprocess.Popen[bytes]: ...
-
-
 class AppProcess:
     """Spawn, stop, and probe the workspace application process."""
 
-    def __init__(
-        self,
-        workspace: Path,
-        processes: ProcessRegistry,
-        *,
-        connect: Callable[[], bool] | None = None,
-        spawn: ProcessSpawn | None = None,
-    ) -> None:
+    def __init__(self, workspace: Path, processes: ProcessRegistry) -> None:
+        # start() 的 cwd，和监督器共用同一份 workspace。
         self.workspace = workspace
+
+        # 每拉起一个子进程就登记，空闲退出 / SIGTERM 的 stop_all 才能杀到。
         self._processes = processes
-        self._connect = connect or self.port_is_open
-        self._spawn = spawn or _spawn_popen
         self._child: subprocess.Popen[bytes] | None = None
 
     @property
@@ -78,7 +56,7 @@ class AppProcess:
 
     def is_listening(self) -> bool:
         """Return whether the agreed port accepts a TCP connection."""
-        return self._connect()
+        return self.port_is_open()
 
     def port_is_open(self) -> bool:
         """Probe 127.0.0.1 on the agreed port."""
@@ -113,7 +91,7 @@ class AppProcess:
         """Spawn the child, attach its output to the app log, and register it."""
         log_file = _open_app_log()
         try:
-            self._child = self._spawn(
+            self._child = _spawn_popen(
                 self.start_argv(),
                 cwd=self.workspace,
                 env=self.build_child_environ(),
@@ -143,7 +121,7 @@ def _open_app_log() -> int | IO[bytes]:
         return subprocess.DEVNULL
 
 
-# 单独抽出默认 spawn：测试注入假进程，不必去补丁 subprocess.Popen。
+# 单独抽出 Popen：单测 mock 这一层，不必给 AppProcess 加 spawn 参数。
 def _spawn_popen(
     argv: list[str],
     *,

@@ -64,7 +64,11 @@ APP_PORT_ENV = f"{settings.ENV_PREFIX}APP_PORT"
 # 只落盘给控制面 drain，不往进行中的 /runs SSE 里插。
 LAUNCHED_EVENT_NAME = "app.launched"
 
-# 子进程只剥这四个密钥。不要扩成全部 APP_SPARK_AGENT_*，那是模型 Shell 的名单。
+# 控制面签发真实 run_id。这里用固定哨兵，避免每次 launch 灌一个 uuid 进 AppendLog._run_ids。
+LAUNCH_EVENT_RUN_ID = "app-supervisor"
+
+# 本进程只会持有这四个密钥：网关 access_token 或直连 MODEL_API_KEY，外加 runtime / 控制面。
+# 不要扩成全部 APP_SPARK_AGENT_*，更不要套 harness 的 provider 通配——那是模型 Shell 的名单。
 SECRET_ENV_KEYS = (
     f"{settings.ENV_PREFIX}RUNTIME_TOKEN",
     f"{settings.ENV_PREFIX}MODEL_API_KEY",

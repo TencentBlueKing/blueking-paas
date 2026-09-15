@@ -103,18 +103,32 @@ class AppProcessRegistry:
 
         deadline = time.monotonic() + timeout
         for process in living:
-            process.terminate()
+            _signal_process_group(process, signal.SIGTERM)
         for process in living:
             remaining = max(0.0, deadline - time.monotonic())
             try:
                 process.wait(timeout=remaining)
             except subprocess.TimeoutExpired:
-                process.kill()
+                _signal_process_group(process, signal.SIGKILL)
                 try:
                     process.wait(timeout=1.0)
                 except subprocess.TimeoutExpired:
                     pass
         self._processes.clear()
+
+
+def _signal_process_group(process: subprocess.Popen[bytes], sig: signal.Signals) -> None:
+    # start_new_session 的子进程用 killpg 清整组；没有独立组或进程已没了就退回 terminate/kill。
+    fallback = process.terminate if sig == signal.SIGTERM else process.kill
+    try:
+        if process.pid:
+            os.killpg(process.pid, sig)
+        else:
+            fallback()
+    except ProcessLookupError:
+        return
+    except OSError:
+        fallback()
 
 
 class RuntimeLifecycle:

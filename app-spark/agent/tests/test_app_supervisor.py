@@ -14,17 +14,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""AppSupervisor 规则：校验、密钥剥离、重启沿用、并发 409、启动失败。"""
+"""AppSupervisor 规则：校验、密钥剥离、重启沿用、并发 409、启动失败、crash-watch。"""
 
 import asyncio
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from app_spark_agent import settings
 from app_spark_agent.app_supervisor import (
     APP_PORT_ENV,
+    LAUNCH_EVENT_RUN_ID,
     SECRET_ENV_KEYS,
     AppLaunchConflict,
     AppLaunchFailed,
@@ -34,159 +36,195 @@ from app_spark_agent.app_supervisor import (
     validate_launch_label,
     validate_launch_path,
 )
+from app_spark_agent.app_supervisor import process as process_mod
+from app_spark_agent.app_supervisor import supervisor as supervisor_mod
+from app_spark_agent.app_supervisor.process import AppProcess
 from app_spark_agent.server.lifecycle import AppProcessRegistry
 from app_spark_agent.state import AppendLog
 
 
-class FakeProcess:
+class Child:
     def __init__(self, *, living: bool = True) -> None:
-        self._living = living
+        self.living = living
         self.pid = 0
 
     def poll(self) -> int | None:
-        return None if self._living else 0
+        return None if self.living else 0
 
     def terminate(self) -> None:
-        self._living = False
+        self.living = False
 
-    def kill(self) -> None:
-        self._living = False
+    kill = terminate
 
     def wait(self, timeout: float | None = None) -> int:
-        self._living = False
+        self.living = False
         return 0
 
 
-def make_supervisor(
-    tmp_path: Path,
-    *,
-    connect: Any = None,
-    spawn: Any = None,
-    listen_timeout: float = 0.4,
-) -> AppSupervisor:
-    log = AppendLog(tmp_path / "ui_events.jsonl", payload_key="event")
-    return AppSupervisor(
-        tmp_path / "workspace",
-        AppProcessRegistry(),
-        log,
-        connect=connect,
-        spawn=spawn,
-        listen_timeout=listen_timeout,
-    )
+class App:
+    """假端口 + 假进程。auto_listen 关掉后 spawn 不再把端口标成在听。"""
+
+    def __init__(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        *,
+        living: bool = True,
+        auto_listen: bool = True,
+        fail_on: int | None = None,
+    ) -> None:
+        self.listening = False
+        self.auto_listen = auto_listen
+        self.spawned: list[Child] = []
+        self._living = living
+        self._fail_on = fail_on
+        self._calls = 0
+        (tmp_path / "workspace").mkdir(exist_ok=True)
+        monkeypatch.setattr(AppProcess, "port_is_open", lambda _self: self.listening)
+        monkeypatch.setattr(process_mod, "_spawn_popen", self._spawn)
+        self.supervisor = AppSupervisor(
+            tmp_path / "workspace",
+            AppProcessRegistry(),
+            AppendLog(tmp_path / "ui_events.jsonl", payload_key="event"),
+        )
+
+    def _spawn(self, *_args: object, **_kwargs: object) -> Child:
+        self._calls += 1
+        if self._fail_on is not None and self._calls == self._fail_on:
+            raise OSError("spawn refused")
+        child = Child(living=self._living)
+        self.spawned.append(child)
+        if self.auto_listen and child.poll() is None:
+            self.listening = True
+        return child
+
+    def drop(self) -> None:
+        self.listening = False
+        self.spawned[-1].living = False
+
+    def run_ids(self) -> set[str]:
+        return {record.run_id for record in self.supervisor._ui_events.read_since(0, 100)}
+
+
+@pytest.fixture(autouse=True)
+def fast_supervisor_timings(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 生产是 30s / 2s / 0.5s，单测不能真睡那么久。
+    monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.4)
+    monkeypatch.setattr(supervisor_mod, "CRASH_RETRY_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(supervisor_mod, "CRASH_WATCH_POLL_SECONDS", 0.01)
+
+
+@asynccontextmanager
+async def watching(supervisor: AppSupervisor) -> AsyncIterator[asyncio.Task[None]]:
+    task = asyncio.create_task(supervisor.watch())
+    try:
+        yield task
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+async def wait_until(predicate: Callable[[], bool], timeout: float = 1.5) -> None:
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
+        if predicate():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("condition not met before timeout")
 
 
 def test_path_and_label_rules() -> None:
     assert validate_launch_path("/") == "/"
     assert validate_launch_path("/preview") == "/preview"
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_path("preview")
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_path("//host/path")
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_path("/../secret")
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_path("https://example.com/")
+    for path in ("preview", "//host/path", "/../secret", "https://example.com/"):
+        with pytest.raises(AppLaunchInvalid):
+            validate_launch_path(path)
     assert validate_launch_label(" Preview ") == "Preview"
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_label("")
-    with pytest.raises(AppLaunchInvalid):
-        validate_launch_label("x" * 65)
+    for label in ("", "x" * 65):
+        with pytest.raises(AppLaunchInvalid):
+            validate_launch_label(label)
 
 
-def test_build_child_environ_injects_port_and_drops_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_child_env_drops_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "APP_PORT", 8123)
-    supervisor = make_supervisor(tmp_path, connect=lambda: False)
-    source = {
-        "PATH": "/bin",
-        "APP_SPARK_AGENT_WORKSPACE": "/data/workspace",
-        "APP_SPARK_AGENT_RUNTIME_TOKEN": "runtime-secret",
-        "APP_SPARK_AGENT_MODEL_API_KEY": "model-secret",
-        "APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN": "aidev-secret",
-        "APP_SPARK_AGENT_CONTROL_PLANE_TOKEN": "plane-secret",
-    }
-
-    env = supervisor.build_child_environ(source)
-
+    source = dict.fromkeys(SECRET_ENV_KEYS, "secret")
+    source["APP_SPARK_AGENT_WORKSPACE"] = "/data/workspace"
+    env = App(monkeypatch, tmp_path).supervisor.build_child_environ(source)
     assert env[APP_PORT_ENV] == "8123"
     assert env["APP_SPARK_AGENT_WORKSPACE"] == "/data/workspace"
-    for key in SECRET_ENV_KEYS:
-        assert key not in env
+    assert all(key not in env for key in SECRET_ENV_KEYS)
 
 
-async def test_relaunch_restarts_and_keeps_last_path(tmp_path: Path) -> None:
-    listening = False
-    spawned: list[FakeProcess] = []
-
-    def spawn(*_args: object, **_kwargs: object) -> FakeProcess:
-        nonlocal listening
-        process = FakeProcess()
-        spawned.append(process)
-        listening = True
-        return process
-
-    supervisor = make_supervisor(tmp_path, connect=lambda: listening, spawn=spawn)
-    (tmp_path / "workspace").mkdir()
-
-    first = await supervisor.launch(path="/demo", label="Demo")
-
-    # 第二次不带 path/label：沿用上次，并先停掉旧进程。
-    listening = False
-    second = await supervisor.launch()
-
-    assert first.path == "/demo"
-    assert first.label == "Demo"
-    assert second.path == "/demo"
-    assert second.label == "Demo"
-    assert len(spawned) == 2
-    assert spawned[0].poll() is not None
+async def test_relaunch_keeps_path_and_reuses_run_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path)
+    first = await app.supervisor.launch(path="/demo", label="Demo")
+    app.listening = False
+    second = await app.supervisor.launch()
+    assert (first.path, first.label) == (second.path, second.label) == ("/demo", "Demo")
+    assert len(app.spawned) == 2
+    assert app.spawned[0].poll() is not None
+    assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
 
 
-async def test_second_launch_while_waiting_is_conflict(tmp_path: Path) -> None:
-    listening = False
-    supervisor = make_supervisor(
-        tmp_path,
-        connect=lambda: listening,
-        spawn=lambda *_args, **_kwargs: FakeProcess(),
-        listen_timeout=1.0,
-    )
-    (tmp_path / "workspace").mkdir()
-
-    # 第一次卡在等实听，锁还没放。第二次必须 409，不能排队。
-    first = asyncio.create_task(supervisor.launch())
+async def test_second_launch_while_waiting_is_conflict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 1.0)
+    app = App(monkeypatch, tmp_path, auto_listen=False)
+    first = asyncio.create_task(app.supervisor.launch())
     await asyncio.sleep(0.05)
     with pytest.raises(AppLaunchConflict, match="already in progress"):
-        await supervisor.launch()
-
-    listening = True
-    result = await first
-    assert result.app_status == AppStatus.HEALTHY
+        await app.supervisor.launch()
+    app.listening = True
+    assert (await first).app_status == AppStatus.HEALTHY
 
 
-async def test_timeout_without_listen_is_unhealthy(tmp_path: Path) -> None:
-    # 进程还活着，但端口一直没听上。
-    supervisor = make_supervisor(
-        tmp_path,
-        connect=lambda: False,
-        spawn=lambda *_args, **_kwargs: FakeProcess(),
-        listen_timeout=0.15,
-    )
-    (tmp_path / "workspace").mkdir()
+@pytest.mark.parametrize(
+    ("living", "match"),
+    [(True, "did not listen"), (False, "exited before it listened")],
+)
+async def test_failed_launch_is_unhealthy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    living: bool,
+    match: str,
+) -> None:
+    monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.15)
+    app = App(monkeypatch, tmp_path, living=living, auto_listen=False)
+    with pytest.raises(AppLaunchFailed, match=match):
+        await app.supervisor.launch()
+    assert app.supervisor.app_status == AppStatus.UNHEALTHY
 
-    with pytest.raises(AppLaunchFailed, match="did not listen"):
-        await supervisor.launch()
-    assert supervisor.app_status == AppStatus.UNHEALTHY
+
+async def test_watch_restarts_after_a_spawn_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # fail_on=2：第一次手动 launch 成功，自动重启第一次抛 OSError，第二次拉起来。
+    app = App(monkeypatch, tmp_path, fail_on=2)
+    await app.supervisor.launch()
+    app.drop()
+    async with watching(app.supervisor) as task:
+        await wait_until(lambda: len(app.spawned) == 2)
+        assert not task.done()
+        assert app.supervisor.app_status == AppStatus.HEALTHY
+        assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
 
 
-async def test_process_exit_before_listen_is_unhealthy(tmp_path: Path) -> None:
-    # 进程先退出，不应空等到 listen_timeout。
-    supervisor = make_supervisor(
-        tmp_path,
-        connect=lambda: False,
-        spawn=lambda *_args, **_kwargs: FakeProcess(living=False),
-        listen_timeout=0.4,
-    )
-    (tmp_path / "workspace").mkdir()
+async def test_watch_gives_up_after_retry_limit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.08)
+    monkeypatch.setattr(supervisor_mod, "CRASH_RETRY_LIMIT", 2)
+    app = App(monkeypatch, tmp_path)
+    await app.supervisor.launch()
+    app.auto_listen = False
+    app.drop()
+    async with watching(app.supervisor):
+        await wait_until(lambda: app.supervisor._auto_restarts >= 2, timeout=2.0)
+        assert app.supervisor.app_status == AppStatus.UNHEALTHY
+        stopped_at = len(app.spawned)
+        await asyncio.sleep(0.1)
+        assert len(app.spawned) == stopped_at
 
-    with pytest.raises(AppLaunchFailed, match="exited before it listened"):
-        await supervisor.launch()
-    assert supervisor.app_status == AppStatus.UNHEALTHY
+
+async def test_watch_ignores_never_launched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path, auto_listen=False)
+    async with watching(app.supervisor):
+        await asyncio.sleep(0.08)
+        assert app.spawned == []
+        assert app.supervisor.app_status == AppStatus.NOT_STARTED

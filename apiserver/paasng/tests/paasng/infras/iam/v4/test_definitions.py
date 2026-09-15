@@ -19,15 +19,13 @@ import pytest
 
 from paasng.infras.iam.exceptions import InvalidIAMIdentifierError
 from paasng.infras.iam.permissions.resources.application import AppRole
-from paasng.infras.iam.permissions.resources.plugin import PluginIAMRole
 from paasng.infras.iam.v4.definitions import (
     ActionDefinition,
     RoleDefinition,
     SystemDefinition,
     build_paas_system_definition,
-    build_plugin_system_definition,
     is_valid_v4_identifier,
-    resolve_system_definitions,
+    iter_system_definitions,
     validate_identifiers,
 )
 
@@ -35,7 +33,6 @@ from paasng.infras.iam.v4.definitions import (
 @pytest.fixture()
 def iam_v4_settings(settings):
     settings.IAM_PAAS_V3_SYSTEM_ID = "bk_paas3"
-    settings.IAM_PLUGINS_CENTER_SYSTEM_ID = "bk_plugins"
     settings.IAM_APP_CODE = "bk_paas3"
     settings.BK_IAM_RESOURCE_API_HOST = "http://paas.example.com"
 
@@ -51,20 +48,8 @@ class TestLocalDefinitions:
         assert [role.name for role in definition.roles] == [str(AppRole.get_choice_label(role)) for role in AppRole]
         assert "related_actions" not in definition.to_create_payload()
 
-    def test_plugin_model_counts(self, iam_v4_settings):
-        definition = build_plugin_system_definition()
-
-        assert definition.id == "bk_plugins"
-        assert [item.id for item in definition.resource_types] == ["plugin"]
-        assert len(definition.actions) == 7
-        assert [role.id for role in definition.roles] == [str(role) for role in PluginIAMRole]
-        assert [role.name for role in definition.roles] == [
-            str(PluginIAMRole.get_choice_label(role)) for role in PluginIAMRole
-        ]
-
     def test_developer_actions_follow_code_not_template(self):
         assert len(AppRole.get_actions(AppRole.DEVELOPER)) == 8
-        assert len(PluginIAMRole.get_actions(PluginIAMRole.DEVELOPER)) == 5
 
 
 class TestIdentifierValidation:
@@ -94,15 +79,7 @@ class TestIdentifierValidation:
         assert exc_info.value.identifiers == ["BadSystem", "1bad"]
 
 
-class TestResolveSystems:
-    def test_default_is_both_systems(self, iam_v4_settings):
-        definitions = resolve_system_definitions(None)
-        assert [item.id for item in definitions] == ["bk_paas3", "bk_plugins"]
-
-    def test_alias_and_system_id(self, iam_v4_settings):
-        assert resolve_system_definitions(["paas"])[0].id == "bk_paas3"
-        assert resolve_system_definitions(["bk_plugins"])[0].id == "bk_plugins"
-
-    def test_unknown_system(self, iam_v4_settings):
-        with pytest.raises(ValueError, match="未知的系统"):
-            resolve_system_definitions(["unknown"])
+class TestIterSystemDefinitions:
+    def test_covers_paas_only(self, iam_v4_settings):
+        """插件开发中心本期不接入 V4，全量同步只含 bk_paas3"""
+        assert [item.id for item in iter_system_definitions()] == ["bk_paas3"]

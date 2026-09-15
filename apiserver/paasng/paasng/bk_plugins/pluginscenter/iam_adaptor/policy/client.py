@@ -21,9 +21,9 @@ from django.conf import settings
 from django.db.models import Q
 from iam import IAM, Action, MultiActionRequest, Request, Resource, Subject
 
+from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.definitions import IAMResource
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.converter import PluginPolicyConverter
-from paasng.infras.iam.permissions.resources.plugin import PluginPermissionActions
 
 
 class BKIAMClient:

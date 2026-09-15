@@ -32,7 +32,6 @@ from paasng.infras.iam.v4.definitions import (
     RoleDefinition,
     SystemDefinition,
     build_paas_system_definition,
-    build_plugin_system_definition,
 )
 from paasng.infras.iam.v4.registry import BKIAMV4ModelRegistryBackend
 
@@ -284,18 +283,17 @@ class TestIdempotentSync:
         assert fake.writes == []
 
     def test_full_definitions_create_expected_counts(self, backend, settings):
-        """空 V4 上全量同步时，两个系统的新增条目数应与本地定义一致"""
+        """空 V4 上全量同步时，新增条目数应与本地定义一致（1 系统 + 1 资源类型 + 14 操作 + 3 角色）"""
         settings.IAM_PAAS_V3_SYSTEM_ID = "bk_paas3"
-        settings.IAM_PLUGINS_CENTER_SYSTEM_ID = "bk_plugins"
         settings.IAM_APP_CODE = "bk_paas3"
         settings.BK_IAM_RESOURCE_API_HOST = "http://paas.example.com"
 
         fake = FakeIAM(system_missing=True)
         bind_fake(backend, fake)
-        aggregated = backend.sync_definitions([build_paas_system_definition(), build_plugin_system_definition()])
+        aggregated = backend.sync_definitions([build_paas_system_definition()])
 
-        assert [result.counts()["created"] for result in aggregated.results] == [19, 11]
-        assert aggregated.created_count == 30
+        assert [result.counts()["created"] for result in aggregated.results] == [19]
+        assert aggregated.created_count == 19
         assert aggregated.updated_count == 0
 
     def test_updates_changed_action_name(self, backend):

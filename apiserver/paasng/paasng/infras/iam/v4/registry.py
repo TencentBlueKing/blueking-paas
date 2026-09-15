@@ -21,8 +21,6 @@
 单个条目失败时记录后继续处理其余条目。
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Callable, Dict, Iterable, List, Optional, Sequence
 
@@ -78,7 +76,7 @@ class ModelSyncResult:
 
 @define
 class AggregatedSyncResult:
-    """一次命令执行覆盖的全部系统"""
+    """一次命令的汇总结果"""
 
     results: List[ModelSyncResult] = field(factory=list)
 
@@ -121,7 +119,10 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
     def sync_definitions(
         self, definitions: Sequence[SystemDefinition], *, dry_run: bool = False
     ) -> AggregatedSyncResult:
-        """同步一组系统的完整模型。标识符校验在任何写操作之前执行。"""
+        """同步给定系统的完整模型。标识符校验在任何写操作之前执行。
+
+        运维命令目前只传入 bk_paas3。
+        """
         validate_identifiers(definitions)
         aggregated = AggregatedSyncResult()
         for definition in definitions:

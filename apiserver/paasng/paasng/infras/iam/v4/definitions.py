@@ -15,16 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""两个系统在 IAM V4 上的本地模型定义
-
-从现有枚举与角色映射抽取系统、资源类型、操作、角色四类数据，丢弃 V4 无对应物的
-action_groups / common_actions / resource_creator_actions / related_actions。
-"""
-
-from __future__ import annotations
+"""开发者中心（bk_paas3）在 IAM V4 上的本地模型定义"""
 
 import re
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, List, Sequence
 from urllib.parse import urljoin
 
 from attrs import define, field
@@ -34,24 +28,21 @@ from django.utils.encoding import force_str
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.exceptions import InvalidIAMIdentifierError
 from paasng.infras.iam.permissions.resources.application import AppAction, AppRole
-from paasng.infras.iam.permissions.resources.plugin import PluginIAMRole, PluginPermissionActions
-from paasng.infras.iam.shim import get_paas_system_id, get_plugin_system_id
+from paasng.infras.iam.shim import get_paas_system_id
 
 # 小写字母开头，只含小写字母/数字/下划线/连字符，最长 32 字符
 V4_IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 
 PAAS_RESOURCE_TYPE_ID = ResourceType.Application.value
-PLUGIN_RESOURCE_TYPE_ID = "plugin"
 
 PAAS_CALLBACK_PATH = "/backend/api/iam-provider/applications/"
-PLUGIN_CALLBACK_PATH = "/backend/api/bkplugins/shim/iam/selection/plugin_view/"
-
-SYSTEM_ALIAS_PAAS = "paas"
-SYSTEM_ALIAS_PLUGINS = "plugins"
 
 
 @define(frozen=True)
 class ResourceTypeDefinition:
+    """IAM V4 资源类型。本期只注册 application，对应平台侧的 Application。"""
+
+    # "application"，取值 ResourceType.Application
     id: str
     name: str
     ancestors: List[str] = field(factory=list)
@@ -68,8 +59,13 @@ class ResourceTypeDefinition:
 
 @define(frozen=True)
 class ActionDefinition:
+    """IAM V4 操作。对应 AppAction，例如 view_basic_info / basic_develop。"""
+
+    # AppAction 的值，如 "view_basic_info"
     id: str
+    # AppAction 的展示名，如「基础信息查看」
     name: str
+    # 固定为 application
     resource_type_id: str
 
     def to_create_payload(self) -> Dict:
@@ -85,6 +81,9 @@ class ActionDefinition:
 
 @define(frozen=True)
 class RoleActionDefinition:
+    """角色绑定的一条操作。id 对应 AppAction，resource_type_id 固定为 application。"""
+
+    # AppAction 的值，如 "basic_develop"
     id: str
     resource_type_id: str
 
@@ -97,9 +96,15 @@ class RoleActionDefinition:
 
 @define(frozen=True)
 class RoleDefinition:
+    """IAM V4 角色。对应 AppRole（app_administrator / app_developer / app_operator）"""
+
+    # AppRole 的值，如 "app_administrator"
     id: str
+    # AppRole 的展示名，如「应用管理员」
     name: str
+    # AppRole.get_description()
     description: str
+    # AppRole.get_actions() 展开后的操作清单
     actions: List[RoleActionDefinition] = field(factory=list)
 
     def to_create_payload(self) -> Dict:
@@ -125,10 +130,15 @@ class RoleDefinition:
 
 @define(frozen=True)
 class SystemDefinition:
+    """IAM V4 系统"""
+
+    # settings.IAM_PAAS_V3_SYSTEM_ID，默认 "bk_paas3"
     id: str
     name: str
     description: str
+    # 允许调用该系统的蓝鲸应用，取 settings.IAM_APP_CODE
     clients: List[str]
+    # IAM 拉取 application 实例的回调地址
     callback_url: str
     resource_types: List[ResourceTypeDefinition]
     actions: List[ActionDefinition]
@@ -229,69 +239,5 @@ def build_paas_system_definition() -> SystemDefinition:
     )
 
 
-def build_plugin_system_definition() -> SystemDefinition:
-    resource_type_id = PLUGIN_RESOURCE_TYPE_ID
-    actions = [
-        ActionDefinition(
-            id=str(action),
-            name=force_str(PluginPermissionActions.get_choice_label(action)),
-            resource_type_id=resource_type_id,
-        )
-        for action in PluginPermissionActions
-    ]
-    roles = [
-        RoleDefinition(
-            id=str(role),
-            name=force_str(PluginIAMRole.get_choice_label(role)),
-            description=PluginIAMRole.get_description(role),
-            actions=[
-                RoleActionDefinition(id=str(action), resource_type_id=resource_type_id)
-                for action in PluginIAMRole.get_actions(role)
-            ],
-        )
-        for role in PluginIAMRole
-    ]
-    return SystemDefinition(
-        id=get_plugin_system_id(),
-        name="插件开发者中心",
-        description="蓝鲸插件开发者中心，提供插件的开发、发布与管理能力。",
-        clients=[settings.IAM_APP_CODE],
-        callback_url=_callback_url(PLUGIN_CALLBACK_PATH),
-        resource_types=[ResourceTypeDefinition(id=resource_type_id, name="插件")],
-        actions=actions,
-        roles=roles,
-    )
-
-
 def iter_system_definitions() -> List[SystemDefinition]:
-    return [build_paas_system_definition(), build_plugin_system_definition()]
-
-
-def resolve_system_definitions(system_aliases: Iterable[str] | None) -> List[SystemDefinition]:
-    """按命令行别名或系统 ID 解析要同步的系统，未指定则全量"""
-    mapping = {
-        SYSTEM_ALIAS_PAAS: build_paas_system_definition,
-        SYSTEM_ALIAS_PLUGINS: build_plugin_system_definition,
-        get_paas_system_id(): build_paas_system_definition,
-        get_plugin_system_id(): build_plugin_system_definition,
-    }
-    if not system_aliases:
-        return iter_system_definitions()
-
-    selected: List[SystemDefinition] = []
-    seen = set()
-    unknown = []
-    for alias in system_aliases:
-        builder = mapping.get(alias)
-        if builder is None:
-            unknown.append(alias)
-            continue
-        definition = builder()
-        if definition.id in seen:
-            continue
-        seen.add(definition.id)
-        selected.append(definition)
-
-    if unknown:
-        raise ValueError(f"未知的系统: {', '.join(unknown)}，可选值为 {sorted(set(mapping))}")
-    return selected
+    return [build_paas_system_definition()]

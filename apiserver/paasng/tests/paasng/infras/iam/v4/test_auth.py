@@ -17,7 +17,7 @@
 
 import json
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 import requests
@@ -94,8 +94,8 @@ def make_backend():
     return _make
 
 
-def make_resources(*res_ids: str) -> List[AuthResource]:
-    return [AuthResource(SYSTEM_ID, "application", res_id) for res_id in res_ids]
+def make_resource(res_id: str = "app-1") -> AuthResource:
+    return AuthResource(SYSTEM_ID, "application", res_id)
 
 
 def action_flags(flags: Dict[str, bool]) -> Dict:
@@ -103,12 +103,7 @@ def action_flags(flags: Dict[str, bool]) -> Dict:
     return {"data": [{"action_id": action_id, "allowed": allowed} for action_id, allowed in flags.items()]}
 
 
-def resource_flags(flags: Dict[str, bool]) -> Dict:
-    """构造 auth-by-resources 的响应体"""
-    return {"data": [{"resource_id": res_id, "allowed": allowed} for res_id, allowed in flags.items()]}
-
-
-def make_http_error(status_code: int = 400, body: Dict | None = None) -> HTTPResponseError:
+def make_http_error(status_code: int = 400, body: Optional[Dict] = None) -> HTTPResponseError:
     response = requests.Response()
     response.status_code = status_code
     response._content = json.dumps(body or {}).encode()
@@ -120,7 +115,7 @@ class TestSingleAuth:
         """单资源单操作走 direct_auth，请求体带 subject / action_id / resource"""
         backend, ops = make_backend(direct_auth=[{"data": {"allowed": True}}])
 
-        assert backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resources("app-1")) is True
+        assert backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resource()) is True
 
         call = ops.direct_auth.calls[0]
         assert call["data"] == {
@@ -139,9 +134,7 @@ class TestSingleAuth:
         """响应未给出判定结果时按未授权处理，不得放行"""
         backend, _ = make_backend(direct_auth=[{"data": data}])
 
-        assert (
-            backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resources("app-1")) is expected
-        )
+        assert backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resource()) is expected
 
     def test_resource_type_allowed_omits_resource(self, make_backend):
         """资源无关的操作不能带 resource 字段，否则权限中心会按资源相关的语义校验"""
@@ -156,15 +149,6 @@ class TestSingleAuth:
         assert call["path_params"] == {"system_id": get_paas_system_id()}
         assert call["path_params"]["system_id"] != SYSTEM_ID
 
-    def test_rejects_multiple_resources(self, make_backend):
-        """单次鉴权只接受一个资源实例，多传时报错而非静默取首个"""
-        backend, ops = make_backend(direct_auth=[])
-
-        with pytest.raises(ValueError, match="at most one resource"):
-            backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resources("app-1", "app-2"))
-
-        assert ops.direct_auth.calls == []
-
 
 class TestMultiActionsAuth:
     def test_single_call_within_limit(self, make_backend):
@@ -174,7 +158,7 @@ class TestMultiActionsAuth:
         )
 
         perms = backend.resource_inst_multi_actions_allowed(
-            USERNAME, TENANT_ID, ["manage_members", "edit_basic_info"], make_resources("app-1")
+            USERNAME, TENANT_ID, ["manage_members", "edit_basic_info"], make_resource()
         )
 
         assert perms == {"manage_members": True, "edit_basic_info": False}
@@ -195,7 +179,7 @@ class TestMultiActionsAuth:
             ]
         )
 
-        perms = backend.resource_inst_multi_actions_allowed(USERNAME, TENANT_ID, action_ids, make_resources("app-1"))
+        perms = backend.resource_inst_multi_actions_allowed(USERNAME, TENANT_ID, action_ids, make_resource())
 
         assert [len(call["data"]["action_ids"]) for call in ops.direct_auth_by_actions.calls] == [20, 5]
         assert len(perms) == 25
@@ -207,55 +191,21 @@ class TestMultiActionsAuth:
         backend, _ = make_backend(direct_auth_by_actions=[action_flags({"manage_members": True})])
 
         perms = backend.resource_inst_multi_actions_allowed(
-            USERNAME, TENANT_ID, ["manage_members", "edit_basic_info"], make_resources("app-1")
+            USERNAME, TENANT_ID, ["manage_members", "edit_basic_info"], make_resource()
         )
 
         assert perms == {"manage_members": True, "edit_basic_info": False}
 
+    @pytest.mark.parametrize("data", [{"action_id": "manage_members"}, ["manage_members"], None, 42])
+    def test_malformed_data_is_denied(self, make_backend, data):
+        """data 结构不符预期时按未授权处理，而不是在取值处抛异常变成 500"""
+        backend, _ = make_backend(direct_auth_by_actions=[{"data": data}])
 
-class TestBatchResourceMultiActionsAuth:
-    def test_splits_by_action_dimension(self, make_backend):
-        """3 资源 × 2 操作按 action 维度拆为 2 次调用，返回完整的 6 项判定结果"""
-        backend, ops = make_backend(
-            direct_auth_by_resources=[
-                resource_flags({"app-1": True, "app-2": False, "app-3": True}),
-                resource_flags({"app-1": False, "app-2": False, "app-3": True}),
-            ]
+        perms = backend.resource_inst_multi_actions_allowed(
+            USERNAME, TENANT_ID, ["manage_members", "edit_basic_info"], make_resource()
         )
 
-        perms = backend.batch_resource_multi_actions_allowed(
-            USERNAME, TENANT_ID, ["view_basic_info", "basic_develop"], make_resources("app-1", "app-2", "app-3")
-        )
-
-        calls = ops.direct_auth_by_resources.calls
-        assert [call["data"]["action_id"] for call in calls] == ["view_basic_info", "basic_develop"]
-        assert calls[0]["data"]["resources"] == [{"id": "app-1"}, {"id": "app-2"}, {"id": "app-3"}]
-        # 鉴权是读操作，批量调用不应带上写操作人 header
-        assert V4_OPERATOR_HEADER not in calls[0]["headers"]
-
-        assert perms == {
-            "app-1": {"view_basic_info": True, "basic_develop": False},
-            "app-2": {"view_basic_info": False, "basic_develop": False},
-            "app-3": {"view_basic_info": True, "basic_develop": True},
-        }
-
-    def test_splits_resources_beyond_batch_limit(self, make_backend):
-        """单个操作下 25 个资源应拆为 20 + 5 两次调用"""
-        res_ids = [f"app-{i}" for i in range(25)]
-        backend, ops = make_backend(
-            direct_auth_by_resources=[
-                resource_flags(dict.fromkeys(res_ids[:20], True)),
-                resource_flags(dict.fromkeys(res_ids[20:], True)),
-            ]
-        )
-
-        perms = backend.batch_resource_multi_actions_allowed(
-            USERNAME, TENANT_ID, ["view_basic_info"], make_resources(*res_ids)
-        )
-
-        assert [len(call["data"]["resources"]) for call in ops.direct_auth_by_resources.calls] == [20, 5]
-        assert len(perms) == 25
-        assert all(perm["view_basic_info"] for perm in perms.values())
+        assert perms == {"manage_members": False, "edit_basic_info": False}
 
 
 class TestFailureIsNotFallbackToAllow:
@@ -271,7 +221,7 @@ class TestFailureIsNotFallbackToAllow:
         )
 
         with pytest.raises(BKIAMApiHTTPError) as exc_info:
-            backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resources("app-1"))
+            backend.resource_inst_allowed(USERNAME, TENANT_ID, "view_basic_info", make_resource())
 
         assert exc_info.value.request_id == "req-err"
         assert exc_info.value.status_code == 400
@@ -290,6 +240,6 @@ class TestFailureIsNotFallbackToAllow:
         )
 
         with pytest.raises(BKIAMApiHTTPError):
-            backend.resource_inst_multi_actions_allowed(USERNAME, TENANT_ID, action_ids, make_resources("app-1"))
+            backend.resource_inst_multi_actions_allowed(USERNAME, TENANT_ID, action_ids, make_resource())
 
         assert len(ops.direct_auth_by_actions.calls) == 2

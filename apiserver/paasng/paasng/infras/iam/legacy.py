@@ -43,7 +43,7 @@ class Permission:
 
     待权限中心确认后按结论处理：该系统在 V4 存在则把这两个方法改为经 `shim.get_auth_backend()`
     分发（注意 `app_filters` 依赖 SDK 的 SQLConverter，V4 需另找等价实现，见 base.backends 的说明）；
-    若确认只存在于 V3 或可直接停用，则连同 `paasng.infras.legacydb` 的调用点一起下线。
+        若确认只存在于 V3 或可直接停用，则连同唯一调用点 `paasng.infras.legacydb.models` 一起下线。
     """
 
     def __init__(self):

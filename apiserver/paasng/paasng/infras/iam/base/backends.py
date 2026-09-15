@@ -58,29 +58,20 @@ class BaseAuthBackend(ABC):
         username: str,
         tenant_id: str,
         action_id: str,
-        resources: List[AuthResource],
+        resource: AuthResource,
         use_cache: bool = False,
     ) -> bool:
         """判断用户对某个资源实例是否具有指定操作的权限"""
 
     @abstractmethod
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
+        self, username: str, tenant_id: str, action_ids: List[str], resource: AuthResource
     ) -> Dict[str, bool]:
         """判断用户对单个资源实例是否具有多个操作的权限
 
+        操作数超过版本约定的批量上限时，由实现自动分批后合并结果。
+
         :returns: 形如 {'view_basic_info': True, 'edit_basic_info': False}
-        """
-
-    @abstractmethod
-    def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
-    ) -> Dict[str, Dict[str, bool]]:
-        """判断用户对多个同类型资源是否具有多个操作的权限
-
-        条目数超过版本约定的批量上限时，由实现自动分批后合并结果。
-
-        :returns: 形如 {'app_code_test': {'view_basic_info': True, 'edit_basic_info': False}}
         """
 
     @abstractmethod

@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from typing import Any, Dict, List, Optional, Union
 from unittest.mock import Mock
 
@@ -104,6 +105,44 @@ class TestCall:
 
         with pytest.raises(BKIAMGatewayServiceError):
             client.call(operation)
+
+
+class TestExtractErrorDetail:
+    """错误体里的 code 与 message 要尽量拼进异常消息，缺项时不能拼出误导性的内容"""
+
+    @pytest.mark.parametrize(
+        ("body", "expected"),
+        [
+            (
+                {"error": {"code": "INVALID_REQUEST", "message": "action not found"}},
+                "INVALID_REQUEST: action not found",
+            ),
+            # 只给出一项时单独返回该项，不拼接出 "None: xxx" 这类内容
+            ({"error": {"message": "action not found"}}, "action not found"),
+            ({"error": {"code": "INVALID_REQUEST"}}, "INVALID_REQUEST"),
+            # 两项都缺、error 不是对象、没有 error 字段：无可用信息，调用方只拼 SDK 的原始消息
+            ({"error": {}}, None),
+            ({"error": "invalid request"}, None),
+            ({"request_id": "req-err"}, None),
+        ],
+    )
+    def test_combines_code_and_message(self, body, expected):
+        response = requests.Response()
+        response.status_code = 400
+        response._content = json.dumps(body).encode()
+
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad request", response=response)) == expected
+
+    def test_returns_none_without_response(self):
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad request")) is None
+
+    def test_returns_none_for_non_json_body(self):
+        """网关返回 HTML 错误页时不应抛异常，取不到 detail 即可"""
+        response = requests.Response()
+        response.status_code = 502
+        response._content = b"<html>502 Bad Gateway</html>"
+
+        assert BKIAMV4BaseClient._extract_error_detail(HTTPResponseError("bad gateway", response=response)) is None
 
 
 class TestPaginate:

@@ -75,7 +75,7 @@ class FakeApplicationPermission(Permission):
         return FakeApplicationAuthBackend()
 
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
+        self, username: str, tenant_id: str, action_ids: List[str], resource: AuthResource
     ) -> Dict[str, bool]:
         if username in [roles.ADMIN_USER, roles.APP_ADMIN_USER]:
             return dict.fromkeys(action_ids, True)
@@ -90,12 +90,3 @@ class FakeApplicationPermission(Permission):
                 if key in app_operate_allowed_actions:
                     multi[key] = True
         return multi
-
-    def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
-    ) -> Dict[str, Dict[str, bool]]:
-        perms = {}
-        for _, r_id in enumerate([res.id for res in resources]):
-            perms[r_id] = dict.fromkeys(action_ids, False)
-
-        return perms

@@ -14,18 +14,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The one workspace child the supervisor starts, stops, and checks for a listen."""
+"""Hosting for one child process: spawn it, poll it, probe it, stop its group.
+
+这一层不认识 uvicorn、端口、密钥和预览地址。要启什么由调用方用 ProcessSpec 说清楚，
+怎么算就绪由调用方给的探针决定。
+"""
 
 import os
 import signal
 import socket
 import subprocess
-import sys
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Protocol
 
-from app_spark_agent import settings
-from app_spark_agent.app_supervisor.types import APP_PORT_ENV, SECRET_ENV_KEYS, STOP_TIMEOUT_SECONDS
+# SIGTERM 之后等多久再 SIGKILL。
+STOP_TIMEOUT_SECONDS = 5.0
 
 
 class ProcessRegistry(Protocol):
@@ -34,69 +39,64 @@ class ProcessRegistry(Protocol):
     def register(self, process: subprocess.Popen[bytes]) -> None: ...
 
 
-class AppProcess:
-    """Spawn, stop, and probe the workspace application process."""
+@dataclass(frozen=True)
+class ProcessSpec:
+    """One child process to start. Built fresh per start, so a changed port takes effect.
 
-    def __init__(self, workspace: Path, processes: ProcessRegistry) -> None:
-        # start() 的 cwd，和监督器共用同一份 workspace。
-        self.workspace = workspace
+    :param argv: Command to run; argv[0] is the executable.
+    :param cwd: Working directory the command is resolved against.
+    :param env: The child's entire environment; nothing is inherited on top of it.
+    :param log_path: File the child's stdout and stderr are appended to.
+    """
 
+    argv: tuple[str, ...]
+    cwd: Path
+    env: Mapping[str, str]
+    log_path: Path
+
+
+def tcp_port_is_open(port: int, *, host: str = "127.0.0.1", timeout: float = 0.2) -> bool:
+    """Return whether host:port accepts a TCP connection."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+class ManagedProcess:
+    """Spawn, poll, probe, and stop the one child process a caller hosts."""
+
+    def __init__(self, processes: ProcessRegistry, *, probe: Callable[[], bool]) -> None:
         # 每拉起一个子进程就登记，空闲退出 / SIGTERM 的 stop_all 才能杀到。
         self._processes = processes
+
+        # 就绪由调用方定义：这一层不知道该连哪个端口，也不解析 HTTP。
+        self._probe = probe
         self._child: subprocess.Popen[bytes] | None = None
 
-    @property
-    def port(self) -> int:
-        """Return the port the application is expected to listen on."""
-        return settings.APP_PORT
-
     def living(self) -> bool:
-        """Return whether the supervisor still has a running child."""
+        """Return whether the child this object started is still running."""
         return self._child is not None and self._child.poll() is None
 
-    def is_listening(self) -> bool:
-        """Return whether the agreed port accepts a TCP connection."""
-        return self.port_is_open()
+    def is_ready(self) -> bool:
+        """Return whether the caller's readiness probe passes.
 
-    def port_is_open(self) -> bool:
-        """Probe 127.0.0.1 on the agreed port."""
-        try:
-            with socket.create_connection(("127.0.0.1", self.port), timeout=0.2):
-                return True
-        except OSError:
-            return False
+        与 living 无关：探针可能被别人启的进程满足，判活要两者一起看。
+        """
+        return self._probe()
 
-    def build_child_environ(self, source: dict[str, str] | None = None) -> dict[str, str]:
-        """Copy the parent environment, inject the app port, and drop secrets."""
-        env = dict(os.environ if source is None else source)
-        for key in SECRET_ENV_KEYS:
-            env.pop(key, None)
-        env[APP_PORT_ENV] = str(self.port)
-        return env
-
-    def start_argv(self) -> list[str]:
-        """Return the command that starts main:app on the agreed port."""
-        return [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "main:app",
-            "--host",
-            "0.0.0.0",
-            "--port",
-            str(self.port),
-        ]
-
-    def start(self) -> None:
-        """Spawn the child, attach its output to the app log, and register it."""
-        log_file = _open_app_log()
+    def start(self, spec: ProcessSpec) -> None:
+        """Spawn the child spec describes, attach its output to the log, and register it."""
+        log_file = _open_log(spec.log_path)
         try:
             self._child = _spawn_popen(
-                self.start_argv(),
-                cwd=self.workspace,
-                env=self.build_child_environ(),
+                list(spec.argv),
+                cwd=spec.cwd,
+                env=dict(spec.env),
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
+                # 独立进程组：停的时候能把子进程自己拉起的那些一起清掉。
                 start_new_session=True,
             )
         finally:
@@ -105,7 +105,7 @@ class AppProcess:
         self._processes.register(self._child)
 
     def stop(self) -> None:
-        """SIGTERM the current child, then SIGKILL if it is still alive."""
+        """SIGTERM the current child's group, then SIGKILL if it is still alive."""
         process = self._child
         self._child = None
         if process is None or process.poll() is not None:
@@ -113,15 +113,15 @@ class AppProcess:
         _stop_process(process)
 
 
-def _open_app_log() -> int | IO[bytes]:
-    """Open the application log for append, or discard output when that file cannot be used."""
+def _open_log(path: Path) -> int | IO[bytes]:
+    """Open path for append, or discard output when that file cannot be used."""
     try:
-        return open(settings.APP_LOG_PATH, "ab")
+        return open(path, "ab")
     except OSError:
         return subprocess.DEVNULL
 
 
-# 单独抽出 Popen：单测 mock 这一层，不必给 AppProcess 加 spawn 参数。
+# 单独抽出 Popen：单测 mock 这一层，不必给 ManagedProcess 加 spawn 参数。
 def _spawn_popen(
     argv: list[str],
     *,
@@ -131,7 +131,7 @@ def _spawn_popen(
     stderr: int,
     start_new_session: bool,
 ) -> subprocess.Popen[bytes]:
-    """Start one application child with Popen."""
+    """Start one child with Popen."""
     return subprocess.Popen(
         argv,
         cwd=cwd,

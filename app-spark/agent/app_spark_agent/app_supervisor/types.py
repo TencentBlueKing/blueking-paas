@@ -52,13 +52,10 @@ CRASH_RETRY_INTERVAL_SECONDS = 2.0
 # watch 轮询间隔。掉听另有上面的缓冲，不必更密。
 CRASH_WATCH_POLL_SECONDS = 0.5
 
-# SIGTERM 之后等多久再 SIGKILL。
-STOP_TIMEOUT_SECONDS = 5.0
-
 # 重启前等旧端口放开。到期没等到也继续，由后面的实听等待收场。
 PORT_FREE_TIMEOUT_SECONDS = 5.0
 
-# skill 约定读这个键拿端口，不要让模型硬编码。
+# 注入给子进程的端口。应用不靠它选端口，监听端口由启动命令决定。
 APP_PORT_ENV = f"{settings.ENV_PREFIX}APP_PORT"
 
 # 只落盘给控制面 drain，不往进行中的 /runs SSE 里插。
@@ -137,7 +134,7 @@ def validate_launch_label(label: str) -> str:
 
 def build_preview_url(path: str) -> str:
     """Join the preview base URL with path."""
+
+    # 结尾补 / 保证 urljoin 不吃掉基址最后一段；缺省的 "/" 去掉斜杠后就是空串，回到基址本身。
     base = settings.preview_base_url().rstrip("/") + "/"
-    if path == DEFAULT_LAUNCH_PATH:
-        return base
     return urljoin(base, path.lstrip("/"))

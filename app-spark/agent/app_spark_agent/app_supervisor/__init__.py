@@ -14,9 +14,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Start and restart the workspace application so a caller can open it over HTTP."""
+"""Start and restart the workspace application so a caller can open it over HTTP.
 
-from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry
+分三层：process.py 是通用子进程托管，app_spec.py 说清这个应用怎么启，supervisor.py 只管
+策略（一次一个 launch、掉听重启额度、状态、事件）。
+"""
+
+from app_spark_agent.app_supervisor.app_spec import build_app_spec, build_child_environ
+from app_spark_agent.app_supervisor.process import ManagedProcess, ProcessRegistry, ProcessSpec
 from app_spark_agent.app_supervisor.supervisor import AppSupervisor
 from app_spark_agent.app_supervisor.types import (
     APP_PORT_ENV,
@@ -42,11 +47,14 @@ __all__ = [
     "AppLaunchError",
     "AppLaunchFailed",
     "AppLaunchInvalid",
-    "AppProcess",
     "AppStatus",
     "AppSupervisor",
     "LaunchResult",
+    "ManagedProcess",
     "ProcessRegistry",
+    "ProcessSpec",
+    "build_app_spec",
+    "build_child_environ",
     "validate_launch_label",
     "validate_launch_path",
 ]

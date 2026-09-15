@@ -28,7 +28,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 兼容回落。未注入上面的 token 时当作 access_token 用。`fake:*` 不需要 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 调用真实模型时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
-| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`。`POST /app/launch` 拉起应用时注入同名环境变量；健康只认该端口是否实听 |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`。`POST /app/launch` 用它拼启动命令，并注入同名环境变量；健康只认该端口是否实听 |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
@@ -132,8 +132,12 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 预览地址以响应体的 `url` 为准。同一份四要素会落一条 `app.launched` 到 `ui_events`，`GET /ui-events` 可 drain；
 这条事件和控制面最终一致，launch 刚返回时立刻去读可能还看不到。不往进行中的 `/runs` SSE 里插。
 
-启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`。
-skill `fastapi_http.md` 要求生成 `main:app`，端口只读 `APP_SPARK_AGENT_APP_PORT`。
+启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`
+（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在 `settings.INSTRUCTIONS` 里，两处必须一起改——
+模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
+
+`--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。判活只连
+`127.0.0.1:<APP_PORT>`，两者不是一回事。
 
 规则：
 

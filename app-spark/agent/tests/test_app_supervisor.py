@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""AppSupervisor 规则：校验、密钥剥离、重启沿用、并发 409、启动失败、crash-watch。"""
+"""AppSupervisor 规则：校验、启动 spec、重启沿用、并发 409、启动失败、crash-watch。"""
 
 import asyncio
 from collections.abc import AsyncIterator, Callable
@@ -33,12 +33,14 @@ from app_spark_agent.app_supervisor import (
     AppLaunchInvalid,
     AppStatus,
     AppSupervisor,
+    build_app_spec,
+    build_child_environ,
     validate_launch_label,
     validate_launch_path,
 )
 from app_spark_agent.app_supervisor import process as process_mod
 from app_spark_agent.app_supervisor import supervisor as supervisor_mod
-from app_spark_agent.app_supervisor.process import AppProcess
+from app_spark_agent.app_supervisor.app_spec import APP_IMPORT_PATH
 from app_spark_agent.server.lifecycle import AppProcessRegistry
 from app_spark_agent.state import AppendLog
 
@@ -80,7 +82,7 @@ class App:
         self._fail_on = fail_on
         self._calls = 0
         (tmp_path / "workspace").mkdir(exist_ok=True)
-        monkeypatch.setattr(AppProcess, "port_is_open", lambda _self: self.listening)
+        monkeypatch.setattr(supervisor_mod, "tcp_port_is_open", lambda _port: self.listening)
         monkeypatch.setattr(process_mod, "_spawn_popen", self._spawn)
         self.supervisor = AppSupervisor(
             tmp_path / "workspace",
@@ -146,14 +148,25 @@ def test_path_and_label_rules() -> None:
             validate_launch_label(label)
 
 
-def test_child_env_drops_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "APP_PORT", 8123)
+def test_child_env_drops_secrets() -> None:
     source = dict.fromkeys(SECRET_ENV_KEYS, "secret")
     source["APP_SPARK_AGENT_WORKSPACE"] = "/data/workspace"
-    env = App(monkeypatch, tmp_path).supervisor.build_child_environ(source)
+
+    env = build_child_environ(8123, source)
+
     assert env[APP_PORT_ENV] == "8123"
     assert env["APP_SPARK_AGENT_WORKSPACE"] == "/data/workspace"
     assert all(key not in env for key in SECRET_ENV_KEYS)
+
+
+def test_spec_starts_the_import_path_the_instructions_promise(tmp_path: Path) -> None:
+    """启动命令和提示词里的入口名是一对，改一边就必须改另一边，否则 launch 必失败。"""
+    spec = build_app_spec(tmp_path, 8123)
+
+    assert APP_IMPORT_PATH in spec.argv
+    assert APP_IMPORT_PATH in settings.INSTRUCTIONS
+    assert spec.argv[-2:] == ("--port", "8123")
+    assert spec.cwd == tmp_path
 
 
 async def test_relaunch_keeps_path_and_reuses_run_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -131,7 +131,11 @@ FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 # Agent 的系统提示词。它和 agent.py 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
 #
-# TODO：当前仅做调试功能后，后续再调，以及增加更多 SKILL。
+# 下半段的 main:app 与 app_supervisor 里构造的启动命令是一对：那边启的就是这个导入路径，
+# 模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
+#
+# TODO：当前仅做调试功能后，后续再调。真出现多套技术栈时把「怎么写应用」抽成可切换的档，
+# 而不是再挂一个指向本包安装目录的 RepoContext。
 INSTRUCTIONS = """
 You are a coding agent working inside the provided workspace.
 
@@ -143,6 +147,19 @@ verified, and anything that remains blocked.
 Use file tools for reading and editing and shell tools for commands. Treat paths as relative to the
 workspace. Use read_app_log when diagnosing the running application; it has no path argument.
 Never expose credentials or intentionally inspect secret files.
+
+Write the user-facing application as a FastAPI app exported from main.py as app, that is the
+import path main:app. The launcher starts that import path and no other, so an application
+exported under a different name cannot be started at all.
+
+Do not listen on a port yourself and do not hard-code one. The launcher decides the port and
+passes it to the server on the command line, so the application has no say in it.
+
+Do not start or keep the application process running yourself, and do not use the shell to host a
+long-running server. The application is launched for you once the user asks for it.
+
+Do not align this application with the BlueKing or PaaS application framework in this period. A
+plain FastAPI HTTP app is enough.
 """.strip()
 
 # -----------------------------------------------------------------------

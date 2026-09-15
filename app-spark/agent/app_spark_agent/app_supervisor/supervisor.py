@@ -23,7 +23,9 @@ from pathlib import Path
 
 from ag_ui.core import CustomEvent
 
-from app_spark_agent.app_supervisor.process import AppProcess, ProcessRegistry
+from app_spark_agent import settings
+from app_spark_agent.app_supervisor.app_spec import build_app_spec
+from app_spark_agent.app_supervisor.process import ManagedProcess, ProcessRegistry, tcp_port_is_open
 from app_spark_agent.app_supervisor.types import (
     CRASH_RETRY_INTERVAL_SECONDS,
     CRASH_RETRY_LIMIT,
@@ -50,14 +52,15 @@ class AppSupervisor:
     """Launch, restart, and watch the single workspace application process."""
 
     def __init__(self, workspace: Path, processes: ProcessRegistry, ui_events: AppendLog) -> None:
-        # uvicorn 的 cwd，必须能 import 到 main:app。
+        # uvicorn 的 cwd，必须能 import 到应用的入口。
         self.workspace = workspace
 
         # 只落 app.launched，给控制面 drain；不往 /runs SSE 里插。
         self._ui_events = ui_events
 
-        # processes 把子进程挂到 Runtime 的 SIGTERM / 空闲退出名单上。
-        self._process = AppProcess(workspace, processes)
+        # 进程层只管 spawn / stop / poll / probe：启什么由这边每次 launch 构造 spec 交给它，
+        # 怎么算就绪也由这边的探针决定。processes 把子进程挂到 SIGTERM / 空闲退出名单上。
+        self._process = ManagedProcess(processes, probe=self._port_is_open)
 
         # 与 RunGuard 分开：run 进行中仍允许 launch，第二次 launch 才 409。
         self._lock = asyncio.Lock()
@@ -71,7 +74,7 @@ class AppSupervisor:
     @property
     def port(self) -> int:
         """Return the port the application is expected to listen on."""
-        return self._process.port
+        return settings.APP_PORT
 
     @property
     def app_status(self) -> AppStatus:
@@ -86,18 +89,6 @@ class AppSupervisor:
             return AppStatus.HEALTHY
         return AppStatus.UNHEALTHY
 
-    def preview_url(self, path: str) -> str:
-        """Join the preview base URL with path."""
-        return build_preview_url(path)
-
-    def build_child_environ(self, source: dict[str, str] | None = None) -> dict[str, str]:
-        """Copy the parent environment, inject the app port, and drop secrets."""
-        return self._process.build_child_environ(source)
-
-    def start_argv(self) -> list[str]:
-        """Return the command that starts main:app on the agreed port."""
-        return self._process.start_argv()
-
     async def launch(self, path: str | None = None, label: str | None = None) -> LaunchResult:
         """Start or restart the application and persist app.launched when it listens."""
 
@@ -110,13 +101,13 @@ class AppSupervisor:
             resolved_label = self._resolve_label(label)
 
             # 端口在听、却不是我们的子进程：不杀、不发事件。
-            if self._process.is_listening() and not self._process.living():
+            if self._process.is_ready() and not self._process.living():
                 raise AppLaunchConflict("The application port is owned by a process this supervisor did not start.")
 
             # 已是监督器进程：再次 launch 一律先停再拉，好加载新代码。
             if self._process.living():
                 self._process.stop()
-                await self._wait_until(lambda: not self._process.is_listening(), PORT_FREE_TIMEOUT_SECONDS)
+                await self._wait_until(lambda: not self._process.is_ready(), PORT_FREE_TIMEOUT_SECONDS)
 
             self._path = resolved_path
             self._label = resolved_label
@@ -177,9 +168,15 @@ class AppSupervisor:
                 # 标 unhealthy 后继续转；额度未满下一轮还会再试。
                 self._status = AppStatus.UNHEALTHY
 
+    def _port_is_open(self) -> bool:
+        """Probe the agreed port. This is the readiness the process layer is given."""
+
+        # 健康只认约定端口 TCP 实听，不看 HTTP 状态码。
+        return tcp_port_is_open(self.port)
+
     def _is_up(self) -> bool:
         """Return whether the supervisor child is alive and the port accepts a connection."""
-        return self._process.living() and self._process.is_listening()
+        return self._process.living() and self._process.is_ready()
 
     def _retries_exhausted(self) -> bool:
         """Return whether automatic restarts since the last manual launch are used up."""
@@ -203,7 +200,7 @@ class AppSupervisor:
             port=self.port,
             path=self._path,
             label=self._label,
-            url=self.preview_url(self._path),
+            url=build_preview_url(self._path),
             app_status=self.app_status,
         )
 
@@ -222,7 +219,9 @@ class AppSupervisor:
 
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until the port listens, or fail the launch."""
-        self._process.start()
+
+        # 每次重新构造 spec：两次 launch 之间端口和环境都可能已经变了。
+        self._process.start(build_app_spec(self.workspace, self.port))
         deadline = time.monotonic() + LISTEN_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
             # 进程先死了就不必再空等超时。
@@ -230,8 +229,7 @@ class AppSupervisor:
                 self._status = AppStatus.UNHEALTHY
                 raise AppLaunchFailed("The application process exited before it listened.")
 
-            # 健康只认 TCP 实听，不看 HTTP 状态码。
-            if self._process.is_listening():
+            if self._process.is_ready():
                 self._status = AppStatus.HEALTHY
                 return
             await asyncio.sleep(0.05)

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from functools import wraps
 from typing import Dict, List, Optional
 
 from django.conf import settings
@@ -25,13 +26,32 @@ from iam.exceptions import AuthAPIError
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
 from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.exceptions import BKIAMAuthCheckError
 
 logger = logging.getLogger(__name__)
+
+
+def _reraise_as_auth_check_error(func):
+    """把 SDK 抛出的 AuthAPIError 转换为平台自身的鉴权异常
+
+    V4 无 SDK，鉴权失败抛的是 BKIAMGatewayServiceError 的子类。两版须对调用方呈现同一种
+    异常类型，调用方才能在不感知版本、也不 import SDK 异常的前提下捕获。
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except AuthAPIError as e:
+            raise BKIAMAuthCheckError(f"request bk-iam auth api failed: {e}") from e
+
+    return wrapper
 
 
 class BKIAMV3AuthBackend(BaseAuthBackend):
     """基于 bk-iam Python SDK 的 V3 鉴权实现"""
 
+    @_reraise_as_auth_check_error
     def resource_type_allowed(self, username: str, tenant_id: str, action_id: str, use_cache: bool = False) -> bool:
         _iam = self._make_iam(tenant_id)
         request = self._make_request(username, action_id)
@@ -39,37 +59,34 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
             return _iam.is_allowed(request)
         return _iam.is_allowed_with_cache(request)
 
+    @_reraise_as_auth_check_error
     def resource_inst_allowed(
         self,
         username: str,
         tenant_id: str,
         action_id: str,
-        resources: List[AuthResource],
+        resource: AuthResource,
         use_cache: bool = False,
     ) -> bool:
         _iam = self._make_iam(tenant_id)
-        request = self._make_request(username, action_id, resources=self._to_sdk_resources(resources))
+        request = self._make_request(username, action_id, resources=[self._to_sdk_resource(resource)])
         if not use_cache:
             return _iam.is_allowed(request)
         return _iam.is_allowed_with_cache(request)
 
+    @_reraise_as_auth_check_error
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
+        self, username: str, tenant_id: str, action_ids: List[str], resource: AuthResource
     ) -> Dict[str, bool]:
         actions = [Action(action_id) for action_id in action_ids]
         request = MultiActionRequest(
-            settings.IAM_PAAS_V3_SYSTEM_ID, Subject("user", username), actions, self._to_sdk_resources(resources), None
+            settings.IAM_PAAS_V3_SYSTEM_ID,
+            Subject("user", username),
+            actions,
+            [self._to_sdk_resource(resource)],
+            None,
         )
         return self._make_iam(tenant_id).resource_multi_actions_allowed(request)
-
-    def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[AuthResource]
-    ) -> Dict[str, Dict[str, bool]]:
-        # note: SDK 仅支持同类型的资源
-        actions = [Action(action_id) for action_id in action_ids]
-        request = MultiActionRequest(settings.IAM_PAAS_V3_SYSTEM_ID, Subject("user", username), actions, [], None)
-        resources_list = [[res] for res in self._to_sdk_resources(resources)]
-        return self._make_iam(tenant_id).batch_resource_multi_actions_allowed(request, resources_list)
 
     def build_resource_filter(
         self, username: str, tenant_id: str, action_id: str, key_mapping: Optional[Dict[str, str]] = None
@@ -94,8 +111,8 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
         )
 
     @staticmethod
-    def _to_sdk_resources(resources: List[AuthResource]) -> List[Resource]:
-        return [Resource(res.system, res.type, res.id, res.attribute) for res in resources]
+    def _to_sdk_resource(resource: AuthResource) -> Resource:
+        return Resource(resource.system, resource.type, resource.id, resource.attribute)
 
     @staticmethod
     def _make_request(username: str, action_id: str, resources: Optional[List[Resource]] = None) -> Request:

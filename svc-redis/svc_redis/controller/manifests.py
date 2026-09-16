@@ -121,6 +121,7 @@ class DisableAdditionalServiceConstructor(ManifestConstructor):
     def apply_to(
         self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
+        # 目前 redis-operator.opstree 仅支持 kind: Redis 的 svc 削减
         if plan_config.type != RedisType.REDIS.value:
             return
         model_res.spec.kubernetesConfig.service = crd.KubernetesServiceConfig(

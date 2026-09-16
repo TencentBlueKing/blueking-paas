@@ -179,6 +179,25 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
 }
 ```
 
+组合使用：
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "small",
+    "requests": {
+      "cpu": "100m",
+    },
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 
 ### 6. 启动项目

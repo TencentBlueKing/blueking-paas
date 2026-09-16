@@ -47,6 +47,24 @@ def get_plugin_system_id() -> str:
     return settings.IAM_PLUGINS_CENTER_SYSTEM_ID
 
 
+def get_system_token(tenant_id: str) -> str:
+    """开发者中心在权限中心上注册的系统认证令牌
+
+    权限中心回调平台的资源接口时，以 Basic base64(bk_iam:{token}) 携带它。两个版本的
+    凭证形式一致，差别只在令牌从哪里取：V3 由 SDK 提供，V4 无 SDK，改为直接调接口。
+
+    :raises BKIAMGatewayServiceError: 未能从权限中心取得令牌
+    """
+    if get_iam_version() == IAMVersion.V4:
+        from paasng.infras.iam.v4.token import fetch_system_token
+
+        return fetch_system_token(tenant_id)
+
+    from paasng.infras.iam.v3.token import fetch_system_token as fetch_v3_system_token
+
+    return fetch_v3_system_token(tenant_id)
+
+
 def get_auth_backend() -> BaseAuthBackend:
     """获取当前环境的鉴权实现
 

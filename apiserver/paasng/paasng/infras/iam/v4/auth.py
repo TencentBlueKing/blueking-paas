@@ -56,7 +56,6 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
     判定单资源多操作。后者单次上限为 20 个操作，超出由客户端基座自动分批。
 
     列表场景的策略下推走 `list_authorized_resource`，见 `build_resource_filter`。
-    申请链接见 `#7 资源回调与申请链接 V4 适配`。
 
     note: 租户标识逐请求传入，因此客户端按请求创建，不在实例上缓存租户上下文
     """
@@ -222,7 +221,9 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
         return Q(**{f"{V4_PUSHDOWN_ORM_FIELD}__in": unique_ids})
 
     def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        raise NotImplementedError("V4 申请链接生成由子需求 #7 实现")
+        # 平台的权限申请链接走用户组（见 helpers.user_group_apply_url），按本地模板拼出，
+        # 不经权限中心。操作级的申请链接没有调用方，故不实现
+        raise NotImplementedError("平台使用用户组申请链接，不生成操作级申请链接")
 
     @staticmethod
     def _make_subject(username: str) -> Dict[str, str]:

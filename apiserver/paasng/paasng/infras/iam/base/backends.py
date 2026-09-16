@@ -155,14 +155,24 @@ class BaseManagementBackend(ABC):
         """为管理空间追加监控、日志空间的授权范围
 
         note: V4 暂未提供管理空间的更新接口。V4 下应在创建空间时一次性写齐授权范围，
-            该方法在 V4 实现中抛 `BKIAMCapabilityNotSupportedError`。
+            该方法在 V4 实现中记录错误后返回，避免阻断监控/日志接入。
         """
 
     # ---------------- 用户组与成员 ----------------
 
     @abstractmethod
-    def create_builtin_user_groups(self, space_id: int, app_code: str) -> List[UserGroup]:
-        """创建内建用户组（管理员、开发者、运营者），若已存在则返回已有用户组"""
+    def create_builtin_user_groups(
+        self,
+        space_id: int,
+        app_code: str,
+        app_name: str = "",
+        init_members: List[str] | None = None,
+    ) -> List[UserGroup]:
+        """创建内建用户组（管理员、开发者、运营者），若已存在则返回已有用户组
+
+        :param app_name: 应用名称。V4 创建时用于组装权限范围
+        :param init_members: 初始成员。V4 在创建管理员组时一次性写入；V3 忽略该参数
+        """
 
     @abstractmethod
     def delete_user_groups(self, user_group_ids: List[int]):

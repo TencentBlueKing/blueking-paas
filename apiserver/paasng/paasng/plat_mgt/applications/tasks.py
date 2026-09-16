@@ -4,6 +4,7 @@ from celery import shared_task
 
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_role_members, fetch_role_members
+from paasng.infras.iam.shim import get_system_operator
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application, JustLeaveAppManager
 from paasng.platform.applications.signals import application_member_updated
@@ -29,7 +30,7 @@ def remove_temp_admin(app_code: str, username: str):
         raise error_codes.MEMBERSHIP_DELETE_FAILED
 
     try:
-        delete_role_members(app_code, ApplicationRole.ADMINISTRATOR, username)
+        delete_role_members(app_code, ApplicationRole.ADMINISTRATOR, username, operator=get_system_operator())
     except BKIAMGatewayServiceError as e:
         raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 

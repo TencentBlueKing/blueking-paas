@@ -170,6 +170,38 @@ class Group(OperationGroup):
         path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/",
     )
 
+    # ---------------- 用户组与成员 ----------------
+    list_group = bind_property(
+        Operation,
+        name="list_group",
+        method="GET",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/groups/",
+    )
+    create_group = bind_property(
+        Operation,
+        name="create_group",
+        method="POST",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/groups/",
+    )
+    add_group_member = bind_property(
+        Operation,
+        name="add_group_member",
+        method="POST",
+        path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/members/",
+    )
+    list_group_member = bind_property(
+        Operation,
+        name="list_group_member",
+        method="GET",
+        path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/members/",
+    )
+    delete_group_member = bind_property(
+        Operation,
+        name="delete_group_member",
+        method="DELETE",
+        path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/members/",
+    )
+
 
 class Client(APIGatewayClient):
     """蓝鲸权限中心 V4 提供的 OpenAPI"""

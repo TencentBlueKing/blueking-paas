@@ -40,6 +40,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.iam.shim import get_system_operator
 from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
@@ -191,8 +192,8 @@ class Command(BaseCommand):
             except IntegrityError as e:
                 logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create.")  # noqa: TRY400
                 # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容，权限中心先删除用户组，再删除分级管理员
-                delete_builtin_user_groups(application.code)
-                delete_grade_manager(application.code)
+                delete_builtin_user_groups(application.code, operator=get_system_operator())
+                delete_grade_manager(application.code, operator=get_system_operator())
                 Application.objects.filter(code=app_desc.code).delete()
                 return
 

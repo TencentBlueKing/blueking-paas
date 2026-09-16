@@ -21,8 +21,6 @@
 不支持按功能模块或按应用混用两个版本。非法取值在服务启动时即报错（见 settings）。
 """
 
-from typing import Optional
-
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -64,7 +62,7 @@ def get_auth_backend() -> BaseAuthBackend:
     return BKIAMV3AuthBackend()
 
 
-def get_management_backend(tenant_id: str, operator: Optional[str] = None) -> BaseManagementBackend:
+def get_management_backend(tenant_id: str, operator: str | None = None) -> BaseManagementBackend:
     """获取当前环境的权限管理实现
 
     :param tenant_id: 租户标识

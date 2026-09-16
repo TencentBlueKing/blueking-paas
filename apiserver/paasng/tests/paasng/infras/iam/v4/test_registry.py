@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pytest
 
@@ -36,7 +36,7 @@ from paasng.infras.iam.v4.definitions import (
 from paasng.infras.iam.v4.registry import BKIAMV4ModelRegistryBackend
 
 
-def sample_definition(extra_actions: Optional[List[ActionDefinition]] = None) -> SystemDefinition:
+def sample_definition(extra_actions: List[ActionDefinition] | None = None) -> SystemDefinition:
     actions = [
         ActionDefinition(id="view_basic_info", name="基础信息查看", resource_type_id="application"),
         ActionDefinition(id="edit_basic_info", name="基础信息编辑", resource_type_id="application"),
@@ -77,13 +77,13 @@ class FakeIAM:
     def __init__(
         self,
         *,
-        system: Optional[Dict] = None,
-        types: Optional[List[Dict]] = None,
-        actions: Optional[List[Dict]] = None,
-        roles: Optional[List[Dict]] = None,
+        system: Dict | None = None,
+        types: List[Dict] | None = None,
+        actions: List[Dict] | None = None,
+        roles: List[Dict] | None = None,
         system_missing: bool = False,
-        fail_create_action_ids: Optional[List[str]] = None,
-        fail_delete_ids: Optional[List[str]] = None,
+        fail_create_action_ids: List[str] | None = None,
+        fail_delete_ids: List[str] | None = None,
         fail_list: bool = False,
     ):
         self.system = system
@@ -132,7 +132,7 @@ class FakeIAM:
         raise AssertionError(f"unexpected call: {name}")
 
     @staticmethod
-    def _deleted_identifier(name: str, kwargs: Dict) -> Optional[str]:
+    def _deleted_identifier(name: str, kwargs: Dict) -> str | None:
         path_params = kwargs.get("path_params") or {}
         if name == "delete_action":
             return path_params.get("action_id")
@@ -240,13 +240,26 @@ class TestIdempotentSync:
         assert result.deleted == []
 
     def test_prune_deletes_extras_in_constraint_order(self, backend):
-        """prune 按解绑角色操作 → 删角色 → 删操作 → 删资源类型的顺序清理多余项"""
+        """prune 按解绑角色操作 → 删角色 → 删操作 → 删资源类型的顺序清理多余项
+
+        覆盖两类解绑：现存角色多出的操作，以及废弃角色上残留的多条绑定。
+        """
         definition = sample_definition()
         remote = matching_remote(definition)
         remote["types"].append({"id": "obsolete_type", "name": "废弃类型"})
         remote["actions"].append({"id": "obsolete_action", "name": "已废弃", "resource_type_id": "application"})
         remote["roles"][0]["actions"].append({"id": "obsolete_action", "resource_type_id": "application"})
-        remote["roles"].append({"id": "obsolete_role", "name": "废弃角色", "description": "", "actions": []})
+        remote["roles"].append(
+            {
+                "id": "obsolete_role",
+                "name": "废弃角色",
+                "description": "",
+                "actions": [
+                    {"id": "obsolete_action", "resource_type_id": "application"},
+                    {"id": "view_basic_info", "resource_type_id": "application"},
+                ],
+            }
+        )
         fake = FakeIAM(
             system=remote["system"], types=remote["types"], actions=remote["actions"], roles=remote["roles"]
         )
@@ -256,12 +269,16 @@ class TestIdempotentSync:
 
         assert [(item.kind, item.identifier) for item in result.deleted] == [
             ("role_action", "app_administrator:obsolete_action"),
+            ("role_action", "obsolete_role:obsolete_action"),
+            ("role_action", "obsolete_role:view_basic_info"),
             ("role", "obsolete_role"),
             ("action", "obsolete_action"),
             ("resource_type", "obsolete_type"),
         ]
         assert result.warnings == []
         assert [item["name"] for item in fake.writes] == [
+            "batch_delete_role_action",
+            "batch_delete_role_action",
             "batch_delete_role_action",
             "delete_role",
             "delete_action",

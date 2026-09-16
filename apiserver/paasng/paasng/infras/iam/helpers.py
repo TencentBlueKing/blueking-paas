@@ -20,7 +20,9 @@ from typing import Dict, List, Union
 from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings
 
+from paasng.infras.iam.exceptions import ignore_unsupported_capability
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.infras.iam.shim import get_management_backend
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 
@@ -56,12 +58,14 @@ def add_role_members(
 
     tenant_id = get_tenant_id_for_app(app_code)
     iam_client = BKIAMClient(tenant_id)
-    # 如果是管理者，还要添加成分级管理员
+    # 如果是管理者，还要添加成分级管理员 / 管理空间管理员。
+    # TODO: 待 IAM 补齐空间成员增删接口后去掉 ignore，让管理员同步到管理空间。
     if role == ApplicationRole.ADMINISTRATOR:
-        iam_client.add_grade_manager_members(
-            grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
-            usernames=usernames,
-        )
+        with ignore_unsupported_capability():
+            get_management_backend(tenant_id).add_management_space_members(
+                space_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
+                usernames=usernames,
+            )
 
     return iam_client.add_user_group_members(
         user_group_id=ApplicationUserGroup.objects.get(app_code=app_code, role=role).user_group_id,
@@ -81,12 +85,14 @@ def delete_role_members(app_code: str, role: ApplicationRole, usernames: Union[L
     usernames = [usernames] if isinstance(usernames, str) else usernames
     tenant_id = get_tenant_id_for_app(app_code)
     iam_client = BKIAMClient(tenant_id)
-    # 如果是管理者，还要从分级管理员中移除
+    # 如果是管理者，还要从分级管理员 / 管理空间管理员中移除。
+    # TODO: 待 IAM 补齐空间成员增删接口后去掉 ignore，让管理员从管理空间同步移除。
     if role == ApplicationRole.ADMINISTRATOR:
-        iam_client.delete_grade_manager_members(
-            grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
-            usernames=usernames,
-        )
+        with ignore_unsupported_capability():
+            get_management_backend(tenant_id).delete_management_space_members(
+                space_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
+                usernames=usernames,
+            )
 
     return iam_client.delete_user_group_members(
         user_group_id=ApplicationUserGroup.objects.get(app_code=app_code, role=role).user_group_id,
@@ -141,11 +147,13 @@ def remove_user_all_roles(app_code: str, usernames: Union[List[str], str]):
     tenant_id = get_tenant_id_for_app(app_code)
     iam_client = BKIAMClient(tenant_id)
 
-    # 先清理掉分级管理员权限
-    iam_client.delete_grade_manager_members(
-        grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
-        usernames=usernames,
-    )
+    # 先清理掉分级管理员 / 管理空间管理员权限。
+    # TODO: 待 IAM 补齐空间成员增删接口后去掉 ignore，让管理员从管理空间同步移除。
+    with ignore_unsupported_capability():
+        get_management_backend(tenant_id).delete_management_space_members(
+            space_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
+            usernames=usernames,
+        )
 
     role_group_id_map = {
         group.role: group.user_group_id for group in ApplicationUserGroup.objects.filter(app_code=app_code)
@@ -187,13 +195,18 @@ def delete_builtin_user_groups(app_code: str):
 
 
 def delete_grade_manager(app_code: str):
-    """删除应用的分级管理员"""
+    """删除应用的分级管理员 / 管理空间
+
+    TODO: 待 IAM 补齐删除管理空间接口后去掉 ignore，回收 IAM 侧空间。
+        当前记录日志后忽略，本地记录仍删除，避免应用删除被打断。
+    """
     grade_manager = ApplicationGradeManager.objects.filter(app_code=app_code).first()
     if not grade_manager:
         return
 
     tenant_id = get_tenant_id_for_app(app_code)
-    BKIAMClient(tenant_id).delete_grade_manager(grade_manager.grade_manager_id)
+    with ignore_unsupported_capability():
+        get_management_backend(tenant_id).delete_management_space(grade_manager.grade_manager_id)
     grade_manager.delete()
 
 

@@ -21,7 +21,7 @@ V4 的 `permission_scope` 以角色 + 资源实例表达可授权范围，对应
 `authorization_scopes`（action 列表 + 资源路径）。
 """
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Sequence
 
 from paasng.infras.iam.constants import (
     BK_LOG_SYSTEM_ID,
@@ -54,7 +54,7 @@ def build_permission_scope(
     role_ids: Sequence[str],
     resource_type: str,
     instance_id: str,
-    system_id: Optional[str] = None,
+    system_id: str | None = None,
 ) -> List[Dict]:
     """按角色列表构造 V4 权限范围
 

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from paasng.infras.iam.base.backends import BaseManagementBackend
 from paasng.infras.iam.base.dto import UserGroup
@@ -32,7 +32,7 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
     :param operator: V3 的写操作不要求携带操作人，该参数仅为统一两个版本的构造方式而保留
     """
 
-    def __init__(self, tenant_id: str, operator: Optional[str] = None):
+    def __init__(self, tenant_id: str, operator: str | None = None):
         self.tenant_id = tenant_id
         self.operator = operator
         self._client = BKIAMClient(tenant_id)
@@ -43,8 +43,8 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
         self,
         app_code: str,
         app_name: str,
-        init_member: Optional[str] = None,
-        bk_space_id: Optional[str] = None,
+        init_member: str | None = None,
+        bk_space_id: str | None = None,
     ) -> int:
         return self._client.create_grade_managers(app_code, app_name, init_member)
 
@@ -57,14 +57,14 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
     def fetch_management_space_members(self, space_id: int) -> List[str]:
         return self._client.fetch_grade_manager_members(space_id)
 
-    def add_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
+    def add_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
         return self._client.add_grade_manager_members(space_id, usernames)
 
-    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
+    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
         return self._client.delete_grade_manager_members(space_id, usernames)
 
     def update_management_space_scopes(
-        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: Optional[str] = None
+        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: str | None = None
     ):
         return self._client.update_grade_managers_with_bksaas_space(space_id, app_code, app_name, bk_space_id)
 
@@ -81,11 +81,11 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
         return self._client.fetch_user_group_members(user_group_id)
 
     def add_user_group_members(
-        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: Optional[str] = None
+        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: str | None = None
     ):
         return self._client.add_user_group_members(user_group_id, usernames, expired_after_days)
 
-    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: Optional[str] = None):
+    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: str | None = None):
         return self._client.delete_user_group_members(user_group_id, usernames)
 
     # ---------------- 授权 ----------------

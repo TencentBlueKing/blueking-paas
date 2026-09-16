@@ -25,7 +25,6 @@ from paasng.infras.iam.constants import BK_LOG_SYSTEM_ID, BK_MONITOR_SYSTEM_ID
 from paasng.infras.iam.exceptions import (
     BKIAMApiHTTPError,
     BKIAMCapabilityNotSupportedError,
-    BKIAMGatewayServiceError,
 )
 from paasng.infras.iam.v4.management import BKIAMV4ManagementBackend
 from paasng.infras.iam.v4.spaces import SPACE_OPERATOR_ROLE_ID
@@ -79,26 +78,6 @@ class TestCreateManagementSpace:
         )
 
         assert backend.create_management_space("app-code", "App", "someone") == 7
-
-
-class TestListAndFetchManagementSpace:
-    def test_list_returns_all_pages(self, backend):
-        """超过单页上限 100 时必须完整返回，无静默截断"""
-        spaces = [{"id": idx, "name": f"space-{idx}"} for idx in range(250)]
-        backend.paginate = mock.Mock(return_value=iter(spaces))  # type: ignore
-
-        results = backend.list_management_spaces()
-
-        assert len(results) == 250
-        assert [item["id"] for item in results] == list(range(250))
-        backend.paginate.assert_called_once()
-        assert backend.paginate.call_args.args[0] is backend.client.list_space
-
-    def test_paginate_failure_aborts_without_partial_result(self, backend):
-        backend.paginate = mock.Mock(side_effect=BKIAMGatewayServiceError("page 2 timeout"))  # type: ignore
-
-        with pytest.raises(BKIAMGatewayServiceError, match="page 2 timeout"):
-            backend.list_management_spaces()
 
 
 class TestCapabilityNotSupported:

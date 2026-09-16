@@ -29,7 +29,7 @@ note: 鉴权类调用的异常类型目前尚未跨版本统一——V3 直接�
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List
 
 from django.db.models import Q
 
@@ -85,8 +85,8 @@ class BaseAuthBackend(ABC):
 
     @abstractmethod
     def build_resource_filter(
-        self, username: str, tenant_id: str, action_id: str, key_mapping: Optional[Dict[str, str]] = None
-    ) -> Optional[Q]:
+        self, username: str, tenant_id: str, action_id: str, key_mapping: Dict[str, str] | None = None
+    ) -> Q | None:
         """策略下推：将用户在某操作上的权限策略转换为 Django ORM 过滤条件
 
         :param key_mapping: IAM 侧资源字段到 ORM 字段的映射，如 {"application.id": "code"}
@@ -120,8 +120,8 @@ class BaseManagementBackend(ABC):
         self,
         app_code: str,
         app_name: str,
-        init_member: Optional[str] = None,
-        bk_space_id: Optional[str] = None,
+        init_member: str | None = None,
+        bk_space_id: str | None = None,
     ) -> int:
         """创建管理空间，若已存在则返回已有空间的 ID
 
@@ -147,19 +147,19 @@ class BaseManagementBackend(ABC):
         """查询管理空间的成员列表"""
 
     @abstractmethod
-    def add_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
+    def add_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
         """向管理空间添加成员
 
         :param operator: 操作人。V4 写操作必填，为空时由实现填入 BK_APP_CODE
         """
 
     @abstractmethod
-    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: Optional[str] = None):
+    def delete_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
         """删除管理空间的成员"""
 
     @abstractmethod
     def update_management_space_scopes(
-        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: Optional[str] = None
+        self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: str | None = None
     ):
         """为管理空间追加监控、日志空间的授权范围
 
@@ -183,7 +183,7 @@ class BaseManagementBackend(ABC):
 
     @abstractmethod
     def add_user_group_members(
-        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: Optional[str] = None
+        self, user_group_id: int, usernames: List[str], expired_after_days: int, operator: str | None = None
     ):
         """向用户组添加成员
 
@@ -193,7 +193,7 @@ class BaseManagementBackend(ABC):
         """
 
     @abstractmethod
-    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: Optional[str] = None):
+    def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: str | None = None):
         """删除用户组的成员"""
 
     # ---------------- 授权 ----------------

@@ -75,10 +75,6 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         """按名称查询应用管理空间 ID"""
         return self._fetch_space_id(get_paas_system_id(), utils.gen_grade_manager_name(app_code), app_code)
 
-    def list_management_spaces(self, system_id: str | None = None) -> List[Dict]:
-        """查询指定系统下的全部管理空间，超出单页上限 100 时自动翻页"""
-        return list(self._iter_spaces(system_id or get_paas_system_id()))
-
     def delete_management_space(self, space_id: int):
         """删除管理空间
 
@@ -183,9 +179,6 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         except BKIAMApiHTTPError as exc:
             if exc.status_code == HTTPStatus.CONFLICT:
                 return reuse_on_conflict()
-            raise
-        except BKIAMApiError:
-            # 配额超限等业务错误已由 BKIAMApiError 转成可读信息，不重试
             raise
 
         space_id = (resp.get("data") or {}).get("id")

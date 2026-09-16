@@ -36,7 +36,7 @@ def _mock_iam_client():
     from tests.utils.mocks.iam import StubBKIAMClient
 
     with (
-        mock.patch("paasng.infras.iam.helpers.BKIAMClient", new=StubBKIAMClient),
+        mock.patch("paasng.infras.iam.v3.management.BKIAMClient", new=StubBKIAMClient),
         mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient),
     ):
         yield

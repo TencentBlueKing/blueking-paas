@@ -29,6 +29,7 @@ from bkapi_client_core.exceptions import (
     PathParamsMissing,
 )
 
+from paasng.infras.iam.base.constants import V4_OPERATOR_HEADER
 from paasng.infras.iam.exceptions import BKIAMApiHTTPError, BKIAMGatewayServiceError
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 
@@ -130,6 +131,30 @@ class TestCall:
 
         with pytest.raises(BKIAMGatewayServiceError, match="stub_operation"):
             client.call(operation)
+
+
+class TestOperatorHeader:
+    def test_write_uses_instance_operator(self, client):
+        operation = StubOperation([{"data": {}}])
+
+        client.call(operation, for_write=True)
+
+        assert operation.calls[0]["headers"][V4_OPERATOR_HEADER] == "someone"
+
+    def test_write_uses_explicit_operator_without_mutating_instance(self, client):
+        operation = StubOperation([{"data": {}}])
+
+        client.call(operation, for_write=True, operator="someone-else")
+
+        assert operation.calls[0]["headers"][V4_OPERATOR_HEADER] == "someone-else"
+        assert client.operator == "someone"
+
+    def test_read_omits_operator_header(self, client):
+        operation = StubOperation([{"data": {}}])
+
+        client.call(operation)
+
+        assert V4_OPERATOR_HEADER not in operation.calls[0]["headers"]
 
 
 class TestExtractErrorDetail:

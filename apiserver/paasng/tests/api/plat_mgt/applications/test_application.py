@@ -413,7 +413,7 @@ class TestDeletedApplicationView:
         active_codes = {"global-app1", "global-app2", "single-app1"}
         assert not active_codes.intersection(actual_codes)
 
-    def test_destroy_applications(self, plat_mgt_api_client, prepare_applications):
+    def test_destroy_applications(self, plat_mgt_api_client, plat_manager_user, prepare_applications):
         """测试彻底删除应用"""
         app = prepare_applications["deleted_app1"]
 
@@ -459,7 +459,7 @@ class TestDeletedApplicationView:
             assert not SMartAppExtraInfo.objects.filter(id=smart_info.id).exists()
             assert not Module.objects.filter(id=module.id).exists()
 
-            mock_del_groups.assert_called_once_with(app.code)
-            mock_del_manager.assert_called_once_with(app.code)
+            mock_del_groups.assert_called_once_with(app.code, operator=plat_manager_user.username)
+            mock_del_manager.assert_called_once_with(app.code, operator=plat_manager_user.username)
             mock_cascade_delete_legacy_app.assert_called_once_with("code", app.code, False)
             mock_bk_oauth_client().delete_client.assert_called_once_with(app.code)

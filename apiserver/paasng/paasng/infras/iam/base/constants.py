@@ -39,3 +39,7 @@ V4_BATCH_OPERATION_LIMIT = 20
 
 # V4 写操作的操作人 header 名称
 V4_OPERATOR_HEADER = "X-Bkiam-Operator"
+
+# V4 授权有效期上限（天）。权限中心限制不超过 365 天，过期时间挂在用户组权限层级而非成员层级。
+# TODO: 平台侧暂不实现续期、到期巡检与到期提醒；到期处置方案待 IAM 提供官方路径
+V4_MAX_PERMISSION_DAYS = 365

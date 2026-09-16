@@ -14,14 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import logging
 import re
-from contextlib import contextmanager
-from typing import Iterator
 
 from django.utils.translation import gettext_lazy as _
-
-logger = logging.getLogger(__name__)
 
 
 class BKIAMGatewayServiceError(Exception):
@@ -112,7 +107,8 @@ class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
     """目标权限中心版本尚未提供所需的能力
 
     用于 V4 尚未补齐的管理接口：抽象接口保留方法定义，V4 实现抛出该异常而非静默返回成功。
-    业务主流程应捕获后记录日志并继续，避免把成员变更、应用删除等打断。
+    挂在应用创建/删除、成员变更等主流程上的能力不走本异常，由 V4 实现记录错误日志后返回，
+    避免把主流程打断。
     """
 
     def __init__(self, capability: str, detail: str = ""):
@@ -121,12 +117,3 @@ class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
             message = f"{message}（{detail}）"
         super().__init__(message)
         self.capability = capability
-
-
-@contextmanager
-def ignore_unsupported_capability() -> Iterator[None]:
-    """捕获 V4 暂缺能力并记日志，让上层主流程继续"""
-    try:
-        yield
-    except BKIAMCapabilityNotSupportedError as exc:
-        logger.warning("IAM 暂未提供该能力，已忽略：%s", exc)

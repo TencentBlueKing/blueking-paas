@@ -81,7 +81,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
 
         try:
             for role, members in role_members_map.items():
-                add_role_members(application.code, role, members)
+                add_role_members(application.code, role, members, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -111,8 +111,8 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
             self.check_admin_count(application.code, username)
 
             try:
-                remove_user_all_roles(application.code, username)
-                add_role_members(application.code, target_role, username)
+                remove_user_all_roles(application.code, username, operator=request.user.username)
+                add_role_members(application.code, target_role, username, operator=request.user.username)
             except BKIAMGatewayServiceError as e:
                 raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -132,7 +132,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         username = get_username_by_bkpaas_user_id(user_id)
         self.check_admin_count(application.code, username)
         try:
-            remove_user_all_roles(application.code, username)
+            remove_user_all_roles(application.code, username, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -168,7 +168,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         try:
-            add_role_members(application.code, ApplicationRole.ADMINISTRATOR, username)
+            add_role_members(application.code, ApplicationRole.ADMINISTRATOR, username, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 

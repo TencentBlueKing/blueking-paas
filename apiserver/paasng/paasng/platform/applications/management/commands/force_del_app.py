@@ -22,6 +22,7 @@ from django.core.management.base import BaseCommand
 
 from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.oauth2.api import BkOauthClient
 from paasng.platform.applications.models import Application
 
@@ -84,8 +85,8 @@ class Command(BaseCommand):
 
         # 删除权限中心相关数据
         for app in to_del_apps:
-            delete_builtin_user_groups(app.code)
-            delete_grade_manager(app.code)
+            delete_builtin_user_groups(app.code, operator=get_paas_system_id())
+            delete_grade_manager(app.code, operator=get_paas_system_id())
 
         # 删除 bkAuth 上的应用信息 (同时会删除 AppSecret)
         for app in to_del_apps:

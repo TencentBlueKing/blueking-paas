@@ -70,8 +70,15 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
 
     # ---------------- 用户组与成员 ----------------
 
-    def create_builtin_user_groups(self, space_id: int, app_code: str) -> List[UserGroup]:
+    def create_builtin_user_groups(
+        self,
+        space_id: int,
+        app_code: str,
+        app_name: str = "",
+        init_members: List[str] | None = None,
+    ) -> List[UserGroup]:
         groups = self._client.create_builtin_user_groups(space_id, app_code)
+        # app_name / init_members 仅 V4 使用：V3 仍分步授权、加成员
         return [self._to_user_group(group) for group in groups]
 
     def delete_user_groups(self, user_group_ids: List[int]):

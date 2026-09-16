@@ -19,7 +19,7 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-ResourcePresetName = Literal["nano", "micro", "small", "medium", "large", "xlarge", "2xlarge"]
+ResourcePresetName = Literal["nano", "micro", "small", "medium"]
 
 
 class RedisResourcesConfig(BaseModel):
@@ -29,7 +29,7 @@ class RedisResourcesConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     preset: Optional[ResourcePresetName] = None
-    # 任意 K8s 资源名，便于后续扩展 hugepages / ephemeral-storage 等
+    # 任意 K8s 资源名，便于后续扩展 hugepages 等
     requests: Optional[Dict[str, str]] = None
     limits: Optional[Dict[str, str]] = None
 

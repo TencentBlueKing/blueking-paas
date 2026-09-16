@@ -17,9 +17,9 @@
 
 """Redis 套餐资源规格。
 
-预设名称与资源数值对齐 Bitnami common resource presets：
-https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl
-本地静态维护，不在运行时读取模板；生产环境使用前需按集群容量和 Redis 压测结果调整。
+按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。
+小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；
+CPU 只保留较小配额和突发余量。
 """
 
 from copy import deepcopy
@@ -34,32 +34,20 @@ DEFAULT_RESOURCE_PRESET: ResourcePresetName = "micro"
 # preset -> {requests, limits}，requests/limits 为任意 K8s 资源字典
 RESOURCE_PRESETS: Dict[ResourcePresetName, Dict[str, Dict[str, str]]] = {
     "nano": {
-        "requests": {"cpu": "100m", "memory": "128Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "150m", "memory": "192Mi", "ephemeral-storage": "2Gi"},
+        "requests": {"cpu": "25m", "memory": "128Mi"},
+        "limits": {"cpu": "100m", "memory": "256Mi"},
     },
     "micro": {
-        "requests": {"cpu": "250m", "memory": "256Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "375m", "memory": "384Mi", "ephemeral-storage": "2Gi"},
+        "requests": {"cpu": "25m", "memory": "256Mi"},
+        "limits": {"cpu": "100m", "memory": "512Mi"},
     },
     "small": {
-        "requests": {"cpu": "500m", "memory": "512Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "750m", "memory": "768Mi", "ephemeral-storage": "2Gi"},
+        "requests": {"cpu": "25m", "memory": "512Mi"},
+        "limits": {"cpu": "100m", "memory": "1024Mi"},
     },
     "medium": {
-        "requests": {"cpu": "500m", "memory": "1024Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "750m", "memory": "1536Mi", "ephemeral-storage": "2Gi"},
-    },
-    "large": {
-        "requests": {"cpu": "1.0", "memory": "2048Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "1.5", "memory": "3072Mi", "ephemeral-storage": "2Gi"},
-    },
-    "xlarge": {
-        "requests": {"cpu": "1.0", "memory": "3072Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "3.0", "memory": "6144Mi", "ephemeral-storage": "2Gi"},
-    },
-    "2xlarge": {
-        "requests": {"cpu": "1.0", "memory": "3072Mi", "ephemeral-storage": "50Mi"},
-        "limits": {"cpu": "6.0", "memory": "12288Mi", "ephemeral-storage": "2Gi"},
+        "requests": {"cpu": "50m", "memory": "1024Mi"},
+        "limits": {"cpu": "200m", "memory": "2048Mi"},
     },
 }
 

@@ -971,8 +971,20 @@ BK_PAAS2_PLATFORM_ENVS = settings.get(
 # 注入应用的内置环境变量 BKPAAS_IAM_URL 与权限申请链接均使用该值
 BK_IAM_EFFECTIVE_URL = BK_IAM_V4_URL if BK_IAM_VERSION == IAM_VERSION_V4 else BK_IAM_URL
 
-# 权限中心用户组申请链接
-BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_EFFECTIVE_URL + "/apply-join-user-group?id={user_group_id}"
+# 用户组申请页路径按版本硬编码，不做成配置项：现状即硬编码，新增配置只会增加运维维护面。
+# 应用侧随 BK_IAM_VERSION 切路径；插件用户组只存在于 V3，必须固定走 V3，见下方 PLUGIN 模板。
+BK_IAM_V3_USER_GROUP_APPLY_PATH = "/apply-join-user-group?id={user_group_id}"
+# FIXME: V4 加入用户组页路径尚未完全确认，暂按此值落地
+# 完整形态示例：{BK_IAM_V4_URL}/permission/apply?tab=group&groupID={user_group_id}
+BK_IAM_V4_USER_GROUP_APPLY_PATH = "/permission/apply?tab=group&groupID={user_group_id}"
+
+# 应用侧用户组申请链接。域名与路径必须同属一个版本，不得混搭
+BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_EFFECTIVE_URL + (
+    BK_IAM_V4_USER_GROUP_APPLY_PATH if BK_IAM_VERSION == IAM_VERSION_V4 else BK_IAM_V3_USER_GROUP_APPLY_PATH
+)
+
+# 插件用户组由 V3 网关创建，申请链接不得随 BK_IAM_VERSION 切到 V4，否则会指向错误域名上的无效 ID
+BK_IAM_PLUGIN_USER_GROUP_APPLY_TMPL = BK_IAM_URL + BK_IAM_V3_USER_GROUP_APPLY_PATH
 
 # 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 BKPAAS_WEIXIN_URL_MAP = settings.get(

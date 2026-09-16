@@ -80,6 +80,8 @@ Forgejo 单进程独占 `/data`，`replicaCount` 只能是 1，更新策略固�
 Forgejo 用 `ROOT_URL` 生成 clone URL，所以这个地址必须是**调用方真能解析**的地址：
 
 - `server.rootUrl` 留空时由 `ingress.host` 和 `ingress.tls` 推导；关掉 Ingress 时退回集群内地址。
+- 显式填写时必须带 scheme（`http://` 或 `https://`），且不支持裸 IPv6（`http://[::1]:3000`）：
+  `DOMAIN` 是从这个地址里截主机名得到的，形状不对模板会直接报错，不会渲染出一份错配置。
 - app-spark-api 的 `repoServer.base_url` 填集群内地址（API 自己调 Forgejo），
   `repoServer.clone_url` 填对外地址（写进 Agent 沙箱）。两者不一致是正常形状。
 - 沙箱解析不到 `clone_url` 时，故障出现在 Git push 阶段，而不是部署时。

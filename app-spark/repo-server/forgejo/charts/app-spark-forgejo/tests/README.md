@@ -19,6 +19,8 @@ helm template t $C $V --set database.host=
 helm template t $C $V --set auth.adminPassword=
 helm template t $C $V --set ingress.host=
 helm template t $C $V --set extraConfig.FORGEJO__repository__DEFAULT_PRIVATE=public
+helm template t $C $V --set-string server.rootUrl=repo.example.com
+helm template t $C $V --set-string 'server.rootUrl=http://[::1]:3000'
 ```
 
 ## kind 集群冒烟验证

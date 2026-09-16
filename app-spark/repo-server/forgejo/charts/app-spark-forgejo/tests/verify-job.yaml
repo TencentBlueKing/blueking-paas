@@ -4,6 +4,11 @@
 #
 # 名称按 release `app-spark-forgejo` 写死（fullname 与 release 同名），只用于测试 namespace。
 # 它会在 app-spark 组织下创建 phase1-verify 仓库并推送，不要对生产实例执行。
+#
+# 只能对 init.enabled=true 的 release 执行：verify-remote 用服务账号登录，密码取自下面
+# envFrom 的 Secret 中的 FORGEJO_SERVICE_ACCOUNT_PASSWORD，而该键只在 init.enabled 时写入。
+# 缺了它，CLI 会退回「本地生成一份密码文件」的开发流程，往镜像里只有 root 可写的
+# /opt/app-spark-forgejo/secrets 写入，报出与真正原因无关的 PermissionError。
 apiVersion: batch/v1
 kind: Job
 metadata:

@@ -55,7 +55,10 @@
 {{- end -}}
 {{- end -}}
 
-{{/* DOMAIN 只要主机名：从根地址里去掉 scheme、端口和路径。 */}}
+{{/*
+DOMAIN 只要主机名：从根地址里去掉 scheme、端口和路径。
+根地址必带 scheme 且不是裸 IPv6，由 validateValues 保证，这里才能按 "/" 切片取第 3 段。
+*/}}
 {{- define "app-spark-forgejo.domain" -}}
 {{- if .Values.server.domain -}}
 {{- .Values.server.domain -}}
@@ -112,6 +115,19 @@ FORGEJO__service__DEFAULT_ALLOW_CREATE_ORGANIZATION: "false"
 {{- end }}
 {{- if and .Values.ingress.enabled (not .Values.ingress.host) }}
 {{- fail "ingress.enabled 时必须设置 ingress.host。" }}
+{{- end }}
+{{/*
+rootUrl 要同时喂给 ROOT_URL 和 domain helper，后者按 scheme://host[:port][/path]
+截主机名。这里把形状不对的输入挡在渲染前，否则只会得到一份看似正常、
+到运行期才发现 clone URL 或 DOMAIN 是错的配置。
+*/}}
+{{- if .Values.server.rootUrl }}
+{{- if not (or (hasPrefix "http://" .Values.server.rootUrl) (hasPrefix "https://" .Values.server.rootUrl)) }}
+{{- fail (printf "server.rootUrl 必须带 scheme，以 http:// 或 https:// 开头，当前为 %q。" .Values.server.rootUrl) }}
+{{- end }}
+{{- if contains "[" .Values.server.rootUrl }}
+{{- fail (printf "server.rootUrl 不支持裸 IPv6 地址（当前为 %q），请改用域名。" .Values.server.rootUrl) }}
+{{- end }}
 {{- end }}
 {{- if and .Values.init.enabled (or (not .Values.auth.adminPassword) (not .Values.auth.serviceAccountPassword)) }}
 {{- fail "init.enabled 时 auth.adminPassword 和 auth.serviceAccountPassword 必填，且部署后保持稳定。" }}

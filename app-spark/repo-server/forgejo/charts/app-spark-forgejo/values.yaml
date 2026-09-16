@@ -44,6 +44,8 @@ ingress:
 server:
   # 对外根地址，决定 Forgejo 生成的 clone URL。留空时由 ingress.host 与 tls 推导。
   # app-spark-api 和 Agent 沙箱必须能解析它：填 127.0.0.1 会让沙箱里的 git 打到沙箱自己。
+  # 必须带 scheme（http:// 或 https://），形如 https://repo-server.example.com[:port][/path]；
+  # 不支持裸 IPv6（http://[::1]:3000）——模板取不出主机名，请改用域名。
   rootUrl: ""
   # 留空取 rootUrl 的主机名。
   domain: ""

@@ -53,13 +53,13 @@ class BKIAMV4BaseClient:
     `call_in_batches` 发起调用，以复用统一的 header 注入、翻页、分批与错误处理逻辑。
 
     :param tenant_id: 租户标识，逐请求透传
-    :param operator: 操作人。V4 写操作要求携带该标识，为空时使用 BK_APP_CODE
+    :param operator: 操作人。V4 写操作要求携带该标识，为空时使用 system_id
     """
 
     def __init__(self, tenant_id: str, operator: str | None = None):
         self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_V4_APIGW_SERVICE_STAGE)
         self.tenant_id = tenant_id
-        self.operator = operator or settings.BK_APP_CODE
+        self.operator = operator or settings.IAM_PAAS_V3_SYSTEM_ID
         self.client: BKIAMV4Group = self._client.api
 
     def call(
@@ -70,15 +70,17 @@ class BKIAMV4BaseClient:
         params: Dict | None = None,
         data: Any | None = None,
         for_write: bool = False,
+        operator: str | None = None,
     ) -> Dict:
         """发起一次 V4 接口调用
 
         :param for_write: 是否为写操作。写操作会额外注入操作人 header
+        :param operator: 本次写操作的操作人。为空时使用实例默认值
         :raises BKIAMApiHTTPError: 权限中心返回非 2xx 状态码
         :raises BKIAMApiError: 权限中心返回业务错误
         :raises BKIAMGatewayServiceError: 网关不可达、超时或返回无法解析的内容
         """
-        kwargs: Dict[str, Any] = {"headers": self._prepare_headers(for_write=for_write)}
+        kwargs: Dict[str, Any] = {"headers": self._prepare_headers(for_write=for_write, operator=operator)}
         if path_params is not None:
             kwargs["path_params"] = path_params
         if params is not None:
@@ -167,21 +169,29 @@ class BKIAMV4BaseClient:
         path_params: Dict | None = None,
         batch_size: int = V4_BATCH_OPERATION_LIMIT,
         for_write: bool = True,
+        operator: str | None = None,
     ) -> List[Dict]:
         """将超出单次上限的条目自动分批调用
 
         :param build_data: 由一批条目构造请求体
+        :param operator: 本次写操作的操作人。为空时使用实例默认值
         :returns: 各批次的响应，由调用方按业务语义合并
         """
         if batch_size > V4_BATCH_OPERATION_LIMIT:
             raise ValueError(f"batch_size {batch_size} exceeds the bkiam limit {V4_BATCH_OPERATION_LIMIT}")
 
         return [
-            self.call(operation, path_params=path_params, data=build_data(batch), for_write=for_write)
+            self.call(
+                operation,
+                path_params=path_params,
+                data=build_data(batch),
+                for_write=for_write,
+                operator=operator,
+            )
             for batch in batched(items, batch_size)
         ]
 
-    def _prepare_headers(self, for_write: bool = False) -> Dict[str, str]:
+    def _prepare_headers(self, for_write: bool = False, operator: str | None = None) -> Dict[str, str]:
         headers = {
             "x-bkapi-authorization": json.dumps(
                 {
@@ -192,7 +202,7 @@ class BKIAMV4BaseClient:
             API_HERDER_TENANT_ID: self.tenant_id,
         }
         if for_write:
-            headers[V4_OPERATOR_HEADER] = self.operator
+            headers[V4_OPERATOR_HEADER] = operator or self.operator
         return headers
 
     @staticmethod

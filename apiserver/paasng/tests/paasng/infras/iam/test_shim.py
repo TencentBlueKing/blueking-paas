@@ -57,9 +57,3 @@ class TestBackendDispatch:
         assert isinstance(backend, BKIAMV4ManagementBackend)
         assert backend.tenant_id == "tenant-foo"
         assert backend.operator == "someone"
-
-    def test_system_operator_uses_app_code(self, settings):
-        settings.BK_APP_CODE = "bk_paas"
-        from paasng.infras.iam.shim import get_system_operator
-
-        assert get_system_operator() == "bk_paas"

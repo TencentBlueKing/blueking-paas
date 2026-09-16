@@ -219,6 +219,7 @@ class TestUserGroupMembers:
         assert backend.call.call_count == 1
         assert backend.operator == "creator"
         assert backend.call.call_args.kwargs["for_write"] is True
+        assert backend.call.call_args.kwargs["operator"] == "someone-else"
         assert backend.call.call_args.kwargs["data"] == {"members": [{"id": "alice", "type": "user"}]}
 
     def test_skips_platform_admin_username(self, backend, mocker, settings):

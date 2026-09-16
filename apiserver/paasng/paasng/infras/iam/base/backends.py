@@ -139,10 +139,7 @@ class BaseManagementBackend(ABC):
 
     @abstractmethod
     def add_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
-        """向管理空间添加成员
-
-        :param operator: 操作人。V4 写操作必填，为空时由实现填入 BK_APP_CODE
-        """
+        """向管理空间添加成员"""
 
     @abstractmethod
     def delete_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):

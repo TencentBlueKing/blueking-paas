@@ -17,9 +17,8 @@
 
 import logging
 import time
-from contextlib import contextmanager
 from http import HTTPStatus
-from typing import Dict, Iterable, Iterator, List, Sequence
+from typing import Dict, Iterable, List, Sequence
 
 from django.conf import settings
 
@@ -188,12 +187,10 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
 
         :param expired_after_days: 兼容 V3 签名，V4 不向 IAM 传递该字段。
         """
-        with self._use_operator(operator):
-            self._mutate_group_members(self.client.add_group_member, user_group_id, usernames)
+        self._mutate_group_members(self.client.add_group_member, user_group_id, usernames, operator=operator)
 
     def delete_user_group_members(self, user_group_id: int, usernames: List[str], operator: str | None = None):
-        with self._use_operator(operator):
-            self._mutate_group_members(self.client.delete_group_member, user_group_id, usernames)
+        self._mutate_group_members(self.client.delete_group_member, user_group_id, usernames, operator=operator)
 
     # ---------------- 授权 ----------------
 
@@ -345,7 +342,7 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
                 return group["id"]
         raise BKIAMApiError(f"failed to find existing user group [{name}]")
 
-    def _mutate_group_members(self, operation, user_group_id: int, usernames: List[str]):
+    def _mutate_group_members(self, operation, user_group_id: int, usernames: List[str], operator: str | None = None):
         """批量增删组成员"""
         usernames = [name for name in usernames if name != settings.ADMIN_USERNAME]
         if not usernames:
@@ -356,26 +353,8 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
             usernames,
             lambda batch: {"members": _to_user_members(batch)},
             path_params={"system_id": get_paas_system_id(), "group_id": user_group_id},
+            operator=operator,
         )
-
-    @contextmanager
-    def _use_operator(self, operator: str | None) -> Iterator[None]:
-        """本次写操作用传入的 operator 覆盖实例默认值。
-
-        V4 写接口的 X-Bkiam-Operator 取自 self.operator。实例默认值是构造 backend
-        时写入的创建人或系统账号；界面加删成员时操作人是当前登录用户，需要临时替换，
-        调用结束后再恢复，避免影响同实例后续请求。未传入时沿用默认值。
-        """
-        if not operator:
-            yield
-            return
-
-        original = self.operator
-        self.operator = operator
-        try:
-            yield
-        finally:
-            self.operator = original
 
 
 def _to_user_members(usernames: List[str]) -> List[Dict]:

@@ -31,11 +31,6 @@ from paasng.platform.applications.tenant import get_tenant_id_for_app
 def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     """create bk monitor space associated to the given application
 
-    IAM V3 schedules a delayed task to grant monitor/log permissions to the grade
-    manager and user groups (for existing spaces that were created without them).
-    IAM V4 writes the three-system scopes when creating the management space, so
-    this extra grant is not needed.
-
     :param application:
     :return: BKMonitorSpace
     """
@@ -47,6 +42,8 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     except Exception:  # noqa: BLE001
         space = mgr.create_space(gen_bk_monitor_space(application))
 
+    # IAM V3：存量数据没有监控日志权限，这里统一通过异步任务补授
+    # IAM V4：创建管理空间时已一次性带上权限范围，不用额外处理
     if get_iam_version() == IAMVersion.V3:
         add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.iam_resource_id)
     return BKMonitorSpace.objects.update_or_create(
@@ -65,9 +62,6 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
 
 def get_or_create_bk_monitor_space(application: Application) -> Tuple[BKMonitorSpace, bool]:
     """get or create bk monitor space associated to the given application
-
-    When a new space is created, IAM V3 schedules a delayed task to grant
-    monitor/log permissions. IAM V4 does not.
 
     :param application:
     :return: Tuple[BKMonitorSpace, whether a bk monitor space was created]

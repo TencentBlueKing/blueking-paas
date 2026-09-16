@@ -110,8 +110,8 @@ config = {
     "redis_version": "v7.0.15",
     # Kubernetes 集群名称
     "cluster_name": "redis-cluster",
-    # 每个 Redis 实例的内存限制
-    "memory_size": "2Gi",
+    # 资源配额，见下方两份 plan 配置用例
+    "resources": {"preset": "medium"},
     # 服务暴露方式 (必填)
     # - "ClusterDNS": 通过集群内 DNS 访问服务
     # - "TencentCLB": 通过腾讯云负载均衡器暴露服务
@@ -126,6 +126,57 @@ config = {
 }
 
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
+```
+
+`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。型号命名对齐 [Bitnami common resource presets](https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl)，具体数值由本模块维护，不运行时读取 Helm 模板。
+
+| preset | CPU requests | Memory requests | CPU limits | Memory limits |
+| --- | --- | --- | --- | --- |
+| nano | 100m | 128Mi | 100m | 128Mi |
+| micro | 250m | 256Mi | 250m | 256Mi |
+| small | 500m | 512Mi | 500m | 512Mi |
+| medium | 500m | 1Gi | 500m | 1Gi |
+| large | 1 | 2Gi | 1 | 2Gi |
+| xlarge | 1 | 3Gi | 1 | 3Gi |
+| 2xlarge | 1 | 4Gi | 1 | 4Gi |
+
+常规套餐，使用 preset：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "medium"
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+特殊套餐，显式指定 requests / limits：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "requests": {
+      "cpu": "500m",
+      "memory": "1Gi"
+    },
+    "limits": {
+      "cpu": "2",
+      "memory": "2Gi"
+    }
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
 ```
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类

@@ -23,7 +23,8 @@ ResourcePresetName = Literal["nano", "micro", "small", "medium", "large", "xlarg
 
 
 class RedisResourcesConfig(BaseModel):
-    """套餐资源配额。常规方案用 preset，特殊方案显式写 requests/limits。"""
+    """套餐资源配额
+    常规方案用 preset，特殊方案显式写 requests/limits，常规和特殊方案可组合使用，详情见 RAEDME.md"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -42,8 +43,8 @@ class RedisPlanConfig(BaseModel):
     persistent_storage: bool = False
     monitor: bool = False
     resources: Optional[RedisResourcesConfig] = None
-    # 历史字段：未配 resources 时，4Gi/8Gi 按旧比例折算
-    memory_size: Optional[Literal["2Gi", "4Gi", "8Gi"]] = None
+    # 历史资源配额字段（即将废弃）
+    memory_size: Optional[str] = None
     service_export_type: Literal["TencentCLB", "ClusterDNS"] = "ClusterDNS"
 
 

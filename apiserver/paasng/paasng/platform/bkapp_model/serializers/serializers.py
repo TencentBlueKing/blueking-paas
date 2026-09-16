@@ -28,6 +28,7 @@ from paasng.accessories.proc_components.exceptions import ComponentNotFound, Com
 from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -69,7 +70,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-单一环境相关配置"""
 
-    plan_name = serializers.CharField(help_text="资源配额方案", required=False, validators=[validate_res_quota_plan])
+    plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
@@ -281,7 +282,21 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
     def validate(self, data):
         data = super().validate(data)
         self._validate_exposed_types(data["proc_specs"])
+        self._validate_res_quota_plans(data["proc_specs"])
         return data
+
+    def _validate_res_quota_plans(self, proc_specs):
+        """按应用可见范围校验进程方案：可新选或保留原引用。"""
+        policy = ResQuotaPlanPolicy()
+        app_code = self.context.get("app_code")
+        current_plans = self.context.get("current_env_plans") or {}
+        for proc in proc_specs:
+            for env_name, overlay in (proc.get("env_overlay") or {}).items():
+                policy.ensure_assignable(
+                    overlay.get("plan_name"),
+                    app_code,
+                    current_plans.get((proc["name"], env_name)),
+                )
 
     def _validate_exposed_types(self, proc_specs):
         """check whether exposed_types are duplicated.

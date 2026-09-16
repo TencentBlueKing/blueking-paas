@@ -30,6 +30,7 @@
 """
 
 import copy
+from typing import Any
 
 from bleach.sanitizer import BleachSanitizerFilter, Cleaner
 
@@ -119,15 +120,16 @@ class BkCleaner(Cleaner):
             return ""
 
         dom = self.parser.parseFragment(text)
-        filtered = BkBleachSanitizerFilter(
-            source=self.walker(dom),
-            # Bleach-sanitizer-specific things
+        # bleach 3.3 仍用这组 html5lib 参数；types-bleach 已经跟到新 API，构造签名对不上。
+        walker = self.walker
+        styles = getattr(self, "styles", [])
+        filtered: Any = BkBleachSanitizerFilter(  # type: ignore[call-arg]
+            source=walker(dom),  # type: ignore[operator]
             attributes=self.attributes,
             strip_disallowed_elements=self.strip,
             strip_html_comments=self.strip_comments,
-            # html5lib-sanitizer things
             allowed_elements=self.tags,
-            allowed_css_properties=self.styles,
+            allowed_css_properties=styles,
             allowed_protocols=self.protocols,
             allowed_svg_properties=[],
         )

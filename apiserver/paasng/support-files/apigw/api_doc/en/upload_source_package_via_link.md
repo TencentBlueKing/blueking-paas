@@ -13,11 +13,14 @@ Upload the source code package to the platform according to the download link.
 
 #### 2. API Parameters:
 
-| Field           | Type    | Required | Description                 |
-| --------------- | ------- | -------- | --------------------------- |
-| package_url     | string  | Yes      | Source code package download path |
-| version         | string  | No       | Source code package version number |
-| allow_overwrite | boolean | No       | Whether to allow overwriting the original source code package |
+| Field              | Type    | Required | Description                 |
+| ------------------ | ------- | -------- | --------------------------- |
+| package_url        | string  | Yes      | Source code package download path |
+| version            | string  | No       | Source code package version number |
+| allow_overwrite    | boolean | No       | Whether to allow overwriting the original source code package |
+| build_method       | string  | No       | Build method. Only supported by AI Agent apps. Values: buildpack, dockerfile. If omitted, the module's current build method is kept |
+| dockerfile_path    | string  | No       | Dockerfile path. Effective when build_method is dockerfile. Defaults to Dockerfile |
+| docker_build_args  | object  | No       | Docker build arguments. Effective when build_method is dockerfile. Defaults to {} |
 
 ### Request Example
 ```bash

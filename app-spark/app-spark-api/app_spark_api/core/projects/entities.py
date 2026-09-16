@@ -14,27 +14,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pytest
+from datetime import datetime
 
-from app_spark_api.repository.storage.backends import SourceStorage
-from app_spark_api.repository.storage.blob_stores import HostTmpPath
-from app_spark_api.repository.storage.constants import StorageBackend
-from app_spark_api.repository.storage.models import ProjectSourceStorage
+from ninja import Field, Schema
 
-pytestmark = pytest.mark.django_db
+from app_spark_api.core.projects.constants import PROJECT_ID_PATTERN
 
 
-def test_project_source_storage_builds_backend(project, tmp_path):
-    package_path = tmp_path / "source.tgz"
-    source_storage = ProjectSourceStorage.objects.create(
-        project=project,
-        backend=StorageBackend.HOST_TMP_PATH,
-        config={"path": str(package_path)},
+class ProjectCreateRequest(Schema):
+    """创建一个 Project。"""
+
+    id: str = Field(
+        pattern=PROJECT_ID_PATTERN,
+        description="项目 ID，全局唯一，2-20 个字符，小写字母开头，仅含小写字母、数字与连字符，会在路径中使用",
     )
+    name: str = Field(min_length=1, max_length=20, description="项目名称，同租户内唯一")
 
-    backend = source_storage.get_backend()
 
-    assert isinstance(backend, SourceStorage)
-    assert isinstance(backend.blob_store, HostTmpPath)
-    assert backend.blob_store.path == package_path
-    assert project.source_storage == source_storage
+class ProjectResponse(Schema):
+    """一个 Project 对象。"""
+
+    id: str = Field(description="项目 ID")
+    name: str = Field(description="项目名称")
+    created: datetime = Field(description="创建时间")
+    updated: datetime = Field(description="最后更新时间")

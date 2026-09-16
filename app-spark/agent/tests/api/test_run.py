@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from app_spark_agent import settings
 from tests.api.support import (
+    ApiFactory,
     get_transcript_messages,
     post_run_async,
     run_in_flight,
@@ -21,6 +22,7 @@ from tests.api.support import (
     run_turn,
 )
 from tests.support.ag_ui import SSE_HEADERS, run_body
+from tests.support.fake_models import failing_model
 
 
 def test_a_run_streams_the_reply_as_ag_ui_events(api: TestClient) -> None:
@@ -204,6 +206,7 @@ def test_runs_rejects_bad_token(api: TestClient, headers: dict[str, str]) -> Non
 
 def test_runs_model_not_ready_503(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     resp = api.post(
         "/runs",
         headers=SSE_HEADERS,
@@ -226,3 +229,37 @@ def test_control_plane_without_bearer_is_401(api: TestClient) -> None:
 def test_no_independent_cancel_route(api: TestClient) -> None:
     paths = [getattr(route, "path", "") for route in api.app.routes]
     assert not any("cancel" in path for path in paths)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("MODEL_NAME", "not-a-listed-model"), ("MODEL_BASE_URL", "")],
+)
+def test_runs_rejects_an_unready_listed_model_gate(
+    api: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: str,
+) -> None:
+    monkeypatch.setattr(settings, field, value)
+
+    resp = api.post(
+        "/runs",
+        headers=SSE_HEADERS,
+        json=run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0),
+    )
+
+    assert resp.status_code == 503
+    assert api.get("/health").json()["model_ready"] is False
+
+
+def test_a_failed_run_does_not_clear_readiness(make_api: ApiFactory) -> None:
+    """中途模型失败只让该次 run 失败，不得把随后的 model_ready 改成 false。"""
+    api = make_api(model=failing_model())
+
+    resp = run_request(api, conversation_id=str(uuid4()), context_version=0)
+    health = api.get("/health").json()
+
+    assert resp.status_code != 503
+    assert health["model_ready"] is True
+    assert health["running"] is False

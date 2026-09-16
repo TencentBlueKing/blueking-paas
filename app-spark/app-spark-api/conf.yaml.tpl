@@ -29,12 +29,37 @@
 ## 生产环境请配置远程服务缓存（如 RedisCache、DatabaseCache），以保证多副本多 worker 时缓存数据一致
 # DEFAULT_CACHE_CONFIG:
 
+## 列表接口翻页（翻页方式固定为「页码 + 每页条数」，不可配置）
+## 默认每页条数，客户端可用 page_size 参数覆盖，但不能超过下面的上限
+# NINJA_PAGINATION_PER_PAGE: 20
+## 每页条数上限，客户端传更大的值会被压回这个数
+# NINJA_MAX_PER_PAGE_SIZE: 100
+
 ## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: ''
 #   ENDPOINT: ''
 #   USERNAME: ''
 #   PASSWORD: ''
+
+## EncryptField 使用的 Fernet key。进程启动必须配置，不要留空：
+## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# BKKRILL_ENCRYPT_SECRET_KEY: ''
+# ENCRYPT_CIPHER_TYPE: FernetCipher
+
+## Git 持久化（repo-server）。进程启动必须配置，没有关闭开关。
+## clone_url 是 Agent 侧地址，不要默认写成 localhost。
+# REPO_SERVER:
+#   type: forgejo
+#   base_url: ''
+#   clone_url: ''
+#   org: app-spark
+#   service_account: app-spark-bot
+#   service_account_password: ''
+#   default_branch: main
+#   timeout_seconds: 30.0
+#   commit_author_name: App-Spark
+#   commit_author_email: app-spark@localhost.invalid
 
 ## ---------------------------------- Agent Runtime 驱动相关配置 ----------------------------------
 

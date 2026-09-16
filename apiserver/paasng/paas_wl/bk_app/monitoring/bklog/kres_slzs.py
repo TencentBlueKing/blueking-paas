@@ -60,7 +60,7 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
             "dataId": obj.data_id,
             "encoding": obj.encoding,
             "path": obj.paths,
-            "filters": asdict(obj.filters) if obj.filters else [],
+            "filters": [asdict(item) for item in obj.filters] if obj.filters else [],
             "extMeta": obj.ext_meta,
             "logConfigType": obj.config_type.value,
         }

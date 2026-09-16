@@ -16,16 +16,20 @@
 
 from typing import Literal
 
-from ninja import Schema
+from ninja import Field, Schema
 
 
 class AnonymousUserResponse(Schema):
-    authenticated: Literal[False]
-    login_url: str
+    """未登录用户请求用户信息时返回的 401 响应体。"""
+
+    authenticated: Literal[False] = Field(description="是否已登录")
+    login_url: str = Field(description="登录页完整 URL")
 
 
 class AuthenticatedUserResponse(Schema):
-    authenticated: Literal[True]
-    username: str
-    display_name: str
-    tenant_id: str | None
+    """当前登录用户的用户信息。"""
+
+    authenticated: Literal[True] = Field(description="是否已登录")
+    username: str = Field(description="用户登录名")
+    display_name: str = Field(description="用户展示名")
+    tenant_id: str | None = Field(description="所属租户的 ID")

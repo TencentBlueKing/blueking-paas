@@ -23,6 +23,7 @@ from io import BytesIO
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.db import transaction
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.response import Response
@@ -39,6 +40,7 @@ from paasng.platform.applications.constants import LightApplicationViewSetErrorC
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_third_app
+from paasng.platform.applications.views.creation import ApplicationCreateViewSet
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 
 try:
@@ -297,6 +299,27 @@ class LightAppViewSet(viewsets.ViewSet):
 
 class SysAppViewSet(viewsets.ViewSet):
     permission_classes = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
+
+    def get_permissions(self):
+        # 创建 AI Agent 只给 AIDEV；BASIC_MAINTAINER 即使有 MANAGE_APPLICATIONS 也不能调。
+        if self.action == "create_ai_agent_app":
+            return [sysapi_client_perm_class(ClientAction.CREATE_AI_AGENT_APP)()]
+
+        return super().get_permissions()
+
+    @transaction.atomic
+    @swagger_auto_schema(
+        request_body=slzs.SysAIAgentAppCreateInputSLZ,
+        responses={status.HTTP_201_CREATED: slzs.ApplicationCreateOutputSLZ()},
+        tags=["创建 AI Agent 应用"],
+    )
+    def create_ai_agent_app(self, request):
+        """给 AIDEV 提供的应用态创建 AI Agent 应用接口，管理员为请求中的已注册用户。"""
+        serializer = slzs.SysAIAgentAppCreateInputSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
+        operator_user = params.pop("operator_user")
+        return ApplicationCreateViewSet().create_ai_agent_app_for_user(operator_user, params)
 
     @swagger_auto_schema(request_body=slzs.SysThirdPartyApplicationSLZ, tags=["创建第三方(外链)应用"])
     def create_sys_third_app(self, request, sys_id):

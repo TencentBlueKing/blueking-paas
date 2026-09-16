@@ -170,6 +170,11 @@ class RemoteServiceObj(ServiceObj):
             raise RuntimeError('RemoteServiceObj requires "_data" attribute')
         return ServiceCategory.objects.get(pk=self._data["category"])
 
+    # 基类 category 是可写属性，只读 property 覆盖过不了 mypy。setter 拒绝写入，语义仍是派生字段。
+    @category.setter
+    def category(self, value):
+        raise AttributeError("category is derived from remote data")
+
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         return [plan.with_service(self) for plan in self.plans if (plan.is_active == is_active or is_active is NOTSET)]
 

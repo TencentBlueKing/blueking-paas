@@ -230,6 +230,15 @@ def test_a_superseded_version_is_accepted_without_overwriting(conversation) -> N
     assert state.load_context(conversation.id) == {"context_version": 5, "messages": ["new"]}
 
 
+def test_a_superseded_push_archives_nothing(conversation) -> None:
+    """A late retry must not resurrect a version retention has already taken away."""
+    state.save_context(conversation.id, {"context_version": 5, "messages": ["new"]})
+
+    state.save_context(conversation.id, {"context_version": 3, "messages": ["old"]})
+
+    assert state.load_context_version(conversation.id, 3) is None
+
+
 @pytest.mark.parametrize("version", [None, -1, "4", True])
 def test_a_context_without_a_usable_version_is_rejected(conversation, version) -> None:
     with pytest.raises(state.ConversationStateError, match="context_version"):

@@ -20,4 +20,10 @@ from django.urls import path
 
 from .views import ResQuotaPlanOptionsView
 
-urlpatterns = [path("api/bkapps/quota_plans/", ResQuotaPlanOptionsView.as_view())]
+urlpatterns = [
+    path(
+        "api/bkapps/applications/<str:code>/quota_plans/",
+        ResQuotaPlanOptionsView.as_view({"get": "list"}),
+        name="api.bkapps.quota_plans",
+    )
+]

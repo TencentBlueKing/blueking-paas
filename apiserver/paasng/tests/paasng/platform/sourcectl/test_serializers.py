@@ -19,6 +19,7 @@
 
 import pytest
 
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.sourcectl.serializers import SourcePackageUploadViaUrlSLZ
 
 
@@ -102,3 +103,27 @@ class TestSourcePackageUploadViaUrlSLZ:
         slz = SourcePackageUploadViaUrlSLZ(data=_make_data(url))
         assert not slz.is_valid()
         assert "package_url" in slz.errors
+
+    @pytest.mark.parametrize(
+        ("extra", "valid", "expected"),
+        [
+            ({}, True, {"build_method": None, "dockerfile_path": None, "docker_build_args": None}),
+            (
+                {"build_method": RuntimeType.DOCKERFILE},
+                True,
+                {"build_method": RuntimeType.DOCKERFILE, "dockerfile_path": "Dockerfile", "docker_build_args": {}},
+            ),
+            ({"build_method": RuntimeType.BUILDPACK}, True, {"build_method": RuntimeType.BUILDPACK}),
+            ({"dockerfile_path": "Dockerfile"}, False, None),
+            ({"build_method": RuntimeType.BUILDPACK, "dockerfile_path": "Dockerfile"}, False, None),
+            ({"build_method": RuntimeType.BUILDPACK, "docker_build_args": {"FOO": "bar"}}, False, None),
+            ({"build_method": RuntimeType.CUSTOM_IMAGE}, False, None),
+        ],
+    )
+    def test_build_method_fields(self, settings, extra, valid, expected):
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+        slz = SourcePackageUploadViaUrlSLZ(data={**_make_data("https://example.com/pkg.tar.gz"), **extra})
+        assert slz.is_valid() is valid
+        if valid:
+            for key, value in expected.items():
+                assert slz.validated_data.get(key) == value

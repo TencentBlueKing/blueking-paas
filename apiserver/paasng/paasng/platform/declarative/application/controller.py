@@ -106,16 +106,9 @@ class AppDeclarativeController:
             tenant_id=self.app_tenant_conf.tenant_id,
         )
 
-        try:
-            create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
-        except BkOauthClientCodeConflictError:
-            logger.warning(f"OAuth2 client code conflict for application {application.code}")
-            raise error_codes.CANNOT_CREATE_APP_BKAUTH_CONFLICT.f(code=application.code)
-
         self.sync_modules(application, desc.modules)
         default_module = application.get_default_module()
 
-        post_create_application.send(sender=self.__class__, application=application)
         # Create market related data after application created, to avoid overwriting market related data
         MarketConfig.objects.create(
             application=application,
@@ -130,6 +123,18 @@ class AppDeclarativeController:
         self.sync_market_fields(application, desc.market)
         self.sync_services_fields(application, desc.modules)
         self.save_description(desc, application, is_creation=True)
+
+        # Signal handlers run inside this transaction and may fail (e.g. IAM).
+        post_create_application.send(sender=self.__class__, application=application)
+
+        # OAuth2 client is an external side effect and cannot be rolled back with the
+        # DB transaction. It must be the last step inside @atomic so earlier failures
+        # (no available cluster, IAM init, etc.) do not leave an orphan app_code.
+        try:
+            create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
+        except BkOauthClientCodeConflictError:
+            logger.warning(f"OAuth2 client code conflict for application {application.code}")
+            raise error_codes.CANNOT_CREATE_APP_BKAUTH_CONFLICT.f(code=application.code)
         return application
 
     @atomic

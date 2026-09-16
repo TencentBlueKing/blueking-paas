@@ -21,8 +21,8 @@ import yaml
 from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
-from drf_yasg.utils import swagger_auto_schema
 from django.utils.translation import gettext as _
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -50,6 +50,7 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.bkapp_model.serializers import (
     BkAppModelSLZ,
     DomainResolutionSLZ,
@@ -173,7 +174,13 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def batch_upsert(self, request, code, module_name):
         """批量更新模块的进程配置"""
         module = self.get_module_via_path()
-        slz = ModuleProcessSpecsInputSLZ(data=request.data)
+        slz = ModuleProcessSpecsInputSLZ(
+            data=request.data,
+            context={
+                "app_code": module.application.code,
+                "current_env_plans": ResQuotaPlanPolicy().bound_env_plans(module),
+            },
+        )
         slz.is_valid(raise_exception=True)
         proc_specs = slz.validated_data["proc_specs"]
         processes = [

@@ -30,3 +30,5 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.BASIC_READER, ClientAction.READ_APPLICATIONS) is True
         assert perm_checker.role_can_do(ClientRole.BASIC_READER, ClientAction.BIND_DB_SERVICE) is False
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.BIND_DB_SERVICE) is True
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.CREATE_AI_AGENT_APP) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.CREATE_AI_AGENT_APP) is False

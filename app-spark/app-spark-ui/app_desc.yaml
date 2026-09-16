@@ -1,0 +1,6 @@
+spec_version: 2
+module:
+  language: NodeJS
+  processes:
+    web:
+      command: npm run server

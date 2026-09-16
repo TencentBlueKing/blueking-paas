@@ -1,0 +1,37 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  overflow-x: clip;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+body {
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #313238;
+  background: #e8f3ff;
+}
+
+#app {
+  width: 100%;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+}

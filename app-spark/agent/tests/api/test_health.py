@@ -1,4 +1,4 @@
-"""``GET /health``: the single call a control plane polls the Runtime with.
+"""GET /health: the single call a control plane polls the Runtime with.
 
 Everything it reports is a cursor into something a client can fetch in full elsewhere, so the
 interesting assertion is not the shape of the document but that its numbers agree with the
@@ -47,37 +47,56 @@ def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient
     assert reported["running"] is False
 
 
-@pytest.mark.parametrize("missing", ["MODEL_NAME", "MODEL_BASE_URL"])
-def test_readiness_is_latched_only_by_the_api_key(
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("MODEL_NAME", ""),
+        ("MODEL_NAME", "not-a-listed-model"),
+        ("MODEL_BASE_URL", ""),
+    ],
+)
+def test_readiness_requires_url_and_listed_model(
     api: TestClient,
     monkeypatch: pytest.MonkeyPatch,
-    missing: str,
+    field: str,
+    value: str,
 ) -> None:
-    """The model name and base URL are carried for a later caller, not gates on serving a run.
-
-    Reporting the Runtime unready for a missing name would stall the sandbox on a condition it
-    cannot fix and that stops nothing it currently does.
-    """
-    monkeypatch.setattr(settings, missing, "")
-
-    reported: dict[str, Any] = api.get("/health").json()
-
-    assert reported["model_ready"] is True
-
-
-def test_a_missing_api_key_is_reported_as_unready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The one condition that must never be reported as ready."""
-    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    """网关地址和对照表内模型名缺一不可；表外名称不得假装就绪。"""
+    monkeypatch.setattr(settings, field, value)
 
     reported: dict[str, Any] = api.get("/health").json()
 
     assert reported["model_ready"] is False
 
 
+def test_a_missing_token_is_reported_as_unready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """用户态 token 和兼容回落密钥都空，才算没有 access_token。"""
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is False
+
+
+def test_aidev_access_token_is_enough_when_the_api_key_is_absent(
+    api: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """用户态 token 是正门；MODEL_API_KEY 只是兼容回落。"""
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-access-token")
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is True
+
+
 def test_a_fake_model_is_ready_without_an_api_key(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """The deterministic fake model never calls a provider and therefore needs no credential."""
     monkeypatch.setattr(settings, "MODEL", "fake:write-file")
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
 
     reported: dict[str, Any] = api.get("/health").json()
 

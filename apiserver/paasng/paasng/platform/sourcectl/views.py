@@ -45,8 +45,9 @@ from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl import serializers as slzs
@@ -282,7 +283,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         request_body=slzs.SourcePackageUploadViaUrlSLZ,
         responses={200: slzs.SourcePackageSLZ()},
         tags=["源码包管理"],
-        operation_description="目前仅提供给 lesscode 项目使用",
+        operation_description="提供给 lesscode / AI Agent 使用，AI Agent 可指定构建方式",
     )
     def upload_via_url(self, request, code, module_name):
         """根据 URL 方式上传源码包, 目前不校验 app_desc.yaml"""
@@ -293,6 +294,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         allow_overwrite = data["allow_overwrite"]
         version = data["version"]
         package_url = data["package_url"]
+        self._validate_optional_build_method(module, data)
 
         # 提取文件名
         filename = Path(urlparse(package_url).path).name.split(".")[0]
@@ -301,7 +303,65 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         source_package = upload_package_via_url(
             module, package_url, version, filename, request.user, allow_overwrite=allow_overwrite, need_patch=False
         )
+        self._apply_optional_build_method(request, module, data)
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
+
+    def _validate_optional_build_method(self, module: Module, data: dict) -> None:
+        """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
+        has_build_method_fields = bool(
+            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
+        )
+        if not has_build_method_fields:
+            return
+        if module.get_source_origin() != SourceOrigin.AI_AGENT:
+            raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
+
+    @staticmethod
+    def _build_config_audit_data(build_config: BuildConfig) -> dict:
+        """审计只记本接口会改的字段，不拼完整 ModuleBuildConfigSLZ。"""
+        return {
+            "build_method": build_config.build_method,
+            "dockerfile_path": build_config.dockerfile_path,
+            "docker_build_args": build_config.docker_build_args or {},
+        }
+
+    def _apply_optional_build_method(self, request, module: Module, data: dict) -> None:
+        """按上传参数更新模块构建方式。
+
+        不传 build_method 则保持当前配置。
+        本接口只改 build_method 和 dockerfile 字段，不重绑 slugbuilder / buildpacks。
+        切回 buildpack 时清空 path/args，避免下次读到过期值。
+        """
+        build_method = data.get("build_method")
+        if not build_method:
+            return
+
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        data_before = DataDetail(data=self._build_config_audit_data(build_config))
+
+        # 不走 update_build_config_with_method：那是完整构建配置入口，切 buildpack 还要重绑 bp stack。
+        build_config.build_method = build_method
+        if build_method == RuntimeType.DOCKERFILE:
+            build_config.dockerfile_path = data.get("dockerfile_path") or "Dockerfile"
+            build_config.docker_build_args = data.get("docker_build_args") or {}
+
+        else:
+            build_config.dockerfile_path = None
+            build_config.docker_build_args = {}
+
+        build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
+
+        add_app_audit_record(
+            app_code=module.application.code,
+            tenant_id=module.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_CONFIG,
+            module_name=module.name,
+            data_before=data_before,
+            data_after=DataDetail(data=self._build_config_audit_data(build_config)),
+        )
 
 
 class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

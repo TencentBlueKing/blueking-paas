@@ -20,11 +20,22 @@ from app_spark_api.core.tenant.fields import tenant_id_field_factory
 from app_spark_api.utils.models import BkUserField, OwnerTimestampedModel
 
 
-class ProjectManager(models.Manager):
+class ProjectManager(models.Manager["Project"]):
     """Manager for Projects"""
 
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
+
+    def owned_by(self, owner: str, *, tenant_id: str) -> "models.QuerySet[Project]":
+        """列出某个用户自己的 Project，按创建时间倒序。
+
+        软删除的项目不会出现，这由本管理器的 ``get_queryset()`` 负责。
+
+        :param owner: 项目 owner 的用户 pk。
+        :param tenant_id: 限定的租户。
+        :return: 排好序、尚未取值的 queryset，翻页交给调用方。
+        """
+        return self.filter(owner=owner, tenant_id=tenant_id).order_by("-created", "id")
 
 
 class Project(OwnerTimestampedModel):

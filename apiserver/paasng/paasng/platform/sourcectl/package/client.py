@@ -84,11 +84,16 @@ class TarClient(BasePackageClient):
         :param mode: tar 包操作的模式, 具体请看 TarFile.open 的注解
         :param relative_path: tar 包内容的相对位置, 如果压缩时将目录也打包进来, 入目录名是 foo, 那么 relative_path = 'foo/'
         """
-        if not file_path and not file_obj:
-            raise ValueError("nothing to open")
         if file_path and file_obj:
             raise ValueError("file_path and file_obj cannot be provided at the same time")
-        self.tar = tarfile.open(name=file_path, fileobj=file_obj, mode=mode)  # noqa: SIM115
+        # 空串按旧语义当成没路径，和上面的真值互斥检查对齐。
+        # stubs 把 mode 收成 Literal，变量 str 对不上重载。
+        if file_path:
+            self.tar = tarfile.open(name=file_path, mode=mode)  # type: ignore[call-overload]  # noqa: SIM115
+        elif file_obj is not None:
+            self.tar = tarfile.open(fileobj=file_obj, mode=mode)  # type: ignore[call-overload]  # noqa: SIM115
+        else:
+            raise ValueError("nothing to open")
         self.relative_path = relative_path
 
     def read_file(self, file_path: str) -> bytes:

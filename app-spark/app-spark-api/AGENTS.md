@@ -16,13 +16,17 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 
 * Prefer frozen attrs classes for internal configuration and data models, and use cattrs to structure and validate untyped input.
     - Translate library validation failures into domain-level exceptions at module boundaries.
-* Avoid Django `choices` when defining models if the choices might change in the future, document the supported values instead.
-
+* Avoid Django `choices=<values>` when defining models if the values might change in the future, document the supported values instead.
+* Put pure queries on the model's manager/queryset, not in services; services orchestrate (transactions, translating database errors into domain exceptions).
+* Failures leave the API as `{"code", "detail"}`. Raise an `error_codes.*` entry at the boundary, or
+  map a domain exception in `api.py`; do not raise `HttpError` or hand-build a `{"detail": ...}` body.
+  Routes declare `**ERROR_RESPONSES` so OpenAPI matches. See the README's 「API 错误响应」 section.
 
 ### Running tests
 
 * Run all tests: `uv run pytest --reuse-db -s --maxfail=1 tests/`
 * ALWAYS prefer specifying test files for efficiency
+* Run test commands outside the command sandbox: it blocks localhost TCP, so `Connection refused` from a local service means the sandbox, not a stopped server.
 * `tests/api/test_conversations.py` spawns real agent processes instead of mocking them, so it
   needs the agent's virtualenv: run `cd ../agent && uv sync` first. Without it the tests skip
   with a reason rather than failing.
@@ -30,3 +34,7 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
       socket and cannot reach an in-process test client.
     - Replication lands *after* the run's event stream has been sent, so read-backs poll
       (`wait_for_replication`) rather than assuming the database is already up to date.
+* Live Forgejo tests live in `tests/api/live_forgejo/` and are not collected unless
+  `APP_SPARK_FORGEJO_LIVE=1`. That job starts the sibling `repo-server/forgejo` test
+  instance (`just test-up`) the way conversation tests spawn the Agent. Missing Forgejo
+  fails the job, it does not skip. `just` and Docker must be on PATH.

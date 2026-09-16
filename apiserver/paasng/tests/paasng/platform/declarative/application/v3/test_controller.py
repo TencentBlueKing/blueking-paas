@@ -16,9 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 from typing import Dict
+from unittest import mock
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
+from blue_krill.web.std_error import APIError
 from django.conf import settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
@@ -31,13 +33,15 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import AppTenantInfo
+from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
 from paasng.platform.declarative.application.validations.v3 import AppDescriptionSLZ
-from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
+from paasng.utils.error_codes import error_codes
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
 from tests.paasng.platform.declarative.utils import AppDescV3Decorator as decorator  # noqa: N813
 from tests.utils.auth import create_user
@@ -148,6 +152,63 @@ class TestAppDeclarativeControllerCreation:
         with override("en"):
             assert application.get_product().introduction == "introduction"
             assert application.get_product().description == "description"
+
+
+class TestOAuth2ClientCreationOrder:
+    """oauth2 client is an unrollbackable external call and must be the last step."""
+
+    def test_sync_modules_failure_skips_oauth2_client(self, random_name, declarative_controller, app_tenant):
+        app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))
+        desc = get_app_description(app_json, app_tenant.app_tenant_id)
+
+        with (
+            mock.patch.object(declarative_controller, "sync_modules", side_effect=ControllerError("no cluster")),
+            mock.patch(
+                "paasng.platform.declarative.application.controller.create_oauth2_client"
+            ) as mock_create_oauth2,
+            pytest.raises(ControllerError),
+        ):
+            declarative_controller.perform_action(desc)
+
+        mock_create_oauth2.assert_not_called()
+        assert not Application.objects.filter(code=random_name).exists()
+
+    def test_post_create_application_failure_skips_oauth2_client(
+        self, random_name, declarative_controller, app_tenant
+    ):
+        app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))
+        desc = get_app_description(app_json, app_tenant.app_tenant_id)
+
+        with (
+            mock.patch(
+                "paasng.platform.declarative.application.controller.post_create_application.send",
+                side_effect=RuntimeError("iam failed"),
+            ),
+            mock.patch(
+                "paasng.platform.declarative.application.controller.create_oauth2_client"
+            ) as mock_create_oauth2,
+            pytest.raises(RuntimeError, match="iam failed"),
+        ):
+            declarative_controller.perform_action(desc)
+
+        mock_create_oauth2.assert_not_called()
+        assert not Application.objects.filter(code=random_name).exists()
+
+    def test_oauth2_conflict_rolls_back_application(self, random_name, declarative_controller, app_tenant):
+        app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))
+        desc = get_app_description(app_json, app_tenant.app_tenant_id)
+
+        with (
+            mock.patch(
+                "paasng.platform.declarative.application.controller.create_oauth2_client",
+                side_effect=BkOauthClientCodeConflictError(bk_app_code=random_name),
+            ),
+            pytest.raises(APIError) as exc_info,
+        ):
+            declarative_controller.perform_action(desc)
+
+        assert exc_info.value.code == error_codes.CANNOT_CREATE_APP_BKAUTH_CONFLICT.code
+        assert not Application.objects.filter(code=random_name).exists()
 
 
 class TestAppDeclarativeControllerUpdate:

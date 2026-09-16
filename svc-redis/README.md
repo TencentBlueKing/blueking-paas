@@ -128,14 +128,14 @@ config = {
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
-`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；CPU 只保留较小配额和突发余量。
+`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；CPU request 偏低，limit 留到 500m–1 核以覆盖 BGSAVE / 全量同步。
 
 | preset | CPU requests | Memory requests | CPU limits | Memory limits |
 | --- | --- | --- | --- | --- |
-| nano | 25m | 128Mi | 100m | 256Mi |
-| micro | 25m | 256Mi | 100m | 512Mi |
-| small | 25m | 512Mi | 100m | 1024Mi |
-| medium | 50m | 1024Mi | 200m | 2048Mi |
+| nano | 50m | 128Mi | 500m | 256Mi |
+| micro | 50m | 256Mi | 500m | 512Mi |
+| small | 50m | 512Mi | 500m | 1024Mi |
+| medium | 100m | 1024Mi | 1 | 2048Mi |
 
 超过 2Gi 的容量需求应显式配置 requests / limits。
 

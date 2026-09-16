@@ -42,7 +42,7 @@ class TestResolvePlanResources:
 
     def test_preset_with_explicit_overlay(self):
         resolved = resolve_plan_resources(_plan_config(resources={"preset": "medium", "limits": {"cpu": "2"}}))
-        assert resolved.requests == {"cpu": "50m", "memory": "1024Mi"}
+        assert resolved.requests == {"cpu": "100m", "memory": "1024Mi"}
         assert resolved.limits == {"cpu": "2", "memory": "2048Mi"}
 
     def test_explicit_requests_only_copies_to_limits(self):
@@ -57,8 +57,8 @@ class TestResolvePlanResources:
 
     def test_resources_wins_over_memory_size(self):
         resolved = resolve_plan_resources(_plan_config(memory_size="4Gi", resources={"preset": "small"}))
-        assert resolved.requests == {"cpu": "25m", "memory": "512Mi"}
-        assert resolved.limits == {"cpu": "100m", "memory": "1024Mi"}
+        assert resolved.requests == {"cpu": "50m", "memory": "512Mi"}
+        assert resolved.limits == {"cpu": "500m", "memory": "1024Mi"}
 
 
 class TestGetRedisResource:
@@ -67,16 +67,16 @@ class TestGetRedisResource:
 
         assert deployable["spec"]["kubernetesConfig"]["service"]["additional"]["enabled"] is False
         resources = deployable["spec"]["kubernetesConfig"]["resources"]
-        assert resources["requests"] == {"cpu": "25m", "memory": "256Mi"}
-        assert resources["limits"] == {"cpu": "100m", "memory": "512Mi"}
+        assert resources["requests"] == {"cpu": "50m", "memory": "256Mi"}
+        assert resources["limits"] == {"cpu": "500m", "memory": "512Mi"}
 
     @pytest.mark.parametrize(
         ("preset", "requests_cpu", "requests_memory", "limits_cpu", "limits_memory"),
         [
-            ("nano", "25m", "128Mi", "100m", "256Mi"),
-            ("micro", "25m", "256Mi", "100m", "512Mi"),
-            ("small", "25m", "512Mi", "100m", "1024Mi"),
-            ("medium", "50m", "1024Mi", "200m", "2048Mi"),
+            ("nano", "50m", "128Mi", "500m", "256Mi"),
+            ("micro", "50m", "256Mi", "500m", "512Mi"),
+            ("small", "50m", "512Mi", "500m", "1024Mi"),
+            ("medium", "100m", "1024Mi", "1", "2048Mi"),
         ],
     )
     def test_get_replication_redis_manifest(self, preset, requests_cpu, requests_memory, limits_cpu, limits_memory):

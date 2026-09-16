@@ -15,11 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Redis 套餐资源规格。
-
-按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。
-小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；
-CPU 只保留较小配额和突发余量。
+"""Redis 套餐资源规格
+预定义了几组规格，因为 redis 几乎不吃 cpu，所以 cpu 的配额比较低
+同时也支持自定义 requests 和 limits
+也支持二者组合使用，可见 README.md
 """
 
 from copy import deepcopy
@@ -34,20 +33,20 @@ DEFAULT_RESOURCE_PRESET: ResourcePresetName = "micro"
 # preset -> {requests, limits}，requests/limits 为任意 K8s 资源字典
 RESOURCE_PRESETS: Dict[ResourcePresetName, Dict[str, Dict[str, str]]] = {
     "nano": {
-        "requests": {"cpu": "25m", "memory": "128Mi"},
-        "limits": {"cpu": "100m", "memory": "256Mi"},
+        "requests": {"cpu": "50m", "memory": "128Mi"},
+        "limits": {"cpu": "500m", "memory": "256Mi"},
     },
     "micro": {
-        "requests": {"cpu": "25m", "memory": "256Mi"},
-        "limits": {"cpu": "100m", "memory": "512Mi"},
+        "requests": {"cpu": "50m", "memory": "256Mi"},
+        "limits": {"cpu": "500m", "memory": "512Mi"},
     },
     "small": {
-        "requests": {"cpu": "25m", "memory": "512Mi"},
-        "limits": {"cpu": "100m", "memory": "1024Mi"},
+        "requests": {"cpu": "50m", "memory": "512Mi"},
+        "limits": {"cpu": "500m", "memory": "1024Mi"},
     },
     "medium": {
-        "requests": {"cpu": "50m", "memory": "1024Mi"},
-        "limits": {"cpu": "200m", "memory": "2048Mi"},
+        "requests": {"cpu": "100m", "memory": "1024Mi"},
+        "limits": {"cpu": "1", "memory": "2048Mi"},
     },
 }
 

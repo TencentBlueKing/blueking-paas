@@ -1,0 +1,91 @@
+# Forgejo 进程独占 /data 里的 Git 对象和仓库锁，只支持单副本。模板会拒绝其他取值。
+replicaCount: 1
+
+# 可统一指定镜像仓库和拉取凭据。
+# global:
+#   imageRegistry: ""
+#   imagePullSecrets: []
+
+# 镜像由 ../../Dockerfile 构建：官方 Forgejo 加上 init CLI 需要的 Python。
+# 官方镜像不含 Python，init Job 用不了，因此不能直接填 codeberg.org/forgejo/forgejo。
+image:
+  # registry: ""
+  repository: app-spark-forgejo
+  # pullPolicy: IfNotPresent
+  # 留空取 Chart.appVersion（即 Forgejo 版本）。重建同版本镜像时显式写带后缀的 tag。
+  tag: ""
+  # digest 优先于 tag；pullSecrets 支持名称字符串或 {name: ...}。
+  # digest: ""
+  # pullSecrets: []
+# Pod 级拉取凭据，与 global、image.pullSecrets 合并去重。
+# imagePullSecrets: []
+
+# nameOverride: ""
+# fullnameOverride: ""
+
+service:
+  # type: ClusterIP
+  # 容器内 HTTP 端口固定 3000，这里只改 Service 暴露的端口。
+  port: 3000
+
+# Git over HTTP 与 Web UI 的入口。Forgejo 不签发 SSH 密钥，只有这一个协议。
+ingress:
+  enabled: true
+  # 显式指定时优先于 annotations 中的 kubernetes.io/ingress.class。
+  # ingressClass: ""
+  host: repo-server.example.com
+  # annotations 和 tls 支持 Helm 模板表达式（例如 {{ .Release.Name }}）。
+  annotations:
+    # git push 的 pack 远超 ingress-nginx 默认的 1m 上限；clone 大仓库也会超过默认读超时。
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+  # tls: []
+
+server:
+  # 对外根地址，决定 Forgejo 生成的 clone URL。留空时由 ingress.host 与 tls 推导。
+  # app-spark-api 和 Agent 沙箱必须能解析它：填 127.0.0.1 会让沙箱里的 git 打到沙箱自己。
+  # 必须带 scheme（http:// 或 https://），形如 https://repo-server.example.com[:port][/path]；
+  # 不支持裸 IPv6（http://[::1]:3000）——模板取不出主机名，请改用域名。
+  rootUrl: ""
+  # 留空取 rootUrl 的主机名。
+  domain: ""
+
+# /data 里放 Git 对象、附件，以及首次启动生成的 SECRET_KEY / INTERNAL_TOKEN。
+# 丢了等于仓库全丢，因此本 chart 不提供 emptyDir 回退：要么用已有 PVC，要么由 chart 创建。
+persistence:
+  # 填写同 namespace 下已有的 PVC 时，chart 不再创建。
+  existingClaim: ""
+  # storageClass: ""
+  # Forgejo 单进程写 /data，RWO 足够；多节点集群不要改成 RWX 以免误开多副本。
+  accessModes: [ReadWriteOnce]
+  size: 20Gi
+  # chart 创建的 PVC 默认带 helm.sh/resource-policy=keep，helm uninstall 不会删仓库数据。
+  # 设为 false 时卸载连带删除，只适合一次性测试环境。
+  retainOnDelete: true
+
+# 只对接外部 MySQL 8.x，chart 不安装数据库，也不支持 SQLite。
+database:
+  host: ""
+  port: 3306
+  name: forgejo
+  user: forgejo
+  password: ""
+
+# 初始化创建的账号。密码必填，且部署后不要改：app-spark-api 用服务账号密码签发仓库 token，
+# 改了密码等于让已下发的凭据链路失效。用户名和组织名由 app_spark_forgejo 固定。
+auth:
+  adminPassword: ""
+  serviceAccountPassword: ""
+
+# 每次安装/升级创建独立的 init Job：等 /api/healthz 通过后建管理员、服务账号和 app-spark 组织。
+# 跑的是 app_spark_forgejo init，与本地 `just init` 同一份代码，可重复执行。
+init:
+  enabled: true
+  # timeoutSeconds: 600
+  # resources: {}
+
+# resources: {}
+
+# 追加 Forgejo 配置，键为完整环境变量名，例如 FORGEJO__log__LEVEL: info。
+# 安全与持久化的不变量（见 ../../compose.yaml 中标注的项）不允许从这里改写，模板会直接报错。
+extraConfig: {}

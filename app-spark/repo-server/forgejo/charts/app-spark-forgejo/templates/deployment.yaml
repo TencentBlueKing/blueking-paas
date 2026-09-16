@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app-spark-forgejo.fullname" . }}
+  labels:
+    {{- include "app-spark-forgejo.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # RWO 卷只能单节点挂载，Forgejo 也不接受两个进程同时写 /data；不能用滚动更新。
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "app-spark-forgejo.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-forgejo.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/general-envs-configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "app-spark-forgejo.imagePullSecrets" . | nindent 6 }}
+      # git push 结束时服务端要落完对象再退出。
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "app-spark-forgejo.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          # 不覆盖 command：镜像 entrypoint 负责按 USER_UID 对齐属主、由 FORGEJO__* 生成
+          # /data/gitea/conf/app.ini，再交给 s6 拉起 Forgejo。覆盖它就没人生成配置了。
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "app-spark-forgejo.fullname" . }}
+          env:
+            - name: FORGEJO__database__PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "app-spark-forgejo.fullname" . }}
+                  key: FORGEJO__database__PASSWD
+          # REQUIRE_SIGNIN_VIEW 下 /api/v1/version 是 403，healthz 保持公开，
+          # 且它会连带检查数据库连通性。
+          startupProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 10
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "app-spark-forgejo.claimName" . }}

@@ -347,7 +347,16 @@ def assert_restart_keeps_repo(password: str) -> None:
     ok("repository still exists after restart")
 
 
-def verify() -> None:
+def verify_remote() -> str:
+    """Check the invariants that only need HTTP and Git against ``FORGEJO_ROOT_URL``.
+
+    This is the subset that does not care how Forgejo was deployed, so the chart's
+    smoke test runs it from a Pod instead of restating the same checks in YAML.
+    Returns the repo-scoped write token so callers can keep using it.
+
+    It creates and pushes to the ``phase1-verify`` repository, therefore run it
+    against a disposable instance, not a production one.
+    """
     require_bin("git")
     wait_ready()
     creds = load_or_create_credentials()
@@ -363,7 +372,14 @@ def verify() -> None:
     assert_push_create_disabled(token)
     assert_basic_auth_git(password)
     assert_repo_is_private(repo_body)
-    assert_container_can_reach(token)
     assert_repeat_init_is_idempotent()
+    return token
+
+
+def verify() -> None:
+    token = verify_remote()
+    # The remaining checks drive Compose itself, so they only apply to dev mode.
+    password = load_or_create_credentials()["SERVICE_ACCOUNT_PASSWORD"]
+    assert_container_can_reach(token)
     assert_restart_keeps_repo(password)
     print("phase-1 verification passed")

@@ -1,8 +1,8 @@
 # Forgejo（repo-server 的当前实现）
 
-固定 **Forgejo 15.0.7 LTS**。默认是 **dev 模式**：Compose + SQLite + named volume，用来开发和验收。线上会用同目录 `charts/` 部署。
+固定 **Forgejo 15.0.7 LTS**。默认是 **dev 模式**：Compose + SQLite + named volume，用来开发和验收。线上用同目录的 [charts/app-spark-forgejo](charts/app-spark-forgejo/README.md) 部署（外部 MySQL 8 + PVC）。
 
-镜像摘要写在 `compose.yaml` 里。升补丁前先看 [15.x 发布说明](https://forgejo.org/releases/15.x/)。
+镜像摘要写在 `compose.yaml` 和 `Dockerfile` 里，升版本要和 `Chart.yaml` 的 `appVersion` 一起改。升补丁前先看 [15.x 发布说明](https://forgejo.org/releases/15.x/)。
 
 初始化按「两种部署共用」来写：HTTP 建组织和团队，不假设 SQLite。入口是本目录的 uv 项目
 `app-spark-forgejo`（`uv run app-spark-forgejo <subcommand>`）。本地用 `docker compose exec`
@@ -22,7 +22,7 @@ Agent 镜像里写 `http://localhost:3000` 只会打到沙箱自己。
 
 ## 入口
 
-在本目录执行（第一次会 `uv sync`，Python 锁在 `.python-version` / `uv.lock`）：
+在本目录执行（第一次会 `uv sync`，Python 版本由 `pyproject.toml` 的 `requires-python` 和 `uv.lock` 约束）：
 
 ```bash
 just start    # 启动、等待就绪、初始化（保留开发数据卷）
@@ -31,7 +31,12 @@ just init     # uv run app-spark-forgejo init
 just logs
 just verify   # uv run app-spark-forgejo verify
 just stop     # 停止容器，开发数据卷保留
+just image    # 构建线上镜像（官方 Forgejo + 本包及其虚拟环境）并自检
 ```
+
+线上镜像里同样用 uv：`uv sync --frozen` 在构建时装好虚拟环境，调用方
+`uv run --directory /opt/app-spark-forgejo --no-sync app-spark-forgejo <子命令>`，
+入口与本地一致。
 
 测试用的临时实例与开发卷分开：
 
@@ -66,7 +71,9 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 
 ## 固化的服务端不变量
 
-这些不是调优，`just verify` 和 chart 都要保持：
+这些不是调优，`just verify` 和 chart 都要保持。其中与部署方式无关的那部分由
+`app-spark-forgejo verify-remote` 覆盖：`just verify` 先跑它再补两条 Compose 特有的检查，
+chart 的冒烟 Job 也跑它，因此验收逻辑只有一份实现。
 
 - `ENABLE_PUSH_CREATE_USER` / `ENABLE_PUSH_CREATE_ORG` 关闭
 - 默认仓库可见性 `private`，默认分支 `main`

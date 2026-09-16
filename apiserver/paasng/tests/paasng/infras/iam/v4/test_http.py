@@ -21,7 +21,13 @@ from unittest.mock import Mock
 
 import pytest
 import requests
-from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError, JSONResponseError
+from bkapi_client_core.exceptions import (
+    APIGatewayResponseError,
+    EndpointNotSetError,
+    HTTPResponseError,
+    JSONResponseError,
+    PathParamsMissing,
+)
 
 from paasng.infras.iam.exceptions import BKIAMApiHTTPError, BKIAMGatewayServiceError
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
@@ -104,6 +110,25 @@ class TestCall:
         operation = StubOperation(requests.exceptions.ReadTimeout("read timed out"))
 
         with pytest.raises(BKIAMGatewayServiceError):
+            client.call(operation)
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            pytest.param(EndpointNotSetError("endpoint not set"), id="endpoint-not-set"),
+            pytest.param(PathParamsMissing("system_id missing"), id="path-params-missing"),
+        ],
+    )
+    def test_wraps_bkapi_only_errors(self, client, exc):
+        """只继承 BKAPIError 的异常也要收敛
+
+        EndpointNotSetError 与 PathParamsMissing 不是 RequestException 的子类，
+        漏掉它们会让网关地址未配置这类故障越过调用方的捕获，从「取不到策略」变成 500——
+        而 V3 下同类配置错误经 SDK 的异常漏斗最终是前者。
+        """
+        operation = StubOperation(exc)
+
+        with pytest.raises(BKIAMGatewayServiceError, match="stub_operation"):
             client.call(operation)
 
 

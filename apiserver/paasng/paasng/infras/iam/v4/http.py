@@ -240,7 +240,7 @@ class BKIAMV4BaseClient:
             return None
 
     @staticmethod
-    def _extract_error_detail(exc: HTTPResponseError) -> Optional[str]:
+    def _extract_error_detail(exc: HTTPResponseError) -> str | None:
         """从错误响应体中取出权限中心的错误码与描述
 
         V4 的错误体形如 {"error": {"code": "INVALID_REQUEST", "message": "..."}}：

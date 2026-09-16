@@ -70,20 +70,21 @@ class ResolvedResources(NamedTuple):
 
 
 def resolve_plan_resources(plan_config: RedisPlanConfig) -> ResolvedResources:
-    """解析套餐资源。
+    """解析套餐资源
 
     优先级：
     1. resources.preset 作为底稿，再叠加 resources.requests / limits
-    2. 仅有显式 requests / limits 时，缺的一侧复用另一侧
-    3. 未配 resources 时：历史 memory_size 为 4Gi/8Gi 走旧比例，其余用默认 preset
+    2. requests/limits 只配了一个时，缺的一侧复用另一侧
+    3. 未配 resources 时：若配了 memory_size 走历史配额计算方式，否则用默认 preset
     """
     resources = plan_config.resources
     if resources is None:
-        if plan_config.memory_size and plan_config.memory_size != "2Gi":
+        if plan_config.memory_size:
             return _from_memory_size(plan_config.memory_size)
         return _from_preset(DEFAULT_RESOURCE_PRESET)
 
     quota = _from_preset(resources.preset) if resources.preset else ResolvedResources({}, {})
+    # 可覆盖 preset 的配额
     requests = {**quota.requests, **(resources.requests or {})}
     limits = {**quota.limits, **(resources.limits or {})}
 
@@ -102,7 +103,7 @@ def _from_preset(preset: ResourcePresetName) -> ResolvedResources:
 
 
 def _from_memory_size(memory_limit: str) -> ResolvedResources:
-    """历史 memory_size 折算：内存 request 为 limit 的一半，每 Gi 配 0.25c request / 0.5c limit。"""
+    """历史配额计算方式：内存 request 为 limit 的一半，每 Gi 配 0.25c request / 0.5c limit。"""
     mem_gb = parse_quantity(memory_limit) / (1024**3)
     return ResolvedResources(
         requests={"cpu": f"{mem_gb * 250}m", "memory": f"{mem_gb / 2}Gi"},

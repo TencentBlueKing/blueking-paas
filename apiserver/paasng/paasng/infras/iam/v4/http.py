@@ -18,7 +18,7 @@
 import json
 import logging
 from itertools import islice
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, TypeVar
+from typing import Any, Callable, Dict, Iterable, Iterator, List, TypeVar
 
 from bkapi_client_core.exceptions import BKAPIError, HTTPResponseError, JSONResponseError
 from django.conf import settings
@@ -56,7 +56,7 @@ class BKIAMV4BaseClient:
     :param operator: 操作人。V4 写操作要求携带该标识，为空时使用 BK_APP_CODE
     """
 
-    def __init__(self, tenant_id: str, operator: Optional[str] = None):
+    def __init__(self, tenant_id: str, operator: str | None = None):
         self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_V4_APIGW_SERVICE_STAGE)
         self.tenant_id = tenant_id
         self.operator = operator or settings.BK_APP_CODE
@@ -66,9 +66,9 @@ class BKIAMV4BaseClient:
         self,
         operation: Callable[..., Dict],
         *,
-        path_params: Optional[Dict] = None,
-        params: Optional[Dict] = None,
-        data: Optional[Any] = None,
+        path_params: Dict | None = None,
+        params: Dict | None = None,
+        data: Any | None = None,
         for_write: bool = False,
     ) -> Dict:
         """发起一次 V4 接口调用
@@ -128,8 +128,8 @@ class BKIAMV4BaseClient:
         self,
         operation: Callable[..., Dict],
         *,
-        path_params: Optional[Dict] = None,
-        params: Optional[Dict] = None,
+        path_params: Dict | None = None,
+        params: Dict | None = None,
         page_size: int = V4_LIST_PAGE_SIZE_LIMIT,
     ) -> Iterator[Dict]:
         """逐页拉取列表接口的全部结果，直到取完为止，不静默截断"""
@@ -164,7 +164,7 @@ class BKIAMV4BaseClient:
         items: Iterable[T],
         build_data: Callable[[List[T]], Any],
         *,
-        path_params: Optional[Dict] = None,
+        path_params: Dict | None = None,
         batch_size: int = V4_BATCH_OPERATION_LIMIT,
         for_write: bool = True,
     ) -> List[Dict]:
@@ -221,7 +221,7 @@ class BKIAMV4BaseClient:
         raise BKIAMApiError(message, code, request_id)
 
     @staticmethod
-    def _extract_request_id(exc: HTTPResponseError) -> Optional[str]:
+    def _extract_request_id(exc: HTTPResponseError) -> str | None:
         """从错误响应中提取权限中心的 request_id，用于跨系统排查
 
         网关会将 request_id 放在响应头中并由 SDK 解析，权限中心则将其放在响应体里，

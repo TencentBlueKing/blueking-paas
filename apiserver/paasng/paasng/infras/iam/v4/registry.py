@@ -23,7 +23,7 @@
 """
 
 import logging
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, Sequence, Tuple
 
 from attrs import define, field
 
@@ -32,6 +32,7 @@ from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMApiHTTPError, BKIAM
 from paasng.infras.iam.v4.definitions import (
     ActionDefinition,
     ResourceTypeDefinition,
+    RoleDefinition,
     SystemDefinition,
     build_paas_system_definition,
     validate_identifiers,
@@ -49,7 +50,7 @@ class SyncItem:
     identifier: str
     system_id: str
     detail: str = ""
-    request_id: Optional[str] = None
+    request_id: str | None = None
 
 
 @define
@@ -231,9 +232,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
     # ---------------- 各类模型同步 ----------------
 
-    def _sync_system(
-        self, definition: SystemDefinition, remote: Optional[Dict], result: ModelSyncResult, dry_run: bool
-    ):
+    def _sync_system(self, definition: SystemDefinition, remote: Dict | None, result: ModelSyncResult, dry_run: bool):
         if remote is None:
             self._try_write(
                 result,
@@ -345,7 +344,16 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
             extra_actions = role.remote_action_ids(remote) - role.local_action_ids()
             extra_role_actions.extend((role.id, action_id) for action_id, _ in sorted(extra_actions))
 
-        return extra_role_actions, sorted(set(remote_map) - local_ids)
+        extra_roles = sorted(set(remote_map) - local_ids)
+        # 废弃角色不会进入上面的循环，必须把它们残留的绑定一并解绑，
+        # 否则 prune 时会先 delete_role，V4 可能因仍有 role_actions 而拒绝删除。
+        for role_id in extra_roles:
+            extra_role_actions.extend(
+                (role_id, action_id)
+                for action_id, _ in sorted(RoleDefinition.remote_action_ids(remote_map[role_id]))
+                if action_id
+            )
+        return extra_role_actions, extra_roles
 
     def _sync_named_items(
         self,
@@ -411,10 +419,10 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
         *,
         dry_run: bool,
         prune: bool,
-        extra_role_actions: Optional[List[Tuple[str, str]]] = None,
-        extra_roles: Optional[List[str]] = None,
-        extra_actions: Optional[List[str]] = None,
-        extra_types: Optional[List[str]] = None,
+        extra_role_actions: List[Tuple[str, str]] | None = None,
+        extra_roles: List[str] | None = None,
+        extra_actions: List[str] | None = None,
+        extra_types: List[str] | None = None,
     ):
         """处理 V4 侧本地已无的多余项。默认告警；prune 时按约束顺序删除。"""
         for role_id, action_id in extra_role_actions or []:
@@ -491,7 +499,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
 
     # ---------------- 查询与错误处理 ----------------
 
-    def _retrieve_system(self, system_id: str, result: ModelSyncResult) -> Optional[Dict]:
+    def _retrieve_system(self, system_id: str, result: ModelSyncResult) -> Dict | None:
         try:
             resp = self.call(self.client.retrieve_system, path_params={"system_id": system_id})
         except BKIAMApiHTTPError as exc:
@@ -504,7 +512,7 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
             return None
         return resp.get("data") or {}
 
-    def _list_by_id(self, operation, system_id: str, result: ModelSyncResult, kind: str) -> Optional[Dict[str, Dict]]:
+    def _list_by_id(self, operation, system_id: str, result: ModelSyncResult, kind: str) -> Dict[str, Dict] | None:
         try:
             items = list(self.paginate(operation, path_params={"system_id": system_id}))
         except (BKIAMApiError, BKIAMApiHTTPError, BKIAMGatewayServiceError) as exc:
@@ -590,11 +598,11 @@ class BKIAMV4ModelRegistryBackend(BaseModelRegistryBackend, BKIAMV4BaseClient):
         kind: str,
         identifier: str,
         system_id: str,
-        bucket: Optional[str],
+        bucket: str | None,
         dry_run: bool,
         write_fn: Callable,
         detail: str = "",
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """执行一条写操作。dry-run 只记账；失败记入 failures 并继续。
 
         :param bucket: created / updated / deleted；为 None 时表示该写操作从属于已记账的更新
@@ -673,7 +681,7 @@ def sync_iam_v4_models(
     tenant_id: str,
     dry_run: bool = False,
     prune: bool = False,
-    operator: Optional[str] = None,
+    operator: str | None = None,
 ) -> AggregatedSyncResult:
     """运维命令入口：校验标识符后按系统执行幂等同步"""
     backend = BKIAMV4ModelRegistryBackend(tenant_id, operator)

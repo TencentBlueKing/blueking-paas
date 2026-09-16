@@ -339,8 +339,8 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
             raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败"))
 
         # 删除权限中心相关数据
-        delete_builtin_user_groups(app_code)
-        delete_grade_manager(app_code)
+        delete_builtin_user_groups(app_code, operator=request.user.username)
+        delete_grade_manager(app_code, operator=request.user.username)
 
         # 删除 bkAuth 上的应用信息 (同时会删除 AppSecret)
         try:

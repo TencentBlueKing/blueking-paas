@@ -66,7 +66,7 @@ def get_management_backend(tenant_id: str, operator: str | None = None) -> BaseM
     """获取当前环境的权限管理实现
 
     :param tenant_id: 租户标识
-    :param operator: 操作人。V4 的写操作要求携带该标识，为空时使用 BK_APP_CODE
+    :param operator: 操作人。V4 的写操作要求携带该标识，为空时使用 system_id
     """
     if get_iam_version() == IAMVersion.V4:
         from paasng.infras.iam.v4.management import BKIAMV4ManagementBackend

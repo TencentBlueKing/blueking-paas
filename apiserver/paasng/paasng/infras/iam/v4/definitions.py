@@ -128,7 +128,8 @@ class RoleDefinition:
     def local_action_ids(self) -> set:
         return {action.identity() for action in self.actions}
 
-    def remote_action_ids(self, remote: Dict) -> set:
+    @staticmethod
+    def remote_action_ids(remote: Dict) -> set:
         return {(item.get("id"), item.get("resource_type_id") or "") for item in (remote.get("actions") or [])}
 
 

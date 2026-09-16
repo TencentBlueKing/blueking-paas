@@ -42,7 +42,7 @@ class TestMethodMapping:
     def test_create_management_space(self, backend, mocked_v3_client):
         mocked_v3_client.create_grade_managers.return_value = 42
 
-        assert backend.create_management_space("app-code", "App", "admin") == 42
+        assert backend.create_management_space("app-code", "App", "admin", bk_space_id="-1") == 42
         mocked_v3_client.create_grade_managers.assert_called_once_with("app-code", "App", "admin")
 
     def test_fetch_management_space(self, backend, mocked_v3_client):

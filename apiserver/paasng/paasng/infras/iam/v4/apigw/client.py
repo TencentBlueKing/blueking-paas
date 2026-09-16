@@ -150,6 +150,26 @@ class Group(OperationGroup):
         path="/api/v1/open/rbac/model/systems/{system_id}/roles/{role_id}/actions/",
     )
 
+    # ---------------- 管理空间 ----------------
+    create_space = bind_property(
+        Operation,
+        name="create_space",
+        method="POST",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/",
+    )
+    list_space = bind_property(
+        Operation,
+        name="list_space",
+        method="GET",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/",
+    )
+    retrieve_space = bind_property(
+        Operation,
+        name="retrieve_space",
+        method="GET",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/",
+    )
+
 
 class Client(APIGatewayClient):
     """蓝鲸权限中心 V4 提供的 OpenAPI"""

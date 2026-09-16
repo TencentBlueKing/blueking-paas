@@ -20,7 +20,7 @@ import logging
 from itertools import islice
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, TypeVar
 
-from bkapi_client_core.exceptions import HTTPResponseError, JSONResponseError
+from bkapi_client_core.exceptions import BKAPIError, HTTPResponseError, JSONResponseError
 from django.conf import settings
 from requests.exceptions import RequestException
 
@@ -109,10 +109,16 @@ class BKIAMV4BaseClient:
             ) from e
         except RequestException as e:
             # 网关返回错误头（APIGatewayResponseError）、连接失败、读超时都落在这里——
-            # SDK 的异常与 requests 的异常同为 RequestException 的子类，兜底一处即可。
+            # SDK 的响应类异常同时继承 RequestException，与 requests 自身的异常一并兜住。
             # 这些情况都拿不到权限中心的判定结果，必须收敛为平台异常，否则原始的 requests 异常
             # 会越过调用方的 except BKIAMGatewayServiceError 一路抛到请求栈顶，
             # 让「权限中心不可用」从拒绝降级成 500。不做默认放行，由调用方决定重试与告警
+            raise BKIAMGatewayServiceError(f"request bkiam api {name} error, detail: {e}") from e
+        except BKAPIError as e:
+            # EndpointNotSetError（网关地址未配置）与 PathParamsMissing 只继承 BKAPIError，
+            # 不是 RequestException 的子类，落不到上一个分支。它们同样没拿到判定结果，
+            # 必须一并收敛：V3 下同类配置错误经 SDK 的异常漏斗最终也是「取不到策略」而非 500，
+            # 不收敛会让 V4 在这条路径上与 V3 行为分叉
             raise BKIAMGatewayServiceError(f"request bkiam api {name} error, detail: {e}") from e
 
         self._validate_resp(resp, name)

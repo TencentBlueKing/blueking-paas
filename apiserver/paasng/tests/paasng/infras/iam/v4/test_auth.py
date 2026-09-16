@@ -31,7 +31,7 @@ from paasng.infras.iam.exceptions import BKIAMApiHTTPError
 from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.iam.v4 import auth as v4_auth
 from paasng.infras.iam.v4.auth import (
-    V4_AUTHORIZED_IDS_WARN_THRESHOLD,
+    V4_MALFORMED_ENTRIES_LIMIT,
     V4_MALFORMED_REPR_LIMIT,
     V4_PUSHDOWN_RESOURCE_TYPE,
     BKIAMV4AuthBackend,
@@ -313,7 +313,7 @@ class TestResourceFilterPushdown:
         ("entries", "expected_ids"),
         [
             pytest.param([make_app_entry(["app-foo", "app-bar"])], ["app-foo", "app-bar"], id="single-entry"),
-            # 多条目取并集且去重保序：重复项既会无谓放大 IN 子句，也会让阈值日志虚高
+            # 多条目取并集且去重保序，重复项会无谓放大 IN 子句
             pytest.param(
                 [make_app_entry(["app-foo", "app-bar"]), make_app_entry(["app-bar", "app-baz"])],
                 ["app-foo", "app-bar", "app-baz"],
@@ -436,15 +436,25 @@ class TestResourceFilterPushdown:
         # 截断后的片段加上固定文案，总长仍应是常量级
         assert len(warnings[0]) < 2 * V4_MALFORMED_REPR_LIMIT
 
+    def test_malformed_log_is_count_bounded(self, pushdown):
+        """畸形条目数也要有上限：单条内容截断了，条数不限仍能让一条 warning 膨胀到几 MB"""
+        entry_count = V4_MALFORMED_ENTRIES_LIMIT + 100
+
+        _, warnings = pushdown({"data": [make_app_entry(f"bad-{i}") for i in range(entry_count)]})
+
+        assert len(warnings) == 1
+        # 超出部分不打明细，但总数要留在日志里，否则看不出实际规模
+        assert f"bad-{V4_MALFORMED_ENTRIES_LIMIT}" not in warnings[0]
+        assert str(entry_count) in warnings[0]
+
     def test_long_id_list_is_not_truncated(self, pushdown):
-        """接口无分页参数，超长列表只留痕不截断，否则会静默少显应用"""
-        res_ids = [f"app-{i}" for i in range(V4_AUTHORIZED_IDS_WARN_THRESHOLD + 500)]
+        """接口无分页参数，超长列表只能整体拼进 IN 子句，截断会静默少显应用"""
+        res_ids = [f"app-{i}" for i in range(2500)]
 
         filters, warnings = pushdown(make_authorized_resp(make_app_entry(res_ids)))
 
         assert filters == Q(code__in=res_ids)
-        assert len(warnings) == 1
-        assert str(len(res_ids)) in warnings[0]
+        assert warnings == []
 
     def test_key_mapping_does_not_affect_result(self, make_backend):
         """key_mapping 是 V3 SDK converter 的概念，V4 下被忽略"""

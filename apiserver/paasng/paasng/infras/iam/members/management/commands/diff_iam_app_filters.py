@@ -67,8 +67,10 @@ class Command(BaseCommand):
         parser.add_argument(
             "--action",
             dest="action_id",
-            default=AppAction.VIEW_BASIC_INFO,
-            choices=COMPARABLE_ACTIONS,
+            default=AppAction.VIEW_BASIC_INFO.value,
+            # 取 .value 而非枚举成员：AppAction 本质是 str，直接传能跑通，
+            # 但 argparse 会把 --help 与报错里的候选渲染成枚举 repr，照着拷贝会传错
+            choices=[action.value for action in COMPARABLE_ACTIONS],
             help="比对哪个操作下的应用列表",
         )
 

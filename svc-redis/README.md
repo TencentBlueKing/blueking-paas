@@ -128,17 +128,21 @@ config = {
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
-`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。型号命名对齐 [Bitnami common resource presets](https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl)，具体数值由本模块维护，不运行时读取 Helm 模板。
+`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。预设名称与资源数值对齐 [Bitnami common resource presets](https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl)，在本地静态维护，不在运行时读取 Helm 模板。
 
 | preset | CPU requests | Memory requests | CPU limits | Memory limits |
 | --- | --- | --- | --- | --- |
-| nano | 100m | 128Mi | 100m | 128Mi |
-| micro | 250m | 256Mi | 250m | 256Mi |
-| small | 500m | 512Mi | 500m | 512Mi |
-| medium | 500m | 1Gi | 500m | 1Gi |
-| large | 1 | 2Gi | 1 | 2Gi |
-| xlarge | 1 | 3Gi | 1 | 3Gi |
-| 2xlarge | 1 | 4Gi | 1 | 4Gi |
+| nano | 100m | 128Mi | 150m | 192Mi |
+| micro | 250m | 256Mi | 375m | 384Mi |
+| small | 500m | 512Mi | 750m | 768Mi |
+| medium | 500m | 1024Mi | 750m | 1536Mi |
+| large | 1.0 | 2048Mi | 1.5 | 3072Mi |
+| xlarge | 1.0 | 3072Mi | 3.0 | 6144Mi |
+| 2xlarge | 1.0 | 3072Mi | 6.0 | 12288Mi |
+
+所有 preset 均设置 `ephemeral-storage`：requests 为 `50Mi`，limits 为 `2Gi`。
+
+Bitnami 将这些预设定位为基础测试配置，生产环境应根据容量和压测结果显式配置或覆盖配额。
 
 常规套餐，使用 preset：
 
@@ -188,8 +192,8 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
   "resources": {
     "preset": "small",
     "requests": {
-      "cpu": "100m",
-    },
+      "cpu": "100m"
+    }
   },
   "service_export_type": "TencentCLB",
   "persistent_storage": false,

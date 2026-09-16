@@ -17,9 +17,9 @@
 
 """Redis 套餐资源规格。
 
-型号命名对齐 Bitnami common resource presets：
+预设名称与资源数值对齐 Bitnami common resource presets：
 https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl
-具体数值由本模块维护，落地前按目标集群容量和 Redis 压测结果确认即可。
+本地静态维护，不在运行时读取模板；生产环境使用前需按集群容量和 Redis 压测结果调整。
 """
 
 from copy import deepcopy
@@ -34,32 +34,32 @@ DEFAULT_RESOURCE_PRESET: ResourcePresetName = "micro"
 # preset -> {requests, limits}，requests/limits 为任意 K8s 资源字典
 RESOURCE_PRESETS: Dict[ResourcePresetName, Dict[str, Dict[str, str]]] = {
     "nano": {
-        "requests": {"cpu": "100m", "memory": "128Mi"},
-        "limits": {"cpu": "100m", "memory": "128Mi"},
+        "requests": {"cpu": "100m", "memory": "128Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "150m", "memory": "192Mi", "ephemeral-storage": "2Gi"},
     },
     "micro": {
-        "requests": {"cpu": "250m", "memory": "256Mi"},
-        "limits": {"cpu": "250m", "memory": "256Mi"},
+        "requests": {"cpu": "250m", "memory": "256Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "375m", "memory": "384Mi", "ephemeral-storage": "2Gi"},
     },
     "small": {
-        "requests": {"cpu": "500m", "memory": "512Mi"},
-        "limits": {"cpu": "500m", "memory": "512Mi"},
+        "requests": {"cpu": "500m", "memory": "512Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "750m", "memory": "768Mi", "ephemeral-storage": "2Gi"},
     },
     "medium": {
-        "requests": {"cpu": "500m", "memory": "1Gi"},
-        "limits": {"cpu": "500m", "memory": "1Gi"},
+        "requests": {"cpu": "500m", "memory": "1024Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "750m", "memory": "1536Mi", "ephemeral-storage": "2Gi"},
     },
     "large": {
-        "requests": {"cpu": "1", "memory": "2Gi"},
-        "limits": {"cpu": "1", "memory": "2Gi"},
+        "requests": {"cpu": "1.0", "memory": "2048Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "1.5", "memory": "3072Mi", "ephemeral-storage": "2Gi"},
     },
     "xlarge": {
-        "requests": {"cpu": "1", "memory": "3Gi"},
-        "limits": {"cpu": "1", "memory": "3Gi"},
+        "requests": {"cpu": "1.0", "memory": "3072Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "3.0", "memory": "6144Mi", "ephemeral-storage": "2Gi"},
     },
     "2xlarge": {
-        "requests": {"cpu": "1", "memory": "4Gi"},
-        "limits": {"cpu": "1", "memory": "4Gi"},
+        "requests": {"cpu": "1.0", "memory": "3072Mi", "ephemeral-storage": "50Mi"},
+        "limits": {"cpu": "6.0", "memory": "12288Mi", "ephemeral-storage": "2Gi"},
     },
 }
 

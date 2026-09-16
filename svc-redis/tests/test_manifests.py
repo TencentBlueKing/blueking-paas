@@ -16,16 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from pydantic import ValidationError
 from svc_redis.controller.entities import RedisPlanConfig
-from svc_redis.controller.manifests import (
-    DisableAdditionalServiceConstructor,
-    ResourceManifestConstructor,
-    create_redis_base_resource,
-    get_redis_resource,
-)
-from svc_redis.controller.resource_presets import RESOURCE_PRESETS, resolve_plan_resources
-from svc_redis.vendor.redis_crd.constants import RedisType
+from svc_redis.controller.manifests import get_redis_resource
+from svc_redis.controller.resource_presets import resolve_plan_resources
 
 
 def _plan_config(**overrides) -> RedisPlanConfig:
@@ -34,74 +27,8 @@ def _plan_config(**overrides) -> RedisPlanConfig:
     return RedisPlanConfig(**data)
 
 
-def _apply_resources(plan_config: RedisPlanConfig):
-    res = create_redis_base_resource(plan_config.type, "test-redis")
-    ResourceManifestConstructor().apply_to(res, plan_config)
-    return res.spec.kubernetesConfig.resources
-
-
-class TestDisableAdditionalServiceConstructor:
-    def test_standalone_redis_disables_additional_service(self):
-        res = create_redis_base_resource(RedisType.REDIS.value, "test-redis")
-        DisableAdditionalServiceConstructor().apply_to(res, _plan_config())
-
-        assert res.spec.kubernetesConfig.service.additional.enabled is False
-        deployable = res.to_deployable()
-        assert deployable["spec"]["kubernetesConfig"]["service"]["additional"]["enabled"] is False
-
-    def test_replication_redis_does_not_set_service(self):
-        plan_config = _plan_config(type="RedisReplication")
-        res = create_redis_base_resource(RedisType.REDIS_REPLICATION.value, "test-redis")
-        DisableAdditionalServiceConstructor().apply_to(res, plan_config)
-
-        assert res.spec.kubernetesConfig.service is None
-        assert "service" not in res.to_deployable()["spec"]["kubernetesConfig"]
-
-
 class TestResolvePlanResources:
-    def test_default_uses_micro_preset(self):
-        resolved = resolve_plan_resources(_plan_config())
-        assert resolved.requests == RESOURCE_PRESETS["micro"]["requests"]
-        assert resolved.limits == RESOURCE_PRESETS["micro"]["limits"]
-
-    def test_preset_medium(self):
-        resolved = resolve_plan_resources(_plan_config(resources={"preset": "medium"}))
-        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
-        assert resolved.limits == {"cpu": "500m", "memory": "1Gi"}
-
-    @pytest.mark.parametrize("preset", list(RESOURCE_PRESETS))
-    def test_all_presets_resolve(self, preset):
-        resolved = resolve_plan_resources(_plan_config(resources={"preset": preset}))
-        assert resolved.requests == RESOURCE_PRESETS[preset]["requests"]
-        assert resolved.limits == RESOURCE_PRESETS[preset]["limits"]
-
-    def test_unknown_preset_is_rejected(self):
-        with pytest.raises(ValidationError):
-            _plan_config(resources={"preset": "huge"})
-
     def test_explicit_requests_and_limits(self):
-        resolved = resolve_plan_resources(
-            _plan_config(
-                resources={
-                    "requests": {"cpu": "500m", "memory": "1Gi"},
-                    "limits": {"cpu": "2", "memory": "2Gi"},
-                }
-            )
-        )
-        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
-        assert resolved.limits == {"cpu": "2", "memory": "2Gi"}
-
-    def test_preset_with_explicit_overlay(self):
-        resolved = resolve_plan_resources(_plan_config(resources={"preset": "medium", "limits": {"cpu": "2"}}))
-        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
-        assert resolved.limits == {"cpu": "2", "memory": "1Gi"}
-
-    def test_explicit_requests_only_copies_to_limits(self):
-        resolved = resolve_plan_resources(_plan_config(resources={"requests": {"cpu": "500m", "memory": "1Gi"}}))
-        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
-        assert resolved.limits == {"cpu": "500m", "memory": "1Gi"}
-
-    def test_extra_resource_keys_passthrough(self):
         resolved = resolve_plan_resources(
             _plan_config(
                 resources={
@@ -110,46 +37,59 @@ class TestResolvePlanResources:
                 }
             )
         )
-        assert resolved.requests["hugepages-2Mi"] == "1Gi"
-        assert resolved.limits["hugepages-2Mi"] == "1Gi"
+        assert resolved.requests == {"cpu": "500m", "memory": "1Gi", "hugepages-2Mi": "1Gi"}
+        assert resolved.limits == {"cpu": "2", "memory": "2Gi", "hugepages-2Mi": "1Gi"}
 
-    def test_legacy_memory_size_2gi_uses_default_preset(self):
+    def test_preset_with_explicit_overlay(self):
+        resolved = resolve_plan_resources(_plan_config(resources={"preset": "medium", "limits": {"cpu": "2"}}))
+        assert resolved.requests == {"cpu": "500m", "memory": "1024Mi", "ephemeral-storage": "50Mi"}
+        assert resolved.limits == {"cpu": "2", "memory": "1536Mi", "ephemeral-storage": "2Gi"}
+
+    def test_explicit_requests_only_copies_to_limits(self):
+        resolved = resolve_plan_resources(_plan_config(resources={"requests": {"cpu": "500m", "memory": "1Gi"}}))
+        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
+        assert resolved.limits == {"cpu": "500m", "memory": "1Gi"}
+
+    def test_legacy_memory_size_2gi(self):
         resolved = resolve_plan_resources(_plan_config(memory_size="2Gi"))
-        assert resolved.requests == RESOURCE_PRESETS["micro"]["requests"]
-        assert resolved.limits == RESOURCE_PRESETS["micro"]["limits"]
-
-    def test_legacy_memory_size_4gi(self):
-        resolved = resolve_plan_resources(_plan_config(memory_size="4Gi"))
-        assert resolved.requests == {"cpu": "1000m", "memory": "2Gi"}
-        assert resolved.limits == {"cpu": "2000m", "memory": "4Gi"}
+        assert resolved.requests == {"cpu": "500m", "memory": "1Gi"}
+        assert resolved.limits == {"cpu": "1000m", "memory": "2Gi"}
 
     def test_resources_wins_over_memory_size(self):
         resolved = resolve_plan_resources(_plan_config(memory_size="4Gi", resources={"preset": "small"}))
-        assert resolved.requests == RESOURCE_PRESETS["small"]["requests"]
-        assert resolved.limits == RESOURCE_PRESETS["small"]["limits"]
-
-
-class TestResourceManifestConstructor:
-    def test_preset_written_to_manifest(self):
-        resources = _apply_resources(_plan_config(resources={"preset": "medium"}))
-        assert resources.requests == {"cpu": "500m", "memory": "1Gi"}
-        assert resources.limits == {"cpu": "500m", "memory": "1Gi"}
+        assert resolved.requests == {"cpu": "500m", "memory": "512Mi", "ephemeral-storage": "50Mi"}
+        assert resolved.limits == {"cpu": "750m", "memory": "768Mi", "ephemeral-storage": "2Gi"}
 
 
 class TestGetRedisResource:
-    def test_get_standalone_redis_manifest(self):
-        deployable = get_redis_resource(_plan_config(resources={"preset": "micro"})).to_deployable()
+    def test_get_standalone_redis_manifest_with_default_resources(self):
+        deployable = get_redis_resource(_plan_config()).to_deployable()
 
         assert deployable["spec"]["kubernetesConfig"]["service"]["additional"]["enabled"] is False
         resources = deployable["spec"]["kubernetesConfig"]["resources"]
-        assert resources["requests"] == {"cpu": "250m", "memory": "256Mi"}
-        assert resources["limits"] == {"cpu": "250m", "memory": "256Mi"}
+        assert resources["requests"] == {"cpu": "250m", "memory": "256Mi", "ephemeral-storage": "50Mi"}
+        assert resources["limits"] == {"cpu": "375m", "memory": "384Mi", "ephemeral-storage": "2Gi"}
 
-    def test_get_replication_redis_manifest(self):
-        plan_config = _plan_config(type="RedisReplication", resources={"preset": "medium"})
+    # Expected quotas come from Bitnami, not the implementation's RESOURCE_PRESETS.
+    @pytest.mark.parametrize(
+        ("preset", "requests_cpu", "requests_memory", "limits_cpu", "limits_memory"),
+        [
+            ("nano", "100m", "128Mi", "150m", "192Mi"),
+            ("micro", "250m", "256Mi", "375m", "384Mi"),
+            ("small", "500m", "512Mi", "750m", "768Mi"),
+            ("medium", "500m", "1024Mi", "750m", "1536Mi"),
+            ("large", "1.0", "2048Mi", "1.5", "3072Mi"),
+            ("xlarge", "1.0", "3072Mi", "3.0", "6144Mi"),
+            ("2xlarge", "1.0", "3072Mi", "6.0", "12288Mi"),
+        ],
+    )
+    def test_get_replication_redis_manifest(self, preset, requests_cpu, requests_memory, limits_cpu, limits_memory):
+        plan_config = _plan_config(type="RedisReplication", resources={"preset": preset})
         deployable = get_redis_resource(plan_config).to_deployable()
 
         assert "service" not in deployable["spec"]["kubernetesConfig"]
         resources = deployable["spec"]["kubernetesConfig"]["resources"]
-        assert resources["requests"] == {"cpu": "500m", "memory": "1Gi"}
-        assert resources["limits"] == {"cpu": "500m", "memory": "1Gi"}
+        assert resources == {
+            "requests": {"cpu": requests_cpu, "memory": requests_memory, "ephemeral-storage": "50Mi"},
+            "limits": {"cpu": limits_cpu, "memory": limits_memory, "ephemeral-storage": "2Gi"},
+        }

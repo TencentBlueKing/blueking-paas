@@ -28,7 +28,7 @@ class Group(OperationGroup):
     """
 
     # ---------------- 鉴权 ----------------
-    # 两个鉴权接口均为读操作，调用时不注入操作人 header。
+    # 鉴权类接口均为读操作，调用时不注入操作人 header。
     # 系统标识由 path 参数 system_id 承载，资源类型由 action 隐含，故请求体中的资源实例只有 id。
     # 权限中心还提供了 auth-by-resources（单操作多资源），平台暂无调用场景，待有需要时再补。
 
@@ -47,6 +47,15 @@ class Group(OperationGroup):
         name="direct_auth_by_actions",
         method="POST",
         path="/api/v1/open/rbac/authorization/systems/{system_id}/auth-by-actions/",
+    )
+
+    # 策略下推：按用户与操作查询有权限的资源实例列表，含用户自身权限与所在用户组的权限。
+    # 只支持顶层资源类型，非顶层权限中心会拒绝请求；无分页参数，一次返回全量
+    list_authorized_resource = bind_property(
+        Operation,
+        name="list_authorized_resource",
+        method="POST",
+        path="/api/v1/open/rbac/authorization/systems/{system_id}/relation/authorized-resources/",
     )
 
     # ---------------- 模型注册：系统 ----------------

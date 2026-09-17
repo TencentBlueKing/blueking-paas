@@ -42,4 +42,9 @@ def fetch_system_token(tenant_id: str) -> str:
     if not ok:
         raise BKIAMGatewayServiceError(f"get system token from bkiam v3 failed: {msg}")
 
+    # ok 为真不代表拿到了令牌：SDK 取字段带了默认值，缺 token 键时返回空串。
+    # 空串会与不带密码的 Basic 凭证比中，把认证失败变成认证通过
+    if not token or not isinstance(token, str):
+        raise BKIAMGatewayServiceError("bkiam v3 api get_token returned no token")
+
     return token

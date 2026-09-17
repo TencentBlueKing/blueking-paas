@@ -84,6 +84,9 @@ class TestFetchSystemToken:
             pytest.param({"data": {"auth_token": None}}, id="null-token"),
             pytest.param({"data": {"auth_token": ""}}, id="empty-token"),
             pytest.param({"data": {"auth_token": 123}}, id="non-str-token"),
+            # data 不是对象时直接 .get 会抛 AttributeError，绕过调用方的异常收敛
+            pytest.param({"data": ["auth_token"]}, id="data-is-list"),
+            pytest.param({"data": "auth_token"}, id="data-is-str"),
         ],
     )
     def test_unusable_token_raises(self, stub_token_api, response):

@@ -897,11 +897,16 @@ BK_IAM_V4_APIGW_SERVICE_STAGE = settings.get("BK_IAM_V4_APIGW_SERVICE_STAGE", "p
 # 权限中心 V4 的访问地址，用于注入应用内置环境变量与生成权限申请链接
 BK_IAM_V4_URL = settings.get("BK_IAM_V4_URL", "")
 
-# 版本开关取值非法、或所选版本的必填配置缺失时，启动即失败，不留到运行时才暴露
+# 权限中心 V3 的访问地址。插件用户组只存在于 V3，切到 V4 后仍需它拼申请链接，故不可缺省
+BK_IAM_URL = settings.get("BK_IAM_URL", "")
+
+# 版本开关取值非法、或 V4 环境的必填配置缺失时，启动即失败，不留到运行时才暴露
 validate_iam_settings(
     BK_IAM_VERSION,
     {
         "BK_IAM_V4_URL": BK_IAM_V4_URL,
+        # 漏配时插件申请链接会拼成没有主机名的相对路径，静默失效
+        "BK_IAM_URL": BK_IAM_URL,
     },
 )
 
@@ -928,7 +933,6 @@ BKPAAS_DB_TYPE = settings.get("BKPAAS_DB_TYPE", "mysql")
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get("BK_CC_URL", "")
 BK_JOB_URL = settings.get("BK_JOB_URL", "")
-BK_IAM_URL = settings.get("BK_IAM_URL", "")
 BK_USER_URL = settings.get("BK_USER_URL", "")
 BK_MONITORV3_URL = settings.get("BK_MONITORV3_URL", "")
 BK_LOG_URL = settings.get("BK_LOG_URL", "")

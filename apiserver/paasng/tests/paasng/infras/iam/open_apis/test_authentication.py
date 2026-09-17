@@ -58,6 +58,8 @@ def stub_system_token(monkeypatch):
 def call_callback():
     """以给定的 Authorization 头发起一次回调请求"""
     client = APIClient()
+    # 平台故障走未捕获异常产出 5xx，默认配置会把它重新抛出，用例就断不到状态码
+    client.raise_request_exception = False
 
     def _call(authorization: str | None = None):
         headers = {"HTTP_AUTHORIZATION": authorization} if authorization else {}
@@ -111,12 +113,12 @@ class TestIAMCallbackAuthentication:
 
         assert call_callback(authorization).status_code == 401
 
-    def test_token_fetch_failure_is_not_a_server_error(self, call_callback, stub_system_token):
-        """取不到令牌时返回 401 而不是 500
+    def test_token_fetch_failure_is_a_server_error(self, call_callback, stub_system_token):
+        """取不到令牌时返回 5xx 而不是 401
 
-        自定义异常若不继承 DRF 的 AuthenticationFailed，会绕过全局异常处理器的 401 分支
-        落到兜底逻辑，把认证失败暴露成平台故障。
+        取不到令牌是平台故障，调用方的凭证可能完全正确。压成 401 会让权限中心
+        按凭证错误处理而不是按服务故障重试。
         """
         stub_system_token(BKIAMGatewayServiceError("bkiam is down"))
 
-        assert call_callback(make_basic_auth("bk_iam", SYSTEM_TOKEN)).status_code == 401
+        assert call_callback(make_basic_auth("bk_iam", SYSTEM_TOKEN)).status_code >= 500

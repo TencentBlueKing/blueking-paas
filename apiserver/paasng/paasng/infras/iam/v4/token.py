@@ -35,10 +35,14 @@ def fetch_system_token(tenant_id: str) -> str:
         for_write=False,
     )
 
-    token = (resp.get("data") or {}).get("auth_token")
+    # 基座只校验响应顶层，data 是列表或字符串时直接 .get 会抛 AttributeError，
+    # 绕过调用方的异常收敛把回调打成 500
+    data = resp.get("data")
+    if not isinstance(data, dict):
+        raise BKIAMGatewayServiceError("bkiam api retrieve_system_auth_token returned non-object data")
 
-    # 取不到令牌必须报错而不是返回空串：调用方拿它与请求里的密码做相等比较，
     # 空串会与不带密码的 Basic 凭证比中，把认证失败变成认证通过
+    token = data.get("auth_token")
     if not token or not isinstance(token, str):
         raise BKIAMGatewayServiceError("bkiam api retrieve_system_auth_token returned no auth_token")
 

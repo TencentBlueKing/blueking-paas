@@ -30,7 +30,7 @@ class ConversationResponse(Schema):
     number: int = Field(description="会话编号")
     conversation_id: UUID = Field(alias="id", description="会话全局唯一 ID，也是 AG-UI 事件里的 threadId")
     is_live: bool = Field(description="会话是否还活着（live），即是否还能继续推进")
-    created: datetime = Field(description="会话创建时间")
+    created_at: datetime = Field(description="会话创建时间")
     closed_at: datetime | None = Field(description="会话结束时间；仍然活着时为 null")
 
 
@@ -73,6 +73,15 @@ class StartRunRequest(Schema):
     content: str = Field(min_length=1, description="用户本轮发送的内容")
 
 
+class UiEventRecord(Schema):
+    """AG-UI 事件记录，保持 Runtime 与 ui-events 接口已有的传输结构。"""
+
+    seq: int
+    run_id: str
+    timestamp: str = Field(description="Runtime 记录事件的 ISO 8601 时间，保留原有精度和格式")
+    event: dict[str, Any]
+
+
 class UiEventPageResponse(Schema):
     """
     一页 AG-UI 事件，这些事件都已从 Runtime 持久化到服务端中。
@@ -88,4 +97,27 @@ class UiEventPageResponse(Schema):
     since: int = Field(description="本页请求时使用的游标")
     last_seq: int = Field(description="频道当前的最后一个游标")
     exhausted: bool = Field(description="本页是否已经读到频道末尾")
-    records: list[dict[str, Any]] = Field(description="AG-UI 事件记录，原样透传")
+    records: list[UiEventRecord] = Field(description="AG-UI 事件记录，原样透传")
+
+
+class UserMessageHistoryRecord(Schema):
+    """历史中的一条用户输入。"""
+
+    id: int = Field(description="用户消息 ID，可用于去重")
+    run_id: str | None
+    after_seq: int = Field(description="插在该 UI event 序号之后，0 表示所有事件之前")
+    created_at: datetime
+    content: str
+
+
+class ConversationHistoryRecord(Schema):
+    """一条展示历史：两个字段恰好一个非空，分别复用各自的记录结构。"""
+
+    ui_event: UiEventRecord | None = None
+    user_message: UserMessageHistoryRecord | None = None
+
+
+class ConversationHistoryResponse(Schema):
+    """会话已入库的完整展示历史，用户输入按创建时保存的 after_seq 定位。"""
+
+    records: list[ConversationHistoryRecord]

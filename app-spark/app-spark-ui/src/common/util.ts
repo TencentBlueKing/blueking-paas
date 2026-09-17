@@ -1,4 +1,8 @@
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/zh-cn';
+
+dayjs.extend(relativeTime);
 
 // 获取 cookie object
 export function getCookies(strCookie = document.cookie): any {
@@ -57,4 +61,14 @@ export function deepMerge(...objectArray: object[]) {
  */
 export function timeFormatter(val: string, format = 'YYYY-MM-DD HH:mm:ss') {
   return val ? dayjs(val).format(format) : '--';
+}
+
+/**
+ * 相对当下的时间描述，如「3 分钟前」
+ * @param val 待格式化时间
+ * @returns 相对时间描述
+ */
+export function fromNowFormatter(val: string) {
+  // 语言在实例上指定，而不是 `dayjs.locale('zh-cn')` 全局切换：后者会顺带改掉其他地方的格式化结果。
+  return val ? dayjs(val).locale('zh-cn').fromNow() : '--';
 }

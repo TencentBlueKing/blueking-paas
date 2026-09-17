@@ -126,10 +126,10 @@ async def test_a_listed_conversation_carries_what_it_takes_to_open_it(aapi_clien
 async def test_the_list_is_newest_first(aapi_client, project, bk_user):
     for index in range(3):
         created = await make_conversation(project, bk_user.pk)
-        # `created` is auto_now_add, so conversations built back to back can share a timestamp
+        # `created_at` is auto_now_add, so conversations built back to back can share a timestamp
         # and leave the order down to the tiebreaker. Set explicitly, since the order is the
         # thing under test here.
-        await Conversation.objects.filter(pk=created.pk).aupdate(created=datetime(2026, 1, index + 1, tzinfo=UTC))
+        await Conversation.objects.filter(pk=created.pk).aupdate(created_at=datetime(2026, 1, index + 1, tzinfo=UTC))
 
     body = (await aapi_client.get(CONVERSATIONS_URL)).json()
 
@@ -193,6 +193,7 @@ async def someone_elses_conversation(bk_user) -> Conversation:
         ("post", ""),
         ("get", "{number}/"),
         ("get", "{number}/ui-events/"),
+        ("get", "{number}/history/"),
         ("post", "{number}/close/"),
     ],
 )

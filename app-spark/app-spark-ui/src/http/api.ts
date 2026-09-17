@@ -2,6 +2,7 @@ import http, { resolveApiUrl } from './fetch';
 import RequestError from './fetch/request-error';
 import type {
   AuthenticatedUserResponse,
+  ConversationHistoryResponse,
   ConversationResponse,
   ListConversationsQuery,
   ListUiEventsQuery,
@@ -19,6 +20,8 @@ export type {
   AgUiEvent,
   AnonymousUserResponse,
   AuthenticatedUserResponse,
+  ConversationHistoryRecord,
+  ConversationHistoryResponse,
   ConversationResponse,
   ErrorResponse,
   ListConversationsQuery,
@@ -33,6 +36,7 @@ export type {
   StartRunRequest,
   UiEventPageResponse,
   UserInfoResponse,
+  UserMessageRecord,
 } from './types';
 
 // 业务 API 前缀，不含 SITE_URL。绝对 BK_API_URL 只给本地 webpack 代理用
@@ -75,12 +79,21 @@ export const closeConversation = (
   http.post(`${apiPrefix}/projects/${projectId}/conversations/${number}/close/`)
 );
 
+/** 拉取已入库的 AG-UI 事件，用于 SSE 意外中断后从 `since` 处追赶；完整历史请用 `listHistory` */
 export const listUiEvents = (
   projectId: string,
   number: number,
   query: ListUiEventsQuery = {},
 ): Promise<UiEventPageResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query)
+);
+
+/** 拉取会话的完整展示历史（用户输入 + AG-UI 事件），不分页，一次全量返回 */
+export const listHistory = (
+  projectId: string,
+  number: number,
+): Promise<ConversationHistoryResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`)
 );
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */

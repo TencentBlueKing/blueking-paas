@@ -32,6 +32,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.db import models
 
 from app_spark_api.repository.storage.blob_stores import BlobStore, make_blob_store
@@ -84,7 +86,8 @@ class ConversationMessage(ConversationChannelRecord):
 class ConversationUiEvent(ConversationChannelRecord):
     """AG-UI 事件历史：客户端当时看到的那一串事件，delta 已经在 Runtime 侧合并过。
 
-    这是「点开一个历史会话能看到内容」的唯一来源。SSE 本身没有重放能力，而事件里的 message id
+    这是「点开一个历史会话能看到 Agent 输出」的来源，用户输入另存于 ConversationUserMessage。
+    SSE 本身没有重放能力，而事件里的 message id
     是每次流式输出随机生成的，没法从模型历史里反推——所以只能存下来。
     """
 
@@ -96,7 +99,22 @@ class ConversationUiEvent(ConversationChannelRecord):
     )
 
     class Meta(ConversationChannelRecord.Meta):
-        pass
+        indexes = [models.Index(fields=["conversation", "-seq"], name="conv_ui_event_latest_idx")]
+
+    def as_record(self) -> dict[str, Any]:
+        """Return a stored row in the shape the Runtime's own drain endpoint would have used.
+
+        Keeping the shape identical is what lets a client read history from here and live events
+        from the stream without knowing which one it got.
+
+        :return: The record shared by the UI event and complete history endpoints.
+        """
+        return {
+            "seq": self.seq,
+            "run_id": self.run_id,
+            "timestamp": self.recorded_at.isoformat(),
+            "event": self.payload,
+        }
 
 
 class ConversationContextVersion(TimestampedModel):
@@ -189,4 +207,4 @@ class ConversationCheckpoint(TimestampedModel):
             )
         ]
         # 冷恢复只问一个问题：这个会话最新的可恢复点是哪个。
-        indexes = [models.Index(fields=["conversation", "-created"])]
+        indexes = [models.Index(fields=["conversation", "-created_at"])]

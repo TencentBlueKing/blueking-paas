@@ -15,18 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import importlib
 import os
 import secrets
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("PAAS_SERVICE_JWT_CLIENTS_KEY", secrets.token_urlsafe(32))
 
-_base_settings = importlib.import_module("svc_otel.settings")
-globals().update(
-    {
-        setting_name: getattr(_base_settings, setting_name)
-        for setting_name in dir(_base_settings)
-        if setting_name.isupper()
-    }
-)
+from svc_otel.settings import *

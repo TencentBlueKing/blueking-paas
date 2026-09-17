@@ -28,14 +28,6 @@ from svc_otel.vendor.models import ApmData
 logger = logging.getLogger(__name__)
 
 
-def _build_apm_app_name(bk_app_code: str, env: str) -> str:
-    """按应用 + 环境生成稳定的 APM 应用名，保证同一 app/env 复用同一个监控实例。
-
-    APM 应用名称只能包含小写字母和数字 (^[a-z0-9_]+$)，需要将 bk_app_code 的连字符转换为 0us0。
-    """
-    return f"bkapp_{bk_app_code}_{env}".replace("-", "0us0")
-
-
 @dataclass
 class Provider(BaseProvider):
     SERVICE_NAME = "otel"
@@ -46,7 +38,8 @@ class Provider(BaseProvider):
         if apm_data:
             return apm_data
 
-        app_name = _build_apm_app_name(bk_app_code, env)
+        # 使用稳定名称复用监控实例，并将 APM 名称不允许的连字符转换为 0us0。
+        app_name = f"bkapp_{bk_app_code}_{env}".replace("-", "0us0")
         client = make_bk_monitor_client(tenant_id)
         data_token = client.get_or_create_apm(app_name, bk_monitor_space_id)
 

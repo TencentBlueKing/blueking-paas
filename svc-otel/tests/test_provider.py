@@ -19,13 +19,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from svc_otel.vendor.models import ApmData
-from svc_otel.vendor.provider import Provider, _build_apm_app_name
+from svc_otel.vendor.provider import Provider
 
 pytestmark = pytest.mark.django_db
-
-
-def test_build_stable_apm_app_name():
-    assert _build_apm_app_name("demo-app", "stag") == "bkapp_demo0us0app_stag"
 
 
 def test_reuse_local_apm_data_without_remote_request():

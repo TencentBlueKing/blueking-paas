@@ -54,11 +54,7 @@ class BkMonitorClient:
         self.client = backend
 
     def get_apm(self, apm_name: str, bk_monitor_space_id: str) -> str:
-        """查询 APM 应用详情并返回 data_token。
-
-        文档: GET /app/apm/detail_apm_application/
-        传参三选一：application_id，或 bk_biz_id + app_name，或 space_uid + app_name
-        """
+        """按空间和应用名查询 APM 的 data_token，不存在时抛出异常。"""
         data = {"app_name": apm_name, "space_uid": bk_monitor_space_id}
         try:
             resp = self.client.detail_apm_application(data=data)
@@ -132,11 +128,6 @@ class BkMonitorClient:
         try:
             return self.get_apm(apm_name, bk_monitor_space_id)
         except BkMonitorApmApplicationDoesNotExist:
-            logger.info(
-                "APM application does not exist, creating it, apm_name: %s, space_uid: %s",
-                apm_name,
-                bk_monitor_space_id,
-            )
             return self.create_apm(apm_name, bk_monitor_space_id)
 
 

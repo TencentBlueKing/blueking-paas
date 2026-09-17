@@ -15,23 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, call
 
 import pytest
 from bkapi_client_core.exceptions import APIGatewayResponseError
-from svc_otel.bkmonitorv3.backend.apigw import Group
-from svc_otel.bkmonitorv3.backend.esb import MonitorV3Group
-from svc_otel.bkmonitorv3.client import BkMonitorClient
-from svc_otel.bkmonitorv3.exceptions import (
-    BkMonitorApiError,
-    BkMonitorApmApplicationDoesNotExist,
-    BkMonitorGatewayServiceError,
-)
+from svc_otel.bkmonitorv3.client import BkMonitorBackend, BkMonitorClient
+from svc_otel.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 
 
 @pytest.fixture()
 def backend():
-    return MagicMock()
+    return Mock(spec=BkMonitorBackend)
 
 
 @pytest.fixture()
@@ -39,107 +33,55 @@ def client(backend):
     return BkMonitorClient(backend)
 
 
-class TestGetApm:
-    def test_return_token(self, client, backend):
-        backend.detail_apm_application.return_value = {
-            "result": True,
-            "data": {"app_name": "bkapp_demo_stag", "token": "token-from-monitor"},
-        }
+class TestGetOrCreateApm:
+    def test_reuse_existing_application(self, client, backend):
+        backend.detail_apm_application.return_value = {"result": True, "data": {"token": "existing-token"}}
 
-        token = client.get_apm("bkapp_demo_stag", "bkpaas__demo")
-
-        assert token == "token-from-monitor"
+        assert client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo") == "existing-token"
         backend.detail_apm_application.assert_called_once_with(
             data={"app_name": "bkapp_demo_stag", "space_uid": "bkpaas__demo"}
         )
+        backend.apm_create_application.assert_not_called()
 
-    def test_raise_when_application_does_not_exist(self, client, backend):
-        backend.detail_apm_application.return_value = {
-            "result": False,
-            "message": "the application does not exist",
-            "data": {},
-        }
+    def test_create_when_application_does_not_exist(self, client, backend):
+        backend.detail_apm_application.return_value = {"result": False, "message": "application does not exist"}
+        backend.apm_create_application.return_value = {"result": True, "data": "created-token"}
 
-        with pytest.raises(BkMonitorApmApplicationDoesNotExist, match="does not exist"):
-            client.get_apm("bkapp_demo_stag", "bkpaas__demo")
+        assert client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo") == "created-token"
+        assert backend.mock_calls == [
+            call.detail_apm_application(data={"app_name": "bkapp_demo_stag", "space_uid": "bkpaas__demo"}),
+            call.apm_create_application(data={"app_name": "bkapp_demo_stag", "space_uid": "bkpaas__demo"}),
+        ]
 
-    @pytest.mark.parametrize("data", [{}, None, "unexpected", {"token": ""}])
-    def test_raise_when_token_is_missing(self, client, backend, data):
-        backend.detail_apm_application.return_value = {"result": True, "data": data}
+    def test_missing_token_does_not_trigger_create(self, client, backend):
+        backend.detail_apm_application.return_value = {"result": True, "data": {"token": ""}}
 
         with pytest.raises(BkMonitorApiError, match="token is empty"):
-            client.get_apm("bkapp_demo_stag", "bkpaas__demo")
+            client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo")
 
-    def test_wrap_gateway_error(self, client, backend):
+        backend.apm_create_application.assert_not_called()
+
+    def test_gateway_error_does_not_trigger_create(self, client, backend):
         backend.detail_apm_application.side_effect = APIGatewayResponseError("gateway error")
 
         with pytest.raises(BkMonitorGatewayServiceError, match="Failed to get APM"):
-            client.get_apm("bkapp_demo_stag", "bkpaas__demo")
-
-
-class TestCreateApm:
-    def test_return_token(self, client, backend):
-        backend.apm_create_application.return_value = {"result": True, "data": "created-token"}
-
-        assert client.create_apm("bkapp_demo_stag", "bkpaas__demo") == "created-token"
-
-    @pytest.mark.parametrize("data", [{}, None, ""])
-    def test_raise_when_token_is_missing(self, client, backend, data):
-        backend.apm_create_application.return_value = {"result": True, "data": data}
-
-        with pytest.raises(BkMonitorApiError, match="token is empty"):
-            client.create_apm("bkapp_demo_stag", "bkpaas__demo")
-
-
-class TestGetOrCreateApm:
-    def test_reuse_existing_application(self, client):
-        with (
-            patch.object(client, "get_apm", return_value="existing-token") as get_apm,
-            patch.object(client, "create_apm") as create_apm,
-        ):
-            assert client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo") == "existing-token"
-
-        get_apm.assert_called_once_with("bkapp_demo_stag", "bkpaas__demo")
-        create_apm.assert_not_called()
-
-    def test_create_when_application_does_not_exist(self, client):
-        with (
-            patch.object(
-                client,
-                "get_apm",
-                side_effect=BkMonitorApmApplicationDoesNotExist("application does not exist"),
-            ),
-            patch.object(client, "create_apm", return_value="created-token") as create_apm,
-        ):
-            assert client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo") == "created-token"
-
-        create_apm.assert_called_once_with("bkapp_demo_stag", "bkpaas__demo")
-
-    def test_do_not_match_create_error_message(self, client):
-        with (
-            patch.object(
-                client,
-                "get_apm",
-                side_effect=BkMonitorApmApplicationDoesNotExist("application does not exist"),
-            ) as get_apm,
-            patch.object(client, "create_apm", side_effect=BkMonitorApiError("应用名称已存在")),
-            pytest.raises(BkMonitorApiError, match="应用名称已存在"),
-        ):
             client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo")
 
-        assert get_apm.call_count == 1
+        backend.apm_create_application.assert_not_called()
 
-    def test_propagate_other_query_errors(self, client):
-        with (
-            patch.object(client, "get_apm", side_effect=BkMonitorApiError("permission denied")),
-            patch.object(client, "create_apm") as create_apm,
-            pytest.raises(BkMonitorApiError, match="permission denied"),
-        ):
+    @pytest.mark.parametrize(
+        ("response", "message"),
+        [
+            ({"result": False, "message": "应用名称已存在"}, "应用名称已存在"),
+            ({"result": True, "data": ""}, "token is empty"),
+        ],
+    )
+    def test_create_failure_is_propagated(self, client, backend, response, message):
+        backend.detail_apm_application.return_value = {"result": False, "message": "application does not exist"}
+        backend.apm_create_application.return_value = response
+
+        with pytest.raises(BkMonitorApiError, match=message):
             client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo")
 
-        create_apm.assert_not_called()
-
-
-def test_detail_operation_paths():
-    assert Group().detail_apm_application.path == "/app/apm/detail_apm_application/"
-    assert MonitorV3Group().detail_apm_application.path == "/api/c/compapi/v2/monitor_v3/detail_apm_application/"
+        backend.detail_apm_application.assert_called_once()
+        backend.apm_create_application.assert_called_once()

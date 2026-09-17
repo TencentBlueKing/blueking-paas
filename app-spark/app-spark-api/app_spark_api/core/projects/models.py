@@ -35,7 +35,7 @@ class ProjectManager(models.Manager["Project"]):
         :param tenant_id: 限定的租户。
         :return: 排好序、尚未取值的 queryset，翻页交给调用方。
         """
-        return self.filter(owner=owner, tenant_id=tenant_id).order_by("-created", "id")
+        return self.filter(owner=owner, tenant_id=tenant_id).order_by("-created_at", "id")
 
 
 class Project(OwnerTimestampedModel):

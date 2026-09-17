@@ -1,11 +1,24 @@
-import type { ChatMessage } from '@/components/project/interaction/types';
-import type { AgUiEvent } from '@/http/types';
+import type { ChatBlock, ChatMessage, ChatToolCall } from '@/components/project/interaction/types';
+import type { AgUiEvent, UserMessageRecord } from '@/http/types';
+import { describeToolCall } from '@/services/agent/tool-call';
 
 export type AgUiRunStatus = 'idle' | 'thinking' | 'streaming';
+
+/** 一次还没收完的工具调用：界面上那一行，加上攒到一半的参数。 */
+interface PendingToolCall {
+  tool: ChatToolCall;
+  /**
+   * 累积的参数 JSON。只留开头一段：这里唯一的用途是抽出一行摘要，而写文件的参数带着整个文件，
+   * 全存下来就是把一份文件副本挂在对话上。
+   */
+  args: string;
+}
 
 export interface AgUiApplyContext {
   messages: ChatMessage[];
   byId: Map<string, ChatMessage>;
+  /** toolCallId -> 那次调用，后续的参数与结果事件靠它找回自己那一行 */
+  toolCalls: Map<string, PendingToolCall>;
 }
 
 export interface AgUiApplyResult {
@@ -14,6 +27,12 @@ export interface AgUiApplyResult {
   errorText?: string;
   done?: boolean;
 }
+
+export const createApplyContext = (messages: ChatMessage[]): AgUiApplyContext => ({
+  messages,
+  byId: new Map(),
+  toolCalls: new Map(),
+});
 
 const createLocalId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -37,13 +56,27 @@ export const getRecordSeq = (record: AgUiEvent): number | null => {
   return Number.isFinite(seq) ? seq : null;
 };
 
+/**
+ * 把块接到消息末尾，并把「接进去之后」的那一份还回来。
+ *
+ * 不能接着用传进来的那个对象：消息列表是 Vue 的响应式数组，push 进去的是原始对象，之后只有改
+ * 从数组里读回来的那个代理才会触发重渲染。工具调用那一行的摘要和状态是后面几个事件慢慢补齐
+ * 的，拿错了这一份，界面会一直停在「正在执行」。
+ */
+const appendBlock = (message: ChatMessage, block: ChatBlock): ChatBlock => {
+  message.blocks.push(block);
+  return message.blocks[message.blocks.length - 1];
+};
+
+/**
+ * 取这条消息末尾那个文本块，用来接住下一段文本增量。
+ *
+ * 认「最后一个块」而不是「第一个文本块」：工具调用和文本在同一条消息里按发生顺序排着，一次调
+ * 用之后模型接着说的话得落在那次调用下面，而不是回头续进它上面的段落。
+ */
 const getTextBlock = (message: ChatMessage) => {
-  let block = message.blocks.find(item => item.type === 'text');
-  if (!block) {
-    block = { type: 'text', text: '' };
-    message.blocks.unshift(block);
-  }
-  return block;
+  const last = message.blocks[message.blocks.length - 1];
+  return last?.type === 'text' ? last : appendBlock(message, { type: 'text', text: '' });
 };
 
 const upsertMessage = (
@@ -71,8 +104,56 @@ const upsertMessage = (
     blocks: [{ type: 'text', text: '' }],
   };
   ctx.messages.push(message);
-  if (messageId) ctx.byId.set(messageId, message);
-  return message;
+  // 同 `appendBlock`：往下要改的是接进列表之后的那一份，不是手里这个原始对象。
+  const stored = ctx.messages[ctx.messages.length - 1];
+  if (messageId) ctx.byId.set(messageId, stored);
+  return stored;
+};
+
+/**
+ * 工具调用挂到哪条消息上：末尾那条助手消息，没有就新起一条。
+ *
+ * 事件里的 `parentMessageId` 是可选的，而且指向的本来就是刚说完话的那条助手消息，也就是末尾
+ * 这条，所以不必绕一圈去查——真按 id 挂反而会把一次调用插回更早的位置，读起来是乱的。
+ */
+const currentAssistant = (ctx: AgUiApplyContext): ChatMessage => {
+  const last = ctx.messages[ctx.messages.length - 1];
+  if (last?.role === 'assistant') return last;
+  ctx.messages.push({ id: createLocalId(), role: 'assistant', blocks: [] });
+  return ctx.messages[ctx.messages.length - 1];
+};
+
+/** 参数只用来抽一行摘要，留个开头就够，其余的直接丢掉。 */
+const MAX_TOOL_ARGS = 4096;
+
+const refreshToolCall = (pending: PendingToolCall) => {
+  const display = describeToolCall(pending.tool.name, pending.args);
+  pending.tool.label = display.label;
+  pending.tool.detail = display.detail;
+};
+
+const getToolCallId = (event: AgUiEvent) => String(event.toolCallId ?? event.tool_call_id ?? '');
+
+const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
+  const toolCallId = getToolCallId(event);
+  const name = String(event.toolCallName ?? event.tool_call_name ?? event.name ?? '');
+  const block = appendBlock(currentAssistant(ctx), {
+    type: 'tool',
+    tool: { id: toolCallId, name, label: '', detail: '', state: 'running' },
+  });
+  const pending: PendingToolCall = { tool: block.tool as ChatToolCall, args: '' };
+  refreshToolCall(pending);
+  if (toolCallId) ctx.toolCalls.set(toolCallId, pending);
+};
+
+const growToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent, delta: string) => {
+  const pending = ctx.toolCalls.get(getToolCallId(event));
+  if (!pending || !delta) return;
+  if (pending.args.length < MAX_TOOL_ARGS) {
+    pending.args += delta;
+  }
+  // 摘要一旦抽出来就不再逐片重算：参数可以有几万片，而要找的那个字段在开头就传完了。
+  if (!pending.tool.detail) refreshToolCall(pending);
 };
 
 export const applyAgUiEvent = (
@@ -123,14 +204,53 @@ export const applyAgUiEvent = (
         status: 'thinking',
         progress: String(event.stepName || event.step || event.name || '正在处理…'),
       };
+    // 一次工具调用摊成四个事件：START 报名字，ARGS 一片片送参数，END 表示参数说完了，
+    // RESULT 才是工具真的返回。界面上它们合成一行，状态跟着这条线走。
     case 'TOOL_CALL_START':
-      return {
-        status: 'thinking',
-        progress: String(event.toolCallName || event.name || '正在调用工具…'),
-      };
+      startToolCall(ctx, event);
+      // 调用本身已经在时间线上占了一行，进度条再重复一遍工具名就是噪音。
+      return { status: 'thinking', progress: '' };
+    case 'TOOL_CALL_ARGS':
+      growToolCallArgs(ctx, event, delta);
+      return {};
+    case 'TOOL_CALL_END': {
+      // 参数齐了，用完整的 JSON 再算一次，盖掉流式期间那份可能不准的摘要。
+      const pending = ctx.toolCalls.get(getToolCallId(event));
+      if (pending) refreshToolCall(pending);
+      return {};
+    }
+    case 'TOOL_CALL_RESULT': {
+      // 只记「跑完了」，不展示返回值：read_file 之类的返回值就是整个文件。
+      const pending = ctx.toolCalls.get(getToolCallId(event));
+      if (pending) pending.tool.state = 'done';
+      return {};
+    }
     default:
       return {};
   }
+};
+
+/**
+ * 把历史里的一条用户输入接到消息列表末尾。
+ *
+ * 不走 `upsertMessage`：那条路是给 AG-UI 事件用的，靠事件自带的 messageId 认人，而用户输入是
+ * 后端另一张表里的记录，没有那个 id。消息 id 用后端主键拼出来，回放同一段历史两次也不会出现两
+ * 个不同 id 的同一条输入。
+ */
+export const appendUserMessage = (
+  ctx: AgUiApplyContext,
+  record: UserMessageRecord,
+): ChatMessage | null => {
+  const text = String(record.content ?? '');
+  if (!text) return null;
+
+  const message: ChatMessage = {
+    id: `user-${record.id}`,
+    role: 'user',
+    blocks: [{ type: 'text', text }],
+  };
+  ctx.messages.push(message);
+  return message;
 };
 
 export const createWelcomeMessage = (): ChatMessage => ({
@@ -148,6 +268,7 @@ export const hasConversationContent = (messages: ChatMessage[]) => (
     && message.blocks.some(block => (
       (block.type === 'text' && Boolean(block.text))
       || (block.type === 'image' && Boolean(block.src))
+      || block.type === 'tool'
     ))
   ))
 );

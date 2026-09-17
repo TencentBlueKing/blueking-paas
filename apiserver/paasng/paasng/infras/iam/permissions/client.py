@@ -17,39 +17,41 @@
 
 from typing import Dict, List, Optional
 
-from django.conf import settings
-from iam import IAM, Action, MultiActionRequest, Request, Resource, Subject
+from django.db.models import Q
+
+from paasng.infras.iam.base.backends import BaseAuthBackend
+from paasng.infras.iam.base.dto import AuthResource
+from paasng.infras.iam.shim import get_auth_backend
 
 
 class IAMClient:
-    """提供基础的 iam client 方法封装"""
+    """鉴权入口
+
+    版本无关的门面：按部署环境的配置将调用分发到 V3 或 V4 的实现，调用方无需感知版本差异。
+    """
+
+    def _get_auth_backend(self) -> BaseAuthBackend:
+        """获取当前环境的鉴权实现，子类可覆盖以注入替身"""
+        return get_auth_backend()
 
     def resource_type_allowed(self, username: str, tenant_id: str, action_id: str, use_cache: bool = False) -> bool:
         """
         判断用户是否具备某个操作的权限
         note: 权限判断与资源实例无关，如创建某资源
         """
-        _iam = self._make_iam(tenant_id)
-        request = self._make_request(username, action_id)
-        if not use_cache:
-            return _iam.is_allowed(request)
-        return _iam.is_allowed_with_cache(request)
+        return self._get_auth_backend().resource_type_allowed(username, tenant_id, action_id, use_cache)
 
     def resource_inst_allowed(
-        self, username: str, tenant_id: str, action_id: str, resources: List[Resource], use_cache: bool = False
+        self, username: str, tenant_id: str, action_id: str, resource: AuthResource, use_cache: bool = False
     ) -> bool:
         """
         判断用户对某个资源实例是否具有指定操作的权限
         note: 权限判断与资源实例有关，如更新某个具体资源
         """
-        _iam = self._make_iam(tenant_id)
-        request = self._make_request(username, action_id, resources=resources)
-        if not use_cache:
-            return _iam.is_allowed(request)
-        return _iam.is_allowed_with_cache(request)
+        return self._get_auth_backend().resource_inst_allowed(username, tenant_id, action_id, resource, use_cache)
 
     def resource_inst_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
+        self, username: str, tenant_id: str, action_ids: List[str], resource: AuthResource
     ) -> Dict[str, bool]:
         """
         判断用户对某个(单个)资源实例是否具有多个操作的权限.
@@ -57,36 +59,14 @@ class IAMClient:
 
         :returns: 示例 {'view_basic_info': True, 'edit_basic_info': False}
         """
-        actions = [Action(action_id) for action_id in action_ids]
-        request = MultiActionRequest(
-            settings.IAM_PAAS_V3_SYSTEM_ID, Subject("user", username), actions, resources, None
-        )
-        _iam = self._make_iam(tenant_id)
-        return _iam.resource_multi_actions_allowed(request)
+        return self._get_auth_backend().resource_inst_multi_actions_allowed(username, tenant_id, action_ids, resource)
 
-    def batch_resource_multi_actions_allowed(
-        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
-    ) -> Dict[str, Dict[str, bool]]:
+    def build_resource_filter(
+        self, username: str, tenant_id: str, action_id: str, key_mapping: Optional[Dict[str, str]] = None
+    ) -> Optional[Q]:
         """
-        判断用户对某些资源是否具有多个指定操作的权限. 当前sdk仅支持同类型的资源
+        将用户在某操作上的权限策略下推为 Django ORM 过滤条件
 
-        :returns: 示例 {'app_code_test': {'view_basic_info': True, 'edit_basic_info': False}}
+        :returns: 过滤条件；None 表示未能取得策略，调用方需按无权限处理
         """
-        actions = [Action(action_id) for action_id in action_ids]
-        request = MultiActionRequest(settings.IAM_PAAS_V3_SYSTEM_ID, Subject("user", username), actions, [], None)
-        resources_list = [[res] for res in resources]
-        _iam = self._make_iam(tenant_id)
-        return _iam.batch_resource_multi_actions_allowed(request, resources_list)
-
-    @staticmethod
-    def _make_request(username: str, action_id: str, resources: Optional[List[Resource]] = None) -> Request:
-        return Request(settings.IAM_PAAS_V3_SYSTEM_ID, Subject("user", username), Action(action_id), resources, None)
-
-    @staticmethod
-    def _make_iam(tenant_id: str):
-        return IAM(
-            settings.IAM_APP_CODE,
-            settings.IAM_APP_SECRET,
-            settings.BK_IAM_APIGATEWAY_URL,
-            bk_tenant_id=tenant_id,
-        )
+        return self._get_auth_backend().build_resource_filter(username, tenant_id, action_id, key_mapping)

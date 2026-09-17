@@ -5,7 +5,9 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -32,7 +34,55 @@ class FakeClock:
 
 
 def _sleeping_child() -> subprocess.Popen[bytes]:
-    return subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    return subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(60)"],
+        start_new_session=True,
+    )
+
+
+# 组内的第二个进程，没有被登记过：它只有在信号打到整个进程组时才会收到 SIGTERM。
+# 收到就写标记文件，测试据此判断，而不是去看它的 pid 还在不在——孤儿进程会被 reparent 到
+# PID 1，容器里的 PID 1 不一定回收子进程，僵尸状态下 os.kill(pid, 0) 照样成功。
+_GROUP_MEMBER = """
+import os
+import signal
+import sys
+import time
+
+marker, ready = sys.argv[1], sys.argv[2]
+
+
+def on_term(signum, frame):
+    with open(marker, "w") as handle:
+        handle.write("term")
+    os._exit(0)
+
+
+signal.signal(signal.SIGTERM, on_term)
+with open(ready, "w") as handle:
+    handle.write("up")
+time.sleep(60)
+"""
+
+# 被登记的那个进程：自己不做事，只负责在同一个进程组里再拉起一个。
+_GROUP_LEADER = """
+import subprocess
+import sys
+import time
+
+member, marker, ready = sys.argv[1], sys.argv[2], sys.argv[3]
+subprocess.Popen([sys.executable, "-c", member, marker, ready])
+time.sleep(60)
+"""
+
+
+def _wait_for(path: Path, *, timeout: float = 10.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.exists():
+            return True
+        time.sleep(0.02)
+    return False
 
 
 def test_idle_watch_timeout_busy_and_reset() -> None:
@@ -160,3 +210,27 @@ def test_stop_all_terminates_registered_children() -> None:
         if child.poll() is None:
             child.kill()
             child.wait()
+
+
+def test_stop_all_signals_the_whole_process_group(tmp_path: Path) -> None:
+    """A uvicorn that spawned its own workers must not leave them behind holding the port."""
+    marker = tmp_path / "member-got-sigterm"
+    ready = tmp_path / "member-up"
+    leader = subprocess.Popen(
+        [sys.executable, "-c", _GROUP_LEADER, _GROUP_MEMBER, str(marker), str(ready)],
+        start_new_session=True,
+    )
+    try:
+        assert _wait_for(ready), "the second process in the group never started"
+        registry = AppProcessRegistry()
+        registry.register(leader)
+
+        registry.stop_all()
+
+        assert leader.poll() is not None
+        # 只 terminate 被登记的那个进程时，这个标记永远不会出现。
+        assert _wait_for(marker), "the unregistered group member was never signalled"
+    finally:
+        if leader.poll() is None:
+            leader.kill()
+            leader.wait()

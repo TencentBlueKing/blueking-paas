@@ -273,8 +273,10 @@ def delete_grade_manager(plugin: PluginInstance):
 
 
 def user_group_apply_url(plugin_id: str) -> dict:
-    """应用用户组权限申请链接"""
+    """插件用户组权限申请链接"""
+
+    # 插件用户组只存在于 V3，必须用固定走 V3 的模板，不能复用随版本切换的应用侧模板。
     dev_user_group_id = PluginUserGroup.objects.get(plugin_id=plugin_id, role=PluginRole.DEVELOPER).user_group_id
     return {
-        "apply_url_for_dev": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
+        "apply_url_for_dev": settings.BK_IAM_PLUGIN_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
     }

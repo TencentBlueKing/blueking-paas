@@ -80,7 +80,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         try:
             for role, members in role_members_map.items():
-                add_role_members(application.code, role, members)
+                add_role_members(application.code, role, members, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -104,8 +104,8 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         if current_role != target_role:
             self.check_admin_count(application.code, username)
             try:
-                remove_user_all_roles(application.code, username)
-                add_role_members(application.code, target_role, username)
+                remove_user_all_roles(application.code, username, operator=request.user.username)
+                add_role_members(application.code, target_role, username, operator=request.user.username)
             except BKIAMGatewayServiceError as e:
                 raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -119,7 +119,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         self.check_admin_count(application.code, request.user.username)
         try:
-            remove_user_all_roles(application.code, request.user.username)
+            remove_user_all_roles(application.code, request.user.username, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -136,7 +136,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         username = get_username_by_bkpaas_user_id(kwargs["user_id"])
         self.check_admin_count(application.code, username)
         try:
-            remove_user_all_roles(application.code, username)
+            remove_user_all_roles(application.code, username, operator=request.user.username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 

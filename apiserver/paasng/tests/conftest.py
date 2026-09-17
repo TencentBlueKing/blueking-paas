@@ -402,14 +402,7 @@ def _mock_iam():
 
     with (
         mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient),
-        mock.patch(
-            "paasng.infras.iam.helpers.BKIAMClient",
-            new=StubBKIAMClient,
-        ),
-        mock.patch(
-            "paasng.platform.applications.helpers.BKIAMClient",
-            new=StubBKIAMClient,
-        ),
+        mock.patch("paasng.infras.iam.v3.management.BKIAMClient", new=StubBKIAMClient),
         mock.patch(
             "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
             new=mock_user_has_app_action_perm,

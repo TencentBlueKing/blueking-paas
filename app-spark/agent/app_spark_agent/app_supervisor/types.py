@@ -64,14 +64,6 @@ LAUNCHED_EVENT_NAME = "app.launched"
 # 控制面签发真实 run_id。这里用固定哨兵，避免每次 launch 灌一个 uuid 进 AppendLog._run_ids。
 LAUNCH_EVENT_RUN_ID = "app-supervisor"
 
-# 本进程持有的密钥。只给测试断言用：子进程环境按 ENV_PREFIX 整段剥离，不看这张表。
-SECRET_ENV_KEYS = (
-    f"{settings.ENV_PREFIX}RUNTIME_TOKEN",
-    f"{settings.ENV_PREFIX}MODEL_API_KEY",
-    f"{settings.ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN",
-    f"{settings.ENV_PREFIX}CONTROL_PLANE_TOKEN",
-)
-
 
 class AppLaunchError(Exception):
     """A launch the HTTP view maps to a status code."""

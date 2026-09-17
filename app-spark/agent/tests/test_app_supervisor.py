@@ -27,7 +27,6 @@ from app_spark_agent import settings
 from app_spark_agent.app_supervisor import (
     APP_PORT_ENV,
     LAUNCH_EVENT_RUN_ID,
-    SECRET_ENV_KEYS,
     AppLaunchConflict,
     AppLaunchFailed,
     AppLaunchInvalid,
@@ -150,13 +149,21 @@ def test_path_and_label_rules() -> None:
 
 def test_child_env_drops_every_agent_setting_not_just_the_known_secrets() -> None:
     """应用进程拿不到任何 APP_SPARK_AGENT_*，包括还没被认定为密钥的那些。"""
-    source = dict.fromkeys(SECRET_ENV_KEYS, "secret")
+
+    # 写全名而不是拿生产常量拼：被剥掉的是前缀，名字由这里独立列出来才算校验。
+    secrets = (
+        "APP_SPARK_AGENT_RUNTIME_TOKEN",
+        "APP_SPARK_AGENT_MODEL_API_KEY",
+        "APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN",
+        "APP_SPARK_AGENT_CONTROL_PLANE_TOKEN",
+    )
+    source = dict.fromkeys(secrets, "secret")
     source["APP_SPARK_AGENT_WORKSPACE"] = "/data/workspace"
     source["PATH"] = "/usr/bin"
 
     env = build_child_environ(8123, source)
 
-    assert all(key not in env for key in SECRET_ENV_KEYS)
+    assert all(key not in env for key in secrets)
     # 不是密钥，一样不给。应用的 cwd 就是 workspace。
     assert "APP_SPARK_AGENT_WORKSPACE" not in env
     assert env["PATH"] == "/usr/bin"

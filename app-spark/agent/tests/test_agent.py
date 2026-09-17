@@ -74,6 +74,24 @@ def test_create_agent_scopes_tools_to_workspace(
     assert log_tool.function_schema.json_schema["properties"] == {}
 
 
+def test_extra_tools_reach_the_model_alongside_the_owned_one(tmp_path: Path) -> None:
+    """A caller's tools are registered, and they do not displace read_app_log.
+
+    The instructions name launch_app unconditionally, so nothing here may quietly drop what a
+    Runtime handed over -- the model would go looking for a tool it was told to use.
+    """
+
+    async def launch_app() -> str:
+        """Stand-in with the name and the empty signature the real one has."""
+        return "ok"
+
+    agent = create_agent(tmp_path, extra_tools=[launch_app])
+
+    tools = function_tools(agent)
+    assert set(tools) == {"read_app_log", "launch_app"}
+    assert tools["launch_app"].function_schema.json_schema["properties"] == {}
+
+
 def function_tools(agent: Agent[None, str]) -> dict[str, Any]:
     """Return the function tools registered on agent, keyed by name."""
     tools: dict[str, Any] = {}

@@ -21,6 +21,7 @@
 成功都落同一条 app.launched 到 ui_events，控制面照旧 drain，不需要反向回调。
 """
 
+from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from pydantic import BaseModel
@@ -54,6 +55,24 @@ class LaunchTool:
         self._supervisor = supervisor
         self._max_per_run = max_per_run
         self._used = 0
+
+    def as_tool(self) -> Callable[[], Awaitable[LaunchToolResult]]:
+        """Return this tool as the plain async function the harness registers.
+
+        The model reads the returned function's name and docstring, so they belong here next to
+        the behaviour they describe. Built here rather than where an agent is assembled: two
+        copies of this wrapper would drift, and the one the tests use would stop being the one
+        the model gets.
+        """
+
+        async def launch_app() -> LaunchToolResult:
+            """Start or restart this session's application and return the URL to open.
+
+            Takes no arguments: the port, the entry point, and the preview path are all fixed.
+            """
+            return await self.launch()
+
+        return launch_app
 
     def begin_run(self) -> None:
         """Reset the per-run budget. POST /runs calls this before the model starts."""

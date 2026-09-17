@@ -267,7 +267,7 @@ class ConversationRuntime:
             agent = create_agent(
                 resolved_workspace,
                 state_dir=resolved_state_dir,
-                launch_tool=launch_tool,
+                extra_tools=[launch_tool.as_tool()],
             )
 
         return cls(

@@ -1,6 +1,6 @@
 """Construction of the workspace-scoped coding agent."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -35,7 +35,6 @@ from app_spark_agent.bkaidev.auth import (
     authorization_headers,
 )
 from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
-from app_spark_agent.launch_tool import LaunchTool, LaunchToolResult
 
 
 class ApiKeyProvider(Protocol):
@@ -165,7 +164,7 @@ def create_agent(
     workspace: str | Path,
     *,
     state_dir: Path | None = None,
-    launch_tool: LaunchTool | None = None,
+    extra_tools: Sequence[Any] = (),
 ) -> Agent[None, str]:
     """Create the coding agent scoped to workspace.
 
@@ -176,9 +175,13 @@ def create_agent(
 
     :param workspace: Existing directory the agent may inspect and modify.
     :param state_dir: Conversation state directory; the log tool must not point inside it.
-    :param launch_tool: Lets the model launch the application itself. Omitting it leaves the
-        instructions describing a tool that is absent, so a Runtime always passes one; the
-        control plane's own POST /app/launch is unaffected either way.
+    :param extra_tools: Further tools to register, already in the form the harness takes. What
+        they are wired to is the caller's business: this function has no reason to know what a
+        LaunchTool is, and a caller holding one hands over launch_tool.as_tool().
+
+        The instructions describe launch_app unconditionally, so a caller that leaves it out
+        gives the model a tool it was told to use and cannot find. A Runtime always passes it;
+        the control plane's own POST /app/launch is unaffected either way.
     :return: A configured Pydantic AI coding agent.
     :raises NotADirectoryError: If workspace is not an existing directory.
     """
@@ -197,19 +200,9 @@ def create_agent(
         """Read this session's application log. The path is not a parameter."""
         return reader.read()
 
-    # 工具表随注入而定：没给 launch_tool 的调用方（嵌入、单测）只拿到读日志那一个。
-    tools: list[Any] = [read_app_log]
-    if launch_tool is not None:
-        launcher = launch_tool
-
-        async def launch_app() -> LaunchToolResult:
-            """Start or restart this session's application and return the URL to open.
-
-            Takes no arguments: the port, the entry point, and the preview path are all fixed.
-            """
-            return await launcher.launch()
-
-        tools.append(launch_app)
+    # read_app_log 由这里拥有：它要绑 workspace 和 state_dir 才能拦住越界读，而那两个路径
+    # 是在这里解析的。其余工具由调用方备好。
+    tools: list[Any] = [read_app_log, *extra_tools]
 
     capabilities: list[AbstractCapability[object]] = [
         FileSystem(root_dir=workspace_path),

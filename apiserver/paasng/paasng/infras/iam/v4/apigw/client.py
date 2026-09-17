@@ -68,6 +68,14 @@ class Group(OperationGroup):
     update_system = bind_property(
         Operation, name="update_system", method="PUT", path="/api/v1/open/rbac/model/systems/{system_id}/"
     )
+    # 系统认证令牌。权限中心回调平台的资源接口时，以 Basic base64(bk_iam:{auth_token}) 携带它，
+    # 平台取本接口的返回值与之比对。V3 由 SDK 的 get_token 提供，V4 无 SDK，改为直接调用
+    retrieve_system_auth_token = bind_property(
+        Operation,
+        name="retrieve_system_auth_token",
+        method="GET",
+        path="/api/v1/open/rbac/model/systems/{system_id}/auth-token/",
+    )
 
     # ---------------- 模型注册：资源类型 ----------------
     list_resource_type = bind_property(

@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.shim import get_auth_backend
 
 
@@ -70,7 +70,3 @@ class IAMClient:
         :returns: 过滤条件；None 表示未能取得策略，调用方需按无权限处理
         """
         return self._get_auth_backend().build_resource_filter(username, tenant_id, action_id, key_mapping)
-
-    def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        """生成无权限时的申请链接"""
-        return self._get_auth_backend().build_apply_url(tenant_id, action_requests)

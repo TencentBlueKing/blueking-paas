@@ -21,7 +21,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.shim import get_paas_system_id
@@ -56,7 +56,6 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
     判定单资源多操作。后者单次上限为 20 个操作，超出由客户端基座自动分批。
 
     列表场景的策略下推走 `list_authorized_resource`，见 `build_resource_filter`。
-    申请链接见 `#7 资源回调与申请链接 V4 适配`。
 
     note: 租户标识逐请求传入，因此客户端按请求创建，不在实例上缓存租户上下文
     """
@@ -220,9 +219,6 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
         # 接口无分页参数，超长列表无法靠分页规避，只能整体拼入 IN 子句，不做截断，
         # 否则会静默少显应用
         return Q(**{f"{V4_PUSHDOWN_ORM_FIELD}__in": unique_ids})
-
-    def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        raise NotImplementedError("V4 申请链接生成由子需求 #7 实现")
 
     @staticmethod
     def _make_subject(username: str) -> Dict[str, str]:

@@ -21,7 +21,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.shim import get_paas_system_id
@@ -219,11 +219,6 @@ class BKIAMV4AuthBackend(BaseAuthBackend):
         # 接口无分页参数，超长列表无法靠分页规避，只能整体拼入 IN 子句，不做截断，
         # 否则会静默少显应用
         return Q(**{f"{V4_PUSHDOWN_ORM_FIELD}__in": unique_ids})
-
-    def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        # 平台的权限申请链接走用户组（见 helpers.user_group_apply_url），按本地模板拼出，
-        # 不经权限中心。操作级的申请链接没有调用方，故不实现
-        raise NotImplementedError("平台使用用户组申请链接，不生成操作级申请链接")
 
     @staticmethod
     def _make_subject(username: str) -> Dict[str, str]:

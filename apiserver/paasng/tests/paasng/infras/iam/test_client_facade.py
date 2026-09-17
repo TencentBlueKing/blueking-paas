@@ -21,7 +21,7 @@ import pytest
 from django.db.models import Q
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.permissions.client import IAMClient
 from paasng.infras.iam.permissions.resources.application import AppAction, ApplicationPermission
 from paasng.infras.iam.v3.apigw.client import Client as BKIAMV3GatewayClient
@@ -72,13 +72,6 @@ class TestFacadeDelegation:
         mocked_backend.build_resource_filter.assert_called_once_with(
             "user-0", "tenant-foo", AppAction.VIEW_BASIC_INFO, key_mapping
         )
-
-    def test_build_apply_url(self, mocked_backend):
-        action_requests = [ActionRequest(AppAction.VIEW_BASIC_INFO, "application", ["app-code"])]
-
-        IAMClient().build_apply_url("tenant-foo", action_requests)
-
-        mocked_backend.build_apply_url.assert_called_once_with("tenant-foo", action_requests)
 
 
 class TestPermissionFollowsVersion:

@@ -35,19 +35,6 @@ class AuthResource:
 
 
 @define
-class ActionRequest:
-    """申请链接中的一项操作及其关联的资源实例
-
-    :param resource_ids: 资源实例 ID 列表。为空表示该操作与资源实例无关；
-        非空时各实例必须具有相同的父实例
-    """
-
-    action_id: str
-    resource_type: Optional[str] = None
-    resource_ids: List[str] = field(factory=list)
-
-
-@define
 class ManagementSpace:
     """管理空间
 

@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 from django.db.models import Q
 
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource, UserGroup
+from paasng.infras.iam.base.dto import AuthResource, UserGroup
 
 if TYPE_CHECKING:
     from paasng.infras.iam.permissions.resources.application import AppAction
@@ -85,13 +85,6 @@ class BaseAuthBackend(ABC):
 
         note: PaaS 2.0 遗留系统（`bk_paas`）的 SQL 过滤场景不在本契约内，
             该系统未在 V4 侧注册模型，仍走 V3 专有实现。
-        """
-
-    @abstractmethod
-    def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        """生成无权限时的申请链接
-
-        :returns: 申请页地址；生成失败时返回权限中心首页地址，不抛异常
         """
 
 

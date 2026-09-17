@@ -26,6 +26,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from paasng.infras.iam.base.backends import BaseAuthBackend, BaseManagementBackend
 from paasng.infras.iam.base.constants import IAMVersion
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 
 
 def get_iam_version() -> IAMVersion:
@@ -45,6 +46,28 @@ def get_paas_system_id() -> str:
 def get_plugin_system_id() -> str:
     """插件开发中心在权限中心上注册的系统 ID。V3 与 V4 使用同一套系统 ID"""
     return settings.IAM_PLUGINS_CENTER_SYSTEM_ID
+
+
+def get_system_token(tenant_id: str) -> str:
+    """开发者中心在权限中心上注册的系统认证令牌，权限中心回调时以 Basic 凭证携带它
+
+    返回值保证是非空字符串，调用方不必再判空。
+
+    :raises BKIAMGatewayServiceError: 未能从权限中心取得令牌
+    """
+    if get_iam_version() == IAMVersion.V4:
+        from paasng.infras.iam.v4.token import fetch_system_token
+    else:
+        from paasng.infras.iam.v3.token import fetch_system_token
+
+    try:
+        return fetch_system_token(tenant_id)
+    except BKIAMGatewayServiceError:
+        raise
+    except Exception as e:
+        # V4 的失败由客户端基座收敛，V3 走 SDK 没有等价漏斗（响应不是 JSON、data 为 null
+        # 都会抛 SDK 自己的异常），在此补齐，让调用方只认一种失败形态
+        raise BKIAMGatewayServiceError(f"fetch system token from bkiam failed: {e}") from e
 
 
 def get_auth_backend() -> BaseAuthBackend:

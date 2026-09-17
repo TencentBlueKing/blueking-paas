@@ -25,7 +25,7 @@ from iam import IAM, Action, MultiActionRequest, Request, Resource, Subject
 from iam.exceptions import AuthAPIError
 
 from paasng.infras.iam.base.backends import BaseAuthBackend
-from paasng.infras.iam.base.dto import ActionRequest, AuthResource
+from paasng.infras.iam.base.dto import AuthResource
 from paasng.infras.iam.exceptions import BKIAMAuthCheckError
 
 logger = logging.getLogger(__name__)
@@ -97,18 +97,6 @@ class BKIAMV3AuthBackend(BaseAuthBackend):
         except AuthAPIError as e:
             logger.warning("build resource filter for action %s failed: %s", action_id, e)
             return None
-
-    def build_apply_url(self, tenant_id: str, action_requests: List[ActionRequest]) -> str:
-        from paasng.infras.iam.permissions.apply_url import ApplyURLGenerator
-        from paasng.infras.iam.permissions.request import ActionResourcesRequest
-
-        return ApplyURLGenerator.generate_apply_url(
-            tenant_id,
-            [
-                ActionResourcesRequest(req.action_id, req.resource_type, req.resource_ids or None)
-                for req in action_requests
-            ],
-        )
 
     @staticmethod
     def _to_sdk_resource(resource: AuthResource) -> Resource:

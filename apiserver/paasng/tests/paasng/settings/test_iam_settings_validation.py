@@ -48,3 +48,32 @@ class TestV4RequiredSettings:
     def test_v3_does_not_require_v4_settings(self):
         """V3 环境无需配置 V4 相关项"""
         validate_iam_settings(IAM_VERSION_V3, {"BK_IAM_V4_URL": ""})
+
+
+class TestUserGroupApplyTemplates:
+    """用户组申请页路径按版本硬编码；插件固定走 V3，不得复用应用侧模板"""
+
+    def test_path_constants(self):
+        from django.conf import settings
+
+        assert settings.BK_IAM_V3_USER_GROUP_APPLY_PATH == "/apply-join-user-group?id={user_group_id}"
+        # FIXME 对应的暂定值：尚未向 IAM 完全确认，后续可能会修改
+        assert settings.BK_IAM_V4_USER_GROUP_APPLY_PATH == "/permission/apply?tab=group&groupID={user_group_id}"
+
+    def test_plugin_template_always_uses_v3_url_and_path(self):
+        from django.conf import settings
+
+        assert settings.BK_IAM_PLUGIN_USER_GROUP_APPLY_TMPL == (
+            settings.BK_IAM_URL + settings.BK_IAM_V3_USER_GROUP_APPLY_PATH
+        )
+        assert settings.BK_IAM_V4_USER_GROUP_APPLY_PATH not in settings.BK_IAM_PLUGIN_USER_GROUP_APPLY_TMPL
+
+    def test_app_template_matches_effective_version(self):
+        from django.conf import settings
+
+        expected_path = (
+            settings.BK_IAM_V4_USER_GROUP_APPLY_PATH
+            if settings.BK_IAM_VERSION == IAM_VERSION_V4
+            else settings.BK_IAM_V3_USER_GROUP_APPLY_PATH
+        )
+        assert settings.BK_IAM_EFFECTIVE_URL + expected_path == settings.BK_IAM_USER_GROUP_APPLY_TMPL

@@ -91,8 +91,7 @@ class ModelLauncher:
             """Start or restart this session's application and return the URL to open."""
             assert self.client is not None
 
-            # 调生产的 as_tool()，不自己复刻一遍那层包装：复刻出来的会和模型真正拿到的那个漂移，
-            # 而这里唯一的测试专属职责是把结果记下来。
+            # 调生产的 as_tool()，不复刻那层包装；这里只负责把结果记下来。
             launch_tool = self.client.app.state.conversation_runtime.launch_tool
             result = await launch_tool.as_tool()()
             self.results.append(result)

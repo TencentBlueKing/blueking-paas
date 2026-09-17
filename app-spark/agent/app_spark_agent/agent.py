@@ -175,13 +175,9 @@ def create_agent(
 
     :param workspace: Existing directory the agent may inspect and modify.
     :param state_dir: Conversation state directory; the log tool must not point inside it.
-    :param extra_tools: Further tools to register, already in the form the harness takes. What
-        they are wired to is the caller's business: this function has no reason to know what a
-        LaunchTool is, and a caller holding one hands over launch_tool.as_tool().
-
-        The instructions describe launch_app unconditionally, so a caller that leaves it out
-        gives the model a tool it was told to use and cannot find. A Runtime always passes it;
-        the control plane's own POST /app/launch is unaffected either way.
+    :param extra_tools: Further tools to register, already in the harness's form; a caller
+        holding a LaunchTool hands over launch_tool.as_tool(). The instructions name launch_app
+        unconditionally, so omitting it leaves the model hunting for a tool it was told to use.
     :return: A configured Pydantic AI coding agent.
     :raises NotADirectoryError: If workspace is not an existing directory.
     """
@@ -200,8 +196,7 @@ def create_agent(
         """Read this session's application log. The path is not a parameter."""
         return reader.read()
 
-    # read_app_log 由这里拥有：它要绑 workspace 和 state_dir 才能拦住越界读，而那两个路径
-    # 是在这里解析的。其余工具由调用方备好。
+    # read_app_log 要绑 workspace 和 state_dir 才拦得住越界读，那两个路径在这里解析。
     tools: list[Any] = [read_app_log, *extra_tools]
 
     capabilities: list[AbstractCapability[object]] = [

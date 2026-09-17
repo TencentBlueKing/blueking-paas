@@ -59,10 +59,8 @@ class LaunchTool:
     def as_tool(self) -> Callable[[], Awaitable[LaunchToolResult]]:
         """Return this tool as the plain async function the harness registers.
 
-        The model reads the returned function's name and docstring, so they belong here next to
-        the behaviour they describe. Built here rather than where an agent is assembled: two
-        copies of this wrapper would drift, and the one the tests use would stop being the one
-        the model gets.
+        Name and docstring are what the model sees, so they live here instead of being rebuilt
+        at each assembly site.
         """
 
         async def launch_app() -> LaunchToolResult:

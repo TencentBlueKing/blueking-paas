@@ -56,15 +56,13 @@ def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
 def build_child_environ(port: int, source: Mapping[str, str] | None = None) -> dict[str, str]:
     """Copy the parent environment, drop every agent setting, and inject the app port."""
 
-    # 剥掉整个前缀，而不是逐个 pop 已知的密钥：这样以后新增的 agent 配置默认不会漏给应用，
-    # 忘记登记也不会变成一次静默泄漏。应用要用的那一项在下面显式加回来。
+    # 整段剥前缀，不是逐个 pop 已知密钥：新增配置忘了登记就会漏进应用，而应用是模型写的代码。
     env = {
         key: value
         for key, value in (os.environ if source is None else source).items()
         if not key.startswith(settings.ENV_PREFIX)
     }
 
-    # 应用自己不选端口，注入只为让代码里需要时能读到同一个值。加在剥离之后：APP_PORT_ENV
-    # 本身就带这个前缀。
+    # 应用自己不选端口。加在剥离之后，这个 key 本身带前缀。
     env[APP_PORT_ENV] = str(port)
     return env

@@ -149,10 +149,7 @@ def test_path_and_label_rules() -> None:
 
 
 def test_child_env_drops_every_agent_setting_not_just_the_known_secrets() -> None:
-    """应用进程拿不到任何 APP_SPARK_AGENT_* —— 包括还没被认定为密钥的那些。
-
-    逐个 pop 已知密钥的话，以后新增一个忘了登记就是静默泄漏，而应用是模型写的代码。
-    """
+    """应用进程拿不到任何 APP_SPARK_AGENT_*，包括还没被认定为密钥的那些。"""
     source = dict.fromkeys(SECRET_ENV_KEYS, "secret")
     source["APP_SPARK_AGENT_WORKSPACE"] = "/data/workspace"
     source["PATH"] = "/usr/bin"
@@ -160,11 +157,10 @@ def test_child_env_drops_every_agent_setting_not_just_the_known_secrets() -> Non
     env = build_child_environ(8123, source)
 
     assert all(key not in env for key in SECRET_ENV_KEYS)
-    # 不是密钥，一样不给：剥的是整个前缀。应用的 cwd 就是 workspace，不需要它。
+    # 不是密钥，一样不给。应用的 cwd 就是 workspace。
     assert "APP_SPARK_AGENT_WORKSPACE" not in env
-    # 前缀之外的环境原样继承，应用还要靠它找解释器和系统工具。
     assert env["PATH"] == "/usr/bin"
-    # 端口是唯一加回来的那一项，尽管它也带这个前缀。
+    # 唯一加回来的一项，尽管它也带前缀。
     assert env[APP_PORT_ENV] == "8123"
 
 

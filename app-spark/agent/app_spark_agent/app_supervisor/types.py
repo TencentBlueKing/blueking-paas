@@ -64,12 +64,7 @@ LAUNCHED_EVENT_NAME = "app.launched"
 # 控制面签发真实 run_id。这里用固定哨兵，避免每次 launch 灌一个 uuid 进 AppendLog._run_ids。
 LAUNCH_EVENT_RUN_ID = "app-supervisor"
 
-# 本进程持有的密钥，仅用于断言「它们没有进到应用子进程里去」。子进程环境的构造不看这张表：
-# build_child_environ 剥掉的是整个 ENV_PREFIX 前缀，白名单式地只加回应用真正要用的那一项。
-#
-# 不按这张表逐个 pop，是因为那样一来以后新增任何一个密钥，只要忘了来登记就会静默流进应用进程，
-# 而应用是模型写的代码。剥前缀和模型 Shell 的 denied_env_patterns 里那条 APP_SPARK_AGENT_*
-# 严格程度一致：模型能读的环境，和模型写的代码能读的环境，不该一松一紧。
+# 本进程持有的密钥。只给测试断言用：子进程环境按 ENV_PREFIX 整段剥离，不看这张表。
 SECRET_ENV_KEYS = (
     f"{settings.ENV_PREFIX}RUNTIME_TOKEN",
     f"{settings.ENV_PREFIX}MODEL_API_KEY",

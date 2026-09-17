@@ -15,9 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Literal
+from typing import Dict, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+ResourcePresetName = Literal["nano", "micro", "small", "medium"]
+
+
+class RedisResourcesConfig(BaseModel):
+    """套餐资源配额
+    常规方案用 preset，特殊方案显式写 requests/limits，常规和特殊方案可组合使用，详情见 RAEDME.md"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    preset: Optional[ResourcePresetName] = None
+    # 任意 K8s 资源名，便于后续扩展 hugepages 等
+    requests: Optional[Dict[str, str]] = None
+    limits: Optional[Dict[str, str]] = None
 
 
 class RedisPlanConfig(BaseModel):
@@ -25,11 +39,12 @@ class RedisPlanConfig(BaseModel):
 
     type: Literal["Redis", "RedisReplication"] = "Redis"
     redis_version: str
-    # 部署集群
     cluster_name: str
     persistent_storage: bool = False
     monitor: bool = False
-    memory_size: Literal["2Gi", "4Gi", "8Gi"] = "2Gi"
+    resources: Optional[RedisResourcesConfig] = None
+    # 历史资源配额字段（即将废弃）
+    memory_size: Optional[str] = None
     service_export_type: Literal["TencentCLB", "ClusterDNS"] = "ClusterDNS"
 
 

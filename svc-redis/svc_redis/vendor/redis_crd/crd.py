@@ -55,6 +55,14 @@ class RedisSecret(BaseModel):
     key: str
 
 
+class AdditionalServiceConfig(BaseModel):
+    enabled: Optional[bool] = None
+
+
+class KubernetesServiceConfig(BaseModel):
+    additional: Optional[AdditionalServiceConfig] = None
+
+
 class KubernetesConfig(BaseModel):
     # Redis Image 与 Operator Version 版本兼容性参考：
     # https://github.com/OT-CONTAINER-KIT/redis-operator?tab=readme-ov-file#image-compatibility
@@ -62,6 +70,7 @@ class KubernetesConfig(BaseModel):
     imagePullPolicy: str = "IfNotPresent"
     resources: Optional[ResourceRequirements] = None
     redisSecret: Optional[RedisSecret] = None
+    service: Optional[KubernetesServiceConfig] = None
 
 
 class Storage(BaseModel):

@@ -110,8 +110,8 @@ config = {
     "redis_version": "v7.0.15",
     # Kubernetes 集群名称
     "cluster_name": "redis-cluster",
-    # 每个 Redis 实例的内存限制
-    "memory_size": "2Gi",
+    # 资源配额，见下方两份 plan 配置用例
+    "resources": {"preset": "medium"},
     # 服务暴露方式 (必填)
     # - "ClusterDNS": 通过集群内 DNS 访问服务
     # - "TencentCLB": 通过腾讯云负载均衡器暴露服务
@@ -127,6 +127,75 @@ config = {
 
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
+
+`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；CPU request 偏低，limit 留到 500m–1 核以覆盖 BGSAVE / 全量同步。
+
+| preset | CPU requests | Memory requests | CPU limits | Memory limits |
+| --- | --- | --- | --- | --- |
+| nano | 50m | 128Mi | 500m | 256Mi |
+| micro | 50m | 256Mi | 500m | 512Mi |
+| small | 50m | 512Mi | 500m | 1024Mi |
+| medium | 100m | 1024Mi | 1 | 2048Mi |
+
+超过 2Gi 的容量需求应显式配置 requests / limits。
+
+常规套餐，使用 preset：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "medium"
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+特殊套餐，显式指定 requests / limits：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "requests": {
+      "cpu": "500m",
+      "memory": "1Gi"
+    },
+    "limits": {
+      "cpu": "2",
+      "memory": "2Gi"
+    }
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+组合使用：
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "small",
+    "requests": {
+      "cpu": "100m"
+    }
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 

@@ -342,6 +342,9 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Re
     """
     context = runtime.context_store.context
     prepared = prepare_run(await request.body(), context, runtime.transcript)
+
+    # 额度按轮清零：防的是一轮里反复重试，不是给整个会话设总量。
+    runtime.launch_tool.begin_run()
     logger.info(
         "run started run_id=%s conversation_id=%s context_version=%s",
         prepared.run_id,

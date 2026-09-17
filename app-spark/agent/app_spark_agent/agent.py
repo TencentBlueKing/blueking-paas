@@ -35,6 +35,7 @@ from app_spark_agent.bkaidev.auth import (
     authorization_headers,
 )
 from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
+from app_spark_agent.launch_tool import LaunchTool, LaunchToolResult
 
 
 class ApiKeyProvider(Protocol):
@@ -160,7 +161,12 @@ def build_compaction() -> TieredCompaction[object]:
     )
 
 
-def create_agent(workspace: str | Path, *, state_dir: Path | None = None) -> Agent[None, str]:
+def create_agent(
+    workspace: str | Path,
+    *,
+    state_dir: Path | None = None,
+    launch_tool: LaunchTool | None = None,
+) -> Agent[None, str]:
     """Create the coding agent scoped to workspace.
 
     The harness file tools enforce a workspace root and protect common secrets. Shell commands
@@ -170,6 +176,9 @@ def create_agent(workspace: str | Path, *, state_dir: Path | None = None) -> Age
 
     :param workspace: Existing directory the agent may inspect and modify.
     :param state_dir: Conversation state directory; the log tool must not point inside it.
+    :param launch_tool: Lets the model launch the application itself. Omitting it leaves the
+        instructions describing a tool that is absent, so a Runtime always passes one; the
+        control plane's own POST /app/launch is unaffected either way.
     :return: A configured Pydantic AI coding agent.
     :raises NotADirectoryError: If workspace is not an existing directory.
     """
@@ -187,6 +196,20 @@ def create_agent(workspace: str | Path, *, state_dir: Path | None = None) -> Age
     def read_app_log() -> AppLogReadResult:
         """Read this session's application log. The path is not a parameter."""
         return reader.read()
+
+    # 工具表随注入而定：没给 launch_tool 的调用方（嵌入、单测）只拿到读日志那一个。
+    tools: list[Any] = [read_app_log]
+    if launch_tool is not None:
+        launcher = launch_tool
+
+        async def launch_app() -> LaunchToolResult:
+            """Start or restart this session's application and return the URL to open.
+
+            Takes no arguments: the port, the entry point, and the preview path are all fixed.
+            """
+            return await launcher.launch()
+
+        tools.append(launch_app)
 
     capabilities: list[AbstractCapability[object]] = [
         FileSystem(root_dir=workspace_path),
@@ -210,5 +233,5 @@ def create_agent(workspace: str | Path, *, state_dir: Path | None = None) -> Age
         build_model(),
         instructions=settings.INSTRUCTIONS,
         capabilities=capabilities,
-        tools=[read_app_log],
+        tools=tools,
     )

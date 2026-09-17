@@ -119,7 +119,14 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 ## 拉起用户应用
 
-这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。控制面调 `POST /app/launch`，模型没有对应工具。
+这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。两条触发路径，共用同一把锁、同一份返回：
+
+- **模型自己拉**：`launch_app` 工具进程内直调监督器（`launch_tool.py`），不走 HTTP、不碰凭据——模型的
+  `Shell` 屏蔽了 `APP_SPARK_AGENT_*`，它本来也拿不到 `RUNTIME_TOKEN`。只有 agent 第一时间知道代码什么时候
+  真的能跑，所以不该只等用户点按钮。失败不中断整轮：原因交回模型，它可以读日志改完再拉，单轮最多 2 次。
+- **控制面拉**：`POST /app/launch`，给手动重启和刷新预览用，可带 `path` / `label`；模型那条固定 `/` + `Preview`。
+
+成功都落同一条 `app.launched` 到 `ui_events`，控制面 drain 这条就拿到 url，不需要 agent 反向回调控制面接口。
 
 ```bash
 curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
@@ -146,6 +153,8 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 - 已是监督器进程：再次 launch 一律重启（加载新代码），请求没带的 path/label 沿用上次。
 - 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再手动 launch。
 - run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。
+- 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
+  不然「失败→改代码→再 launch」会一直烧 token。控制面那条不受这个额度限制。
 - 子进程注入 `APP_SPARK_AGENT_APP_PORT`，只剥 `RUNTIME_TOKEN` / `MODEL_API_KEY` / `BK_AIDEV_ACCESS_TOKEN` / `CONTROL_PLANE_TOKEN`。不要按「屏蔽全部 `APP_SPARK_AGENT_*`」理解这条路径——那是给模型 Shell 的。
 
 ## 凭据屏蔽
@@ -194,6 +203,8 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
   网关的历史，并读取三份游标；不改写 context，也不往 transcript 写 OpenAI 原始报文。
 - `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
   8192 字节；文件工具看不见它。
+- `launch_app` 不接受参数，返回 `status` / `url` / `detail`。注入自带 agent 的调用方（嵌入、单测）
+  身上没有这个工具，`POST /app/launch` 才是保底入口。
 
 ## 远程持久化
 

@@ -155,8 +155,11 @@ exported under a different name cannot be started at all.
 Do not listen on a port yourself and do not hard-code one. The launcher decides the port and
 passes it to the server on the command line, so the application has no say in it.
 
-Do not start or keep the application process running yourself, and do not use the shell to host a
-long-running server. The application is launched for you once the user asks for it.
+Use the launch_app tool to start or restart the application once its code can run. Never host a
+long-running server with the shell, and never start the application any other way. When
+launch_app reports a failure, read the log with read_app_log, fix the cause, and launch once
+more; the tool refuses a third attempt in the same turn, and you should then report the failure
+rather than keep retrying.
 
 Do not align this application with the BlueKing or PaaS application framework in this period. A
 plain FastAPI HTTP app is enough.

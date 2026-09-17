@@ -20,6 +20,7 @@ from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
 from app_spark_agent.app_supervisor import AppSupervisor
 from app_spark_agent.git.saver import WorkspaceSaver
+from app_spark_agent.launch_tool import LaunchTool
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
 from app_spark_agent.state import (
@@ -162,6 +163,9 @@ class ConversationRuntime:
     :param run_guard: Guard admitting one mutating operation at a time.
     :param lifecycle: Idle timeout and the registry of application children.
     :param app_supervisor: Starts and watches the workspace application process.
+    :param launch_tool: The model's way to launch that process; its per-run budget is reset by
+        ``POST /runs``. Held here rather than only inside the agent because an injected agent
+        does not carry one.
     :param replicator: Pushes the durable state to the control plane, or ``None`` when this
         Runtime has no control plane and its state directory is all there is.
     :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
@@ -176,6 +180,7 @@ class ConversationRuntime:
     run_guard: RunGuard
     lifecycle: RuntimeLifecycle
     app_supervisor: AppSupervisor
+    launch_tool: LaunchTool
     replicator: StateReplicator | None
     saver: WorkspaceSaver | None = None
 
@@ -254,19 +259,27 @@ class ConversationRuntime:
                 context_store=context_store,
             )
 
+        # 监督器先于 agent 构造：模型的 launch 工具是进程内直调它，不走 HTTP、不碰凭据。
+        app_supervisor = AppSupervisor(resolved_workspace, bound.processes, ui_events)
+        launch_tool = LaunchTool(app_supervisor)
+
+        if not agent:
+            agent = create_agent(
+                resolved_workspace,
+                state_dir=resolved_state_dir,
+                launch_tool=launch_tool,
+            )
+
         return cls(
-            agent=agent or create_agent(resolved_workspace, state_dir=resolved_state_dir),
+            agent=agent,
             context_store=context_store,
             transcript=transcript,
             ui_events=ui_events,
             cursors=cursors,
             run_guard=run_guard,
             lifecycle=bound,
-            app_supervisor=AppSupervisor(
-                resolved_workspace,
-                bound.processes,
-                ui_events,
-            ),
+            app_supervisor=app_supervisor,
+            launch_tool=launch_tool,
             replicator=replicator,
             saver=saver,
         )

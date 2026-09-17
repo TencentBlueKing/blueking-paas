@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "paas_service",
     "svc_redis.vendor",
     "svc_redis.cluster",
+    "bkpaas_auth",
 ]
 
 MIDDLEWARE = [
@@ -109,6 +110,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "bkpaas_auth.middlewares.CookieLoginMiddleware",
     # Append middlewares from paas_service to make client auth works
     "paas_service.auth.middleware.VerifiedClientMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -283,6 +285,26 @@ PAAS_SERVICE_JWT_CLIENTS = [
 
 # 是否开启管理端功能
 ENABLE_ADMIN = False
+
+BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
+# 登录票据类型：bk_token / bk_ticket
+BKAUTH_BACKEND_TYPE = env("BKAUTH_BACKEND_TYPE", default="bk_token")
+
+# 未登录跳转页，不要填验票接口
+LOGIN_URL = env.str("BK_LOGIN_API_URL", default="http://paasee.blueking-fake.com/login")
+
+# 用 cookie 换用户信息。bk_ticket 配完整 check_token URL；未设置则拼 is_login
+# 不要同时设 BKAUTH_USER_INFO_APIGW_URL，bk_ticket 没有 APIGW 实现
+BKAUTH_USER_COOKIE_VERIFY_URL = env.str(
+    "BKAUTH_USER_COOKIE_VERIFY_URL",
+    default=LOGIN_URL.rstrip("/") + env.str("BK_LOGIN_VERIFY_API_PATH", default="/api/v3/is_login/"),
+)
+BKAUTH_USER_INFO_APIGW_URL = env.str("BKAUTH_USER_INFO_APIGW_URL", default="")
+
+AUTHENTICATION_BACKENDS = [
+    # 使用数据库表的 django.contrib.auth.User，登录成功后 get_or_create
+    "bkpaas_auth.backends.DjangoAuthUserCompatibleBackend",
+]
 
 # 跳转回应用首页的 url 模板
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"

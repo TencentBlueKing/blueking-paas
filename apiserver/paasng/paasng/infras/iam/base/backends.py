@@ -104,7 +104,7 @@ class BaseManagementBackend(ABC):
         self,
         app_code: str,
         app_name: str,
-        init_member: str | None = None,
+        init_members: List[str] | None = None,
         bk_space_id: str | None = None,
     ) -> int:
         """创建管理空间，若已存在则返回已有空间的 ID
@@ -112,7 +112,8 @@ class BaseManagementBackend(ABC):
         监控/日志权限的写入时机两个版本不同：V3 由后续的更新操作事后补齐（该权限是后来新增的
         逻辑，为让存量分级管理员平滑迁移，只能通过更新补充）；V4 在创建时一次性写入。
 
-        :param init_member: 初始管理员用户名，为空则该空间没有管理员
+        :param init_members: 初始管理员用户名列表。V3、V4 创建时都会写入；为空则该空间没有管理员。
+            V4 暂无空间成员增删接口，存量迁移必须一次把全部管理员带上
         :param bk_space_id: 蓝鲸监控空间在权限中心的资源 ID。V4 创建时用于一次性写入
             监控/日志权限范围；V3 忽略该参数，仍通过更新分级管理员事后补齐
         :returns: 管理空间 ID

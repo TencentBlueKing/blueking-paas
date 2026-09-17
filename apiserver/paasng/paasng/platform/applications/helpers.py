@@ -43,7 +43,7 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     space_id = backend.create_management_space(
         application.code,
         application.name,
-        creator,
+        init_members=[creator],
         bk_space_id=_resolve_v4_bk_space_id(application),
     )
     ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=space_id, tenant_id=tenant_id)

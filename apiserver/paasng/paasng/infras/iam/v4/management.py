@@ -59,7 +59,7 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         self,
         app_code: str,
         app_name: str,
-        init_member: str | None = None,
+        init_members: List[str] | None = None,
         bk_space_id: str | None = None,
     ) -> int:
         """创建应用管理空间，写入 paas/监控/日志 权限范围"""
@@ -72,7 +72,7 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
             system_id=system_id,
             name=utils.gen_grade_manager_name(app_code),
             description=utils.gen_grade_manager_desc(app_code),
-            init_member=init_member,
+            managers=self._resolve_managers(init_members),
             permission_scope=permission_scope,
             reuse_on_conflict=lambda: self.fetch_management_space(app_code),
         )
@@ -239,14 +239,14 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         system_id: str,
         name: str,
         description: str,
-        init_member: str | None,
+        managers: List[str],
         permission_scope: Sequence[Dict],
         reuse_on_conflict,
     ) -> int:
         data = {
             "name": name,
             "description": description,
-            "managers": self._resolve_managers(init_member),
+            "managers": managers,
             "permission_scope": list(permission_scope),
             "subject_scope": build_subject_scope(),
         }
@@ -295,10 +295,10 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         )
         return list((resp.get("data") or {}).get("managers") or [])
 
-    def _resolve_managers(self, init_member: str | None) -> List[str]:
+    def _resolve_managers(self, init_members: List[str] | None = None) -> List[str]:
         """V4 要求 managers 不能为空；无初始管理员时回退到本次写操作的操作人"""
-        if init_member:
-            return [init_member]
+        if init_members:
+            return list(init_members)
         return [self.operator]
 
     def _create_or_reuse_group(

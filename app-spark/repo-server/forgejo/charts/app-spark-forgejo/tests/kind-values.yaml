@@ -1,0 +1,19 @@
+# Disposable test environment only. Never use these credentials in production.
+image:
+  repository: app-spark-forgejo
+  tag: helm-test
+  pullPolicy: Never
+database:
+  host: mysql
+  password: forgejo-test-only
+auth:
+  adminPassword: forgejo-test-admin-only
+  serviceAccountPassword: forgejo-test-bot-only
+# 有意保留一个集群里解析不到的对外主机名：生产就是这个形状（ROOT_URL 走 Ingress，
+# 集群内调用方走 Service），顺带验证两者不一致时 Git over HTTP 仍然可用。
+ingress:
+  host: repo-server.helm-test.example.com
+persistence:
+  size: 1Gi
+  # 测试 namespace 删除时连带回收，不留 PVC。
+  retainOnDelete: false

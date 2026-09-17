@@ -64,6 +64,16 @@ def start_runtime(workspace: Path, tmp_path: Path) -> Iterator[StartRuntime]:
 
 
 @pytest.fixture
+def runtime(start_runtime: StartRuntime) -> LiveRuntime:
+    """A Runtime with no settings overrides, on the default state directory.
+
+    The plain case: one process, production settings. Scenarios that need their own settings, or
+    more than one process, call ``start_runtime`` themselves instead.
+    """
+    return start_runtime()
+
+
+@pytest.fixture
 def conversation_id() -> str:
     """The conversation every turn of one scenario belongs to."""
     conversation_id = str(uuid4())

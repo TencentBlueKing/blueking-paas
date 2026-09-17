@@ -37,6 +37,28 @@ def log_calling_model() -> FunctionModel:
     return FunctionModel(stream_function=stream)
 
 
+def named_tool_model(name: str, *, times: int = 1, reply: str = "done") -> FunctionModel:
+    """Call one no-argument tool times times, then answer with reply.
+
+    The count lives in the closure rather than being derived from the history, so a compaction
+    tier that blanks earlier turns cannot restart it.
+    """
+    issued = 0
+
+    async def stream(
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> AsyncIterator[str | DeltaToolCalls]:
+        nonlocal issued
+        if issued >= times:
+            yield reply
+            return
+        issued += 1
+        yield {0: DeltaToolCall(name=name, json_args="{}", tool_call_id=f"{name}-{issued}")}
+
+    return FunctionModel(stream_function=stream)
+
+
 def tool_calling_model(rounds: int) -> FunctionModel:
     """Build a model that calls probe rounds times and then answers with text.
 

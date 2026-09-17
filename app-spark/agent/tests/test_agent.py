@@ -53,7 +53,7 @@ def test_create_agent_scopes_tools_to_workspace(
     capabilities = agent.root_capability.capabilities
     filesystem = next(item for item in capabilities if isinstance(item, FileSystem))
     shell = next(item for item in capabilities if isinstance(item, Shell))
-    repo_context = next(item for item in capabilities if isinstance(item, RepoContext))
+    repo_contexts = [item for item in capabilities if isinstance(item, RepoContext)]
 
     assert Path(filesystem.root_dir) == tmp_path
     assert Path(shell.cwd) == tmp_path
@@ -63,12 +63,32 @@ def test_create_agent_scopes_tools_to_workspace(
     # silently hand every provider key to the model's shell commands.
     assert set(LLM_API_KEY_ENV_PATTERNS) <= set(shell.denied_env_patterns)
     assert "APP_SPARK_AGENT_*" in shell.denied_env_patterns
-    assert repo_context.workspace_dir == tmp_path
-    assert repo_context.nested_traversal is True
-    assert tuple(repo_context.filenames) == ("AGENTS.md",)
+    # Only the workspace is a repo. How to write the application is unconditional instruction
+    # text, not a second RepoContext pointed at this package's install directory.
+    assert len(repo_contexts) == 1
+    assert tuple(repo_contexts[0].filenames) == ("AGENTS.md",)
+    assert repo_contexts[0].workspace_dir == tmp_path
+    assert repo_contexts[0].nested_traversal is True
     assert any(isinstance(item, TieredCompaction) for item in capabilities)
     log_tool = function_tools(agent)["read_app_log"]
     assert log_tool.function_schema.json_schema["properties"] == {}
+
+
+def test_extra_tools_reach_the_model_alongside_the_owned_one(tmp_path: Path) -> None:
+    """A caller's tools are registered without displacing read_app_log.
+
+    Dropping launch_app would leave the model hunting for a tool the instructions name.
+    """
+
+    async def launch_app() -> str:
+        """Stand-in carrying the real one's name and empty signature."""
+        return "ok"
+
+    agent = create_agent(tmp_path, extra_tools=[launch_app])
+
+    tools = function_tools(agent)
+    assert set(tools) == {"read_app_log", "launch_app"}
+    assert tools["launch_app"].function_schema.json_schema["properties"] == {}
 
 
 def function_tools(agent: Agent[None, str]) -> dict[str, Any]:

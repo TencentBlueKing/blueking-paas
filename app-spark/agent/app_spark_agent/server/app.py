@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -75,12 +75,14 @@ def create_runtime_app(
             # Adopts the remote branch into the workspace before any run can touch a file.
             await runtime.saver.start()
         lifecycle_task = asyncio.create_task(runtime.lifecycle.watch())
+        app_watch_task = asyncio.create_task(runtime.app_supervisor.watch())
         try:
             yield
         finally:
+            app_watch_task.cancel()
             lifecycle_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await lifecycle_task
+            # 任一 watch 若因非 CancelledError 退出，串行 await 会跳过另一个任务和后面的 drain。
+            await asyncio.gather(app_watch_task, lifecycle_task, return_exceptions=True)
             try:
                 # The last attempt to hand over whatever the background tasks had not reached,
                 # and the only one: both the workspace disk and the state directory go away with

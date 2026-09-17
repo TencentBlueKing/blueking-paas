@@ -9,6 +9,11 @@
 ### 生产构建
 根目录执行`npm run build`
 
+### 容器与 Helm 部署
+
+使用 `Dockerfile.prod` 构建 Nginx 镜像，启动时替换环境变量占位符，同一镜像可跨环境部署。
+Chart 位于 [`charts/app-spark-ui`](charts/app-spark-ui/)。原有 `npm run build` + `paas-server` 的 PaaS 部署方式保持可用。
+
 ## 前端项目工程介绍
 
 ### bin 目录

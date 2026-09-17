@@ -9,6 +9,7 @@
     "reset:template": "node ./scripts/reset-template.js",
     "dev:agent": "node ./scripts/agent-server.mjs",
     "build": "bk-cli-service-webpack build",
+    "build:container": "node ./scripts/build-container.js",
     "server": "node ./paas-server/index.js",
     "lint:style": "stylelint **/*.{html,vue,css,sass,scss,less} --fix"
   },

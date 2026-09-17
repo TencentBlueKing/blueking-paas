@@ -70,7 +70,7 @@ def _list_allocated_instances() -> list[tuple[RedisInstance, int | None]]:
     rows = list(
         ServiceInstance.objects.filter(to_be_deleted=False)
         .select_related("plan")
-        .only("uuid", "config", "plan__config")
+        .only("uuid", "config", "plan_id", "plan__config")
     )
     app_infos = {
         str(config.instance_id): config.paas_app_info
@@ -206,7 +206,7 @@ def _fill_usage_rates(
 
     def _fetch(status: RedisInstanceStatus):
         client, pod_name = exporter_targets[status.instance.bk_instance]
-        return status, exporter.fetch_usage(status.instance, client, pod_name)
+        return status, exporter.fetch_usage(status.instance, client, pod_name, deadline)
 
     for status, usage in map_concurrently(_fetch, fetchable, deadline):
         status.exporter_up = usage is not None

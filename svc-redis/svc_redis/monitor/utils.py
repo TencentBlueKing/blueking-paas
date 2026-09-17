@@ -19,8 +19,8 @@
 
 import logging
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, wait
-from typing import Callable
 
 from django.conf import settings
 
@@ -71,3 +71,8 @@ def map_concurrently(func: Callable, items: list, deadline: float) -> list:
             # 单个任务失败不得影响整次采集
             logger.exception("unexpected error in concurrent collect task")
     return results
+
+
+def request_timeout(deadline: float) -> float:
+    """单次请求的超时: 取 min(单请求上限, 剩余预算), 下限 0.1 是因为 0 会被当成 "未设置" """
+    return min(settings.METRIC_COLLECT_REQUEST_TIMEOUT, max(remaining_time(deadline), 0.1))

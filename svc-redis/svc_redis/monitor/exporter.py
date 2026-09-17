@@ -23,11 +23,11 @@ redis-exporter 由 redis-operator 作为 sidecar 注入 (需 plan 开启 monitor
 import logging
 from dataclasses import dataclass
 
-from django.conf import settings
 from kubernetes.client.exceptions import ApiException
 from prometheus_client.parser import text_string_to_metric_families
 
 from svc_redis.monitor.entities import RedisInstance
+from svc_redis.monitor.utils import request_timeout
 from svc_redis.resources.base.base import EnhancedApiClient
 from svc_redis.vendor.redis_crd.constants import REDIS_EXPORTER_PORT
 
@@ -50,7 +50,9 @@ class ExporterUsage:
     maxclients: float | None
 
 
-def fetch_usage(instance: RedisInstance, client: EnhancedApiClient, pod_name: str) -> ExporterUsage | None:
+def fetch_usage(
+    instance: RedisInstance, client: EnhancedApiClient, pod_name: str, deadline: float
+) -> ExporterUsage | None:
     """读取实例 exporter 的用量; 取数失败时返回 None"""
     path = f"/api/v1/namespaces/{instance.namespace}/pods/{pod_name}:{REDIS_EXPORTER_PORT}/proxy/metrics"
     try:
@@ -60,7 +62,7 @@ def fetch_usage(instance: RedisInstance, client: EnhancedApiClient, pod_name: st
             auth_settings=["BearerToken"],
             response_type="str",
             _return_http_data_only=True,
-            _request_timeout=settings.METRIC_COLLECT_REQUEST_TIMEOUT,
+            _request_timeout=request_timeout(deadline),
         )
         return _parse_usage(text)
     except ApiException as e:

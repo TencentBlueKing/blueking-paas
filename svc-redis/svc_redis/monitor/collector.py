@@ -42,12 +42,17 @@ class RedisInstanceMetricsCollector:
             success = False
 
         yield from self._build_families(statuses)
-        yield from self._build_self_families(len(statuses), success)
+
+        instances_family, success_family = self._build_self_families()
+        instances_family.add_metric([], len(statuses))
+        success_family.add_metric([], int(success))
+        yield instances_family
+        yield success_family
 
     def describe(self):
         """prometheus_client 注册时会调用, 返回空指标以避免触发真实采集"""
         yield from self._build_families([])
-        yield from self._build_self_families(0, False)
+        yield from self._build_self_families()
 
     @staticmethod
     def _build_families(statuses: list[RedisInstanceStatus]) -> list[GaugeMetricFamily]:
@@ -84,15 +89,12 @@ class RedisInstanceMetricsCollector:
         return [alive, memory_usage, connection_usage, oom_killed, exporter_up]
 
     @staticmethod
-    def _build_self_families(instances: int, success: bool) -> list[GaugeMetricFamily]:
+    def _build_self_families() -> list[GaugeMetricFamily]:
         """采集链路的自监控: 本次采集覆盖了多少实例 / 是否成功"""
         instances_family = GaugeMetricFamily("redis_instance_collect_instances", "number of instances collected")
-        instances_family.add_metric([], instances)
-
         success_family = GaugeMetricFamily(
             "redis_instance_collect_success", "whether this collection finished without unexpected error"
         )
-        success_family.add_metric([], int(success))
 
         return [instances_family, success_family]
 

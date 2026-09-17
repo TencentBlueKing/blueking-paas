@@ -159,7 +159,7 @@ def pick_exporter_pod_name(pods: list) -> str:
 def _is_master(pod) -> bool:
     """Pod 是否为 RedisReplication 的 master"""
     labels = pod["metadata"]["labels"]
-    return labels is not None and labels["redis-role"] == "master"
+    return labels is not None and labels.get("redis-role") == "master"
 
 
 def _has_exporter_container(pod) -> bool:

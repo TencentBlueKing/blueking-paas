@@ -43,10 +43,10 @@ class BKIAMV3ManagementBackend(BaseManagementBackend):
         self,
         app_code: str,
         app_name: str,
-        init_member: str | None = None,
+        init_members: List[str] | None = None,
         bk_space_id: str | None = None,
     ) -> int:
-        return self._client.create_grade_managers(app_code, app_name, init_member)
+        return self._client.create_grade_managers(app_code, app_name, init_members)
 
     def fetch_management_space(self, app_code: str) -> int:
         return self._client.fetch_grade_manager(app_code)

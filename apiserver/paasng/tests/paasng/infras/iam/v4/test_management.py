@@ -56,7 +56,7 @@ class TestCreateManagementSpace:
         """创建时一次性写入三个系统的权限范围，且写操作携带操作人"""
         backend.call = mock.Mock(return_value={"data": {"id": 42}})  # type: ignore
 
-        assert backend.create_management_space("app-code", "App", "someone", bk_space_id="-100") == 42
+        assert backend.create_management_space("app-code", "App", ["someone"], bk_space_id="-100") == 42
 
         backend.call.assert_called_once()
         kwargs = backend.call.call_args.kwargs
@@ -72,10 +72,17 @@ class TestCreateManagementSpace:
         observability = [item for item in scopes if item["system"] in {BK_MONITOR_SYSTEM_ID, BK_LOG_SYSTEM_ID}]
         assert {item["id"] for item in observability} == {SPACE_OPERATOR_ROLE_ID}
 
+    def test_writes_all_init_members(self, backend):
+        backend.call = mock.Mock(return_value={"data": {"id": 1}})  # type: ignore
+
+        backend.create_management_space("app-code", "App", ["alice", "bob"])
+
+        assert backend.call.call_args.kwargs["data"]["managers"] == ["alice", "bob"]
+
     def test_without_bk_space_id_only_writes_paas(self, backend):
         backend.call = mock.Mock(return_value={"data": {"id": 1}})  # type: ignore
 
-        backend.create_management_space("app-code", "App", "someone")
+        backend.create_management_space("app-code", "App", ["someone"])
 
         systems = {item["system"] for item in backend.call.call_args.kwargs["data"]["permission_scope"]}
         assert systems == {"bk_paas3"}
@@ -92,7 +99,7 @@ class TestCreateManagementSpace:
             return_value=iter([{"id": 7, "name": existing_name}, {"id": 8, "name": "other"}])
         )
 
-        assert backend.create_management_space("app-code", "App", "someone") == 7
+        assert backend.create_management_space("app-code", "App", ["someone"]) == 7
 
 
 class TestCapabilityNotSupported:

@@ -25,6 +25,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_reuse_local_apm_data_without_remote_request():
+    """复用本地已有的 APM 名称和 token（包括历史名称），不请求监控接口。"""
     existing = ApmData.objects.create(
         bk_app_code="demo-app",
         env="stag",
@@ -42,6 +43,7 @@ def test_reuse_local_apm_data_without_remote_request():
 
 
 def test_get_or_create_remote_apm_once_and_persist_locally():
+    """首次申请按规则生成名称、传递租户和空间参数并落库，再次申请复用本地记录。"""
     client = MagicMock()
     client.get_or_create_apm.return_value = "remote-token"
 

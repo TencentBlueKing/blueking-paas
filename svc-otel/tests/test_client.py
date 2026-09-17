@@ -35,6 +35,7 @@ def client(backend):
 
 class TestGetOrCreateApm:
     def test_reuse_existing_application(self, client, backend):
+        """按应用名和空间查询已有 APM，直接返回 token，不调用创建接口。"""
         backend.detail_apm_application.return_value = {"result": True, "data": {"token": "existing-token"}}
 
         assert client.get_or_create_apm("bkapp_demo_stag", "bkpaas__demo") == "existing-token"
@@ -44,6 +45,7 @@ class TestGetOrCreateApm:
         backend.apm_create_application.assert_not_called()
 
     def test_create_when_application_does_not_exist(self, client, backend):
+        """查询提示应用不存在时，使用相同的应用名和空间创建 APM 并返回 token。"""
         backend.detail_apm_application.return_value = {"result": False, "message": "application does not exist"}
         backend.apm_create_application.return_value = {"result": True, "data": "created-token"}
 
@@ -54,6 +56,7 @@ class TestGetOrCreateApm:
         ]
 
     def test_missing_token_does_not_trigger_create(self, client, backend):
+        """查询成功但 token 为空时抛出异常，不尝试创建 APM。"""
         backend.detail_apm_application.return_value = {"result": True, "data": {"token": ""}}
 
         with pytest.raises(BkMonitorApiError, match="token is empty"):
@@ -62,6 +65,7 @@ class TestGetOrCreateApm:
         backend.apm_create_application.assert_not_called()
 
     def test_gateway_error_does_not_trigger_create(self, client, backend):
+        """查询发生网关异常时抛出网关服务错误，不尝试创建 APM。"""
         backend.detail_apm_application.side_effect = APIGatewayResponseError("gateway error")
 
         with pytest.raises(BkMonitorGatewayServiceError, match="Failed to get APM"):
@@ -77,6 +81,7 @@ class TestGetOrCreateApm:
         ],
     )
     def test_create_failure_is_propagated(self, client, backend, response, message):
+        """创建返回名称冲突或空 token 时抛出相应异常，不重复查询或创建。"""
         backend.detail_apm_application.return_value = {"result": False, "message": "application does not exist"}
         backend.apm_create_application.return_value = response
 

@@ -31,8 +31,10 @@
 
 import json
 import logging
+import time
 from collections import defaultdict
 
+from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 from paas_service.models import ServiceInstance, ServiceInstanceConfig
 
@@ -46,9 +48,18 @@ logger = logging.getLogger(__name__)
 # 实例 ID -> (该实例所在集群的 k8s client, exporter Pod 名)
 ExporterTargets = dict[str, tuple[EnhancedApiClient, str]]
 
+# 上次采集的结果与时间(monotonic 秒); 取结果的一方只读, 不得修改
+_cache: tuple[float, list[RedisInstanceStatus]] | None = None
+
 
 def collect_instance_statuses() -> list[RedisInstanceStatus]:
-    """实时采集全部已分配 (未回收) 实例的运行状态"""
+    """采集全部已分配 (未回收) 实例的运行状态; METRIC_COLLECT_CACHE_TTL 秒内复用上次结果"""
+    global _cache
+
+    started_at = time.monotonic()
+    if _cache is not None and started_at - _cache[0] < settings.METRIC_COLLECT_CACHE_TTL:
+        return _cache[1]
+
     # k8s 与 exporter 的查询共用这一份 deadline
     deadline = collect_deadline()
 
@@ -61,6 +72,8 @@ def collect_instance_statuses() -> list[RedisInstanceStatus]:
 
     exporter_targets = _fill_k8s_states(statuses, deadline)
     _fill_usage_rates(statuses, exporter_targets, memory_limits, deadline)
+
+    _cache = (started_at, statuses)
     return statuses
 
 

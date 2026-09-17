@@ -254,6 +254,8 @@ METRIC_COLLECT_REQUEST_TIMEOUT = env.int("METRIC_COLLECT_REQUEST_TIMEOUT", defau
 METRIC_COLLECT_DEADLINE = env.int("METRIC_COLLECT_DEADLINE", default=8)
 # OOMKilled 指标的时间窗(秒), 只有最近这段时间内发生过 OOM 才计为 1
 METRIC_OOM_KILLED_WINDOW = env.int("METRIC_OOM_KILLED_WINDOW", default=300)
+# 采集结果缓存时间(秒): 避免每次 scrape 都全量拉库 + 查 k8s.
+METRIC_COLLECT_CACHE_TTL = env.int("METRIC_COLLECT_CACHE_TTL", default=60)
 
 SENTRY_DSN = env.str("SENTRY_DSN", default="")
 

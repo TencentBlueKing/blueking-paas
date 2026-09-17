@@ -279,6 +279,13 @@ class PluginRelease(AuditedModel):
     gray_status = models.CharField(
         verbose_name="灰度发布状态", max_length=32, default=constants.GrayReleaseStatus.IN_GRAY
     )
+    release_process = models.CharField(
+        verbose_name="发布流程",
+        max_length=32,
+        choices=constants.ReleaseProcess.get_choices(),
+        default=constants.ReleaseProcess.DEFAULT,
+        help_text="正式发布流程类型，决定灰度/预发布/全量的步骤与审批人",
+    )
 
     creator = BkUserField()
     # 租户信息
@@ -430,7 +437,11 @@ class PluginReleaseStrategy(AuditedModel):
 
     def get_itsm_service_name(self, is_organization_changed: bool) -> str:
         """根据发布策略的设置获取对应的 ITSM 审批流程"""
-        if self.strategy == constants.ReleaseStrategy.FULL:
+        # 腾讯代码规范工具发布：灰度 / 预发布 / 全量均由平台管理员审批，不走 Leader 审批
+        if self.release.release_process == constants.ReleaseProcess.TENCENT_STANDARD:
+            return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
+
+        if self.strategy in [constants.ReleaseStrategy.FULL, constants.ReleaseStrategy.PRE_PROD]:
             return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
 
         # 灰度范围包括了组织且组织信息变更了，则需要上级审批

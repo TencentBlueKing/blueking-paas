@@ -54,7 +54,7 @@
       >
         <div slot="title">
           <i class="paasng-icon paasng-remind"></i>
-          {{ $t('灰度发布审批中，请耐心等待') }}
+          {{ approvalInProgressTips }}
           <bk-button
             size="small"
             text
@@ -118,6 +118,35 @@
             {{ $t('撤销提单') }}
           </bk-button>
           <!-- 扩大灰度范围时，之前已选的项目/组织范围不可删除，只能增加 -->
+          <template v-else-if="isTencentStandardProcess">
+            <bk-button
+              v-if="canApplyFullAfterPreProd"
+              :theme="'primary'"
+              type="submit"
+              :loading="isApplyLoading"
+              @click="handleApplyFull"
+            >
+              {{ $t('申请全量发布') }}
+            </bk-button>
+            <template v-else>
+              <bk-button
+                :theme="'primary'"
+                type="submit"
+                :loading="isApplyLoading"
+                @click="handleApplyPreProd"
+              >
+                {{ $t('申请预发布') }}
+              </bk-button>
+              <bk-button
+                :theme="'default'"
+                type="submit"
+                class="ml8"
+                @click="handleGrayscaleRange('gray')"
+              >
+                {{ $t('扩大灰度范围') }}
+              </bk-button>
+            </template>
+          </template>
           <template v-else>
             <bk-button
               :theme="'primary'"
@@ -157,7 +186,7 @@
           <p
             class="release-tips"
             v-bk-overflow-tips
-            v-dompurify-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
+            v-dompurify-html="applyReleaseTips"
           ></p>
         </template>
       </section>
@@ -201,7 +230,13 @@ export default {
       scheme: {
         source_versions: [],
       },
-      canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
+      canTerminateStatus: [
+        'gray_approval_in_progress',
+        'pre_prod_approval_in_progress',
+        'full_approval_in_progress',
+        'in_gray',
+        'in_pre_prod',
+      ],
       curStrategyType: '',
     };
   },
@@ -217,6 +252,29 @@ export default {
     },
     officialReleaseTips() {
       return this.$t('正式发布需由<em>平台管理员</em>进行审批。');
+    },
+    tencentStandardReleaseTips() {
+      return this.$t('腾讯代码规范工具发布需由<em>平台管理员</em>进行审批。');
+    },
+    applyReleaseTips() {
+      if (this.isTencentStandardProcess) return this.tencentStandardReleaseTips;
+      return this.curStrategyType === 'full' ? this.officialReleaseTips : this.canaryReleaseTips;
+    },
+    approvalInProgressTips() {
+      const status = this.versionData.gray_status;
+      if (status === 'pre_prod_approval_in_progress') {
+        return this.$t('预发布审批中，请耐心等待');
+      }
+      if (status === 'full_approval_in_progress') {
+        return this.$t('全量发布审批中，请耐心等待');
+      }
+      return this.$t('灰度发布审批中，请耐心等待');
+    },
+    isTencentStandardProcess() {
+      return this.versionData.release_process === 'tencent_standard';
+    },
+    canApplyFullAfterPreProd() {
+      return this.versionData.gray_status === 'in_pre_prod';
     },
     // 审批失败要用 release 的 status 来判断
     releaseStatus() {
@@ -338,6 +396,7 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+        throw e;
       } finally {
         this.isApplyLoading = false;
       }
@@ -428,6 +487,38 @@ export default {
 
     handleStrategyChange(type) {
       this.curStrategyType = type;
+    },
+
+    handleApplyPreProd() {
+      this.$bkInfo({
+        title: this.$t('确认申请预发布？'),
+        width: 480,
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.applyGrayRelease({ strategy: 'pre_prod' });
+            return true;
+          } catch (e) {
+            return false;
+          }
+        },
+      });
+    },
+
+    handleApplyFull() {
+      this.$bkInfo({
+        title: this.$t('确认申请全量发布？'),
+        width: 480,
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.applyGrayRelease({ strategy: 'full' });
+            return true;
+          } catch (e) {
+            return false;
+          }
+        },
+      });
     },
   },
 };

@@ -517,7 +517,7 @@ def register_iam_after_create_application(application: Application):
     creator = get_username_by_bkpaas_user_id(application.creator or application.owner)
 
     # 1. 创建分级管理员，并记录分级管理员 ID
-    grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
+    grade_manager_id = cli.create_grade_managers(application.code, application.name, [creator])
     ApplicationGradeManager.objects.create(
         app_code=application.code, grade_manager_id=grade_manager_id, tenant_id=tenant_id
     )

@@ -51,20 +51,20 @@ class BKIAMClient:
         self.tenant_id = tenant_id
         self.client: BKIAMGroup = self._client.api
 
-    def create_grade_managers(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
+    def create_grade_managers(self, app_code: str, app_name: str, init_members: Optional[List[str]] = None) -> int:
         """
         在权限中心上为应用注册分级管理员，若已存在，则返回
 
         :param app_code: 蓝鲸应用 ID
         :param app_name: 蓝鲸应用名称
-        :param init_member: 初始分级管理员用户名，如 admin，若为空值，则该用户组没有分级管理员
+        :param init_members: 初始分级管理员用户名列表，为空则该分级管理员没有成员
         :returns: 分级管理员 ID
         """
         data = {
             "system": settings.IAM_PAAS_V3_SYSTEM_ID,
             "name": utils.gen_grade_manager_name(app_code),
             "description": utils.gen_grade_manager_desc(app_code),
-            "members": [init_member] if init_member else [],
+            "members": list(init_members) if init_members else [],
             # 创建分级管理员时，仅授权开发者中心的权限
             "authorization_scopes": [
                 utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)

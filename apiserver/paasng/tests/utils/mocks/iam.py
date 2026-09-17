@@ -34,7 +34,7 @@ class StubBKIAMClient:
     def __init__(self, tenant_id: str):
         self.tenant_id = tenant_id
 
-    def create_grade_managers(self, app_code: str, app_name: str, creator: str) -> int:
+    def create_grade_managers(self, app_code: str, app_name: str, init_members: List[str] | None = None) -> int:
         """创建分级管理员"""
         latest_manager = ApplicationGradeManager.objects.all().last()
         grade_manager_id = latest_manager.id + 1 if latest_manager else 1

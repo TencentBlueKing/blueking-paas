@@ -54,7 +54,8 @@ class IAMBasicAuthentication(BasicAuthentication):
         # 取不到是平台故障而非凭证问题，刻意不捕获，让它变成 5xx 而不是 401
         token = get_system_token(get_init_tenant_id())
 
-        # 恒定时间比较。编码成字节是因为 compare_digest 对非 ASCII 的 str 会抛 TypeError
+        # 令牌是长期有效的共享密钥，本接口又无需凭证即可反复触发。!= 一遇到不同的字节就
+        # 返回，耗时会暴露已经猜对多少个字节；compare_digest 不论匹不匹配都走完整个长度
         if not hmac.compare_digest(password.encode(), token.encode()):
             raise AuthenticationFailed("password in basic_auth not equals to system token")
 

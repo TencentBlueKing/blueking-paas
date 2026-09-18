@@ -69,15 +69,20 @@ def _list_resources(kres_cls, client, namespaces: list[str], deadline: float) ->
         )
         return _list_by_namespace(kres, list(namespaces), deadline)
 
-    resources: dict[str, list] = {namespace: [] for namespace in namespaces}
+    # 按实际返回的 item 聚合: 没有 item 的命名空间保持缺席(缺失)
+    resources: dict[str, list] = {}
     for item in items:
-        if item.metadata.namespace in resources:
-            resources[item.metadata.namespace].append(item)
+        if item.metadata.namespace in namespaces:
+            resources.setdefault(item.metadata.namespace, []).append(item)
     return resources
 
 
 def _list_by_namespace(kres, namespaces: list[str], deadline: float) -> dict[str, list]:
-    """逐个命名空间并发查询; 查询失败的命名空间不出现在结果里"""
+    """逐个命名空间并发查询
+
+    查询失败的命名空间不出现在结果里(判为缺失)
+    查询成功但结果为空列表时保留空列表: 这是逐 namespace 确认过的 "确实没有资源", 判为不可用.
+    """
 
     def _list(namespace: str):
         try:

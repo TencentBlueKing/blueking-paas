@@ -116,6 +116,8 @@ def test_metrics_of_instance(monkeypatch):
         ("redis_instance_exporter_up", iid): 1.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
+        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
+        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
@@ -153,21 +155,26 @@ def test_metrics_missing_when_no_exporter(monkeypatch):
         ("redis_instance_oom_killed", iid): 0.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
+        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
+        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
 def test_exporter_up_zero_when_fetch_failed(monkeypatch):
-    """实例有 exporter 但取数失败: exporter_up=0, 使用率缺失"""
+    """实例有 exporter 但取数失败: exporter_up=0, 使用率缺失; 目标侧失败不影响采集器健康度"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {})
+    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
     monkeypatch.setattr(exporter, "fetch_usage", lambda *args: None)
 
     assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
         ("redis_instance_oom_killed", iid): 0.0,
         ("redis_instance_exporter_up", iid): 0.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
+        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
+        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
@@ -190,4 +197,57 @@ def test_single_cluster_failure_is_isolated(monkeypatch):
     instances._fill_k8s_states([ok, bad], time.monotonic() + 5)
 
     assert ok.alive is True
+    assert not ok.k8s_state_missing
     assert bad.alive is None  # 该集群失败, 字段保持缺失
+    assert bad.k8s_state_missing is True
+
+
+def test_collect_success_zero_when_k8s_unreadable(monkeypatch):
+    """k8s 状态读不到: 实例指标缺失, k8s_missing 反映规模, success=0"""
+    _instance()
+
+    def _raise(*args):
+        raise RuntimeError("cluster down")
+
+    monkeypatch.setattr(k8s, "list_statefulsets", _raise)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {})
+
+    assert _metrics() == {
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 0.0,
+        ("redis_instance_collect_k8s_state_missing_instances", ""): 1.0,
+        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
+    }
+
+
+def test_collect_success_zero_when_usage_fetch_abandoned(monkeypatch):
+    """exporter 任务异常被放弃: exporter_up=0 且计入 skipped, success=0"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+
+    def _raise(*args):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(exporter, "fetch_usage", _raise)
+
+    assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
+        ("redis_instance_oom_killed", iid): 0.0,
+        ("redis_instance_exporter_up", iid): 0.0,
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 0.0,
+        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
+        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 1.0,
+    }
+
+
+def test_usage_skipped_when_deadline_exceeded(monkeypatch):
+    """deadline 已过期: 有 exporter 的实例按取数失败处理, 并标记为采集器侧跳过"""
+    status = RedisInstanceStatus(RedisInstance("i-1", "c-1", "ns-a", "app", "mod", "stag"))
+    monkeypatch.setattr(exporter, "fetch_usage", lambda *args: pytest.fail("should not be called"))
+
+    instances._fill_usage_rates([status], {"i-1": (object(), "svc-redis-0")}, {}, deadline=time.monotonic() - 1)
+
+    assert status.exporter_up is False
+    assert status.usage_fetch_skipped is True

@@ -146,11 +146,11 @@ def _parse_memory_size(memory_size) -> int | None:
         return None
 
 
-def _fill_k8s_states(statuses: list[RedisInstanceStatus], deadline: float) -> ExporterTargets:
+def _fill_k8s_states(statuses: list[RedisInstanceStatus], deadline: float) -> ExporterTargets:  # noqa: C901
     """填充存活与 OOMKilled, 并找出可读取 exporter 指标的 Pod
 
     每个集群一个并发任务, 共用本次采集的 deadline; 单个集群失败只影响该集群的实例.
-    只有命名空间查询成功时才写回字段: 查不到同名 StatefulSet 判为不可用, 查询失败则保持缺失.
+    查询失败时字段保持缺失并标记 k8s_state_missing; 查不到同名 StatefulSet 判为不可用.
     """
     statuses_by_cluster: dict[str, list[RedisInstanceStatus]] = defaultdict(list)
     for status in statuses:
@@ -176,15 +176,24 @@ def _fill_k8s_states(statuses: list[RedisInstanceStatus], deadline: float) -> Ex
         return cluster_name, statefulsets, pods
 
     exporter_targets: ExporterTargets = {}
+    collected_clusters: set[str] = set()
     for resources in map_concurrently(_list_cluster_resources, list(clients), deadline):
         if resources is None:
             continue
 
         cluster_name, statefulsets, pods = resources
+        collected_clusters.add(cluster_name)
         for status in statuses_by_cluster[cluster_name]:
             pod_name = _fill_instance_state(status, statefulsets, pods)
             if pod_name:
                 exporter_targets[status.instance.bk_instance] = (clients[cluster_name], pod_name)
+
+    # 未被采集到的集群 (初始化失败 / 查询异常 / deadline 放弃): 其下实例标记状态缺失
+    for cluster_name, cluster_statuses in statuses_by_cluster.items():
+        if cluster_name in collected_clusters:
+            continue
+        for status in cluster_statuses:
+            status.k8s_state_missing = True
 
     return exporter_targets
 
@@ -194,8 +203,10 @@ def _fill_instance_state(status: RedisInstanceStatus, statefulsets: dict[str, li
     namespace = status.instance.namespace
     sts_list = statefulsets.get(namespace)
     pods_list = pods.get(namespace)
-    # 命名空间不在结果里 = 该命名空间查询失败, 字段保持缺失;
-    # 在结果里但查不到同名 StatefulSet = 资源确实不存在, 判为不可用
+    # 命名空间不在结果里 = 查询失败, 字段保持缺失并标记; 在结果里但查不到同名 StatefulSet = 资源不存在
+    if sts_list is None or pods_list is None:
+        status.k8s_state_missing = True
+
     status.alive = k8s.is_instance_ready(sts_list) if sts_list is not None else None
     if not pods_list:
         return ""
@@ -237,3 +248,4 @@ def _fill_usage_rates(
     for status in fetchable:
         if status.exporter_up is None:
             status.exporter_up = False
+            status.usage_fetch_skipped = True

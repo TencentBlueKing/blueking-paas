@@ -28,6 +28,7 @@ import os
 
 from blue_krill.monitoring.prometheus.django_utils import PrometheusExposeHandler
 from django.core.wsgi import get_wsgi_application
+from prometheus_client import REGISTRY
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "svc_redis.settings")
 
@@ -35,4 +36,4 @@ _django_app = get_wsgi_application()
 
 from svc_redis.monitor.collector import collector_registry
 
-application = PrometheusExposeHandler(_django_app, extra_registries=[collector_registry])
+application = PrometheusExposeHandler(_django_app, extra_registries=[REGISTRY, collector_registry])

@@ -43,11 +43,18 @@ class RedisInstanceMetricsCollector:
 
         yield from self._build_families(statuses)
 
-        instances_family, success_family = self._build_self_families()
+        k8s_missing = sum(1 for status in statuses if status.k8s_state_missing)
+        usage_skipped = sum(1 for status in statuses if status.usage_fetch_skipped)
+
+        success_family, instances_family, k8s_missing_family, usage_skipped_family = self._build_self_families()
         instances_family.add_metric([], len(statuses))
-        success_family.add_metric([], int(success))
+        success_family.add_metric([], int(success and not k8s_missing and not usage_skipped))
+        k8s_missing_family.add_metric([], k8s_missing)
+        usage_skipped_family.add_metric([], usage_skipped)
         yield instances_family
         yield success_family
+        yield k8s_missing_family
+        yield usage_skipped_family
 
     def describe(self):
         """prometheus_client 注册时会调用, 返回空指标以避免触发真实采集"""
@@ -90,13 +97,25 @@ class RedisInstanceMetricsCollector:
 
     @staticmethod
     def _build_self_families() -> list[GaugeMetricFamily]:
-        """采集链路的自监控: 本次采集覆盖了多少实例 / 是否成功"""
-        instances_family = GaugeMetricFamily("redis_instance_collect_instances", "number of instances collected")
+        """采集链路的自监控: 采集器是否健康 / 应采集实例数 / 两类降级的实例数"""
         success_family = GaugeMetricFamily(
-            "redis_instance_collect_success", "whether this collection finished without unexpected error"
+            "redis_instance_collect_success",
+            "whether this collection finished without collector-side failures, including unexpected errors, "
+            "unreadable k8s states and skipped exporter fetches; target-side failures are not counted",
+        )
+        instances_family = GaugeMetricFamily(
+            "redis_instance_collect_instances", "number of instances that should be collected"
+        )
+        k8s_missing_family = GaugeMetricFamily(
+            "redis_instance_collect_k8s_state_missing_instances",
+            "number of instances whose k8s states could not be read",
+        )
+        usage_skipped_family = GaugeMetricFamily(
+            "redis_instance_collect_usage_fetch_skipped_instances",
+            "number of instances whose exporter usage fetch was skipped (deadline exceeded or task failed)",
         )
 
-        return [instances_family, success_family]
+        return [success_family, instances_family, k8s_missing_family, usage_skipped_family]
 
 
 metrics_collector = RedisInstanceMetricsCollector()

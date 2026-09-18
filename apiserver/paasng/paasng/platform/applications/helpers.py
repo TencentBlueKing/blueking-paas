@@ -17,10 +17,8 @@
 
 import logging
 
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.base.constants import IAMVersion
 from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
-from paasng.infras.iam.exceptions import BKIAMApiError
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.infras.iam.shim import get_iam_version, get_management_backend
 from paasng.platform.applications.models import Application
@@ -44,7 +42,6 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
         application.code,
         application.name,
         init_members=[creator],
-        bk_space_id=_resolve_v4_bk_space_id(application),
     )
     ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=space_id, tenant_id=tenant_id)
 
@@ -72,22 +69,3 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     if get_iam_version() == IAMVersion.V3:
         backend.grant_user_group_policies(application.code, application.name, user_groups)
         backend.add_user_group_members(user_groups[0].id, [creator], NEVER_EXPIRE_DAYS, operator=creator)
-
-
-def _resolve_v4_bk_space_id(application: Application) -> str | None:
-    """V4 创建管理空间前先拿到监控空间资源 ID，以便一次写齐三系统权限范围
-
-    监控空间创建失败必须抛明确错误，不能静默跳过导致后续没有监控权限。
-    是否异步补 IAM 授权由监控 shim 按 IAM 版本自行决定。
-    """
-    if get_iam_version() != IAMVersion.V4:
-        return None
-
-    try:
-        space, _ = get_or_create_bk_monitor_space(application)
-    except Exception as exc:
-        raise BKIAMApiError(
-            f"创建应用 {application.code} 的管理空间前无法获取蓝鲸监控空间，"
-            "监控/日志权限范围无法写入，请确认监控服务可用"
-        ) from exc
-    return space.iam_resource_id

@@ -41,7 +41,7 @@ from paas_service.models import ServiceInstance, ServiceInstanceConfig
 from svc_redis.monitor import exporter, k8s
 from svc_redis.monitor.entities import RedisInstance, RedisInstanceStatus
 from svc_redis.monitor.utils import collect_deadline, map_concurrently
-from svc_redis.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
+from svc_redis.resources.base.base import EnhancedApiClient, clone_client, get_client_by_cluster_name
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +230,8 @@ def _fill_usage_rates(
 
     def _fetch(status: RedisInstanceStatus):
         client, pod_name = exporter_targets[status.instance.bk_instance]
-        return status, exporter.fetch_usage(status.instance, client, pod_name, deadline)
+        # 每个任务独享一个克隆出来的 client, 不与其他并发任务共享
+        return status, exporter.fetch_usage(status.instance, clone_client(client), pod_name, deadline)
 
     for status, usage in map_concurrently(_fetch, fetchable, deadline):
         status.exporter_up = usage is not None

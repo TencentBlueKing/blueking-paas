@@ -31,7 +31,8 @@ from django.conf import settings
 from django.utils.timezone import now
 
 from svc_redis.controller.manifests import generate_redis_name
-from svc_redis.monitor.utils import map_concurrently, remaining_time
+from svc_redis.monitor.utils import map_concurrently, request_timeout
+from svc_redis.resources.base.base import clone_client
 from svc_redis.resources.base.kres import KPod, KStatefulSet
 
 logger = logging.getLogger(__name__)
@@ -56,9 +57,8 @@ def list_pods(client, namespaces: list[str], deadline: float) -> dict[str, list]
 def _list_resources(kres_cls, client, namespaces: list[str], deadline: float) -> dict[str, list]:
     """按标签批量列出资源, 返回 命名空间 -> 资源列表"""
     namespaces = set(namespaces)
-    # 单次请求的超时不能超过整体 deadline; 下限 0.1 是因为 request_timeout=0 会被当成 "未设置"
-    request_timeout = min(settings.METRIC_COLLECT_REQUEST_TIMEOUT, max(remaining_time(deadline), 0.1))
-    kres = kres_cls(client, request_timeout=request_timeout)
+    # 单次请求的超时不能超过整体 deadline
+    kres = kres_cls(client, request_timeout=request_timeout(deadline))
 
     try:
         # 批量操作需通过 ops_batch 调用, BaseKresource 只代理了基于名称的操作
@@ -67,7 +67,7 @@ def _list_resources(kres_cls, client, namespaces: list[str], deadline: float) ->
         logger.warning(
             "unable to batch list %s by label, fallback to per-namespace list", kres_cls.kind, exc_info=True
         )
-        return _list_by_namespace(kres, list(namespaces), deadline)
+        return _list_by_namespace(kres_cls, client, list(namespaces), deadline)
 
     # 按实际返回的 item 聚合: 没有 item 的命名空间保持缺席(缺失)
     resources: dict[str, list] = {}
@@ -77,18 +77,21 @@ def _list_resources(kres_cls, client, namespaces: list[str], deadline: float) ->
     return resources
 
 
-def _list_by_namespace(kres, namespaces: list[str], deadline: float) -> dict[str, list]:
+def _list_by_namespace(kres_cls, client, namespaces: list[str], deadline: float) -> dict[str, list]:
     """逐个命名空间并发查询
 
     查询失败的命名空间不出现在结果里(判为缺失)
     查询成功但结果为空列表时保留空列表: 这是逐 namespace 确认过的 "确实没有资源", 判为不可用.
+
+    每个任务克隆 client 并重建 kres.
     """
 
     def _list(namespace: str):
         try:
+            kres = kres_cls(clone_client(client), request_timeout=request_timeout(deadline))
             return namespace, kres.ops_batch.list(labels=INSTANCE_LABELS, namespace=namespace).items
         except Exception:
-            logger.exception("unable to list %s in namespace<%s>", kres.kind, namespace)
+            logger.exception("unable to list %s in namespace<%s>", kres_cls.kind, namespace)
             return namespace, None
 
     return {

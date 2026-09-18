@@ -34,6 +34,7 @@
           <BaseInfo
             v-if="tabActive === 'planBaseInfo'"
             :data="displayInfoData"
+            :tenant-id="tenantId"
             v-bind="$attrs"
             @operate="isRefresh = true"
             @change-details="changeDetails"
@@ -90,10 +91,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },

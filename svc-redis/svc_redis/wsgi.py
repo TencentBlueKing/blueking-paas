@@ -33,6 +33,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "svc_redis.settings")
 
 _django_app = get_wsgi_application()
 
-from svc_redis.monitor import collector_registry
+from svc_redis.monitor.collector import collector_registry
 
 application = PrometheusExposeHandler(_django_app, extra_registries=[collector_registry])

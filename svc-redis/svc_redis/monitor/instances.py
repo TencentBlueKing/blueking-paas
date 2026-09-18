@@ -232,3 +232,8 @@ def _fill_usage_rates(
             status.memory_usage_rate = usage.used_memory / memory_limit
         if usage.connected_clients is not None and usage.maxclients:
             status.connection_usage_rate = usage.connected_clients / usage.maxclients
+
+    # 有 exporter 但结果未被回填, 按取数失败处理, 避免与 "没有 exporter" 混淆
+    for status in fetchable:
+        if status.exporter_up is None:
+            status.exporter_up = False

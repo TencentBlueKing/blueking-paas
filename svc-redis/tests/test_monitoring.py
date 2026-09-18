@@ -18,6 +18,7 @@
 """monitor 采集主流程的测试"""
 
 import json
+import time
 from datetime import timedelta
 
 import pytest
@@ -26,6 +27,7 @@ from django.utils.timezone import now
 from paas_service.models import Plan, Service, ServiceInstance, ServiceInstanceConfig
 from svc_redis.monitor import exporter, instances, k8s
 from svc_redis.monitor.collector import RedisInstanceMetricsCollector
+from svc_redis.monitor.entities import RedisInstance, RedisInstanceStatus
 from svc_redis.monitor.exporter import ExporterUsage
 
 pytestmark = pytest.mark.django_db
@@ -167,3 +169,25 @@ def test_exporter_up_zero_when_fetch_failed(monkeypatch):
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
     }
+
+
+def test_single_cluster_failure_is_isolated(monkeypatch):
+    """一个集群查询失败只影响该集群实例, 其它集群照常回填"""
+    ok = RedisInstanceStatus(RedisInstance("i-ok", "c-ok", "ns-a", "app", "mod", "stag"))
+    bad = RedisInstanceStatus(RedisInstance("i-bad", "c-bad", "ns-b", "app", "mod", "stag"))
+    monkeypatch.setattr(instances, "get_client_by_cluster_name", lambda name: object())
+    monkeypatch.setattr(k8s, "list_statefulsets", lambda client, ns, deadline: {"ns-a": [_statefulset()]})
+    monkeypatch.setattr(k8s, "list_pods", lambda client, ns, deadline: {"ns-a": [_pod()]})
+    # 让 c-bad 的命名空间查询失败
+    monkeypatch.setattr(
+        k8s,
+        "list_statefulsets",
+        lambda client, ns, deadline: (
+            (_ for _ in ()).throw(RuntimeError("down")) if "ns-b" in ns else {"ns-a": [_statefulset()]}
+        ),
+    )
+
+    instances._fill_k8s_states([ok, bad], time.monotonic() + 5)
+
+    assert ok.alive is True
+    assert bad.alive is None  # 该集群失败, 字段保持缺失

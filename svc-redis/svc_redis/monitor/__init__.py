@@ -21,7 +21,3 @@
 
 仅覆盖已分配, 未回收且套餐开启 monitor 的实例; 指标取不到时显式缺失, 不用 0 冒充健康.
 """
-
-from svc_redis.monitor.collector import collector_registry
-
-__all__ = ["collector_registry"]

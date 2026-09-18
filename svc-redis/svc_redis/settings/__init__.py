@@ -248,6 +248,15 @@ METRIC_CLIENT_TOKEN_DICT = {
     "monitoring": env.str("METRIC_CLIENT_TOKEN", "5c1e7f0e-7705-25b4-50e4-177856bed126"),
 }
 
+# 单个 k8s API / exporter 请求的超时(秒)
+METRIC_COLLECT_REQUEST_TIMEOUT = env.int("METRIC_COLLECT_REQUEST_TIMEOUT", default=3)
+# 整次采集共用的 deadline(秒): k8s / exporter 查询共用这一份预算, 超时未完成的任务被放弃(对应指标缺失)
+METRIC_COLLECT_DEADLINE = env.int("METRIC_COLLECT_DEADLINE", default=8)
+# OOMKilled 指标的时间窗(秒), 只有最近这段时间内发生过 OOM 才计为 1
+METRIC_OOM_KILLED_WINDOW = env.int("METRIC_OOM_KILLED_WINDOW", default=300)
+# 采集结果缓存时间(秒): 避免每次 scrape 都全量拉库 + 查 k8s.
+METRIC_COLLECT_CACHE_TTL = env.int("METRIC_COLLECT_CACHE_TTL", default=60)
+
 SENTRY_DSN = env.str("SENTRY_DSN", default="")
 
 # 接入 sentry

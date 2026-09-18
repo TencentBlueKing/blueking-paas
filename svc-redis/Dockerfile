@@ -29,6 +29,7 @@ ADD ./svc_redis ./svc_redis
 ADD ./utils ./utils
 ADD ./manage.py .
 ADD ./start.sh .
+ADD ./prometheus_data ./prometheus_data
 
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini

@@ -22,6 +22,11 @@ from typing import TYPE_CHECKING
 from django.db import models, transaction
 from django.db.models import F
 
+from app_spark_api.agent.conversations.entities import (
+    ConversationHistoryRecord,
+    UiEventRecord,
+    UserMessageHistoryRecord,
+)
 from app_spark_api.agent.conversations.state_models import (
     ConversationMessage,
     ConversationUiEvent,
@@ -41,6 +46,8 @@ __all__ = [
     "ConversationNumber",
     "ConversationQuerySet",
     "ConversationUiEvent",
+    "ConversationUserMessage",
+    "ConversationUserMessageManager",
 ]
 
 
@@ -115,7 +122,7 @@ class ConversationManager(models.Manager["Conversation"]):
             queryset = queryset.live()
         elif is_live is False:
             queryset = queryset.closed()
-        return queryset.order_by("-created", "-number")
+        return queryset.order_by("-created_at", "-number")
 
     def create_for_project(self, project: Project, *, owner: str | None) -> Conversation:
         """建一个会话，并给它分配所属 Project 内的下一个序号。
@@ -136,11 +143,36 @@ class ConversationManager(models.Manager["Conversation"]):
                 tenant_id=project.tenant_id,
             )
 
+    def read_history(self, conversation: Conversation) -> list[ConversationHistoryRecord]:
+        """读取完整展示历史，把用户输入插在创建时记录的 UI event 游标之后。
+
+        :param conversation: 已通过调用方权限检查的会话。
+        :return: 按对话顺序排列的历史实体，包含尚无事件的用户消息。
+        """
+        events = list(ConversationUiEvent.objects.filter(conversation=conversation).order_by("seq"))
+        messages = list(
+            ConversationUserMessage.objects.filter(conversation=conversation).order_by("after_seq", "created_at", "id")
+        )
+        records: list[ConversationHistoryRecord] = []
+        next_message = 0
+
+        # 两端时钟可能不同，事件回写也晚于输入落库，不能按时间戳混排。例如输入记录 after_seq=3，
+        # 就始终插在 seq=3 后、seq=4 前，即使后续回写的事件来自上一轮 run，也不移动这个位置。
+        # UI event 的 seq 是 Runtime 跨重启延续的顺序，旧会话没有用户消息也仍然可以完整读取。
+        for event in events:
+            while next_message < len(messages) and messages[next_message].after_seq < event.seq:
+                records.append(_history_record_for_user_message(messages[next_message]))
+                next_message += 1
+            records.append(_history_record_for_ui_event(event))
+        records.extend(_history_record_for_user_message(message) for message in messages[next_message:])
+        return records
+
 
 class Conversation(OwnerTimestampedModel):
     """一次由 Agent 驱动的 Project 开发会话，对应 Agent Runtime 里的一个 conversation。
 
-    这张表只回答「这个 Project 有哪些会话」。会话内容本身在旁边的三张状态表里——消息历史、
+    这张表只回答「这个 Project 有哪些会话」。用户输入保存在 ConversationUserMessage 中；
+    Runtime 的会话内容在旁边的状态表里——消息历史、
     AG-UI 事件、上下文都由 Runtime 后台回写过来（见
     :mod:`~app_spark_api.agent.conversations.state_models`）。Runtime 自己的状态目录是可丢弃的
     本地缓冲，不是权威副本。
@@ -186,9 +218,70 @@ class Conversation(OwnerTimestampedModel):
         constraints = [
             models.UniqueConstraint(fields=["project", "number"], name="uniq_conversation_number_per_project"),
         ]
-        indexes = [models.Index(fields=["project", "-created"])]
+        indexes = [models.Index(fields=["project", "-created_at"])]
 
     @property
     def is_live(self) -> bool:
         """这个会话是否还活着，也就是还能不能继续推进。"""
         return self.closed_at is None
+
+
+class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
+    """保存用户输入及创建时的 UI event 游标。"""
+
+    def create_for_conversation(self, conversation: Conversation, *, content: str) -> ConversationUserMessage:
+        """在同一个事务里固定用户输入的位置并保存原文。
+
+        :param conversation: 输入所属的会话。
+        :param content: 用户输入原文。
+        :return: 带租户、所有者和 after_seq 的消息；空事件频道使用游标 0。
+        """
+        with transaction.atomic():
+            # 与 state.append_records 使用同一把会话行锁，避免读游标和创建消息之间插入事件。
+            locked = Conversation.objects.select_for_update().get(pk=conversation.pk)
+            # 按联合索引的顺序取第一条即可得到最大 seq，无需取回完整事件内容。
+            after_seq = (
+                ConversationUiEvent.objects.filter(conversation=locked)
+                .order_by("-seq")
+                .values_list("seq", flat=True)
+                .first()
+            )
+            return self.create(
+                conversation=locked,
+                content=content,
+                after_seq=after_seq or 0,
+                tenant_id=locked.tenant_id,
+                owner=locked.owner,
+            )
+
+
+class ConversationUserMessage(OwnerTimestampedModel):
+    """用户提交的原始输入，独立于模型内部记录；Runtime 明确拒绝时删除。"""
+
+    conversation = models.ForeignKey(
+        Conversation,
+        verbose_name="所属会话",
+        on_delete=models.CASCADE,
+        related_name="user_messages",
+    )
+    # 发送前创建消息，接受后再补上 run_id；它只用于排查，不参与历史定位。
+    run_id = models.CharField(verbose_name="接受该输入的 run", max_length=64, null=True, default=None)
+    content = models.TextField(verbose_name="用户输入原文")
+    after_seq = models.PositiveIntegerField(verbose_name="插入位置之前的 UI event 序号", default=0)
+    tenant_id = tenant_id_field_factory(db_index=False)
+
+    objects = ConversationUserMessageManager()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["conversation", "run_id"], name="uniq_conversation_user_run"),
+        ]
+        indexes = [models.Index(fields=["conversation", "after_seq", "created_at", "id"])]
+
+
+def _history_record_for_user_message(message: ConversationUserMessage) -> ConversationHistoryRecord:
+    return ConversationHistoryRecord(user_message=UserMessageHistoryRecord.model_validate(message))
+
+
+def _history_record_for_ui_event(event: ConversationUiEvent) -> ConversationHistoryRecord:
+    return ConversationHistoryRecord(ui_event=UiEventRecord.model_validate(event.as_record()))

@@ -8,19 +8,12 @@
           class="session-tag"
           :class="{ 'is-live': isLive }"
         >
-          会话 #{{ conversationNumber }} · {{ isLive ? '进行中' : '已结束' }}
+          会话 #{{ conversationNumber }} · {{ isLive ? '进行中' : '已归档' }}
         </span>
       </div>
       <div class="interaction-panel__actions">
-        <span
-          class="icon-btn"
-          :class="{ 'is-disabled': busy }"
-          v-bk-tooltips="{ content: '新建会话', placement: 'top', disabled: busy }"
-          @click="handleCreate"
-        >
-          <Plus class="icon-btn__icon" />
-        </span>
-        <ConversationHistory :disabled="busy" :current-number="conversationNumber" />
+        <NewConversationButton :disabled="busy" />
+        <ConversationArchive :disabled="busy" :current-number="conversationNumber" />
       </div>
     </header>
     <div
@@ -28,12 +21,22 @@
       class="interaction-panel__body"
       @scroll="handleScroll"
     >
-      <p
-        v-if="!isLive && conversationNumber"
+      <div
+        v-if="viewingArchive"
         class="interaction-panel__note"
       >
-        这是已结束的会话，只能查看。新建会话后可以继续对话。
-      </p>
+        <p class="interaction-panel__note-text">
+          这是已归档的会话，只能查看，不能在其中继续对话。
+        </p>
+        <span
+          v-if="canReturnToLive"
+          class="interaction-panel__note-link"
+          :class="{ 'is-disabled': busy }"
+          @click="handleReturn"
+        >
+          返回当前会话
+        </span>
+      </div>
       <ChatMessageList :messages="messages" :status="status" />
     </div>
     <ChatComposer
@@ -50,14 +53,22 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { Message } from 'bkui-vue';
-import { Plus } from 'bkui-vue/lib/icon';
 import ChatComposer from './ChatComposer.vue';
 import ChatMessageList from './ChatMessageList.vue';
-import ConversationHistory from './ConversationHistory.vue';
+import ConversationArchive from './ConversationArchive.vue';
+import NewConversationButton from './NewConversationButton.vue';
 import { useProjectStore } from '@/store/project';
 
 const projectStore = useProjectStore();
-const { messages, status, busy, conversationNumber, isLive } = storeToRefs(projectStore);
+const {
+  messages,
+  status,
+  busy,
+  conversationNumber,
+  isLive,
+  viewingArchive,
+  canReturnToLive,
+} = storeToRefs(projectStore);
 const { sendMessage } = projectStore;
 const scrollerRef = ref<HTMLElement>();
 const pinnedToBottom = ref(true);
@@ -68,9 +79,9 @@ const composerDisabled = computed(() => (
 
 const composerHint = computed(() => {
   if (!conversationNumber.value) return '正在准备会话…';
-  if (!isLive.value) return '历史会话只能查看';
+  if (!isLive.value) return '归档会话只能查看，不能发送消息';
   if (busy.value) return '正在回复，完成后可以继续';
-  return 'Enter 发送，Shift + Enter 换行';
+  return 'Shift + Enter 换行';
 });
 
 const handleScroll = () => {
@@ -86,16 +97,15 @@ watch(messages, async () => {
   }
 }, { deep: true });
 
-const handleCreate = async () => {
+const handleReturn = async () => {
   if (busy.value) return;
   try {
-    await projectStore.createNewConversation();
-    // Message({ theme: 'success', message: '已新建会话' });
-  } catch {
-    // Message({
-    //   theme: 'error',
-    //   message: '新建会话失败',
-    // });
+    await projectStore.returnToLiveConversation();
+  } catch (error) {
+    Message({
+      theme: 'error',
+      message: error instanceof Error ? error.message : '返回当前会话失败',
+    });
   }
 };
 </script>
@@ -157,31 +167,6 @@ const handleCreate = async () => {
   gap: 2px;
 }
 
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: var(--muted, #5c6573);
-  cursor: pointer;
-  border-radius: 8px;
-}
-
-.icon-btn:hover:not(.is-disabled) {
-  color: var(--ink, #12141a);
-  background: #e8ecf3;
-}
-
-.icon-btn.is-disabled {
-  color: #c4c6cc;
-  cursor: not-allowed;
-}
-
-.icon-btn__icon {
-  font-size: 16px;
-}
-
 .interaction-panel__body {
   flex: 1;
   min-height: 0;
@@ -196,5 +181,25 @@ const handleCreate = async () => {
   line-height: 1.5;
   background: var(--accent-soft, #edf1ff);
   border-radius: 12px;
+}
+
+.interaction-panel__note-text {
+  margin: 0;
+}
+
+.interaction-panel__note-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--accent, #3d6dff);
+  cursor: pointer;
+}
+
+.interaction-panel__note-link:hover:not(.is-disabled) {
+  text-decoration: underline;
+}
+
+.interaction-panel__note-link.is-disabled {
+  color: var(--faint, #88919e);
+  cursor: not-allowed;
 }
 </style>

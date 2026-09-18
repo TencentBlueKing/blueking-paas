@@ -238,10 +238,10 @@ async def test_the_list_is_newest_first(aapi_client, bk_user):
     tenant_id = get_tenant(bk_user).id
     for index, project_id in enumerate(["oldest", "middle", "newest"]):
         await make_project(project_id=project_id, name=project_id.title(), owner=bk_user, tenant_id=tenant_id)
-        # `created` is auto_now_add, so three rows built back to back can share a timestamp.
+        # `created_at` is auto_now_add, so three rows built back to back can share a timestamp.
         # Written explicitly here because this test is about the order, not about how fast the
         # loop ran.
-        await Project.objects.filter(pk=project_id).aupdate(created=datetime(2026, 1, index + 1, tzinfo=UTC))
+        await Project.objects.filter(pk=project_id).aupdate(created_at=datetime(2026, 1, index + 1, tzinfo=UTC))
 
     body = (await aapi_client.get(PROJECTS_URL)).json()
 

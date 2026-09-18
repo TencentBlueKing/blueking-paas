@@ -85,6 +85,7 @@ def _metrics() -> dict[tuple[str, str], float]:
 def _cluster_client(monkeypatch):
     """测试环境里没有真集群, 换成占位对象"""
     monkeypatch.setattr(instances, "get_client_by_cluster_name", lambda name: object())
+    monkeypatch.setattr(instances, "clone_client", lambda client: client)
 
 
 def test_metrics_of_instance(monkeypatch):

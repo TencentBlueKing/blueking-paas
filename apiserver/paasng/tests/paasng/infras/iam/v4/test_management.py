@@ -26,8 +26,6 @@ from paasng.infras.iam import utils
 from paasng.infras.iam.base.constants import V4_MAX_PERMISSION_DAYS
 from paasng.infras.iam.constants import (
     APP_DEFAULT_ROLES,
-    BK_LOG_SYSTEM_ID,
-    BK_MONITOR_SYSTEM_ID,
     NEVER_EXPIRE_DAYS,
     ONE_DAY_SECONDS,
 )
@@ -37,7 +35,6 @@ from paasng.infras.iam.exceptions import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction, AppRole
 from paasng.infras.iam.v4.management import BKIAMV4ManagementBackend
-from paasng.infras.iam.v4.spaces import SPACE_OPERATOR_ROLE_ID
 from paasng.platform.applications.constants import ApplicationRole
 
 
@@ -52,8 +49,8 @@ def _group_name(app_code: str, role: ApplicationRole) -> str:
 
 
 class TestCreateManagementSpace:
-    def test_writes_three_systems_and_operator(self, backend):
-        """创建时一次性写入三个系统的权限范围，且写操作携带操作人"""
+    def test_writes_paas_scope_and_skips_observability_roles(self, backend, caplog):
+        """create_space 只写本系统角色；监控/日志的 space_operator 不在 bk_paas3，写入会被 400 拒绝"""
         backend.call = mock.Mock(return_value={"data": {"id": 42}})  # type: ignore
 
         assert backend.create_management_space("app-code", "App", ["someone"], bk_space_id="-100") == 42
@@ -67,10 +64,9 @@ class TestCreateManagementSpace:
         assert kwargs["data"]["name"] == utils.gen_grade_manager_name("app-code")
 
         scopes = kwargs["data"]["permission_scope"]
-        systems = {item["system"] for item in scopes}
-        assert systems == {"bk_paas3", BK_MONITOR_SYSTEM_ID, BK_LOG_SYSTEM_ID}
-        observability = [item for item in scopes if item["system"] in {BK_MONITOR_SYSTEM_ID, BK_LOG_SYSTEM_ID}]
-        assert {item["id"] for item in observability} == {SPACE_OPERATOR_ROLE_ID}
+        assert {item["system"] for item in scopes} == {"bk_paas3"}
+        assert {item["id"] for item in scopes} == {str(role) for role in AppRole}
+        assert "skip monitor/log permission scope" in caplog.text
 
     def test_writes_all_init_members(self, backend):
         backend.call = mock.Mock(return_value={"data": {"id": 1}})  # type: ignore
@@ -142,26 +138,6 @@ class TestCapabilityNotSupported:
         getattr(backend, method)(*args)
 
         assert "does not support" in caplog.text
-
-
-class TestResolveV4BkSpaceId:
-    def test_v3_skips_monitor_space(self, settings):
-        from paasng.platform.applications.helpers import _resolve_v4_bk_space_id
-
-        settings.BK_IAM_VERSION = "v3"
-        assert _resolve_v4_bk_space_id(mock.Mock(code="app-code")) is None
-
-    def test_v4_returns_monitor_space_id(self, settings):
-        from paasng.platform.applications.helpers import _resolve_v4_bk_space_id
-
-        settings.BK_IAM_VERSION = "v4"
-        space = mock.Mock(iam_resource_id="-100")
-        with mock.patch(
-            "paasng.platform.applications.helpers.get_or_create_bk_monitor_space",
-            return_value=(space, True),
-        ) as mocked:
-            assert _resolve_v4_bk_space_id(mock.Mock(code="app-code")) == "-100"
-            mocked.assert_called_once()
 
 
 class TestCreateBuiltinUserGroups:

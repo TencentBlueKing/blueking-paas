@@ -97,7 +97,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "paas_service",
-    "svc_redis.vendor",
+    "svc_redis.vendor.apps.VendorConfig",
     "svc_redis.cluster",
     "bkpaas_auth",
 ]

@@ -55,7 +55,8 @@ export DJANGO_SETTINGS_MODULE="svc_redis.settings"
 # bk_token：统一登录；bk_ticket：内部登录
 export BKAUTH_BACKEND_TYPE="bk_token"
 export BKAUTH_DEFAULT_PROVIDER_TYPE="BK"
-export BK_LOGIN_API_URL="http://bk-login.example.com"
+# 需带 /login；同时作为 LOGIN_URL 和验票 URL 前缀
+export BK_LOGIN_API_URL="http://bk-login.example.com/login"
 # 完整验票 URL；bk_ticket 场景直接配 get_info / check_token
 # export BKAUTH_USER_COOKIE_VERIFY_URL="http://login.example.com/user/get_info/"
 # 未设置时回退为 {BK_LOGIN_API_URL}/api/v3/is_login/

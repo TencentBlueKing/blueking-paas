@@ -68,7 +68,7 @@ env:
   # 蓝鲸登录（管理端页面）。平台 JWT 调增强服务不依赖以下配置
   # BKAUTH_BACKEND_TYPE: "bk_token"  # 或 bk_ticket
   # BKAUTH_DEFAULT_PROVIDER_TYPE: "BK"  # bk_ticket 用 RTX
-  # BK_LOGIN_API_URL: "http://bk-login.example.com"
+  # BK_LOGIN_API_URL: "http://bk-login.example.com/login"  # 需带 /login，用作 LOGIN_URL 与验票 URL 前缀
   # BKAUTH_USER_COOKIE_VERIFY_URL: "http://login.example.com/user/get_info/"
 
 envFrom: []

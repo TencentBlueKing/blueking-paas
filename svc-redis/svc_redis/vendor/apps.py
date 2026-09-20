@@ -20,6 +20,7 @@ from django.apps import AppConfig
 
 class VendorConfig(AppConfig):
     name = "svc_redis.vendor"
+    default = True
 
     def ready(self):
         from bkpaas_auth.monkey import patch_middleware_get_user

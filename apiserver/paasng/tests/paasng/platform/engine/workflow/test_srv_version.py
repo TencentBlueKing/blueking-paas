@@ -20,9 +20,7 @@ import types
 from unittest import mock
 
 import pytest
-from django.core.cache import cache
 
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.engine.exceptions import ServerVersionCheckFailed
 from paasng.platform.engine.workflow.srv_version import ServerVersionChecker, parse_xyz_version
 from tests.utils.helpers import override_settings
@@ -30,16 +28,6 @@ from tests.utils.helpers import override_settings
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 CHECKER_LOGGER = "paasng.platform.engine.workflow.srv_version"
-
-
-@pytest.fixture()
-def _clear_operator_version_cache(bk_module):
-    """A fixture used to clear cache key in OperatorVersionCondition"""
-    cluster_name = EnvClusterService(bk_module.get_envs("stag")).get_cluster_name()
-    key = f"helm_release:{cluster_name}:operator_version"
-    cache.delete(key)
-    yield
-    cache.delete(key)
 
 
 def _patch_helm_release(operator_version: str):
@@ -76,7 +64,7 @@ class TestParseXYZVersion:
         assert parse_xyz_version(version) == expected
 
 
-@pytest.mark.usefixtures("_clear_operator_version_cache", "bk_cnative_app")
+@pytest.mark.usefixtures("bk_cnative_app")
 class TestServerVersionChecker:
     """测试校验平台服务版本兼容性"""
 

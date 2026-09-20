@@ -68,6 +68,12 @@ class TestParseXYZVersion:
 class TestServerVersionChecker:
     """测试校验平台服务版本兼容性"""
 
+    @pytest.fixture(autouse=True)
+    def _isolate_version_cache(self):
+        with mock.patch("paasng.platform.engine.workflow.srv_version.cache") as mocked_cache:
+            mocked_cache.get.return_value = None
+            yield mocked_cache
+
     @pytest.mark.parametrize(
         ("apiserver_version", "operator_version", "should_raise_exception", "expect_warning"),
         [

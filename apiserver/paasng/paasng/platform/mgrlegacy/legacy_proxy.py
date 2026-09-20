@@ -122,6 +122,8 @@ class LegacyAppProxy:
 
     def get_secret_key(self):
         """获取应用的 bk_app_secret，所有版本都需要"""
+        if not hasattr(self.legacy_app, "auth_token"):
+            raise ValueError(f"legacy app({self.legacy_app.code}) has no auth_token field")
         return self.legacy_app.auth_token
 
     def get_unified_password(self):

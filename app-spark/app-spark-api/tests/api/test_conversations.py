@@ -258,11 +258,29 @@ async def read_ui_events(client: AsyncClient, number: int, since: int = 0) -> di
     return json.loads(response.content)
 
 
-async def read_history(client: AsyncClient, number: int) -> list[dict[str, Any]]:
-    """Read the complete display history, including the user's own inputs."""
-    response = await client.get(f"/api/projects/{PROJECT_ID}/conversations/{number}/history/")
+async def read_history_page(client: AsyncClient, number: int, cursor: str | None = None) -> dict[str, Any]:
+    """Read one page of a conversation's display history, newest page when no cursor is given."""
+    query = {"cursor": cursor} if cursor else {}
+    response = await client.get(f"/api/projects/{PROJECT_ID}/conversations/{number}/history/", data=query)
     assert response.status_code == HTTPStatus.OK, response.content
-    return response.json()["records"]
+    return json.loads(response.content)
+
+
+async def read_history(client: AsyncClient, number: int) -> list[dict[str, Any]]:
+    """Page back through the whole display history and return it in conversation order.
+
+    The endpoint hands out the *newest* page first, so the pages come back in reverse and are
+    stitched by prepending. Tests assert about whole conversations, which is a different thing
+    from what any one page holds; keeping the walk here is what keeps them readable.
+    """
+    records: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        page = await read_history_page(client, number, cursor)
+        records = page["records"] + records
+        cursor = page["next_cursor"]
+        if cursor is None:
+            return records
 
 
 async def wait_for_replication(

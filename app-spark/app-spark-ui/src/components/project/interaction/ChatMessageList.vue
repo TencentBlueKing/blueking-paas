@@ -2,10 +2,10 @@
   <div class="chat-message-list">
     <div v-if="isFresh" class="chat-empty">
       <h3>描述你的需求</h3>
-      <ul>
-      <p>- “开发一个番茄钟小工具，使用活泼的配色风格。”</p>
-      <p>- “开发一个抽奖小工具，可录入抽奖名单，奖品固定为一台 Switch 2。”</p>
-      <p>- ……</p>
+      <ul class="chat-empty__samples">
+        <li>“开发一个番茄钟小工具，使用活泼的配色风格。”</li>
+        <li>“开发一个抽奖小工具，可录入抽奖名单，奖品固定为一台 Switch 2。”</li>
+        <li>……</li>
       </ul>
     </div>
 
@@ -116,8 +116,12 @@ const pendingText = (message: ChatMessage) => {
   letter-spacing: -0.02em;
 }
 
-.chat-empty p {
+.chat-empty__samples {
   margin: 0;
+  padding-left: 1.2em;
+}
+
+.chat-empty__samples li {
   color: #8b93a0;
   font-size: 13px;
   line-height: 1.6;

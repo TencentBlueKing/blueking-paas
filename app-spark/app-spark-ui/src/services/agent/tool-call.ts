@@ -38,11 +38,30 @@ const TOOL_SPECS: Record<string, { label: string; key?: string }> = {
 /** 一行能显示的长度，超了就截断——这里是摘要，不是日志。 */
 const DETAIL_LIMIT = 72;
 
-/** 通用模式下单个参数值的长度，几个参数拼起来还得塞进 `DETAIL_LIMIT`。 */
+/**
+ * 通用模式下单个参数值的长度，几个参数拼起来还得塞进 `DETAIL_LIMIT`。
+ * 超过这个长度的值不再显示内容本身，见 `describeValue`。
+ */
 const VALUE_LIMIT = 32;
 
+/** 压平时换行显示成这个记号，而不是悄悄变成一个空格，见 `flatten`。 */
+const LINE_BREAK_MARK = ' ↵ ';
+
+/**
+ * 把一段可能有多行的文本压成一行。
+ *
+ * 换行不能直接当成空白抹掉：`run_command` 的参数常常是一段多行 shell，`cd build\nmake` 抹平成
+ * `cd build make` 之后，摆在 `<code>` 里看着像一条能原样粘回终端的命令，而那根本不是跑过的那
+ * 条。换成一个看得见的记号，读的人至少知道这里断过行。
+ */
+const flatten = (text: string): string => text
+  .trim()
+  // 先吃掉带换行的那些空白（连同换行两侧的缩进），再把剩下的横向空白并成单空格
+  .replace(/\s*[\r\n]\s*/g, LINE_BREAK_MARK)
+  .replace(/\s+/g, ' ');
+
 export const clip = (text: string, limit: number): string => {
-  const flat = text.replace(/\s+/g, ' ').trim();
+  const flat = flatten(text);
   return flat.length > limit ? `${flat.slice(0, limit)}…` : flat;
 };
 
@@ -83,12 +102,25 @@ const formatValue = (value: unknown): string => (
   typeof value === 'string' ? value : String(JSON.stringify(value))
 );
 
-/** 表外工具的裸展示：把参数摊成 `key=value`，每个值都掐短。 */
+/**
+ * 通用模式下单个值怎么显示：短的原样给，长的只报体量、不给内容。
+ *
+ * 不截前 `VALUE_LIMIT` 个字符，是因为表外工具压根没人替它挑过「哪个字段值得看」。agent 侧随时
+ * 会加新工具，一旦加了个带 `content`、`patch` 这类大字段的工具又忘了回这里补 `TOOL_SPECS`，截
+ * 断就等于把文件开头（可能是密钥，可能是用户数据）原样贴进对话流——而那几十个字符本来也说明
+ * 不了什么。报个「<1024 字符>」既不泄内容，也足够让人看出这里该去补一条工具声明了。
+ */
+const describeValue = (value: unknown): string => {
+  const flat = flatten(formatValue(value));
+  return flat.length > VALUE_LIMIT ? `<${flat.length} 字符>` : flat;
+};
+
+/** 表外工具的裸展示：把参数摊成 `key=value`，每个值交给 `describeValue` 掐短。 */
 const genericDetail = (argsText: string): string => {
   const args = parseArgs(argsText);
   if (!args) return '';
   return Object.entries(args)
-    .map(([key, value]) => `${key}=${clip(formatValue(value), VALUE_LIMIT)}`)
+    .map(([key, value]) => `${key}=${describeValue(value)}`)
     .join('  ');
 };
 

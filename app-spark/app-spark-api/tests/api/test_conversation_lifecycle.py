@@ -29,10 +29,16 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import pytest
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from app_spark_api.agent.conversations import services
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations import services, state
+from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH
+from app_spark_api.agent.conversations.history import DEFAULT_PAGE_RUNS, MAX_PAGE_RUNS
+from app_spark_api.agent.conversations.models import (
+    Conversation,
+    ConversationUserMessage,
+)
 from app_spark_api.agent.runtime import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
@@ -400,3 +406,157 @@ async def test_ending_a_conversation_that_does_not_exist_is_not_found(aapi_clien
 async def test_an_anonymous_caller_can_neither_list_nor_end(aanonymous_api_client, conversation):
     assert (await aanonymous_api_client.get(CONVERSATIONS_URL)).status_code == HTTPStatus.UNAUTHORIZED
     assert (await aanonymous_api_client.post(close_url(conversation.number))).status_code == (HTTPStatus.UNAUTHORIZED)
+
+
+# --- what a turn may carry ---------------------------------------------------------------
+
+
+async def test_an_oversized_turn_is_refused_before_it_reaches_the_database(aapi_client, conversation):
+    """The body limit is 64MB for the Runtime's sake, so the turn needs a limit of its own.
+
+    Without it a caller could park an arbitrarily large blob in ``ConversationUserMessage``,
+    which is kept for the life of the conversation and read back whole on every history load.
+    Also proves the check lands before the Runtime is spawned: there is no agent here, so
+    anything that got past validation would fail differently.
+    """
+    response = await aapi_client.post(
+        f"{CONVERSATIONS_URL}{conversation.number}/runs/",
+        data={"content": "x" * (MAX_RUN_CONTENT_LENGTH + 1)},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert not await ConversationUserMessage.objects.filter(conversation=conversation).aexists()
+
+
+async def test_an_empty_turn_is_refused(aapi_client, conversation):
+    response = await aapi_client.post(
+        f"{CONVERSATIONS_URL}{conversation.number}/runs/",
+        data={"content": ""},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+# --- paging back through the history ------------------------------------------------------
+#
+# The paging itself is pinned down in `tests/agent/conversations/test_history.py`; what is left
+# for the endpoint is the contract a client actually codes against -- which end it starts from,
+# what it hands back to keep going, and how a cursor it made up is answered.
+
+
+async def seed_turns(conversation: Conversation, *turn_sizes: int) -> None:
+    """Leave behind what completed turns leave behind, without an agent to produce them.
+
+    The input goes in before its events, which is the real order and the only one that gives
+    each input the ``after_seq`` the history reader positions it by.
+
+    :param conversation: Conversation to advance.
+    :param turn_sizes: One entry per turn, saying how many AG-UI events it produced.
+    """
+
+    def seed() -> None:
+        for index, events in enumerate(turn_sizes, start=1):
+            ConversationUserMessage.objects.create_for_conversation(conversation, content=f"turn-{index}")
+            start = state.last_seq(conversation.id, state.UI_EVENT_CHANNEL) + 1
+            state.append_records(
+                conversation.id,
+                state.UI_EVENT_CHANNEL,
+                [
+                    {
+                        "seq": seq,
+                        "run_id": f"run-{index}",
+                        "timestamp": "2026-01-01T00:00:00+00:00",
+                        "event": {"type": "CUSTOM", "n": seq},
+                    }
+                    for seq in range(start, start + events)
+                ],
+            )
+
+    await sync_to_async(seed)()
+
+
+def inputs_on(page: dict) -> list[str]:
+    """The user's own lines on a page, which is the readable shape of "which turns are here"."""
+    return [record["user_message"]["content"] for record in page["records"] if record["user_message"]]
+
+
+async def test_the_first_history_page_is_the_newest_turns(aapi_client, conversation):
+    """No cursor means the end of the conversation: that is where a returning reader resumes.
+
+    Sized off the default rather than a literal count, so that tuning how much a page holds
+    does not read as a regression here.
+    """
+    total = DEFAULT_PAGE_RUNS + 2
+    await seed_turns(conversation, *([2] * total))
+
+    body = (await aapi_client.get(f"{CONVERSATIONS_URL}{conversation.number}/history/")).json()
+
+    newest = range(total - DEFAULT_PAGE_RUNS + 1, total + 1)
+    assert inputs_on(body) == [f"turn-{index}" for index in newest]
+    assert body["next_cursor"] is not None
+    # The channel's end, not this page's: it is the watermark a client then catches up from
+    # over ui-events, so it must not follow the page backwards.
+    assert body["last_seq"] == total * 2
+
+
+async def test_the_cursor_walks_back_to_the_start_of_the_conversation(aapi_client, conversation):
+    """Seeded past what one page holds, so this exercises the walk rather than a single read."""
+    total = DEFAULT_PAGE_RUNS * 2 + 1
+    await seed_turns(conversation, *([2] * total))
+    url = f"{CONVERSATIONS_URL}{conversation.number}/history/"
+
+    walked: list[str] = []
+    visited = 0
+    cursor = None
+    for _ in range(total + 1):
+        page = (await aapi_client.get(url, data={"cursor": cursor} if cursor else {})).json()
+        walked = inputs_on(page) + walked
+        visited += 1
+        cursor = page["next_cursor"]
+        if cursor is None:
+            break
+
+    assert cursor is None, "paging never reached the start of the conversation"
+    assert visited > 1, "the whole conversation arrived in one page, so nothing was walked"
+    assert walked == [f"turn-{index}" for index in range(1, total + 1)]
+
+
+async def test_a_smaller_page_is_honoured(aapi_client, conversation):
+    await seed_turns(conversation, 2, 2, 2)
+
+    body = (await aapi_client.get(f"{CONVERSATIONS_URL}{conversation.number}/history/", data={"runs": 1})).json()
+
+    assert inputs_on(body) == ["turn-3"]
+
+
+async def test_a_history_cursor_this_service_did_not_issue_is_refused(aapi_client, conversation):
+    """Named as its own failure rather than silently restarting at the newest page, which the
+
+    client would experience as "load more does nothing".
+    """
+    response = await aapi_client.get(
+        f"{CONVERSATIONS_URL}{conversation.number}/history/",
+        data={"cursor": "made-up"},
+    )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()["code"] == "INVALID_HISTORY_CURSOR"
+
+
+@pytest.mark.parametrize("runs", [0, -1, MAX_PAGE_RUNS + 1])
+async def test_a_page_size_outside_the_allowed_range_is_refused(aapi_client, conversation, runs):
+    """An upper bound as well as a lower one: a page carries whole tool-call arguments, so
+
+    "give me every turn at once" is how a long conversation becomes a multi-megabyte response.
+    """
+    response = await aapi_client.get(
+        f"{CONVERSATIONS_URL}{conversation.number}/history/",
+        data={"runs": runs},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"

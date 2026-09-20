@@ -22,11 +22,6 @@ from typing import TYPE_CHECKING
 from django.db import models, transaction
 from django.db.models import F
 
-from app_spark_api.agent.conversations.entities import (
-    ConversationHistoryRecord,
-    UiEventRecord,
-    UserMessageHistoryRecord,
-)
 from app_spark_api.agent.conversations.state_models import (
     ConversationMessage,
     ConversationUiEvent,
@@ -143,30 +138,6 @@ class ConversationManager(models.Manager["Conversation"]):
                 tenant_id=project.tenant_id,
             )
 
-    def read_history(self, conversation: Conversation) -> list[ConversationHistoryRecord]:
-        """读取完整展示历史，把用户输入插在创建时记录的 UI event 游标之后。
-
-        :param conversation: 已通过调用方权限检查的会话。
-        :return: 按对话顺序排列的历史实体，包含尚无事件的用户消息。
-        """
-        events = list(ConversationUiEvent.objects.filter(conversation=conversation).order_by("seq"))
-        messages = list(
-            ConversationUserMessage.objects.filter(conversation=conversation).order_by("after_seq", "created_at", "id")
-        )
-        records: list[ConversationHistoryRecord] = []
-        next_message = 0
-
-        # 两端时钟可能不同，事件回写也晚于输入落库，不能按时间戳混排。例如输入记录 after_seq=3，
-        # 就始终插在 seq=3 后、seq=4 前，即使后续回写的事件来自上一轮 run，也不移动这个位置。
-        # UI event 的 seq 是 Runtime 跨重启延续的顺序，旧会话没有用户消息也仍然可以完整读取。
-        for event in events:
-            while next_message < len(messages) and messages[next_message].after_seq < event.seq:
-                records.append(_history_record_for_user_message(messages[next_message]))
-                next_message += 1
-            records.append(_history_record_for_ui_event(event))
-        records.extend(_history_record_for_user_message(message) for message in messages[next_message:])
-        return records
-
 
 class Conversation(OwnerTimestampedModel):
     """一次由 Agent 驱动的 Project 开发会话，对应 Agent Runtime 里的一个 conversation。
@@ -276,12 +247,4 @@ class ConversationUserMessage(OwnerTimestampedModel):
         constraints = [
             models.UniqueConstraint(fields=["conversation", "run_id"], name="uniq_conversation_user_run"),
         ]
-        indexes = [models.Index(fields=["conversation", "after_seq", "created_at", "id"])]
-
-
-def _history_record_for_user_message(message: ConversationUserMessage) -> ConversationHistoryRecord:
-    return ConversationHistoryRecord(user_message=UserMessageHistoryRecord.model_validate(message))
-
-
-def _history_record_for_ui_event(event: ConversationUiEvent) -> ConversationHistoryRecord:
-    return ConversationHistoryRecord(ui_event=UiEventRecord.model_validate(event.as_record()))
+        indexes = [models.Index(fields=["conversation", "after_seq", "id"])]

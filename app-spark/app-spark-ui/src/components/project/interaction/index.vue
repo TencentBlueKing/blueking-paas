@@ -37,6 +37,17 @@
           返回当前会话
         </span>
       </div>
+      <div v-if="hasEarlierHistory" class="interaction-panel__earlier">
+        <bk-button
+          text
+          theme="primary"
+          size="small"
+          :loading="loadingEarlier"
+          @click="handleLoadEarlier"
+        >
+          加载更多
+        </bk-button>
+      </div>
       <ChatMessageList :messages="messages" :status="status" />
     </div>
     <ChatComposer
@@ -66,6 +77,8 @@ const {
   busy,
   conversationNumber,
   isLive,
+  loadingEarlier,
+  hasEarlierHistory,
   viewingArchive,
   canReturnToLive,
 } = storeToRefs(projectStore);
@@ -107,6 +120,27 @@ const handleReturn = async () => {
       message: error instanceof Error ? error.message : '返回当前会话失败',
     });
   }
+};
+
+/**
+ * 往前接一页历史，并把视口钉在用户原本在看的那一段上。
+ *
+ * 新内容接在列表头部，`scrollTop` 不会跟着动，于是原来那一段会整体往下跑掉，看起来像是页面自己
+ * 跳了。按「高度长了多少」把 `scrollTop` 补回去，手里这一段就还在原地。
+ */
+const handleLoadEarlier = async () => {
+  const el = scrollerRef.value;
+  const before = el?.scrollHeight ?? 0;
+  try {
+    await projectStore.loadEarlierHistory();
+  } catch (error) {
+    // 失败的提示由 http 层的全局拦截器给（见 `http/fetch/error-interceptor`），这里只要保证在什么
+    // 都没接上的时候别去动滚动位置——那会把用户手里这一段莫名挪走。
+    console.error('[project] 历史加载失败', error);
+    return;
+  }
+  await nextTick();
+  if (el) el.scrollTop += el.scrollHeight - before;
 };
 </script>
 
@@ -171,6 +205,12 @@ const handleReturn = async () => {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.interaction-panel__earlier {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px 0;
 }
 
 .interaction-panel__note {

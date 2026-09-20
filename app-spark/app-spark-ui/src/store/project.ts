@@ -10,8 +10,13 @@ import {
   listUiEvents,
   startConversationRun,
 } from '@/http/api';
-import type { ConversationResponse, RuntimeStateResponse } from '@/http/types';
+import type {
+  ConversationHistoryRecord,
+  ConversationResponse,
+  RuntimeStateResponse,
+} from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
+import type { AgUiApplyContext } from '@/services/agent/ag-ui';
 import {
   appendUserMessage,
   applyAgUiEvent,
@@ -40,7 +45,12 @@ export const useProjectStore = defineStore('project', () => {
   const entering = ref(false);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
+  // 取更早一页历史用的游标，null 表示已经翻到会话开头（或者还没拉过第一页）。
+  const historyCursor = ref<string | null>(null);
+  const loadingEarlier = ref(false);
   const busy = computed(() => status.value !== 'idle' || entering.value);
+  /** 还有更早的历史可以往前翻。 */
+  const hasEarlierHistory = computed(() => historyCursor.value !== null);
   /** 正在翻看归档：会话已经结束，只能读，发不出新的一轮对话。 */
   const viewingArchive = computed(() => conversationNumber.value != null && !isLive.value);
   /** 归档看完之后能不能回到当前对话——上一次新建失败过的话，项目里可能根本没有活跃会话。 */
@@ -94,12 +104,14 @@ export const useProjectStore = defineStore('project', () => {
     replicationPending.value = false;
     entering.value = false;
     status.value = 'idle';
+    historyCursor.value = null;
+    loadingEarlier.value = false;
     messages.value = [createWelcomeMessage()];
     resetApplyCtx();
   };
 
-  const latestAssistant = () => (
-    [...applyCtx.messages].reverse().find(item => item.role === 'assistant')
+  const latestAssistant = (ctx: AgUiApplyContext) => (
+    [...ctx.messages].reverse().find(item => item.role === 'assistant')
   );
 
   /**
@@ -110,13 +122,18 @@ export const useProjectStore = defineStore('project', () => {
    * 还没回写最后一批事件、进程被回收、上一轮被打断）把界面永久钉在「正在回复」上，输入框和右上
    * 角两个按钮跟着一起灰掉，刷新也没用——因为回放的还是同一段历史。眼下这一刻到底有没有在跑，
    * 由会话状态里的 `running` 说，见 :func:`bindConversation`。
+   *
+   * `ctx` 必须显式传：回放更早的一页历史用的是一个独立的 ctx（见 `replayHistoryPage`），而
+   * `progress` / `errorText` 都是接在「这一段的最后一条助手消息」上的，认错 ctx 就会把更早那一页
+   * 的进度文字写到当前这一轮的气泡里。
    */
   const applyResult = (
+    ctx: AgUiApplyContext,
     result: ReturnType<typeof applyAgUiEvent>,
     { trackStatus = true }: { trackStatus?: boolean } = {},
   ) => {
     if (trackStatus && result.status) status.value = result.status;
-    const assistant = latestAssistant();
+    const assistant = latestAssistant(ctx);
     if (assistant && result.progress !== undefined) {
       assistant.progress = result.progress;
     }
@@ -150,34 +167,82 @@ export const useProjectStore = defineStore('project', () => {
   };
 
   /**
-   * 回放会话的完整展示历史。
-   *
-   * 走 history 而不是 ui-events：用户发过什么不在 AG-UI 事件流里——Runtime 只回写自己产生的事
-   * 件，用户输入由后端单独存着——只有 history 会把两者按对话顺序合成一条流交回来。它也不分页，
-   * 一次就是全部，所以这里顺着记录走一遍就完了。
+   * 把一页展示历史回放成消息，落到给定的 ctx 上。
    *
    * 事件一律按 `ignoreUser` 处理：用户那一侧已经由 `user_message` 记录负责，事件流里万一也混进
    * 用户消息，渲染出来就是重复的一条。
+   */
+  const replayHistoryPage = (ctx: AgUiApplyContext, records: ConversationHistoryRecord[]) => {
+    for (const record of records) {
+      if (record.user_message) {
+        appendUserMessage(ctx, record.user_message);
+        continue;
+      }
+      if (!record.ui_event) continue;
+      applyResult(
+        ctx,
+        applyAgUiEvent(ctx, record.ui_event, { ignoreUser: true }),
+        { trackStatus: false },
+      );
+    }
+  };
+
+  /**
+   * 回放会话**最新**的一页展示历史。
+   *
+   * 走 history 而不是 ui-events：用户发过什么不在 AG-UI 事件流里——Runtime 只回写自己产生的事
+   * 件，用户输入由后端单独存着——只有 history 会把两者按对话顺序合成一条流交回来。
+   *
+   * 只拉一页，更早的由 `loadEarlierHistory` 按需往前取：一个长会话里 `TOOL_CALL_ARGS` 事件带着完
+   * 整的工具参数（write_file 的参数就是整份文件），全量拉的代价跟对话长度成正比，而用户一打开只
+   * 看得到最后几轮。
+   *
+   * 这一页用的是共享的 `applyCtx`，不是独立的：接下来直播过来的事件要按 id 认回这一页尾巴上那条
+   * 还没说完的助手消息。
    */
   const pullHistory = async () => {
     if (!projectId.value || conversationNumber.value == null) return;
     const data = await listHistory(projectId.value, conversationNumber.value);
     syncApplyCtx();
+    replayHistoryPage(applyCtx, data.records || []);
 
-    for (const record of data.records || []) {
-      if (record.user_message) {
-        appendUserMessage(applyCtx, record.user_message);
-        continue;
-      }
-      if (!record.ui_event) continue;
-      applyResult(
-        applyAgUiEvent(applyCtx, record.ui_event, { ignoreUser: true }),
-        { trackStatus: false },
-      );
-      advanceUiEventSeq(getRecordSeq(record.ui_event));
-    }
-
+    // 水位取响应里的 `last_seq`，而不是本页最后一条事件的 seq：本页一定读到了频道末尾（它没有上
+    // 界），而「频道到哪了」是频道自己的事，一并给出来就省掉一次额外的状态查询。
+    advanceUiEventSeq(data.last_seq);
+    historyCursor.value = data.next_cursor;
     fallbackToWelcome();
+  };
+
+  /**
+   * 往列表头部接上更早的一页历史。
+   *
+   * 每页一个独立的 ctx：`byId` / `toolCalls` 是按事件自带的 id 认人的索引，而一页就是若干个完整
+   * 的 run（页边界由后端卡在 run 边界上），所以页内自洽，不需要跨页共享。反过来也必须独立——更早
+   * 的页是**后**拉的，混进当前 ctx 的话，一次工具调用会按 id 认回别的页里那一行，续写到一个根本
+   * 不属于它的气泡上。
+   *
+   * 用 `unshift` 原地改而不是 `messages.value = [...earlier, ...messages.value]`：后者换掉了数组
+   * 本身，而 `applyCtx.messages` 指着的是原来那个，直播事件会写进一个已经没人渲染的数组里。
+   */
+  const loadEarlierHistory = async () => {
+    const cursor = historyCursor.value;
+    const target = conversationNumber.value;
+    if (!cursor || loadingEarlier.value || !projectId.value || target == null) return;
+
+    loadingEarlier.value = true;
+    try {
+      const data = await listHistory(projectId.value, target, { cursor });
+      // 这一页在路上时可能已经切走了（打开归档、新建会话），那它属于上一段对话，不能接到眼前这
+      // 段的头上。游标也一并核对：`bindConversation` 会把它清掉，那同样意味着换了一段历史。
+      if (conversationNumber.value !== target || historyCursor.value !== cursor) return;
+
+      const earlier: ChatMessage[] = [];
+      replayHistoryPage(createApplyContext(earlier), data.records || []);
+      messages.value.unshift(...earlier);
+      historyCursor.value = data.next_cursor;
+    } finally {
+      loadingEarlier.value = false;
+    }
   };
 
   /**
@@ -199,6 +264,7 @@ export const useProjectStore = defineStore('project', () => {
       syncApplyCtx();
       for (const record of records) {
         applyResult(
+          applyCtx,
           applyAgUiEvent(applyCtx, record, { ignoreUser: true }),
           { trackStatus: false },
         );
@@ -232,15 +298,41 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
+  /**
+   * 历史没拉回来时摆进对话区的那一条。
+   *
+   * 不能只靠调用方那句 toast：它几秒就消失了，剩下的是一片空白，而空白跟「这是个刚开的新会
+   * 话」长得一模一样。用户会以为对话真的是空的，接着在这段自己都不知道残缺的历史上往下发。
+   */
+  const createHistoryErrorMessage = (): ChatMessage => ({
+    id: 'history-error',
+    role: 'assistant',
+    tone: 'error',
+    blocks: [{ type: 'text', text: '会话历史加载失败，这里显示的不是完整对话，刷新页面可重试。' }],
+  });
+
   const bindConversation = async (state: RuntimeStateResponse) => {
     applyState(state);
     uiEventSeq.value = 0;
+    // 清在拉第一页之前：这一页失败的话，游标就该是「不知道能往前翻到哪」，而不是上一个会话的。
+    historyCursor.value = null;
     messages.value = [];
     resetApplyCtx();
-    await pullHistory();
-    // 唯一有资格决定「此刻是不是在回复中」的地方：`running` 是后端现问 Runtime 拿到的，历史事件
-    // 只能告诉我们过去发生过什么。放在回放之后，保证它不会被回放出来的中间态盖掉。
-    status.value = state.running ? 'thinking' : 'idle';
+    try {
+      await pullHistory();
+    } catch (error) {
+      console.error('[project] 会话历史加载失败', error);
+      messages.value.push(createHistoryErrorMessage());
+      // 回放到一半断掉的话，byId / toolCalls 里攒着的是半条消息、半次工具调用。清掉，免得后面
+      // 直播来的事件按 id 认回这些残骸，续写到一个根本没画完的块上。
+      resetApplyCtx();
+      // 继续往外抛：调用方那句 toast 才是「刚刚这一下失败了」的即时反馈，两者不重复。
+      throw error;
+    } finally {
+      // 唯一有资格决定「此刻是不是在回复中」的地方：`running` 是后端现问 Runtime 拿到的，历史事件
+      // 只能告诉我们过去发生过什么。放在回放之后，保证它不会被回放出来的中间态盖掉。
+      status.value = state.running ? 'thinking' : 'idle';
+    }
   };
 
   /** 项目里还活着的那个会话，一个都没有则返回 null。 */
@@ -414,7 +506,7 @@ export const useProjectStore = defineStore('project', () => {
       );
       for await (const event of readSseEvents(response)) {
         syncApplyCtx();
-        applyResult(applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
+        applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
     } catch (error) {
       const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
@@ -454,10 +546,13 @@ export const useProjectStore = defineStore('project', () => {
     messages,
     status,
     busy,
+    loadingEarlier,
+    hasEarlierHistory,
     viewingArchive,
     canReturnToLive,
     reset,
     enterProject,
+    loadEarlierHistory,
     openConversation,
     startFreshConversation,
     returnToLiveConversation,

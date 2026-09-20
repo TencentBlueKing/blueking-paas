@@ -141,7 +141,10 @@ const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
     type: 'tool',
     tool: { id: toolCallId, name, label: '', detail: '', state: 'running' },
   });
-  const pending: PendingToolCall = { tool: block.tool as ChatToolCall, args: '' };
+  // `ChatBlock.tool` 是可选字段，靠 narrow 而不是断言拿它：断言等于替编译器打包票说上面那个
+  // 字面量一定原样传了回来，而 `appendBlock` 还回来的是响应式代理，真有一天不是了也没人会提醒。
+  if (block.type !== 'tool' || !block.tool) return;
+  const pending: PendingToolCall = { tool: block.tool, args: '' };
   refreshToolCall(pending);
   if (toolCallId) ctx.toolCalls.set(toolCallId, pending);
 };
@@ -149,8 +152,11 @@ const startToolCall = (ctx: AgUiApplyContext, event: AgUiEvent) => {
 const growToolCallArgs = (ctx: AgUiApplyContext, event: AgUiEvent, delta: string) => {
   const pending = ctx.toolCalls.get(getToolCallId(event));
   if (!pending || !delta) return;
-  if (pending.args.length < MAX_TOOL_ARGS) {
-    pending.args += delta;
+  // 按剩下的额度裁掉再接，而不是「没超就整片接上」：一片本身就可能是整份文件——write_file 完全
+  // 可以把 content 一次送完——那样第一片就把上限冲过去了，上限也就白设了。
+  const room = MAX_TOOL_ARGS - pending.args.length;
+  if (room > 0) {
+    pending.args += delta.slice(0, room);
   }
   // 摘要一旦抽出来就不再逐片重算：参数可以有几万片，而要找的那个字段在开头就传完了。
   if (!pending.tool.detail) refreshToolCall(pending);

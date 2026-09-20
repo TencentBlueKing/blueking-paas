@@ -5,6 +5,7 @@ import type {
   ConversationHistoryResponse,
   ConversationResponse,
   ListConversationsQuery,
+  ListHistoryQuery,
   ListUiEventsQuery,
   PagedConversationResponse,
   PagedProjectResponse,
@@ -25,6 +26,7 @@ export type {
   ConversationResponse,
   ErrorResponse,
   ListConversationsQuery,
+  ListHistoryQuery,
   ListUiEventsQuery,
   PagedConversationResponse,
   PagedProjectResponse,
@@ -88,12 +90,17 @@ export const listUiEvents = (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query)
 );
 
-/** 拉取会话的完整展示历史（用户输入 + AG-UI 事件），不分页，一次全量返回 */
+/**
+ * 拉取一页展示历史（用户输入 + AG-UI 事件）。
+ *
+ * 不带游标时给的是**最新**的若干轮，往更早翻就一直用上一页的 `next_cursor`，直到它为 null。
+ */
 export const listHistory = (
   projectId: string,
   number: number,
+  query: ListHistoryQuery = {},
 ): Promise<ConversationHistoryResponse> => (
-  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`)
+  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`, query)
 );
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */

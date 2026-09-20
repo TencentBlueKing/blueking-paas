@@ -63,9 +63,14 @@ const handleConfirm = async () => {
     await projectStore.startFreshConversation();
   } catch (error) {
     // 失败必须说出来：归档那一步可能已经生效，否则用户只会看到对话忽然变成只读，不知道为什么。
+    const reason = error instanceof Error ? error.message : '新建会话失败';
+    // 归档排在创建前面，所以创建失败之后项目里可能一个活跃会话都不剩（`liveNumber` 为 null）。
+    // 这时候原来那段对话已经是只读归档，界面整个发不出话，而一句「失败」并不会让人想到还得再
+    // 按一次新建——把眼下的状态和下一步一起说出来。
+    const stranded = projectStore.liveNumber == null;
     Message({
       theme: 'error',
-      message: error instanceof Error ? error.message : '新建会话失败',
+      message: stranded ? `${reason}。原会话已归档，可再次点击新建。` : reason,
     });
   }
 };

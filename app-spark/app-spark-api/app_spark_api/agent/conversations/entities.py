@@ -63,6 +63,16 @@ class RuntimeStateResponse(Schema):
     )
 
 
+# 用户单轮输入的字符上限。
+#
+# 必须在这里单独设限，不能靠请求体的大小兜底：``DATA_UPLOAD_MAX_MEMORY_SIZE`` 被 Runtime 的状态
+# 回写抬到了 64MB（见 settings），而那是给内部接口用的额度。
+#
+# 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
+# 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
+MAX_RUN_CONTENT_LENGTH = 32 * 1024
+
+
 class StartRunRequest(Schema):
     """推进一次会话交互的请求体。
 
@@ -70,7 +80,11 @@ class StartRunRequest(Schema):
     导致冲突。
     """
 
-    content: str = Field(min_length=1, description="用户本轮发送的内容")
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_RUN_CONTENT_LENGTH,
+        description="用户本轮发送的内容",
+    )
 
 
 class UiEventRecord(Schema):
@@ -118,6 +132,10 @@ class ConversationHistoryRecord(Schema):
 
 
 class ConversationHistoryResponse(Schema):
-    """会话已入库的完整展示历史，用户输入按创建时保存的 after_seq 定位。"""
+    """一页展示历史，用户输入按创建时保存的 after_seq 定位。"""
 
-    records: list[ConversationHistoryRecord]
+    records: list[ConversationHistoryRecord] = Field(description="本页记录，按对话正序排列")
+    next_cursor: str | None = Field(description="取更早一页时原样回传；null 表示已经到会话开头，没有更早的内容了")
+    # 「到会话开头了」和「最新一轮还没回写完」是两件事：前者看 next_cursor，后者看
+    # `RuntimeStateResponse.replication_pending`。这个字段是给后者用的水位。
+    last_seq: int = Field(description="AG-UI 事件频道当前的最后一个游标")

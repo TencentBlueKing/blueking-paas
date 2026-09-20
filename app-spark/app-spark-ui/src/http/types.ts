@@ -112,7 +112,27 @@ export interface ConversationHistoryRecord {
   user_message: UserMessageRecord | null;
 }
 
-/** 会话的完整展示历史，接口不分页，一次全量返回。 */
+export interface ListHistoryQuery {
+  /** 上一页返回的 `next_cursor`；不传则读最新一页 */
+  cursor?: string;
+  /** 本页覆盖几轮对话，默认由后端决定 */
+  runs?: number;
+}
+
+/**
+ * 一页展示历史。
+ *
+ * 分页是往**更早**的方向翻的：不带游标拿到的是最新的若干轮，之后一直用上一页的 `next_cursor`
+ * 往前取。页内记录始终是对话正序。
+ *
+ * 一页是若干个**完整的 run**，不是固定条数，所以 `records` 的长度是浮动的。页边界卡在 run 边界
+ * 上，是因为回放事件流要靠一个有状态的 reducer（见 `services/agent/ag-ui.ts`）：切在一次工具调用
+ * 中间，那次调用在界面上就永远停在「正在执行」。
+ */
 export interface ConversationHistoryResponse {
   records: ConversationHistoryRecord[];
+  /** 取更早一页时原样回传；null 表示已经到会话开头，没有更早的内容了 */
+  next_cursor: string | null;
+  /** AG-UI 事件频道当前的最后一个游标，可直接当 ui-events 的 `since` 用 */
+  last_seq: number;
 }

@@ -99,7 +99,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "paas_service",
-    "svc_otel.vendor.apps.VendorConfig",
+    "svc_otel.vendor",
     "bkpaas_auth",
 ]
 

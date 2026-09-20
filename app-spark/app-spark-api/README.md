@@ -111,6 +111,7 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 | 数据 | 存在哪 | 谁来读 |
 | --- | --- | --- |
 | 原始对话记录 | `ConversationMessage` 表 | 暂无对外读接口 |
+| 用户发送的原文 | `ConversationUserMessage` 表 | `GET .../history/`，与 AG-UI 事件一起恢复 |
 | AG-UI 事件历史 | `ConversationUiEvent` 表 | `GET .../ui-events/`，直接读库、不起容器 |
 | 会话上下文 | 制品库 blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
 | 可恢复检查点 | `ConversationCheckpoint` 行 | 冷启动时先据此把文件放回去 |

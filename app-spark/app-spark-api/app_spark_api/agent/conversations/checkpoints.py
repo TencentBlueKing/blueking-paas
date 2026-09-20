@@ -167,7 +167,7 @@ def latest_restorable(conversation_id: Any) -> ConversationCheckpoint | None:
     :param conversation_id: 要恢复的会话。
     :return: 检查点行，没有则 ``None``。
     """
-    return restorable_checkpoints(conversation_id).order_by("-context_version", "-created").first()
+    return restorable_checkpoints(conversation_id).order_by("-context_version", "-created_at").first()
 
 
 def reclaim(conversation_id: Any) -> Reclaimed:
@@ -205,7 +205,7 @@ def _reclaim_checkpoints(conversation_id: Any) -> int:
     """
     doomed = list(
         ConversationCheckpoint.objects.filter(conversation_id=conversation_id)
-        .order_by("-context_version", "-created")
+        .order_by("-context_version", "-created_at")
         .values_list("pk", flat=True)[checkpoints_kept() :]
     )
     if not doomed:

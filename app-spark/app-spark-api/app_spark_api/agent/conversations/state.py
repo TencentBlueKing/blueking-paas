@@ -45,7 +45,7 @@ from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations.context_storage import blob_location
 
 # `models` imports `state_models`, never this module, so this direction cannot cycle.
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import (
     ConversationCheckpoint,
     ConversationContextVersion,
@@ -162,12 +162,11 @@ def read_ui_events(conversation_id: Any, *, since: int, limit: int) -> tuple[lis
     :return: The page's records in the Runtime's own wire shape, and the last stored sequence
         number.
     """
-    spec = CHANNELS[UI_EVENT_CHANNEL]
     rows = ConversationUiEvent.objects.filter(
         conversation_id=conversation_id,
         seq__gt=since,
     ).order_by("seq")[:limit]
-    records = [_wire_record(row, spec.payload_key) for row in rows]
+    records = [row.as_record() for row in rows]
     return records, last_seq(conversation_id, UI_EVENT_CHANNEL)
 
 
@@ -311,6 +310,7 @@ def clear(conversation_id: Any) -> None:
     """
     ConversationMessage.objects.filter(conversation_id=conversation_id).delete()
     ConversationUiEvent.objects.filter(conversation_id=conversation_id).delete()
+    ConversationUserMessage.objects.filter(conversation_id=conversation_id).delete()
     # Checkpoints go too: they name context versions that are about to stop existing, and a
     # checkpoint whose context cannot be read is exactly the half-state cold start must not see.
     ConversationCheckpoint.objects.filter(conversation_id=conversation_id).delete()
@@ -374,17 +374,3 @@ def _structure_timestamp(raw: object) -> datetime:
     if parsed is None:
         raise ConversationStateError(f"a record timestamp is not ISO-8601: {raw!r}")
     return parsed
-
-
-def _wire_record(row: ConversationMessage | ConversationUiEvent, payload_key: str) -> dict[str, Any]:
-    """Return a stored row in the shape the Runtime's own drain endpoint would have used.
-
-    Keeping the shape identical is what lets a client read history from here and live events
-    from the stream without knowing which one it got.
-    """
-    return {
-        "seq": row.seq,
-        "run_id": row.run_id,
-        "timestamp": row.recorded_at.isoformat(),
-        payload_key: row.payload,
-    }

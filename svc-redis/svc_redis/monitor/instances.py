@@ -25,6 +25,7 @@
 - redis_instance_connection_usage_rate: Redis `connected_clients` / `maxclients`
 - redis_instance_oom_killed: 最近 METRIC_OOM_KILLED_WINDOW 秒内是否因内存被杀死, 超过时间窗自动回到 0
 - redis_instance_exporter_up: 实例有 exporter 且取数成功为 1, 取数失败为 0; 没有 exporter 的实例不产出
+- redis_instance_db_keys: 实例所有 DB 的 key 总数 (redis_db_keys 按 db 标签求和)
 
 取不到的指标显式缺失, 不得用 0 冒充健康; 单个实例取数失败不影响其余实例出数.
 """
@@ -241,6 +242,8 @@ def _fill_usage_rates(
         status.exporter_up = usage is not None
         if usage is None:
             continue
+
+        status.db_keys = usage.db_keys
 
         # 未设置 maxmemory (值为 0) 时, 使用率分母回退为套餐的内存上限
         memory_limit = usage.maxmemory or memory_limits.get(status.instance.bk_instance)

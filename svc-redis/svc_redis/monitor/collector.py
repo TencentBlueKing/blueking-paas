@@ -79,6 +79,9 @@ class RedisInstanceMetricsCollector:
             "whether the redis exporter metrics were collected; absent when the instance has no exporter",
             labels=labels,
         )
+        db_keys = GaugeMetricFamily(
+            "redis_instance_db_keys", "total number of keys across all DBs of the redis instance", labels=labels
+        )
 
         for status in statuses:
             label_values = status.instance.as_label_values()
@@ -89,11 +92,12 @@ class RedisInstanceMetricsCollector:
                 (connection_usage, status.connection_usage_rate),
                 (oom_killed, status.oom_killed),
                 (exporter_up, status.exporter_up),
+                (db_keys, status.db_keys),
             ):
                 if value is not None:
                     family.add_metric(label_values, value)
 
-        return [alive, memory_usage, connection_usage, oom_killed, exporter_up]
+        return [alive, memory_usage, connection_usage, oom_killed, exporter_up, db_keys]
 
     @staticmethod
     def _build_self_families() -> list[GaugeMetricFamily]:

@@ -38,6 +38,7 @@ _USED_MEMORY = "redis_memory_used_bytes"
 _MAXMEMORY = "redis_memory_max_bytes"
 _CONNECTED_CLIENTS = "redis_connected_clients"
 _MAXCLIENTS = "redis_config_maxclients"
+_DB_KEYS = "redis_db_keys"
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class ExporterUsage:
     maxmemory: float | None
     connected_clients: float | None
     maxclients: float | None
+    db_keys: float | None
 
 
 def fetch_usage(
@@ -73,16 +75,23 @@ def fetch_usage(
 
 
 def _parse_usage(text: str) -> ExporterUsage:
-    """从 prometheus 文本中取出关心的 4 个样本; 同名样本以最后一条为准"""
+    """从 prometheus 文本中取出关心的样本
+
+    redis_db_keys 带 db 标签, 逐条累加成实例级总量.
+    """
     samples: dict[str, float] = {}
+    db_keys: list[float] = []
     for family in text_string_to_metric_families(text):
         for sample in family.samples:
             if sample.name in (_USED_MEMORY, _MAXMEMORY, _CONNECTED_CLIENTS, _MAXCLIENTS):
                 samples[sample.name] = sample.value
+            elif sample.name == _DB_KEYS:
+                db_keys.append(sample.value)
 
     return ExporterUsage(
         used_memory=samples.get(_USED_MEMORY),
         maxmemory=samples.get(_MAXMEMORY),
         connected_clients=samples.get(_CONNECTED_CLIENTS),
         maxclients=samples.get(_MAXCLIENTS),
+        db_keys=sum(db_keys) if db_keys else None,
     )

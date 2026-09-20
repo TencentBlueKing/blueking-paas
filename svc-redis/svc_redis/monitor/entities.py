@@ -50,6 +50,8 @@ class RedisInstanceStatus:
     oom_killed: bool | None = None
     # 有 exporter 且取数成功为 True, 取数失败为 False; None 表示实例没有 exporter
     exporter_up: bool | None = None
+    # 所有 DB 的 key 总数 (redis_db_keys 按 db 标签求和); None 表示取不到该样本
+    db_keys: float | None = None
     # True 表示实例的 k8s 状态读不到 (集群或命名空间查询失败)
     k8s_state_missing: bool = False
     # True 表示实例有 exporter 但因 deadline 截断/任务异常未被回填 (区别于 exporter 真的取数失败)

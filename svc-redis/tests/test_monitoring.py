@@ -98,14 +98,14 @@ def _clean_metrics_cache():
 
 
 def test_metrics_of_instance(monkeypatch):
-    """正常实例: 五个指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
+    """正常实例: 各实例指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
     iid = str(_instance(app_info={"app_code": "app", "module": "default", "environment": "stag"}).uuid)
     monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
     monkeypatch.setattr(
         exporter,
         "fetch_usage",
-        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100),
+        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100, db_keys=7),
     )
 
     alive = next(s for s in _samples() if s.name == "redis_instance_alive")
@@ -124,6 +124,7 @@ def test_metrics_of_instance(monkeypatch):
         ("redis_instance_connection_usage_rate", iid): 0.1,
         ("redis_instance_oom_killed", iid): 0.0,
         ("redis_instance_exporter_up", iid): 1.0,
+        ("redis_instance_db_keys", iid): 7.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
         ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
@@ -146,12 +147,13 @@ def test_metrics_reuse_cached_result(monkeypatch, settings):
     monkeypatch.setattr(
         exporter,
         "fetch_usage",
-        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100),
+        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100, db_keys=7),
     )
 
     first = _metrics()
     assert first[("redis_instance_alive", iid)] == 1.0
     assert first[("redis_instance_memory_usage_rate", iid)] == 1024 / (2 * 1024**3)
+    assert first[("redis_instance_db_keys", iid)] == 7.0
 
     assert _metrics() == first
     assert len(sts_calls) == 1

@@ -94,11 +94,11 @@ class TestServerVersionChecker:
             ("1.8.0", "1.8.1", True, False),
             ("1.8.0-alpha.1", "1.7.0-alpha.9", True, False),
             # Helm 查询成功但 app_version 为空: 拦截
-            ("v1.0.0", "", True, False),
+            ("1.0.0", "", True, False),
             # 版本无法解析: 拦截
-            ("v1.0.0", "1.7", True, False),
+            ("1.0.0", "1.7", True, False),
             ("1.7", "1.7", True, False),
-            ("latest", "v1.0.0", True, False),
+            ("latest", "1.0.0", True, False),
         ],
     )
     def test_validate_version(

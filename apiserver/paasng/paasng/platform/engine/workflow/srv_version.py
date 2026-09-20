@@ -50,7 +50,7 @@ def parse_xyz_version(version: str | None) -> tuple[int, int, int] | None:
 class ServerVersionChecker:
     """检查 apiserver 和 operator 版本信息是否兼容
 
-    仅比较版本号中的 X.Y.Z; X.Y.Z 相同而只有预发布号(alpha/beta/rc)不同时,
+    仅比较版本号中的 X.Y.Z; X.Y.Z 相同而只有预发布号(alpha/beta)不同时,
     属于滚动升级过程中的正常中间状态, 放行部署并记录 WARNING 日志.
     """
 

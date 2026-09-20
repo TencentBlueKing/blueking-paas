@@ -82,6 +82,14 @@ WSGI_APPLICATION = "svc_redis.wsgi.application"
 
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 
+# 采集结果缓存在 Django 缓存里, 测试里换成进程内缓存, 免去建缓存表
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "svc-redis-tests",
+    },
+}
+
 # Internationalization
 
 LANGUAGE_CODE = "zh-cn"

@@ -161,6 +161,15 @@ else:
         }
     }
 
+# Cache
+# 采集结果等数据需要在多个 worker / 副本间共享, 因此使用数据库缓存; 缓存表由 createcachetable 创建
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": env.str("CACHE_TABLE_NAME", default="cache_table"),
+    },
+}
+
 # Password validation
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -254,7 +263,7 @@ METRIC_COLLECT_REQUEST_TIMEOUT = env.int("METRIC_COLLECT_REQUEST_TIMEOUT", defau
 METRIC_COLLECT_DEADLINE = env.int("METRIC_COLLECT_DEADLINE", default=8)
 # OOMKilled 指标的时间窗(秒), 只有最近这段时间内发生过 OOM 才计为 1
 METRIC_OOM_KILLED_WINDOW = env.int("METRIC_OOM_KILLED_WINDOW", default=300)
-# 采集结果缓存时间(秒): 避免每次 scrape 都全量拉库 + 查 k8s.
+# 采集结果缓存时间(秒): 结果写入数据库缓存, 由全部 worker/副本共享, 避免每次 scrape 都全量拉库 + 查 k8s;
 METRIC_COLLECT_CACHE_TTL = env.int("METRIC_COLLECT_CACHE_TTL", default=60)
 
 SENTRY_DSN = env.str("SENTRY_DSN", default="")

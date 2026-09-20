@@ -23,6 +23,7 @@ from datetime import timedelta
 
 import pytest
 from django.conf import settings
+from django.core.cache import cache
 from django.utils.timezone import now
 from paas_service.models import Plan, Service, ServiceInstance, ServiceInstanceConfig
 from svc_redis.monitor import exporter, instances, k8s
@@ -88,6 +89,14 @@ def _cluster_client(monkeypatch):
     monkeypatch.setattr(instances, "clone_client", lambda client: client)
 
 
+@pytest.fixture(autouse=True)
+def _clean_metrics_cache():
+    """采集结果会写入缓存, 每个用例前后清空, 避免用例间相互影响"""
+    cache.clear()
+    yield
+    cache.clear()
+
+
 def test_metrics_of_instance(monkeypatch):
     """正常实例: 五个指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
     iid = str(_instance(app_info={"app_code": "app", "module": "default", "environment": "stag"}).uuid)
@@ -120,6 +129,32 @@ def test_metrics_of_instance(monkeypatch):
         ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
         ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
+
+
+def test_metrics_reuse_cached_result(monkeypatch, settings):
+    """TTL 内的多次采集复用缓存结果: 结果一致, 且不再重复查询 k8s"""
+    settings.METRIC_COLLECT_CACHE_TTL = 60
+    iid = str(_instance().uuid)
+    sts_calls: list = []
+
+    def _list_statefulsets(*args):
+        sts_calls.append(1)
+        return {"ns-a": [_statefulset()]}
+
+    monkeypatch.setattr(k8s, "list_statefulsets", _list_statefulsets)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+    monkeypatch.setattr(
+        exporter,
+        "fetch_usage",
+        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100),
+    )
+
+    first = _metrics()
+    assert first[("redis_instance_alive", iid)] == 1.0
+    assert first[("redis_instance_memory_usage_rate", iid)] == 1024 / (2 * 1024**3)
+
+    assert _metrics() == first
+    assert len(sts_calls) == 1
 
 
 @pytest.mark.parametrize(

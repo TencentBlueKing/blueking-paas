@@ -17,7 +17,7 @@
 
 """Redis 实例指标采集的数据结构"""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 @dataclass(frozen=True)
@@ -54,3 +54,12 @@ class RedisInstanceStatus:
     k8s_state_missing: bool = False
     # True 表示实例有 exporter 但因 deadline 截断/任务异常未被回填 (区别于 exporter 真的取数失败)
     usage_fetch_skipped: bool = False
+
+    def as_dict(self) -> dict:
+        """转换为可序列化的普通字典 (嵌套的 instance 一并转换)"""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RedisInstanceStatus":
+        """由 as_dict() 的结果还原"""
+        return cls(instance=RedisInstance(**data["instance"]), **{k: v for k, v in data.items() if k != "instance"})

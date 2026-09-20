@@ -76,6 +76,8 @@ $ helm test redis-operator --namespace ot-operators
 
 ```bash
 python manage.py migrate
+# 创建数据库缓存表 (实例指标采集结果等数据缓存在其中)
+python manage.py createcachetable
 ```
 
 初始化增强服务的套餐信息：

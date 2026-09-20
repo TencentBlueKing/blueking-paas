@@ -31,10 +31,10 @@
 
 import json
 import logging
-import time
 from collections import defaultdict
 
 from django.conf import settings
+from django.core.cache import cache
 from kubernetes.utils.quantity import parse_quantity
 from paas_service.models import ServiceInstance, ServiceInstanceConfig
 
@@ -48,17 +48,20 @@ logger = logging.getLogger(__name__)
 # 实例 ID -> (该实例所在集群的 k8s client, exporter Pod 名)
 ExporterTargets = dict[str, tuple[EnhancedApiClient, str]]
 
-# 上次采集的结果与时间(monotonic 秒); 取结果的一方只读, 不得修改
-_cache: tuple[float, list[RedisInstanceStatus]] | None = None
+# 采集结果的缓存 key: 结果存放在数据库缓存里, 由全部 worker / 副本共享
+_STATUSES_CACHE_KEY = "svc_redis:monitor:instance_statuses"
 
 
 def collect_instance_statuses() -> list[RedisInstanceStatus]:
-    """采集全部已分配 (未回收) 实例的运行状态; METRIC_COLLECT_CACHE_TTL 秒内复用上次结果"""
-    global _cache
+    """采集全部已分配 (未回收) 实例的运行状态; METRIC_COLLECT_CACHE_TTL 秒内复用上次结果
 
-    started_at = time.monotonic()
-    if _cache is not None and started_at - _cache[0] < settings.METRIC_COLLECT_CACHE_TTL:
-        return _cache[1]
+    结果写入数据库缓存, 缓存未过期时直接复用.
+    """
+    ttl = settings.METRIC_COLLECT_CACHE_TTL
+    if ttl > 0:
+        cached = cache.get(_STATUSES_CACHE_KEY)
+        if cached is not None:
+            return [RedisInstanceStatus.from_dict(data) for data in cached]
 
     # k8s 与 exporter 的查询共用这一份 deadline
     deadline = collect_deadline()
@@ -73,7 +76,8 @@ def collect_instance_statuses() -> list[RedisInstanceStatus]:
     exporter_targets = _fill_k8s_states(statuses, deadline)
     _fill_usage_rates(statuses, exporter_targets, memory_limits, deadline)
 
-    _cache = (started_at, statuses)
+    if ttl > 0:
+        cache.set(_STATUSES_CACHE_KEY, [status.as_dict() for status in statuses], ttl)
     return statuses
 
 

@@ -325,6 +325,9 @@ BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default="")
 # 调用 API 需要的信息
 BK_APP_CODE = env("BK_APP_CODE", default="bk_paas3")
 BK_APP_SECRET = env("BK_APP_SECRET", default="")
+# bk_token 验票所需应用凭证；未单独配置时回落到上面的应用凭证，二者须非空；bk_ticket 不用
+BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default=BK_APP_CODE)
+BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default=BK_APP_SECRET)
 # 对外版蓝鲸监控的 API 注册在 ESB
 BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default="")
 # 上云版蓝鲸监控的 API 注册在 APIGW

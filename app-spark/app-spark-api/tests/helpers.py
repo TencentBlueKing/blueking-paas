@@ -32,6 +32,11 @@ def generate_random_string(length: int = 30, chars: str = DFT_RANDOM_CHARACTER_S
     return "".join(rand.choice(chars) for _ in range(length))
 
 
+async def read_streaming_response(response) -> bytes:
+    """Collect a streaming response's body."""
+    return b"".join([chunk async for chunk in response.streaming_content])
+
+
 def create_user(username: Optional[str] = None, tenant_id: Optional[str] = None) -> User:
     """Create a user.
 

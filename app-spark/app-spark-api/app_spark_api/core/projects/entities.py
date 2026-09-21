@@ -36,5 +36,5 @@ class ProjectResponse(Schema):
 
     id: str = Field(description="项目 ID")
     name: str = Field(description="项目名称")
-    created: datetime = Field(description="创建时间")
-    updated: datetime = Field(description="最后更新时间")
+    created_at: datetime = Field(description="创建时间")
+    updated_at: datetime = Field(description="最后更新时间")

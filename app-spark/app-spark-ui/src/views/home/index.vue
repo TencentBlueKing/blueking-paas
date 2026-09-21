@@ -3,7 +3,7 @@
     <div class="home-page">
       <section class="hero">
         <h1>{{ greeting }}</h1>
-        <p>用自然语言开发可部署的蓝鲸 SaaS。从下一个项目开始。</p>
+        <p>用自然语言来开发蓝鲸 SaaS。</p>
         <bk-button
           class="hero__cta"
           theme="primary"
@@ -73,7 +73,6 @@
                     height="72px"
                   />
                   <span class="create-card__title">新项目</span>
-                  <span class="create-card__hint">用一句话开始</span>
                 </button>
               </li>
               <li
@@ -94,8 +93,8 @@
                     <p class="project-card__id">{{ row.id }}</p>
                   </header>
                   <footer class="project-card__foot">
-                    <time :datetime="row.updated">
-                      更新于 {{ timeFormatter(row.updated, 'YYYY-MM-DD HH:mm') }}
+                    <time :datetime="row.updated_at">
+                      更新于 {{ timeFormatter(row.updated_at, 'YYYY-MM-DD HH:mm') }}
                     </time>
                     <span>进入</span>
                   </footer>

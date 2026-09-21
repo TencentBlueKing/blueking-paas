@@ -37,7 +37,7 @@ from django.utils import timezone
 from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
@@ -130,12 +130,12 @@ async def close_conversation(conversation: Conversation) -> None:
     #   而停进程是尽力而为的——先停进程再落库，中间失败就会留下一个「Runtime 没了但会话还活着」
     #   的状态，下一轮对话又会把 Runtime 拉起来，等于这次结束什么也没做成。
     #
-    # `updated` 一并显式写上：`aupdate()` 绕过 `save()`，`auto_now` 不会被触发。
+    # `updated_at` 一并显式写上：`aupdate()` 绕过 `save()`，`auto_now` 不会被触发。
     changed = (
         await Conversation.objects.get_queryset()
         .filter(pk=conversation.pk)
         .live()
-        .aupdate(closed_at=closed_at, updated=closed_at)
+        .aupdate(closed_at=closed_at, updated_at=closed_at)
     )
     if not changed:
         raise ConversationClosedError(f"Conversation {conversation.id} has already been closed")
@@ -300,7 +300,26 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
     await _reject_if_closed_meanwhile(conversation)
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)
-    return await client.start_run(content=content, context_version=health.context_version)
+    message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
+        conversation, content=content
+    )
+    try:
+        run = await client.start_run(content=content, context_version=health.context_version)
+    except BaseException:
+        # Runtime 拒绝的请求不应留在历史里；输入必须先于调用创建，才不会把本轮新事件算入游标。
+        await message.adelete()
+        raise
+
+    try:
+        # 接受后立即补上用于排查的 run_id，不能等 SSE 消费完。
+        # 否则浏览器断开连接或生成失败，就会丢掉用户输入与 run 的关联信息。
+        message.run_id = run.run_id
+        await message.asave(update_fields=["run_id", "updated_at"])
+    except BaseException:
+        # 此时连接已经打开，但还没有交给 stream_run；保存失败或任务取消也必须释放它。
+        await run.aclose()
+        raise
+    return run
 
 
 async def _reject_if_closed_meanwhile(conversation: Conversation) -> None:

@@ -46,6 +46,9 @@ class TestParseXYZVersion:
             ("1.7.0-beta.5", (1, 7, 0)),
             ("1.8.0-alpha.222", (1, 8, 0)),
             (" 1.8.0 ", (1, 8, 0)),
+            ("v1.8.0", (1, 8, 0)),
+            ("v1.7.0", (1, 7, 0)),
+            ("v1.7.0-beta.1", (1, 7, 0)),
             # 解析不出三段数字的版本号
             ("1.7", None),
             ("1", None),
@@ -79,10 +82,14 @@ class TestServerVersionChecker:
         [
             # 完整版本号完全一致: 通过, 不写 WARNING
             ("1.8.0", "1.8.0", False, False),
-            ("1.8.0-beta.5", "1.8.0-beta.5", False, False),
+            ("v1.8.0", "v1.8.0", False, False),
+            ("v1.7.0-beta.1", "v1.7.0-beta.1", False, False),
+            ("v1.8.0-beta.5", "v1.8.0-beta.5", False, False),
+            # 仅一侧带 v 前缀时, 前缀不参与比较
+            ("v1.8.0", "1.8.0", False, True),
             # X.Y.Z 相同, 仅预发布号不同: 放行 + WARNING
             ("1.7.0-beta.5", "1.7.0-alpha.59", False, True),
-            ("1.8.0-alpha.123", "1.8.0-alpha.222", False, True),
+            ("v1.8.0-alpha.123", "v1.8.0-alpha.222", False, True),
             # X.Y.Z 不同: 拦截
             ("1.7.0", "1.6.0", True, False),
             ("1.8.0", "1.8.1", True, False),

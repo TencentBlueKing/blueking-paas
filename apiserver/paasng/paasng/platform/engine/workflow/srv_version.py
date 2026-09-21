@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 def parse_xyz_version(version: str | None) -> tuple[int, int, int] | None:
     """解析版本号中的 X.Y.Z(major.minor.patch), 无法解析时返回 None
 
-    :param version: 形如 "1.8.0"、"1.7.0-beta.5" 的版本号
+    :param version: 形如 "1.8.0"、"v1.7.0-beta.5" 的版本号
     """
     if not version:
         return None
 
     try:
-        parsed = VersionInfo.parse(version.strip())
+        parsed = VersionInfo.parse(version.strip().removeprefix("v"))
     except (TypeError, ValueError):
         return None
 

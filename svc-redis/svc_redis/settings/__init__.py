@@ -289,9 +289,13 @@ ENABLE_ADMIN = False
 BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
 # 登录票据类型：bk_token / bk_ticket
 BKAUTH_BACKEND_TYPE = env("BKAUTH_BACKEND_TYPE", default="bk_token")
-# bk_token 验票所需应用凭证，必须非空，否则带 cookie 的请求会在验票前 500；bk_ticket 不用
+# bk_token 验票所需应用凭证，必须非空，否则启动失败；bk_ticket 不用
 BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default="")
 BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default="")
+if BKAUTH_BACKEND_TYPE == "bk_token" and not (BKAUTH_TOKEN_APP_CODE and BKAUTH_TOKEN_SECRET_KEY):
+    raise ValueError(
+        "BKAUTH_TOKEN_APP_CODE and BKAUTH_TOKEN_SECRET_KEY must be set when BKAUTH_BACKEND_TYPE is bk_token"
+    )
 
 # 未登录跳转页，不要填验票接口
 LOGIN_URL = env.str("BK_LOGIN_API_URL", default="http://paasee.blueking-fake.com/login")

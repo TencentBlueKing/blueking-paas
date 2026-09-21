@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Redis 套餐资源规格
-预定义 default / 1G / 2G 三档，CPU 统一 100m / 500m。
+预定义 default / 1G / 2G 三档，CPU 统一 100m / 500m，内存 request 为 limit 的一半。
 也支持自定义 requests 和 limits，或在 preset 上叠加，可见 README.md
 """
 
@@ -28,15 +28,15 @@ from .entities import RedisPlanConfig, ResourcePresetName
 # preset -> {requests, limits}，requests/limits 为任意 K8s 资源字典
 RESOURCE_PRESETS: Dict[ResourcePresetName, Dict[str, Dict[str, str]]] = {
     "default": {
-        "requests": {"cpu": "100m", "memory": "512Mi"},
+        "requests": {"cpu": "100m", "memory": "256Mi"},
         "limits": {"cpu": "500m", "memory": "512Mi"},
     },
     "1G": {
-        "requests": {"cpu": "100m", "memory": "1Gi"},
+        "requests": {"cpu": "100m", "memory": "512Mi"},
         "limits": {"cpu": "500m", "memory": "1Gi"},
     },
     "2G": {
-        "requests": {"cpu": "100m", "memory": "2Gi"},
+        "requests": {"cpu": "100m", "memory": "1Gi"},
         "limits": {"cpu": "500m", "memory": "2Gi"},
     },
 }

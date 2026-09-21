@@ -48,7 +48,7 @@ class TestResolvePlanResources:
 
     def test_preset_with_explicit_overlay(self):
         resolved = resolve_plan_resources(_plan_config(resources={"preset": "1G", "limits": {"cpu": "2"}}))
-        assert resolved.requests == {"cpu": "100m", "memory": "1Gi"}
+        assert resolved.requests == {"cpu": "100m", "memory": "512Mi"}
         assert resolved.limits == {"cpu": "2", "memory": "1Gi"}
 
     def test_missing_resources_is_rejected(self):
@@ -70,15 +70,15 @@ class TestGetRedisResource:
 
         assert deployable["spec"]["kubernetesConfig"]["service"]["additional"]["enabled"] is False
         resources = deployable["spec"]["kubernetesConfig"]["resources"]
-        assert resources["requests"] == {"cpu": "100m", "memory": "512Mi"}
+        assert resources["requests"] == {"cpu": "100m", "memory": "256Mi"}
         assert resources["limits"] == {"cpu": "500m", "memory": "512Mi"}
 
     @pytest.mark.parametrize(
         ("preset", "requests_cpu", "requests_memory", "limits_cpu", "limits_memory"),
         [
-            ("default", "100m", "512Mi", "500m", "512Mi"),
-            ("1G", "100m", "1Gi", "500m", "1Gi"),
-            ("2G", "100m", "2Gi", "500m", "2Gi"),
+            ("default", "100m", "256Mi", "500m", "512Mi"),
+            ("1G", "100m", "512Mi", "500m", "1Gi"),
+            ("2G", "100m", "1Gi", "500m", "2Gi"),
         ],
     )
     def test_get_replication_redis_manifest(self, preset, requests_cpu, requests_memory, limits_cpu, limits_memory):

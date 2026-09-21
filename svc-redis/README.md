@@ -128,15 +128,15 @@ config = {
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
-`resources` 为必填，规格表定义在 `svc_redis/controller/resource_presets.py`。CPU 统一 100m / 500m；超过 2Gi 或需要其它配额时显式写 `requests` / `limits`。
+`resources` 为必填，规格表定义在 `svc_redis/controller/resource_presets.py`。CPU 统一 100m / 500m，内存 request 为 limit 的一半；超过 2Gi 或需要其它配额时显式写 `requests` / `limits`。
 
 **Breaking change**：不再支持历史字段 `memory_size`。升级前请直接修改存量 Plan 的 `config`：删除 `memory_size`，改为 `resources`。已创建的实例不会自动变更规格；未改 plan 就发版会导致创建/删除实例失败。原 `memory_size: 2Gi` 可改为 `{"preset": "2G"}`，`4Gi` / `8Gi` 等需显式写 `requests` / `limits`。
 
 | preset | CPU requests | Memory requests | CPU limits | Memory limits |
 | --- | --- | --- | --- | --- |
-| default | 100m | 512Mi | 500m | 512Mi |
-| 1G | 100m | 1Gi | 500m | 1Gi |
-| 2G | 100m | 2Gi | 500m | 2Gi |
+| default | 100m | 256Mi | 500m | 512Mi |
+| 1G | 100m | 512Mi | 500m | 1Gi |
+| 2G | 100m | 1Gi | 500m | 2Gi |
 
 常规套餐，使用 preset：
 

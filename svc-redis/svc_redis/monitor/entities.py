@@ -17,7 +17,7 @@
 
 """Redis 实例指标采集的数据结构"""
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 
 
 @dataclass(frozen=True)
@@ -32,25 +32,32 @@ class RedisInstance:
     bk_env: str
 
     def as_label_values(self) -> list[str]:
-        return [self.bk_instance, self.bk_cluster, self.namespace, self.bk_app_code, self.bk_module, self.bk_env]
+        return [getattr(self, field.name) for field in fields(self)]
 
     @classmethod
     def as_label_keys(cls) -> list[str]:
-        return ["bk_instance", "bk_cluster", "namespace", "bk_app_code", "bk_module", "bk_env"]
+        return [field.name for field in fields(cls)]
 
 
 @dataclass
 class RedisInstanceStatus:
-    """单个实例的采集结果, 值为 None 表示采集失败(该指标不产出样本)"""
+    """单个实例的采集结果
+
+    取值一律遵循 "显式缺失" 约定:
+    - None: 取不到 (没有 exporter / k8s 查询失败 / 样本不存在), 对应指标不产出样本
+    - bool: 已确认的结论, False 为否定 (代表 Pod 未就绪 / 确认没有 Pod / exporter 取数失败)
+
+    k8s_state_missing / usage_fetch_skipped 是采集器侧的降级标记, 供 collect_success 判断使用.
+    """
 
     instance: RedisInstance
     alive: bool | None = None
-    memory_usage_rate: float | None = None
-    connection_usage_rate: float | None = None
     oom_killed: bool | None = None
     # 有 exporter 且取数成功为 True, 取数失败为 False; None 表示实例没有 exporter
     exporter_up: bool | None = None
-    # 所有 DB 的 key 总数 (redis_db_keys 按 db 标签求和); None 表示取不到该样本
+    memory_usage_rate: float | None = None
+    connection_usage_rate: float | None = None
+    # 所有 DB 的 key 总数 (redis_db_keys 按 db 标签求和)
     db_keys: float | None = None
     # True 表示实例的 k8s 状态读不到 (集群或命名空间查询失败)
     k8s_state_missing: bool = False

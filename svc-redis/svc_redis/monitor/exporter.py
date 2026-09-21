@@ -40,6 +40,9 @@ _CONNECTED_CLIENTS = "redis_connected_clients"
 _MAXCLIENTS = "redis_config_maxclients"
 _DB_KEYS = "redis_db_keys"
 
+# 单值样本, 同名样本以最后一条为准
+_SINGLE_VALUE_METRICS = (_USED_MEMORY, _MAXMEMORY, _CONNECTED_CLIENTS, _MAXCLIENTS)
+
 
 @dataclass(frozen=True)
 class ExporterUsage:
@@ -55,7 +58,10 @@ class ExporterUsage:
 def fetch_usage(
     instance: RedisInstance, client: EnhancedApiClient, pod_name: str, deadline: float
 ) -> ExporterUsage | None:
-    """读取实例 exporter 的用量; 取数失败时返回 None"""
+    """读取实例 exporter 的用量; 取数失败时返回 None
+
+    exporter 是实例 Pod 的 sidecar, 只能经 kube-apiserver 的 pod proxy 访问它的 /metrics.
+    """
     path = f"/api/v1/namespaces/{instance.namespace}/pods/{pod_name}:{REDIS_EXPORTER_PORT}/proxy/metrics"
     try:
         text = client.call_api(
@@ -71,19 +77,20 @@ def fetch_usage(
         logger.warning("unable to fetch exporter metrics of instance<%s>: %s", instance.bk_instance, e)
     except Exception:
         logger.exception("unable to fetch exporter metrics of instance<%s>", instance.bk_instance)
+
     return None
 
 
 def _parse_usage(text: str) -> ExporterUsage:
     """从 prometheus 文本中取出关心的样本
 
-    redis_db_keys 带 db 标签, 逐条累加成实例级总量.
+    单值样本 (内存/连接数) 同名以最后一条为准; redis_db_keys 带 db 标签, 逐条累加成实例级总量.
     """
     samples: dict[str, float] = {}
     db_keys: list[float] = []
     for family in text_string_to_metric_families(text):
         for sample in family.samples:
-            if sample.name in (_USED_MEMORY, _MAXMEMORY, _CONNECTED_CLIENTS, _MAXCLIENTS):
+            if sample.name in _SINGLE_VALUE_METRICS:
                 samples[sample.name] = sample.value
             elif sample.name == _DB_KEYS:
                 db_keys.append(sample.value)

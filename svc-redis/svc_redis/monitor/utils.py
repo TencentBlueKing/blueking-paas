@@ -40,10 +40,16 @@ def remaining_time(deadline: float) -> float:
     return deadline - time.monotonic()
 
 
-def map_concurrently(func: Callable, items: list, deadline: float) -> list:
-    """并发执行任务并收集结果, 到 deadline 仍未完成的任务被放弃
+def request_timeout(deadline: float) -> float:
+    """单次请求的超时: 取 min(单请求上限, 剩余预算), 下限 0.1 是因为 0 会被当成 "未设置" """
+    return min(settings.METRIC_COLLECT_REQUEST_TIMEOUT, max(remaining_time(deadline), 0.1))
 
-    NOTE: 被放弃的任务仍会继续跑完, 因此 func 必须是纯函数, 不得修改传入对象或其它共享状态.
+
+def map_with_deadline(func: Callable, items: list, deadline: float) -> list:
+    """并发执行任务并收集结果, 结果里不包含到 deadline 仍未完成的任务
+
+    NOTE: 被放弃的任务仍会继续跑完, 因此 func 不得修改传入对象或其它共享状态;
+    单个任务抛异常只记录日志, 不影响其它任务.
     """
     if not items:
         return []
@@ -71,8 +77,3 @@ def map_concurrently(func: Callable, items: list, deadline: float) -> list:
             # 单个任务失败不得影响整次采集
             logger.exception("unexpected error in concurrent collect task")
     return results
-
-
-def request_timeout(deadline: float) -> float:
-    """单次请求的超时: 取 min(单请求上限, 剩余预算), 下限 0.1 是因为 0 会被当成 "未设置" """
-    return min(settings.METRIC_COLLECT_REQUEST_TIMEOUT, max(remaining_time(deadline), 0.1))

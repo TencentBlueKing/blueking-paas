@@ -58,17 +58,16 @@ def _instance(app_info=None) -> ServiceInstance:
     return instance
 
 
-def _statefulset(replicas=1, ready_replicas=1):
-    return _Obj(metadata=_Obj(name=k8s.INSTANCE_NAME), status=_Obj(replicas=replicas, readyReplicas=ready_replicas))
-
-
-def _pod(exporter=True, oom_finished_at=None):
+def _pod(exporter=True, oom_finished_at=None, role="master", ready=True, name="svc-redis-0"):
     containers = [_Obj(name="redis")] + ([_Obj(name="redis-exporter")] if exporter else [])
     terminated = {"reason": "OOMKilled", "finishedAt": oom_finished_at.isoformat()} if oom_finished_at else None
     return _Obj(
-        metadata=_Obj(name="svc-redis-0", labels=_Obj({"redis-role": "master"})),
+        metadata=_Obj(name=name, labels=_Obj({"redis-role": role})),
         spec=_Obj(containers=containers),
-        status=_Obj(containerStatuses=[_Obj(state=_Obj(), lastState=_Obj(terminated=terminated))]),
+        status=_Obj(
+            conditions=[_Obj(type="Ready", status="True" if ready else "False")],
+            containerStatuses=[_Obj(state=_Obj(), lastState=_Obj(terminated=terminated))],
+        ),
     )
 
 
@@ -100,7 +99,6 @@ def _clean_metrics_cache():
 def test_metrics_of_instance(monkeypatch):
     """正常实例: 各实例指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
     iid = str(_instance(app_info={"app_code": "app", "module": "default", "environment": "stag"}).uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
     monkeypatch.setattr(
         exporter,
@@ -127,8 +125,6 @@ def test_metrics_of_instance(monkeypatch):
         ("redis_instance_db_keys", iid): 7.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
-        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
-        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
@@ -136,14 +132,13 @@ def test_metrics_reuse_cached_result(monkeypatch, settings):
     """TTL 内的多次采集复用缓存结果: 结果一致, 且不再重复查询 k8s"""
     settings.METRIC_COLLECT_CACHE_TTL = 60
     iid = str(_instance().uuid)
-    sts_calls: list = []
+    pod_calls: list = []
 
-    def _list_statefulsets(*args):
-        sts_calls.append(1)
-        return {"ns-a": [_statefulset()]}
+    def _list_pods(*args):
+        pod_calls.append(1)
+        return {"ns-a": [_pod()]}
 
-    monkeypatch.setattr(k8s, "list_statefulsets", _list_statefulsets)
-    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+    monkeypatch.setattr(k8s, "list_pods", _list_pods)
     monkeypatch.setattr(
         exporter,
         "fetch_usage",
@@ -156,7 +151,7 @@ def test_metrics_reuse_cached_result(monkeypatch, settings):
     assert first[("redis_instance_db_keys", iid)] == 7.0
 
     assert _metrics() == first
-    assert len(sts_calls) == 1
+    assert len(pod_calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -165,7 +160,6 @@ def test_metrics_reuse_cached_result(monkeypatch, settings):
 def test_oom_killed(monkeypatch, age, expected):
     """OOM 只统计最近 METRIC_OOM_KILLED_WINDOW 秒内发生的"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {})
     monkeypatch.setattr(
         k8s, "list_pods", lambda *args: {"ns-a": [_pod(oom_finished_at=now() - timedelta(seconds=age))]}
     )
@@ -173,19 +167,31 @@ def test_oom_killed(monkeypatch, age, expected):
     assert _metrics()[("redis_instance_oom_killed", iid)] == expected
 
 
-def test_not_alive(monkeypatch):
-    """副本没全部就绪时判为不可用"""
+def test_alive_only_depends_on_master_pod(monkeypatch):
+    """存活只看代表 Pod: 副本未就绪不影响, master 未就绪或缺失才判不可用"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset(replicas=3, ready_replicas=2)]})
-    monkeypatch.setattr(k8s, "list_pods", lambda *args: {})
+    # 副本未就绪, master 就绪 -> 实例可用
+    monkeypatch.setattr(
+        k8s, "list_pods", lambda *args: {"ns-a": [_pod(), _pod(name="svc-redis-1", role="replica", ready=False)]}
+    )
+    assert _metrics()[("redis_instance_alive", iid)] == 1.0
 
+    # master 未就绪 -> 实例不可用
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod(ready=False)]})
+    assert _metrics()[("redis_instance_alive", iid)] == 0.0
+
+    # 主从结构下没有 master (只剩副本) -> 实例不可用
+    monkeypatch.setattr(
+        k8s,
+        "list_pods",
+        lambda *args: {"ns-a": [_pod(name="svc-redis-1", role="replica"), _pod(name="svc-redis-2", role="replica")]},
+    )
     assert _metrics()[("redis_instance_alive", iid)] == 0.0
 
 
 def test_metrics_missing_when_no_exporter(monkeypatch):
     """实例没有 exporter sidecar: 只出存活与 OOM"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod(exporter=False)]})
 
     assert _metrics() == {
@@ -193,15 +199,12 @@ def test_metrics_missing_when_no_exporter(monkeypatch):
         ("redis_instance_oom_killed", iid): 0.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
-        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
-        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
 def test_exporter_up_zero_when_fetch_failed(monkeypatch):
     """实例有 exporter 但取数失败: exporter_up=0, 使用率缺失; 目标侧失败不影响采集器健康度"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
     monkeypatch.setattr(exporter, "fetch_usage", lambda *args: None)
 
@@ -211,8 +214,6 @@ def test_exporter_up_zero_when_fetch_failed(monkeypatch):
         ("redis_instance_exporter_up", iid): 0.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 1.0,
-        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
-        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
@@ -221,18 +222,16 @@ def test_single_cluster_failure_is_isolated(monkeypatch):
     ok = RedisInstanceStatus(RedisInstance("i-ok", "c-ok", "ns-a", "app", "mod", "stag"))
     bad = RedisInstanceStatus(RedisInstance("i-bad", "c-bad", "ns-b", "app", "mod", "stag"))
     monkeypatch.setattr(instances, "get_client_by_cluster_name", lambda name: object())
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda client, ns, deadline: {"ns-a": [_statefulset()]})
-    monkeypatch.setattr(k8s, "list_pods", lambda client, ns, deadline: {"ns-a": [_pod()]})
     # 让 c-bad 的命名空间查询失败
     monkeypatch.setattr(
         k8s,
-        "list_statefulsets",
+        "list_pods",
         lambda client, ns, deadline: (
-            (_ for _ in ()).throw(RuntimeError("down")) if "ns-b" in ns else {"ns-a": [_statefulset()]}
+            (_ for _ in ()).throw(RuntimeError("down")) if "ns-b" in ns else {"ns-a": [_pod()]}
         ),
     )
 
-    instances._fill_k8s_states([ok, bad], time.monotonic() + 5)
+    instances._collect_k8s_states([ok, bad], time.monotonic() + 5)
 
     assert ok.alive is True
     assert not ok.k8s_state_missing
@@ -247,21 +246,17 @@ def test_collect_success_zero_when_k8s_unreadable(monkeypatch):
     def _raise(*args):
         raise RuntimeError("cluster down")
 
-    monkeypatch.setattr(k8s, "list_statefulsets", _raise)
-    monkeypatch.setattr(k8s, "list_pods", lambda *args: {})
+    monkeypatch.setattr(k8s, "list_pods", _raise)
 
     assert _metrics() == {
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 0.0,
-        ("redis_instance_collect_k8s_state_missing_instances", ""): 1.0,
-        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 0.0,
     }
 
 
 def test_collect_success_zero_when_usage_fetch_abandoned(monkeypatch):
     """exporter 任务异常被放弃: exporter_up=0 且计入 skipped, success=0"""
     iid = str(_instance().uuid)
-    monkeypatch.setattr(k8s, "list_statefulsets", lambda *args: {"ns-a": [_statefulset()]})
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
 
     def _raise(*args):
@@ -275,8 +270,6 @@ def test_collect_success_zero_when_usage_fetch_abandoned(monkeypatch):
         ("redis_instance_exporter_up", iid): 0.0,
         ("redis_instance_collect_instances", ""): 1.0,
         ("redis_instance_collect_success", ""): 0.0,
-        ("redis_instance_collect_k8s_state_missing_instances", ""): 0.0,
-        ("redis_instance_collect_usage_fetch_skipped_instances", ""): 1.0,
     }
 
 
@@ -285,7 +278,9 @@ def test_usage_skipped_when_deadline_exceeded(monkeypatch):
     status = RedisInstanceStatus(RedisInstance("i-1", "c-1", "ns-a", "app", "mod", "stag"))
     monkeypatch.setattr(exporter, "fetch_usage", lambda *args: pytest.fail("should not be called"))
 
-    instances._fill_usage_rates([status], {"i-1": (object(), "svc-redis-0")}, {}, deadline=time.monotonic() - 1)
+    instances._collect_usage(
+        [status], {"i-1": instances.ExporterTarget(object(), "svc-redis-0")}, {}, deadline=time.monotonic() - 1
+    )
 
     assert status.exporter_up is False
     assert status.usage_fetch_skipped is True

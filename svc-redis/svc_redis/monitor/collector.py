@@ -41,20 +41,17 @@ class RedisInstanceMetricsCollector:
             statuses = []
             success = False
 
-        yield from self._build_families(statuses)
+        k8s_missing = any(status.k8s_state_missing for status in statuses)
+        usage_skipped = any(status.usage_fetch_skipped for status in statuses)
+        collect_success = int(success and not k8s_missing and not usage_skipped)
 
-        k8s_missing = sum(1 for status in statuses if status.k8s_state_missing)
-        usage_skipped = sum(1 for status in statuses if status.usage_fetch_skipped)
-
-        success_family, instances_family, k8s_missing_family, usage_skipped_family = self._build_self_families()
+        success_family, instances_family = self._build_self_families()
+        success_family.add_metric([], collect_success)
         instances_family.add_metric([], len(statuses))
-        success_family.add_metric([], int(success and not k8s_missing and not usage_skipped))
-        k8s_missing_family.add_metric([], k8s_missing)
-        usage_skipped_family.add_metric([], usage_skipped)
-        yield instances_family
+
+        yield from self._build_families(statuses)
         yield success_family
-        yield k8s_missing_family
-        yield usage_skipped_family
+        yield instances_family
 
     def describe(self):
         """prometheus_client 注册时会调用, 返回空指标以避免触发真实采集"""
@@ -65,12 +62,6 @@ class RedisInstanceMetricsCollector:
     def _build_families(statuses: list[RedisInstanceStatus]) -> list[GaugeMetricFamily]:
         labels = RedisInstance.as_label_keys()
         alive = GaugeMetricFamily("redis_instance_alive", "whether the redis instance is available", labels=labels)
-        memory_usage = GaugeMetricFamily(
-            "redis_instance_memory_usage_rate", "memory usage rate of the redis instance", labels=labels
-        )
-        connection_usage = GaugeMetricFamily(
-            "redis_instance_connection_usage_rate", "connection usage rate of the redis instance", labels=labels
-        )
         oom_killed = GaugeMetricFamily(
             "redis_instance_oom_killed", "whether the redis container was oom killed", labels=labels
         )
@@ -79,47 +70,45 @@ class RedisInstanceMetricsCollector:
             "whether the redis exporter metrics were collected; absent when the instance has no exporter",
             labels=labels,
         )
+        memory_usage = GaugeMetricFamily(
+            "redis_instance_memory_usage_rate", "memory usage rate of the redis instance", labels=labels
+        )
+        connection_usage = GaugeMetricFamily(
+            "redis_instance_connection_usage_rate", "connection usage rate of the redis instance", labels=labels
+        )
         db_keys = GaugeMetricFamily(
             "redis_instance_db_keys", "total number of keys across all DBs of the redis instance", labels=labels
         )
 
         for status in statuses:
             label_values = status.instance.as_label_values()
-            # 取不到的值不产出样本(显式缺失), 不用 0 冒充; gauge 值统一转 float(bool 即 1/0)
-            for family, value in (
-                (alive, status.alive),
-                (memory_usage, status.memory_usage_rate),
-                (connection_usage, status.connection_usage_rate),
-                (oom_killed, status.oom_killed),
-                (exporter_up, status.exporter_up),
-                (db_keys, status.db_keys),
-            ):
-                if value is not None:
-                    family.add_metric(label_values, value)
+            _add_if_present(alive, label_values, status.alive)
+            _add_if_present(oom_killed, label_values, status.oom_killed)
+            _add_if_present(exporter_up, label_values, status.exporter_up)
+            _add_if_present(memory_usage, label_values, status.memory_usage_rate)
+            _add_if_present(connection_usage, label_values, status.connection_usage_rate)
+            _add_if_present(db_keys, label_values, status.db_keys)
 
-        return [alive, memory_usage, connection_usage, oom_killed, exporter_up, db_keys]
+        return [alive, oom_killed, exporter_up, memory_usage, connection_usage, db_keys]
 
     @staticmethod
     def _build_self_families() -> list[GaugeMetricFamily]:
-        """采集链路的自监控: 采集器是否健康 / 应采集实例数 / 两类降级的实例数"""
+        """采集链路的自监控: 采集器是否健康 / 应采集实例数"""
         success_family = GaugeMetricFamily(
             "redis_instance_collect_success",
-            "whether this collection finished without collector-side failures, including unexpected errors, "
-            "unreadable k8s states and skipped exporter fetches; target-side failures are not counted",
+            "whether the metric collection pipeline is healthy; target-side failures are not counted",
         )
         instances_family = GaugeMetricFamily(
             "redis_instance_collect_instances", "number of instances that should be collected"
         )
-        k8s_missing_family = GaugeMetricFamily(
-            "redis_instance_collect_k8s_state_missing_instances",
-            "number of instances whose k8s states could not be read",
-        )
-        usage_skipped_family = GaugeMetricFamily(
-            "redis_instance_collect_usage_fetch_skipped_instances",
-            "number of instances whose exporter usage fetch was skipped (deadline exceeded or task failed)",
-        )
 
-        return [success_family, instances_family, k8s_missing_family, usage_skipped_family]
+        return [success_family, instances_family]
+
+
+def _add_if_present(family: GaugeMetricFamily, labels: list[str], value: float | None):
+    """取不到的值不产出样本 (显式缺失), 不用 0 冒充; gauge 值统一转 float"""
+    if value is not None:
+        family.add_metric(labels, value)
 
 
 metrics_collector = RedisInstanceMetricsCollector()

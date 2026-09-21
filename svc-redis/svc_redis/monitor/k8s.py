@@ -31,86 +31,46 @@ from django.conf import settings
 from django.utils.timezone import now
 
 from svc_redis.controller.manifests import generate_redis_name
-from svc_redis.monitor.utils import map_concurrently, request_timeout
-from svc_redis.resources.base.base import clone_client
-from svc_redis.resources.base.kres import KPod, KStatefulSet
+from svc_redis.monitor.utils import request_timeout
+from svc_redis.resources.base.base import EnhancedApiClient
+from svc_redis.resources.base.kres import KPod
 
 logger = logging.getLogger(__name__)
 
-# 实例资源 (StatefulSet/Pod) 的名字与标签, 由 redis-operator 注入
+# 实例 CR 名, 同时是 redis-operator 给实例 Pod 打的 app 标签值
 INSTANCE_NAME = generate_redis_name()
 INSTANCE_LABELS = {"app": INSTANCE_NAME}
 # redis-exporter 容器的名称关键字, 由 redis-operator 注入的 sidecar 使用
 EXPORTER_CONTAINER_NAME_KEYWORD = "exporter"
 
 
-def list_statefulsets(client, namespaces: list[str], deadline: float) -> dict[str, list]:
-    """列出各命名空间的 StatefulSet, 返回 命名空间 -> 资源列表"""
-    return _list_resources(KStatefulSet, client, namespaces, deadline)
+def list_pods(client: EnhancedApiClient, namespaces: list[str], deadline: float) -> dict[str, list]:
+    """按标签批量列出各命名空间的 Pod, 返回 命名空间 -> 资源列表
 
-
-def list_pods(client, namespaces: list[str], deadline: float) -> dict[str, list]:
-    """列出各命名空间的 Pod, 返回 命名空间 -> 资源列表"""
-    return _list_resources(KPod, client, namespaces, deadline)
-
-
-def _list_resources(kres_cls, client, namespaces: list[str], deadline: float) -> dict[str, list]:
-    """按标签批量列出资源, 返回 命名空间 -> 资源列表"""
-    namespaces = set(namespaces)
+    只走跨 namespace 的批量查询: 查询失败直接抛出, 由调用方把该集群的实例标记为状态缺失;
+    没有 item 的命名空间保持缺失.
+    """
+    wanted = set(namespaces)
     # 单次请求的超时不能超过整体 deadline
-    kres = kres_cls(client, request_timeout=request_timeout(deadline))
+    kres = KPod(client, request_timeout=request_timeout(deadline))
+    # 批量操作需通过 ops_batch 调用, BaseKresource 只代理了基于名称的操作
+    items = kres.ops_batch.list(labels=INSTANCE_LABELS).items
 
-    try:
-        # 批量操作需通过 ops_batch 调用, BaseKresource 只代理了基于名称的操作
-        items = kres.ops_batch.list(labels=INSTANCE_LABELS).items
-    except Exception:
-        logger.warning(
-            "unable to batch list %s by label, fallback to per-namespace list", kres_cls.kind, exc_info=True
-        )
-        return _list_by_namespace(kres_cls, client, list(namespaces), deadline)
-
-    # 按实际返回的 item 聚合: 没有 item 的命名空间保持缺席(缺失)
     resources: dict[str, list] = {}
     for item in items:
-        if item.metadata.namespace in namespaces:
+        if item.metadata.namespace in wanted:
             resources.setdefault(item.metadata.namespace, []).append(item)
     return resources
 
 
-def _list_by_namespace(kres_cls, client, namespaces: list[str], deadline: float) -> dict[str, list]:
-    """逐个命名空间并发查询
-
-    查询失败的命名空间不出现在结果里(判为缺失)
-    查询成功但结果为空列表时保留空列表: 这是逐 namespace 确认过的 "确实没有资源", 判为不可用.
-
-    每个任务克隆 client 并重建 kres.
-    """
-
-    def _list(namespace: str):
-        try:
-            kres = kres_cls(clone_client(client), request_timeout=request_timeout(deadline))
-            return namespace, kres.ops_batch.list(labels=INSTANCE_LABELS, namespace=namespace).items
-        except Exception:
-            logger.exception("unable to list %s in namespace<%s>", kres_cls.kind, namespace)
-            return namespace, None
-
-    return {
-        namespace: items for namespace, items in map_concurrently(_list, namespaces, deadline) if items is not None
-    }
-
-
-def is_instance_ready(statefulsets: list) -> bool:
-    """实例对应的 StatefulSet 是否全部就绪"""
-    for statefulset in statefulsets:
-        if statefulset.metadata.name != INSTANCE_NAME:
-            continue
-        status = statefulset["status"]
-        if status is None:
-            return False
-        replicas = status["replicas"] or 0
-        ready_replicas = status["readyReplicas"] or 0
-        return replicas > 0 and replicas == ready_replicas
-
+def is_pod_ready(pod) -> bool:
+    """Pod 的 Ready condition 是否为 True; 取不到 status / conditions 时判为未就绪"""
+    status = pod["status"]
+    if status is None:
+        return False
+    for condition in status["conditions"] or []:
+        if condition["type"] == "Ready":
+            return condition["status"] == "True"
     return False
 
 
@@ -155,13 +115,29 @@ def _parse_k8s_time(value: str | None) -> datetime | None:
 
 
 def pick_exporter_pod_name(pods: list) -> str:
-    """挑选一个带 redis-exporter sidecar 的 Pod: 主从架构优先 master, 否则取第一个"""
+    """挑一个带 redis-exporter sidecar 的 Pod 名: 主从架构优先 master, 没有 master 时取第一个
+
+    与 pick_instance_pod 的区别: 这里只用于读 exporter 指标, 允许在缺少 master 时回退到副本;
+    实例存活判定不允许这种回退.
+    """
     candidates = [pod for pod in pods if _has_exporter_container(pod)]
     if not candidates:
         return ""
 
     # 主从架构下, 应用连接与连接数统计都以 master 为准
-    return max(candidates, key=_is_master).metadata.name
+    masters = [pod for pod in candidates if _is_master(pod)]
+    return (masters or candidates)[0].metadata.name
+
+
+def pick_instance_pod(pods: list):
+    """挑选代表实例可用性的 Pod: 主从结构取 redis-role=master, 单机 (只有一个 Pod) 取该 Pod
+
+    主从结构下没有 master 时返回 None, 不用副本冒充; 就绪状态另由 is_pod_ready 判断.
+    """
+    for pod in pods:
+        if _is_master(pod):
+            return pod
+    return pods[0] if len(pods) == 1 else None
 
 
 def _is_master(pod) -> bool:

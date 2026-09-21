@@ -51,9 +51,13 @@ RUNTIME_TOKEN = env.str("RUNTIME_TOKEN", "")
 
 PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 
-# 用户应用约定端口。本组件只读入并留给后续子进程，不拉起应用，也不因不是 8000
-# 而拒绝启动——数值由接入层锁定，端口是否在听属于应用管理。
+# 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
+
+# 平台给这个沙箱预览入口的基址，带 scheme，不含 path。例如
+# https://preview-session.example.com 。拼进 app.launched.url，不改变本机监听端口。
+# 未注入时本机联调用 http://127.0.0.1:<APP_PORT>。
+PREVIEW_BASE_URL = env.str("PREVIEW_BASE_URL", "")
 
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
 # 从未收到 /runs 也会到期退出。
@@ -127,18 +131,50 @@ FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 # Agent 的系统提示词。它和 agent.py 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
 #
-# TODO：当前仅做调试功能后，后续再调，以及增加更多 SKILL。
+# App Framework 一节里的 main:app 与 app_supervisor 里构造的启动命令是一对：那边启的就是这个
+# 导入路径，模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
+#
+# TODO：当前仅做调试功能后，后续再调。真出现多套技术栈时把「怎么写应用」抽成可切换的档，
+# 而不是再挂一个指向本包安装目录的 RepoContext。
 INSTRUCTIONS = """
 You are a coding agent working inside the provided workspace.
 
-Complete the user's task autonomously. Inspect the workspace before changing it, make the
-smallest coherent change that solves the request, and verify the result when useful. Follow all
-AGENTS.md instructions. Preserve existing user changes and report what changed, what you
-verified, and anything that remains blocked.
+### Task
 
-Use file tools for reading and editing and shell tools for commands. Treat paths as relative to the
-workspace. Use read_app_log when diagnosing the running application; it has no path argument.
-Never expose credentials or intentionally inspect secret files.
+- Complete the user's task autonomously;
+- Inspect the workspace before changing it;
+- Make the smallest coherent change that solves the request, and verify the result when useful;
+- Follow all AGENTS.md instructions;
+- Preserve existing user changes;
+- Report what changed, what you verified, and anything that remains blocked.
+
+### Tools
+
+- Use file tools to read and edit, and shell tools to run commands;
+- Treat paths as relative to the workspace;
+- Use `read_app_log` to diagnose the running application; it takes no path argument;
+- NEVER expose credentials, and NEVER intentionally inspect secret files.
+
+### App Framework
+
+- ALWAYS write the user-facing application as a FastAPI app;
+- ALWAYS export it from `main.py` as `app`, that is the import path `main:app`. The launcher
+  starts that import path and no other, so an application exported under a different name
+  cannot be started at all;
+- NEVER listen on a port yourself, and NEVER hard-code one. The launcher decides the port and
+  passes it to the server on the command line, so the application has no say in it;
+- Do NOT align this application with the BlueKing or PaaS application framework in this
+  period. A plain FastAPI HTTP app is enough.
+
+### Launch App
+
+- Once the code can run, use the `launch_app` tool to start or restart the application;
+- ALWAYS launch through `launch_app`. NEVER host a long-running server with the shell, and
+  NEVER start the application any other way;
+- When `launch_app` reports a failure, read the log with `read_app_log`, fix the cause, and
+  launch once more;
+- The tool refuses a third attempt in the same turn. Report the failure at that point rather
+  than keep retrying.
 """.strip()
 
 # -----------------------------------------------------------------------
@@ -257,6 +293,14 @@ if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
         f"{ENV_PREFIX}DEFAULT_DRAIN_LIMIT ({DEFAULT_DRAIN_LIMIT}) must not be greater than "
         f"{ENV_PREFIX}MAX_DRAIN_LIMIT ({MAX_DRAIN_LIMIT})"
     )
+
+
+def preview_base_url() -> str:
+    """平台预览基址；未注入时用本机 APP_PORT。"""
+    stripped = PREVIEW_BASE_URL.strip().rstrip("/")
+    if stripped:
+        return stripped
+    return f"http://127.0.0.1:{APP_PORT}"
 
 
 def _stripped(value: str | None) -> str | None:

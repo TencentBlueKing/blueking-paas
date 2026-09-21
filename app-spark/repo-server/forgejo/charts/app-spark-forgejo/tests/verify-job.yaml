@@ -1,0 +1,57 @@
+# 冒烟验收：在独立 Pod 里跑 `app-spark-forgejo verify-remote`，通过 Service 访问
+# chart 部署的实例。这样验收用的是 app_spark_forgejo 那一份代码，不在 YAML 里重述一遍，
+# 同时也证明了集群内其他 Pod 能完成真实的 clone / push。
+#
+# 名称按 release `app-spark-forgejo` 写死（fullname 与 release 同名），只用于测试 namespace。
+# 它会在 app-spark 组织下创建 phase1-verify 仓库并推送，不要对生产实例执行。
+#
+# 只能对 init.enabled=true 的 release 执行：verify-remote 用服务账号登录，密码取自下面
+# envFrom 的 Secret 中的 FORGEJO_SERVICE_ACCOUNT_PASSWORD，而该键只在 init.enabled 时写入。
+# 缺了它，CLI 会退回「本地生成一份密码文件」的开发流程，往镜像里只有 root 可写的
+# /opt/app-spark-forgejo/secrets 写入，报出与真正原因无关的 PermissionError。
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forgejo-verify
+  namespace: app-spark-forgejo-helm-test
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: verify
+          image: app-spark-forgejo:helm-test
+          imagePullPolicy: Never
+          command: [/bin/sh, -ec]
+          args:
+            # 和 init Job 一样，先从 ConfigMap 里的 FORGEJO__* 生成一份一次性 app.ini，
+            # `assert_repeat_init_is_idempotent` 要用 forgejo CLI 读数据库。
+            - |
+              mkdir -p "$GITEA_CUSTOM/conf"
+              environment-to-ini --config "$GITEA_CUSTOM/conf/app.ini"
+              exec uv run --directory /opt/app-spark-forgejo --no-sync app-spark-forgejo verify-remote
+          envFrom:
+            - configMapRef:
+                name: app-spark-forgejo
+            - secretRef:
+                name: app-spark-forgejo
+          env:
+            - name: FORGEJO_ROOT_URL
+              value: http://app-spark-forgejo:3000
+            - name: FORGEJO_CLI
+              value: forgejo
+            # 镜像里 HOME=/root，对 git 不可写；指到这个 Pod 自己的临时卷上。
+            - name: HOME
+              value: /data
+          volumeMounts:
+            - name: scratch
+              mountPath: /data
+      volumes:
+        - name: scratch
+          emptyDir: {}

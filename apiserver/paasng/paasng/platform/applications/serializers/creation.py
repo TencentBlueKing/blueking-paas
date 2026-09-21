@@ -69,16 +69,12 @@ def validate_ai_agent_create_mode(attrs: Dict[str, Any]) -> Dict[str, Any]:
 
     # 外链与 git / 隔离部署互斥，避免静默丢掉调用方传入的源码或构建配置。
     if attrs.get("is_engineless"):
-        conflicts = [
-            name for name in ("source_config", "bkapp_spec") if attrs.get(name)
-        ]
+        conflicts = [name for name in ("source_config", "bkapp_spec") if attrs.get(name)]
         if attrs.get("is_isolated"):
             conflicts.append("is_isolated")
 
         if conflicts:
-            raise ValidationError(
-                {name: _("外链模式不能同时指定该字段") for name in conflicts}
-            )
+            raise ValidationError({name: _("外链模式不能同时指定该字段") for name in conflicts})
 
         return attrs
 
@@ -227,7 +223,7 @@ class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
 
     code = AppIDField()
     name = I18NExtend(AppNameField())
-    operator = serializers.CharField(required=True, help_text="已在开发者中心注册的管理员用户名")
+    operator = serializers.CharField(required=True, help_text="管理员用户名，允许使用虚拟账号")
     is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境")
     is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
@@ -250,15 +246,6 @@ class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
 
         return code
 
-    def validate_operator(self, operator: str) -> str:
-        user_id = user_id_encoder.encode(settings.USER_TYPE, operator)
-
-        # UserProfile 在用户首次访问开发者中心时创建，用它判定已登录/注册过。不造虚拟用户。
-        if not UserProfile.objects.filter(user=user_id).exists():
-            raise ValidationError(_("用户未在开发者中心注册"))
-
-        return operator
-
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         attrs = super().validate(attrs)
         attrs = validate_ai_agent_create_mode(attrs)
@@ -273,8 +260,11 @@ class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
         attrs["app_tenant_info"] = app_tenant_info
 
         user_id = user_id_encoder.encode(settings.USER_TYPE, attrs["operator"])
-        profile = UserProfile.objects.get(user=user_id)
-        self._validate_operator_tenant(profile, app_tenant_info)
+        profile = UserProfile.objects.filter(user=user_id).first()
+        # 虚拟账号没有对应的 UserProfile，跳过租户一致性校验
+        if profile is not None:
+            self._validate_operator_tenant(profile, app_tenant_info)
+
         attrs["operator_user"] = get_user_by_user_id(user_id)
         return attrs
 

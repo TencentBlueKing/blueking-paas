@@ -22,7 +22,7 @@ import argparse
 
 from app_spark_forgejo.common import wait_ready
 from app_spark_forgejo.init import initialise
-from app_spark_forgejo.verify import verify
+from app_spark_forgejo.verify import verify, verify_remote
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -34,7 +34,11 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("ready", help="Block until /api/healthz answers 200")
     sub.add_parser("init", help="Create admin, service account and org (idempotent)")
-    sub.add_parser("verify", help="Check server-side invariants against a running instance")
+    sub.add_parser("verify", help="Check server-side invariants against dev-mode Compose")
+    sub.add_parser(
+        "verify-remote",
+        help="Check the deployment-agnostic invariants against FORGEJO_ROOT_URL (used by the chart)",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "ready":
@@ -43,5 +47,9 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args.command == "init":
         initialise()
+        return
+    if args.command == "verify-remote":
+        verify_remote()
+        print("remote verification passed")
         return
     verify()

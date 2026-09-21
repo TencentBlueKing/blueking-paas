@@ -4,7 +4,7 @@
   guard that admits one mutating operation at a time. No HTTP.
 - :mod:`app_spark_agent.server.run_input` -- the trust boundary: validates an inbound AG-UI run
   and reduces it to a single new user turn.
-- :mod:`app_spark_agent.server.routes` -- the views: health, drain, context, and AG-UI run.
+- :mod:`app_spark_agent.server.routes` -- the views: health, drain, context, launch, and AG-UI run.
 - :mod:`app_spark_agent.server.errors` -- exception handlers: 409 mapping and credential
   masking on HTTP error bodies.
 - :mod:`app_spark_agent.server.lifecycle` -- idle timeout and SIGTERM child-process registry.

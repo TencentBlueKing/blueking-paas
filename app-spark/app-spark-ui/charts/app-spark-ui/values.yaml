@@ -1,0 +1,51 @@
+replicaCount: 1
+
+# 可统一指定镜像仓库和拉取凭据。
+# global:
+#   imageRegistry: ""
+#   imagePullSecrets: []
+
+# 必须使用本项目 Dockerfile.prod 构建的镜像，不能使用原生 nginx 镜像。
+image:
+  # registry: ""
+  repository: app-spark-ui
+  # pullPolicy: IfNotPresent
+  # 为空时使用 Chart.appVersion。
+  tag: ""
+  # digest 优先于 tag；pullSecrets 支持名称字符串或 {name: ...}。
+  # digest: ""
+  # pullSecrets: []
+# Pod 级拉取凭据，与 global、image.pullSecrets 合并去重。
+# imagePullSecrets: []
+# nameOverride: ""
+# fullnameOverride: ""
+
+service:
+  # type: ClusterIP
+  port: 5000
+
+ingress:
+  enabled: true
+  # 显式指定时优先于 annotations 中的 kubernetes.io/ingress.class。
+  # ingressClass: ""
+  # 必须与 env.BK_SITE_URL 对应；UI 路径原样转发，不设置 rewrite-target。
+  pathPrefix: /
+  host: app-spark.example.com
+  # annotations 和 tls 支持 Helm 模板表达式（例如 {{ .Release.Name }}）。
+  annotations: {}
+  # tls: []
+
+# 仅公开的浏览器配置；不允许放入密码、App Secret 或模型 API Key。
+env:
+  # 根路径为 "" 或 "/"；子路径如 "/spark"，同时设置 ingress.pathPrefix: /spark。
+  BK_SITE_URL: ""
+  # 必填：浏览器可访问的绝对 HTTP(S) 登录地址，用于登录和退出登录。
+  BK_LOGIN_URL: ""
+  # 已部署的预览服务地址（HTTP(S) 或根相对路径）；空值显示空白预览。
+  # 当前 UI 尚未接入按项目生成的预览地址，配置对所有项目统一生效。
+  BK_TEMPLATE_URL: ""
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

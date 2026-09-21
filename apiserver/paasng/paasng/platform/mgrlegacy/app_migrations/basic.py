@@ -23,6 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.bk_app.applications.models import WlApp
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
+from paasng.infras.iam.shim import get_paas_system_id
 from paasng.platform.applications.cleaner import ApplicationCleaner
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.handlers import turn_on_bk_log_feature
@@ -115,7 +116,12 @@ class MainInfoMigration(BaseMigration):
             role_members[m.role].append(m.username)
 
         for role, members in role_members.items():
-            add_role_members(app_code=self.context.app.code, role=ApplicationRole(role), usernames=members)
+            add_role_members(
+                app_code=self.context.app.code,
+                role=ApplicationRole(role),
+                usernames=members,
+                operator=get_paas_system_id(),
+            )
 
         return True
 

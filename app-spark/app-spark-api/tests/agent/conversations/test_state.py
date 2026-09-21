@@ -29,7 +29,7 @@ from typing import Any
 import pytest
 
 from app_spark_api.agent.conversations import state
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationMessage
 from app_spark_api.core.projects.models import Project
 
@@ -253,6 +253,8 @@ def test_clearing_forgets_everything_about_one_conversation(
     state.append_records(conversation.id, state.UI_EVENT_CHANNEL, ui_events(1))
     state.save_context(conversation.id, {"context_version": 1, "messages": []})
     state.append_records(other_conversation.id, state.MESSAGE_CHANNEL, messages(1))
+    for target in (conversation, other_conversation):
+        ConversationUserMessage.objects.create(conversation=target, run_id="run-a", content="user input")
 
     state.clear(conversation.id)
 
@@ -260,6 +262,8 @@ def test_clearing_forgets_everything_about_one_conversation(
     assert state.last_seq(conversation.id, state.UI_EVENT_CHANNEL) == 0
     assert state.context_version(conversation.id) == 0
     assert state.last_seq(other_conversation.id, state.MESSAGE_CHANNEL) == 1
+    assert not ConversationUserMessage.objects.filter(conversation=conversation).exists()
+    assert ConversationUserMessage.objects.filter(conversation=other_conversation).exists()
 
 
 def _read_messages(conversation_id) -> tuple[list[dict[str, Any]], int]:

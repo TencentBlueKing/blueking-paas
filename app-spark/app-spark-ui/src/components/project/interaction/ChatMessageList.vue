@@ -1,8 +1,12 @@
 <template>
   <div class="chat-message-list">
     <div v-if="isFresh" class="chat-empty">
-      <h3>从一句话开始</h3>
-      <p>描述你想做的改动。发送后我会改应用，中间预览会跟着更新。</p>
+      <h3>描述你的需求</h3>
+      <ul class="chat-empty__samples">
+        <li>“开发一个番茄钟小工具，使用活泼的配色风格。”</li>
+        <li>“开发一个抽奖小工具，可录入抽奖名单，奖品固定为一台 Switch 2。”</li>
+        <li>……</li>
+      </ul>
     </div>
 
     <article
@@ -20,12 +24,14 @@
           class="chat-message__markdown"
           v-html="renderMarkdown(block.text)"
         />
-        <p v-else-if="block.type === 'text'" class="chat-message__text">
-          <template v-if="block.text">{{ block.text }}</template>
-          <span v-else-if="status !== 'idle'" class="chat-message__thinking">
-            {{ message.progress || '正在生成…' }}
-          </span>
+        <p v-else-if="block.type === 'text' && block.text" class="chat-message__text">
+          {{ block.text }}
         </p>
+        <ToolCallBlock
+          v-else-if="block.type === 'tool' && block.tool"
+          :tool="block.tool"
+          :live="status !== 'idle'"
+        />
         <img
           v-else-if="block.type === 'image' && block.src"
           class="chat-message__thumb"
@@ -40,10 +46,10 @@
         </ul>
       </template>
       <p
-        v-if="hasProgress(message)"
+        v-if="pendingText(message)"
         class="chat-message__thinking"
       >
-        {{ message.progress }}
+        {{ pendingText(message) }}
       </p>
     </article>
   </div>
@@ -53,13 +59,18 @@
 import { computed } from 'vue';
 import { Done } from 'bkui-vue/lib/icon';
 import type { ProjectStatus } from '@/store/project';
+import ToolCallBlock from './ToolCallBlock.vue';
 import { renderMarkdown } from './render-markdown';
-import type { ChatMessage } from './types';
+import type { ChatBlock, ChatMessage } from './types';
 
 const props = defineProps<{
   messages: ChatMessage[];
   status?: ProjectStatus;
 }>();
+
+const hasContent = (block: ChatBlock) => Boolean(
+  block.text || block.src || block.items?.length || block.tool,
+);
 
 const visibleMessages = computed(() => (
   props.messages.filter(message => message.id !== 'welcome')
@@ -67,17 +78,21 @@ const visibleMessages = computed(() => (
 
 const isFresh = computed(() => (
   !visibleMessages.value.some(message => (
-    message.role === 'user'
-    || message.blocks.some(block => Boolean(block.text || block.src || block.items?.length))
+    message.role === 'user' || message.blocks.some(hasContent)
   ))
 ));
 
-const hasProgress = (message: ChatMessage) => (
-  message.role === 'assistant'
-  && Boolean(message.progress)
-  && props.status !== 'idle'
-  && message.blocks.some(block => block.type === 'text' && block.text)
-);
+/**
+ * 助手消息末尾那行灰字，没有就返回空串。
+ *
+ * 一条空的助手消息是「已经发出去、还没等到第一个字」的样子，这时候必须说点什么，否则界面看着
+ * 像没反应；已经有内容之后就只报 STEP_STARTED 之类带来的进度，没有进度就什么都不加。
+ */
+const pendingText = (message: ChatMessage) => {
+  if (message.role !== 'assistant' || props.status === 'idle') return '';
+  if (message.progress) return message.progress;
+  return message.blocks.some(hasContent) ? '' : '正在生成…';
+};
 </script>
 
 <style lang="postcss" scoped>
@@ -101,8 +116,12 @@ const hasProgress = (message: ChatMessage) => (
   letter-spacing: -0.02em;
 }
 
-.chat-empty p {
+.chat-empty__samples {
   margin: 0;
+  padding-left: 1.2em;
+}
+
+.chat-empty__samples li {
   color: #8b93a0;
   font-size: 13px;
   line-height: 1.6;

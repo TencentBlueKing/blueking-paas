@@ -53,6 +53,9 @@ class ErrorCodes:
     # --- Conversations ----------------------------------------------------------------------------
     CONVERSATION_NOT_FOUND = ErrorCode(_("No such conversation."), status_code=HTTPStatus.NOT_FOUND)
     CONVERSATION_CLOSED = ErrorCode(_("This conversation has been closed."), status_code=HTTPStatus.CONFLICT)
+    # The history cursor is opaque and only this service issues them, so a cursor it does not
+    # recognize is the caller having made one up -- not a conversation that moved on.
+    INVALID_HISTORY_CURSOR = ErrorCode(_("The history cursor is invalid."), status_code=HTTPStatus.BAD_REQUEST)
 
     # --- Conversation state write-back ------------------------------------------------------------
     # The Agent Runtime's replication path. The split that matters: `INVALID_` is the Runtime

@@ -19,6 +19,7 @@ import logging
 
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.iam.shim import get_paas_system_id
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.models import Application
@@ -44,11 +45,11 @@ class ApplicationCleaner:
         """删除 IAM 相关资源"""
         # 删除应用的内建用户组
         logger.info("delete all builtin user groups for application(%s)", self.application)
-        delete_builtin_user_groups(app_code=self.application.code)
+        delete_builtin_user_groups(app_code=self.application.code, operator=get_paas_system_id())
 
         # 删除应用的分级管理员
         logger.info("delete grade manager for application(%s)", self.application)
-        delete_grade_manager(app_code=self.application.code)
+        delete_grade_manager(app_code=self.application.code, operator=get_paas_system_id())
 
     def delete_application(self):
         """删除应用的数据库记录(软删除)"""

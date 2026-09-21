@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app-spark-ui.fullname" . }}
+  labels:
+    {{- include "app-spark-ui.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "app-spark-ui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-ui.labels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "app-spark-ui.imagePullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "app-spark-ui.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          # 保留镜像入口，先注入配置再 exec nginx。
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          env:
+            {{- range $name, $value := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

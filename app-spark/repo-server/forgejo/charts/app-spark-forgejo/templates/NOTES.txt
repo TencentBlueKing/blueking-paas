@@ -1,0 +1,28 @@
+repo-server (Forgejo {{ .Chart.AppVersion }}) 已部署为 release {{ .Release.Name }}。
+
+对外根地址（Forgejo 生成的 clone URL 用它）：{{ include "app-spark-forgejo.rootUrl" . }}
+集群内地址：{{ include "app-spark-forgejo.clusterUrl" . }}
+
+{{ if .Values.init.enabled -}}
+初始化 Job：{{ include "app-spark-forgejo.initJobName" . }}
+  kubectl -n {{ .Release.Namespace }} logs job/{{ include "app-spark-forgejo.initJobName" . }}
+{{- else -}}
+init.enabled=false：管理员、服务账号和 app-spark 组织需要自行创建，否则 app-spark-api 无法建仓。
+{{- end }}
+
+app-spark-api 的 values 按下面填写（service_account_password 用本 release 的
+auth.serviceAccountPassword，不要从集群里读出来贴进版本库）：
+
+  repoServer:
+    type: forgejo
+    base_url: {{ include "app-spark-forgejo.clusterUrl" . }}
+    clone_url: {{ include "app-spark-forgejo.rootUrl" . }}
+    org: app-spark
+    service_account: app-spark-bot
+    service_account_password: "<auth.serviceAccountPassword>"
+    default_branch: main
+    commit_author_name: App-Spark
+    commit_author_email: app-spark@localhost.invalid
+
+base_url 是 API 自己调用 Forgejo 的地址，clone_url 是写进 Agent 沙箱的地址；
+沙箱解析不到 clone_url 时，Git 保存会在 push 阶段失败，而不是在部署时报错。

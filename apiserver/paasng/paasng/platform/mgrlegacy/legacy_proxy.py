@@ -121,9 +121,15 @@ class LegacyAppProxy:
             raise ValueError(language_lower)
 
     def get_secret_key(self):
-        """获取应用的 bk_app_secret，所有版本都需要"""
+        """获取应用的 bk_app_secret。
+
+        部分桌面版本已因安全加固移除 auth_token 字段，此时不再支持从桌面读取密钥。
+        """
         if not hasattr(self.legacy_app, "auth_token"):
-            raise ValueError(f"legacy app({self.legacy_app.code}) has no auth_token field")
+            raise ValueError(
+                f"auth_token of legacy app({self.legacy_app.code}) was removed for security hardening "
+                "and is no longer supported"
+            )
         return self.legacy_app.auth_token
 
     def get_unified_password(self):

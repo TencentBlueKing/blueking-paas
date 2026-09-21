@@ -15,23 +15,31 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, Literal, Optional
+from typing import Dict, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
-ResourcePresetName = Literal["nano", "micro", "small", "medium", "large"]
+ResourcePresetName = Literal["default", "1G", "2G"]
 
 
 class RedisResourcesConfig(BaseModel):
     """套餐资源配额
-    常规方案用 preset，特殊方案显式写 requests/limits，常规和特殊方案可组合使用，详情见 README.md"""
+    常规方案用 preset，特殊方案同时写 requests/limits，也可在 preset 上叠加一侧，详情见 README.md"""
 
     model_config = ConfigDict(extra="forbid")
 
-    preset: Optional[ResourcePresetName] = None
+    preset: ResourcePresetName | None = None
     # 任意 K8s 资源名，便于后续扩展 hugepages 等
-    requests: Optional[Dict[str, str]] = None
-    limits: Optional[Dict[str, str]] = None
+    requests: Dict[str, str] | None = None
+    limits: Dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def validate_quota(self):
+        if self.preset is not None:
+            return self
+        if self.requests and self.limits:
+            return self
+        raise ValueError("resources 必须配置 preset，或同时提供 requests 与 limits")
 
 
 class RedisPlanConfig(BaseModel):
@@ -43,9 +51,7 @@ class RedisPlanConfig(BaseModel):
     cluster_name: str
     persistent_storage: bool = False
     monitor: bool = False
-    resources: Optional[RedisResourcesConfig] = None
-    # 历史资源配额字段（即将废弃）
-    memory_size: Optional[str] = None
+    resources: RedisResourcesConfig
     service_export_type: Literal["TencentCLB", "ClusterDNS"] = "ClusterDNS"
 
 

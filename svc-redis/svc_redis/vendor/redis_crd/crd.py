@@ -70,7 +70,7 @@ class KubernetesConfig(BaseModel):
     imagePullPolicy: str = "IfNotPresent"
     resources: Optional[ResourceRequirements] = None
     redisSecret: Optional[RedisSecret] = None
-    service: Optional[KubernetesServiceConfig] = None
+    service: KubernetesServiceConfig | None = None
 
 
 class Storage(BaseModel):

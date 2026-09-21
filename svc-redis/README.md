@@ -110,8 +110,8 @@ config = {
     "redis_version": "v7.0.15",
     # Kubernetes 集群名称
     "cluster_name": "redis-cluster",
-    # 资源配额，见下方两份 plan 配置用例
-    "resources": {"preset": "medium"},
+    # 资源配额，见下方 plan 配置用例。必填，不再支持 memory_size
+    "resources": {"preset": "default"},
     # 服务暴露方式 (必填)
     # - "ClusterDNS": 通过集群内 DNS 访问服务
     # - "TencentCLB": 通过腾讯云负载均衡器暴露服务
@@ -128,17 +128,15 @@ config = {
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
-`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 4Gi；CPU request 偏低，limit 留到 500m–1 核以覆盖 BGSAVE / 全量同步。
+`resources` 为必填，规格表定义在 `svc_redis/controller/resource_presets.py`。CPU 统一 100m / 500m；超过 2Gi 或需要其它配额时显式写 `requests` / `limits`。
+
+**Breaking change**：不再支持历史字段 `memory_size`。升级前请直接修改存量 Plan 的 `config`：删除 `memory_size`，改为 `resources`。已创建的实例不会自动变更规格；未改 plan 就发版会导致创建/删除实例失败。原 `memory_size: 2Gi` 可改为 `{"preset": "2G"}`，`4Gi` / `8Gi` 等需显式写 `requests` / `limits`。
 
 | preset | CPU requests | Memory requests | CPU limits | Memory limits |
 | --- | --- | --- | --- | --- |
-| nano | 50m | 128Mi | 500m | 256Mi |
-| micro | 50m | 256Mi | 500m | 512Mi |
-| small | 50m | 512Mi | 500m | 1024Mi |
-| medium | 100m | 1024Mi | 1 | 2048Mi |
-| large | 100m | 2048Mi | 1 | 4096Mi |
-
-超过 4Gi 的容量需求应显式配置 requests / limits。
+| default | 100m | 512Mi | 500m | 512Mi |
+| 1G | 100m | 1Gi | 500m | 1Gi |
+| 2G | 100m | 2Gi | 500m | 2Gi |
 
 常规套餐，使用 preset：
 
@@ -148,7 +146,7 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
   "redis_version": "v7.0.15",
   "cluster_name": "redis-cluster",
   "resources": {
-    "preset": "micro"
+    "preset": "default"
   },
   "service_export_type": "TencentCLB",
   "persistent_storage": false,
@@ -186,7 +184,7 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
   "redis_version": "v7.0.15",
   "cluster_name": "redis-cluster",
   "resources": {
-    "preset": "small",
+    "preset": "1G",
     "requests": {
       "cpu": "100m"
     }

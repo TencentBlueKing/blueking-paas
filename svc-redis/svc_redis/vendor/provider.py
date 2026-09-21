@@ -17,7 +17,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from paas_service.base_vendor import BaseProvider, InstanceData
 from utils.text import to_dns_safe
@@ -38,9 +38,8 @@ class Provider(BaseProvider):
     :param type: Redis 部署类型，可选值为 "Redis" 或 "RedisReplication"
     :param redis_version: Redis 版本号，例如 "v6.2.12"
     :param cluster_name: Kubernetes 集群名称，用于标识部署目标集群
+    :param resources: 资源配额，常规套餐 {"preset": "default"}，特殊套餐同时写 requests/limits
     :param service_export_type: 服务暴露方式，可选值为 "TencentCLB" 或 "ClusterDNS"
-    :param resources: 资源配额，常规套餐 {"preset": "medium"}，特殊套餐显式写 requests/limits
-    :param memory_size: 历史内存限制（"2Gi" / "4Gi" / "8Gi"），仅在未配 resources 时生效
     :param persistent_storage: 是否启用持久化存储，默认为 False
     :param monitor: 是否启用 Prometheus 监控，默认为 False
     """
@@ -48,9 +47,8 @@ class Provider(BaseProvider):
     type: str
     redis_version: str
     cluster_name: str
+    resources: Dict[str, Any]
     service_export_type: str = "ClusterDNS"
-    resources: Optional[Dict[str, Any]] = None
-    memory_size: Optional[str] = None
     persistent_storage: bool = False
     monitor: bool = False
 
@@ -63,7 +61,6 @@ class Provider(BaseProvider):
             cluster_name=self.cluster_name,
             service_export_type=self.service_export_type,
             resources=self.resources,
-            memory_size=self.memory_size,
             persistent_storage=self.persistent_storage,
             monitor=self.monitor,
         )

@@ -134,20 +134,6 @@ class Command(BaseCommand):
                         env_init_code_list,
                     )
 
-    def get_app_secret_key(self, code: str) -> str:
-        session = console_db.get_scoped_session()
-        legacy_app = AppManger(session).get(code)
-        if legacy_app:
-            return legacy_app.auth_token
-        return ""
-
-    def create_oauth_client_by_code(self, code: str, app_tenant_mode: str, app_tenant_id: str):
-        secret_key = self.get_app_secret_key(code)
-        # secret_key 不存在，则生成一个新的
-        if not secret_key:
-            create_oauth2_client(code, app_tenant_mode, app_tenant_id)
-            logger.info("create oauth app(code:%s) with a new randomly generated key", code)
-
     def create_3rd_app(
         self,
         app_desc: Simple3rdAppDesc,
@@ -200,7 +186,7 @@ class Command(BaseCommand):
         if created:
             module = create_default_module(application)
             try:
-                self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+                create_oauth2_client(app_desc.code, app_tenant_mode, app_tenant_id)
             except BkOauthClientCodeConflictError:
                 if app_desc.code in env_init_code_list:
                     logger.warning(

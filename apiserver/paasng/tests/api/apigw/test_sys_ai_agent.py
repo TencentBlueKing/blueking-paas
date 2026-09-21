@@ -161,20 +161,24 @@ class TestSysCreateAIAgentApp:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         assert not Application.objects.filter(code=bk_app_code).exists()
 
+    @pytest.mark.usefixtures("_init_tmpls")
     def test_operator_without_profile(
         self,
         sys_aidev_api_client,
+        mock_wl_services_in_creation,
         bk_app_code,
         bk_app_name,
     ):
         unregistered = create_user()
+        assert not UserProfile.objects.filter(user=unregistered.pk).exists()
+
         resp = sys_aidev_api_client.post(
             SYS_AI_AGENT_URL,
             data={"code": bk_app_code, "name": bk_app_name, "operator": unregistered.username},
         )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.json()["code"] == "VALIDATION_ERROR"
-        assert not Application.objects.filter(code=bk_app_code).exists()
+        app_data, _ = _assert_created_without_secret_or_deploy(resp, bk_app_code, unregistered.username)
+        assert app_data["modules"][0]["source_origin"] == SourceOrigin.AI_AGENT
+        assert app_data["is_ai_agent_app"] is True
 
     def test_code_without_ai_prefix(
         self,
@@ -274,6 +278,7 @@ class TestSysCreateAIAgentApp:
         sys_aidev_api_client,
         bk_app_code,
         bk_app_name,
+        *,
         operator_tenant,
         app_tenant_mode,
         app_tenant_id,

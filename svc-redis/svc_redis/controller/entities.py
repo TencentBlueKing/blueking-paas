@@ -39,6 +39,7 @@ class RedisPlanConfig(BaseModel):
 
     type: Literal["Redis", "RedisReplication"] = "Redis"
     redis_version: str
+    # 部署集群
     cluster_name: str
     persistent_storage: bool = False
     monitor: bool = False

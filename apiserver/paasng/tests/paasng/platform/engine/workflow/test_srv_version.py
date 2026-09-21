@@ -21,6 +21,7 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.engine.exceptions import ServerVersionCheckFailed
 from paasng.platform.engine.workflow.srv_version import ServerVersionChecker, parse_xyz_version
 from tests.utils.helpers import override_settings
@@ -34,6 +35,17 @@ def _patch_helm_release(operator_version: str):
     """Patch HelmClient.get_release to return the given operator version"""
     fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
     return mock.patch("paas_wl.infras.cluster.helm.HelmClient.get_release", return_value=fake_release)
+
+
+def _patch_cache(cached_operator_version: str | None = None):
+    """Patch the cache used by ServerVersionChecker
+
+    测试环境使用进程间共享的缓存(Redis), 直接读写真实缓存会与其他测试/进程相互干扰, 因此统一替换为
+    Mock: 传入版本号表示缓存命中, None 表示缓存未命中.
+    """
+    mocked_cache = mock.MagicMock()
+    mocked_cache.get.return_value = cached_operator_version
+    return mock.patch("paasng.platform.engine.workflow.srv_version.cache", mocked_cache)
 
 
 class TestParseXYZVersion:
@@ -71,12 +83,6 @@ class TestParseXYZVersion:
 class TestServerVersionChecker:
     """测试校验平台服务版本兼容性"""
 
-    @pytest.fixture(autouse=True)
-    def _isolate_version_cache(self):
-        with mock.patch("paasng.platform.engine.workflow.srv_version.cache") as mocked_cache:
-            mocked_cache.get.return_value = None
-            yield mocked_cache
-
     @pytest.mark.parametrize(
         ("apiserver_version", "operator_version", "should_raise_exception", "expect_warning"),
         [
@@ -109,6 +115,7 @@ class TestServerVersionChecker:
         with (
             override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION=apiserver_version),
             _patch_helm_release(operator_version),
+            _patch_cache(),
             caplog.at_level(logging.WARNING, logger=CHECKER_LOGGER),
         ):
             if should_raise_exception:
@@ -128,6 +135,7 @@ class TestServerVersionChecker:
         with (
             override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0-alpha.222"),
             _patch_helm_release("1.8.1-alpha.1"),
+            _patch_cache(),
             pytest.raises(ServerVersionCheckFailed) as exc_info,
         ):
             ServerVersionChecker(bk_stag_env).validate_version()
@@ -140,6 +148,62 @@ class TestServerVersionChecker:
         with (
             override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0"),
             mock.patch("paas_wl.infras.cluster.helm.HelmClient.get_release", side_effect=RuntimeError("helm error")),
+            _patch_cache(),
             pytest.raises(ServerVersionCheckFailed),
         ):
             ServerVersionChecker(bk_stag_env).validate_version()
+
+    def test_cached_version_incompatible_clears_cache(self, bk_stag_env):
+        """缓存命中但 X.Y.Z 不一致: 中止部署并清理缓存, 促使下次强制刷新"""
+        cluster_name = EnvClusterService(bk_stag_env).get_cluster_name()
+        cache_key = f"helm_release:{cluster_name}:operator_version"
+
+        with (
+            override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0"),
+            mock.patch("paas_wl.infras.cluster.helm.HelmClient.get_release") as mocked_get_release,
+            _patch_cache("1.7.0") as mocked_cache,
+            pytest.raises(ServerVersionCheckFailed),
+        ):
+            ServerVersionChecker(bk_stag_env).validate_version()
+
+        assert not mocked_get_release.called
+        mocked_cache.delete.assert_called_once_with(cache_key)
+
+    def test_cached_version_used_without_helm_query(self, bk_stag_env, caplog):
+        """缓存值与 apiserver 完整一致: 不查询 Helm, 直接放行且不写 WARNING"""
+        with (
+            override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0"),
+            mock.patch("paas_wl.infras.cluster.helm.HelmClient.get_release") as mocked_get_release,
+            _patch_cache("1.8.0") as mocked_cache,
+            caplog.at_level(logging.WARNING, logger=CHECKER_LOGGER),
+        ):
+            ServerVersionChecker(bk_stag_env).validate_version()
+
+        assert not mocked_get_release.called
+        assert not mocked_cache.set.called
+        assert not [r for r in caplog.records if r.levelno == logging.WARNING]
+
+    def test_cache_written_when_full_version_matched(self, bk_stag_env):
+        """查询到的 operator 版本与 apiserver 完整一致时写入缓存"""
+        cluster_name = EnvClusterService(bk_stag_env).get_cluster_name()
+        cache_key = f"helm_release:{cluster_name}:operator_version"
+
+        with (
+            override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0"),
+            _patch_helm_release("1.8.0"),
+            _patch_cache() as mocked_cache,
+        ):
+            ServerVersionChecker(bk_stag_env).validate_version()
+
+        mocked_cache.set.assert_called_once_with(cache_key, "1.8.0")
+
+    def test_cache_not_written_when_only_xyz_matched(self, bk_stag_env):
+        """仅 X.Y.Z 一致时放行, 但不写入缓存"""
+        with (
+            override_settings(APISERVER_OPERATOR_VERSION_CHECK=True, APISERVER_VERSION="1.8.0-alpha.123"),
+            _patch_helm_release("1.8.0-alpha.222"),
+            _patch_cache() as mocked_cache,
+        ):
+            ServerVersionChecker(bk_stag_env).validate_version()
+
+        assert not mocked_cache.set.called

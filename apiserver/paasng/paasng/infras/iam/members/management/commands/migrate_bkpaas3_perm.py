@@ -177,7 +177,9 @@ class Command(BaseCommand):
             else:
                 migrate_logs.append(f"add {first_grade_manager} as grade manager members...")
 
-            grade_manager_id = iam_client.create_grade_managers(app_code, app_name, first_grade_manager)
+            grade_manager_id = iam_client.create_grade_managers(
+                app_code, app_name, [first_grade_manager] if first_grade_manager else None
+            )
 
             # 更新分级管理员映射表信息 & ApplicationGradeManager 表数据
             self.grade_manager_map[app_code] = grade_manager_id

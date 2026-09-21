@@ -284,7 +284,27 @@ REPO_SERVER = settings.get(
 ## 目前只有 local_process（在本机 spawn 一个 agent 进程，仅供开发与测试）
 AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 
-## 上述驱动方式各自的配置，字段以对应的 config 类为准（local_process 见 LocalProcessConfig）
+## 上述驱动方式各自的配置，字段以对应的 config 类为准。
+##
+## local_process 类型配置示例（详见 LocalProcessConfig）：
+##
+## AGENT_RUNTIME_PROVIDER_CONFIG:
+##   ## 必填。agent 项目目录。
+##   agent_project_dir: /srv/app-spark/agent
+##   ## 必填。各 Project 的 workspace 的父目录，实际工作目录为 {workspace_root}/{project_id}。
+##   workspace_root: /var/lib/app-spark/workspaces
+##   ## 必填。各会话状态目录的父目录。
+##   state_root: /var/lib/app-spark/agent-state
+##   ## 本服务对 agent 进程可达的地址，agent 用它把会话状态回写回来。默认 http://127.0.0.1:8000。
+##   callback_base_url: http://127.0.0.1:8000
+##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL，不填则用 agent 自己的默认值。
+##   model: deepseek:deepseek-v4-flash
+##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值。
+##   model_api_key: ''
+##   ## 等待新起的 Runtime 通过 /health 健康检查的超时秒数。
+##   startup_timeout_seconds: 60
+##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
+##   extra_env: {}
 AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob

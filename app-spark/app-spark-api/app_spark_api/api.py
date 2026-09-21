@@ -28,7 +28,7 @@ from ninja import NinjaAPI, Router
 from ninja.errors import AuthenticationError, HttpError, ValidationError
 
 from app_spark_api.agent.conversations.api import router as conversations_router
-from app_spark_api.agent.conversations.exceptions import ConversationClosedError
+from app_spark_api.agent.conversations.exceptions import ConversationClosedError, InvalidHistoryCursorError
 from app_spark_api.agent.conversations.internal_api import router as conversation_state_router
 from app_spark_api.agent.conversations.state import ConversationStateError
 from app_spark_api.agent.runtime import (
@@ -75,6 +75,7 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     # Both closing and advancing a conversation can fail this way; retrying
     # cannot reopen a closed conversation.
     ConversationClosedError: error_codes.CONVERSATION_CLOSED,
+    InvalidHistoryCursorError: error_codes.INVALID_HISTORY_CURSOR,
     ConversationStateError: error_codes.CONVERSATION_STATE_UNAVAILABLE,
     StorageConfigurationError: error_codes.STORAGE_CONFIGURATION_ERROR,
     AgentBusyError: error_codes.AGENT_BUSY,

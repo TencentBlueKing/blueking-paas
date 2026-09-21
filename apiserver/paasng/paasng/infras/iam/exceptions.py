@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import re
-from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
 
@@ -35,9 +34,17 @@ class BKIAMApiError(BKIAMGatewayServiceError):
     which needs to be captured and displayed to the user on the page
     """
 
-    def __init__(self, message: str, code: Optional[int] = None):
+    def __init__(self, message: str, code: int | None = None, request_id: str | None = None):
         super().__init__(self.parse_quota_message(message))
         self.code = code
+        # 权限中心侧的请求 ID，用于跨系统排查。仅在字符串化时附加，
+        # 以保证 message 仍是可直接展示给用户的内容
+        self.request_id = request_id
+
+    def __str__(self) -> str:
+        if self.request_id:
+            return f"{self.message} (iam request_id: {self.request_id})"
+        return str(self.message)
 
     def parse_quota_message(self, message: str) -> str:
         """权限中心给多个用户添加用户组权限时，会因为其中一个用户的额度超限导致添加失败，权限中心未针对用户超限定义单独的错误码，超限的用户也只能从错误信息中提取。
@@ -60,3 +67,53 @@ class BKIAMApiError(BKIAMGatewayServiceError):
         else:
             # 没匹配到则返回原始的错误信息
             return message
+
+
+class BKIAMApiHTTPError(BKIAMApiError):
+    """权限中心返回了非 2xx 的 HTTP 状态码
+
+    V4 以 HTTP 状态码表达错误语义（如 409 表示资源已存在），调用方需要据此走幂等分支时，
+    可通过 `status_code` 判断，而不必解析错误信息。
+    """
+
+    def __init__(self, message: str, status_code: int | None, request_id: str | None = None):
+        super().__init__(message, request_id=request_id)
+        self.status_code = status_code
+
+
+class InvalidIAMIdentifierError(ValueError):
+    """本地模型标识符不满足权限中心 V4 的命名约束
+
+    同步命令在提交到 V4 之前校验，命中时立即失败并列出全部违规标识符。
+    """
+
+    def __init__(self, identifiers: list[str]):
+        self.identifiers = identifiers
+        super().__init__(f"以下标识符不满足 IAM V4 命名约束: {', '.join(identifiers)}")
+
+
+class BKIAMAuthCheckError(BKIAMGatewayServiceError):
+    """鉴权判定调用失败
+
+    V3 经 SDK 鉴权、V4 经 HTTP 鉴权，两者原始的异常类型不同。V3 实现将 SDK 的 AuthAPIError
+    包装为本异常，V4 实现抛出的 BKIAMApiError 系列同属 BKIAMGatewayServiceError，
+    调用方据此捕获基类即可，无需感知版本差异，也不必再 import SDK 的异常。
+
+    note: 判定失败不等于无权限。捕获方须按未授权处理，不得因调用失败而放行
+    """
+
+
+class BKIAMCapabilityNotSupportedError(BKIAMGatewayServiceError):
+    """目标权限中心版本尚未提供所需的能力
+
+    用于 V4 尚未补齐的管理接口：抽象接口保留方法定义，V4 实现抛出该异常而非静默返回成功。
+    挂在应用创建/删除、成员变更等主流程上的能力不走本异常，由 V4 实现记录错误日志后返回，
+    避免把主流程打断。
+    """
+
+    def __init__(self, capability: str, detail: str = ""):
+        message = _("权限中心 V4 暂未提供该能力：{capability}").format(capability=capability)
+        if detail:
+            message = f"{message}（{detail}）"
+        super().__init__(message)
+        self.capability = capability

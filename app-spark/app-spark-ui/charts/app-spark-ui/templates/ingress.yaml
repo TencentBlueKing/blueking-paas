@@ -1,0 +1,45 @@
+{{- if .Values.ingress.enabled }}
+{{- $site := trimSuffix "/" .Values.env.BK_SITE_URL }}
+{{- $pathPrefix := trimSuffix "/" (.Values.ingress.pathPrefix | default "/") }}
+{{- if ne $site $pathPrefix }}
+  {{- fail "ingress.pathPrefix must match env.BK_SITE_URL (use / for the root path)" }}
+{{- end }}
+{{- $supportsClassName := eq "true" (include "common.ingress.supportsIngressClassname" .) }}
+{{- $annotations := deepCopy (.Values.ingress.annotations | default dict) }}
+{{/* 显式 class 优先；没有显式 class 时保留旧版 annotation 配置。 */}}
+{{- if .Values.ingress.ingressClass }}
+  {{- if $supportsClassName }}
+    {{- $annotations = omit $annotations "kubernetes.io/ingress.class" }}
+  {{- else }}
+    {{- $_ := set $annotations "kubernetes.io/ingress.class" .Values.ingress.ingressClass }}
+  {{- end }}
+{{- end }}
+apiVersion: {{ include "common.capabilities.ingress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ include "app-spark-ui.fullname" . }}
+  labels:
+    {{- include "app-spark-ui.labels" . | nindent 4 }}
+  {{- with $annotations }}
+  annotations:
+    {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and $supportsClassName .Values.ingress.ingressClass }}
+  ingressClassName: {{ .Values.ingress.ingressClass | quote }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ $pathPrefix | default "/" | quote }}
+            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
+            pathType: Prefix
+            {{- end }}
+            backend:
+              {{- include "common.ingress.backend" (dict "serviceName" (include "app-spark-ui.fullname" .) "servicePort" (.Values.service.port | int) "context" $) | nindent 14 }}
+{{- end }}

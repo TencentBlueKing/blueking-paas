@@ -137,12 +137,15 @@ class TestDeploymentCoordinator:
 
     def test_release_with_wrong_deployment(self, bk_deployment, bk_stag_env, bk_module):
         env_mgr = DeploymentCoordinator(bk_stag_env)
-        env_mgr.acquire_lock()
-        env_mgr.set_deployment(bk_deployment)
+        assert env_mgr.acquire_lock()
+        try:
+            env_mgr.set_deployment(bk_deployment)
 
-        deployment = create_fake_deployment(bk_module)
-        env_mgr = DeploymentCoordinator(bk_stag_env)
-        with pytest.raises(ValueError, match=r"deployment lock holder mismatch.*"):
-            env_mgr.release_lock(deployment)
+            deployment = create_fake_deployment(bk_module)
+            env_mgr = DeploymentCoordinator(bk_stag_env)
+            with pytest.raises(ValueError, match=r"deployment lock holder mismatch.*"):
+                env_mgr.release_lock(deployment)
 
-        assert env_mgr.get_current_deployment() == bk_deployment
+            assert env_mgr.get_current_deployment() == bk_deployment
+        finally:
+            env_mgr.release_lock(expected_deployment=bk_deployment)

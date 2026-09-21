@@ -17,8 +17,10 @@
 
 from celery import shared_task
 
+from paasng.infras.iam.base.constants import IAMVersion
 from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.infras.iam.shim import get_iam_version
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
@@ -34,9 +36,11 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
     tenant_id = get_tenant_id_for_app(app_code)
     iam_client = BKIAMClient(tenant_id)
 
-    # 1. 更新分级管理员的授权范围
-    grade_manager_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
-    iam_client.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
+    # V4 创建管理空间时已一次性写齐三系统权限范围，不存在事后补的场景，
+    # 也不调用「更新管理空间」（V4 暂未提供该接口，见 BKIAMV4ManagementBackend）。
+    if get_iam_version() == IAMVersion.V3:
+        grade_manager_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
+        iam_client.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
 
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role")
     user_groups_list = [{"id": user_group.user_group_id, "role": user_group.role} for user_group in user_groups]

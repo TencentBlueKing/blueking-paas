@@ -24,12 +24,14 @@ from django.shortcuts import aget_object_or_404
 from ninja import Path, Query, Router, Status
 from ninja.pagination import paginate
 
-from app_spark_api.agent.conversations import services
+from app_spark_api.agent.conversations import history, services
 from app_spark_api.agent.conversations.entities import (
+    ConversationHistoryResponse,
     ConversationResponse,
     RuntimeStateResponse,
     StartRunRequest,
     UiEventPageResponse,
+    UiEventRecord,
 )
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.core.projects.models import Project
@@ -109,7 +111,7 @@ async def get_conversation(
 ):
     """查看已创建的会话目前的状态，不会触发创建任何 Agent Runtime 逻辑。
 
-    主要用于恢复一个历史会话，client 可根据返回里的状态信息拉取历史 AG-UI 事件。
+    主要用于恢复一个历史会话，client 可根据返回里的状态信息通过 history 接口拉取完整展示历史。
     """
     conversation = await _get_conversation(request, project_id, number)
     return _to_state(conversation, await services.get_state(conversation))
@@ -185,7 +187,7 @@ async def list_ui_events(
     since: int = Query(0, ge=0, description="从这个游标之后开始读"),
     limit: int | None = Query(None, ge=1, description="每页条数，默认值 200"),
 ):
-    """拉取已入库的 AG-UI 事件，用于恢复会话后展示历史对话内容，或在 SSE 以外终止后补上事件。"""
+    """拉取已入库的 AG-UI 事件，用于 SSE 意外终止后补上事件；完整展示历史请使用 history 接口。"""
     # 直接读本服务的库，不会为此拉起 Runtime。代价是最终一致：Runtime 是把事件流发完之后才回写
     # 的，所以刚结束的那一轮可能还差一点。要确认是否已经落定，看 `GET .../conversations/<n>/`
     # 的 `running` 与 `replication_pending` 是否都是 false。
@@ -195,7 +197,52 @@ async def list_ui_events(
         since=page.since,
         last_seq=page.last_seq,
         exhausted=page.exhausted,
+        records=[UiEventRecord(**record) for record in page.records],
+    )
+
+
+@router.get(
+    "{number}/history/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: ConversationHistoryResponse},
+    url_name="conversations-history",
+    summary="拉取用户输入和 AG-UI 事件的展示历史，按轮倒序分页",
+)
+async def list_history(
+    request: HttpRequest,
+    number: int,
+    project_id: str = PROJECT_ID,
+    cursor: str | None = Query(None, description="上一页返回的 next_cursor；不传则读最新一页"),
+    runs: int = Query(
+        history.DEFAULT_PAGE_RUNS,
+        ge=1,
+        le=history.MAX_PAGE_RUNS,
+        description="本页覆盖几轮对话；单页事件过多时实际轮数会少于这个值",
+    ),
+) -> ConversationHistoryResponse:
+    """读取一页展示历史，不启动 Runtime，也适用于已结束的会话。
+
+    第一页给的是**最新**的若干轮，往前翻用上一页的 ``next_cursor``，直到它为 null。分页单位是
+    「轮」而不是「条」：页边界落在 run 边界上，客户端才能一页一页地回放事件流而不会切出半次工具
+    调用，详见 :mod:`app_spark_api.agent.conversations.history`。
+
+    :param request: 已登录用户的请求。
+    :param number: 项目内会话编号。
+    :param project_id: 所属项目 ID。
+    :param cursor: 上一页的 ``next_cursor``；不传表示从最新一页开始。
+    :param runs: 本页想覆盖的轮数。
+    :return: 合并后的一页历史；事件尚未回写时，后续重新读取即可补齐。
+    :raises InvalidHistoryCursorError: 游标错误。
+    """
+    conversation = await _get_conversation(request, project_id, number)
+    page = await history.aread_page(
+        conversation,
+        before_seq=history.decode_cursor(cursor) if cursor else None,
+        runs=runs,
+    )
+    return ConversationHistoryResponse(
         records=page.records,
+        next_cursor=page.next_cursor,
+        last_seq=page.last_seq,
     )
 
 

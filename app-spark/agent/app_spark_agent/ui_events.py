@@ -141,6 +141,11 @@ def _end_event(family: _Family, key: str) -> BaseEvent:
             return ReasoningMessageEndEvent(message_id=key)
 
 
+async def persist_ui_events(events: Sequence[BaseEvent], *, log: AppendLog, run_id: str) -> None:
+    """Write AG-UI events to the durable log without streaming them."""
+    await _persist(events, log=log, run_id=run_id)
+
+
 async def _persist(events: Sequence[BaseEvent], *, log: AppendLog, run_id: str) -> None:
     if not events:
         return

@@ -20,10 +20,10 @@ import time
 from typing import Dict, Optional, Type, Union
 
 from django.conf import settings
-from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import user_group_apply_url
 from paasng.infras.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.platform.applications.models import Application
@@ -128,7 +128,9 @@ def user_has_app_action_perm(user, application: Application, action: AppAction) 
     )
     try:
         return ApplicationPermission().get_method_by_action(action)(perm_ctx, raise_exception=False)
-    except AuthAPIError:
+    except BKIAMGatewayServiceError:
+        # 捕获 iam 模块的异常基类，V3 与 V4 的鉴权失败都收敛于此。
+        # 判定失败按无权限处理，不因权限中心不可用而放行
         logger.exception("check user has application perm error.")
 
     return False

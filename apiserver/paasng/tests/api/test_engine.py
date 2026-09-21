@@ -253,9 +253,19 @@ class TestDeploymentViewSet:
 
     def test_deploy_exception(self, api_client, bk_app, bk_module):
         url = reverse("api.deploy", kwargs={"code": bk_app.code, "environment": "stag"})
-        resp = api_client.post(
-            url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar", "revision": "baz"}
-        )
+        with (
+            mock.patch("paasng.platform.engine.views.deploy.DeploymentCoordinator") as coordinator_cls,
+            mock.patch(
+                "paasng.platform.engine.views.deploy.initialize_deployment",
+                side_effect=RuntimeError("deployment initialization failed"),
+            ) as initialize,
+        ):
+            coordinator_cls.return_value.acquire_lock.return_value = True
+            resp = api_client.post(
+                url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar", "revision": "baz"}
+            )
+
+        initialize.assert_called_once()
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_DEPLOY_APP", "detail": "部署失败: 部署请求异常，请稍候再试"}
 

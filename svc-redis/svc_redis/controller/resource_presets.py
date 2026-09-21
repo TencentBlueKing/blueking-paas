@@ -48,6 +48,10 @@ RESOURCE_PRESETS: Dict[ResourcePresetName, Dict[str, Dict[str, str]]] = {
         "requests": {"cpu": "100m", "memory": "1024Mi"},
         "limits": {"cpu": "1", "memory": "2048Mi"},
     },
+    "large": {
+        "requests": {"cpu": "100m", "memory": "2048Mi"},
+        "limits": {"cpu": "1", "memory": "4096Mi"},
+    },
 }
 
 

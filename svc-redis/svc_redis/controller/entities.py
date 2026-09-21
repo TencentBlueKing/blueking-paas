@@ -19,12 +19,12 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-ResourcePresetName = Literal["nano", "micro", "small", "medium"]
+ResourcePresetName = Literal["nano", "micro", "small", "medium", "large"]
 
 
 class RedisResourcesConfig(BaseModel):
     """套餐资源配额
-    常规方案用 preset，特殊方案显式写 requests/limits，常规和特殊方案可组合使用，详情见 RAEDME.md"""
+    常规方案用 preset，特殊方案显式写 requests/limits，常规和特殊方案可组合使用，详情见 README.md"""
 
     model_config = ConfigDict(extra="forbid")
 

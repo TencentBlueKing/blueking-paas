@@ -128,7 +128,7 @@ config = {
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
-`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 2Gi；CPU request 偏低，limit 留到 500m–1 核以覆盖 BGSAVE / 全量同步。
+`resources.preset` 规格表定义在 `svc_redis/controller/resource_presets.py`。按集群观测在本地静态维护：多数实例内存约 80Mi、CPU 接近 0。小规格按观测用量下探，大规格内存以 512Mi 递进且 request 低于 limit，上限 4Gi；CPU request 偏低，limit 留到 500m–1 核以覆盖 BGSAVE / 全量同步。
 
 | preset | CPU requests | Memory requests | CPU limits | Memory limits |
 | --- | --- | --- | --- | --- |
@@ -136,8 +136,9 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
 | micro | 50m | 256Mi | 500m | 512Mi |
 | small | 50m | 512Mi | 500m | 1024Mi |
 | medium | 100m | 1024Mi | 1 | 2048Mi |
+| large | 100m | 2048Mi | 1 | 4096Mi |
 
-超过 2Gi 的容量需求应显式配置 requests / limits。
+超过 4Gi 的容量需求应显式配置 requests / limits。
 
 常规套餐，使用 preset：
 
@@ -147,7 +148,7 @@ Plan.objects.create(name="default-redis", description="redis 实例", is_active=
   "redis_version": "v7.0.15",
   "cluster_name": "redis-cluster",
   "resources": {
-    "preset": "medium"
+    "preset": "micro"
   },
   "service_export_type": "TencentCLB",
   "persistent_storage": false,

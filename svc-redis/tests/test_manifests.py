@@ -77,6 +77,7 @@ class TestGetRedisResource:
             ("micro", "50m", "256Mi", "500m", "512Mi"),
             ("small", "50m", "512Mi", "500m", "1024Mi"),
             ("medium", "100m", "1024Mi", "1", "2048Mi"),
+            ("large", "100m", "2048Mi", "1", "4096Mi"),
         ],
     )
     def test_get_replication_redis_manifest(self, preset, requests_cpu, requests_memory, limits_cpu, limits_memory):

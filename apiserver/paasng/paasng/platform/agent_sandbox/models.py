@@ -106,10 +106,23 @@ class VolumeArtifact(UuidAuditedModel):
 class SandboxManager(models.Manager):
     """沙箱 Manager 类"""
 
+    def count_active(self, application: Application) -> int:
+        """统计应用下仍然占用集群资源的沙箱数量。
+
+        已软删除的沙箱不再占用资源; 创建失败 (err_creating) 的沙箱, 其工作负载已在创建失败时清理,
+        同样不计入, 否则一次失败的创建会让用户凭空少一个配额且无法自助恢复.
+        """
+        return (
+            self.filter(application=application, deleted_at__isnull=True)
+            .exclude(status=SandboxStatus.ERR_CREATING.value)
+            .count()
+        )
+
     def new(
         self,
         application: Application,
         creator: str,
+        *,
         snapshot: str,
         snapshot_entrypoint: list | None = None,
         env_vars: dict | None = None,
@@ -235,6 +248,7 @@ class SandboxAppSettings(UuidAuditedModel):
 
     当前已支持的配置项：
     - cpu / memory：沙箱资源上限，未配置时回退到 DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY。
+    - max_sandbox_count：应用可同时存在的沙箱数量上限，未配置时回退到 DEFAULT_MAX_SANDBOX_COUNT。
     """
 
     application = models.OneToOneField(
@@ -245,6 +259,12 @@ class SandboxAppSettings(UuidAuditedModel):
     )
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True)
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, null=True, blank=True)
+    max_sandbox_count = models.PositiveIntegerField(
+        verbose_name="沙箱数量上限",
+        null=True,
+        blank=True,
+        help_text="应用可同时存在的沙箱数量上限，未配置时回退到平台默认值",
+    )
     tenant_id = tenant_id_field_factory()
 
     class Meta:

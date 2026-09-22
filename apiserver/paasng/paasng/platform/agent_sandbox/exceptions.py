@@ -35,6 +35,19 @@ class SandboxCreateError(SandboxError):
         self.logs = logs
 
 
+class SandboxCountLimitExceeded(SandboxError):
+    """Raised when an application has reached the limit of concurrent sandboxes.
+
+    :param limit: The max number of sandboxes the application may keep at the same time.
+    :param current: The number of active sandboxes the application had when the check ran.
+    """
+
+    def __init__(self, message: str, limit: int, current: int):
+        super().__init__(message)
+        self.limit = limit
+        self.current = current
+
+
 class SandboxFileError(SandboxError):
     """Raised when file operations in the sandbox fail."""
 

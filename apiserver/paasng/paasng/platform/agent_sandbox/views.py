@@ -45,6 +45,7 @@ from paasng.platform.agent_sandbox.artifact import (
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxAlreadyExists,
     SandboxArchiveFailed,
+    SandboxCountLimitExceeded,
     SandboxCreateError,
     SandboxDaemonAPIError,
     SandboxError,
@@ -401,6 +402,8 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
+        except SandboxCountLimitExceeded as e:
+            raise error_codes.AGENT_SANDBOX_COUNT_LIMIT_EXCEEDED.f(limit=e.limit)
         except SandboxImageValidateError as e:
             raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
         except (VolumeNotFound, VolumeNotMountable):

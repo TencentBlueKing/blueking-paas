@@ -53,6 +53,10 @@ SANDBOX_MAX_TTL_SECONDS = 24 * 60 * 60
 DEFAULT_SANDBOX_CPU = Decimal(4)
 DEFAULT_SANDBOX_MEMORY = Decimal(2)
 
+# 单个应用可同时存在的沙箱数量上限的平台默认值
+# 该值可由 app 级配置 SandboxAppSettings.max_sandbox_count 覆盖
+DEFAULT_MAX_SANDBOX_COUNT = 100
+
 # Volume.shared_app_codes 软上限；超出后 share 接口拒绝写入
 VOLUME_SHARED_APP_CODES_MAX = 50
 

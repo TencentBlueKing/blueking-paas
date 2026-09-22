@@ -43,7 +43,7 @@ from paas_wl.infras.resources.base.exceptions import (
     ResourceMissing,
 )
 from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
-from paas_wl.utils.kubestatus import parse_pod
+from paas_wl.utils.kubestatus import is_pod_ready, is_pod_terminated, parse_pod
 
 logger = logging.getLogger(__name__)
 
@@ -651,6 +651,38 @@ class KPod(BaseKresource):
             else:
                 if pod.status.phase in target_statuses:
                     return pod.status.phase
+            time.sleep(check_period)
+        raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
+
+    def wait_for_ready(
+        self,
+        name: str,
+        namespace: Namespace = None,
+        timeout: float | None = None,
+        check_period: float = 0.5,
+    ) -> bool:
+        """Calling this function will blocks until the pod becomes ready or has terminated
+
+        Prefer this over `wait_for_status` when the caller wants to send requests to the pod
+        afterwards: the pod enters phase "Running" before its readiness probe has passed.
+
+        :param timeout: timeout seconds for this join operation, default to never timeout
+        :param check_period: wait interval for polling
+        :return: False if the pod has terminated and will never become ready
+        :raises: ReadTargetStatusTimeout
+        """
+        time_started = time.time()
+        pod = None
+        while timeout is None or time.time() - time_started < timeout:
+            try:
+                pod = parse_pod(self.get(name, namespace=namespace))
+            except ResourceMissing:
+                logger.warning("Pod %s %s not found.", namespace, name)
+            else:
+                if is_pod_ready(pod):
+                    return True
+                if is_pod_terminated(pod):
+                    return False
             time.sleep(check_period)
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
 

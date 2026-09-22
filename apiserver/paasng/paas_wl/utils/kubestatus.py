@@ -195,6 +195,23 @@ def find_pod_status_condition(
     return None
 
 
+def is_pod_ready(pod: kmodels.V1Pod) -> bool:
+    """是否可以向 Pod 发送请求
+
+    phase 变为 Running 时容器进程刚启动, 而 Ready 条件还要求 startupProbe / readinessProbe 通过
+    """
+    if not pod.status:
+        return False
+
+    cond_ready = find_pod_status_condition(pod.status.conditions or [], cond_type="Ready")
+    return bool(cond_ready and cond_ready.status == "True")
+
+
+def is_pod_terminated(pod: kmodels.V1Pod) -> bool:
+    """Pod 是否已经结束运行（成功或失败），此后不会再变为 Ready"""
+    return bool(pod.status) and pod.status.phase in ["Succeeded", "Failed"]
+
+
 def extract_exit_code(health_status: HealthStatus) -> Optional[int]:
     """A helper to extract exit code"""
     try:

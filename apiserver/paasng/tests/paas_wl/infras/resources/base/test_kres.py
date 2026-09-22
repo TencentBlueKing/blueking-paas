@@ -282,6 +282,19 @@ class TestKPod:
             == "Pending"
         )
 
+    @pytest.mark.parametrize(
+        ("status", "expected"),
+        [
+            # phase "Running" 出现在 readinessProbe 通过之前, 只有 Ready 条件能代表可以服务
+            ({"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}, True),
+            ({"phase": "Failed"}, False),
+        ],
+    )
+    def test_wait_for_ready(self, k8s_client, status, expected):
+        kpod = KPod(k8s_client)
+        with mock.patch.object(kpod, "get", return_value=ResourceInstance(None, {"kind": "Pod", "status": status})):
+            assert kpod.wait_for_ready("foo", namespace="default", timeout=1, check_period=0.1) is expected
+
     def test_get_logs(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
             wl_app.scheduler_safe_name,

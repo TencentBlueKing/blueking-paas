@@ -152,7 +152,7 @@ def create_sandbox(
         sandbox_obj.save(update_fields=["status"])
         raise
 
-    # The sandbox started successfully and running.
+    # Daemon 已通过就绪探针，可以对外服务。
     sandbox_obj.status = SandboxStatus.RUNNING.value
     sandbox_obj.started_at = timezone.now()
     sandbox_obj.save(update_fields=["status", "started_at", "updated"])

@@ -68,6 +68,9 @@ LOG_TAIL_LINES = 40
 # 5s to stop application children. Raising any of those means raising this.
 SHUTDOWN_GRACE_SECONDS = 20
 
+# 抽两个不重复的端口。一次就中是常态；上限只是不让「每次都撞上已预留端口」变成死循环。
+PORT_RESERVE_ATTEMPTS = 32
+
 
 @dataclass(frozen=True)
 class _LocalRuntime:
@@ -244,13 +247,16 @@ class LocalProcessProvider(AgentRuntimeProvider):
         """
         reserved = {runtime.app_port for runtime in self._runtimes.values()}
         drawn: list[int] = []
-        while len(drawn) < 2:
+        # 正常一次就抽到。上限是防「每次都撞上已预留的端口」时这条循环永远不返回。
+        for _ in range(PORT_RESERVE_ATTEMPTS):
+            if len(drawn) == 2:
+                return drawn[0], drawn[1]
             port = _free_port()
             if port in reserved:
                 continue
             reserved.add(port)
             drawn.append(port)
-        return drawn[0], drawn[1]
+        raise AgentProvisionError("Could not reserve two distinct ports for an Agent Runtime.")
 
     def _reject_workspace_conflict(self, conversation_id: str, workspace_dir: Path) -> None:
         """Refuse a second live Runtime on one workspace.

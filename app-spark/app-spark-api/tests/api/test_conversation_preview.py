@@ -309,6 +309,7 @@ async def test_the_response_can_be_put_in_an_iframe_and_is_not_buffered(
 
     assert response.headers["X-Frame-Options"] == "SAMEORIGIN"
     assert response.headers["X-Accel-Buffering"] == "no"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
 
 
 async def test_a_page_the_model_wrote_cannot_call_the_platform_as_the_user(aapi_client, conversation, stage):
@@ -325,14 +326,23 @@ async def test_a_page_the_model_wrote_cannot_call_the_platform_as_the_user(aapi_
 
 
 async def test_a_non_document_response_carries_no_policy(aapi_client, conversation, stage):
-    """CSP 只约束文档。给一张图片带上没坏处也没意义，别让响应头凭空变长。"""
+    """声明了非文档类型的响应不注入 CSP。没声明类型的不行：浏览器会嗅探成 HTML。"""
     with serving_app(FakeApp(extra_headers={"Content-Type": "image/png"})) as upstream:
         stage(conversation, app=upstream)
 
-        response = await aapi_client.get(build_app_url(conversation.number, "/logo.png"))
-        await collect_body(response)
+        image = await aapi_client.get(build_app_url(conversation.number, "/logo.png"))
+        await collect_body(image)
 
-    assert "Content-Security-Policy" not in response.headers
+    assert "Content-Security-Policy" not in image.headers
+    assert image.headers["X-Content-Type-Options"] == "nosniff"
+
+    with serving_app(FakeApp()) as upstream:
+        stage(conversation, app=upstream)
+
+        untyped = await aapi_client.get(build_app_url(conversation.number, "/page"))
+        await collect_body(untyped)
+
+    assert "Content-Security-Policy" in untyped.headers
 
 
 async def test_credentials_cross_neither_direction(aapi_client, conversation, stage):

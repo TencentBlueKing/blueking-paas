@@ -34,8 +34,9 @@ Cookie 认人，换了域名那个 Cookie 就不会被带过来，得先有一�
 
 from __future__ import annotations
 
+import posixpath
 from typing import TYPE_CHECKING
-from urllib.parse import quote
+from urllib.parse import quote, urljoin
 
 import httpx2
 from django.http import StreamingHttpResponse
@@ -100,6 +101,10 @@ DOCUMENT_CONTENT_TYPES = ("text/html", "application/xhtml+xml")
 # 应用自己的长轮询和 SSE 能过，缓冲不关掉那个放宽就白给了。
 STREAMING_HEADERS = {"x-accel-buffering": "no"}
 
+# 没有 Content-Type 时浏览器会嗅探，一段 HTML 就会被当成页面执行。nosniff 关掉嗅探；CSP 仍然要
+# 在「没声明类型」时也带上，防的是老浏览器不认 nosniff 仍去执行。
+NOSNIFF_HEADER = {"x-content-type-options": "nosniff"}
+
 
 def build_preview_origin(request: HttpRequest, *, project_id: str, number: int) -> str:
     """Return the absolute URL a browser opens this conversation's application on.
@@ -140,9 +145,9 @@ async def forward_to_app(
     :raises APIError: If the application cannot be reached.
     """
     # Django 把 method 标成可空（请求对象还没填好时是 None），但能被路由到这里的请求必然有方法。
-    # 断言而不是回落成 GET：真的是 None 时，把一个 POST 当 GET 转出去只会更难查。位置在建 client
-    # 之前，免得这条断言自己变成一处泄漏。
-    assert request.method is not None
+    # 不用 assert：python -O 会把 assert 拿掉，那时一个没有方法的请求会被当成别的方法转出去。
+    if request.method is None:
+        raise error_codes.BAD_REQUEST
 
     base = httpx2.URL(upstream)
     url = _build_upstream_url(base, subpath=subpath, query=request.META.get("QUERY_STRING", ""))
@@ -175,7 +180,13 @@ async def forward_to_app(
             _stream_body(client, response),
             status=response.status_code,
             reason=response.reason_phrase,
-            headers=_collect_response_headers(response, upstream=base, preview_root=preview_root),
+            headers=_collect_response_headers(
+                response,
+                upstream=base,
+                preview_root=preview_root,
+                # 相对 Location 是相对「浏览器正在看的这个地址」解析的，不是相对应用根。
+                current_url=preview_root + subpath.lstrip("/"),
+            ),
         )
     except BaseException:
         await response.aclose()
@@ -235,6 +246,7 @@ def _collect_response_headers(
     *,
     upstream: httpx2.URL,
     preview_root: str,
+    current_url: str,
 ) -> dict[str, str]:
     """Return the application's headers, minus the ones that must not reach the browser."""
 
@@ -251,11 +263,16 @@ def _collect_response_headers(
     # Starlette 默认开 redirect_slashes，`.../preview/app/docs` 会得到一个 307。
     location = headers.get("location")
     if location is not None:
-        headers["location"] = _rewrite_location(location, upstream=upstream, preview_root=preview_root)
+        headers["location"] = _rewrite_location(
+            location, upstream=upstream, preview_root=preview_root, current_url=current_url
+        )
 
-    headers |= FRAME_ANCESTOR_HEADERS | STREAMING_HEADERS
+    headers |= FRAME_ANCESTOR_HEADERS | STREAMING_HEADERS | NOSNIFF_HEADER
 
-    if headers.get("content-type", "").startswith(DOCUMENT_CONTENT_TYPES):
+    # 没声明类型的也注入。模型写的小应用经常漏 Content-Type，浏览器嗅探成 HTML 之后这段脚本就在
+    # 控制面的 origin 上跑，而 CSP 还没带上。
+    content_type = headers.get("content-type", "")
+    if not content_type or content_type.startswith(DOCUMENT_CONTENT_TYPES):
         headers["content-security-policy"] = _build_content_security_policy(preview_root)
 
     return headers
@@ -288,12 +305,14 @@ def _build_content_security_policy(preview_root: str) -> str:
     )
 
 
-def _rewrite_location(location: str, *, upstream: httpx2.URL, preview_root: str) -> str:
+def _rewrite_location(location: str, *, upstream: httpx2.URL, preview_root: str, current_url: str) -> str:
     """Bring a redirect the application issued back inside the preview prefix.
 
     :param location: The application's own ``Location`` value.
     :param upstream: Where the application is, so its own address can be recognized.
     :param preview_root: Absolute URL the application is published under, ending in a slash.
+    :param current_url: The preview URL the browser is on, so a relative redirect resolves the
+        same way the browser would.
     :return: What the browser should be told instead.
     """
     target = httpx2.URL(location)
@@ -302,14 +321,37 @@ def _rewrite_location(location: str, *, upstream: httpx2.URL, preview_root: str)
     if target.host:
         if (target.scheme, target.host, target.port) != (upstream.scheme, upstream.host, upstream.port):
             return location
-        return preview_root + target.raw_path.decode().lstrip("/")
+        return _join_under_preview(preview_root, target.raw_path.decode())
 
     # 根绝对路径会落到控制面自己的路由上，也要拉回前缀下面。
     if location.startswith("/"):
-        return preview_root + target.raw_path.decode().lstrip("/")
+        return _join_under_preview(preview_root, location)
 
-    # 剩下的是相对地址，浏览器本来就相对当前预览 URL 解析，不必动。
-    return location
+    # 相对地址按浏览器的规则相对当前页解析。解析之后还在前缀下面就用那个结果；`..` 爬出去的
+    # 折回应用自己的路径空间，不能落到控制面的别的路由上。
+    resolved = urljoin(current_url, location)
+    if resolved.startswith(preview_root):
+        return resolved
+    return _join_under_preview(preview_root, location)
+
+
+def _join_under_preview(preview_root: str, raw_path: str) -> str:
+    """Map an application path onto preview_root, collapsing `..` so it cannot climb out."""
+    cut = len(raw_path)
+    for mark in ("?", "#"):
+        index = raw_path.find(mark)
+        if index != -1:
+            cut = min(cut, index)
+    path, tail = raw_path[:cut], raw_path[cut:]
+
+    # normpath 会吃掉结尾的斜杠，而 Starlette 的 redirect_slashes 靠那个斜杠区分。
+    keep_slash = path.endswith("/") and path != "/"
+    normalized = posixpath.normpath("/" + path.lstrip("/"))
+    if not normalized.startswith("/"):
+        normalized = "/"
+    if keep_slash and normalized != "/":
+        normalized += "/"
+    return preview_root + normalized.lstrip("/") + tail
 
 
 def _is_stripped(name: str, extra: Iterable[str]) -> bool:

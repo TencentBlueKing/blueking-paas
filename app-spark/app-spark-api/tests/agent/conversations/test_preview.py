@@ -138,17 +138,35 @@ def test_the_query_string_is_forwarded_as_written():
         pytest.param("/docs/", f"{PREVIEW_ROOT}docs/", id="root-absolute"),
         pytest.param("http://127.0.0.1:9001/docs/", f"{PREVIEW_ROOT}docs/", id="upstream-absolute"),
         pytest.param("http://127.0.0.1:9001/x?a=1", f"{PREVIEW_ROOT}x?a=1", id="upstream-with-query"),
-        # 相对地址本来就相对当前预览 URL 解析，动它反而会错。
-        pytest.param("next/", "next/", id="relative-is-left-alone"),
+        # 不含 .. 的相对地址，按当前页解析后仍在前缀下。
+        pytest.param("next/", f"{PREVIEW_ROOT}next/", id="relative-stays-under-the-prefix"),
         # 指向别处是应用自己的意思。
         pytest.param("https://other.example/x", "https://other.example/x", id="another-host-is-left-alone"),
     ],
 )
 def test_a_redirect_is_brought_back_inside_the_preview_prefix(location, expected):
     """不改写的话 iframe 第一跳就跳出预览：要么落到控制面自己的路由上，要么去连用户的回环地址。"""
-    rewritten = preview._rewrite_location(location, upstream=UPSTREAM, preview_root=PREVIEW_ROOT)
+    rewritten = preview._rewrite_location(
+        location, upstream=UPSTREAM, preview_root=PREVIEW_ROOT, current_url=PREVIEW_ROOT
+    )
 
     assert rewritten == expected
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        pytest.param("/../../../etc/admin", id="root-absolute-climbs-out"),
+        pytest.param("http://127.0.0.1:9001/../../api/accounts/", id="upstream-absolute-climbs-out"),
+        pytest.param("../../etc/admin", id="relative-climbs-out"),
+    ],
+)
+def test_a_redirect_cannot_climb_out_of_the_preview_prefix(location):
+    """`..` 不折叠的话，浏览器归一化之后会落到控制面自己的路由上，还带着用户的登录态。"""
+    current = f"{PREVIEW_ROOT}deep/page"
+    rewritten = preview._rewrite_location(location, upstream=UPSTREAM, preview_root=PREVIEW_ROOT, current_url=current)
+
+    assert rewritten.startswith(PREVIEW_ROOT)
 
 
 # --- 同源的兜底 ------------------------------------------------------------------------------

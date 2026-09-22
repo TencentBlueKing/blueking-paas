@@ -108,8 +108,8 @@ const fetchProjects = async () => {
       projects.value.unshift({
         id: projectId.value,
         name: projectId.value,
-        created: '',
-        updated: '',
+        created_at: '',
+        updated_at: '',
       });
     }
   } catch (error) {

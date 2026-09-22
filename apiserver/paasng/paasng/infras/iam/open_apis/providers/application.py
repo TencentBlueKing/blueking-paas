@@ -22,8 +22,8 @@ from iam.collection import FancyDict
 from iam.resource.provider import ListResult, ResourceProvider
 from iam.resource.utils import Page
 
-from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager
+from paasng.infras.iam.shim import get_management_backend
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 
@@ -88,13 +88,14 @@ class ApplicationProvider(ResourceProvider):
 
     @staticmethod
     def _fetch_application_approvers(app_codes: List[str]) -> Dict[str, List[str]]:
-        """
-        获取应用审批人信息（每个应用的分级管理员）
+        """获取应用审批人（V3 分级管理员成员 / V4 管理空间管理员）
 
-        :param app_codes: 蓝鲸应用 ID 列表
-        :returns: 审批人信息，格式：{app_code: single_app_approvers}
+        必须走 `get_management_backend`，不能直连 V3 的 `BKIAMClient`：V4 环境里
+        `grade_manager_id` 存的是管理空间 ID，打 V3 的 grade_managers 接口会被 403。
         """
         return {
-            m.app_code: BKIAMClient(get_tenant_id_for_app(m.app_code)).fetch_grade_manager_members(m.grade_manager_id)
+            m.app_code: get_management_backend(get_tenant_id_for_app(m.app_code)).fetch_management_space_members(
+                m.grade_manager_id
+            )
             for m in ApplicationGradeManager.objects.filter(app_code__in=app_codes)
         }

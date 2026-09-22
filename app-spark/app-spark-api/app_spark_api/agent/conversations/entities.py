@@ -30,7 +30,7 @@ class ConversationResponse(Schema):
     number: int = Field(description="会话编号")
     conversation_id: UUID = Field(alias="id", description="会话全局唯一 ID，也是 AG-UI 事件里的 threadId")
     is_live: bool = Field(description="会话是否还活着（live），即是否还能继续推进")
-    created: datetime = Field(description="会话创建时间")
+    created_at: datetime = Field(description="会话创建时间")
     closed_at: datetime | None = Field(description="会话结束时间；仍然活着时为 null")
 
 
@@ -63,6 +63,16 @@ class RuntimeStateResponse(Schema):
     )
 
 
+# 用户单轮输入的字符上限。
+#
+# 必须在这里单独设限，不能靠请求体的大小兜底：``DATA_UPLOAD_MAX_MEMORY_SIZE`` 被 Runtime 的状态
+# 回写抬到了 64MB（见 settings），而那是给内部接口用的额度。
+#
+# 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
+# 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
+MAX_RUN_CONTENT_LENGTH = 32 * 1024
+
+
 class StartRunRequest(Schema):
     """推进一次会话交互的请求体。
 
@@ -70,7 +80,20 @@ class StartRunRequest(Schema):
     导致冲突。
     """
 
-    content: str = Field(min_length=1, description="用户本轮发送的内容")
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_RUN_CONTENT_LENGTH,
+        description="用户本轮发送的内容",
+    )
+
+
+class UiEventRecord(Schema):
+    """AG-UI 事件记录，保持 Runtime 与 ui-events 接口已有的传输结构。"""
+
+    seq: int
+    run_id: str
+    timestamp: str = Field(description="Runtime 记录事件的 ISO 8601 时间，保留原有精度和格式")
+    event: dict[str, Any]
 
 
 class UiEventPageResponse(Schema):
@@ -88,4 +111,31 @@ class UiEventPageResponse(Schema):
     since: int = Field(description="本页请求时使用的游标")
     last_seq: int = Field(description="频道当前的最后一个游标")
     exhausted: bool = Field(description="本页是否已经读到频道末尾")
-    records: list[dict[str, Any]] = Field(description="AG-UI 事件记录，原样透传")
+    records: list[UiEventRecord] = Field(description="AG-UI 事件记录，原样透传")
+
+
+class UserMessageHistoryRecord(Schema):
+    """历史中的一条用户输入。"""
+
+    id: int = Field(description="用户消息 ID，可用于去重")
+    run_id: str | None
+    after_seq: int = Field(description="插在该 UI event 序号之后，0 表示所有事件之前")
+    created_at: datetime
+    content: str
+
+
+class ConversationHistoryRecord(Schema):
+    """一条展示历史：两个字段恰好一个非空，分别复用各自的记录结构。"""
+
+    ui_event: UiEventRecord | None = None
+    user_message: UserMessageHistoryRecord | None = None
+
+
+class ConversationHistoryResponse(Schema):
+    """一页展示历史，用户输入按创建时保存的 after_seq 定位。"""
+
+    records: list[ConversationHistoryRecord] = Field(description="本页记录，按对话正序排列")
+    next_cursor: str | None = Field(description="取更早一页时原样回传；null 表示已经到会话开头，没有更早的内容了")
+    # 「到会话开头了」和「最新一轮还没回写完」是两件事：前者看 next_cursor，后者看
+    # `RuntimeStateResponse.replication_pending`。这个字段是给后者用的水位。
+    last_seq: int = Field(description="AG-UI 事件频道当前的最后一个游标")

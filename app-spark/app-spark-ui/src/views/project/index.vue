@@ -9,7 +9,6 @@
     <ProjectLayout>
       <InteractionPanel />
       <WorkspacePanel />
-      <ManagementPanel />
     </ProjectLayout>
   </bk-loading>
 </template>
@@ -20,7 +19,6 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { Message } from 'bkui-vue';
 import InteractionPanel from '@/components/project/interaction/index.vue';
-import ManagementPanel from '@/components/project/management/index.vue';
 import WorkspacePanel from '@/components/project/workspace/index.vue';
 import ProjectLayout from '@/layouts/ProjectLayout.vue';
 import { useProjectStore } from '@/store/project';

@@ -83,17 +83,17 @@ class BkUserField(_BkUserFieldBase):
 
 
 class TimestampedModel(models.Model):
-    """Model with 'created' and 'updated' fields."""
+    """Model with 'created_at' and 'updated_at' fields."""
 
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
 
 
 class OwnerTimestampedModel(TimestampedModel):
-    """Model with 'owner', 'created' and 'updated' fields."""
+    """Model with 'owner', 'created_at' and 'updated_at' fields."""
 
     owner = BkUserField()
 

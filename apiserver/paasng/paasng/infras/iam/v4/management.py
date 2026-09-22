@@ -36,8 +36,6 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 from paasng.infras.iam.v4.spaces import (
-    build_log_permission_scope,
-    build_monitor_permission_scope,
     build_paas_permission_scope,
     build_subject_scope,
 )
@@ -62,11 +60,17 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         init_members: List[str] | None = None,
         bk_space_id: str | None = None,
     ) -> int:
-        """创建应用管理空间，写入 paas/监控/日志 权限范围"""
+        """创建应用管理空间，写入本系统权限范围
+        TODO 目前 iamV4 不支持跨系统授予角色（如监控/日志系统下的运营角色），待监控修复
+        """
         system_id = get_paas_system_id()
         permission_scope = build_paas_permission_scope(app_code, system_id)
         if bk_space_id:
-            permission_scope.extend(self._build_observability_permission_scope(bk_space_id))
+            logger.warning(
+                "iam v4 create_space only accepts roles of the current system, "
+                "skip monitor/log permission scope. bk_space_id=%s",
+                bk_space_id,
+            )
 
         return self._create_space(
             system_id=system_id,
@@ -266,13 +270,6 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         if space_id is None:
             raise BKIAMApiError(f"create management space got unexpected response: {resp!r}")
         return int(space_id)
-
-    def _build_observability_permission_scope(self, bk_space_id: str) -> List[Dict]:
-        """写入监控 / 日志空间的业务运维角色，不实时拉取远端角色列表"""
-        return [
-            *build_monitor_permission_scope(bk_space_id),
-            *build_log_permission_scope(bk_space_id),
-        ]
 
     def _iter_spaces(self, system_id: str) -> Iterable[Dict]:
         return self.paginate(self.client.list_space, path_params={"system_id": system_id})

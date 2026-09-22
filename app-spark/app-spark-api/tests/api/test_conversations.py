@@ -258,6 +258,31 @@ async def read_ui_events(client: AsyncClient, number: int, since: int = 0) -> di
     return json.loads(response.content)
 
 
+async def read_history_page(client: AsyncClient, number: int, cursor: str | None = None) -> dict[str, Any]:
+    """Read one page of a conversation's display history, newest page when no cursor is given."""
+    query = {"cursor": cursor} if cursor else {}
+    response = await client.get(f"/api/projects/{PROJECT_ID}/conversations/{number}/history/", data=query)
+    assert response.status_code == HTTPStatus.OK, response.content
+    return json.loads(response.content)
+
+
+async def read_history(client: AsyncClient, number: int) -> list[dict[str, Any]]:
+    """Page back through the whole display history and return it in conversation order.
+
+    The endpoint hands out the *newest* page first, so the pages come back in reverse and are
+    stitched by prepending. Tests assert about whole conversations, which is a different thing
+    from what any one page holds; keeping the walk here is what keeps them readable.
+    """
+    records: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        page = await read_history_page(client, number, cursor)
+        records = page["records"] + records
+        cursor = page["next_cursor"]
+        if cursor is None:
+            return records
+
+
 async def wait_for_replication(
     client: AsyncClient,
     number: int,
@@ -411,6 +436,11 @@ async def test_history_is_readable_without_waking_the_runtime(aapi_client, proje
     idle = await read_state(aapi_client, number)
 
     assert page["last_seq"] > 0
+    history = await read_history(aapi_client, number)
+    assert history[0]["ui_event"] is None
+    assert history[0]["user_message"]["content"] == "write my first note"
+    assert history[0]["user_message"]["run_id"] == page["records"][0]["run_id"]
+    assert [row["ui_event"] for row in history if row["ui_event"] is not None] == page["records"]
     assert idle["running"] is False
     assert await provider.peek(conversation_id) is None
 
@@ -452,6 +482,14 @@ async def test_a_conversation_outlives_the_runtime_that_held_it(
     page = await read_ui_events(aapi_client, number)
     assert [record["seq"] for record in page["records"]] == list(range(1, after["ui_event_seq"] + 1))
     assert after["ui_event_seq"] > first["ui_event_seq"]
+    history = await read_history(aapi_client, number)
+    messages = [row["user_message"] for row in history if row["user_message"] is not None]
+    assert [row["content"] for row in messages] == ["write my first note", "write my second note"]
+    assert [row["after_seq"] for row in messages] == [0, first["ui_event_seq"]]
+    # A restarted Runtime continues the same sequence; each input precedes its own reply.
+    assert [(row["ui_event"] or row["user_message"])["run_id"] for row in history] == [messages[0]["run_id"]] * (
+        first["ui_event_seq"] + 1
+    ) + [messages[1]["run_id"]] * (after["ui_event_seq"] - first["ui_event_seq"] + 1)
 
 
 async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(

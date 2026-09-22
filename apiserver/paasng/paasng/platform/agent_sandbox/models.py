@@ -107,10 +107,15 @@ class SandboxManager(models.Manager):
     """沙箱 Manager 类"""
 
     def count_active(self, application: Application) -> int:
-        """统计应用下仍然占用集群资源的沙箱数量。
+        """统计应用下仍然占用集群资源的沙箱数量
 
-        已软删除的沙箱不再占用资源; 创建失败 (err_creating) 的沙箱, 其工作负载已在创建失败时清理,
-        同样不计入, 否则一次失败的创建会让用户凭空少一个配额且无法自助恢复.
+        不计入:
+
+        - 已软删除 (deleted_at 非空) 的沙箱: 其工作负载已不存在;
+        - 创建失败 (err_creating) 的沙箱: 创建失败时已尝试清理其工作负载, 若该次清理本身失败,
+          及仍不计入, 残留由过期沙箱清理命令在 TTL 到期后回收, 因此计数可能短暂偏低
+
+        计入: 删除失败 (err_deleting) 的沙箱 -- 删除失败意味着工作负载可能仍然存在
         """
         return (
             self.filter(application=application, deleted_at__isnull=True)

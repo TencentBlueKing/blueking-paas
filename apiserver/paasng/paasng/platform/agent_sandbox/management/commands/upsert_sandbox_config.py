@@ -49,18 +49,18 @@ class Command(BaseCommand):
         parser.add_argument(
             "--cpu",
             type=str,
-            help="CPU limit in cores, e.g. 4 (platform default: {DEFAULT_SANDBOX_CPU}",
+            help=f"CPU limit in cores, e.g. 4 (platform default: {DEFAULT_SANDBOX_CPU})",
         )
         parser.add_argument(
             "--memory",
             type=str,
-            help="Memory limit in GB, e.g. 2 (platform default: {DEFAULT_SANDBOX_MEMORY}",
+            help=f"Memory limit in GB, e.g. 2 (platform default: {DEFAULT_SANDBOX_MEMORY})",
         )
         parser.add_argument(
             "--max-sandbox-count",
             dest="max_sandbox_count",
             type=int,
-            help="Max sandboxes the app may keep at the same time, e.g. 100 (platform default: {DEFAULT_MAX_SANDBOX_COUNT})",
+            help=f"Max sandboxes the app may keep at the same time, e.g. 100 (platform default: {DEFAULT_MAX_SANDBOX_COUNT})",
         )
         parser.add_argument(
             "--reset",

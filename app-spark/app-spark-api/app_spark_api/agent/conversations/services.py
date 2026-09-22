@@ -83,6 +83,9 @@ class ConversationState:
         then nothing left that could still arrive.
     :param model: Model of the live Runtime, or ``None`` when none is up. Nothing here can
         answer it otherwise: the model is the agent's own configuration, not this service's.
+    :param app_status: What the live Runtime says about the workspace application it
+        supervises. ``None`` when no Runtime is up, because whether that application is
+        listening is a fact about a running sandbox and nothing stored here can stand in for it.
     """
 
     context_version: int
@@ -91,6 +94,49 @@ class ConversationState:
     running: bool
     replication_pending: bool
     model: str | None
+    app_status: str | None = None
+
+
+async def get_app_status(conversation: Conversation) -> str | None:
+    """Ask the live Runtime how the conversation's application is doing, without starting one.
+
+    Deliberately never fails. The preview address does not depend on a Runtime -- it stays the
+    same across restarts and is issued before the first turn -- so a Runtime that cannot be
+    reached is something to report as "nothing to show right now", not an error that should take
+    the address away with it.
+
+    :param conversation: Conversation whose application is being looked at.
+    :return: The Runtime's own word for the application's state, or ``None`` when nothing could
+        be asked. A client only has to branch on whether there is a status at all: no second,
+        derived field says the same thing in other words.
+    """
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+
+    # 没有 Runtime 是常态而不是故障：会话可能刚建、也可能被回收过。
+    if handle is None:
+        return None
+
+    try:
+        health = await AgentRuntimeClient(handle).health()
+    except AgentUnavailableError:
+        # 降成 info 且不带 traceback：Runtime 死掉但还没被回收的那段时间里，前端每轮询一次就会
+        # 走到这里，按 warning 打会把日志刷满。真正需要人看的是 Runtime 为什么死，不在这条上。
+        logger.info(
+            "Conversation %s has a Runtime that cannot be read, reporting its application as unknown",
+            conversation.id,
+        )
+        return None
+
+    return health.app_status
+
+
+async def get_preview_upstream(conversation: Conversation) -> str | None:
+    """Return where this service should proxy the conversation's preview to.
+
+    :param conversation: Conversation whose application is to be proxied.
+    :return: A base URL, or ``None`` when no Runtime is serving the conversation.
+    """
+    return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:
@@ -238,11 +284,13 @@ async def get_state(conversation: Conversation) -> ConversationState:
     model: str | None = None
     running = False
     replication_pending = False
+    app_status: str | None = None
     if handle is not None:
         health = await AgentRuntimeClient(handle).health()
         model = health.model
         running = health.running
         replication_pending = health.replication_pending
+        app_status = health.app_status
 
     return ConversationState(
         context_version=context_version,
@@ -251,6 +299,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         running=running,
         replication_pending=replication_pending,
         model=model,
+        app_status=app_status,
     )
 
 

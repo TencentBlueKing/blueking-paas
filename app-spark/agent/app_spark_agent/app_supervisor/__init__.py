@@ -30,11 +30,8 @@ from app_spark_agent.app_supervisor.types import (
     AppLaunchConflict,
     AppLaunchError,
     AppLaunchFailed,
-    AppLaunchInvalid,
     AppStatus,
     LaunchResult,
-    validate_launch_label,
-    validate_launch_path,
 )
 
 __all__ = [
@@ -44,7 +41,6 @@ __all__ = [
     "AppLaunchConflict",
     "AppLaunchError",
     "AppLaunchFailed",
-    "AppLaunchInvalid",
     "AppStatus",
     "AppSupervisor",
     "LaunchResult",
@@ -53,6 +49,4 @@ __all__ = [
     "ProcessSpec",
     "build_app_spec",
     "build_child_environ",
-    "validate_launch_label",
-    "validate_launch_path",
 ]

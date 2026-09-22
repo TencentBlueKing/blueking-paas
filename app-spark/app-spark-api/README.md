@@ -247,6 +247,30 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 好几秒，够另一个请求在这中间把会话结束掉：进来时看一次，Runtime 拉起来之后再回库确认一次，
 确认没过就把刚拉起来的 Runtime 收掉并返回 409（见 `_reject_if_closed_meanwhile()`）。
 
+### 工作区应用的预览
+
+预览是三件事，分开看才对：**平台签发能打开的地址**、**agent 保证约定端口在听**、**前端决定什么时候
+摆给人看**。沙箱只管中间那件——它不知道自己被外面怎么寻址，`app.launched` 里也就没有 url。
+
+`GET .../conversations/<n>/preview/` 返回 `origin` 和 `app_status`。`origin` 是本服务自己的一条路径
+`.../preview/app/`，前端直接拿去当 iframe 的 `src`；它不依赖 Runtime 存活，会话一建好就有，也不落库
+（由请求推导）。此刻有没有东西可看要看 `app_status`，`null` 表示问不到。
+
+`.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
+预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的
+`preview_upstream` 给出，local_process 为每个 Runtime 分一个应用端口，于是多个会话能同时预览。没有
+Runtime 是 503，应用没起来是 502。
+
+**同源是这块最大的妥协。** 应用是模型写的代码，却和控制面共享 origin，它的 JS 一句
+`fetch("/api/...")` 就能带着用户登录态调平台。HTML 响应因此带一条 CSP，把 `connect-src` /
+`form-action` 锁在预览前缀下，代价是应用不能从浏览器直连第三方。干净的解法是换独立主机名，难点
+在鉴权。上游路径怎么拼、响应头怎么改，都写在 `conversations/preview.py` 里。
+
+两个部署前提：在 Ingress 上终结 TLS 时要配 `SECURE_PROXY_SSL_HEADER`，否则 `origin` 签成
+`http://`，前端是 https 就按 mixed content 拦掉；前端与本服务不同源时，`X-Frame-Options:
+SAMEORIGIN` 要换成 `frame-ancestors`。HTML 正文里的根绝对路径（`/static/app.css`）仍会 404，
+重定向那一类已经在响应里改写了。
+
 ## 部署相关
 
 ### 镜像构建

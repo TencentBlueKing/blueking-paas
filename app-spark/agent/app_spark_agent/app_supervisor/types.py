@@ -18,7 +18,6 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
-from urllib.parse import urljoin
 
 from app_spark_agent import settings
 
@@ -29,14 +28,17 @@ class AppStatus(StrEnum):
     # 从未被本监督器 launch 过。别人占着端口也不算启动。
     NOT_STARTED = "not_started"
 
-    # 已经 launch 过，但子进程掉了或约定端口没实听。
+    # 已经 launch 过，但子进程掉了或约定端口答不出 HTTP。
     UNHEALTHY = "unhealthy"
 
-    # 本监督器的子进程还在，且约定端口 TCP 能连上。
+    # 本监督器的子进程还在，且约定端口应答得了一个 HTTP GET。
     HEALTHY = "healthy"
 
 
-# 请求没带 path/label 时用这两项；第一次 launch 和再次沿用都读这里。
+# 应用把自己摆在哪个路径下，以及给人看的标签。写进 app.launched 供前端用。
+#
+# 是常量而不是入参：能传别的值的调用方只有当初那个控制面 launch 接口，它已经没了。模型的
+# launch_app 不接受参数，于是「可配的 path」是一条不存在的路径——留着会让人以为它能变。
 DEFAULT_LAUNCH_PATH = "/"
 DEFAULT_LAUNCH_LABEL = "Preview"
 
@@ -66,15 +68,11 @@ LAUNCH_EVENT_RUN_ID = "app-supervisor"
 
 
 class AppLaunchError(Exception):
-    """A launch the HTTP view maps to a status code."""
+    """A launch the tool reports as failed, without aborting the run."""
 
 
 class AppLaunchConflict(AppLaunchError):
     """Another launch is in progress, or a foreign process owns the port."""
-
-
-class AppLaunchInvalid(AppLaunchError):
-    """path or label is not acceptable."""
 
 
 class AppLaunchFailed(AppLaunchError):
@@ -85,47 +83,9 @@ class AppLaunchFailed(AppLaunchError):
 class LaunchResult:
     """What a successful launch hands back to the caller."""
 
+    # 没有 url：沙箱里没人知道浏览器该打开哪个地址，那是控制面签发的。这里只说端口在听，
+    # 以及应用把自己摆在哪个路径下。
     port: int
     path: str
     label: str
-    url: str
     app_status: AppStatus
-
-    def as_dict(self) -> dict[str, object]:
-        """Return the JSON object POST /app/launch responds with."""
-        return {
-            "port": self.port,
-            "path": self.path,
-            "label": self.label,
-            "url": self.url,
-            "app_status": self.app_status,
-        }
-
-
-def validate_launch_path(path: str) -> str:
-    """Accept a URL path that starts with / and names no host."""
-    if not path.startswith("/") or path.startswith("//"):
-        raise AppLaunchInvalid("path must be an absolute URL path starting with /.")
-    if "://" in path or ".." in path:
-        raise AppLaunchInvalid("path must not include a scheme or parent segments.")
-    if any(ch.isspace() for ch in path):
-        raise AppLaunchInvalid("path must not include whitespace.")
-    return path
-
-
-def validate_launch_label(label: str) -> str:
-    """Accept a non-empty single-line label."""
-    stripped = label.strip()
-    if not stripped or len(stripped) > 64:
-        raise AppLaunchInvalid("label must be between 1 and 64 characters.")
-    if any(ch in stripped for ch in "\r\n"):
-        raise AppLaunchInvalid("label must be a single line.")
-    return stripped
-
-
-def build_preview_url(path: str) -> str:
-    """Join the preview base URL with path."""
-
-    # 结尾补 / 保证 urljoin 不吃掉基址最后一段；缺省的 "/" 去掉斜杠后就是空串，回到基址本身。
-    base = settings.preview_base_url().rstrip("/") + "/"
-    return urljoin(base, path.lstrip("/"))

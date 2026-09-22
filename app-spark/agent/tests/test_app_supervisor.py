@@ -29,13 +29,10 @@ from app_spark_agent.app_supervisor import (
     LAUNCH_EVENT_RUN_ID,
     AppLaunchConflict,
     AppLaunchFailed,
-    AppLaunchInvalid,
     AppStatus,
     AppSupervisor,
     build_app_spec,
     build_child_environ,
-    validate_launch_label,
-    validate_launch_path,
 )
 from app_spark_agent.app_supervisor import process as process_mod
 from app_spark_agent.app_supervisor import supervisor as supervisor_mod
@@ -81,6 +78,13 @@ class App:
         self._fail_on = fail_on
         self._calls = 0
         (tmp_path / "workspace").mkdir(exist_ok=True)
+
+        async def answers(_port: int) -> bool:
+            return self.listening
+
+        # 两个探针都假掉：一个判就绪（应答得了 HTTP），一个判端口有没有被占。真实情况里两者可以
+        # 不一致——「占着端口但不说 HTTP」正是留下 TCP 探针的理由，那条由 test_app_probe.py 守。
+        monkeypatch.setattr(supervisor_mod, "http_get_answers", answers)
         monkeypatch.setattr(supervisor_mod, "tcp_port_is_open", lambda _port: self.listening)
         monkeypatch.setattr(process_mod, "_spawn_popen", self._spawn)
         self.supervisor = AppSupervisor(
@@ -135,18 +139,6 @@ async def wait_until(predicate: Callable[[], bool], timeout: float = 1.5) -> Non
     raise AssertionError("condition not met before timeout")
 
 
-def test_path_and_label_rules() -> None:
-    assert validate_launch_path("/") == "/"
-    assert validate_launch_path("/preview") == "/preview"
-    for path in ("preview", "//host/path", "/../secret", "https://example.com/"):
-        with pytest.raises(AppLaunchInvalid):
-            validate_launch_path(path)
-    assert validate_launch_label(" Preview ") == "Preview"
-    for label in ("", "x" * 65):
-        with pytest.raises(AppLaunchInvalid):
-            validate_launch_label(label)
-
-
 def test_child_env_drops_every_agent_setting_not_just_the_known_secrets() -> None:
     """应用进程拿不到任何 APP_SPARK_AGENT_*，包括还没被认定为密钥的那些。"""
 
@@ -181,14 +173,20 @@ def test_spec_starts_the_import_path_the_instructions_promise(tmp_path: Path) ->
     assert spec.cwd == tmp_path
 
 
-async def test_relaunch_keeps_path_and_reuses_run_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_relaunch_replaces_the_process_and_reuses_the_run_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app = App(monkeypatch, tmp_path)
-    first = await app.supervisor.launch(path="/demo", label="Demo")
+    first = await app.supervisor.launch()
     app.listening = False
+
     second = await app.supervisor.launch()
-    assert (first.path, first.label) == (second.path, second.label) == ("/demo", "Demo")
+
+    assert (first.path, first.label) == (second.path, second.label) == ("/", "Preview")
     assert len(app.spawned) == 2
+    # 旧进程必须真的被换掉，否则「再次 launch 加载新代码」这条就不成立。
     assert app.spawned[0].poll() is not None
+    # 固定哨兵，不是每次 launch 灌一个新 uuid 进 AppendLog._run_ids。
     assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
 
 
@@ -217,7 +215,7 @@ async def test_failed_launch_is_unhealthy(
     app = App(monkeypatch, tmp_path, living=living, auto_listen=False)
     with pytest.raises(AppLaunchFailed, match=match):
         await app.supervisor.launch()
-    assert app.supervisor.app_status == AppStatus.UNHEALTHY
+    assert await app.supervisor.app_status() == AppStatus.UNHEALTHY
 
 
 async def test_watch_restarts_after_a_spawn_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -228,7 +226,7 @@ async def test_watch_restarts_after_a_spawn_error(tmp_path: Path, monkeypatch: p
     async with watching(app.supervisor) as task:
         await wait_until(lambda: len(app.spawned) == 2)
         assert not task.done()
-        assert app.supervisor.app_status == AppStatus.HEALTHY
+        assert await app.supervisor.app_status() == AppStatus.HEALTHY
         assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
 
 
@@ -241,7 +239,7 @@ async def test_watch_gives_up_after_retry_limit(tmp_path: Path, monkeypatch: pyt
     app.drop()
     async with watching(app.supervisor):
         await wait_until(lambda: app.supervisor._auto_restarts >= 2, timeout=2.0)
-        assert app.supervisor.app_status == AppStatus.UNHEALTHY
+        assert await app.supervisor.app_status() == AppStatus.UNHEALTHY
         stopped_at = len(app.spawned)
         await asyncio.sleep(0.1)
         assert len(app.spawned) == stopped_at
@@ -252,4 +250,4 @@ async def test_watch_ignores_never_launched(tmp_path: Path, monkeypatch: pytest.
     async with watching(app.supervisor):
         await asyncio.sleep(0.08)
         assert app.spawned == []
-        assert app.supervisor.app_status == AppStatus.NOT_STARTED
+        assert await app.supervisor.app_status() == AppStatus.NOT_STARTED

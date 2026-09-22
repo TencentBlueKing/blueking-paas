@@ -16,9 +16,10 @@
 
 """模型侧的 launch：进程内直调监督器，不走 HTTP、不碰任何凭据。
 
-只有 agent 第一时间知道代码什么时候真的能跑，所以拉起这件事不该只等用户点按钮。
-控制面那条 POST /app/launch 仍然保留：两条路径共用同一把锁、同一份 LaunchResult，
-成功都落同一条 app.launched 到 ui_events，控制面照旧 drain，不需要反向回调。
+只有 agent 第一时间知道代码什么时候真的能跑，所以拉起这件事交给模型自己的 launch_app 工具，
+不另开控制面接口。成功落一条 app.launched 到 ui_events，控制面 drain 这条就知道端口在听。
+
+工具不交出任何可打开的地址：浏览器该访问哪个 origin 由控制面签发，沙箱里推不出来。
 """
 
 from collections.abc import Awaitable, Callable
@@ -39,12 +40,12 @@ class LaunchToolResult(BaseModel):
     """launch 工具返回给模型的结构，方便按字段消费而不是猜一段纯文本。
 
     :param status: ok 端口已实听；failed 没起来；refused 本轮次数已用尽。
-    :param url: 成功时可以打开的地址。
+    :param port: 成功时应用实听的端口。不给 URL，免得模型顺手编一个地址报给用户。
     :param detail: 失败或被拒的原因。
     """
 
     status: Literal["ok", "failed", "refused"]
-    url: str = ""
+    port: int | None = None
     detail: str = ""
 
 
@@ -64,9 +65,11 @@ class LaunchTool:
         """
 
         async def launch_app() -> LaunchToolResult:
-            """Start or restart this session's application and return the URL to open.
+            """Start or restart this session's application and report whether it is listening.
 
             Takes no arguments: the port, the entry point, and the preview path are all fixed.
+            Returns no address. The platform decides where the user opens the application, so
+            do not invent a URL or tell the user to visit one.
             """
             return await self.launch()
 
@@ -91,4 +94,4 @@ class LaunchTool:
             # 不往上抛。抛出去会中断整轮，而模型本可以读日志、改代码再试一次。
             return LaunchToolResult(status="failed", detail=str(exc))
 
-        return LaunchToolResult(status="ok", url=result.url)
+        return LaunchToolResult(status="ok", port=result.port)

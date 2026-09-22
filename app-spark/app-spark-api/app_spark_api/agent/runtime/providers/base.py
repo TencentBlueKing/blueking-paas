@@ -83,6 +83,24 @@ class AgentRuntimeProvider(abc.ABC):
         """
 
     @abc.abstractmethod
+    async def preview_upstream(self, conversation_id: str) -> str | None:
+        """Return the base URL this service should proxy the conversation's preview to.
+
+        The workspace application, not the Runtime's own API: what a user opens when they want
+        to look at what the agent built. Asking the provider is the whole point -- where that
+        application is reachable from is as provider-specific as where the Runtime lives, and
+        it is the one thing the sandbox itself cannot say, since nothing inside it knows how
+        the outside addresses it.
+
+        This never starts anything, for the same reason :meth:`peek` does not: looking at a
+        conversation must not provision an agent for it.
+
+        :param conversation_id: Conversation whose application is to be proxied.
+        :return: A scheme-and-authority base URL, or ``None`` when no Runtime is serving the
+            conversation and there is therefore nothing to proxy to.
+        """
+
+    @abc.abstractmethod
     async def terminate(self, conversation_id: str) -> None:
         """Shut down the Runtime serving ``conversation_id``, if there is one.
 

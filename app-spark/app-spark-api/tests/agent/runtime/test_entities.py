@@ -116,6 +116,19 @@ def test_a_health_snapshot_is_read_from_the_runtimes_own_words():
     assert health.running is False
 
 
+def test_the_application_status_is_forwarded_as_the_runtime_worded_it():
+    health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "app_status": "healthy"})
+
+    assert health.app_status == "healthy"
+
+
+def test_a_runtime_that_says_nothing_about_its_application_is_not_read_as_a_status():
+    """「问不出来」和三个状态里的任何一个都不是一回事，不能折成其中之一。"""
+    health = RuntimeHealth.from_payload(HEALTHY_PAYLOAD)
+
+    assert health.app_status is None
+
+
 def test_a_runtime_that_has_never_run_has_no_conversation_yet():
     health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "conversation_id": None})
 

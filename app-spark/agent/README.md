@@ -28,7 +28,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 兼容回落。未注入上面的 token 时当作 access_token 用。`fake:*` 不需要 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 调用真实模型时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
-| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用约定端口，锁定 `8000`。`POST /app/launch` 用它拼启动命令，并注入同名环境变量；健康只认该端口是否实听 |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，由接入层为每个沙箱分配（缺省 `8000`）。`launch_app` 用它拼启动命令，并注入同名环境变量；健康只认该端口应不应答 HTTP |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
@@ -37,7 +37,6 @@ uv sync
 | `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/data/state` | 必须在 workspace 外 |
 | `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条。launch 会把应用 stdout/stderr 接到这里，打开失败不阻止已实听的成功 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
-| `APP_SPARK_AGENT_PREVIEW_BASE_URL` | 否 | 平台分配的预览基址（`https://<平台给的主机>`，不要 path）。拼进 `app.launched.url`。空则本机用 `http://127.0.0.1:<APP_PORT>`。只改 url 字符串，应用仍听 `APP_PORT` |
 
 就绪门闩：`fake:*` 直接就绪；真实模型要 access_token 非空 **且** `MODEL_BASE_URL` 非空 **且** `MODEL_NAME` 在对照表。
 access_token 取值：`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` → `APP_SPARK_AGENT_MODEL_API_KEY`。
@@ -80,7 +79,7 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`app_status`，以及会话游标
 `conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube 探针用同一接口，走 `httpHeaders`。
-`app_status` 是 `not_started` / `unhealthy` / `healthy`（看约定端口是否实听），不含预览 `url`。
+`app_status` 是 `not_started` / `unhealthy` / `healthy`（看约定端口应不应答），不含任何预览地址。
 
 `POST /runs` 为 AG-UI over SSE，同样必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
 
@@ -110,7 +109,7 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
 运行的 `contextVersion` 是 `0`。
 
-`/log`、`/ui-events`、`GET/PUT /context`、`POST /app/launch` 同样需要 Bearer。
+`/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer。
 
 以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标、运行标志，以及
 `pushed_*` 复制游标与 `replication_pending`（都只在配了控制面时才有意义），`/log` 与
@@ -119,50 +118,52 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 ## 拉起用户应用
 
-这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。两条触发路径，共用同一把锁、同一份返回：
+这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。唯一的触发路径是模型自己的 `launch_app`
+工具：进程内直调监督器（`launch_tool.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
+`APP_SPARK_AGENT_*`。只有 agent 第一时间知道代码什么时候真的能跑。失败不中断整轮：原因交回模型，
+它可以读日志改完再拉，单轮最多 2 次。
 
-- **模型自己拉**：`launch_app` 工具进程内直调监督器（`launch_tool.py`），不走 HTTP、不碰凭据——模型的
-  `Shell` 屏蔽了 `APP_SPARK_AGENT_*`，它本来也拿不到 `RUNTIME_TOKEN`。只有 agent 第一时间知道代码什么时候
-  真的能跑，所以不该只等用户点按钮。失败不中断整轮：原因交回模型，它可以读日志改完再拉，单轮最多 2 次。
-- **控制面拉**：`POST /app/launch`，给手动重启和刷新预览用，可带 `path` / `label`；模型那条固定 `/` + `Preview`。
+成功落一条 `app.launched` 到 `ui_events`，控制面 drain 这条就知道应用起来了，不需要 agent 反向回调控制面接口。
 
-成功都落同一条 `app.launched` 到 `ui_events`，控制面 drain 这条就拿到 url，不需要 agent 反向回调控制面接口。
+成功时事件值带 `port`、`path`、`label`、`app_status`；缺省 `path=/`、`label=Preview`。
+`GET /ui-events` 可 drain；这条事件和控制面最终一致，刚 launch 完立刻去读可能还看不到。不往进行中的
+`/runs` SSE 里插。
 
-```bash
-curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{}' \
-  http://127.0.0.1:8090/app/launch
-```
-
-成功 2xx：`port`、`path`、`label`、`url`、`app_status`（`healthy`）。缺省 `path=/`、`label=Preview`。
-预览地址以响应体的 `url` 为准。同一份四要素会落一条 `app.launched` 到 `ui_events`，`GET /ui-events` 可 drain；
-这条事件和控制面最终一致，launch 刚返回时立刻去读可能还看不到。不往进行中的 `/runs` SSE 里插。
+**这里不产出任何可以打开的地址。** 浏览器该访问哪个 origin 由控制面签发，沙箱里推不出来：它不知道自己
+被外面怎么寻址，也不该知道。`launch_app` 只回 `status` 和 `port`，`app.launched` 同理。给模型一个地址，
+它就会把那个地址当成真的报给用户。
 
 启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`
 （`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在 `settings.INSTRUCTIONS` 里，两处必须一起改——
 模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
 
-`--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。判活只连
-`127.0.0.1:<APP_PORT>`，两者不是一回事。
+`--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。会话之间的隔离靠
+每个沙箱分到不同的 `APP_PORT`、以及浏览器只能走控制面的反向代理，不靠改这个监听地址。判活只连
+`127.0.0.1:<APP_PORT>`，和听哪个网卡不是一回事。
 
 规则：
 
-- 健康只认 `127.0.0.1:<APP_PORT>` 能 TCP 连上，最多等 30 秒。
-- 进行中的 launch 再打一次，或端口被非本监督器进程占用：409，不杀、不发事件。
-- 已是监督器进程：再次 launch 一律重启（加载新代码），请求没带的 path/label 沿用上次。
-- 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再手动 launch。
+- 健康只认 `127.0.0.1:<APP_PORT>` 应答得了一个 HTTP GET，最多等 30 秒。任何状态码（含 4xx / 5xx）
+  都算在听：应用返回什么是它自己的事。只连 TCP 不够——端口 bind 上到真能处理请求之间那段窗口里，
+  预览打开只会拿到一个空响应。
+- 探针的两个超时是分开的：建连 0.2 秒（本机 connect 要么立刻成、要么立刻拒），等应答 2 秒。
+  应答那一段是应用处理一个请求的时间，给紧了会把一个正在正常服务的应用判成掉听、再被下面的
+  自动重启停掉。探针本身是异步的，不占事件循环——它每 0.5 秒就要跑一次。
+- 进行中的 launch 再打一次，或端口被非本监督器进程占用：冲突，不杀、不发事件。
+- 已是监督器进程：再次 launch 一律重启，为的是加载新代码。`launch_app` 不接受参数，事件里的
+  `path` / `label` 是常量（`/` + `Preview`）——当初能传别的值的只有控制面那个 launch 接口，它已经没了。
+- 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再由模型 launch。
 - run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。
 - 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
-  不然「失败→改代码→再 launch」会一直烧 token。控制面那条不受这个额度限制。
-- 子进程注入 `APP_SPARK_AGENT_APP_PORT`，只剥 `RUNTIME_TOKEN` / `MODEL_API_KEY` / `BK_AIDEV_ACCESS_TOKEN` / `CONTROL_PLANE_TOKEN`。不要按「屏蔽全部 `APP_SPARK_AGENT_*`」理解这条路径——那是给模型 Shell 的。
+  不然「失败→改代码→再 launch」会一直烧 token。
+- 子进程的环境整段剥掉 `APP_SPARK_AGENT_` 前缀，然后只把 `APP_SPARK_AGENT_APP_PORT` 加回去（`build_child_environ`）。剥前缀而不是逐个 pop 已知密钥：新增一个配置忘了登记就会漏进应用，而应用是模型写的代码。
 
 ## 凭据屏蔽
 
 两层。第二层存在的理由是**第一层静默失效**：新增一个密钥键却忘了登记、或 harness 升级改了名单语义，
 测试全绿、功能正常，密钥却已经进了模型能读的环境。
 
-**一、密钥不进模型能用的环境**：harness `Shell` 从继承环境里剥掉 `APP_SPARK_AGENT_*` 及各 provider 密钥变量（`agent.py`）。`POST /app/launch` 拉起的用户应用另算：注入 `APP_SPARK_AGENT_APP_PORT`，只剥上面四个密钥，不能套用「全部 `APP_SPARK_AGENT_*` 都剥掉」。
+**一、密钥不进模型能用的环境**：harness `Shell` 从继承环境里剥掉 `APP_SPARK_AGENT_*` 及各 provider 密钥变量（`agent.py`）。`launch_app` 拉起的用户应用走同一条线：整段剥掉 `APP_SPARK_AGENT_` 前缀，只把 `APP_SPARK_AGENT_APP_PORT` 加回去（`app_spec.py` 的 `build_child_environ`）。
 
 **二、出站文本脱敏**（`masking.py`），匹配值而非键名，多个密钥按长度降序替换：
 
@@ -203,8 +204,8 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
   网关的历史，并读取三份游标；不改写 context，也不往 transcript 写 OpenAI 原始报文。
 - `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
   8192 字节；文件工具看不见它。
-- `launch_app` 不接受参数，返回 `status` / `url` / `detail`。注入自带 agent 的调用方（嵌入、单测）
-  身上没有这个工具，`POST /app/launch` 才是保底入口。
+- `launch_app` 不接受参数，返回 `status` / `port` / `detail`。注入自带 agent 的调用方（嵌入、单测）
+  身上没有这个工具，必须把 `LaunchTool.as_tool()` 交进去，否则模型会去找一个不存在的工具。
 
 ## 远程持久化
 

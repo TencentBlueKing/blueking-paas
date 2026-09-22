@@ -1,4 +1,4 @@
-"""HTTP views: health, drain, context, application launch, and the AG-UI run."""
+"""HTTP views: health, drain, context, and the AG-UI run."""
 
 import json
 from collections.abc import AsyncIterator
@@ -6,7 +6,6 @@ from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from pydantic_ai.run import AgentRunResult
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.responses import JSONResponse, Response
@@ -17,7 +16,6 @@ from starlette.responses import JSONResponse, Response
 from starlette.types import Receive, Scope, Send
 
 from app_spark_agent import VERSION, settings
-from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed, AppLaunchInvalid
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
@@ -110,7 +108,7 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "version": VERSION,
         "model_ready": settings.is_model_ready(),
         "running": runtime.run_guard.busy,
-        "app_status": runtime.app_supervisor.app_status,
+        "app_status": await runtime.app_supervisor.app_status(),
         "model": settings.MODEL,
         "conversation_id": context.conversation_id,
         "context_version": context.context_version,
@@ -125,28 +123,6 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "workspace_save_pending": saver is not None and saver.status.outstanding,
         "workspace": saver.status.as_payload() if saver is not None else None,
     }
-
-
-class LaunchRequest(BaseModel):
-    """Optional path and label for POST /app/launch. Omitted fields reuse the last launch."""
-
-    path: str | None = None
-    label: str | None = None
-
-
-@router.post("/app/launch", dependencies=[Depends(require_bearer)])
-async def launch_app(runtime: RuntimeDep, body: LaunchRequest | None = None) -> dict[str, object]:
-    """Start or restart the workspace application and return the URL a caller can open."""
-    request = body if body is not None else LaunchRequest()
-    try:
-        result = await runtime.app_supervisor.launch(path=request.path, label=request.label)
-    except AppLaunchInvalid as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
-    except AppLaunchConflict as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    except AppLaunchFailed as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-    return result.as_dict()
 
 
 @router.get("/log", dependencies=[Depends(require_bearer)])

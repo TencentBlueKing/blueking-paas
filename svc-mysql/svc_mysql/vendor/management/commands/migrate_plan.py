@@ -17,14 +17,21 @@
 
 """在 plan 之间迁移 MySQL 实例。实例 uuid 保持不变，迁移期间应用仍使用旧库。
 
-使用方式:
-    python manage.py migrate_plan prepare -a <app_code> -t <目标 plan 名称> [-m <模块>] [-e stag|prod] [-d <developer>]
-    python manage.py migrate_plan switch  -a <app_code> [-m <模块>] [-e stag|prod]
-    python manage.py migrate_plan revert  -a <app_code> [-m <模块>] [-e stag|prod]
-    python manage.py migrate_plan status  [-a <app_code>] [-m <模块>] [-e stag|prod]
+使用示例:
+    # 预分配 stag 和 prod。标准输出是给运维复制的连接信息，不含密码
+    python manage.py migrate_plan prepare -a cw-chaos -t mysql-8.0 -d v_jackyjxie
 
-prepare 在目标 plan 上预分配新库，标准输出是给运维复制的连接信息（不含密码）。
-运维完成数据同步后执行 switch，再重新部署应用。revert 把绑定写回旧库，目标库保留。
+    # 只处理指定模块和环境。-m、-e 都可以重复
+    python manage.py migrate_plan prepare -a cw-chaos -t mysql-8.0 -m default -m api -e prod
+
+    # 查看哪些已预分配、哪些已切换
+    python manage.py migrate_plan status -a cw-chaos
+
+    # 运维同步完数据后切换，然后重新部署应用
+    python manage.py migrate_plan switch -a cw-chaos -m default -e prod
+
+    # 切换后有问题，写回旧库。目标库保留，需要再部署一次
+    python manage.py migrate_plan revert -a cw-chaos -m default -e prod
 """
 
 from django.core.management.base import BaseCommand, CommandError

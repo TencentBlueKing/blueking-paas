@@ -24,7 +24,12 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
-from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxError, SandboxImageValidateError
+from paasng.platform.agent_sandbox.exceptions import (
+    SandboxAlreadyExists,
+    SandboxCountLimitExceeded,
+    SandboxError,
+    SandboxImageValidateError,
+)
 from paasng.platform.agent_sandbox.models import Sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -146,6 +151,23 @@ class TestAgentSandboxViewSetCreate:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "AGENT_SANDBOX_CREATE_FAILED"
 
+    def test_create_sandbox_count_limit_exceeded(self, api_client: APIClient, bk_app: Any) -> None:
+        """Verify sandbox creation returns the dedicated error when the app hits its count limit.
+
+        :param api_client: The API client fixture.
+        :param bk_app: The application fixture.
+        """
+        create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
+
+        with mock.patch(
+            "paasng.platform.agent_sandbox.views.create_sandbox",
+            side_effect=SandboxCountLimitExceeded("limit reached", limit=100, current=100),
+        ):
+            resp = api_client.post(create_url, data={"name": "over-limit"}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "AGENT_SANDBOX_COUNT_LIMIT_EXCEEDED"
+
     def test_create_sandbox_image_not_found(self, api_client: APIClient, bk_app: Any) -> None:
         """Verify sandbox creation returns proper error when snapshot image doesn't exist.
 
@@ -165,7 +187,7 @@ class TestAgentSandboxViewSetCreate:
             )
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.json()["code"] == "AGENT_SANDBOX_IMAGE_NOT_FOUND"
+        assert resp.json()["code"] == "AGENT_SANDBOX_IMAGE_VALIDATE_FAILED"
 
 
 @pytest.mark.usefixtures("_mock_verified_app_permission")

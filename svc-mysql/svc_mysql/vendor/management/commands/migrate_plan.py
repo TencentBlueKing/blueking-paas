@@ -19,19 +19,19 @@
 
 使用示例:
     # 预分配 stag 和 prod。标准输出是给运维复制的连接信息，不含密码
-    python manage.py migrate_plan prepare -a cw-chaos -t mysql-8.0 -d v_jackyjxie
+    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -d v_jackyjxie
 
     # 只处理指定模块和环境。-m、-e 都可以重复
-    python manage.py migrate_plan prepare -a cw-chaos -t mysql-8.0 -m default -m api -e prod
+    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -m default -m api -e prod
 
     # 查看哪些已预分配、哪些已切换
-    python manage.py migrate_plan status -a cw-chaos
+    python manage.py migrate_plan status -a <app_code>
 
     # 运维同步完数据后切换，然后重新部署应用
-    python manage.py migrate_plan switch -a cw-chaos -m default -e prod
+    python manage.py migrate_plan switch -a <app_code> -m default -e prod
 
     # 切换后有问题，写回旧库。目标库保留，需要再部署一次
-    python manage.py migrate_plan revert -a cw-chaos -m default -e prod
+    python manage.py migrate_plan revert -a <app_code> -m default -e prod
 """
 
 from django.core.management.base import BaseCommand, CommandError

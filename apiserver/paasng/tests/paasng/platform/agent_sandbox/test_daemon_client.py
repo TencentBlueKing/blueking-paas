@@ -207,6 +207,22 @@ class TestSandboxDaemonClient:
         ):
             client.execute("echo hello")
 
+    def test_probe_health_ok(self, client: SandboxDaemonClient):
+        """Router GET /health 200 means the same path callers use is usable."""
+        mock_response = mock.MagicMock(status_code=200)
+        with mock.patch.object(client._session, "get", return_value=mock_response) as mock_get:
+            assert client.probe_health() is True
+        mock_get.assert_called_once_with("http://agent-sbx-router.example.com/health", timeout=2)
+
+    def test_probe_health_502_is_not_ready(self, client: SandboxDaemonClient):
+        """502 from the router means Endpoints or the data plane are not ready yet."""
+        with mock.patch.object(client._session, "get", return_value=mock.MagicMock(status_code=502)):
+            assert client.probe_health() is False
+
+    def test_probe_health_connection_error_is_not_ready(self, client: SandboxDaemonClient):
+        with mock.patch.object(client._session, "get", side_effect=requests.ConnectionError("connection refused")):
+            assert client.probe_health() is False
+
     def test_context_manager(self):
         """Test client as context manager."""
         with SandboxDaemonClient("agent-sbx-router.example.com", "token", "sbx-1", "ns-1") as client:

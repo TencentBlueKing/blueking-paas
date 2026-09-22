@@ -152,7 +152,11 @@ class SandboxWorkloadHandler(ABC):
 
     @abstractmethod
     def wait_until_ready(self, name: str, timeout: float) -> None:
-        """Block until the workload can serve requests, or raise SandboxCreateError on failure."""
+        """Block until the workload's Ready condition is true, or raise SandboxCreateError.
+
+        Ready means the daemon can accept connections on its Pod IP. Callers that go
+        through the Router still have to wait for the Service path separately.
+        """
 
     @abstractmethod
     def map_status(self, phase: str) -> str:
@@ -177,10 +181,11 @@ class PodWorkloadHandler(SandboxWorkloadHandler):
     delete_non_grace_period = True
 
     def wait_until_ready(self, name: str, timeout: float) -> None:
-        """Block until the Pod is ready to serve requests.
+        """Block until the Pod's Ready condition is true.
 
         Phase Running only means the container process has started. The daemon stays
-        unavailable until startupProbe and readinessProbe succeed.
+        unavailable until startupProbe and readinessProbe succeed, which includes
+        pre_start.sh. ``timeout`` must cover that budget, not only the time to Running.
         """
         namespace = self.kres_app.namespace
         with self.kres_app.get_kube_api_client() as client:

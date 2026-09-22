@@ -295,6 +295,47 @@ class TestKPod:
         with mock.patch.object(kpod, "get", return_value=ResourceInstance(None, {"kind": "Pod", "status": status})):
             assert kpod.wait_for_ready("foo", namespace="default", timeout=1, check_period=0.1) is expected
 
+    def test_wait_for_ready_allows_pre_start_past_legacy_120s(self, k8s_client):
+        """Running 之后 pre_start.sh 可以合法跑满 PRE_START_TIMEOUT，不能按旧的 120s 判超时。"""
+        from paas_wl.bk_app.agent_sandbox.constants import PRE_START_TIMEOUT_SECONDS
+        from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager
+
+        not_ready = ResourceInstance(
+            None,
+            {"kind": "Pod", "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "False"}]}},
+        )
+        ready = ResourceInstance(
+            None,
+            {"kind": "Pod", "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}},
+        )
+        clock = {"t": 0.0}
+
+        def now():
+            return clock["t"]
+
+        def sleep(seconds):
+            clock["t"] += seconds
+
+        def fake_get(name, namespace=None):
+            return not_ready if clock["t"] < PRE_START_TIMEOUT_SECONDS else ready
+
+        kpod = KPod(k8s_client)
+        with (
+            mock.patch("paas_wl.infras.resources.base.kres.time.time", side_effect=now),
+            mock.patch("paas_wl.infras.resources.base.kres.time.sleep", side_effect=sleep),
+            mock.patch.object(kpod, "get", side_effect=fake_get),
+        ):
+            assert (
+                kpod.wait_for_ready(
+                    "foo",
+                    namespace="default",
+                    timeout=AgentSandboxResManager.create_timeout,
+                    check_period=30,
+                )
+                is True
+            )
+        assert clock["t"] >= PRE_START_TIMEOUT_SECONDS
+
     def test_get_logs(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
             wl_app.scheduler_safe_name,

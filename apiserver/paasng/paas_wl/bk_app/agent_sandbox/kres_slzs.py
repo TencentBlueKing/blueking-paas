@@ -25,11 +25,13 @@ from paas_wl.bk_app.agent_sandbox.constants import (
     DAEMON_BIND_PORT,
     DEFAULT_RESOURCES,
     DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
+    PRE_START_TIMEOUT_SECONDS,
     SANDBOX_INSTANCE_API_VERSION,
     SANDBOX_INSTANCE_DESIRED_STATE_RUNNING,
     SANDBOX_INSTANCE_NETWORK_MODE,
     SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
     SHARED_VOLUME_NAME_IN_POD,
+    STARTUP_PROBE_PERIOD_SECONDS,
     SandboxInstancePhase,
 )
 from paas_wl.bk_app.agent_sandbox.image_credential import IMAGE_CREDENTIAL_NAME
@@ -138,14 +140,14 @@ class AgentSandboxPodSerializer(KresAppEntitySerializer["AgentSandboxPod"]):
             "resources": _build_resources(obj.cpu, obj.memory),
             "env": env,
             "imagePullPolicy": "IfNotPresent",
-            # startupProbe: 每 1s 探测一次，最多容忍 300 次失败（即等待 ~300s），覆盖沙箱中 pre_start.sh 最长耗时 (沙箱 daemon 服务默认设置 PRE_START_TIMEOUT=300s)
-            # NOTE: 沙箱中可能配置了 pre_start.sh，此时 daemon 服务需要等待 pre_start.sh 执行完成后才会就绪
+            # pre_start.sh 结束前 daemon 不会监听。周期 × 失败阈值 = PRE_START_TIMEOUT_SECONDS，
+            # 与 sandbox/daemon 的 PRE_START_TIMEOUT 默认值一致。
             "startupProbe": {
                 "tcpSocket": {
                     "port": DAEMON_BIND_PORT,
                 },
-                "periodSeconds": 1,
-                "failureThreshold": 300,
+                "periodSeconds": STARTUP_PROBE_PERIOD_SECONDS,
+                "failureThreshold": PRE_START_TIMEOUT_SECONDS // STARTUP_PROBE_PERIOD_SECONDS,
             },
             # readinessProbe: startup 成功后接管，每 2s 探测一次，连续 2 次失败（~20s）标记为 Not Ready
             "readinessProbe": {

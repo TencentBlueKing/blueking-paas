@@ -99,11 +99,34 @@ class TestCreateSandbox:
         """SandboxInstance workload creates SandboxInstance CR instead of Pod."""
         from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
 
+        order: list[str] = []
+
+        def record(step: str):
+            def _record(*args, **kwargs):
+                order.append(step)
+
+            return _record
+
+        def record_router_ready(*args, **kwargs) -> bool:
+            order.append("router")
+            return True
+
         with (
             mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create") as mock_create_cr,
             mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create") as mock_create_pod,
-            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create") as mock_create_svc,
-            mock.patch("paasng.platform.agent_sandbox.workload.SandboxInstanceWorkloadHandler.wait_until_ready"),
+            mock.patch.object(
+                kres_mod.agent_sandbox_svc_kmodel,
+                "create",
+                side_effect=record("service"),
+            ) as mock_create_svc,
+            mock.patch(
+                "paasng.platform.agent_sandbox.workload.SandboxInstanceWorkloadHandler.wait_until_ready",
+                side_effect=record("pod-ready"),
+            ),
+            mock.patch(
+                "paasng.platform.agent_sandbox.sandbox.SandboxDaemonClient.probe_health",
+                side_effect=record_router_ready,
+            ),
             mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
@@ -120,6 +143,42 @@ class TestCreateSandbox:
         mock_create_cr.assert_called_once()
         mock_create_pod.assert_not_called()
         mock_create_svc.assert_called_once()
+        # Service 先创建，Pod Ready 之后还要等 Router 路径探测成功才返回。
+        assert order == ["service", "pod-ready", "router"]
+
+    def test_router_path_timeout_deletes_workload_and_service(self, bk_app, bk_user, mock_image_validator):
+        """Pod Ready 之后 Router 仍不可达时，创建失败并删掉 workload 和 Service。"""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+
+        clock = {"t": 0.0}
+
+        def monotonic():
+            return clock["t"]
+
+        def sleep(seconds):
+            clock["t"] += seconds
+
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "delete_by_name") as mock_del_pod,
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "delete_by_name") as mock_del_svc,
+            mock.patch("paasng.platform.agent_sandbox.workload.PodWorkloadHandler.wait_until_ready"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.SandboxDaemonClient.probe_health", return_value=False),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.time.monotonic", side_effect=monotonic),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.time.sleep", side_effect=sleep),
+            pytest.raises(SandboxCreateTimeout, match="router path"),
+        ):
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="route-timeout")
+
+        mock_del_pod.assert_called_once()
+        mock_del_svc.assert_called_once()
+        sandbox = Sandbox.objects.get(application=bk_app, name="route-timeout")
+        assert sandbox.status == SandboxStatus.ERR_CREATING.value
+        assert clock["t"] >= AgentSandboxResManager.route_ready_timeout
 
     @pytest.mark.parametrize(
         "exc",

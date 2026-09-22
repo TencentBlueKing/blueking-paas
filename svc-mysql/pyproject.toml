@@ -19,6 +19,10 @@ url = "https://mirrors.tencent.com/pypi/simple/"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+python_files = ["test_*.py"]
+
 [project]
 name = "svc_mysql"
 description = ""

@@ -25,7 +25,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError as DjangoIntegrityError
-from django.db.transaction import atomic
+from django.db.transaction import atomic, set_rollback
 
 from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, DisplayOptions, MarketConfig, Product, Tag
@@ -167,6 +167,8 @@ class Command(BaseCommand):
                 register_builtin_user_groups_and_grade_manager(application)
             except BKIAMGatewayServiceError as e:
                 logger.exception("app initialize members failed, skip create: %s", e.message)
+                # 回滚已写入的应用等记录，否则下次执行会因应用已存在而跳过初始化，且因缺少默认模块而报错
+                set_rollback(True)
                 return
 
         # 新建的应用需要同步在桌面上创建（PaaS2.0），已经存在则不需要再创建

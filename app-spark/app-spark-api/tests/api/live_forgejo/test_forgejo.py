@@ -23,11 +23,13 @@ the Agent. Missing Forgejo or credentials fail the job.
 
 from __future__ import annotations
 
+import io
 import os
 import secrets
 import shutil
 import subprocess
 import tempfile
+import zipfile
 from http import HTTPStatus
 from pathlib import Path
 
@@ -41,6 +43,7 @@ from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git.constants import READ_TOKEN_SCOPE, STATUS_READY, read_token_name
 from app_spark_api.repository.git.entities import RepoServerConfig
 from app_spark_api.repository.git.models import ProjectGitRepository
+from tests.helpers import read_streaming_response
 
 pytestmark = [pytest.mark.django_db(transaction=True), pytest.mark.forgejo]
 
@@ -204,6 +207,36 @@ async def test_two_projects_get_isolated_private_repositories(aapi_client, forge
     assert revoked.status_code == HTTPStatus.OK
     after = _git(row_a.write_token, "ls-remote", row_a.clone_url, cwd=work, username=username)
     assert after.returncode != 0
+
+
+async def test_the_archive_endpoint_returns_a_real_zip_of_the_pushed_source(aapi_client, forgejo_settings):
+    """The unit tests mock the archive bytes, so packing is only ever checked here."""
+    project_id = _project_id("zip")
+    repository = await _create_project(aapi_client, project_id)
+    assert repository["status"] == STATUS_READY
+    assert repository["archive_url"] == f"/api/projects/{project_id}/git-repository/archive/"
+    row = await ProjectGitRepository.objects.aget(project_id=project_id)
+    pushed = _clone_and_push(
+        row.clone_url,
+        row.write_token,
+        forgejo_settings.service_account,
+        "downloaded.txt",
+    )
+    assert pushed.returncode == 0, pushed.stderr
+
+    response = await aapi_client.get(f"/api/projects/{project_id}/git-repository/archive/")
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert response.headers["Content-Type"] == "application/zip"
+    assert response.headers["Content-Disposition"].startswith(f'attachment; filename="{project_id}-')
+    body = await read_streaming_response(response)
+    with zipfile.ZipFile(io.BytesIO(body)) as archive:
+        # Forgejo nests the tree under a top-level directory named after the ref.
+        names = archive.namelist()
+        assert any(name.endswith("/downloaded.txt") for name in names), names
+        # The pushed commit, not the `auto_init` one the repository was created with, and
+        # no `.git` -- an archive is source, not history.
+        assert not any(".git/" in name for name in names), names
 
 
 async def test_a_mis_scoped_probe_is_removed_from_the_working_tree(aapi_client, forgejo_settings, tmp_path):

@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import base64
 import json
 from io import StringIO
 from unittest.mock import MagicMock, patch
@@ -23,7 +24,8 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from paas_service.base_vendor import InstanceData
-from paas_service.models import Plan, Service, ServiceInstance, ServiceInstanceConfig
+from paas_service.constants import ProvisionRecordStatus
+from paas_service.models import Plan, ProvisionRecord, Service, ServiceInstance, ServiceInstanceConfig
 from svc_mysql.vendor.models import PlanMigration, PlanMigrationStatus
 
 pytestmark = pytest.mark.django_db
@@ -218,3 +220,99 @@ def test_status_lists_progress_without_password(service, source_plan, target_pla
     assert "switched_at: -" in stdout
     assert OLD_PASSWORD not in stdout
     assert NEW_PASSWORD not in stdout
+
+
+def test_prepare_grants_wildcard_egress_and_copies_to_clipboard(service, source_plan, target_plan, provider):
+    """新库授权 %，标准输出末尾带 OSC 52，剪贴板内容不含密码。"""
+    bind_instance(service, source_plan, "default", "stag", name="old-stag")
+
+    stdout, stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+
+    egress_info = provider.create.call_args.kwargs["params"]["egress_info"]
+    assert json.loads(egress_info)["egress_ips"] == ["%"]
+    encoded = stdout.split("\033]52;c;", 1)[1].split("\a", 1)[0]
+    clipboard = base64.b64decode(encoded).decode()
+    assert "GCS_MYSQL_NAME: new-stag" in clipboard
+    assert NEW_PASSWORD not in clipboard
+    assert "migrate_mysql_plan" in stderr
+
+
+def test_second_prepare_finishes_previous_switched_record(service, source_plan, target_plan, other_plan, provider):
+    """A→B 已切换后再 prepare B→C，旧记录变为 finished，revert 不会把它切回 A。"""
+    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-c", "-e", "stag")
+
+    finished = PlanMigration.objects.get(source_plan=source_plan, target_plan=target_plan)
+    prepared = PlanMigration.objects.get(status=PlanMigrationStatus.PREPARED)
+    assert finished.status == PlanMigrationStatus.FINISHED
+    assert prepared.target_plan_id == other_plan.pk
+
+    with pytest.raises(CommandError, match="没有处于 switched"):
+        run_migrate("revert", "-a", APP_CODE, "-e", "stag")
+
+    instance.refresh_from_db()
+    assert instance.plan_id == target_plan.pk
+    assert instance.get_credentials()["name"] == "new-stag"
+
+
+def test_revert_rejects_when_instance_left_the_target_database(service, source_plan, target_plan, provider):
+    """实例已经不在记录的目标库上时，revert 不改实例。"""
+    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+    credentials = instance.get_credentials()
+    credentials["host"] = "moved.db"
+    instance.credentials = json.dumps(credentials)
+    instance.save(update_fields=["credentials"])
+
+    with pytest.raises(CommandError, match="回切失败"):
+        run_migrate("revert", "-a", APP_CODE, "-e", "stag")
+
+    instance.refresh_from_db()
+    assert instance.get_credentials()["host"] == "moved.db"
+    assert PlanMigration.objects.get().status == PlanMigrationStatus.SWITCHED
+
+
+def test_switch_updates_provision_record_plan(service, source_plan, target_plan, provider):
+    """switch 把开通记录的 plan 一起改成目标 plan。"""
+    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    record = ProvisionRecord.objects.create(
+        provision_key="bkapp-cw-chaos-stag",
+        service_instance=instance,
+        plan_id=source_plan.uuid,
+        status=ProvisionRecordStatus.SUCCESS,
+    )
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+
+    record.refresh_from_db()
+    assert record.plan_id == target_plan.uuid
+
+
+def test_status_lists_every_app_and_filters_by_status(service, source_plan, target_plan, provider):
+    """status 不传应用时列出全部记录，并可按状态筛选。"""
+    bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+
+    stdout, _stderr = run_migrate("status", "--status", "prepared")
+
+    assert f"app_code: {APP_CODE}" in stdout
+    assert "status: prepared" in stdout
+
+    empty, _stderr = run_migrate("status", "--status", "finished")
+    assert "没有迁移记录" in empty
+
+
+def test_deleting_instance_keeps_migration_credentials(service, source_plan, target_plan, provider):
+    """解绑实例后迁移记录还在，另一侧库的凭证没有被级联清掉。"""
+    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+
+    instance.delete()
+
+    record = PlanMigration.objects.get()
+    assert record.instance_id is None
+    assert json.loads(record.target_credentials)["name"] == "new-stag"

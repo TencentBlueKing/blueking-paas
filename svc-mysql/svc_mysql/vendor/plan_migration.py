@@ -19,11 +19,12 @@ import json
 import logging
 from dataclasses import dataclass
 
+from django.core.management.base import CommandError
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 from paas_service.base_vendor import get_provider_cls
-from paas_service.models import Plan, ServiceInstance, ServiceInstanceConfig
+from paas_service.models import Plan, ProvisionRecord, ServiceInstance, ServiceInstanceConfig
 
 from svc_mysql.vendor.models import PlanMigration, PlanMigrationStatus
 
@@ -68,12 +69,11 @@ class MigrationScope:
     app_code: str
     modules: list[str] | None
     environments: list[str] | None
+    status: str | None = None
 
 
 def resolve_target_plan(name: str) -> Plan:
-    """按名称找唯一的目标 plan。重名时拒绝，避免迁错租户。"""
-    from django.core.management.base import CommandError
-
+    """按名称找目标 plan。仅单租户环境使用；同名多条时拒绝。"""
     plans = list(Plan.objects.filter(name=name))
     if not plans:
         raise CommandError(f"找不到 plan: {name}")
@@ -84,31 +84,28 @@ def resolve_target_plan(name: str) -> Plan:
 
 
 def list_bound_instances(scope: MigrationScope) -> list[InstanceRef]:
-    """按应用、模块、环境找出已绑定且未删除的 MySQL 实例。
-
-    paas_app_info 存在 JSON 文本里，不能按字段索引，管理命令里全表扫描。
-    """
-    from django.core.management.base import CommandError
-
+    """按应用、模块、环境找出已绑定且未删除的 MySQL 实例。"""
     if not scope.app_code:
         raise CommandError("需要指定应用 ID")
 
-    wanted_modules = set(scope.modules) if scope.modules else None
-    wanted_envs = set(scope.environments) if scope.environments else None
+    # 空集合表示不按这一维过滤。
+    wanted_modules = set(scope.modules or [])
+    wanted_envs = set(scope.environments or [])
     refs: list[InstanceRef] = []
     configs = ServiceInstanceConfig.objects.select_related("instance", "instance__plan", "instance__service").filter(
         instance__to_be_deleted=False,
         instance__plan__isnull=False,
     )
+    # paas_app_info 是 JSON 文本，不能按字段过滤，只能扫表；iterator 控制内存。
     for config in configs.iterator(chunk_size=500):
         info = _read_app_info(config)
         if info.get("app_code") != scope.app_code:
             continue
         module = info.get("module") or ""
         environment = info.get("environment") or ""
-        if wanted_modules is not None and module not in wanted_modules:
+        if wanted_modules and module not in wanted_modules:
             continue
-        if wanted_envs is not None and environment not in wanted_envs:
+        if wanted_envs and environment not in wanted_envs:
             continue
         refs.append(
             InstanceRef(
@@ -128,8 +125,6 @@ def prepare_migrations(
     scope: MigrationScope, target_plan: Plan, developer: str
 ) -> tuple[list[CopySection], list[str], list[str]]:
     """预分配目标库。目标 plan 冲突在创建任何库之前拒绝。"""
-    from django.core.management.base import CommandError
-
     refs = list_bound_instances(scope)
     _reject_target_plan_conflicts(refs, target_plan)
 
@@ -141,8 +136,10 @@ def prepare_migrations(
             raise CommandError(f"{_ref_label(ref)} 所属服务与目标 plan 不一致")
         try:
             outcome = _prepare_one(ref, target_plan, developer)
-        except CommandError:
-            raise
+        except CommandError as exc:
+            # 身份对不上或凭证不完整时只失败这一条，其他实例继续。
+            failures.append(f"{_ref_label(ref)}：{exc}")
+            continue
         except Exception as exc:  # noqa: BLE001
             # 建库异常的消息里可能含有 SQL 和密码，只记录异常类型。
             logger.error(  # noqa: TRY400
@@ -161,9 +158,7 @@ def prepare_migrations(
 
 def switch_migrations(scope: MigrationScope) -> BatchResult:
     """把 prepared 记录的目标凭证写回原实例。"""
-    from django.core.management.base import CommandError
-
-    records = list(_migration_queryset(scope, PlanMigrationStatus.PREPARED))
+    records = list(_migration_queryset(scope, PlanMigrationStatus.PREPARED, require_instance=True))
     if not records:
         raise CommandError("没有处于 prepared 的迁移记录")
     return _apply_each(records, _switch_one, "switch mysql plan migration failed: %s error=%s")
@@ -171,16 +166,14 @@ def switch_migrations(scope: MigrationScope) -> BatchResult:
 
 def revert_migrations(scope: MigrationScope) -> BatchResult:
     """把 switched 记录恢复为切换前的 plan 和凭证，状态回到 prepared。"""
-    from django.core.management.base import CommandError
-
-    records = list(_migration_queryset(scope, PlanMigrationStatus.SWITCHED))
+    records = list(_migration_queryset(scope, PlanMigrationStatus.SWITCHED, require_instance=True))
     if not records:
         raise CommandError("没有处于 switched 的迁移记录")
     return _apply_each(records, _revert_one, "revert mysql plan migration failed: %s error=%s")
 
 
 def query_migrations(scope: MigrationScope) -> list[PlanMigration]:
-    return list(_migration_queryset(scope, status=None))
+    return list(_migration_queryset(scope, status=scope.status))
 
 
 def render_copy_blocks(sections: list[CopySection], developer: str) -> str:
@@ -223,7 +216,7 @@ def render_status(records: list[PlanMigration]) -> str:
             f"app_code: {record.app_code}",
             f"module: {record.module}",
             f"environment: {record.environment}",
-            f"instance: {record.instance_id}",
+            f"instance: {record.instance_id or '-'}",
             f"source_plan: {record.source_plan.name}",
             f"target_plan: {record.target_plan.name}",
             f"status: {record.status}",
@@ -253,8 +246,6 @@ def _apply_each(records: list[PlanMigration], action, failure_log: str) -> Batch
 
 
 def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> PrepareOutcome:
-    from django.core.management.base import CommandError
-
     with transaction.atomic():
         instance = (
             ServiceInstance.objects.select_for_update().select_related("plan", "service").get(pk=ref.instance.pk)
@@ -277,7 +268,10 @@ def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> Prepare
         if already_on_target or switched_to_target:
             return PrepareOutcome(skipped=f"{_ref_label(ref)} 已在目标 plan {target_plan.name}，跳过")
 
+        # 先核对再建库。对不上就不要把旧的回滚记录标成 finished。
+        previous = _matching_switched_records(instance)
         instance_data = _create_target_database(instance, target_plan, ref)
+        _ensure_credential_keys(instance_data.credentials)
         record = PlanMigration.objects.create(
             instance=instance,
             app_code=ref.app_code,
@@ -293,6 +287,9 @@ def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> Prepare
             status=PlanMigrationStatus.PREPARED,
             tenant_id=instance.tenant_id,
         )
+        for old in previous:
+            old.status = PlanMigrationStatus.FINISHED
+            old.save(update_fields=["status", "updated"])
         logger.info(
             "prepared mysql plan migration for %s instance=%s target_plan=%s",
             _ref_label(ref),
@@ -310,17 +307,23 @@ def _switch_one(record: PlanMigration) -> None:
         locked = PlanMigration.objects.select_for_update().get(pk=record.pk)
         if locked.status != PlanMigrationStatus.PREPARED:
             return
-        _refresh_source_snapshot(locked, instance, locked.developer)
-        target_credentials = _load_credentials(locked.target_credentials)
-        instance.credentials = json.dumps(target_credentials)
+        _require_same_database(
+            instance.plan_id,
+            instance.get_credentials(),
+            locked.source_plan_id,
+            _load_credentials(locked.source_credentials),
+            f"{_record_label(locked)} 当前实例已经不是这条记录的源库",
+        )
+        _load_credentials(locked.target_credentials)
+        instance.credentials = locked.target_credentials
         instance.plan = locked.target_plan
         instance.config = {**_as_config(instance.config), **_as_config(locked.target_config)}
         instance.save(update_fields=["credentials", "plan", "config", "updated"])
+        # 幂等开通用实例上的 plan 做比较，开通记录里的 plan_id 跟着改。
+        ProvisionRecord.objects.filter(service_instance=instance).update(plan_id=locked.target_plan_id)
         locked.status = PlanMigrationStatus.SWITCHED
         locked.switched_at = timezone.now()
-        locked.save(
-            update_fields=["status", "switched_at", "source_plan", "source_credentials", "source_config", "updated"]
-        )
+        locked.save(update_fields=["status", "switched_at", "updated"])
         logger.info("switched mysql plan migration for %s instance=%s", _record_label(locked), instance.uuid)
 
 
@@ -330,6 +333,13 @@ def _revert_one(record: PlanMigration) -> None:
         locked = PlanMigration.objects.select_for_update().select_related("source_plan").get(pk=record.pk)
         if locked.status != PlanMigrationStatus.SWITCHED:
             return
+        _require_same_database(
+            instance.plan_id,
+            instance.get_credentials(),
+            locked.target_plan_id,
+            _load_credentials(locked.target_credentials),
+            f"{_record_label(locked)} 当前实例已经不是这条记录的目标库",
+        )
         instance.credentials = locked.source_credentials
         instance.plan = locked.source_plan
         instance.config = _as_config(locked.source_config)
@@ -344,7 +354,13 @@ def _create_target_database(instance: ServiceInstance, target_plan: Plan, ref: I
     provider_cls = get_provider_cls()
     provider = provider_cls(**target_plan.get_config())
     preferred_name = f"{ref.app_code}-{ref.module}-{ref.environment}"
-    return provider.create(params={"engine_app_name": preferred_name})
+    # 新库默认授权全部来源。provider 会把它和 plan 的 auth_ip_list 并在一起。
+    return provider.create(
+        params={
+            "engine_app_name": preferred_name,
+            "egress_info": json.dumps({"egress_ips": ["%"]}),
+        }
+    )
 
 
 def _refresh_source_snapshot(record: PlanMigration, instance: ServiceInstance, developer: str) -> None:
@@ -368,8 +384,6 @@ def _section_from(instance: ServiceInstance, record: PlanMigration) -> CopySecti
 
 
 def _reject_target_plan_conflicts(refs: list[InstanceRef], target_plan: Plan) -> None:
-    from django.core.management.base import CommandError
-
     instance_ids = [ref.instance.pk for ref in refs]
     conflicts = (
         PlanMigration.objects.filter(
@@ -391,8 +405,6 @@ def _reject_target_plan_conflicts(refs: list[InstanceRef], target_plan: Plan) ->
 
 
 def _ensure_scope_covered(scope: MigrationScope, refs: list[InstanceRef]) -> None:
-    from django.core.management.base import CommandError
-
     if not refs:
         raise CommandError(f"找不到应用 {scope.app_code} 在指定范围内的 MySQL 实例")
     if not scope.modules:
@@ -403,8 +415,12 @@ def _ensure_scope_covered(scope: MigrationScope, refs: list[InstanceRef]) -> Non
         raise CommandError(f"这些模块在指定环境没有 MySQL 实例: {', '.join(missing)}")
 
 
-def _migration_queryset(scope: MigrationScope, status: str | None) -> QuerySet[PlanMigration]:
+def _migration_queryset(
+    scope: MigrationScope, status: str | None, *, require_instance: bool = False
+) -> QuerySet[PlanMigration]:
     queryset = PlanMigration.objects.select_related("source_plan", "target_plan", "instance")
+    if require_instance:
+        queryset = queryset.filter(instance__isnull=False)
     if scope.app_code:
         queryset = queryset.filter(app_code=scope.app_code)
     if scope.modules:
@@ -417,11 +433,7 @@ def _migration_queryset(scope: MigrationScope, status: str | None) -> QuerySet[P
 
 
 def _credential_section(title: str, service_name: str, credentials: dict) -> list[str]:
-    from django.core.management.base import CommandError
-
-    missing = [key for key in PUBLIC_CREDENTIAL_KEYS if key not in credentials]
-    if missing:
-        raise CommandError(f"凭证缺少字段: {', '.join(missing)}")
+    _ensure_credential_keys(credentials)
     prefix = service_name.upper().replace("-", "_")
     lines = [f"{title}："]
     lines.extend(f"{prefix}_{key.upper()}: {credentials[key]}" for key in PUBLIC_CREDENTIAL_KEYS)
@@ -436,10 +448,52 @@ def _read_app_info(config: ServiceInstanceConfig) -> dict:
 
 
 def _load_credentials(raw: str) -> dict:
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise CommandError("凭证不是合法的 JSON") from exc
     if not isinstance(data, dict):
-        return {}
+        raise CommandError("凭证不是 JSON 对象")
     return data
+
+
+def _ensure_credential_keys(credentials: dict) -> None:
+    missing = [key for key in PUBLIC_CREDENTIAL_KEYS if key not in credentials]
+    if missing:
+        raise CommandError(f"凭证缺少字段: {', '.join(missing)}")
+
+
+def _require_same_database(
+    live_plan_id,
+    live_credentials: dict,
+    expected_plan_id,
+    expected_credentials: dict,
+    message: str,
+) -> None:
+    """plan 加上 host、port、name、user 相同，才算还是同一个库。密码不参与比较。"""
+    if str(live_plan_id) != str(expected_plan_id) or _endpoint(live_credentials) != _endpoint(expected_credentials):
+        raise CommandError(message)
+
+
+def _endpoint(credentials: dict) -> tuple[str, ...] | None:
+    if any(key not in credentials for key in PUBLIC_CREDENTIAL_KEYS):
+        return None
+    return tuple(str(credentials[key]) for key in PUBLIC_CREDENTIAL_KEYS)
+
+
+def _matching_switched_records(instance: ServiceInstance) -> list[PlanMigration]:
+    records = list(
+        PlanMigration.objects.select_for_update().filter(instance=instance, status=PlanMigrationStatus.SWITCHED)
+    )
+    for record in records:
+        _require_same_database(
+            instance.plan_id,
+            instance.get_credentials(),
+            record.target_plan_id,
+            _load_credentials(record.target_credentials),
+            f"{_record_label(record)} 当前实例已经不是这条已切换记录的目标库，不能开始下一次迁移",
+        )
+    return records
 
 
 def _as_config(value) -> dict:

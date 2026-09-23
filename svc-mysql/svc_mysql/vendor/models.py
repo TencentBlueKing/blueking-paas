@@ -23,30 +23,28 @@ from paas_service.models import UuidAuditedModel
 
 
 class PlanMigrationStatus(models.TextChoices):
-    """plan 迁移记录的状态。一条实例同时最多只有一条 prepared。"""
+    """plan 迁移记录的状态。一条实例同时最多只有一条 prepared 或 switched。"""
 
     PREPARED = "prepared", "已预分配"
     SWITCHED = "switched", "已切换"
+    FINISHED = "finished", "已结束"
 
 
 class PlanMigration(UuidAuditedModel):
-    """一次 MySQL 实例从源 plan 到目标 plan 的迁移。
-
-    prepare 只创建目标库并记下凭证，不改 ServiceInstance。
-    switch 把目标凭证写回原实例，uuid 不变。
-    revert 把 switch 时记下的旧凭证写回去，状态回到 prepared，目标库保留。
-    """
+    """一次 MySQL 实例换 plan。prepare 只建目标库；switch 写回原实例；revert 回到 prepared。"""
 
     instance = models.ForeignKey(
         "paas_service.ServiceInstance",
         verbose_name="服务实例",
         related_name="plan_migrations",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     app_code = models.CharField("应用 ID", max_length=64)
     module = models.CharField("模块", max_length=64, blank=True, default="")
     environment = models.CharField("环境", max_length=32)
-    developer = models.CharField("开发者", max_length=128, blank=True, default="")
+    developer = models.CharField("联系人", max_length=128, blank=True, default="")
 
     source_plan = models.ForeignKey(
         "paas_service.Plan",
@@ -78,4 +76,4 @@ class PlanMigration(UuidAuditedModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.app_code}/{self.module}/{self.environment} {self.status}"
+        return f"{self.app_code}/{self.module}/{self.environment} {self.get_status_display()}"

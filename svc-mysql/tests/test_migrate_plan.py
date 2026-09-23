@@ -140,14 +140,14 @@ def test_prepare_keeps_instance_and_prints_copy_block(service, source_plan, targ
     stag = bind_instance(service, source_plan, "default", "stag", name="old-stag")
     bind_instance(service, source_plan, "default", "prod", name="old-prod")
 
-    stdout, _stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-d", "v_jackyjxie")
+    stdout, _stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-d", "contact")
 
     stag.refresh_from_db()
     assert stag.plan_id == source_plan.pk
     assert stag.get_credentials()["name"] == "old-stag"
     assert "appCode: cw-chaos" in stdout
     assert "envs: stag, prod" in stdout
-    assert "developer: v_jackyjxie" in stdout
+    assert "developer: contact" in stdout
     assert "GCS_MYSQL_NAME: old-stag" in stdout
     assert "GCS_MYSQL_NAME: new-stag" in stdout
     assert "GCS_MYSQL_NAME: new-prod" in stdout

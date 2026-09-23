@@ -31,7 +31,7 @@
 
 使用示例:
     # 预分配 stag 和 prod。标准输出是给运维复制的连接信息，不含密码
-    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -d v_jackyjxie
+    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -d <contact>
 
     # 只处理指定模块和环境。-m、-e 都可以重复
     python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -m default -m api -e prod

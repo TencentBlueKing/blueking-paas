@@ -68,6 +68,9 @@ LOG_TAIL_LINES = 40
 # 5s to stop application children. Raising any of those means raising this.
 SHUTDOWN_GRACE_SECONDS = 20
 
+# 抽两个不重复的端口。一次就中是常态；上限只是不让「每次都撞上已预留端口」变成死循环。
+PORT_RESERVE_ATTEMPTS = 32
+
 
 @dataclass(frozen=True)
 class _LocalRuntime:
@@ -77,6 +80,10 @@ class _LocalRuntime:
     process: subprocess.Popen[bytes]
     workspace_dir: Path
     log_path: Path
+
+    # 这个会话的工作区应用听哪个端口。每个 Runtime 一个，否则同一台机器上的第二个会话拉起
+    # 应用时会撞上第一个，两个会话也就没法同时预览。反代要连的就是它。
+    app_port: int
 
     @property
     def alive(self) -> bool:
@@ -184,6 +191,16 @@ class LocalProcessProvider(AgentRuntimeProvider):
                 return None
             return runtime.handle
 
+    async def preview_upstream(self, conversation_id: str) -> str | None:
+        async with self._lock:
+            runtime = self._runtimes.get(conversation_id)
+            if runtime is None or not runtime.alive:
+                return None
+            # Loopback, even though the application binds 0.0.0.0: the proxy runs in this very
+            # process, so it is on the same host either way, and naming loopback is what keeps
+            # this from depending on which interface the host happens to have.
+            return f"http://127.0.0.1:{runtime.app_port}"
+
     async def terminate(self, conversation_id: str) -> None:
         async with self._lock:
             runtime = self._runtimes.get(conversation_id)
@@ -206,6 +223,40 @@ class LocalProcessProvider(AgentRuntimeProvider):
         runtime = self._runtimes.pop(conversation_id, None)
         if runtime is not None and runtime.process in _spawned:
             _spawned.remove(runtime.process)
+
+    def _reserve_ports(self) -> tuple[int, int]:
+        """Return the port for a new Runtime and the one for its application, never equal.
+
+        `_free_port` on its own is enough for the Runtime's port, because uvicorn binds it
+        milliseconds later and the kernel then stops handing it out. The application port is the
+        problem: nothing binds it until the model gets around to calling ``launch_app``, which
+        may be minutes away or never. So an application port stays merely "reserved" for a long
+        time, and `_free_port` will happily return it again -- to the second draw of this very
+        call, or to the next Runtime.
+
+        Either collision is self-inflicted and cheap to rule out. Left in, the second
+        application cannot bind; worse, ``launch_app`` then reports the port as owned by a
+        process this supervisor did not start, while the squatter is in fact a sibling Runtime
+        of this same service.
+
+        Only collisions this provider could cause are prevented. An unrelated process taking a
+        reserved port is still possible, and remains what `_free_port` calls not worth guarding
+        against.
+
+        :return: ``(port, app_port)``.
+        """
+        reserved = {runtime.app_port for runtime in self._runtimes.values()}
+        drawn: list[int] = []
+        # 正常一次就抽到。上限是防「每次都撞上已预留的端口」时这条循环永远不返回。
+        for _ in range(PORT_RESERVE_ATTEMPTS):
+            if len(drawn) == 2:
+                return drawn[0], drawn[1]
+            port = _free_port()
+            if port in reserved:
+                continue
+            reserved.add(port)
+            drawn.append(port)
+        raise AgentProvisionError("Could not reserve two distinct ports for an Agent Runtime.")
 
     def _reject_workspace_conflict(self, conversation_id: str, workspace_dir: Path) -> None:
         """Refuse a second live Runtime on one workspace.
@@ -230,7 +281,10 @@ class LocalProcessProvider(AgentRuntimeProvider):
         git_remote: GitRemote | None,
     ) -> _LocalRuntime:
         """Start one Runtime and return it once it answers ``/health``."""
-        port = _free_port()
+        # Two ports: one for the agent, one for the application the agent writes. Every Runtime
+        # gets an application port of its own so two conversations on this host can serve their
+        # applications at the same time instead of the second one failing to bind.
+        port, app_port = self._reserve_ports()
         base_url = f"http://127.0.0.1:{port}"
         log_path = state_dir.parent / f"{state_dir.name}-uvicorn.log"
         runtime_token = secrets.token_urlsafe(32)
@@ -240,6 +294,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         process = await asyncio.to_thread(
             self._start_process,
             port=port,
+            app_port=app_port,
             project_id=project_id,
             workspace_dir=workspace_dir,
             state_dir=state_dir,
@@ -268,12 +323,14 @@ class LocalProcessProvider(AgentRuntimeProvider):
             process=process,
             workspace_dir=workspace_dir,
             log_path=log_path,
+            app_port=app_port,
         )
 
     def _start_process(
         self,
         *,
         port: int,
+        app_port: int,
         project_id: str,
         workspace_dir: Path,
         state_dir: Path,
@@ -323,6 +380,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
                     stderr=subprocess.STDOUT,
                     env=self._build_env(
                         project_id=project_id,
+                        app_port=app_port,
                         workspace_dir=workspace_dir,
                         state_dir=state_dir,
                         runtime_token=runtime_token,
@@ -337,6 +395,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         self,
         *,
         project_id: str,
+        app_port: int,
         workspace_dir: Path,
         state_dir: Path,
         runtime_token: str,
@@ -353,6 +412,9 @@ class LocalProcessProvider(AgentRuntimeProvider):
             f"{ENV_PREFIX}STATE_DIR": str(state_dir),
             f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
             f"{ENV_PREFIX}PROJECT_ID": project_id,
+            # Not left to the agent's own default of 8000: on a shared host that default is the
+            # same number for every conversation, and the second one to launch would lose.
+            f"{ENV_PREFIX}APP_PORT": str(app_port),
         }
         if state_callback is not None:
             # An address already scoped to one conversation, plus a token that authorizes only

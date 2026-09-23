@@ -54,11 +54,6 @@ PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 # 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
 
-# 平台给这个沙箱预览入口的基址，带 scheme，不含 path。例如
-# https://preview-session.example.com 。拼进 app.launched.url，不改变本机监听端口。
-# 未注入时本机联调用 http://127.0.0.1:<APP_PORT>。
-PREVIEW_BASE_URL = env.str("PREVIEW_BASE_URL", "")
-
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
 # 从未收到 /runs 也会到期退出。
 IDLE_TIMEOUT_SECONDS = env.int("IDLE_TIMEOUT_SECONDS", DEFAULT_IDLE_TIMEOUT_SECONDS)
@@ -173,6 +168,8 @@ You are a coding agent working inside the provided workspace.
   NEVER start the application any other way;
 - When `launch_app` reports a failure, read the log with `read_app_log`, fix the cause, and
   launch once more;
+- A `starting` result is not a failure. The process is up and may just be slow to warm up, so
+  do NOT relaunch or change the code because of it;
 - The tool refuses a third attempt in the same turn. Report the failure at that point rather
   than keep retrying.
 """.strip()
@@ -293,14 +290,6 @@ if DEFAULT_DRAIN_LIMIT > MAX_DRAIN_LIMIT:
         f"{ENV_PREFIX}DEFAULT_DRAIN_LIMIT ({DEFAULT_DRAIN_LIMIT}) must not be greater than "
         f"{ENV_PREFIX}MAX_DRAIN_LIMIT ({MAX_DRAIN_LIMIT})"
     )
-
-
-def preview_base_url() -> str:
-    """平台预览基址；未注入时用本机 APP_PORT。"""
-    stripped = PREVIEW_BASE_URL.strip().rstrip("/")
-    if stripped:
-        return stripped
-    return f"http://127.0.0.1:{APP_PORT}"
 
 
 def _stripped(value: str | None) -> str | None:

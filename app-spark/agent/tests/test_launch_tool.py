@@ -23,17 +23,15 @@ import pytest
 from app_spark_agent.app_supervisor import (
     AppLaunchConflict,
     AppLaunchFailed,
-    AppStatus,
     AppSupervisor,
+    DevServerStatus,
     LaunchResult,
 )
 from app_spark_agent.launch_tool import MAX_LAUNCHES_PER_RUN, LaunchTool
 
-URL = "http://127.0.0.1:8000/"
 
-
-def launched(url: str = URL) -> LaunchResult:
-    return LaunchResult(port=8000, path="/", label="Preview", url=url, app_status=AppStatus.HEALTHY)
+def make_launched(port: int = 8000, status: DevServerStatus = DevServerStatus.READY) -> LaunchResult:
+    return LaunchResult(port=port, path="/", label="Preview", dev_server_status=status)
 
 
 class StubSupervisor:
@@ -43,9 +41,9 @@ class StubSupervisor:
         self._outcomes = list(outcomes)
         self.calls = 0
 
-    async def launch(self, path: str | None = None, label: str | None = None) -> LaunchResult:
+    async def launch(self) -> LaunchResult:
         self.calls += 1
-        outcome = self._outcomes.pop(0) if self._outcomes else launched()
+        outcome = self._outcomes.pop(0) if self._outcomes else make_launched()
         if isinstance(outcome, Exception):
             raise outcome
         return outcome
@@ -56,13 +54,15 @@ def make_tool(*outcomes: LaunchResult | Exception) -> tuple[LaunchTool, StubSupe
     return LaunchTool(cast(AppSupervisor, stub)), stub
 
 
-async def test_a_listening_app_hands_back_its_url() -> None:
-    tool, stub = make_tool(launched("http://preview.example.com/"))
+async def test_a_listening_app_hands_back_its_port_and_no_address() -> None:
+    """模型拿到的只有端口。给它一个地址，它就会把那个地址报给用户，而那不是用户该打开的。"""
+    tool, stub = make_tool(make_launched(port=9123))
 
     result = await tool.launch()
 
     assert result.status == "ok"
-    assert result.url == "http://preview.example.com/"
+    assert result.port == 9123
+    assert "url" not in result.model_dump()
     assert stub.calls == 1
 
 
@@ -70,7 +70,7 @@ async def test_a_listening_app_hands_back_its_url() -> None:
     "error",
     [
         pytest.param(AppLaunchFailed("The application did not listen before the deadline."), id="did-not-listen"),
-        pytest.param(AppLaunchConflict("An application launch is already in progress."), id="control-plane-launching"),
+        pytest.param(AppLaunchConflict("An application launch is already in progress."), id="already-in-progress"),
     ],
 )
 async def test_a_failure_is_reported_rather_than_raised(error: Exception) -> None:
@@ -81,7 +81,7 @@ async def test_a_failure_is_reported_rather_than_raised(error: Exception) -> Non
 
     assert result.status == "failed"
     assert result.detail == str(error)
-    assert result.url == ""
+    assert result.port is None
 
 
 async def test_the_budget_runs_out_within_one_run() -> None:

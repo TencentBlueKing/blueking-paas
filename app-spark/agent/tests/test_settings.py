@@ -82,16 +82,3 @@ def test_direct_provider_is_only_for_api_key_without_gateway(monkeypatch: Monkey
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-token")
 
     assert settings.uses_direct_provider() is False
-
-
-def test_preview_base_url_defaults_to_localhost_port(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "PREVIEW_BASE_URL", "")
-    monkeypatch.setattr(settings, "APP_PORT", 8000)
-
-    assert settings.preview_base_url() == "http://127.0.0.1:8000"
-
-
-def test_preview_base_url_override_strips_slash(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "PREVIEW_BASE_URL", "http://preview.example.com/")
-
-    assert settings.preview_base_url() == "http://preview.example.com"

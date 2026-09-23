@@ -164,7 +164,7 @@ class Command(BaseCommand):
 
         if created:
             try:
-                register_builtin_user_groups_and_grade_manager(application)
+                register_builtin_user_groups_and_grade_manager(application, add_creator_to_admin_group=False)
             except BKIAMGatewayServiceError as e:
                 logger.exception("app initialize members failed, skip create: %s", e.message)
                 # 回滚已写入的应用等记录，否则下次执行会因应用已存在而跳过初始化，且因缺少默认模块而报错

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import httpx
+import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
@@ -114,7 +114,7 @@ def test_the_model_launches_the_app_itself(make_api: ApiFactory, launch_port: in
 
     assert [result.status for result in launcher.results] == ["ok"]
     assert launcher.results[0].port == launch_port
-    assert httpx.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
+    assert httpx2.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
     assert api.get("/health").json()["dev_server_status"] == "ready"
 
     # 回写通道就是控制面已经在 drain 的那条，不需要反向回调。
@@ -138,7 +138,7 @@ def test_the_model_can_launch_twice_in_one_turn(make_api: ApiFactory, launch_por
     run_turn(api, conversation_id=str(uuid4()))
 
     assert [result.status for result in launcher.results] == ["ok", "ok"]
-    assert httpx.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
+    assert httpx2.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
 
 
 def test_a_foreign_port_is_reported_as_failed(make_api: ApiFactory, launch_port: int) -> None:

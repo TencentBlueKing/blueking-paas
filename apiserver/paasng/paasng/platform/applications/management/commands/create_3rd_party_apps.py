@@ -178,7 +178,7 @@ class Command(BaseCommand):
 
         if created:
             try:
-                register_builtin_user_groups_and_grade_manager(application)
+                register_builtin_user_groups_and_grade_manager(application, add_creator_to_admin_group=False)
             except BKIAMGatewayServiceError as e:
                 logger.exception("app initialize members failed, skip create: %s", e.message)
                 return

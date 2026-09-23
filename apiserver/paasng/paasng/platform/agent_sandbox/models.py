@@ -253,7 +253,7 @@ class SandboxAppSettings(UuidAuditedModel):
 
     当前已支持的配置项：
     - cpu / memory：沙箱资源上限，未配置时回退到 DEFAULT_SANDBOX_CPU / DEFAULT_SANDBOX_MEMORY。
-    - max_sandbox_count：应用可同时存在的沙箱数量上限，未配置时回退到 DEFAULT_MAX_SANDBOX_COUNT。
+    - max_active_sandbox_count：应用可同时存活的沙箱数量上限，未配置时回退到 DEFAULT_MAX_ACTIVE_SANDBOX_COUNT。
     """
 
     application = models.OneToOneField(
@@ -264,11 +264,11 @@ class SandboxAppSettings(UuidAuditedModel):
     )
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, null=True, blank=True)
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, null=True, blank=True)
-    max_sandbox_count = models.PositiveIntegerField(
-        verbose_name="沙箱数量上限",
+    max_active_sandbox_count = models.PositiveIntegerField(
+        verbose_name="存活沙箱数量上限",
         null=True,
         blank=True,
-        help_text="应用可同时存在的沙箱数量上限，未配置时回退到平台默认值",
+        help_text="应用可同时存活的沙箱数量上限，未配置时回退到平台默认值",
     )
     tenant_id = tenant_id_field_factory()
 

@@ -35,8 +35,8 @@ class SandboxCreateError(SandboxError):
         self.logs = logs
 
 
-class SandboxCountLimitExceeded(SandboxError):
-    """Raised when an application has reached the limit of concurrent sandboxes.
+class SandboxActiveCountLimitExceeded(SandboxError):
+    """Raised when an application has reached the limit of active sandboxes.
 
     :param limit: The max number of sandboxes the application may keep at the same time.
     :param current: The number of active sandboxes the application had when the check ran.

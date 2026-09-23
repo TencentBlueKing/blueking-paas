@@ -45,18 +45,18 @@ class TestUpsertSandboxConfigCommand:
         assert config.cpu == Decimal(4)
         assert config.memory is None
 
-    def test_create_with_max_sandbox_count_only(self, bk_app):
-        # 只传 max_sandbox_count 时, cpu/memory 保持为空 (创建沙箱时回退默认)
-        call_command("upsert_sandbox_config", app_code=bk_app.code, max_sandbox_count=10)
+    def test_create_with_max_active_sandbox_count_only(self, bk_app):
+        # 只传 max_active_sandbox_count 时, cpu/memory 保持为空 (创建沙箱时回退默认)
+        call_command("upsert_sandbox_config", app_code=bk_app.code, max_active_sandbox_count=10)
 
         config = SandboxAppSettings.objects.get(application=bk_app)
-        assert config.max_sandbox_count == 10
+        assert config.max_active_sandbox_count == 10
         assert config.cpu is None
         assert config.memory is None
 
-    def test_invalid_max_sandbox_count(self, bk_app):
+    def test_invalid_max_active_sandbox_count(self, bk_app):
         with pytest.raises(CommandError, match="must not be negative"):
-            call_command("upsert_sandbox_config", app_code=bk_app.code, max_sandbox_count=-1)
+            call_command("upsert_sandbox_config", app_code=bk_app.code, max_active_sandbox_count=-1)
 
     def test_partial_update_keeps_other_field(self, bk_app):
         SandboxAppSettings.objects.create(

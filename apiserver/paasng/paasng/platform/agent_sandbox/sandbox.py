@@ -41,7 +41,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.agent_sandbox.constants import (
-    DEFAULT_MAX_SANDBOX_COUNT,
+    DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SANDBOX_DEFAULT_TTL_SECONDS,
@@ -51,7 +51,7 @@ from paasng.platform.agent_sandbox.constants import (
 from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
-    SandboxCountLimitExceeded,
+    SandboxActiveCountLimitExceeded,
     SandboxCreateError,
     SandboxCreateTimeout,
     SandboxDaemonAPIError,
@@ -94,7 +94,7 @@ def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decima
     return cpu, memory
 
 
-def resolve_max_sandbox_count(application: Application) -> int:
+def resolve_max_active_sandbox_count(application: Application) -> int:
     """Return the max number of sandboxes the application may keep at the same time.
 
     A per-app config value takes precedence; otherwise the platform default is used.
@@ -102,24 +102,24 @@ def resolve_max_sandbox_count(application: Application) -> int:
     :param application: The application that the sandbox belongs to.
     """
     config = SandboxAppSettings.objects.filter(application=application).first()
-    if config is not None and config.max_sandbox_count is not None:
-        return config.max_sandbox_count
-    return DEFAULT_MAX_SANDBOX_COUNT
+    if config is not None and config.max_active_sandbox_count is not None:
+        return config.max_active_sandbox_count
+    return DEFAULT_MAX_ACTIVE_SANDBOX_COUNT
 
 
 def ensure_sandbox_quota(application: Application) -> None:
-    """Raise SandboxCountLimitExceeded when the application cannot create more sandboxes.
+    """Raise SandboxActiveCountLimitExceeded when the application cannot create more sandboxes.
 
     A soft, lock-free check-then-create limit that keeps one app from exhausting cluster
     capacity; concurrent requests may briefly overshoot the limit, which is acceptable.
 
     :param application: The application that the sandbox belongs to.
-    :raises SandboxCountLimitExceeded: If the application has reached its max number of sandboxes.
+    :raises SandboxActiveCountLimitExceeded: If the application has reached its max number of sandboxes.
     """
-    limit = resolve_max_sandbox_count(application)
+    limit = resolve_max_active_sandbox_count(application)
     current = Sandbox.objects.count_active(application)
     if current >= limit:
-        raise SandboxCountLimitExceeded(
+        raise SandboxActiveCountLimitExceeded(
             f"application {application.code} already has {current} sandboxes, limit is {limit}",
             limit=limit,
             current=current,
@@ -153,7 +153,7 @@ def create_sandbox(
         (each item: ``{"volume_id": UUID, "mount_path": str}``). Persisted to
         the Sandbox DB record and resolved into Pod spec mounts during provision.
     :param workload_type: Sandbox workload type (``default`` / ``sandbox_instance``), optional.
-    :raises SandboxCountLimitExceeded: If the application has reached its max number of sandboxes.
+    :raises SandboxActiveCountLimitExceeded: If the application has reached its max number of sandboxes.
     """
     ensure_sandbox_quota(application)
 

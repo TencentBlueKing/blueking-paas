@@ -22,7 +22,7 @@ from decimal import Decimal, InvalidOperation
 from django.core.management.base import BaseCommand, CommandError
 
 from paasng.platform.agent_sandbox.constants import (
-    DEFAULT_MAX_SANDBOX_COUNT,
+    DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
 )
@@ -38,7 +38,7 @@ class Command(BaseCommand):
     Example:
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --cpu 4 --memory 2
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --cpu 4
-        python manage.py upsert_sandbox_config --app_code ai-agent-prod --max-sandbox-count 50
+        python manage.py upsert_sandbox_config --app_code ai-agent-prod --max-active-sandbox-count 50
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --reset
     """
 
@@ -57,10 +57,10 @@ class Command(BaseCommand):
             help=f"Memory limit in GB, e.g. 2 (platform default: {DEFAULT_SANDBOX_MEMORY})",
         )
         parser.add_argument(
-            "--max-sandbox-count",
-            dest="max_sandbox_count",
+            "--max-active-sandbox-count",
+            dest="max_active_sandbox_count",
             type=int,
-            help=f"Max sandboxes the app may keep at the same time, e.g. 100 (platform default: {DEFAULT_MAX_SANDBOX_COUNT})",
+            help=f"Max sandboxes the app may keep at the same time, e.g. 100 (platform default: {DEFAULT_MAX_ACTIVE_SANDBOX_COUNT})",
         )
         parser.add_argument(
             "--reset",
@@ -68,7 +68,7 @@ class Command(BaseCommand):
             help="Remove the app's config so it falls back to the platform default",
         )
 
-    def handle(self, app_code, cpu, memory, max_sandbox_count, reset, *args, **options):
+    def handle(self, app_code, cpu, memory, max_active_sandbox_count, reset, *args, **options):
         try:
             application = Application.objects.get(code=app_code)
         except Application.DoesNotExist:
@@ -81,14 +81,14 @@ class Command(BaseCommand):
                     f"Reset sandbox settings for '{app_code}' "
                     f"(removed={deleted}), now using platform default: "
                     f"cpu={DEFAULT_SANDBOX_CPU} core, memory={DEFAULT_SANDBOX_MEMORY} GB, "
-                    f"max_sandbox_count={DEFAULT_MAX_SANDBOX_COUNT}"
+                    f"max_active_sandbox_count={DEFAULT_MAX_ACTIVE_SANDBOX_COUNT}"
                 )
             )
             return
 
-        if cpu is None and memory is None and max_sandbox_count is None:
+        if cpu is None and memory is None and max_active_sandbox_count is None:
             raise CommandError(
-                "at least one of --cpu / --memory / --max-sandbox-count is required unless --reset is used"
+                "at least one of --cpu / --memory / --max_active_sandbox_count is required unless --reset is used"
             )
 
         # 只更新本次显式传入的字段，未传入的字段保持原值（新建时则保持为空，创建沙箱时回退默认）。
@@ -97,10 +97,12 @@ class Command(BaseCommand):
             update_fields["cpu"] = self._parse_decimal("cpu", cpu)
         if memory is not None:
             update_fields["memory"] = self._parse_decimal("memory", memory)
-        if max_sandbox_count is not None:
-            if max_sandbox_count < 0:
-                raise CommandError(f"Invalid max_sandbox_count value: {max_sandbox_count!r}, must not be negative")
-            update_fields["max_sandbox_count"] = max_sandbox_count
+        if max_active_sandbox_count is not None:
+            if max_active_sandbox_count < 0:
+                raise CommandError(
+                    f"Invalid max_active_sandbox_count value: {max_active_sandbox_count!r}, must not be negative"
+                )
+            update_fields["max_active_sandbox_count"] = max_active_sandbox_count
 
         config, created = SandboxAppSettings.objects.update_or_create(
             application=application,
@@ -111,7 +113,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"{action} sandbox settings for '{app_code}': "
                 f"cpu={config.cpu} core, memory={config.memory} GB, "
-                f"max_sandbox_count={config.max_sandbox_count}"
+                f"max_active_sandbox_count={config.max_active_sandbox_count}"
             )
         )
 

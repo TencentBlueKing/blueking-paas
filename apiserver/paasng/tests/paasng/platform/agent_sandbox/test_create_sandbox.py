@@ -31,14 +31,14 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
 )
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import (
-    DEFAULT_MAX_SANDBOX_COUNT,
+    DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SandboxStatus,
     SandboxWorkloadType,
 )
 from paasng.platform.agent_sandbox.exceptions import (
-    SandboxCountLimitExceeded,
+    SandboxActiveCountLimitExceeded,
     SandboxCreateError,
     SandboxCreateTimeout,
     SandboxError,
@@ -49,7 +49,7 @@ from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
     create_sandbox,
     delete_sandbox,
-    resolve_max_sandbox_count,
+    resolve_max_active_sandbox_count,
     resolve_sandbox_resources,
 )
 from paasng.platform.agent_sandbox.workload import get_workload_handler
@@ -236,24 +236,24 @@ class TestCreateSandboxResources:
         assert sandbox.memory == Decimal(2)
 
 
-class TestSandboxCountLimit:
+class TestActiveSandboxCountLimit:
     """Test the per-app sandbox count limit."""
 
-    @pytest.mark.parametrize(("configured", "expected"), [(None, DEFAULT_MAX_SANDBOX_COUNT), (3, 3)])
-    def test_resolve_max_sandbox_count(self, bk_app, configured, expected):
+    @pytest.mark.parametrize(("configured", "expected"), [(None, DEFAULT_MAX_ACTIVE_SANDBOX_COUNT), (3, 3)])
+    def test_resolve_max_active_sandbox_count(self, bk_app, configured, expected):
         """未配置时回退平台默认值, 配置后以配置为准"""
         if configured is not None:
             SandboxAppSettings.objects.create(
-                application=bk_app, max_sandbox_count=configured, tenant_id=bk_app.tenant_id
+                application=bk_app, max_active_sandbox_count=configured, tenant_id=bk_app.tenant_id
             )
-        assert resolve_max_sandbox_count(bk_app) == expected
+        assert resolve_max_active_sandbox_count(bk_app) == expected
 
     def test_create_rejected_when_limit_reached(self, bk_app, bk_user, mock_sandbox_provision):
         """达到上限后拒绝创建, 且不再下发工作负载"""
-        SandboxAppSettings.objects.create(application=bk_app, max_sandbox_count=1, tenant_id=bk_app.tenant_id)
+        SandboxAppSettings.objects.create(application=bk_app, max_active_sandbox_count=1, tenant_id=bk_app.tenant_id)
         create_sandbox(application=bk_app, creator=bk_user.pk, name="limit-1")
 
-        with pytest.raises(SandboxCountLimitExceeded) as exc_info:
+        with pytest.raises(SandboxActiveCountLimitExceeded) as exc_info:
             create_sandbox(application=bk_app, creator=bk_user.pk, name="limit-2")
 
         assert (exc_info.value.limit, exc_info.value.current) == (1, 1)
@@ -263,7 +263,7 @@ class TestSandboxCountLimit:
     @pytest.mark.parametrize("status", [SandboxStatus.DELETED.value, SandboxStatus.ERR_CREATING.value])
     def test_inactive_sandbox_not_counted(self, bk_app, bk_user, mock_sandbox_provision, status):
         """已删除, 创建失败的沙箱不再占用配额"""
-        SandboxAppSettings.objects.create(application=bk_app, max_sandbox_count=1, tenant_id=bk_app.tenant_id)
+        SandboxAppSettings.objects.create(application=bk_app, max_active_sandbox_count=1, tenant_id=bk_app.tenant_id)
         sandbox = Sandbox.objects.new(
             application=bk_app, name="inactive", snapshot="python:3.11-alpine", creator=bk_user.pk
         )

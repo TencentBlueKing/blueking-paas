@@ -248,8 +248,8 @@ class ErrorCodes:
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
     AGENT_SANDBOX_DAEMON_API_ERROR = ErrorCode(_("Agent 沙箱守护进程 API 异常"), status_code=500)
     AGENT_SANDBOX_IMAGE_VALIDATE_FAILED = ErrorCode(_("Agent 沙箱快照镜像验证失败"), status_code=400)
-    AGENT_SANDBOX_COUNT_LIMIT_EXCEEDED = ErrorCode(
-        _("Agent 沙箱数量已达应用上限（{limit}），请先删除不再使用的沙箱"), status_code=400
+    AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED = ErrorCode(
+        _("存活的 Agent 沙箱数量已达应用上限（{limit}），请先删除不再使用的沙箱"), status_code=400
     )
 
     # Agent sandbox volume file (persistence)

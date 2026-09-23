@@ -422,7 +422,7 @@ make test
 ```
 
 `tests/api/` 跑在进程内注入的假模型上，完整覆盖 HTTP 接口的正确与错误分支；状态原语、Agent
-组装、压缩、事件合并在 `tests/` 其余模块。`tests/replication/` 用 `httpx.MockTransport` 在进程
+组装、压缩、事件合并在 `tests/` 其余模块。`tests/replication/` 用 `httpx2.MockTransport` 在进程
 内伪造控制面，但状态文件、游标、字节偏移全是真的——整套设计就架在「文件即 outbox」上。
 
 `tests/live/` 用 uvicorn 拉起**真实进程**，但模型是 `fake:` 场景，所以默认就跑。它覆盖

@@ -12,10 +12,9 @@ requires-python = ">=3.14"
 dependencies = [
     "environs>=15.1.0,<16.0.0",
     "fastapi>=0.116.0",
-    # Pulled in transitively anyway, but declared because `replication/client.py` imports it
-    # directly to push state to the control plane.
-    "httpx>=0.28.1",
-    # Same reason: `agent.py`, `bkaidev/auth.py` and the app readiness probe import it directly.
+    # Pulled in transitively anyway, but declared because `agent.py`, `bkaidev/`, the app
+    # readiness probe and `replication/client.py` (to push state to the control plane) import
+    # it directly.
     "httpx2>=2.10.0,<3.0.0",
     # Required by environs; declared explicitly because `settings.py` imports its validators
     # directly rather than through the untyped `environs.validate` alias.
@@ -27,7 +26,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
     "mypy>=2.3.0,<3.0.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",

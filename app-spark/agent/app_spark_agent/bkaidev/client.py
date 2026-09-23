@@ -7,7 +7,7 @@ POST {BASE_URL}/chat/completions。鉴权只用用户态 access_token。
 
 from typing import Self
 
-import httpx
+import httpx2
 from pydantic import ValidationError
 
 from app_spark_agent import settings
@@ -35,7 +35,7 @@ class AidevApiClient:
     :param base_url: v1 层地址，不要带 /chat/completions。
     :param access_token: 用户态 token，只进 X-Bkapi-Authorization。
     :param timeout: 单次请求超时秒数。
-    :param transport: 测试注入的 httpx transport。
+    :param transport: 测试注入的 httpx2 transport。
     """
 
     def __init__(
@@ -44,10 +44,10 @@ class AidevApiClient:
         base_url: str,
         access_token: str,
         timeout: float = 60.0,
-        transport: httpx.AsyncBaseTransport | None = None,
+        transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             base_url=self.base_url,
             headers=authorization_headers(access_token),
             timeout=timeout,
@@ -88,7 +88,7 @@ class AidevApiClient:
         response = await self._client.post("/chat/completions", json=payload)
         return ChatCompletionResponse.model_validate(self._json(response))
 
-    def _json(self, response: httpx.Response) -> object:
+    def _json(self, response: httpx2.Response) -> object:
         """把响应校验成 JSON；非 2xx 抽错误信息，正文不含鉴权头。"""
         if response.is_success:
             return response.json()

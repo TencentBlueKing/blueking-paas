@@ -38,7 +38,7 @@ class Provider(BaseProvider):
     :param type: Redis 部署类型，可选值为 "Redis" 或 "RedisReplication"
     :param redis_version: Redis 版本号，例如 "v6.2.12"
     :param cluster_name: Kubernetes 集群名称，用于标识部署目标集群
-    :param resources: 资源配额，常规套餐 {"preset": "default"}，特殊套餐同时写 requests/limits
+    :param resources: 资源配额，常规套餐 {"preset": "512"}，特殊套餐同时写 requests/limits
     :param service_export_type: 服务暴露方式，可选值为 "TencentCLB" 或 "ClusterDNS"
     :param persistent_storage: 是否启用持久化存储，默认为 False
     :param monitor: 是否启用 Prometheus 监控，默认为 False

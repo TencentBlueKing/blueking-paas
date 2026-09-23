@@ -19,7 +19,7 @@ from typing import Dict, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-ResourcePresetName = Literal["default", "1G", "2G"]
+ResourcePresetName = Literal["512", "1G", "2G"]
 
 
 class RedisResourcesConfig(BaseModel):

@@ -27,7 +27,7 @@ def _plan_config(**overrides) -> RedisPlanConfig:
         "type": "Redis",
         "redis_version": "v7.0.15",
         "cluster_name": "test-cluster",
-        "resources": {"preset": "default"},
+        "resources": {"preset": "512"},
     }
     data.update(overrides)
     return RedisPlanConfig(**data)
@@ -76,7 +76,7 @@ class TestGetRedisResource:
     @pytest.mark.parametrize(
         ("preset", "requests_cpu", "requests_memory", "limits_cpu", "limits_memory"),
         [
-            ("default", "100m", "256Mi", "500m", "512Mi"),
+            ("512", "100m", "256Mi", "500m", "512Mi"),
             ("1G", "100m", "512Mi", "500m", "1Gi"),
             ("2G", "100m", "1Gi", "500m", "2Gi"),
         ],

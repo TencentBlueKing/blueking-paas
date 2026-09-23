@@ -24,8 +24,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from paas_service.base_vendor import InstanceData
-from paas_service.constants import ProvisionRecordStatus
-from paas_service.models import Plan, ProvisionRecord, Service, ServiceInstance, ServiceInstanceConfig
+from paas_service.models import Plan, Service, ServiceInstance, ServiceInstanceConfig
 from svc_mysql.vendor.models import PlanMigration, PlanMigrationStatus
 
 pytestmark = pytest.mark.django_db
@@ -274,22 +273,6 @@ def test_revert_rejects_when_instance_left_the_target_database(service, source_p
     instance.refresh_from_db()
     assert instance.get_credentials()["host"] == "moved.db"
     assert PlanMigration.objects.get().status == PlanMigrationStatus.SWITCHED
-
-
-def test_switch_updates_provision_record_plan(service, source_plan, target_plan, provider):
-    """switch 把开通记录的 plan 一起改成目标 plan。"""
-    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    record = ProvisionRecord.objects.create(
-        provision_key="bkapp-cw-chaos-stag",
-        service_instance=instance,
-        plan_id=source_plan.uuid,
-        status=ProvisionRecordStatus.SUCCESS,
-    )
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
-    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
-
-    record.refresh_from_db()
-    assert record.plan_id == target_plan.uuid
 
 
 def test_status_lists_every_app_and_filters_by_status(service, source_plan, target_plan, provider):

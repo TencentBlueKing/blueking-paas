@@ -24,7 +24,7 @@ from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 from paas_service.base_vendor import get_provider_cls
-from paas_service.models import Plan, ProvisionRecord, ServiceInstance, ServiceInstanceConfig
+from paas_service.models import Plan, ServiceInstance, ServiceInstanceConfig
 
 from svc_mysql.vendor.models import PlanMigration, PlanMigrationStatus
 
@@ -319,8 +319,6 @@ def _switch_one(record: PlanMigration) -> None:
         instance.plan = locked.target_plan
         instance.config = {**_as_config(instance.config), **_as_config(locked.target_config)}
         instance.save(update_fields=["credentials", "plan", "config", "updated"])
-        # 幂等开通用实例上的 plan 做比较，开通记录里的 plan_id 跟着改。
-        ProvisionRecord.objects.filter(service_instance=instance).update(plan_id=locked.target_plan_id)
         locked.status = PlanMigrationStatus.SWITCHED
         locked.switched_at = timezone.now()
         locked.save(update_fields=["status", "switched_at", "updated"])

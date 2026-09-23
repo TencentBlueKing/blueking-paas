@@ -129,10 +129,10 @@ class RuntimeHealth:
     :param replication_pending: Whether the Runtime still holds state it has not managed to
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
-    :param app_status: What the Runtime says about the workspace application it supervises --
-        ``not_started``, ``unhealthy``, or ``healthy``. Forwarded rather than interpreted: this
-        service has no opinion on the names, and an older Runtime that says nothing leaves it
-        ``None``.
+    :param dev_server_status: What the Runtime says about the dev server hosting the workspace
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
+        than interpreted: this service has no opinion on the names, and an older Runtime that
+        says nothing leaves it ``None``.
     """
 
     model: str
@@ -142,7 +142,7 @@ class RuntimeHealth:
     ui_event_seq: int
     running: bool
     replication_pending: bool = False
-    app_status: str | None = None
+    dev_server_status: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -168,8 +168,10 @@ class RuntimeHealth:
                 replication_pending=bool(payload.get("replication_pending", False)),
                 # Lenient for a different reason: a Runtime that predates the field says
                 # nothing, and "this Runtime cannot tell me" is not the same answer as any of
-                # the three statuses it could have given.
-                app_status=None if payload.get("app_status") is None else str(payload["app_status"]),
+                # the four statuses it could have given.
+                dev_server_status=(
+                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc

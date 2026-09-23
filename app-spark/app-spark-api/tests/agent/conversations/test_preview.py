@@ -169,6 +169,55 @@ def test_a_redirect_cannot_climb_out_of_the_preview_prefix(location):
     assert rewritten.startswith(PREVIEW_ROOT)
 
 
+# --- 告诉应用它其实被挂在哪 ------------------------------------------------------------------
+
+
+def test_the_application_is_told_where_the_browser_actually_reached_it(request_factory):
+    """不补这组，应用看到的客户端是本服务、协议是 http、主机是沙箱内网地址。
+
+    前缀那条尤其关键：沙箱按设计不知道预览地址，应用于是会把自己的链接拼成 `/static/x.css`，
+    落到控制面的路由上 404。读 X-Forwarded-Prefix 的框架能自己把它拼对。
+    """
+    request = request_factory.get("/api/projects/p/conversations/3/preview/app/page", REMOTE_ADDR="10.0.0.7")
+
+    headers = preview._collect_request_headers(request, preview_root=PREVIEW_ROOT)
+
+    assert headers["x-forwarded-proto"] == "http"
+    assert headers["x-forwarded-host"] == "testserver"
+    assert headers["x-forwarded-prefix"] == "/api/projects/p/conversations/3/preview/app"
+    assert headers["x-forwarded-for"] == "10.0.0.7"
+
+
+def test_an_existing_forwarded_chain_is_appended_to_not_replaced(request_factory):
+    """本服务前面还有接入层，它写下的那一段也是链路的一部分。"""
+    request = request_factory.get("/whatever/", REMOTE_ADDR="10.0.0.7", HTTP_X_FORWARDED_FOR="203.0.113.9")
+
+    headers = preview._collect_request_headers(request, preview_root=PREVIEW_ROOT)
+
+    assert headers["x-forwarded-for"] == "203.0.113.9, 10.0.0.7"
+
+
+def test_a_client_supplied_forwarded_header_cannot_reach_the_application_as_written(request_factory):
+    """整组重写，不让应用读到半新半旧的一份——它无从分辨哪条是接入层写的、哪条是浏览器编的。"""
+    request = request_factory.get(
+        "/whatever/",
+        REMOTE_ADDR="10.0.0.7",
+        HTTP_X_FORWARDED_HOST="evil.example",
+        HTTP_X_FORWARDED_PROTO="https",
+        HTTP_X_FORWARDED_PREFIX="/admin",
+    )
+
+    headers = preview._collect_request_headers(request, preview_root=PREVIEW_ROOT)
+
+    forwarded = {name: value for name, value in headers.items() if name.lower().startswith("x-forwarded-")}
+    assert forwarded == {
+        "x-forwarded-for": "10.0.0.7",
+        "x-forwarded-proto": "http",
+        "x-forwarded-host": "testserver",
+        "x-forwarded-prefix": "/api/projects/p/conversations/3/preview/app",
+    }
+
+
 # --- 同源的兜底 ------------------------------------------------------------------------------
 
 

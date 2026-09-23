@@ -115,7 +115,7 @@ def test_the_model_launches_the_app_itself(make_api: ApiFactory, launch_port: in
     assert [result.status for result in launcher.results] == ["ok"]
     assert launcher.results[0].port == launch_port
     assert httpx.get(f"http://127.0.0.1:{launch_port}/").json()["port"] == str(launch_port)
-    assert api.get("/health").json()["app_status"] == "healthy"
+    assert api.get("/health").json()["dev_server_status"] == "ready"
 
     # 回写通道就是控制面已经在 drain 的那条，不需要反向回调。
     records = launched_records(api)
@@ -125,7 +125,7 @@ def test_the_model_launches_the_app_itself(make_api: ApiFactory, launch_port: in
         "port": launch_port,
         "path": "/",
         "label": "Preview",
-        "app_status": "healthy",
+        "dev_server_status": "ready",
     }
 
 
@@ -154,7 +154,7 @@ def test_a_foreign_port_is_reported_as_failed(make_api: ApiFactory, launch_port:
 
         assert [result.status for result in launcher.results] == ["failed"]
         assert "owned by a process" in launcher.results[0].detail
-        assert api.get("/health").json()["app_status"] == "not_started"
+        assert api.get("/health").json()["dev_server_status"] == "not_started"
         assert launched_events(api) == []
     finally:
         occupant.close()
@@ -167,7 +167,7 @@ def test_missing_app_is_failed(make_api: ApiFactory, launch_port: int) -> None:
     run_turn(api, conversation_id=str(uuid4()))
 
     assert [result.status for result in launcher.results] == ["failed"]
-    assert api.get("/health").json()["app_status"] == "unhealthy"
+    assert api.get("/health").json()["dev_server_status"] == "stopped"
     assert launched_events(api) == []
 
 
@@ -184,5 +184,5 @@ def test_the_model_cannot_retry_launching_all_turn(make_api: ApiFactory, launch_
 
     # 额度用尽后第三次直接被拒，run 本身照常结束。下一轮重新给额度见 tests/test_launch_tool.py。
     assert [result.status for result in launcher.results] == ["failed"] * MAX_LAUNCHES_PER_RUN + ["refused"]
-    assert api.get("/health").json()["app_status"] == "unhealthy"
+    assert api.get("/health").json()["dev_server_status"] == "stopped"
     assert launched_events(api) == []

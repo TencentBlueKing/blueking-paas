@@ -30,7 +30,7 @@ from tests.support.fake_models import gated_model
 RUNTIME_TOKEN = "test-runtime-token"
 MODEL_API_KEY = "test-model-api-key"
 AUTH_HEADERS = {"Authorization": f"Bearer {RUNTIME_TOKEN}"}
-HEALTH_FIELDS = {"version", "model_ready", "running", "app_status"}
+HEALTH_FIELDS = {"version", "model_ready", "running", "dev_server_status"}
 
 # `ASGITransport` never opens a socket, so this only has to be an absolute URL httpx can build
 # requests from; nothing ever resolves it.

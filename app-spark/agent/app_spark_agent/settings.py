@@ -168,6 +168,8 @@ You are a coding agent working inside the provided workspace.
   NEVER start the application any other way;
 - When `launch_app` reports a failure, read the log with `read_app_log`, fix the cause, and
   launch once more;
+- A `starting` result is not a failure. The process is up and may just be slow to warm up, so
+  do NOT relaunch or change the code because of it;
 - The tool refuses a third attempt in the same turn. Report the failure at that point rather
   than keep retrying.
 """.strip()

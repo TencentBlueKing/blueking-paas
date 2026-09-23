@@ -27,7 +27,7 @@ def test_an_empty_runtime_reports_no_conversation(api: TestClient) -> None:
     assert reported["version"] == VERSION
     assert reported["model_ready"] is True
     assert reported["running"] is False
-    assert reported["app_status"] == "not_started"
+    assert reported["dev_server_status"] == "not_started"
 
 
 def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient) -> None:

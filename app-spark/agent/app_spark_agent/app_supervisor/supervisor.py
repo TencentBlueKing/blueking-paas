@@ -17,6 +17,7 @@
 """Coordinate one launch at a time and restart a dropped application."""
 
 import asyncio
+import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -43,11 +44,13 @@ from app_spark_agent.app_supervisor.types import (
     PORT_FREE_TIMEOUT_SECONDS,
     AppLaunchConflict,
     AppLaunchFailed,
-    AppStatus,
+    DevServerStatus,
     LaunchResult,
 )
 from app_spark_agent.state import AppendLog
 from app_spark_agent.ui_events import persist_ui_events
+
+logger = logging.getLogger(__name__)
 
 
 class AppSupervisor:
@@ -66,9 +69,12 @@ class AppSupervisor:
 
         # 与 RunGuard 分开：run 进行中仍允许 launch，第二次 launch 才冲突。
         self._lock = asyncio.Lock()
-        self._status = AppStatus.NOT_STARTED
 
-        # 从上次手动 launch 起算。成功也不清零，避免听上又立刻崩时无限重启。
+        # 唯一需要记住的一位：其余三档都由「进程还在吗」加「端口应答吗」当场算出来，存一份缓存
+        # 只会和实况不一致。not_started 算不出来，因为端口空着既可能是没拉过也可能是崩了。
+        self._launched = False
+
+        # 从上次手动 launch 起算。成功也不清零，避免起来又立刻崩时无限重启。
         self._auto_restarts = 0
 
     @property
@@ -76,22 +82,23 @@ class AppSupervisor:
         """Return the port the application is expected to listen on."""
         return settings.APP_PORT
 
-    async def app_status(self) -> AppStatus:
-        """Return not_started, unhealthy, or healthy from live listen state."""
+    async def dev_server_status(self) -> DevServerStatus:
+        """Return not_started, stopped, starting, or ready from the live process and probe."""
 
         # 不做成 property：判定要发一次真请求，把网络 I/O 藏在属性读取后面会让调用方看不出代价。
         #
         # 从未 launch 过就保持 not_started，哪怕别人占着端口。
-        if self._status == AppStatus.NOT_STARTED:
-            return AppStatus.NOT_STARTED
+        if not self._launched:
+            return DevServerStatus.NOT_STARTED
 
-        # 健康看实听，不看上次写入的 _status：进程可能刚掉。
-        if await self._is_up():
-            return AppStatus.HEALTHY
-        return AppStatus.UNHEALTHY
+        # 先判活再判就绪，顺序就是这两档的区别所在：进程没了要重拉，进程在只是还答不出要等。
+        if not self._process.living():
+            return DevServerStatus.STOPPED
+
+        return DevServerStatus.READY if await self._process.is_ready() else DevServerStatus.STARTING
 
     async def launch(self) -> LaunchResult:
-        """Start or restart the application and persist app.launched when it listens."""
+        """Start or restart the application, waiting a bounded time for it to answer."""
 
         # 不接受参数：路径和标签都是常量，见 DEFAULT_LAUNCH_PATH。
         #
@@ -119,42 +126,38 @@ class AppSupervisor:
             return result
 
     async def watch(self) -> None:
-        """Restart a dropped application up to CRASH_RETRY_LIMIT times, then leave it unhealthy."""
+        """Restart the application when its process dies, up to CRASH_RETRY_LIMIT times."""
         while True:
             await asyncio.sleep(CRASH_WATCH_POLL_SECONDS)
 
             # 用户正在 launch，或从未拉起过：监督不插手。
-            if self._lock.locked() or self._status == AppStatus.NOT_STARTED:
+            if self._lock.locked() or not self._launched:
                 continue
 
-            # 子进程还在且端口实听，不必重启。
-            if await self._is_up():
+            # 判活，不判就绪。答不出 HTTP 的活进程只是 starting：可能在跑启动钩子、在编译模板，
+            # 也可能首屏本来就慢过探针那 2 秒的读预算。停掉重拉既救不了它，还会打断一个正在
+            # 预热的应用，把「慢」变成「永远起不来」。
+            if self._process.living():
                 continue
 
-            # 额度用尽只标 unhealthy，等下一次手动 launch。
+            # 额度用尽就不再拉，等下一次手动 launch。不必记状态，进程不在自然就是 stopped。
             if self._retries_exhausted():
-                self._status = AppStatus.UNHEALTHY
                 continue
 
-            # 掉听后先等一段，避免进程刚退出就立刻拉起。
+            # 进程刚退出，先等一段再拉，避免崩溃循环被按轮询间隔的速度复现一遍。
             await asyncio.sleep(CRASH_RETRY_INTERVAL_SECONDS)
 
-            # 等待期间用户可能已经手动 launch，或应用自己又听上了。
-            if self._lock.locked() or await self._is_up():
-                continue
-
-            if self._retries_exhausted():
-                self._status = AppStatus.UNHEALTHY
+            # 等待期间用户可能已经手动 launch。
+            if self._lock.locked() or self._process.living():
                 continue
 
             try:
                 async with self._lock:
                     # 拿到锁后再看一眼：可能刚被另一轮 launch 拉起来。
-                    if await self._is_up():
+                    if self._process.living():
                         continue
 
                     if self._retries_exhausted():
-                        self._status = AppStatus.UNHEALTHY
                         continue
 
                     # 计入本次自动拉起；成功也不清零，同一手动 launch 之后最多三次。
@@ -162,10 +165,10 @@ class AppSupervisor:
                     self._process.stop()
                     await self._start_and_wait()
                     await self._emit_launched(await self._result())
-            except Exception:  # noqa: BLE001
+            except Exception:
                 # AppLaunchFailed 之外，spawn / 写事件也可能抛。只捕前者会拆掉整条 watch。
-                # 标 unhealthy 后继续转；额度未满下一轮还会再试。
-                self._status = AppStatus.UNHEALTHY
+                # 这里是真把错误吞掉的地方，所以打一条日志；额度未满下一轮还会再试。
+                logger.warning("Automatic restart %s failed", self._auto_restarts, exc_info=True)
 
     async def _app_answers(self) -> bool:
         """Probe the agreed port. This is the readiness the process layer is given."""
@@ -178,10 +181,6 @@ class AppSupervisor:
         """Return whether anything at all holds the agreed port, HTTP or not."""
         return tcp_port_is_open(self.port)
 
-    async def _is_up(self) -> bool:
-        """Return whether the supervisor child is alive and the port answers the readiness probe."""
-        return self._process.living() and await self._process.is_ready()
-
     def _retries_exhausted(self) -> bool:
         """Return whether automatic restarts since the last manual launch are used up."""
         return self._auto_restarts >= CRASH_RETRY_LIMIT
@@ -192,7 +191,7 @@ class AppSupervisor:
             port=self.port,
             path=DEFAULT_LAUNCH_PATH,
             label=DEFAULT_LAUNCH_LABEL,
-            app_status=await self.app_status(),
+            dev_server_status=await self.dev_server_status(),
         )
 
     async def _emit_launched(self, result: LaunchResult) -> None:
@@ -203,32 +202,33 @@ class AppSupervisor:
                 "port": result.port,
                 "path": result.path,
                 "label": result.label,
-                "app_status": result.app_status,
+                "dev_server_status": result.dev_server_status,
             },
         )
         await persist_ui_events([event], log=self._ui_events, run_id=LAUNCH_EVENT_RUN_ID)
 
     async def _start_and_wait(self) -> None:
-        """Spawn the child and wait until the port listens, or fail the launch."""
+        """Spawn the child and wait until it answers, or fail if it exits first."""
 
         # 每次重新构造 spec：两次 launch 之间端口和环境都可能已经变了。
         self._process.start(build_app_spec(self.workspace, self.port))
+
+        # spawn 成功就算 launch 过。not_started 从此不再回来：之后端口空着的意思是崩了，不是
+        # 没拉过，而这两者的处置不同。
+        self._launched = True
+
         deadline = time.monotonic() + LISTEN_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
-            # 进程先死了就不必再空等超时。
+            # 进程退出是 launch 唯一算失败的情形：没有进程就没什么可等的了，模型该去读日志。
             if not self._process.living():
-                self._status = AppStatus.UNHEALTHY
                 raise AppLaunchFailed("The application process exited before it listened.")
 
             if await self._process.is_ready():
-                self._status = AppStatus.HEALTHY
                 return
             await asyncio.sleep(0.05)
 
-        # 超时把我们拉起的进程停掉，避免留下一个半活子进程。
-        self._process.stop()
-        self._status = AppStatus.UNHEALTHY
-        raise AppLaunchFailed("The application did not listen before the deadline.")
+        # 到点还没应答，但进程活着。不停它、也不抛：把慢启动杀掉正是「拿就绪当健康」的那个错。
+        # 调用方从结果里的 starting 知道现在还打不开，watch 会继续照看这个进程。
 
     async def _wait_until(self, predicate: Callable[[], bool], seconds: float) -> None:
         # 重启前等旧端口放开，避免立刻 bind 失败。到期没等到就继续，由后面的实听等待收场。

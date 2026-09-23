@@ -261,13 +261,13 @@ async def get_preview(
     """拿到用 iframe 打开这个会话的工作区应用的地址，以及那个应用此刻的状态。
 
     地址由平台签发，会话一建好就有，也不会因为 Runtime 被回收而失效——所以拿到 origin 不等于
-    这一刻就有东西可看，该看 `app_status`。Runtime 联系不上只会让 `app_status` 变成 null，不会让
+    这一刻就有东西可看，该看 `dev_server_status`。Runtime 联系不上只会让 `dev_server_status` 变成 null，不会让
     这个接口失败，更不会把地址收回去。
     """
     conversation = await _get_conversation(request, project_id, number)
     return PreviewResponse(
         origin=preview.build_preview_origin(request, project_id=project_id, number=number),
-        app_status=await services.get_app_status(conversation),
+        dev_server_status=await services.get_dev_server_status(conversation),
     )
 
 
@@ -344,6 +344,6 @@ def _to_state(conversation: Conversation, state: ConversationState) -> RuntimeSt
         log_seq=state.log_seq,
         ui_event_seq=state.ui_event_seq,
         running=state.running,
-        app_status=state.app_status,
+        dev_server_status=state.dev_server_status,
         replication_pending=state.replication_pending,
     )

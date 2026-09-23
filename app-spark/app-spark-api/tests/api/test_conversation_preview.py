@@ -60,10 +60,10 @@ APP_MARKER = "only-the-workspace-application-writes-this"
 
 HTML = {"Content-Type": "text/html; charset=utf-8"}
 
-# 「没给 app_status」和「给了 None」是两回事：前者表示压根没有 Runtime，后者表示有但读不出来。
+# 「没给 dev_server_status」和「给了 None」是两回事：前者表示压根没有 Runtime，后者表示有但读不出来。
 _NO_RUNTIME = object()
 
-# 除 app_status 之外的字段这边一概不关心，用一份固定的垫底。
+# 除 dev_server_status 之外的字段这边一概不关心，用一份固定的垫底。
 HEALTH = RuntimeHealth(
     model="fake:write-file",
     conversation_id=None,
@@ -179,9 +179,9 @@ def stage(monkeypatch):
     A callable rather than a value: the isolation rule needs two conversations staged at once,
     which is the only way to show that neither reaches the other's application.
 
-    ``app_status`` has three states, matching the three the service has to tell apart: not
-    passed means no Runtime at all, ``None`` means a Runtime that cannot be read, and a string
-    is what a live one reported.
+    ``dev_server_status`` has three shapes here, matching the three the service has to tell
+    apart: not passed means no Runtime at all, ``None`` means a Runtime that cannot be read, and
+    a string is whatever a live one reported.
     """
     apps: dict[str, str] = {}
     statuses: dict[str, str | None] = {}
@@ -202,18 +202,18 @@ def stage(monkeypatch):
         status = statuses[self.handle.conversation_id]
         if status is None:
             raise AgentUnavailableError("the Runtime could not be reached")
-        return attrs.evolve(HEALTH, app_status=status)
+        return attrs.evolve(HEALTH, dev_server_status=status)
 
     provider = get_agent_runtime_provider()
     monkeypatch.setattr(provider, "preview_upstream", fake_preview_upstream)
     monkeypatch.setattr(provider, "peek", fake_peek)
     monkeypatch.setattr(AgentRuntimeClient, "health", fake_health)
 
-    def attach(conversation: Conversation, *, app: str | None = None, app_status=_NO_RUNTIME) -> None:
+    def attach(conversation: Conversation, *, app: str | None = None, dev_server_status=_NO_RUNTIME) -> None:
         if app is not None:
             apps[str(conversation.id)] = app
-        if app_status is not _NO_RUNTIME:
-            statuses[str(conversation.id)] = app_status
+        if dev_server_status is not _NO_RUNTIME:
+            statuses[str(conversation.id)] = dev_server_status
 
     return attach
 
@@ -229,14 +229,14 @@ async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_cl
     # 不是回环地址：那是「浏览器和后端同机」时才碰巧对的答案。
     assert "127.0.0.1" not in body["origin"]
     # 地址有了但没东西可看，这两件事是分开的。
-    assert body["app_status"] is None
+    assert body["dev_server_status"] is None
 
 
 @pytest.mark.parametrize(
     ("staged", "expected"),
     [
-        pytest.param({"app_status": "healthy"}, "healthy", id="a-live-runtime-reports"),
-        pytest.param({"app_status": None}, None, id="an-unreadable-runtime-reports-nothing"),
+        pytest.param({"dev_server_status": "ready"}, "ready", id="a-live-runtime-reports"),
+        pytest.param({"dev_server_status": None}, None, id="an-unreadable-runtime-reports-nothing"),
         pytest.param({}, None, id="no-runtime-at-all"),
     ],
 )
@@ -248,7 +248,7 @@ async def test_the_address_holds_while_only_the_status_moves(aapi_client, conver
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
-    assert response.json()["app_status"] == expected
+    assert response.json()["dev_server_status"] == expected
 
 
 # --- 反代 ------------------------------------------------------------------------------------

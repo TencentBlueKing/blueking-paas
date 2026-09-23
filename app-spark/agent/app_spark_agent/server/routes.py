@@ -108,7 +108,7 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "version": VERSION,
         "model_ready": settings.is_model_ready(),
         "running": runtime.run_guard.busy,
-        "app_status": await runtime.app_supervisor.app_status(),
+        "dev_server_status": await runtime.app_supervisor.dev_server_status(),
         "model": settings.MODEL,
         "conversation_id": context.conversation_id,
         "context_version": context.context_version,

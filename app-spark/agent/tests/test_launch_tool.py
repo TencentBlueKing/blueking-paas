@@ -23,15 +23,15 @@ import pytest
 from app_spark_agent.app_supervisor import (
     AppLaunchConflict,
     AppLaunchFailed,
-    AppStatus,
     AppSupervisor,
+    DevServerStatus,
     LaunchResult,
 )
 from app_spark_agent.launch_tool import MAX_LAUNCHES_PER_RUN, LaunchTool
 
 
-def make_launched(port: int = 8000) -> LaunchResult:
-    return LaunchResult(port=port, path="/", label="Preview", app_status=AppStatus.HEALTHY)
+def make_launched(port: int = 8000, status: DevServerStatus = DevServerStatus.READY) -> LaunchResult:
+    return LaunchResult(port=port, path="/", label="Preview", dev_server_status=status)
 
 
 class StubSupervisor:

@@ -83,7 +83,7 @@ class ConversationState:
         then nothing left that could still arrive.
     :param model: Model of the live Runtime, or ``None`` when none is up. Nothing here can
         answer it otherwise: the model is the agent's own configuration, not this service's.
-    :param app_status: What the live Runtime says about the workspace application it
+    :param dev_server_status: What the live Runtime says about the workspace application it
         supervises. ``None`` when no Runtime is up, because whether that application is
         listening is a fact about a running sandbox and nothing stored here can stand in for it.
     """
@@ -94,10 +94,10 @@ class ConversationState:
     running: bool
     replication_pending: bool
     model: str | None
-    app_status: str | None = None
+    dev_server_status: str | None = None
 
 
-async def get_app_status(conversation: Conversation) -> str | None:
+async def get_dev_server_status(conversation: Conversation) -> str | None:
     """Ask the live Runtime how the conversation's application is doing, without starting one.
 
     Deliberately never fails. The preview address does not depend on a Runtime -- it stays the
@@ -127,7 +127,7 @@ async def get_app_status(conversation: Conversation) -> str | None:
         )
         return None
 
-    return health.app_status
+    return health.dev_server_status
 
 
 async def get_preview_upstream(conversation: Conversation) -> str | None:
@@ -284,13 +284,13 @@ async def get_state(conversation: Conversation) -> ConversationState:
     model: str | None = None
     running = False
     replication_pending = False
-    app_status: str | None = None
+    dev_server_status: str | None = None
     if handle is not None:
         health = await AgentRuntimeClient(handle).health()
         model = health.model
         running = health.running
         replication_pending = health.replication_pending
-        app_status = health.app_status
+        dev_server_status = health.dev_server_status
 
     return ConversationState(
         context_version=context_version,
@@ -299,7 +299,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         running=running,
         replication_pending=replication_pending,
         model=model,
-        app_status=app_status,
+        dev_server_status=dev_server_status,
     )
 
 

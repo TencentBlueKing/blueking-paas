@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import posixpath
 from typing import TYPE_CHECKING
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlsplit
 
 import httpx2
 from django.http import StreamingHttpResponse
@@ -79,6 +79,11 @@ HOP_BY_HOP_HEADERS = frozenset(
 # 而预览与控制面同源，浏览器默认就会把 Cookie 带上，所以必须在这里显式摘掉。
 # Host 另有原因：它由 httpx 按上游地址自己写。
 STRIPPED_REQUEST_HEADERS = frozenset({"cookie", "authorization", "host"})
+
+# 这一组不透传，由反代按自己看到的事实重写，见 _collect_request_headers。
+FORWARDED_REQUEST_HEADERS = frozenset(
+    {"x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "x-forwarded-prefix"}
+)
 
 # 同源的另一面。应用种下的 Cookie 会落在控制面这个域上，一个叫 sessionid 的就能把用户的登录
 # 顶掉。应用要存东西请用它自己的存储。
@@ -162,7 +167,7 @@ async def forward_to_app(
         upstream_request = client.build_request(
             request.method,
             url,
-            headers=_collect_request_headers(request),
+            headers=_collect_request_headers(request, preview_root=preview_root),
             content=request.body or None,
         )
         response = await client.send(upstream_request, stream=True)
@@ -236,9 +241,42 @@ async def _stream_body(client: httpx2.AsyncClient, response: httpx2.Response) ->
         await client.aclose()
 
 
-def _collect_request_headers(request: HttpRequest) -> dict[str, str]:
-    """Return the client's headers, minus the ones the application must not see."""
-    return {name: value for name, value in request.headers.items() if not _is_stripped(name, STRIPPED_REQUEST_HEADERS)}
+def _collect_request_headers(request: HttpRequest, *, preview_root: str) -> dict[str, str]:
+    """Return the client's headers, minus the ones the application must not see, plus Forwarded.
+
+    :param request: The request being forwarded.
+    :param preview_root: Absolute URL the application is published under, ending in a slash.
+    :return: Headers to send upstream.
+    """
+    # 先把进来的那份 X-Forwarded-* 滤掉，下面按本服务看到的事实整组重写。混着传会让应用读到
+    # 半新半旧的一组，而它无从分辨哪条是谁写的。
+    headers = {
+        name: value
+        for name, value in request.headers.items()
+        if not _is_stripped(name, STRIPPED_REQUEST_HEADERS) and name.lower() not in FORWARDED_REQUEST_HEADERS
+    }
+
+    # 不补这几条，应用看到的客户端就是本服务、协议是 http、主机是沙箱内网地址，它据此拼出来的
+    # 绝对 URL 一个都指不回浏览器打得开的地方。转发那一跳把这些信息吃掉了，得显式说回去。
+    #
+    # 追加而不是覆盖客户端链路：本服务前面还有接入层，它写下的那一段也是链路的一部分。
+    chain = request.headers.get("x-forwarded-for", "")
+    client_ip = request.META.get("REMOTE_ADDR", "")
+    forwarded_for = ", ".join(part for part in (chain, client_ip) if part)
+    if forwarded_for:
+        headers["x-forwarded-for"] = forwarded_for
+
+    # 协议、主机、前缀都从 preview_root 上拆，而不是各自去问 request：那个值就是拿这个请求
+    # build_absolute_uri 出来的，浏览器地址栏里的正是它。分别取会给出三份可能互相矛盾的答案。
+    published = urlsplit(preview_root)
+    headers["x-forwarded-proto"] = published.scheme
+    headers["x-forwarded-host"] = published.netloc
+
+    # 应用挂在一个前缀下面，而它自己不知道——沙箱按设计就不知道预览地址。给出前缀，读这条的框架
+    # （Starlette 的 root_path 一类）就能把自己生成的链接拼对，不必等换独立域名。
+    headers["x-forwarded-prefix"] = published.path.rstrip("/")
+
+    return headers
 
 
 def _collect_response_headers(

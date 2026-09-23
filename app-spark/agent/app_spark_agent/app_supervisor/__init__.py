@@ -30,7 +30,7 @@ from app_spark_agent.app_supervisor.types import (
     AppLaunchConflict,
     AppLaunchError,
     AppLaunchFailed,
-    AppStatus,
+    DevServerStatus,
     LaunchResult,
 )
 
@@ -41,8 +41,8 @@ __all__ = [
     "AppLaunchConflict",
     "AppLaunchError",
     "AppLaunchFailed",
-    "AppStatus",
     "AppSupervisor",
+    "DevServerStatus",
     "LaunchResult",
     "ManagedProcess",
     "ProcessRegistry",

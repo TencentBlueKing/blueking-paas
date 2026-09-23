@@ -28,7 +28,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 兼容回落。未注入上面的 token 时当作 access_token 用。`fake:*` 不需要 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 调用真实模型时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
-| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，由接入层为每个沙箱分配（缺省 `8000`）。`launch_app` 用它拼启动命令，并注入同名环境变量；健康只认该端口应不应答 HTTP |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，由接入层为每个沙箱分配（缺省 `8000`）。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
@@ -77,9 +77,12 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
   http://127.0.0.1:8090/health
 ```
 
-成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`app_status`，以及会话游标
+成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`dev_server_status`，以及会话游标
 `conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube 探针用同一接口，走 `httpHeaders`。
-`app_status` 是 `not_started` / `unhealthy` / `healthy`（看约定端口应不应答），不含任何预览地址。
+`dev_server_status` 是 `not_started` / `starting` / `ready` / `stopped`，不含任何预览地址。
+活着和能服务分开成两档，照 kubernetes 的 liveness / readiness：进程在但端口还答不出是 `starting`，
+进程没了才是 `stopped`。合成一个「健康」会让「慢启动」和「崩了」变成同一个答案，而这两者一个该等、
+一个该重拉。
 
 `POST /runs` 为 AG-UI over SSE，同样必须 `Authorization: Bearer <APP_SPARK_AGENT_RUNTIME_TOKEN>`：
 
@@ -125,7 +128,7 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 成功落一条 `app.launched` 到 `ui_events`，控制面 drain 这条就知道应用起来了，不需要 agent 反向回调控制面接口。
 
-成功时事件值带 `port`、`path`、`label`、`app_status`；缺省 `path=/`、`label=Preview`。
+成功时事件值带 `port`、`path`、`label`、`dev_server_status`；缺省 `path=/`、`label=Preview`。
 `GET /ui-events` 可 drain；这条事件和控制面最终一致，刚 launch 完立刻去读可能还看不到。不往进行中的
 `/runs` SSE 里插。
 
@@ -138,21 +141,28 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
 
 `--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。会话之间的隔离靠
-每个沙箱分到不同的 `APP_PORT`、以及浏览器只能走控制面的反向代理，不靠改这个监听地址。判活只连
+每个沙箱分到不同的 `APP_PORT`、以及浏览器只能走控制面的反向代理，不靠改这个监听地址。探针只连
 `127.0.0.1:<APP_PORT>`，和听哪个网卡不是一回事。
 
 规则：
 
-- 健康只认 `127.0.0.1:<APP_PORT>` 应答得了一个 HTTP GET，最多等 30 秒。任何状态码（含 4xx / 5xx）
-  都算在听：应用返回什么是它自己的事。只连 TCP 不够——端口 bind 上到真能处理请求之间那段窗口里，
-  预览打开只会拿到一个空响应。
-- 探针的两个超时是分开的：建连 0.2 秒（本机 connect 要么立刻成、要么立刻拒），等应答 2 秒。
-  应答那一段是应用处理一个请求的时间，给紧了会把一个正在正常服务的应用判成掉听、再被下面的
-  自动重启停掉。探针本身是异步的，不占事件循环——它每 0.5 秒就要跑一次。
+- 就绪只认 `127.0.0.1:<APP_PORT>` 应答得了一个 HTTP GET，手动 launch 最多等 30 秒。任何状态码
+  （含 4xx / 5xx）都算在听：应用返回什么是它自己的事。只连 TCP 不够——端口 bind 上到真能处理请求
+  之间那段窗口里，预览打开只会拿到一个空响应。
+- 探针走 httpx2，只读响应头不读 body，两个超时分开：建连 0.2 秒（本机 connect 要么立刻成、要么
+  立刻拒），等应答 2 秒。应答那一段是应用处理一个请求的时间，给紧了会把一个正在正常服务的应用
+  判成没就绪。
+- 探针只在被问到时才发（`GET /health`、launch 等待期间），crash-watch 那条 0.5 秒的循环只 `poll()`
+  子进程，不发请求——否则用户应用的 access log 会被探针刷满，而那正是模型读 traceback 的那份日志。
 - 进行中的 launch 再打一次，或端口被非本监督器进程占用：冲突，不杀、不发事件。
 - 已是监督器进程：再次 launch 一律重启，为的是加载新代码。`launch_app` 不接受参数，事件里的
   `path` / `label` 是常量（`/` + `Preview`）——当初能传别的值的只有控制面那个 launch 接口，它已经没了。
-- 掉听后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过则 `unhealthy`，须再由模型 launch。
+- 自动重启只看进程死没死，不看就绪。活着但答不出的进程是 `starting`，watch 不碰它：停掉一个正在
+  预热的应用救不了它，只会把「慢」变成「永远起不来」。
+- 进程退出后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过就停在
+  `stopped`，须再由模型 launch。
+- 手动 launch 等不到应答也不算失败、更不停进程：进程活着就交回 `starting`，`launch_app` 据此告诉
+  模型别改代码、别重来。只有进程自己退出了才是 `failed`。
 - run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。
 - 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
   不然「失败→改代码→再 launch」会一直烧 token。

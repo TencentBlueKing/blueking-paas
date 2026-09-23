@@ -20,16 +20,16 @@
 怎么算就绪由调用方给的探针决定。
 """
 
-import asyncio
 import os
 import signal
 import socket
 import subprocess
 from collections.abc import Awaitable, Callable, Mapping
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Protocol
+
+import httpx2
 
 # SIGTERM 之后等多久再 SIGKILL。
 STOP_TIMEOUT_SECONDS = 5.0
@@ -38,8 +38,8 @@ STOP_TIMEOUT_SECONDS = 5.0
 PROBE_CONNECT_TIMEOUT_SECONDS = 0.2
 
 # 等应答要宽得多。这一段是应用自己处理一个请求的时间，不是建连时间：首次请求触发 lazy import、
-# 渲染一个稍大的模板、查一次库，几百毫秒很正常。给太紧会把一个正在正常服务的应用判成掉听，
-# 然后被 watch 停掉重拉。
+# 渲染一个稍大的模板、查一次库，几百毫秒很正常。给太紧会把一个正在正常服务的应用报成没就绪，
+# 预览那边就一直是占位。
 PROBE_READ_TIMEOUT_SECONDS = 2.0
 
 
@@ -87,31 +87,25 @@ async def http_get_answers(
     # 比只连 TCP 严一点：uvicorn 绑上端口到真能处理请求之间有一小段窗口，纯 TCP 探针在那段时间
     # 就已经算就绪，预览打开会撞上空响应。
     #
-    # 用 asyncio 而不是 http.client：这个探针在事件循环上每 0.5 秒被调一次，同步实现会在应用变慢
-    # 时（正好是最该探的时候）把整个循环连同进行中的 /runs SSE 一起堵住。
-    try:
-        reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), connect_timeout)
-    except OSError, TimeoutError:
-        return False
+    # 建连和应答的预算分开：本机 connect 要么立刻成功要么立刻 ECONNREFUSED，而应用处理一个请求
+    # 可以慢得多。合成一个预算会把正在正常服务的应用判成掉听。
+    timeout = httpx2.Timeout(connect_timeout, read=read_timeout, write=read_timeout, pool=connect_timeout)
 
+    # stream 而不是 get：探针只要状态行。读 body 既白花一轮 CPU，也会让一个大页面在每次探测时被
+    # 完整传一遍，而 launch 等待期间探测很密。
+    #
+    # Connection: close 让应用那边自己收尾，不必留一条马上就要被 client 关掉的空闲连接。
     try:
-        # Connection: close 让应用那边自己收尾。探针只要状态行，不读 body——半途断开会在应用
-        # 日志里留下一行异常，而那个日志是模型读 traceback 用的，不该被探针刷。
-        writer.write(f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode())
-        await writer.drain()
-        status_line = await asyncio.wait_for(reader.readline(), read_timeout)
-    except OSError, TimeoutError:
+        async with (
+            httpx2.AsyncClient(timeout=timeout) as client,
+            client.stream("GET", f"http://{host}:{port}{path}", headers={"connection": "close"}),
+        ):
+            # 任何 HTTP 响应都算在听，包括 4xx / 5xx。应用返回什么状态码是它自己的事，这里只判断
+            # 「有没有一个 HTTP 服务在这个端口上」。
+            return True
+    except httpx2.HTTPError:
         # 连接被拒、应答超时、对端说的不是 HTTP：都当作没听。
         return False
-    finally:
-        writer.close()
-        # 对端可能已经走了。关连接没关干净不该让一次成功的探测变成失败。
-        with suppress(OSError, TimeoutError):
-            await asyncio.wait_for(writer.wait_closed(), connect_timeout)
-
-    # 任何 HTTP 响应都算在听，包括 4xx / 5xx。应用返回什么状态码是它自己的事，这里只判断
-    # 「有没有一个 HTTP 服务在这个端口上」。
-    return status_line.startswith(b"HTTP/")
 
 
 class ManagedProcess:

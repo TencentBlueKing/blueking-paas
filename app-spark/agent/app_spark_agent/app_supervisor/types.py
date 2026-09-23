@@ -22,17 +22,25 @@ from enum import StrEnum
 from app_spark_agent import settings
 
 
-class AppStatus(StrEnum):
-    """What health and launch report about the workspace application."""
+class DevServerStatus(StrEnum):
+    """What health and launch report about the dev server hosting the workspace application.
+
+    活着和能服务分开成两档，照 kubernetes 的 liveness / readiness 那样分。合成一个「健康」会让
+    「慢启动」和「进程崩了」变成同一个答案，而这两者的处置正好相反：前者要等，后者要重拉。
+    """
 
     # 从未被本监督器 launch 过。别人占着端口也不算启动。
     NOT_STARTED = "not_started"
 
-    # 已经 launch 过，但子进程掉了或约定端口答不出 HTTP。
-    UNHEALTHY = "unhealthy"
+    # 子进程还在，但约定端口还答不出 HTTP。慢启动、首屏慢、应用自己卡住都落在这一档。
+    # 不触发自动重启：停掉一个正在预热的进程解决不了任何问题。
+    STARTING = "starting"
 
-    # 本监督器的子进程还在，且约定端口应答得了一个 HTTP GET。
-    HEALTHY = "healthy"
+    # 子进程还在，且约定端口应答得了一个 HTTP GET。
+    READY = "ready"
+
+    # launch 过，但本监督器的子进程已经不在了。只有这一档会触发自动重启。
+    STOPPED = "stopped"
 
 
 # 应用把自己摆在哪个路径下，以及给人看的标签。写进 app.launched 供前端用。
@@ -42,16 +50,17 @@ class AppStatus(StrEnum):
 DEFAULT_LAUNCH_PATH = "/"
 DEFAULT_LAUNCH_LABEL = "Preview"
 
-# 手动 launch 最多等这么久听到端口。超时停掉半活子进程，避免留下占着环境的进程。
+# 手动 launch 最多等这么久听到端口。到点还没应答不停它，也不算失败：进程活着就交回 starting，
+# 剩下的交给 watch。这里只是「别让调用方一直挂着」的上限。
 LISTEN_TIMEOUT_SECONDS = 30.0
 
-# 从上次手动 launch 起算。成功也不清零，避免听上又立刻崩时无限重启。
+# 从上次手动 launch 起算。成功也不清零，避免起来又立刻崩时无限重启。
 CRASH_RETRY_LIMIT = 3
 
-# 掉听后先睡再拉，避免进程刚退出就立刻 spawn。
+# 进程退出后先睡再拉，避免崩溃循环被按轮询间隔的速度复现一遍。
 CRASH_RETRY_INTERVAL_SECONDS = 2.0
 
-# watch 轮询间隔。掉听另有上面的缓冲，不必更密。
+# watch 轮询间隔。重拉另有上面的缓冲，不必更密。
 CRASH_WATCH_POLL_SECONDS = 0.5
 
 # 重启前等旧端口放开。到期没等到也继续，由后面的实听等待收场。
@@ -76,7 +85,7 @@ class AppLaunchConflict(AppLaunchError):
 
 
 class AppLaunchFailed(AppLaunchError):
-    """The process did not start listening in time."""
+    """The process died before it could serve. 起得慢不算失败，那是 starting。"""
 
 
 @dataclass(frozen=True)
@@ -88,4 +97,4 @@ class LaunchResult:
     port: int
     path: str
     label: str
-    app_status: AppStatus
+    dev_server_status: DevServerStatus

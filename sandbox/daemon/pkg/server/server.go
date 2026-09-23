@@ -107,6 +107,7 @@ func StartResident(ctx context.Context) error {
 	files.GET("/preview", volumefs.PreviewFile)
 	files.POST("/archive", volumefs.ExportFile)
 	files.DELETE("", volumefs.DeleteFile)
+	files.DELETE("/volume", volumefs.DeleteVolume)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.G.ServerHost, config.G.ServerPort),

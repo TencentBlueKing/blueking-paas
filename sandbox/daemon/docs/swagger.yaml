@@ -342,6 +342,30 @@ paths:
       summary: Upload a file
       tags:
       - files
+  /files/volume:
+    delete:
+      consumes:
+      - application/json
+      description: Remove base_path (a Volume's shared-storage sub-directory) and
+        everything under it; deleting a missing directory is idempotent
+      operationId: PVDeleteVolume
+      parameters:
+      - description: volume storage path issued by apiserver, must match app/{32 hex
+          chars}
+        in: query
+        name: base_path
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_server_volumefs.DeleteResponse'
+      summary: Delete an entire volume directory
+      tags:
+      - pv
   /process/execute:
     post:
       consumes:

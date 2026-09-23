@@ -360,6 +360,39 @@
                 }
             }
         },
+        "/files/volume": {
+            "delete": {
+                "description": "Remove base_path (a Volume's shared-storage sub-directory) and everything under it; deleting a missing directory is idempotent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pv"
+                ],
+                "summary": "Delete an entire volume directory",
+                "operationId": "PVDeleteVolume",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "volume storage path issued by apiserver, must match app/{32 hex chars}",
+                        "name": "base_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_volumefs.DeleteResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/process/execute": {
             "post": {
                 "description": "Execute a shell command and return the output and exit code",

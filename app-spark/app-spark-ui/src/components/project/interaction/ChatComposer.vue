@@ -112,7 +112,7 @@ const placeholder = computed(() => (
 ));
 const hint = computed(() => {
   if (props.hint) return props.hint;
-  return 'Enter 发送，Shift + Enter 换行';
+  return 'Shift + Enter 换行';
 });
 
 const openFile = () => {

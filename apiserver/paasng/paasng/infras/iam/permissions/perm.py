@@ -121,7 +121,7 @@ class Permission(ABC, IAMClient):
                 perm_ctx.username,
                 perm_ctx.tenant_id,
                 action_ids,
-                resources=res_request.make_resources(perm_ctx.resource_id),
+                resource=res_request.make_resource(perm_ctx.resource_id),
             )
 
         return self._can_multi_actions(perm_ctx, perms, raise_exception)
@@ -138,8 +138,8 @@ class Permission(ABC, IAMClient):
 
         # 与当前资源实例相关
         res_request = self.make_res_request(perm_ctx)
-        resources = res_request.make_resources(res_id)
-        return self.resource_inst_allowed(perm_ctx.username, perm_ctx.tenant_id, action_id, resources, use_cache)
+        resource = res_request.make_resource(res_id)
+        return self.resource_inst_allowed(perm_ctx.username, perm_ctx.tenant_id, action_id, resource, use_cache)
 
     def _can_multi_actions(self, perm_ctx: PermCtx, perms: Dict[str, bool], raise_exception: bool) -> bool:
         messages = []

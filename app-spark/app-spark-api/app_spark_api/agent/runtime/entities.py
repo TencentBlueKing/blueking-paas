@@ -74,6 +74,31 @@ class StateCallback:
 
 
 @attrs.frozen
+class GitRemote:
+    """How a Runtime is told to persist its workspace into the Project's repository.
+
+    Sibling of :class:`StateCallback`, and passed the same way: the provider hands it to the
+    process it starts and nothing else. A Runtime therefore learns one clone URL and one
+    credential, and never has to know what a Project is or which one it is serving.
+
+    Unlike the state token, this one is **not** revoked when the Runtime stops. It is long-lived
+    and shared by every Runtime of the Project, so the defence against a replaced Runtime pushing
+    stale history is the server refusing a non-fast-forward -- not taking the credential away.
+
+    :param clone_url: The repository's HTTPS clone URL, as reachable *from the sandbox*. The
+        control plane's own ``localhost`` is not that address.
+    :param branch: The single working branch.
+    :param username: HTTP Basic user, the service account that issued the token.
+    :param token: Repository-scoped read-write token.
+    """
+
+    clone_url: str = attrs.field(validator=validate_non_empty_string)
+    branch: str = attrs.field(validator=validate_non_empty_string)
+    username: str = attrs.field(validator=validate_non_empty_string)
+    token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+
+
+@attrs.frozen
 class AgentRuntimeHandle:
     """Where a conversation's Runtime can be reached.
 
@@ -104,6 +129,10 @@ class RuntimeHealth:
     :param replication_pending: Whether the Runtime still holds state it has not managed to
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
+    :param dev_server_status: What the Runtime says about the dev server hosting the workspace
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
+        than interpreted: this service has no opinion on the names, and an older Runtime that
+        says nothing leaves it ``None``.
     """
 
     model: str
@@ -113,6 +142,7 @@ class RuntimeHealth:
     ui_event_seq: int
     running: bool
     replication_pending: bool = False
+    dev_server_status: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -136,6 +166,12 @@ class RuntimeHealth:
                 # configured has no answer to give, and treating "did not say" as "nothing
                 # pending" is the truthful reading of that.
                 replication_pending=bool(payload.get("replication_pending", False)),
+                # Lenient for a different reason: a Runtime that predates the field says
+                # nothing, and "this Runtime cannot tell me" is not the same answer as any of
+                # the four statuses it could have given.
+                dev_server_status=(
+                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc

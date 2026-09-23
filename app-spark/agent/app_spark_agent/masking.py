@@ -55,6 +55,7 @@ def secret_values() -> tuple[str, ...]:
             settings.MODEL_API_KEY,
             settings.CONTROL_PLANE_TOKEN,
             settings.RUNTIME_TOKEN,
+            settings.GIT_TOKEN,
         )
     )
 

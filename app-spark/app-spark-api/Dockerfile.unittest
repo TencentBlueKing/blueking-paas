@@ -1,6 +1,9 @@
 FROM python:3.14-slim-bookworm
 ENV UV_NO_DEV=0
 RUN mkdir -p ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
+# Live Forgejo tests run git clone/push; the default suite does not need this binary.
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.10.0
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md manage.py ./

@@ -26,3 +26,7 @@ class ConversationClosedError(Exception):
 
     结束是终态：一个会话的历史仍然可读，但它不再接受新的一轮对话。
     """
+
+
+class InvalidHistoryCursorError(Exception):
+    """翻历史时带来的游标不是本服务签发的，或者签发格式已经换掉了。"""

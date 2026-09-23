@@ -43,3 +43,13 @@ class AgentUnavailableError(AgentRuntimeError):
 
 class AgentBusyError(AgentRuntimeError):
     """The Agent Runtime is already executing a run for this conversation."""
+
+
+class AgentWorkspaceSavePendingError(AgentRuntimeError):
+    """The previous turn's files have not reached the Project's Git repository yet.
+
+    Deliberately not a kind of :class:`AgentBusyError`, even though the Runtime reports both as
+    409: no run is in progress, waiting a moment is not necessarily enough, and the way out is a
+    different one. Collapsing the two would tell the user their agent is busy while it is in fact
+    idle and unable to save.
+    """

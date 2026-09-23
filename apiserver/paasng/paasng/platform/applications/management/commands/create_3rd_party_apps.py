@@ -40,6 +40,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.oauth2.exceptions import BkOauthClientCodeConflictError
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
@@ -133,20 +134,6 @@ class Command(BaseCommand):
                         env_init_code_list,
                     )
 
-    def get_app_secret_key(self, code: str) -> str:
-        session = console_db.get_scoped_session()
-        legacy_app = AppManger(session).get(code)
-        if legacy_app:
-            return legacy_app.auth_token
-        return ""
-
-    def create_oauth_client_by_code(self, code: str, app_tenant_mode: str, app_tenant_id: str):
-        secret_key = self.get_app_secret_key(code)
-        # secret_key 不存在，则生成一个新的
-        if not secret_key:
-            create_oauth2_client(code, app_tenant_mode, app_tenant_id)
-            logger.info("create oauth app(code:%s) with a new randomly generated key", code)
-
     def create_3rd_app(
         self,
         app_desc: Simple3rdAppDesc,
@@ -191,15 +178,15 @@ class Command(BaseCommand):
             except IntegrityError as e:
                 logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create.")  # noqa: TRY400
                 # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容，权限中心先删除用户组，再删除分级管理员
-                delete_builtin_user_groups(application.code)
-                delete_grade_manager(application.code)
+                delete_builtin_user_groups(application.code, operator=get_paas_system_id())
+                delete_grade_manager(application.code, operator=get_paas_system_id())
                 Application.objects.filter(code=app_desc.code).delete()
                 return
 
         if created:
             module = create_default_module(application)
             try:
-                self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
+                create_oauth2_client(app_desc.code, app_tenant_mode, app_tenant_id)
             except BkOauthClientCodeConflictError:
                 if app_desc.code in env_init_code_list:
                     logger.warning(

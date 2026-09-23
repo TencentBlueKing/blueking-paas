@@ -59,6 +59,7 @@ class ResQuotaPlan(TimestampedModel):
     requests = JSONField(default={})
     is_active = models.BooleanField("是否启用", default=True)
     is_builtin = models.BooleanField("是否为内置方案", default=False)
+    allowed_app_codes = JSONField("专用应用列表", default=list)
 
     class Meta:
         ordering = ["created"]

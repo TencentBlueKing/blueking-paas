@@ -34,17 +34,21 @@ from asgiref.sync import sync_to_async
 from django.db.models import F
 from django.utils import timezone
 
-from app_spark_api.agent.conversations import state
+from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
+    AgentUnavailableError,
     EventPage,
+    GitRemote,
     StateCallback,
     get_agent_runtime_provider,
 )
+from app_spark_api.repository.git.factory import get_repo_server_config
+from app_spark_api.repository.git.services import arequire_project_git_ready
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -52,6 +56,7 @@ if TYPE_CHECKING:
 
     from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
     from app_spark_api.core.projects.models import Project
+    from app_spark_api.repository.git.models import ProjectGitRepository
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +83,9 @@ class ConversationState:
         then nothing left that could still arrive.
     :param model: Model of the live Runtime, or ``None`` when none is up. Nothing here can
         answer it otherwise: the model is the agent's own configuration, not this service's.
+    :param dev_server_status: What the live Runtime says about the workspace application it
+        supervises. ``None`` when no Runtime is up, because whether that application is
+        listening is a fact about a running sandbox and nothing stored here can stand in for it.
     """
 
     context_version: int
@@ -86,6 +94,49 @@ class ConversationState:
     running: bool
     replication_pending: bool
     model: str | None
+    dev_server_status: str | None = None
+
+
+async def get_dev_server_status(conversation: Conversation) -> str | None:
+    """Ask the live Runtime how the conversation's application is doing, without starting one.
+
+    Deliberately never fails. The preview address does not depend on a Runtime -- it stays the
+    same across restarts and is issued before the first turn -- so a Runtime that cannot be
+    reached is something to report as "nothing to show right now", not an error that should take
+    the address away with it.
+
+    :param conversation: Conversation whose application is being looked at.
+    :return: The Runtime's own word for the application's state, or ``None`` when nothing could
+        be asked. A client only has to branch on whether there is a status at all: no second,
+        derived field says the same thing in other words.
+    """
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+
+    # 没有 Runtime 是常态而不是故障：会话可能刚建、也可能被回收过。
+    if handle is None:
+        return None
+
+    try:
+        health = await AgentRuntimeClient(handle).health()
+    except AgentUnavailableError:
+        # 降成 info 且不带 traceback：Runtime 死掉但还没被回收的那段时间里，前端每轮询一次就会
+        # 走到这里，按 warning 打会把日志刷满。真正需要人看的是 Runtime 为什么死，不在这条上。
+        logger.info(
+            "Conversation %s has a Runtime that cannot be read, reporting its application as unknown",
+            conversation.id,
+        )
+        return None
+
+    return health.dev_server_status
+
+
+async def get_preview_upstream(conversation: Conversation) -> str | None:
+    """Return where this service should proxy the conversation's preview to.
+
+    :param conversation: Conversation whose application is to be proxied.
+    :return: A base URL, or ``None`` when no Runtime is serving the conversation.
+    """
+    return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:
@@ -125,12 +176,12 @@ async def close_conversation(conversation: Conversation) -> None:
     #   而停进程是尽力而为的——先停进程再落库，中间失败就会留下一个「Runtime 没了但会话还活着」
     #   的状态，下一轮对话又会把 Runtime 拉起来，等于这次结束什么也没做成。
     #
-    # `updated` 一并显式写上：`aupdate()` 绕过 `save()`，`auto_now` 不会被触发。
+    # `updated_at` 一并显式写上：`aupdate()` 绕过 `save()`，`auto_now` 不会被触发。
     changed = (
         await Conversation.objects.get_queryset()
         .filter(pk=conversation.pk)
         .live()
-        .aupdate(closed_at=closed_at, updated=closed_at)
+        .aupdate(closed_at=closed_at, updated_at=closed_at)
     )
     if not changed:
         raise ConversationClosedError(f"Conversation {conversation.id} has already been closed")
@@ -146,7 +197,9 @@ async def open_client(conversation: Conversation) -> AgentRuntimeClient:
     :return: A client pointed at a Runtime that has answered ``/health``.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
+    :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
     """
+    repo = await arequire_project_git_ready(conversation.project_id)
     provider = get_agent_runtime_provider()
     # `project_id` rather than `project`, so this never lazily loads the related row -- an
     # implicit query here would be a synchronous one in an async view.
@@ -154,8 +207,30 @@ async def open_client(conversation: Conversation) -> AgentRuntimeClient:
         project_id=conversation.project_id,
         conversation_id=str(conversation.id),
         state_callback=_state_callback(conversation),
+        git_remote=await sync_to_async(_git_remote)(repo),
     )
     return AgentRuntimeClient(handle)
+
+
+def _git_remote(repo: ProjectGitRepository) -> GitRemote:
+    """Describe the Project's repository for the Runtime that will write to it.
+
+    The clone URL is the one recorded at provisioning time, which is the host as the *sandbox*
+    sees it rather than as this process does. The two are the same only while everything runs on
+    one machine, and the moment they are not, using this process's own address would point every
+    Runtime at itself.
+
+    Wrapped in ``sync_to_async`` by the caller because reading ``write_token`` decrypts it, and
+    ``EncryptField`` is not safe to touch from the event loop.
+    """
+    # `require_project_git_ready` refuses anything without a token, so this cannot be None here.
+    assert repo.write_token is not None
+    return GitRemote(
+        clone_url=repo.clone_url,
+        branch=repo.default_branch,
+        username=get_repo_server_config().service_account,
+        token=repo.write_token,
+    )
 
 
 async def terminate_runtime(conversation: Conversation) -> None:
@@ -209,11 +284,13 @@ async def get_state(conversation: Conversation) -> ConversationState:
     model: str | None = None
     running = False
     replication_pending = False
+    dev_server_status: str | None = None
     if handle is not None:
         health = await AgentRuntimeClient(handle).health()
         model = health.model
         running = health.running
         replication_pending = health.replication_pending
+        dev_server_status = health.dev_server_status
 
     return ConversationState(
         context_version=context_version,
@@ -222,6 +299,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         running=running,
         replication_pending=replication_pending,
         model=model,
+        dev_server_status=dev_server_status,
     )
 
 
@@ -271,7 +349,26 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
     await _reject_if_closed_meanwhile(conversation)
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)
-    return await client.start_run(content=content, context_version=health.context_version)
+    message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
+        conversation, content=content
+    )
+    try:
+        run = await client.start_run(content=content, context_version=health.context_version)
+    except BaseException:
+        # Runtime 拒绝的请求不应留在历史里；输入必须先于调用创建，才不会把本轮新事件算入游标。
+        await message.adelete()
+        raise
+
+    try:
+        # 接受后立即补上用于排查的 run_id，不能等 SSE 消费完。
+        # 否则浏览器断开连接或生成失败，就会丢掉用户输入与 run 的关联信息。
+        message.run_id = run.run_id
+        await message.asave(update_fields=["run_id", "updated_at"])
+    except BaseException:
+        # 此时连接已经打开，但还没有交给 stream_run；保存失败或任务取消也必须释放它。
+        await run.aclose()
+        raise
+    return run
 
 
 async def _reject_if_closed_meanwhile(conversation: Conversation) -> None:
@@ -318,15 +415,27 @@ async def _resume_if_cold(
     Either alone would be ambiguous, and injecting into a Runtime that already holds a
     conversation would be destroying one.
 
+    Files come back before the conversation does. In between the two, the Runtime is a process
+    that remembers writing code which is not on disk yet, and a run arriving in that window
+    would have the model act on the mismatch. Nothing accepts runs until both are done, which
+    is what the caller's ordering gives us for free.
+
     :return: The health to start the run against, unchanged when there was nothing to resume.
+    :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
     if health.conversation_id is not None or health.context_version != 0:
         return health
 
-    document = await state.aload_context(conversation.id)
+    document = await _restore_files(conversation, client)
     if document is None:
         return health
 
+    # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
+    # its commit reached the remote, which is before that turn's events have finished being
+    # replicated here -- and seeding a Runtime below the real cursor makes it number its first
+    # entry over one that already exists, where the ingest's own idempotency silently drops it.
+    # The channels are append-only and nothing truncates them, so "where we are now" is always
+    # the right place for the next entry to go.
     log_seq = await state.alast_seq(conversation.id, state.MESSAGE_CHANNEL)
     ui_event_seq = await state.alast_seq(conversation.id, state.UI_EVENT_CHANNEL)
     restored_version = await client.restore_context(
@@ -344,6 +453,54 @@ async def _resume_if_cold(
         ui_event_seq,
     )
     return attrs.evolve(health, context_version=restored_version)
+
+
+async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
+    """Put the workspace back to this conversation's checkpoint, and return its paired context.
+
+    When there is no restorable checkpoint, the files are left alone and the newest archived
+    context is returned. If a checkpoint exists but the conversation has advanced past it,
+    restoration fails instead of combining files from the checkpoint with newer memory.
+
+    :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
+    """
+    checkpoint = await checkpoints.alatest_restorable(conversation.id)
+    if checkpoint is None:
+        # There is no file snapshot that this service can restore or compare. This is the normal
+        # shape for conversations that only read files or do non-code work, and it is also the
+        # safest useful fallback when an incomplete checkpoint cannot be restored.
+        return await state.aload_context(conversation.id)
+
+    newest = await state.acontext_version(conversation.id)
+    # A checkpoint the conversation has already moved past is not usable, even though both its
+    # halves are here. Seeding the Runtime with an older version would have it re-issue version
+    # numbers this service has already archived, and pairing the newest context with this older
+    # commit would violate the restore invariant instead. Refuse until an operator recovers or
+    # deliberately discards the unmatched state.
+    if checkpoint.context_version != newest:
+        raise AgentUnavailableError(
+            f"Conversation {conversation.id} has archived context version {newest}, but its "
+            f"latest restorable workspace checkpoint only covers version "
+            f"{checkpoint.context_version}; refusing to combine mismatched files and context."
+        )
+
+    outcome = await client.restore_workspace(checkpoint.commit)
+    document = await state.aload_context_version(conversation.id, checkpoint.context_version)
+    if document is None:
+        # The checkpoint was found *because* its version row exists, so failing to read the
+        # document means the row and the blob disagree. Carrying on would pair files we have
+        # just restored with a context from somewhere else, so this fails out loud.
+        raise AgentUnavailableError(
+            f"The checkpoint at {checkpoint.commit} names context version "
+            f"{checkpoint.context_version}, which is no longer readable."
+        )
+    logger.info(
+        "Conversation %s restored its workspace to checkpoint %s (%s)",
+        conversation.id,
+        checkpoint.commit,
+        outcome,
+    )
+    return document
 
 
 def _state_callback(conversation: Conversation) -> StateCallback:

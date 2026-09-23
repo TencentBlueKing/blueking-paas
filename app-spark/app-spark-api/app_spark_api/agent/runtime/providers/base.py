@@ -22,7 +22,7 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, StateCallback
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, StateCallback
 
 
 class AgentRuntimeProvider(abc.ABC):
@@ -42,6 +42,7 @@ class AgentRuntimeProvider(abc.ABC):
         project_id: str,
         conversation_id: str,
         state_callback: StateCallback | None = None,
+        git_remote: GitRemote | None = None,
     ) -> AgentRuntimeHandle:
         """Return a live Runtime for ``conversation_id``, starting one if needed.
 
@@ -52,14 +53,16 @@ class AgentRuntimeProvider(abc.ABC):
 
         Implementations must be idempotent: a second call for a conversation that is already
         served has to return the running Runtime rather than start a rival one. A consequence
-        worth stating: ``state_callback`` is only read when a Runtime is actually started, so a
-        caller cannot use it to re-point a Runtime that is already up.
+        worth stating: ``state_callback`` and ``git_remote`` are only read when a Runtime is
+        actually started, so a caller cannot use either to re-point a Runtime that is already up.
 
         :param project_id: Project being developed; its workspace is shared by every one of its
             conversations.
         :param conversation_id: Conversation the Runtime is bound to, one per Runtime.
         :param state_callback: Where the Runtime should replicate its durable state, and the
             token to do it with. Omitted for a Runtime that is to keep its state to itself.
+        :param git_remote: Where the Runtime should persist its workspace files. Omitted for a
+            Runtime whose workspace is to live only on local disk.
         :return: Where the Runtime can be reached.
         :raises AgentProvisionError: If no Runtime could be brought up.
         :raises AgentWorkspaceBusyError: If another conversation of the same Project already
@@ -77,6 +80,24 @@ class AgentRuntimeProvider(abc.ABC):
 
         :param conversation_id: Conversation to look for.
         :return: Where the Runtime can be reached, or ``None`` if none is serving it.
+        """
+
+    @abc.abstractmethod
+    async def preview_upstream(self, conversation_id: str) -> str | None:
+        """Return the base URL this service should proxy the conversation's preview to.
+
+        The workspace application, not the Runtime's own API: what a user opens when they want
+        to look at what the agent built. Asking the provider is the whole point -- where that
+        application is reachable from is as provider-specific as where the Runtime lives, and
+        it is the one thing the sandbox itself cannot say, since nothing inside it knows how
+        the outside addresses it.
+
+        This never starts anything, for the same reason :meth:`peek` does not: looking at a
+        conversation must not provision an agent for it.
+
+        :param conversation_id: Conversation whose application is to be proxied.
+        :return: A scheme-and-authority base URL, or ``None`` when no Runtime is serving the
+            conversation and there is therefore nothing to proxy to.
         """
 
     @abc.abstractmethod

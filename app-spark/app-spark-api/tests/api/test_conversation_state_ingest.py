@@ -163,6 +163,7 @@ def test_a_malformed_record_is_refused(runtime: RuntimeCaller) -> None:
     response = runtime.post("messages", [{"seq": 0, "run_id": "a", "timestamp": TIMESTAMP}])
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert json.loads(response.content)["code"] == "VALIDATION_ERROR"
 
 
 def test_a_context_document_is_archived_as_it_arrived(runtime: RuntimeCaller) -> None:
@@ -180,12 +181,14 @@ def test_a_context_without_a_version_is_refused(runtime: RuntimeCaller) -> None:
     response = runtime.put_context({"messages": []})
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert json.loads(response.content)["code"] == "INVALID_CONVERSATION_STATE"
 
 
 def test_a_context_body_that_is_not_an_object_is_refused(runtime: RuntimeCaller) -> None:
     response = runtime.put_context([1, 2])
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert json.loads(response.content)["code"] == "JSON_OBJECT_REQUIRED"
 
 
 def test_a_context_larger_than_djangos_default_body_limit_is_still_archived(
@@ -229,13 +232,17 @@ def test_a_message_batch_larger_than_djangos_default_body_limit_is_still_stored(
 def test_an_unauthenticated_push_is_refused(conversation) -> None:
     caller = RuntimeCaller(conversation, token="")
 
-    assert caller.post("messages", messages(1)).status_code == HTTPStatus.UNAUTHORIZED
+    response = caller.post("messages", messages(1))
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert json.loads(response.content)["code"] == "AUTHENTICATION_REQUIRED"
 
 
 def test_a_forged_token_is_refused(conversation) -> None:
     caller = RuntimeCaller(conversation, token=f"{conversation.id}:not-a-signature")
 
-    assert caller.post("messages", messages(1)).status_code == HTTPStatus.UNAUTHORIZED
+    response = caller.post("messages", messages(1))
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert json.loads(response.content)["code"] == "AUTHENTICATION_REQUIRED"
 
 
 def test_a_token_for_another_conversation_cannot_write_into_this_one(
@@ -251,6 +258,7 @@ def test_a_token_for_another_conversation_cannot_write_into_this_one(
     response = caller.post("messages", messages(1))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    assert json.loads(response.content)["code"] == "CONVERSATION_NOT_FOUND"
     assert state.last_seq(other_conversation.id, state.MESSAGE_CHANNEL) == 0
 
 

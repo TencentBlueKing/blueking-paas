@@ -212,3 +212,68 @@ class TestResourceQuotaPlanViewSet:
                 "process_name": "web",
             },
         ]
+
+    def test_create_normalizes_allowed_app_codes(self, plat_mgt_api_client, sample_plan_data):
+        sample_plan_data["allowed_app_codes"] = [" bk-hids ", "", "bk-hids", "future-app"]
+        url = reverse("plat_mgt.res_quota_plans.list_create")
+        response = plat_mgt_api_client.post(url, data=sample_plan_data)
+        assert response.status_code == 201
+
+        plan = ResQuotaPlan.objects.get(name=sample_plan_data["name"])
+        assert plan.allowed_app_codes == ["bk-hids", "future-app"]
+
+    def test_list_returns_allowed_app_codes(self, plat_mgt_api_client, created_plan):
+        created_plan.allowed_app_codes = ["bk-hids"]
+        created_plan.save()
+
+        url = reverse("plat_mgt.res_quota_plans.list_create")
+        response = plat_mgt_api_client.get(url)
+        assert response.status_code == 200
+        plan_data = next(item for item in response.data if item["name"] == created_plan.name)
+        assert plan_data["allowed_app_codes"] == ["bk-hids"]
+
+    def test_update_keeps_allowed_app_codes_when_omitted(self, plat_mgt_api_client, created_plan, sample_plan_data):
+        created_plan.allowed_app_codes = ["bk-hids"]
+        created_plan.save()
+
+        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
+        update_data = sample_plan_data.copy()
+        response = plat_mgt_api_client.put(url, data=update_data)
+        assert response.status_code == 200
+
+        created_plan.refresh_from_db()
+        assert created_plan.allowed_app_codes == ["bk-hids"]
+
+    def test_update_clears_allowed_app_codes(self, plat_mgt_api_client, created_plan, sample_plan_data):
+        created_plan.allowed_app_codes = ["bk-hids"]
+        created_plan.save()
+
+        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
+        update_data = sample_plan_data.copy()
+        update_data["allowed_app_codes"] = []
+        response = plat_mgt_api_client.put(url, data=update_data)
+        assert response.status_code == 200
+
+        created_plan.refresh_from_db()
+        assert created_plan.allowed_app_codes == []
+
+    def test_update_builtin_rejects_allowed_app_codes(self, plat_mgt_api_client):
+        builtin = ResQuotaPlan.objects.create(
+            name=f"builtin-{uuid.uuid4().hex[:8]}",
+            limits={"cpu": "1000m", "memory": "1024Mi"},
+            requests={"cpu": "200m", "memory": "256Mi"},
+            is_builtin=True,
+        )
+        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin.id})
+        response = plat_mgt_api_client.put(
+            url,
+            data={
+                "name": builtin.name,
+                "limits": builtin.limits,
+                "requests": builtin.requests,
+                "allowed_app_codes": ["bk-hids"],
+            },
+        )
+        assert response.status_code == 400
+        builtin.refresh_from_db()
+        assert builtin.allowed_app_codes == []

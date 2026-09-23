@@ -29,13 +29,20 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import pytest
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from app_spark_api.agent.conversations import services
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations import services, state
+from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH
+from app_spark_api.agent.conversations.history import DEFAULT_PAGE_RUNS, MAX_PAGE_RUNS
+from app_spark_api.agent.conversations.models import (
+    Conversation,
+    ConversationUserMessage,
+)
 from app_spark_api.agent.runtime import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project
 from tests.helpers import create_user
 
 if TYPE_CHECKING:
@@ -43,40 +50,20 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
-PROJECT_ID = "spark-demo"
-CONVERSATIONS_URL = f"/api/projects/{PROJECT_ID}/conversations/"
-
 
 @pytest.fixture(autouse=True)
 def runtime_provider(settings, tmp_path: Path) -> None:
     """Give the provider somewhere harmless to point at.
 
     Ending a conversation goes through ``terminate_runtime()``, which needs a provider to exist
-    even when there is no Runtime for it to stop. The local provider only validates its
-    configuration on construction and touches none of these paths unless it spawns something.
+    even when there is no Runtime for it to stop.
     """
-    settings.AGENT_RUNTIME_PROVIDER = "local_process"
-    settings.AGENT_RUNTIME_PROVIDER_CONFIG = {
-        "agent_project_dir": str(tmp_path / "agent"),
-        "workspace_root": str(tmp_path / "workspaces"),
-        "state_root": str(tmp_path / "agent-state"),
-    }
+    configure_local_provider(settings, tmp_path)
 
 
 @pytest.fixture
 def project(bk_user) -> Project:
-    """A Project the logged-in caller can reach.
-
-    Not the shared ``project`` fixture: that one uses the user's own random ``tenant_id``, while
-    the API scopes by ``get_tenant()``, which is ``default`` unless multi-tenant mode is on.
-    """
-    return Project.objects.create(
-        id=PROJECT_ID,
-        name="Spark Demo",
-        creator=bk_user,
-        owner=bk_user,
-        tenant_id=get_tenant(bk_user).id,
-    )
+    return create_reachable_project(bk_user)
 
 
 @pytest.fixture
@@ -126,10 +113,10 @@ async def test_a_listed_conversation_carries_what_it_takes_to_open_it(aapi_clien
 async def test_the_list_is_newest_first(aapi_client, project, bk_user):
     for index in range(3):
         created = await make_conversation(project, bk_user.pk)
-        # `created` is auto_now_add, so conversations built back to back can share a timestamp
+        # `created_at` is auto_now_add, so conversations built back to back can share a timestamp
         # and leave the order down to the tiebreaker. Set explicitly, since the order is the
         # thing under test here.
-        await Conversation.objects.filter(pk=created.pk).aupdate(created=datetime(2026, 1, index + 1, tzinfo=UTC))
+        await Conversation.objects.filter(pk=created.pk).aupdate(created_at=datetime(2026, 1, index + 1, tzinfo=UTC))
 
     body = (await aapi_client.get(CONVERSATIONS_URL)).json()
 
@@ -193,6 +180,7 @@ async def someone_elses_conversation(bk_user) -> Conversation:
         ("post", ""),
         ("get", "{number}/"),
         ("get", "{number}/ui-events/"),
+        ("get", "{number}/history/"),
         ("post", "{number}/close/"),
     ],
 )
@@ -213,6 +201,9 @@ async def test_no_conversation_endpoint_reaches_another_users_project(
     response = await getattr(aapi_client, method)(url)
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    # Never CONVERSATION_NOT_FOUND: naming the inner resource on the endpoints that take a
+    # number would confirm the Project is there to be guessed at.
+    assert response.json()["code"] == "RESOURCE_NOT_FOUND"
     await someone_elses_conversation.arefresh_from_db()
     assert someone_elses_conversation.is_live
 
@@ -279,7 +270,7 @@ async def test_ending_a_conversation_twice_is_refused(aapi_client, conversation)
     response = await aapi_client.post(close_url(conversation.number))
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {"detail": "This conversation has been closed."}
+    assert response.json() == {"code": "CONVERSATION_CLOSED", "detail": "This conversation has been closed."}
 
 
 async def test_ending_a_conversation_revokes_its_runtimes_authority_to_write(aapi_client, conversation):
@@ -372,7 +363,7 @@ async def test_a_closed_conversation_cannot_be_advanced(aapi_client, conversatio
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {"detail": "This conversation has been closed."}
+    assert response.json() == {"code": "CONVERSATION_CLOSED", "detail": "This conversation has been closed."}
 
 
 async def test_a_closed_conversation_still_reports_its_state(aapi_client, conversation):
@@ -390,8 +381,163 @@ async def test_ending_a_conversation_that_does_not_exist_is_not_found(aapi_clien
     response = await aapi_client.post(close_url(404))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()["code"] == "CONVERSATION_NOT_FOUND"
 
 
 async def test_an_anonymous_caller_can_neither_list_nor_end(aanonymous_api_client, conversation):
     assert (await aanonymous_api_client.get(CONVERSATIONS_URL)).status_code == HTTPStatus.UNAUTHORIZED
     assert (await aanonymous_api_client.post(close_url(conversation.number))).status_code == (HTTPStatus.UNAUTHORIZED)
+
+
+# --- what a turn may carry ---------------------------------------------------------------
+
+
+async def test_an_oversized_turn_is_refused_before_it_reaches_the_database(aapi_client, conversation):
+    """The body limit is 64MB for the Runtime's sake, so the turn needs a limit of its own.
+
+    Without it a caller could park an arbitrarily large blob in ``ConversationUserMessage``,
+    which is kept for the life of the conversation and read back whole on every history load.
+    Also proves the check lands before the Runtime is spawned: there is no agent here, so
+    anything that got past validation would fail differently.
+    """
+    response = await aapi_client.post(
+        f"{CONVERSATIONS_URL}{conversation.number}/runs/",
+        data={"content": "x" * (MAX_RUN_CONTENT_LENGTH + 1)},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert not await ConversationUserMessage.objects.filter(conversation=conversation).aexists()
+
+
+async def test_an_empty_turn_is_refused(aapi_client, conversation):
+    response = await aapi_client.post(
+        f"{CONVERSATIONS_URL}{conversation.number}/runs/",
+        data={"content": ""},
+        content_type="application/json",
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+# --- paging back through the history ------------------------------------------------------
+#
+# The paging itself is pinned down in `tests/agent/conversations/test_history.py`; what is left
+# for the endpoint is the contract a client actually codes against -- which end it starts from,
+# what it hands back to keep going, and how a cursor it made up is answered.
+
+
+async def seed_turns(conversation: Conversation, *turn_sizes: int) -> None:
+    """Leave behind what completed turns leave behind, without an agent to produce them.
+
+    The input goes in before its events, which is the real order and the only one that gives
+    each input the ``after_seq`` the history reader positions it by.
+
+    :param conversation: Conversation to advance.
+    :param turn_sizes: One entry per turn, saying how many AG-UI events it produced.
+    """
+
+    def seed() -> None:
+        for index, events in enumerate(turn_sizes, start=1):
+            ConversationUserMessage.objects.create_for_conversation(conversation, content=f"turn-{index}")
+            start = state.last_seq(conversation.id, state.UI_EVENT_CHANNEL) + 1
+            state.append_records(
+                conversation.id,
+                state.UI_EVENT_CHANNEL,
+                [
+                    {
+                        "seq": seq,
+                        "run_id": f"run-{index}",
+                        "timestamp": "2026-01-01T00:00:00+00:00",
+                        "event": {"type": "CUSTOM", "n": seq},
+                    }
+                    for seq in range(start, start + events)
+                ],
+            )
+
+    await sync_to_async(seed)()
+
+
+def inputs_on(page: dict) -> list[str]:
+    """The user's own lines on a page, which is the readable shape of "which turns are here"."""
+    return [record["user_message"]["content"] for record in page["records"] if record["user_message"]]
+
+
+async def test_the_first_history_page_is_the_newest_turns(aapi_client, conversation):
+    """No cursor means the end of the conversation: that is where a returning reader resumes.
+
+    Sized off the default rather than a literal count, so that tuning how much a page holds
+    does not read as a regression here.
+    """
+    total = DEFAULT_PAGE_RUNS + 2
+    await seed_turns(conversation, *([2] * total))
+
+    body = (await aapi_client.get(f"{CONVERSATIONS_URL}{conversation.number}/history/")).json()
+
+    newest = range(total - DEFAULT_PAGE_RUNS + 1, total + 1)
+    assert inputs_on(body) == [f"turn-{index}" for index in newest]
+    assert body["next_cursor"] is not None
+    # The channel's end, not this page's: it is the watermark a client then catches up from
+    # over ui-events, so it must not follow the page backwards.
+    assert body["last_seq"] == total * 2
+
+
+async def test_the_cursor_walks_back_to_the_start_of_the_conversation(aapi_client, conversation):
+    """Seeded past what one page holds, so this exercises the walk rather than a single read."""
+    total = DEFAULT_PAGE_RUNS * 2 + 1
+    await seed_turns(conversation, *([2] * total))
+    url = f"{CONVERSATIONS_URL}{conversation.number}/history/"
+
+    walked: list[str] = []
+    visited = 0
+    cursor = None
+    for _ in range(total + 1):
+        page = (await aapi_client.get(url, data={"cursor": cursor} if cursor else {})).json()
+        walked = inputs_on(page) + walked
+        visited += 1
+        cursor = page["next_cursor"]
+        if cursor is None:
+            break
+
+    assert cursor is None, "paging never reached the start of the conversation"
+    assert visited > 1, "the whole conversation arrived in one page, so nothing was walked"
+    assert walked == [f"turn-{index}" for index in range(1, total + 1)]
+
+
+async def test_a_smaller_page_is_honoured(aapi_client, conversation):
+    await seed_turns(conversation, 2, 2, 2)
+
+    body = (await aapi_client.get(f"{CONVERSATIONS_URL}{conversation.number}/history/", data={"runs": 1})).json()
+
+    assert inputs_on(body) == ["turn-3"]
+
+
+async def test_a_history_cursor_this_service_did_not_issue_is_refused(aapi_client, conversation):
+    """Named as its own failure rather than silently restarting at the newest page, which the
+
+    client would experience as "load more does nothing".
+    """
+    response = await aapi_client.get(
+        f"{CONVERSATIONS_URL}{conversation.number}/history/",
+        data={"cursor": "made-up"},
+    )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()["code"] == "INVALID_HISTORY_CURSOR"
+
+
+@pytest.mark.parametrize("runs", [0, -1, MAX_PAGE_RUNS + 1])
+async def test_a_page_size_outside_the_allowed_range_is_refused(aapi_client, conversation, runs):
+    """An upper bound as well as a lower one: a page carries whole tool-call arguments, so
+
+    "give me every turn at once" is how a long conversation becomes a multi-megabyte response.
+    """
+    response = await aapi_client.get(
+        f"{CONVERSATIONS_URL}{conversation.number}/history/",
+        data={"runs": runs},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: app-spark-forgejo
+description: App Spark repo-server (Forgejo) Git host
+type: application
+version: 0.1.0-alpha.1
+# 部署的 Forgejo 版本，同时作为 image.tag 的默认值。升版本要同步改 Dockerfile 和 compose.yaml。
+appVersion: "15.0.7"
+kubeVersion: ">=1.19.0-0"
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    version: 2.13.3

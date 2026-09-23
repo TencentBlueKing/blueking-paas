@@ -143,7 +143,7 @@ class Group(OperationGroup):
 
 
 class Client(APIGatewayClient):
-    """蓝鲸权限中心提供的 OpenAPI"""
+    """蓝鲸权限中心 V3 提供的 OpenAPI"""
 
     _api_name = "bk-iam"
 

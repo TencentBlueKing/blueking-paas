@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -15,6 +14,4 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
-class AuthenticationFailed(Exception):
-    """权限中心回调认证失败"""
+"""CLI for initialising and verifying the App-Spark Forgejo Git host."""

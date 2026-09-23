@@ -73,6 +73,9 @@ persistence:
 django:
   # 必填：部署时设置随机生成且保持稳定的 SECRET_KEY。
   secretKey: ""
+  # 必填：EncryptField 使用的 Fernet key，必须自己生成且保持稳定。
+  # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  encryptSecretKey: ""
   allowedHosts: ["*"]
   # debug: false
   # autoCreateRegularUser: true
@@ -122,6 +125,18 @@ bkAuth:
 #   ENDPOINT: ""
 #   USERNAME: ""
 #   PASSWORD: ""
+
+# Git 持久化（repo-server）。API 进程启动必须配置，省略该键则无法启动。
+# repoServer:
+#   type: forgejo
+#   base_url: ""
+#   clone_url: ""
+#   org: app-spark
+#   service_account: app-spark-bot
+#   service_account_password: ""
+#   default_branch: main
+#   commit_author_name: App-Spark
+#   commit_author_email: app-spark@localhost.invalid
 
 agent:
   # runtimeProvider: local_process

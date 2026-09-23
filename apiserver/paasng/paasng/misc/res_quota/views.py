@@ -17,19 +17,26 @@
 
 
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 
-from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 
 from .serializers import ResQuotaPlanSLZ
 
 
-class ResQuotaPlanOptionsView(APIView):
+class ResQuotaPlanOptionsView(ViewSet, ApplicationCodeInPathMixin):
     """资源配额方案 选项视图"""
 
-    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
-    def get(self, request):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True), tags=["资源配额方案"])
+    def list(self, request, code):
+        application = self.get_application()
         return Response(
             data=ResQuotaPlanSLZ(
                 [
@@ -38,7 +45,7 @@ class ResQuotaPlanOptionsView(APIView):
                         "limit": plan_obj.limits,
                         "request": plan_obj.requests,
                     }
-                    for plan_obj in ResQuotaPlan.objects.filter(is_active=True)
+                    for plan_obj in ResQuotaPlanPolicy().list_selectable(application.code)
                 ],
                 many=True,
             ).data

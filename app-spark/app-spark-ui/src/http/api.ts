@@ -2,8 +2,11 @@ import http, { resolveApiUrl } from './fetch';
 import RequestError from './fetch/request-error';
 import type {
   AuthenticatedUserResponse,
+  ConversationHistoryResponse,
   ConversationResponse,
+  GitRepositoryResponse,
   ListConversationsQuery,
+  ListHistoryQuery,
   ListUiEventsQuery,
   PagedConversationResponse,
   PagedProjectResponse,
@@ -19,9 +22,15 @@ export type {
   AgUiEvent,
   AnonymousUserResponse,
   AuthenticatedUserResponse,
+  ConversationHistoryRecord,
+  ConversationHistoryResponse,
   ConversationResponse,
   ErrorResponse,
+  GitCommitIdentity,
+  GitRepositoryResponse,
+  GitRepositoryStatus,
   ListConversationsQuery,
+  ListHistoryQuery,
   ListUiEventsQuery,
   PagedConversationResponse,
   PagedProjectResponse,
@@ -33,6 +42,7 @@ export type {
   StartRunRequest,
   UiEventPageResponse,
   UserInfoResponse,
+  UserMessageRecord,
 } from './types';
 
 // 业务 API 前缀，不含 SITE_URL。绝对 BK_API_URL 只给本地 webpack 代理用
@@ -48,6 +58,13 @@ export const listProjects = (query: PageQuery = {}): Promise<PagedProjectRespons
 
 export const createProject = (payload: ProjectCreateRequest): Promise<ProjectResponse> => (
   http.post(`${apiPrefix}/projects/`, payload)
+);
+
+/**
+ * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。
+ */
+export const getGitRepository = (projectId: string): Promise<GitRepositoryResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/git-repository/`, {}, { globalError: false })
 );
 
 export const listConversations = (
@@ -75,12 +92,26 @@ export const closeConversation = (
   http.post(`${apiPrefix}/projects/${projectId}/conversations/${number}/close/`)
 );
 
+/** 拉取已入库的 AG-UI 事件，用于 SSE 意外中断后从 `since` 处追赶；完整历史请用 `listHistory` */
 export const listUiEvents = (
   projectId: string,
   number: number,
   query: ListUiEventsQuery = {},
 ): Promise<UiEventPageResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query)
+);
+
+/**
+ * 拉取一页展示历史（用户输入 + AG-UI 事件）。
+ *
+ * 不带游标时给的是**最新**的若干轮，往更早翻就一直用上一页的 `next_cursor`，直到它为 null。
+ */
+export const listHistory = (
+  projectId: string,
+  number: number,
+  query: ListHistoryQuery = {},
+): Promise<ConversationHistoryResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/history/`, query)
 );
 
 /** 发起一轮对话，返回 AG-UI SSE Response，调用方自行读流 */

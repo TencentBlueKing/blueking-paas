@@ -15,6 +15,8 @@ dependencies = [
     # Pulled in transitively anyway, but declared because `replication/client.py` imports it
     # directly to push state to the control plane.
     "httpx>=0.28.1",
+    # Same reason: `agent.py`, `bkaidev/auth.py` and the app readiness probe import it directly.
+    "httpx2>=2.10.0,<3.0.0",
     # Required by environs; declared explicitly because `settings.py` imports its validators
     # directly rather than through the untyped `environs.validate` alias.
     "marshmallow>=4.0.0,<5.0.0",
@@ -57,6 +59,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "live: exercises the real DeepSeek API",
+    "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
 ]
 
 [tool.ruff]

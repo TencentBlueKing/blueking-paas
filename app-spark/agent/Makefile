@@ -30,6 +30,10 @@ test: ## Run unit tests (excludes e2e)
 run: ## Start the Agent HTTP server
 	uv run python -m app_spark_agent
 
+.PHONY: update-gitignore-assets
+update-gitignore-assets: ## Refresh vendored github/gitignore templates in git/assets
+	uv run python -m app_spark_agent.git.update_assets
+
 ##@ Build
 
 .PHONY: docker-build

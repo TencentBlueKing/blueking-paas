@@ -42,27 +42,69 @@
 #   USERNAME: ''
 #   PASSWORD: ''
 
+## EncryptField 使用的 Fernet key。进程启动必须配置，不要留空：
+## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# BKKRILL_ENCRYPT_SECRET_KEY: ''
+# ENCRYPT_CIPHER_TYPE: FernetCipher
+
+## Git 持久化（repo-server）。进程启动必须配置，没有关闭开关。
+## clone_url 是 Agent 侧地址，不要默认写成 localhost。
+# REPO_SERVER:
+#   type: forgejo
+#   base_url: ''
+#   clone_url: ''
+#   org: app-spark
+#   service_account: app-spark-bot
+#   service_account_password: ''
+#   default_branch: main
+#   timeout_seconds: 30.0
+#   commit_author_name: App-Spark
+#   commit_author_email: app-spark@localhost.invalid
+
 ## ---------------------------------- Agent Runtime 驱动相关配置 ----------------------------------
 
-## 用什么方式为一个会话拉起 Agent Runtime，目前只有 local_process
-## （在本机 spawn 一个 agent 进程，仅供开发与测试；需先在 agent 目录执行过 uv sync）
+## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
+## 目前只有 local_process（在本机 spawn 一个 agent 进程，仅供开发与测试）
 # AGENT_RUNTIME_PROVIDER: local_process
 
-## 上述驱动方式各自的配置，字段以对应的 config 类为准（local_process 见 LocalProcessConfig）
+## 上述驱动方式各自的配置，字段以对应的 config 类为准。
+##
+## local_process 类型配置示例（详见 LocalProcessConfig）：
+##
 # AGENT_RUNTIME_PROVIDER_CONFIG:
-#   ## agent 项目目录，即 agent 的 pyproject.toml 所在处
+#   ## 必填。agent 项目目录。
 #   agent_project_dir: ''
-#   ## 各 Project 的 workspace 的父目录
+#   ## 必填。各 Project 的 workspace 的父目录，实际工作目录为 {workspace_root}/{project_id}。
 #   workspace_root: ''
-#   ## 各会话的状态目录的父目录，必须在 workspace_root 之外，否则 agent 可能用自己的文件工具毁掉自己的历史
+#   ## 必填。各会话状态目录的父目录。
 #   state_root: ''
-#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL / APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值
+#   ## 本服务对 agent 进程可达的地址，agent 用它把会话状态回写回来。默认 http://127.0.0.1:8000。
+#   callback_base_url: http://127.0.0.1:8000
+#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL，不填则用 agent 自己的默认值。
 #   model: ''
+#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值。
 #   model_api_key: ''
-#   ## 等待新起的 Runtime 变健康的超时秒数
+#   ## 等待新起的 Runtime 通过 /health 健康检查的超时秒数。
 #   startup_timeout_seconds: 60
-#   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量
+#   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
 #   extra_env: {}
+
+## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
+## 存储而不是塞进 MySQL 行里。backend 可选 host_tmp_path（root 为父目录）或 bk_repo（root 为
+## 制品库仓库名）
+# AGENT_CONTEXT_STORAGE:
+#   backend: host_tmp_path
+#   root: /tmp/app-spark/agent-contexts
+
+## 除被检查点引用的版本外，一个会话还额外保留多少个最近的上下文版本（小于 1 会被抬回 1）
+# AGENT_CONTEXT_VERSIONS_KEPT: 5
+
+## 一个会话保留多少个最近的检查点（每个检查点都会钉住一份上下文 blob 不被回收）
+# AGENT_CHECKPOINTS_KEPT: 3
+
+## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走普通 JSON 请求体，一份 context
+## 序列化后远超 Django 默认的 2.5MB
+# DATA_UPLOAD_MAX_MEMORY_SIZE: 67108864
 
 ## 是否启用多租户模式，仅支持在初次部署时配置，部署后不支持动态调整
 # ENABLE_MULTI_TENANT_MODE: false

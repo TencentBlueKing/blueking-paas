@@ -1,0 +1,23 @@
+{{- if not .Values.persistence.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "app-spark-forgejo.claimName" . }}
+  labels:
+    {{- include "app-spark-forgejo.labels" . | nindent 4 }}
+  {{- if .Values.persistence.retainOnDelete }}
+  annotations:
+    # 卷上是全部 Project 的 Git 仓库，误删无法从数据库重建，因此默认不随 release 卸载。
+    # 留下的 PVC 需要手工清理，同名 release 重新安装会直接复用它。
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+{{- end }}

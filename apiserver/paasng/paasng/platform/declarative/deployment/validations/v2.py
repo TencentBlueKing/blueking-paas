@@ -90,7 +90,15 @@ class DeploymentDescSLZ(serializers.Serializer):
                     "name": proc_type,
                     # NOTE: 此处的 replicas 可能为 None，也被允许使用 None
                     "replicas": process["replicas"],
-                    "res_quota_plan": get_quota_plan(process["plan"]) if process.get("plan") else None,
+                    "res_quota_plan": (
+                        get_quota_plan(
+                            process["plan"],
+                            app_code=self.context.get("app_code"),
+                            current_plan_name=(self.context.get("current_plans") or {}).get((proc_type, None)),
+                        )
+                        if process.get("plan")
+                        else None
+                    ),
                     # proc_command 用于向后兼容普通应用部署场景
                     # (shlex.split + shlex.join 难以保证正确性)
                     "proc_command": process["command"],

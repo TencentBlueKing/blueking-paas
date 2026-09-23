@@ -32,17 +32,17 @@ from typing import TYPE_CHECKING, Any
 # a type used in a path parameter cannot live in the TYPE_CHECKING block below.
 from uuid import UUID  # noqa: TC003
 
-from django.shortcuts import aget_object_or_404
 from ninja import Field, Path, Router, Schema
-from ninja.errors import HttpError
 
-from app_spark_api.agent.conversations import state
+from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import (
     InvalidStateToken,
     StateTokenClaims,
     read_state_token,
 )
+from app_spark_api.entities import ERROR_RESPONSES
+from app_spark_api.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:
@@ -59,6 +59,7 @@ BEARER_PREFIX = "Bearer "
 MESSAGES_SEGMENT = "messages"
 UI_EVENTS_SEGMENT = "ui-events"
 CONTEXT_SEGMENT = "context"
+CHECKPOINT_SEGMENT = "checkpoint"
 
 APPEND_MESSAGES_URL_NAME = "internal-append-messages"
 
@@ -146,9 +147,25 @@ class ContextResponse(Schema):
     context_version: int = Field(description="已归档的上下文版本")
 
 
+class CheckpointRequest(Schema):
+    """一个已经到达远端的提交，以及它配套的会话位置。"""
+
+    commit: str = Field(min_length=7, max_length=64, description="已推送的提交 SHA")
+    tag: str = Field(min_length=1, max_length=255, description="钉住该提交的远端 tag")
+    run_id: str = Field(min_length=1, max_length=64, description="产生这次提交的 run")
+    context_version: int = Field(ge=0, description="和这次提交配套的上下文版本")
+    completed: bool = Field(description="该 run 是否完整结束并提交了最终上下文")
+
+
+class CheckpointResponse(Schema):
+    """这个检查点此刻能不能用来恢复。"""
+
+    restorable: bool = Field(description="代码和配套上下文是否都已就位")
+
+
 @router.post(
     f"{{conversation_id}}/state/{MESSAGES_SEGMENT}",
-    response=AppendResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppendResponse},
     url_name=APPEND_MESSAGES_URL_NAME,
     summary="回写原始对话记录",
 )
@@ -162,7 +179,7 @@ async def append_messages(
 
 @router.post(
     f"{{conversation_id}}/state/{UI_EVENTS_SEGMENT}",
-    response=AppendResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: AppendResponse},
     url_name="internal-append-ui-events",
     summary="回写 AG-UI 事件历史",
 )
@@ -176,7 +193,7 @@ async def append_ui_events(
 
 @router.put(
     f"{{conversation_id}}/state/{CONTEXT_SEGMENT}",
-    response=ContextResponse,
+    response={**ERROR_RESPONSES, HTTPStatus.OK: ContextResponse},
     url_name="internal-put-context",
     summary="回写会话上下文文档",
 )
@@ -195,8 +212,42 @@ async def put_context(
         document = _json_object(await _read_json(request))
         version = await state.asave_context(conversation_id, document)
     except state.ConversationStateError as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise error_codes.INVALID_CONVERSATION_STATE from exc
     return ContextResponse(context_version=version)
+
+
+@router.put(
+    f"{{conversation_id}}/state/{CHECKPOINT_SEGMENT}",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: CheckpointResponse},
+    url_name="internal-put-checkpoint",
+    summary="登记一个已推送到远端的可恢复点",
+)
+async def put_checkpoint(
+    request: HttpRequest,
+    payload: CheckpointRequest,
+    conversation_id: UUID = CONVERSATION_ID,
+):
+    """记下 Runtime 刚推上去的那次提交，并回答它现在能不能用来恢复。
+
+    游标不由 Runtime 报，而是在这里就地读当前已存到哪：Runtime 报的是它自己以为推到了哪，一旦
+    某个批次其实没落库，恢复就会从一个并不存在的位置继续。这里读到的是真的存下来的。
+
+    ``restorable`` 为 false 不是错误，是「代码到了、上下文还没到」这个正常的中间态。Runtime 之后
+    重报同一个检查点即可，不需要——也不应该——再做一次提交。
+    """
+    conversation = await _authorized_conversation(request, conversation_id)
+    restorable = await checkpoints.arecord(
+        conversation_id,
+        run_id=payload.run_id,
+        commit=payload.commit,
+        tag=payload.tag,
+        context_version=payload.context_version,
+        completed=payload.completed,
+        log_seq=await state.alast_seq(conversation_id, state.MESSAGE_CHANNEL),
+        ui_event_seq=await state.alast_seq(conversation_id, state.UI_EVENT_CHANNEL),
+        state_epoch=conversation.state_epoch,
+    )
+    return CheckpointResponse(restorable=restorable)
 
 
 async def _append(
@@ -211,7 +262,7 @@ async def _append(
     try:
         stored_through = await state.aappend_records(conversation_id, channel, records)
     except state.ConversationStateError as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise error_codes.INVALID_CONVERSATION_STATE from exc
     return AppendResponse(last_seq=stored_through)
 
 
@@ -226,12 +277,15 @@ async def _authorized_conversation(request: HttpRequest, conversation_id: UUID) 
     # `HttpRequest` knows nothing about it.
     claims: StateTokenClaims = request.auth  # type: ignore[attr-defined]
     if claims.conversation_id != str(conversation_id):
-        raise HttpError(HTTPStatus.NOT_FOUND, "No such conversation.")
-    conversation = await aget_object_or_404(Conversation.objects, id=conversation_id)
+        raise error_codes.CONVERSATION_NOT_FOUND
+    try:
+        conversation = await Conversation.objects.aget(id=conversation_id)
+    except Conversation.DoesNotExist as exc:
+        raise error_codes.CONVERSATION_NOT_FOUND from exc
     if claims.epoch != conversation.state_epoch:
         # 这张 token 属于已经被吊销的那一代（比如上一代 Runtime 被显式终止过）。这个 Runtime
         # 可能还活着、还在推，但它写的已经不是当前这个会话该收的东西了。
-        raise HttpError(HTTPStatus.NOT_FOUND, "No such conversation.")
+        raise error_codes.CONVERSATION_NOT_FOUND
     return conversation
 
 
@@ -240,11 +294,11 @@ async def _read_json(request: HttpRequest) -> Any:
     try:
         return json.loads(request.body)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, "Invalid JSON body.") from exc
+        raise error_codes.INVALID_JSON_BODY from exc
 
 
 def _json_object(payload: Any) -> dict[str, Any]:
     """Insist that a forwarded body is a JSON object."""
     if not isinstance(payload, dict):
-        raise HttpError(HTTPStatus.UNPROCESSABLE_ENTITY, "Expected a JSON object.")
+        raise error_codes.JSON_OBJECT_REQUIRED
     return payload

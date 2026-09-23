@@ -52,6 +52,11 @@ const checkReady = async () => {
 };
 
 onMounted(() => {
+  // 未配置生产预览时直接显示空白页，避免轮询无法 fetch 的 about: URL。
+  if (props.src === 'about:blank') {
+    ready.value = true;
+    return;
+  }
   checkReady();
   timer = window.setInterval(() => {
     if (!ready.value) {

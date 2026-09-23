@@ -171,6 +171,13 @@ class PermissionApplyRecordOutputSLZ(serializers.Serializer):
     reason = serializers.CharField(allow_blank=True, required=False)
     expire_days = serializers.IntegerField(required=False)
     gateway_name = serializers.CharField(required=False)
+    approval_url = serializers.SerializerMethodField(help_text="审批链接")
+
+    def get_approval_url(self, obj) -> str:
+        """优先使用 approval_url，为空时回退到网关返回的 itsm_ticket_url"""
+        if not isinstance(obj, dict):
+            return ""
+        return obj.get("approval_url") or obj.get("itsm_ticket_url") or ""
 
 
 class PaginatedPermissionApplyRecordOutputSLZ(serializers.Serializer):

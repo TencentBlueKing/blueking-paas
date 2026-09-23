@@ -9,6 +9,11 @@
 ### 生产构建
 根目录执行`npm run build`
 
+### 容器与 Helm 部署
+
+使用 `Dockerfile.prod` 构建 Nginx 镜像，启动时替换环境变量占位符，同一镜像可跨环境部署。
+Chart 位于 [`charts/app-spark-ui`](charts/app-spark-ui/)。原有 `npm run build` + `paas-server` 的 PaaS 部署方式保持可用。
+
 ## 前端项目工程介绍
 
 ### bin 目录
@@ -24,6 +29,21 @@ bin 目录下有 2 个钩子文件，可以在项目在开发者中心构建前�
 该目录编写 vue 相关代码，包含了 vue、vue-router、vue-store、pinia、api 等能力，详细编写语法可以参阅官方文档。
 
 `src/components/project/` 是真实项目工作室。`src/components/studio/` 是 `/studio` 的 mock 实验面，和 project 的重复是有意保留的副本，删除前不要抽公共层。说明见该目录 [README](src/components/studio/README.md)。
+
+#### AG-UI 事件渲染
+
+真实对话的事件流是 [AG-UI](https://github.com/ag-ui-protocol/ag-ui)，直播（SSE）和回放（`ui-events` / `history`）走的是同一个归约器 `src/services/agent/ag-ui.ts`，它把事件摊成 `ChatMessage.blocks`。同一条助手消息里，文本块和工具调用块按发生顺序排列，所以新的文本一律接在末尾，不要回头去找「第一个文本块」。
+
+一次工具调用（TOOL_CALL_START / ARGS / END / RESULT）在界面上合成一行，只显示「做什么 + 对什么做」，摘要规则在 `src/services/agent/tool-call.ts`：
+
+- **写文件类工具只显示路径**。`write_file`、`edit_file` 的 `content` / `old_text` / `new_text` 绝对不进界面——整个文件摆进对话流既看不完，也会把上下文冲掉。加新工具时若它带大字段，要在 `TOOL_SPECS` 里显式指定用哪个参数，别留给通用模式。
+- **表外工具走通用裸展示**，把参数摊成 `key=value` 并逐个截断，能短则短。
+- **工具返回值一概不显示**，只把状态标成已完成：`read_file` 之类的返回值同样是整个文件。
+
+#### 历史往前翻
+
+打开一个会话只拉 `history` 的**最新一页**（后端按「轮」倒序分页，一页是若干个完整的 run），更早的由 `store/project.ts` 的 `loadEarlierHistory` 用上一页的 `next_cursor` 按需往前取，入口是对话区顶部的「加载更早的对话」。
+
 
 ### static 目录
 如果项目中有些资源不参与打包构建，可以放到这个文件下。在项目中使用该文件的时候，使用 `/文件名` 这样的形式。

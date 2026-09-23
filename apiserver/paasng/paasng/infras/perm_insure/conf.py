@@ -80,7 +80,6 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "TemplateViewSet",
     "TemplateDetailedViewSet",
     "ChangelogViewSet",
-    "ResQuotaPlanOptionsView",
     "DistributorsViewSet",
     "BkPluginTagsViewSet",
     "SchemaViewSet",

@@ -219,7 +219,7 @@ class PluginDefaultAPIGateway:
         generate a default one.
     """
 
-    description_tmp = "This gateway is related with bluking plugin: {plugin_code}, do not modify."
+    description_tmp = "This gateway is related with blueking plugin: {plugin_code}, do not modify."
     grant_dimension = "api"
 
     def __init__(self, plugin_app: Application, client: Optional[PluginApiGWClient] = None):

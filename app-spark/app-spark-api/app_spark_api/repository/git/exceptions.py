@@ -14,27 +14,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pytest
-
-from app_spark_api.repository.storage.backends import SourceStorage
-from app_spark_api.repository.storage.blob_stores import HostTmpPath
-from app_spark_api.repository.storage.constants import StorageBackend
-from app_spark_api.repository.storage.models import ProjectSourceStorage
-
-pytestmark = pytest.mark.django_db
+"""Git 仓库生命周期相关的失败。"""
 
 
-def test_project_source_storage_builds_backend(project, tmp_path):
-    package_path = tmp_path / "source.tgz"
-    source_storage = ProjectSourceStorage.objects.create(
-        project=project,
-        backend=StorageBackend.HOST_TMP_PATH,
-        config={"path": str(package_path)},
-    )
+class GitBackendError(Exception):
+    """Git 持久化（repo-server）或仓库生命周期出了问题。"""
 
-    backend = source_storage.get_backend()
 
-    assert isinstance(backend, SourceStorage)
-    assert isinstance(backend.blob_store, HostTmpPath)
-    assert backend.blob_store.path == package_path
-    assert project.source_storage == source_storage
+class RepoServerConfigurationError(GitBackendError, ValueError):
+    """``REPO_SERVER`` 缺失或无法使用。进程不能带着这份配置启动。"""
+
+
+class GitRepositoryNotReadyError(GitBackendError):
+    """仓库还不能给 Agent 用：未建、仍在 pending，或上次建仓失败。
+
+    重试同一请求不会自己变好，要先走补建入口。
+    """

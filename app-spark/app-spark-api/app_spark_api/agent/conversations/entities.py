@@ -30,7 +30,7 @@ class ConversationResponse(Schema):
     number: int = Field(description="会话编号")
     conversation_id: UUID = Field(alias="id", description="会话全局唯一 ID，也是 AG-UI 事件里的 threadId")
     is_live: bool = Field(description="会话是否还活着（live），即是否还能继续推进")
-    created: datetime = Field(description="会话创建时间")
+    created_at: datetime = Field(description="会话创建时间")
     closed_at: datetime | None = Field(description="会话结束时间；仍然活着时为 null")
 
 
@@ -54,12 +54,49 @@ class RuntimeStateResponse(Schema):
     log_seq: int = Field(description="原始对话记录的最后一个游标")
     ui_event_seq: int = Field(description="AG-UI 事件历史的最后一个游标")
     running: bool = Field(description="是否有活跃 Runtime 且正在执行 run")
+    # 和 running 无关：run 早就结束了，用户拉起来的那个应用还在跑。
+    dev_server_status: str | None = Field(
+        description=(
+            "活跃 Runtime 报的工作区应用 dev server 状态：not_started / starting / ready / stopped；"
+            "没有活跃 Runtime、或 Runtime 没报时为 null"
+        ),
+    )
     replication_pending: bool = Field(
         description=(
             "是否有状态留在 Runtime 里没回写过来。要判断某一轮会话是否真的落库，"
             "必须 running 与本字段同时为 false——由于 flush 超时也会释放 run guard，"
             "所以单看 running=false 并不代表这一轮已经在库里"
         )
+    )
+
+
+# 用户单轮输入的字符上限。
+#
+# 必须在这里单独设限，不能靠请求体的大小兜底：``DATA_UPLOAD_MAX_MEMORY_SIZE`` 被 Runtime 的状态
+# 回写抬到了 64MB（见 settings），而那是给内部接口用的额度。
+#
+# 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
+# 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
+MAX_RUN_CONTENT_LENGTH = 32 * 1024
+
+
+class PreviewResponse(Schema):
+    """会话里那个工作区应用该去哪儿打开，以及此刻打不打得开。
+
+    地址和状态是两回事，所以分成两个字段。`origin` 由平台签发，会话一建好就有，Runtime 重启、
+    回收、再拉起都不会变；`dev_server_status` 说的是这一刻沙箱里那个进程能不能服务。前端据此决定
+    是先摆一个占位还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
+    """
+
+    origin: str = Field(
+        description="用 iframe 打开工作区应用的地址，末尾带斜杠；不随 Runtime 的存亡变化",
+    )
+    dev_server_status: str | None = Field(
+        description=(
+            "活跃 Runtime 报的工作区应用 dev server 状态：not_started 还没拉起过；"
+            "starting 进程在跑但还答不出，继续等；ready 可以挂 iframe 了；stopped 进程没了。"
+            "null 表示此刻问不到——没有活跃 Runtime，或者有但联系不上"
+        ),
     )
 
 
@@ -70,7 +107,20 @@ class StartRunRequest(Schema):
     导致冲突。
     """
 
-    content: str = Field(min_length=1, description="用户本轮发送的内容")
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_RUN_CONTENT_LENGTH,
+        description="用户本轮发送的内容",
+    )
+
+
+class UiEventRecord(Schema):
+    """AG-UI 事件记录，保持 Runtime 与 ui-events 接口已有的传输结构。"""
+
+    seq: int
+    run_id: str
+    timestamp: str = Field(description="Runtime 记录事件的 ISO 8601 时间，保留原有精度和格式")
+    event: dict[str, Any]
 
 
 class UiEventPageResponse(Schema):
@@ -88,4 +138,31 @@ class UiEventPageResponse(Schema):
     since: int = Field(description="本页请求时使用的游标")
     last_seq: int = Field(description="频道当前的最后一个游标")
     exhausted: bool = Field(description="本页是否已经读到频道末尾")
-    records: list[dict[str, Any]] = Field(description="AG-UI 事件记录，原样透传")
+    records: list[UiEventRecord] = Field(description="AG-UI 事件记录，原样透传")
+
+
+class UserMessageHistoryRecord(Schema):
+    """历史中的一条用户输入。"""
+
+    id: int = Field(description="用户消息 ID，可用于去重")
+    run_id: str | None
+    after_seq: int = Field(description="插在该 UI event 序号之后，0 表示所有事件之前")
+    created_at: datetime
+    content: str
+
+
+class ConversationHistoryRecord(Schema):
+    """一条展示历史：两个字段恰好一个非空，分别复用各自的记录结构。"""
+
+    ui_event: UiEventRecord | None = None
+    user_message: UserMessageHistoryRecord | None = None
+
+
+class ConversationHistoryResponse(Schema):
+    """一页展示历史，用户输入按创建时保存的 after_seq 定位。"""
+
+    records: list[ConversationHistoryRecord] = Field(description="本页记录，按对话正序排列")
+    next_cursor: str | None = Field(description="取更早一页时原样回传；null 表示已经到会话开头，没有更早的内容了")
+    # 「到会话开头了」和「最新一轮还没回写完」是两件事：前者看 next_cursor，后者看
+    # `RuntimeStateResponse.replication_pending`。这个字段是给后者用的水位。
+    last_seq: int = Field(description="AG-UI 事件频道当前的最后一个游标")

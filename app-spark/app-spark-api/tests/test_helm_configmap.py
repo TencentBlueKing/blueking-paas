@@ -60,6 +60,8 @@ def test_null_groups_and_values_are_omitted():
         ("django.languageCode", "en", "LANGUAGE_CODE"),
         ("externalDatabase.password", "00123", "DATABASE_PASSWORD"),
         ("blobstoreBkrepoConfig", {"PROJECT": "test", "PASSWORD": "true"}, "BLOBSTORE_BKREPO_CONFIG"),
+        ("django.encryptSecretKey", "Q3NyY0V3cFpTUlVNbHp3RUZMYWtXaEdOdXp3eWZNSkc=", "BKKRILL_ENCRYPT_SECRET_KEY"),
+        ("repoServer", {"type": "forgejo", "org": "app-spark"}, "REPO_SERVER"),
     ],
 )
 def test_explicit_values_survive_dynaconf(monkeypatch, key, value, setting):

@@ -94,6 +94,7 @@ async def test_a_taken_project_id_is_refused_even_from_another_tenant(aapi_clien
     response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
 
     assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PROJECT_ID_TAKEN"
     assert "spark-demo" in response.json()["detail"]
 
 
@@ -108,6 +109,7 @@ async def test_a_name_already_used_in_the_tenant_is_refused(aapi_client, bk_user
     response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
 
     assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
     assert "Spark Demo" in response.json()["detail"]
 
 
@@ -161,6 +163,7 @@ async def test_a_name_taken_after_the_check_is_still_reported_as_a_conflict(aapi
     response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
 
     assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
     assert "Spark Demo" in response.json()["detail"]
 
 
@@ -186,6 +189,7 @@ async def test_an_id_that_is_not_safe_as_a_path_component_is_refused(aapi_client
     response = await create_via_api(aapi_client, project_id=project_id, name="Spark Demo")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
     assert not await Project.default_objects.aexists()
 
 
@@ -193,6 +197,7 @@ async def test_a_name_longer_than_the_column_is_refused_rather_than_truncated(aa
     response = await create_via_api(aapi_client, project_id="spark-demo", name="x" * 21)
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 # --- listing ----------------------------------------------------------------------------
@@ -233,10 +238,10 @@ async def test_the_list_is_newest_first(aapi_client, bk_user):
     tenant_id = get_tenant(bk_user).id
     for index, project_id in enumerate(["oldest", "middle", "newest"]):
         await make_project(project_id=project_id, name=project_id.title(), owner=bk_user, tenant_id=tenant_id)
-        # `created` is auto_now_add, so three rows built back to back can share a timestamp.
+        # `created_at` is auto_now_add, so three rows built back to back can share a timestamp.
         # Written explicitly here because this test is about the order, not about how fast the
         # loop ran.
-        await Project.objects.filter(pk=project_id).aupdate(created=datetime(2026, 1, index + 1, tzinfo=UTC))
+        await Project.objects.filter(pk=project_id).aupdate(created_at=datetime(2026, 1, index + 1, tzinfo=UTC))
 
     body = (await aapi_client.get(PROJECTS_URL)).json()
 
@@ -260,6 +265,7 @@ async def test_nonsense_paging_parameters_are_refused(aapi_client, query):
     response = await aapi_client.get(f"{PROJECTS_URL}?{query}")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 async def test_the_list_of_a_user_without_projects_is_empty_rather_than_missing(aapi_client):
@@ -276,3 +282,4 @@ async def test_an_anonymous_caller_reaches_no_project_endpoint(aanonymous_api_cl
     response = await getattr(aanonymous_api_client, method)(PROJECTS_URL)
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json()["code"] == "AUTHENTICATION_REQUIRED"

@@ -1,6 +1,9 @@
 # Local settings files
 app-spark-api/settings_local.yaml
 
+# Generated Forgejo credentials (local/dev only; production uses injected Secrets)
+repo-server/forgejo/secrets/
+
 # uv / Python
 .venv/
 __pycache__/

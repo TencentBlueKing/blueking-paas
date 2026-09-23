@@ -19,6 +19,19 @@ DEFAULT_STATE_DIR = "/data/state"
 DEFAULT_IDLE_TIMEOUT_SECONDS = 1800
 GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 1
 
+# 关停时 lifespan 允许为「把东西送出去」花掉的总墙钟秒数：workspace 的 push 和状态回写的
+# flush 共用它，先 push 后 flush。见 ``ConversationRuntime.drain``。
+#
+# 这个值不能自己定。控制面停 Runtime 时给的是 ``SHUTDOWN_GRACE_SECONDS``（见 app-spark-api 的
+# local_process provider），超时就 SIGKILL，而关停要按顺序花掉：
+#   uvicorn 掐连接 1s + 本值 + 停应用子进程 5s = 14s < 20s
+# 改这里必须回头看那个常量，否则 drain 会被杀在半路，等于一点没送出去。
+SHUTDOWN_DRAIN_TIMEOUT_SECONDS = 8.0
+
+# 空闲退出发出 SIGTERM 后，等有序关停走完的上限；到点无条件 ``os._exit``。
+# 比上面那串 14s 留出余量：它是兜底，不是正常路径的预算。
+IDLE_EXIT_DEADLINE_SECONDS = 20.0
+
 env = Env(prefix=ENV_PREFIX)
 env.read_env(".env")
 
@@ -38,8 +51,7 @@ RUNTIME_TOKEN = env.str("RUNTIME_TOKEN", "")
 
 PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 
-# 用户应用约定端口。本组件只读入并留给后续子进程，不拉起应用，也不因不是 8000
-# 而拒绝启动——数值由接入层锁定，端口是否在听属于应用管理。
+# 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
 
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
@@ -114,18 +126,52 @@ FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 # Agent 的系统提示词。它和 agent.py 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
 #
-# TODO：当前仅做调试功能后，后续再调，以及增加更多 SKILL。
+# App Framework 一节里的 main:app 与 app_supervisor 里构造的启动命令是一对：那边启的就是这个
+# 导入路径，模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
+#
+# TODO：当前仅做调试功能后，后续再调。真出现多套技术栈时把「怎么写应用」抽成可切换的档，
+# 而不是再挂一个指向本包安装目录的 RepoContext。
 INSTRUCTIONS = """
 You are a coding agent working inside the provided workspace.
 
-Complete the user's task autonomously. Inspect the workspace before changing it, make the
-smallest coherent change that solves the request, and verify the result when useful. Follow all
-AGENTS.md instructions. Preserve existing user changes and report what changed, what you
-verified, and anything that remains blocked.
+### Task
 
-Use file tools for reading and editing and shell tools for commands. Treat paths as relative to the
-workspace. Use read_app_log when diagnosing the running application; it has no path argument.
-Never expose credentials or intentionally inspect secret files.
+- Complete the user's task autonomously;
+- Inspect the workspace before changing it;
+- Make the smallest coherent change that solves the request, and verify the result when useful;
+- Follow all AGENTS.md instructions;
+- Preserve existing user changes;
+- Report what changed, what you verified, and anything that remains blocked.
+
+### Tools
+
+- Use file tools to read and edit, and shell tools to run commands;
+- Treat paths as relative to the workspace;
+- Use `read_app_log` to diagnose the running application; it takes no path argument;
+- NEVER expose credentials, and NEVER intentionally inspect secret files.
+
+### App Framework
+
+- ALWAYS write the user-facing application as a FastAPI app;
+- ALWAYS export it from `main.py` as `app`, that is the import path `main:app`. The launcher
+  starts that import path and no other, so an application exported under a different name
+  cannot be started at all;
+- NEVER listen on a port yourself, and NEVER hard-code one. The launcher decides the port and
+  passes it to the server on the command line, so the application has no say in it;
+- Do NOT align this application with the BlueKing or PaaS application framework in this
+  period. A plain FastAPI HTTP app is enough.
+
+### Launch App
+
+- Once the code can run, use the `launch_app` tool to start or restart the application;
+- ALWAYS launch through `launch_app`. NEVER host a long-running server with the shell, and
+  NEVER start the application any other way;
+- When `launch_app` reports a failure, read the log with `read_app_log`, fix the cause, and
+  launch once more;
+- A `starting` result is not a failure. The process is up and may just be slow to warm up, so
+  do NOT relaunch or change the code because of it;
+- The tool refuses a third attempt in the same turn. Report the failure at that point rather
+  than keep retrying.
 """.strip()
 
 # -----------------------------------------------------------------------
@@ -183,6 +229,53 @@ PUSH_FLUSH_TIMEOUT_SECONDS = env.float("PUSH_FLUSH_TIMEOUT_SECONDS", 30.0, valid
 
 if CONTROL_PLANE_URL and not CONTROL_PLANE_TOKEN:
     raise EnvError(f"{ENV_PREFIX}CONTROL_PLANE_TOKEN must be set whenever {ENV_PREFIX}CONTROL_PLANE_URL is")
+
+# -----------------------------------------------------------------------
+# Workspace 工作区持久化（基于 Git）
+# -----------------------------------------------------------------------
+
+# Project 私有仓库的 HTTP clone 地址，由控制面在拉起 Runtime 时注入，且必须是**沙箱能解析的**
+# 地址：控制面自己用的 `localhost` 拿到这里只会打到沙箱自己。
+#
+# 留空即关闭 Git 持久化：此时 workspace 只存在于本地磁盘，也就是单测与本地开发的形态。
+GIT_REMOTE_URL = env.str("GIT_REMOTE_URL", "")
+
+# 仓库范围的读写 token，作为 HTTP Basic 的密码。长期有效、不随 Runtime 代次轮换，因此它
+# 只在受控的 git 子进程环境里出现，不进命令行、不写进 .git/config、不进提交内容。
+GIT_TOKEN = env.str("GIT_TOKEN", "")
+
+# Basic 认证的用户名，对 Forgejo 是签发 token 的那个服务账号。
+GIT_USERNAME = env.str("GIT_USERNAME", "")
+
+# 唯一的工作分支。推送与恢复都只认它。
+GIT_BRANCH = env.str("GIT_BRANCH", "main")
+
+# 提交身份。是机器人而不是终端用户：提交发生在 Agent 里，而蓝鲸用户未必有 Git 能接受的邮箱。
+# Git 在缺少这两项时直接拒绝提交，所以它们有缺省值而不是留空。
+GIT_AUTHOR_NAME = env.str("GIT_AUTHOR_NAME", "App-Spark")
+GIT_AUTHOR_EMAIL = env.str("GIT_AUTHOR_EMAIL", "app-spark@localhost.invalid")
+
+# 单条 git 命令的超时秒数。必须有限：本地提交发生在 run 收尾屏障里，一条挂住的命令等于挂住
+# 这一轮对话。给到 120 秒是因为首次 clone 要走网络。
+GIT_COMMAND_TIMEOUT_SECONDS = env.float("GIT_COMMAND_TIMEOUT_SECONDS", 120.0, validate=Range(min=0))
+
+# 文件策略的硬性体积上限，超限时提交明确失败并报出是哪些路径。见 ``git/policy.py``。
+GIT_MAX_FILE_BYTES = env.int("GIT_MAX_FILE_BYTES", 10 * 1024 * 1024, validate=Range(min=1))
+GIT_MAX_TOTAL_BYTES = env.int("GIT_MAX_TOTAL_BYTES", 200 * 1024 * 1024, validate=Range(min=1))
+
+# push 失败后重试的间隔秒数。网络分区可能持续很久，退避太短只是把失败刷进日志。
+GIT_PUSH_RETRY_BACKOFF_SECONDS = env.float("GIT_PUSH_RETRY_BACKOFF_SECONDS", 5.0, validate=Range(min=0))
+
+# 开始下一轮前，等待上一轮文件推送到远端的时间上限。这是逃生口的那个「有界」：网络断了时
+# push 可能永远落不了地，无限等待等于把用户锁在自己的会话外面。超时后接口返回 409，客户端
+# 可以带 ``?allow_unsaved=true`` 明确选择继续。
+GIT_SAVE_WAIT_TIMEOUT_SECONDS = env.float("GIT_SAVE_WAIT_TIMEOUT_SECONDS", 10.0, validate=Range(min=0))
+
+# 这个 Runtime 属于哪个 Project，仅用于写进 commit trailer 便于追溯。留空不影响保存。
+PROJECT_ID = env.str("PROJECT_ID", "")
+
+if GIT_REMOTE_URL and not GIT_TOKEN:
+    raise EnvError(f"{ENV_PREFIX}GIT_TOKEN must be set whenever {ENV_PREFIX}GIT_REMOTE_URL is")
 
 # -----------------------------------------------------------------------
 # HTTP 接口
@@ -251,6 +344,11 @@ def is_model_ready() -> bool:
     if MODEL.startswith("fake:"):
         return True
     return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+
+
+def is_git_configured() -> bool:
+    """是否给了远端仓库地址和凭据。为假时 workspace 只存在于本地磁盘。"""
+    return bool(GIT_REMOTE_URL and GIT_TOKEN)
 
 
 def _tokens_match(expected: str, actual: str) -> bool:

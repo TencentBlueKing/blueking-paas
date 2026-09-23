@@ -30,10 +30,12 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications.serializers import (
     ModuleProcessSpecOutputSLZ,
+    ProcessQuotaPlanListInputSLZ,
     ProcessSpecInputSLZ,
 )
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay, ResQuotaPlan
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.res_quota import ResQuotaPlanPolicy
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 
@@ -94,10 +96,6 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
     def update_resource(self, request, app_code, module_name, process_name):
         """更新单个进程的资源限制"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
-        slz = ProcessSpecInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-
         # 校验 module 的 source_origin 是否可以修改, 目前仅 SMart 和 AI Agent 应用支持修改进程资源配额
         module = get_object_or_404(application.modules, name=module_name)
         if module.source_origin != SourceOrigin.S_MART.value and application.is_ai_agent_app is False:
@@ -113,6 +111,16 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             )
         except ModuleProcessSpec.DoesNotExist:
             return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)  # noqa: INT001
+
+        slz = ProcessSpecInputSLZ(
+            data=request.data,
+            context={
+                "app_code": application.code,
+                "current_override_plans": ResQuotaPlanPolicy().bound_overrides(proc_spec),
+            },
+        )
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
         # 构建环境覆盖映射
         env_overlays_map = {o.environment_name: o for o in proc_spec.env_overlays.all()}
         requested_overlays: dict[str, dict] = data["env_overlays"]
@@ -180,14 +188,16 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
     def list_quota_plans(self, request):
         """获取资源配额方案选项列表"""
-
+        slz = ProcessQuotaPlanListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        app_code = slz.validated_data.get("app_code") or None
         result = [
             {
                 "name": plan.name,
                 "limits": plan.limits,
                 "requests": plan.requests,
             }
-            for plan in ResQuotaPlan.objects.filter(is_active=True)
+            for plan in ResQuotaPlanPolicy().list_selectable(app_code)
         ]
 
         return Response(result)

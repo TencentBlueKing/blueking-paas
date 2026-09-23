@@ -1,0 +1,69 @@
+# Local/dev Forgejo (Compose + SQLite). Production uses charts/ (MySQL 8 + PVC).
+
+compose := "docker compose"
+cli := "uv run app-spark-forgejo"
+test_http_port := env("TEST_HTTP_PORT", "3001")
+here := justfile_directory()
+
+# 线上镜像：官方 Forgejo 加上 init CLI 需要的 Python。tag 默认与 Chart.appVersion 一致。
+registry := env("REGISTRY", "")
+image_tag := env("IMAGE_TAG", "15.0.7")
+image_ref := if registry == "" { "app-spark-forgejo:" + image_tag } else { registry + "/app-spark-forgejo:" + image_tag }
+
+export FORGEJO_HTTP_PORT := env("FORGEJO_HTTP_PORT", "3000")
+export FORGEJO_ROOT_URL := env("FORGEJO_ROOT_URL", "http://127.0.0.1:" + FORGEJO_HTTP_PORT)
+
+# List recipes
+default:
+    @just --list
+
+# Start Forgejo (keeps the development volume) and initialise it
+start: up ready init
+
+# Create or start the server container
+up:
+    {{ compose }} up -d server
+
+# Stop containers; development data is kept
+stop:
+    {{ compose }} stop
+
+# Wait until /api/healthz answers
+ready:
+    {{ cli }} ready
+
+# Create admin, service account and org (idempotent)
+init:
+    {{ cli }} init
+
+# Follow Forgejo logs
+logs:
+    {{ compose }} logs -f server
+
+# Dev-mode acceptance: force-push rejected, no push-to-create, Basic Auth, private
+verify:
+    {{ cli }} verify
+
+# Isolated test instance (port 3001, own volume and secrets/test)
+test-up:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} FORGEJO_ROOT_URL=http://127.0.0.1:{{ test_http_port }} FORGEJO_SECRETS_DIR={{ here }}/secrets/test just start
+
+# Acceptance checks against the test instance
+test-verify:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} FORGEJO_ROOT_URL=http://127.0.0.1:{{ test_http_port }} FORGEJO_SECRETS_DIR={{ here }}/secrets/test just verify
+
+# Build the production image (charts/) and self-check it
+image: image-build image-check
+
+# Build the production image; REGISTRY / IMAGE_TAG override the tag
+image-build:
+    docker build -t {{ image_ref }} {{ here }}
+
+# Run the CLI in the image as the git user the init Job uses (catches venv/uv wiring)
+image-check:
+    docker run --rm --user 1000:1000 --entrypoint uv {{ image_ref }} run --directory /opt/app-spark-forgejo --no-sync app-spark-forgejo --help
+
+# Stop the test instance and delete its volume
+test-clean:
+    COMPOSE_PROJECT_NAME=app-spark-forgejo-test FORGEJO_HTTP_PORT={{ test_http_port }} {{ compose }} down -v --remove-orphans
+    rm -rf {{ here }}/secrets/test

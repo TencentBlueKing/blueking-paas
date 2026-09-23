@@ -25,11 +25,37 @@ from urllib.parse import urlparse
 
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from blue_krill.secure.dj_environ import SecureEnv
+from django.core.exceptions import ImproperlyConfigured
 from dynaconf.base import LazySettings
 from dynaconf.utils import object_merge
 from environ import Env
 
 logger = logging.getLogger(__name__)
+
+# 权限中心版本取值，与 paasng.infras.iam.base.constants.IAMVersion 保持一致。
+# 此处不直接引用该枚举，以免在 settings 加载期导入业务模块
+IAM_VERSION_V3 = "v3"
+IAM_VERSION_V4 = "v4"
+SUPPORTED_IAM_VERSIONS = [IAM_VERSION_V3, IAM_VERSION_V4]
+
+
+def validate_iam_settings(version: str, settings_required_by_v4: Dict[str, Any]) -> None:
+    """校验权限中心的版本开关，以及 V4 环境下的必填配置
+
+    :param version: 版本开关的取值
+    :param settings_required_by_v4: V4 环境下必填的配置项，键为配置项名，值为其取值。
+        note: 不限于 V4 自身的配置，V4 环境仍需 V3 地址来拼插件申请链接
+    :raises ImproperlyConfigured: 版本取值非法，或版本为 V4 时必填配置缺失
+    """
+    if version not in SUPPORTED_IAM_VERSIONS:
+        raise ImproperlyConfigured(f"不支持的 IAM 版本: {version}，可选值为 {SUPPORTED_IAM_VERSIONS}")
+
+    if version != IAM_VERSION_V4:
+        return
+
+    missing = [name for name, value in settings_required_by_v4.items() if not value]
+    if missing:
+        raise ImproperlyConfigured(f"BK_IAM_VERSION 为 {IAM_VERSION_V4} 时，以下配置项不能为空: {', '.join(missing)}")
 
 
 def get_database_conf(

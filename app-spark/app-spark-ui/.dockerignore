@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.bk.*.env
+!.bk.production.env
+.env*
+template
+pre-template
+charts
+tests
+docs
+*.log

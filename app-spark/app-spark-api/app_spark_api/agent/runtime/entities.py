@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import attrs
 
@@ -55,6 +55,36 @@ class LocalProcessConfig:
     model_api_key: str | None = None
     startup_timeout_seconds: float = 60.0
     extra_env: dict[str, str] = attrs.field(factory=dict)
+
+
+@attrs.frozen
+class E2BConfig:
+    """Configuration for provisioning an E2B sandbox per conversation.
+
+    :param api_key: Credential for the E2B-compatible API.
+    :param api_url: Base URL of that API; independent of the exposed port domain.
+    :param domain: Fallback domain for sandbox hosts when the API does not return one.
+    :param template: Sandbox template name or ID.
+    :param timeout_seconds: Sandbox lifetime in seconds.
+    :param runtime_port: Port reserved for the future Agent Runtime HTTP server.
+    :param preview_port: Fixed sandbox port for the workspace application preview.
+    :param port_scheme: URL scheme for the exposed port proxy.
+    """
+
+    api_key: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    api_url: str = attrs.field(validator=validate_non_empty_string)
+    domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
+    template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
+    timeout_seconds: int = attrs.field(default=300, validator=attrs.validators.gt(0))
+    runtime_port: int = attrs.field(
+        default=8000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    preview_port: int = attrs.field(
+        default=9000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    port_scheme: Literal["http", "https"] = attrs.field(
+        default="https", validator=attrs.validators.in_(("http", "https"))
+    )
 
 
 @attrs.frozen
@@ -102,18 +132,20 @@ class GitRemote:
 class AgentRuntimeHandle:
     """Where a conversation's Runtime can be reached.
 
-    Everything provider-specific stops here: a Runtime in a remote sandbox is addressed by the
-    same base URL as one spawned locally, which is why the client below never learns which
-    provider produced it.
+    Everything provider-specific stops here: both local and remote Runtimes are addressed by
+    a URL, an Agent Bearer token, and any headers their transport needs. The client below does
+    not need to know which provider produced the handle.
 
     :param conversation_id: Conversation this Runtime serves, one per process.
     :param base_url: Root URL the Runtime's HTTP API is served under.
     :param runtime_token: Bearer token required by every Runtime HTTP endpoint.
+    :param http_headers: Additional transport headers required by the provider's port proxy.
     """
 
     conversation_id: str
     base_url: str
     runtime_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
 
 
 @attrs.frozen
@@ -227,3 +259,13 @@ def structure_local_process_config(raw_config: object) -> LocalProcessConfig:
         otherwise invalid fields.
     """
     return structure_config(raw_config, LocalProcessConfig, error_cls=AgentConfigurationError)
+
+
+def structure_e2b_config(raw_config: object) -> E2BConfig:
+    """Structure and validate an E2B provider configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: A validated configuration.
+    :raises AgentConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, E2BConfig, error_cls=AgentConfigurationError)

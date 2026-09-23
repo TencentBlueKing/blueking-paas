@@ -25,8 +25,9 @@ from django.core.signals import setting_changed
 from django.dispatch import receiver
 
 from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType
-from app_spark_api.agent.runtime.entities import structure_local_process_config
+from app_spark_api.agent.runtime.entities import structure_e2b_config, structure_local_process_config
 from app_spark_api.agent.runtime.exceptions import AgentConfigurationError
+from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
 if TYPE_CHECKING:
@@ -62,6 +63,8 @@ def make_agent_runtime_provider(provider: str, config: object) -> AgentRuntimePr
 
     if provider_type == AgentRuntimeProviderType.LOCAL_PROCESS:
         return LocalProcessProvider(structure_local_process_config(config))
+    if provider_type == AgentRuntimeProviderType.E2B:
+        return E2BProvider(structure_e2b_config(config))
 
     raise AgentConfigurationError(f"Unsupported Agent Runtime provider: {provider_type}")
 

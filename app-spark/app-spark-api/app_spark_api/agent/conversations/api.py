@@ -304,6 +304,7 @@ async def proxy_preview(
         request,
         upstream=upstream,
         subpath=subpath,
+        upstream_headers=await services.get_preview_transport_headers(conversation),
         # 和 origin 同一个值。应用自己发的重定向要靠它拉回前缀下面，否则浏览器第一跳就出去了。
         preview_root=preview.build_preview_origin(request, project_id=project_id, number=number),
     )

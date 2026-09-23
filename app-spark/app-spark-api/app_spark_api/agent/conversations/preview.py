@@ -45,7 +45,7 @@ from app_spark_api.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterable
+    from collections.abc import AsyncIterator, Iterable, Mapping
 
     from django.http import HttpRequest
 
@@ -78,7 +78,7 @@ HOP_BY_HOP_HEADERS = frozenset(
 # 不交给沙箱里的应用。那是模型写出来的代码，平台的登录 Cookie 和 Bearer 进去就等于交出去了，
 # 而预览与控制面同源，浏览器默认就会把 Cookie 带上，所以必须在这里显式摘掉。
 # Host 另有原因：它由 httpx 按上游地址自己写。
-STRIPPED_REQUEST_HEADERS = frozenset({"cookie", "authorization", "host"})
+STRIPPED_REQUEST_HEADERS = frozenset({"cookie", "authorization", "host", "x-access-token", "e2b-traffic-access-token"})
 
 # 这一组不透传，由反代按自己看到的事实重写，见 _collect_request_headers。
 FORWARDED_REQUEST_HEADERS = frozenset(
@@ -136,6 +136,7 @@ async def forward_to_app(
     upstream: str,
     subpath: str,
     preview_root: str,
+    upstream_headers: Mapping[str, str] | None = None,
 ) -> StreamingHttpResponse:
     """Forward one request to the workspace application and stream its answer back.
 
@@ -146,6 +147,7 @@ async def forward_to_app(
     :param subpath: Path under that base, starting with a slash.
     :param preview_root: Absolute URL this conversation's application is published under, used
         to bring the application's own redirects back inside the proxy.
+    :param upstream_headers: Trusted transport headers required by the provider's port proxy.
     :return: The application's response, streamed rather than buffered.
     :raises APIError: If the application cannot be reached.
     """
@@ -167,7 +169,7 @@ async def forward_to_app(
         upstream_request = client.build_request(
             request.method,
             url,
-            headers=_collect_request_headers(request, preview_root=preview_root),
+            headers=_collect_request_headers(request, preview_root=preview_root, upstream_headers=upstream_headers),
             content=request.body or None,
         )
         response = await client.send(upstream_request, stream=True)
@@ -241,11 +243,14 @@ async def _stream_body(client: httpx2.AsyncClient, response: httpx2.Response) ->
         await client.aclose()
 
 
-def _collect_request_headers(request: HttpRequest, *, preview_root: str) -> dict[str, str]:
+def _collect_request_headers(
+    request: HttpRequest, *, preview_root: str, upstream_headers: Mapping[str, str] | None = None
+) -> dict[str, str]:
     """Return the client's headers, minus the ones the application must not see, plus Forwarded.
 
     :param request: The request being forwarded.
     :param preview_root: Absolute URL the application is published under, ending in a slash.
+    :param upstream_headers: Provider-owned transport credentials, never taken from the client.
     :return: Headers to send upstream.
     """
     # 先把进来的那份 X-Forwarded-* 滤掉，下面按本服务看到的事实整组重写。混着传会让应用读到
@@ -270,11 +275,19 @@ def _collect_request_headers(request: HttpRequest, *, preview_root: str) -> dict
     # build_absolute_uri 出来的，浏览器地址栏里的正是它。分别取会给出三份可能互相矛盾的答案。
     published = urlsplit(preview_root)
     headers["x-forwarded-proto"] = published.scheme
-    headers["x-forwarded-host"] = published.netloc
+    # Our self-hosted E2B port proxy rejects a forwarded host different from its exposed-port
+    # host with HTTP 400 (`bad target`). The local provider has no such intermediary and can
+    # pass the browser's host through for applications that build absolute URLs from it.
+    if not upstream_headers:
+        headers["x-forwarded-host"] = published.netloc
 
     # 应用挂在一个前缀下面，而它自己不知道——沙箱按设计就不知道预览地址。给出前缀，读这条的框架
     # （Starlette 的 root_path 一类）就能把自己生成的链接拼对，不必等换独立域名。
     headers["x-forwarded-prefix"] = published.path.rstrip("/")
+
+    # The E2B port proxy authenticates before it forwards to the workspace application. A
+    # browser-supplied copy is stripped above; only the provider's sandbox credentials go out.
+    headers.update(upstream_headers or {})
 
     return headers
 

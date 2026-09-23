@@ -45,8 +45,8 @@ from app_spark_api.agent.runtime import (
     EventPage,
     GitRemote,
     StateCallback,
-    get_agent_runtime_provider,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -137,6 +137,16 @@ async def get_preview_upstream(conversation: Conversation) -> str | None:
     :return: A base URL, or ``None`` when no Runtime is serving the conversation.
     """
     return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
+
+
+async def get_preview_transport_headers(conversation: Conversation) -> dict[str, str]:
+    """Return the provider's port-proxy headers for a workspace preview request.
+
+    :param conversation: Conversation whose sandbox hosts the application.
+    :return: Trusted transport headers, empty for the local provider.
+    """
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+    return handle.http_headers if handle is not None else {}
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:

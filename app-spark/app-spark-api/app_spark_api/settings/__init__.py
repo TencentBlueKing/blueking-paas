@@ -39,6 +39,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 """
 
 from pathlib import Path
+from typing import Any
 
 import pymysql
 from dynaconf import LazySettings, Validator
@@ -49,6 +50,46 @@ pymysql.install_as_MySQLdb()
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+def build_logging_config(log_level: str, file_directory: str | None, always_console: bool) -> dict[str, Any]:
+    """Build Django's logging configuration from this service's output settings.
+
+    :param log_level: Minimum level for application logs.
+    :param file_directory: Optional directory for a rotating text log.
+    :param always_console: Also write to stdout when a log directory is configured.
+    :return: Configuration accepted by Django's logging setup.
+    """
+    handlers: dict[str, Any] = {
+        "console": {"class": "logging.StreamHandler", "stream": "ext://sys.stdout", "formatter": "standard"}
+    }
+    root_handlers = ["console"] if file_directory is None or always_console else []
+    if file_directory is not None:
+        log_directory = BASE_DIR / file_directory
+        log_directory.mkdir(parents=True, exist_ok=True)
+        handlers["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(log_directory / "app-spark-api.log"),
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "formatter": "standard",
+        }
+        root_handlers.append("file")
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {"standard": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+        "handlers": handlers,
+        "root": {"handlers": root_handlers, "level": log_level},
+        # Django installs its own handlers before applying LOGGING. Route its messages through
+        # the selected outputs once, so warnings do not appear twice on the console.
+        "loggers": {
+            "django": {"handlers": root_handlers, "level": "WARNING", "propagate": False},
+            "django.server": {"handlers": root_handlers, "level": log_level, "propagate": False},
+        },
+    }
+
 
 # 默认加载的额外配置文件，主要用于本地开发
 SETTINGS_FILES_GLOB = str(BASE_DIR / "settings_files/*.yaml")
@@ -64,6 +105,12 @@ settings = LazySettings(
     ENVVAR_PREFIX_FOR_DYNACONF="APP_SPARK_API",
     ENVVAR_FOR_DYNACONF="APP_SPARK_API_SETTINGS",
 )
+
+# Log to the console by default; a configured directory switches the default to a rotating file.
+LOG_LEVEL = settings.get("LOG_LEVEL", "INFO")
+LOGGING_DIRECTORY = settings.get("LOGGING_DIRECTORY", None)
+LOGGING_ALWAYS_CONSOLE = settings.get("LOGGING_ALWAYS_CONSOLE", False)
+LOGGING = build_logging_config(LOG_LEVEL, LOGGING_DIRECTORY, LOGGING_ALWAYS_CONSOLE)
 
 # Django 项目使用的 SECRET_KEY，默认值不安全，建议使用真实生成的随机 secret 重载
 # 示例命令： python -c "import secrets; print(secrets.token_urlsafe(50))"
@@ -88,6 +135,7 @@ INSTALLED_APPS = [
     "app_spark_api.infras.accounts.apps.AccountsConfig",
     "app_spark_api.core.projects.apps.ProjectsConfig",
     "app_spark_api.agent.conversations.apps.ConversationsConfig",
+    "app_spark_api.agent.runtime.apps.RuntimeConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
     "app_spark_api.repository.git.apps.GitConfig",
 ]
@@ -281,7 +329,7 @@ REPO_SERVER = settings.get(
 # --------
 
 ## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
-## 目前只有 local_process（在本机 spawn 一个 agent 进程，仅供开发与测试）
+## local_process 在本机 spawn agent；e2b 目前只管理沙箱，尚未在沙箱内启动 Agent。
 AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 
 ## 上述驱动方式各自的配置，字段以对应的 config 类为准。
@@ -305,6 +353,25 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   startup_timeout_seconds: 60
 ##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
 ##   extra_env: {}
+##
+## e2b 类型配置示例（详见 E2BConfig）：
+##
+## AGENT_RUNTIME_PROVIDER_CONFIG:
+##   ## 必填。E2B 兼容服务的 API 凭据和管理 API 地址，不使用 SDK 的公共默认值。
+##   api_key: ''
+##   api_url: https://example.com/e2b
+##   ## 可选。API 未返回 sandbox_domain 时的端口域名后缀。
+##   domain: example.com
+##   ## 可选。沙箱模板，默认 e2b-python。
+##   template: e2b-python
+##   ## 可选。沙箱存活秒数，默认 300。
+##   timeout_seconds: 300
+##   ## 可选。将来 Agent Runtime 监听的沙箱端口，默认 8000。
+##   runtime_port: 8000
+##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。
+##   preview_port: 9000
+##   ## 可选。暴露端口代理使用的协议，默认 https。
+##   port_scheme: https
 AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob

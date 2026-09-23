@@ -28,9 +28,8 @@ if TYPE_CHECKING:
 class AgentRuntimeProvider(abc.ABC):
     """Brings an Agent Runtime up for a conversation, and takes it down again.
 
-    This is the seam the deployment story moves along. Today the only implementation spawns a
-    process on this host; a sandbox implementation would replace it wholesale without anything
-    above having to change, because both hand back the same
+    This is the seam the deployment story moves along. One implementation spawns a process on
+    this host; a sandbox implementation owns the remote sandbox. Both hand back the same
     :class:`~app_spark_api.agent.runtime.entities.AgentRuntimeHandle` and the Runtime behind it
     speaks the same HTTP either way.
     """

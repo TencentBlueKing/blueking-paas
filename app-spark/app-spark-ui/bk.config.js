@@ -1,6 +1,7 @@
 
 const mockServer = require('./mock-server');
 const containerBuild = process.env.APP_SPARK_CONTAINER_BUILD === '1';
+const stripApiSvcPrefix = process.env.BK_API_PROXY_STRIP_PREFIX === '1';
 
 module.exports = {
   host: process.env.BK_APP_HOST,
@@ -26,6 +27,7 @@ module.exports = {
             changeOrigin: true,
             secure: true,
             cookieDomainRewrite: '',
+            ...(stripApiSvcPrefix ? { pathRewrite: { '^/api-svc': '' } } : {}),
             timeout: 0,
             proxyTimeout: 0,
           },

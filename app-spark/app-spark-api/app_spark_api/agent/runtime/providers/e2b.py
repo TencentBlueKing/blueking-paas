@@ -14,11 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Provision E2B sandboxes for Agent Runtimes.
-
-Sandbox ownership is recorded in the database, so another API worker can reconnect after the
-worker that created a sandbox exits. Installing and starting the Agent is still a separate step.
-"""
+"""Provision E2B sandboxes for Agent Runtimes."""
 
 from __future__ import annotations
 
@@ -29,7 +25,7 @@ import secrets
 import weakref
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import AsyncGenerator
 
 from django.db import IntegrityError
 from django.utils import timezone
@@ -48,9 +44,6 @@ from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWor
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
 logger = logging.getLogger(__name__)
 
 # Upper bound on creating a sandbox and binding it to its claim. The whole step is bounded, not
@@ -61,6 +54,19 @@ PROVISION_TIMEOUT_SECONDS = 120
 # An unbound claim older than this belongs to a worker that died while provisioning. The margin
 # covers the database writes around the bounded step and clock skew between workers.
 ABANDONED_CLAIM_SECONDS = PROVISION_TIMEOUT_SECONDS + 60
+
+
+def _port_headers(sandbox: AsyncSandbox) -> dict[str, str]:
+    """Forward tokens required by the E2B proxy for an exposed application port."""
+    headers: dict[str, str] = {}
+    # The self-hosted proxy in front of our E2B service requires the same sandbox access
+    # token the SDK sends to envd. Read it through the SDK's public connection config, not
+    # through the sandbox's private token field. The port itself comes from get_host().
+    if access_token := sandbox.connection_config.sandbox_headers.get("X-Access-Token"):
+        headers["X-Access-Token"] = access_token
+    if sandbox.traffic_access_token:
+        headers["E2B-Traffic-Access-Token"] = sandbox.traffic_access_token
+    return headers
 
 
 class E2BProvider(AgentRuntimeProvider):
@@ -77,10 +83,7 @@ class E2BProvider(AgentRuntimeProvider):
 
     def __init__(self, config: E2BConfig) -> None:
         self.config = config
-        # One lock per conversation, dropped by the garbage collector once nobody holds or awaits
-        # it. It only keeps this worker's concurrent requests for one conversation from turning
-        # into a spurious busy error; requests for other conversations never wait on it, and
-        # exclusion across conversations and workers comes from the unique active IDs.
+        # One lock per conversation.
         self._locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
     async def ensure(
@@ -106,34 +109,65 @@ class E2BProvider(AgentRuntimeProvider):
             another worker is still creating a sandbox for this conversation or Project.
         """
         async with self._conversation_lock(conversation_id):
-            active = await self._active_sandbox(conversation_id, reconcile=True)
-            if active is not None:
-                record, existing_sandbox = active
-                return self._handle(record, existing_sandbox)
+            if active := await self._active_sandbox(conversation_id, reconcile=True):
+                claim, existing_sandbox = active
+                return claim.handle(existing_sandbox)
 
             # A holder whose sandbox has gone is released here, so the claim below can succeed.
             holder = await E2BSandboxRecord.objects.active_for_project(project_id).afirst()
-            if holder is not None and await self._connect(holder, reconcile=True) is not None:
+            if holder is not None and await _SandboxClaim(holder, self.config).connect(reconcile=True) is not None:
                 raise AgentWorkspaceBusyError(
                     f"Conversation {holder.conversation_id} already has a running Agent on this project."
                 )
 
-            claim = await self._claim(project_id=project_id, conversation_id=conversation_id)
+            claim = _SandboxClaim(
+                await self._claim(project_id=project_id, conversation_id=conversation_id), self.config
+            )
             sandbox = None
             try:
                 async with asyncio.timeout(PROVISION_TIMEOUT_SECONDS):
-                    sandbox = await self._create_sandbox()
-                    await self._bind(claim, sandbox)
-                    return self._handle(claim, sandbox)
+                    try:
+                        sandbox = await AsyncSandbox.create(
+                            self.config.template,
+                            timeout=self.config.timeout_seconds,
+                            api_key=self.config.api_key,
+                            api_url=self.config.api_url,
+                            domain=self.config.domain,
+                        )
+                    except SandboxException as exc:
+                        raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc
+                    await claim.bind(sandbox)
+                    return claim.handle(sandbox)
             except BaseException as exc:
                 # Cancellation included: the claim is this request's to give back, and so is
                 # a sandbox it has already created.
-                await self._abandon(claim, sandbox)
+                await claim.abandon(sandbox)
                 if isinstance(exc, TimeoutError):
                     raise AgentProvisionError(
                         f"Provisioning an E2B sandbox took longer than {PROVISION_TIMEOUT_SECONDS} seconds."
                     ) from exc
                 raise
+
+    async def terminate(self, conversation_id: str) -> None:
+        """Stop the sandbox serving a conversation, retaining its historical record.
+
+        :param conversation_id: Conversation whose sandbox should stop.
+        :raises AgentProvisionError: If E2B could not stop the sandbox.
+        """
+        async with self._conversation_lock(conversation_id):
+            record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
+            if record is not None:
+                await _SandboxClaim(record, self.config).terminate()
+
+    async def shutdown(self) -> None:
+        """Stop all active sandboxes owned by this API service.
+
+        :raises AgentProvisionError: If an active sandbox could not be stopped.
+        """
+        records = [record async for record in E2BSandboxRecord.objects.active()]
+        for record in records:
+            async with self._conversation_lock(record.conversation_id):
+                await _SandboxClaim(record, self.config).terminate()
 
     async def peek(self, conversation_id: str) -> AgentRuntimeHandle | None:
         """Reconnect to the sandbox serving a conversation without creating or releasing one.
@@ -145,8 +179,8 @@ class E2BProvider(AgentRuntimeProvider):
         active = await self._active_sandbox(conversation_id)
         if active is None:
             return None
-        record, sandbox = active
-        return self._handle(record, sandbox)
+        claim, sandbox = active
+        return claim.handle(sandbox)
 
     async def get_sandbox(self, conversation_id: str) -> AsyncSandbox | None:
         """Reconnect to a recorded sandbox for installation or inspection.
@@ -181,40 +215,19 @@ class E2BProvider(AgentRuntimeProvider):
         if record is None or record.sandbox_id is None:
             return None
         try:
-            sandbox = self._rebuild_sandbox(record)
+            sandbox = _SandboxClaim(record, self.config).rebuild_sandbox()
         except (SandboxException, ValueError) as exc:
             raise AgentProvisionError(f"Could not rebuild E2B sandbox {record.sandbox_id}: {exc}") from exc
         return PreviewTarget(
             base_url=f"{self.config.port_scheme}://{sandbox.get_host(self.config.preview_port)}",
-            http_headers=self._port_headers(sandbox),
+            http_headers=_port_headers(sandbox),
             # Our self-hosted E2B port proxy rejects a forwarded host different from its
             # exposed-port host with HTTP 400 (`bad target`).
             send_forwarded_host=False,
         )
 
-    async def terminate(self, conversation_id: str) -> None:
-        """Stop the sandbox serving a conversation, retaining its historical record.
-
-        :param conversation_id: Conversation whose sandbox should stop.
-        :raises AgentProvisionError: If E2B could not stop the sandbox.
-        """
-        async with self._conversation_lock(conversation_id):
-            record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
-            if record is not None:
-                await self._terminate_record(record)
-
-    async def shutdown(self) -> None:
-        """Stop all active sandboxes owned by this API service.
-
-        :raises AgentProvisionError: If an active sandbox could not be stopped.
-        """
-        records = [record async for record in E2BSandboxRecord.objects.active()]
-        for record in records:
-            async with self._conversation_lock(record.conversation_id):
-                await self._terminate_record(record)
-
     @asynccontextmanager
-    async def _conversation_lock(self, conversation_id: str) -> AsyncIterator[None]:
+    async def _conversation_lock(self, conversation_id: str) -> AsyncGenerator[None]:
         lock = self._locks.get(conversation_id)
         if lock is None:
             lock = self._locks[conversation_id] = asyncio.Lock()
@@ -223,13 +236,14 @@ class E2BProvider(AgentRuntimeProvider):
 
     async def _active_sandbox(
         self, conversation_id: str, *, reconcile: bool = False
-    ) -> tuple[E2BSandboxRecord, AsyncSandbox] | None:
+    ) -> tuple[_SandboxClaim, AsyncSandbox] | None:
         """Look up a conversation's active record and reconnect to its running sandbox."""
         record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
         if record is None:
             return None
-        sandbox = await self._connect(record, reconcile=reconcile)
-        return (record, sandbox) if sandbox is not None else None
+        claim = _SandboxClaim(record, self.config)
+        sandbox = await claim.connect(reconcile=reconcile)
+        return (claim, sandbox) if sandbox is not None else None
 
     async def _claim(self, *, project_id: str, conversation_id: str) -> E2BSandboxRecord:
         """Reserve the conversation and its Project before any sandbox exists."""
@@ -250,24 +264,25 @@ class E2BProvider(AgentRuntimeProvider):
                 f"or project {project_id}."
             ) from exc
 
-    async def _create_sandbox(self) -> AsyncSandbox:
-        try:
-            return await AsyncSandbox.create(
-                self.config.template,
-                timeout=self.config.timeout_seconds,
-                api_key=self.config.api_key,
-                api_url=self.config.api_url,
-                domain=self.config.domain,
-            )
-        except SandboxException as exc:
-            raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc
 
-    async def _bind(self, claim: E2BSandboxRecord, sandbox: AsyncSandbox) -> None:
+class _SandboxClaim:
+    """Operate on one recorded claim and its E2B sandbox.
+
+    Each instance is scoped to one provider operation. Its record may be stale after another
+    worker acts, so state transitions must still be conditional database updates.
+    """
+
+    def __init__(self, record: E2BSandboxRecord, config: E2BConfig) -> None:
+        self.record = record
+        self.config = config
+
+    async def bind(self, sandbox: AsyncSandbox) -> None:
         """Record a newly created sandbox on its claim.
 
         :raises AgentProvisionError: If the sandbox cannot be inspected, or the claim was
             released while E2B was creating the sandbox.
         """
+        claim = self.record
         try:
             info = await sandbox.get_info()
         except SandboxException as exc:
@@ -293,13 +308,14 @@ class E2BProvider(AgentRuntimeProvider):
         for name, value in fields.items():
             setattr(claim, name, value)
 
-    async def _abandon(self, claim: E2BSandboxRecord, sandbox: AsyncSandbox | None) -> None:
+    async def abandon(self, sandbox: AsyncSandbox | None) -> None:
         """Give back a failed claim and the sandbox it may have created.
 
         Best-effort on both counts, so the failure that led here is the one the caller sees. A
         sandbox left running still ends at its E2B timeout, and a claim left active is taken for
         abandoned once it is older than :data:`ABANDONED_CLAIM_SECONDS`.
         """
+        claim = self.record
         if sandbox is not None:
             try:
                 await sandbox.kill()
@@ -310,7 +326,7 @@ class E2BProvider(AgentRuntimeProvider):
                     exc_info=True,
                 )
         try:
-            await self._release(claim, "failed")
+            await self._release("failed")
         except Exception:
             logger.exception(
                 "Could not release the sandbox claim of conversation %s; it is reclaimed after %d seconds",
@@ -318,7 +334,30 @@ class E2BProvider(AgentRuntimeProvider):
                 ABANDONED_CLAIM_SECONDS,
             )
 
-    async def _connect(self, record: E2BSandboxRecord, *, reconcile: bool) -> AsyncSandbox | None:
+    async def terminate(self) -> None:
+        """Stop this claim's sandbox, preserving the record for history."""
+        record = self.record
+        if record.sandbox_id is None:
+            # Nothing to stop yet, unless a bind landed after this record was read. Releasing
+            # only while still unbound leaves that sandbox claimed, so the fall-through below
+            # reconnects and stops it instead of forgetting it.
+            if await self._release("terminated", only_unbound=True):
+                return
+            await record.arefresh_from_db()
+            if record.sandbox_id is None or record.active_conversation_id is None:
+                return
+        sandbox = await self.connect(reconcile=True)
+        if sandbox is None:
+            return
+        try:
+            await sandbox.kill()
+        except NotFoundException:
+            pass
+        except SandboxException as exc:
+            raise AgentProvisionError(f"Could not stop E2B sandbox {record.sandbox_id}: {exc}") from exc
+        await self._release("terminated")
+
+    async def connect(self, *, reconcile: bool) -> AsyncSandbox | None:
         """Reconnect to a record's sandbox if it is still running.
 
         :param reconcile: Also write back what was learned: renewed tokens of a live sandbox,
@@ -330,7 +369,8 @@ class E2BProvider(AgentRuntimeProvider):
             provisioning.
         :raises AgentProvisionError: If E2B cannot say whether the sandbox is running.
         """
-        if record.sandbox_id is None and (not reconcile or await self._give_up_unbound_claim(record)):
+        record = self.record
+        if record.sandbox_id is None and (not reconcile or await self._give_up_unbound_claim()):
             return None
         # Still empty after the claim was settled: it was released, or it never had a sandbox.
         # The bound case falls through with the id the refresh just loaded.
@@ -350,7 +390,7 @@ class E2BProvider(AgentRuntimeProvider):
             # sandbox. Rebuild the SDK object from its persisted connection metadata, then ask
             # envd whether it is still alive. Standard E2B can use the connect response above.
             try:
-                sandbox = self._rebuild_sandbox(record)
+                sandbox = self.rebuild_sandbox()
             except (SandboxException, ValueError) as exc:
                 raise AgentProvisionError(f"Could not rebuild E2B sandbox {record.sandbox_id}: {exc}") from exc
         except SandboxException as exc:
@@ -359,40 +399,22 @@ class E2BProvider(AgentRuntimeProvider):
         try:
             if await sandbox.is_running():
                 if reconcile:
-                    await self._refresh_connection(record, sandbox)
+                    await self._refresh_connection(sandbox)
                 return sandbox
         except NotFoundException:
             pass
         except SandboxException as exc:
             raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
         if reconcile:
-            await self._release(record, "expired")
+            await self._release("expired")
         return None
 
-    async def _give_up_unbound_claim(self, record: E2BSandboxRecord) -> bool:
-        """Release a claim that never received a sandbox, unless one was bound since the read.
-
-        :param record: Claim observed with no sandbox id.
-        :return: Whether the caller is done with it. ``False`` means a bind won the race and
-            ``record`` has been refreshed into that bound, still-active row.
-        :raises AgentWorkspaceBusyError: If the claim is recent enough to still be provisioning.
-        """
-        if record.created_at > timezone.now() - timedelta(seconds=ABANDONED_CLAIM_SECONDS):
-            raise AgentWorkspaceBusyError(
-                f"Conversation {record.conversation_id} is still starting a sandbox on this project."
-            )
-        # Releasing by primary key alone would drop a live sandbox's claim and leave that
-        # sandbox running with nobody recorded to stop it.
-        if await self._release(record, "abandoned", only_unbound=True):
-            return True
-        await record.arefresh_from_db()
-        return record.sandbox_id is None or record.active_conversation_id is None
-
-    def _rebuild_sandbox(self, record: E2BSandboxRecord) -> AsyncSandbox:
+    def rebuild_sandbox(self) -> AsyncSandbox:
         """Build an SDK object from the record alone; nothing here reaches the network.
 
         :raises ValueError: If the record is unbound or its stored metadata is malformed.
         """
+        record = self.record
         if record.sandbox_id is None or record.envd_version is None:
             raise ValueError("The record has no sandbox bound to it")
         headers = json.loads(record.sandbox_headers)
@@ -418,9 +440,38 @@ class E2BProvider(AgentRuntimeProvider):
             ),
         )
 
-    @staticmethod
-    async def _refresh_connection(record: E2BSandboxRecord, sandbox: AsyncSandbox) -> None:
+    def handle(self, sandbox: AsyncSandbox) -> AgentRuntimeHandle:
+        """Build the runtime endpoint using this claim's identity and transport."""
+        record = self.record
+        return AgentRuntimeHandle(
+            conversation_id=record.conversation_id,
+            base_url=f"{self.config.port_scheme}://{sandbox.get_host(self.config.runtime_port)}",
+            runtime_token=record.runtime_token,
+            http_headers=_port_headers(sandbox),
+        )
+
+    async def _give_up_unbound_claim(self) -> bool:
+        """Release a claim that never received a sandbox, unless one was bound since the read.
+
+        :return: Whether the caller is done with it. ``False`` means a bind won the race and
+            ``record`` has been refreshed into that bound, still-active row.
+        :raises AgentWorkspaceBusyError: If the claim is recent enough to still be provisioning.
+        """
+        record = self.record
+        if record.created_at > timezone.now() - timedelta(seconds=ABANDONED_CLAIM_SECONDS):
+            raise AgentWorkspaceBusyError(
+                f"Conversation {record.conversation_id} is still starting a sandbox on this project."
+            )
+        # Releasing by primary key alone would drop a live sandbox's claim and leave that
+        # sandbox running with nobody recorded to stop it.
+        if await self._release("abandoned", only_unbound=True):
+            return True
+        await record.arefresh_from_db()
+        return record.sandbox_id is None or record.active_conversation_id is None
+
+    async def _refresh_connection(self, sandbox: AsyncSandbox) -> None:
         """Keep renewed access tokens after a successful standard SDK reconnect."""
+        record = self.record
         headers = dict(sandbox.connection_config.sandbox_headers)
         if (
             headers == json.loads(record.sandbox_headers)
@@ -437,37 +488,15 @@ class E2BProvider(AgentRuntimeProvider):
         record.traffic_access_token = sandbox.traffic_access_token
         record.sandbox_domain = sandbox.sandbox_domain
 
-    async def _terminate_record(self, record: E2BSandboxRecord) -> None:
-        if record.sandbox_id is None:
-            # Nothing to stop yet, unless a bind landed after this record was read. Releasing
-            # only while still unbound leaves that sandbox claimed, so the fall-through below
-            # reconnects and stops it instead of forgetting it.
-            if await self._release(record, "terminated", only_unbound=True):
-                return
-            await record.arefresh_from_db()
-            if record.sandbox_id is None or record.active_conversation_id is None:
-                return
-        sandbox = await self._connect(record, reconcile=True)
-        if sandbox is None:
-            return
-        try:
-            await sandbox.kill()
-        except NotFoundException:
-            pass
-        except SandboxException as exc:
-            raise AgentProvisionError(f"Could not stop E2B sandbox {record.sandbox_id}: {exc}") from exc
-        await self._release(record, "terminated")
-
-    @staticmethod
-    async def _release(record: E2BSandboxRecord, reason: str, *, only_unbound: bool = False) -> bool:
+    async def _release(self, reason: str, *, only_unbound: bool = False) -> bool:
         """Clear a claim's active IDs.
 
-        :param record: Claim to release. A claim that is already released is left unchanged.
         :param reason: Why it is ending, kept on the row for history.
         :param only_unbound: Also require that no sandbox has been recorded yet. A bind that
             won the race then keeps the claim, and the caller reconnects to stop that sandbox.
         :return: Whether this call released the claim.
         """
+        record = self.record
         stopped_at = timezone.now()
         query = E2BSandboxRecord.objects.filter(pk=record.pk, active_conversation_id__isnull=False)
         if only_unbound:
@@ -480,24 +509,3 @@ class E2BProvider(AgentRuntimeProvider):
             updated_at=stopped_at,
         )
         return bool(released)
-
-    def _handle(self, record: E2BSandboxRecord, sandbox: AsyncSandbox) -> AgentRuntimeHandle:
-        return AgentRuntimeHandle(
-            conversation_id=record.conversation_id,
-            base_url=f"{self.config.port_scheme}://{sandbox.get_host(self.config.runtime_port)}",
-            runtime_token=record.runtime_token,
-            http_headers=self._port_headers(sandbox),
-        )
-
-    @staticmethod
-    def _port_headers(sandbox: AsyncSandbox) -> dict[str, str]:
-        """Forward tokens required by the E2B proxy for an exposed application port."""
-        headers: dict[str, str] = {}
-        # The self-hosted proxy in front of our E2B service requires the same sandbox access
-        # token the SDK sends to envd. Read it through the SDK's public connection config, not
-        # through the sandbox's private token field. The port itself comes from get_host().
-        if access_token := sandbox.connection_config.sandbox_headers.get("X-Access-Token"):
-            headers["X-Access-Token"] = access_token
-        if sandbox.traffic_access_token:
-            headers["E2B-Traffic-Access-Token"] = sandbox.traffic_access_token
-        return headers

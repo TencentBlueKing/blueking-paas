@@ -36,10 +36,13 @@ from app_spark_api.agent.runtime import (
     AgentRuntimeError,
     AgentWorkspaceBusyError,
     AgentWorkspaceSavePendingError,
+    ModelAccessConfigurationError,
+    ModelCredentialMissingError,
 )
 from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.api import router as accounts_router
+from app_spark_api.infras.bk_access_token import AccessTokenError
 from app_spark_api.infras.forgejo.exceptions import ForgejoError
 from app_spark_api.repository.git.api import router as git_repository_router
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
@@ -81,6 +84,9 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     AgentBusyError: error_codes.AGENT_BUSY,
     AgentWorkspaceBusyError: error_codes.AGENT_WORKSPACE_BUSY,
     AgentWorkspaceSavePendingError: error_codes.AGENT_WORKSPACE_SAVE_PENDING,
+    ModelAccessConfigurationError: error_codes.MODEL_ACCESS_CONFIGURATION_ERROR,
+    ModelCredentialMissingError: error_codes.MODEL_CREDENTIAL_MISSING,
+    AccessTokenError: error_codes.MODEL_ACCESS_TOKEN_UNAVAILABLE,
     AgentRuntimeError: error_codes.AGENT_UNAVAILABLE,
     AuthenticationError: error_codes.AUTHENTICATION_REQUIRED,
     PermissionDenied: error_codes.PERMISSION_DENIED,

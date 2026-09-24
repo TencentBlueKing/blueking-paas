@@ -43,6 +43,9 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "AGENT_RUNTIME_PROVIDER" $agent.runtimeProvider
   "AGENT_RUNTIME_PROVIDER_CONFIG" $agent.runtimeProviderConfig
   "AGENT_CONTEXT_STORAGE" $agent.contextStorage
+  "AGENT_MODEL_SOURCE" $agent.modelSource
+  "AGENT_DIRECT_MODEL_CONFIG" $agent.directModelConfig
+  "BKAIDEV_MODEL_CONFIG" $agent.bkaidevModelConfig
 -}}
 apiVersion: v1
 kind: ConfigMap

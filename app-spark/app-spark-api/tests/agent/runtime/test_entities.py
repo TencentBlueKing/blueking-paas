@@ -48,9 +48,6 @@ def test_a_minimal_configuration_gets_workable_defaults():
     config = structure_local_process_config(MINIMAL_CONFIG)
 
     assert config.agent_project_dir == "/srv/app-spark/agent"
-    # Unset means "leave it to the agent's own default" rather than "send an empty value".
-    assert config.model is None
-    assert config.model_api_key is None
     assert config.extra_env == {}
     assert config.startup_timeout_seconds > 0
 
@@ -59,15 +56,11 @@ def test_every_setting_can_be_given():
     config = structure_local_process_config(
         {
             **MINIMAL_CONFIG,
-            "model": "deepseek:deepseek-v4-flash",
-            "model_api_key": "a-key",
             "startup_timeout_seconds": 5.0,
             "extra_env": {"APP_SPARK_AGENT_FAKE_DELAY_SECONDS": "1"},
         }
     )
 
-    assert config.model == "deepseek:deepseek-v4-flash"
-    assert config.model_api_key == "a-key"
     assert config.startup_timeout_seconds == 5.0
     assert config.extra_env == {"APP_SPARK_AGENT_FAKE_DELAY_SECONDS": "1"}
 
@@ -98,6 +91,21 @@ def test_every_setting_can_be_given():
             id="a-misspelled-key",
         ),
         pytest.param("just a string", "LocalProcessConfig", id="not-a-mapping"),
+        # The model moved to the model source settings; still accepting it here would leave two
+        # places that disagree about which key a Runtime gets.
+        pytest.param({**MINIMAL_CONFIG, "model_api_key": "a-key"}, "model_api_key", id="a-model-key"),
+        # extra_env is a door into the Runtime's environment, and the Runtime hands most of that
+        # environment to the application the model writes.
+        pytest.param(
+            {**MINIMAL_CONFIG, "extra_env": {"APP_SPARK_API_SECRET_KEY": "platform-secret"}},
+            "APP_SPARK_API_SECRET_KEY",
+            id="a-variable-that-is-not-the-agents",
+        ),
+        pytest.param(
+            {**MINIMAL_CONFIG, "extra_env": {"APP_SPARK_AGENT_MODEL_API_KEY": "shared-key"}},
+            "APP_SPARK_AGENT_MODEL_API_KEY",
+            id="a-model-variable",
+        ),
     ],
 )
 def test_an_unusable_configuration_is_refused_by_name(raw_config, reason):

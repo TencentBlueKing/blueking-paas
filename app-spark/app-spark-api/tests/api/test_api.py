@@ -30,9 +30,12 @@ from app_spark_api.agent.runtime import (
     AgentUnavailableError,
     AgentWorkspaceBusyError,
     AgentWorkspaceSavePendingError,
+    ModelAccessConfigurationError,
+    ModelCredentialMissingError,
 )
 from app_spark_api.api import api
 from app_spark_api.error_codes import error_codes
+from app_spark_api.infras.bk_access_token import AccessTokenUnavailableError
 
 SECRET = "internal-secret-token"
 
@@ -83,6 +86,28 @@ def test_agent_runtime_errors_do_not_leak_internal_details(exc, status, detail):
             AgentProvisionError: "AGENT_UNAVAILABLE",
         }[type(exc)]
     )
+    assert SECRET not in response.content.decode()
+
+
+@pytest.mark.parametrize(
+    ("exc", "status", "code"),
+    [
+        # An operator's problem, even though ModelAccessConfigurationError is also an
+        # AgentRuntimeError: the nearest base class has to win, or it would read as a dead Runtime.
+        (
+            ModelAccessConfigurationError(f"Invalid BkAidevModelConfig: {SECRET}"),
+            503,
+            "MODEL_ACCESS_CONFIGURATION_ERROR",
+        ),
+        (ModelCredentialMissingError(SECRET), 401, "MODEL_CREDENTIAL_MISSING"),
+        (AccessTokenUnavailableError(f"refused: {SECRET}"), 502, "MODEL_ACCESS_TOKEN_UNAVAILABLE"),
+    ],
+)
+def test_model_access_errors_say_who_has_to_fix_them(exc, status, code):
+    response = api.on_exception(RequestFactory().get("/"), exc)
+
+    assert response.status_code == status
+    assert json.loads(response.content)["code"] == code
     assert SECRET not in response.content.decode()
 
 

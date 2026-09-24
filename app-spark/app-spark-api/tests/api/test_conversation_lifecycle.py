@@ -324,7 +324,7 @@ async def test_a_conversation_closed_while_its_runtime_comes_up_does_not_keep_it
     """
     terminated: list[str] = []
 
-    async def close_it_behind_our_back(target: Conversation) -> object:
+    async def close_it_behind_our_back(target: Conversation, **_: object) -> object:
         """Stand in for a concurrent close that lands after the gate has let this run past."""
         await Conversation.objects.filter(pk=target.pk).aupdate(closed_at=timezone.now())
         # The run is meant to be rejected before anything touches the client, so what this

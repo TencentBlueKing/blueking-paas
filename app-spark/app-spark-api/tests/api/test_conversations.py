@@ -176,7 +176,6 @@ async def _configured_agent(
         "agent_project_dir": str(AGENT_PROJECT_DIR),
         "workspace_root": str(workspace_root),
         "state_root": str(tmp_path / "agent-state"),
-        "model": model,
         # The spawned Runtime is a real process, so the only address it can push its state to
         # is a real one. Everything else in these tests goes through the in-process client.
         "callback_base_url": live_server.url,
@@ -184,6 +183,9 @@ async def _configured_agent(
         # that a test which forgets to release it still finishes.
         "extra_env": {"APP_SPARK_AGENT_FAKE_DELAY_SECONDS": "5"},
     }
+    # fake: 模型不发网络请求，也就用不着 bkaidev 的 access_token。
+    settings.AGENT_MODEL_SOURCE = "direct"
+    settings.AGENT_DIRECT_MODEL_CONFIG = {"model": model}
     try:
         yield None
     finally:

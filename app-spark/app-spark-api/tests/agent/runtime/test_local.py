@@ -21,13 +21,18 @@ FORCE_SCRIPT_NAME comes off; the Project's Git repository is described to the Ru
 there is one; and each Runtime is given an application port of its own.
 """
 
+import pytest
+
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
+    BkAidevModelAccess,
+    DirectModelAccess,
     GitRemote,
     LocalProcessConfig,
     PreviewTarget,
     StateCallback,
 )
+from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 from app_spark_api.agent.runtime.providers import local as local_mod
 from app_spark_api.agent.runtime.providers.local import ENV_PREFIX, LocalProcessProvider
 
@@ -39,6 +44,14 @@ REMOTE = GitRemote(
     branch="main",
     username="app-spark-bot",
     token="repo-scoped-token",
+)
+
+FIXED_MODEL_KEY = "fixed-model-key"
+DIRECT_ACCESS = DirectModelAccess(model="deepseek:deepseek-v4-flash", api_key=FIXED_MODEL_KEY)
+MODEL_ACCESS = BkAidevModelAccess(
+    base_url="https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1",
+    model_name="deepseek-v4-flash",
+    access_token="user-token",
 )
 
 
@@ -53,7 +66,9 @@ def _provider(tmp_path) -> LocalProcessProvider:
     )
 
 
-def _build_env(tmp_path, *, state_callback=None, git_remote=None, app_port=9000) -> dict[str, str]:
+def _build_env(
+    tmp_path, *, state_callback=None, git_remote=None, app_port=9000, model_access=DIRECT_ACCESS
+) -> dict[str, str]:
     """Build one Runtime's environment with everything but the varying part held fixed."""
     return _provider(tmp_path)._build_env(
         project_id="p",
@@ -63,6 +78,7 @@ def _build_env(tmp_path, *, state_callback=None, git_remote=None, app_port=9000)
         runtime_token="runtime-token",
         state_callback=state_callback,
         git_remote=git_remote,
+        model_access=model_access,
     )
 
 
@@ -142,7 +158,109 @@ def test_the_runtime_is_told_exactly_these_things_and_nothing_else(tmp_path):
         f"{ENV_PREFIX}RUNTIME_TOKEN",
         f"{ENV_PREFIX}PROJECT_ID",
         f"{ENV_PREFIX}APP_PORT",
+        f"{ENV_PREFIX}MODEL",
+        f"{ENV_PREFIX}MODEL_API_KEY",
     }
+
+
+def test_only_allow_listed_variables_of_this_service_reach_the_runtime(tmp_path, monkeypatch):
+    """本服务的环境里有平台自己的密钥，Runtime 又会把环境交给模型写的应用，所以只能按白名单放行。"""
+    monkeypatch.setenv("APP_SPARK_API_BKAIDEV_MODEL_CONFIG", '{"token": {"app_secret": "platform-secret"}}')
+    monkeypatch.setenv("APP_SPARK_API_DATABASE_PASSWORD", "db-password")
+    monkeypatch.setenv("SOME_UNRELATED_TOKEN", "unrelated")
+    monkeypatch.setenv("UV_INDEX_PRIVATE_PASSWORD", "index-password")
+    monkeypatch.setenv(f"{ENV_PREFIX}MODEL_API_KEY", FIXED_MODEL_KEY)
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.setenv("LC_ALL", "C.UTF-8")
+
+    env = _build_env(tmp_path, model_access=MODEL_ACCESS)
+
+    assert not any(name.startswith("APP_SPARK_API_") for name in env)
+    assert "SOME_UNRELATED_TOKEN" not in env
+    assert "UV_INDEX_PRIVATE_PASSWORD" not in env
+    for secret in ("platform-secret", "db-password", "index-password", FIXED_MODEL_KEY):
+        assert not any(secret in value for value in env.values())
+    # What uv and the agent need to run at all still gets through.
+    assert env["PATH"] == "/usr/bin"
+    assert env["LC_ALL"] == "C.UTF-8"
+
+
+def test_a_bkaidev_runtime_gets_the_users_token_and_nothing_to_fall_back_on(tmp_path):
+    env = _build_env(tmp_path, model_access=MODEL_ACCESS)
+
+    assert env[f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN"] == "user-token"
+    assert env[f"{ENV_PREFIX}MODEL_BASE_URL"] == MODEL_ACCESS.base_url
+    assert env[f"{ENV_PREFIX}MODEL_NAME"] == "deepseek-v4-flash"
+    # The agent falls back to this key when it has no token, so there must be none.
+    assert f"{ENV_PREFIX}MODEL_API_KEY" not in env
+
+
+def test_a_direct_runtime_gets_the_fixed_key_and_no_gateway_settings(tmp_path):
+    env = _build_env(tmp_path, model_access=DIRECT_ACCESS)
+
+    assert env[f"{ENV_PREFIX}MODEL"] == "deepseek:deepseek-v4-flash"
+    assert env[f"{ENV_PREFIX}MODEL_API_KEY"] == FIXED_MODEL_KEY
+    # Any of these would make the agent treat the fixed key as a bkaidev token.
+    for name in ("BK_AIDEV_ACCESS_TOKEN", "MODEL_BASE_URL", "MODEL_NAME"):
+        assert f"{ENV_PREFIX}{name}" not in env
+
+
+def test_a_fake_model_is_given_no_key_at_all(tmp_path):
+    env = _build_env(tmp_path, model_access=DirectModelAccess(model="fake:write-file"))
+
+    assert env[f"{ENV_PREFIX}MODEL"] == "fake:write-file"
+    assert f"{ENV_PREFIX}MODEL_API_KEY" not in env
+
+
+def make_counting_resolver():
+    """Return a model access resolver and the list recording each call to it."""
+    calls: list[None] = []
+
+    async def resolve():
+        calls.append(None)
+        return MODEL_ACCESS
+
+    return resolve, calls
+
+
+async def test_a_live_runtime_is_returned_without_resolving_model_access(tmp_path):
+    provider = _provider(tmp_path)
+    register_runtime(provider, "c", app_port=9001)
+    resolve, calls = make_counting_resolver()
+
+    await provider.ensure(project_id="p", conversation_id="c", model_access=resolve)
+
+    assert calls == []
+
+
+async def test_a_runtime_that_died_is_replaced_with_fresh_model_access(tmp_path, monkeypatch):
+    """看时还活着、起时已经没了：解析放在锁里、确定要起之后，新 Runtime 照样拿到凭据。"""
+    provider = _provider(tmp_path)
+    register_runtime(provider, "c", app_port=9001, alive=False)
+    resolve, calls = make_counting_resolver()
+    spawned_with: list[object] = []
+
+    async def fake_spawn(**kwargs):
+        spawned_with.append(kwargs["model_access"])
+        return local_mod._LocalRuntime(
+            handle=AgentRuntimeHandle(conversation_id="c", base_url="http://127.0.0.1:1", runtime_token="t"),
+            process=None,
+            workspace_dir=provider.workspace_dir("p"),
+            log_path=provider.state_dir("c"),
+            app_port=9002,
+        )
+
+    monkeypatch.setattr(provider, "_spawn", fake_spawn)
+
+    await provider.ensure(project_id="p", conversation_id="c", model_access=resolve)
+
+    assert len(calls) == 1
+    assert spawned_with == [MODEL_ACCESS]
+
+
+async def test_starting_a_runtime_without_model_access_is_refused(tmp_path):
+    with pytest.raises(AgentProvisionError):
+        await _provider(tmp_path).ensure(project_id="p", conversation_id="c")
 
 
 async def test_two_conversations_are_proxied_to_their_own_applications(tmp_path):

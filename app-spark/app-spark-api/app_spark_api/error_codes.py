@@ -107,6 +107,24 @@ class ErrorCodes:
     )
     AGENT_UNAVAILABLE = ErrorCode(_("The Agent Runtime is unavailable."), status_code=HTTPStatus.BAD_GATEWAY)
 
+    # --- Model access -----------------------------------------------------------------------------
+    # Three failures with three different people to fix them: an operator for the settings, the
+    # user for their login, and nobody in particular for a token service that is down.
+    MODEL_ACCESS_CONFIGURATION_ERROR = ErrorCode(
+        _("Model access is not configured correctly. Please contact an administrator."),
+        status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+    )
+    # 401 rather than 400: the session still says who the user is, but the BlueKing login the
+    # token is exchanged with is gone, and logging in again is what brings it back.
+    MODEL_CREDENTIAL_MISSING = ErrorCode(
+        _("Your BlueKing login is unavailable. Please log in again."),
+        status_code=HTTPStatus.UNAUTHORIZED,
+    )
+    MODEL_ACCESS_TOKEN_UNAVAILABLE = ErrorCode(
+        _("Could not obtain an access token for the model. Please retry later."),
+        status_code=HTTPStatus.BAD_GATEWAY,
+    )
+
     # --- Workspace application preview --------------------------------------------------------------
     # Two separate failures, because only the first one is the user's to fix. No Runtime means
     # nothing is serving this conversation yet, which a turn of conversation resolves; an

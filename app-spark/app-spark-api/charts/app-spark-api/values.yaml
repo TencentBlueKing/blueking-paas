@@ -147,11 +147,24 @@ agent:
     # state_root 必须在 workspace_root 之外。
     state_root: /data/app-spark/agent-state
     # callback_base_url: http://127.0.0.1:8000
-    # null 使用 Agent 自身默认值；本地验证可设为 fake:write-file。
-    model: null
-    model_api_key: null
     # startup_timeout_seconds: 60.0
+    # 只收 APP_SPARK_AGENT_* 变量，且不收模型相关的变量。
     # extra_env: {}
   contextStorage:
     backend: host_tmp_path
     root: /data/app-spark/agent-contexts
+  # 调模型走哪条路：bkaidev（默认，不填即是）或 direct（直连厂商）。
+  # modelSource: bkaidev
+  # modelSource 为 direct 时必填。本地验证可把 model 设为 fake:write-file。
+  # directModelConfig:
+  #   model: deepseek:deepseek-v4-flash
+  #   api_key: ""
+  # modelSource 为 bkaidev 时必填，字段见 settings 中 BKAIDEV_MODEL_CONFIG 的说明。
+  # bkaidevModelConfig:
+  #   base_url: https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
+  #   model_name: deepseek-v4-flash
+  #   token:
+  #     token_url: ""
+  #     app_code: ""
+  #     app_secret: ""
+  #     env_name: prod

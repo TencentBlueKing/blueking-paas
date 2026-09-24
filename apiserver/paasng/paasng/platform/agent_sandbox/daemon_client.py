@@ -144,14 +144,14 @@ class SandboxDaemonClient:
         """Whether GET /health through the router can reach this sandbox right now.
 
         Uses the same router headers as later API calls. Transport errors and any
-        non-200 (including 502 while Endpoints or kube-proxy are still catching up)
-        mean the path is not ready yet.
+        status outside 2xx (including 502 while Endpoints or kube-proxy are still
+        catching up) mean the path is not ready yet.
         """
         try:
             resp = self._session.get(f"{self.base_url}/health", timeout=timeout)
         except requests.RequestException:
             return False
-        return resp.status_code == 200
+        return 200 <= resp.status_code < 300
 
     def close(self) -> None:
         """Close the HTTP session."""

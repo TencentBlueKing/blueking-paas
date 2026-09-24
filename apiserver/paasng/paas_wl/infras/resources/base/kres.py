@@ -38,6 +38,7 @@ from kubernetes.dynamic.resource import Resource, ResourceInstance
 from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
+    PodTerminatedError,
     ReadTargetStatusTimeout,
     ResourceDeleteTimeout,
     ResourceMissing,
@@ -660,16 +661,17 @@ class KPod(BaseKresource):
         namespace: Namespace = None,
         timeout: float | None = None,
         check_period: float = 0.5,
-    ) -> bool:
-        """Calling this function will blocks until the pod becomes ready or has terminated
+    ) -> None:
+        """Block until the pod is ready.
 
         Prefer this over `wait_for_status` when the caller wants to send requests to the pod
         afterwards: the pod enters phase "Running" before its readiness probe has passed.
+        A terminated pod is not a timeout: it will not become ready, so this raises immediately.
 
         :param timeout: timeout seconds for this join operation, default to never timeout
         :param check_period: wait interval for polling
-        :return: False if the pod has terminated and will never become ready
-        :raises: ReadTargetStatusTimeout
+        :raises PodTerminatedError: the pod has terminated and will not become ready
+        :raises ReadTargetStatusTimeout: the pod did not become ready within ``timeout``
         """
         time_started = time.time()
         pod = None
@@ -680,9 +682,9 @@ class KPod(BaseKresource):
                 logger.warning("Pod %s %s not found.", namespace, name)
             else:
                 if is_pod_ready(pod):
-                    return True
+                    return
                 if is_pod_terminated(pod):
-                    return False
+                    raise PodTerminatedError(pod_name=name)
             time.sleep(check_period)
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
 

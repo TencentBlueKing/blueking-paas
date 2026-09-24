@@ -207,12 +207,18 @@ class TestSandboxDaemonClient:
         ):
             client.execute("echo hello")
 
-    def test_probe_health_ok(self, client: SandboxDaemonClient):
-        """Router GET /health 200 means the same path callers use is usable."""
-        mock_response = mock.MagicMock(status_code=200)
+    @pytest.mark.parametrize("status_code", [200, 204])
+    def test_probe_health_2xx_is_ready(self, client: SandboxDaemonClient, status_code: int):
+        """Router GET /health 2xx means the same path callers use is usable."""
+        mock_response = mock.MagicMock(status_code=status_code)
         with mock.patch.object(client._session, "get", return_value=mock_response) as mock_get:
             assert client.probe_health() is True
         mock_get.assert_called_once_with("http://agent-sbx-router.example.com/health", timeout=2)
+
+    def test_probe_health_redirect_is_not_ready(self, client: SandboxDaemonClient):
+        """3xx is not a daemon response on this path."""
+        with mock.patch.object(client._session, "get", return_value=mock.MagicMock(status_code=302)):
+            assert client.probe_health() is False
 
     def test_probe_health_502_is_not_ready(self, client: SandboxDaemonClient):
         """502 from the router means Endpoints or the data plane are not ready yet."""

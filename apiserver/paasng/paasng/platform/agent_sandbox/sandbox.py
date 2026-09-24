@@ -335,7 +335,7 @@ class AgentSandboxResManager:
         )
 
     def _wait_router_ready(self, workload: AgentSandboxWorkload, daemon_token: str, timeout: float) -> None:
-        """Block until GET /health through the Agent Sandbox Router returns 200.
+        """Block until GET /health through the Agent Sandbox Router returns 2xx.
 
         Pod Ready only means the Pod can become a Service endpoint. The caller reaches
         ``{name}.{namespace}.svc.cluster.local`` via the router, which stays failing

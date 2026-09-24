@@ -58,6 +58,19 @@ export MYSQL_PORT="3306"
 export BKKRILL_ENCRYPT_SECRET_KEY="请参考上面的命令生成"
 # Django Settings
 export DJANGO_SETTINGS_MODULE="svc_otel.settings"
+
+# 蓝鲸登录（Django /admin/ 等页面）。平台调增强服务走 JWT，不依赖这组变量
+# bk_token：统一登录；bk_ticket：内部登录
+export BKAUTH_BACKEND_TYPE="bk_token"
+export BKAUTH_DEFAULT_PROVIDER_TYPE="BK"
+# bk_token 验票凭证；未设置时回落到 BK_APP_CODE / BK_APP_SECRET，二者须非空。bk_ticket 不用
+# export BKAUTH_TOKEN_APP_CODE=""
+# export BKAUTH_TOKEN_SECRET_KEY=""
+# 需带 /login；同时作为 LOGIN_URL 和验票 URL 前缀
+export BK_LOGIN_API_URL="http://bk-login.example.com/login"
+# 完整验票 URL；bk_ticket 场景直接配 get_info / check_token
+# export BKAUTH_USER_COOKIE_VERIFY_URL="http://login.example.com/user/get_info/"
+# 未设置时回退为 {BK_LOGIN_API_URL}/api/v3/is_login/
 ```
 
 ### 4. 初始化数据

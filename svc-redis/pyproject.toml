@@ -48,4 +48,5 @@ dependencies = [
     "attrs (==22.1.0)",
     "grpcio (==1.76.0)",
     "paas-service (==3.1.0)",
+    "bkpaas-auth (==4.1.0)",
 ]

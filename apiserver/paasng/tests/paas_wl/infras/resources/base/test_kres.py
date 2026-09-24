@@ -31,6 +31,7 @@ from kubernetes.dynamic.resource import ResourceInstance
 from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
+    PodTerminatedError,
     ReadTargetStatusTimeout,
     ResourceMissing,
 )
@@ -281,6 +282,93 @@ class TestKPod:
             )
             == "Pending"
         )
+
+    def test_wait_for_ready_returns_when_ready(self, k8s_client):
+        # phase "Running" 出现在 readinessProbe 通过之前, 只有 Ready 条件能代表可以服务
+        status = {"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}
+        kpod = KPod(k8s_client)
+        with mock.patch.object(kpod, "get", return_value=ResourceInstance(None, {"kind": "Pod", "status": status})):
+            kpod.wait_for_ready("foo", namespace="default", timeout=1, check_period=0.1)
+
+    def test_wait_for_ready_raises_when_terminated(self, k8s_client):
+        kpod = KPod(k8s_client)
+        status = {"phase": "Failed"}
+        with (
+            mock.patch.object(kpod, "get", return_value=ResourceInstance(None, {"kind": "Pod", "status": status})),
+            pytest.raises(PodTerminatedError),
+        ):
+            kpod.wait_for_ready("foo", namespace="default", timeout=1, check_period=0.1)
+
+    def test_wait_for_ready_polls_until_ready(self, k8s_client):
+        """缺失和未就绪都继续轮询，直到 Ready 条件为真。"""
+        not_ready = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Pending"}})
+        ready = ResourceInstance(
+            None,
+            {"kind": "Pod", "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}},
+        )
+        kpod = KPod(k8s_client)
+        with (
+            mock.patch.object(kpod, "get", side_effect=[ResourceMissing("default", "foo"), not_ready, ready]),
+            mock.patch("paas_wl.infras.resources.base.kres.time.sleep"),
+        ):
+            kpod.wait_for_ready("foo", namespace="default", timeout=5, check_period=0.1)
+
+    def test_wait_for_ready_times_out_while_pending(self, k8s_client):
+        pending = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Pending"}})
+        clock = {"t": 0.0}
+
+        def now():
+            return clock["t"]
+
+        def sleep(seconds):
+            clock["t"] += seconds
+
+        kpod = KPod(k8s_client)
+        with (
+            mock.patch("paas_wl.infras.resources.base.kres.time.time", side_effect=now),
+            mock.patch("paas_wl.infras.resources.base.kres.time.sleep", side_effect=sleep),
+            mock.patch.object(kpod, "get", return_value=pending),
+            pytest.raises(ReadTargetStatusTimeout),
+        ):
+            kpod.wait_for_ready("foo", namespace="default", timeout=1, check_period=0.4)
+
+    def test_wait_for_ready_allows_pre_start_past_legacy_120s(self, k8s_client):
+        """Running 之后 pre_start.sh 可以合法跑满 PRE_START_TIMEOUT，不能按旧的 120s 判超时。"""
+        from paas_wl.bk_app.agent_sandbox.constants import PRE_START_TIMEOUT_SECONDS
+        from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager
+
+        not_ready = ResourceInstance(
+            None,
+            {"kind": "Pod", "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "False"}]}},
+        )
+        ready = ResourceInstance(
+            None,
+            {"kind": "Pod", "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}},
+        )
+        clock = {"t": 0.0}
+
+        def now():
+            return clock["t"]
+
+        def sleep(seconds):
+            clock["t"] += seconds
+
+        def fake_get(name, namespace=None):
+            return not_ready if clock["t"] < PRE_START_TIMEOUT_SECONDS else ready
+
+        kpod = KPod(k8s_client)
+        with (
+            mock.patch("paas_wl.infras.resources.base.kres.time.time", side_effect=now),
+            mock.patch("paas_wl.infras.resources.base.kres.time.sleep", side_effect=sleep),
+            mock.patch.object(kpod, "get", side_effect=fake_get),
+        ):
+            kpod.wait_for_ready(
+                "foo",
+                namespace="default",
+                timeout=AgentSandboxResManager.create_timeout,
+                check_period=30,
+            )
+        assert clock["t"] >= PRE_START_TIMEOUT_SECONDS
 
     def test_get_logs(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(

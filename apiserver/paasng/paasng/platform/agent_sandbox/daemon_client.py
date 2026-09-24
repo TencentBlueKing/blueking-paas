@@ -140,6 +140,19 @@ class SandboxDaemonClient:
 
         self._request("POST", "/files/folder", json=payload)
 
+    def probe_health(self, timeout: float = 2) -> bool:
+        """Whether GET /health through the router can reach this sandbox right now.
+
+        Uses the same router headers as later API calls. Transport errors and any
+        status outside 2xx (including 502 while Endpoints or kube-proxy are still
+        catching up) mean the path is not ready yet.
+        """
+        try:
+            resp = self._session.get(f"{self.base_url}/health", timeout=timeout)
+        except requests.RequestException:
+            return False
+        return 200 <= resp.status_code < 300
+
     def close(self) -> None:
         """Close the HTTP session."""
         self._session.close()

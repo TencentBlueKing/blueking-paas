@@ -35,6 +35,16 @@ DAEMON_COMMAND = [DAEMON_BINARY_PATH]
 # The bind port for sandbox daemon
 DAEMON_BIND_PORT = 30000
 
+# Default of sandbox/daemon PRE_START_TIMEOUT. The daemon does not listen until
+# pre_start.sh finishes, so the Pod startupProbe and the create API must cover it.
+PRE_START_TIMEOUT_SECONDS = 300
+# Schedule and image pull before the container process is Running.
+WORKLOAD_START_MARGIN_SECONDS = 120
+# EndpointSlice, kube-proxy and router DNS after the Pod is Ready.
+ROUTE_READY_MARGIN_SECONDS = 30
+# startupProbe period. failureThreshold is PRE_START_TIMEOUT_SECONDS / this value.
+STARTUP_PROBE_PERIOD_SECONDS = 1
+
 # ================================
 # Constants for SandboxInstance CR (cube)
 # ================================

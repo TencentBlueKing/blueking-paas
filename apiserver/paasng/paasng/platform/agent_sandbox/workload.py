@@ -24,6 +24,7 @@ workload-type-agnostic.
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
 from typing import Any, ClassVar
@@ -41,12 +42,20 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     agent_sandbox_pod_kmodel,
 )
 from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.base.exceptions import ResourceMissing
+from paas_wl.infras.resources.base.exceptions import PodTerminatedError, ResourceMissing
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
-from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, SandboxError
+from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, SandboxCreateTimeout, SandboxError
 
 logger = logging.getLogger(__name__)
+
+# Wait interval for polling the SandboxInstance CR.
+_CR_CHECK_PERIOD = 0.5
+
+
+def _remaining(deadline: float) -> float:
+    """The seconds left before ``deadline``, never negative."""
+    return max(deadline - time.monotonic(), 0)
 
 
 @dataclass(frozen=True)
@@ -143,7 +152,11 @@ class SandboxWorkloadHandler(ABC):
 
     @abstractmethod
     def wait_until_ready(self, name: str, timeout: float) -> None:
-        """Block until the workload is Running, or raise SandboxCreateError on Failed."""
+        """Block until the workload's Ready condition is true, or raise SandboxCreateError.
+
+        Ready means the daemon can accept connections on its Pod IP. Callers that go
+        through the Router still have to wait for the Service path separately.
+        """
 
     @abstractmethod
     def map_status(self, phase: str) -> str:
@@ -168,16 +181,19 @@ class PodWorkloadHandler(SandboxWorkloadHandler):
     delete_non_grace_period = True
 
     def wait_until_ready(self, name: str, timeout: float) -> None:
+        """Block until the Pod's Ready condition is true.
+
+        Phase Running only means the container process has started. The daemon stays
+        unavailable until startupProbe and readinessProbe succeed, which includes
+        pre_start.sh. ``timeout`` must cover that budget, not only the time to Running.
+        """
+        namespace = self.kres_app.namespace
         with self.kres_app.get_kube_api_client() as client:
-            pod_phase = kres.KPod(client).wait_for_status(
-                name=name,
-                target_statuses={PodPhase.RUNNING.value, PodPhase.FAILED.value},
-                namespace=self.kres_app.namespace,
-                timeout=timeout,
-            )
-            if pod_phase == PodPhase.FAILED.value:
-                logs = get_pod_logs(client, self.kres_app.namespace, name)
-                raise SandboxCreateError("sandbox pod failed to start", logs=logs)
+            try:
+                kres.KPod(client).wait_for_ready(name, namespace=namespace, timeout=timeout)
+            except PodTerminatedError as exc:
+                logs = get_pod_logs(client, namespace, name)
+                raise SandboxCreateError("sandbox pod failed to start", logs=logs) from exc
 
     def map_status(self, phase: str) -> str:
         """Map Pod ``status.phase``. The sandbox Pod uses ``restartPolicy: Never``, so a
@@ -207,6 +223,13 @@ class SandboxInstanceWorkloadHandler(SandboxWorkloadHandler):
     delete_non_grace_period = False
 
     def wait_until_ready(self, name: str, timeout: float) -> None:
+        """Block until the SandboxInstance is Running and its rendered Pod is ready.
+
+        CR phase Running means the MicroVM is up. The daemon inside is not usable
+        until the Pod's Ready condition turns True.
+        """
+        deadline = time.monotonic() + timeout
+        namespace = self.kres_app.namespace
         with self.kres_app.get_kube_api_client() as client:
             phase = kres.KSandboxInstance(client).wait_for_status(
                 name=name,
@@ -217,6 +240,38 @@ class SandboxInstanceWorkloadHandler(SandboxWorkloadHandler):
             if phase == SandboxInstancePhase.FAILED.value:
                 logs = self._failure_diagnostics(client, name)
                 raise SandboxCreateError("sandbox instance failed to start", logs=logs)
+
+            pod_name = self._wait_pod_name(client, name, _remaining(deadline))
+            try:
+                kres.KPod(client).wait_for_ready(pod_name, namespace=namespace, timeout=_remaining(deadline))
+            except PodTerminatedError as exc:
+                logs = self._failure_diagnostics(client, name)
+                raise SandboxCreateError("sandbox instance failed to start", logs=logs) from exc
+
+    def _wait_pod_name(self, client, name: str, timeout: float) -> str:
+        """Poll the CR until sandbox-controller reports the name of the rendered Pod.
+
+        :raises SandboxCreateError: The CR turned Failed while waiting.
+        :raises SandboxCreateTimeout: No Pod name was reported within ``timeout``.
+        """
+        namespace = self.kres_app.namespace
+        time_started = time.monotonic()
+        while time.monotonic() - time_started < timeout:
+            try:
+                instance = kres.KSandboxInstance(client).get(name, namespace=namespace)
+            except ResourceMissing:
+                logger.warning("SandboxInstance %s %s not found.", namespace, name)
+            else:
+                status = getattr(instance, "status", None)
+                if getattr(status, "phase", None) == SandboxInstancePhase.FAILED.value:
+                    logs = self._failure_diagnostics(client, name)
+                    raise SandboxCreateError("sandbox instance failed to start", logs=logs)
+                if pod_name := getattr(status, "podName", None):
+                    return pod_name
+            time.sleep(_CR_CHECK_PERIOD)
+        raise SandboxCreateTimeout(
+            f"SandboxInstance {namespace}/{name} did not report status.podName within {timeout} seconds"
+        )
 
     def map_status(self, phase: str) -> str:
         """Map SandboxInstance CR ``status.phase``; the extra ``Creating`` phase folds into PENDING."""

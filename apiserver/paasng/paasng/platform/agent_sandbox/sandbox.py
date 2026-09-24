@@ -19,6 +19,7 @@ import copy
 import logging
 import re
 import shlex
+import time
 from decimal import Decimal
 
 from django.conf import settings
@@ -27,7 +28,12 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.agent_sandbox.cluster import get_router_endpoint
-from paas_wl.bk_app.agent_sandbox.constants import DAEMON_BIND_PORT
+from paas_wl.bk_app.agent_sandbox.constants import (
+    DAEMON_BIND_PORT,
+    PRE_START_TIMEOUT_SECONDS,
+    ROUTE_READY_MARGIN_SECONDS,
+    WORKLOAD_START_MARGIN_SECONDS,
+)
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
 from paas_wl.bk_app.agent_sandbox.image_credential import ensure_image_credential
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
@@ -73,6 +79,10 @@ logger = logging.getLogger(__name__)
 
 
 ENV_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+# How often to retry the router health probe, and how long a single probe may block.
+_ROUTE_CHECK_PERIOD = 0.5
+_ROUTE_PROBE_TIMEOUT = 2
 
 
 def resolve_sandbox_resources(application: Application) -> tuple[Decimal, Decimal]:
@@ -152,7 +162,7 @@ def create_sandbox(
         sandbox_obj.save(update_fields=["status"])
         raise
 
-    # The sandbox started successfully and running.
+    # Daemon 已通过就绪探针，且 Router 能把请求转到沙箱 Service。
     sandbox_obj.status = SandboxStatus.RUNNING.value
     sandbox_obj.started_at = timezone.now()
     sandbox_obj.save(update_fields=["status", "started_at", "updated"])
@@ -194,9 +204,12 @@ class AgentSandboxResManager:
     :param target: The target that all the sandboxes should run in.
     """
 
-    # The timeout for creating a sandbox, in seconds
-    # 探测沙箱 daemon 服务就绪的最大超时时间，不宜超过 daemon 实际配置的 PRE_START_TIMEOUT 时间
-    create_timeout = 120
+    # 等到 Pod Ready 的时间。120s 只够调度到 Running；pre_start.sh 在 Running 之后才跑，
+    # 最长 PRE_START_TIMEOUT_SECONDS，startupProbe 用的是同一预算。
+    create_timeout = WORKLOAD_START_MARGIN_SECONDS + PRE_START_TIMEOUT_SECONDS
+    # Pod Ready 之后，EndpointSlice / kube-proxy / Router DNS 仍可能没跟上。单独留预算，
+    # 避免被 pre_start 吃掉。
+    route_ready_timeout = ROUTE_READY_MARGIN_SECONDS
 
     def __init__(self, app: Application, target: str):
         self.app = app
@@ -238,6 +251,7 @@ class AgentSandboxResManager:
 
         handler = self._workload_handler(sandbox_obj.workload_type)
         sandbox_created = False
+        service_created = False
         workload: AgentSandboxWorkload
         try:
             with self.kres_app.get_kube_api_client() as client:
@@ -245,24 +259,34 @@ class AgentSandboxResManager:
                 ensure_image_credential(client=client, namespace=self.kres_app.namespace)
             workload = handler.create(spec)
             sandbox_created = True
-            handler.wait_until_ready(workload.name, self.create_timeout)
-        except ReadTargetStatusTimeout as exc:
-            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created)
-            raise SandboxCreateTimeout(str(exc)) from exc
-        except SandboxCreateError:
-            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created)
-            raise
         except ApiException as exc:
-            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created)
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
             raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
 
-        # 下发 ClusterIP 类型的 service, 关联到 sandbox pod, 由 'Agent Sandbox Router' 进行流量转发
-        sandbox_svc = AgentSandboxService.create(workload)
+        # Service 先于就绪等待创建，EndpointSlice controller 可以和容器启动并行。
+        # 调用方走的是 Router -> Service，不是 Pod IP。
         try:
-            agent_sandbox_svc_kmodel.create(sandbox_svc)
+            agent_sandbox_svc_kmodel.create(AgentSandboxService.create(workload))
+            service_created = True
         except ApiException as exc:
-            self._cleanup_sandbox_on_create_error(handler, workload.name, True)
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
             raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
+
+        try:
+            handler.wait_until_ready(workload.name, self.create_timeout)
+            self._wait_router_ready(workload, sandbox_obj.daemon_token, self.route_ready_timeout)
+        except ReadTargetStatusTimeout as exc:
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
+            raise SandboxCreateTimeout(str(exc)) from exc
+        except SandboxCreateTimeout:
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
+            raise
+        except SandboxCreateError:
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
+            raise
+        except ApiException as exc:
+            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
+            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
 
         router_endpoint = get_router_endpoint(self.kres_app.target)
         return KubernetesSandbox(
@@ -310,25 +334,64 @@ class AgentSandboxResManager:
             daemon_token=sandbox_obj.daemon_token,
         )
 
+    def _wait_router_ready(self, workload: AgentSandboxWorkload, daemon_token: str, timeout: float) -> None:
+        """Block until GET /health through the Agent Sandbox Router returns 2xx.
+
+        Pod Ready only means the Pod can become a Service endpoint. The caller reaches
+        ``{name}.{namespace}.svc.cluster.local`` via the router, which stays failing
+        until EndpointSlice, kube-proxy and router DNS have caught up.
+
+        :raises SandboxCreateTimeout: The router path did not succeed within ``timeout``.
+        """
+        client = SandboxDaemonClient(
+            router_endpoint=get_router_endpoint(self.kres_app.target),
+            token=daemon_token,
+            sandbox_name=workload.name,
+            sandbox_namespace=self.kres_app.namespace,
+            sandbox_daemon_port=DAEMON_BIND_PORT,
+            router_auth_token=settings.AGENT_SANDBOX_ROUTER_AUTH_TOKEN,
+        )
+        deadline = time.monotonic() + timeout
+        try:
+            while True:
+                if client.probe_health(timeout=_ROUTE_PROBE_TIMEOUT):
+                    return
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                time.sleep(min(_ROUTE_CHECK_PERIOD, remaining))
+        finally:
+            client.close()
+        raise SandboxCreateTimeout(f"sandbox {workload.name} router path was not ready within {timeout} seconds")
+
     def _cleanup_sandbox_on_create_error(
         self,
         handler: SandboxWorkloadHandler,
         name: str,
         sandbox_created: bool,
+        service_created: bool = False,
     ) -> None:
-        if not sandbox_created:
-            return
-
-        try:
-            handler.delete(name)
-        except (ApiException, AppEntityNotFound, ResourceNotFoundError):
-            logger.warning(
-                "failed to cleanup sandbox workload after create error, name=%s, namespace=%s, workload_type=%s",
-                name,
-                self.kres_app.namespace,
-                handler.workload_type,
-                exc_info=True,
-            )
+        if sandbox_created:
+            try:
+                handler.delete(name)
+            except (ApiException, AppEntityNotFound, ResourceNotFoundError):
+                logger.warning(
+                    "failed to cleanup sandbox workload after create error, name=%s, namespace=%s, workload_type=%s",
+                    name,
+                    self.kres_app.namespace,
+                    handler.workload_type,
+                    exc_info=True,
+                )
+        if service_created:
+            try:
+                agent_sandbox_svc_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
+            except (ApiException, AppEntityNotFound, ResourceNotFoundError):
+                logger.warning(
+                    "failed to cleanup sandbox service after create error, name=%s, namespace=%s",
+                    name,
+                    self.kres_app.namespace,
+                    exc_info=True,
+                )
 
 
 class KubernetesSandbox(SandboxProcess, SandboxFS):

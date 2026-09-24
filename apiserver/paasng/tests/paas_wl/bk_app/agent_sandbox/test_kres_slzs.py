@@ -22,16 +22,20 @@ is parametrized across Pod and SandboxInstance entities.
 """
 
 import uuid
+from pathlib import Path
 
 import pytest
 from django.conf import settings
 
 from paas_wl.bk_app.agent_sandbox.constants import (
     DAEMON_COMMAND,
+    PRE_START_TIMEOUT_SECONDS,
+    ROUTE_READY_MARGIN_SECONDS,
     SANDBOX_INSTANCE_API_VERSION,
     SANDBOX_INSTANCE_NETWORK_MODE,
     SANDBOX_INSTANCE_RUNTIME_CLASS_NAME,
     SHARED_VOLUME_NAME_IN_POD,
+    WORKLOAD_START_MARGIN_SECONDS,
 )
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxInstance,
@@ -266,3 +270,29 @@ class TestAgentSandboxInstanceSerializer:
         mounts = manifest["spec"]["podTemplate"]["containers"][0]["volumeMounts"]
         assert mounts[0]["mountPath"] == "/workspace/data"
         assert mounts[0]["subPath"] == "app/vol1"
+
+
+def _daemon_config_go() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "sandbox" / "daemon" / "pkg" / "config" / "config.go"
+        if candidate.is_file():
+            return candidate
+    raise AssertionError("sandbox daemon config.go not found")
+
+
+class TestPreStartBudget:
+    """startupProbe、创建超时和 daemon PRE_START_TIMEOUT 必须是同一段时间。"""
+
+    def test_startup_probe_matches_daemon_pre_start(self, sbx_app):
+        sbx = _make_sandbox(sbx_app, AgentSandboxPod)
+        probe = AgentSandboxPodSerializer._construct_pod_spec(sbx)["containers"][0]["startupProbe"]
+        assert probe["periodSeconds"] * probe["failureThreshold"] == PRE_START_TIMEOUT_SECONDS
+
+        config_go = _daemon_config_go().read_text()
+        assert f'env:"PRE_START_TIMEOUT" envDefault:"{PRE_START_TIMEOUT_SECONDS}s"' in config_go
+
+    def test_create_timeout_covers_pre_start_and_schedule(self):
+        from paasng.platform.agent_sandbox.sandbox import AgentSandboxResManager
+
+        assert AgentSandboxResManager.create_timeout >= PRE_START_TIMEOUT_SECONDS + WORKLOAD_START_MARGIN_SECONDS
+        assert AgentSandboxResManager.route_ready_timeout == ROUTE_READY_MARGIN_SECONDS

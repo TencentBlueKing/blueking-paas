@@ -13,9 +13,11 @@ dependencies = [
     "django>=6.0.8,<6.1",
     "django-ninja>=1.6.2,<2.0.0",
     "dynaconf>=3.3.5,<4.0.0",
+    "e2b==2.50.0",
     # Already installed as a transitive dependency of bkpaas-auth, declared here because this
     # project imports it directly to drive the Agent Runtime over HTTP.
     "httpx2>=2.10.0,<3.0.0",
+    "packaging>=26.3,<27.0",
     "pymysql>=1.2.0,<2.0.0",
     # Required by the production ASGI server, including the container image.
     "uvicorn>=0.52.1,<0.53.0",
@@ -41,7 +43,11 @@ known-first-party = ["app_spark_api"]
 [tool.ruff.lint.flake8-type-checking]
 # pydantic 会在运行时解析这些基类的字段注解，把它们的 import 挪进 TYPE_CHECKING 块会直接让
 # 模型构建失败，所以这里声明清楚，让 TC 规则不要对它们提出这种建议。
-runtime-evaluated-base-classes = ["ninja.Schema", "ninja.ModelSchema", "pydantic.BaseModel"]
+runtime-evaluated-base-classes = [
+    "ninja.Schema",
+    "ninja.ModelSchema",
+    "pydantic.BaseModel",
+]
 
 [tool.mypy]
 python_version = "3.14"
@@ -67,5 +73,6 @@ addopts = "-p no:cacheprovider"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
+    "e2b: requires a configured live E2B endpoint and provisions real sandboxes",
     "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
 ]

@@ -39,7 +39,7 @@ from app_spark_api.agent.conversations.models import (
     Conversation,
     ConversationUserMessage,
 )
-from app_spark_api.agent.runtime import get_agent_runtime_provider
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project

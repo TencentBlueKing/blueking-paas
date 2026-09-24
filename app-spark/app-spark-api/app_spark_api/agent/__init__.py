@@ -16,8 +16,9 @@
 
 """让 Agent 替用户干活的那一整块，分成上下两层：
 
-* :mod:`~app_spark_api.agent.conversations` 是领域层，也是唯一的 Django app：会话属于哪个
+* :mod:`~app_spark_api.agent.conversations` 是领域层：会话属于哪个
   Project、编号是几、对外的 HTTP 接口长什么样。
 * :mod:`~app_spark_api.agent.runtime` 是设施层：Agent Runtime 在哪里跑、怎么把它拉起来、
-  怎么跟它说话。上层只认这一层给出的抽象，因此本机进程换成远程沙箱时，上层不必改。
+  怎么跟它说话，以及远程沙箱的持久化记录。上层只认这一层给出的抽象，因此本机进程换成
+  远程沙箱时，上层不必改。两层均注册为 Django app。
 """

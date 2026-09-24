@@ -14,13 +14,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import StrEnum
+"""Django registration for persisted Agent Runtime sandboxes."""
+
+from django.apps import AppConfig
 
 
-class AgentRuntimeProviderType(StrEnum):
-    """How an Agent Runtime is obtained for a conversation."""
+class RuntimeConfig(AppConfig):
+    """Register the Runtime app and its sandbox history model."""
 
-    # 在本机 spawn 一个 agent 进程。开发与测试用，进程句柄只存在内存里。
-    LOCAL_PROCESS = "local_process"
-    # 每个会话分配一个远程沙箱；Agent Runtime 的安装与启动留待后续实现。
-    E2B = "e2b"
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "app_spark_api.agent.runtime"

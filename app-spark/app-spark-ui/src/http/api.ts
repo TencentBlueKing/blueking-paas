@@ -11,6 +11,7 @@ import type {
   PagedConversationResponse,
   PagedProjectResponse,
   PageQuery,
+  PreviewResponse,
   ProjectCreateRequest,
   ProjectResponse,
   RuntimeStateResponse,
@@ -25,6 +26,7 @@ export type {
   ConversationHistoryRecord,
   ConversationHistoryResponse,
   ConversationResponse,
+  DevServerStatus,
   ErrorResponse,
   GitCommitIdentity,
   GitRepositoryResponse,
@@ -36,6 +38,7 @@ export type {
   PagedProjectResponse,
   PagedResponse,
   PageQuery,
+  PreviewResponse,
   ProjectCreateRequest,
   ProjectResponse,
   RuntimeStateResponse,
@@ -83,6 +86,24 @@ export const getConversation = (
   number: number,
 ): Promise<RuntimeStateResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/`)
+);
+
+/**
+ * 这个会话的工作区应用该去哪儿打开，以及此刻打不打得开。
+ *
+ * 会话一创建就可以问。`origin` 末尾带斜杠，直接当作 iframe 的 src；能不能看只看
+ * `dev_server_status`。Runtime 联系不上时仍是 200，地址照常返回，所以这里关掉全局报错：
+ * 预览面板会每 5 秒打一次，一句 toast 不该跟着响。
+ */
+export const getConversationPreview = (
+  projectId: string,
+  number: number,
+): Promise<PreviewResponse> => (
+  http.get(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/`,
+    {},
+    { globalError: false },
+  )
 );
 
 export const closeConversation = (

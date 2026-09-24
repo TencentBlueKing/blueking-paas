@@ -193,5 +193,9 @@ def stub_resident_client():
             "paasng.platform.agent_sandbox.artifact.get_resident_daemon_client",
             return_value=client,
         ),
+        mock.patch(
+            "paasng.platform.agent_sandbox.volume.get_resident_daemon_client",
+            return_value=client,
+        ),
     ):
         yield client

@@ -55,6 +55,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxImageValidateError,
     SandboxServiceNotReady,
     VolumeGranteeNotFound,
+    VolumeInUse,
     VolumeNotFound,
     VolumeNotMountable,
     VolumeShareLimitExceeded,
@@ -94,7 +95,7 @@ from paasng.platform.agent_sandbox.serializers import (
     VolumeOutputSLZ,
     VolumeShareInputSLZ,
 )
-from paasng.platform.agent_sandbox.volume import share_volume, unshare_volume
+from paasng.platform.agent_sandbox.volume import delete_volume, share_volume, unshare_volume
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
@@ -136,13 +137,21 @@ class VolumeViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
     def destroy(self, request, code, volume_id):
-        """软删除共享存储卷。"""
+        """删除共享存储卷: 物理清理共享存储目录后软删记录。
+
+        目录清理失败时记录保持未删除状态, 调用方可直接重试。
+        """
         application = self.get_application()
         volume = get_object_or_404(Volume, uuid=volume_id, application=application, deleted_at__isnull=True)
-        # TODO: 检查是否有沙箱正在使用该 Volume，有则阻止删除
-        # TODO: CFS 数据清理流程
-        volume.deleted_at = timezone.now()
-        volume.save(update_fields=["deleted_at", "updated"])
+        try:
+            delete_volume(volume)
+        except VolumeInUse:
+            raise error_codes.AGENT_SANDBOX_VOLUME_IN_USE
+        except SandboxServiceNotReady:
+            raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
+        except SandboxError:
+            logger.exception("Failed to delete volume: %s", volume_id)
+            raise error_codes.AGENT_SANDBOX_VOLUME_DELETE_FAILED
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

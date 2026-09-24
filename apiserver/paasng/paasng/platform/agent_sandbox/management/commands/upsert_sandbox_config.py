@@ -21,7 +21,11 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
 
-from paasng.platform.agent_sandbox.constants import DEFAULT_SANDBOX_CPU, DEFAULT_SANDBOX_MEMORY
+from paasng.platform.agent_sandbox.constants import (
+    DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
+    DEFAULT_SANDBOX_CPU,
+    DEFAULT_SANDBOX_MEMORY,
+)
 from paasng.platform.agent_sandbox.models import SandboxAppSettings
 from paasng.platform.applications.models import Application
 
@@ -29,28 +33,42 @@ from paasng.platform.applications.models import Application
 class Command(BaseCommand):
     """Create or update the per-app sandbox settings.
 
-    Apps without settings (or with settings that leave cpu/memory unset) fall back to
-    the platform default (cpu=%s core, memory=%s GB) when creating sandboxes.
+    Fields left unset fall back to the platform defaults when a sandbox is created.
 
     Example:
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --cpu 4 --memory 2
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --cpu 4
+        python manage.py upsert_sandbox_config --app_code ai-agent-prod --max-active-sandbox-count 50
         python manage.py upsert_sandbox_config --app_code ai-agent-prod --reset
-    """ % (DEFAULT_SANDBOX_CPU, DEFAULT_SANDBOX_MEMORY)
+    """
 
     help = "Create, update or reset the sandbox settings for an application"
 
     def add_arguments(self, parser):
         parser.add_argument("--app_code", type=str, required=True, help="Application code")
-        parser.add_argument("--cpu", type=str, help="CPU limit in cores, e.g. 4")
-        parser.add_argument("--memory", type=str, help="Memory limit in GB, e.g. 2")
+        parser.add_argument(
+            "--cpu",
+            type=str,
+            help=f"CPU limit in cores, e.g. 4 (platform default: {DEFAULT_SANDBOX_CPU})",
+        )
+        parser.add_argument(
+            "--memory",
+            type=str,
+            help=f"Memory limit in GB, e.g. 2 (platform default: {DEFAULT_SANDBOX_MEMORY})",
+        )
+        parser.add_argument(
+            "--max-active-sandbox-count",
+            dest="max_active_sandbox_count",
+            type=int,
+            help=f"Max sandboxes the app may keep at the same time, e.g. 100 (platform default: {DEFAULT_MAX_ACTIVE_SANDBOX_COUNT})",
+        )
         parser.add_argument(
             "--reset",
             action="store_true",
             help="Remove the app's config so it falls back to the platform default",
         )
 
-    def handle(self, app_code, cpu, memory, reset, *args, **options):
+    def handle(self, app_code, cpu, memory, max_active_sandbox_count, reset, *args, **options):
         try:
             application = Application.objects.get(code=app_code)
         except Application.DoesNotExist:
@@ -62,13 +80,16 @@ class Command(BaseCommand):
                 self.style.SUCCESS(
                     f"Reset sandbox settings for '{app_code}' "
                     f"(removed={deleted}), now using platform default: "
-                    f"cpu={DEFAULT_SANDBOX_CPU} core, memory={DEFAULT_SANDBOX_MEMORY} GB"
+                    f"cpu={DEFAULT_SANDBOX_CPU} core, memory={DEFAULT_SANDBOX_MEMORY} GB, "
+                    f"max_active_sandbox_count={DEFAULT_MAX_ACTIVE_SANDBOX_COUNT}"
                 )
             )
             return
 
-        if cpu is None and memory is None:
-            raise CommandError("at least one of --cpu / --memory is required unless --reset is used")
+        if cpu is None and memory is None and max_active_sandbox_count is None:
+            raise CommandError(
+                "at least one of --cpu / --memory / --max_active_sandbox_count is required unless --reset is used"
+            )
 
         # 只更新本次显式传入的字段，未传入的字段保持原值（新建时则保持为空，创建沙箱时回退默认）。
         update_fields: dict = {"tenant_id": application.tenant_id}
@@ -76,6 +97,12 @@ class Command(BaseCommand):
             update_fields["cpu"] = self._parse_decimal("cpu", cpu)
         if memory is not None:
             update_fields["memory"] = self._parse_decimal("memory", memory)
+        if max_active_sandbox_count is not None:
+            if max_active_sandbox_count < 0:
+                raise CommandError(
+                    f"Invalid max_active_sandbox_count value: {max_active_sandbox_count!r}, must not be negative"
+                )
+            update_fields["max_active_sandbox_count"] = max_active_sandbox_count
 
         config, created = SandboxAppSettings.objects.update_or_create(
             application=application,
@@ -85,7 +112,8 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"{action} sandbox settings for '{app_code}': "
-                f"cpu={config.cpu} core, memory={config.memory} GB"
+                f"cpu={config.cpu} core, memory={config.memory} GB, "
+                f"max_active_sandbox_count={config.max_active_sandbox_count}"
             )
         )
 

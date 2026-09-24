@@ -33,8 +33,8 @@ class TestUpsertSandboxConfigCommand:
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="4", memory="2")
 
         config = SandboxAppSettings.objects.get(application=bk_app)
-        assert config.cpu == Decimal("4")
-        assert config.memory == Decimal("2")
+        assert config.cpu == Decimal(4)
+        assert config.memory == Decimal(2)
         assert config.tenant_id == bk_app.tenant_id
 
     def test_create_with_cpu_only(self, bk_app):
@@ -42,33 +42,46 @@ class TestUpsertSandboxConfigCommand:
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="4")
 
         config = SandboxAppSettings.objects.get(application=bk_app)
-        assert config.cpu == Decimal("4")
+        assert config.cpu == Decimal(4)
         assert config.memory is None
+
+    def test_create_with_max_active_sandbox_count_only(self, bk_app):
+        # 只传 max_active_sandbox_count 时, cpu/memory 保持为空 (创建沙箱时回退默认)
+        call_command("upsert_sandbox_config", app_code=bk_app.code, max_active_sandbox_count=10)
+
+        config = SandboxAppSettings.objects.get(application=bk_app)
+        assert config.max_active_sandbox_count == 10
+        assert config.cpu is None
+        assert config.memory is None
+
+    def test_invalid_max_active_sandbox_count(self, bk_app):
+        with pytest.raises(CommandError, match="must not be negative"):
+            call_command("upsert_sandbox_config", app_code=bk_app.code, max_active_sandbox_count=-1)
 
     def test_partial_update_keeps_other_field(self, bk_app):
         SandboxAppSettings.objects.create(
-            application=bk_app, cpu=Decimal("2"), memory=Decimal("1"), tenant_id=bk_app.tenant_id
+            application=bk_app, cpu=Decimal(2), memory=Decimal(1), tenant_id=bk_app.tenant_id
         )
         # 只更新 memory，cpu 应保持原值不被覆盖
         call_command("upsert_sandbox_config", app_code=bk_app.code, memory="3")
 
         config = SandboxAppSettings.objects.get(application=bk_app)
-        assert config.cpu == Decimal("2")
-        assert config.memory == Decimal("3")
+        assert config.cpu == Decimal(2)
+        assert config.memory == Decimal(3)
 
     def test_update_existing_config(self, bk_app):
         SandboxAppSettings.objects.create(
-            application=bk_app, cpu=Decimal("2"), memory=Decimal("1"), tenant_id=bk_app.tenant_id
+            application=bk_app, cpu=Decimal(2), memory=Decimal(1), tenant_id=bk_app.tenant_id
         )
         call_command("upsert_sandbox_config", app_code=bk_app.code, cpu="3", memory="2")
 
         config = SandboxAppSettings.objects.get(application=bk_app)
-        assert config.cpu == Decimal("3")
-        assert config.memory == Decimal("2")
+        assert config.cpu == Decimal(3)
+        assert config.memory == Decimal(2)
 
     def test_reset_config(self, bk_app):
         SandboxAppSettings.objects.create(
-            application=bk_app, cpu=Decimal("4"), memory=Decimal("2"), tenant_id=bk_app.tenant_id
+            application=bk_app, cpu=Decimal(4), memory=Decimal(2), tenant_id=bk_app.tenant_id
         )
         call_command("upsert_sandbox_config", app_code=bk_app.code, reset=True)
 

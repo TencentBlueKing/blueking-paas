@@ -2,6 +2,40 @@
 const mockServer = require('./mock-server');
 const containerBuild = process.env.APP_SPARK_CONTAINER_BUILD === '1';
 
+/**
+ * 预览响应里的绝对地址按 API 主机签发。本地页面是另一台主机，iframe 跟着跳过去就会被
+ * `frame-ancestors 'self'` 拦住。把这些地址改回「发起这次代理的页面主机」，路径不动。
+ */
+const rewriteApiHost = (value, apiUrl, pageOrigin) => {
+  if (!value || !apiUrl || !pageOrigin) return value;
+  let api;
+  try {
+    api = new URL(apiUrl);
+  } catch {
+    return value;
+  }
+  return String(value)
+    .split(api.origin).join(pageOrigin)
+    .split(`http://${api.host}`).join(pageOrigin)
+    .split(`https://${api.host}`).join(pageOrigin);
+};
+
+const keepPreviewOnPageHost = (proxyRes, req) => {
+  const host = req.headers.host;
+  if (!host) return;
+  const forwarded = req.headers['x-forwarded-proto'];
+  const proto = (Array.isArray(forwarded) ? forwarded[0] : forwarded) || 'http';
+  const pageOrigin = `${proto}://${host}`;
+  const apiUrl = process.env.BK_API_URL;
+  ['location', 'content-security-policy'].forEach((name) => {
+    const current = proxyRes.headers[name];
+    if (!current) return;
+    proxyRes.headers[name] = Array.isArray(current)
+      ? current.map(item => rewriteApiHost(item, apiUrl, pageOrigin))
+      : rewriteApiHost(current, apiUrl, pageOrigin);
+  });
+};
+
 module.exports = {
   host: process.env.BK_APP_HOST,
   port: process.env.BK_APP_PORT,
@@ -28,6 +62,7 @@ module.exports = {
             cookieDomainRewrite: '',
             timeout: 0,
             proxyTimeout: 0,
+            onProxyRes: keepPreviewOnPageHost,
           },
           {
             context: ['/agent'],

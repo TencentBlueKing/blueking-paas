@@ -17,7 +17,7 @@
 
 from unittest.mock import MagicMock
 
-from paasng.accessories.servicehub.mysql_plan_migration import align_binding
+from paasng.accessories.servicehub.management.commands.migrate_mysql_plan import align_binding
 
 
 def _attachment(*, plan_id: str, service_instance_id: str | None):

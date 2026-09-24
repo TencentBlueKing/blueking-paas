@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+from enum import StrEnum
 from pathlib import Path
 
 from environs import Env, EnvError
@@ -300,11 +301,13 @@ def _stripped(value: str | None) -> str | None:
     return stripped or None
 
 
-# model_mode 的四种结果。fake / direct / gateway 才算就绪，unready 让 /runs 返回 503。
-MODEL_MODE_FAKE = "fake"
-MODEL_MODE_DIRECT = "direct"
-MODEL_MODE_GATEWAY = "gateway"
-MODEL_MODE_UNREADY = "unready"
+class ModelMode(StrEnum):
+    """model_mode 的四种结果。fake / direct / gateway 才算就绪，unready 让 /runs 返回 503。"""
+
+    FAKE = "fake"
+    DIRECT = "direct"
+    GATEWAY = "gateway"
+    UNREADY = "unready"
 
 
 def gateway_access_token() -> str | None:
@@ -327,22 +330,22 @@ def _gateway_ready() -> bool:
     return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
 
 
-def model_mode() -> str:
+def model_mode() -> ModelMode:
     """当前生效的模型配置：fake、direct、gateway，或 unready。"""
 
     # fake 不看凭据。它存在就是为了不发起网络请求。
     if MODEL.startswith("fake:"):
-        return MODEL_MODE_FAKE
+        return ModelMode.FAKE
 
     # 网关优先于直连：两者同时配齐时走 bkaidev，MODEL_API_KEY 不参与鉴权。
     if _gateway_ready():
-        return MODEL_MODE_GATEWAY
+        return ModelMode.GATEWAY
 
     # 任一网关项已出现就不降级成直连，缺项保持未就绪，避免把钥匙发到公网。
     if uses_direct_provider():
-        return MODEL_MODE_DIRECT
+        return ModelMode.DIRECT
 
-    return MODEL_MODE_UNREADY
+    return ModelMode.UNREADY
 
 
 def resolved_model_name() -> str:
@@ -364,7 +367,7 @@ def openai_capability_profile(name: str | None = None) -> OpenAIModelProfile | N
 
 def is_model_ready() -> bool:
     """fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套，三者之一。"""
-    return model_mode() != MODEL_MODE_UNREADY
+    return model_mode() != ModelMode.UNREADY
 
 
 def is_git_configured() -> bool:

@@ -49,11 +49,11 @@ def build_model() -> Model:
     mode = settings.model_mode()
 
     # fake: 不发起网络请求。infer_model 只特殊处理 "test"，其它未知前缀会直接拒。
-    if mode == settings.MODEL_MODE_FAKE:
+    if mode == settings.ModelMode.FAKE:
         return build_fake_model(settings.MODEL.removeprefix(FAKE_MODEL_PREFIX))
 
     # 网关三件套齐全。协议仍是 Chat Completions，鉴权换头，不用 MODEL_API_KEY。
-    if mode == settings.MODEL_MODE_GATEWAY:
+    if mode == settings.ModelMode.GATEWAY:
         model_name = settings.resolved_model_name()
         profile = settings.openai_capability_profile(model_name)
         token = settings.gateway_access_token()
@@ -67,7 +67,7 @@ def build_model() -> Model:
         )
 
     # 只注入了 MODEL_API_KEY：按 MODEL 的 <provider>:<model> 走官网。
-    if mode == settings.MODEL_MODE_DIRECT:
+    if mode == settings.ModelMode.DIRECT:
         return _build_inferred_model()
 
     # 缺项不推断、也不发往公网；占位模型让进程能起来、/health 能答。

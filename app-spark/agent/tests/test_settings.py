@@ -56,7 +56,7 @@ def test_api_key_alone_is_the_direct_provider(monkeypatch: MonkeyPatch) -> None:
 
     assert settings.gateway_access_token() is None
     assert settings.uses_direct_provider() is True
-    assert settings.model_mode() == settings.MODEL_MODE_DIRECT
+    assert settings.model_mode() == settings.ModelMode.DIRECT
     assert settings.is_model_ready() is True
 
 

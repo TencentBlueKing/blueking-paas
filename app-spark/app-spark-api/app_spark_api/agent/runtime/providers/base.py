@@ -22,7 +22,13 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, PreviewTarget, StateCallback
+    from app_spark_api.agent.runtime.entities import (
+        AgentRuntimeHandle,
+        GitRemote,
+        ModelAccessResolver,
+        PreviewTarget,
+        StateCallback,
+    )
 
 
 class AgentRuntimeProvider(abc.ABC):
@@ -42,6 +48,7 @@ class AgentRuntimeProvider(abc.ABC):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         """Return a live Runtime for ``conversation_id``, starting one if needed.
 
@@ -52,8 +59,12 @@ class AgentRuntimeProvider(abc.ABC):
 
         Implementations must be idempotent: a second call for a conversation that is already
         served has to return the running Runtime rather than start a rival one. A consequence
-        worth stating: ``state_callback`` and ``git_remote`` are only read when a Runtime is
-        actually started, so a caller cannot use either to re-point a Runtime that is already up.
+        worth stating: ``state_callback``, ``git_remote`` and ``model_access`` are only read when
+        a Runtime is actually started, so a caller cannot use any of them to re-point a Runtime
+        that is already up. ``model_access`` in particular must be called only then, and under the
+        same guard that keeps two requests from starting rival Runtimes: a Runtime that is already
+        up must not cost a token exchange, and one that died since the caller last looked must
+        still get its credential.
 
         :param project_id: Project being developed; its workspace is shared by every one of its
             conversations.
@@ -62,6 +73,8 @@ class AgentRuntimeProvider(abc.ABC):
             token to do it with. Omitted for a Runtime that is to keep its state to itself.
         :param git_remote: Where the Runtime should persist its workspace files. Omitted for a
             Runtime whose workspace is to live only on local disk.
+        :param model_access: Returns how the Runtime calls its model. Required by any provider
+            that starts an agent; its errors propagate unchanged.
         :return: Where the Runtime can be reached.
         :raises AgentProvisionError: If no Runtime could be brought up.
         :raises AgentWorkspaceBusyError: If another conversation of the same Project already

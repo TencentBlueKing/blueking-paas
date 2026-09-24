@@ -63,3 +63,6 @@ def configure_local_provider(settings, tmp_path: Path) -> None:
         "workspace_root": str(tmp_path / "workspaces"),
         "state_root": str(tmp_path / "agent-state"),
     }
+    # 这些测试不关心模型从哪来。默认的 bkaidev 要先换票，会把它们卡在与本测试无关的配置上。
+    settings.AGENT_MODEL_SOURCE = "direct"
+    settings.AGENT_DIRECT_MODEL_CONFIG = {"model": "fake:chat"}

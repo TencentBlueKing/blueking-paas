@@ -13,5 +13,6 @@ ingress:
 persistence:
   existingClaim: app-spark-data
 agent:
-  runtimeProviderConfig:
+  modelSource: direct
+  directModelConfig:
     model: fake:write-file

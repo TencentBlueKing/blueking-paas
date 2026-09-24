@@ -345,13 +345,10 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   state_root: /var/lib/app-spark/agent-state
 ##   ## 本服务对 agent 进程可达的地址，agent 用它把会话状态回写回来。默认 http://127.0.0.1:8000。
 ##   callback_base_url: http://127.0.0.1:8000
-##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL，不填则用 agent 自己的默认值。
-##   model: deepseek:deepseek-v4-flash
-##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值。
-##   model_api_key: ''
 ##   ## 等待新起的 Runtime 通过 /health 健康检查的超时秒数。
 ##   startup_timeout_seconds: 60
-##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
+##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。只收这个前缀，模型相关的变量也不收，
+##   ## 那些由下面的 AGENT_MODEL_SOURCE 决定。
 ##   extra_env: {}
 ##
 ## e2b 类型配置示例（详见 E2BConfig）：
@@ -373,6 +370,43 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   ## 可选。暴露端口代理使用的协议，默认 https。
 ##   port_scheme: https
 AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
+
+## Agent Runtime 调模型走哪条路，可选值见 agent.runtime.constants.ModelSource：
+## bkaidev（默认）走 bkaidev 的 LLM 网关，拉起 Runtime 时用当前用户的登录态换一张用户态
+## access_token 交给它；direct 直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 key。
+AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
+
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelAccess。
+##
+## AGENT_DIRECT_MODEL_CONFIG:
+##   ## 必填。pydantic-ai 的 <provider>:<model>；本地不花钱跑通可用 fake:write-file。
+##   model: deepseek:deepseek-v4-flash
+##   ## 可选。厂商 API Key，fake: 模型不需要。
+##   api_key: ''
+AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
+
+## AGENT_MODEL_SOURCE 为 bkaidev 时必填，字段详见 BkAidevModelConfig 与 AccessTokenClientConfig。
+##
+## access_token 由本服务按「app_code + 当前用户」向蓝鲸网关申请，不落库、不缓存：换票时带
+## need_new_token=0，网关在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token
+## 废掉。app_secret 只用于换票，不会交给 Agent Runtime。
+##
+## BKAIDEV_MODEL_CONFIG:
+##   ## 必填。bkaidev LLM 网关 OpenAI 兼容入口，注入到 v1 这一层，不要带 /chat/completions。
+##   base_url: https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
+##   ## 必填。模型名，必须是该应用在 bkaidev 已开通、且 agent 能力对照表里有的模型。
+##   model_name: deepseek-v4-flash
+##   token:
+##     ## 必填。蓝鲸网关签发 access_token 的地址。
+##     token_url: https://bkssm.example.com/api/v1/auth/access-tokens
+##     ## 必填。access_token 绑定的应用。
+##     app_code: bk-app-spark
+##     app_secret: ''
+##     ## 可选。access_token 签发的环境，默认 prod。
+##     env_name: prod
+##     ## 可选。换票请求超时秒数，默认 120。
+##     timeout_seconds: 120
+BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。会话冷启动就是从这里把文档取回来再注入新 Runtime。

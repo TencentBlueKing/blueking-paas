@@ -36,10 +36,15 @@ from pathlib import Path
 
 import httpx2
 
+from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
+    BkAidevModelAccess,
+    DirectModelAccess,
     GitRemote,
     LocalProcessConfig,
+    ModelAccess,
+    ModelAccessResolver,
     PreviewTarget,
     StateCallback,
 )
@@ -49,8 +54,38 @@ from app_spark_api.utils.urls import to_path_info
 
 logger = logging.getLogger(__name__)
 
-# The agent reads its whole configuration from variables under this prefix.
-ENV_PREFIX = "APP_SPARK_AGENT_"
+# 从本服务进程继承给 Runtime 的环境变量只有这些。本服务的环境里有平台自己的密钥（APP_SPARK_API_*
+# 下的 app_secret、数据库密码等），而 Runtime 会把自己的环境几乎原样交给模型写的应用。所以按白名单
+# 放行，不按已知密钥名剔除：新增一项配置忘了登记，默认也不会漏进沙箱。
+INHERITED_ENV_NAMES = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "USER",
+        "LOGNAME",
+        "LANG",
+        "LANGUAGE",
+        "TZ",
+        "TMPDIR",
+        "TEMP",
+        "TMP",
+        # TLS 根证书与出站代理：Runtime 要自己连模型网关和代码仓库。
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "REQUESTS_CA_BUNDLE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        # uv run 找解释器与缓存用。不放行整个 UV_ 前缀：UV_INDEX_* 里可能带私有源的凭据。
+        "UV_CACHE_DIR",
+        "UV_PYTHON_INSTALL_DIR",
+        "UV_PYTHON_PREFERENCE",
+    }
+)
+INHERITED_ENV_PREFIXES = ("LC_",)
 
 ASGI_TARGET = "app_spark_agent.server.asgi:app"
 
@@ -156,6 +191,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         async with self._lock:
             existing = self._runtimes.get(conversation_id)
@@ -172,6 +208,14 @@ class LocalProcessProvider(AgentRuntimeProvider):
 
             workspace_dir = self.workspace_dir(project_id)
             self._reject_workspace_conflict(conversation_id, workspace_dir)
+
+            # 在锁里、确定要新起之后才解析：已在跑的 Runtime 不花一次换票，刚退出的也照样拿到凭据，
+            # 不存在「看时还活着、起时已经没了」的窗口。代价是换票期间本 worker 的其它 ensure 要等，
+            # 与等 /health 的代价同级。
+            if model_access is None:
+                raise AgentProvisionError("Starting an Agent Runtime needs model access, and none was given.")
+            access = await model_access()
+
             runtime = await self._spawn(
                 conversation_id=conversation_id,
                 project_id=project_id,
@@ -179,6 +223,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
                 state_dir=self.state_dir(conversation_id),
                 state_callback=state_callback,
                 git_remote=git_remote,
+                model_access=access,
             )
             self._runtimes[conversation_id] = runtime
             return runtime.handle
@@ -281,6 +326,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         state_dir: Path,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> _LocalRuntime:
         """Start one Runtime and return it once it answers ``/health``."""
         # Two ports: one for the agent, one for the application the agent writes. Every Runtime
@@ -304,6 +350,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
             runtime_token=runtime_token,
             state_callback=state_callback,
             git_remote=git_remote,
+            model_access=model_access,
         )
 
         _spawned.append(process)
@@ -340,6 +387,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         runtime_token: str,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> subprocess.Popen[bytes]:
         """Prepare the directories and fork the Runtime.
 
@@ -388,6 +436,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
                         runtime_token=runtime_token,
                         state_callback=state_callback,
                         git_remote=git_remote,
+                        model_access=model_access,
                     ),
                 )
             except OSError as exc:
@@ -403,12 +452,18 @@ class LocalProcessProvider(AgentRuntimeProvider):
         runtime_token: str,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> dict[str, str]:
-        """Build the child's environment from this service's own plus the agent's settings."""
+        """Build the child's environment: an allow-listed part of this service's, plus the agent's settings."""
+        inherited = {
+            name: value
+            for name, value in os.environ.items()
+            if name in INHERITED_ENV_NAMES or name.startswith(INHERITED_ENV_PREFIXES)
+        }
         # Provider-owned values are applied after `extra_env`: callers may extend the Runtime's
         # environment, but cannot accidentally replace its identity, state paths, or Bearer.
         env = {
-            **os.environ,
+            **inherited,
             **self.config.extra_env,
             f"{ENV_PREFIX}WORKSPACE": str(workspace_dir),
             f"{ENV_PREFIX}STATE_DIR": str(state_dir),
@@ -436,11 +491,33 @@ class LocalProcessProvider(AgentRuntimeProvider):
             env[f"{ENV_PREFIX}GIT_BRANCH"] = git_remote.branch
             env[f"{ENV_PREFIX}GIT_USERNAME"] = git_remote.username
             env[f"{ENV_PREFIX}GIT_TOKEN"] = git_remote.token
-        if self.config.model is not None:
-            env[f"{ENV_PREFIX}MODEL"] = self.config.model
-        if self.config.model_api_key is not None:
-            env[f"{ENV_PREFIX}MODEL_API_KEY"] = self.config.model_api_key
+
+        env.update(self._build_model_env(model_access))
         return env
+
+    @staticmethod
+    def _build_model_env(model_access: ModelAccess) -> dict[str, str]:
+        """Return the model variables for one Runtime, and only those of its own model source.
+
+        Nothing else can put model variables in the environment -- the inherited part is
+        allow-listed and extra_env refuses them -- so what this returns is the whole story.
+        """
+        match model_access:
+            # 直连厂商：固定 key。fake: 模型不需要 key，就不给。
+            case DirectModelAccess(model=model, api_key=api_key):
+                env = {f"{ENV_PREFIX}MODEL": model}
+                if api_key is not None:
+                    env[f"{ENV_PREFIX}MODEL_API_KEY"] = api_key
+                return env
+
+            # bkaidev：只有用户态 access_token。不给 MODEL_API_KEY，agent 缺 token 时会回落到它，
+            # 那就成了用共享密钥冒充用户。
+            case BkAidevModelAccess(base_url=base_url, model_name=model_name, access_token=access_token):
+                return {
+                    f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN": access_token,
+                    f"{ENV_PREFIX}MODEL_BASE_URL": base_url,
+                    f"{ENV_PREFIX}MODEL_NAME": model_name,
+                }
 
     async def _wait_until_healthy(
         self,

@@ -116,6 +116,20 @@ def test_a_health_snapshot_is_read_from_the_runtimes_own_words():
     assert health.running is False
 
 
+def test_the_application_status_is_forwarded_as_the_runtime_worded_it():
+    """本服务对这些名字没有意见，原样转发。换一个它不认识的词也必须照样过。"""
+    health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "dev_server_status": "starting"})
+
+    assert health.dev_server_status == "starting"
+
+
+def test_a_runtime_that_says_nothing_about_its_application_is_not_read_as_a_status():
+    """「问不出来」和 Runtime 能给的那几档里的任何一个都不是一回事，不能折成其中之一。"""
+    health = RuntimeHealth.from_payload(HEALTHY_PAYLOAD)
+
+    assert health.dev_server_status is None
+
+
 def test_a_runtime_that_has_never_run_has_no_conversation_yet():
     health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "conversation_id": None})
 

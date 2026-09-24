@@ -4,6 +4,7 @@ import type {
   AuthenticatedUserResponse,
   ConversationHistoryResponse,
   ConversationResponse,
+  GitRepositoryResponse,
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
@@ -25,6 +26,9 @@ export type {
   ConversationHistoryResponse,
   ConversationResponse,
   ErrorResponse,
+  GitCommitIdentity,
+  GitRepositoryResponse,
+  GitRepositoryStatus,
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
@@ -54,6 +58,13 @@ export const listProjects = (query: PageQuery = {}): Promise<PagedProjectRespons
 
 export const createProject = (payload: ProjectCreateRequest): Promise<ProjectResponse> => (
   http.post(`${apiPrefix}/projects/`, payload)
+);
+
+/**
+ * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。
+ */
+export const getGitRepository = (projectId: string): Promise<GitRepositoryResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/git-repository/`, {}, { globalError: false })
 );
 
 export const listConversations = (

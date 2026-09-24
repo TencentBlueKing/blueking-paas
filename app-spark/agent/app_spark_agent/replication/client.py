@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any, cast
 
-import httpx
+import httpx2
 
 from app_spark_agent.state import Channel
 
@@ -72,7 +72,7 @@ class ControlPlaneClient:
     :param base_url: Conversation-scoped root the ingest endpoints hang off.
     :param token: Bearer token minted by the control plane when it started this Runtime.
     :param timeout_seconds: Timeout for a single ingest call.
-    :param transport: What to send requests over, defaulting to httpx's own. This is httpx's
+    :param transport: What to send requests over, defaulting to httpx2's own. This is httpx2's
         designated seam for replacing the network underneath a client; tests use it to drive a
         real ingest application in-process instead of over a socket.
     """
@@ -83,12 +83,12 @@ class ControlPlaneClient:
         base_url: str,
         token: str,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
-        transport: httpx.AsyncBaseTransport | None = None,
+        transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
-        # A trailing slash so `httpx` resolves the relative channel paths *under* the base
+        # A trailing slash so `httpx2` resolves the relative channel paths *under* the base
         # rather than replacing its last segment.
         self.base_url = base_url if base_url.endswith("/") else f"{base_url}/"
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             base_url=self.base_url,
             headers={"Authorization": f"Bearer {token}"},
             timeout=timeout_seconds,
@@ -149,7 +149,7 @@ class ControlPlaneClient:
         """Perform one ingest call and return its decoded body."""
         try:
             response = await self._client.request(method, path, json=body)
-        except httpx.HTTPError as exc:
+        except httpx2.HTTPError as exc:
             raise ControlPlaneError(f"could not reach the control plane at {path}: {exc}") from exc
 
         if response.status_code != HTTPStatus.OK:
@@ -173,7 +173,7 @@ def _read_int(payload: dict[str, Any], key: str) -> int:
         raise ControlPlaneError(f"unreadable ingest response, {key} is missing or not an integer: {exc}") from exc
 
 
-def _response_error(path: str, response: httpx.Response) -> ControlPlaneError:
+def _response_error(path: str, response: httpx2.Response) -> ControlPlaneError:
     """Read the API error envelope without depending on Django or blue-krill."""
     try:
         payload = response.json()

@@ -42,6 +42,7 @@ from app_spark_api.agent.conversations.models import (
 from app_spark_api.agent.runtime import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project
 from tests.helpers import create_user
 
 if TYPE_CHECKING:
@@ -49,40 +50,20 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
-PROJECT_ID = "spark-demo"
-CONVERSATIONS_URL = f"/api/projects/{PROJECT_ID}/conversations/"
-
 
 @pytest.fixture(autouse=True)
 def runtime_provider(settings, tmp_path: Path) -> None:
     """Give the provider somewhere harmless to point at.
 
     Ending a conversation goes through ``terminate_runtime()``, which needs a provider to exist
-    even when there is no Runtime for it to stop. The local provider only validates its
-    configuration on construction and touches none of these paths unless it spawns something.
+    even when there is no Runtime for it to stop.
     """
-    settings.AGENT_RUNTIME_PROVIDER = "local_process"
-    settings.AGENT_RUNTIME_PROVIDER_CONFIG = {
-        "agent_project_dir": str(tmp_path / "agent"),
-        "workspace_root": str(tmp_path / "workspaces"),
-        "state_root": str(tmp_path / "agent-state"),
-    }
+    configure_local_provider(settings, tmp_path)
 
 
 @pytest.fixture
 def project(bk_user) -> Project:
-    """A Project the logged-in caller can reach.
-
-    Not the shared ``project`` fixture: that one uses the user's own random ``tenant_id``, while
-    the API scopes by ``get_tenant()``, which is ``default`` unless multi-tenant mode is on.
-    """
-    return Project.objects.create(
-        id=PROJECT_ID,
-        name="Spark Demo",
-        creator=bk_user,
-        owner=bk_user,
-        tenant_id=get_tenant(bk_user).id,
-    )
+    return create_reachable_project(bk_user)
 
 
 @pytest.fixture

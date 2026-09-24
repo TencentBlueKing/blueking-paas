@@ -42,6 +42,7 @@ def fake_forgejo(settings, monkeypatch, request):
         return
     settings.REPO_SERVER = repo_server_config()
     monkeypatch.setattr("app_spark_api.repository.git.services.make_forgejo_client", fake.client)
+    monkeypatch.setattr("app_spark_api.repository.git.archives.make_forgejo_async_client", fake.async_client)
     yield fake
 
 

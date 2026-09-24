@@ -24,14 +24,25 @@ from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git.constants import REPOSITORY_ERROR_DETAIL, STATUS_FAILED, STATUS_READY
 from app_spark_api.repository.git.models import ProjectGitRepository
+from tests.helpers import read_streaming_response
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
 PROJECT_ID = "spark-demo"
+HEAD_COMMIT = "deadbeef" + "0" * 32
 
 
 def git_url(project_id: str = PROJECT_ID) -> str:
     return f"/api/projects/{project_id}/git-repository/"
+
+
+async def create_project(aapi_client) -> None:
+    response = await aapi_client.post(
+        "/api/projects/",
+        data={"id": PROJECT_ID, "name": "Spark Demo"},
+        content_type="application/json",
+    )
+    assert response.status_code == HTTPStatus.CREATED
 
 
 async def test_creating_a_project_provisions_its_repository(aapi_client, fake_forgejo):
@@ -102,9 +113,98 @@ async def test_starting_an_agent_requires_a_ready_repository(aapi_client, fake_f
     assert "Git repository" in response.json()["detail"]
 
 
-async def test_git_endpoints_are_auth_protected(aanonymous_api_client, bk_user):
-    response = await aanonymous_api_client.get(git_url())
+@pytest.mark.parametrize("operation", ["", "archive/"])
+async def test_git_endpoints_are_auth_protected(aanonymous_api_client, bk_user, operation):
+    response = await aanonymous_api_client.get(git_url() + operation)
     assert response.status_code == HTTPStatus.UNAUTHORIZED
+
+
+async def test_archive_streams_the_saved_source_and_names_the_commit(aapi_client, fake_forgejo):
+    await create_project(aapi_client)
+    fake_forgejo.heads[("app-spark", PROJECT_ID)] = HEAD_COMMIT
+
+    response = await aapi_client.get(git_url() + "archive/")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["Content-Type"] == "application/zip"
+    assert response.headers["Content-Disposition"] == f'attachment; filename="{PROJECT_ID}-deadbee.zip"'
+    assert await read_streaming_response(response) == fake_forgejo.archive_bytes
+
+
+async def test_archive_url_is_offered_only_once_the_remote_repository_exists(aapi_client, fake_forgejo):
+    await create_project(aapi_client)
+
+    ready = await aapi_client.get(git_url())
+    assert ready.json()["archive_url"] == f"/api/projects/{PROJECT_ID}/git-repository/archive/"
+
+    await ProjectGitRepository.objects.filter(project_id=PROJECT_ID).aupdate(remote_id=None)
+    pending = await aapi_client.get(git_url())
+    assert pending.json()["archive_url"] is None
+
+
+async def test_archive_is_not_found_when_the_project_has_no_repository(aapi_client, bk_user):
+    from app_spark_api.core.projects.models import Project
+
+    await Project.objects.acreate(
+        id=PROJECT_ID,
+        name="Spark Demo",
+        creator=bk_user,
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+
+    response = await aapi_client.get(git_url() + "archive/")
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()["code"] == "GIT_REPOSITORY_NOT_FOUND"
+
+
+async def test_archive_is_refused_while_the_remote_repository_does_not_exist(aapi_client, fake_forgejo):
+    await create_project(aapi_client)
+    await ProjectGitRepository.objects.filter(project_id=PROJECT_ID).aupdate(remote_id=None)
+
+    response = await aapi_client.get(git_url() + "archive/")
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "GIT_REPOSITORY_NOT_READY"
+
+
+async def test_archive_still_works_after_credentials_are_revoked(aapi_client, fake_forgejo):
+    """Reading the source does not use the write token, so revoking it must not block export."""
+    await create_project(aapi_client)
+    revoked = await aapi_client.post(git_url() + "revoke-credentials/")
+    assert revoked.json()["status"] == STATUS_FAILED
+
+    response = await aapi_client.get(git_url() + "archive/")
+
+    assert response.status_code == HTTPStatus.OK
+    assert await read_streaming_response(response) == fake_forgejo.archive_bytes
+
+
+@pytest.mark.parametrize("failure", ["archive", "branch"])
+async def test_a_forgejo_failure_is_an_error_response_not_a_truncated_download(
+    aapi_client,
+    fake_forgejo,
+    caplog,
+    failure,
+):
+    await create_project(aapi_client)
+    if failure == "archive":
+        fake_forgejo.archive_status = HTTPStatus.INTERNAL_SERVER_ERROR
+    else:
+        # A branch the fake Forgejo does not have, so the lookup that precedes the
+        # download 404s.
+        await ProjectGitRepository.objects.filter(project_id=PROJECT_ID).aupdate(default_branch="gone")
+
+    response = await aapi_client.get(git_url() + "archive/")
+
+    assert response.streaming is False
+    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.json() == {
+        "code": "REPO_SERVER_UNAVAILABLE",
+        "detail": "Git repository service is unavailable. Please retry later.",
+    }
+    assert "app-spark" in caplog.text
 
 
 async def test_get_is_not_found_when_the_project_has_no_repository(aapi_client, bk_user):

@@ -45,6 +45,38 @@ export interface ProjectResponse {
 
 export type PagedProjectResponse = PagedResponse<ProjectResponse>;
 
+/** Agent 提交代码时用的机器身份，不是终端用户。 */
+export interface GitCommitIdentity {
+  author_name: string;
+  author_email: string;
+}
+
+/** 建仓进度：`pending` 等待初始化，`ready` 初始化完成，`failed` 初始化失败。 */
+export type GitRepositoryStatus = 'pending' | 'ready' | 'failed';
+
+/** GET /projects/{id}/git-repository/ 仓库状态，不含凭据明文。 */
+export interface GitRepositoryResponse {
+  owner: string;
+  name: string;
+  default_branch: string;
+  status: GitRepositoryStatus;
+  status_detail: string;
+  clone_url: string;
+  created_at: string;
+  updated_at: string;
+  commit: GitCommitIdentity;
+  /**
+   * 下载已保存源码（zip）的地址；远端仓库还没建起来时为 null。
+   *
+   * 可能是站内路径（含后端 `FORCE_SCRIPT_NAME` 前缀），也可能是带协议的绝对地址，交给
+   * `resolveApiUrl` 分辨即可。
+   *
+   * 下到的是 Agent **最后一次成功保存**的那一版，不是运行中 Runtime 工作区的实时状态；文件名里
+   * 带 commit 短 SHA，据此可分辨拿到的是哪一版。
+   */
+  archive_url: string | null;
+}
+
 export interface ListConversationsQuery extends PageQuery {
   is_live?: boolean | null;
 }

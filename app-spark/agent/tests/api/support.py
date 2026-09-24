@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Protocol, cast
 from uuid import uuid4
 
-import httpx
+import httpx2
 from fastapi.testclient import TestClient
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import AbstractCapability
@@ -30,9 +30,9 @@ from tests.support.fake_models import gated_model
 RUNTIME_TOKEN = "test-runtime-token"
 MODEL_API_KEY = "test-model-api-key"
 AUTH_HEADERS = {"Authorization": f"Bearer {RUNTIME_TOKEN}"}
-HEALTH_FIELDS = {"version", "model_ready", "running", "app_status"}
+HEALTH_FIELDS = {"version", "model_ready", "running", "dev_server_status"}
 
-# `ASGITransport` never opens a socket, so this only has to be an absolute URL httpx can build
+# `ASGITransport` never opens a socket, so this only has to be an absolute URL httpx2 can build
 # requests from; nothing ever resolves it.
 ASGI_BASE_URL = "http://runtime.test"
 
@@ -236,15 +236,15 @@ def run_turn(
 
 
 @asynccontextmanager
-async def http_client(test_client: TestClient) -> AsyncGenerator[httpx.AsyncClient]:
+async def http_client(test_client: TestClient) -> AsyncGenerator[httpx2.AsyncClient]:
     """Reach a Runtime from the test's own event loop.
 
     ``TestClient`` runs each request to completion before returning, which is precisely what a
     test about two overlapping requests cannot use. Driving the ASGI application directly keeps
     both requests on one event loop, so the second one arrives while the first is still open.
     """
-    transport = httpx.ASGITransport(app=test_client.app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=test_client.app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url=ASGI_BASE_URL,
         headers=AUTH_HEADERS,
@@ -253,12 +253,12 @@ async def http_client(test_client: TestClient) -> AsyncGenerator[httpx.AsyncClie
 
 
 async def post_run_async(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     *,
     conversation_id: str,
     context_version: int,
     prompt: str = "hello",
-) -> httpx.Response:
+) -> httpx2.Response:
     """Post one AG-UI run over an event-loop-sharing client and return its response."""
     return await client.post(
         "/runs",
@@ -276,12 +276,12 @@ async def post_run_async(
 class InFlightRun:
     """A Runtime with one run held open, and a client that can reach it meanwhile."""
 
-    client: httpx.AsyncClient
+    client: httpx2.AsyncClient
     conversation_id: str
     gate: asyncio.Event
-    streaming: asyncio.Task[httpx.Response]
+    streaming: asyncio.Task[httpx2.Response]
 
-    async def release(self) -> httpx.Response:
+    async def release(self) -> httpx2.Response:
         """Let the held run finish and return the response it streamed.
 
         Safe to call more than once, and called on the way out of :func:`run_in_flight` for the
@@ -292,7 +292,7 @@ class InFlightRun:
 
 
 async def wait_until_busy(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     timeout: float = BUSY_TIMEOUT_SECONDS,
 ) -> None:
     """Block until the Runtime reports a run in flight, or fail the test."""

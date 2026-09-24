@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
-import httpx
+import httpx2
 
 from app_spark_agent import settings
 from tests.support import console
@@ -75,7 +75,7 @@ class LiveRuntime:
         url: str,
         state_dir: Path,
         process: subprocess.Popen[bytes],
-        client: httpx.Client,
+        client: httpx2.Client,
         log_path: Path,
     ) -> None:
         self.label = label
@@ -116,7 +116,7 @@ class LiveRuntime:
         if_match: str | None = None,
         log_seq: int | None = None,
         ui_event_seq: int | None = None,
-    ) -> httpx.Response:
+    ) -> httpx2.Response:
         """Inject a cold context, and return the response without judging it.
 
         Both outcomes are part of the contract -- a mismatched ``If-Match`` is a 412, an
@@ -308,7 +308,7 @@ def serve(
         url=url,
         state_dir=state_dir,
         process=process,
-        client=httpx.Client(
+        client=httpx2.Client(
             base_url=url,
             timeout=REQUEST_TIMEOUT_SECONDS,
             headers={"Authorization": f"Bearer {runtime_token}"},
@@ -337,7 +337,7 @@ def wait_until_healthy(
     while True:
         try:
             if (
-                httpx.get(
+                httpx2.get(
                     f"{url}/health",
                     headers={"Authorization": f"Bearer {runtime_token}"},
                     timeout=0.5,
@@ -345,7 +345,7 @@ def wait_until_healthy(
                 == 200
             ):
                 return
-        except httpx.HTTPError:
+        except httpx2.HTTPError:
             pass
         if process.poll() is not None:
             raise AssertionError(f"Runtime exited during startup:\n{tail(log_path)}")
@@ -384,7 +384,7 @@ def free_port() -> int:
         return int(probe.getsockname()[1])
 
 
-def iter_sse(response: httpx.Response) -> Iterator[dict[str, Any]]:
+def iter_sse(response: httpx2.Response) -> Iterator[dict[str, Any]]:
     """Yield each AG-UI event as it arrives, rather than after the stream ends."""
     data: list[str] = []
     for raw in response.iter_lines():

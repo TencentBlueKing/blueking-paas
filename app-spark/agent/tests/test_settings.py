@@ -1,4 +1,4 @@
-"""就绪门闩：token + 网关地址 + 对照表内模型名。"""
+"""就绪门闩：fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套。"""
 
 import pytest
 from pytest import MonkeyPatch
@@ -47,26 +47,35 @@ def test_a_fake_model_is_ready_without_gateway_settings(monkeypatch: MonkeyPatch
     assert settings.is_model_ready() is True
 
 
-def test_api_key_is_a_fallback_token(monkeypatch: MonkeyPatch) -> None:
+def test_api_key_alone_is_the_direct_provider(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "MODEL", "deepseek:deepseek-v4-flash")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
-    monkeypatch.setattr(settings, "MODEL_API_KEY", "legacy-key")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
-    monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
+    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
-    assert settings.gateway_access_token() == "legacy-key"
+    assert settings.gateway_access_token() is None
+    assert settings.uses_direct_provider() is True
+    assert settings.model_mode() == settings.MODEL_MODE_DIRECT
     assert settings.is_model_ready() is True
 
 
-def test_whitespace_token_falls_back_or_is_unready(monkeypatch: MonkeyPatch) -> None:
+def test_api_key_does_not_complete_a_partial_gateway(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
+    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
+
+    assert settings.gateway_access_token() is None
+    assert settings.uses_direct_provider() is False
+    assert settings.is_model_ready() is False
+
+
+def test_whitespace_token_is_absent(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "   ")
-    monkeypatch.setattr(settings, "MODEL_API_KEY", "legacy-key")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
     monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
-
-    assert settings.gateway_access_token() == "legacy-key"
-    assert settings.is_model_ready() is True
-
-    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
 
     assert settings.gateway_access_token() is None
     assert settings.is_model_ready() is False
@@ -74,11 +83,12 @@ def test_whitespace_token_falls_back_or_is_unready(monkeypatch: MonkeyPatch) -> 
 
 def test_direct_provider_is_only_for_api_key_without_gateway(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
-    monkeypatch.setattr(settings, "MODEL_API_KEY", "legacy-key")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
+    monkeypatch.setattr(settings, "MODEL_NAME", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     assert settings.uses_direct_provider() is True
 
-    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-token")
+    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
 
     assert settings.uses_direct_provider() is False

@@ -73,12 +73,12 @@ TENANT_ID = env.str("TENANT_ID", "")
 # 真正启动起来，场景清单见 fake_model.py。
 MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
 
-# 一把钥匙，两条路，不是两套并行生产配置。
+# 三种互斥的模型配置，凭据不要混用。
 #
-# 网关：未注入 BK_AIDEV_ACCESS_TOKEN 时，把它当作 bkaidev 的 access_token 回落，
-# 以免已入库的 SPARK_MODEL_API_KEY 立刻失效。
-# 直连：没有网关意图时，交给 pydantic-ai 按 MODEL 的 <provider>:<model> 推断，
-# 走官网 Bearer。/runs 只认网关三件套或 fake；只配这把钥匙走直连时 HTTP 仍 503。
+# fake: MODEL=fake:<scenario>，不需要任何凭据。
+# 直连: 只提供 MODEL_API_KEY，和 MODEL 的 <provider>:<model> 一起走官网 Bearer。
+# 网关: BK_AIDEV_ACCESS_TOKEN、MODEL_NAME、MODEL_BASE_URL 三者齐全，走 bkaidev。
+# 网关三项只要出现一项，就不把 MODEL_API_KEY 当成直连钥匙；缺项保持未就绪。
 MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 
 # 用户态 access_token。app-spark 在 bkaidev 建好该沙箱的空间和单个智能体后注入。
@@ -300,26 +300,49 @@ def _stripped(value: str | None) -> str | None:
     return stripped or None
 
 
-def gateway_access_token() -> str | None:
-    """bkaidev 出站使用的用户态 access_token。
+# model_mode 的四种结果。fake / direct / gateway 才算就绪，unready 让 /runs 返回 503。
+MODEL_MODE_FAKE = "fake"
+MODEL_MODE_DIRECT = "direct"
+MODEL_MODE_GATEWAY = "gateway"
+MODEL_MODE_UNREADY = "unready"
 
-    优先 BK_AIDEV_ACCESS_TOKEN；未注入时回落到 MODEL_API_KEY。
-    两侧都先 strip，空白值不能挡住回落，也不能把就绪门闩打成真。
-    """
-    return _stripped(BK_AIDEV_ACCESS_TOKEN) or _stripped(MODEL_API_KEY)
+
+def gateway_access_token() -> str | None:
+    """bkaidev 出站使用的用户态 access_token。只认 BK_AIDEV_ACCESS_TOKEN。"""
+    return _stripped(BK_AIDEV_ACCESS_TOKEN)
+
+
+def _has_gateway_intent() -> bool:
+    """网关三项里只要有一项非空，就表示要走 bkaidev，而不是官网直连。"""
+    return gateway_access_token() is not None or bool(MODEL_BASE_URL.strip()) or bool(resolved_model_name())
 
 
 def uses_direct_provider() -> bool:
-    """没有网关意图时，才允许 MODEL_API_KEY 走官网 provider。
+    """只注入了 MODEL_API_KEY、没有任何网关项时，才走官网 provider。"""
+    return not _has_gateway_intent() and _stripped(MODEL_API_KEY) is not None
 
-    注入了 BK_AIDEV_ACCESS_TOKEN 或 MODEL_BASE_URL 就表示要走 bkaidev，
-    缺项不得回落到公网 api.deepseek.com。
-    """
-    return (
-        _stripped(BK_AIDEV_ACCESS_TOKEN) is None
-        and not MODEL_BASE_URL.strip()
-        and _stripped(MODEL_API_KEY) is not None
-    )
+
+def _gateway_ready() -> bool:
+    """网关三件套齐全，且模型名在对照表内。"""
+    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+
+
+def model_mode() -> str:
+    """当前生效的模型配置：fake、direct、gateway，或 unready。"""
+
+    # fake 不看凭据。它存在就是为了不发起网络请求。
+    if MODEL.startswith("fake:"):
+        return MODEL_MODE_FAKE
+
+    # 网关优先于直连：两者同时配齐时走 bkaidev，MODEL_API_KEY 不参与鉴权。
+    if _gateway_ready():
+        return MODEL_MODE_GATEWAY
+
+    # 任一网关项已出现就不降级成直连，缺项保持未就绪，避免把钥匙发到公网。
+    if uses_direct_provider():
+        return MODEL_MODE_DIRECT
+
+    return MODEL_MODE_UNREADY
 
 
 def resolved_model_name() -> str:
@@ -340,10 +363,8 @@ def openai_capability_profile(name: str | None = None) -> OpenAIModelProfile | N
 
 
 def is_model_ready() -> bool:
-    """fake: 无需凭据；真实模型要 access_token、网关地址、对照表内模型名。"""
-    if MODEL.startswith("fake:"):
-        return True
-    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+    """fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套，三者之一。"""
+    return model_mode() != MODEL_MODE_UNREADY
 
 
 def is_git_configured() -> bool:

@@ -1,6 +1,7 @@
 
 const mockServer = require('./mock-server');
 const containerBuild = process.env.APP_SPARK_CONTAINER_BUILD === '1';
+const stripApiSvcPrefix = process.env.BK_API_PROXY_STRIP_PREFIX === '1';
 
 /**
  * 预览响应里的绝对地址按 API 主机签发。本地页面是另一台主机，iframe 跟着跳过去就会被
@@ -60,6 +61,7 @@ module.exports = {
             changeOrigin: true,
             secure: true,
             cookieDomainRewrite: '',
+            ...(stripApiSvcPrefix ? { pathRewrite: { '^/api-svc': '' } } : {}),
             timeout: 0,
             proxyTimeout: 0,
             onProxyRes: keepPreviewOnPageHost,

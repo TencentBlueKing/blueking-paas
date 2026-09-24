@@ -38,7 +38,7 @@ from e2b import AsyncSandbox, NotFoundException, SandboxException
 from app_spark_api.agent.runtime.entities import E2BConfig
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
-from app_spark_api.agent.runtime.providers.e2b import ABANDONED_CLAIM_SECONDS, E2BProvider
+from app_spark_api.agent.runtime.providers.e2b import ABANDONED_CLAIM_SECONDS, E2BProvider, _SandboxClaim
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -224,7 +224,7 @@ async def test_a_stale_abandoned_view_does_not_release_a_sandbox_bound_since(e2b
     # old enough that the abandoned check would otherwise give the claim away.
     stale["record"].created_at = timezone.now() - timedelta(seconds=ABANDONED_CLAIM_SECONDS + 1)
 
-    assert await provider._connect(stale["record"], reconcile=True) is not None
+    assert await _SandboxClaim(stale["record"], provider.config).connect(reconcile=True) is not None
 
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
     assert (record.active_conversation_id, record.sandbox_id, record.stop_reason) == (conversation_id, "sbx-1", "")
@@ -293,7 +293,7 @@ async def test_terminating_a_claim_bound_since_it_was_read_still_kills_the_sandb
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
     assert stale["record"].sandbox_id is None
 
-    await other_worker._terminate_record(stale["record"])
+    await _SandboxClaim(stale["record"], other_worker.config).terminate()
 
     assert e2b.sandboxes["sbx-1"].killed
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)

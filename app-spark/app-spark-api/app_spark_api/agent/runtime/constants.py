@@ -22,3 +22,5 @@ class AgentRuntimeProviderType(StrEnum):
 
     # 在本机 spawn 一个 agent 进程。开发与测试用，进程句柄只存在内存里。
     LOCAL_PROCESS = "local_process"
+    # 每个会话分配一个远程沙箱；Agent Runtime 的安装与启动留待后续实现。
+    E2B = "e2b"

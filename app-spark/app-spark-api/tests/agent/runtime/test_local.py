@@ -21,7 +21,13 @@ FORCE_SCRIPT_NAME comes off; the Project's Git repository is described to the Ru
 there is one; and each Runtime is given an application port of its own.
 """
 
-from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, LocalProcessConfig, StateCallback
+from app_spark_api.agent.runtime.entities import (
+    AgentRuntimeHandle,
+    GitRemote,
+    LocalProcessConfig,
+    PreviewTarget,
+    StateCallback,
+)
 from app_spark_api.agent.runtime.providers import local as local_mod
 from app_spark_api.agent.runtime.providers.local import ENV_PREFIX, LocalProcessProvider
 
@@ -144,12 +150,13 @@ async def test_two_conversations_are_proxied_to_their_own_applications(tmp_path)
     register_runtime(provider, "first", app_port=9001)
     register_runtime(provider, "second", app_port=9002)
 
-    assert await provider.preview_upstream("first") == "http://127.0.0.1:9001"
-    assert await provider.preview_upstream("second") == "http://127.0.0.1:9002"
+    # 本机直连，中间没有要按 host 路由的代理，所以照常把浏览器的 host 告诉应用。
+    assert await provider.preview_target("first") == PreviewTarget(base_url="http://127.0.0.1:9001")
+    assert await provider.preview_target("second") == PreviewTarget(base_url="http://127.0.0.1:9002")
 
 
 async def test_a_conversation_nobody_ever_served_has_nothing_to_proxy_to(tmp_path):
-    assert await _provider(tmp_path).preview_upstream("unknown") is None
+    assert await _provider(tmp_path).preview_target("unknown") is None
 
 
 async def test_a_conversation_whose_runtime_died_has_nothing_to_proxy_to(tmp_path):
@@ -157,7 +164,7 @@ async def test_a_conversation_whose_runtime_died_has_nothing_to_proxy_to(tmp_pat
     provider = _provider(tmp_path)
     register_runtime(provider, "dead", app_port=9003, alive=False)
 
-    assert await provider.preview_upstream("dead") is None
+    assert await provider.preview_target("dead") is None
 
 
 def test_the_two_ports_of_one_runtime_are_never_the_same(tmp_path):

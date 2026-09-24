@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "paas_service",
     "svc_redis.vendor",
     "svc_redis.cluster",
+    "bkpaas_auth",
 ]
 
 MIDDLEWARE = [
@@ -109,6 +110,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "bkpaas_auth.middlewares.CookieLoginMiddleware",
     # Append middlewares from paas_service to make client auth works
     "paas_service.auth.middleware.VerifiedClientMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -160,6 +162,15 @@ else:
             "OPTIONS": env.json("MYSQL_OPTIONS", default={}),
         }
     }
+
+# Cache
+# 采集结果等数据需要在多个 worker / 副本间共享, 因此使用数据库缓存; 缓存表由 createcachetable 创建
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": env.str("CACHE_TABLE_NAME", default="cache_table"),
+    },
+}
 
 # Password validation
 
@@ -248,6 +259,15 @@ METRIC_CLIENT_TOKEN_DICT = {
     "monitoring": env.str("METRIC_CLIENT_TOKEN", "5c1e7f0e-7705-25b4-50e4-177856bed126"),
 }
 
+# 单个 k8s API / exporter 请求的超时(秒)
+METRIC_COLLECT_REQUEST_TIMEOUT = env.int("METRIC_COLLECT_REQUEST_TIMEOUT", default=3)
+# 整次采集共用的 deadline(秒): k8s / exporter 查询共用这一份预算, 超时未完成的任务被放弃(对应指标缺失)
+METRIC_COLLECT_DEADLINE = env.int("METRIC_COLLECT_DEADLINE", default=8)
+# OOMKilled 指标的时间窗(秒), 只有最近这段时间内发生过 OOM 才计为 1
+METRIC_OOM_KILLED_WINDOW = env.int("METRIC_OOM_KILLED_WINDOW", default=300)
+# 采集结果缓存时间(秒): 结果写入数据库缓存, 由全部 worker/副本共享, 避免每次 scrape 都全量拉库 + 查 k8s;
+METRIC_COLLECT_CACHE_TTL = env.int("METRIC_COLLECT_CACHE_TTL", default=60)
+
 SENTRY_DSN = env.str("SENTRY_DSN", default="")
 
 # 接入 sentry
@@ -283,6 +303,33 @@ PAAS_SERVICE_JWT_CLIENTS = [
 
 # 是否开启管理端功能
 ENABLE_ADMIN = False
+
+BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
+# 登录票据类型：bk_token / bk_ticket
+BKAUTH_BACKEND_TYPE = env("BKAUTH_BACKEND_TYPE", default="bk_token")
+# bk_token 验票所需应用凭证，必须非空，否则启动失败；bk_ticket 不用
+BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default="")
+BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default="")
+if BKAUTH_BACKEND_TYPE == "bk_token" and not (BKAUTH_TOKEN_APP_CODE and BKAUTH_TOKEN_SECRET_KEY):
+    raise ValueError(
+        "BKAUTH_TOKEN_APP_CODE and BKAUTH_TOKEN_SECRET_KEY must be set when BKAUTH_BACKEND_TYPE is bk_token"
+    )
+
+# 未登录跳转页，不要填验票接口
+LOGIN_URL = env.str("BK_LOGIN_API_URL", default="http://paasee.blueking-fake.com/login")
+
+# 用 cookie 换用户信息。bk_ticket 配完整 check_token URL；未设置则拼 is_login
+# 不要同时设 BKAUTH_USER_INFO_APIGW_URL，bk_ticket 没有 APIGW 实现
+BKAUTH_USER_COOKIE_VERIFY_URL = env.str(
+    "BKAUTH_USER_COOKIE_VERIFY_URL",
+    default=LOGIN_URL.rstrip("/") + env.str("BK_LOGIN_VERIFY_API_PATH", default="/api/v3/is_login/"),
+)
+BKAUTH_USER_INFO_APIGW_URL = env.str("BKAUTH_USER_INFO_APIGW_URL", default="")
+
+AUTHENTICATION_BACKENDS = [
+    # 使用数据库表的 django.contrib.auth.User，登录成功后 get_or_create
+    "bkpaas_auth.backends.DjangoAuthUserCompatibleBackend",
+]
 
 # 跳转回应用首页的 url 模板
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"

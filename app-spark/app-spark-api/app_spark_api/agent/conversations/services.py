@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
+    from app_spark_api.agent.runtime import AgentRun, PreviewTarget, RuntimeHealth
     from app_spark_api.core.projects.models import Project
     from app_spark_api.repository.git.models import ProjectGitRepository
 
@@ -130,23 +130,14 @@ async def get_dev_server_status(conversation: Conversation) -> str | None:
     return health.dev_server_status
 
 
-async def get_preview_upstream(conversation: Conversation) -> str | None:
-    """Return where this service should proxy the conversation's preview to.
+async def get_preview_target(conversation: Conversation) -> PreviewTarget | None:
+    """Return where, and how, this service should proxy the conversation's preview to.
 
     :param conversation: Conversation whose application is to be proxied.
-    :return: A base URL, or ``None`` when no Runtime is serving the conversation.
+    :return: The application's address with its transport headers, or ``None`` when no
+        Runtime is serving the conversation.
     """
-    return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
-
-
-async def get_preview_transport_headers(conversation: Conversation) -> dict[str, str]:
-    """Return the provider's port-proxy headers for a workspace preview request.
-
-    :param conversation: Conversation whose sandbox hosts the application.
-    :return: Trusted transport headers, empty for the local provider.
-    """
-    handle = await get_agent_runtime_provider().peek(str(conversation.id))
-    return handle.http_headers if handle is not None else {}
+    return await get_agent_runtime_provider().preview_target(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:

@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -73,7 +74,7 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
     next_conversation_id = str(uuid4())
     assert await e2b_provider.peek(conversation_id) is None
     assert await e2b_provider.get_sandbox(conversation_id) is None
-    assert await e2b_provider.preview_upstream(conversation_id) is None
+    assert await e2b_provider.preview_target(conversation_id) is None
     await e2b_provider.terminate(conversation_id)
 
     logger.info("Creating sandbox for provider lifecycle test")
@@ -90,9 +91,20 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
     assert (
         handle.base_url == f"{e2b_provider.config.port_scheme}://{sandbox.get_host(e2b_provider.config.runtime_port)}"
     )
-    assert await e2b_provider.preview_upstream(conversation_id) == (
+    # Port-proxy credentials are whatever this sandbox actually issued.
+    expected_headers: dict[str, str] = {}
+    if access_token := sandbox.connection_config.sandbox_headers.get("X-Access-Token"):
+        expected_headers["X-Access-Token"] = access_token
+    if sandbox.traffic_access_token:
+        expected_headers["E2B-Traffic-Access-Token"] = sandbox.traffic_access_token
+    assert handle.http_headers == expected_headers
+    target = await e2b_provider.preview_target(conversation_id)
+    assert target is not None
+    assert target.base_url == (
         f"{e2b_provider.config.port_scheme}://{sandbox.get_host(e2b_provider.config.preview_port)}"
     )
+    assert target.http_headers == handle.http_headers
+    assert target.send_forwarded_host is False
     result = await sandbox.commands.run("printf 'agent-sandbox-ready'")
     assert result.stdout == "agent-sandbox-ready"
 
@@ -101,7 +113,7 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
     await e2b_provider.terminate(conversation_id)
     assert await e2b_provider.peek(conversation_id) is None
     assert await e2b_provider.get_sandbox(conversation_id) is None
-    assert await e2b_provider.preview_upstream(conversation_id) is None
+    assert await e2b_provider.preview_target(conversation_id) is None
     await record.arefresh_from_db()
     assert record.project_id == project_id
     assert record.conversation_id == conversation_id
@@ -117,6 +129,24 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
     assert await E2BSandboxRecord.objects.active_for_project(project_id).acount() == 1
 
 
+async def test_concurrent_ensures_of_one_conversation_share_one_sandbox(e2b_provider: E2BProvider):
+    """Two requests on one worker wait, then share the sandbox, instead of one reporting busy.
+
+    Creating a sandbox takes long enough that the two calls overlap. A missing per-conversation
+    lock lets the second lose the claim and raise ``AgentWorkspaceBusyError``.
+    """
+    project_id = str(uuid4())
+    conversation_id = str(uuid4())
+
+    first, second = await asyncio.gather(
+        e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id),
+        e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id),
+    )
+
+    assert first == second
+    assert await E2BSandboxRecord.objects.active_for_conversation(conversation_id).acount() == 1
+
+
 async def test_e2b_sandbox_survives_provider_recreation(e2b_provider: E2BProvider):
     """A fresh provider reconnects from the database and can finish cleanup."""
     project_id = str(uuid4())
@@ -129,7 +159,7 @@ async def test_e2b_sandbox_survives_provider_recreation(e2b_provider: E2BProvide
     reloaded_provider = E2BProvider(e2b_provider.config)
     assert await reloaded_provider.peek(conversation_id) == original
     assert await reloaded_provider.ensure(project_id=project_id, conversation_id=conversation_id) == original
-    assert await reloaded_provider.preview_upstream(conversation_id) is not None
+    assert await reloaded_provider.preview_target(conversation_id) is not None
 
     await reloaded_provider.shutdown()
     await reloaded_provider.shutdown()
@@ -139,7 +169,10 @@ async def test_e2b_sandbox_survives_provider_recreation(e2b_provider: E2BProvide
 
 
 async def test_e2b_provider_releases_expired_sandbox(e2b_provider: E2BProvider):
-    """A sandbox removed outside the provider frees its project and leaves a history row."""
+    """A sandbox removed outside the provider frees its project and leaves a history row.
+
+    Looking does not release it; the next ensure does, and replaces it.
+    """
     project_id = str(uuid4())
     conversation_id = str(uuid4())
     await e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id)
@@ -150,10 +183,15 @@ async def test_e2b_provider_releases_expired_sandbox(e2b_provider: E2BProvider):
     await sandbox.kill()
     assert await e2b_provider.peek(conversation_id) is None
     record = await E2BSandboxRecord.objects.aget(sandbox_id=sandbox.sandbox_id)
+    assert record.active_conversation_id == conversation_id
+
+    replacement = await e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    await record.arefresh_from_db()
     assert record.active_project_id is None
     assert record.active_conversation_id is None
     assert record.stopped_at is not None
     assert record.stop_reason == "expired"
+    assert await e2b_provider.peek(conversation_id) == replacement
 
 
 async def test_agent_wheel_runs_a_real_fake_turn_in_e2b(e2b_provider: E2BProvider, agent_bundle: AgentBundle):

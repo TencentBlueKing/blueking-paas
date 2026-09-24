@@ -65,7 +65,9 @@ class E2BConfig:
     :param api_url: Base URL of that API; independent of the exposed port domain.
     :param domain: Fallback domain for sandbox hosts when the API does not return one.
     :param template: Sandbox template name or ID.
-    :param timeout_seconds: Sandbox lifetime in seconds.
+    :param timeout_seconds: E2B sandbox time to live in seconds from creation (default 3600).
+        Activity and this provider's reconnects do not renew it; E2B stops the sandbox when
+        the timeout expires unless its deadline is explicitly extended.
     :param runtime_port: Port reserved for the future Agent Runtime HTTP server.
     :param preview_port: Fixed sandbox port for the workspace application preview.
     :param port_scheme: URL scheme for the exposed port proxy.
@@ -75,7 +77,7 @@ class E2BConfig:
     api_url: str = attrs.field(validator=validate_non_empty_string)
     domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
     template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
-    timeout_seconds: int = attrs.field(default=300, validator=attrs.validators.gt(0))
+    timeout_seconds: int = attrs.field(default=3600, validator=attrs.validators.gt(0))
     runtime_port: int = attrs.field(
         default=8000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
     )
@@ -146,6 +148,23 @@ class AgentRuntimeHandle:
     base_url: str
     runtime_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
     http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+
+
+@attrs.frozen
+class PreviewTarget:
+    """Where a conversation's workspace application is proxied to, and how to reach it.
+
+    :param base_url: Scheme-and-authority base URL of the application.
+    :param http_headers: Transport headers the provider's port proxy requires, e.g. its access
+        tokens. They authenticate this service to the proxy and never come from the browser.
+    :param send_forwarded_host: Whether the application may be told the browser's host through
+        ``X-Forwarded-Host``. A provider sets it to ``False`` when something between this
+        service and the application routes by that header and rejects a foreign host.
+    """
+
+    base_url: str
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+    send_forwarded_host: bool = True
 
 
 @attrs.frozen

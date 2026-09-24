@@ -35,6 +35,7 @@ from app_spark_api.agent.runtime.entities import (
     EventPage,
     GitRemote,
     LocalProcessConfig,
+    PreviewTarget,
     RuntimeHealth,
     StateCallback,
 )
@@ -66,6 +67,7 @@ __all__ = [
     "EventPage",
     "GitRemote",
     "LocalProcessConfig",
+    "PreviewTarget",
     "RuntimeHealth",
     "StateCallback",
 ]

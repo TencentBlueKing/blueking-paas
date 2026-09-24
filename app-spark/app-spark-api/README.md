@@ -108,6 +108,8 @@ cd ../agent && uv sync
 `e2b` provider 创建、重连和销毁沙箱，并在数据库保留归属与停止记录。Runtime 和预览地址
 分别来自 `sandbox.get_host(runtime_port)` 与 `sandbox.get_host(preview_port)`；预览端口固定为
 9000。生产 provider 尚不会安装或启动 Agent，因此默认模板下还不能直接完成会话。
+`timeout_seconds` 默认 3600 秒，是创建时设置的 E2B 沙箱存活期限；活动和本 provider 的重连不会自动续期。
+需要连续使用超过一小时的部署，应按 E2B 服务端允许的范围调大该值；要让长会话持续可用，还需在用户活动时续期。
 
 ```yaml
 AGENT_RUNTIME_PROVIDER: e2b
@@ -127,6 +129,7 @@ TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口�
 有有效 E2B 配置时，运行
 `APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`。
 测试会上传并安装本地构建的 Agent wheel，验证沙箱生命周期、聊天和预览；没有有效配置时跳过。
+真实 E2B 测试固定使用 300 秒的沙箱存活期限，并在测试结束时主动销毁沙箱，避免沿用生产默认值。
 当前测试不验证沙箱内的 Git 或仓库持久化。
 
 ### 会话状态的权威副本
@@ -286,9 +289,10 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 
 `.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
 预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的
-`preview_upstream` 给出，local_process 为每个 Runtime 分一个应用端口，于是多个会话能同时预览。没有
-Runtime 是 503，应用没起来是 502。转发时按本服务看到的事实重写 `X-Forwarded-For` / `-Proto` /
-`-Prefix`；本地 provider 还会重写 `X-Forwarded-Host`，E2B 则因端口代理的限制不发送该头。
+`preview_target` 一次给出（地址、端口代理要的首部、能否发 `X-Forwarded-Host`），local_process 为每个
+Runtime 分一个应用端口，于是多个会话能同时预览。没有 Runtime 是 503，应用没起来是 502。转发时按本服务
+看到的事实重写 `X-Forwarded-For` / `-Proto` / `-Prefix`；`X-Forwarded-Host` 由 provider 的
+`send_forwarded_host` 决定：本地 provider 发送，E2B 因端口代理按 host 路由而不发送。
 客户端自己带的那份不透传；读 `X-Forwarded-Prefix` 的框架能靠它把自己生成的链接
 拼对。
 

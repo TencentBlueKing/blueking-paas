@@ -41,6 +41,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import attrs
 import pytest
 
 from app_spark_api.agent.runtime.entities import E2BConfig, structure_e2b_config
@@ -58,6 +59,7 @@ SANDBOX_WORKSPACE = "/tmp/app-spark-workspace"
 SANDBOX_STATE_DIR = "/tmp/app-spark-state"
 SANDBOX_LOG = "/tmp/app-spark-agent.log"
 HEALTH_TIMEOUT_SECONDS = 20
+LIVE_E2B_TIMEOUT_SECONDS = 300
 
 logger = logging.getLogger("tests.e2b")
 
@@ -75,14 +77,16 @@ def require_e2b_config(settings: Any) -> E2BConfig:
     """Skip a live test unless the API service has a usable E2B configuration.
 
     :param settings: Django settings object supplied by pytest-django.
-    :return: Valid E2B connection settings.
+    :return: Valid E2B connection settings with a short test sandbox lifetime.
     """
     if settings.AGENT_RUNTIME_PROVIDER != "e2b":
         pytest.skip("AGENT_RUNTIME_PROVIDER is not e2b")
     try:
-        return structure_e2b_config(settings.AGENT_RUNTIME_PROVIDER_CONFIG)
+        config = structure_e2b_config(settings.AGENT_RUNTIME_PROVIDER_CONFIG)
     except AgentConfigurationError:
         pytest.skip("A valid E2B provider configuration is required")
+    # Fixtures normally kill their sandboxes; this bounds leaked resources if a test worker dies.
+    return attrs.evolve(config, timeout_seconds=LIVE_E2B_TIMEOUT_SECONDS)
 
 
 def build_agent_bundle(build_dir: Path) -> AgentBundle:

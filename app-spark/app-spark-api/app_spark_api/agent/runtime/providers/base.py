@@ -22,7 +22,7 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, StateCallback
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, PreviewTarget, StateCallback
 
 
 class AgentRuntimeProvider(abc.ABC):
@@ -82,8 +82,8 @@ class AgentRuntimeProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def preview_upstream(self, conversation_id: str) -> str | None:
-        """Return the base URL this service should proxy the conversation's preview to.
+    async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
+        """Return where, and how, this service should proxy the conversation's preview to.
 
         The workspace application, not the Runtime's own API: what a user opens when they want
         to look at what the agent built. Asking the provider is the whole point -- where that
@@ -95,8 +95,8 @@ class AgentRuntimeProvider(abc.ABC):
         conversation must not provision an agent for it.
 
         :param conversation_id: Conversation whose application is to be proxied.
-        :return: A scheme-and-authority base URL, or ``None`` when no Runtime is serving the
-            conversation and there is therefore nothing to proxy to.
+        :return: The application's address plus the transport it needs, or ``None`` when no
+            Runtime is serving the conversation and there is therefore nothing to proxy to.
         """
 
     @abc.abstractmethod

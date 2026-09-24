@@ -49,6 +49,8 @@ if TYPE_CHECKING:
 
     from django.http import HttpRequest
 
+    from app_spark_api.agent.runtime import PreviewTarget
+
 # 反代那条路由的名字。origin 由它反查出来，而不是把路径字面量再抄一遍——把 API 挂到别处时
 # 抄出来的那份不会跟着变，前端拿到的就是一个 404。
 PREVIEW_APP_URL_NAME = "conversations-preview-app"
@@ -133,21 +135,20 @@ def build_preview_origin(request: HttpRequest, *, project_id: str, number: int) 
 async def forward_to_app(
     request: HttpRequest,
     *,
-    upstream: str,
+    target: PreviewTarget,
     subpath: str,
     preview_root: str,
-    upstream_headers: Mapping[str, str] | None = None,
 ) -> StreamingHttpResponse:
     """Forward one request to the workspace application and stream its answer back.
 
     :param request: The already-authorized request. Callers must have resolved the conversation
         first: this does no checking of its own, and the whole point of the indirection is that
         those checks happened.
-    :param upstream: Base URL of the application, as the provider reported it.
+    :param target: Where the application is and what its transport needs, as the provider
+        reported it.
     :param subpath: Path under that base, starting with a slash.
     :param preview_root: Absolute URL this conversation's application is published under, used
         to bring the application's own redirects back inside the proxy.
-    :param upstream_headers: Trusted transport headers required by the provider's port proxy.
     :return: The application's response, streamed rather than buffered.
     :raises APIError: If the application cannot be reached.
     """
@@ -156,7 +157,7 @@ async def forward_to_app(
     if request.method is None:
         raise error_codes.BAD_REQUEST
 
-    base = httpx2.URL(upstream)
+    base = httpx2.URL(target.base_url)
     url = _build_upstream_url(base, subpath=subpath, query=request.META.get("QUERY_STRING", ""))
 
     # 不跟随重定向：3xx 是给浏览器的，替它跟下去会把重定向后的内容冒充成原地址的响应。
@@ -169,7 +170,12 @@ async def forward_to_app(
         upstream_request = client.build_request(
             request.method,
             url,
-            headers=_collect_request_headers(request, preview_root=preview_root, upstream_headers=upstream_headers),
+            headers=_collect_request_headers(
+                request,
+                preview_root=preview_root,
+                upstream_headers=target.http_headers,
+                send_forwarded_host=target.send_forwarded_host,
+            ),
             content=request.body or None,
         )
         response = await client.send(upstream_request, stream=True)
@@ -244,13 +250,19 @@ async def _stream_body(client: httpx2.AsyncClient, response: httpx2.Response) ->
 
 
 def _collect_request_headers(
-    request: HttpRequest, *, preview_root: str, upstream_headers: Mapping[str, str] | None = None
+    request: HttpRequest,
+    *,
+    preview_root: str,
+    upstream_headers: Mapping[str, str] | None = None,
+    send_forwarded_host: bool = True,
 ) -> dict[str, str]:
     """Return the client's headers, minus the ones the application must not see, plus Forwarded.
 
     :param request: The request being forwarded.
     :param preview_root: Absolute URL the application is published under, ending in a slash.
     :param upstream_headers: Provider-owned transport credentials, never taken from the client.
+    :param send_forwarded_host: Whether the provider lets the browser's host through as
+        ``X-Forwarded-Host``; see :attr:`PreviewTarget.send_forwarded_host`.
     :return: Headers to send upstream.
     """
     # 先把进来的那份 X-Forwarded-* 滤掉，下面按本服务看到的事实整组重写。混着传会让应用读到
@@ -275,10 +287,8 @@ def _collect_request_headers(
     # build_absolute_uri 出来的，浏览器地址栏里的正是它。分别取会给出三份可能互相矛盾的答案。
     published = urlsplit(preview_root)
     headers["x-forwarded-proto"] = published.scheme
-    # Our self-hosted E2B port proxy rejects a forwarded host different from its exposed-port
-    # host with HTTP 400 (`bad target`). The local provider has no such intermediary and can
-    # pass the browser's host through for applications that build absolute URLs from it.
-    if not upstream_headers:
+    # 不同 provider 提供的 preview 对是否发送该 x-forwarded-host 的头的要求可能有所不同。
+    if send_forwarded_host:
         headers["x-forwarded-host"] = published.netloc
 
     # 应用挂在一个前缀下面，而它自己不知道——沙箱按设计就不知道预览地址。给出前缀，读这条的框架

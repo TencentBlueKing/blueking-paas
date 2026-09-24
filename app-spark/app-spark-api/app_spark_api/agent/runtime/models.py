@@ -52,7 +52,16 @@ class E2BSandboxRecordManager(models.Manager["E2BSandboxRecord"]):
 
 
 class E2BSandboxRecord(TimestampedModel):
-    """One E2B sandbox the API service created, including its eventual end.
+    """One claim on an E2B sandbox for a conversation, from reservation to its eventual end.
+
+    The record is written *before* its sandbox exists. Claiming the unique active IDs first means
+    only the request that won them ever asks E2B for a sandbox, so a lost race costs nothing to
+    clean up. A record therefore moves through three states:
+
+    * claimed -- active IDs set, ``sandbox_id`` still empty while E2B creates the sandbox;
+    * bound -- ``sandbox_id`` and the connection metadata filled in, the sandbox is serving;
+    * released -- active IDs cleared and ``stopped_at`` set. A claim released before it was ever
+      bound is the history of a provisioning attempt that produced no sandbox.
 
     Original IDs retain ownership history after termination. Nullable unique active IDs enforce
     one sandbox per conversation and project while it runs, including on MySQL, where partial
@@ -60,8 +69,9 @@ class E2BSandboxRecord(TimestampedModel):
     """
 
     # Business identity and ownership. The runtime token authenticates the Agent HTTP API;
-    # original IDs remain for history, while unique active IDs reserve live workspaces.
-    sandbox_id = models.CharField(verbose_name="E2B 沙箱 ID", max_length=128, primary_key=True)
+    # original IDs remain for history, while unique active IDs reserve live workspaces. The
+    # sandbox ID is not the primary key because E2B only assigns it after the claim is made.
+    sandbox_id = models.CharField(verbose_name="E2B 沙箱 ID", max_length=128, unique=True, null=True)
     project_id = models.CharField(verbose_name="原始项目 ID", max_length=128, db_index=True)
     conversation_id = models.CharField(verbose_name="原始会话 ID", max_length=128, db_index=True)
     active_project_id = models.CharField(verbose_name="占用中的项目 ID", max_length=128, unique=True, null=True)
@@ -71,14 +81,17 @@ class E2BSandboxRecord(TimestampedModel):
     # Creation history; the template is recorded for inspection, not used to reconnect.
     template = models.CharField(verbose_name="沙箱模板", max_length=128)
 
-    # SDK connection metadata. A restarted worker uses this only when the self-hosted control
-    # plane cannot reconnect a still-running sandbox; it does not determine business ownership.
+    # SDK connection metadata, filled in when the claim is bound. Preview requests address the
+    # sandbox from these alone, and a restarted worker uses them when the self-hosted control
+    # plane cannot reconnect a still-running sandbox; they do not determine business ownership.
     sandbox_domain = models.CharField(verbose_name="沙箱访问域名", max_length=255, null=True)
-    envd_version = models.CharField(verbose_name="沙箱 envd 版本", max_length=64)
+    envd_version = models.CharField(verbose_name="沙箱 envd 版本", max_length=64, null=True)
     sandbox_headers = EncryptField(verbose_name="沙箱连接头", default="{}")
     traffic_access_token = EncryptField(verbose_name="端口代理访问令牌", null=True)
 
-    # Lifecycle history remains after active ownership has been released.
+    # Lifecycle history remains after active ownership has been released. Supported reasons:
+    # ``terminated`` (stopped on request), ``expired`` (found gone), ``failed`` (provisioning
+    # raised), ``abandoned`` (a claim whose worker never came back to bind it).
     stopped_at = models.DateTimeField(verbose_name="停止或失效时间", null=True, default=None)
     stop_reason = models.CharField(verbose_name="停止原因", max_length=32, blank=True, default="")
 
@@ -86,3 +99,8 @@ class E2BSandboxRecord(TimestampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["conversation_id", "-created_at"])]
+
+    @property
+    def is_bound(self) -> bool:
+        """Whether E2B has created the sandbox this record claimed."""
+        return self.sandbox_id is not None

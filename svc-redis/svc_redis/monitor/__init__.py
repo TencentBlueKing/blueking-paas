@@ -15,25 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+"""Redis 增强服务实例指标暴露.
+
+出数方式: 把 prometheus collector 注册到项目已有的 /metrics 采集入口, 每次 scrape 实时采集.
+
+仅覆盖已分配, 未回收且套餐开启 monitor 的实例; 指标取不到时显式缺失, 不用 0 冒充健康.
 """
-WSGI config for svc_redis project.
-
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/
-"""
-
-import os
-
-from blue_krill.monitoring.prometheus.django_utils import PrometheusExposeHandler
-from django.core.wsgi import get_wsgi_application
-from prometheus_client import REGISTRY
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "svc_redis.settings")
-
-_django_app = get_wsgi_application()
-
-from svc_redis.monitor.collector import collector_registry
-
-application = PrometheusExposeHandler(_django_app, extra_registries=[REGISTRY, collector_registry])

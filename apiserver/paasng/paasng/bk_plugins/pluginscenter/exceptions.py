@@ -64,6 +64,7 @@ class ErrorCodes:
     # 灰度发布相关
     RELEASE_COMPLETED = ErrorCode(_("版本发布已结束"))
     LAST_GRAY_RELEASE_NOT_APPROVED = ErrorCode(_("上一次灰度发布还未审批完成"))
+    INVALID_RELEASE_STRATEGY = ErrorCode(_("发布策略不合法"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

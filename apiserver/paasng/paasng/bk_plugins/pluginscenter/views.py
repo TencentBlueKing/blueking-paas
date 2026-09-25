@@ -637,11 +637,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         data = slz.validated_data
 
         release_strategy = data.pop("release_strategy", None)
+        release_process = constants.ReleaseProcess.DEFAULT
+        if release_strategy:
+            release_process = release_strategy.pop("release_process", None) or constants.ReleaseProcess.DEFAULT
         release = PluginRelease.objects.create(
             plugin=plugin,
             source_location=plugin.repository,
             creator=request.user.pk,
             tenant_id=plugin.tenant_id,
+            release_process=release_process,
             **data,
         )
 
@@ -1399,6 +1403,8 @@ class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
         slz = serializers.ReleaseStrategyCreateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
+        validated_data.pop("release_process", None)
+        _validate_release_strategy_step(release, validated_data["strategy"])
         # 更新灰度策略，同时发起审批流程
         release_strategy = PluginReleaseStrategy.objects.create(
             release=release, tenant_id=plugin.tenant_id, **validated_data
@@ -1414,3 +1420,32 @@ class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
             tenant_id=plugin.tenant_id,
         )
         return Response(serializers.PluginReleaseStrategySLZ(release_strategy).data)
+
+
+def _validate_release_strategy_step(release: PluginRelease, strategy: str):
+    """校验当前版本是否允许申请指定发布策略"""
+    process = release.release_process
+    gray_status = release.gray_status
+
+    if strategy == constants.ReleaseStrategy.PRE_PROD:
+        if process != constants.ReleaseProcess.TENCENT_STANDARD:
+            raise error_codes.INVALID_RELEASE_STRATEGY.f(_("仅腾讯代码规范工具发布支持预发布"))
+        if release.release_strategies.filter(strategy=constants.ReleaseStrategy.PRE_PROD).exists():
+            raise error_codes.INVALID_RELEASE_STRATEGY.f(_("预发布只能执行一次"))
+        if gray_status != constants.GrayReleaseStatus.IN_GRAY:
+            raise error_codes.INVALID_RELEASE_STRATEGY.f(_("请先完成灰度发布后再申请预发布"))
+        return
+
+    if (
+        strategy == constants.ReleaseStrategy.FULL
+        and process == constants.ReleaseProcess.TENCENT_STANDARD
+        and gray_status != constants.GrayReleaseStatus.IN_PRE_PROD
+    ):
+        raise error_codes.INVALID_RELEASE_STRATEGY.f(_("请先完成预发布后再申请全量发布"))
+
+    if (
+        strategy == constants.ReleaseStrategy.GRAY
+        and process == constants.ReleaseProcess.TENCENT_STANDARD
+        and gray_status != constants.GrayReleaseStatus.IN_GRAY
+    ):
+        raise error_codes.INVALID_RELEASE_STRATEGY.f(_("预发布完成后不能再扩大灰度范围"))

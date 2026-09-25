@@ -14,21 +14,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import uuid
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
-from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
+from paasng.platform.agent_sandbox.artifact import delete_volume_artifacts
+from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX, SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import (
     VolumeGranteeNotFound,
+    VolumeInUse,
     VolumeNotFound,
     VolumeNotMountable,
     VolumeShareLimitExceeded,
 )
-from paasng.platform.agent_sandbox.models import Volume
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
 from paasng.platform.applications.models import Application
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_volume_mounts(application: Application, requests: list[dict] | None) -> list[VolumeMount]:
@@ -119,3 +126,44 @@ def unshare_volume(volume: Volume, grantee_app_code: str) -> None:
             return
         locked.shared_app_codes = [c for c in codes if c != grantee_app_code]
         locked.save(update_fields=["shared_app_codes", "updated"])
+
+
+def volume_in_use(volume: Volume) -> bool:
+    """判断是否仍有存活的沙箱挂载该 Volume.
+
+    ``err_creating`` 的记录跳过: 其工作负载已在创建失败时清理. 其余存活记录一律计入,
+    包括其他应用的沙箱 (Volume 可跨应用共享).
+    """
+    sandboxes = (
+        Sandbox.objects.filter(tenant_id=volume.tenant_id, deleted_at__isnull=True)
+        .exclude(status=SandboxStatus.ERR_CREATING.value)
+        .only("volume_mounts")
+    )
+    volume_id = str(volume.uuid)
+    return any(
+        volume_id in {str(mount.get("volume_id")) for mount in (sandbox.volume_mounts or [])} for sandbox in sandboxes
+    )
+
+
+def delete_volume(volume: Volume) -> None:
+    """删除 Volume: 先物理清理共享存储目录, 再软删记录.
+
+    顺序是刻意的: 目录清理失败时记录保持未删除, 调用方可直接重试
+
+    :param volume: 调用方需已校验其归属与未删除状态.
+    :raises VolumeInUse: 仍有存活的沙箱挂载该 Volume.
+    :raises SandboxDaemonAPIError: 常驻 daemon 删除目录失败或不可达.
+    """
+    if volume_in_use(volume):
+        raise VolumeInUse(f"volume {volume.uuid} is still mounted by live sandboxes")
+
+    get_resident_daemon_client().delete_volume(volume.storage_path)
+
+    # best-effort: bkrepo 故障不该阻塞删卷; 遗留归档对象由 cleanup_expired_agent_artifacts 兜底清理.
+    try:
+        delete_volume_artifacts(volume)
+    except Exception:
+        logger.exception("Failed to clean archived objects of volume %s", volume.uuid)
+
+    volume.deleted_at = timezone.now()
+    volume.save(update_fields=["deleted_at", "updated"])

@@ -22,6 +22,7 @@ URLs and tells the resident daemon to archive (daemon reads CFS, computes sha256
 directly to bkrepo). Downloads are served by the frontend hitting the signed bkrepo URL.
 """
 
+import logging
 from urllib.parse import quote, urlencode
 
 from blue_krill.storages.blobstore.base import SignatureType
@@ -37,6 +38,8 @@ from .constants import PREVIEW_EXTRA_PARAM, PREVIEW_REPO_TYPE, PREVIEW_TOKEN_TYP
 from .exceptions import SandboxFileNotFound
 from .models import Volume, VolumeArtifact
 from .resident_daemon_client import ResidentDaemonClient, get_resident_daemon_client
+
+logger = logging.getLogger(__name__)
 
 
 def build_bkrepo_key(volume: Volume, rel_path: str) -> str:
@@ -100,6 +103,26 @@ def delete_volume_artifact(volume: Volume, rel_path: str) -> None:
     store = make_blob_store(settings.AGENT_SANDBOX_ARTIFACT_BUCKET)
     store.delete_file(artifact.bkrepo_key)
     artifact.delete()
+
+
+def delete_volume_artifacts(volume: Volume) -> None:
+    """Delete every archived bkrepo object of ``volume`` along with its mapping row.
+
+    Eager cleanup avoids orphans: if the volume record is ever removed, its ``VolumeArtifact``
+    rows cascade away and the retention command -- which only sweeps objects that still have a
+    mapping row -- can no longer find them. Failures are logged and skipped, never raised.
+    """
+    artifacts = list(VolumeArtifact.objects.filter(volume=volume))
+    if not artifacts:
+        return
+    store = make_blob_store(settings.AGENT_SANDBOX_ARTIFACT_BUCKET)
+
+    for artifact in artifacts:
+        try:
+            store.delete_file(artifact.bkrepo_key)
+            artifact.delete()
+        except Exception:
+            logger.exception("Failed to delete archived object %s of volume %s", artifact.bkrepo_key, volume.uuid)
 
 
 def build_download_url(artifact: VolumeArtifact, expires_in: int) -> str:

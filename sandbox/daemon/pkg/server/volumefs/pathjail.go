@@ -2,8 +2,10 @@ package volumefs
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -45,6 +47,21 @@ func validateBasePath(basePath string) error {
 	clean, err := validateRootPath(basePath)
 	if err != nil || clean == "." {
 		return ErrPathEscape
+	}
+	return nil
+}
+
+// volumeBasePathPattern matches the shared-storage sub-directory of one Volume:
+// "app/" plus the 32 lowercase hex chars of its UUID (Volume.storage_path on the
+// apiserver side).
+var volumeBasePathPattern = regexp.MustCompile(`^app/[0-9a-f]{32}$`)
+
+// validateVolumeBasePath rejects any base_path that is not a Volume's storage path.
+// Volume deletion removes base_path itself, so an unconstrained value could wipe the
+// storage root or an unrelated directory.
+func validateVolumeBasePath(basePath string) error {
+	if !volumeBasePathPattern.MatchString(basePath) {
+		return fmt.Errorf("base_path %q must match app/{32 hex chars}", basePath)
 	}
 	return nil
 }

@@ -1142,6 +1142,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get all process and instance information of the application environment
+  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/{process_name}/restart/:
+    put:
+      operationId: restart_process
+      description: 滚动重启进程
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: put
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/{process_name}/restart/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Rolling restart a process
   /system/bkapps/xycd/third_app/:
     post:
       operationId: create_xy_cd_app

@@ -25,7 +25,7 @@ from typing import Any
 
 import httpx2
 
-from app_spark_api.infras.forgejo import ForgejoClient, ForgejoClientConfig
+from app_spark_api.infras.forgejo import ForgejoAsyncClient, ForgejoClient, ForgejoClientConfig
 
 ORG = "app-spark"
 SERVICE_ACCOUNT = "app-spark-bot"
@@ -67,15 +67,26 @@ class FakeForgejo:
         self.repos: dict[tuple[str, str], dict[str, Any]] = {}
         self.tokens: dict[int, dict[str, Any]] = {}
         self.protections: set[tuple[str, str, str]] = set()
+        # Each repository's default-branch tip, keyed the same way as `repos`.
+        self.heads: dict[tuple[str, str], str] = {}
         self._next_repo_id = 1
         self._next_token_id = 1
         self.drop_next_create_response = False
         self.drop_next_token_response = False
         self.fail_next_request = False
+        # Stand-in archive payload. Tests assert the bytes arrive unchanged rather than
+        # that they are a real zip: packing is Forgejo's job, and the live Forgejo tests
+        # are what check a downloaded archive actually unpacks.
+        self.archive_bytes = b"PK\x03\x04 fake archive"
+        self.archive_status = HTTPStatus.OK
 
     def client(self, config: ForgejoClientConfig | None = None) -> ForgejoClient:
         resolved = config if isinstance(config, ForgejoClientConfig) else forgejo_client_config()
         return ForgejoClient(resolved, transport=httpx2.MockTransport(self._handle))
+
+    def async_client(self, config: ForgejoClientConfig | None = None) -> ForgejoAsyncClient:
+        resolved = config if isinstance(config, ForgejoClientConfig) else forgejo_client_config()
+        return ForgejoAsyncClient(resolved, transport=httpx2.MockTransport(self._handle))
 
     def _handle(self, request: httpx2.Request) -> httpx2.Response:
         if self.fail_next_request:
@@ -87,7 +98,7 @@ class FakeForgejo:
         with self._lock:
             return self._dispatch(method, path, body, request)
 
-    def _dispatch(  # noqa: PLR0911
+    def _dispatch(
         self,
         method: str,
         path: str,
@@ -99,28 +110,61 @@ class FakeForgejo:
         if parts[:2] != ["api", "v1"]:
             return self._json(HTTPStatus.NOT_FOUND, {"message": "no such route"})
 
+        # Split by the resource the route is addressed through, because `/repos/*` is most
+        # of the surface and each group matches on its own path shape.
         rest = parts[2:]
-        if method == "GET" and rest[:1] == ["repos"] and len(rest) == 3:
+        if rest[:1] == ["repos"]:
+            matched = self._dispatch_repo(method, rest, body, request)
+        elif rest[:1] == ["users"]:
+            matched = self._dispatch_user(method, rest, body)
+        elif method == "POST" and rest[:1] == ["orgs"] and rest[-1:] == ["repos"]:
+            matched = self._create_repo(rest[1], body)
+        else:
+            matched = None
+        if matched is None:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": f"unhandled {method} {path}"})
+        return matched
+
+    def _dispatch_repo(  # noqa: PLR0911
+        self,
+        method: str,
+        rest: list[str],
+        body: dict[str, Any],
+        request: httpx2.Request,
+    ) -> httpx2.Response | None:
+        """Route one `/repos/{owner}/{name}/...` call, or ``None`` if nothing matches."""
+        if method == "GET" and len(rest) == 3:
             return self._get_repo(rest[1], rest[2], request)
-        if method == "POST" and rest[:1] == ["orgs"] and rest[-1:] == ["repos"]:
-            return self._create_repo(rest[1], body)
-        if method == "POST" and len(rest) == 4 and rest[0] == "repos" and rest[3] == "branch_protections":
-            return self._protect(rest[1], rest[2], body)
-        if method == "GET" and len(rest) == 5 and rest[0] == "repos" and rest[3] == "branch_protections":
-            if (rest[1], rest[2], rest[4]) in self.protections:
-                return self._json(HTTPStatus.OK, {"rule_name": rest[4]})
-            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
-        if method == "PATCH" and len(rest) == 5 and rest[0] == "repos" and rest[3] == "branch_protections":
-            return self._protect(rest[1], rest[2], body, branch=rest[4])
-        if method == "GET" and rest[:1] == ["users"] and rest[-1:] == ["tokens"]:
-            return self._list_tokens()
-        if method == "POST" and rest[:1] == ["users"] and rest[-1:] == ["tokens"]:
-            return self._create_token(body)
-        if method == "DELETE" and rest[:1] == ["users"] and rest[-2:-1] == ["tokens"]:
-            return self._delete_token(rest[-1])
-        if method == "POST" and len(rest) >= 5 and rest[0] == "repos" and rest[3] == "contents":
+        if len(rest) < 4:
+            return None
+        owner, name, resource = rest[1], rest[2], rest[3]
+        tail = rest[4] if len(rest) > 4 else None
+        if resource == "branch_protections":
+            if method == "POST" and tail is None:
+                return self._protect(owner, name, body)
+            if method == "PATCH" and tail is not None:
+                return self._protect(owner, name, body, branch=tail)
+            if method == "GET" and tail is not None:
+                if (owner, name, tail) in self.protections:
+                    return self._json(HTTPStatus.OK, {"rule_name": tail})
+                return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+        if method == "GET" and resource == "branches" and tail is not None:
+            return self._get_branch(owner, name, tail)
+        if method == "GET" and resource == "archive" and tail is not None:
+            return self._get_archive(owner, name, tail)
+        if method == "POST" and resource == "contents" and tail is not None:
             return self._write_contents(request)
-        return self._json(HTTPStatus.NOT_FOUND, {"message": f"unhandled {method} {path}"})
+        return None
+
+    def _dispatch_user(self, method: str, rest: list[str], body: dict[str, Any]) -> httpx2.Response | None:
+        """Route one `/users/{name}/tokens/...` call, or ``None`` if nothing matches."""
+        if method == "GET" and rest[-1:] == ["tokens"]:
+            return self._list_tokens()
+        if method == "POST" and rest[-1:] == ["tokens"]:
+            return self._create_token(body)
+        if method == "DELETE" and rest[-2:-1] == ["tokens"]:
+            return self._delete_token(rest[-1])
+        return None
 
     def _auth_token(self, request: httpx2.Request) -> str | None:
         header = request.headers.get("authorization", "")
@@ -156,6 +200,8 @@ class FakeForgejo:
         }
         self._next_repo_id += 1
         self.repos[key] = repo
+        # `auto_init` means a real Forgejo repo has a commit as soon as it exists.
+        self.heads[key] = format(repo["id"], "040x")
         if self.drop_next_create_response:
             self.drop_next_create_response = False
             return self._json(HTTPStatus.GATEWAY_TIMEOUT, {"message": "lost"})
@@ -171,6 +217,26 @@ class FakeForgejo:
         self.protections.add(key)
         status = HTTPStatus.OK if existed else HTTPStatus.CREATED
         return self._json(status, {"rule_name": rule, "enable_force_push": False})
+
+    def _get_branch(self, owner: str, name: str, branch: str) -> httpx2.Response:
+        repo = self.repos.get((owner, name))
+        if repo is None or branch != repo["default_branch"]:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+        return self._json(HTTPStatus.OK, {"name": branch, "commit": {"id": self.heads[(owner, name)]}})
+
+    def _get_archive(self, owner: str, name: str, archive: str) -> httpx2.Response:
+        # Forgejo takes the ref and the format as one path segment, e.g. `main.zip`.
+        ref, _, suffix = archive.rpartition(".")
+        repo = self.repos.get((owner, name))
+        if repo is None or suffix != "zip" or ref != repo["default_branch"]:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+        if self.archive_status != HTTPStatus.OK:
+            return self._json(self.archive_status, {"message": "could not pack the archive"})
+        return httpx2.Response(
+            HTTPStatus.OK,
+            content=self.archive_bytes,
+            headers={"Content-Type": "application/zip"},
+        )
 
     def _list_tokens(self) -> httpx2.Response:
         listed = [{"id": t["id"], "name": t["name"], "sha1": None} for t in self.tokens.values()]

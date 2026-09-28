@@ -19,21 +19,23 @@
 Two abstractions, kept apart because they change for different reasons:
 
 * :class:`~app_spark_api.agent.runtime.providers.base.AgentRuntimeProvider` decides *where* a
-  Runtime lives and brings it up. Moving from a local process to a remote sandbox replaces this
-  and nothing else.
+  Runtime lives and brings it up. Local processes and remote sandboxes each implement this
+  boundary.
 * :class:`~app_spark_api.agent.runtime.client.AgentRuntimeClient` speaks the Runtime's HTTP
   contract. A sandboxed Runtime answers the same API, so this stays put.
 
-Not a Django app: it owns no models, only the machinery for reaching a Runtime.
+The Django app also records E2B sandbox ownership so workers can reconnect after a restart.
 """
 
 from app_spark_api.agent.runtime.client import AgentRun, AgentRuntimeClient
 from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
+    E2BConfig,
     EventPage,
     GitRemote,
     LocalProcessConfig,
+    PreviewTarget,
     RuntimeHealth,
     StateCallback,
 )
@@ -45,10 +47,6 @@ from app_spark_api.agent.runtime.exceptions import (
     AgentUnavailableError,
     AgentWorkspaceBusyError,
     AgentWorkspaceSavePendingError,
-)
-from app_spark_api.agent.runtime.factory import (
-    get_agent_runtime_provider,
-    make_agent_runtime_provider,
 )
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 
@@ -65,11 +63,11 @@ __all__ = [
     "AgentUnavailableError",
     "AgentWorkspaceBusyError",
     "AgentWorkspaceSavePendingError",
+    "E2BConfig",
     "EventPage",
     "GitRemote",
     "LocalProcessConfig",
+    "PreviewTarget",
     "RuntimeHealth",
     "StateCallback",
-    "get_agent_runtime_provider",
-    "make_agent_runtime_provider",
 ]

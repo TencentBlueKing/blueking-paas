@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 
 import pytest
+from django.urls import get_script_prefix, set_script_prefix
 
 from app_spark_api.core.projects.models import Project
 from tests.helpers import create_user
@@ -28,6 +29,19 @@ from tests.infras.forgejo.fake import FakeForgejo, repo_server_config
 
 if os.environ.get("APP_SPARK_FORGEJO_LIVE") != "1":
     collect_ignore = ["api/live_forgejo"]
+
+
+@pytest.fixture(autouse=True)
+def default_script_name(settings):
+    """Keep unit tests independent of the local deployment's public URL prefix."""
+    original_prefix = get_script_prefix()
+    settings.FORCE_SCRIPT_NAME = None
+    # Django initializes the URL resolver's thread-local prefix before fixtures run.
+    set_script_prefix("/")
+    try:
+        yield
+    finally:
+        set_script_prefix(original_prefix)
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +56,7 @@ def fake_forgejo(settings, monkeypatch, request):
         return
     settings.REPO_SERVER = repo_server_config()
     monkeypatch.setattr("app_spark_api.repository.git.services.make_forgejo_client", fake.client)
+    monkeypatch.setattr("app_spark_api.repository.git.archives.make_forgejo_async_client", fake.async_client)
     yield fake
 
 

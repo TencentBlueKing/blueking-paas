@@ -3,7 +3,7 @@
 import json
 from uuid import uuid4
 
-import httpx
+import httpx2
 from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
 
 from app_spark_agent.bkaidev.client import AidevApiClient
@@ -43,7 +43,7 @@ async def test_history_comes_from_context_not_transcript(tmp_path) -> None:
         client=AidevApiClient(
             base_url="https://bkaidev.test/v1",
             access_token="user-token",
-            transport=httpx.MockTransport(lambda request: httpx.Response(500)),
+            transport=httpx2.MockTransport(lambda request: httpx2.Response(500)),
         ),
         context_store=context_store,
         transcript=transcript,
@@ -75,9 +75,9 @@ async def test_create_completion_sends_context_plus_extra(tmp_path) -> None:
     )
     seen: dict[str, object] = {}
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen["body"] = json.loads(request.content)
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "id": "chatcmpl-2",
@@ -99,7 +99,7 @@ async def test_create_completion_sends_context_plus_extra(tmp_path) -> None:
         client=AidevApiClient(
             base_url="https://bkaidev.test/v1",
             access_token="user-token",
-            transport=httpx.MockTransport(handler),
+            transport=httpx2.MockTransport(handler),
         ),
         context_store=context_store,
         transcript=transcript,

@@ -54,6 +54,13 @@ class RuntimeStateResponse(Schema):
     log_seq: int = Field(description="原始对话记录的最后一个游标")
     ui_event_seq: int = Field(description="AG-UI 事件历史的最后一个游标")
     running: bool = Field(description="是否有活跃 Runtime 且正在执行 run")
+    # 和 running 无关：run 早就结束了，用户拉起来的那个应用还在跑。
+    dev_server_status: str | None = Field(
+        description=(
+            "活跃 Runtime 报的工作区应用 dev server 状态：not_started / starting / ready / stopped；"
+            "没有活跃 Runtime、或 Runtime 没报时为 null"
+        ),
+    )
     replication_pending: bool = Field(
         description=(
             "是否有状态留在 Runtime 里没回写过来。要判断某一轮会话是否真的落库，"
@@ -71,6 +78,26 @@ class RuntimeStateResponse(Schema):
 # 32K 字符对一次对话输入是很宽的（贴一整份报错日志也够），同时远小于 Agent 侧一份 context 的压缩
 # 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
 MAX_RUN_CONTENT_LENGTH = 32 * 1024
+
+
+class PreviewResponse(Schema):
+    """会话里那个工作区应用该去哪儿打开，以及此刻打不打得开。
+
+    地址和状态是两回事，所以分成两个字段。`origin` 由平台签发，会话一建好就有，Runtime 重启、
+    回收、再拉起都不会变；`dev_server_status` 说的是这一刻沙箱里那个进程能不能服务。前端据此决定
+    是先摆一个占位还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
+    """
+
+    origin: str = Field(
+        description="用 iframe 打开工作区应用的地址，末尾带斜杠；不随 Runtime 的存亡变化",
+    )
+    dev_server_status: str | None = Field(
+        description=(
+            "活跃 Runtime 报的工作区应用 dev server 状态：not_started 还没拉起过；"
+            "starting 进程在跑但还答不出，继续等；ready 可以挂 iframe 了；stopped 进程没了。"
+            "null 表示此刻问不到——没有活跃 Runtime，或者有但联系不上"
+        ),
+    )
 
 
 class StartRunRequest(Schema):

@@ -49,8 +49,9 @@ from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations import state as conversation_state
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.runtime import AgentUnavailableError, get_agent_runtime_provider
+from app_spark_api.agent.runtime import AgentUnavailableError
 from app_spark_api.agent.runtime.entities import RuntimeHealth
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.repository.git.services import provision_project_repository

@@ -1,24 +1,32 @@
 <template>
   <div class="preview-canvas">
     <div
-      :class="['preview-frame', `preview-frame--${device}`, { 'is-busy': busy }]"
+      :class="['preview-frame', `preview-frame--${device}`, { 'is-busy': busy || waiting }]"
     >
       <div
         class="preview-frame__marquee"
-        :class="{ 'is-active': busy }"
+        :class="{ 'is-active': busy || waiting }"
         aria-hidden="true"
       >
         <span class="preview-frame__marquee-bar" />
       </div>
       <div class="preview-frame__body">
+        <!--
+          src 就是 preview 接口的 origin，末尾带斜杠。后面的路径由页面自己跳。
+          非 ready 时 src 为空，iframe 不挂，502 / 503 不会留在这里。
+        -->
         <iframe
-          v-if="ready"
+          v-if="src"
           class="preview-frame__iframe"
-          title="template 预览"
+          title="应用预览"
           :src="src"
         />
-        <div v-else class="preview-frame__empty">
-          模板服务启动中，请确认 template 已在 {{ src }} 运行…
+        <div
+          v-else
+          class="preview-frame__empty"
+          role="status"
+        >
+          {{ placeholder }}
         </div>
       </div>
     </div>
@@ -26,48 +34,37 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import type { WorkspaceDevice } from './types';
+import { computed } from 'vue';
+import type { PreviewPhase, WorkspaceDevice } from './types';
+
+const PLACEHOLDER: Record<PreviewPhase, string> = {
+  'no-conversation': '正在准备会话…',
+  ended: '会话已结束',
+  pending: '正在获取预览…',
+  unavailable: '预览环境未就绪',
+  not_started: '应用尚未启动',
+  starting: '应用正在启动…',
+  stopped: '应用未在运行',
+  ready: '正在打开预览…',
+};
 
 const props = withDefaults(defineProps<{
   device?: WorkspaceDevice;
+  /** 仅在 dev_server_status 为 ready 时传入，值即 origin。 */
   src?: string;
+  phase?: PreviewPhase;
+  /** 正在等第一次响应，或状态是 starting。starting 不是失败。 */
+  waiting?: boolean;
   busy?: boolean;
 }>(), {
   device: 'desktop',
-  src: 'http://localhost:5173',
+  src: '',
+  phase: 'pending',
+  waiting: false,
   busy: false,
 });
 
-const ready = ref(false);
-let timer = 0;
-
-const checkReady = async () => {
-  try {
-    await fetch(props.src, { mode: 'no-cors' });
-    ready.value = true;
-  } catch {
-    ready.value = false;
-  }
-};
-
-onMounted(() => {
-  // 未配置生产预览时直接显示空白页，避免轮询无法 fetch 的 about: URL。
-  if (props.src === 'about:blank') {
-    ready.value = true;
-    return;
-  }
-  checkReady();
-  timer = window.setInterval(() => {
-    if (!ready.value) {
-      checkReady();
-    }
-  }, 1500);
-});
-
-onBeforeUnmount(() => {
-  window.clearInterval(timer);
-});
+const placeholder = computed(() => PLACEHOLDER[props.phase]);
 </script>
 
 <style lang="postcss" scoped>

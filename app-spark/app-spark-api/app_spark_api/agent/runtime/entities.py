@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import attrs
 
@@ -55,6 +55,38 @@ class LocalProcessConfig:
     model_api_key: str | None = None
     startup_timeout_seconds: float = 60.0
     extra_env: dict[str, str] = attrs.field(factory=dict)
+
+
+@attrs.frozen
+class E2BConfig:
+    """Configuration for provisioning an E2B sandbox per conversation.
+
+    :param api_key: Credential for the E2B-compatible API.
+    :param api_url: Base URL of that API; independent of the exposed port domain.
+    :param domain: Fallback domain for sandbox hosts when the API does not return one.
+    :param template: Sandbox template name or ID.
+    :param timeout_seconds: E2B sandbox time to live in seconds from creation (default 3600).
+        Activity and this provider's reconnects do not renew it; E2B stops the sandbox when
+        the timeout expires unless its deadline is explicitly extended.
+    :param runtime_port: Port reserved for the future Agent Runtime HTTP server.
+    :param preview_port: Fixed sandbox port for the workspace application preview.
+    :param port_scheme: URL scheme for the exposed port proxy.
+    """
+
+    api_key: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    api_url: str = attrs.field(validator=validate_non_empty_string)
+    domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
+    template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
+    timeout_seconds: int = attrs.field(default=3600, validator=attrs.validators.gt(0))
+    runtime_port: int = attrs.field(
+        default=8000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    preview_port: int = attrs.field(
+        default=9000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    port_scheme: Literal["http", "https"] = attrs.field(
+        default="https", validator=attrs.validators.in_(("http", "https"))
+    )
 
 
 @attrs.frozen
@@ -102,18 +134,37 @@ class GitRemote:
 class AgentRuntimeHandle:
     """Where a conversation's Runtime can be reached.
 
-    Everything provider-specific stops here: a Runtime in a remote sandbox is addressed by the
-    same base URL as one spawned locally, which is why the client below never learns which
-    provider produced it.
+    Everything provider-specific stops here: both local and remote Runtimes are addressed by
+    a URL, an Agent Bearer token, and any headers their transport needs. The client below does
+    not need to know which provider produced the handle.
 
     :param conversation_id: Conversation this Runtime serves, one per process.
     :param base_url: Root URL the Runtime's HTTP API is served under.
     :param runtime_token: Bearer token required by every Runtime HTTP endpoint.
+    :param http_headers: Additional transport headers required by the provider's port proxy.
     """
 
     conversation_id: str
     base_url: str
     runtime_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+
+
+@attrs.frozen
+class PreviewTarget:
+    """Where a conversation's workspace application is proxied to, and how to reach it.
+
+    :param base_url: Scheme-and-authority base URL of the application.
+    :param http_headers: Transport headers the provider's port proxy requires, e.g. its access
+        tokens. They authenticate this service to the proxy and never come from the browser.
+    :param send_forwarded_host: Whether the application may be told the browser's host through
+        ``X-Forwarded-Host``. A provider sets it to ``False`` when something between this
+        service and the application routes by that header and rejects a foreign host.
+    """
+
+    base_url: str
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+    send_forwarded_host: bool = True
 
 
 @attrs.frozen
@@ -129,6 +180,10 @@ class RuntimeHealth:
     :param replication_pending: Whether the Runtime still holds state it has not managed to
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
+    :param dev_server_status: What the Runtime says about the dev server hosting the workspace
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
+        than interpreted: this service has no opinion on the names, and an older Runtime that
+        says nothing leaves it ``None``.
     """
 
     model: str
@@ -138,6 +193,7 @@ class RuntimeHealth:
     ui_event_seq: int
     running: bool
     replication_pending: bool = False
+    dev_server_status: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -161,6 +217,12 @@ class RuntimeHealth:
                 # configured has no answer to give, and treating "did not say" as "nothing
                 # pending" is the truthful reading of that.
                 replication_pending=bool(payload.get("replication_pending", False)),
+                # Lenient for a different reason: a Runtime that predates the field says
+                # nothing, and "this Runtime cannot tell me" is not the same answer as any of
+                # the four statuses it could have given.
+                dev_server_status=(
+                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc
@@ -216,3 +278,13 @@ def structure_local_process_config(raw_config: object) -> LocalProcessConfig:
         otherwise invalid fields.
     """
     return structure_config(raw_config, LocalProcessConfig, error_cls=AgentConfigurationError)
+
+
+def structure_e2b_config(raw_config: object) -> E2BConfig:
+    """Structure and validate an E2B provider configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: A validated configuration.
+    :raises AgentConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, E2BConfig, error_cls=AgentConfigurationError)

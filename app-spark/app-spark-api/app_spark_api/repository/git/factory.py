@@ -24,6 +24,7 @@ from django.conf import settings
 from django.core.signals import setting_changed
 from django.dispatch import receiver
 
+from app_spark_api.infras.forgejo.async_client import ForgejoAsyncClient
 from app_spark_api.infras.forgejo.client import ForgejoClient
 from app_spark_api.repository.git.entities import RepoServerConfig, structure_repo_server_config
 
@@ -53,6 +54,20 @@ def make_forgejo_client(
     """
     resolved = config or get_repo_server_config()
     return ForgejoClient(resolved.forgejo_client_config(), transport=transport)
+
+
+def make_forgejo_async_client(
+    config: RepoServerConfig | None = None,
+    *,
+    transport: httpx2.AsyncBaseTransport | None = None,
+) -> ForgejoAsyncClient:
+    """Build an async Forgejo client from ``REPO_SERVER``, for reads that stream.
+
+    :param config: Defaults to the process-wide settings.
+    :param transport: Optional httpx transport for tests.
+    """
+    resolved = config or get_repo_server_config()
+    return ForgejoAsyncClient(resolved.forgejo_client_config(), transport=transport)
 
 
 @receiver(setting_changed)

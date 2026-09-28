@@ -120,6 +120,10 @@ class GitRepositoryResponse(ModelSchema):
     """A Project's Git repository, without credential plaintext."""
 
     commit: GitCommitIdentity = Field(description="Agent 提交身份")
+    archive_url: str | None = Field(
+        default=None,
+        description="下载已保存源码（zip）的地址；远端仓库还不存在时为 null",
+    )
 
     class Meta:
         model = ProjectGitRepository
@@ -135,16 +139,25 @@ class GitRepositoryResponse(ModelSchema):
         ]
 
     @classmethod
-    def from_repository(cls, repo: ProjectGitRepository, *, commit: GitCommitIdentity) -> Self:
-        """Assemble from the ORM row; attach commit identity from ``REPO_SERVER``.
+    def from_repository(
+        cls,
+        repo: ProjectGitRepository,
+        *,
+        commit: GitCommitIdentity,
+        archive_url: str | None,
+    ) -> Self:
+        """Assemble from the ORM row, plus the two values that are not on it.
 
         :param repo: Persisted ``ProjectGitRepository``.
         :param commit: Author identity from process config, not stored on the row.
+        :param archive_url: Where the source can be downloaded, from
+            :func:`~app_spark_api.repository.git.archives.archive_url_for`, or ``None``.
         """
         model_names = {field.name for field in repo._meta.fields}
         data: dict[str, Any] = {name: getattr(repo, name) for name in cls.model_fields if name in model_names}
         data["status_detail"] = repo.public_status_detail
         data["commit"] = commit
+        data["archive_url"] = archive_url
         return cls.model_validate(data)
 
 

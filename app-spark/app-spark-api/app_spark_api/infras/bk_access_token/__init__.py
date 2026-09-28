@@ -14,17 +14,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Client for the BlueKing token service that turns a user's login into an access_token."""
+"""Clients for the BlueKing token services that turn a user's login into an access_token."""
 
-from app_spark_api.infras.bk_access_token.client import AccessTokenClient
-from app_spark_api.infras.bk_access_token.entities import AccessTokenClientConfig, UserCredential, UserCredentialType
+from app_spark_api.infras.bk_access_token.backends import (
+    AccessTokenBackend,
+    AuthApiBackend,
+    SsmBackend,
+    get_access_token_backend_cls,
+)
+from app_spark_api.infras.bk_access_token.entities import (
+    AccessTokenBackendConfig,
+    UserCredential,
+    UserCredentialType,
+)
 from app_spark_api.infras.bk_access_token.exceptions import AccessTokenError, AccessTokenUnavailableError
 
 __all__ = [
-    "AccessTokenClient",
-    "AccessTokenClientConfig",
+    "AccessTokenBackend",
+    "AccessTokenBackendConfig",
     "AccessTokenError",
     "AccessTokenUnavailableError",
+    "AuthApiBackend",
+    "SsmBackend",
     "UserCredential",
     "UserCredentialType",
+    "get_access_token_backend_cls",
 ]

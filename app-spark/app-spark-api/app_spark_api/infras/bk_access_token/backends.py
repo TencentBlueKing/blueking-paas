@@ -14,34 +14,43 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Exchanging a user's BlueKing login for a user-scoped access_token."""
+"""Exchanging a user's BlueKing login for a user-scoped access_token.
 
-from typing import Any
+Supports two backends, calling auth api or SSM directly. BKAUTH_BACKEND_TYPE picks one.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Any, ClassVar
 
 import httpx2
+from django.conf import settings
 
-from app_spark_api.infras.bk_access_token.entities import AccessTokenClientConfig, UserCredential, UserCredentialType
+from app_spark_api.infras.bk_access_token.entities import (
+    AccessTokenBackendConfig,
+    UserCredential,
+    UserCredentialType,
+)
 from app_spark_api.infras.bk_access_token.exceptions import AccessTokenUnavailableError
 
 
-class AccessTokenClient:
+class AccessTokenBackend(ABC):
     """Ask the token service for the access_token binding one app to one user.
-
-    The request body follows blueking-paas apiserver's APIGateWayBackend and BKSSMBackend, plus
-    need_new_token=0 on both, so asking again returns the token a running Runtime already holds.
 
     Example::
 
-        client = AccessTokenClient(config)
-        token = await client.fetch_user_token(
-            UserCredential(type=UserCredentialType.BK_TOKEN, value="...", username="admin")
-        )
+        backend = get_access_token_backend_cls()(config)
+        token = await backend.fetch_user_token(credential)
 
     :param config: The app identity and where the token service is.
     :param transport: httpx transport; tests inject MockTransport.
     """
 
-    def __init__(self, config: AccessTokenClientConfig, *, transport: httpx2.AsyncBaseTransport | None = None) -> None:
+    # 这个 backend 认的登录态 cookie；读请求时按它取，换票时按它放进请求体。
+    credential_type: ClassVar[UserCredentialType]
+
+    def __init__(
+        self, config: AccessTokenBackendConfig, *, transport: httpx2.AsyncBaseTransport | None = None
+    ) -> None:
         self._config = config
         self._transport = transport
 
@@ -53,6 +62,12 @@ class AccessTokenClient:
         :raises AccessTokenUnavailableError: The token service was unreachable, refused the
             exchange, or answered without a token.
         """
+        # 登录态种类和签发服务对不上时，请求发出去也只会被拒，还可能把登录态送到不认它的服务。
+        if credential.type != self.credential_type:
+            raise AccessTokenUnavailableError(
+                f"{type(self).__name__} exchanges a {self.credential_type} login, got a {credential.type} one"
+            )
+
         async with httpx2.AsyncClient(timeout=self._config.timeout_seconds, transport=self._transport) as client:
             try:
                 response = await client.post(
@@ -68,29 +83,9 @@ class AccessTokenClient:
 
         return self._extract_token(response)
 
+    @abstractmethod
     def _build_payload(self, credential: UserCredential) -> dict[str, Any]:
-        """Build the exchange request body for the kind of login the user has."""
-        payload: dict[str, Any] = {
-            "app_code": self._config.app_code,
-            "app_secret": self._config.app_secret,
-            "env_name": self._config.env_name,
-            "grant_type": "authorization_code",
-            credential.type.value: credential.value,
-            # 两种登录都带：现有 token 仍有效、且剩余有效期大于 300 秒时原样返回，不重新签发。
-            # 签发新 token 会让旧的失效，而 token 要在 Runtime 里一直用到会话结束，每次拉起都签
-            # 新的，会把同一用户已经在跑的 Runtime 手里的 token 一起废掉。apiserver 的
-            # BKSSMBackend 不带它，是因为那边的 token 只交给当次调用方，没有别人还拿着旧的。
-            "need_new_token": 0,
-        }
-
-        # SSM 登录：由 bk_login 认证 bk_token，与 apiserver 的 BKSSMBackend 一致。
-        if credential.type == UserCredentialType.BK_TOKEN:
-            payload["id_provider"] = "bk_login"
-            return payload
-
-        # 网关登录：还要带用户名，与 apiserver 的 APIGateWayBackend 一致。
-        payload["rtx"] = credential.username
-        return payload
+        """Build the exchange request body this token service expects."""
 
     def _extract_token(self, response: httpx2.Response) -> str:
         """Pull the access_token out of a token service response."""
@@ -106,8 +101,54 @@ class AccessTokenClient:
         except ValueError, AttributeError:
             raise AccessTokenUnavailableError("The token service answered with a body that is not a JSON mapping")
 
-        # 与 apiserver 的 validate_response 相同：data 为空视为换票失败，而不是拿空 token 去拉起 Runtime。
+        # 两个 backend 的 code 一个是字符串 "0"、一个是整数 0，但成功时都把 token 放在 data.access_token，
+        # 所以只认 data。失败时 data 为空，视为换票失败。
         token = data.get("access_token") if isinstance(data, dict) else None
         if not isinstance(token, str) or not token:
             raise AccessTokenUnavailableError("The token service answered without an access_token")
         return token
+
+
+class AuthApiBackend(AccessTokenBackend):
+    """Exchange a bk_ticket login with auth api."""
+
+    credential_type = UserCredentialType.BK_TICKET
+
+    def _build_payload(self, credential: UserCredential) -> dict[str, Any]:
+        """Build the body carrying the app identity, env_name and rtx alongside bk_ticket."""
+        return {
+            "app_code": self._config.app_code,
+            "app_secret": self._config.app_secret,
+            "env_name": self._config.env_name,
+            "grant_type": "authorization_code",
+            "rtx": credential.username,
+            "bk_ticket": credential.value,
+            # 这个接口默认每次都签发新 token，并让旧的立即失效。token 要在 Runtime 里一直用到会话
+            # 结束，不带这个参数，新开一个会话就会把同一用户已在跑的 Runtime 手里的 token 废掉。
+            # 带上后，现有 token 仍有效且剩余超过 300 秒时原样返回。
+            "need_new_token": 0,
+        }
+
+
+class SsmBackend(AccessTokenBackend):
+    """Exchange a bk_token login with SSM."""
+
+    credential_type = UserCredentialType.BK_TOKEN
+
+    def _build_payload(self, credential: UserCredential) -> dict[str, Any]:
+        """Build the body; the app identity travels in the X-BK-APP-* headers only."""
+        # 这个签发接口本身是 create-or-update：同一应用同一用户已有未过期的 token 时直接返回
+        # 原 token，所以不需要 need_new_token，接口也没有这个参数。
+        return {
+            "grant_type": "authorization_code",
+            "id_provider": "bk_login",
+            "bk_token": credential.value,
+        }
+
+
+def get_access_token_backend_cls() -> type[AccessTokenBackend]:
+    """Return the backend matching this site's BKAUTH_BACKEND_TYPE."""
+    # 只有 bk_token 用 SsmBackend，其余取值都用 AuthApiBackend。
+    if settings.BKAUTH_BACKEND_TYPE == "bk_token":
+        return SsmBackend
+    return AuthApiBackend

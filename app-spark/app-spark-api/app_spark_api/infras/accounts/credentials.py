@@ -18,17 +18,13 @@
 
 from typing import TYPE_CHECKING
 
-from django.conf import settings
-
 from app_spark_api.infras.accounts.auth import authenticated_user
-from app_spark_api.infras.bk_access_token import UserCredential, UserCredentialType
+from app_spark_api.infras.bk_access_token import UserCredential, UserCredentialType, get_access_token_backend_cls
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
-# Where a proxy that has already stripped the cookie puts the same value, keyed like
-# request.META. Same HEADER_KEY as apiserver's APIGateWayBackend / BKSSMBackend
-# (paasng.infras.accounts.oauth.backends).
+# Where a proxy that has already stripped the cookie puts the same value, keyed like request.META.
 _CREDENTIAL_HEADERS = {
     UserCredentialType.BK_TOKEN: "HTTP_X_USER_BK_TOKEN",
     UserCredentialType.BK_TICKET: "HTTP_X_USER_BK_TICKET",
@@ -39,16 +35,15 @@ def get_user_credential(request: HttpRequest) -> UserCredential | None:
     """Return the caller's BlueKing login, or None when the request does not carry one.
 
     :param request: Request handled by an operation guarded with login_required.
-    :return: The login, tagged with the kind BKAUTH_BACKEND_TYPE says this site uses.
+    :return: The login, tagged with the kind this site's token backend exchanges.
     """
-    credential_type = (
-        UserCredentialType.BK_TOKEN if settings.BKAUTH_BACKEND_TYPE == "bk_token" else UserCredentialType.BK_TICKET
-    )
+    # 跟着换票 backend 取登录态，读哪个 cookie 与送去哪个签发服务只由 BKAUTH_BACKEND_TYPE 判定一次。
+    credential_type = get_access_token_backend_cls().credential_type
 
-    # 先 cookie 后请求头，与 apiserver 的 get_user_credential_from_request 同序。
+    # 先 cookie 后请求头：cookie 是浏览器直接带来的，请求头只在代理剥掉 cookie 时才有。
     value = request.COOKIES.get(credential_type.value) or request.META.get(_CREDENTIAL_HEADERS[credential_type])
 
-    # 网关换票要带用户名（rtx），缺了它这份登录态换不出 token，与没有登录态同等处理。
+    # bk_ticket 换票要带用户名（rtx），缺了它这份登录态换不出 token，与没有登录态同等处理。
     username = authenticated_user(request).username
     if not value or not username:
         return None

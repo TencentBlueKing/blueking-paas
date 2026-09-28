@@ -110,14 +110,25 @@ externalDatabase:
 # 仅允许在初次部署时设置，部署后不要切换。
 enableMultiTenantMode: false
 loginFull: ""
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对；appSecret 不进 Runtime。
+appCode: ""
+appSecret: ""
+# 网关 API 访问地址模板，须含 {api_name}。bkaidev 的 LLM 基址从这里拼。
+# bkApiUrlTmpl: "https://bkapi.example.com/api/{api_name}/"
+# 调用网关时的环境名（stage）。
+# apigwEnvironment: prod
 bkAuth:
+  # 同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api。
   backendType: bk_token
-  appCode: ""
-  appSecret: ""
   bkLoginApigwStage: prod
   userInfoApigwUrl: ""
   userCookieVerifyUrl: ""
   tokenUserInfoEndpoint: ""
+  # 用户态 access_token 的签发地址，agent.modelSource 为 bkaidev 时必填。
+  # 支持直连 auth api 或 SSM 两种 backend，由 backendType 决定。
+  # tokenAuthEndpoint: ""
+  # 换票时的 env_name（prod / test）；backendType 为 bk_token 时不使用。
+  # authEnvName: prod
 
 # 使用 bk_repo 存储时填写 PROJECT、ENDPOINT、USERNAME、PASSWORD。
 # blobstoreBkrepoConfig:
@@ -159,12 +170,8 @@ agent:
   # directModelConfig:
   #   model: deepseek:deepseek-v4-flash
   #   api_key: ""
-  # modelSource 为 bkaidev 时必填，字段见 settings 中 BKAIDEV_MODEL_CONFIG 的说明。
+  # modelSource 为 bkaidev 时可选。LLM 基址由 bkApiUrlTmpl + apigwEnvironment 拼接，换票地址是
+  # bkAuth.tokenAuthEndpoint；app 身份用上面的 appCode / appSecret。default_model_name
+  # 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
   # bkaidevModelConfig:
-  #   base_url: https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
-  #   model_name: deepseek-v4-flash
-  #   token:
-  #     token_url: ""
-  #     app_code: ""
-  #     app_secret: ""
-  #     env_name: prod
+  #   default_model_name: deepseek-v4-flash

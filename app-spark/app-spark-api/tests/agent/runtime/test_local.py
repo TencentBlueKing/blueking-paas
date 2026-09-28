@@ -165,7 +165,7 @@ def test_the_runtime_is_told_exactly_these_things_and_nothing_else(tmp_path):
 
 def test_only_allow_listed_variables_of_this_service_reach_the_runtime(tmp_path, monkeypatch):
     """本服务的环境里有平台自己的密钥，Runtime 又会把环境交给模型写的应用，所以只能按白名单放行。"""
-    monkeypatch.setenv("APP_SPARK_API_BKAIDEV_MODEL_CONFIG", '{"token": {"app_secret": "platform-secret"}}')
+    monkeypatch.setenv("APP_SPARK_API_APP_SECRET", "platform-secret")
     monkeypatch.setenv("APP_SPARK_API_DATABASE_PASSWORD", "db-password")
     monkeypatch.setenv("SOME_UNRELATED_TOKEN", "unrelated")
     monkeypatch.setenv("UV_INDEX_PRIVATE_PASSWORD", "index-password")

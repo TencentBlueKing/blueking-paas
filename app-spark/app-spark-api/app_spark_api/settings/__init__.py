@@ -123,6 +123,11 @@ DEBUG = settings.get("DEBUG", False)
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/6.1/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对。
+# APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
+APP_CODE = settings.get("APP_CODE", "")
+APP_SECRET = settings.get("APP_SECRET", "")
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -274,6 +279,23 @@ ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
 # 统一登录页面地址，用于模板渲染，必填
 LOGIN_FULL = settings.get("LOGIN_FULL", "")
 
+## 网关 API 访问地址模板，须含 {api_name}。平台注入名也是 BK_API_URL_TMPL。
+## 两种常见形态都可以：
+##   https://bkapi.example.com/api/{api_name}/
+##   https://{api_name}.apigw.example.com
+## bkaidev 的 LLM 基址从这个模板 + APIGW_ENVIRONMENT 拼出来，不要在 BKAIDEV_MODEL_CONFIG 里再配一份。
+BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "")
+
+## 调用网关时使用的环境名（stage）。
+APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
+
+## 用户态 access_token 的签发地址。AGENT_MODEL_SOURCE 为 bkaidev 时必填。
+## 支持直连 auth api 或 SSM 两种 backend，由 BKAUTH_BACKEND_TYPE 决定：bk_token 用 SSM，其余用 auth api。
+TOKEN_AUTH_ENDPOINT = settings.get("TOKEN_AUTH_ENDPOINT", "")
+
+## 换票请求体里的 env_name，可选 prod / test；BKAUTH_BACKEND_TYPE 为 bk_token 时不使用。
+AUTH_ENV_NAME = settings.get("AUTH_ENV_NAME", "prod")
+
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
@@ -281,9 +303,11 @@ LOGIN_FULL = settings.get("LOGIN_FULL", "")
 # 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
 BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE
 
+## 用户身份校验类型，同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api。
 BKAUTH_BACKEND_TYPE = settings.get("BKAUTH_BACKEND_TYPE", "bk_token")
-BKAUTH_TOKEN_APP_CODE = settings.get("BKAUTH_TOKEN_APP_CODE", "")
-BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", "")
+## bkpaas_auth 只认这两个名字，值直接取本服务的 APP_CODE / APP_SECRET，不单独配置。
+BKAUTH_TOKEN_APP_CODE = APP_CODE
+BKAUTH_TOKEN_SECRET_KEY = APP_SECRET
 
 # 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
 # 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
@@ -385,27 +409,17 @@ AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
 ##   api_key: ''
 AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 
-## AGENT_MODEL_SOURCE 为 bkaidev 时必填，字段详见 BkAidevModelConfig 与 AccessTokenClientConfig。
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选，字段详见 BkAidevModelConfig。
 ##
-## access_token 由本服务按「app_code + 当前用户」向蓝鲸网关申请，不落库、不缓存：换票时带
-## need_new_token=0，网关在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token
-## 废掉。app_secret 只用于换票，不会交给 Agent Runtime。
+## access_token 由本服务按「APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
+## 不缓存：签发服务在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token 废掉。
+## APP_SECRET 不会交给 Agent Runtime。
+##
+## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
 ##
 ## BKAIDEV_MODEL_CONFIG:
-##   ## 必填。bkaidev LLM 网关 OpenAI 兼容入口，注入到 v1 这一层，不要带 /chat/completions。
-##   base_url: https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
-##   ## 必填。模型名，必须是该应用在 bkaidev 已开通、且 agent 能力对照表里有的模型。
-##   model_name: deepseek-v4-flash
-##   token:
-##     ## 必填。蓝鲸网关签发 access_token 的地址。
-##     token_url: https://bkssm.example.com/api/v1/auth/access-tokens
-##     ## 必填。access_token 绑定的应用。
-##     app_code: bk-app-spark
-##     app_secret: ''
-##     ## 可选。access_token 签发的环境，默认 prod。
-##     env_name: prod
-##     ## 可选。换票请求超时秒数，默认 120。
-##     timeout_seconds: 120
+##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash，须是 agent 支持的模型名。
+##   default_model_name: deepseek-v4-flash
 BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob

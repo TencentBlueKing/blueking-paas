@@ -24,10 +24,7 @@ from app_spark_api.utils import validate_non_empty_string
 
 
 class UserCredentialType(StrEnum):
-    """Which BlueKing login cookie proves who the user is.
-
-    Follows BKAUTH_BACKEND_TYPE: bk_token for the SSM login, bk_ticket otherwise.
-    """
+    """Which BlueKing login cookie proves who the user is; follows BKAUTH_BACKEND_TYPE."""
 
     BK_TOKEN = "bk_token"
     BK_TICKET = "bk_ticket"
@@ -48,13 +45,13 @@ class UserCredential:
 
 
 @attrs.frozen
-class AccessTokenClientConfig:
+class AccessTokenBackendConfig:
     """How to ask the token service for a user-scoped access_token on behalf of one app.
 
     :param token_url: The token service's issue endpoint.
     :param app_code: App the token is bound to.
     :param app_secret: That app's secret; never logged, never handed to an Agent Runtime.
-    :param env_name: Environment the token is issued for.
+    :param env_name: Environment the token is issued for; only AuthApiBackend sends it.
     :param timeout_seconds: HTTP timeout for the exchange.
     """
 

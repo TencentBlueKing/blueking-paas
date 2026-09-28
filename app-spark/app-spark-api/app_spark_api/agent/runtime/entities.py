@@ -29,9 +29,6 @@ from app_spark_api.agent.runtime.exceptions import (
     AgentUnavailableError,
     ModelAccessConfigurationError,
 )
-
-# cattrs resolves BkAidevModelConfig.token's annotation at runtime to structure it.
-from app_spark_api.infras.bk_access_token import AccessTokenClientConfig  # noqa: TC001
 from app_spark_api.utils import structure_config, validate_non_empty_string
 
 
@@ -150,18 +147,18 @@ class GitRemote:
 
 @attrs.frozen
 class BkAidevModelConfig:
-    """How Agent Runtimes reach bkaidev's LLM gateway, and how their access_token is obtained.
+    """Defaults for a Runtime that calls bkaidev.
 
-    :param base_url: The gateway's OpenAI-compatible v1 root, without ``/chat/completions``.
-    :param model_name: Model to call. Must be one the app has been granted on bkaidev, and one
-        the agent's MODEL_PROFILES lists, or the Runtime starts with its model not ready.
-    :param token: The app identity and token service the user's access_token is exchanged at.
-        Its app_secret is used for the exchange only and never reaches a Runtime.
+    The LLM base URL and the access_token exchange endpoint are not configured here: the former
+    is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
+    app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
+
+    :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
     """
 
-    base_url: str = attrs.field(validator=validate_non_empty_string)
-    model_name: str = attrs.field(validator=validate_non_empty_string)
-    token: AccessTokenClientConfig
+    # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
+    # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
+    default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
 
 
 @attrs.frozen
@@ -186,13 +183,13 @@ class BkAidevModelAccess:
     token of its own.
 
     :param base_url: The gateway's OpenAI-compatible v1 root.
-    :param model_name: Model to call.
     :param access_token: The user's access_token for the configured app.
+    :param model_name: The model the Runtime asks the gateway for.
     """
 
     base_url: str = attrs.field(validator=validate_non_empty_string)
-    model_name: str = attrs.field(validator=validate_non_empty_string)
     access_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    model_name: str = attrs.field(validator=validate_non_empty_string)
 
 
 # Exactly one of the two, so a provider never has to guess what a missing value was meant to be.

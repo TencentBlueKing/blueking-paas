@@ -8,10 +8,12 @@
 # 必选：统一登录页面地址
 LOGIN_FULL: ...
 
+# 必选：本服务在蓝鲸的应用身份，调用蓝鲸各服务都用这一对
+APP_CODE: ...
+APP_SECRET: ...
+
 # 必选：BKAUTH 用户认证相关配置（具体值请参考当前开发环境）
 BKAUTH_BACKEND_TYPE: ...
-BKAUTH_TOKEN_APP_CODE: ...
-BKAUTH_TOKEN_SECRET_KEY: ...
 BKAUTH_TOKEN_USER_INFO_ENDPOINT: ...
 BKAUTH_USER_COOKIE_VERIFY_URL: ...
 
@@ -92,14 +94,13 @@ AGENT_CONTEXT_STORAGE:
 
 ## 调模型走哪条路：bkaidev（默认）或 direct（直连厂商）
 AGENT_MODEL_SOURCE: bkaidev
-## AGENT_MODEL_SOURCE 为 bkaidev 时必填，字段见 BkAidevModelConfig
-BKAIDEV_MODEL_CONFIG:
-  base_url: https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1
-  model_name: deepseek-v4-flash
-  token:
-    token_url: https://bkssm.example.com/api/v1/auth/access-tokens
-    app_code: bk-app-spark
-    app_secret: ...
+## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
+# TOKEN_AUTH_ENDPOINT: ...
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
+## app 身份用 APP_CODE / APP_SECRET。
+## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+# BKAIDEV_MODEL_CONFIG:
+#   default_model_name: deepseek-v4-flash
 ## AGENT_MODEL_SOURCE 为 direct 时必填，字段见 DirectModelAccess
 # AGENT_DIRECT_MODEL_CONFIG:
 #   model: deepseek:deepseek-v4-flash
@@ -112,12 +113,18 @@ BKAIDEV_MODEL_CONFIG:
 数据库密码）一律不进 Runtime，因为 Runtime 又会把环境交给模型写的应用。
 
 **模型的 access_token**：走 bkaidev 时，provider 在确定要新起 Runtime 的那一刻（持锁、确认没有
-活着的 Runtime 之后）用当前用户的登录态（bk_token 或 bk_ticket，随 `BKAUTH_BACKEND_TYPE`）加上
-`app_code` / `app_secret` 向蓝鲸网关换一张用户态 access_token，只注入该 Runtime 的
-`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`。本服务不落库也不缓存它：两种登录的换票都带
-`need_new_token=0`，网关在现有 token 仍有效时原样返回，所以新开会话不会把用户已在用的 token
-废掉。已在跑的 Runtime 继续对话时不会再换票。bkaidev 的 Runtime 拿不到 `app_secret`，也拿不到
-直连用的固定 key。
+活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
+`TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
+`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
+`{BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
+`APP_SPARK_AGENT_MODEL_BASE_URL`，`default_model_name`（默认 `deepseek-v4-flash`）注入为
+`APP_SPARK_AGENT_MODEL_NAME`。
+
+换票支持直连 auth api 或 SSM 两种 backend，由 `BKAUTH_BACKEND_TYPE` 选择：`bk_token` 用
+`SsmBackend`，其余用 `AuthApiBackend`，
+后者请求体另带 `AUTH_ENV_NAME`（默认 `prod`）作为 `env_name`。本服务不落库也不缓存 token：签发
+服务在现有 token 仍有效时原样返回，所以新开会话不会把用户已在用的 token 废掉。已在跑的 Runtime
+继续对话时不会再换票。bkaidev 的 Runtime 拿不到 `app_secret`，也拿不到直连用的固定 key。
 
 **前置条件**：local_process 用 `uv run --project <agent_project_dir> --no-sync` 拉起 Runtime，
 `--no-sync` 意味着它不会在请求路径上解析依赖，所以 agent 的虚拟环境必须提前备好：

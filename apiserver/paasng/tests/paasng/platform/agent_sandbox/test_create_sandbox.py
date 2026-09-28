@@ -28,7 +28,7 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxKresApp,
     AgentSandboxPod,
 )
-from paas_wl.infras.resources.base.exceptions import PodTerminatedError
+from paas_wl.infras.resources.base.exceptions import PodTerminatedError, ReadTargetStatusTimeout
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import (
     DEFAULT_SANDBOX_CPU,
@@ -511,6 +511,65 @@ class TestWaitForSandboxInstanceRunning:
                 handler.wait_until_ready("pod-1", timeout=5)
 
         assert exc_info.value.logs == "exited\n"
+
+    def test_pod_ready_timeout_is_create_timeout(self, bk_app):
+        """KPod 的状态超时在 handler 边界转成 SandboxCreateTimeout。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.DEFAULT.value)
+        mock_pod = mock.MagicMock()
+        mock_pod.wait_for_ready.side_effect = ReadTargetStatusTimeout("pod-1", 5)
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KPod", return_value=mock_pod),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
+            with pytest.raises(SandboxCreateTimeout, match="was not ready"):
+                handler.wait_until_ready("pod-1", timeout=5)
+
+    def test_instance_phase_timeout_is_create_timeout(self, bk_app):
+        """等 CR phase 超时抛 SandboxCreateTimeout，调用方看不到 ReadTargetStatusTimeout。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.side_effect = ReadTargetStatusTimeout("si-demo", 10)
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
+            with pytest.raises(SandboxCreateTimeout, match="Running or Failed"):
+                handler.wait_until_ready("si-demo", timeout=10)
+
+    def test_pod_name_wait_sleeps_only_remaining_timeout(self, bk_app):
+        """剩余时间小于检查周期时，sleep 按剩余时间裁剪。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.RUNNING.value
+        mock_si.get.return_value = mock.MagicMock(
+            status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName=None)
+        )
+        clock = {"t": 0.0}
+
+        def monotonic():
+            return clock["t"]
+
+        def sleep(seconds):
+            clock["t"] += seconds
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
+            mock.patch("paasng.platform.agent_sandbox.workload.time.monotonic", side_effect=monotonic),
+            mock.patch("paasng.platform.agent_sandbox.workload.time.sleep", side_effect=sleep) as mock_sleep,
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
+            with pytest.raises(SandboxCreateTimeout, match=r"status\.podName"):
+                handler.wait_until_ready("si-demo", timeout=0.2)
+
+        mock_sleep.assert_called_once_with(0.2)
 
 
 class TestWorkloadHandler:

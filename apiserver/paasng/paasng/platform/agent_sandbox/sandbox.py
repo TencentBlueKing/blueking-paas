@@ -44,7 +44,6 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
 )
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.agent_sandbox.constants import (
     DEFAULT_SANDBOX_CPU,
@@ -275,13 +274,7 @@ class AgentSandboxResManager:
         try:
             handler.wait_until_ready(workload.name, self.create_timeout)
             self._wait_router_ready(workload, sandbox_obj.daemon_token, self.route_ready_timeout)
-        except ReadTargetStatusTimeout as exc:
-            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxCreateTimeout(str(exc)) from exc
-        except SandboxCreateTimeout:
-            self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise
-        except SandboxCreateError:
+        except (SandboxCreateTimeout, SandboxCreateError):
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
             raise
         except ApiException as exc:

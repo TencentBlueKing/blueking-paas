@@ -673,9 +673,9 @@ class KPod(BaseKresource):
         :raises PodTerminatedError: the pod has terminated and will not become ready
         :raises ReadTargetStatusTimeout: the pod did not become ready within ``timeout``
         """
-        time_started = time.time()
+        time_started = time.monotonic()
         pod = None
-        while timeout is None or time.time() - time_started < timeout:
+        while timeout is None or time.monotonic() - time_started < timeout:
             try:
                 pod = parse_pod(self.get(name, namespace=namespace))
             except ResourceMissing:

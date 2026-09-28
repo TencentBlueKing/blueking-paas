@@ -325,7 +325,7 @@ class TestKPod:
 
         kpod = KPod(k8s_client)
         with (
-            mock.patch("paas_wl.infras.resources.base.kres.time.time", side_effect=now),
+            mock.patch("paas_wl.infras.resources.base.kres.time.monotonic", side_effect=now),
             mock.patch("paas_wl.infras.resources.base.kres.time.sleep", side_effect=sleep),
             mock.patch.object(kpod, "get", return_value=pending),
             pytest.raises(ReadTargetStatusTimeout),
@@ -358,7 +358,7 @@ class TestKPod:
 
         kpod = KPod(k8s_client)
         with (
-            mock.patch("paas_wl.infras.resources.base.kres.time.time", side_effect=now),
+            mock.patch("paas_wl.infras.resources.base.kres.time.monotonic", side_effect=now),
             mock.patch("paas_wl.infras.resources.base.kres.time.sleep", side_effect=sleep),
             mock.patch.object(kpod, "get", side_effect=fake_get),
         ):

@@ -196,9 +196,9 @@ def find_pod_status_condition(
 
 
 def is_pod_ready(pod: kmodels.V1Pod) -> bool:
-    """是否可以向 Pod 发送请求
+    """Pod 的 Ready 条件是否为 True。
 
-    phase 变为 Running 时容器进程刚启动, 而 Ready 条件还要求 startupProbe / readinessProbe 通过
+    phase 变为 Running 只说明容器进程已启动，Ready 还要求 startupProbe / readinessProbe 通过。
     """
     if not pod.status:
         return False

@@ -42,7 +42,7 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     agent_sandbox_pod_kmodel,
 )
 from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.base.exceptions import PodTerminatedError, ResourceMissing
+from paas_wl.infras.resources.base.exceptions import PodTerminatedError, ReadTargetStatusTimeout, ResourceMissing
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
 from paasng.platform.agent_sandbox.exceptions import SandboxCreateError, SandboxCreateTimeout, SandboxError
@@ -152,10 +152,12 @@ class SandboxWorkloadHandler(ABC):
 
     @abstractmethod
     def wait_until_ready(self, name: str, timeout: float) -> None:
-        """Block until the workload's Ready condition is true, or raise SandboxCreateError.
+        """Block until the workload's Ready condition is true.
 
         Ready means the daemon can accept connections on its Pod IP. Callers that go
         through the Router still have to wait for the Service path separately.
+        A terminated workload raises SandboxCreateError. Exceeding ``timeout`` raises
+        SandboxCreateTimeout.
         """
 
     @abstractmethod
@@ -194,6 +196,10 @@ class PodWorkloadHandler(SandboxWorkloadHandler):
             except PodTerminatedError as exc:
                 logs = get_pod_logs(client, namespace, name)
                 raise SandboxCreateError("sandbox pod failed to start", logs=logs) from exc
+            except ReadTargetStatusTimeout as exc:
+                raise SandboxCreateTimeout(
+                    f"sandbox pod {namespace}/{name} was not ready within {timeout} seconds"
+                ) from exc
 
     def map_status(self, phase: str) -> str:
         """Map Pod ``status.phase``. The sandbox Pod uses ``restartPolicy: Never``, so a
@@ -231,22 +237,32 @@ class SandboxInstanceWorkloadHandler(SandboxWorkloadHandler):
         deadline = time.monotonic() + timeout
         namespace = self.kres_app.namespace
         with self.kres_app.get_kube_api_client() as client:
-            phase = kres.KSandboxInstance(client).wait_for_status(
-                name=name,
-                target_statuses={SandboxInstancePhase.RUNNING.value, SandboxInstancePhase.FAILED.value},
-                namespace=self.kres_app.namespace,
-                timeout=timeout,
-            )
+            try:
+                phase = kres.KSandboxInstance(client).wait_for_status(
+                    name=name,
+                    target_statuses={SandboxInstancePhase.RUNNING.value, SandboxInstancePhase.FAILED.value},
+                    namespace=self.kres_app.namespace,
+                    timeout=timeout,
+                )
+            except ReadTargetStatusTimeout as exc:
+                raise SandboxCreateTimeout(
+                    f"SandboxInstance {namespace}/{name} did not become Running or Failed within {timeout} seconds"
+                ) from exc
             if phase == SandboxInstancePhase.FAILED.value:
                 logs = self._failure_diagnostics(client, name)
                 raise SandboxCreateError("sandbox instance failed to start", logs=logs)
 
             pod_name = self._wait_pod_name(client, name, _remaining(deadline))
+            pod_ready_timeout = _remaining(deadline)
             try:
-                kres.KPod(client).wait_for_ready(pod_name, namespace=namespace, timeout=_remaining(deadline))
+                kres.KPod(client).wait_for_ready(pod_name, namespace=namespace, timeout=pod_ready_timeout)
             except PodTerminatedError as exc:
                 logs = self._failure_diagnostics(client, name)
                 raise SandboxCreateError("sandbox instance failed to start", logs=logs) from exc
+            except ReadTargetStatusTimeout as exc:
+                raise SandboxCreateTimeout(
+                    f"sandbox pod {namespace}/{pod_name} was not ready within {pod_ready_timeout} seconds"
+                ) from exc
 
     def _wait_pod_name(self, client, name: str, timeout: float) -> str:
         """Poll the CR until sandbox-controller reports the name of the rendered Pod.
@@ -256,7 +272,7 @@ class SandboxInstanceWorkloadHandler(SandboxWorkloadHandler):
         """
         namespace = self.kres_app.namespace
         time_started = time.monotonic()
-        while time.monotonic() - time_started < timeout:
+        while (remaining := timeout - (time.monotonic() - time_started)) > 0:
             try:
                 instance = kres.KSandboxInstance(client).get(name, namespace=namespace)
             except ResourceMissing:
@@ -268,7 +284,10 @@ class SandboxInstanceWorkloadHandler(SandboxWorkloadHandler):
                     raise SandboxCreateError("sandbox instance failed to start", logs=logs)
                 if pod_name := getattr(status, "podName", None):
                     return pod_name
-            time.sleep(_CR_CHECK_PERIOD)
+            remaining = timeout - (time.monotonic() - time_started)
+            if remaining <= 0:
+                break
+            time.sleep(min(_CR_CHECK_PERIOD, remaining))
         raise SandboxCreateTimeout(
             f"SandboxInstance {namespace}/{name} did not report status.podName within {timeout} seconds"
         )

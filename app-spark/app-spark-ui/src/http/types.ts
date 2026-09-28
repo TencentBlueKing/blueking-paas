@@ -45,6 +45,38 @@ export interface ProjectResponse {
 
 export type PagedProjectResponse = PagedResponse<ProjectResponse>;
 
+/** Agent 提交代码时用的机器身份，不是终端用户。 */
+export interface GitCommitIdentity {
+  author_name: string;
+  author_email: string;
+}
+
+/** 建仓进度：`pending` 等待初始化，`ready` 初始化完成，`failed` 初始化失败。 */
+export type GitRepositoryStatus = 'pending' | 'ready' | 'failed';
+
+/** GET /projects/{id}/git-repository/ 仓库状态，不含凭据明文。 */
+export interface GitRepositoryResponse {
+  owner: string;
+  name: string;
+  default_branch: string;
+  status: GitRepositoryStatus;
+  status_detail: string;
+  clone_url: string;
+  created_at: string;
+  updated_at: string;
+  commit: GitCommitIdentity;
+  /**
+   * 下载已保存源码（zip）的地址；远端仓库还没建起来时为 null。
+   *
+   * 可能是站内路径（含后端 `FORCE_SCRIPT_NAME` 前缀），也可能是带协议的绝对地址，交给
+   * `resolveApiUrl` 分辨即可。
+   *
+   * 下到的是 Agent **最后一次成功保存**的那一版，不是运行中 Runtime 工作区的实时状态；文件名里
+   * 带 commit 短 SHA，据此可分辨拿到的是哪一版。
+   */
+  archive_url: string | null;
+}
+
 export interface ListConversationsQuery extends PageQuery {
   is_live?: boolean | null;
 }
@@ -69,7 +101,27 @@ export interface RuntimeStateResponse {
   log_seq: number;
   ui_event_seq: number;
   running: boolean;
+  /**
+   * 活跃 Runtime 报的 dev server 状态。没有 origin：预览地址以
+   * `GET .../conversations/{number}/preview/` 为准。
+   */
+  dev_server_status: DevServerStatus | null;
   replication_pending: boolean;
+}
+
+/**
+ * 工作区应用此刻能不能服务，和「有没有预览地址」是两回事。
+ *
+ * 四个字符串把「进程还在」和「端口已经能应答」拆开。只有 `ready` 才能把 origin 挂上 iframe；
+ * `starting` 是还在等端口，不是失败。`null` 表示没有 Runtime，或有但问不到。
+ */
+export type DevServerStatus = 'not_started' | 'starting' | 'ready' | 'stopped';
+
+/** GET .../conversations/{number}/preview/ */
+export interface PreviewResponse {
+  /** 末尾带斜杠，直接作为 iframe 的 src。会话一建好就有，Runtime 回收后再拉起也不变。 */
+  origin: string;
+  dev_server_status: DevServerStatus | null;
 }
 
 export interface StartRunRequest {

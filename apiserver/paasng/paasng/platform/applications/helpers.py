@@ -28,10 +28,12 @@ from paasng.utils.basic import get_username_by_bkpaas_user_id
 logger = logging.getLogger(__name__)
 
 
-def register_builtin_user_groups_and_grade_manager(application: Application):
+def register_builtin_user_groups_and_grade_manager(application: Application, add_creator_to_admin_group: bool = True):
     """
     默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
     将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
+
+    :param add_creator_to_admin_group: V4 下是否将创建者加入管理者用户组，V3 始终加入
     """
     tenant_id = get_tenant_id_for_app(application.code)
     creator = get_username_by_bkpaas_user_id(application.creator)
@@ -53,7 +55,10 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     # 3. 创建默认的 管理者，开发者，运营者用户组。
     #    V4 创建时一次性写入权限范围与管理员组成员，减少中间失败态。
     user_groups = backend.create_builtin_user_groups(
-        space_id, application.code, app_name=application.name, init_members=[creator]
+        space_id,
+        application.code,
+        app_name=application.name,
+        init_members=[creator] if add_creator_to_admin_group else None,
     )
     ApplicationUserGroup.objects.bulk_create(
         [

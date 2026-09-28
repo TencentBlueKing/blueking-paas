@@ -1,0 +1,286 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+"""monitor 采集主流程的测试"""
+
+import json
+import time
+from datetime import timedelta
+
+import pytest
+from django.conf import settings
+from django.core.cache import cache
+from django.utils.timezone import now
+from paas_service.models import Plan, Service, ServiceInstance, ServiceInstanceConfig
+from svc_redis.monitor import exporter, instances, k8s
+from svc_redis.monitor.collector import RedisInstanceMetricsCollector
+from svc_redis.monitor.entities import RedisInstance, RedisInstanceStatus
+from svc_redis.monitor.exporter import ExporterUsage
+
+pytestmark = pytest.mark.django_db
+
+
+class _Obj(dict):
+    """kres 的动态资源对象: 必需字段用属性访问, 可选字段用下标访问且缺失为 None"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__dict__.update(self)
+
+    def __missing__(self, key):
+        return None
+
+
+def _instance(app_info=None) -> ServiceInstance:
+    """建一个已分配实例: 套餐开启 monitor, 命名空间 ns-a"""
+    service = Service.objects.create(name="redis", category=1)
+    plan = Plan.objects.create(
+        name="redis",
+        service=service,
+        config=json.dumps({"cluster_name": "redis-cluster", "memory_size": "2Gi", "monitor": True}),
+    )
+    instance = ServiceInstance.objects.create(plan=plan, config={"namespace": "ns-a"})
+    ServiceInstanceConfig.objects.create(instance=instance, paas_app_info=app_info or {})
+    return instance
+
+
+def _pod(exporter=True, oom_finished_at=None, role="master", ready=True, name="svc-redis-0"):
+    containers = [_Obj(name="redis")] + ([_Obj(name="redis-exporter")] if exporter else [])
+    terminated = {"reason": "OOMKilled", "finishedAt": oom_finished_at.isoformat()} if oom_finished_at else None
+    return _Obj(
+        metadata=_Obj(name=name, labels=_Obj({"redis-role": role})),
+        spec=_Obj(containers=containers),
+        status=_Obj(
+            conditions=[_Obj(type="Ready", status="True" if ready else "False")],
+            containerStatuses=[_Obj(state=_Obj(), lastState=_Obj(terminated=terminated))],
+        ),
+    )
+
+
+def _samples() -> list:
+    """跑一次完整采集, 返回全部指标样本"""
+    return [sample for family in RedisInstanceMetricsCollector().collect() for sample in family.samples]
+
+
+def _metrics() -> dict[tuple[str, str], float]:
+    """(指标名, 实例 ID) -> 值; 自监控指标没有实例 ID"""
+    return {(s.name, s.labels.get("bk_instance", "")): s.value for s in _samples()}
+
+
+@pytest.fixture(autouse=True)
+def _cluster_client(monkeypatch):
+    """测试环境里没有真集群, 换成占位对象"""
+    monkeypatch.setattr(instances, "get_client_by_cluster_name", lambda name: object())
+    monkeypatch.setattr(instances, "clone_client", lambda client: client)
+
+
+@pytest.fixture(autouse=True)
+def _clean_metrics_cache():
+    """采集结果会写入缓存, 每个用例前后清空, 避免用例间相互影响"""
+    cache.clear()
+    yield
+    cache.clear()
+
+
+def test_metrics_of_instance(monkeypatch):
+    """正常实例: 各实例指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
+    iid = str(_instance(app_info={"app_code": "app", "module": "default", "environment": "stag"}).uuid)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+    monkeypatch.setattr(
+        exporter,
+        "fetch_usage",
+        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100, db_keys=7),
+    )
+
+    alive = next(s for s in _samples() if s.name == "redis_instance_alive")
+
+    assert alive.labels == {
+        "bk_instance": iid,
+        "bk_cluster": "redis-cluster",
+        "namespace": "ns-a",
+        "bk_app_code": "app",
+        "bk_module": "default",
+        "bk_env": "stag",
+    }
+    assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
+        ("redis_instance_memory_usage_rate", iid): 1024 / (2 * 1024**3),
+        ("redis_instance_connection_usage_rate", iid): 0.1,
+        ("redis_instance_oom_killed", iid): 0.0,
+        ("redis_instance_exporter_up", iid): 1.0,
+        ("redis_instance_db_keys", iid): 7.0,
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 1.0,
+    }
+
+
+def test_metrics_reuse_cached_result(monkeypatch, settings):
+    """TTL 内的多次采集复用缓存结果: 结果一致, 且不再重复查询 k8s"""
+    settings.METRIC_COLLECT_CACHE_TTL = 60
+    iid = str(_instance().uuid)
+    pod_calls: list = []
+
+    def _list_pods(*args):
+        pod_calls.append(1)
+        return {"ns-a": [_pod()]}
+
+    monkeypatch.setattr(k8s, "list_pods", _list_pods)
+    monkeypatch.setattr(
+        exporter,
+        "fetch_usage",
+        lambda *args: ExporterUsage(used_memory=1024, maxmemory=0, connected_clients=10, maxclients=100, db_keys=7),
+    )
+
+    first = _metrics()
+    assert first[("redis_instance_alive", iid)] == 1.0
+    assert first[("redis_instance_memory_usage_rate", iid)] == 1024 / (2 * 1024**3)
+    assert first[("redis_instance_db_keys", iid)] == 7.0
+
+    assert _metrics() == first
+    assert len(pod_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("age", "expected"), [(settings.METRIC_OOM_KILLED_WINDOW // 2, 1.0), (settings.METRIC_OOM_KILLED_WINDOW + 60, 0.0)]
+)
+def test_oom_killed(monkeypatch, age, expected):
+    """OOM 只统计最近 METRIC_OOM_KILLED_WINDOW 秒内发生的"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(
+        k8s, "list_pods", lambda *args: {"ns-a": [_pod(oom_finished_at=now() - timedelta(seconds=age))]}
+    )
+
+    assert _metrics()[("redis_instance_oom_killed", iid)] == expected
+
+
+def test_alive_only_depends_on_master_pod(monkeypatch):
+    """存活只看代表 Pod: 副本未就绪不影响, master 未就绪或缺失才判不可用"""
+    iid = str(_instance().uuid)
+    # 副本未就绪, master 就绪 -> 实例可用
+    monkeypatch.setattr(
+        k8s, "list_pods", lambda *args: {"ns-a": [_pod(), _pod(name="svc-redis-1", role="replica", ready=False)]}
+    )
+    assert _metrics()[("redis_instance_alive", iid)] == 1.0
+
+    # master 未就绪 -> 实例不可用
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod(ready=False)]})
+    assert _metrics()[("redis_instance_alive", iid)] == 0.0
+
+    # 主从结构下没有 master (只剩副本) -> 实例不可用
+    monkeypatch.setattr(
+        k8s,
+        "list_pods",
+        lambda *args: {"ns-a": [_pod(name="svc-redis-1", role="replica"), _pod(name="svc-redis-2", role="replica")]},
+    )
+    assert _metrics()[("redis_instance_alive", iid)] == 0.0
+
+
+def test_metrics_missing_when_no_exporter(monkeypatch):
+    """实例没有 exporter sidecar: 只出存活与 OOM"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod(exporter=False)]})
+
+    assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
+        ("redis_instance_oom_killed", iid): 0.0,
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 1.0,
+    }
+
+
+def test_exporter_up_zero_when_fetch_failed(monkeypatch):
+    """实例有 exporter 但取数失败: exporter_up=0, 使用率缺失; 目标侧失败不影响采集器健康度"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+    monkeypatch.setattr(exporter, "fetch_usage", lambda *args: None)
+
+    assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
+        ("redis_instance_oom_killed", iid): 0.0,
+        ("redis_instance_exporter_up", iid): 0.0,
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 1.0,
+    }
+
+
+def test_single_cluster_failure_is_isolated(monkeypatch):
+    """一个集群查询失败只影响该集群实例, 其它集群照常回填"""
+    ok = RedisInstanceStatus(RedisInstance("i-ok", "c-ok", "ns-a", "app", "mod", "stag"))
+    bad = RedisInstanceStatus(RedisInstance("i-bad", "c-bad", "ns-b", "app", "mod", "stag"))
+    monkeypatch.setattr(instances, "get_client_by_cluster_name", lambda name: object())
+    # 让 c-bad 的命名空间查询失败
+    monkeypatch.setattr(
+        k8s,
+        "list_pods",
+        lambda client, ns, deadline: (
+            (_ for _ in ()).throw(RuntimeError("down")) if "ns-b" in ns else {"ns-a": [_pod()]}
+        ),
+    )
+
+    instances._collect_k8s_states([ok, bad], time.monotonic() + 5)
+
+    assert ok.alive is True
+    assert not ok.k8s_state_missing
+    assert bad.alive is None  # 该集群失败, 字段保持缺失
+    assert bad.k8s_state_missing is True
+
+
+def test_collect_success_zero_when_k8s_unreadable(monkeypatch):
+    """k8s 状态读不到: 实例指标缺失, k8s_missing 反映规模, success=0"""
+    _instance()
+
+    def _raise(*args):
+        raise RuntimeError("cluster down")
+
+    monkeypatch.setattr(k8s, "list_pods", _raise)
+
+    assert _metrics() == {
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 0.0,
+    }
+
+
+def test_collect_success_zero_when_usage_fetch_abandoned(monkeypatch):
+    """exporter 任务异常被放弃: exporter_up=0 且计入 skipped, success=0"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
+
+    def _raise(*args):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(exporter, "fetch_usage", _raise)
+
+    assert _metrics() == {
+        ("redis_instance_alive", iid): 1.0,
+        ("redis_instance_oom_killed", iid): 0.0,
+        ("redis_instance_exporter_up", iid): 0.0,
+        ("redis_instance_collect_instances", ""): 1.0,
+        ("redis_instance_collect_success", ""): 0.0,
+    }
+
+
+def test_usage_skipped_when_deadline_exceeded(monkeypatch):
+    """deadline 已过期: 有 exporter 的实例按取数失败处理, 并标记为采集器侧跳过"""
+    status = RedisInstanceStatus(RedisInstance("i-1", "c-1", "ns-a", "app", "mod", "stag"))
+    monkeypatch.setattr(exporter, "fetch_usage", lambda *args: pytest.fail("should not be called"))
+
+    instances._collect_usage(
+        [status], {"i-1": instances.ExporterTarget(object(), "svc-redis-0")}, {}, deadline=time.monotonic() - 1
+    )
+
+    assert status.exporter_up is False
+    assert status.usage_fetch_skipped is True

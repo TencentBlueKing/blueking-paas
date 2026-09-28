@@ -16,9 +16,10 @@
 
 """模型侧的 launch：进程内直调监督器，不走 HTTP、不碰任何凭据。
 
-只有 agent 第一时间知道代码什么时候真的能跑，所以拉起这件事不该只等用户点按钮。
-控制面那条 POST /app/launch 仍然保留：两条路径共用同一把锁、同一份 LaunchResult，
-成功都落同一条 app.launched 到 ui_events，控制面照旧 drain，不需要反向回调。
+只有 agent 第一时间知道代码什么时候真的能跑，所以拉起这件事交给模型自己的 launch_app 工具，
+不另开控制面接口。成功落一条 app.launched 到 ui_events，控制面 drain 这条就知道端口在听。
+
+工具不交出任何可打开的地址：浏览器该访问哪个 origin 由控制面签发，沙箱里推不出来。
 """
 
 from collections.abc import Awaitable, Callable
@@ -26,7 +27,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app_spark_agent.app_supervisor import AppLaunchError, AppSupervisor
+from app_spark_agent.app_supervisor import AppLaunchError, AppSupervisor, DevServerStatus
 
 # 单轮上限。launch 失败后模型会倾向于「改代码再 launch」，不封顶就会一直烧 token。
 # 一次首发加一次修好够用了；还不行就把原因交回用户，别再自己试。
@@ -34,17 +35,23 @@ MAX_LAUNCHES_PER_RUN = 2
 
 REFUSED_DETAIL = f"Already launched {MAX_LAUNCHES_PER_RUN} times in this turn. Report the failure instead of retrying."
 
+STARTING_DETAIL = (
+    "The process is running but has not answered an HTTP request yet. It may still be warming up. "
+    "Do not launch again for this reason alone; read the log if it never becomes reachable."
+)
+
 
 class LaunchToolResult(BaseModel):
     """launch 工具返回给模型的结构，方便按字段消费而不是猜一段纯文本。
 
-    :param status: ok 端口已实听；failed 没起来；refused 本轮次数已用尽。
-    :param url: 成功时可以打开的地址。
-    :param detail: 失败或被拒的原因。
+    :param status: ok 端口已实听；starting 进程在跑但还答不出；failed 进程没能活下来；
+        refused 本轮次数已用尽。
+    :param port: 进程起来后应用该听的端口。不给 URL，免得模型顺手编一个地址报给用户。
+    :param detail: 未就绪、失败或被拒的原因。
     """
 
-    status: Literal["ok", "failed", "refused"]
-    url: str = ""
+    status: Literal["ok", "starting", "failed", "refused"]
+    port: int | None = None
     detail: str = ""
 
 
@@ -64,9 +71,11 @@ class LaunchTool:
         """
 
         async def launch_app() -> LaunchToolResult:
-            """Start or restart this session's application and return the URL to open.
+            """Start or restart this session's application and report whether it is listening.
 
             Takes no arguments: the port, the entry point, and the preview path are all fixed.
+            Returns no address. The platform decides where the user opens the application, so
+            do not invent a URL or tell the user to visit one.
             """
             return await self.launch()
 
@@ -91,4 +100,9 @@ class LaunchTool:
             # 不往上抛。抛出去会中断整轮，而模型本可以读日志、改代码再试一次。
             return LaunchToolResult(status="failed", detail=str(exc))
 
-        return LaunchToolResult(status="ok", url=result.url)
+        # 进程活着但还没应答不算失败，所以单独一档。报成 failed 会把模型推去改一份没有问题的
+        # 代码，再烧掉本轮仅剩的那次 launch 额度。
+        if result.dev_server_status is not DevServerStatus.READY:
+            return LaunchToolResult(status="starting", port=result.port, detail=STARTING_DETAIL)
+
+        return LaunchToolResult(status="ok", port=result.port)

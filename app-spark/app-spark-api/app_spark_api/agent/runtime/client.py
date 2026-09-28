@@ -17,7 +17,7 @@
 """Speaking the Agent Runtime's HTTP contract.
 
 This layer is deliberately separate from provisioning. Where a Runtime lives is the provider's
-business and will change -- local process today, remote sandbox later -- but a Runtime always
+business -- a local process or a remote sandbox -- but a Runtime always
 answers the same HTTP API, so nothing here needs to know which provider produced the URL.
 """
 
@@ -134,7 +134,7 @@ class AgentRuntimeClient:
             base_url=self.handle.base_url,
             timeout=timeout,
             transport=self._transport,
-            headers={"Authorization": f"Bearer {self.handle.runtime_token}"},
+            headers={**self.handle.http_headers, "Authorization": f"Bearer {self.handle.runtime_token}"},
         )
 
     async def health(self) -> RuntimeHealth:

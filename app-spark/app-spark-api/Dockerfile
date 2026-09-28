@@ -2,7 +2,7 @@
 FROM python:3.14-slim-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates git tini \
+    && apt-get install -y --no-install-recommends ca-certificates curl git procps tini vim \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.10.0
 

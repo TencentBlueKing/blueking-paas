@@ -9,7 +9,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
@@ -24,7 +24,7 @@ TOKEN = "test-token"
 class FakeControlPlane:
     """An ingest endpoint that records what it was given and can be told to misbehave.
 
-    Driven through ``httpx.MockTransport`` rather than over a socket, so a test asserts on the
+    Driven through ``httpx2.MockTransport`` rather than over a socket, so a test asserts on the
     exact batches the replicator chose to send instead of on whatever a real server happened to
     log.
 
@@ -61,30 +61,30 @@ class FakeControlPlane:
         """Return the size of each batch this channel was sent."""
         return [count for name, count in self.calls if name == channel]
 
-    def transport(self) -> httpx.MockTransport:
+    def transport(self) -> httpx2.MockTransport:
         """Return a transport that answers as this control plane."""
-        return httpx.MockTransport(self._handle)
+        return httpx2.MockTransport(self._handle)
 
-    def _handle(self, request: httpx.Request) -> httpx.Response:
+    def _handle(self, request: httpx2.Request) -> httpx2.Response:
         name = request.url.path.rsplit("/", 1)[-1]
         body = json.loads(request.content)
         self.calls.append((name, len(body.get("records", []))))
 
         if self.failures > 0:
             self.failures -= 1
-            return httpx.Response(HTTPStatus.SERVICE_UNAVAILABLE, text="try again")
+            return httpx2.Response(HTTPStatus.SERVICE_UNAVAILABLE, text="try again")
 
         if name == "context":
             version = int(body["context_version"])
             if self.context_ceiling is not None and version > self.context_ceiling:
                 # Refused rather than archived, the way a control plane that already holds a
                 # newer document answers: it reports what it kept, not what it was handed.
-                return httpx.Response(HTTPStatus.OK, json={"context_version": self.context_ceiling})
+                return httpx2.Response(HTTPStatus.OK, json={"context_version": self.context_ceiling})
             self.context = body
-            return httpx.Response(HTTPStatus.OK, json={"context_version": version})
+            return httpx2.Response(HTTPStatus.OK, json={"context_version": version})
 
         self._store(name, body["records"])
-        return httpx.Response(HTTPStatus.OK, json={"last_seq": self.last_seq(name)})
+        return httpx2.Response(HTTPStatus.OK, json={"last_seq": self.last_seq(name)})
 
     def _store(self, channel: str, records: list[dict[str, Any]]) -> None:
         """Merge a batch the way a unique constraint on ``(conversation, seq)`` would."""

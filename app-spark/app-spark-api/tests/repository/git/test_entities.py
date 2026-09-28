@@ -60,11 +60,13 @@ def test_git_repository_response_copies_model_fields_and_nests_commit(project, f
     body = GitRepositoryResponse.from_repository(
         repo,
         commit=GitCommitIdentity(author_name="Bot", author_email="bot@example.invalid"),
+        archive_url="/api/projects/test-project/git-repository/archive/",
     )
     dumped = body.model_dump()
     assert dumped["owner"] == repo.owner
     assert dumped["name"] == repo.name
     assert dumped["status"] == repo.status
     assert dumped["commit"] == {"author_name": "Bot", "author_email": "bot@example.invalid"}
+    assert dumped["archive_url"] == "/api/projects/test-project/git-repository/archive/"
     assert "write_token" not in dumped
     assert "write_token_id" not in dumped

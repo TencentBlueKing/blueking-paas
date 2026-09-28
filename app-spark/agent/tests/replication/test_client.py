@@ -2,7 +2,7 @@
 
 from http import HTTPStatus
 
-import httpx
+import httpx2
 import pytest
 
 from app_spark_agent.replication.client import ControlPlaneClient, ControlPlaneError
@@ -12,13 +12,13 @@ from app_spark_agent.state import Channel
 @pytest.mark.parametrize("operation", ["append", "put_context", "put_checkpoint"])
 async def test_structured_api_errors_keep_the_code_detail_and_http_status(operation):
     def respond(request):
-        return httpx.Response(
+        return httpx2.Response(
             HTTPStatus.UNPROCESSABLE_ENTITY,
             json={"code": "INVALID_CONVERSATION_STATE", "detail": "The conversation state is invalid."},
         )
 
     client = ControlPlaneClient(
-        base_url="http://api.invalid/state/", token="secret", transport=httpx.MockTransport(respond)
+        base_url="http://api.invalid/state/", token="secret", transport=httpx2.MockTransport(respond)
     )
     try:
         call = client.append(Channel.MESSAGE, []) if operation == "append" else getattr(client, operation)({})
@@ -45,7 +45,7 @@ async def test_legacy_or_malformed_error_envelopes_preserve_http_status(body, ex
     client = ControlPlaneClient(
         base_url="http://api.invalid/state/",
         token="secret",
-        transport=httpx.MockTransport(lambda request: httpx.Response(403, json=body)),
+        transport=httpx2.MockTransport(lambda request: httpx2.Response(403, json=body)),
     )
     try:
         with pytest.raises(ControlPlaneError) as caught:
@@ -61,7 +61,7 @@ async def test_proxy_error_pages_are_not_copied_into_exceptions():
     client = ControlPlaneClient(
         base_url="http://api.invalid/state/",
         token="secret",
-        transport=httpx.MockTransport(lambda request: httpx.Response(502, text="<html>private-proxy-dump</html>")),
+        transport=httpx2.MockTransport(lambda request: httpx2.Response(502, text="<html>private-proxy-dump</html>")),
     )
     try:
         with pytest.raises(ControlPlaneError) as caught:
@@ -76,10 +76,10 @@ async def test_proxy_error_pages_are_not_copied_into_exceptions():
 
 async def test_transport_failures_do_not_invent_a_server_error_code():
     def respond(request):
-        raise httpx.ConnectError("unreachable")
+        raise httpx2.ConnectError("unreachable")
 
     client = ControlPlaneClient(
-        base_url="http://api.invalid/state/", token="secret", transport=httpx.MockTransport(respond)
+        base_url="http://api.invalid/state/", token="secret", transport=httpx2.MockTransport(respond)
     )
     try:
         with pytest.raises(ControlPlaneError) as caught:

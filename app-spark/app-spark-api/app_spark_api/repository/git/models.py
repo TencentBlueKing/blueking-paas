@@ -42,6 +42,11 @@ class ProjectGitRepository(TimestampedModel):
     clone_url = models.CharField(max_length=512, blank=True, default="")
 
     @property
+    def has_remote_repository(self) -> bool:
+        """Whether the remote repository exists, which is all a *read* needs."""
+        return self.remote_id is not None
+
+    @property
     def public_status_detail(self) -> str:
         """Return a safe summary, including for rows containing legacy errors."""
         # Older rows may contain remote response bodies or internal URLs. Only

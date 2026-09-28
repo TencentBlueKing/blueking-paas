@@ -31,6 +31,32 @@ def _aggregated(**counts_and_items) -> AggregatedSyncResult:
 
 
 class TestSyncIAMV4ModelCommand:
+    @pytest.fixture(autouse=True)
+    def _setup_iam_v4_env(self, settings):
+        """命令只在 V4 且未配置跳过时执行同步"""
+        settings.BK_IAM_VERSION = "v4"
+        settings.BK_IAM_SKIP = False
+
+    @pytest.mark.parametrize(
+        ("version", "skip", "expected_msg"),
+        [
+            ("v3", False, "BK_IAM_VERSION=v3"),
+            ("v4", True, "BK_IAM_SKIP"),
+        ],
+    )
+    def test_skipped(self, settings, version, skip, expected_msg):
+        settings.BK_IAM_VERSION = version
+        settings.BK_IAM_SKIP = skip
+        stdout = StringIO()
+
+        with mock.patch(
+            "paasng.infras.iam.members.management.commands.sync_iam_v4_model.sync_iam_v4_models",
+        ) as mocked:
+            call_command("sync_iam_v4_model", stdout=stdout)
+
+        mocked.assert_not_called()
+        assert expected_msg in stdout.getvalue()
+
     def test_prints_counts_on_success(self):
         aggregated = _aggregated(
             created=[SyncItem(kind="action", identifier="view_basic_info", system_id="bk_paas3")],

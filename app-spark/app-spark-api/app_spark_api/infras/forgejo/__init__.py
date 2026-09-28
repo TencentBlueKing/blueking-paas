@@ -16,15 +16,23 @@
 
 """Forgejo HTTP client used by Git persistence."""
 
+from app_spark_api.infras.forgejo.async_client import ForgejoAsyncClient
 from app_spark_api.infras.forgejo.client import ForgejoClient
-from app_spark_api.infras.forgejo.entities import AccessToken, ForgejoClientConfig, RemoteRepository
+from app_spark_api.infras.forgejo.entities import (
+    AccessToken,
+    ForgejoClientConfig,
+    RemoteBranch,
+    RemoteRepository,
+)
 from app_spark_api.infras.forgejo.exceptions import ForgejoError, ForgejoUnavailableError
 
 __all__ = [
     "AccessToken",
+    "ForgejoAsyncClient",
     "ForgejoClient",
     "ForgejoClientConfig",
     "ForgejoError",
     "ForgejoUnavailableError",
+    "RemoteBranch",
     "RemoteRepository",
 ]

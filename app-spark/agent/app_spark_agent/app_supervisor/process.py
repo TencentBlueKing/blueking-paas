@@ -24,13 +24,23 @@ import os
 import signal
 import socket
 import subprocess
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Protocol
 
+import httpx2
+
 # SIGTERM 之后等多久再 SIGKILL。
 STOP_TIMEOUT_SECONDS = 5.0
+
+# 连不上就是没听，本机 connect 要么立刻成功要么立刻 ECONNREFUSED，不需要给够时间。
+PROBE_CONNECT_TIMEOUT_SECONDS = 0.2
+
+# 等应答要宽得多。这一段是应用自己处理一个请求的时间，不是建连时间：首次请求触发 lazy import、
+# 渲染一个稍大的模板、查一次库，几百毫秒很正常。给太紧会把一个正在正常服务的应用报成没就绪，
+# 预览那边就一直是占位。
+PROBE_READ_TIMEOUT_SECONDS = 2.0
 
 
 class ProcessRegistry(Protocol):
@@ -64,14 +74,49 @@ def tcp_port_is_open(port: int, *, host: str = "127.0.0.1", timeout: float = 0.2
         return False
 
 
+async def http_get_answers(
+    port: int,
+    *,
+    host: str = "127.0.0.1",
+    connect_timeout: float = PROBE_CONNECT_TIMEOUT_SECONDS,
+    read_timeout: float = PROBE_READ_TIMEOUT_SECONDS,
+    path: str = "/",
+) -> bool:
+    """Return whether host:port answers a GET with something that parses as an HTTP response."""
+
+    # 比只连 TCP 严一点：uvicorn 绑上端口到真能处理请求之间有一小段窗口，纯 TCP 探针在那段时间
+    # 就已经算就绪，预览打开会撞上空响应。
+    #
+    # 建连和应答的预算分开：本机 connect 要么立刻成功要么立刻 ECONNREFUSED，而应用处理一个请求
+    # 可以慢得多。合成一个预算会把正在正常服务的应用判成掉听。
+    timeout = httpx2.Timeout(connect_timeout, read=read_timeout, write=read_timeout, pool=connect_timeout)
+
+    # stream 而不是 get：探针只要状态行。读 body 既白花一轮 CPU，也会让一个大页面在每次探测时被
+    # 完整传一遍，而 launch 等待期间探测很密。
+    #
+    # Connection: close 让应用那边自己收尾，不必留一条马上就要被 client 关掉的空闲连接。
+    try:
+        async with (
+            httpx2.AsyncClient(timeout=timeout) as client,
+            client.stream("GET", f"http://{host}:{port}{path}", headers={"connection": "close"}),
+        ):
+            # 任何 HTTP 响应都算在听，包括 4xx / 5xx。应用返回什么状态码是它自己的事，这里只判断
+            # 「有没有一个 HTTP 服务在这个端口上」。
+            return True
+    except httpx2.HTTPError:
+        # 连接被拒、应答超时、对端说的不是 HTTP：都当作没听。
+        return False
+
+
 class ManagedProcess:
     """Spawn, poll, probe, and stop the one child process a caller hosts."""
 
-    def __init__(self, processes: ProcessRegistry, *, probe: Callable[[], bool]) -> None:
+    def __init__(self, processes: ProcessRegistry, *, probe: Callable[[], Awaitable[bool]]) -> None:
         # 每拉起一个子进程就登记，空闲退出 / SIGTERM 的 stop_all 才能杀到。
         self._processes = processes
 
-        # 就绪由调用方定义：这一层不知道该连哪个端口，也不解析 HTTP。
+        # 就绪由调用方定义：这一层不知道该连哪个端口，也不解析 HTTP。探针是 awaitable，因为它
+        # 要发一次真请求，而这一切都跑在 agent 自己的事件循环上。
         self._probe = probe
         self._child: subprocess.Popen[bytes] | None = None
 
@@ -79,12 +124,12 @@ class ManagedProcess:
         """Return whether the child this object started is still running."""
         return self._child is not None and self._child.poll() is None
 
-    def is_ready(self) -> bool:
+    async def is_ready(self) -> bool:
         """Return whether the caller's readiness probe passes.
 
         与 living 无关：探针可能被别人启的进程满足，判活要两者一起看。
         """
-        return self._probe()
+        return await self._probe()
 
     def start(self, spec: ProcessSpec) -> None:
         """Spawn the child spec describes, attach its output to the log, and register it."""

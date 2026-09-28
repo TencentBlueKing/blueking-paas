@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 from app_spark_agent.git import GitIdentity, GitRunner, GitWorkspace, RemoteConfig
@@ -41,9 +41,9 @@ class ForgejoInstance:
     account: str
     password: str
 
-    def client(self) -> httpx.Client:
+    def client(self) -> httpx2.Client:
         """An API client authenticated as the service account."""
-        return httpx.Client(
+        return httpx2.Client(
             base_url=self.base_url.rstrip("/") + "/",
             auth=(self.account, self.password),
             headers={"Accept": "application/json"},

@@ -38,6 +38,8 @@ uv run uvicorn app_spark_api.asgi:application --reload
 必须用 ASGI 服务器（uvicorn）启动。会话接口要把 Agent 的 SSE 事件流边收边转发，
 在 WSGI 下这个流会被缓冲到结束才吐出来，等于失去流式的意义。
 
+日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
+
 ### 运行测试
 
 ```bash
@@ -66,7 +68,7 @@ local_process provider 会为每个 Runtime 生成独立的随机 Bearer token�
 ### 配置
 
 ```yaml
-## Agent Runtime 的驱动方式，目前只有 local_process（在本机 spawn 进程）
+## Agent Runtime 的驱动方式；local_process 在本机 spawn 进程
 AGENT_RUNTIME_PROVIDER: local_process
 AGENT_RUNTIME_PROVIDER_CONFIG:
   ## agent 项目目录，`uv run --project` 指向它
@@ -102,6 +104,33 @@ cd ../agent && uv sync
 本地想不花钱跑通整条链路时，把 `model` 设成 `fake:write-file`——
 这是 agent 内置的确定性假模型，不发起任何网络请求，
 细节见 [agent/README.md](../agent/README.md) 的「假模型」一节。
+
+`e2b` provider 创建、重连和销毁沙箱，并在数据库保留归属与停止记录。Runtime 和预览地址
+分别来自 `sandbox.get_host(runtime_port)` 与 `sandbox.get_host(preview_port)`；预览端口固定为
+9000。生产 provider 尚不会安装或启动 Agent，因此默认模板下还不能直接完成会话。
+`timeout_seconds` 默认 3600 秒，是创建时设置的 E2B 沙箱存活期限；活动和本 provider 的重连不会自动续期。
+需要连续使用超过一小时的部署，应按 E2B 服务端允许的范围调大该值；要让长会话持续可用，还需在用户活动时续期。
+
+```yaml
+AGENT_RUNTIME_PROVIDER: e2b
+AGENT_RUNTIME_PROVIDER_CONFIG:
+  ## 必填：自建 E2B 服务的凭据与管理 API 地址
+  api_key: <your-api-key>
+  api_url: https://example.com/e2b
+  ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
+  # domain: sandbox.example.com
+```
+
+`get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
+Runtime 客户端和预览代理会从 provider 获取并附加所需请求头。
+
+TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
+
+有有效 E2B 配置时，运行
+`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`。
+测试会上传并安装本地构建的 Agent wheel，验证沙箱生命周期、聊天和预览；没有有效配置时跳过。
+真实 E2B 测试固定使用 300 秒的沙箱存活期限，并在测试结束时主动销毁沙箱，避免沿用生产默认值。
+当前测试不验证沙箱内的 Git 或仓库持久化。
 
 ### 会话状态的权威副本
 
@@ -246,6 +275,39 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 只是杀掉了一个进程，下一轮对话会照常把 Runtime 重新拉起来。闸门有两道，因为拉起 Runtime 要花
 好几秒，够另一个请求在这中间把会话结束掉：进来时看一次，Runtime 拉起来之后再回库确认一次，
 确认没过就把刚拉起来的 Runtime 收掉并返回 409（见 `_reject_if_closed_meanwhile()`）。
+
+### 工作区应用的预览
+
+预览是三件事，分开看才对：**平台签发能打开的地址**、**agent 保证约定端口在听**、**前端决定什么时候
+摆给人看**。沙箱只管中间那件——它不知道自己被外面怎么寻址，`app.launched` 里也就没有 url。
+
+`GET .../conversations/<n>/preview/` 返回 `origin` 和 `dev_server_status`。`origin` 是本服务自己的一条
+路径 `.../preview/app/`，前端直接拿去当 iframe 的 `src`；它不依赖 Runtime 存活，会话一建好就有，也不
+落库（由请求推导）。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` / `ready` /
+`stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，继续等
+就好，Runtime 那边不会因此重启它。
+
+`.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
+预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的
+`preview_target` 一次给出（地址、端口代理要的首部、能否发 `X-Forwarded-Host`），local_process 为每个
+Runtime 分一个应用端口，于是多个会话能同时预览。没有 Runtime 是 503，应用没起来是 502。转发时按本服务
+看到的事实重写 `X-Forwarded-For` / `-Proto` / `-Prefix`；`X-Forwarded-Host` 由 provider 的
+`send_forwarded_host` 决定：本地 provider 发送，E2B 因端口代理按 host 路由而不发送。
+客户端自己带的那份不透传；读 `X-Forwarded-Prefix` 的框架能靠它把自己生成的链接
+拼对。
+
+**同源是这块最大的妥协。** 应用是模型写的代码，却和控制面共享 origin，它的 JS 一句
+`fetch("/api/...")` 就能带着用户登录态调平台。HTML 响应因此带一条 CSP，把 `connect-src` /
+`form-action` 锁在预览前缀下，代价是应用不能从浏览器直连第三方。干净的解法是换独立主机名，难点
+在鉴权。上游路径怎么拼、响应头怎么改，都写在 `conversations/preview.py` 里。
+
+两个部署前提：在 Ingress 上终结 TLS 时要配 `SECURE_PROXY_SSL_HEADER`，否则 `origin` 签成
+`http://`，前端是 https 就按 mixed content 拦掉；前端与本服务不同源时，`X-Frame-Options:
+SAMEORIGIN` 要换成 `frame-ancestors`。
+
+反代的已知缺口（都等换独立主机名时连同鉴权一起重做，不在这一轮补）：不支持 WebSocket（`Upgrade`
+属逐跳首部，且 Django 的 `StreamingHttpResponse` 代理不了）；请求体整份进内存，没有流式上传；HTML
+正文里的根绝对路径（`/static/app.css`）仍会 404——重定向那一类已经在响应里改写了，正文没有改写。
 
 ## 部署相关
 

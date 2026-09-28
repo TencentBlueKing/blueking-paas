@@ -82,6 +82,14 @@ WSGI_APPLICATION = "svc_redis.wsgi.application"
 
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 
+# 采集结果缓存在 Django 缓存里, 测试里换成进程内缓存, 免去建缓存表
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "svc-redis-tests",
+    },
+}
+
 # Internationalization
 
 LANGUAGE_CODE = "zh-cn"
@@ -117,3 +125,10 @@ ENABLE_ADMIN = False
 # 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
 BK_CRYPTO_TYPE = "CLASSIC"
 ENCRYPT_CIPHER_TYPE = "FernetCipher"
+
+# 实例指标采集
+METRIC_COLLECT_REQUEST_TIMEOUT = 3
+METRIC_COLLECT_DEADLINE = 8
+METRIC_OOM_KILLED_WINDOW = 300
+# 测试里关掉缓存
+METRIC_COLLECT_CACHE_TTL = 0

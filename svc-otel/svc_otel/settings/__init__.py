@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "paas_service",
     "svc_otel.vendor",
+    "bkpaas_auth",
 ]
 
 MIDDLEWARE = [
@@ -110,6 +111,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "bkpaas_auth.middlewares.CookieLoginMiddleware",
     # Append middlewares from paas_service to make client auth works
     "paas_service.auth.middleware.VerifiedClientMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -295,6 +297,26 @@ PAAS_SERVICE_JWT_CLIENTS = [
 # 是否开启管理端功能
 ENABLE_ADMIN = True
 
+BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
+# 登录票据类型：bk_token / bk_ticket
+BKAUTH_BACKEND_TYPE = env("BKAUTH_BACKEND_TYPE", default="bk_token")
+
+# 未登录跳转页，不要填验票接口
+LOGIN_URL = env.str("BK_LOGIN_API_URL", default="http://paasee.blueking-fake.com/login")
+
+# 用 cookie 换用户信息。bk_ticket 配完整 check_token URL；未设置则拼 is_login
+# 不要同时设 BKAUTH_USER_INFO_APIGW_URL，bk_ticket 没有 APIGW 实现
+BKAUTH_USER_COOKIE_VERIFY_URL = env.str(
+    "BKAUTH_USER_COOKIE_VERIFY_URL",
+    default=LOGIN_URL.rstrip("/") + env.str("BK_LOGIN_VERIFY_API_PATH", default="/api/v3/is_login/"),
+)
+BKAUTH_USER_INFO_APIGW_URL = env.str("BKAUTH_USER_INFO_APIGW_URL", default="")
+
+AUTHENTICATION_BACKENDS = [
+    # 使用数据库表的 django.contrib.auth.User，登录成功后 get_or_create
+    "bkpaas_auth.backends.DjangoAuthUserCompatibleBackend",
+]
+
 # 跳转回应用首页的 url 模板
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"
 
@@ -303,6 +325,9 @@ BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default="")
 # 调用 API 需要的信息
 BK_APP_CODE = env("BK_APP_CODE", default="bk_paas3")
 BK_APP_SECRET = env("BK_APP_SECRET", default="")
+# bk_token 验票所需应用凭证；未单独配置时回落到上面的应用凭证，二者须非空；bk_ticket 不用
+BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default=BK_APP_CODE)
+BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default=BK_APP_SECRET)
 # 对外版蓝鲸监控的 API 注册在 ESB
 BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default="")
 # 上云版蓝鲸监控的 API 注册在 APIGW

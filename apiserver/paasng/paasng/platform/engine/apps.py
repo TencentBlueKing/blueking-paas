@@ -35,6 +35,10 @@ class EngineConfig(PlugableAppConfig):
         register_metrics()
 
         from . import handlers  # noqa: F401
+        from .configurations.build_token import load_signing_key_set
         from .processes import handlers as deploy_phase_handlers  # noqa: F401
+
+        # 签名密钥配置非法时启动即失败，不留到构建时才暴露
+        load_signing_key_set()
 
         # fmt: on

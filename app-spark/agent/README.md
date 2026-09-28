@@ -24,10 +24,10 @@ uv sync
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 所有 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面） |
-| `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` | 调用真实模型时是 | 用户态 access_token。app-spark 创建 bkaidev 空间和单个智能体后注入；出站只放进 `X-Bkapi-Authorization`。`fake:*` 不需要 |
-| `APP_SPARK_AGENT_MODEL_API_KEY` | 调用真实模型时是 | 兼容回落。未注入上面的 token 时当作 access_token 用。`fake:*` 不需要 |
-| `APP_SPARK_AGENT_MODEL_NAME` | 调用真实模型时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
-| `APP_SPARK_AGENT_MODEL_BASE_URL` | 调用真实模型时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
+| `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` | 走 bkaidev 时是 | 用户态 access_token。出站只放进 `X-Bkapi-Authorization`。不参与官网直连 |
+| `APP_SPARK_AGENT_MODEL_API_KEY` | 走官网直连时是 | 和 `MODEL` 的 `<provider>:<model>` 一起走官网 Bearer。有任一网关项时不拿它补网关 |
+| `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
+| `APP_SPARK_AGENT_MODEL_BASE_URL` | 走 bkaidev 时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，由接入层为每个沙箱分配（缺省 `8000`）。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
@@ -38,8 +38,9 @@ uv sync
 | `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条。launch 会把应用 stdout/stderr 接到这里，打开失败不阻止已实听的成功 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
 
-就绪门闩：`fake:*` 直接就绪；真实模型要 access_token 非空 **且** `MODEL_BASE_URL` 非空 **且** `MODEL_NAME` 在对照表。
-access_token 取值：`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` → `APP_SPARK_AGENT_MODEL_API_KEY`。
+就绪门闩三选一，不要混用：`fake:*` 直接就绪；只配 `MODEL_API_KEY`（没有网关项）走官网直连；
+`BK_AIDEV_ACCESS_TOKEN`、`MODEL_BASE_URL`、对照表内的 `MODEL_NAME` 三者齐全走 bkaidev。
+网关三项只要出现一项，缺的那些不会用 `MODEL_API_KEY` 补上。
 bkaidev 鉴权是 `X-Bkapi-Authorization: {"access_token":"..."}`，不是 `Authorization: Bearer`。
 沙箱不注入 `bk_app_code` / `bk_app_secret`。
 

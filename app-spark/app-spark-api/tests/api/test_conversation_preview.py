@@ -41,9 +41,10 @@ from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
     AgentRuntimeHandle,
     AgentUnavailableError,
+    PreviewTarget,
     RuntimeHealth,
-    get_agent_runtime_provider,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project
@@ -183,10 +184,10 @@ def stage(monkeypatch):
     apart: not passed means no Runtime at all, ``None`` means a Runtime that cannot be read, and
     a string is whatever a live one reported.
     """
-    apps: dict[str, str] = {}
+    apps: dict[str, PreviewTarget] = {}
     statuses: dict[str, str | None] = {}
 
-    async def fake_preview_upstream(conversation_id: str) -> str | None:
+    async def fake_preview_target(conversation_id: str) -> PreviewTarget | None:
         return apps.get(conversation_id)
 
     async def fake_peek(conversation_id: str) -> AgentRuntimeHandle | None:
@@ -205,13 +206,22 @@ def stage(monkeypatch):
         return attrs.evolve(HEALTH, dev_server_status=status)
 
     provider = get_agent_runtime_provider()
-    monkeypatch.setattr(provider, "preview_upstream", fake_preview_upstream)
+    monkeypatch.setattr(provider, "preview_target", fake_preview_target)
     monkeypatch.setattr(provider, "peek", fake_peek)
     monkeypatch.setattr(AgentRuntimeClient, "health", fake_health)
 
-    def attach(conversation: Conversation, *, app: str | None = None, dev_server_status=_NO_RUNTIME) -> None:
+    def attach(
+        conversation: Conversation,
+        *,
+        app: str | None = None,
+        http_headers: dict[str, str] | None = None,
+        send_forwarded_host: bool = True,
+        dev_server_status=_NO_RUNTIME,
+    ) -> None:
         if app is not None:
-            apps[str(conversation.id)] = app
+            apps[str(conversation.id)] = PreviewTarget(
+                base_url=app, http_headers=http_headers or {}, send_forwarded_host=send_forwarded_host
+            )
         if dev_server_status is not _NO_RUNTIME:
             statuses[str(conversation.id)] = dev_server_status
 
@@ -363,6 +373,42 @@ async def test_credentials_cross_neither_direction(aapi_client, conversation, st
     assert "authorization" not in leaky.received[0].headers
     # 反方向：一个叫 sessionid 的 Cookie 就能把用户顶下线。
     assert "Set-Cookie" not in response.headers
+
+
+async def test_only_the_providers_transport_credentials_reach_its_port_proxy(aapi_client, conversation, stage):
+    """端口代理认的令牌由 provider 给，浏览器自己带一份同名的不能混进去。"""
+    app = FakeApp()
+    with serving_app(app) as upstream:
+        stage(conversation, app=upstream, http_headers={"X-Access-Token": "sandbox-token"}, send_forwarded_host=False)
+
+        await collect_body(
+            await aapi_client.get(build_app_url(conversation.number), headers={"X-Access-Token": "forged"})
+        )
+
+    assert app.received[0].headers["x-access-token"] == "sandbox-token"
+
+
+@pytest.mark.parametrize(
+    ("http_headers", "send_forwarded_host"),
+    [
+        pytest.param({}, True, id="nothing-in-between"),
+        # 带传输首部不等于容不下 X-Forwarded-Host：一个只加追踪头的 provider 不该让应用丢掉 host。
+        pytest.param({"X-Trace-Id": "t"}, True, id="headers-that-are-not-a-host-routing-proxy"),
+        pytest.param({"X-Access-Token": "sandbox-token"}, False, id="a-proxy-that-routes-by-host"),
+    ],
+)
+async def test_the_forwarded_host_follows_what_the_provider_says(
+    aapi_client, conversation, stage, http_headers, send_forwarded_host
+):
+    app = FakeApp()
+    with serving_app(app) as upstream:
+        stage(conversation, app=upstream, http_headers=http_headers, send_forwarded_host=send_forwarded_host)
+
+        await collect_body(await aapi_client.get(build_app_url(conversation.number)))
+
+    assert ("x-forwarded-host" in app.received[0].headers) is send_forwarded_host
+    # 其余几条与 provider 无关，照常重写。
+    assert app.received[0].headers["x-forwarded-prefix"].endswith(f"/conversations/{conversation.number}/preview/app")
 
 
 async def test_a_redirect_the_application_issues_stays_inside_the_preview(aapi_client, conversation, stage):

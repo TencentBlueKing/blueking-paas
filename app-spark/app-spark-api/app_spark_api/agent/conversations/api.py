@@ -296,13 +296,14 @@ async def proxy_preview(
     conversation = await _get_conversation(request, project_id, number)
 
     # 没有 Runtime 就没有上游。不在这里顺手拉一个：看一眼预览不该等于给会话开一个 agent。
-    upstream = await services.get_preview_upstream(conversation)
-    if upstream is None:
+    # 地址和它要带的 headers 一次拿全，分两次问可能正好跨过沙箱被替换，拿到一个沙箱的地址配另一个的凭据。
+    target = await services.get_preview_target(conversation)
+    if target is None:
         raise error_codes.PREVIEW_RUNTIME_NOT_RUNNING
 
     return await preview.forward_to_app(
         request,
-        upstream=upstream,
+        target=target,
         subpath=subpath,
         # 和 origin 同一个值。应用自己发的重定向要靠它拉回前缀下面，否则浏览器第一跳就出去了。
         preview_root=preview.build_preview_origin(request, project_id=project_id, number=number),

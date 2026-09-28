@@ -141,6 +141,37 @@ async def test_every_runtime_client_request_uses_the_handle_bearer():
     ]
 
 
+async def test_provider_port_header_is_sent_alongside_the_runtime_bearer():
+    """An E2B proxy token and an Agent Runtime token protect different HTTP hops."""
+    sent: list[httpx2.Request] = []
+
+    def respond(request: httpx2.Request) -> httpx2.Response:
+        sent.append(request)
+        return httpx2.Response(
+            200,
+            json={
+                "model": "fake:write-file",
+                "conversation_id": None,
+                "context_version": 0,
+                "log_seq": 0,
+                "ui_event_seq": 0,
+                "running": False,
+            },
+        )
+
+    handle = AgentRuntimeHandle(
+        conversation_id=CONVERSATION_ID,
+        base_url="http://runtime.invalid",
+        runtime_token=RUNTIME_TOKEN,
+        http_headers={"X-Access-Token": "sandbox-token"},
+    )
+    await AgentRuntimeClient(handle, transport=httpx2.MockTransport(respond)).health()
+
+    assert sent[0].headers["x-access-token"] == "sandbox-token"
+    assert sent[0].headers["authorization"] == f"Bearer {RUNTIME_TOKEN}"
+    assert "sandbox-token" not in repr(handle)
+
+
 async def test_each_turn_gets_its_own_run_id():
     """The Runtime refuses a replayed one, so the id cannot be reused between turns."""
     client = runtime_answering({"/runs": (200, b"data: {}\n\n")})

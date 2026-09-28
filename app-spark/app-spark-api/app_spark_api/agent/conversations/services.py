@@ -45,8 +45,8 @@ from app_spark_api.agent.runtime import (
     EventPage,
     GitRemote,
     StateCallback,
-    get_agent_runtime_provider,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
+    from app_spark_api.agent.runtime import AgentRun, PreviewTarget, RuntimeHealth
     from app_spark_api.core.projects.models import Project
     from app_spark_api.repository.git.models import ProjectGitRepository
 
@@ -130,13 +130,14 @@ async def get_dev_server_status(conversation: Conversation) -> str | None:
     return health.dev_server_status
 
 
-async def get_preview_upstream(conversation: Conversation) -> str | None:
-    """Return where this service should proxy the conversation's preview to.
+async def get_preview_target(conversation: Conversation) -> PreviewTarget | None:
+    """Return where, and how, this service should proxy the conversation's preview to.
 
     :param conversation: Conversation whose application is to be proxied.
-    :return: A base URL, or ``None`` when no Runtime is serving the conversation.
+    :return: The application's address with its transport headers, or ``None`` when no
+        Runtime is serving the conversation.
     """
-    return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
+    return await get_agent_runtime_provider().preview_target(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:

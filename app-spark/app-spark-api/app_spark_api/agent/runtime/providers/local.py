@@ -40,6 +40,7 @@ from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
     GitRemote,
     LocalProcessConfig,
+    PreviewTarget,
     StateCallback,
 )
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
@@ -191,15 +192,16 @@ class LocalProcessProvider(AgentRuntimeProvider):
                 return None
             return runtime.handle
 
-    async def preview_upstream(self, conversation_id: str) -> str | None:
+    async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
         async with self._lock:
             runtime = self._runtimes.get(conversation_id)
             if runtime is None or not runtime.alive:
                 return None
             # Loopback, even though the application binds 0.0.0.0: the proxy runs in this very
             # process, so it is on the same host either way, and naming loopback is what keeps
-            # this from depending on which interface the host happens to have.
-            return f"http://127.0.0.1:{runtime.app_port}"
+            # this from depending on which interface the host happens to have. Nothing sits in
+            # between, so the application may be told the browser's host.
+            return PreviewTarget(base_url=f"http://127.0.0.1:{runtime.app_port}")
 
     async def terminate(self, conversation_id: str) -> None:
         async with self._lock:

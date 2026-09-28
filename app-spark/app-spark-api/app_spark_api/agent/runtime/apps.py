@@ -14,4 +14,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Project source storage models."""
+"""Django registration for persisted Agent Runtime sandboxes."""
+
+from django.apps import AppConfig
+
+
+class RuntimeConfig(AppConfig):
+    """Register the Runtime app and its sandbox history model."""
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "app_spark_api.agent.runtime"

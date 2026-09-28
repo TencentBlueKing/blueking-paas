@@ -101,7 +101,27 @@ export interface RuntimeStateResponse {
   log_seq: number;
   ui_event_seq: number;
   running: boolean;
+  /**
+   * 活跃 Runtime 报的 dev server 状态。没有 origin：预览地址以
+   * `GET .../conversations/{number}/preview/` 为准。
+   */
+  dev_server_status: DevServerStatus | null;
   replication_pending: boolean;
+}
+
+/**
+ * 工作区应用此刻能不能服务，和「有没有预览地址」是两回事。
+ *
+ * 四个字符串把「进程还在」和「端口已经能应答」拆开。只有 `ready` 才能把 origin 挂上 iframe；
+ * `starting` 是还在等端口，不是失败。`null` 表示没有 Runtime，或有但问不到。
+ */
+export type DevServerStatus = 'not_started' | 'starting' | 'ready' | 'stopped';
+
+/** GET .../conversations/{number}/preview/ */
+export interface PreviewResponse {
+  /** 末尾带斜杠，直接作为 iframe 的 src。会话一建好就有，Runtime 回收后再拉起也不变。 */
+  origin: string;
+  dev_server_status: DevServerStatus | null;
 }
 
 export interface StartRunRequest {

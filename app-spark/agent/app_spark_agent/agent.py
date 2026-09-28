@@ -46,21 +46,28 @@ class ApiKeyProvider(Protocol):
 def build_model() -> Model:
     """Build the chat model the agent will call."""
 
+    mode = settings.model_mode()
+
     # fake: 不发起网络请求。infer_model 只特殊处理 "test"，其它未知前缀会直接拒。
-    if settings.MODEL.startswith(FAKE_MODEL_PREFIX):
+    if mode == settings.ModelMode.FAKE:
         return build_fake_model(settings.MODEL.removeprefix(FAKE_MODEL_PREFIX))
 
-    token = settings.gateway_access_token()
-    base_url = settings.MODEL_BASE_URL.strip()
-    model_name = settings.resolved_model_name()
-    profile = settings.openai_capability_profile(model_name)
+    # 网关三件套齐全。协议仍是 Chat Completions，鉴权换头，不用 MODEL_API_KEY。
+    if mode == settings.ModelMode.GATEWAY:
+        model_name = settings.resolved_model_name()
+        profile = settings.openai_capability_profile(model_name)
+        token = settings.gateway_access_token()
+        assert profile is not None
+        assert token is not None
+        return _build_gateway_model(
+            model_name,
+            settings.MODEL_BASE_URL.strip(),
+            token,
+            profile=profile,
+        )
 
-    # 网关三件套：token + 地址 + 对照表内模型。协议仍是 Chat Completions，鉴权换头。
-    if token and base_url and profile is not None:
-        return _build_gateway_model(model_name, base_url, token, profile=profile)
-
-    # 没有网关意图、只注入了 MODEL_API_KEY：官网 / 单测直连。
-    if settings.uses_direct_provider():
+    # 只注入了 MODEL_API_KEY：按 MODEL 的 <provider>:<model> 走官网。
+    if mode == settings.ModelMode.DIRECT:
         return _build_inferred_model()
 
     # 缺项不推断、也不发往公网；占位模型让进程能起来、/health 能答。
@@ -96,7 +103,9 @@ def _build_gateway_model(
 
 async def _unready_stream(_messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str]:
     """未就绪占位：被调用说明门闩被绕过了。"""
-    raise RuntimeError("model is not ready: need access_token, MODEL_BASE_URL, and a listed MODEL_NAME")
+    raise RuntimeError(
+        "model is not ready: fake, MODEL_API_KEY alone, or BK_AIDEV_ACCESS_TOKEN with MODEL_BASE_URL and a listed MODEL_NAME"
+    )
     yield ""
 
 

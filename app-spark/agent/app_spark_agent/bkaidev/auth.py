@@ -44,7 +44,7 @@ class WithoutAuthorization(httpx2.AsyncBaseTransport):
     """剥掉 OpenAI SDK 自动加上的 Authorization: Bearer <api_key>。
 
     api_key 必须填占位才能构造客户端，但出站只允许 X-Bkapi-Authorization。
-    锁定的 openai v3.x 依赖 httpx2；AidevApiClient 用的是 httpx，两个包不能通用。
+    锁定的 openai v3.x 依赖 httpx2。
     """
 
     def __init__(self, wrapped: httpx2.AsyncBaseTransport | None = None) -> None:

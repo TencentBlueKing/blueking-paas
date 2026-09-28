@@ -459,6 +459,8 @@ ensure-runtimes() {
 }
 
 ensure-init-data() {
+    # 需先于 create_3rd_party_apps 执行：创建应用时依赖权限中心已有权限模型（非 V4 环境会自动跳过）
+    python manage.py sync_iam_v4_model
     python manage.py loaddata fixtures/smart_advisor.yaml
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     # role=50:基础可读，可以调用查询类系统 API

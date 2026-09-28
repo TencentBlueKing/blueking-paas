@@ -6,6 +6,8 @@
 4. 根目录执行 `npm run dev`
 5. 配置 host，打开 BK_APP_HOST 配置了域名的地址
 
+本地 `BK_API_URL` 若指向不带 `/api-svc` 前缀的 API 服务，在 `.bk.local.env` 中设置 `BK_API_PROXY_STRIP_PREFIX = '1'`。
+
 ### 生产构建
 根目录执行`npm run build`
 

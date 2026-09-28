@@ -64,7 +64,9 @@ class TestCreate3rdPartyApps:
     def test_rollback_when_iam_init_failed(self, source_file: str, app_code: str):
         """权限中心初始化失败时，不应在本地残留应用及分级管理员记录"""
 
-        def _register_then_fail(application: Application):
+        def _register_then_fail(application: Application, add_creator_to_admin_group: bool = True):
+            # 第三方应用创建时不应把创建者加入管理者用户组
+            assert add_creator_to_admin_group is False
             ApplicationGradeManager.objects.create(
                 app_code=application.code, grade_manager_id=1, tenant_id=application.tenant_id
             )

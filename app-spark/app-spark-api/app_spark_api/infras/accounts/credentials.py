@@ -27,7 +27,8 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
 # Where a proxy that has already stripped the cookie puts the same value, keyed like
-# request.META. Matches the fallback blueking-paas apiserver reads.
+# request.META. Same HEADER_KEY as apiserver's APIGateWayBackend / BKSSMBackend
+# (paasng.infras.accounts.oauth.backends).
 _CREDENTIAL_HEADERS = {
     UserCredentialType.BK_TOKEN: "HTTP_X_USER_BK_TOKEN",
     UserCredentialType.BK_TICKET: "HTTP_X_USER_BK_TICKET",

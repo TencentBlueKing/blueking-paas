@@ -100,10 +100,11 @@ class AccessTokenClient:
                 f"The token service refused the access_token exchange with HTTP {response.status_code}"
             )
 
+        # ValueError：正文不是 JSON；AttributeError：是 JSON 但不是 mapping（.get 不存在）。
         try:
             data = response.json().get("data")
         except ValueError, AttributeError:
-            raise AccessTokenUnavailableError("The token service answered with a body that is not a JSON object")
+            raise AccessTokenUnavailableError("The token service answered with a body that is not a JSON mapping")
 
         # 与 apiserver 的 validate_response 相同：data 为空视为换票失败，而不是拿空 token 去拉起 Runtime。
         token = data.get("access_token") if isinstance(data, dict) else None

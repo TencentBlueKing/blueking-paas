@@ -94,6 +94,8 @@ async def test_bk_token_login_is_verified_by_bk_login():
         pytest.param(httpx2.Response(200, json={"code": 1, "data": None}), id="empty-data"),
         pytest.param(httpx2.Response(200, json={"data": {"access_token": ""}}), id="empty-token"),
         pytest.param(httpx2.Response(200, text="not json"), id="not-json"),
+        # JSON 数组走 AttributeError：.get 不存在，不能当成「有 data 字段的 mapping」。
+        pytest.param(httpx2.Response(200, json=["not", "a", "mapping"]), id="json-array"),
     ],
 )
 async def test_a_failed_exchange_is_reported_without_echoing_secrets(response):

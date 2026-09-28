@@ -19,6 +19,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from django.http import StreamingHttpResponse
 from django.shortcuts import aget_object_or_404
 from ninja import Path, Router
 
@@ -27,7 +28,7 @@ from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
-from app_spark_api.repository.git import services
+from app_spark_api.repository.git import archives, services
 from app_spark_api.repository.git.entities import GitRepositoryResponse
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
 from app_spark_api.repository.git.factory import get_repo_server_config
@@ -58,6 +59,43 @@ async def get_git_repository(request: HttpRequest, project_id: str = PROJECT_ID)
     except ProjectGitRepository.DoesNotExist as exc:
         raise error_codes.GIT_REPOSITORY_NOT_FOUND from exc
     return _to_response(repo)
+
+
+@router.get(
+    "archive/",
+    response={**ERROR_RESPONSES},
+    openapi_extra={
+        "responses": {
+            HTTPStatus.OK: {
+                "description": "下载源码压缩包",
+                "content": {archives.ARCHIVE_MEDIA_TYPE: {"schema": {"type": "string", "format": "binary"}}},
+            },
+        },
+    },
+    url_name="git-repository-archive",
+    summary="下载 Project 已保存的源码压缩包",
+)
+async def download_git_archive(request: HttpRequest, project_id: str = PROJECT_ID):
+    """工作分支最新提交的 zip 包，浏览器可以直接作为链接打开。
+
+    内容是 Agent 最后一次成功保存的那一轮，而不是运行中 Runtime 工作区的实时状态；文件名里带
+    commit 短 SHA，调用方据此分辨拿到的是哪一版。
+    """
+    project = await _get_project(request, project_id)
+    try:
+        repo = await ProjectGitRepository.objects.aget(project=project)
+    except ProjectGitRepository.DoesNotExist as exc:
+        raise error_codes.GIT_REPOSITORY_NOT_FOUND from exc
+    if not repo.has_remote_repository:
+        raise error_codes.GIT_REPOSITORY_NOT_READY
+    archive = await archives.open_project_source_archive(repo)
+    # Streamed rather than buffered: the archive is as big as the Project's source, and
+    # holding one in memory per concurrent download is not a size this service controls.
+    return StreamingHttpResponse(
+        archive.chunks,
+        content_type=archive.media_type,
+        headers={"Content-Disposition": f'attachment; filename="{archive.filename}"'},
+    )
 
 
 @router.post(
@@ -104,4 +142,8 @@ async def _get_project(request: HttpRequest, project_id: str) -> Project:
 
 
 def _to_response(repo: ProjectGitRepository) -> GitRepositoryResponse:
-    return GitRepositoryResponse.from_repository(repo, commit=get_repo_server_config().commit_identity())
+    return GitRepositoryResponse.from_repository(
+        repo,
+        commit=get_repo_server_config().commit_identity(),
+        archive_url=archives.archive_url_for(repo),
+    )

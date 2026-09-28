@@ -74,6 +74,27 @@ class RemoteRepository:
 
 
 @attrs.frozen
+class RemoteBranch:
+    """A branch as Forgejo described it, reduced to the commit its tip is at.
+
+    :param name: Branch name, as Forgejo echoed it back.
+    :param commit: Full SHA the branch currently points at.
+    """
+
+    name: str
+    commit: str
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> RemoteBranch:
+        if not isinstance(payload, dict):
+            raise ForgejoUnavailableError(f"Expected a branch object, got {payload!r}")
+        try:
+            return cls(name=str(payload["name"]), commit=str(payload["commit"]["id"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ForgejoUnavailableError(f"Unreadable branch response: {exc}") from exc
+
+
+@attrs.frozen
 class AccessToken:
     """A Forgejo access token. ``sha1`` is present only on create."""
 

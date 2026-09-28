@@ -4,12 +4,14 @@ import type {
   AuthenticatedUserResponse,
   ConversationHistoryResponse,
   ConversationResponse,
+  GitRepositoryResponse,
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
   PagedConversationResponse,
   PagedProjectResponse,
   PageQuery,
+  PreviewResponse,
   ProjectCreateRequest,
   ProjectResponse,
   RuntimeStateResponse,
@@ -24,7 +26,11 @@ export type {
   ConversationHistoryRecord,
   ConversationHistoryResponse,
   ConversationResponse,
+  DevServerStatus,
   ErrorResponse,
+  GitCommitIdentity,
+  GitRepositoryResponse,
+  GitRepositoryStatus,
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
@@ -32,6 +38,7 @@ export type {
   PagedProjectResponse,
   PagedResponse,
   PageQuery,
+  PreviewResponse,
   ProjectCreateRequest,
   ProjectResponse,
   RuntimeStateResponse,
@@ -56,6 +63,13 @@ export const createProject = (payload: ProjectCreateRequest): Promise<ProjectRes
   http.post(`${apiPrefix}/projects/`, payload)
 );
 
+/**
+ * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。
+ */
+export const getGitRepository = (projectId: string): Promise<GitRepositoryResponse> => (
+  http.get(`${apiPrefix}/projects/${projectId}/git-repository/`, {}, { globalError: false })
+);
+
 export const listConversations = (
   projectId: string,
   query: ListConversationsQuery = {},
@@ -72,6 +86,24 @@ export const getConversation = (
   number: number,
 ): Promise<RuntimeStateResponse> => (
   http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/`)
+);
+
+/**
+ * 这个会话的工作区应用该去哪儿打开，以及此刻打不打得开。
+ *
+ * 会话一创建就可以问。`origin` 末尾带斜杠，直接当作 iframe 的 src；能不能看只看
+ * `dev_server_status`。Runtime 联系不上时仍是 200，地址照常返回，所以这里关掉全局报错：
+ * 预览面板会每 5 秒打一次，一句 toast 不该跟着响。
+ */
+export const getConversationPreview = (
+  projectId: string,
+  number: number,
+): Promise<PreviewResponse> => (
+  http.get(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/`,
+    {},
+    { globalError: false },
+  )
 );
 
 export const closeConversation = (

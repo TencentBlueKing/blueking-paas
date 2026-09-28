@@ -22,15 +22,14 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, StateCallback
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, PreviewTarget, StateCallback
 
 
 class AgentRuntimeProvider(abc.ABC):
     """Brings an Agent Runtime up for a conversation, and takes it down again.
 
-    This is the seam the deployment story moves along. Today the only implementation spawns a
-    process on this host; a sandbox implementation would replace it wholesale without anything
-    above having to change, because both hand back the same
+    This is the seam the deployment story moves along. One implementation spawns a process on
+    this host; a sandbox implementation owns the remote sandbox. Both hand back the same
     :class:`~app_spark_api.agent.runtime.entities.AgentRuntimeHandle` and the Runtime behind it
     speaks the same HTTP either way.
     """
@@ -80,6 +79,24 @@ class AgentRuntimeProvider(abc.ABC):
 
         :param conversation_id: Conversation to look for.
         :return: Where the Runtime can be reached, or ``None`` if none is serving it.
+        """
+
+    @abc.abstractmethod
+    async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
+        """Return where, and how, this service should proxy the conversation's preview to.
+
+        The workspace application, not the Runtime's own API: what a user opens when they want
+        to look at what the agent built. Asking the provider is the whole point -- where that
+        application is reachable from is as provider-specific as where the Runtime lives, and
+        it is the one thing the sandbox itself cannot say, since nothing inside it knows how
+        the outside addresses it.
+
+        This never starts anything, for the same reason :meth:`peek` does not: looking at a
+        conversation must not provision an agent for it.
+
+        :param conversation_id: Conversation whose application is to be proxied.
+        :return: The application's address plus the transport it needs, or ``None`` when no
+            Runtime is serving the conversation and there is therefore nothing to proxy to.
         """
 
     @abc.abstractmethod

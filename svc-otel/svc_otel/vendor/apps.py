@@ -20,3 +20,10 @@ from django.apps import AppConfig
 
 class VendorConfig(AppConfig):
     name = "svc_otel.vendor"
+
+    def ready(self):
+        from bkpaas_auth.monkey import patch_middleware_get_user
+
+        # Patch the get_user function in the auth module to make bkpaas_auth work properly.
+        # This mainly changed how the auth backend was used.
+        patch_middleware_get_user()

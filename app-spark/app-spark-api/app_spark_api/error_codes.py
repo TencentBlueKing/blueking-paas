@@ -107,5 +107,18 @@ class ErrorCodes:
     )
     AGENT_UNAVAILABLE = ErrorCode(_("The Agent Runtime is unavailable."), status_code=HTTPStatus.BAD_GATEWAY)
 
+    # --- Workspace application preview --------------------------------------------------------------
+    # Two separate failures, because only the first one is the user's to fix. No Runtime means
+    # nothing is serving this conversation yet, which a turn of conversation resolves; an
+    # unreachable application means the Runtime is up but what the model wrote is not answering.
+    PREVIEW_RUNTIME_NOT_RUNNING = ErrorCode(
+        _("This conversation has no running Agent Runtime, so its application cannot be opened."),
+        status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+    )
+    PREVIEW_APP_UNREACHABLE = ErrorCode(
+        _("This conversation's application is not answering."),
+        status_code=HTTPStatus.BAD_GATEWAY,
+    )
+
 
 error_codes = ErrorCodes()

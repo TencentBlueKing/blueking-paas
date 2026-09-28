@@ -47,12 +47,17 @@ export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
  *
  * `origin` 第一次拿到就留下，后面只看 `dev_server_status` 变不变。地址有了不等于页面能开，
  * 只有 `ready` 才把 origin 交给 iframe。
+ *
+ * 接口只报地址和状态，模型改了代码这两样都不变，轮询看不出页面该刷新了。所以另给一个 `frameKey`，
+ * 一轮对话结束就递增，让 iframe 重新挂一次。
  */
 export const useConversationPreview = (panelOpen: Ref<boolean>) => {
-  const { projectId, conversationNumber, isLive } = storeToRefs(useProjectStore());
+  const { projectId, conversationNumber, isLive, status } = storeToRefs(useProjectStore());
 
   const origin = ref('');
   const devServerStatus = ref<DevServerStatus | null>(null);
+  /** 作为 iframe 的 key，变了就重新挂载、重新请求页面。 */
+  const frameKey = ref(0);
   /**
    * 这次打开面板后还没问到 preview。离开面板、换会话都会重新置上，
    * 这样回来时先占位，问到 ready 再挂 iframe。
@@ -135,6 +140,12 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
 
   watch([panelOpen, projectId, conversationNumber, isLive], sync, { immediate: true });
 
+  // 文件是在一轮对话里写的，回到 idle 时通常已经写完。不能指望状态变化来触发：只改文件时进程不
+  // 重启，状态一直是 ready；就算重启了，5 秒一拍的轮询也未必赶得上中间那段 starting。
+  watch(status, (next, prev) => {
+    if (next === 'idle' && prev !== 'idle') frameKey.value += 1;
+  });
+
   onScopeDispose(() => {
     stop();
     generation += 1;
@@ -164,5 +175,5 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
 
   const waiting = computed(() => phase.value === 'pending' || phase.value === 'starting');
 
-  return { phase, frameSrc, waiting };
+  return { phase, frameSrc, frameKey, waiting };
 };

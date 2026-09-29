@@ -31,6 +31,7 @@ from paas_wl.utils.constants import PodPhase
 from paas_wl.utils.text import b64encode
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
+from paasng.platform.engine.configurations.image import kaniko_cache_repository
 from paasng.utils.blobstore import make_blob_store
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
@@ -105,7 +106,7 @@ class KanikoBuildExecutor:
             "SOURCE_GET_URL": self._generate_source_get_url(),
             "OUTPUT_IMAGE": self.build.output_image,
             "DOCKERFILE_PATH": self.build.dockerfile_path,
-            "CACHE_REPO": f"{output_image_info.domain}/{output_image_info.name}/dockerbuild-cache",
+            "CACHE_REPO": kaniko_cache_repository(f"{output_image_info.domain}/{output_image_info.name}"),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
             "DOCKER_CONFIG_JSON": generate_dockerconfig_b64(),
             "SKIP_TLS_VERIFY_REGISTRIES": (

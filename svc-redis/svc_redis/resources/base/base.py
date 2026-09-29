@@ -102,3 +102,16 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
 
     ep_pool = ContextConfigurationPoolMap.from_db()[cluster_name]
     return EnhancedApiClient(ep_pool=ep_pool)
+
+
+def clone_client(client: EnhancedApiClient) -> EnhancedApiClient:
+    """克隆一个 client, 供单个并发任务独占使用
+
+    EnhancedApiClient.call_api 会改写自身的 configuration, 并对共享的 HAEndpointPool 做
+    elect/fail/succeed; 多个线程共用一个 client 时, 请求可能被发到别的线程选中的 endpoint,
+    失败也可能记到健康 endpoint 上(多 endpoint 的集群会被误判).
+
+    克隆复用原 client 的 Configuration 对象, 底层 HTTP 连接池(make_rest_client 的缓存)
+    不会重建; 但持有独立的 HAEndpointPool, 选举与评分互不影响.
+    """
+    return EnhancedApiClient(ep_pool=HAEndpointPool(items=[ep.raw for ep in client.ep_pool.endpoints]))

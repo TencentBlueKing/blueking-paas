@@ -48,9 +48,6 @@ def test_a_minimal_configuration_gets_workable_defaults():
     config = structure_local_process_config(MINIMAL_CONFIG)
 
     assert config.agent_project_dir == "/srv/app-spark/agent"
-    # Unset means "leave it to the agent's own default" rather than "send an empty value".
-    assert config.model is None
-    assert config.model_api_key is None
     assert config.extra_env == {}
     assert config.startup_timeout_seconds > 0
 
@@ -59,15 +56,11 @@ def test_every_setting_can_be_given():
     config = structure_local_process_config(
         {
             **MINIMAL_CONFIG,
-            "model": "deepseek:deepseek-v4-flash",
-            "model_api_key": "a-key",
             "startup_timeout_seconds": 5.0,
             "extra_env": {"APP_SPARK_AGENT_FAKE_DELAY_SECONDS": "1"},
         }
     )
 
-    assert config.model == "deepseek:deepseek-v4-flash"
-    assert config.model_api_key == "a-key"
     assert config.startup_timeout_seconds == 5.0
     assert config.extra_env == {"APP_SPARK_AGENT_FAKE_DELAY_SECONDS": "1"}
 
@@ -98,6 +91,21 @@ def test_every_setting_can_be_given():
             id="a-misspelled-key",
         ),
         pytest.param("just a string", "LocalProcessConfig", id="not-a-mapping"),
+        # The model moved to the model source settings; still accepting it here would leave two
+        # places that disagree about which key a Runtime gets.
+        pytest.param({**MINIMAL_CONFIG, "model_api_key": "a-key"}, "model_api_key", id="a-model-key"),
+        # extra_env is a door into the Runtime's environment, and the Runtime hands most of that
+        # environment to the application the model writes.
+        pytest.param(
+            {**MINIMAL_CONFIG, "extra_env": {"APP_SPARK_API_SECRET_KEY": "platform-secret"}},
+            "APP_SPARK_API_SECRET_KEY",
+            id="a-variable-that-is-not-the-agents",
+        ),
+        pytest.param(
+            {**MINIMAL_CONFIG, "extra_env": {"APP_SPARK_AGENT_MODEL_API_KEY": "shared-key"}},
+            "APP_SPARK_AGENT_MODEL_API_KEY",
+            id="a-model-variable",
+        ),
     ],
 )
 def test_an_unusable_configuration_is_refused_by_name(raw_config, reason):
@@ -114,6 +122,20 @@ def test_a_health_snapshot_is_read_from_the_runtimes_own_words():
     assert health.conversation_id == "3f2b"
     assert health.context_version == 2
     assert health.running is False
+
+
+def test_the_application_status_is_forwarded_as_the_runtime_worded_it():
+    """本服务对这些名字没有意见，原样转发。换一个它不认识的词也必须照样过。"""
+    health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "dev_server_status": "starting"})
+
+    assert health.dev_server_status == "starting"
+
+
+def test_a_runtime_that_says_nothing_about_its_application_is_not_read_as_a_status():
+    """「问不出来」和 Runtime 能给的那几档里的任何一个都不是一回事，不能折成其中之一。"""
+    health = RuntimeHealth.from_payload(HEALTHY_PAYLOAD)
+
+    assert health.dev_server_status is None
 
 
 def test_a_runtime_that_has_never_run_has_no_conversation_yet():

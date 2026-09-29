@@ -14,4 +14,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Project source storage models."""
+"""Errors raised while exchanging a user's login for a BlueKing access_token."""
+
+
+class AccessTokenError(Exception):
+    """Base class for every failure of the access_token exchange."""
+
+
+class AccessTokenUnavailableError(AccessTokenError):
+    """The token service was unreachable, refused the exchange, or returned no token.
+
+    The message is for operators. It never contains the app secret, the user's login
+    credential, or a token, so it is safe to log.
+    """

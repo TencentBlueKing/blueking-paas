@@ -13,6 +13,6 @@ COPY pyproject.toml uv.lock README.md ./
 COPY app_spark_agent ./app_spark_agent
 COPY tests ./tests
 RUN uv sync --frozen \
-    && uv pip install --python /app/.venv/bin/python 'mypy>=2.3.0,<3.0.0' 'pytest>=9.1.1' 'pytest-asyncio>=1.3.0' 'httpx>=0.28.1' \
+    && uv pip install --python /app/.venv/bin/python 'mypy>=2.3.0,<3.0.0' 'pytest>=9.1.1' 'pytest-asyncio>=1.3.0' \
     && /app/.venv/bin/python -c "import mypy, pytest"
 ENV PATH="/app/.venv/bin:${PATH}"

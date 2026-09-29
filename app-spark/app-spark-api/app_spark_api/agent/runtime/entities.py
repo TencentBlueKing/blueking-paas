@@ -18,11 +18,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal
 
 import attrs
 
-from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
+from app_spark_api.agent.runtime.constants import ENV_PREFIX, MODEL_ENV_NAMES
+from app_spark_api.agent.runtime.exceptions import (
+    AgentConfigurationError,
+    AgentUnavailableError,
+    ModelAccessConfigurationError,
+)
 from app_spark_api.utils import structure_config, validate_non_empty_string
 
 
@@ -38,23 +44,64 @@ class LocalProcessConfig:
     :param callback_base_url: Where a spawned Runtime can reach *this* service, to replicate
         its state back. Loopback is right for a process on this host and wrong for anything
         else, which is exactly why it is provider configuration rather than a global setting.
-    :param model: Value for ``APP_SPARK_AGENT_MODEL``; left to the agent's default when unset.
-    :param model_api_key: Value for ``APP_SPARK_AGENT_MODEL_API_KEY``; left to the agent's
-        default when unset.
     :param startup_timeout_seconds: How long to wait for a spawned Runtime to answer
         ``/health``.
     :param extra_env: Further ``APP_SPARK_AGENT_*`` variables to hand the process, so an agent
-        setting can be reached without growing a field here for each one.
+        setting can be reached without growing a field here for each one. Model variables are
+        refused: which model a Runtime calls, and with what credential, is the model source's
+        decision, not the provider's.
     """
 
     agent_project_dir: str = attrs.field(validator=validate_non_empty_string)
     workspace_root: str = attrs.field(validator=validate_non_empty_string)
     state_root: str = attrs.field(validator=validate_non_empty_string)
     callback_base_url: str = "http://127.0.0.1:8000"
-    model: str | None = None
-    model_api_key: str | None = None
     startup_timeout_seconds: float = 60.0
     extra_env: dict[str, str] = attrs.field(factory=dict)
+
+    @extra_env.validator
+    def _validate_extra_env(self, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
+        # 只放行 agent 自己的配置：本服务的其它变量（尤其是 APP_SPARK_API_* 里的平台密钥）不能借
+        # 这个口子流进 Runtime。
+        foreign = sorted(name for name in value if not name.startswith(ENV_PREFIX))
+        if foreign:
+            raise ValueError(f"{attribute.name} may only hold {ENV_PREFIX}* variables, got {foreign}")
+
+        owned = sorted(MODEL_ENV_NAMES.intersection(value))
+        if owned:
+            raise ValueError(f"{attribute.name} must not set model variables, use the model source settings: {owned}")
+
+
+@attrs.frozen
+class E2BConfig:
+    """Configuration for provisioning an E2B sandbox per conversation.
+
+    :param api_key: Credential for the E2B-compatible API.
+    :param api_url: Base URL of that API; independent of the exposed port domain.
+    :param domain: Fallback domain for sandbox hosts when the API does not return one.
+    :param template: Sandbox template name or ID.
+    :param timeout_seconds: E2B sandbox time to live in seconds from creation (default 3600).
+        Activity and this provider's reconnects do not renew it; E2B stops the sandbox when
+        the timeout expires unless its deadline is explicitly extended.
+    :param runtime_port: Port reserved for the future Agent Runtime HTTP server.
+    :param preview_port: Fixed sandbox port for the workspace application preview.
+    :param port_scheme: URL scheme for the exposed port proxy.
+    """
+
+    api_key: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    api_url: str = attrs.field(validator=validate_non_empty_string)
+    domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
+    template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
+    timeout_seconds: int = attrs.field(default=3600, validator=attrs.validators.gt(0))
+    runtime_port: int = attrs.field(
+        default=8000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    preview_port: int = attrs.field(
+        default=9000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
+    )
+    port_scheme: Literal["http", "https"] = attrs.field(
+        default="https", validator=attrs.validators.in_(("http", "https"))
+    )
 
 
 @attrs.frozen
@@ -99,21 +146,96 @@ class GitRemote:
 
 
 @attrs.frozen
+class BkAidevModelConfig:
+    """Defaults for a Runtime that calls bkaidev.
+
+    The LLM base URL and the access_token exchange endpoint are not configured here: the former
+    is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
+    app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
+
+    :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    """
+
+    # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
+    # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
+    default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+
+
+@attrs.frozen
+class DirectModelAccess:
+    """What a Runtime is told to call a model vendor directly, with a fixed key.
+
+    Also the shape of AGENT_DIRECT_MODEL_CONFIG: there is nothing to resolve per user.
+
+    :param model: pydantic-ai model string, ``<provider>:<model>``, or ``fake:<scenario>``.
+    :param api_key: The vendor key; omitted for ``fake:`` models.
+    """
+
+    model: str = attrs.field(validator=validate_non_empty_string)
+    api_key: str | None = attrs.field(default=None, repr=False)
+
+
+@attrs.frozen
+class BkAidevModelAccess:
+    """What a Runtime is told so it can call bkaidev on the user's behalf.
+
+    Carries the access_token alone, no app credentials, so nothing in the sandbox can mint a
+    token of its own.
+
+    :param base_url: The gateway's OpenAI-compatible v1 root.
+    :param access_token: The user's access_token for the configured app.
+    :param model_name: The model the Runtime asks the gateway for.
+    """
+
+    base_url: str = attrs.field(validator=validate_non_empty_string)
+    access_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    model_name: str = attrs.field(validator=validate_non_empty_string)
+
+
+# Exactly one of the two, so a provider never has to guess what a missing value was meant to be.
+type ModelAccess = DirectModelAccess | BkAidevModelAccess
+
+# Called by a provider only when it is about to start a Runtime, inside whatever keeps two
+# requests from starting rival Runtimes. Resolving any earlier would need a separate "is one
+# already up" check, and the Runtime could die between that check and the start.
+type ModelAccessResolver = Callable[[], Awaitable[ModelAccess]]
+
+
+@attrs.frozen
 class AgentRuntimeHandle:
     """Where a conversation's Runtime can be reached.
 
-    Everything provider-specific stops here: a Runtime in a remote sandbox is addressed by the
-    same base URL as one spawned locally, which is why the client below never learns which
-    provider produced it.
+    Everything provider-specific stops here: both local and remote Runtimes are addressed by
+    a URL, an Agent Bearer token, and any headers their transport needs. The client below does
+    not need to know which provider produced the handle.
 
     :param conversation_id: Conversation this Runtime serves, one per process.
     :param base_url: Root URL the Runtime's HTTP API is served under.
     :param runtime_token: Bearer token required by every Runtime HTTP endpoint.
+    :param http_headers: Additional transport headers required by the provider's port proxy.
     """
 
     conversation_id: str
     base_url: str
     runtime_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+
+
+@attrs.frozen
+class PreviewTarget:
+    """Where a conversation's workspace application is proxied to, and how to reach it.
+
+    :param base_url: Scheme-and-authority base URL of the application.
+    :param http_headers: Transport headers the provider's port proxy requires, e.g. its access
+        tokens. They authenticate this service to the proxy and never come from the browser.
+    :param send_forwarded_host: Whether the application may be told the browser's host through
+        ``X-Forwarded-Host``. A provider sets it to ``False`` when something between this
+        service and the application routes by that header and rejects a foreign host.
+    """
+
+    base_url: str
+    http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
+    send_forwarded_host: bool = True
 
 
 @attrs.frozen
@@ -129,6 +251,10 @@ class RuntimeHealth:
     :param replication_pending: Whether the Runtime still holds state it has not managed to
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
+    :param dev_server_status: What the Runtime says about the dev server hosting the workspace
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
+        than interpreted: this service has no opinion on the names, and an older Runtime that
+        says nothing leaves it ``None``.
     """
 
     model: str
@@ -138,6 +264,7 @@ class RuntimeHealth:
     ui_event_seq: int
     running: bool
     replication_pending: bool = False
+    dev_server_status: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Any) -> RuntimeHealth:
@@ -161,6 +288,12 @@ class RuntimeHealth:
                 # configured has no answer to give, and treating "did not say" as "nothing
                 # pending" is the truthful reading of that.
                 replication_pending=bool(payload.get("replication_pending", False)),
+                # Lenient for a different reason: a Runtime that predates the field says
+                # nothing, and "this Runtime cannot tell me" is not the same answer as any of
+                # the four statuses it could have given.
+                dev_server_status=(
+                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc
@@ -216,3 +349,33 @@ def structure_local_process_config(raw_config: object) -> LocalProcessConfig:
         otherwise invalid fields.
     """
     return structure_config(raw_config, LocalProcessConfig, error_cls=AgentConfigurationError)
+
+
+def structure_e2b_config(raw_config: object) -> E2BConfig:
+    """Structure and validate an E2B provider configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: A validated configuration.
+    :raises AgentConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, E2BConfig, error_cls=AgentConfigurationError)
+
+
+def structure_bkaidev_model_config(raw_config: object) -> BkAidevModelConfig:
+    """Structure and validate the bkaidev model configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: A validated configuration.
+    :raises ModelAccessConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, BkAidevModelConfig, error_cls=ModelAccessConfigurationError)
+
+
+def structure_direct_model_config(raw_config: object) -> DirectModelAccess:
+    """Structure and validate the direct model configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: What every directly-calling Runtime is given.
+    :raises ModelAccessConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, DirectModelAccess, error_cls=ModelAccessConfigurationError)

@@ -36,10 +36,16 @@ from pathlib import Path
 
 import httpx2
 
+from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
+    BkAidevModelAccess,
+    DirectModelAccess,
     GitRemote,
     LocalProcessConfig,
+    ModelAccess,
+    ModelAccessResolver,
+    PreviewTarget,
     StateCallback,
 )
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
@@ -48,8 +54,38 @@ from app_spark_api.utils.urls import to_path_info
 
 logger = logging.getLogger(__name__)
 
-# The agent reads its whole configuration from variables under this prefix.
-ENV_PREFIX = "APP_SPARK_AGENT_"
+# 从本服务进程继承给 Runtime 的环境变量只有这些。本服务的环境里有平台自己的密钥（APP_SPARK_API_*
+# 下的 app_secret、数据库密码等），而 Runtime 会把自己的环境几乎原样交给模型写的应用。所以按白名单
+# 放行，不按已知密钥名剔除：新增一项配置忘了登记，默认也不会漏进沙箱。
+INHERITED_ENV_NAMES = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "USER",
+        "LOGNAME",
+        "LANG",
+        "LANGUAGE",
+        "TZ",
+        "TMPDIR",
+        "TEMP",
+        "TMP",
+        # TLS 根证书与出站代理：Runtime 要自己连模型网关和代码仓库。
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "REQUESTS_CA_BUNDLE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        # uv run 找解释器与缓存用。不放行整个 UV_ 前缀：UV_INDEX_* 里可能带私有源的凭据。
+        "UV_CACHE_DIR",
+        "UV_PYTHON_INSTALL_DIR",
+        "UV_PYTHON_PREFERENCE",
+    }
+)
+INHERITED_ENV_PREFIXES = ("LC_",)
 
 ASGI_TARGET = "app_spark_agent.server.asgi:app"
 
@@ -68,6 +104,9 @@ LOG_TAIL_LINES = 40
 # 5s to stop application children. Raising any of those means raising this.
 SHUTDOWN_GRACE_SECONDS = 20
 
+# 抽两个不重复的端口。一次就中是常态；上限只是不让「每次都撞上已预留端口」变成死循环。
+PORT_RESERVE_ATTEMPTS = 32
+
 
 @dataclass(frozen=True)
 class _LocalRuntime:
@@ -77,6 +116,10 @@ class _LocalRuntime:
     process: subprocess.Popen[bytes]
     workspace_dir: Path
     log_path: Path
+
+    # 这个会话的工作区应用听哪个端口。每个 Runtime 一个，否则同一台机器上的第二个会话拉起
+    # 应用时会撞上第一个，两个会话也就没法同时预览。反代要连的就是它。
+    app_port: int
 
     @property
     def alive(self) -> bool:
@@ -148,6 +191,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         async with self._lock:
             existing = self._runtimes.get(conversation_id)
@@ -164,6 +208,14 @@ class LocalProcessProvider(AgentRuntimeProvider):
 
             workspace_dir = self.workspace_dir(project_id)
             self._reject_workspace_conflict(conversation_id, workspace_dir)
+
+            # 在锁里、确定要新起之后才解析：已在跑的 Runtime 不花一次换票，刚退出的也照样拿到凭据，
+            # 不存在「看时还活着、起时已经没了」的窗口。代价是换票期间本 worker 的其它 ensure 要等，
+            # 与等 /health 的代价同级。
+            if model_access is None:
+                raise AgentProvisionError("Starting an Agent Runtime needs model access, and none was given.")
+            access = await model_access()
+
             runtime = await self._spawn(
                 conversation_id=conversation_id,
                 project_id=project_id,
@@ -171,6 +223,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
                 state_dir=self.state_dir(conversation_id),
                 state_callback=state_callback,
                 git_remote=git_remote,
+                model_access=access,
             )
             self._runtimes[conversation_id] = runtime
             return runtime.handle
@@ -183,6 +236,17 @@ class LocalProcessProvider(AgentRuntimeProvider):
             if runtime is None or not runtime.alive:
                 return None
             return runtime.handle
+
+    async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
+        async with self._lock:
+            runtime = self._runtimes.get(conversation_id)
+            if runtime is None or not runtime.alive:
+                return None
+            # Loopback, even though the application binds 0.0.0.0: the proxy runs in this very
+            # process, so it is on the same host either way, and naming loopback is what keeps
+            # this from depending on which interface the host happens to have. Nothing sits in
+            # between, so the application may be told the browser's host.
+            return PreviewTarget(base_url=f"http://127.0.0.1:{runtime.app_port}")
 
     async def terminate(self, conversation_id: str) -> None:
         async with self._lock:
@@ -207,6 +271,40 @@ class LocalProcessProvider(AgentRuntimeProvider):
         if runtime is not None and runtime.process in _spawned:
             _spawned.remove(runtime.process)
 
+    def _reserve_ports(self) -> tuple[int, int]:
+        """Return the port for a new Runtime and the one for its application, never equal.
+
+        `_free_port` on its own is enough for the Runtime's port, because uvicorn binds it
+        milliseconds later and the kernel then stops handing it out. The application port is the
+        problem: nothing binds it until the model gets around to calling ``launch_app``, which
+        may be minutes away or never. So an application port stays merely "reserved" for a long
+        time, and `_free_port` will happily return it again -- to the second draw of this very
+        call, or to the next Runtime.
+
+        Either collision is self-inflicted and cheap to rule out. Left in, the second
+        application cannot bind; worse, ``launch_app`` then reports the port as owned by a
+        process this supervisor did not start, while the squatter is in fact a sibling Runtime
+        of this same service.
+
+        Only collisions this provider could cause are prevented. An unrelated process taking a
+        reserved port is still possible, and remains what `_free_port` calls not worth guarding
+        against.
+
+        :return: ``(port, app_port)``.
+        """
+        reserved = {runtime.app_port for runtime in self._runtimes.values()}
+        drawn: list[int] = []
+        # 正常一次就抽到。上限是防「每次都撞上已预留的端口」时这条循环永远不返回。
+        for _ in range(PORT_RESERVE_ATTEMPTS):
+            if len(drawn) == 2:
+                return drawn[0], drawn[1]
+            port = _free_port()
+            if port in reserved:
+                continue
+            reserved.add(port)
+            drawn.append(port)
+        raise AgentProvisionError("Could not reserve two distinct ports for an Agent Runtime.")
+
     def _reject_workspace_conflict(self, conversation_id: str, workspace_dir: Path) -> None:
         """Refuse a second live Runtime on one workspace.
 
@@ -228,9 +326,13 @@ class LocalProcessProvider(AgentRuntimeProvider):
         state_dir: Path,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> _LocalRuntime:
         """Start one Runtime and return it once it answers ``/health``."""
-        port = _free_port()
+        # Two ports: one for the agent, one for the application the agent writes. Every Runtime
+        # gets an application port of its own so two conversations on this host can serve their
+        # applications at the same time instead of the second one failing to bind.
+        port, app_port = self._reserve_ports()
         base_url = f"http://127.0.0.1:{port}"
         log_path = state_dir.parent / f"{state_dir.name}-uvicorn.log"
         runtime_token = secrets.token_urlsafe(32)
@@ -240,6 +342,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         process = await asyncio.to_thread(
             self._start_process,
             port=port,
+            app_port=app_port,
             project_id=project_id,
             workspace_dir=workspace_dir,
             state_dir=state_dir,
@@ -247,6 +350,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
             runtime_token=runtime_token,
             state_callback=state_callback,
             git_remote=git_remote,
+            model_access=model_access,
         )
 
         _spawned.append(process)
@@ -268,12 +372,14 @@ class LocalProcessProvider(AgentRuntimeProvider):
             process=process,
             workspace_dir=workspace_dir,
             log_path=log_path,
+            app_port=app_port,
         )
 
     def _start_process(
         self,
         *,
         port: int,
+        app_port: int,
         project_id: str,
         workspace_dir: Path,
         state_dir: Path,
@@ -281,6 +387,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         runtime_token: str,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> subprocess.Popen[bytes]:
         """Prepare the directories and fork the Runtime.
 
@@ -323,11 +430,13 @@ class LocalProcessProvider(AgentRuntimeProvider):
                     stderr=subprocess.STDOUT,
                     env=self._build_env(
                         project_id=project_id,
+                        app_port=app_port,
                         workspace_dir=workspace_dir,
                         state_dir=state_dir,
                         runtime_token=runtime_token,
                         state_callback=state_callback,
                         git_remote=git_remote,
+                        model_access=model_access,
                     ),
                 )
             except OSError as exc:
@@ -337,22 +446,32 @@ class LocalProcessProvider(AgentRuntimeProvider):
         self,
         *,
         project_id: str,
+        app_port: int,
         workspace_dir: Path,
         state_dir: Path,
         runtime_token: str,
         state_callback: StateCallback | None,
         git_remote: GitRemote | None,
+        model_access: ModelAccess,
     ) -> dict[str, str]:
-        """Build the child's environment from this service's own plus the agent's settings."""
+        """Build the child's environment: an allow-listed part of this service's, plus the agent's settings."""
+        inherited = {
+            name: value
+            for name, value in os.environ.items()
+            if name in INHERITED_ENV_NAMES or name.startswith(INHERITED_ENV_PREFIXES)
+        }
         # Provider-owned values are applied after `extra_env`: callers may extend the Runtime's
         # environment, but cannot accidentally replace its identity, state paths, or Bearer.
         env = {
-            **os.environ,
+            **inherited,
             **self.config.extra_env,
             f"{ENV_PREFIX}WORKSPACE": str(workspace_dir),
             f"{ENV_PREFIX}STATE_DIR": str(state_dir),
             f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
             f"{ENV_PREFIX}PROJECT_ID": project_id,
+            # Not left to the agent's own default of 8000: on a shared host that default is the
+            # same number for every conversation, and the second one to launch would lose.
+            f"{ENV_PREFIX}APP_PORT": str(app_port),
         }
         if state_callback is not None:
             # An address already scoped to one conversation, plus a token that authorizes only
@@ -372,11 +491,33 @@ class LocalProcessProvider(AgentRuntimeProvider):
             env[f"{ENV_PREFIX}GIT_BRANCH"] = git_remote.branch
             env[f"{ENV_PREFIX}GIT_USERNAME"] = git_remote.username
             env[f"{ENV_PREFIX}GIT_TOKEN"] = git_remote.token
-        if self.config.model is not None:
-            env[f"{ENV_PREFIX}MODEL"] = self.config.model
-        if self.config.model_api_key is not None:
-            env[f"{ENV_PREFIX}MODEL_API_KEY"] = self.config.model_api_key
+
+        env.update(self._build_model_env(model_access))
         return env
+
+    @staticmethod
+    def _build_model_env(model_access: ModelAccess) -> dict[str, str]:
+        """Return the model variables for one Runtime, and only those of its own model source.
+
+        Nothing else can put model variables in the environment -- the inherited part is
+        allow-listed and extra_env refuses them -- so what this returns is the whole story.
+        """
+        match model_access:
+            # 直连厂商：固定 key。fake: 模型不需要 key，就不给。
+            case DirectModelAccess(model=model, api_key=api_key):
+                env = {f"{ENV_PREFIX}MODEL": model}
+                if api_key is not None:
+                    env[f"{ENV_PREFIX}MODEL_API_KEY"] = api_key
+                return env
+
+            # bkaidev：只有用户态 access_token。不给 MODEL_API_KEY，agent 缺 token 时会回落到它，
+            # 那就成了用共享密钥冒充用户。
+            case BkAidevModelAccess(base_url=base_url, model_name=model_name, access_token=access_token):
+                return {
+                    f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN": access_token,
+                    f"{ENV_PREFIX}MODEL_BASE_URL": base_url,
+                    f"{ENV_PREFIX}MODEL_NAME": model_name,
+                }
 
     async def _wait_until_healthy(
         self,

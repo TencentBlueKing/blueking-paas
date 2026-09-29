@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import attrs
@@ -45,8 +46,9 @@ from app_spark_api.agent.runtime import (
     EventPage,
     GitRemote,
     StateCallback,
-    get_agent_runtime_provider,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.agent.runtime.model_access import resolve_model_access
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -54,8 +56,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
+    from app_spark_api.agent.runtime import AgentRun, PreviewTarget, RuntimeHealth
     from app_spark_api.core.projects.models import Project
+    from app_spark_api.infras.bk_access_token import UserCredential
     from app_spark_api.repository.git.models import ProjectGitRepository
 
 logger = logging.getLogger(__name__)
@@ -83,6 +86,9 @@ class ConversationState:
         then nothing left that could still arrive.
     :param model: Model of the live Runtime, or ``None`` when none is up. Nothing here can
         answer it otherwise: the model is the agent's own configuration, not this service's.
+    :param dev_server_status: What the live Runtime says about the workspace application it
+        supervises. ``None`` when no Runtime is up, because whether that application is
+        listening is a fact about a running sandbox and nothing stored here can stand in for it.
     """
 
     context_version: int
@@ -91,6 +97,50 @@ class ConversationState:
     running: bool
     replication_pending: bool
     model: str | None
+    dev_server_status: str | None = None
+
+
+async def get_dev_server_status(conversation: Conversation) -> str | None:
+    """Ask the live Runtime how the conversation's application is doing, without starting one.
+
+    Deliberately never fails. The preview address does not depend on a Runtime -- it stays the
+    same across restarts and is issued before the first turn -- so a Runtime that cannot be
+    reached is something to report as "nothing to show right now", not an error that should take
+    the address away with it.
+
+    :param conversation: Conversation whose application is being looked at.
+    :return: The Runtime's own word for the application's state, or ``None`` when nothing could
+        be asked. A client only has to branch on whether there is a status at all: no second,
+        derived field says the same thing in other words.
+    """
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+
+    # 没有 Runtime 是常态而不是故障：会话可能刚建、也可能被回收过。
+    if handle is None:
+        return None
+
+    try:
+        health = await AgentRuntimeClient(handle).health()
+    except AgentUnavailableError:
+        # 降成 info 且不带 traceback：Runtime 死掉但还没被回收的那段时间里，前端每轮询一次就会
+        # 走到这里，按 warning 打会把日志刷满。真正需要人看的是 Runtime 为什么死，不在这条上。
+        logger.info(
+            "Conversation %s has a Runtime that cannot be read, reporting its application as unknown",
+            conversation.id,
+        )
+        return None
+
+    return health.dev_server_status
+
+
+async def get_preview_target(conversation: Conversation) -> PreviewTarget | None:
+    """Return where, and how, this service should proxy the conversation's preview to.
+
+    :param conversation: Conversation whose application is to be proxied.
+    :return: The application's address with its transport headers, or ``None`` when no
+        Runtime is serving the conversation.
+    """
+    return await get_agent_runtime_provider().preview_target(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:
@@ -144,24 +194,35 @@ async def close_conversation(conversation: Conversation) -> None:
     await terminate_runtime(conversation)
 
 
-async def open_client(conversation: Conversation) -> AgentRuntimeClient:
+async def open_client(conversation: Conversation, *, credential: UserCredential | None = None) -> AgentRuntimeClient:
     """Bring up the conversation's Agent Runtime if needed and return a client for it.
 
     :param conversation: Conversation to be served.
+    :param credential: The caller's BlueKing login. Needed only when a Runtime has to be started
+        and its model calls go through bkaidev, to get the caller's access_token.
     :return: A client pointed at a Runtime that has answered ``/health``.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
     :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
+    :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
+        its settings are invalid.
+    :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
+        ``credential`` is None.
+    :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
+        access_token could not be obtained.
     """
     repo = await arequire_project_git_ready(conversation.project_id)
-    provider = get_agent_runtime_provider()
+
+    # 交给 provider 的是解析函数而不是结果：只有它知道这次是否真要新起 Runtime。每轮对话都走到
+    # 这里，已在跑的 Runtime 手里早有 token，提前解析就是每条消息一次换票。
     # `project_id` rather than `project`, so this never lazily loads the related row -- an
     # implicit query here would be a synchronous one in an async view.
-    handle = await provider.ensure(
+    handle = await get_agent_runtime_provider().ensure(
         project_id=conversation.project_id,
         conversation_id=str(conversation.id),
         state_callback=_state_callback(conversation),
         git_remote=await sync_to_async(_git_remote)(repo),
+        model_access=partial(resolve_model_access, credential),
     )
     return AgentRuntimeClient(handle)
 
@@ -238,11 +299,13 @@ async def get_state(conversation: Conversation) -> ConversationState:
     model: str | None = None
     running = False
     replication_pending = False
+    dev_server_status: str | None = None
     if handle is not None:
         health = await AgentRuntimeClient(handle).health()
         model = health.model
         running = health.running
         replication_pending = health.replication_pending
+        dev_server_status = health.dev_server_status
 
     return ConversationState(
         context_version=context_version,
@@ -251,6 +314,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         running=running,
         replication_pending=replication_pending,
         model=model,
+        dev_server_status=dev_server_status,
     )
 
 
@@ -276,7 +340,7 @@ async def read_ui_events(
     return EventPage(since=since, last_seq=last_seq, records=records)
 
 
-async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
+async def start_run(conversation: Conversation, *, content: str, credential: UserCredential | None = None) -> AgentRun:
     """Submit one turn and return its open event stream.
 
     The context version is read from ``/health`` immediately before the run rather than
@@ -285,10 +349,17 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
 
     :param conversation: Conversation the turn belongs to.
     :param content: The user's message.
+    :param credential: The caller's BlueKing login, passed to :func:`open_client`.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
+    :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
+        its settings are invalid.
+    :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
+        ``credential`` is None.
+    :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
+        access_token could not be obtained.
     :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
     """
     # 这道闸门是「结束会话」有意义的前提。没有它，结束一个会话只是杀掉了一个进程：下一轮对话
@@ -296,7 +367,7 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
     if not conversation.is_live:
         raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
 
-    client = await open_client(conversation)
+    client = await open_client(conversation, credential=credential)
     await _reject_if_closed_meanwhile(conversation)
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)

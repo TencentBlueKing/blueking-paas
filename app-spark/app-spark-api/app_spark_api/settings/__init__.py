@@ -39,6 +39,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 """
 
 from pathlib import Path
+from typing import Any
 
 import pymysql
 from dynaconf import LazySettings, Validator
@@ -49,6 +50,46 @@ pymysql.install_as_MySQLdb()
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+def build_logging_config(log_level: str, file_directory: str | None, always_console: bool) -> dict[str, Any]:
+    """Build Django's logging configuration from this service's output settings.
+
+    :param log_level: Minimum level for application logs.
+    :param file_directory: Optional directory for a rotating text log.
+    :param always_console: Also write to stdout when a log directory is configured.
+    :return: Configuration accepted by Django's logging setup.
+    """
+    handlers: dict[str, Any] = {
+        "console": {"class": "logging.StreamHandler", "stream": "ext://sys.stdout", "formatter": "standard"}
+    }
+    root_handlers = ["console"] if file_directory is None or always_console else []
+    if file_directory is not None:
+        log_directory = BASE_DIR / file_directory
+        log_directory.mkdir(parents=True, exist_ok=True)
+        handlers["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(log_directory / "app-spark-api.log"),
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "formatter": "standard",
+        }
+        root_handlers.append("file")
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {"standard": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+        "handlers": handlers,
+        "root": {"handlers": root_handlers, "level": log_level},
+        # Django installs its own handlers before applying LOGGING. Route its messages through
+        # the selected outputs once, so warnings do not appear twice on the console.
+        "loggers": {
+            "django": {"handlers": root_handlers, "level": "WARNING", "propagate": False},
+            "django.server": {"handlers": root_handlers, "level": log_level, "propagate": False},
+        },
+    }
+
 
 # 默认加载的额外配置文件，主要用于本地开发
 SETTINGS_FILES_GLOB = str(BASE_DIR / "settings_files/*.yaml")
@@ -65,6 +106,12 @@ settings = LazySettings(
     ENVVAR_FOR_DYNACONF="APP_SPARK_API_SETTINGS",
 )
 
+# Log to the console by default; a configured directory switches the default to a rotating file.
+LOG_LEVEL = settings.get("LOG_LEVEL", "INFO")
+LOGGING_DIRECTORY = settings.get("LOGGING_DIRECTORY", None)
+LOGGING_ALWAYS_CONSOLE = settings.get("LOGGING_ALWAYS_CONSOLE", False)
+LOGGING = build_logging_config(LOG_LEVEL, LOGGING_DIRECTORY, LOGGING_ALWAYS_CONSOLE)
+
 # Django 项目使用的 SECRET_KEY，默认值不安全，建议使用真实生成的随机 secret 重载
 # 示例命令： python -c "import secrets; print(secrets.token_urlsafe(50))"
 SECRET_KEY = settings.get(
@@ -75,6 +122,11 @@ DEBUG = settings.get("DEBUG", False)
 
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/6.1/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
+
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对。
+# APP_SECRET 只留在本服务里，不会交给 Agent Runtime。
+APP_CODE = settings.get("APP_CODE", "")
+APP_SECRET = settings.get("APP_SECRET", "")
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -88,6 +140,7 @@ INSTALLED_APPS = [
     "app_spark_api.infras.accounts.apps.AccountsConfig",
     "app_spark_api.core.projects.apps.ProjectsConfig",
     "app_spark_api.agent.conversations.apps.ConversationsConfig",
+    "app_spark_api.agent.runtime.apps.RuntimeConfig",
     "app_spark_api.repository.storage.apps.StorageConfig",
     "app_spark_api.repository.git.apps.GitConfig",
 ]
@@ -226,6 +279,23 @@ ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
 # 统一登录页面地址，用于模板渲染，必填
 LOGIN_FULL = settings.get("LOGIN_FULL", "")
 
+## 网关 API 访问地址模板，须含 {api_name}。平台注入名也是 BK_API_URL_TMPL。
+## 两种常见形态都可以：
+##   https://bkapi.example.com/api/{api_name}/
+##   https://{api_name}.apigw.example.com
+## bkaidev 的 LLM 基址从这个模板 + APIGW_ENVIRONMENT 拼出来，不要在 BKAIDEV_MODEL_CONFIG 里再配一份。
+BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "")
+
+## 调用网关时使用的环境名（stage）。
+APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
+
+## 用户态 access_token 的签发地址。AGENT_MODEL_SOURCE 为 bkaidev 时必填。
+## 支持直连 auth api 或 SSM 两种 backend，由 BKAUTH_BACKEND_TYPE 决定：bk_token 用 SSM，其余用 auth api。
+TOKEN_AUTH_ENDPOINT = settings.get("TOKEN_AUTH_ENDPOINT", "")
+
+## 换票请求体里的 env_name，可选 prod / test；BKAUTH_BACKEND_TYPE 为 bk_token 时不使用。
+AUTH_ENV_NAME = settings.get("AUTH_ENV_NAME", "prod")
+
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
@@ -233,9 +303,11 @@ LOGIN_FULL = settings.get("LOGIN_FULL", "")
 # 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
 BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE
 
+## 用户身份校验类型，同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api。
 BKAUTH_BACKEND_TYPE = settings.get("BKAUTH_BACKEND_TYPE", "bk_token")
-BKAUTH_TOKEN_APP_CODE = settings.get("BKAUTH_TOKEN_APP_CODE", "")
-BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", "")
+## bkpaas_auth 只认这两个名字，值直接取本服务的 APP_CODE / APP_SECRET，不单独配置。
+BKAUTH_TOKEN_APP_CODE = APP_CODE
+BKAUTH_TOKEN_SECRET_KEY = APP_SECRET
 
 # 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
 # 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
@@ -281,7 +353,7 @@ REPO_SERVER = settings.get(
 # --------
 
 ## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
-## 目前只有 local_process（在本机 spawn 一个 agent 进程，仅供开发与测试）
+## local_process 在本机 spawn agent；e2b 目前只管理沙箱，尚未在沙箱内启动 Agent。
 AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 
 ## 上述驱动方式各自的配置，字段以对应的 config 类为准。
@@ -297,15 +369,58 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   state_root: /var/lib/app-spark/agent-state
 ##   ## 本服务对 agent 进程可达的地址，agent 用它把会话状态回写回来。默认 http://127.0.0.1:8000。
 ##   callback_base_url: http://127.0.0.1:8000
-##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL，不填则用 agent 自己的默认值。
-##   model: deepseek:deepseek-v4-flash
-##   ## 传给 agent 的 APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值。
-##   model_api_key: ''
 ##   ## 等待新起的 Runtime 通过 /health 健康检查的超时秒数。
 ##   startup_timeout_seconds: 60
-##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
+##   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。只收这个前缀，模型相关的变量也不收，
+##   ## 那些由下面的 AGENT_MODEL_SOURCE 决定。
 ##   extra_env: {}
+##
+## e2b 类型配置示例（详见 E2BConfig）：
+##
+## AGENT_RUNTIME_PROVIDER_CONFIG:
+##   ## 必填。E2B 兼容服务的 API 凭据和管理 API 地址，不使用 SDK 的公共默认值。
+##   api_key: ''
+##   api_url: https://example.com/e2b
+##   ## 可选。API 未返回 sandbox_domain 时的端口域名后缀。
+##   domain: example.com
+##   ## 可选。沙箱模板，默认 e2b-python。
+##   template: e2b-python
+##   ## 可选。创建沙箱时设置的 E2B 存活期限（秒），默认 3600；活动和重连不会自动续期。
+##   timeout_seconds: 3600
+##   ## 可选。将来 Agent Runtime 监听的沙箱端口，默认 8000。
+##   runtime_port: 8000
+##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。
+##   preview_port: 9000
+##   ## 可选。暴露端口代理使用的协议，默认 https。
+##   port_scheme: https
 AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
+
+## Agent Runtime 调模型走哪条路，可选值见 agent.runtime.constants.ModelSource：
+## bkaidev（默认）走 bkaidev 的 LLM 网关，拉起 Runtime 时用当前用户的登录态换一张用户态
+## access_token 交给它；direct 直连模型厂商，用 AGENT_DIRECT_MODEL_CONFIG 里固定的 key。
+AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
+
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段详见 DirectModelAccess。
+##
+## AGENT_DIRECT_MODEL_CONFIG:
+##   ## 必填。pydantic-ai 的 <provider>:<model>；本地不花钱跑通可用 fake:write-file。
+##   model: deepseek:deepseek-v4-flash
+##   ## 可选。厂商 API Key，fake: 模型不需要。
+##   api_key: ''
+AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
+
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选，字段详见 BkAidevModelConfig。
+##
+## access_token 由本服务按「APP_CODE + 当前用户」向 TOKEN_AUTH_ENDPOINT 申请，不落库、
+## 不缓存：签发服务在现有 token 仍有效时原样返回，不会因为新开会话而把用户已有的 token 废掉。
+## APP_SECRET 不会交给 Agent Runtime。
+##
+## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
+##
+## BKAIDEV_MODEL_CONFIG:
+##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash，须是 agent 支持的模型名。
+##   default_model_name: deepseek-v4-flash
+BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。会话冷启动就是从这里把文档取回来再注入新 Runtime。

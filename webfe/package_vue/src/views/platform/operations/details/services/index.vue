@@ -336,9 +336,9 @@ export default {
       return `${moduleName}${this.$t('模块')} / ${this.envMap[env]} / ${service?.display_name}${this.$t('增强服务')}`;
     },
     alertTitle() {
-      const { service, moduleName } = this.credentialConfig.row;
+      const { service } = this.credentialConfig.row;
       return this.$t('共享自 {m} 模块的 {s} 增强服务', {
-        m: moduleName,
+        m: this.credentialConfig.row.ref_module?.name,
         s: service?.display_name,
       });
     },

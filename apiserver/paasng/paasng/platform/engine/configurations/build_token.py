@@ -35,6 +35,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
+from paasng.platform.engine.configurations.image import (
+    CNB_CACHE_TAG,
+    kaniko_cache_repository,
+    module_image_repository,
+    module_repo_path,
+)
+
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.entities import BuildMetadata
     from paas_wl.bk_app.applications.models.build import BuildProcess
@@ -47,8 +54,6 @@ SIGNING_ALGORITHM = "EdDSA"
 # exp = iat + BUILD_PROCESS_TIMEOUT + TOKEN_GRACE_SECONDS
 TOKEN_GRACE_SECONDS = 300
 
-KANIKO_CACHE_REPO_SUFFIX = "/dockerbuild-cache"
-CNB_CACHE_TAG = "cnb-build-cache"
 ANY_TAG = "*"
 
 _UPSTREAM_ALIAS_REGEX = re.compile(r"[a-z0-9]+(-+[a-z0-9]+)*")
@@ -227,9 +232,10 @@ def make_build_token_claims(
     if not cluster_name:
         raise BuildTokenUnavailable("cluster name is empty")
 
-    # 与 generate_image_repository_by_env 一致
-    repo_path = f"{registry.namespace}/{app_code}/{module_name}"
-    image_prefix = f"{registry.host}/{repo_path}:"
+    # 与 generate_image_repository_by_env 共用 module_image_repository；代理侧仓库用上游别名替换 host
+    repo_path = module_repo_path(registry.namespace, app_code, module_name)
+    repository = module_image_repository(registry.host, registry.namespace, app_code, module_name)
+    image_prefix = f"{repository}:"
     tag = metadata.image.removeprefix(image_prefix)
     if not metadata.image.startswith(image_prefix) or not _IMAGE_TAG_REGEX.fullmatch(tag):
         raise BuildTokenUnavailable(
@@ -242,7 +248,7 @@ def make_build_token_claims(
             # 允许推送本应用产物（具体 tag）
             {"repo": client_repo, "tags": [tag]},
             # 允许推送 kaniko build-cache
-            {"repo": client_repo + KANIKO_CACHE_REPO_SUFFIX, "tags": [ANY_TAG]},
+            {"repo": kaniko_cache_repository(client_repo), "tags": [ANY_TAG]},
         ]
     elif metadata.use_cnb:
         # CNB 的缓存是产物仓库中的一个 tag，不是独立仓库
@@ -289,8 +295,9 @@ def issue_build_token(
     """
     try:
         keyset = load_signing_key_set()
-    except ImproperlyConfigured:
-        raise BuildTokenUnavailable("invalid build token signing key configuration") from None
+    except ImproperlyConfigured as e:
+        # 上游错误只含下标、kid 和错误名，不含密钥内容，可以放进构建失败原因
+        raise BuildTokenUnavailable(f"invalid build token signing key configuration: {e}") from None
     if not keyset:
         raise BuildTokenUnavailable("build token signing key is not configured")
 

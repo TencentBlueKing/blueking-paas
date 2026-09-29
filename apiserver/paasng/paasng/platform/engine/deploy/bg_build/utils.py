@@ -35,6 +35,7 @@ from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
+from paasng.platform.engine.configurations.image import cnb_cache_image, kaniko_cache_repository
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -69,25 +70,29 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
     if metadata.use_dockerfile:
         # build application form Dockerfile
         image_repository = metadata.image_repository
+        if image_repository is None:
+            raise ValueError("image_repository is required for Dockerfile builds")
         output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
             ),
             OUTPUT_IMAGE=output_image,
-            CACHE_REPO=f"{image_repository}/dockerbuild-cache",
+            CACHE_REPO=kaniko_cache_repository(image_repository),
             DOCKER_CONFIG_JSON=b64encode(json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())),
         )
     elif metadata.use_cnb:
         # build application as image
         image_repository = metadata.image_repository
+        if image_repository is None:
+            raise ValueError("image_repository is required for buildpack image builds")
         output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
             ),
             OUTPUT_IMAGE=output_image,
-            CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
+            CACHE_IMAGE=cnb_cache_image(image_repository),
             CNB_REGISTRY_AUTH=json.dumps(ImageCredentials.load_from_app(app).build_app_registry_auth()),
         )
     else:

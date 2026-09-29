@@ -289,8 +289,10 @@ class TestIssueBuildTokenUnavailable:
         settings.BUILD_TOKEN_SIGNING_KEYS = ["not a pem"]
         settings.BUILD_TOKEN_ACTIVE_KID = ""
 
-        with pytest.raises(BuildTokenUnavailable, match="invalid build token signing key configuration"):
+        with pytest.raises(BuildTokenUnavailable, match="invalid build token signing key configuration") as exc_info:
             issue_build_token(build_proc, _kaniko_metadata(), _registry(), CLUSTER)
+        assert "BUILD_TOKEN_SIGNING_KEYS[0] is invalid" in str(exc_info.value)
+        assert "not a pem" not in str(exc_info.value)
 
     @pytest.mark.usefixtures("_with_signing_key")
     @pytest.mark.parametrize(

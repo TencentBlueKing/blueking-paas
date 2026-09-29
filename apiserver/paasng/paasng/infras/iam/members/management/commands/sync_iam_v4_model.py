@@ -17,10 +17,13 @@
 
 from typing import List
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from paasng.core.tenant.user import get_init_tenant_id
+from paasng.infras.iam.base.constants import IAMVersion
 from paasng.infras.iam.exceptions import InvalidIAMIdentifierError
+from paasng.infras.iam.shim import get_iam_version
 from paasng.infras.iam.v4.definitions import build_paas_system_definition
 from paasng.infras.iam.v4.registry import AggregatedSyncResult, ModelSyncResult, SyncItem, sync_iam_v4_models
 
@@ -36,6 +39,8 @@ class Command(BaseCommand):
 
     请求头中的租户标识与 V3 模型 migration 一致，由 get_init_tenant_id() 决定：
     多租户为 system，非多租户为 default。模型注册是平台级初始化，不按业务租户拆分。
+
+    部署初始化脚本会无条件调用本命令：非 V4 环境或配置了 BK_IAM_SKIP 时直接跳过。
     """
 
     help = "将开发者中心的权限模型同步到 IAM V4（默认只新增/更新；--prune 删除多余项）"
@@ -49,6 +54,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, dry_run: bool, prune: bool, *args, **options):
+        version = get_iam_version()
+        if version != IAMVersion.V4:
+            self.stdout.write(f"当前环境 BK_IAM_VERSION={version.value}，无需同步 IAM V4 权限模型，跳过")
+            return
+        if settings.BK_IAM_SKIP:
+            self.stdout.write("已配置 BK_IAM_SKIP，跳过同步 IAM V4 权限模型")
+            return
+
         try:
             result = sync_iam_v4_models(
                 [build_paas_system_definition()], tenant_id=get_init_tenant_id(), dry_run=dry_run, prune=prune

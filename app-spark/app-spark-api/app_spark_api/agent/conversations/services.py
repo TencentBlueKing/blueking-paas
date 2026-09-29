@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import attrs
@@ -45,8 +46,9 @@ from app_spark_api.agent.runtime import (
     EventPage,
     GitRemote,
     StateCallback,
-    get_agent_runtime_provider,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.agent.runtime.model_access import resolve_model_access
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -54,8 +56,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from app_spark_api.agent.runtime import AgentRun, RuntimeHealth
+    from app_spark_api.agent.runtime import AgentRun, PreviewTarget, RuntimeHealth
     from app_spark_api.core.projects.models import Project
+    from app_spark_api.infras.bk_access_token import UserCredential
     from app_spark_api.repository.git.models import ProjectGitRepository
 
 logger = logging.getLogger(__name__)
@@ -130,13 +133,14 @@ async def get_dev_server_status(conversation: Conversation) -> str | None:
     return health.dev_server_status
 
 
-async def get_preview_upstream(conversation: Conversation) -> str | None:
-    """Return where this service should proxy the conversation's preview to.
+async def get_preview_target(conversation: Conversation) -> PreviewTarget | None:
+    """Return where, and how, this service should proxy the conversation's preview to.
 
     :param conversation: Conversation whose application is to be proxied.
-    :return: A base URL, or ``None`` when no Runtime is serving the conversation.
+    :return: The application's address with its transport headers, or ``None`` when no
+        Runtime is serving the conversation.
     """
-    return await get_agent_runtime_provider().preview_upstream(str(conversation.id))
+    return await get_agent_runtime_provider().preview_target(str(conversation.id))
 
 
 async def create_conversation(project: Project, *, owner: str | None) -> Conversation:
@@ -190,24 +194,35 @@ async def close_conversation(conversation: Conversation) -> None:
     await terminate_runtime(conversation)
 
 
-async def open_client(conversation: Conversation) -> AgentRuntimeClient:
+async def open_client(conversation: Conversation, *, credential: UserCredential | None = None) -> AgentRuntimeClient:
     """Bring up the conversation's Agent Runtime if needed and return a client for it.
 
     :param conversation: Conversation to be served.
+    :param credential: The caller's BlueKing login. Needed only when a Runtime has to be started
+        and its model calls go through bkaidev, to get the caller's access_token.
     :return: A client pointed at a Runtime that has answered ``/health``.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
     :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
+    :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
+        its settings are invalid.
+    :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
+        ``credential`` is None.
+    :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
+        access_token could not be obtained.
     """
     repo = await arequire_project_git_ready(conversation.project_id)
-    provider = get_agent_runtime_provider()
+
+    # 交给 provider 的是解析函数而不是结果：只有它知道这次是否真要新起 Runtime。每轮对话都走到
+    # 这里，已在跑的 Runtime 手里早有 token，提前解析就是每条消息一次换票。
     # `project_id` rather than `project`, so this never lazily loads the related row -- an
     # implicit query here would be a synchronous one in an async view.
-    handle = await provider.ensure(
+    handle = await get_agent_runtime_provider().ensure(
         project_id=conversation.project_id,
         conversation_id=str(conversation.id),
         state_callback=_state_callback(conversation),
         git_remote=await sync_to_async(_git_remote)(repo),
+        model_access=partial(resolve_model_access, credential),
     )
     return AgentRuntimeClient(handle)
 
@@ -325,7 +340,7 @@ async def read_ui_events(
     return EventPage(since=since, last_seq=last_seq, records=records)
 
 
-async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
+async def start_run(conversation: Conversation, *, content: str, credential: UserCredential | None = None) -> AgentRun:
     """Submit one turn and return its open event stream.
 
     The context version is read from ``/health`` immediately before the run rather than
@@ -334,10 +349,17 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
 
     :param conversation: Conversation the turn belongs to.
     :param content: The user's message.
+    :param credential: The caller's BlueKing login, passed to :func:`open_client`.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
+    :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
+        its settings are invalid.
+    :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
+        ``credential`` is None.
+    :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
+        access_token could not be obtained.
     :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
     """
     # 这道闸门是「结束会话」有意义的前提。没有它，结束一个会话只是杀掉了一个进程：下一轮对话
@@ -345,7 +367,7 @@ async def start_run(conversation: Conversation, *, content: str) -> AgentRun:
     if not conversation.is_live:
         raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
 
-    client = await open_client(conversation)
+    client = await open_client(conversation, credential=credential)
     await _reject_if_closed_meanwhile(conversation)
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)

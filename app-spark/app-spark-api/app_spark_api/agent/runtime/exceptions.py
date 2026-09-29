@@ -25,6 +25,14 @@ class AgentConfigurationError(AgentRuntimeError, ValueError):
     """The configured Agent Runtime provider or its settings are invalid."""
 
 
+class ModelAccessConfigurationError(AgentConfigurationError):
+    """The configured model source, or the bkaidev settings it needs, are invalid."""
+
+
+class ModelCredentialMissingError(AgentRuntimeError):
+    """A Runtime calling bkaidev needs the user's login to get a token, and the request had none."""
+
+
 class AgentProvisionError(AgentRuntimeError):
     """An Agent Runtime could not be brought up for a conversation."""
 

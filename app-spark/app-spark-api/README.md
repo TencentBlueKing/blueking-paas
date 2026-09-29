@@ -8,10 +8,12 @@
 # 必选：统一登录页面地址
 LOGIN_FULL: ...
 
+# 必选：本服务在蓝鲸的应用身份，调用蓝鲸各服务都用这一对
+APP_CODE: ...
+APP_SECRET: ...
+
 # 必选：BKAUTH 用户认证相关配置（具体值请参考当前开发环境）
 BKAUTH_BACKEND_TYPE: ...
-BKAUTH_TOKEN_APP_CODE: ...
-BKAUTH_TOKEN_SECRET_KEY: ...
 BKAUTH_TOKEN_USER_INFO_ENDPOINT: ...
 BKAUTH_USER_COOKIE_VERIFY_URL: ...
 
@@ -37,6 +39,8 @@ uv run uvicorn app_spark_api.asgi:application --reload
 
 必须用 ASGI 服务器（uvicorn）启动。会话接口要把 Agent 的 SSE 事件流边收边转发，
 在 WSGI 下这个流会被缓冲到结束才吐出来，等于失去流式的意义。
+
+日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
 
 ### 运行测试
 
@@ -66,7 +70,7 @@ local_process provider 会为每个 Runtime 生成独立的随机 Bearer token�
 ### 配置
 
 ```yaml
-## Agent Runtime 的驱动方式，目前只有 local_process（在本机 spawn 进程）
+## Agent Runtime 的驱动方式；local_process 在本机 spawn 进程
 AGENT_RUNTIME_PROVIDER: local_process
 AGENT_RUNTIME_PROVIDER_CONFIG:
   ## agent 项目目录，`uv run --project` 指向它
@@ -79,10 +83,7 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   state_root: /tmp/app-spark/agent-state
   ## Runtime 回写状态时访问本服务用的地址。spawn 时会拼上会话前缀注入进去
   callback_base_url: http://127.0.0.1:8000
-  ## 可选，留空则用 agent 自己的默认值
-  # model: deepseek:deepseek-v4-flash
-  # model_api_key: ...
-  ## 可选，追加传给 agent 进程的 APP_SPARK_AGENT_* 环境变量
+  ## 可选，追加传给 agent 进程的 APP_SPARK_AGENT_* 环境变量（模型相关的变量不收）
   # extra_env:
   #   APP_SPARK_AGENT_FAKE_DELAY_SECONDS: "3"
 
@@ -90,7 +91,40 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
 AGENT_CONTEXT_STORAGE:
   backend: host_tmp_path
   root: /tmp/app-spark/agent-contexts
+
+## 调模型走哪条路：bkaidev（默认）或 direct（直连厂商）
+AGENT_MODEL_SOURCE: bkaidev
+## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
+# TOKEN_AUTH_ENDPOINT: ...
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
+## app 身份用 APP_CODE / APP_SECRET。
+## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+# BKAIDEV_MODEL_CONFIG:
+#   default_model_name: deepseek-v4-flash
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段见 DirectModelAccess
+# AGENT_DIRECT_MODEL_CONFIG:
+#   model: deepseek:deepseek-v4-flash
+#   api_key: ...
 ```
+
+**Runtime 的环境变量**：local_process 不把本服务的环境整份交给 Runtime，只按白名单继承 `PATH`、
+`HOME`、语言、时区、临时目录、TLS 根证书、出站代理和 uv 的缓存与解释器路径（见 `INHERITED_ENV_NAMES`），
+再加上 provider 自己注入的 `APP_SPARK_AGENT_*`。本服务的 `APP_SPARK_API_*` 配置（含 `app_secret`、
+数据库密码）一律不进 Runtime，因为 Runtime 又会把环境交给模型写的应用。
+
+**模型的 access_token**：走 bkaidev 时，provider 在确定要新起 Runtime 的那一刻（持锁、确认没有
+活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
+`TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
+`APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
+`{BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
+`APP_SPARK_AGENT_MODEL_BASE_URL`，`default_model_name`（默认 `deepseek-v4-flash`）注入为
+`APP_SPARK_AGENT_MODEL_NAME`。
+
+换票支持直连 auth api 或 SSM 两种 backend，由 `BKAUTH_BACKEND_TYPE` 选择：`bk_token` 用
+`SsmBackend`，其余用 `AuthApiBackend`，
+后者请求体另带 `AUTH_ENV_NAME`（默认 `prod`）作为 `env_name`。本服务不落库也不缓存 token：签发
+服务在现有 token 仍有效时原样返回，所以新开会话不会把用户已在用的 token 废掉。已在跑的 Runtime
+继续对话时不会再换票。bkaidev 的 Runtime 拿不到 `app_secret`，也拿不到直连用的固定 key。
 
 **前置条件**：local_process 用 `uv run --project <agent_project_dir> --no-sync` 拉起 Runtime，
 `--no-sync` 意味着它不会在请求路径上解析依赖，所以 agent 的虚拟环境必须提前备好：
@@ -99,9 +133,36 @@ AGENT_CONTEXT_STORAGE:
 cd ../agent && uv sync
 ```
 
-本地想不花钱跑通整条链路时，把 `model` 设成 `fake:write-file`——
-这是 agent 内置的确定性假模型，不发起任何网络请求，
+本地想不花钱跑通整条链路时，把 `AGENT_MODEL_SOURCE` 设成 `direct`，`AGENT_DIRECT_MODEL_CONFIG.model`
+设成 `fake:write-file`——这是 agent 内置的确定性假模型，不发起任何网络请求，
 细节见 [agent/README.md](../agent/README.md) 的「假模型」一节。
+
+`e2b` provider 创建、重连和销毁沙箱，并在数据库保留归属与停止记录。Runtime 和预览地址
+分别来自 `sandbox.get_host(runtime_port)` 与 `sandbox.get_host(preview_port)`；预览端口固定为
+9000。生产 provider 尚不会安装或启动 Agent，因此默认模板下还不能直接完成会话。
+`timeout_seconds` 默认 3600 秒，是创建时设置的 E2B 沙箱存活期限；活动和本 provider 的重连不会自动续期。
+需要连续使用超过一小时的部署，应按 E2B 服务端允许的范围调大该值；要让长会话持续可用，还需在用户活动时续期。
+
+```yaml
+AGENT_RUNTIME_PROVIDER: e2b
+AGENT_RUNTIME_PROVIDER_CONFIG:
+  ## 必填：自建 E2B 服务的凭据与管理 API 地址
+  api_key: <your-api-key>
+  api_url: https://example.com/e2b
+  ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
+  # domain: sandbox.example.com
+```
+
+`get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
+Runtime 客户端和预览代理会从 provider 获取并附加所需请求头。
+
+TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
+
+有有效 E2B 配置时，运行
+`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`。
+测试会上传并安装本地构建的 Agent wheel，验证沙箱生命周期、聊天和预览；没有有效配置时跳过。
+真实 E2B 测试固定使用 300 秒的沙箱存活期限，并在测试结束时主动销毁沙箱，避免沿用生产默认值。
+当前测试不验证沙箱内的 Git 或仓库持久化。
 
 ### 会话状态的权威副本
 
@@ -260,9 +321,11 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 
 `.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
 预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的
-`preview_upstream` 给出，local_process 为每个 Runtime 分一个应用端口，于是多个会话能同时预览。没有
-Runtime 是 503，应用没起来是 502。转发时按本服务看到的事实重写一组 `X-Forwarded-For` / `-Proto` /
-`-Host` / `-Prefix`，客户端自己带的那份不透传；读 `X-Forwarded-Prefix` 的框架能靠它把自己生成的链接
+`preview_target` 一次给出（地址、端口代理要的首部、能否发 `X-Forwarded-Host`），local_process 为每个
+Runtime 分一个应用端口，于是多个会话能同时预览。没有 Runtime 是 503，应用没起来是 502。转发时按本服务
+看到的事实重写 `X-Forwarded-For` / `-Proto` / `-Prefix`；`X-Forwarded-Host` 由 provider 的
+`send_forwarded_host` 决定：本地 provider 发送，E2B 因端口代理按 host 路由而不发送。
+客户端自己带的那份不透传；读 `X-Forwarded-Prefix` 的框架能靠它把自己生成的链接
 拼对。
 
 **同源是这块最大的妥协。** 应用是模型写的代码，却和控制面共享 origin，它的 JS 一句

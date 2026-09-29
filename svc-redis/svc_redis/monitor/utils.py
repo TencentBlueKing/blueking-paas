@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) Tencent. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+"""采集的并发与超时控制"""
+
+import logging
+import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, wait
+
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+# 并发采集的最大并发数
+MAX_CONCURRENT_TASKS = 32
+
+
+def collect_deadline() -> float:
+    """本次采集的截止时间 (time.monotonic() 时间戳)"""
+    return time.monotonic() + settings.METRIC_COLLECT_DEADLINE
+
+
+def remaining_time(deadline: float) -> float:
+    """距离 deadline 还剩多少秒 (可能为负)"""
+    return deadline - time.monotonic()
+
+
+def request_timeout(deadline: float) -> float:
+    """单次请求的超时: 取 min(单请求上限, 剩余预算), 下限 0.1 是因为 0 会被当成 "未设置" """
+    return min(settings.METRIC_COLLECT_REQUEST_TIMEOUT, max(remaining_time(deadline), 0.1))
+
+
+def map_with_deadline(func: Callable, items: list, deadline: float) -> list:
+    """并发执行任务并收集结果, 结果里不包含到 deadline 仍未完成的任务
+
+    NOTE: 被放弃的任务仍会继续跑完, 因此 func 不得修改传入对象或其它共享状态;
+    单个任务抛异常只记录日志, 不影响其它任务.
+    """
+    if not items:
+        return []
+
+    timeout = remaining_time(deadline)
+    if timeout <= 0:
+        logger.warning("collecting metrics deadline exceeded, skip %d task(s)", len(items))
+        return []
+
+    executor = ThreadPoolExecutor(max_workers=min(MAX_CONCURRENT_TASKS, len(items)))
+    try:
+        futures = [executor.submit(func, item) for item in items]
+        done, not_done = wait(futures, timeout=timeout)
+        if not_done:
+            logger.warning("collecting metrics timeout, %d/%d unfinished task(s) skipped", len(not_done), len(futures))
+    finally:
+        # 不等待未完成的任务, 避免拖慢采集; 它们不会再修改共享对象
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    results = []
+    for future in done:
+        try:
+            results.append(future.result())
+        except Exception:
+            # 单个任务失败不得影响整次采集
+            logger.exception("unexpected error in concurrent collect task")
+    return results

@@ -39,7 +39,7 @@ from app_spark_api.agent.conversations.models import (
     Conversation,
     ConversationUserMessage,
 )
-from app_spark_api.agent.runtime import get_agent_runtime_provider
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from tests.api.support import CONVERSATIONS_URL, configure_local_provider, create_reachable_project
@@ -324,7 +324,7 @@ async def test_a_conversation_closed_while_its_runtime_comes_up_does_not_keep_it
     """
     terminated: list[str] = []
 
-    async def close_it_behind_our_back(target: Conversation) -> object:
+    async def close_it_behind_our_back(target: Conversation, **_: object) -> object:
         """Stand in for a concurrent close that lands after the gate has let this run past."""
         await Conversation.objects.filter(pk=target.pk).aupdate(closed_at=timezone.now())
         # The run is meant to be rejected before anything touches the client, so what this

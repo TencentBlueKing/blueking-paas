@@ -59,7 +59,7 @@ class AidevApiClient:
         """用当前进程注入的 token 和网关地址构造客户端。"""
         token = settings.gateway_access_token()
         if token is None:
-            raise ValueError("BK_AIDEV_ACCESS_TOKEN or MODEL_API_KEY is required")
+            raise ValueError("BK_AIDEV_ACCESS_TOKEN is required")
 
         base_url = settings.MODEL_BASE_URL.strip()
         if not base_url:

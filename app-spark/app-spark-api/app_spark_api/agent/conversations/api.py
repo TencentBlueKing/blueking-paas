@@ -40,6 +40,7 @@ from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
+from app_spark_api.infras.accounts.credentials import get_user_credential
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -73,7 +74,7 @@ async def create_conversation(request: HttpRequest, project_id: str = PROJECT_ID
     """
     project = await _get_project(request, project_id)
     conversation = await services.create_conversation(project, owner=authenticated_user(request).pk)
-    await services.open_client(conversation)
+    await services.open_client(conversation, credential=get_user_credential(request))
     return Status(HTTPStatus.CREATED, _to_state(conversation, await services.get_state(conversation)))
 
 
@@ -143,7 +144,7 @@ async def start_run(
 
     # 所有 ORM 操作都必须在返回 StreamingHttpResponse 之前做完：生成器要跑到 run 结束为止，
     # 中途碰 ORM 会把一条数据库连接钉在一次可能长达数分钟的 run 上。
-    run = await services.start_run(conversation, content=payload.content)
+    run = await services.start_run(conversation, content=payload.content, credential=get_user_credential(request))
 
     return StreamingHttpResponse(
         services.stream_run(run, conversation.id),
@@ -296,13 +297,14 @@ async def proxy_preview(
     conversation = await _get_conversation(request, project_id, number)
 
     # 没有 Runtime 就没有上游。不在这里顺手拉一个：看一眼预览不该等于给会话开一个 agent。
-    upstream = await services.get_preview_upstream(conversation)
-    if upstream is None:
+    # 地址和它要带的 headers 一次拿全，分两次问可能正好跨过沙箱被替换，拿到一个沙箱的地址配另一个的凭据。
+    target = await services.get_preview_target(conversation)
+    if target is None:
         raise error_codes.PREVIEW_RUNTIME_NOT_RUNNING
 
     return await preview.forward_to_app(
         request,
-        upstream=upstream,
+        target=target,
         subpath=subpath,
         # 和 origin 同一个值。应用自己发的重定向要靠它拉回前缀下面，否则浏览器第一跳就出去了。
         preview_root=preview.build_preview_origin(request, project_id=project_id, number=number),

@@ -22,15 +22,20 @@ import abc
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, GitRemote, StateCallback
+    from app_spark_api.agent.runtime.entities import (
+        AgentRuntimeHandle,
+        GitRemote,
+        ModelAccessResolver,
+        PreviewTarget,
+        StateCallback,
+    )
 
 
 class AgentRuntimeProvider(abc.ABC):
     """Brings an Agent Runtime up for a conversation, and takes it down again.
 
-    This is the seam the deployment story moves along. Today the only implementation spawns a
-    process on this host; a sandbox implementation would replace it wholesale without anything
-    above having to change, because both hand back the same
+    This is the seam the deployment story moves along. One implementation spawns a process on
+    this host; a sandbox implementation owns the remote sandbox. Both hand back the same
     :class:`~app_spark_api.agent.runtime.entities.AgentRuntimeHandle` and the Runtime behind it
     speaks the same HTTP either way.
     """
@@ -43,6 +48,7 @@ class AgentRuntimeProvider(abc.ABC):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         """Return a live Runtime for ``conversation_id``, starting one if needed.
 
@@ -53,8 +59,12 @@ class AgentRuntimeProvider(abc.ABC):
 
         Implementations must be idempotent: a second call for a conversation that is already
         served has to return the running Runtime rather than start a rival one. A consequence
-        worth stating: ``state_callback`` and ``git_remote`` are only read when a Runtime is
-        actually started, so a caller cannot use either to re-point a Runtime that is already up.
+        worth stating: ``state_callback``, ``git_remote`` and ``model_access`` are only read when
+        a Runtime is actually started, so a caller cannot use any of them to re-point a Runtime
+        that is already up. ``model_access`` in particular must be called only then, and under the
+        same guard that keeps two requests from starting rival Runtimes: a Runtime that is already
+        up must not cost a token exchange, and one that died since the caller last looked must
+        still get its credential.
 
         :param project_id: Project being developed; its workspace is shared by every one of its
             conversations.
@@ -63,6 +73,8 @@ class AgentRuntimeProvider(abc.ABC):
             token to do it with. Omitted for a Runtime that is to keep its state to itself.
         :param git_remote: Where the Runtime should persist its workspace files. Omitted for a
             Runtime whose workspace is to live only on local disk.
+        :param model_access: Returns how the Runtime calls its model. Required by any provider
+            that starts an agent; its errors propagate unchanged.
         :return: Where the Runtime can be reached.
         :raises AgentProvisionError: If no Runtime could be brought up.
         :raises AgentWorkspaceBusyError: If another conversation of the same Project already
@@ -83,8 +95,8 @@ class AgentRuntimeProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def preview_upstream(self, conversation_id: str) -> str | None:
-        """Return the base URL this service should proxy the conversation's preview to.
+    async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
+        """Return where, and how, this service should proxy the conversation's preview to.
 
         The workspace application, not the Runtime's own API: what a user opens when they want
         to look at what the agent built. Asking the provider is the whole point -- where that
@@ -96,8 +108,8 @@ class AgentRuntimeProvider(abc.ABC):
         conversation must not provision an agent for it.
 
         :param conversation_id: Conversation whose application is to be proxied.
-        :return: A scheme-and-authority base URL, or ``None`` when no Runtime is serving the
-            conversation and there is therefore nothing to proxy to.
+        :return: The application's address plus the transport it needs, or ``None`` when no
+            Runtime is serving the conversation and there is therefore nothing to proxy to.
         """
 
     @abc.abstractmethod

@@ -60,5 +60,6 @@ dependencies = [
     'bkapi-client-core (==1.2.0)',
     'django-environ (==0.14.0)',
     'urllib3 (==1.26.20)',
-    'pyjwt (==2.12.0)'
+    'pyjwt (==2.12.0)',
+    'bkpaas-auth (==4.1.0)',
 ]

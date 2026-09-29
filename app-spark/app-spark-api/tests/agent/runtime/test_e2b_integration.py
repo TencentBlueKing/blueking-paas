@@ -31,15 +31,15 @@ from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 from tests.agent.runtime.e2b_support import (
     SANDBOX_WORKSPACE,
     AgentBundle,
+    BootstrappedE2BProvider,
     build_agent_bundle,
-    install_agent_bundle,
     logger,
     require_e2b_config,
-    start_agent,
-    wait_for_health,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from app_spark_api.agent.runtime.entities import E2BConfig
 
 pytestmark = [pytest.mark.e2b, pytest.mark.django_db(transaction=True)]
@@ -51,20 +51,37 @@ def e2b_config(settings) -> E2BConfig:
     return require_e2b_config(settings)
 
 
+@pytest.fixture(scope="session")
+def agent_bundle_factory(tmp_path_factory) -> Callable[[], AgentBundle]:
+    """Build once, and only after a test has passed the E2B configuration gate."""
+    bundle: AgentBundle | None = None
+
+    def get_bundle() -> AgentBundle:
+        nonlocal bundle
+        if bundle is None:
+            bundle = build_agent_bundle(tmp_path_factory.mktemp("live-e2b-agent"))
+        return bundle
+
+    return get_bundle
+
+
 @pytest.fixture
-async def e2b_provider(e2b_config: E2BConfig):
-    """Own and clean up every sandbox created by one test."""
-    provider = E2BProvider(e2b_config)
+def agent_bundle(e2b_config: E2BConfig, agent_bundle_factory: Callable[[], AgentBundle]) -> AgentBundle:
+    """Get the wheel bundle after the E2B skip condition has been checked."""
+    return agent_bundle_factory()
+
+
+@pytest.fixture
+async def e2b_provider(e2b_config: E2BConfig, agent_bundle: AgentBundle):
+    """Own and clean up every sandbox created by one test.
+
+    Every new sandbox has its Agent started, so each one first gets the test Agent installed.
+    """
+    provider = BootstrappedE2BProvider(e2b_config, agent_bundle)
     try:
         yield provider
     finally:
         await provider.shutdown()
-
-
-@pytest.fixture
-def agent_bundle(tmp_path, e2b_config: E2BConfig) -> AgentBundle:
-    """Prepare local artifacts after the E2B skip condition has been checked."""
-    return build_agent_bundle(tmp_path)
 
 
 async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider):
@@ -194,26 +211,20 @@ async def test_e2b_provider_releases_expired_sandbox(e2b_provider: E2BProvider):
     assert await e2b_provider.peek(conversation_id) == replacement
 
 
-async def test_agent_wheel_runs_a_real_fake_turn_in_e2b(e2b_provider: E2BProvider, agent_bundle: AgentBundle):
-    """Install the wheel, reach its HTTP port, and make its fake model write a file."""
+async def test_the_provider_starts_an_agent_that_runs_a_real_fake_turn(e2b_provider: E2BProvider):
+    """The provider's own start reaches the Agent's HTTP port, and its fake model writes a file."""
     project_id = str(uuid4())
     conversation_id = str(uuid4())
-    logger.info("Creating sandbox and installing real Agent for fake chat turn")
+    logger.info("Creating sandbox and starting a real Agent for a fake chat turn")
     handle = await e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id)
     sandbox = await e2b_provider.get_sandbox(conversation_id)
     assert sandbox is not None
+    record = await E2BSandboxRecord.objects.aget(sandbox_id=sandbox.sandbox_id)
+    assert record.agent_pid is not None
 
-    await install_agent_bundle(sandbox, agent_bundle)
-    await start_agent(
-        sandbox,
-        handle,
-        port=e2b_provider.config.runtime_port,
-        app_port=e2b_provider.config.preview_port,
-        project_id=project_id,
-    )
-
+    # ensure returns only once /health answered, so no waiting is needed here.
     client = AgentRuntimeClient(handle)
-    health = await wait_for_health(sandbox, client, port=e2b_provider.config.runtime_port)
+    health = await client.health()
     assert health.model == "fake:write-file"
     assert health.conversation_id is None
 

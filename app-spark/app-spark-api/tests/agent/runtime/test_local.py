@@ -23,6 +23,7 @@ there is one; and each Runtime is given an application port of its own.
 
 import pytest
 
+from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
     BkAidevModelAccess,
@@ -34,7 +35,7 @@ from app_spark_api.agent.runtime.entities import (
 )
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 from app_spark_api.agent.runtime.providers import local as local_mod
-from app_spark_api.agent.runtime.providers.local import ENV_PREFIX, LocalProcessProvider
+from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
 PUBLIC_PATH = "/api-svc/api/internal/conversations/x/state/"
 PATH_INFO = "/api/internal/conversations/x/state/"

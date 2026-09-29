@@ -5,6 +5,10 @@
 # DEBUG: false
 # ALLOWED_HOSTS: ['*']
 
+## 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对，APP_SECRET 不进 Runtime
+# APP_CODE: ''
+# APP_SECRET: ''
+
 ## 国际化
 # LANGUAGE_CODE: zh-hans
 # LANGUAGES:
@@ -80,14 +84,27 @@
 #   state_root: ''
 #   ## 本服务对 agent 进程可达的地址，agent 用它把会话状态回写回来。默认 http://127.0.0.1:8000。
 #   callback_base_url: http://127.0.0.1:8000
-#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL，不填则用 agent 自己的默认值。
-#   model: ''
-#   ## 传给 agent 的 APP_SPARK_AGENT_MODEL_API_KEY，不填则用 agent 自己的默认值。
-#   model_api_key: ''
 #   ## 等待新起的 Runtime 通过 /health 健康检查的超时秒数。
 #   startup_timeout_seconds: 60
-#   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。
+#   ## 其余要透给 agent 进程的 APP_SPARK_AGENT_* 变量。模型相关的变量不收，由下面的模型来源决定。
 #   extra_env: {}
+
+## Agent Runtime 调模型走哪条路：bkaidev（默认）或 direct（直连厂商）
+# AGENT_MODEL_SOURCE: bkaidev
+
+## AGENT_MODEL_SOURCE 为 direct 时必填（详见 DirectModelAccess）
+# AGENT_DIRECT_MODEL_CONFIG:
+#   ## 必填。pydantic-ai 的 <provider>:<model>，本地可用 fake:write-file。
+#   model: ''
+#   ## 可选。厂商 API Key，fake: 模型不需要。
+#   api_key: ''
+
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选（详见 BkAidevModelConfig）。
+## app_code / app_secret 用上面的 APP_CODE / APP_SECRET，不在这里再配。
+## LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接，换票地址是 TOKEN_AUTH_ENDPOINT，都不在这里配。
+## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+# BKAIDEV_MODEL_CONFIG:
+#   default_model_name: deepseek-v4-flash
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。backend 可选 host_tmp_path（root 为父目录）或 bk_repo（root 为
@@ -117,14 +134,24 @@
 ## 统一登录页面地址，用于模板渲染，必填
 # LOGIN_FULL: ''
 
+## 网关 API 访问地址模板，须含 {api_name}。bkaidev 的 LLM 基址从这里拼。
+## 例：https://bkapi.example.com/api/{api_name}/ 或 https://{api_name}.apigw.example.com
+# BK_API_URL_TMPL: ''
+
+## 调用网关时的环境名（stage），默认 prod
+# APIGW_ENVIRONMENT: prod
+
+## 用户态 access_token 的签发地址，AGENT_MODEL_SOURCE 为 bkaidev 时必填
+## 支持直连 auth api 或 SSM 两种 backend，由 BKAUTH_BACKEND_TYPE 决定：bk_token 用 SSM，其余用 auth api
+# TOKEN_AUTH_ENDPOINT: ''
+
+## 换票时的 env_name（prod / test），默认 prod；BKAUTH_BACKEND_TYPE 为 bk_token 时不使用
+# AUTH_ENV_NAME: prod
+
 ## -------------------------------- 用户鉴权模块 bkpaas_auth SDK 相关配置 --------------------------------
 
-## 用户身份校验类型，默认值为 bk_token
+## 用户身份校验类型，默认值为 bk_token。同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api
 # BKAUTH_BACKEND_TYPE: bk_token
-## 用于获取 Token 的 App Code
-# BKAUTH_TOKEN_APP_CODE: ''
-## 用于获取 Token 的 App Secret
-# BKAUTH_TOKEN_SECRET_KEY: ''
 ## bk-login 网关环境，默认值为 prod
 # BKAUTH_BK_LOGIN_APIGW_STAGE: prod
 ## 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串，bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL

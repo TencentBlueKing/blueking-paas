@@ -37,6 +37,7 @@ from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
     E2BConfig,
     GitRemote,
+    ModelAccessResolver,
     PreviewTarget,
     StateCallback,
 )
@@ -93,16 +94,19 @@ class E2BProvider(AgentRuntimeProvider):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         """Return an existing sandbox or claim the conversation and create one.
 
-        The callback and Git remote become useful when the Agent process is installed and
-        started inside the sandbox; this stage does not pass them to an Agent.
+        The callback, Git remote, and model access become useful when the Agent process is
+        installed and started inside the sandbox; this stage does not pass them to an Agent.
 
         :param project_id: Project whose conversations must not run concurrently.
         :param conversation_id: Conversation to assign to the sandbox.
         :param state_callback: Future Runtime state callback, unused at this stage.
         :param git_remote: Future workspace remote, unused at this stage.
+        :param model_access: Future model credentials for the Runtime. Never called at this
+            stage, so creating a sandbox costs no token exchange.
         :return: Reserved HTTP endpoint and token for the future Runtime.
         :raises AgentProvisionError: If sandbox creation, reconnection, or recording fails.
         :raises AgentWorkspaceBusyError: If another conversation of this Project is active, or

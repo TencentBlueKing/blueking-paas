@@ -41,7 +41,13 @@ from tests.api.support import create_reachable_project
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, E2BConfig, GitRemote, StateCallback
+    from app_spark_api.agent.runtime.entities import (
+        AgentRuntimeHandle,
+        E2BConfig,
+        GitRemote,
+        ModelAccessResolver,
+        StateCallback,
+    )
 
 
 class BootstrappedE2BProvider(E2BProvider):
@@ -60,6 +66,7 @@ class BootstrappedE2BProvider(E2BProvider):
         conversation_id: str,
         state_callback: StateCallback | None = None,
         git_remote: GitRemote | None = None,
+        model_access: ModelAccessResolver | None = None,
     ) -> AgentRuntimeHandle:
         """Provision through the real provider, then install the test Agent once.
 
@@ -67,6 +74,7 @@ class BootstrappedE2BProvider(E2BProvider):
         :param conversation_id: Conversation being served.
         :param state_callback: Callback passed through to the production provider.
         :param git_remote: Repository details passed through to the production provider.
+        :param model_access: Model credentials passed through to the production provider.
         :return: Handle of the healthy Agent Runtime.
         """
         handle = await super().ensure(
@@ -74,6 +82,7 @@ class BootstrappedE2BProvider(E2BProvider):
             conversation_id=conversation_id,
             state_callback=state_callback,
             git_remote=git_remote,
+            model_access=model_access,
         )
         async with self._bootstrap_lock:
             if conversation_id not in self._bootstrapped:

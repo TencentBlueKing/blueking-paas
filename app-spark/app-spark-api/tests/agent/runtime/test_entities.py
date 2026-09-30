@@ -23,6 +23,7 @@ import pytest
 from app_spark_api.agent.runtime.entities import (
     EventPage,
     RuntimeHealth,
+    structure_e2b_config,
     structure_local_process_config,
 )
 from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
@@ -111,6 +112,50 @@ def test_every_setting_can_be_given():
 def test_an_unusable_configuration_is_refused_by_name(raw_config, reason):
     with pytest.raises(AgentConfigurationError) as exc_info:
         structure_local_process_config(raw_config)
+
+    assert reason in str(exc_info.value)
+
+
+MINIMAL_E2B_CONFIG = {
+    "api_key": "e2b-key",
+    "api_url": "https://e2b.example",
+    "callback_base_url": "https://app-spark.example",
+}
+
+
+@pytest.mark.parametrize(
+    ("raw_config", "reason"),
+    [
+        # A sandbox has no loopback route back to this service, so there is no default to fall
+        # back on the way the local provider has one.
+        pytest.param(
+            {k: v for k, v in MINIMAL_E2B_CONFIG.items() if k != "callback_base_url"},
+            "callback_base_url",
+            id="no-callback-address",
+        ),
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data", "state_dir": "/data/state"},
+            "state_dir",
+            id="state-inside-the-workspace",
+        ),
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data/state/ws", "state_dir": "/data/state"},
+            "state_dir",
+            id="workspace-inside-the-state",
+        ),
+        # Compared literally, this would pass as a sibling of the workspace.
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data/workspace", "state_dir": "/data/x/../workspace/state"},
+            "state_dir",
+            id="state-inside-the-workspace-through-dot-dot",
+        ),
+        pytest.param({**MINIMAL_E2B_CONFIG, "workspace_dir": "data/workspace"}, "workspace_dir", id="relative-ws"),
+        pytest.param({**MINIMAL_E2B_CONFIG, "state_dir": "state"}, "state_dir", id="relative-state"),
+    ],
+)
+def test_an_unusable_e2b_configuration_is_refused_by_name(raw_config, reason):
+    with pytest.raises(AgentConfigurationError) as exc_info:
+        structure_e2b_config(raw_config)
 
     assert reason in str(exc_info.value)
 

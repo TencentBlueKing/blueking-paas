@@ -18,94 +18,38 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
 
-from app_spark_api.agent.runtime import AgentRuntimeClient
 from app_spark_api.agent.runtime import factory as runtime_factory
-from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 from app_spark_api.repository.git.services import provision_project_repository
 from tests.agent.runtime.e2b_support import (
     AgentBundle,
+    BootstrappedE2BProvider,
     build_agent_bundle,
-    install_agent_bundle,
     logger,
     require_e2b_config,
-    start_agent,
-    wait_for_health,
 )
 from tests.api.support import create_reachable_project
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from app_spark_api.agent.runtime.entities import (
-        AgentRuntimeHandle,
-        E2BConfig,
-        GitRemote,
-        ModelAccessResolver,
-        StateCallback,
-    )
-
-
-class BootstrappedE2BProvider(E2BProvider):
-    """Make the default template usable for live API tests after provisioning."""
-
-    def __init__(self, config: E2BConfig, bundle: AgentBundle) -> None:
-        super().__init__(config)
-        self.bundle = bundle
-        self._bootstrapped: set[str] = set()
-        self._bootstrap_lock = asyncio.Lock()
-
-    async def ensure(
-        self,
-        *,
-        project_id: str,
-        conversation_id: str,
-        state_callback: StateCallback | None = None,
-        git_remote: GitRemote | None = None,
-        model_access: ModelAccessResolver | None = None,
-    ) -> AgentRuntimeHandle:
-        """Provision through the real provider, then install the test Agent once.
-
-        :param project_id: Project being served.
-        :param conversation_id: Conversation being served.
-        :param state_callback: Callback passed through to the production provider.
-        :param git_remote: Repository details passed through to the production provider.
-        :param model_access: Model credentials passed through to the production provider.
-        :return: Handle of the healthy Agent Runtime.
-        """
-        handle = await super().ensure(
-            project_id=project_id,
-            conversation_id=conversation_id,
-            state_callback=state_callback,
-            git_remote=git_remote,
-            model_access=model_access,
-        )
-        async with self._bootstrap_lock:
-            if conversation_id not in self._bootstrapped:
-                sandbox = await self.get_sandbox(conversation_id)
-                assert sandbox is not None
-                logger.info("Bootstrapping API conversation %s in sandbox %s", conversation_id, sandbox.sandbox_id)
-                await install_agent_bundle(sandbox, self.bundle)
-                await start_agent(
-                    sandbox,
-                    handle,
-                    port=self.config.runtime_port,
-                    app_port=self.config.preview_port,
-                    project_id=project_id,
-                )
-                await wait_for_health(sandbox, AgentRuntimeClient(handle), port=self.config.runtime_port)
-                self._bootstrapped.add(conversation_id)
-        return handle
+    from app_spark_api.agent.runtime.entities import E2BConfig
 
 
 @pytest.fixture
 def e2b_config(settings) -> E2BConfig:
-    """Skip live API tests unless the service has a valid E2B configuration."""
-    return require_e2b_config(settings)
+    """Skip live API tests unless the service has a valid E2B configuration.
+
+    The API resolves model access itself before the provider starts an Agent; the default bkaidev
+    source would need a token exchange these tests have no user for.
+    """
+    config = require_e2b_config(settings)
+    settings.AGENT_MODEL_SOURCE = "direct"
+    settings.AGENT_DIRECT_MODEL_CONFIG = {"model": "fake:write-file"}
+    return config
 
 
 @pytest.fixture(scope="session")

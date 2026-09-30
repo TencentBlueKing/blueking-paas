@@ -1,0 +1,6 @@
+# e2e 状态目录与 env.sh 含上游凭证和签名私钥，不得进入构建上下文
+hack/e2e/.state/
+hack/e2e/env.sh
+build/
+bin/
+cover.out

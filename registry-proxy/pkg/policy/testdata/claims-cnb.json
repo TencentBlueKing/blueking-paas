@@ -1,0 +1,10 @@
+{
+  "sub": "9c2d7e41-0b6a-4f3e-8a15-6d0c3b2e7f58",
+  "app_code": "demo",
+  "module": "default",
+  "push": [
+    {"repo": "mirrors-example-com/bkpaas/docker/demo/default", "tags": ["main-3f2a1bc", "cnb-build-cache"]}
+  ],
+  "pull": ["mirrors-example-com/"],
+  "pull_deny": ["mirrors-example-com/bkpaas/docker/"]
+}

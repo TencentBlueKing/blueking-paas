@@ -16,6 +16,8 @@
 
 """Timeouts for provisioning, starting, stopping, and renewing an E2B sandbox."""
 
+from e2b import AuthenticationException, SandboxException
+
 # 创建沙箱并绑定到占位这一整步的上限。限的是整步而不是单个请求，因为 SDK 会重试被限流的请求；
 # 只有整步有上限，才能把一个早已没人管的未绑定占位，和一个还在创建中的占位区分开。
 PROVISION_TIMEOUT_SECONDS = 120
@@ -58,3 +60,8 @@ KILL_REQUEST_TIMEOUT_SECONDS = 5.0
 # 一次续期的上限，SDK 自带的重试也算在内。续期挡在一轮的开头和结尾，控制面卡住时，不限时就会让
 # 这一轮跟着多等一分钟。
 RENEW_TIMEOUT_SECONDS = 5.0
+
+# 一次 SDK 调用可能抛出的错误。凭据或沙箱用户不对时的 AuthenticationException 不是
+# SandboxException 的子类，只接 SandboxException 会让它原样漏出去。2.44.0 里限流是
+# RateLimitException、控制面 503 是 SandboxException，都已经是它的子类。
+SANDBOX_ERRORS = (SandboxException, AuthenticationException)

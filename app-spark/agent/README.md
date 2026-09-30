@@ -399,18 +399,43 @@ Forgejo 起不来就失败，不会 skip。
 
 ## 本地镜像
 
+镜像就是 e2b 沙箱模板：容器里只常驻 envd，Agent 由 app-spark-api 经 envd 注入环境后启动，所以镜像
+不设 CMD。构建时必须指定 envd 的来源镜像，tag 与平台的 ENVD_REF 保持一致：
+
 ```bash
-make docker-build
+make docker-build CUBE_BASE_ENVD_IMAGE=mirrors.tencent.com/bcs/cube-base-envd:2026.16
+```
+
+本地调试 Agent 时显式带上启动命令（不带命令时容器只起 envd，8090 无人监听）：
+
+```bash
 docker run --rm -p 8090:8090 \
   -e APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me \
   -e APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN=replace-me \
   -e APP_SPARK_AGENT_MODEL_NAME=deepseek-v4-flash \
   -e APP_SPARK_AGENT_MODEL_BASE_URL=https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1 \
-  app-spark-agent:dev
+  app-spark-agent:dev python -m app_spark_agent
 ```
 
-入口为 tini（PID 1）。`make docker-build` 使用 `--load` 写入本地 daemon。镜像内 workspace / state 锁定为 `/data/workspace` 与
-`/data/state`，二者必须是独立路径，文件工具只能看见 `/data/workspace`。
+`make docker-build` 使用 `--load` 写入本地 daemon，平台固定为 `linux/amd64`（底座里的 envd 只有这一种架构）。
+镜像内 workspace / state 锁定为 `/data/workspace` 与 `/data/state`，二者必须是独立路径，文件工具只能看见
+`/data/workspace`。
+
+### cube 约定
+
+镜像从 python:3.14-slim-bookworm 自建，只从 cube-base-envd 复制 envd 和入口脚本，其余照 cube 底座的约定：
+
+- envd 位于 `/usr/bin/envd`（静态链接），入口为 `tini -- /usr/local/bin/cube-entrypoint.sh`。入口先在后台起
+  envd（`ENVD_PORT=49983`，日志默认 `/var/log/envd.log`），没有 CMD 时以 envd 为前台进程。平台通过
+  `:49983/health` 探测就绪，要求约 1 秒内通过。
+- `user` 账户（uid 1000，家目录 `/home/user`，免密 sudo）。app-spark-api 以它的身份启动 Agent，`/data`
+  整个目录归属它：除了 workspace 和 state，应用日志 `APP_LOG_PATH` 默认也写在 `/data/app.log`。
+- envd 启动的进程拿到的 PATH 是 envd 自己的默认值，不含镜像 ENV 里的 `/app/.venv/bin`，所以 app-spark-api
+  用绝对路径 `/app/.venv/bin/python -m app_spark_agent` 启动 Agent。镜像里其余 `APP_SPARK_AGENT_*` 的 ENV 也
+  不会被继承，只对本地 `docker run` 生效。
+- 镜像里没有 `ps`，要看进程归属时读 `/proc/<pid>/status`。
+
+升级 envd：平台 ENVD_REF 变更后，把构建参数换成对应 tag 的 cube-base-envd 重新构建，再更新模板。
 
 ## 开发指南
 

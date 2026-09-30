@@ -65,7 +65,7 @@ class _SandboxClaim(SandboxAgentStop):
         claim = self.record
         try:
             info = await sandbox.get_info()
-        except SandboxException as exc:
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not inspect the new E2B sandbox {sandbox.sandbox_id}: {exc}") from exc
 
         fields = {
@@ -108,9 +108,14 @@ class _SandboxClaim(SandboxAgentStop):
             f"{{ mkdir -p {shlex.quote(config.workspace_dir)} {shlex.quote(state_parent)}"
             f" && exec {config.agent_command}; }} >> {shlex.quote(config.agent_log_path)} 2>&1"
         )
+        # 显式指定用户：envd 版本够新时 SDK 不再默认带上 user，命令就由 envd 的默认用户（root）
+        # 执行，Agent 写出的文件和后面的停止信号都会跟镜像里的约定对不上。envd 不认识这个用户时，
+        # SDK 抛 AuthenticationException，已包含在 SANDBOX_ERRORS 里。
         try:
-            process = await sandbox.commands.run(command, background=True, envs=envs, timeout=0)
-        except SandboxException as exc:
+            process = await sandbox.commands.run(
+                command, background=True, envs=envs, timeout=0, user=config.agent_user
+            )
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not start the Agent in E2B sandbox {sandbox.sandbox_id}: {exc}") from exc
 
         try:
@@ -171,9 +176,10 @@ class _SandboxClaim(SandboxAgentStop):
 
     async def _read_failure_output(self, sandbox: AsyncSandbox, process: AsyncCommandHandle) -> str:
         """Return the end of what a failed start wrote, for a failure that has to be explained."""
+        # 与启动它的用户一致：日志文件由那个用户创建。
         try:
-            content = str(await sandbox.files.read(self.config.agent_log_path))
-        except SandboxException:
+            content = str(await sandbox.files.read(self.config.agent_log_path, user=self.config.agent_user))
+        except constants.SANDBOX_ERRORS:
             content = ""
         # The log file holds nothing when the shell could not even open it (an unwritable log
         # directory); what the shell said about that is in the command's own output instead.
@@ -193,7 +199,7 @@ class _SandboxClaim(SandboxAgentStop):
         if sandbox is not None:
             try:
                 await sandbox.kill()
-            except SandboxException:
+            except constants.SANDBOX_ERRORS:
                 logger.warning(
                     "Could not kill E2B sandbox %s after provisioning failed; it runs until its E2B timeout",
                     sandbox.sandbox_id,
@@ -247,7 +253,7 @@ class _SandboxClaim(SandboxAgentStop):
                 return sandbox
         except NotFoundException:
             pass
-        except SandboxException as exc:
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
         if reconcile:
             await self._release("expired")
@@ -273,7 +279,7 @@ class _SandboxClaim(SandboxAgentStop):
                 return self.rebuild_sandbox()
             except (SandboxException, ValueError) as exc:
                 raise AgentProvisionError(f"Could not rebuild E2B sandbox {sandbox_id}: {exc}") from exc
-        except SandboxException as exc:
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not inspect E2B sandbox {sandbox_id}: {exc}") from exc
 
     def rebuild_sandbox(self) -> AsyncSandbox:
@@ -367,7 +373,7 @@ class _SandboxClaim(SandboxAgentStop):
         try:
             sandbox = await self._open_sandbox(record.sandbox_id)
             await sandbox.kill()
-        except AgentProvisionError, SandboxException:
+        except (AgentProvisionError, *constants.SANDBOX_ERRORS):
             logger.warning(
                 "Could not kill E2B sandbox %s whose Agent never started; it runs until its E2B timeout",
                 record.sandbox_id,

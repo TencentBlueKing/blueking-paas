@@ -167,8 +167,10 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   api_url: https://example.com/e2b
   ## 必填：本服务的对外地址，沙箱内的 Agent 用它回写会话状态
   callback_base_url: https://app-spark.example.com
-  ## 可选：预装了 Agent 的沙箱模板
-  # template: <agent-template>
+  ## 必填：预装了 Agent 的沙箱模板，由 agent 镜像添加而来（见 agent/README.md「本地镜像」）
+  template: <agent-template>
+  ## 可选：在沙箱内启动、停止、探测 Agent 所用的用户，默认 user
+  # agent_user: user
   ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
   # domain: sandbox.example.com
 ```
@@ -180,8 +182,9 @@ TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口�
 
 有有效 E2B 配置时，运行
 `APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`，
-没有配置时跳过。默认模板里没有 Agent，测试先往沙箱里装本地构建的 wheel，再走生产的启动路径；
-沙箱存活期固定 300 秒，结束时主动销毁。不验证沙箱内的 Git 持久化和状态回写。
+没有配置、或配置里没有 `template` 时跳过。`template` 必须是由 agent 镜像添加的模板，测试直接用
+生产的 provider 启动模板里的 Agent，不往沙箱里装任何东西；沙箱存活期固定 300 秒，结束时主动销毁。
+不验证沙箱内的 Git 持久化和状态回写。
 
 ### 会话状态的权威副本
 

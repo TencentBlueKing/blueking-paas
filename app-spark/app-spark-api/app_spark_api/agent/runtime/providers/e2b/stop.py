@@ -23,13 +23,14 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from e2b import AsyncSandbox, NotFoundException, SandboxException, TimeoutException
+from e2b import AsyncSandbox, NotFoundException, TimeoutException
 
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 
 from . import constants
 
 if TYPE_CHECKING:
+    from app_spark_api.agent.runtime.entities import E2BConfig
     from app_spark_api.agent.runtime.models import E2BSandboxRecord
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class SandboxAgentStop:
     """
 
     record: E2BSandboxRecord
+    config: E2BConfig
 
     async def connect(self, *, reconcile: bool, require_started: bool = True) -> AsyncSandbox | None:
         """Reconnect to this claim's sandbox. _SandboxClaim implements it."""
@@ -116,7 +118,7 @@ class SandboxAgentStop:
             await sandbox.kill(request_timeout=constants.KILL_REQUEST_TIMEOUT_SECONDS)
         except NotFoundException:
             pass
-        except SandboxException as exc:
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not stop E2B sandbox {self.record.sandbox_id}: {exc}") from exc
 
     async def stop_agent(self, sandbox: AsyncSandbox, *, grace_seconds: float) -> None:
@@ -151,8 +153,10 @@ class SandboxAgentStop:
         try:
             # 两层限时：envd 的 timeout 让 SDK 到点不再等，asyncio.timeout 兜住连接本身卡住。沙箱里
             # 那段循环不会被它们停下，但调用方紧接着就 kill 沙箱。
+            # 以启动 Agent 的同一个用户发信号：换成别的非 root 用户，kill 会因无权限失败，被当成
+            # 「进程已不在」直接返回，Agent 就来不及推送。
             async with asyncio.timeout(grace_seconds):
-                await sandbox.commands.run(command, timeout=grace_seconds)
+                await sandbox.commands.run(command, timeout=grace_seconds, user=self.config.agent_user)
         except TimeoutError, TimeoutException:
             logger.warning(
                 "The Agent in E2B sandbox %s did not exit within %.1f seconds of SIGTERM; killing the sandbox, "
@@ -176,11 +180,13 @@ class SandboxAgentStop:
             return False
 
         # 走 envd 而不是端口代理：/health 不应答时，要区分的正是「进程没了」和「代理这条路不通」。
+        # 用启动 Agent 的同一个用户问：kill -0 对别的用户的进程也会失败，活着的 Agent 会被当成已退出。
         try:
             async with asyncio.timeout(constants.HEALTH_PROBE_TIMEOUT_SECONDS):
                 result = await sandbox.commands.run(
                     f"kill -0 {pid} 2>/dev/null && echo alive || echo gone",
                     timeout=constants.HEALTH_PROBE_TIMEOUT_SECONDS,
+                    user=self.config.agent_user,
                 )
         # 问不到就当它还在：宁可多探一次 /health，也不因为 envd 一时连不上就拆掉一个活着的 Agent。
         except Exception:

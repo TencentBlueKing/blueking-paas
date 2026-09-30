@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Exercise the E2B provider and a real Agent Runtime in a default sandbox."""
+"""Exercise the E2B provider and the real Agent Runtime its template ships."""
 
 from __future__ import annotations
 
@@ -32,18 +32,9 @@ from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.exceptions import AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
 from app_spark_api.agent.runtime.providers.e2b import STOP_GRACE_SECONDS, E2BProvider, _SandboxClaim
-from tests.agent.runtime.e2b_support import (
-    SANDBOX_WORKSPACE,
-    AgentBundle,
-    BootstrappedE2BProvider,
-    build_agent_bundle,
-    logger,
-    require_e2b_config,
-)
+from tests.agent.runtime.e2b_support import FakeModelE2BProvider, logger, require_e2b_config
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from e2b import AsyncSandbox
 
     from app_spark_api.agent.runtime.entities import E2BConfig
@@ -68,33 +59,10 @@ def e2b_config(settings) -> E2BConfig:
     return require_e2b_config(settings)
 
 
-@pytest.fixture(scope="session")
-def agent_bundle_factory(tmp_path_factory) -> Callable[[], AgentBundle]:
-    """Build once, and only after a test has passed the E2B configuration gate."""
-    bundle: AgentBundle | None = None
-
-    def get_bundle() -> AgentBundle:
-        nonlocal bundle
-        if bundle is None:
-            bundle = build_agent_bundle(tmp_path_factory.mktemp("live-e2b-agent"))
-        return bundle
-
-    return get_bundle
-
-
 @pytest.fixture
-def agent_bundle(e2b_config: E2BConfig, agent_bundle_factory: Callable[[], AgentBundle]) -> AgentBundle:
-    """Get the wheel bundle after the E2B skip condition has been checked."""
-    return agent_bundle_factory()
-
-
-@pytest.fixture
-async def e2b_provider(e2b_config: E2BConfig, agent_bundle: AgentBundle):
-    """Own and clean up every sandbox created by one test.
-
-    Every new sandbox has its Agent started, so each one first gets the test Agent installed.
-    """
-    provider = BootstrappedE2BProvider(e2b_config, agent_bundle)
+async def e2b_provider(e2b_config: E2BConfig):
+    """Own and clean up every sandbox created by one test."""
+    provider = FakeModelE2BProvider(e2b_config)
     try:
         yield provider
     finally:
@@ -139,7 +107,7 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
     )
     assert target.http_headers == handle.http_headers
     assert target.send_forwarded_host is False
-    result = await sandbox.commands.run("printf 'agent-sandbox-ready'")
+    result = await sandbox.commands.run("printf 'agent-sandbox-ready'", user=e2b_provider.config.agent_user)
     assert result.stdout == "agent-sandbox-ready"
 
     logger.info("Terminating sandbox %s and checking its retained record", sandbox.sandbox_id)
@@ -249,7 +217,9 @@ async def test_the_provider_starts_an_agent_that_runs_a_real_fake_turn(e2b_provi
     run = await client.start_run(content="write my first note", context_version=health.context_version)
     event_stream = b"".join([part async for part in run.aiter_bytes()])
     assert b"RUN_FINISHED" in event_stream
-    assert "write my first note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-1.md")
+    note = f"{e2b_provider.config.workspace_dir}/fake-agent-note-1.md"
+    # As the Agent's user, the same way the provider itself reaches into the sandbox.
+    assert "write my first note" in await sandbox.files.read(note, user=e2b_provider.config.agent_user)
     logger.info("Fake Agent turn completed and workspace note was verified")
 
 
@@ -265,7 +235,9 @@ async def test_a_stopped_agent_exits_on_sigterm_within_the_grace_period(e2b_prov
     await _SandboxClaim(record, e2b_provider.config).stop_agent(sandbox, grace_seconds=STOP_GRACE_SECONDS)
 
     assert time.monotonic() - started < STOP_GRACE_SECONDS
-    gone = await sandbox.commands.run(f"kill -0 {record.agent_pid} 2>/dev/null && echo alive || echo gone")
+    gone = await sandbox.commands.run(
+        f"kill -0 {record.agent_pid} 2>/dev/null && echo alive || echo gone", user=e2b_provider.config.agent_user
+    )
     assert gone.stdout.strip() == "gone"
 
 
@@ -298,7 +270,7 @@ async def test_an_idle_sandbox_is_reclaimed_when_its_idle_timeout_elapses(
 ):
     """空闲超时设为 120 秒时，一轮结束后沙箱在这个秒数左右被回收。"""
     idle_timeout = 120
-    provider = BootstrappedE2BProvider(attrs.evolve(e2b_config, idle_timeout_seconds=idle_timeout), agent_bundle)
+    provider = FakeModelE2BProvider(attrs.evolve(e2b_config, idle_timeout_seconds=idle_timeout))
     conversation_id = str(uuid4())
     try:
         await provider.ensure(project_id=str(uuid4()), conversation_id=conversation_id)

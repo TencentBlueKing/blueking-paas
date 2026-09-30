@@ -61,6 +61,7 @@ class E2BProvider(AgentRuntimeProvider):
                 api_key="...",
                 api_url="https://example.com/e2b",
                 callback_base_url="https://app-spark.example.com",
+                template="app-spark-agent",
             )
         )
         handle = await provider.ensure(
@@ -141,7 +142,6 @@ class E2BProvider(AgentRuntimeProvider):
 
                 # Outside the provisioning bound: the claim is bound by now, so it can no longer
                 # be mistaken for an abandoned one, and starting the Agent has a bound of its own.
-                await self._prepare_sandbox(sandbox)
                 handle = claim.handle(sandbox)
                 envs = self._build_agent_env(
                     project_id=project_id,
@@ -228,7 +228,8 @@ class E2BProvider(AgentRuntimeProvider):
 
             sandbox = await provider.get_sandbox(conversation_id)
             if sandbox is not None:
-                await sandbox.commands.run("pwd")
+                # As the Agent's user; without it envd runs the command as its default user.
+                await sandbox.commands.run("pwd", user=provider.config.agent_user)
 
         :param conversation_id: Conversation owning the sandbox.
         :return: Connected SDK sandbox, or ``None`` when no live sandbox is recorded.
@@ -265,15 +266,6 @@ class E2BProvider(AgentRuntimeProvider):
             send_forwarded_host=False,
         )
 
-    async def _prepare_sandbox(self, sandbox: AsyncSandbox) -> None:
-        """Make a freshly bound sandbox able to run the Agent before it is started.
-
-        The production template already contains the Agent, so there is nothing to do. The live
-        tests override this to install a locally built Agent into the default template.
-
-        :param sandbox: The sandbox about to have its Agent started.
-        """
-
     async def _create_sandbox(self) -> AsyncSandbox:
         """Ask E2B for a sandbox from the configured template.
 
@@ -287,7 +279,7 @@ class E2BProvider(AgentRuntimeProvider):
                 api_url=self.config.api_url,
                 domain=self.config.domain,
             )
-        except SandboxException as exc:
+        except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc
 
     def _build_agent_env(

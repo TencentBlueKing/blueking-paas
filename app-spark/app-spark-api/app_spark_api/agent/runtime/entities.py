@@ -105,8 +105,9 @@ class E2BConfig:
         replicate its state back, i.e. the service's public address. The state callback path
         is appended with its FORCE_SCRIPT_NAME prefix intact, since the call comes in through
         Ingress.
+    :param template: Name or ID of the template that ships the Agent. Required: a template
+        without the Agent would still create sandboxes, and only time out starting it.
     :param domain: Fallback domain for sandbox hosts when the API does not return one.
-    :param template: Sandbox template name or ID.
     :param idle_timeout_seconds: How long a sandbox may go without a conversation turn before
         it is reclaimed (default 1800). The Agent is told to exit after this same interval, and
         the sandbox's E2B deadline is set to it at creation and at the start and end of every turn.
@@ -125,6 +126,11 @@ class E2BConfig:
         its port and everything else from ``APP_SPARK_AGENT_*`` variables. Interpreted by bash
         after ``exec``, in an environment that holds the Agent's credentials, so it is trusted
         operator configuration and must be a single command, not a pipeline or a sequence.
+        The default names the template's python by absolute path, because envd gives the
+        processes it starts its own default PATH rather than the image's.
+    :param agent_user: Sandbox user every command the provider runs in the sandbox runs as:
+        starting the Agent, signalling it, checking on it, and reading its log. Must exist in
+        the template; the Agent's directories must belong to it.
     :param agent_log_path: Where the Agent's stdout and stderr go inside the sandbox, quoted
         back when it fails to start.
     :param startup_timeout_seconds: How long to wait for a started Agent to answer ``/health``.
@@ -135,8 +141,8 @@ class E2BConfig:
     api_key: str = attrs.field(repr=False, validator=validate_non_empty_string)
     api_url: str = attrs.field(validator=validate_non_empty_string)
     callback_base_url: str = attrs.field(validator=validate_non_empty_string)
+    template: str = attrs.field(validator=validate_non_empty_string)
     domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
-    template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
     idle_timeout_seconds: int = attrs.field(default=1800, validator=attrs.validators.gt(0))
     max_lifetime_seconds: int = attrs.field(default=86400, validator=attrs.validators.gt(0))
     runtime_port: int = attrs.field(
@@ -150,7 +156,10 @@ class E2BConfig:
     )
     workspace_dir: str = attrs.field(default="/data/workspace", validator=validate_sandbox_path)
     state_dir: str = attrs.field(default="/data/state")
-    agent_command: str = attrs.field(default="python -m app_spark_agent", validator=validate_non_empty_string)
+    agent_command: str = attrs.field(
+        default="/app/.venv/bin/python -m app_spark_agent", validator=validate_non_empty_string
+    )
+    agent_user: str = attrs.field(default="user", validator=validate_non_empty_string)
     agent_log_path: str = attrs.field(default="/tmp/app-spark-agent.log", validator=validate_sandbox_path)
     startup_timeout_seconds: float = attrs.field(default=60.0, validator=attrs.validators.gt(0))
     extra_env: dict[str, str] = attrs.field(factory=dict, validator=validate_agent_extra_env)

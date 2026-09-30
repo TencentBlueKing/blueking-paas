@@ -13,7 +13,8 @@ dependencies = [
     "django>=6.0.8,<6.1",
     "django-ninja>=1.6.2,<2.0.0",
     "dynaconf>=3.3.5,<4.0.0",
-    "e2b==2.50.0",
+    # 沙箱平台验证过的 SDK。更新的版本会改异常类型和请求形状，不要跟着上游往上浮。
+    "e2b==2.44.0",
     # Already installed as a transitive dependency of bkpaas-auth, declared here because this
     # project imports it directly to drive the Agent Runtime over HTTP.
     "httpx2>=2.10.0,<3.0.0",

@@ -14,21 +14,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import uuid
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from paas_wl.bk_app.agent_sandbox.kres_entities import VolumeMount
-from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX
+from paasng.platform.agent_sandbox.artifact import delete_volume_artifacts
+from paasng.platform.agent_sandbox.constants import VOLUME_SHARED_APP_CODES_MAX, SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import (
     VolumeGranteeNotFound,
+    VolumeInUse,
     VolumeNotFound,
     VolumeNotMountable,
     VolumeShareLimitExceeded,
 )
-from paasng.platform.agent_sandbox.models import Volume
+from paasng.platform.agent_sandbox.models import Sandbox, Volume
+from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
 from paasng.platform.applications.models import Application
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_volume_mounts(application: Application, requests: list[dict] | None) -> list[VolumeMount]:
@@ -40,39 +47,45 @@ def resolve_volume_mounts(application: Application, requests: list[dict] | None)
     :param application: 创建沙箱的应用，用于租户隔离与授权判定。
     :param requests: 序列化器校验后的挂载请求，每项为 ``{"volume_id": UUID, "mount_path": str}``；
         为空或未开启共享卷特性时返回空列表。
-    :raises VolumeNotFound: 请求的 Volume 不存在、已软删除或不属于本租户。
+    :raises VolumeNotFound: 请求的 Volume 不存在、已软删除、正在删除或不属于本租户。
     :raises VolumeNotMountable: Volume 存在，但本应用未获得挂载授权。
     """
     if not requests or not settings.AGENT_SANDBOX_VOLUME_ENABLED:
         return []
 
     volume_ids = [uuid.UUID(str(item["volume_id"])) for item in requests]
-    volumes = {
-        str(v.uuid): v
-        for v in Volume.objects.filter(
-            uuid__in=volume_ids,
-            tenant_id=application.tenant_id,
-            deleted_at__isnull=True,
-        )
-    }
-
-    mounts: list[VolumeMount] = []
-    for item in requests:
-        volume = volumes.get(str(item["volume_id"]))
-        # 上层用户看到的报错都会是 volume not found
-        if volume is None:
-            raise VolumeNotFound(f"volume {item['volume_id']} not found in tenant {application.tenant_id}")
-        if not volume.allows_mount_by(application):
-            raise VolumeNotMountable(f"application {application.code} is not allowed to mount volume {volume.uuid}")
-        mounts.append(
-            VolumeMount(
-                volume_id=str(volume.uuid),
-                mount_path=item["mount_path"],
-                sub_path=volume.storage_path,
-                read_only=False,
+    with transaction.atomic():
+        # 按主键顺序加锁: 并发挂载请求对同一批 Volume 的加锁顺序一致, 避免 ABBA 死锁(1213)
+        volumes = {
+            str(v.uuid): v
+            for v in Volume.objects.select_for_update().filter(
+                uuid__in=volume_ids,
+                tenant_id=application.tenant_id,
+                deleted_at__isnull=True,
+                # 已进入删除流程的卷不得再被挂载, 即使物理清理尚未完成
+                deleting_at__isnull=True,
             )
-        )
-    return mounts
+        }
+
+        mounts: list[VolumeMount] = []
+        for item in requests:
+            volume = volumes.get(str(item["volume_id"]))
+            # 上层用户看到的报错都会是 volume not found
+            if volume is None:
+                raise VolumeNotFound(f"volume {item['volume_id']} not found in tenant {application.tenant_id}")
+            if not volume.allows_mount_by(application):
+                raise VolumeNotMountable(
+                    f"application {application.code} is not allowed to mount volume {volume.uuid}"
+                )
+            mounts.append(
+                VolumeMount(
+                    volume_id=str(volume.uuid),
+                    mount_path=item["mount_path"],
+                    sub_path=volume.storage_path,
+                    read_only=False,
+                )
+            )
+        return mounts
 
 
 def share_volume(volume: Volume, grantee_app_code: str) -> None:
@@ -119,3 +132,62 @@ def unshare_volume(volume: Volume, grantee_app_code: str) -> None:
             return
         locked.shared_app_codes = [c for c in codes if c != grantee_app_code]
         locked.save(update_fields=["shared_app_codes", "updated"])
+
+
+def volume_in_use(volume: Volume) -> bool:
+    """判断是否仍有存活的沙箱挂载该 Volume.
+
+    ``err_creating`` 的记录跳过: 其工作负载已在创建失败时清理. 其余存活记录一律计入,
+    包括其他应用的沙箱 (Volume 可跨应用共享).
+    """
+    return (
+        Sandbox.objects.filter(
+            tenant_id=volume.tenant_id,
+            deleted_at__isnull=True,
+            volume_mounts__contains=[{"volume_id": str(volume.uuid)}],
+        )
+        .exclude(status=SandboxStatus.ERR_CREATING.value)
+        .exists()
+    )
+
+
+def delete_volume(volume: Volume) -> None:
+    """删除 Volume: 标记删除中 -> 物理清理共享存储目录 -> 落软删时间.
+
+    :param volume: 调用方需已校验其归属.
+    :raises VolumeNotFound: 该卷已被删除.
+    :raises VolumeInUse: 仍有存活的沙箱挂载该 Volume.
+    :raises SandboxServiceNotReady: 常驻 daemon 服务未就绪(HTTP 502).
+    :raises SandboxDaemonAPIError: 常驻 daemon 删除目录失败或不可达(传输层错误由它承载).
+    """
+    with transaction.atomic():
+        locked = Volume.objects.select_for_update().filter(pk=volume.pk).first()
+        if locked is None:
+            raise VolumeNotFound(f"volume {volume.uuid} not found")
+        if locked.deleted_at is not None:
+            raise VolumeNotFound(f"volume {volume.uuid} was already deleted")
+        if volume_in_use(locked):
+            raise VolumeInUse(f"volume {volume.uuid} is still mounted by live sandboxes")
+        # 先落 "删除中" 标记: 挂载校验看到它会直接拒绝, 物理清理因此不会与新的挂载交.
+        if locked.deleting_at is None:
+            locked.deleting_at = timezone.now()
+            locked.save(update_fields=["deleting_at", "updated"])
+
+    # 物理清理共享存储目录. 失败时 deleting_at 已落库 (卷不可挂载)
+    try:
+        get_resident_daemon_client().delete_volume(locked.storage_path)
+    except Exception:
+        logger.warning("Storage cleanup of volume %s failed, it stays in deleting state for retry", volume.uuid)
+        raise
+
+    # best-effort: bkrepo 故障不该阻塞删卷; 遗留归档对象由 cleanup_expired_agent_artifacts 兜底清理.
+    try:
+        delete_volume_artifacts(volume)
+    except Exception:
+        logger.exception("Failed to clean archived objects of volume %s", volume.uuid)
+
+    Volume.objects.filter(pk=locked.pk).update(
+        deleted_at=timezone.now(),
+        deleting_at=None,
+        updated=timezone.now(),
+    )

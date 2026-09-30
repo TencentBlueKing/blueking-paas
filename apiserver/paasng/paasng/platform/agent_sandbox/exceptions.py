@@ -103,3 +103,7 @@ class VolumeGranteeNotFound(SandboxError):
 
 class VolumeShareLimitExceeded(SandboxError):
     """Raised when a volume has reached the maximum number of granted applications."""
+
+
+class VolumeInUse(SandboxError):
+    """Raised when live sandboxes still mount the volume, so it must not be deleted."""

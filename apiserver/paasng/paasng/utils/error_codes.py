@@ -259,7 +259,8 @@ class ErrorCodes:
     AGENT_SANDBOX_VOLUME_NOT_FOUND = ErrorCode(_("Volume 不存在"), status_code=404)
     AGENT_SANDBOX_VOLUME_ALREADY_EXISTS = ErrorCode(_("Volume 已存在"), status_code=409)
     AGENT_SANDBOX_VOLUME_CREATE_FAILED = ErrorCode(_("Volume 创建失败"))
-    AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"))
+    AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"), status_code=500)
+    AGENT_SANDBOX_VOLUME_IN_USE = ErrorCode(_("Volume 仍被沙箱挂载，无法删除"), status_code=409)
     AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED = ErrorCode(_("Volume 授权应用数量已达上限"), status_code=400)
 
     # Agent sandbox e2b compatibility

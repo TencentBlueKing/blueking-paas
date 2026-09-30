@@ -106,6 +106,7 @@ class ResidentDaemonClient:
         self,
         base_path: str,
         rel_path: str = "",
+        *,
         is_recursive: bool = False,
         page: int = 1,
         page_size: int = 100,
@@ -153,6 +154,15 @@ class ResidentDaemonClient:
         """Delete a single file. Deleting a non-existent file is idempotent (success)."""
         params = {"base_path": base_path, "rel_path": rel_path}
         self._request("DELETE", "/files", params=params)
+
+    def delete_volume(self, base_path: str) -> None:
+        """Recursively delete one volume directory. Idempotent.
+
+        ``base_path`` is confined to a single volume by the daemon, so nothing outside it can
+        be removed, and a missing directory counts as success -- a never-mounted volume has
+        no directory at all.
+        """
+        self._request("DELETE", "/files/volume", params={"base_path": base_path})
 
     def close(self) -> None:
         """Close the HTTP session."""

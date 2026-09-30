@@ -1,0 +1,45 @@
+# 镜像代理配置样例。凡是影响安全或转发目标的字段都没有缺省值，缺失或非法时代理拒绝启动。
+
+# 构建容器访问的 HTTPS 入口（缺省 :8443）
+listen: ":8443"
+# healthz / readyz / metrics，明文 HTTP，不要暴露给构建 Pod（缺省 :9090）
+admin_listen: ":9090"
+
+# 代理必须提供 HTTPS。使用自签名证书时，集群注解 build_registry_proxy_skip_tls_verify 需设为 "true"
+tls:
+  cert_file: /etc/registry-proxy/tls/tls.crt
+  key_file: /etc/registry-proxy/tls/tls.key
+# 仅用于本地测试：以明文 HTTP 提供服务，与 tls 互斥
+# plain_http: true
+
+# 构建 token 的 aud，<集群名> 为 apiserver 中的 Cluster.name
+audience: "bkpaas-registry-proxy:default-main"
+# apiserver 导出的公钥集合
+jwks_file: /etc/registry-proxy/jwks/jwks.json
+
+# 上游凭证，docker config.json 格式，按主机名（含端口）匹配上游；只存在于代理进程内
+upstream_docker_config_file: /etc/registry-proxy/secrets/upstream/config.json
+# 上游 Authorization 的最长缓存时间；上游返回的 expires_in 更短时，在其 90% 处刷新（缺省 10m）
+upstream_token_max_ttl: 10m
+# 发完请求后等待上游响应头的超时，不限制 blob 传输时长（缺省 5m）
+upstream_response_header_timeout: 5m
+
+# 上传会话签名密钥，至少 32 字节；多副本之间必须相同，否则同一上传会话落到其他副本时无法继续
+upload_session:
+  key_file: /etc/registry-proxy/secrets/upload-session/key
+  # 轮换时把旧密钥放在这里，只用于校验在途的上传会话
+  # previous_key_file: /etc/registry-proxy/secrets/upload-session/previous-key
+  # 上传会话有效期（缺省 1h）
+  ttl: 1h
+
+# 上游仓库。alias 必须等于按 url 主机名推导的值：转小写后把 "." 与 ":" 替换为 "-"
+upstreams:
+  - alias: mirrors-example-com
+    url: https://mirrors.example.com
+  - alias: registry-example-com
+    url: https://registry.example.com
+    # 对应平台仓库的 skip_tls_verify
+    skip_tls_verify: false
+
+# 收到退出信号后等待在途请求结束的最长时间（缺省 30s）
+shutdown_timeout: 30s

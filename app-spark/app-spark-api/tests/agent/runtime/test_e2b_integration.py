@@ -19,15 +19,19 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+import attrs
 import pytest
+from e2b import NotFoundException
 
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.exceptions import AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
-from app_spark_api.agent.runtime.providers.e2b import E2BProvider
+from app_spark_api.agent.runtime.providers.e2b import STOP_GRACE_SECONDS, E2BProvider, _SandboxClaim
 from tests.agent.runtime.e2b_support import (
     SANDBOX_WORKSPACE,
     AgentBundle,
@@ -40,9 +44,22 @@ from tests.agent.runtime.e2b_support import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from e2b import AsyncSandbox
+
     from app_spark_api.agent.runtime.entities import E2BConfig
 
 pytestmark = [pytest.mark.e2b, pytest.mark.django_db(transaction=True)]
+
+# The sandbox is polled every 10 seconds, and E2B reaps an expired one on its own schedule.
+IDLE_RECLAIM_SLACK_SECONDS = 30
+
+
+async def check_sandbox_running(sandbox: AsyncSandbox) -> bool:
+    """Ask envd whether a sandbox still runs; a control plane that forgot it answers 404."""
+    try:
+        return await sandbox.is_running()
+    except NotFoundException:
+        return False
 
 
 @pytest.fixture
@@ -234,3 +251,75 @@ async def test_the_provider_starts_an_agent_that_runs_a_real_fake_turn(e2b_provi
     assert b"RUN_FINISHED" in event_stream
     assert "write my first note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-1.md")
     logger.info("Fake Agent turn completed and workspace note was verified")
+
+
+async def test_a_stopped_agent_exits_on_sigterm_within_the_grace_period(e2b_provider: E2BProvider):
+    """The stop command signals the real Agent process from inside the sandbox and waits for it."""
+    conversation_id = str(uuid4())
+    await e2b_provider.ensure(project_id=str(uuid4()), conversation_id=conversation_id)
+    sandbox = await e2b_provider.get_sandbox(conversation_id)
+    assert sandbox is not None
+    record = await E2BSandboxRecord.objects.aget(sandbox_id=sandbox.sandbox_id)
+
+    started = time.monotonic()
+    await _SandboxClaim(record, e2b_provider.config).stop_agent(sandbox, grace_seconds=STOP_GRACE_SECONDS)
+
+    assert time.monotonic() - started < STOP_GRACE_SECONDS
+    gone = await sandbox.commands.run(f"kill -0 {record.agent_pid} 2>/dev/null && echo alive || echo gone")
+    assert gone.stdout.strip() == "gone"
+
+
+async def test_a_crashed_agent_is_replaced_by_a_new_sandbox(e2b_provider: E2BProvider):
+    """沙箱还在、Agent 没了：下一轮不在原沙箱里重拉，而是整个换掉。"""
+    project_id = str(uuid4())
+    conversation_id = str(uuid4())
+    original = await e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    sandbox = await e2b_provider.get_sandbox(conversation_id)
+    assert sandbox is not None
+    record = await E2BSandboxRecord.objects.aget(sandbox_id=sandbox.sandbox_id)
+    assert record.agent_pid is not None
+
+    logger.info("Killing the Agent in sandbox %s, leaving the sandbox itself up", sandbox.sandbox_id)
+    await sandbox.commands.kill(record.agent_pid)
+    replacement = await e2b_provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    assert replacement != original
+    await record.arefresh_from_db()
+    assert (record.active_conversation_id, record.stop_reason) == (None, "unhealthy")
+    assert not await check_sandbox_running(sandbox)
+
+
+@pytest.mark.skipif(
+    os.environ.get("APP_SPARK_E2B_IDLE_LIVE") != "1",
+    reason="waits three minutes for a real idle reclamation; set APP_SPARK_E2B_IDLE_LIVE=1",
+)
+async def test_an_idle_sandbox_is_reclaimed_one_margin_after_its_agent_exits(
+    e2b_config: E2BConfig, agent_bundle: AgentBundle
+):
+    """空闲超时设为 120 秒时，一轮结束后 180 秒内沙箱被回收，但不会早于 Agent 的空闲退出。"""
+    idle_timeout = 120
+    provider = BootstrappedE2BProvider(attrs.evolve(e2b_config, idle_timeout_seconds=idle_timeout), agent_bundle)
+    conversation_id = str(uuid4())
+    try:
+        await provider.ensure(project_id=str(uuid4()), conversation_id=conversation_id)
+        sandbox = await provider.get_sandbox(conversation_id)
+        assert sandbox is not None
+
+        # The Agent never ran a turn, so its idle timer started with its process, just before this;
+        # the renewal is the one a turn's end makes, from which the margin is counted.
+        await provider.extend_lifetime(conversation_id)
+        turn_ended = time.monotonic()
+
+        while await check_sandbox_running(sandbox):
+            elapsed = time.monotonic() - turn_ended
+            assert elapsed < idle_timeout + 60 + IDLE_RECLAIM_SLACK_SECONDS, (
+                "the idle sandbox outlived its idle timeout plus the margin"
+            )
+            await asyncio.sleep(10)
+
+        # Gone before the Agent could idle out would mean it was not given the chance to push.
+        assert time.monotonic() - turn_ended > idle_timeout - IDLE_RECLAIM_SLACK_SECONDS, (
+            "the sandbox was reclaimed before its Agent's idle timeout"
+        )
+    finally:
+        await provider.shutdown()

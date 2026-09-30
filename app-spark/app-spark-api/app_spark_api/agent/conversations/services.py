@@ -24,6 +24,7 @@ only to *advance* a conversation, never to look at one.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -68,6 +69,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_UI_EVENT_PAGE_SIZE = 200
 MAX_UI_EVENT_PAGE_SIZE = 1_000
 
+# How often a running turn renews its Runtime. A sandbox is renewed to its idle timeout plus 60
+# seconds, so a turn longer than that would otherwise be reclaimed mid-turn; half that margin
+# keeps one missed renewal survivable at any idle timeout.
+RUN_RENEWAL_INTERVAL_SECONDS = 30
+
 _CLOSED_MESSAGE = "Conversation {id} has been closed and cannot be advanced"
 
 
@@ -89,6 +95,9 @@ class ConversationState:
     :param dev_server_status: What the live Runtime says about the workspace application it
         supervises. ``None`` when no Runtime is up, because whether that application is
         listening is a fact about a running sandbox and nothing stored here can stand in for it.
+    :param runtime_ready: Whether the next turn can go straight to the Runtime that is up now.
+        False when none is up, the one that is up does not answer, or the provider is going
+        to replace it anyway; the next turn then has to prepare one first, which takes a while.
     """
 
     context_version: int
@@ -98,6 +107,7 @@ class ConversationState:
     replication_pending: bool
     model: str | None
     dev_server_status: str | None = None
+    runtime_ready: bool = False
 
 
 async def get_dev_server_status(conversation: Conversation) -> str | None:
@@ -259,6 +269,9 @@ async def terminate_runtime(conversation: Conversation) -> None:
     :param conversation: Conversation whose Runtime should be stopped.
     """
     await revoke_state_access(conversation)
+
+    # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 20 秒再销毁沙箱。凭证已吊销，
+    # Agent 退出前最后那次状态回写会被拒绝，会话历史以此前已回写的为准。
     try:
         await get_agent_runtime_provider().terminate(str(conversation.id))
     except Exception:
@@ -294,27 +307,37 @@ async def get_state(conversation: Conversation) -> ConversationState:
     """
     context_version, log_seq, ui_event_seq = await sync_to_async(_stored_cursors)(conversation.id)
 
-    provider = get_agent_runtime_provider()
-    handle = await provider.peek(str(conversation.id))
-    model: str | None = None
-    running = False
-    replication_pending = False
-    dev_server_status: str | None = None
-    if handle is not None:
-        health = await AgentRuntimeClient(handle).health()
-        model = health.model
-        running = health.running
-        replication_pending = health.replication_pending
-        dev_server_status = health.dev_server_status
-
-    return ConversationState(
+    stored = ConversationState(
         context_version=context_version,
         log_seq=log_seq,
         ui_event_seq=ui_event_seq,
-        running=running,
-        replication_pending=replication_pending,
-        model=model,
-        dev_server_status=dev_server_status,
+        running=False,
+        replication_pending=False,
+        model=None,
+    )
+
+    provider = get_agent_runtime_provider()
+    handle = await provider.peek(str(conversation.id))
+    if handle is None:
+        return stored
+
+    try:
+        health = await AgentRuntimeClient(handle).health()
+    except AgentUnavailableError:
+        # Agent 空闲退出或崩溃、而沙箱还没被回收的那段时间里，前端每轮询一次都会走到这里。
+        # 如实报「没有可用的运行环境」，不重建也不回收：那是下一轮对话 ensure 的事，查询不写数据。
+        # 同 get_dev_server_status，按 info 打、不带 traceback，免得轮询把日志刷满。
+        logger.info("Conversation %s has a Runtime that cannot be read, reporting none", conversation.id)
+        return stored
+
+    return attrs.evolve(
+        stored,
+        running=health.running,
+        replication_pending=health.replication_pending,
+        model=health.model,
+        dev_server_status=health.dev_server_status,
+        # 有一轮在跑时 ensure 不会换掉它（超龄也一样），下一轮要么复用、要么因忙被拒，都不用准备。
+        runtime_ready=health.running or not await provider.needs_replacement(str(conversation.id)),
     )
 
 
@@ -557,6 +580,9 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
     be reported as an HTTP error. AG-UI has its own way to say a run ended badly, and a client
     that receives it can show something better than a stream that simply stopped.
     """
+    # 一轮进行中也要续：只在开头续一次的话，跑得比空闲超时还长的一轮会被 E2B 中途回收。不能按
+    # 收到的数据块来续，长时间的工具调用期间流里可能一个字节都没有。
+    renewing = asyncio.create_task(_renew_runtime_during_run(conversation_id))
     try:
         async for chunk in run.aiter_bytes():
             yield chunk
@@ -569,6 +595,33 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
                 "runId": run.run_id,
                 "message": f"The Agent Runtime stopped responding: {exc}",
             }
+        )
+    finally:
+        renewing.cancel()
+        # 一轮结束时再续一次：Agent 的空闲计时从一轮结束起算，沙箱要从这一刻起比它多活 60 秒。
+        # 流断了、客户端走了也照样续。
+        await _extend_runtime_lifetime(conversation_id)
+
+
+async def _renew_runtime_during_run(conversation_id: UUID) -> None:
+    """Renew the conversation's Runtime every RUN_RENEWAL_INTERVAL_SECONDS until cancelled."""
+    while True:
+        await asyncio.sleep(RUN_RENEWAL_INTERVAL_SECONDS)
+        await _extend_runtime_lifetime(conversation_id)
+
+
+async def _extend_runtime_lifetime(conversation_id: UUID) -> None:
+    """Count a turn as activity for the conversation's Runtime, never failing.
+
+    Called while the event stream is open, so the provider must renew without the database;
+    the e2b provider renews the sandbox this worker served the turn from.
+    """
+    # shield：客户端断开会取消这个流，续期不能被一起取消。失败只记告警，这一轮本身不受影响。
+    try:
+        await asyncio.shield(get_agent_runtime_provider().extend_lifetime(str(conversation_id)))
+    except Exception:
+        logger.warning(
+            "Could not extend the Agent Runtime lifetime of conversation %s", conversation_id, exc_info=True
         )
 
 

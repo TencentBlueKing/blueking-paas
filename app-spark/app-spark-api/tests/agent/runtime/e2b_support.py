@@ -43,7 +43,6 @@ from typing import TYPE_CHECKING, Any
 import attrs
 import pytest
 
-from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import DirectModelAccess, E2BConfig, structure_e2b_config
 from app_spark_api.agent.runtime.exceptions import AgentConfigurationError
 from app_spark_api.agent.runtime.providers.e2b import E2BProvider
@@ -92,14 +91,13 @@ def require_e2b_config(settings: Any) -> E2BConfig:
         pytest.skip("A valid E2B provider configuration is required")
     return attrs.evolve(
         config,
-        # Fixtures normally kill their sandboxes; this bounds leaked resources if a test worker dies.
-        timeout_seconds=LIVE_E2B_TIMEOUT_SECONDS,
+        # Fixtures normally kill their sandboxes; this bounds leaked resources if a test worker
+        # dies. A test lasts a few minutes, and every turn renews it, so nothing idles out mid-test.
+        idle_timeout_seconds=LIVE_E2B_TIMEOUT_SECONDS,
         agent_command=f"{SANDBOX_VENV}/bin/python -m app_spark_agent",
         workspace_dir=SANDBOX_WORKSPACE,
         state_dir=SANDBOX_STATE_DIR,
         agent_log_path=SANDBOX_LOG,
-        # A test sandbox lives for a few minutes; an Agent that idles out mid-test is just noise.
-        extra_env={**config.extra_env, f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS": "0"},
     )
 
 

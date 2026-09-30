@@ -1,4 +1,5 @@
 import http, { resolveApiUrl } from './fetch';
+import type { IFetchConfig } from './fetch';
 import RequestError from './fetch/request-error';
 import type {
   AuthenticatedUserResponse,
@@ -84,8 +85,9 @@ export const createConversation = (projectId: string): Promise<RuntimeStateRespo
 export const getConversation = (
   projectId: string,
   number: number,
+  config: IFetchConfig = {},
 ): Promise<RuntimeStateResponse> => (
-  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/`)
+  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/`, {}, config)
 );
 
 /**

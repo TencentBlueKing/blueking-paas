@@ -21,8 +21,8 @@
 未开通的环境会直接改绑定；已开通的环境要等实例 plan 已经是目标方案。
 
 使用示例:
-    python manage.py migrate_mysql_plan -a <app_code> -t mysql-8.0
-    python manage.py migrate_mysql_plan -a <app_code> -t mysql-8.0 -m default -e prod
+    python manage.py migrate_mysql_plan --app-code <app_code> --target-plan mysql-8.0
+    python manage.py migrate_mysql_plan --app-code <app_code> --target-plan mysql-8.0 --module default --environment prod
 """
 
 from dataclasses import dataclass
@@ -39,15 +39,17 @@ from paasng.platform.applications.models import Application
 
 DEFAULT_ENVIRONMENTS = ["stag", "prod"]
 
+# 表示读取实例失败。不能用 None，None 表示环境还没开通实例
+_MISSING = object()
+
 
 class Command(BaseCommand):
     help = "把 MySQL 环境绑定的 plan 改成目标方案。先执行 svc-mysql 的 migrate_plan。"
 
     def add_arguments(self, parser):
-        parser.add_argument("-a", "--app-code", dest="app_code", required=True, help="应用 ID")
-        parser.add_argument("-t", "--target-plan", dest="target_plan", required=True, help="目标 plan 名称")
+        parser.add_argument("--app-code", dest="app_code", required=True, help="应用 ID")
+        parser.add_argument("--target-plan", dest="target_plan", required=True, help="目标 plan 名称")
         parser.add_argument(
-            "-m",
             "--module",
             dest="modules",
             action="append",
@@ -55,7 +57,6 @@ class Command(BaseCommand):
             help="模块名，可重复。不传则处理应用下所有模块",
         )
         parser.add_argument(
-            "-e",
             "--environment",
             dest="environments",
             action="append",
@@ -115,8 +116,10 @@ def align_mysql_plans(
     updated: list[str] = []
     skipped: list[str] = []
     bound = False
+    # 平台上可能有多个 MySQL 增强服务，逐个服务、模块、环境查找绑定。
+    # 单个环境处理不了只记入 skipped，不影响其他环境。
     for service in services:
-        target_plan = _plan_by_name(service, target_plan_name)
+        target_plan = _get_plan_by_name(service, target_plan_name)
         client = RemoteServiceClient(store.get_source_config(str(service.uuid)))
         for module in module_qs:
             for env in module.envs.all():
@@ -125,12 +128,15 @@ def align_mysql_plans(
                 try:
                     attachment = manager.get_attachment_by_engine_app(service, env.engine_app)
                 except SvcAttachmentDoesNotExist:
+                    # 该环境没有绑定这个服务，属于正常情况，不计入 skipped
                     continue
                 bound = True
                 label = f"{app_code}/{module.name}/{env.environment}"
                 if target_plan is None:
                     skipped.append(f"{label} 的服务 {service.name} 没有名为 {target_plan_name} 的 plan")
                     continue
+                # 已开通的环境要以 svc-mysql 上实例的实际 plan 为准，读不到时无法判断 switch 是否完成，
+                # 宁可不改绑定，避免绑定和实例 plan 不一致导致下次部署失败
                 instance_plan_id = _read_instance_plan(client, attachment)
                 if instance_plan_id is _MISSING:
                     skipped.append(f"{label} 读取实例失败，绑定未改")
@@ -143,16 +149,12 @@ def align_mysql_plans(
     return AlignOutcome(updated=updated, skipped=skipped)
 
 
-# retrieve 失败和「还没开通」都不是一个 plan id，分开表示。
-_MISSING = object()
-
-
 def align_binding(attachment, target_plan_id: str, instance_plan_id: str | None, label: str) -> tuple[str, bool]:
-    """instance_plan_id 为 None 表示还没开通。返回 (说明, 是否已更新)。"""
-    if _same_id(attachment.plan_id, target_plan_id):
+    """把单个环境的绑定改成目标 plan，已开通但实例还没切到目标 plan 时不改。"""
+    if _is_same_id(attachment.plan_id, target_plan_id):
         return f"{label} 绑定已经是目标 plan", False
     # 已开通但实例仍是源 plan 时不改。改早了，下次部署幂等开通会返回 400。
-    if attachment.service_instance_id and not _same_id(instance_plan_id, target_plan_id):
+    if attachment.service_instance_id and not _is_same_id(instance_plan_id, target_plan_id):
         return (
             f"{label} 实例仍不是目标 plan。请先在 svc-mysql 执行 migrate_plan switch，成功后再运行本命令",
             False,
@@ -166,6 +168,7 @@ def align_binding(attachment, target_plan_id: str, instance_plan_id: str | None,
 
 
 def _read_instance_plan(client, attachment):
+    """从 svc-mysql 读取绑定实例当前的 plan id。未开通返回 None，读取失败返回 _MISSING。"""
     if not attachment.service_instance_id:
         return None
     try:
@@ -174,7 +177,7 @@ def _read_instance_plan(client, attachment):
         return _MISSING
 
 
-def _plan_by_name(service, name: str):
+def _get_plan_by_name(service, name: str):
     matched = [plan for plan in service.get_plans() if plan.name == name]
     if not matched:
         return None
@@ -183,7 +186,7 @@ def _plan_by_name(service, name: str):
     return matched[0]
 
 
-def _same_id(left, right) -> bool:
+def _is_same_id(left, right) -> bool:
     if left is None or right is None:
         return False
     return str(left).replace("-", "").lower() == str(right).replace("-", "").lower()

@@ -139,7 +139,9 @@ def test_prepare_keeps_instance_and_prints_copy_block(service, source_plan, targ
     stag = bind_instance(service, source_plan, "default", "stag", name="old-stag")
     bind_instance(service, source_plan, "default", "prod", name="old-prod")
 
-    stdout, _stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-d", "contact")
+    stdout, _stderr = run_migrate(
+        "prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--developer", "contact"
+    )
 
     stag.refresh_from_db()
     assert stag.plan_id == source_plan.pk
@@ -158,9 +160,13 @@ def test_prepare_keeps_instance_and_prints_copy_block(service, source_plan, targ
 def test_prepare_again_reuses_database_and_clears_omitted_developer(service, source_plan, target_plan, provider):
     """同一目标 plan 再次 prepare 不新建库；这次没传 developer 就留空。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag", "-d", "alice")
+    run_migrate(
+        "prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag", "--developer", "alice"
+    )
 
-    stdout, _stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    stdout, _stderr = run_migrate(
+        "prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag"
+    )
 
     assert provider.create.call_count == 1
     assert "developer:\n" in stdout
@@ -171,10 +177,10 @@ def test_prepare_again_reuses_database_and_clears_omitted_developer(service, sou
 def test_prepare_rejects_different_target_plan(service, source_plan, target_plan, other_plan, provider):
     """已有 prepared 且目标 plan 不同时拒绝，不再建库。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
     with pytest.raises(CommandError, match="plan-b"):
-        run_migrate("prepare", "-a", APP_CODE, "-t", "plan-c", "-e", "stag")
+        run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-c", "--environment", "stag")
 
     assert provider.create.call_count == 1
 
@@ -183,9 +189,9 @@ def test_switch_then_revert_restores_old_credentials(service, source_plan, targe
     """switch 写回目标库且 uuid 不变；revert 恢复旧库，目标库记录还在。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
     original_uuid = instance.uuid
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
-    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+    run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
 
     instance.refresh_from_db()
     assert instance.uuid == original_uuid
@@ -193,7 +199,7 @@ def test_switch_then_revert_restores_old_credentials(service, source_plan, targe
     assert instance.get_credentials()["name"] == "new-stag"
     assert PlanMigration.objects.get().status == PlanMigrationStatus.SWITCHED
 
-    run_migrate("revert", "-a", APP_CODE, "-e", "stag")
+    run_migrate("revert", "--app-code", APP_CODE, "--environment", "stag")
 
     instance.refresh_from_db()
     record = PlanMigration.objects.get()
@@ -207,10 +213,10 @@ def test_status_lists_progress_without_password(service, source_plan, target_pla
     """status 能区分中间态和已切换，并带上库名，不显示密码。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
     bind_instance(service, source_plan, "default", "prod", name="old-prod")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b")
-    run_migrate("switch", "-a", APP_CODE, "-e", "prod")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b")
+    run_migrate("switch", "--app-code", APP_CODE, "--environment", "prod")
 
-    stdout, _stderr = run_migrate("status", "-a", APP_CODE)
+    stdout, _stderr = run_migrate("status", "--app-code", APP_CODE)
 
     assert "status: prepared" in stdout
     assert "status: switched" in stdout
@@ -225,7 +231,7 @@ def test_prepare_grants_wildcard_egress_and_copies_to_clipboard(service, source_
     """新库授权 %，标准输出末尾带 OSC 52，剪贴板内容不含密码。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
 
-    stdout, stderr = run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    stdout, stderr = run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
     egress_info = provider.create.call_args.kwargs["params"]["egress_info"]
     assert json.loads(egress_info)["egress_ips"] == ["%"]
@@ -239,10 +245,10 @@ def test_prepare_grants_wildcard_egress_and_copies_to_clipboard(service, source_
 def test_second_prepare_finishes_previous_switched_record(service, source_plan, target_plan, other_plan, provider):
     """A→B 已切换后再 prepare B→C，旧记录变为 finished，revert 不会把它切回 A。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
-    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
+    run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
 
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-c", "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-c", "--environment", "stag")
 
     finished = PlanMigration.objects.get(source_plan=source_plan, target_plan=target_plan)
     prepared = PlanMigration.objects.get(status=PlanMigrationStatus.PREPARED)
@@ -250,7 +256,7 @@ def test_second_prepare_finishes_previous_switched_record(service, source_plan, 
     assert prepared.target_plan_id == other_plan.pk
 
     with pytest.raises(CommandError, match="没有处于 switched"):
-        run_migrate("revert", "-a", APP_CODE, "-e", "stag")
+        run_migrate("revert", "--app-code", APP_CODE, "--environment", "stag")
 
     instance.refresh_from_db()
     assert instance.plan_id == target_plan.pk
@@ -260,15 +266,15 @@ def test_second_prepare_finishes_previous_switched_record(service, source_plan, 
 def test_revert_rejects_when_instance_left_the_target_database(service, source_plan, target_plan, provider):
     """实例已经不在记录的目标库上时，revert 不改实例。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
-    run_migrate("switch", "-a", APP_CODE, "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
+    run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
     credentials = instance.get_credentials()
     credentials["host"] = "moved.db"
     instance.credentials = json.dumps(credentials)
     instance.save(update_fields=["credentials"])
 
     with pytest.raises(CommandError, match="回切失败"):
-        run_migrate("revert", "-a", APP_CODE, "-e", "stag")
+        run_migrate("revert", "--app-code", APP_CODE, "--environment", "stag")
 
     instance.refresh_from_db()
     assert instance.get_credentials()["host"] == "moved.db"
@@ -278,7 +284,7 @@ def test_revert_rejects_when_instance_left_the_target_database(service, source_p
 def test_status_lists_every_app_and_filters_by_status(service, source_plan, target_plan, provider):
     """status 不传应用时列出全部记录，并可按状态筛选。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
     stdout, _stderr = run_migrate("status", "--status", "prepared")
 
@@ -292,7 +298,7 @@ def test_status_lists_every_app_and_filters_by_status(service, source_plan, targ
 def test_deleting_instance_keeps_migration_credentials(service, source_plan, target_plan, provider):
     """解绑实例后迁移记录还在，另一侧库的凭证没有被级联清掉。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "-a", APP_CODE, "-t", "plan-b", "-e", "stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
     instance.delete()
 

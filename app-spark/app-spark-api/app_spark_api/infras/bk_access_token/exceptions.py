@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) Tencent. All rights reserved.
@@ -15,30 +14,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-
-from paasng.utils.addons import PlugableAppConfig
-
-logger = logging.getLogger(__name__)
+"""Errors raised while exchanging a user's login for a BlueKing access_token."""
 
 
-class EngineConfig(PlugableAppConfig):
-    name = "paasng.platform.engine"
-    default = True
+class AccessTokenError(Exception):
+    """Base class for every failure of the access_token exchange."""
 
-    def ready(self):
-        super().ready()
 
-        # fmt: off
-        # Activate monitoring
-        from .monitoring import register_metrics
-        register_metrics()
+class AccessTokenUnavailableError(AccessTokenError):
+    """The token service was unreachable, refused the exchange, or returned no token.
 
-        from . import handlers  # noqa: F401
-        from .configurations.build_token import load_signing_key_set
-        from .processes import handlers as deploy_phase_handlers  # noqa: F401
-
-        # 签名密钥配置非法时启动即失败，不留到构建时才暴露
-        load_signing_key_set()
-
-        # fmt: on
+    The message is for operators. It never contains the app secret, the user's login
+    credential, or a token, so it is safe to log.
+    """

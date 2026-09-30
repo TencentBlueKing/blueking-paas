@@ -1165,6 +1165,98 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Rolling restart a process
+  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/:
+    post:
+      operationId: update_process
+      description: 操作进程，支持的操作：启动、停止、调整实例数
+      tags:
+      - 部署相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 appCode
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: module 名称
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境名
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - operate_type
+              - process_type
+              properties:
+                operate_type:
+                  type: string
+                  enum:
+                  - start
+                  - stop
+                  - scale
+                  description: 操作类型，可选值 start/stop/scale
+                process_type:
+                  type: string
+                  description: 进程名（如 web、worker）
+                target_replicas:
+                  type: integer
+                  description: 目标副本数。operate_type 为 scale 且未开启自动扩缩容时必填
+                autoscaling:
+                  type: boolean
+                  default: false
+                  description: 是否开启自动扩缩容
+                scaling_config:
+                  type: object
+                  description: 开启自动扩缩容时必填
+                  properties:
+                    min_replicas:
+                      type: integer
+                      description: 最小副本数
+                    max_replicas:
+                      type: integer
+                      description: 最大副本数
+                    policy:
+                      type: string
+                      default: default
+                      description: 扩缩容策略
+                    metrics:
+                      type: array
+                      description: 扩缩容指标，为空时按 policy 使用默认指标
+                      items:
+                        type: object
+        required: true
+        description: ''
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Start, stop, or scale a process
   /system/bkapps/xycd/third_app/:
     post:
       operationId: create_xy_cd_app
@@ -2690,6 +2782,318 @@ paths:
           path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/files/download_url
           matchSubpath: false
           timeout: 300
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/shares:
+    post:
+      operationId: share_agent_sandbox_volume
+      description: 向其他应用共享沙箱 volume
+      tags:
+      - Agent沙箱相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 appCode
+      - in: path
+        name: volume_id
+        schema:
+          type: string
+        required: true
+        description: volume ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - grantee_app_code
+              properties:
+                grantee_app_code:
+                  type: string
+                  description: 需要授权的 AppCode，须同租户
+        required: true
+        description: ''
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/shares
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+  /agent_sandbox/applications/{app_code}/volumes/{volume_id}/shares/{grantee_app_code}:
+    delete:
+      operationId: unshare_agent_sandbox_volume
+      description: 撤销对应用的 volume 授权
+      tags:
+      - Agent沙箱相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 AppCode
+      - in: path
+        name: volume_id
+        schema:
+          type: string
+        required: true
+        description: Volume ID
+      - in: path
+        name: grantee_app_code
+        schema:
+          type: string
+        required: true
+        description: 待撤销授权的应用 ID
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/applications/{app_code}/volumes/{volume_id}/shares/{grantee_app_code}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/e2b/sandboxes:
+    post:
+      operationId: create_e2b_sandbox
+      description: 创建 e2b 沙箱
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/e2b/sandboxes
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/e2b/v2/sandboxes:
+    get:
+      operationId: list_e2b_sandboxes
+      description: 列出本应用名下存活的 e2b 沙箱
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/e2b/v2/sandboxes
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/e2b/sandboxes/{sandbox_id}:
+    get:
+      operationId: get_e2b_sandbox
+      description: 查询 e2b 沙箱详情
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/e2b/sandboxes/{sandbox_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
+    delete:
+      operationId: delete_e2b_sandbox
+      description: 销毁 e2b 沙箱
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/e2b/sandboxes/{sandbox_id}
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/e2b/sandboxes/{sandbox_id}/timeout:
+    post:
+      operationId: set_e2b_timeout
+      description: 重设 e2b 沙箱存活时长
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/e2b/sandboxes/{sandbox_id}/timeout
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/e2b/api_keys/:
+    post:
+      operationId: create_e2b_api_key
+      description: 创建 e2b api_key
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/api_keys/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    get:
+      operationId: list_e2b_api_key
+      description: 获取 e2b 秘钥列表
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/api_keys/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+  /agent_sandbox/applications/{app_code}/e2b/api_keys/{key_id}:
+    delete:
+      operationId: delete_e2b_api_key
+      description: 删除不需要的 e2b 秘钥
+      tags:
+      - e2b
+      responses:
+        '200':
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/api/agent_sandbox/applications/{app_code}/e2b/api_keys/{key_id}
+          matchSubpath: false
+          timeout: 0
         pluginConfigs: []
         authConfig:
           userVerifiedRequired: true

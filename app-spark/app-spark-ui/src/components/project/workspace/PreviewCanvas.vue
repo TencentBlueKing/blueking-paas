@@ -17,6 +17,7 @@
         -->
         <iframe
           v-if="src"
+          :key="frameKey"
           class="preview-frame__iframe"
           title="应用预览"
           :src="src"
@@ -52,6 +53,8 @@ const props = withDefaults(defineProps<{
   device?: WorkspaceDevice;
   /** 仅在 dev_server_status 为 ready 时传入，值即 origin。 */
   src?: string;
+  /** src 不变时，靠它变化让 iframe 重新加载页面。 */
+  frameKey?: number;
   phase?: PreviewPhase;
   /** 正在等第一次响应，或状态是 starting。starting 不是失败。 */
   waiting?: boolean;
@@ -59,6 +62,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   device: 'desktop',
   src: '',
+  frameKey: 0,
   phase: 'pending',
   waiting: false,
   busy: false,

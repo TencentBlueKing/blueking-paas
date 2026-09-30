@@ -42,6 +42,30 @@ if TYPE_CHECKING:
     from paasng.platform.engine.models import EngineApp
     from paasng.platform.sourcectl.models import VersionInfo
 
+# 产物仓库与缓存位置。构建环境变量、构建 token 授权、sandbox 构建都从这里推导。
+KANIKO_CACHE_REPO_SUFFIX = "/dockerbuild-cache"
+CNB_CACHE_TAG = "cnb-build-cache"
+
+
+def module_repo_path(namespace: str, app_code: str, module_name: str) -> str:
+    """本模块在平台仓库中的路径，不含 registry host"""
+    return f"{namespace}/{app_code}/{module_name}"
+
+
+def module_image_repository(host: str, namespace: str, app_code: str, module_name: str) -> str:
+    """本模块产物仓库：{host}/{namespace}/{app_code}/{module_name}"""
+    return f"{host}/{module_repo_path(namespace, app_code, module_name)}"
+
+
+def kaniko_cache_repository(image_repository: str) -> str:
+    """Kaniko 缓存仓库，位于产物仓库下的 dockerbuild-cache。参数是不含 tag 的仓库地址"""
+    return f"{image_repository}{KANIKO_CACHE_REPO_SUFFIX}"
+
+
+def cnb_cache_image(image_repository: str) -> str:
+    """CNB 缓存镜像，是产物仓库上的 cnb-build-cache tag。参数是不含 tag 的仓库地址"""
+    return f"{image_repository}:{CNB_CACHE_TAG}"
+
 
 def generate_image_repositories_by_module(module: Module) -> Dict[str, str]:
     """获取应用模块的镜像仓库地址（按环境划分）"""
@@ -51,8 +75,7 @@ def generate_image_repositories_by_module(module: Module) -> Dict[str, str]:
 def generate_image_repository_by_env(env: ModuleEnvironment) -> str:
     """通过部署环境来获取镜像仓库地址"""
     reg = get_image_registry_by_app(env.wl_app)
-    tmpl = f"{reg.host}/{reg.namespace}/{{app_code}}/{{module_name}}"
-    return tmpl.format(app_code=env.application.code, module_name=env.module.name)
+    return module_image_repository(reg.host, reg.namespace, env.application.code, env.module.name)
 
 
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:

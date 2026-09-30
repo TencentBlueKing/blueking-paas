@@ -112,6 +112,11 @@ STREAMING_HEADERS = {"x-accel-buffering": "no"}
 # 在「没声明类型」时也带上，防的是老浏览器不认 nosniff 仍去执行。
 NOSNIFF_HEADER = {"x-content-type-options": "nosniff"}
 
+# 预览里的文件随时会被模型改掉。静态文件服务通常只回 ETag / Last-Modified 不回 Cache-Control，
+# 浏览器就按启发式把旧的 HTML、JS 当成新鲜的直接复用，iframe 重载了也还是旧页面。no-cache 不是
+# 不缓存，而是每次先带着 ETag 回源问一句，没改就是 304。应用自己声明了缓存策略时尊重它。
+DEFAULT_CACHE_CONTROL = "no-cache"
+
 
 def build_preview_origin(request: HttpRequest, *, project_id: str, number: int) -> str:
     """Return the absolute URL a browser opens this conversation's application on.
@@ -329,6 +334,7 @@ def _collect_response_headers(
         )
 
     headers |= FRAME_ANCESTOR_HEADERS | STREAMING_HEADERS | NOSNIFF_HEADER
+    headers.setdefault("cache-control", DEFAULT_CACHE_CONTROL)
 
     # 没声明类型的也注入。模型写的小应用经常漏 Content-Type，浏览器嗅探成 HTML 之后这段脚本就在
     # 控制面的 origin 上跑，而 CSP 还没带上。

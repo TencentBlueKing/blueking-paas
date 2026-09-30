@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.4
-  title: "Add the restart_process API."
-  comment: "Add the restart_process API."
+  version: 1.4.5
+  title: "Add agent sandbox volume share and e2b APIs."
+  comment: "Add agent sandbox volume share and e2b APIs."
 
 
 stages:

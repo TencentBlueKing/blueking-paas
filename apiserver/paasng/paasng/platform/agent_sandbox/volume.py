@@ -140,14 +140,14 @@ def volume_in_use(volume: Volume) -> bool:
     ``err_creating`` 的记录跳过: 其工作负载已在创建失败时清理. 其余存活记录一律计入,
     包括其他应用的沙箱 (Volume 可跨应用共享).
     """
-    sandboxes = (
-        Sandbox.objects.filter(tenant_id=volume.tenant_id, deleted_at__isnull=True)
+    return (
+        Sandbox.objects.filter(
+            tenant_id=volume.tenant_id,
+            deleted_at__isnull=True,
+            volume_mounts__contains=[{"volume_id": str(volume.uuid)}],
+        )
         .exclude(status=SandboxStatus.ERR_CREATING.value)
-        .only("volume_mounts")
-    )
-    volume_id = str(volume.uuid)
-    return any(
-        volume_id in {str(mount.get("volume_id")) for mount in (sandbox.volume_mounts or [])} for sandbox in sandboxes
+        .exists()
     )
 
 

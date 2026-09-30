@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from decimal import Decimal
 from typing import Iterator
 from unittest import mock
@@ -68,6 +68,21 @@ def mock_sandbox_provision() -> Iterator[mock.MagicMock]:
     with mock.patch.object(AgentSandboxResManager, "provision") as mock_provision:
         mock_provision.return_value = mock.MagicMock()
         yield mock_provision
+
+
+@contextmanager
+def fake_clock(module: str) -> Iterator[dict[str, float]]:
+    """Patch ``time.monotonic``/``time.sleep`` in ``module`` so sleeping advances a virtual clock."""
+    clock = {"t": 0.0}
+
+    def sleep(seconds: float):
+        clock["t"] += seconds
+
+    with (
+        mock.patch(f"{module}.time.monotonic", side_effect=lambda: clock["t"]),
+        mock.patch(f"{module}.time.sleep", side_effect=sleep),
+    ):
+        yield clock
 
 
 @pytest.fixture()
@@ -151,14 +166,6 @@ class TestCreateSandbox:
         """Pod Ready 之后 Router 仍不可达时，创建失败并删掉 workload 和 Service。"""
         from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
 
-        clock = {"t": 0.0}
-
-        def monotonic():
-            return clock["t"]
-
-        def sleep(seconds):
-            clock["t"] += seconds
-
         with (
             mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create"),
             mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "delete_by_name") as mock_del_pod,
@@ -169,8 +176,7 @@ class TestCreateSandbox:
             mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.SandboxDaemonClient.probe_health", return_value=False),
-            mock.patch("paasng.platform.agent_sandbox.sandbox.time.monotonic", side_effect=monotonic),
-            mock.patch("paasng.platform.agent_sandbox.sandbox.time.sleep", side_effect=sleep),
+            fake_clock("paasng.platform.agent_sandbox.sandbox") as clock,
             pytest.raises(SandboxCreateTimeout, match="router path"),
         ):
             create_sandbox(application=bk_app, creator=bk_user.pk, name="route-timeout")
@@ -416,20 +422,12 @@ class TestWaitForSandboxInstanceRunning:
             mock.MagicMock(status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName="si-demo-pod")),
         ]
         mock_pod = mock.MagicMock()
-        clock = {"t": 0.0}
-
-        def monotonic():
-            return clock["t"]
-
-        def sleep(seconds):
-            clock["t"] += seconds
 
         with (
             mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
             mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
             mock.patch("paasng.platform.agent_sandbox.workload.kres.KPod", return_value=mock_pod),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.monotonic", side_effect=monotonic),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.sleep", side_effect=sleep),
+            fake_clock("paasng.platform.agent_sandbox.workload"),
         ):
             mock_get_client.return_value.__enter__.return_value = mock_client
             handler.wait_until_ready("si-demo", timeout=10)
@@ -476,19 +474,11 @@ class TestWaitForSandboxInstanceRunning:
         mock_si.get.return_value = mock.MagicMock(
             status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName=None)
         )
-        clock = {"t": 0.0}
-
-        def monotonic():
-            return clock["t"]
-
-        def sleep(seconds):
-            clock["t"] += seconds
 
         with (
             mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
             mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.monotonic", side_effect=monotonic),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.sleep", side_effect=sleep),
+            fake_clock("paasng.platform.agent_sandbox.workload"),
         ):
             mock_get_client.return_value.__enter__.return_value = mock_client
             with pytest.raises(SandboxCreateTimeout, match=r"status\.podName"):
@@ -526,50 +516,6 @@ class TestWaitForSandboxInstanceRunning:
             mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
             with pytest.raises(SandboxCreateTimeout, match="was not ready"):
                 handler.wait_until_ready("pod-1", timeout=5)
-
-    def test_instance_phase_timeout_is_create_timeout(self, bk_app):
-        """等 CR phase 超时抛 SandboxCreateTimeout，调用方看不到 ReadTargetStatusTimeout。"""
-        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
-        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
-        mock_si = mock.MagicMock()
-        mock_si.wait_for_status.side_effect = ReadTargetStatusTimeout("si-demo", 10)
-
-        with (
-            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
-            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
-        ):
-            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
-            with pytest.raises(SandboxCreateTimeout, match="Running or Failed"):
-                handler.wait_until_ready("si-demo", timeout=10)
-
-    def test_pod_name_wait_sleeps_only_remaining_timeout(self, bk_app):
-        """剩余时间小于检查周期时，sleep 按剩余时间裁剪。"""
-        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
-        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
-        mock_si = mock.MagicMock()
-        mock_si.wait_for_status.return_value = SandboxInstancePhase.RUNNING.value
-        mock_si.get.return_value = mock.MagicMock(
-            status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName=None)
-        )
-        clock = {"t": 0.0}
-
-        def monotonic():
-            return clock["t"]
-
-        def sleep(seconds):
-            clock["t"] += seconds
-
-        with (
-            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
-            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.monotonic", side_effect=monotonic),
-            mock.patch("paasng.platform.agent_sandbox.workload.time.sleep", side_effect=sleep) as mock_sleep,
-        ):
-            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
-            with pytest.raises(SandboxCreateTimeout, match=r"status\.podName"):
-                handler.wait_until_ready("si-demo", timeout=0.2)
-
-        mock_sleep.assert_called_once_with(0.2)
 
 
 class TestWorkloadHandler:

@@ -23,28 +23,29 @@
 把环境绑定上的 plan 改成目标方案。apiserver 不会回滚 plan。
 
 使用说明:
-    不传 -m 时处理范围内所有已绑定 MySQL 的模块。
-    不传 -e 时 prepare、switch、revert 处理 stag 和 prod。
-    -d 是这个实例的联系人，不传则留空。再次 prepare 时以最新一次为准。
+    不传 --module 时处理范围内所有已绑定 MySQL 的模块。
+    不传 --environment 时 prepare、switch、revert 处理 stag 和 prod。
+    --developer 是这个实例的联系人，不传则留空。再次 prepare 时以最新一次为准。
     还没开通的环境这里没有实例，要靠 apiserver 命令切绑定 plan，下次部署才会用目标 plan。
     finished 记录里的源库由运维删除，本命令不删库。
 
 使用示例:
     # 预分配 stag 和 prod。标准输出是给运维复制的连接信息，不含密码
-    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -d <contact>
+    python manage.py migrate_plan prepare --app-code <app_code> --target-plan mysql-8.0 --developer <contact>
 
-    # 只处理指定模块和环境。-m、-e 都可以重复
-    python manage.py migrate_plan prepare -a <app_code> -t mysql-8.0 -m default -m api -e prod
+    # 只处理指定模块和环境。--module、--environment 都可以重复
+    python manage.py migrate_plan prepare --app-code <app_code> --target-plan mysql-8.0 \
+        --module default --module api --environment prod
 
     # 查看全部迁移记录，或按状态筛选
     python manage.py migrate_plan status
     python manage.py migrate_plan status --status switched
 
     # 运维同步完数据后切换，然后到 apiserver 改绑定 plan，再重新部署
-    python manage.py migrate_plan switch -a <app_code> -m default -e prod
+    python manage.py migrate_plan switch --app-code <app_code> --module default --environment prod
 
     # 切换后有问题，写回旧库。目标库保留，需要再部署一次
-    python manage.py migrate_plan revert -a <app_code> -m default -e prod
+    python manage.py migrate_plan revert --app-code <app_code> --module default --environment prod
 """
 
 import base64
@@ -96,12 +97,12 @@ class Command(BaseCommand):
             block = render_copy_blocks(sections, developer)
             self.stdout.write(block)
             # 可见文本在前，剪贴板只放这段，不含下面的提示。
-            self.stdout.write(_osc52(block))
+            self.stdout.write(_wrap_osc52(block))
         self.stderr.write(f"预分配完成 {len(sections)} 条，跳过 {len(skipped)} 条\n")
         self.stderr.write(
             "下一步：把标准输出里的连接信息交给运维同步数据。同步完成后执行 "
-            f"migrate_plan switch -a {scope.app_code} 。确认不再回滚后，到 apiserver 执行 "
-            f"migrate_mysql_plan -a {scope.app_code} -t {target_plan.name} 。\n"
+            f"migrate_plan switch --app-code {scope.app_code} 。确认不再回滚后，到 apiserver 执行 "
+            f"migrate_mysql_plan --app-code {scope.app_code} --target-plan {target_plan.name} 。\n"
         )
         if failures:
             raise CommandError(f"以下实例预分配失败: {', '.join(failures)}")
@@ -114,7 +115,7 @@ class Command(BaseCommand):
         if result.labels:
             self.stderr.write(
                 "下一步：到 apiserver 执行 "
-                f"migrate_mysql_plan -a {scope.app_code} -t <目标 plan 名称> ，"
+                f"migrate_mysql_plan --app-code {scope.app_code} --target-plan <目标 plan 名称> ，"
                 "把环境绑定的 plan 改成与实例一致，然后重新部署应用。\n"
             )
         if result.failures:
@@ -140,8 +141,8 @@ class Command(BaseCommand):
     def _add_prepare(self, subparsers) -> None:
         parser = subparsers.add_parser("prepare", help="在目标 plan 上预分配数据库")
         _add_scope(parser, app_required=True)
-        parser.add_argument("-t", "--target-plan", dest="target_plan", required=True, help="目标 plan 名称")
-        parser.add_argument("-d", "--developer", dest="developer", default="", help="联系人，不传则留空")
+        parser.add_argument("--target-plan", dest="target_plan", required=True, help="目标 plan 名称")
+        parser.add_argument("--developer", dest="developer", default="", help="联系人，不传则留空")
 
     def _add_switch(self, subparsers) -> None:
         parser = subparsers.add_parser("switch", help="把已预分配的实例切换到目标库")
@@ -159,14 +160,18 @@ class Command(BaseCommand):
             dest="status",
             choices=["prepared", "switched", "finished"],
             default=None,
-            help="按状态筛选：prepared、switched、finished",
+            help=(
+                "按状态筛选，不传则不过滤。"
+                "prepared：目标库已建好，应用仍用旧库，等运维同步数据后 switch；"
+                "switched：实例已指向目标库，可以 revert 回旧库；"
+                "finished：同一实例开始了下一轮迁移，不能再 revert，源库可由运维删除"
+            ),
         )
 
 
 def _add_scope(parser, *, app_required: bool) -> None:
-    parser.add_argument("-a", "--app-code", dest="app_code", required=app_required, help="应用 ID")
+    parser.add_argument("--app-code", dest="app_code", required=app_required, help="应用 ID")
     parser.add_argument(
-        "-m",
         "--module",
         dest="modules",
         action="append",
@@ -174,7 +179,6 @@ def _add_scope(parser, *, app_required: bool) -> None:
         help="模块名，可重复。不传则处理范围内所有已绑定 MySQL 的模块",
     )
     parser.add_argument(
-        "-e",
         "--environment",
         dest="environments",
         action="append",
@@ -196,7 +200,7 @@ def _scope_from_options(options: dict, *, default_environments: bool) -> Migrati
     )
 
 
-def _osc52(text: str) -> str:
+def _wrap_osc52(text: str) -> str:
     """把文本放进终端剪贴板。终端不支持时忽略这段转义序列。"""
     encoded = base64.b64encode(text.encode()).decode()
     return f"\033]52;c;{encoded}\a"

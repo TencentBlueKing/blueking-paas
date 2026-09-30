@@ -177,6 +177,14 @@ class TestVolumeDestroy:
         assert resp.json()["code"] == "AGENT_SANDBOX_VOLUME_DELETE_FAILED"
         volume.refresh_from_db()
         assert volume.deleted_at is None
+        # 卷进入"删除中"中间态: 不可再挂载, 但仍留在列表中供重试
+        assert volume.deleting_at is not None
+
+        resp = api_client.delete(url)
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        volume.refresh_from_db()
+        assert volume.deleted_at is not None
+        assert volume.deleting_at is None
 
     def test_service_not_ready_maps_to_502(
         self, api_client: APIClient, volume: Volume, url: str, stub_resident_client

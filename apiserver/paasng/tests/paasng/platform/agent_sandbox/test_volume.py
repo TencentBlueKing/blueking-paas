@@ -73,6 +73,17 @@ def _soft_deleted_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
     return volume.uuid
 
 
+def _deleting_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
+    """已进入删除流程 (deleting_at 非空) 的卷不能再被挂载"""
+    volume = Volume.objects.create(
+        application=bk_app,
+        name="deleting-vol",
+        tenant_id=bk_app.tenant_id,
+        deleting_at=timezone.now(),
+    )
+    return volume.uuid
+
+
 def _cross_tenant_volume_id(bk_app: Any, bk_user) -> uuid.UUID:
     """即使已授权，属于其他租户的 Volume 也不可见。"""
     other_app = create_app(owner_username=bk_user.username)
@@ -114,6 +125,7 @@ class TestResolveVolumeMounts:
         [
             pytest.param(_missing_volume_id, id="missing"),
             pytest.param(_soft_deleted_volume_id, id="soft-deleted"),
+            pytest.param(_deleting_volume_id, id="deleting"),
             pytest.param(_cross_tenant_volume_id, id="cross-tenant"),
         ],
     )
@@ -256,6 +268,23 @@ class TestDeleteVolume:
         assert stub_resident_client.stat(volume.storage_path, "outputs/report.html")["exists"] is False
         volume.refresh_from_db()
         assert volume.deleted_at is not None
+        # 删除完成后中间态必须清空
+        assert volume.deleting_at is None
+
+    def test_marks_deleting_before_wipe(self, volume: Volume, stub_resident_client) -> None:
+        """物理清理前必须先落 deleting_at, 否则并发挂载校验仍会把本卷当作可用"""
+        observed: list[tuple[bool, bool]] = []
+
+        def spy(base_path: str) -> None:
+            row = Volume.objects.get(pk=volume.pk)
+            observed.append((row.deleting_at is not None, row.deleted_at is not None))
+
+        with mock.patch.object(stub_resident_client, "delete_volume", side_effect=spy):
+            delete_volume(volume)
+
+        assert observed == [(True, False)]
+        volume.refresh_from_db()
+        assert volume.deleted_at is not None
 
     def test_is_idempotent_for_a_volume_never_mounted(self, volume: Volume, stub_resident_client) -> None:
         """从未被挂载过的 Volume 在共享存储上没有目录, 删除同样应当成功"""
@@ -279,6 +308,8 @@ class TestDeleteVolume:
         assert stub_resident_client.stat(volume.storage_path, "outputs/report.html")["exists"] is True
         volume.refresh_from_db()
         assert volume.deleted_at is None
+        # 校验失败不得留下 "删除中" 标记, 否则卷会被永久挡住挂载
+        assert volume.deleting_at is None
 
     def test_keeps_record_when_daemon_fails(self, volume: Volume, stub_resident_client) -> None:
         """存储清理失败时不得软删记录, 否则用户没有任何入口重试"""
@@ -290,6 +321,32 @@ class TestDeleteVolume:
 
         volume.refresh_from_db()
         assert volume.deleted_at is None
+
+    def test_failed_wipe_keeps_volume_unmountable_but_retryable(self, volume: Volume, stub_resident_client) -> None:
+        """清理失败后卷保持 "删除中" (不可挂载), 且重试同一接口即可完成删除"""
+        with (
+            mock.patch.object(stub_resident_client, "delete_volume", side_effect=SandboxDaemonAPIError("boom")),
+            pytest.raises(SandboxDaemonAPIError),
+        ):
+            delete_volume(volume)
+
+        volume.refresh_from_db()
+        assert volume.deleted_at is None
+        assert volume.deleting_at is not None
+
+        # 重试成功后: 删除时间落库, 中间态清空
+        delete_volume(volume)
+        volume.refresh_from_db()
+        assert volume.deleted_at is not None
+        assert volume.deleting_at is None
+
+    def test_rejects_already_deleted_volume(self, volume: Volume, stub_resident_client) -> None:
+        """并发删除时, 后到者拿到锁后应收到 VolumeNotFound"""
+        volume.deleted_at = timezone.now()
+        volume.save(update_fields=["deleted_at", "updated"])
+
+        with pytest.raises(VolumeNotFound):
+            delete_volume(volume)
 
     def test_removes_archived_objects(self, volume: Volume, stub_resident_client) -> None:
         VolumeArtifact.objects.create(

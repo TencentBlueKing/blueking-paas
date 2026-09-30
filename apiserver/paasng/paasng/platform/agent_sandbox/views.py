@@ -380,7 +380,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         responses={status.HTTP_201_CREATED: SandboxCreateOutputSLZ()},
     )
     def create(self, request, code):
-        """创建一个新的 Agent Sandbox，新沙箱将自动进入运行状态。"""
+        """创建一个新的 Agent Sandbox。接口在沙箱就绪、可以接受请求后才返回。"""
         application = self.get_application()
         slz = SandboxCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

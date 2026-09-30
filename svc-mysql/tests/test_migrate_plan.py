@@ -263,6 +263,21 @@ def test_second_prepare_finishes_previous_switched_record(service, source_plan, 
     assert instance.get_credentials()["name"] == "new-stag"
 
 
+def test_finish_marks_switched_record_and_blocks_revert(service, source_plan, target_plan, provider):
+    """finish 把 switched 记录标成 finished，之后 revert 找不到可回切的记录，实例保持在目标库。"""
+    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
+    run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
+
+    run_migrate("finish", "--app-code", APP_CODE, "--environment", "stag")
+
+    assert PlanMigration.objects.get().status == PlanMigrationStatus.FINISHED
+    with pytest.raises(CommandError, match="没有处于 switched"):
+        run_migrate("revert", "--app-code", APP_CODE, "--environment", "stag")
+    instance.refresh_from_db()
+    assert instance.plan_id == target_plan.pk
+
+
 def test_revert_rejects_when_instance_left_the_target_database(service, source_plan, target_plan, provider):
     """实例已经不在记录的目标库上时，revert 不改实例。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")

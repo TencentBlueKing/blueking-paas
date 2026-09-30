@@ -172,6 +172,14 @@ def revert_migrations(scope: MigrationScope) -> BatchResult:
     return _apply_each(records, _revert_one, "revert mysql plan migration failed: %s error=%s")
 
 
+def finish_migrations(scope: MigrationScope) -> BatchResult:
+    """把 switched 记录标成 finished，表示运维确认不再回退。只改记录，不动实例。"""
+    records = list(_build_migration_queryset(scope, PlanMigrationStatus.SWITCHED))
+    if not records:
+        raise CommandError("没有处于 switched 的迁移记录")
+    return _apply_each(records, _finish_one, "finish mysql plan migration failed: %s error=%s")
+
+
 def query_migrations(scope: MigrationScope) -> list[PlanMigration]:
     return list(_build_migration_queryset(scope, status=scope.status))
 
@@ -358,6 +366,17 @@ def _revert_one(record: PlanMigration) -> None:
         locked.switched_at = None
         locked.save(update_fields=["status", "switched_at", "updated"])
         logger.info("reverted mysql plan migration for %s instance=%s", _make_label(locked), instance.uuid)
+
+
+def _finish_one(record: PlanMigration) -> None:
+    with transaction.atomic():
+        locked = PlanMigration.objects.select_for_update().get(pk=record.pk)
+        # 同 _switch_one：加锁后状态已变说明被别的命令处理过
+        if locked.status != PlanMigrationStatus.SWITCHED:
+            return
+        locked.status = PlanMigrationStatus.FINISHED
+        locked.save(update_fields=["status", "updated"])
+        logger.info("finished mysql plan migration for %s instance=%s", _make_label(locked), locked.instance_id)
 
 
 def _create_target_database(instance: ServiceInstance, target_plan: Plan, ref: InstanceRef):

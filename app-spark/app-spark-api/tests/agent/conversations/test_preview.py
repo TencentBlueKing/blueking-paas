@@ -218,6 +218,35 @@ def test_a_client_supplied_forwarded_header_cannot_reach_the_application_as_writ
     }
 
 
+# --- 缓存 ------------------------------------------------------------------------------------
+
+
+def make_upstream_response(headers: dict[str, str]) -> httpx2.Response:
+    return httpx2.Response(200, headers=headers)
+
+
+def test_a_response_without_a_cache_policy_is_revalidated_every_time():
+    """模型改完文件后 iframe 重载，浏览器不能按 Last-Modified 启发式复用旧的 HTML、JS。"""
+    response = make_upstream_response({"content-type": "text/html", "last-modified": "Mon, 28 Sep 2026 00:00:00 GMT"})
+
+    headers = preview._collect_response_headers(
+        response, upstream=UPSTREAM, preview_root=PREVIEW_ROOT, current_url=PREVIEW_ROOT
+    )
+
+    assert headers["cache-control"] == "no-cache"
+
+
+def test_the_application_own_cache_policy_is_kept():
+    """带哈希的构建产物本来就该长缓存，文件名变了自然会重新拉。"""
+    response = make_upstream_response({"content-type": "text/javascript", "cache-control": "max-age=31536000"})
+
+    headers = preview._collect_response_headers(
+        response, upstream=UPSTREAM, preview_root=PREVIEW_ROOT, current_url=PREVIEW_ROOT
+    )
+
+    assert headers["cache-control"] == "max-age=31536000"
+
+
 # --- 同源的兜底 ------------------------------------------------------------------------------
 
 

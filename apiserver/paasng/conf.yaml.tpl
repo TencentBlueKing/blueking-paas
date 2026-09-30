@@ -769,6 +769,17 @@ BK_AUDIT_ENDPOINT = ""
 ## slugbuilder build 的超时时间, 单位秒, 默认 15 分钟
 # BUILD_PROCESS_TIMEOUT = 900
 
+## 构建 token 的签名密钥（Ed25519 私钥，PKCS#8 PEM），轮换期间可同时配置多把
+## 生成：python manage.py generate_build_token_signing_key --output <文件>
+## 导出公钥（分发给镜像代理）：python manage.py export_build_token_jwks --output <文件>
+# BUILD_TOKEN_SIGNING_KEYS:
+#   - |
+#     -----BEGIN PRIVATE KEY-----
+#     ...
+#     -----END PRIVATE KEY-----
+## 当前用于签发构建 token 的密钥 kid，仅配置一把密钥时可留空
+# BUILD_TOKEN_ACTIVE_KID: ''
+
 
 ## ---------------------------------------- 服务导出配置 ----------------------------------------
 

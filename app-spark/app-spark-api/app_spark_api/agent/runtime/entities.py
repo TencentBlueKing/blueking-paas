@@ -18,11 +18,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 import attrs
 
-from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
+from app_spark_api.agent.runtime.constants import ENV_PREFIX, MODEL_ENV_NAMES
+from app_spark_api.agent.runtime.exceptions import (
+    AgentConfigurationError,
+    AgentUnavailableError,
+    ModelAccessConfigurationError,
+)
 from app_spark_api.utils import structure_config, validate_non_empty_string
 
 
@@ -38,23 +44,32 @@ class LocalProcessConfig:
     :param callback_base_url: Where a spawned Runtime can reach *this* service, to replicate
         its state back. Loopback is right for a process on this host and wrong for anything
         else, which is exactly why it is provider configuration rather than a global setting.
-    :param model: Value for ``APP_SPARK_AGENT_MODEL``; left to the agent's default when unset.
-    :param model_api_key: Value for ``APP_SPARK_AGENT_MODEL_API_KEY``; left to the agent's
-        default when unset.
     :param startup_timeout_seconds: How long to wait for a spawned Runtime to answer
         ``/health``.
     :param extra_env: Further ``APP_SPARK_AGENT_*`` variables to hand the process, so an agent
-        setting can be reached without growing a field here for each one.
+        setting can be reached without growing a field here for each one. Model variables are
+        refused: which model a Runtime calls, and with what credential, is the model source's
+        decision, not the provider's.
     """
 
     agent_project_dir: str = attrs.field(validator=validate_non_empty_string)
     workspace_root: str = attrs.field(validator=validate_non_empty_string)
     state_root: str = attrs.field(validator=validate_non_empty_string)
     callback_base_url: str = "http://127.0.0.1:8000"
-    model: str | None = None
-    model_api_key: str | None = None
     startup_timeout_seconds: float = 60.0
     extra_env: dict[str, str] = attrs.field(factory=dict)
+
+    @extra_env.validator
+    def _validate_extra_env(self, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
+        # 只放行 agent 自己的配置：本服务的其它变量（尤其是 APP_SPARK_API_* 里的平台密钥）不能借
+        # 这个口子流进 Runtime。
+        foreign = sorted(name for name in value if not name.startswith(ENV_PREFIX))
+        if foreign:
+            raise ValueError(f"{attribute.name} may only hold {ENV_PREFIX}* variables, got {foreign}")
+
+        owned = sorted(MODEL_ENV_NAMES.intersection(value))
+        if owned:
+            raise ValueError(f"{attribute.name} must not set model variables, use the model source settings: {owned}")
 
 
 @attrs.frozen
@@ -128,6 +143,62 @@ class GitRemote:
     branch: str = attrs.field(validator=validate_non_empty_string)
     username: str = attrs.field(validator=validate_non_empty_string)
     token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+
+
+@attrs.frozen
+class BkAidevModelConfig:
+    """Defaults for a Runtime that calls bkaidev.
+
+    The LLM base URL and the access_token exchange endpoint are not configured here: the former
+    is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
+    app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
+
+    :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    """
+
+    # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
+    # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
+    default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+
+
+@attrs.frozen
+class DirectModelAccess:
+    """What a Runtime is told to call a model vendor directly, with a fixed key.
+
+    Also the shape of AGENT_DIRECT_MODEL_CONFIG: there is nothing to resolve per user.
+
+    :param model: pydantic-ai model string, ``<provider>:<model>``, or ``fake:<scenario>``.
+    :param api_key: The vendor key; omitted for ``fake:`` models.
+    """
+
+    model: str = attrs.field(validator=validate_non_empty_string)
+    api_key: str | None = attrs.field(default=None, repr=False)
+
+
+@attrs.frozen
+class BkAidevModelAccess:
+    """What a Runtime is told so it can call bkaidev on the user's behalf.
+
+    Carries the access_token alone, no app credentials, so nothing in the sandbox can mint a
+    token of its own.
+
+    :param base_url: The gateway's OpenAI-compatible v1 root.
+    :param access_token: The user's access_token for the configured app.
+    :param model_name: The model the Runtime asks the gateway for.
+    """
+
+    base_url: str = attrs.field(validator=validate_non_empty_string)
+    access_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
+    model_name: str = attrs.field(validator=validate_non_empty_string)
+
+
+# Exactly one of the two, so a provider never has to guess what a missing value was meant to be.
+type ModelAccess = DirectModelAccess | BkAidevModelAccess
+
+# Called by a provider only when it is about to start a Runtime, inside whatever keeps two
+# requests from starting rival Runtimes. Resolving any earlier would need a separate "is one
+# already up" check, and the Runtime could die between that check and the start.
+type ModelAccessResolver = Callable[[], Awaitable[ModelAccess]]
 
 
 @attrs.frozen
@@ -288,3 +359,23 @@ def structure_e2b_config(raw_config: object) -> E2BConfig:
     :raises AgentConfigurationError: If the configuration is invalid.
     """
     return structure_config(raw_config, E2BConfig, error_cls=AgentConfigurationError)
+
+
+def structure_bkaidev_model_config(raw_config: object) -> BkAidevModelConfig:
+    """Structure and validate the bkaidev model configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: A validated configuration.
+    :raises ModelAccessConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, BkAidevModelConfig, error_cls=ModelAccessConfigurationError)
+
+
+def structure_direct_model_config(raw_config: object) -> DirectModelAccess:
+    """Structure and validate the direct model configuration.
+
+    :param raw_config: Mapping from settings, typically loaded from YAML.
+    :return: What every directly-calling Runtime is given.
+    :raises ModelAccessConfigurationError: If the configuration is invalid.
+    """
+    return structure_config(raw_config, DirectModelAccess, error_cls=ModelAccessConfigurationError)

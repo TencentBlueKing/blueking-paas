@@ -5,6 +5,7 @@
       v-if="view === 'preview'"
       :device="device"
       :src="frameSrc"
+      :frame-key="frameKey"
       :phase="phase"
       :waiting="waiting"
       :busy="busy"
@@ -28,7 +29,7 @@ const view = ref<WorkspaceView>('preview');
 const device = ref<WorkspaceDevice>('desktop');
 const { busy } = storeToRefs(useProjectStore());
 const panelOpen = computed(() => view.value === 'preview');
-const { phase, frameSrc, waiting } = useConversationPreview(panelOpen);
+const { phase, frameSrc, frameKey, waiting } = useConversationPreview(panelOpen);
 </script>
 
 <style lang="postcss" scoped>

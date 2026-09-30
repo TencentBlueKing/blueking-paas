@@ -57,7 +57,7 @@ func DeleteVolume(c *gin.Context) {
 		return
 	}
 
-	// 失败 (如权限/IO 错误) 时目录可能只被删掉一部分, 目录本身仍保留, 由调用方重试补完
+	// 失败 (如权限/IO 错误) 时目录可能只被删掉一部分, 部分内容可能残留, 调用方可安全重试
 	if err := storageRoot.RemoveAll(basePath); err != nil {
 		respondErr(c, err)
 		return

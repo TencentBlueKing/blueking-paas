@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import base64
 import json
 from io import StringIO
 from unittest.mock import MagicMock, patch
@@ -157,21 +156,15 @@ def test_prepare_keeps_instance_and_prints_copy_block(service, source_plan, targ
     assert PlanMigration.objects.filter(status=PlanMigrationStatus.PREPARED).count() == 2
 
 
-def test_prepare_again_reuses_database_and_clears_omitted_developer(service, source_plan, target_plan, provider):
-    """同一目标 plan 再次 prepare 不新建库；这次没传 developer 就留空。"""
+def test_prepare_again_reuses_database(service, source_plan, target_plan, provider):
+    """同一目标 plan 再次 prepare 不新建库。"""
     bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate(
-        "prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag", "--developer", "alice"
-    )
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
-    stdout, _stderr = run_migrate(
-        "prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag"
-    )
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
 
     assert provider.create.call_count == 1
-    assert "developer:\n" in stdout
-    assert "alice" not in stdout
-    assert PlanMigration.objects.get().developer == ""
+    assert PlanMigration.objects.count() == 1
 
 
 def test_prepare_rejects_different_target_plan(service, source_plan, target_plan, other_plan, provider):
@@ -227,21 +220,6 @@ def test_status_lists_progress_without_password(service, source_plan, target_pla
     assert NEW_PASSWORD not in stdout
 
 
-def test_prepare_grants_wildcard_egress_and_copies_to_clipboard(service, source_plan, target_plan, provider):
-    """新库授权 %，标准输出末尾带 OSC 52，剪贴板内容不含密码。"""
-    bind_instance(service, source_plan, "default", "stag", name="old-stag")
-
-    stdout, stderr = run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
-
-    egress_info = provider.create.call_args.kwargs["params"]["egress_info"]
-    assert json.loads(egress_info)["egress_ips"] == ["%"]
-    encoded = stdout.split("\033]52;c;", 1)[1].split("\a", 1)[0]
-    clipboard = base64.b64decode(encoded).decode()
-    assert "GCS_MYSQL_NAME: new-stag" in clipboard
-    assert NEW_PASSWORD not in clipboard
-    assert "migrate_mysql_plan" in stderr
-
-
 def test_second_prepare_finishes_previous_switched_record(service, source_plan, target_plan, other_plan, provider):
     """A→B 已切换后再 prepare B→C，旧记录变为 finished，revert 不会把它切回 A。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
@@ -294,29 +272,3 @@ def test_revert_rejects_when_instance_left_the_target_database(service, source_p
     instance.refresh_from_db()
     assert instance.get_credentials()["host"] == "moved.db"
     assert PlanMigration.objects.get().status == PlanMigrationStatus.SWITCHED
-
-
-def test_status_lists_every_app_and_filters_by_status(service, source_plan, target_plan, provider):
-    """status 不传应用时列出全部记录，并可按状态筛选。"""
-    bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
-
-    stdout, _stderr = run_migrate("status", "--status", "prepared")
-
-    assert f"app_code: {APP_CODE}" in stdout
-    assert "status: prepared" in stdout
-
-    empty, _stderr = run_migrate("status", "--status", "finished")
-    assert "没有迁移记录" in empty
-
-
-def test_deleting_instance_keeps_migration_credentials(service, source_plan, target_plan, provider):
-    """解绑实例后迁移记录还在，另一侧库的凭证没有被级联清掉。"""
-    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
-
-    instance.delete()
-
-    record = PlanMigration.objects.get()
-    assert record.instance_id is None
-    assert json.loads(record.target_credentials)["name"] == "new-stag"

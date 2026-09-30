@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Optional
+
 import pytest
 from kubernetes.client.models import V1Container, V1Pod, V1PodSpec
 from kubernetes.dynamic.resource import ResourceInstance
@@ -24,6 +26,7 @@ from paas_wl.utils.kubestatus import (
     HealthStatusType,
     extract_exit_code,
     get_any_container_fail_message,
+    is_pod_ready,
     parse_pod,
 )
 from tests.paas_wl.utils.basic import make_container_status
@@ -91,3 +94,25 @@ def test_extract_exit_code(health_status, expected):
 def test_get_any_container_fail_message(container_statuses, expected):
     pod = parse_pod(ResourceInstance(None, {"kind": "Pod", "status": {"containerStatuses": container_statuses}}))
     assert get_any_container_fail_message(pod) == expected
+
+
+def make_pod(status: Optional[dict] = None) -> V1Pod:
+    """Make a V1Pod carrying the given `status` block."""
+    data: dict = {"kind": "Pod"}
+    if status is not None:
+        data["status"] = status
+    return parse_pod(ResourceInstance(None, data))
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (None, False),
+        # phase 变为 Running 时探针可能还没通过
+        ({"phase": "Running"}, False),
+        ({"phase": "Running", "conditions": [{"type": "ContainersReady", "status": "True"}]}, False),
+        ({"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}]}, True),
+    ],
+)
+def test_is_pod_ready(status, expected):
+    assert is_pod_ready(make_pod(status)) is expected

@@ -30,19 +30,26 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "DEFAULT_CACHE_CONFIG" .Values.defaultCacheConfig
   "ENABLE_MULTI_TENANT_MODE" .Values.enableMultiTenantMode
   "LOGIN_FULL" .Values.loginFull
+  "APP_CODE" .Values.appCode
+  "APP_SECRET" .Values.appSecret
+  "BK_API_URL_TMPL" .Values.bkApiUrlTmpl
+  "APIGW_ENVIRONMENT" .Values.apigwEnvironment
   "BKAUTH_BACKEND_TYPE" $bkAuth.backendType
-  "BKAUTH_TOKEN_APP_CODE" $bkAuth.appCode
-  "BKAUTH_TOKEN_SECRET_KEY" $bkAuth.appSecret
   "BKAUTH_BK_LOGIN_APIGW_STAGE" $bkAuth.bkLoginApigwStage
   "BKAUTH_USER_INFO_APIGW_URL" $bkAuth.userInfoApigwUrl
   "BKAUTH_USER_COOKIE_VERIFY_URL" $bkAuth.userCookieVerifyUrl
   "BKAUTH_TOKEN_USER_INFO_ENDPOINT" $bkAuth.tokenUserInfoEndpoint
+  "TOKEN_AUTH_ENDPOINT" $bkAuth.tokenAuthEndpoint
+  "AUTH_ENV_NAME" $bkAuth.authEnvName
   "BLOBSTORE_BKREPO_CONFIG" .Values.blobstoreBkrepoConfig
   "BKKRILL_ENCRYPT_SECRET_KEY" $django.encryptSecretKey
   "REPO_SERVER" .Values.repoServer
   "AGENT_RUNTIME_PROVIDER" $agent.runtimeProvider
   "AGENT_RUNTIME_PROVIDER_CONFIG" $agent.runtimeProviderConfig
   "AGENT_CONTEXT_STORAGE" $agent.contextStorage
+  "AGENT_MODEL_SOURCE" $agent.modelSource
+  "AGENT_DIRECT_MODEL_CONFIG" $agent.directModelConfig
+  "BKAIDEV_MODEL_CONFIG" $agent.bkaidevModelConfig
 -}}
 apiVersion: v1
 kind: ConfigMap

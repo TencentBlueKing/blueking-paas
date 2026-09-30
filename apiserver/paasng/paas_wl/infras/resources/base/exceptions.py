@@ -34,6 +34,13 @@ class ReadTargetStatusTimeout(KubeException):
         super().__init__(msg, *args, **kwargs)
 
 
+class PodTerminatedError(KubeException):
+    """Pod 已进入终态，不会再变为 Ready。"""
+
+    def __init__(self, pod_name, *args, **kwargs):
+        super().__init__(f"Pod {pod_name} terminated before becoming ready", *args, **kwargs)
+
+
 class PodNotSucceededError(KubeException):
     """pod not succeeded"""
 

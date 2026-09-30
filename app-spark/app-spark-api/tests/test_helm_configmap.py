@@ -29,7 +29,7 @@ def test_default_configmap_omits_optional_settings():
     for setting in ("DEBUG", "LANGUAGE_CODE", "LANGUAGES", "TIME_ZONE", "STATIC_URL", "AGENT_RUNTIME_PROVIDER"):
         assert f"APP_SPARK_API_{setting}" not in data
     assert "APP_SPARK_API_DATABASE_HOST" in data
-    assert "APP_SPARK_API_BKAUTH_TOKEN_APP_CODE" in data
+    assert "APP_SPARK_API_APP_CODE" in data
     assert "APP_SPARK_API_AGENT_RUNTIME_PROVIDER_CONFIG" in data
     assert "APP_SPARK_API_FORCE_SCRIPT_NAME" in data
 
@@ -43,7 +43,18 @@ def test_default_force_script_name_matches_ingress_prefix(monkeypatch):
 
 def test_null_groups_and_values_are_omitted():
     data = _render_configmap(
-        dict.fromkeys(["django", "externalDatabase", "bkAuth", "agent", "enableMultiTenantMode", "loginFull"])
+        dict.fromkeys(
+            [
+                "django",
+                "externalDatabase",
+                "bkAuth",
+                "agent",
+                "enableMultiTenantMode",
+                "loginFull",
+                "appCode",
+                "appSecret",
+            ]
+        )
     )
     assert not any(key.startswith("APP_SPARK_API_") for key in data)
 
@@ -62,6 +73,8 @@ def test_null_groups_and_values_are_omitted():
         ("blobstoreBkrepoConfig", {"PROJECT": "test", "PASSWORD": "true"}, "BLOBSTORE_BKREPO_CONFIG"),
         ("django.encryptSecretKey", "Q3NyY0V3cFpTUlVNbHp3RUZMYWtXaEdOdXp3eWZNSkc=", "BKKRILL_ENCRYPT_SECRET_KEY"),
         ("repoServer", {"type": "forgejo", "org": "app-spark"}, "REPO_SERVER"),
+        ("bkAuth.tokenAuthEndpoint", "https://bkssm.example.com/api/v1/auth/access-tokens", "TOKEN_AUTH_ENDPOINT"),
+        ("bkAuth.authEnvName", "test", "AUTH_ENV_NAME"),
     ],
 )
 def test_explicit_values_survive_dynaconf(monkeypatch, key, value, setting):

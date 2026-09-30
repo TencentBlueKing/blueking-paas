@@ -1406,6 +1406,13 @@ for image_conf in SMART_CNB_IMAGE_CONF.values():
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 
+# 构建 token 的签名密钥：Ed25519 私钥（PKCS#8 PEM）列表，轮换期间可同时配置多把。
+# 使用 `python manage.py generate_build_token_signing_key` 生成，
+# 使用 `python manage.py export_build_token_jwks` 导出公钥集合，分发给各集群的镜像代理
+BUILD_TOKEN_SIGNING_KEYS = settings.get("BUILD_TOKEN_SIGNING_KEYS", [])
+# 当前用于签发构建 token 的密钥 kid，仅配置一把密钥时可留空
+BUILD_TOKEN_ACTIVE_KID = settings.get("BUILD_TOKEN_ACTIVE_KID", "")
+
 # 构建调试: 构建容器在成功/失败后保留的时长, 默认 30 分钟
 BUILD_DEBUG_EXIT_DELAY = settings.get("BUILD_DEBUG_EXIT_DELAY", "30m")
 

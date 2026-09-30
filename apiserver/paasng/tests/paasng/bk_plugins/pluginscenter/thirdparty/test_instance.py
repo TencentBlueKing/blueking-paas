@@ -46,7 +46,8 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
     ]
     # 仅创建插件时有 visible_range 参数
     if handler == instance.create_instance:
-        data_keys.append("visible_range")
+        data_keys.extend(["visible_range", "administrator"])
+        assert data["administrator"] == pd.administrator
     # 验证国际化字段存在
     assert data.keys() ^ data_keys == set()
     assert data["template"] == {

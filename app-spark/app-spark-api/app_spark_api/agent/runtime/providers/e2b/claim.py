@@ -118,8 +118,19 @@ class _SandboxClaim(SandboxAgentStop):
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not start the Agent in E2B sandbox {sandbox.sandbox_id}: {exc}") from exc
 
+        logger.info(
+            "Agent process %s accepted in E2B sandbox %s; waiting for /health at %s",
+            process.pid,
+            sandbox.sandbox_id,
+            handle.base_url,
+        )
         try:
             await self._wait_until_healthy(sandbox, process, handle)
+            logger.info(
+                "Agent in E2B sandbox %s answered /health, pid %s",
+                sandbox.sandbox_id,
+                process.pid,
+            )
             # Only after /health: the pid is also the mark other requests go by before they hand
             # this sandbox out, so writing it earlier would hand out a port nobody answers yet.
             await self._record_agent_pid(process.pid)

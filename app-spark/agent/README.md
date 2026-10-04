@@ -433,7 +433,8 @@ docker run --rm -p 8090:8090 \
 - envd 启动的进程拿到的 PATH 是 envd 自己的默认值，不含镜像 ENV 里的 `/app/.venv/bin`，所以 app-spark-api
   用绝对路径 `/app/.venv/bin/python -m app_spark_agent` 启动 Agent。镜像里其余 `APP_SPARK_AGENT_*` 的 ENV 也
   不会被继承，只对本地 `docker run` 生效。
-- 镜像里没有 `ps`，要看进程归属时读 `/proc/<pid>/status`。
+- 镜像装了 procps，进沙箱排查时可以直接 `ps -ef`：正常情况下只有 envd，Agent 由 app-spark-api 启动后才出现，
+  属主为 `user`。
 
 升级 envd：平台 ENVD_REF 变更后，把构建参数换成对应 tag 的 cube-base-envd 重新构建，再更新模板。
 

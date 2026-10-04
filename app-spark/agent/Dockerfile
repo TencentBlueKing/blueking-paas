@@ -16,8 +16,9 @@ USER root
 # git persists the workspace; ca-certificates is what lets it reach an https remote at all.
 # sudo keeps the cube convention of a password-less sudo user.
 # procps gives ps and friends, for looking inside a running sandbox.
+# vim and curl are for inspecting a running sandbox (process env, local HTTP).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tini git ca-certificates sudo procps \
+    && apt-get install -y --no-install-recommends tini git ca-certificates sudo procps vim curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copied rather than built, so envd is byte-for-byte what the platform validated.

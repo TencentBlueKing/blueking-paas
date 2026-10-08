@@ -20,15 +20,15 @@
 仅适用于单租户环境。目标 plan 只按名称查找，多租户不在支持范围内。
 
 先在本服务执行 prepare / switch。切换后到 apiserver 执行 migrate_mysql_plan
-把环境绑定上的 plan 改成目标方案，再重新部署。确认不再回切后执行 finish。
+把环境绑定上的 plan 改成目标方案，再重新部署。switch 之后迁移即完成，仍可 revert。
 apiserver 不会回滚 plan。
 
 使用说明:
     不传 --module 时处理范围内所有已绑定 MySQL 的模块。
-    不传 --environment 时 prepare、switch、revert、finish 处理 stag 和 prod。
+    不传 --environment 时 prepare、switch、revert 处理 stag 和 prod。
     --developer 是这个实例的联系人，不传则留空。再次 prepare 时以最新一次为准。
     还没开通的环境这里没有实例，要靠 apiserver 命令切绑定 plan，下次部署才会用目标 plan。
-    finished 记录里的源库由运维删除，本命令不删库。
+    源库由运维在切换后确认没有连接再删除，本命令不删库。源库删除后不要再 revert。
 
 使用示例:
     # 预分配 stag 和 prod。标准输出是给运维复制的连接信息，不含密码
@@ -47,9 +47,6 @@ apiserver 不会回滚 plan。
 
     # 切换后有问题，写回旧库。目标库保留，需要再部署一次
     python manage.py migrate_plan revert --app-code <app_code> --module default --environment prod
-
-    # 确认不再回切后标记结束，之后运维可以删除源库
-    python manage.py migrate_plan finish --app-code <app_code>
 """
 
 import base64
@@ -58,7 +55,6 @@ from django.core.management.base import BaseCommand, CommandError
 
 from svc_mysql.vendor.plan_migration import (
     MigrationScope,
-    finish_migrations,
     prepare_migrations,
     query_migrations,
     render_copy_blocks,
@@ -79,7 +75,6 @@ class Command(BaseCommand):
         self._add_prepare(subparsers)
         self._add_switch(subparsers)
         self._add_revert(subparsers)
-        self._add_finish(subparsers)
         self._add_status(subparsers)
 
     def handle(self, **options):
@@ -88,7 +83,6 @@ class Command(BaseCommand):
             "prepare": self._prepare,
             "switch": self._switch,
             "revert": self._revert,
-            "finish": self._finish,
             "status": self._status,
         }
         handlers[action](options)
@@ -110,8 +104,7 @@ class Command(BaseCommand):
             "下一步：把标准输出里的连接信息交给运维同步数据。同步完成后执行 "
             f"migrate_plan switch --app-code {scope.app_code} 。切换后到 apiserver 执行 "
             f"migrate_mysql_plan --app-code {scope.app_code} --target-plan {target_plan.name} ，"
-            "再重新部署。确认不再回切后执行 "
-            f"migrate_plan finish --app-code {scope.app_code} 。\n"
+            "再重新部署。\n"
         )
         if failures:
             raise CommandError(f"以下实例预分配失败: {', '.join(failures)}")
@@ -125,8 +118,7 @@ class Command(BaseCommand):
             self.stderr.write(
                 "下一步：到 apiserver 执行 "
                 f"migrate_mysql_plan --app-code {scope.app_code} --target-plan <目标 plan 名称> ，"
-                "把环境绑定的 plan 改成与实例一致，然后重新部署应用。"
-                f"确认不再回切后，执行 migrate_plan finish --app-code {scope.app_code} 。\n"
+                "把环境绑定的 plan 改成与实例一致，然后重新部署应用。\n"
             )
         if result.failures:
             raise CommandError(f"以下实例切换失败: {', '.join(result.failures)}")
@@ -143,14 +135,6 @@ class Command(BaseCommand):
             )
         if result.failures:
             raise CommandError(f"以下实例回切失败: {', '.join(result.failures)}")
-
-    def _finish(self, options: dict) -> None:
-        scope = _scope_from_options(options, default_environments=True)
-        result = finish_migrations(scope)
-        for label in result.labels:
-            self.stdout.write(f"已结束 {label}，不能再回切，源库可交给运维删除\n")
-        if result.failures:
-            raise CommandError(f"以下记录结束失败: {', '.join(result.failures)}")
 
     def _status(self, options: dict) -> None:
         scope = _scope_from_options(options, default_environments=False)
@@ -170,23 +154,19 @@ class Command(BaseCommand):
         parser = subparsers.add_parser("revert", help="把已切换的实例写回旧库")
         _add_scope(parser, app_required=True)
 
-    def _add_finish(self, subparsers) -> None:
-        parser = subparsers.add_parser("finish", help="确认不再回切，把已切换的记录标记为结束")
-        _add_scope(parser, app_required=True)
-
     def _add_status(self, subparsers) -> None:
         parser = subparsers.add_parser("status", help="查看迁移状态。不传应用时列出全部记录")
         _add_scope(parser, app_required=False)
         parser.add_argument(
             "--status",
             dest="status",
-            choices=["prepared", "switched", "finished"],
+            choices=["prepared", "switched", "superseded"],
             default=None,
             help=(
                 "按状态筛选，不传则不过滤。"
                 "prepared：目标库已建好，应用仍用旧库，等运维同步数据后 switch；"
-                "switched：实例已指向目标库，可以 revert 回旧库；"
-                "finished：已执行 finish 或同一实例开始了下一轮迁移，不能再 revert，源库可由运维删除"
+                "switched：实例已指向目标库，迁移完成，需要时仍可 revert 回旧库；"
+                "superseded：同一实例已开始下一轮迁移，这条记录被取代，不能再 revert"
             ),
         )
 
@@ -206,7 +186,7 @@ def _add_scope(parser, *, app_required: bool) -> None:
         action="append",
         choices=["stag", "prod"],
         default=None,
-        help="环境，可重复。prepare/switch/revert/finish 不传则包含 stag 和 prod；status 不传则不过滤",
+        help="环境，可重复。prepare/switch/revert 不传则包含 stag 和 prod；status 不传则不过滤",
     )
 
 

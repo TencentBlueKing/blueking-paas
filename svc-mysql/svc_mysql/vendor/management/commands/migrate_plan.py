@@ -19,12 +19,13 @@
 
 仅适用于单租户环境。目标 plan 只按名称查找，多租户不在支持范围内。
 
-先在本服务执行本命令，确认不再回滚后，再到 apiserver 执行 migrate_mysql_plan
-把环境绑定上的 plan 改成目标方案。apiserver 不会回滚 plan。
+先在本服务执行 prepare / switch。切换后到 apiserver 执行 migrate_mysql_plan
+把环境绑定上的 plan 改成目标方案，再重新部署。确认不再回切后执行 finish。
+apiserver 不会回滚 plan。
 
 使用说明:
     不传 --module 时处理范围内所有已绑定 MySQL 的模块。
-    不传 --environment 时 prepare、switch、revert 处理 stag 和 prod。
+    不传 --environment 时 prepare、switch、revert、finish 处理 stag 和 prod。
     --developer 是这个实例的联系人，不传则留空。再次 prepare 时以最新一次为准。
     还没开通的环境这里没有实例，要靠 apiserver 命令切绑定 plan，下次部署才会用目标 plan。
     finished 记录里的源库由运维删除，本命令不删库。
@@ -107,8 +108,10 @@ class Command(BaseCommand):
         self.stderr.write(f"预分配完成 {len(sections)} 条，跳过 {len(skipped)} 条\n")
         self.stderr.write(
             "下一步：把标准输出里的连接信息交给运维同步数据。同步完成后执行 "
-            f"migrate_plan switch --app-code {scope.app_code} 。确认不再回滚后，到 apiserver 执行 "
-            f"migrate_mysql_plan --app-code {scope.app_code} --target-plan {target_plan.name} 。\n"
+            f"migrate_plan switch --app-code {scope.app_code} 。切换后到 apiserver 执行 "
+            f"migrate_mysql_plan --app-code {scope.app_code} --target-plan {target_plan.name} ，"
+            "再重新部署。确认不再回切后执行 "
+            f"migrate_plan finish --app-code {scope.app_code} 。\n"
         )
         if failures:
             raise CommandError(f"以下实例预分配失败: {', '.join(failures)}")
@@ -203,7 +206,7 @@ def _add_scope(parser, *, app_required: bool) -> None:
         action="append",
         choices=["stag", "prod"],
         default=None,
-        help="环境，可重复。prepare/switch/revert 不传则包含 stag 和 prod；status 不传则不过滤",
+        help="环境，可重复。prepare/switch/revert/finish 不传则包含 stag 和 prod；status 不传则不过滤",
     )
 
 

@@ -162,7 +162,7 @@ class ResidentDaemonClient:
         be removed, and a missing directory counts as success -- a never-mounted volume has
         no directory at all.
         """
-        self._request("DELETE", "/files/volume", params={"base_path": base_path})
+        self._request("DELETE", "/volumes", params={"base_path": base_path})
 
     def close(self) -> None:
         """Close the HTTP session."""

@@ -20,7 +20,7 @@ import (
 //	@Produce		json
 //	@Param			base_path	query		string	true	"volume storage path issued by apiserver, must match app/{32 hex chars}"
 //	@Success		200			{object}	DeleteResponse
-//	@Router			/files/volume [delete]
+//	@Router			/volumes [delete]
 //
 //	@id				PVDeleteVolume
 func DeleteVolume(c *gin.Context) {

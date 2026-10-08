@@ -23,7 +23,7 @@ func doDeleteVolume(router *gin.Engine, basePath string) *httptest.ResponseRecor
 		q.Set("base_path", basePath)
 	}
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest(http.MethodDelete, "/files/volume?"+q.Encode(), nil)
+	httpReq, _ := http.NewRequest(http.MethodDelete, "/volumes?"+q.Encode(), nil)
 	router.ServeHTTP(w, httpReq)
 	return w
 }
@@ -43,7 +43,7 @@ var _ = Describe("DeleteVolume", func() {
 		Expect(os.WriteFile(filepath.Join(volDir, "nested", "deep", "b.txt"), []byte("b"), 0o644)).To(Succeed())
 
 		router = newTestRouter()
-		router.DELETE("/files/volume", DeleteVolume)
+		router.DELETE("/volumes", DeleteVolume)
 	})
 
 	AfterEach(func() {

@@ -220,17 +220,17 @@ def test_status_lists_progress_without_password(service, source_plan, target_pla
     assert NEW_PASSWORD not in stdout
 
 
-def test_second_prepare_finishes_previous_switched_record(service, source_plan, target_plan, other_plan, provider):
-    """A→B 已切换后再 prepare B→C，旧记录变为 finished，revert 不会把它切回 A。"""
+def test_second_prepare_supersedes_previous_switched_record(service, source_plan, target_plan, other_plan, provider):
+    """A→B 已切换后再 prepare B→C，旧记录变为 superseded，revert 不会把它切回 A。"""
     instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
     run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
     run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
 
     run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-c", "--environment", "stag")
 
-    finished = PlanMigration.objects.get(source_plan=source_plan, target_plan=target_plan)
+    superseded = PlanMigration.objects.get(source_plan=source_plan, target_plan=target_plan)
     prepared = PlanMigration.objects.get(status=PlanMigrationStatus.PREPARED)
-    assert finished.status == PlanMigrationStatus.FINISHED
+    assert superseded.status == PlanMigrationStatus.SUPERSEDED
     assert prepared.target_plan_id == other_plan.pk
 
     with pytest.raises(CommandError, match="没有处于 switched"):
@@ -239,21 +239,6 @@ def test_second_prepare_finishes_previous_switched_record(service, source_plan, 
     instance.refresh_from_db()
     assert instance.plan_id == target_plan.pk
     assert instance.get_credentials()["name"] == "new-stag"
-
-
-def test_finish_marks_switched_record_and_blocks_revert(service, source_plan, target_plan, provider):
-    """finish 把 switched 记录标成 finished，之后 revert 找不到可回切的记录，实例保持在目标库。"""
-    instance = bind_instance(service, source_plan, "default", "stag", name="old-stag")
-    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
-    run_migrate("switch", "--app-code", APP_CODE, "--environment", "stag")
-
-    run_migrate("finish", "--app-code", APP_CODE, "--environment", "stag")
-
-    assert PlanMigration.objects.get().status == PlanMigrationStatus.FINISHED
-    with pytest.raises(CommandError, match="没有处于 switched"):
-        run_migrate("revert", "--app-code", APP_CODE, "--environment", "stag")
-    instance.refresh_from_db()
-    assert instance.plan_id == target_plan.pk
 
 
 def test_revert_rejects_when_instance_left_the_target_database(service, source_plan, target_plan, provider):

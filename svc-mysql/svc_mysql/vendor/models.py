@@ -27,12 +27,12 @@ class PlanMigrationStatus(models.TextChoices):
 
     PREPARED = "prepared", "已预分配"
     SWITCHED = "switched", "已切换"
-    FINISHED = "finished", "已结束"
+    SUPERSEDED = "superseded", "已被取代"
 
 
 class PlanMigration(UuidAuditedModel):
     """一次 MySQL 实例换 plan。prepare 只建目标库；switch 写回原实例；revert 回到 prepared；
-    finish 确认不再回退。
+    同一实例开始下一轮 prepare 时，上一轮的 switched 记录变为 superseded，不能再回退。
 
     source_* 是 prepare 时实例的快照（重复 prepare 会刷新），revert 靠它恢复；
     target_* 是 prepare 新建的目标库，switch 时写入实例。

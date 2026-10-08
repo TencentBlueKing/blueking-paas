@@ -106,9 +106,9 @@ def delete_volume_artifact(volume: Volume, rel_path: str) -> None:
 
 
 def delete_volume_artifacts(volume: Volume) -> None:
-    """Delete every archived bkrepo object of ``volume`` along with its mapping row.
+    """Delete every archived bkrepo object of volume along with its mapping row.
 
-    Eager cleanup avoids orphans: if the volume record is ever removed, its ``VolumeArtifact``
+    Eager cleanup avoids orphans: if the volume record is ever removed, its VolumeArtifact
     rows cascade away and the retention command -- which only sweeps objects that still have a
     mapping row -- can no longer find them. Failures are logged and skipped, never raised.
     """

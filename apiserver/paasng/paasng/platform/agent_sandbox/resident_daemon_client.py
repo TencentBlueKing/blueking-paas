@@ -158,7 +158,7 @@ class ResidentDaemonClient:
     def delete_volume(self, base_path: str) -> None:
         """Recursively delete one volume directory. Idempotent.
 
-        ``base_path`` is confined to a single volume by the daemon, so nothing outside it can
+        base_path is confined to a single volume by the daemon, so nothing outside it can
         be removed, and a missing directory counts as success -- a never-mounted volume has
         no directory at all.
         """

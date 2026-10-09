@@ -23,7 +23,7 @@
           :loading="isSubmitLoading"
           @click="handleSubmit"
         >
-          {{ curStrategyType === 'full' ? $t('申请全量发布') : $t('申请灰度发布') }}
+          {{ submitButtonText }}
         </bk-button>
         <bk-button
           :theme="'default'"
@@ -36,7 +36,7 @@
       <p
         class="release-tips"
         v-bk-overflow-tips
-        v-dompurify-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
+        v-dompurify-html="releaseTips"
       ></p>
     </section>
   </div>
@@ -79,6 +79,17 @@ export default {
     },
     officialReleaseTips() {
       return this.$t('正式发布需由<em>平台管理员</em>进行审批。');
+    },
+    tencentStandardReleaseTips() {
+      return this.$t('腾讯代码规范工具发布需由<em>平台管理员</em>进行审批。');
+    },
+    releaseTips() {
+      if (this.curStrategyType === 'full') return this.officialReleaseTips;
+      if (this.curStrategyType === 'tencent_standard') return this.tencentStandardReleaseTips;
+      return this.canaryReleaseTips;
+    },
+    submitButtonText() {
+      return this.curStrategyType === 'full' ? this.$t('申请全量发布') : this.$t('申请灰度发布');
     },
   },
   created() {

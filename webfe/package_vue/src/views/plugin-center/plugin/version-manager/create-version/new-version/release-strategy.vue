@@ -13,6 +13,7 @@
         ext-cls="release-strategy-form-cls"
       >
         <bk-form-item
+          v-if="!hideStrategyRadio"
           :label="$t('发布策略')"
           :required="true"
           :property="'strategy'"
@@ -81,7 +82,7 @@
                   slot="tip"
                 >
                   {{ $t('最小范围可以选择中心。') }}
-                  <span v-dompurify-html="organizationTips" class="t2"></span>
+                  <span v-if="!isTencentStandardSelected" v-dompurify-html="organizationTips" class="t2"></span>
                 </p>
               </bk-form-item>
             </bk-form>
@@ -97,7 +98,16 @@
           <li class="item">
             <div class="label">{{ $t('发布策略') }}：</div>
             <div class="value">
-              {{ releaseStrategyMap.find((v) => v.value === data.latest_release_strategy.strategy)?.name }}
+              {{ displayStrategyName }}
+            </div>
+          </li>
+          <li
+            class="item"
+            v-if="isTencentStandardProcess && data.latest_release_strategy.strategy"
+          >
+            <div class="label">{{ $t('当前步骤') }}：</div>
+            <div class="value">
+              {{ currentStepName }}
             </div>
           </li>
           <li
@@ -208,6 +218,12 @@ export default {
       releaseStrategyMap: [
         { value: 'gray', name: this.$t('先灰度后全量发布') },
         { value: 'full', name: this.$t('直接全量发布') },
+        { value: 'tencent_standard', name: this.$t('腾讯代码规范工具发布') },
+      ],
+      strategyStepMap: [
+        { value: 'gray', name: this.$t('灰度发布') },
+        { value: 'pre_prod', name: this.$t('预发布') },
+        { value: 'full', name: this.$t('全量发布') },
       ],
       organizationLevel: [],
       disableDeletionMapping: {},
@@ -237,6 +253,25 @@ export default {
     // 全量发布
     isFullRelease() {
       return this.releaseStrategy.strategy === 'full';
+    },
+    isTencentStandardSelected() {
+      return this.releaseStrategy.strategy === 'tencent_standard' || this.isTencentStandardProcess;
+    },
+    isTencentStandardProcess() {
+      return this.data?.release_process === 'tencent_standard';
+    },
+    hideStrategyRadio() {
+      return this.isDetailStep && this.isTencentStandardProcess;
+    },
+    displayStrategyName() {
+      if (this.isTencentStandardProcess) {
+        return this.$t('腾讯代码规范工具发布');
+      }
+      return this.releaseStrategyMap.find((v) => v.value === this.data?.latest_release_strategy?.strategy)?.name;
+    },
+    currentStepName() {
+      return this.strategyStepMap.find((v) => v.value === this.data?.latest_release_strategy?.strategy)?.name
+        || this.data?.latest_release_strategy?.strategy;
     },
     versionId() {
       return this.$route.query.versionId;
@@ -289,7 +324,7 @@ export default {
         latest_release_strategy: { strategy, bkci_project, organization },
       } = this.versionData;
       this.releaseStrategy = {
-        strategy,
+        strategy: this.versionData.release_process === 'tencent_standard' ? 'tencent_standard' : strategy,
         bkci_project,
         organization,
       };
@@ -312,7 +347,19 @@ export default {
     },
     // 向外抛出当前表单数据
     getFormData() {
-      return this.releaseStrategy;
+      const form = { ...this.releaseStrategy };
+      if (form.strategy === 'tencent_standard') {
+        return {
+          strategy: 'gray',
+          release_process: 'tencent_standard',
+          bkci_project: form.bkci_project,
+          organization: form.organization,
+        };
+      }
+      return {
+        ...form,
+        release_process: this.data?.release_process || 'default',
+      };
     },
     // 组织弹窗
     handleSelectOrganization() {

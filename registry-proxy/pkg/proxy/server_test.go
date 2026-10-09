@@ -7,16 +7,19 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
-	"testing"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/authz"
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/buildtoken"
@@ -39,28 +42,23 @@ func (b *syncBuffer) Write(p []byte) (int, error) {
 	return b.buf.Write(p)
 }
 
-func (b *syncBuffer) entries(t *testing.T) []proxy.AuditEntry {
-	t.Helper()
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	var out []proxy.AuditEntry
-	for _, line := range strings.Split(strings.TrimSpace(b.buf.String()), "\n") {
-		if line == "" {
-			continue
-		}
-		var e proxy.AuditEntry
-		if err := json.Unmarshal([]byte(line), &e); err != nil {
-			t.Fatalf("audit line %q: %v", line, err)
-		}
-		out = append(out, e)
-	}
-	return out
-}
-
 func (b *syncBuffer) String() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.buf.String()
+}
+
+func (b *syncBuffer) entries() []proxy.AuditEntry {
+	var out []proxy.AuditEntry
+	for _, line := range strings.Split(strings.TrimSpace(b.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var e proxy.AuditEntry
+		Expect(json.Unmarshal([]byte(line), &e)).To(Succeed(), "audit line %q", line)
+		out = append(out, e)
+	}
+	return out
 }
 
 // testEnv 是两个上游（A、B）与共享上传会话密钥的两个代理副本
@@ -73,24 +71,15 @@ type testEnv struct {
 	kid            string
 }
 
-func newTestEnv(t *testing.T) *testEnv {
-	t.Helper()
-	return newTestEnvWith(t, func(ups map[string]*upstream.Upstream) proxy.Authorizer {
-		return &authz.PolicyAuthorizer{Upstreams: upstream.Aliases(ups)}
-	})
-}
-
-func newTestEnvWith(t *testing.T, newAuthorizer func(map[string]*upstream.Upstream) proxy.Authorizer) *testEnv {
-	t.Helper()
-	e := &testEnv{regA: newFakeRegistry(t), regB: newFakeRegistry(t), audit: &syncBuffer{}}
+// newTestEnv 创建测试环境，customize 用于覆盖代理的部分配置
+func newTestEnv(customize ...func(*proxy.Options)) *testEnv {
+	e := &testEnv{regA: newFakeRegistry(), regB: newFakeRegistry(), audit: &syncBuffer{}}
 	e.aliasA, _ = upstream.AliasOf(e.regA.host())
 	e.aliasB, _ = upstream.AliasOf(e.regB.host())
 
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	e.priv = priv
 	e.kid = buildtoken.JWKThumbprint(base64.RawURLEncoding.EncodeToString(pub))
-	keys := buildtoken.KeySet{e.kid: pub}
-	uploadKey := bytes.Repeat([]byte("k"), 32)
 
 	newProxy := func() *httptest.Server {
 		var specs []upstream.Spec
@@ -101,21 +90,21 @@ func newTestEnvWith(t *testing.T, newAuthorizer func(map[string]*upstream.Upstre
 			creds[u.Host] = upstream.Credential{Username: fakeCredUser, Password: fakeCredPass}
 		}
 		ups, err := upstream.FromSpecs(specs, creds, upstream.Options{TokenMaxTTL: time.Minute})
-		if err != nil {
-			t.Fatal(err)
-		}
-		srv, err := proxy.New(proxy.Options{
+		Expect(err).NotTo(HaveOccurred())
+		opts := proxy.Options{
 			Upstreams:        ups,
-			Authenticator:    &authz.TokenAuthenticator{Keys: keys, Audience: testAudience},
-			Authorizer:       newAuthorizer(ups),
+			Authenticator:    &authz.TokenAuthenticator{Keys: buildtoken.KeySet{e.kid: pub}, Audience: testAudience},
+			Authorizer:       &authz.PolicyAuthorizer{Upstreams: upstream.Aliases(ups)},
 			Auditor:          proxy.NewJSONAuditor(e.audit),
-			UploadSessionKey: uploadKey,
-		})
-		if err != nil {
-			t.Fatal(err)
+			UploadSessionKey: bytes.Repeat([]byte("k"), 32),
 		}
+		for _, c := range customize {
+			c(&opts)
+		}
+		srv, err := proxy.New(opts)
+		Expect(err).NotTo(HaveOccurred())
 		ts := httptest.NewServer(srv)
-		t.Cleanup(ts.Close)
+		DeferCleanup(ts.Close)
 		return ts
 	}
 	e.proxy1, e.proxy2 = newProxy(), newProxy()
@@ -123,8 +112,7 @@ func newTestEnvWith(t *testing.T, newAuthorizer func(map[string]*upstream.Upstre
 }
 
 // token 签发一个构建 token：可推送 A/bkpaas/app:v1 与 A/bkpaas/app/cache:*，可拉取 A/ 与 B/，拒绝 A/bkpaas/
-func (e *testEnv) token(t *testing.T, mutate ...func(jwt.MapClaims)) string {
-	t.Helper()
+func (e *testEnv) token(mutate ...func(jwt.MapClaims)) string {
 	now := time.Now()
 	c := jwt.MapClaims{
 		"iss": buildtoken.Issuer, "aud": testAudience, "sub": "build-1", "jti": "jti-1",
@@ -143,9 +131,7 @@ func (e *testEnv) token(t *testing.T, mutate ...func(jwt.MapClaims)) string {
 	tok := jwt.NewWithClaims(jwt.SigningMethodEdDSA, c)
 	tok.Header["kid"] = e.kid
 	s, err := tok.SignedString(e.priv)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	return s
 }
 
@@ -153,16 +139,14 @@ type reqOpt func(*http.Request)
 
 func withHeader(k, v string) reqOpt { return func(r *http.Request) { r.Header.Set(k, v) } }
 
-func do(t *testing.T, method, rawURL, token string, body []byte, opts ...reqOpt) (*http.Response, []byte) {
-	t.Helper()
+// do 发送请求并读完响应体，不跟随重定向
+func do(method, rawURL, token string, body []byte, opts ...reqOpt) (*http.Response, []byte) {
 	var rd io.Reader
 	if body != nil {
 		rd = bytes.NewReader(body)
 	}
 	req, err := http.NewRequest(method, rawURL, rd)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	if token != "" {
 		req.SetBasicAuth("bkpaas-build", token)
 	}
@@ -171,9 +155,7 @@ func do(t *testing.T, method, rawURL, token string, body []byte, opts ...reqOpt)
 	}
 	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	defer func() { _ = resp.Body.Close() }()
 	b, _ := io.ReadAll(resp.Body)
 	return resp, b
@@ -187,543 +169,460 @@ func withQuery(loc, key, value string) string {
 	return u.String()
 }
 
-func assertProxyError(t *testing.T, resp *http.Response, body []byte, status int, deny string) {
-	t.Helper()
-	if resp.StatusCode != status {
-		t.Fatalf("status = %d, want %d, body = %s", resp.StatusCode, status, body)
-	}
-	want := `"bkpaas-registry-proxy: ` + deny + `"`
-	if !strings.Contains(string(body), want) {
-		t.Fatalf("body = %s, want message %s", body, want)
-	}
-	if resp.Header.Get("Content-Type") != "application/json" {
-		t.Fatalf("content-type = %q", resp.Header.Get("Content-Type"))
-	}
-	wa := resp.Header.Get("WWW-Authenticate")
-	if (status == http.StatusUnauthorized) != (wa == `Basic realm="bkpaas-registry-proxy"`) {
-		t.Fatalf("status %d with WWW-Authenticate %q", status, wa)
+// assertProxyError 检查代理自身产生的 OCI 错误响应：状态码、拒绝原因标记，以及只有 401 带质询
+func assertProxyError(resp *http.Response, body []byte, status int, deny string) {
+	GinkgoHelper()
+	Expect(resp.StatusCode).To(Equal(status), "body = %s", body)
+	Expect(string(body)).To(ContainSubstring(`"bkpaas-registry-proxy: ` + deny + `"`))
+	Expect(resp.Header.Get("Content-Type")).To(Equal("application/json"))
+	if status == http.StatusUnauthorized {
+		Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(`Basic realm="bkpaas-registry-proxy"`))
+	} else {
+		Expect(resp.Header.Get("WWW-Authenticate")).To(BeEmpty())
 	}
 }
 
 // assertNoLeak 检查响应中不含上游凭证、上游 token 与上游 token 服务地址
-func assertNoLeak(t *testing.T, e *testEnv, resp *http.Response, body []byte) {
-	t.Helper()
+func assertNoLeak(e *testEnv, resp *http.Response, body []byte) {
+	GinkgoHelper()
 	var dump strings.Builder
 	_ = resp.Header.Write(&dump)
 	dump.Write(body)
 	for _, needle := range []string{fakeCredPass, "/token", "upstream-session", "Bearer "} {
-		if strings.Contains(dump.String(), needle) {
-			t.Fatalf("response leaks %q:\n%s", needle, dump.String())
-		}
+		Expect(dump.String()).NotTo(ContainSubstring(needle))
 	}
 	for _, reg := range []*fakeRegistry{e.regA, e.regB} {
 		reg.mu.Lock()
 		for tok := range reg.tokens {
-			if strings.Contains(dump.String(), tok) {
-				reg.mu.Unlock()
-				t.Fatalf("response leaks upstream token")
-			}
+			Expect(dump.String()).NotTo(ContainSubstring(tok), "response leaks upstream token")
 		}
 		reg.mu.Unlock()
 	}
 }
 
-func TestPingChallenge(t *testing.T) {
-	e := newTestEnv(t)
-	resp, body := do(t, http.MethodGet, e.proxy1.URL+"/v2/", "", nil)
-	assertProxyError(t, resp, body, http.StatusUnauthorized, "token_missing")
+var _ = Describe("Server", func() {
+	var e *testEnv
+	// validToken 供表格用例延迟签发 token：Entry 在构建 spec 树时求值，e 在 BeforeEach 中才赋值
+	validToken := func() string { return e.token() }
 
-	resp, body = do(t, http.MethodGet, e.proxy1.URL+"/v2/", "forged", nil)
-	assertProxyError(t, resp, body, http.StatusUnauthorized, "token_invalid")
+	BeforeEach(func() { e = newTestEnv() })
 
-	resp, body = do(t, http.MethodGet, e.proxy1.URL+"/v2/", e.token(t), nil)
-	if resp.StatusCode != http.StatusOK || string(body) != "{}" || resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		t.Fatalf("authenticated ping: %d %s %v", resp.StatusCode, body, resp.Header)
-	}
-	// Bearer 方式同样接受
-	resp, _ = do(t, http.MethodHead, e.proxy1.URL+"/v2/", "", nil, withHeader("Authorization", "Bearer "+e.token(t)))
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("bearer ping: %d", resp.StatusCode)
-	}
+	Describe("/v2/ ping", func() {
+		It("challenges without a valid token and never reaches upstream", func() {
+			resp, body := do(http.MethodGet, e.proxy1.URL+"/v2/", "", nil)
+			assertProxyError(resp, body, http.StatusUnauthorized, "token_missing")
+			resp, body = do(http.MethodGet, e.proxy1.URL+"/v2/", "forged", nil)
+			assertProxyError(resp, body, http.StatusUnauthorized, "token_invalid")
 
-	entries := e.audit.entries(t)
-	if entries[0].Route != "ping" || entries[0].Status != 401 || entries[0].Deny != "" {
-		t.Fatalf("tokenless ping audit = %+v", entries[0])
-	}
-	if entries[1].Deny != "token_invalid" {
-		t.Fatalf("forged ping audit = %+v", entries[1])
-	}
-	if len(e.regA.recorded()) != 0 {
-		t.Fatal("ping must not reach upstream")
-	}
-}
+			resp, body = do(http.MethodGet, e.proxy1.URL+"/v2/", e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(string(body)).To(Equal("{}"))
+			Expect(resp.Header.Get("Docker-Distribution-API-Version")).To(Equal("registry/2.0"))
 
-func TestPullManifestStripsUpstreamChallenge(t *testing.T) {
-	e := newTestEnv(t)
-	e.regA.putManifest("python/python", "3", []byte(`{"schemaVersion":2}`))
+			By("accepting Bearer as well")
+			resp, _ = do(http.MethodHead, e.proxy1.URL+"/v2/", "", nil, withHeader("Authorization", "Bearer "+e.token()))
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	resp, body := do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", e.token(t), nil,
-		withHeader("Cookie", "client=1"))
-	if resp.StatusCode != http.StatusOK || string(body) != `{"schemaVersion":2}` {
-		t.Fatalf("pull manifest: %d %s", resp.StatusCode, body)
-	}
-	for _, h := range []string{"WWW-Authenticate", "Set-Cookie", "Keep-Alive", "X-Hop"} {
-		if resp.Header.Get(h) != "" {
-			t.Fatalf("upstream header %s leaked: %v", h, resp.Header)
-		}
-	}
-	assertNoLeak(t, e, resp, body)
-
-	reqs := e.regA.recorded()
-	last := reqs[len(reqs)-1]
-	if last.Path != "/v2/python/python/manifests/3" {
-		t.Fatalf("upstream path = %q, alias must be stripped", last.Path)
-	}
-	if !strings.HasPrefix(last.Authorization, "Bearer ") || strings.Contains(last.Authorization, e.token(t)[:20]) {
-		t.Fatalf("upstream Authorization = %q, must be the proxy's upstream token", last.Authorization)
-	}
-	if last.Cookie != "" {
-		t.Fatal("client cookie must not reach upstream")
-	}
-
-	entries := e.audit.entries(t)
-	got := entries[len(entries)-1]
-	if got.Sub != "build-1" || got.JTI != "jti-1" || got.Route != "manifest" || got.Repo != e.aliasA+"/python/python" ||
-		got.Upstream != e.aliasA || got.Reference != "3" || got.Status != 200 || got.RespBytes != int64(len(body)) || got.RemoteAddr != "127.0.0.1" {
-		t.Fatalf("audit = %+v", got)
-	}
-	if strings.Contains(e.audit.String(), e.token(t)[:40]) || strings.Contains(e.audit.String(), fakeCredPass) {
-		t.Fatal("audit log contains credentials")
-	}
-}
-
-// HTTP/2 禁止连接相关的头，上游的逐跳头透传会让严格的客户端（curl）判定为协议错误
-func TestHTTP2ClientWithHopHeaders(t *testing.T) {
-	e := newTestEnv(t)
-	e.regA.putManifest("python/python", "3", []byte(`{}`))
-	h2 := httptest.NewUnstartedServer(e.proxy1.Config.Handler)
-	h2.EnableHTTP2 = true
-	h2.StartTLS()
-	defer h2.Close()
-
-	req, _ := http.NewRequest(http.MethodGet, h2.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", nil)
-	req.SetBasicAuth("bkpaas-build", e.token(t))
-	resp, err := h2.Client().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.ProtoMajor != 2 || resp.StatusCode != http.StatusOK {
-		t.Fatalf("proto=%s status=%d", resp.Proto, resp.StatusCode)
-	}
-	for _, h := range []string{"Connection", "Keep-Alive", "X-Hop"} {
-		if resp.Header.Get(h) != "" {
-			t.Fatalf("hop-by-hop header %s forwarded over HTTP/2", h)
-		}
-	}
-}
-
-// blob 下载：上游返回 307 时原样交给客户端，直接返回数据时由代理流式转发
-func TestBlobRedirectPassThroughAndStreaming(t *testing.T) {
-	e := newTestEnv(t)
-	content := bytes.Repeat([]byte("layer"), 100000)
-	d := e.regA.putBlob("python/python", content)
-	e.regB.putBlob("python/python", content)
-	e.regA.setRedirectBlobs(true)
-
-	resp, body := do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/blobs/"+d, e.token(t), nil)
-	if resp.StatusCode != http.StatusTemporaryRedirect || !strings.HasPrefix(resp.Header.Get("Location"), e.regA.storage.URL+"/bucket/") {
-		t.Fatalf("harbor-like blob: %d Location=%q", resp.StatusCode, resp.Header.Get("Location"))
-	}
-	assertNoLeak(t, e, resp, body)
-
-	resp, body = do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/"+d, e.token(t), nil)
-	if resp.StatusCode != http.StatusOK || !bytes.Equal(body, content) {
-		t.Fatalf("direct blob: %d len=%d", resp.StatusCode, len(body))
-	}
-
-	entries := e.audit.entries(t)
-	storageHost, _ := url.Parse(e.regA.storage.URL)
-	if entries[0].RedirectHost != storageHost.Hostname() || entries[0].Reference != d {
-		t.Fatalf("redirect audit = %+v", entries[0])
-	}
-	if entries[1].RespBytes != int64(len(content)) {
-		t.Fatalf("streaming audit = %+v", entries[1])
-	}
-}
-
-// 分块上传与 Location 改写：同一上传会话的请求分别落到两个副本
-func TestChunkedUploadAcrossReplicas(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	repo := "/v2/" + e.aliasA + "/bkpaas/app"
-	chunk1, chunk2 := bytes.Repeat([]byte("a"), 1000), bytes.Repeat([]byte("b"), 500)
-	d := digestOf(append(append([]byte(nil), chunk1...), chunk2...))
-
-	resp, _ := do(t, http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", tok, nil)
-	loc := resp.Header.Get("Location")
-	if resp.StatusCode != http.StatusAccepted || !strings.HasPrefix(loc, repo+"/blobs/uploads/") {
-		t.Fatalf("start upload: %d Location=%q", resp.StatusCode, loc)
-	}
-	if strings.Contains(loc, "upstream-") || strings.Contains(loc, "_state") {
-		t.Fatalf("upstream upload state leaked in Location %q", loc)
-	}
-
-	resp, _ = do(t, http.MethodPatch, e.proxy2.URL+loc, tok, chunk1)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("patch on replica 2: %d", resp.StatusCode)
-	}
-	loc = resp.Header.Get("Location")
-	resp, _ = do(t, http.MethodPatch, e.proxy1.URL+loc, tok, chunk2)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("patch on replica 1: %d", resp.StatusCode)
-	}
-	loc = resp.Header.Get("Location")
-	resp, _ = do(t, http.MethodPut, e.proxy2.URL+withQuery(loc, "digest", d), tok, nil)
-	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("commit on replica 2: %d", resp.StatusCode)
-	}
-	if got := resp.Header.Get("Location"); got != repo+"/blobs/"+d {
-		t.Fatalf("commit Location = %q", got)
-	}
-
-	// kaniko 推送前的权限预检会 DELETE 上传会话，代理拒绝
-	resp, body := do(t, http.MethodDelete, e.proxy1.URL+loc, tok, nil)
-	assertProxyError(t, resp, body, http.StatusForbidden, "delete_not_allowed")
-
-	for _, entry := range e.audit.entries(t) {
-		if entry.Route == "upload" && strings.Contains(entry.Reference, ".") {
-			t.Fatalf("audit leaks upload session: %+v", entry)
-		}
-	}
-}
-
-func TestUploadSessionForgery(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	repo := "/v2/" + e.aliasA + "/bkpaas/app"
-
-	resp, body := do(t, http.MethodPatch, e.proxy1.URL+repo+"/blobs/uploads/forged.session", tok, []byte("x"))
-	assertProxyError(t, resp, body, http.StatusForbidden, "invalid_upload_session")
-
-	// 会话绑定仓库，不能拿到其他可推送仓库使用
-	resp, _ = do(t, http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", tok, nil)
-	session := strings.TrimPrefix(resp.Header.Get("Location"), repo+"/blobs/uploads/")
-	session, _, _ = strings.Cut(session, "?")
-	resp, body = do(t, http.MethodPatch, e.proxy1.URL+"/v2/"+e.aliasA+"/bkpaas/app/cache/blobs/uploads/"+session, tok, []byte("x"))
-	assertProxyError(t, resp, body, http.StatusForbidden, "invalid_upload_session")
-}
-
-// 跨上游 mount 降级为普通上传
-func TestCrossUpstreamMountDowngrade(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	d := e.regB.putBlob("python/python", []byte("base-layer"))
-	e.regA.putBlob("python/python", []byte("base-layer"))
-	e.regA.putBlob("bkpaas/other", []byte("base-layer"))
-	target := e.proxy1.URL + "/v2/" + e.aliasA + "/bkpaas/app/blobs/uploads/"
-
-	// 来源在上游 B：降级为普通上传，上游 A 收不到指向 B 路径的 mount
-	resp, _ := do(t, http.MethodPost, target+"?mount="+d+"&from="+e.aliasB+"/python/python", tok, nil)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("cross-upstream mount: %d", resp.StatusCode)
-	}
-	// 来源命中 pull_deny：同样降级
-	resp, _ = do(t, http.MethodPost, target+"?mount="+d+"&from="+e.aliasA+"/bkpaas/other", tok, nil)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("pull-denied mount: %d", resp.StatusCode)
-	}
-	for _, r := range e.regA.recorded() {
-		if strings.Contains(r.Query, "mount") || strings.Contains(r.Query, "from") {
-			t.Fatalf("upstream A received mount request: %+v", r)
-		}
-	}
-
-	// 同上游且来源可读：转发 mount，from 去掉别名
-	resp, _ = do(t, http.MethodPost, target+"?mount="+d+"&from="+e.aliasA+"/python/python", tok, nil)
-	if resp.StatusCode != http.StatusCreated || resp.Header.Get("Location") != "/v2/"+e.aliasA+"/bkpaas/app/blobs/"+d {
-		t.Fatalf("same-upstream mount: %d Location=%q", resp.StatusCode, resp.Header.Get("Location"))
-	}
-	reqs := e.regA.recorded()
-	q, _ := url.ParseQuery(reqs[len(reqs)-1].Query)
-	if q.Get("from") != "python/python" {
-		t.Fatalf("upstream mount from = %q", q.Get("from"))
-	}
-}
-
-// 上游作废 token 后，下一次请求重新鉴权
-func TestUpstreamTokenRevokedRetry(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	e.regA.putManifest("python/python", "3", []byte(`{}`))
-	path := e.proxy1.URL + "/v2/" + e.aliasA + "/python/python/manifests/3"
-
-	if resp, _ := do(t, http.MethodGet, path, tok, nil); resp.StatusCode != http.StatusOK {
-		t.Fatalf("first pull: %d", resp.StatusCode)
-	}
-	if resp, _ := do(t, http.MethodHead, path, tok, nil); resp.StatusCode != http.StatusOK || e.regA.tokenRequests() != 1 {
-		t.Fatalf("cached pull: %d, token requests %d", resp.StatusCode, e.regA.tokenRequests())
-	}
-	e.regA.revokeTokens()
-	resp, body := do(t, http.MethodGet, path, tok, nil)
-	if resp.StatusCode != http.StatusOK || string(body) != `{}` {
-		t.Fatalf("pull after revoke: %d %s", resp.StatusCode, body)
-	}
-	if n := e.regA.tokenRequests(); n != 2 {
-		t.Fatalf("token requests = %d, want 2", n)
-	}
-
-	// 有请求体的请求不重试，返回 502；缓存已作废，下一次请求重新鉴权
-	put := e.proxy1.URL + "/v2/" + e.aliasA + "/bkpaas/app/manifests/v1"
-	if resp, _ := do(t, http.MethodPut, put, tok, []byte(`{"a":1}`)); resp.StatusCode != http.StatusCreated {
-		t.Fatalf("first put: %d", resp.StatusCode)
-	}
-	e.regA.revokeTokens()
-	resp, body = do(t, http.MethodPut, put, tok, []byte(`{"a":1}`))
-	assertProxyError(t, resp, body, http.StatusBadGateway, "upstream_auth_failed")
-	assertNoLeak(t, e, resp, body)
-	if resp, _ := do(t, http.MethodPut, put, tok, []byte(`{"a":1}`)); resp.StatusCode != http.StatusCreated {
-		t.Fatalf("put after re-auth: %d", resp.StatusCode)
-	}
-}
-
-func TestUpstreamFailures(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-
-	// 上游拒绝代理凭证，且错误体中带有敏感信息
-	e.regA.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
-		if r.URL.Path != "/token" {
-			return false
-		}
-		http.Error(w, "invalid credential for robot:"+fakeCredPass, http.StatusUnauthorized)
-		return true
-	})
-	resp, body := do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", tok, nil)
-	assertProxyError(t, resp, body, http.StatusBadGateway, "upstream_auth_failed")
-	assertNoLeak(t, e, resp, body)
-
-	// 上游不可达
-	e.regB.Close()
-	resp, body = do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/manifests/3", tok, nil)
-	assertProxyError(t, resp, body, http.StatusBadGateway, "upstream_unreachable")
-	resp, _ = do(t, http.MethodHead, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/manifests/3", tok, nil)
-	if resp.StatusCode != http.StatusBadGateway {
-		t.Fatalf("HEAD unreachable: %d", resp.StatusCode)
-	}
-}
-
-func TestRejectedRequestsDoNotReachUpstream(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	expired := e.token(t, func(c jwt.MapClaims) {
-		c["exp"] = time.Now().Add(-time.Hour).Unix()
-		c["iat"] = time.Now().Add(-2 * time.Hour).Unix()
-	})
-	a := e.proxy1.URL + "/v2/" + e.aliasA
-
-	cases := []struct {
-		name, method, url, token string
-		status                   int
-		deny                     string
-	}{
-		{"no token", http.MethodGet, a + "/python/python/manifests/3", "", 401, "token_missing"},
-		{"expired", http.MethodGet, a + "/python/python/manifests/3", expired, 401, "token_expired"},
-		{"unknown upstream", http.MethodGet, e.proxy1.URL + "/v2/docker-io/library/python/manifests/3", tok, 403, "unknown_upstream"},
-		{"delete manifest", http.MethodDelete, a + "/bkpaas/app/manifests/v1", tok, 403, "delete_not_allowed"},
-		{"tag not granted", http.MethodPut, a + "/bkpaas/app/manifests/latest", tok, 403, "tag_not_granted"},
-		{"push not granted", http.MethodPost, a + "/bkpaas/other/blobs/uploads/", tok, 403, "push_not_granted"},
-		{"pull denied", http.MethodGet, a + "/bkpaas/other/manifests/v1", tok, 403, "pull_denied"},
-		{"catalog", http.MethodGet, e.proxy1.URL + "/v2/_catalog", tok, 404, "route_not_found"},
-		{"non v2", http.MethodGet, e.proxy1.URL + "/api/v2.0/projects", tok, 404, "route_not_found"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			resp, body := do(t, tc.method, tc.url, tc.token, nil)
-			assertProxyError(t, resp, body, tc.status, tc.deny)
+			By("not auditing a tokenless ping as denied")
+			entries := e.audit.entries()
+			Expect(entries[0].Route).To(Equal("ping"))
+			Expect(entries[0].Status).To(Equal(http.StatusUnauthorized))
+			Expect(entries[0].Deny).To(BeEmpty())
+			Expect(entries[1].Deny).To(Equal("token_invalid"))
+			Expect(e.regA.recorded()).To(BeEmpty())
 		})
-	}
-	if n := len(e.regA.recorded()); n != 0 {
-		t.Fatalf("upstream received %d requests", n)
-	}
-	for _, entry := range e.audit.entries(t) {
-		if entry.Deny == "" {
-			t.Fatalf("rejected request audited without deny: %+v", entry)
-		}
-	}
-}
-
-func TestPathAndReferenceValidation(t *testing.T) {
-	e := newTestEnv(t)
-	tok := e.token(t)
-	a := e.proxy1.URL + "/v2/" + e.aliasA
-	for _, p := range []string{
-		"/python/python/manifests/..",
-		"/python/python/manifests/%2e%2e",
-		"/python%2Fpython/manifests/3",
-		"/python/python/blobs/latest",
-		"/python/python/blobs/sha256:..",
-	} {
-		t.Run(p, func(t *testing.T) {
-			resp, body := do(t, http.MethodGet, a+p, tok, nil)
-			assertProxyError(t, resp, body, http.StatusNotFound, "route_not_found")
-		})
-	}
-	if n := len(e.regA.recorded()); n != 0 {
-		t.Fatalf("upstream received %d requests", n)
-	}
-}
-
-// 缺少 from 的 mount 在部分 registry 上表示从凭证可读的任意仓库挂载，必须降级
-func TestMountWithoutFromDowngraded(t *testing.T) {
-	e := newTestEnv(t)
-	d := e.regA.putBlob("python/python", []byte("base"))
-	resp, _ := do(t, http.MethodPost, e.proxy1.URL+"/v2/"+e.aliasA+"/bkpaas/app/blobs/uploads/?mount="+d, e.token(t), nil)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("status = %d", resp.StatusCode)
-	}
-	for _, r := range e.regA.recorded() {
-		if strings.Contains(r.Query, "mount") {
-			t.Fatalf("upstream received mount without from: %+v", r)
-		}
-	}
-}
-
-func TestUploadLocationOnForeignHostRejected(t *testing.T) {
-	e := newTestEnv(t)
-	e.regA.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
-		if r.Method != http.MethodPost || !strings.HasSuffix(r.URL.Path, "/blobs/uploads/") {
-			return false
-		}
-		w.Header().Set("Location", "https://storage.example.com/v2/bkpaas/app/blobs/uploads/u1")
-		w.WriteHeader(http.StatusAccepted)
-		return true
 	})
-	resp, body := do(t, http.MethodPost, e.proxy1.URL+"/v2/"+e.aliasA+"/bkpaas/app/blobs/uploads/", e.token(t), nil)
-	assertProxyError(t, resp, body, http.StatusBadGateway, "upstream_unreachable")
-	if strings.Contains(resp.Header.Get("Location"), "storage.example.com") {
-		t.Fatal("foreign upload location leaked")
-	}
-}
 
-func TestOnlyAllowedHeadersForwarded(t *testing.T) {
-	e := newTestEnv(t)
-	e.regA.putManifest("python/python", "3", []byte(`{}`))
-	resp, _ := do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", e.token(t), nil,
-		withHeader("Accept", "application/vnd.oci.image.manifest.v1+json"),
-		withHeader("User-Agent", "kaniko/v1.24.0"),
-		withHeader("X-Forwarded-For", "10.0.0.1"),
-		withHeader("X-Custom", "1"))
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d", resp.StatusCode)
-	}
-	reqs := e.regA.recorded()
-	h := reqs[len(reqs)-1].Header
-	if h.Get("Accept") != "application/vnd.oci.image.manifest.v1+json" || h.Get("User-Agent") != "kaniko/v1.24.0" {
-		t.Fatalf("allowed headers not forwarded: %v", h)
-	}
-	if h.Get("X-Forwarded-For") != "" || h.Get("X-Custom") != "" {
-		t.Fatalf("unexpected headers forwarded: %v", h)
-	}
-}
+	Describe("pull", func() {
+		BeforeEach(func() { e.regA.putManifest("python/python", "3", []byte(`{"schemaVersion":2}`)) })
 
-func TestHeadBlobKeepsContentLength(t *testing.T) {
-	e := newTestEnv(t)
-	content := bytes.Repeat([]byte("z"), 12345)
-	d := e.regB.putBlob("python/python", content)
-	resp, body := do(t, http.MethodHead, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/"+d, e.token(t), nil)
-	if resp.StatusCode != http.StatusOK || resp.ContentLength != int64(len(content)) || len(body) != 0 {
-		t.Fatalf("HEAD blob: status=%d length=%d body=%d", resp.StatusCode, resp.ContentLength, len(body))
-	}
-	if resp.Header.Get("Docker-Content-Digest") != d {
-		t.Fatalf("digest header = %q", resp.Header.Get("Docker-Content-Digest"))
-	}
-}
+		It("strips the alias, uses proxy credentials and strips upstream challenges", func() {
+			resp, body := do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", e.token(), nil,
+				withHeader("Cookie", "client=1"))
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(string(body)).To(Equal(`{"schemaVersion":2}`))
+			for _, h := range []string{"WWW-Authenticate", "Set-Cookie", "Keep-Alive", "X-Hop"} {
+				Expect(resp.Header.Get(h)).To(BeEmpty(), "upstream header %s leaked", h)
+			}
+			assertNoLeak(e, resp, body)
+
+			reqs := e.regA.recorded()
+			last := reqs[len(reqs)-1]
+			Expect(last.Path).To(Equal("/v2/python/python/manifests/3"), "alias must be stripped")
+			Expect(last.Authorization).To(HavePrefix("Bearer "))
+			Expect(last.Authorization).NotTo(ContainSubstring(e.token()[:20]), "must be the proxy's upstream token")
+			Expect(last.Cookie).To(BeEmpty(), "client cookie must not reach upstream")
+
+			By("auditing the request without credentials")
+			entries := e.audit.entries()
+			got := entries[len(entries)-1]
+			Expect(got).To(Equal(proxy.AuditEntry{
+				TS: got.TS, Ms: got.Ms,
+				Sub: "build-1", JTI: "jti-1", AppCode: "demo", Module: "default", RemoteAddr: "127.0.0.1",
+				Method: http.MethodGet, Route: "manifest", Repo: e.aliasA + "/python/python", Upstream: e.aliasA,
+				Reference: "3", Status: http.StatusOK, RespBytes: int64(len(body)),
+			}))
+			Expect(e.audit.String()).NotTo(ContainSubstring(e.token()[:40]))
+			Expect(e.audit.String()).NotTo(ContainSubstring(fakeCredPass))
+		})
+
+		It("forwards only allowed request headers", func() {
+			resp, _ := do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", e.token(), nil,
+				withHeader("Accept", "application/vnd.oci.image.manifest.v1+json"),
+				withHeader("User-Agent", "kaniko/v1.24.0"),
+				withHeader("X-Forwarded-For", "10.0.0.1"),
+				withHeader("X-Custom", "1"))
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			reqs := e.regA.recorded()
+			h := reqs[len(reqs)-1].Header
+			Expect(h.Get("Accept")).To(Equal("application/vnd.oci.image.manifest.v1+json"))
+			Expect(h.Get("User-Agent")).To(Equal("kaniko/v1.24.0"))
+			Expect(h.Get("X-Forwarded-For")).To(BeEmpty())
+			Expect(h.Get("X-Custom")).To(BeEmpty())
+		})
+
+		// HTTP/2 禁止连接相关的头，上游的逐跳头透传会让严格的客户端（curl）判定为协议错误
+		It("drops hop-by-hop headers for HTTP/2 clients", func() {
+			h2 := httptest.NewUnstartedServer(e.proxy1.Config.Handler)
+			h2.EnableHTTP2 = true
+			h2.StartTLS()
+			DeferCleanup(h2.Close)
+
+			req, _ := http.NewRequest(http.MethodGet, h2.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", nil)
+			req.SetBasicAuth("bkpaas-build", e.token())
+			resp, err := h2.Client().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = resp.Body.Close() }()
+			Expect(resp.ProtoMajor).To(Equal(2))
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			for _, h := range []string{"Connection", "Keep-Alive", "X-Hop"} {
+				Expect(resp.Header.Get(h)).To(BeEmpty())
+			}
+		})
+
+		It("re-authenticates after the upstream revokes its token", func() {
+			tok := e.token()
+			path := e.proxy1.URL + "/v2/" + e.aliasA + "/python/python/manifests/3"
+			resp, _ := do(http.MethodGet, path, tok, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			resp, _ = do(http.MethodHead, path, tok, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(e.regA.tokenRequests()).To(Equal(1))
+
+			e.regA.revokeTokens()
+			resp, body := do(http.MethodGet, path, tok, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(string(body)).To(Equal(`{"schemaVersion":2}`))
+			Expect(e.regA.tokenRequests()).To(Equal(2))
+
+			By("not retrying a request with a body, but re-authenticating the next one")
+			put := e.proxy1.URL + "/v2/" + e.aliasA + "/bkpaas/app/manifests/v1"
+			resp, _ = do(http.MethodPut, put, tok, []byte(`{"a":1}`))
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			e.regA.revokeTokens()
+			resp, body = do(http.MethodPut, put, tok, []byte(`{"a":1}`))
+			assertProxyError(resp, body, http.StatusBadGateway, "upstream_auth_failed")
+			assertNoLeak(e, resp, body)
+			resp, _ = do(http.MethodPut, put, tok, []byte(`{"a":1}`))
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+		})
+	})
+
+	Describe("blob download", func() {
+		It("passes 307 through and streams direct responses", func() {
+			content := bytes.Repeat([]byte("layer"), 100000)
+			d := e.regA.putBlob("python/python", content)
+			e.regB.putBlob("python/python", content)
+			e.regA.setRedirectBlobs(true)
+
+			resp, body := do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/blobs/"+d, e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusTemporaryRedirect))
+			Expect(resp.Header.Get("Location")).To(HavePrefix(e.regA.storage.URL + "/bucket/"))
+			assertNoLeak(e, resp, body)
+
+			resp, body = do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/"+d, e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(body).To(Equal(content))
+
+			entries := e.audit.entries()
+			storageHost, _ := url.Parse(e.regA.storage.URL)
+			Expect(entries[0].RedirectHost).To(Equal(storageHost.Hostname()))
+			Expect(entries[0].Reference).To(Equal(d))
+			Expect(entries[1].RespBytes).To(BeEquivalentTo(len(content)))
+		})
+
+		It("keeps Content-Length for HEAD", func() {
+			content := bytes.Repeat([]byte("z"), 12345)
+			d := e.regB.putBlob("python/python", content)
+			resp, body := do(http.MethodHead, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/"+d, e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.ContentLength).To(BeEquivalentTo(len(content)))
+			Expect(body).To(BeEmpty())
+			Expect(resp.Header.Get("Docker-Content-Digest")).To(Equal(d))
+		})
+
+		// 客户端中途断开时，发往上游的请求随之取消，不残留连接
+		It("cancels the upstream transfer when the client disconnects", func() {
+			cancelled := make(chan struct{})
+			e.regB.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
+				if !strings.Contains(r.URL.Path, "/blobs/") {
+					return false
+				}
+				w.Header().Set("Content-Length", "1000000000")
+				w.WriteHeader(http.StatusOK)
+				buf := make([]byte, 32<<10)
+				for {
+					if _, err := w.Write(buf); err != nil {
+						close(cancelled)
+						return true
+					}
+				}
+			})
+
+			ctx, cancel := context.WithCancel(context.Background())
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet,
+				e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/sha256:x", nil)
+			req.SetBasicAuth("bkpaas-build", e.token())
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			_, _ = io.CopyN(io.Discard, resp.Body, 1<<20)
+			cancel()
+			_ = resp.Body.Close()
+
+			Eventually(cancelled).WithTimeout(10 * time.Second).Should(BeClosed())
+		})
+	})
+
+	Describe("upload", func() {
+		var repo string
+
+		BeforeEach(func() { repo = "/v2/" + e.aliasA + "/bkpaas/app" })
+
+		// 同一上传会话的请求分别落到两个副本
+		It("completes a chunked upload across replicas", func() {
+			tok := e.token()
+			chunk1, chunk2 := bytes.Repeat([]byte("a"), 1000), bytes.Repeat([]byte("b"), 500)
+			d := digestOf(append(append([]byte(nil), chunk1...), chunk2...))
+
+			resp, _ := do(http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", tok, nil)
+			loc := resp.Header.Get("Location")
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			Expect(loc).To(HavePrefix(repo + "/blobs/uploads/"))
+			Expect(loc).NotTo(ContainSubstring("upstream-"), "upstream upload id leaked")
+			Expect(loc).NotTo(ContainSubstring("_state"), "upstream upload state leaked")
+
+			resp, _ = do(http.MethodPatch, e.proxy2.URL+loc, tok, chunk1)
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			loc = resp.Header.Get("Location")
+			resp, _ = do(http.MethodPatch, e.proxy1.URL+loc, tok, chunk2)
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			loc = resp.Header.Get("Location")
+			resp, _ = do(http.MethodPut, e.proxy2.URL+withQuery(loc, "digest", d), tok, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			Expect(resp.Header.Get("Location")).To(Equal(repo + "/blobs/" + d))
+
+			By("rejecting kaniko's DELETE of the upload session")
+			resp, body := do(http.MethodDelete, e.proxy1.URL+loc, tok, nil)
+			assertProxyError(resp, body, http.StatusForbidden, "delete_not_allowed")
+
+			for _, entry := range e.audit.entries() {
+				if entry.Route == "upload" {
+					Expect(entry.Reference).NotTo(ContainSubstring("."), "audit leaks upload session")
+				}
+			}
+		})
+
+		It("rejects forged sessions and sessions used in another repository", func() {
+			tok := e.token()
+			resp, body := do(http.MethodPatch, e.proxy1.URL+repo+"/blobs/uploads/forged.session", tok, []byte("x"))
+			assertProxyError(resp, body, http.StatusForbidden, "invalid_upload_session")
+
+			resp, _ = do(http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", tok, nil)
+			session := strings.TrimPrefix(resp.Header.Get("Location"), repo+"/blobs/uploads/")
+			session, _, _ = strings.Cut(session, "?")
+			resp, body = do(http.MethodPatch, e.proxy1.URL+repo+"/cache/blobs/uploads/"+session, tok, []byte("x"))
+			assertProxyError(resp, body, http.StatusForbidden, "invalid_upload_session")
+		})
+
+		It("rejects an upload Location on a foreign host", func() {
+			e.regA.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
+				if r.Method != http.MethodPost || !strings.HasSuffix(r.URL.Path, "/blobs/uploads/") {
+					return false
+				}
+				w.Header().Set("Location", "https://storage.example.com/v2/bkpaas/app/blobs/uploads/u1")
+				w.WriteHeader(http.StatusAccepted)
+				return true
+			})
+			resp, body := do(http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", e.token(), nil)
+			assertProxyError(resp, body, http.StatusBadGateway, "upstream_unreachable")
+			Expect(resp.Header.Get("Location")).NotTo(ContainSubstring("storage.example.com"))
+		})
+
+		Describe("mount", func() {
+			var d, target string
+
+			BeforeEach(func() {
+				d = e.regB.putBlob("python/python", []byte("base-layer"))
+				e.regA.putBlob("python/python", []byte("base-layer"))
+				e.regA.putBlob("bkpaas/other", []byte("base-layer"))
+				target = e.proxy1.URL + repo + "/blobs/uploads/"
+			})
+
+			expectNoMountReachedA := func() {
+				GinkgoHelper()
+				for _, r := range e.regA.recorded() {
+					Expect(r.Query).NotTo(ContainSubstring("mount"), "upstream A received mount request")
+					Expect(r.Query).NotTo(ContainSubstring("from"), "upstream A received mount request")
+				}
+			}
+
+			DescribeTable("downgrades to a plain upload",
+				func(query func() string) {
+					resp, _ := do(http.MethodPost, target+query(), e.token(), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+					expectNoMountReachedA()
+				},
+				Entry("source on another upstream", func() string { return "?mount=" + d + "&from=" + e.aliasB + "/python/python" }),
+				Entry("source denied by pull_deny", func() string { return "?mount=" + d + "&from=" + e.aliasA + "/bkpaas/other" }),
+				// 缺少 from 的 mount 在部分 registry 上表示从凭证可读的任意仓库挂载
+				Entry("mount without from", func() string { return "?mount=" + d }),
+				Entry("from without mount", func() string { return "?from=" + e.aliasA + "/python/python" }),
+			)
+
+			It("forwards a readable same-upstream mount with the alias stripped from from", func() {
+				resp, _ := do(http.MethodPost, target+"?mount="+d+"&from="+e.aliasA+"/python/python", e.token(), nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(resp.Header.Get("Location")).To(Equal(repo + "/blobs/" + d))
+				reqs := e.regA.recorded()
+				q, _ := url.ParseQuery(reqs[len(reqs)-1].Query)
+				Expect(q.Get("from")).To(Equal("python/python"))
+			})
+		})
+	})
+
+	Describe("rejected requests", func() {
+		DescribeTable("never reach upstream",
+			func(method, path string, token func() string, status int, deny string) {
+				resp, body := do(method, e.proxy1.URL+strings.ReplaceAll(path, "{A}", e.aliasA), token(), nil)
+				assertProxyError(resp, body, status, deny)
+				Expect(e.regA.recorded()).To(BeEmpty())
+				for _, entry := range e.audit.entries() {
+					Expect(entry.Deny).NotTo(BeEmpty(), "rejected request audited without deny")
+				}
+			},
+			Entry("no token", http.MethodGet, "/v2/{A}/python/python/manifests/3",
+				func() string { return "" }, 401, "token_missing"),
+			Entry("expired token", http.MethodGet, "/v2/{A}/python/python/manifests/3", func() string {
+				return e.token(func(c jwt.MapClaims) {
+					c["exp"] = time.Now().Add(-time.Hour).Unix()
+					c["iat"] = time.Now().Add(-2 * time.Hour).Unix()
+				})
+			}, 401, "token_expired"),
+			Entry("unknown upstream", http.MethodGet, "/v2/docker-io/library/python/manifests/3",
+				validToken, 403, "unknown_upstream"),
+			Entry("alias written as host", http.MethodGet, "/v2/mirrors.example.com/python/python/manifests/3",
+				validToken, 403, "unknown_upstream"),
+			Entry("delete manifest", http.MethodDelete, "/v2/{A}/bkpaas/app/manifests/v1", validToken, 403, "delete_not_allowed"),
+			Entry("delete blob", http.MethodDelete, "/v2/{A}/bkpaas/app/blobs/sha256:x", validToken, 403, "delete_not_allowed"),
+			Entry("tag not granted", http.MethodPut, "/v2/{A}/bkpaas/app/manifests/latest", validToken, 403, "tag_not_granted"),
+			Entry("push not granted", http.MethodPost, "/v2/{A}/bkpaas/other/blobs/uploads/", validToken, 403, "push_not_granted"),
+			Entry("pull denied", http.MethodGet, "/v2/{A}/bkpaas/other/manifests/v1", validToken, 403, "pull_denied"),
+			Entry("catalog", http.MethodGet, "/v2/_catalog", validToken, 404, "route_not_found"),
+			Entry("non v2", http.MethodGet, "/api/v2.0/projects", validToken, 404, "route_not_found"),
+			Entry("unsupported ping method", http.MethodPost, "/v2/", validToken, 404, "route_not_found"),
+			Entry("unsupported route method", http.MethodPost, "/v2/{A}/python/python/manifests/3",
+				validToken, 404, "route_not_found"),
+			Entry("upper-case repository", http.MethodGet, "/v2/{A}/Python/python/manifests/3",
+				validToken, 404, "route_not_found"),
+			Entry("alias without repository", http.MethodGet, "/v2/{A}/manifests/3", validToken, 404, "route_not_found"),
+			Entry("dot-dot reference", http.MethodGet, "/v2/{A}/python/python/manifests/..", validToken, 404, "route_not_found"),
+			Entry("encoded dot-dot", http.MethodGet, "/v2/{A}/python/python/manifests/%2e%2e", validToken, 404, "route_not_found"),
+			Entry("encoded slash", http.MethodGet, "/v2/{A}/python%2Fpython/manifests/3", validToken, 404, "route_not_found"),
+			Entry("tag as blob digest", http.MethodGet, "/v2/{A}/python/python/blobs/latest", validToken, 404, "route_not_found"),
+			Entry("invalid digest", http.MethodGet, "/v2/{A}/python/python/blobs/sha256:..", validToken, 404, "route_not_found"),
+		)
+
+		It("returns no body for HEAD", func() {
+			resp, body := do(http.MethodHead, e.proxy1.URL+"/v2/"+e.aliasA+"/bkpaas/other/manifests/v1", e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+			Expect(body).To(BeEmpty())
+		})
+	})
+
+	Describe("upstream failures", func() {
+		It("returns 502 without leaking upstream error details", func() {
+			e.regA.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
+				if r.URL.Path != "/token" {
+					return false
+				}
+				http.Error(w, "invalid credential for robot:"+fakeCredPass, http.StatusUnauthorized)
+				return true
+			})
+			resp, body := do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/manifests/3", e.token(), nil)
+			assertProxyError(resp, body, http.StatusBadGateway, "upstream_auth_failed")
+			assertNoLeak(e, resp, body)
+		})
+
+		It("returns 502 when the upstream is unreachable", func() {
+			e.regB.Close()
+			path := e.proxy1.URL + "/v2/" + e.aliasB + "/python/python/manifests/3"
+			resp, body := do(http.MethodGet, path, e.token(), nil)
+			assertProxyError(resp, body, http.StatusBadGateway, "upstream_unreachable")
+			resp, _ = do(http.MethodHead, path, e.token(), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+		})
+	})
+
+	It("rewrites the Link header of tags/list", func() {
+		resp, _ := do(http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/tags/list", e.token(), nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		Expect(resp.Header.Get("Link")).To(Equal(`</v2/` + e.aliasA + `/python/python/tags/list?last=v1&n=1>; rel="next"`))
+	})
+})
 
 type allowAll struct{}
 
 func (allowAll) Authorize(proxy.Principal, string, oci.Route) proxy.Decision { return proxy.Decision{} }
 
 // 授权钩子放行一切时，DELETE、未配置的上游与跨上游 mount 仍然不会到达上游
-func TestDefenseInDepthWithPermissiveAuthorizer(t *testing.T) {
-	e := newTestEnvWith(t, func(map[string]*upstream.Upstream) proxy.Authorizer { return allowAll{} })
-	tok := e.token(t)
-	a := e.proxy1.URL + "/v2/" + e.aliasA
+var _ = Describe("Server with a permissive authorizer", func() {
+	It("still enforces defense in depth", func() {
+		e := newTestEnv(func(o *proxy.Options) { o.Authorizer = allowAll{} })
+		tok := e.token()
+		a := e.proxy1.URL + "/v2/" + e.aliasA
 
-	for _, u := range []string{a + "/bkpaas/app/manifests/v1", a + "/bkpaas/app/blobs/sha256:x"} {
-		resp, body := do(t, http.MethodDelete, u, tok, nil)
-		assertProxyError(t, resp, body, http.StatusForbidden, "delete_not_allowed")
-	}
-	resp, body := do(t, http.MethodGet, e.proxy1.URL+"/v2/docker-io/library/python/manifests/3", tok, nil)
-	assertProxyError(t, resp, body, http.StatusForbidden, "unknown_upstream")
-	resp, body = do(t, http.MethodGet, e.proxy1.URL+"/v2/_catalog", tok, nil)
-	assertProxyError(t, resp, body, http.StatusNotFound, "route_not_found")
-	if n := len(e.regA.recorded()); n != 0 {
-		t.Fatalf("upstream received %d requests", n)
-	}
-
-	d := e.regB.putBlob("python/python", []byte("x"))
-	resp, _ = do(t, http.MethodPost, a+"/bkpaas/app/blobs/uploads/?mount="+d+"&from="+e.aliasB+"/python/python", tok, nil)
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("cross-upstream mount: %d", resp.StatusCode)
-	}
-	for _, r := range e.regA.recorded() {
-		if strings.Contains(r.Query, "from") {
-			t.Fatalf("upstream A received mount request: %+v", r)
+		for _, u := range []string{a + "/bkpaas/app/manifests/v1", a + "/bkpaas/app/blobs/sha256:x"} {
+			resp, body := do(http.MethodDelete, u, tok, nil)
+			assertProxyError(resp, body, http.StatusForbidden, "delete_not_allowed")
 		}
-	}
-}
+		resp, body := do(http.MethodGet, e.proxy1.URL+"/v2/docker-io/library/python/manifests/3", tok, nil)
+		assertProxyError(resp, body, http.StatusForbidden, "unknown_upstream")
+		resp, body = do(http.MethodGet, e.proxy1.URL+"/v2/_catalog", tok, nil)
+		assertProxyError(resp, body, http.StatusNotFound, "route_not_found")
+		Expect(e.regA.recorded()).To(BeEmpty())
 
-func TestHeadErrorHasNoBody(t *testing.T) {
-	e := newTestEnv(t)
-	resp, body := do(t, http.MethodHead, e.proxy1.URL+"/v2/"+e.aliasA+"/bkpaas/other/manifests/v1", e.token(t), nil)
-	if resp.StatusCode != http.StatusForbidden || len(body) != 0 {
-		t.Fatalf("HEAD: %d body=%q", resp.StatusCode, body)
-	}
-}
-
-func TestTagsListLinkRewritten(t *testing.T) {
-	e := newTestEnv(t)
-	resp, _ := do(t, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasA+"/python/python/tags/list", e.token(t), nil)
-	want := `</v2/` + e.aliasA + `/python/python/tags/list?last=v1&n=1>; rel="next"`
-	if resp.StatusCode != http.StatusOK || resp.Header.Get("Link") != want {
-		t.Fatalf("tags list: %d Link=%q", resp.StatusCode, resp.Header.Get("Link"))
-	}
-}
-
-// 客户端中途断开时，发往上游的请求随之取消，不残留连接
-func TestClientDisconnectCancelsUpstream(t *testing.T) {
-	e := newTestEnv(t)
-	cancelled := make(chan struct{})
-	e.regB.setIntercept(func(w http.ResponseWriter, r *http.Request) bool {
-		if !strings.Contains(r.URL.Path, "/blobs/") {
-			return false
-		}
-		w.Header().Set("Content-Length", "1000000000")
-		w.WriteHeader(http.StatusOK)
-		buf := make([]byte, 32<<10)
-		for {
-			if _, err := w.Write(buf); err != nil {
-				close(cancelled)
-				return true
-			}
+		d := e.regB.putBlob("python/python", []byte("x"))
+		resp, _ = do(http.MethodPost, a+"/bkpaas/app/blobs/uploads/?mount="+d+"&from="+e.aliasB+"/python/python", tok, nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		for _, r := range e.regA.recorded() {
+			Expect(r.Query).NotTo(ContainSubstring("from"), "upstream A received mount request")
 		}
 	})
+})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, e.proxy1.URL+"/v2/"+e.aliasB+"/python/python/blobs/sha256:x", nil)
-	req.SetBasicAuth("bkpaas-build", e.token(t))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = io.CopyN(io.Discard, resp.Body, 1<<20)
-	cancel()
-	_ = resp.Body.Close()
+var _ = Describe("JSONAuditor", func() {
+	It("reports write failures without blocking requests", func() {
+		var failures atomic.Int32
+		auditor := proxy.NewJSONAuditor(failingWriter{})
+		auditor.OnError = func(error) { failures.Add(1) }
+		e := newTestEnv(func(o *proxy.Options) { o.Auditor = auditor })
 
-	select {
-	case <-cancelled:
-	case <-time.After(10 * time.Second):
-		t.Fatal("upstream transfer was not cancelled after client disconnect")
-	}
-}
+		resp, _ := do(http.MethodGet, e.proxy1.URL+"/v2/", e.token(), nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		Expect(failures.Load()).To(BeEquivalentTo(1))
+	})
+})
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("disk full") }

@@ -81,7 +81,7 @@
     - 缺少 `from`：部分 registry 理解为「从凭证可读的任意仓库挂载」，而代理账号可读全平台；
   - 保留的 mount 去掉 `from` 中的别名段后转发。
 - **目的**：即使授权钩子被替换为全部放行或判定逻辑有缺陷，删除镜像、访问未配置的上游、借 mount 越权读取这三类操作也不会发生
-  （`TestDefenseInDepthWithPermissiveAuthorizer` 用全部放行的钩子验证）。
+  （`Server with a permissive authorizer` 用全部放行的钩子验证）。
 
 ### 5. 目标解析与上游鉴权
 
@@ -148,7 +148,7 @@
   - 审计不能成为泄露渠道：不记录 `Authorization` 与 token，不记录上传会话 token，307 只记目标主机而不记预签名 URL；
   - 有的上游按仓库路径的前两段共享 blob，已知 digest 时可以跨应用读取。审计里记下的 blob digest 是这件事的补偿措施。
 
-各项防护的测试在 `pkg/proxy/server_test.go`，用例名与防护对应；与审计风险项的对照见 `docs/forwarding-design.md` 第 3 节。
+各项防护的测试在 `pkg/proxy/server_test.go`（Ginkgo），用例描述与防护对应；与审计风险项的对照见 `docs/forwarding-design.md` 第 3 节。
 
 ## 代码结构
 

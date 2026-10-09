@@ -11,13 +11,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
 )
 
 // fakeRegistry 是一个内存中的 OCI 仓库，按 Docker token 规范做 Bearer 认证，并记录收到的请求
 type fakeRegistry struct {
 	*httptest.Server
-	t *testing.T
 
 	mu        sync.Mutex
 	tokens    map[string]bool
@@ -28,7 +28,8 @@ type fakeRegistry struct {
 	uploads   map[string][]byte // upload id
 	// redirectBlobs 为 true 时 blob 下载返回 307 到对象存储，否则由上游直接返回数据
 	redirectBlobs bool
-	storage       *httptest.Server
+	// storage 模拟对象存储，只提供 307 的目标地址；代理不跟随重定向，测试中不会访问它
+	storage *httptest.Server
 	// intercept 返回 true 表示已处理请求，用于模拟上游的异常行为
 	intercept func(http.ResponseWriter, *http.Request) bool
 }
@@ -44,23 +45,16 @@ type recordedRequest struct {
 
 const fakeCredUser, fakeCredPass = "robot", "upstream-secret-password"
 
-func newFakeRegistry(t *testing.T) *fakeRegistry {
-	t.Helper()
+func newFakeRegistry() *fakeRegistry {
 	f := &fakeRegistry{
-		t:         t,
 		tokens:    map[string]bool{},
 		manifests: map[string][]byte{},
 		blobs:     map[string][]byte{},
 		uploads:   map[string][]byte{},
 	}
-	f.storage = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "" {
-			t.Errorf("storage received Authorization header")
-		}
-		_, _ = w.Write([]byte("from-storage"))
-	}))
+	f.storage = httptest.NewServer(http.NotFoundHandler())
 	f.Server = httptest.NewServer(http.HandlerFunc(f.handle))
-	t.Cleanup(func() { f.Close(); f.storage.Close() })
+	DeferCleanup(func() { f.Close(); f.storage.Close() })
 	return f
 }
 

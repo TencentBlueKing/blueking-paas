@@ -17,4 +17,4 @@ for _ in $(seq 1 50); do
   sleep 0.2
 done
 
-REGISTRY_PROXY_IT_UPSTREAM="127.0.0.1:$PORT" go test -tags integration -count=1 -run Integration -v ./pkg/proxy/
+REGISTRY_PROXY_IT_UPSTREAM="127.0.0.1:$PORT" go test -tags integration -count=1 -v ./pkg/proxy/ -ginkgo.label-filter=integration

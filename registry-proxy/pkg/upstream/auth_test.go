@@ -3,15 +3,16 @@ package upstream
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 // fakeTokenRegistry 模拟一个 Bearer 认证的上游：/v2/ 返回的质询带一个与请求无关的 scope
@@ -20,12 +21,10 @@ type fakeTokenRegistry struct {
 	tokenRequests atomic.Int32
 	lastScopes    atomic.Value
 	expiresIn     int
-	tokenStatus   int
 }
 
-func newFakeTokenRegistry(t *testing.T) *fakeTokenRegistry {
-	t.Helper()
-	f := &fakeTokenRegistry{expiresIn: 300, tokenStatus: http.StatusOK}
+func newFakeTokenRegistry() *fakeTokenRegistry {
+	f := &fakeTokenRegistry{expiresIn: 300}
 	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v2/":
@@ -36,197 +35,196 @@ func newFakeTokenRegistry(t *testing.T) *fakeTokenRegistry {
 			f.tokenRequests.Add(1)
 			f.lastScopes.Store(r.URL.Query()["scope"])
 			user, pass, ok := r.BasicAuth()
-			if f.tokenStatus != http.StatusOK || !ok || user != "robot" || pass != "secret" {
-				w.WriteHeader(max(f.tokenStatus, http.StatusUnauthorized))
+			if !ok || user != "robot" || pass != "secret" {
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"token": "tk-" + strings.Join(r.URL.Query()["scope"], "+"), "expires_in": f.expiresIn})
+			token := "tk-" + strings.Join(r.URL.Query()["scope"], "+")
+			_ = json.NewEncoder(w).Encode(map[string]any{"token": token, "expires_in": f.expiresIn})
 		default:
 			http.NotFound(w, r)
 		}
 	}))
-	t.Cleanup(f.Close)
+	DeferCleanup(f.Close)
 	return f
 }
 
-func newTestUpstream(t *testing.T, rawURL string, cred *Credential) *Upstream {
-	t.Helper()
+func newTestUpstream(rawURL string, cred *Credential) *Upstream {
 	u, _ := url.Parse(rawURL)
 	creds := map[string]Credential{}
 	if cred != nil {
 		creds[u.Host] = *cred
 	}
 	ups, err := FromSpecs([]Spec{{Alias: "fake", URL: u}}, creds, Options{TokenMaxTTL: 10 * time.Minute})
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	return ups["fake"]
 }
 
 var robot = &Credential{Username: "robot", Password: "secret"}
 
-func TestBearerUsesProxyComputedScope(t *testing.T) {
-	reg := newFakeTokenRegistry(t)
-	up := newTestUpstream(t, reg.URL, robot)
-	scopes := []Scope{{Repo: "bkpaas/app", Actions: []string{"pull", "push"}}}
+func pullScope(repo string) []Scope { return []Scope{{Repo: repo, Actions: []string{"pull"}}} }
 
-	h, hit, err := up.Authorization(context.Background(), scopes)
-	if err != nil || hit {
-		t.Fatalf("first lookup: hit=%v err=%v", hit, err)
-	}
-	if h != "Bearer tk-repository:bkpaas/app:pull,push" {
-		t.Fatalf("header = %q", h)
-	}
-	got := reg.lastScopes.Load().([]string)
-	if len(got) != 1 || got[0] != "repository:bkpaas/app:pull,push" {
-		t.Fatalf("token request scopes = %v, the challenge scope must be ignored", got)
-	}
-}
-
-func TestAuthorizationCacheAndInvalidate(t *testing.T) {
-	reg := newFakeTokenRegistry(t)
-	up := newTestUpstream(t, reg.URL, robot)
-	scopes := []Scope{{Repo: "python/python", Actions: []string{"pull"}}}
+var _ = Describe("Upstream.Authorization", func() {
 	ctx := context.Background()
 
-	for i := range 3 {
-		if _, hit, err := up.Authorization(ctx, scopes); err != nil || hit != (i > 0) {
-			t.Fatalf("lookup %d: hit=%v err=%v", i, hit, err)
-		}
-	}
-	if n := reg.tokenRequests.Load(); n != 1 {
-		t.Fatalf("token requests = %d, want 1", n)
-	}
-	// 不同 scope 独立缓存
-	if _, hit, _ := up.Authorization(ctx, []Scope{{Repo: "other/repo", Actions: []string{"pull"}}}); hit {
-		t.Fatal("different scope must not hit cache")
-	}
+	Context("with a Bearer upstream", func() {
+		var (
+			reg *fakeTokenRegistry
+			up  *Upstream
+		)
 
-	up.Invalidate(scopes)
-	if _, hit, _ := up.Authorization(ctx, scopes); hit {
-		t.Fatal("invalidated scope must not hit cache")
-	}
-	if n := reg.tokenRequests.Load(); n != 3 {
-		t.Fatalf("token requests = %d, want 3", n)
-	}
-}
-
-func TestAuthorizationExpiry(t *testing.T) {
-	reg := newFakeTokenRegistry(t)
-	reg.expiresIn = 100
-	up := newTestUpstream(t, reg.URL, robot)
-	now := time.Now()
-	up.now = func() time.Time { return now }
-	scopes := []Scope{{Repo: "a/b", Actions: []string{"pull"}}}
-
-	_, _, _ = up.Authorization(context.Background(), scopes)
-	now = now.Add(89 * time.Second)
-	if _, hit, _ := up.Authorization(context.Background(), scopes); !hit {
-		t.Fatal("token should be reused before 90% of expires_in")
-	}
-	now = now.Add(2 * time.Second)
-	if _, hit, _ := up.Authorization(context.Background(), scopes); hit {
-		t.Fatal("token should be refreshed after 90% of expires_in")
-	}
-}
-
-func TestTokenTTL(t *testing.T) {
-	up := &Upstream{maxTTL: 5 * time.Minute}
-	cases := map[time.Duration]time.Duration{
-		0:                 defaultTokenExpiresIn * 9 / 10,
-		100 * time.Second: 90 * time.Second,
-		time.Hour:         5 * time.Minute,
-		time.Second:       time.Second,
-	}
-	for in, want := range cases {
-		if got := up.tokenTTL(in); got != want {
-			t.Errorf("tokenTTL(%s) = %s, want %s", in, got, want)
-		}
-	}
-}
-
-func TestConcurrentMissFetchesOnce(t *testing.T) {
-	reg := newFakeTokenRegistry(t)
-	up := newTestUpstream(t, reg.URL, robot)
-	scopes := []Scope{{Repo: "a/b", Actions: []string{"pull"}}}
-	var wg sync.WaitGroup
-	for range 20 {
-		wg.Go(func() {
-			if _, _, err := up.Authorization(context.Background(), scopes); err != nil {
-				t.Error(err)
-			}
+		BeforeEach(func() {
+			reg = newFakeTokenRegistry()
+			up = newTestUpstream(reg.URL, robot)
 		})
-	}
-	wg.Wait()
-	if n := reg.tokenRequests.Load(); n != 1 {
-		t.Fatalf("token requests = %d, want 1", n)
-	}
-}
 
-func TestAuthFailures(t *testing.T) {
-	t.Run("bad credential", func(t *testing.T) {
-		reg := newFakeTokenRegistry(t)
-		up := newTestUpstream(t, reg.URL, &Credential{Username: "robot", Password: "wrong"})
-		_, _, err := up.Authorization(context.Background(), []Scope{{Repo: "a/b", Actions: []string{"pull"}}})
-		if ReasonOf(err) != ReasonAuthFailed {
-			t.Fatalf("err = %v", err)
-		}
-		if strings.Contains(err.Error(), "wrong") {
-			t.Fatal("error must not contain credentials")
-		}
+		It("requests the proxy-computed scope and ignores the challenge scope", func() {
+			h, hit, err := up.Authorization(ctx, []Scope{{Repo: "bkpaas/app", Actions: []string{"pull", "push"}}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hit).To(BeFalse())
+			Expect(h).To(Equal("Bearer tk-repository:bkpaas/app:pull,push"))
+			Expect(reg.lastScopes.Load()).To(Equal([]string{"repository:bkpaas/app:pull,push"}))
+		})
+
+		It("caches by scope and refetches after Invalidate", func() {
+			scopes := pullScope("python/python")
+			for i := range 3 {
+				_, hit, err := up.Authorization(ctx, scopes)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hit).To(Equal(i > 0))
+			}
+			Expect(reg.tokenRequests.Load()).To(BeEquivalentTo(1))
+
+			_, hit, _ := up.Authorization(ctx, pullScope("other/repo"))
+			Expect(hit).To(BeFalse(), "different scope must not hit cache")
+
+			up.Invalidate(scopes)
+			_, hit, _ = up.Authorization(ctx, scopes)
+			Expect(hit).To(BeFalse(), "invalidated scope must not hit cache")
+			Expect(reg.tokenRequests.Load()).To(BeEquivalentTo(3))
+		})
+
+		It("expires the cache at 90% of expires_in", func() {
+			reg.expiresIn = 100
+			now := time.Now()
+			up.now = func() time.Time { return now }
+			scopes := pullScope("a/b")
+
+			_, _, _ = up.Authorization(ctx, scopes)
+			now = now.Add(89 * time.Second)
+			_, hit, _ := up.Authorization(ctx, scopes)
+			Expect(hit).To(BeTrue())
+			now = now.Add(2 * time.Second)
+			_, hit, _ = up.Authorization(ctx, scopes)
+			Expect(hit).To(BeFalse())
+		})
+
+		It("fetches only once for concurrent misses of the same scope", func() {
+			var wg sync.WaitGroup
+			for range 20 {
+				wg.Go(func() {
+					defer GinkgoRecover()
+					_, _, err := up.Authorization(ctx, pullScope("a/b"))
+					Expect(err).NotTo(HaveOccurred())
+				})
+			}
+			wg.Wait()
+			Expect(reg.tokenRequests.Load()).To(BeEquivalentTo(1))
+		})
+
+		It("reports a bad credential as auth failed without leaking it", func() {
+			up = newTestUpstream(reg.URL, &Credential{Username: "robot", Password: "wrong"})
+			_, _, err := up.Authorization(ctx, pullScope("a/b"))
+			Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
+			Expect(err.Error()).NotTo(ContainSubstring("wrong"))
+		})
 	})
-	t.Run("unreachable", func(t *testing.T) {
-		up := newTestUpstream(t, "http://127.0.0.1:1", robot)
-		_, _, err := up.Authorization(context.Background(), []Scope{{Repo: "a/b", Actions: []string{"pull"}}})
-		if ReasonOf(err) != ReasonUnreachable {
-			t.Fatalf("err = %v", err)
-		}
+
+	It("reports an unreachable upstream", func() {
+		_, _, err := newTestUpstream("http://127.0.0.1:1", robot).Authorization(ctx, pullScope("a/b"))
+		Expect(ReasonOf(err)).To(Equal(ReasonUnreachable))
 	})
-	t.Run("plaintext realm for https upstream", func(t *testing.T) {
+
+	It("refuses to send credentials to a plaintext realm of an https upstream", func() {
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="http://token.example/token",service="x"`)
 			w.WriteHeader(http.StatusUnauthorized)
 		}))
-		defer srv.Close()
+		DeferCleanup(srv.Close)
 		u, _ := url.Parse(srv.URL)
-		ups, _ := FromSpecs([]Spec{{Alias: "fake", URL: u, SkipTLSVerify: true}},
+		ups, err := FromSpecs([]Spec{{Alias: "fake", URL: u, SkipTLSVerify: true}},
 			map[string]Credential{u.Host: *robot}, Options{TokenMaxTTL: time.Minute})
-		_, _, err := ups["fake"].Authorization(context.Background(), []Scope{{Repo: "a/b", Actions: []string{"pull"}}})
-		var ae *AuthError
-		if !errors.As(err, &ae) || ae.Reason != ReasonAuthFailed || !strings.Contains(err.Error(), "plaintext") {
-			t.Fatalf("err = %v", err)
-		}
+		Expect(err).NotTo(HaveOccurred())
+
+		_, _, err = ups["fake"].Authorization(ctx, pullScope("a/b"))
+		Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
+		Expect(err).To(MatchError(ContainSubstring("plaintext")))
 	})
-}
 
-func TestBasicAndAnonymous(t *testing.T) {
-	basic := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("WWW-Authenticate", `Basic realm="registry"`)
-		w.WriteHeader(http.StatusUnauthorized)
-	}))
-	defer basic.Close()
-	h, _, err := newTestUpstream(t, basic.URL, robot).Authorization(context.Background(), nil)
-	if err != nil || h != "Basic cm9ib3Q6c2VjcmV0" {
-		t.Fatalf("basic header = %q, err = %v", h, err)
-	}
-	if _, _, err := newTestUpstream(t, basic.URL, nil).Authorization(context.Background(), nil); ReasonOf(err) != ReasonAuthFailed {
-		t.Fatalf("basic upstream without credential: err = %v", err)
-	}
+	Context("with a Basic upstream", func() {
+		var basicURL string
 
-	open := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	defer open.Close()
-	if h, _, err := newTestUpstream(t, open.URL, nil).Authorization(context.Background(), nil); err != nil || h != "" {
-		t.Fatalf("anonymous header = %q, err = %v", h, err)
-	}
-	if h, _, _ := newTestUpstream(t, open.URL, &Credential{RegistryToken: "static"}).Authorization(context.Background(), nil); h != "Bearer static" {
-		t.Fatalf("registry token header = %q", h)
-	}
-}
+		BeforeEach(func() {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="registry"`)
+				w.WriteHeader(http.StatusUnauthorized)
+			}))
+			DeferCleanup(srv.Close)
+			basicURL = srv.URL
+		})
 
-func TestScopeKeyIsOrderIndependent(t *testing.T) {
-	a := ScopeKey([]Scope{{Repo: "x", Actions: []string{"push", "pull"}}, {Repo: "a", Actions: []string{"pull"}}})
-	b := ScopeKey([]Scope{{Repo: "a", Actions: []string{"pull"}}, {Repo: "x", Actions: []string{"pull", "push"}}})
-	if a != b {
-		t.Fatalf("%q != %q", a, b)
-	}
-}
+		It("uses the credential directly", func() {
+			h, _, err := newTestUpstream(basicURL, robot).Authorization(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h).To(Equal("Basic cm9ib3Q6c2VjcmV0"))
+		})
+
+		It("fails without a credential", func() {
+			_, _, err := newTestUpstream(basicURL, nil).Authorization(ctx, nil)
+			Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
+		})
+	})
+
+	Context("with an upstream that requires no auth", func() {
+		var openURL string
+
+		BeforeEach(func() {
+			srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+			DeferCleanup(srv.Close)
+			openURL = srv.URL
+		})
+
+		It("sends no Authorization without a credential", func() {
+			h, _, err := newTestUpstream(openURL, nil).Authorization(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h).To(BeEmpty())
+		})
+
+		It("uses a static registry token as Bearer", func() {
+			h, _, _ := newTestUpstream(openURL, &Credential{RegistryToken: "static"}).Authorization(ctx, nil)
+			Expect(h).To(Equal("Bearer static"))
+		})
+	})
+})
+
+var _ = Describe("tokenTTL", func() {
+	up := &Upstream{maxTTL: 5 * time.Minute}
+
+	DescribeTable("expires at 90% of expires_in, capped by maxTTL",
+		func(expiresIn, want time.Duration) {
+			Expect(up.tokenTTL(expiresIn)).To(Equal(want))
+		},
+		Entry("missing expires_in", time.Duration(0), defaultTokenExpiresIn*9/10),
+		Entry("100s", 100*time.Second, 90*time.Second),
+		Entry("above maxTTL", time.Hour, 5*time.Minute),
+		Entry("at least one second", time.Second, time.Second),
+	)
+})
+
+var _ = Describe("ScopeKey", func() {
+	It("does not depend on the order of scopes and actions", func() {
+		a := ScopeKey([]Scope{{Repo: "x", Actions: []string{"push", "pull"}}, {Repo: "a", Actions: []string{"pull"}}})
+		b := ScopeKey([]Scope{{Repo: "a", Actions: []string{"pull"}}, {Repo: "x", Actions: []string{"pull", "push"}}})
+		Expect(a).To(Equal(b))
+	})
+})

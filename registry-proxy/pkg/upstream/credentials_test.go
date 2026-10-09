@@ -3,85 +3,74 @@ package upstream
 import (
 	"os"
 	"path/filepath"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func writeFile(t *testing.T, content string) string {
-	t.Helper()
-	p := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
-		t.Fatal(err)
-	}
+func writeDockerConfig(content string) string {
+	p := filepath.Join(GinkgoT().TempDir(), "config.json")
+	Expect(os.WriteFile(p, []byte(content), 0o600)).To(Succeed())
 	return p
 }
 
-func TestLoadCredentials(t *testing.T) {
-	p := writeFile(t, `{"auths": {
-		"Mirrors.Example.com": {"username": "u1", "password": "p1"},
-		"https://registry.example.com:8443/v2/": {"auth": "dTI6cDI6d2l0aDpjb2xvbg=="},
-		"static.example.com": {"registrytoken": "rt"}
-	}}`)
-	creds, err := LoadCredentials(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c := creds["mirrors.example.com"]; c.Username != "u1" || c.Password != "p1" {
-		t.Errorf("mirrors = %+v", c)
-	}
-	if c := creds["registry.example.com:8443"]; c.Username != "u2" || c.Password != "p2:with:colon" {
-		t.Errorf("registry = %+v", c)
-	}
-	if c := creds["static.example.com"]; c.RegistryToken != "rt" {
-		t.Errorf("static = %+v", c)
-	}
-}
+var _ = Describe("LoadCredentials", func() {
+	It("normalizes hosts and decodes every supported form", func() {
+		creds, err := LoadCredentials(writeDockerConfig(`{"auths": {
+			"Mirrors.Example.com": {"username": "u1", "password": "p1"},
+			"https://registry.example.com:8443/v2/": {"auth": "dTI6cDI6d2l0aDpjb2xvbg=="},
+			"static.example.com": {"registrytoken": "rt"}
+		}}`))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(creds).To(Equal(map[string]Credential{
+			"mirrors.example.com":       {Username: "u1", Password: "p1"},
+			"registry.example.com:8443": {Username: "u2", Password: "p2:with:colon"},
+			"static.example.com":        {RegistryToken: "rt"},
+		}))
+	})
 
-func TestLoadCredentialsRejects(t *testing.T) {
-	cases := map[string]string{
-		"identitytoken": `{"auths": {"a.com": {"identitytoken": "x"}}}`,
-		"empty entry":   `{"auths": {"a.com": {}}}`,
-		"bad auth":      `{"auths": {"a.com": {"auth": "!!"}}}`,
-		"duplicated":    `{"auths": {"a.com": {"auth": "YTpi"}, "https://a.com": {"auth": "YTpi"}}}`,
-		"invalid json":  `{"auths": {"a.com": {"password": "s3cr3t"`,
-	}
-	for name, content := range cases {
-		t.Run(name, func(t *testing.T) {
-			_, err := LoadCredentials(writeFile(t, content))
-			if err == nil {
-				t.Fatal("want error")
-			}
-			if strings.Contains(err.Error(), "s3cr3t") {
-				t.Fatal("error must not contain credentials")
-			}
-		})
-	}
-}
+	DescribeTable("rejects without leaking credentials",
+		func(content string) {
+			_, err := LoadCredentials(writeDockerConfig(content))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).NotTo(ContainSubstring("s3cr3t"))
+		},
+		Entry("identitytoken", `{"auths": {"a.com": {"identitytoken": "x"}}}`),
+		Entry("empty entry", `{"auths": {"a.com": {}}}`),
+		Entry("bad auth", `{"auths": {"a.com": {"auth": "!!"}}}`),
+		Entry("duplicated host", `{"auths": {"a.com": {"auth": "YTpi"}, "https://a.com": {"auth": "YTpi"}}}`),
+		Entry("invalid json", `{"auths": {"a.com": {"password": "s3cr3t"`),
+	)
+})
 
-func TestCredentialStringIsRedacted(t *testing.T) {
-	c := Credential{Username: "u", Password: "p"}
-	if s := c.String(); strings.Contains(s, "p") && s != "<redacted>" {
-		t.Fatalf("String() = %q", s)
-	}
-}
+var _ = Describe("Credential", func() {
+	It("is redacted when printed", func() {
+		Expect(Credential{Username: "u", Password: "p"}.String()).To(Equal("<redacted>"))
+	})
+})
 
-func TestAliasOf(t *testing.T) {
-	ok := map[string]string{
-		"mirrors.example.com": "mirrors-example-com",
-		"docker.example.com":  "docker-example-com",
-		"registry.local:5000": "registry-local-5000",
-		"127.0.0.1:25001":     "127-0-0-1-25001",
-		"Hub.Example.COM":     "hub-example-com",
-		"xn--fiq228c.com":     "xn--fiq228c-com",
-	}
-	for host, want := range ok {
-		if got, err := AliasOf(host); err != nil || got != want {
-			t.Errorf("AliasOf(%q) = %q, %v; want %q", host, got, err, want)
-		}
-	}
-	for _, host := range []string{"", "[::1]:5000", "a_b.com", "-a.com", "a.com."} {
-		if got, err := AliasOf(host); err == nil {
-			t.Errorf("AliasOf(%q) = %q, want error", host, got)
-		}
-	}
-}
+var _ = Describe("AliasOf", func() {
+	DescribeTable("derives the alias from the host",
+		func(host, want string) {
+			Expect(AliasOf(host)).To(Equal(want))
+		},
+		Entry(nil, "mirrors.example.com", "mirrors-example-com"),
+		Entry(nil, "docker.example.com", "docker-example-com"),
+		Entry(nil, "registry.local:5000", "registry-local-5000"),
+		Entry(nil, "127.0.0.1:25001", "127-0-0-1-25001"),
+		Entry(nil, "Hub.Example.COM", "hub-example-com"),
+		Entry(nil, "xn--fiq228c.com", "xn--fiq228c-com"),
+	)
+
+	DescribeTable("rejects hosts that do not derive a valid alias",
+		func(host string) {
+			_, err := AliasOf(host)
+			Expect(err).To(HaveOccurred())
+		},
+		Entry(nil, ""),
+		Entry(nil, "[::1]:5000"),
+		Entry(nil, "a_b.com"),
+		Entry(nil, "-a.com"),
+		Entry(nil, "a.com."),
+	)
+})

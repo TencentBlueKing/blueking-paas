@@ -15,8 +15,13 @@ kaniko-shim 的使用方式与 [kaniko](https://github.com/GoogleContainerTools/
 | CACHE_REPO                 | 指定一个用作缓存的仓库，否则将从提供的目标推断出一个；当以 `oci:` 为前缀时，仓库将以 OCI 镜像格式写入所提供的路径。 |
 | SOURCE_GET_URL             | dockerfile 构建上下文的网址                                                                                         |
 | DOCKER_CONFIG_JSON         | 访问容器镜像仓库的 Docker 凭据。                                                                                    |
-| INSECURE_REGISTRIES        | 使用纯 HTTP 推送和拉取的不安全仓库。用 `;` 连接多个仓库。                                                           |
-| SKIP_TLS_VERIFY_REGISTRIES | 忽略 TLS 验证以推送和拉取的不安全仓库。用 `;` 连接多个仓库。                                                        |
+| INSECURE_REGISTRIES        | 使用纯 HTTP 推送和拉取的不安全仓库。用 `,` 连接多个仓库。                                                           |
+| SKIP_TLS_VERIFY_REGISTRIES | 忽略 TLS 验证以推送和拉取的不安全仓库。用 `,` 连接多个仓库。                                                        |
+| REGISTRY_MIRRORS           | 替代默认 index.docker.io 的镜像源。用 `,` 连接多个镜像源。                                                          |
+| REGISTRY_MAP               | 拉取镜像时的仓库映射，每项格式为 `<原仓库>=<新前缀>`，展开为 kaniko 的 `--registry-map`。用 `,` 连接多项，格式非法时启动即报错退出。 |
+| SKIP_DEFAULT_REGISTRY_FALLBACK | 为 `true` 时追加 `--skip-default-registry-fallback`：映射或镜像源失败后不再回退到原仓库。                        |
+
+> 注意：映射变量不要命名为 `KANIKO_REGISTRY_MAP`，kaniko executor 会直接读取继承到的同名环境变量。
 
 ## 开发说明
 

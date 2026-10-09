@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 
+import posixpath
 from collections.abc import Awaitable, Callable
+from pathlib import PurePosixPath
 from typing import Any, Literal
 
 import attrs
@@ -30,6 +32,39 @@ from app_spark_api.agent.runtime.exceptions import (
     ModelAccessConfigurationError,
 )
 from app_spark_api.utils import structure_config, validate_non_empty_string
+
+
+def validate_agent_extra_env(_: object, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
+    """Validate the extra variables a provider hands to the Agent Runtime it starts.
+
+    :param attribute: Metadata for the attrs field being validated.
+    :param value: Variable names mapped to their values.
+    :raises ValueError: If a name is outside ``APP_SPARK_AGENT_*`` or is a model variable.
+    """
+    # 只放行 agent 自己的配置：本服务的其它变量（尤其是 APP_SPARK_API_* 里的平台密钥）不能借
+    # 这个口子流进 Runtime。
+    foreign = sorted(name for name in value if not name.startswith(ENV_PREFIX))
+    if foreign:
+        raise ValueError(f"{attribute.name} may only hold {ENV_PREFIX}* variables, got {foreign}")
+
+    owned = sorted(MODEL_ENV_NAMES.intersection(value))
+    if owned:
+        raise ValueError(f"{attribute.name} must not set model variables, use the model source settings: {owned}")
+
+
+def validate_sandbox_path(_: object, attribute: attrs.Attribute[str], value: str) -> None:
+    """Validate an absolute path inside a sandbox.
+
+    A relative path would resolve against whatever directory envd happens to start the command
+    in, and would slip past the checks that compare paths with each other.
+
+    :param attribute: Metadata for the attrs field being validated.
+    :param value: Path to validate.
+    :raises ValueError: If the path is empty or not absolute.
+    """
+    validate_non_empty_string(_, attribute, value)
+    if not PurePosixPath(value).is_absolute():
+        raise ValueError(f"{attribute.name} must be an absolute path, got {value!r}")
 
 
 @attrs.frozen
@@ -57,39 +92,44 @@ class LocalProcessConfig:
     state_root: str = attrs.field(validator=validate_non_empty_string)
     callback_base_url: str = "http://127.0.0.1:8000"
     startup_timeout_seconds: float = 60.0
-    extra_env: dict[str, str] = attrs.field(factory=dict)
-
-    @extra_env.validator
-    def _validate_extra_env(self, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
-        # 只放行 agent 自己的配置：本服务的其它变量（尤其是 APP_SPARK_API_* 里的平台密钥）不能借
-        # 这个口子流进 Runtime。
-        foreign = sorted(name for name in value if not name.startswith(ENV_PREFIX))
-        if foreign:
-            raise ValueError(f"{attribute.name} may only hold {ENV_PREFIX}* variables, got {foreign}")
-
-        owned = sorted(MODEL_ENV_NAMES.intersection(value))
-        if owned:
-            raise ValueError(f"{attribute.name} must not set model variables, use the model source settings: {owned}")
+    extra_env: dict[str, str] = attrs.field(factory=dict, validator=validate_agent_extra_env)
 
 
 @attrs.frozen
 class E2BConfig:
-    """Configuration for provisioning an E2B sandbox per conversation.
+    """Configuration for provisioning an E2B sandbox per conversation and starting its Agent.
 
     :param api_key: Credential for the E2B-compatible API.
     :param api_url: Base URL of that API; independent of the exposed port domain.
+    :param callback_base_url: Where a Runtime inside the sandbox reaches *this* service to
+        replicate its state back, i.e. the service's public address. The state callback path
+        is appended with its FORCE_SCRIPT_NAME prefix intact, since the call comes in through
+        Ingress.
     :param domain: Fallback domain for sandbox hosts when the API does not return one.
     :param template: Sandbox template name or ID.
     :param timeout_seconds: E2B sandbox time to live in seconds from creation (default 3600).
         Activity and this provider's reconnects do not renew it; E2B stops the sandbox when
         the timeout expires unless its deadline is explicitly extended.
-    :param runtime_port: Port reserved for the future Agent Runtime HTTP server.
+    :param runtime_port: Sandbox port the Agent Runtime HTTP server listens on.
     :param preview_port: Fixed sandbox port for the workspace application preview.
     :param port_scheme: URL scheme for the exposed port proxy.
+    :param workspace_dir: The Agent's workspace inside the sandbox.
+    :param state_dir: The Agent's durable state directory inside the sandbox. Must not sit
+        inside ``workspace_dir``, or the agent's own file tools could corrupt its history.
+    :param agent_command: Command that starts the Agent Runtime inside the sandbox. It reads
+        its port and everything else from ``APP_SPARK_AGENT_*`` variables. Interpreted by bash
+        after ``exec``, in an environment that holds the Agent's credentials, so it is trusted
+        operator configuration and must be a single command, not a pipeline or a sequence.
+    :param agent_log_path: Where the Agent's stdout and stderr go inside the sandbox, quoted
+        back when it fails to start.
+    :param startup_timeout_seconds: How long to wait for a started Agent to answer ``/health``.
+    :param extra_env: Further ``APP_SPARK_AGENT_*`` variables to hand the Agent. Model
+        variables are refused, as for the local provider.
     """
 
     api_key: str = attrs.field(repr=False, validator=validate_non_empty_string)
     api_url: str = attrs.field(validator=validate_non_empty_string)
+    callback_base_url: str = attrs.field(validator=validate_non_empty_string)
     domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
     template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
     timeout_seconds: int = attrs.field(default=3600, validator=attrs.validators.gt(0))
@@ -102,6 +142,24 @@ class E2BConfig:
     port_scheme: Literal["http", "https"] = attrs.field(
         default="https", validator=attrs.validators.in_(("http", "https"))
     )
+    workspace_dir: str = attrs.field(default="/data/workspace", validator=validate_sandbox_path)
+    state_dir: str = attrs.field(default="/data/state")
+    agent_command: str = attrs.field(default="python -m app_spark_agent", validator=validate_non_empty_string)
+    agent_log_path: str = attrs.field(default="/tmp/app-spark-agent.log", validator=validate_sandbox_path)
+    startup_timeout_seconds: float = attrs.field(default=60.0, validator=attrs.validators.gt(0))
+    extra_env: dict[str, str] = attrs.field(factory=dict, validator=validate_agent_extra_env)
+
+    @state_dir.validator
+    def _validate_state_dir(self, attribute: attrs.Attribute[str], value: str) -> None:
+        validate_sandbox_path(self, attribute, value)
+
+        # 两个方向都要挡：state 在 workspace 里会被 agent 的文件工具改坏；workspace 在 state 里，
+        # agent 写的文件就混进了会话历史。先规范化，`/data/workspace/../workspace/state` 这类写法
+        # 才不会按字面绕过比较。
+        workspace = PurePosixPath(posixpath.normpath(self.workspace_dir))
+        state = PurePosixPath(posixpath.normpath(value))
+        if state.is_relative_to(workspace) or workspace.is_relative_to(state):
+            raise ValueError(f"{attribute.name} and workspace_dir must not contain each other")
 
 
 @attrs.frozen

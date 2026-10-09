@@ -19,7 +19,8 @@
 The default template has Python 3.12 and no Agent. Build the Agent wheel locally, stage its
 locked runtime dependencies locally, and transfer those artifacts plus uv into the sandbox.
 This keeps the live test independent of the sandbox's pip index while still installing the
-Agent wheel there as a wheel.
+Agent wheel there as a wheel. The provider then starts it exactly as it starts the Agent a
+production template ships.
 
 ### 作为当 Agent E2B template 不可用时的妥协方案
 
@@ -30,13 +31,11 @@ E2B 已经提供了包含 Agent 程序的 template，则不再需要这一套基
 
 from __future__ import annotations
 
-import asyncio
 import gzip
 import logging
 import shutil
 import subprocess
 import tarfile
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -44,22 +43,26 @@ from typing import TYPE_CHECKING, Any
 import attrs
 import pytest
 
-from app_spark_api.agent.runtime.entities import E2BConfig, structure_e2b_config
-from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
+from app_spark_api.agent.runtime.constants import ENV_PREFIX
+from app_spark_api.agent.runtime.entities import DirectModelAccess, E2BConfig, structure_e2b_config
+from app_spark_api.agent.runtime.exceptions import AgentConfigurationError
+from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 
 if TYPE_CHECKING:
     from e2b import AsyncSandbox
 
-    from app_spark_api.agent.runtime.client import AgentRuntimeClient
-    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, RuntimeHealth
+    from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, ModelAccess
 
 AGENT_PROJECT_DIR = Path(__file__).resolve().parents[4] / "agent"
 SANDBOX_VENV = "/tmp/app-spark-agent-venv"
 SANDBOX_WORKSPACE = "/tmp/app-spark-workspace"
 SANDBOX_STATE_DIR = "/tmp/app-spark-state"
 SANDBOX_LOG = "/tmp/app-spark-agent.log"
-HEALTH_TIMEOUT_SECONDS = 20
 LIVE_E2B_TIMEOUT_SECONDS = 300
+
+# The live suites do not verify replication out of the sandbox, which cannot reach a test server
+# on this machine anyway. A callback address configured in the settings still wins.
+UNREACHABLE_CALLBACK_BASE_URL = "http://127.0.0.1:9"
 
 logger = logging.getLogger("tests.e2b")
 
@@ -77,16 +80,52 @@ def require_e2b_config(settings: Any) -> E2BConfig:
     """Skip a live test unless the API service has a usable E2B configuration.
 
     :param settings: Django settings object supplied by pytest-django.
-    :return: Valid E2B connection settings with a short test sandbox lifetime.
+    :return: Valid E2B connection settings with a short test sandbox lifetime, pointed at the
+        Agent that :class:`BootstrappedE2BProvider` installs.
     """
     if settings.AGENT_RUNTIME_PROVIDER != "e2b":
         pytest.skip("AGENT_RUNTIME_PROVIDER is not e2b")
+    raw_config = {"callback_base_url": UNREACHABLE_CALLBACK_BASE_URL, **settings.AGENT_RUNTIME_PROVIDER_CONFIG}
     try:
-        config = structure_e2b_config(settings.AGENT_RUNTIME_PROVIDER_CONFIG)
+        config = structure_e2b_config(raw_config)
     except AgentConfigurationError:
         pytest.skip("A valid E2B provider configuration is required")
-    # Fixtures normally kill their sandboxes; this bounds leaked resources if a test worker dies.
-    return attrs.evolve(config, timeout_seconds=LIVE_E2B_TIMEOUT_SECONDS)
+    return attrs.evolve(
+        config,
+        # Fixtures normally kill their sandboxes; this bounds leaked resources if a test worker dies.
+        timeout_seconds=LIVE_E2B_TIMEOUT_SECONDS,
+        agent_command=f"{SANDBOX_VENV}/bin/python -m app_spark_agent",
+        workspace_dir=SANDBOX_WORKSPACE,
+        state_dir=SANDBOX_STATE_DIR,
+        agent_log_path=SANDBOX_LOG,
+        # A test sandbox lives for a few minutes; an Agent that idles out mid-test is just noise.
+        extra_env={**config.extra_env, f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS": "0"},
+    )
+
+
+async def resolve_fake_model_access() -> ModelAccess:
+    """The deterministic fake model, which needs no credential and makes no network call."""
+    return DirectModelAccess(model="fake:write-file")
+
+
+class BootstrappedE2BProvider(E2BProvider):
+    """The production provider, with the Agent installed into the default template first.
+
+    :param config: Settings from :func:`require_e2b_config`.
+    :param bundle: Artifacts from :func:`build_agent_bundle`.
+    """
+
+    def __init__(self, config: E2BConfig, bundle: AgentBundle) -> None:
+        super().__init__(config)
+        self.bundle = bundle
+
+    async def ensure(self, *, model_access: Any = resolve_fake_model_access, **kwargs: Any) -> AgentRuntimeHandle:  # type: ignore[override]
+        """Provision as in production; callers that pass no model access get the fake model."""
+        return await super().ensure(model_access=model_access, **kwargs)
+
+    async def _prepare_sandbox(self, sandbox: AsyncSandbox) -> None:
+        logger.info("Installing the test Agent into sandbox %s", sandbox.sandbox_id)
+        await install_agent_bundle(sandbox, self.bundle)
 
 
 def build_agent_bundle(build_dir: Path) -> AgentBundle:
@@ -168,71 +207,6 @@ async def install_agent_bundle(sandbox: AsyncSandbox, bundle: AgentBundle) -> No
         logger.info("%s in sandbox %s", label, sandbox.sandbox_id)
         await sandbox.commands.run(command, timeout=150, request_timeout=180)
     logger.info("Agent bundle installed in sandbox %s", sandbox.sandbox_id)
-
-
-async def start_agent(
-    sandbox: AsyncSandbox, handle: AgentRuntimeHandle, *, port: int, app_port: int, project_id: str
-) -> None:
-    """Start the installed Agent with its fake model and the provider's Bearer token.
-
-    :param sandbox: Sandbox holding the installed Agent.
-    :param handle: Provider handle whose token the Agent must accept.
-    :param port: Port exposed by the provider.
-    :param app_port: Fixed sandbox port reserved for application preview.
-    :param project_id: Project identity for the Agent configuration.
-    """
-    envs = {
-        "APP_SPARK_AGENT_WORKSPACE": SANDBOX_WORKSPACE,
-        "APP_SPARK_AGENT_STATE_DIR": SANDBOX_STATE_DIR,
-        "APP_SPARK_AGENT_RUNTIME_TOKEN": handle.runtime_token,
-        "APP_SPARK_AGENT_MODEL": "fake:write-file",
-        "APP_SPARK_AGENT_PORT": str(port),
-        "APP_SPARK_AGENT_APP_PORT": str(app_port),
-        "APP_SPARK_AGENT_PROJECT_ID": project_id,
-        "APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS": "0",
-    }
-    # A log on disk makes a startup failure inspectable after the detached command exits.
-    logger.info("Starting Agent in sandbox %s on port %s", sandbox.sandbox_id, port)
-    await sandbox.commands.run(
-        f"{SANDBOX_VENV}/bin/python -m uvicorn app_spark_agent.server.asgi:app "
-        f"--host 0.0.0.0 --port {port} > {SANDBOX_LOG} 2>&1",
-        background=True,
-        envs=envs,
-        cwd=SANDBOX_WORKSPACE,
-        timeout=0,
-    )
-
-
-async def wait_for_health(sandbox: AsyncSandbox, client: AgentRuntimeClient, *, port: int) -> RuntimeHealth:
-    """Wait until the HTTP Runtime behind the exposed E2B port answers.
-
-    :param sandbox: Sandbox used to retrieve startup logs on failure.
-    :param client: Client using the provider's handle and Bearer token.
-    :param port: Agent Runtime port inside the sandbox.
-    :return: First successful health snapshot.
-    :raises AssertionError: If the Runtime never becomes reachable.
-    """
-    deadline = time.monotonic() + HEALTH_TIMEOUT_SECONDS
-    last_error: AgentUnavailableError | None = None
-    while time.monotonic() < deadline:
-        try:
-            health = await client.health()
-        except AgentUnavailableError as exc:
-            last_error = exc
-            await asyncio.sleep(1)
-        else:
-            logger.info("Agent Runtime is healthy in sandbox %s", sandbox.sandbox_id)
-            return health
-
-    direct = await sandbox.commands.run(
-        "curl -sS -o /dev/null -w '%{http_code}' "
-        f'-H "Authorization: Bearer $APP_SPARK_AGENT_RUNTIME_TOKEN" http://127.0.0.1:{port}/health',
-        envs={"APP_SPARK_AGENT_RUNTIME_TOKEN": client.handle.runtime_token},
-    )
-    log = await sandbox.files.read(SANDBOX_LOG)
-    raise AssertionError(
-        f"Agent Runtime never became healthy: {last_error}; direct status: {direct.stdout}; log tail: {str(log)[-2000:]}"
-    )
 
 
 def _run_local(*command: str) -> None:

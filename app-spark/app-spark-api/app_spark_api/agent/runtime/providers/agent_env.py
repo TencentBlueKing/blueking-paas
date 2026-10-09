@@ -71,59 +71,62 @@ def build_agent_env(
     :param git_remote: Where the Runtime persists its workspace.
     :return: Variable names mapped to values.
     """
-    # Provider-owned values are applied after `extra_env`: callers may extend the Runtime's
-    # environment, but cannot accidentally replace its identity, state paths, or Bearer.
     env = {
-        **(extra_env or {}),
-        f"{ENV_PREFIX}WORKSPACE": workspace,
-        f"{ENV_PREFIX}STATE_DIR": state_dir,
-        f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
-        f"{ENV_PREFIX}PROJECT_ID": project_id,
+        "WORKSPACE": workspace,
+        "STATE_DIR": state_dir,
+        "RUNTIME_TOKEN": runtime_token,
+        "PROJECT_ID": project_id,
         # Not left to the agent's own default: on a shared host that default is the same number
         # for every conversation, and in a sandbox it collides with the Runtime's own port.
-        f"{ENV_PREFIX}APP_PORT": str(app_port),
+        "APP_PORT": str(app_port),
     }
     if port is not None:
-        env[f"{ENV_PREFIX}PORT"] = str(port)
+        env["PORT"] = str(port)
 
     if control_plane_url is not None and state_callback is not None:
         # An address already scoped to one conversation, plus a token that authorizes only
         # that one. Deliberately all the Runtime learns: it replicates to a URL it was
         # handed, and never has to know what a conversation is or which one it is serving.
-        env[f"{ENV_PREFIX}CONTROL_PLANE_URL"] = control_plane_url
-        env[f"{ENV_PREFIX}CONTROL_PLANE_TOKEN"] = state_callback.token
+        env["CONTROL_PLANE_URL"] = control_plane_url
+        env["CONTROL_PLANE_TOKEN"] = state_callback.token
 
     if git_remote is not None:
         # Absent these the Runtime keeps its workspace on local disk and says so on
         # `/health`; it does not quietly behave as though the files were being saved.
-        env[f"{ENV_PREFIX}GIT_REMOTE_URL"] = git_remote.clone_url
-        env[f"{ENV_PREFIX}GIT_BRANCH"] = git_remote.branch
-        env[f"{ENV_PREFIX}GIT_USERNAME"] = git_remote.username
-        env[f"{ENV_PREFIX}GIT_TOKEN"] = git_remote.token
+        env["GIT_REMOTE_URL"] = git_remote.clone_url
+        env["GIT_BRANCH"] = git_remote.branch
+        env["GIT_USERNAME"] = git_remote.username
+        env["GIT_TOKEN"] = git_remote.token
 
     env.update(build_model_env(model_access))
-    return env
+    # extra_env 的键已经是 APP_SPARK_AGENT_*，不参加上面的加前缀。摊在前面：同名时以本函数
+    # 为准，调用方只能追加变量，不能换掉身份、路径或 Bearer。
+    return {**(extra_env or {}), **_add_env_prefix(env)}
+
+
+def _add_env_prefix(env: dict[str, str]) -> dict[str, str]:
+    """Prefix each name with APP_SPARK_AGENT_."""
+
+    return {f"{ENV_PREFIX}{name}": value for name, value in env.items()}
 
 
 def build_model_env(model_access: ModelAccess) -> dict[str, str]:
-    """Return the model variables for one Runtime, and only those of its own model source.
+    """Return this source's model variables, named without the agent prefix."""
 
-    Nothing else can put model variables in the environment -- the inherited part is
-    allow-listed and extra_env refuses them -- so what this returns is the whole story.
-    """
+    # 模型变量只能从这里来：继承的环境是白名单，extra_env 也拒绝它们。
     match model_access:
         # 直连厂商：固定 key。fake: 模型不需要 key，就不给。
         case DirectModelAccess(model=model, api_key=api_key):
-            env = {f"{ENV_PREFIX}MODEL": model}
+            env = {"MODEL": model}
             if api_key is not None:
-                env[f"{ENV_PREFIX}MODEL_API_KEY"] = api_key
+                env["MODEL_API_KEY"] = api_key
             return env
 
         # bkaidev：只有用户态 access_token。不给 MODEL_API_KEY，agent 缺 token 时会回落到它，
         # 那就成了用共享密钥冒充用户。
         case BkAidevModelAccess(base_url=base_url, model_name=model_name, access_token=access_token):
             return {
-                f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN": access_token,
-                f"{ENV_PREFIX}MODEL_BASE_URL": base_url,
-                f"{ENV_PREFIX}MODEL_NAME": model_name,
+                "BK_AIDEV_ACCESS_TOKEN": access_token,
+                "MODEL_BASE_URL": base_url,
+                "MODEL_NAME": model_name,
             }

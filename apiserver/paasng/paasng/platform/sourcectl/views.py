@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import datetime
+import datetime as dt
 import logging
 from pathlib import Path
 from urllib.parse import urlparse
@@ -286,6 +286,14 @@ class SourcePackageUploadViaUrlMixin:
         self._apply_optional_build_method(module, data, operator)
         return source_package
 
+    def handle_exception(self, exc):
+        """将上传源码包过程中的异常转换为面向用户的错误码，用户态 / 应用态接口共用。"""
+        if isinstance(exc, PackageAlreadyExists):
+            raise error_codes.PACKAGE_ALREADY_EXISTS
+        if isinstance(exc, UploadFailedError):
+            raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
+        return super().handle_exception(exc)  # type: ignore[misc]
+
     def _validate_optional_build_method(self, module: Module, data: dict) -> None:
         """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
         has_build_method_fields = bool(
@@ -367,13 +375,6 @@ class ModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ModelV
     def get_queryset(self):
         return self.get_module().packages.all()
 
-    def handle_exception(self, exc):
-        if isinstance(exc, PackageAlreadyExists):
-            raise error_codes.PACKAGE_ALREADY_EXISTS
-        if isinstance(exc, UploadFailedError):
-            raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
-        return super().handle_exception(exc)
-
     @swagger_auto_schema(
         request_body=slzs.SourcePackageUploadViaUrlSLZ,
         responses={200: slzs.SourcePackageSLZ()},
@@ -408,13 +409,6 @@ class SysModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.Vie
         if not ModuleSpecs(module).deploy_via_package:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
         return module
-
-    def handle_exception(self, exc):
-        if isinstance(exc, PackageAlreadyExists):
-            raise error_codes.PACKAGE_ALREADY_EXISTS
-        if isinstance(exc, UploadFailedError):
-            raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
-        return super().handle_exception(exc)
 
     @swagger_auto_schema(
         request_body=slzs.SysSourcePackageUploadViaUrlSLZ,
@@ -656,7 +650,7 @@ class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
             return Response({"message": message}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         with promote_repo_privilege_temporary(application):
-            time_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            time_str = dt.datetime.now().strftime("%Y%m%d%H%M%S")
             data = {"tag_name": time_str, "comment": time_str}
             provider = RepoProvider(**svn_type_spec.config_as_arguments())
 

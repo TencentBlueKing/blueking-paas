@@ -107,9 +107,14 @@ class E2BConfig:
         Ingress.
     :param domain: Fallback domain for sandbox hosts when the API does not return one.
     :param template: Sandbox template name or ID.
-    :param timeout_seconds: E2B sandbox time to live in seconds from creation (default 3600).
-        Activity and this provider's reconnects do not renew it; E2B stops the sandbox when
-        the timeout expires unless its deadline is explicitly extended.
+    :param idle_timeout_seconds: How long a sandbox may go without a conversation turn before
+        it is reclaimed (default 1800). The Agent is told to exit after this same interval, and
+        the sandbox's E2B deadline is set to it at creation and at the start and end of every turn.
+    :param max_lifetime_seconds: Age after which a sandbox is replaced at the start of the next
+        turn (default 86400). A running turn is never interrupted for it. Must stay below the
+        E2B platform's own cap on a sandbox's lifetime, by at least the longest turn expected:
+        a sandbox just short of this age is reused, and the platform kills it outright, without
+        letting the Agent push, once the cap is reached.
     :param runtime_port: Sandbox port the Agent Runtime HTTP server listens on.
     :param preview_port: Fixed sandbox port for the workspace application preview.
     :param port_scheme: URL scheme for the exposed port proxy.
@@ -132,7 +137,8 @@ class E2BConfig:
     callback_base_url: str = attrs.field(validator=validate_non_empty_string)
     domain: str | None = attrs.field(default=None, validator=attrs.validators.optional(validate_non_empty_string))
     template: str = attrs.field(default="e2b-python", validator=validate_non_empty_string)
-    timeout_seconds: int = attrs.field(default=3600, validator=attrs.validators.gt(0))
+    idle_timeout_seconds: int = attrs.field(default=1800, validator=attrs.validators.gt(0))
+    max_lifetime_seconds: int = attrs.field(default=86400, validator=attrs.validators.gt(0))
     runtime_port: int = attrs.field(
         default=8000, validator=attrs.validators.and_(attrs.validators.ge(1), attrs.validators.le(65535))
     )

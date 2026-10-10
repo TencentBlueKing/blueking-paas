@@ -29,6 +29,8 @@ import {
 
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
 
+const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
+
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const useProjectStore = defineStore('project', () => {
@@ -42,6 +44,8 @@ export const useProjectStore = defineStore('project', () => {
   const uiEventSeq = ref(0);
   const running = ref(false);
   const replicationPending = ref(false);
+  // 下一轮能不能直接用现有运行环境；不能时，发消息后要先等运行环境准备好。
+  const runtimeReady = ref(false);
   const entering = ref(false);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
@@ -79,6 +83,7 @@ export const useProjectStore = defineStore('project', () => {
     isLive.value = state.is_live;
     running.value = state.running;
     replicationPending.value = state.replication_pending;
+    runtimeReady.value = state.runtime_ready;
     // 顺手校准「哪个会话是活跃的」。反过来那一支同样重要：我们记着的那个会话被读出来是已结束
     // 的，说明它在别处（另一个标签页、后端回收）被归档了，这里必须忘掉它，否则「返回当前会话」
     // 会指向一个只读的归档。
@@ -102,6 +107,7 @@ export const useProjectStore = defineStore('project', () => {
     uiEventSeq.value = 0;
     running.value = false;
     replicationPending.value = false;
+    runtimeReady.value = false;
     entering.value = false;
     status.value = 'idle';
     historyCursor.value = null;
@@ -498,6 +504,26 @@ export const useProjectStore = defineStore('project', () => {
     syncApplyCtx();
     status.value = 'thinking';
 
+    // 经响应式代理改 progress：直接改 assistantMessage 这个原始对象，界面不会跟着变。
+    const liveAssistant = messages.value[messages.value.length - 1];
+    // 本轮开始输出或已经失败后就不再提示：迟到的状态查询不能把提示又盖回去。
+    let preparingOver = false;
+    const showPreparingRuntime = () => {
+      if (!preparingOver) liveAssistant.progress = PREPARING_RUNTIME_TEXT;
+    };
+
+    // 已知没有可用运行环境：这一轮要先准备环境，可能要几十秒，先说清楚在等什么。
+    if (!runtimeReady.value) showPreparingRuntime();
+
+    // 手里的状态可能早已过期（离开半小时回来，运行环境已被回收），所以和发消息并行再问一次。
+    // 只看 runtime_ready，不走 applyState：它会按 running=false 把「正在回复」改回空闲。
+    // 失败不弹窗，最多是少一句提示。
+    getConversation(projectId.value, conversationNumber.value, { globalError: false })
+      .then((state) => {
+        if (!state.runtime_ready) showPreparingRuntime();
+      })
+      .catch(() => undefined);
+
     try {
       const response = await startConversationRun(
         projectId.value,
@@ -505,6 +531,11 @@ export const useProjectStore = defineStore('project', () => {
         { content },
       );
       for await (const event of readSseEvents(response)) {
+        if (!preparingOver) {
+          preparingOver = true;
+          // 开始输出，运行环境已就绪。只清自己设的那句，事件带来的进度留给 applyResult。
+          if (liveAssistant.progress === PREPARING_RUNTIME_TEXT) liveAssistant.progress = '';
+        }
         syncApplyCtx();
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
@@ -518,6 +549,7 @@ export const useProjectStore = defineStore('project', () => {
         assistantMessage.blocks.push({ type: 'text', text: detail });
       }
     } finally {
+      preparingOver = true;
       assistantMessage.progress = '';
       const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
       if (textBlock && !textBlock.text) {

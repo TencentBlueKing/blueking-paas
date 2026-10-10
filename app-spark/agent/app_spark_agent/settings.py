@@ -5,8 +5,10 @@ from __future__ import annotations
 import hmac
 from enum import StrEnum
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from environs import Env, EnvError
+from marshmallow import ValidationError
 from marshmallow.validate import Length, Range
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 
@@ -54,6 +56,26 @@ PORT = env.int("PORT", DEFAULT_AGENT_PORT)
 
 # 用户应用约定端口。拉起时注入 APP_SPARK_AGENT_APP_PORT；不是 8000 也不拒绝启动。
 APP_PORT = env.int("APP_PORT", DEFAULT_APP_PORT)
+
+# 新项目的模板：模型调 init_project 时，workspace 里 pyproject.toml 与 uv.lock 都不存在才按它
+# 写进去（只改项目名），之后它们就是用户项目的一部分，随代码保存和下载。
+APP_TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "app-template"
+
+DEFAULT_PACKAGE_INDEX_URL = "https://mirrors.cloud.tencent.com/pypi/simple"
+
+
+def _validate_package_index_url(value: str) -> None:
+    # 这个地址会被 uv 写进用户仓库里的 uv.lock，也在模型的 shell 环境变量里，带凭据等于泄露。
+    parts = urlsplit(value)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValidationError("must be an http(s) URL")
+    if parts.username is not None or parts.password is not None:
+        raise ValidationError("must not carry credentials")
+
+
+# 用户项目装依赖用的 PyPI 包源，以 UV_DEFAULT_INDEX 交给 uv。模板的 uv.lock 是对着缺省值锁的
+# （make lock-app-template）：换了包源，uv 会认为锁文件过期，新项目首次启动就要联网重新解析。
+PACKAGE_INDEX_URL = env.str("PACKAGE_INDEX_URL", DEFAULT_PACKAGE_INDEX_URL, validate=_validate_package_index_url)
 
 # 空闲秒数从进程启动起算，POST /runs 结束后重置。缺省 1800；<= 0 关闭空闲退出。
 # 从未收到 /runs 也会到期退出。
@@ -130,6 +152,11 @@ FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 # App Framework 一节里的 main:app 与 app_supervisor 里构造的启动命令是一对：那边启的就是这个
 # 导入路径，模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
 #
+# Dependencies 一节列出的起始包与 app-template/pyproject.toml 的依赖是一对：模型以为新项目里
+# 有什么，模板里就得有什么。改模板依赖时两处一起改。uvicorn 那条也和启动命令是一对：启动器
+# 用的是项目环境里的 uvicorn，模型把它删了或改了版本，launch 就不再可靠。init_project 这个名字
+# 与 tools/init_project.py 注册的工具是一对，project_env.NO_PROJECT_DETAIL 里也写着它。
+#
 # TODO：当前仅做调试功能后，后续再调。真出现多套技术栈时把「怎么写应用」抽成可切换的档，
 # 而不是再挂一个指向本包安装目录的 RepoContext。
 INSTRUCTIONS = """
@@ -149,6 +176,7 @@ You are a coding agent working inside the provided workspace.
 - Use file tools to read and edit, and shell tools to run commands;
 - Treat paths as relative to the workspace;
 - Use `read_app_log` to diagnose the running application; it takes no path argument;
+- Use `init_project` to create the Python project, see Dependencies below;
 - NEVER expose credentials, and NEVER intentionally inspect secret files.
 
 ### App Framework
@@ -162,11 +190,55 @@ You are a coding agent working inside the provided workspace.
 - Do NOT align this application with the BlueKing or PaaS application framework in this
   period. A plain FastAPI HTTP app is enough.
 
+### Project Layout
+
+- Keep `main.py` thin: it creates `app`, mounts static files and includes routers. Move routes,
+  schemas and services into their own modules once the app has more than a few endpoints;
+- Keep HTML, CSS and JavaScript in their own files: templates under `templates/`, assets under
+  `static/`. Avoid embedding large blocks of HTML, CSS, or JavaScript in Python string literals;
+
+### Frontend
+
+- Pick ONE rendering style per app: server-rendered pages with `Jinja2Templates`, or a static
+  page in `static/` that calls a JSON API under `/api/` with `fetch`;
+- Define request and response bodies with Pydantic models, and report errors with
+  `HTTPException` and a fitting status code;
+- There is no Node.js and no build step. Write plain HTML, CSS and browser-ready JavaScript, and
+  NEVER add `package.json`, a bundler or a compile step;
+- Load third-party frontend libraries from a CDN, pinned to an exact version. Prefer
+  `https://registry.npmmirror.com/<package>/<version>/files/<path>`, which is fast from mainland
+  China. NEVER use bootcdn.net, bootcss.com, staticfile.org, staticfile.net or polyfill.io.
+
+### Dependencies
+
+- The project's dependencies live in `pyproject.toml` and `uv.lock` at the workspace root. When
+  neither exists, call `init_project` with a short name for the app before writing the first
+  file of the application. Do NOT call it when the user only asks a question;
+- NEVER write `pyproject.toml` or `uv.lock` from scratch and NEVER run `uv init`: only
+  `init_project` creates them with the locked versions the launcher installs offline;
+- A new project starts with exactly: fastapi, uvicorn, jinja2, python-multipart, httpx2;
+- Prefer the standard library and the packages above. Add a package with `uv add <package>` when
+  the user asks for it or the task genuinely needs it, and remove one with `uv remove`;
+- NEVER use pip or add a `requirements.txt`, NEVER edit `uv.lock` by hand, and NEVER touch
+  `.venv`;
+- NEVER remove uvicorn or change its pinned version. The launcher starts the application with it;
+- Run Python through `uv run`, for example `uv run python -c "import jinja2"`, so that it uses
+  the project's environment rather than yours.
+
+### Project Notes
+
+- Keep a short `AGENTS.md` at the workspace root that records the app's layout, rendering style,
+  API prefix and frontend libraries. Write it with the first version of the app and update it
+  whenever any of these change;
+
 ### Launch App
 
 - Once the code can run, use the `launch_app` tool to start or restart the application;
 - ALWAYS launch through `launch_app`. NEVER host a long-running server with the shell, and
   NEVER start the application any other way;
+- After a successful launch, `curl` the entry page, one static asset and every endpoint you
+  added or changed on `127.0.0.1:<port>`, and check the status codes. A running process does not
+  prove its pages and assets resolve;
 - When `launch_app` reports a failure, read the log with `read_app_log`, fix the cause, and
   launch once more;
 - A `starting` result is not a failure. The process is up and may just be slow to warm up, so

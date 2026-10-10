@@ -17,12 +17,12 @@
 """How the workspace application is started: the command, the environment, the log file."""
 
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
 from app_spark_agent import settings
 from app_spark_agent.app_supervisor.process import ProcessSpec
+from app_spark_agent.app_supervisor.project_env import project_python
 from app_spark_agent.app_supervisor.types import APP_PORT_ENV
 
 # 模型被要求把应用导出成这个路径，启动方也只启这一个。settings.INSTRUCTIONS 里写着同一条
@@ -34,11 +34,13 @@ APP_LISTEN_HOST = "0.0.0.0"
 
 
 def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
-    """Describe the uvicorn child that serves the workspace application."""
+    """Describe the uvicorn child that serves the workspace application.
+
+    Runs the project's own interpreter, which sync_project_environment has just built.
+    """
     return ProcessSpec(
-        # 用本进程的 Python，确保跑的是装了 uvicorn 的那个解释器。
         argv=(
-            sys.executable,
+            str(project_python(workspace)),
             "-m",
             "uvicorn",
             APP_IMPORT_PATH,

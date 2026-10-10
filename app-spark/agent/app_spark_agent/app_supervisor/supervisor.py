@@ -32,6 +32,7 @@ from app_spark_agent.app_supervisor.process import (
     http_get_answers,
     tcp_port_is_open,
 )
+from app_spark_agent.app_supervisor.project_env import sync_project_environment
 from app_spark_agent.app_supervisor.types import (
     CRASH_RETRY_INTERVAL_SECONDS,
     CRASH_RETRY_LIMIT,
@@ -210,8 +211,15 @@ class AppSupervisor:
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until it answers, or fail if it exits first."""
 
-        # 每次重新构造 spec：两次 launch 之间端口和环境都可能已经变了。
-        self._process.start(build_app_spec(self.workspace, self.port))
+        # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
+        # 多少时间，不值得为跳过它去自己判断锁文件变没变。
+        await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
+
+        spec = build_app_spec(self.workspace, self.port)
+        try:
+            self._process.start(spec)
+        except OSError as exc:
+            raise AppLaunchFailed(f"The application process could not be started: {exc}") from exc
 
         # spawn 成功就算 launch 过。not_started 从此不再回来：之后端口空着的意思是崩了，不是
         # 没拉过，而这两者的处置不同。

@@ -8,9 +8,10 @@ HTTP -- which is why this is the only place where "the summary survived the next
 One file per scenario, and one scenario per file: a live turn costs a real model call, so each
 file tells a single connected story rather than a handful of independent cases.
 
-They are marked ``live`` and need an API key::
+They are marked ``live`` and need an API key. pyproject.toml keeps this directory out of every
+default run, so ``-m live`` alone collects nothing; name the directory instead::
 
-    uv run pytest -m live -s
+    uv run pytest tests/e2e -s
 
 ``-s`` is not optional in practice. Each call narrates itself through
 :mod:`tests.support.console`, so the console shows the request, the tool calls, and the model's

@@ -965,6 +965,10 @@ msgstr ""
 msgid "获取可用服务方案失败"
 msgstr "get available service plan failed"
 
+#: paasng/accessories/servicehub/views.py:155
+msgid "当前模块不支持使用该增强服务"
+msgstr "The current module is not allowed to use this add-on service"
+
 #: paasng/accessories/servicehub/views.py:580
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"

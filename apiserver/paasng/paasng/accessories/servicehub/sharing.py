@@ -29,6 +29,7 @@ from paasng.accessories.servicehub.manager import (
     get_db_properties,
     get_db_properties_by_service_type,
     mixed_service_mgr,
+    validate_not_disallowed,
 )
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
@@ -62,11 +63,13 @@ class ServiceSharingManager:
         :param ref_module: referenced module that holds the REAL service binding relationship.
         :raises ReferencedAttachmentNotFound: when referenced relationship not found
         :raises SharedAttachmentAlreadyExists: when shared attachment already exists
+        :raises ServiceDisallowedError: when the module is disallowed from using the service
         """
         if ref_module == self.module:
             raise RuntimeError("module can not share from itself")
 
         DuplicatedBindingValidator(self.module, ServiceBindingType.SHARING).validate(service)
+        validate_not_disallowed(service, self.module)
 
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=[self.application.pk])
         try:

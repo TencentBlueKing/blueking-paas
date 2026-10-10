@@ -24,11 +24,15 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from rest_framework import status
 
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.policy import ServiceBindingPrecedencePolicyDTO
+from paasng.accessories.servicehub.constants import ServiceUsage
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
-from paasng.accessories.services.models import Service, ServiceCategory
+from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 
 pytestmark = pytest.mark.django_db
@@ -116,8 +120,8 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         )
         service2_dict = vars(service2)
         service2_dict["category"] = G(ServiceCategory).id
-        mock_get_or_404.side_effect = (
-            lambda service_id: LocalServiceObj.from_db_object(service1)
+        mock_get_or_404.side_effect = lambda service_id: (
+            LocalServiceObj.from_db_object(service1)
             if service_id == str(service1.uuid)
             else RemoteServiceObj.from_data(service2_dict)
         )
@@ -181,3 +185,27 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
 
         assert response.status_code == 200
         assert response.data == 4
+
+
+def test_disallowed_service(api_client, bk_app, bk_module):
+    """被策略禁止的增强服务，不出现在未启用列表中，且无法通过接口绑定"""
+    service = G(Service, name="redis", category=G(ServiceCategory), logo_b64="dummy", is_visible=True)
+    plan = G(Plan, name="default", service=service)
+    service_obj = mixed_service_mgr.get(service.uuid)
+    SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+        [
+            ServiceBindingPrecedencePolicyDTO(
+                matcher={"usage_in": [ServiceUsage.AI_AGENT.value]}, plans=[], priority=1
+            ),
+            ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[str(plan.uuid)], priority=0),
+        ]
+    )
+    bk_app.is_ai_agent_app = True
+    bk_app.save(update_fields=["is_ai_agent_app"])
+
+    response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/")
+    assert service_obj.uuid not in [svc["uuid"] for svc in response.data["unbound"]]
+
+    data = {"code": bk_app.code, "module_name": bk_module.name, "service_id": service_obj.uuid, "plan_id": plan.uuid}
+    response = api_client.post("/api/services/service-attachments/", data=data)
+    assert response.json()["code"] == "CANNOT_BIND_SERVICE"

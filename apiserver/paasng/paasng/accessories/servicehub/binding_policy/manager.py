@@ -145,7 +145,8 @@ class SvcBindingPolicyManager:
         ServiceAllocationPolicy.objects.set_type_rule_based(self.service, self.tenant_id)
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
         for config in policies:
-            type_, data = self._to_policy_type_data(config.plans, config.env_plans)
+            # 非兜底规则允许不分配方案，表示命中该规则的模块不允许使用该增强服务
+            type_, data = self._to_policy_type_data(config.plans, config.env_plans, allow_empty=bool(config.matcher))
             ServiceBindingPrecedencePolicy.objects.create(
                 service_id=self.service.uuid,
                 service_type=get_service_type(self.service),
@@ -180,15 +181,19 @@ class SvcBindingPolicyManager:
             return None
 
     def _to_policy_type_data(
-        self, plans: list[str] | None, env_plans: dict[str, list[str]] | None
+        self, plans: list[str] | None, env_plans: dict[str, list[str]] | None, allow_empty: bool = False
     ) -> tuple[str, dict[str, Any]]:
         """Convert the given plans and env_plans to a policy type and data dict for saving.
 
+        :param allow_empty: Whether to allow both plans and env_plans to be empty, an empty
+            static policy will be saved in this case.
         :return: (policy_type, policy_data)
         """
         if plans and env_plans:
             raise ValueError("Cannot set both plans and env_plans at the same time.")
         elif not plans and not env_plans:
+            if allow_empty:
+                return ServiceBindingPolicyType.STATIC.value, {"plan_ids": []}
             raise ValueError("Must provide either plans or env_plans.")
 
         data: dict[str, Any]

@@ -2967,6 +2967,8 @@ export default {
   方案: 'Plan',
   方案信息: 'Plan information',
   '方案（预发布环境）': 'Plan (Stag Env)',
+  '不选择方案表示命中该规则的应用无法使用此服务': 'Leave plans empty to disallow matched applications from using this service',
+  '不可使用': 'Unavailable',
   '方案（生产环境）': 'Plan (Prod Env)',
   '获取增强服务配置信息出错，请联系管理员。': 'Error retrieving enhanced service configuration information, please contact the administrator.',
   租户模式: 'Tenant Mode',

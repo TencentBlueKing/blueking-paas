@@ -32,9 +32,15 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
         plans_exists = bool(attrs.get("plans", None))
         env_plans_exists = bool(attrs.get("env_plans", None))
 
+        if self._allow_empty_plans(attrs) and not plans_exists and not env_plans_exists:
+            return attrs
         if plans_exists == env_plans_exists:
             raise serializers.ValidationError("Must provide either plans or env_plans, but not both.")
         return attrs
+
+    def _allow_empty_plans(self, attrs) -> bool:
+        """是否允许不分配任何方案（表示不允许使用该增强服务）"""
+        return False
 
 
 class AllocationPolicySLZ(BaseAllocationPolicySLZ):
@@ -59,6 +65,10 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
             if not val_list:
                 raise serializers.ValidationError(f"Value list for '{key}' cannot be empty.")
         return value
+
+    def _allow_empty_plans(self, attrs) -> bool:
+        # 仅非兜底规则允许不分配方案，兜底规则必须分配
+        return bool(attrs.get("matcher"))
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):

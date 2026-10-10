@@ -123,6 +123,24 @@ class PlanSelector:
         policy_obj = binding_policy_factory(policy.type, policy.data)
         return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
 
+    def is_disallowed(self, service: ServiceObj, module: Module) -> bool:
+        """Check if the module is disallowed from using the service, which means the matched
+        precedence policy of any env is configured with empty plans.
+        """
+        if (
+            ServiceAllocationPolicy.objects.get_type(service, module.tenant_id)
+            != ServiceAllocationPolicyType.RULE_BASED.value
+        ):
+            return False
+
+        for env in module.envs.all():
+            try:
+                if not self._list_rule_based_policies(service, env):
+                    return True
+            except ValueError:
+                continue
+        return False
+
     def _list_rule_based_policies(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """List the plans based on the ServiceBindingPrecedencePolicy.
 

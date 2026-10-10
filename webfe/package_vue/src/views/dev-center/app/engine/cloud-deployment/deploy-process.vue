@@ -287,7 +287,6 @@
                             style="width: 150px"
                             searchable
                             ext-cls="form-style-cls"
-                            @change="handleChange($event, 'stag')"
                           >
                             <bk-option
                               v-for="option in quotaOptions('stag')"
@@ -468,7 +467,6 @@
                             style="width: 150px"
                             searchable
                             ext-cls="form-style-cls"
-                            @change="handleChange($event, 'prod')"
                           >
                             <bk-option
                               v-for="option in quotaOptions('prod')"
@@ -1161,8 +1159,6 @@ export default {
       tagInputIndex: 0,
       allowMultipleImage: false,
       allQuotaList: [],
-      stagQuotaData: {},
-      prodQuotaData: {},
       isEditPopup: false,
       serviceProcess: {},
       moduleAccessAddress: '',
@@ -1234,6 +1230,14 @@ export default {
     // 只读模式展示的启动命令
     readonlyStartupCommand() {
       return this.formData?.proc_command;
+    },
+    // 预发布环境当前选中方案对应的资源配额
+    stagQuotaData() {
+      return this.quotaOptions('stag').find(v => v.name === this.formData?.env_overlay?.stag?.plan_name) || {};
+    },
+    // 生产环境当前选中方案对应的资源配额
+    prodQuotaData() {
+      return this.quotaOptions('prod').find(v => v.name === this.formData?.env_overlay?.prod?.plan_name) || {};
     },
   },
   watch: {
@@ -1565,10 +1569,6 @@ export default {
 
         // 资源配额数据
         this.allQuotaList = res;
-        // 当前stag资源配额
-        this.handleChange(this.formData.env_overlay?.stag?.plan_name || 'default', 'stag');
-        // 当前prod资源配额
-        this.handleChange(this.formData.env_overlay?.prod?.plan_name || 'default', 'prod');
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -1701,18 +1701,6 @@ export default {
       this.$refs.userGuideRef.showSideslider();
     },
 
-    // 资源配额方案change回调
-    handleChange(name, env) {
-      const option = this.quotaOptions(env).find(v => v.name === name) || {
-        limit: { cpu: '--', memory: '--' },
-        request: { cpu: '--', memory: '--' },
-      };
-      if (env === 'stag') {
-        this.stagQuotaData = option;
-      } else {
-        this.prodQuotaData = option;
-      }
-    },
     // 设置对应探测数据
     changeProbeFormData(config) {
       this.formData.probes[config.key] = config.data;

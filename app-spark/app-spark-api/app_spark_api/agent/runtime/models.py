@@ -56,12 +56,16 @@ class E2BSandboxRecord(TimestampedModel):
 
     The record is written *before* its sandbox exists. Claiming the unique active IDs first means
     only the request that won them ever asks E2B for a sandbox, so a lost race costs nothing to
-    clean up. A record therefore moves through three states:
+    clean up. A record therefore moves through four states:
 
     * claimed -- active IDs set, ``sandbox_id`` still empty while E2B creates the sandbox;
-    * bound -- ``sandbox_id`` and the connection metadata filled in, the sandbox is serving;
+    * bound -- ``sandbox_id`` and the connection metadata filled in, the Agent is being started;
+    * started -- ``agent_pid`` filled in once the Agent answered /health, the sandbox is serving;
     * released -- active IDs cleared and ``stopped_at`` set. A claim released before it was ever
       bound is the history of a provisioning attempt that produced no sandbox.
+
+    Claimed and bound are both "in progress" and are never handed out: other requests see the
+    Project as busy until the request doing the work finishes, or is judged dead and reclaimed.
 
     Original IDs retain ownership history after termination. Nullable unique active IDs enforce
     one sandbox per conversation and project while it runs, including on MySQL, where partial
@@ -89,9 +93,16 @@ class E2BSandboxRecord(TimestampedModel):
     sandbox_headers = EncryptField(verbose_name="沙箱连接头", default="{}")
     traffic_access_token = EncryptField(verbose_name="端口代理访问令牌", null=True)
 
+    # Process ID of the Agent Runtime in the sandbox, written only once it has answered /health.
+    # Its presence is what marks the sandbox as ready to hand out: a bound record without it is
+    # still starting its Agent, or was left behind by a worker that died doing so. The pid itself
+    # is what an orderly stop signals, so the Agent gets to push its workspace first.
+    agent_pid = models.PositiveIntegerField(verbose_name="Agent 进程 ID", null=True)
+
     # Lifecycle history remains after active ownership has been released. Supported reasons:
     # ``terminated`` (stopped on request), ``expired`` (found gone), ``failed`` (provisioning
-    # raised), ``abandoned`` (a claim whose worker never came back to bind it).
+    # raised), ``abandoned`` (the worker never came back: the claim was never bound, or it was
+    # bound but the Agent was never recorded as started).
     stopped_at = models.DateTimeField(verbose_name="停止或失效时间", null=True, default=None)
     stop_reason = models.CharField(verbose_name="停止原因", max_length=32, blank=True, default="")
 
@@ -104,3 +115,8 @@ class E2BSandboxRecord(TimestampedModel):
     def is_bound(self) -> bool:
         """Whether E2B has created the sandbox this record claimed."""
         return self.sandbox_id is not None
+
+    @property
+    def is_started(self) -> bool:
+        """Whether the sandbox's Agent Runtime has answered /health, so it may be handed out."""
+        return self.is_bound and self.agent_pid is not None

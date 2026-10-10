@@ -49,30 +49,43 @@ async def _stream_body(response: StreamingHttpResponse) -> bytes:
     return b"".join([chunk async for chunk in stream])
 
 
+async def _run_turn(client, number: int, content: str) -> bytes:
+    response = await client.post(
+        f"{CONVERSATIONS_URL}{number}/runs/",
+        data={"content": content},
+        content_type="application/json",
+    )
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert response.headers["content-type"] == "text/event-stream"
+    return await _stream_body(response)
+
+
 async def test_chat_turn_runs_through_e2b_provider(aapi_client, project, e2b_provider):
-    """The API creates an E2B sandbox and streams a real fake-model chat turn."""
+    """The API starts an Agent in the sandbox, then streams two fake-model turns on it."""
     logger.info("Creating a conversation through the API")
     state = await _create_conversation(aapi_client)
     conversation_id = state["conversation_id"]
     sandbox = await e2b_provider.get_sandbox(conversation_id)
     assert sandbox is not None
-    assert await E2BSandboxRecord.objects.active_for_conversation(conversation_id).aexists()
+    # 会话接口返回时 Agent 必须已经起来：pid 是启动完成的标记，没有它就不能把沙箱交出去。
+    record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
+    assert record is not None
+    assert record.agent_pid is not None
     assert state["model"] == "fake:write-file"
 
     logger.info("Posting chat turn and collecting AG-UI events")
-    response = await aapi_client.post(
-        f"{CONVERSATIONS_URL}{state['number']}/runs/",
-        data={"content": "write an API test note"},
-        content_type="application/json",
-    )
-    assert response.status_code == HTTPStatus.OK, response.content
-    assert response.headers["content-type"] == "text/event-stream"
-    body = await _stream_body(response)
+    body = await _run_turn(aapi_client, state["number"], "write an API test note")
     assert b"RUN_STARTED" in body
     assert b"RUN_FINISHED" in body
     assert b"TOOL_CALL_RESULT" in body
     assert "write an API test note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-1.md")
-    logger.info("Chat turn finished and the sandbox workspace contains the note")
+
+    # 第二轮还是这个已经启动的 Agent。历史留在 Runtime 里，所以它会另写一个文件，而不是改第一份。
+    logger.info("Posting a second turn on the same started Agent")
+    second = await _run_turn(aapi_client, state["number"], "write a second API test note")
+    assert b"RUN_FINISHED" in second
+    assert "write a second API test note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-2.md")
+    logger.info("Both turns finished and the sandbox workspace contains both notes")
 
 
 async def test_preview_origin_proxies_to_fixed_e2b_port(aapi_client, project, e2b_provider):

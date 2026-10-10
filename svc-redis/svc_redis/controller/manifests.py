@@ -19,7 +19,6 @@ from abc import ABC, abstractmethod
 from typing import List, Union
 
 from django.conf import settings
-from kubernetes.utils.quantity import parse_quantity
 
 from svc_redis.vendor.redis_crd import crd
 from svc_redis.vendor.redis_crd.constants import (
@@ -32,6 +31,7 @@ from svc_redis.vendor.redis_crd.constants import (
 )
 
 from .entities import RedisPlanConfig
+from .resource_presets import resolve_plan_resources
 
 
 class ManifestConstructor(ABC):
@@ -90,30 +90,9 @@ class ResourceManifestConstructor(ManifestConstructor):
     def apply_to(
         self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
-        memory_limit = plan_config.memory_size
-        model_res.spec.kubernetesConfig.resources = self._get_resources(memory_limit)
-
-    def _get_resources(self, memory_limit: str) -> crd.ResourceRequirements:
-        """根据内存限制自动计算合理的资源请求和限制
-        规则：内存请求为限制的一半，每 GB 内存配 0.5c CPU Limits, 0.25c CPU Requests
-
-        :param memory_limit: 内存限制，输入一般为 xGi
-        """
-        # 安全解析带单位的内存值（返回字节数）
-        mem_bytes = parse_quantity(memory_limit)
-
-        # 转换为 GB 基数
-        mem_gb = mem_bytes / (1024**3)
-
-        return crd.ResourceRequirements(
-            requests={
-                "cpu": f"{mem_gb * 250}m",
-                "memory": f"{mem_gb / 2}Gi",
-            },
-            limits={
-                "cpu": f"{mem_gb * 500}m",
-                "memory": memory_limit,
-            },
+        resolved = resolve_plan_resources(plan_config)
+        model_res.spec.kubernetesConfig.resources = crd.ResourceRequirements(
+            requests=resolved.requests, limits=resolved.limits
         )
 
 
@@ -134,6 +113,20 @@ class PersistentStorageManifestConstructor(ManifestConstructor):
                 )
             )
             model_res.spec.storage = storage_spec
+
+
+class DisableAdditionalServiceConstructor(ManifestConstructor):
+    """禁用单节点 Redis 的 additional Service，减少集群 Service 数量。"""
+
+    def apply_to(
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
+    ):
+        # 目前 redis-operator.opstree 仅支持 kind: Redis 的 svc 削减
+        if plan_config.type != RedisType.REDIS.value:
+            return
+        model_res.spec.kubernetesConfig.service = crd.KubernetesServiceConfig(
+            additional=crd.AdditionalServiceConfig(enabled=False)
+        )
 
 
 def create_redis_base_resource(redis_type: str, name: str) -> Union[crd.RedisResource, crd.RedisReplicationResource]:
@@ -167,6 +160,7 @@ def get_redis_resource(plan_config: RedisPlanConfig) -> Union["crd.RedisResource
         MonitorManifestConstructor(),
         ResourceManifestConstructor(),
         PersistentStorageManifestConstructor(),
+        DisableAdditionalServiceConstructor(),
     ]
     obj = create_redis_base_resource(plan_config.type, generate_redis_name())
     for builder in builders:

@@ -353,7 +353,7 @@ REPO_SERVER = settings.get(
 # --------
 
 ## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
-## local_process 在本机 spawn agent；e2b 目前只管理沙箱，尚未在沙箱内启动 Agent。
+## local_process 在本机 spawn agent；e2b 为每个会话创建一个沙箱，并在沙箱内启动 Agent。
 AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 
 ## 上述驱动方式各自的配置，字段以对应的 config 类为准。
@@ -381,18 +381,31 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   ## 必填。E2B 兼容服务的 API 凭据和管理 API 地址，不使用 SDK 的公共默认值。
 ##   api_key: ''
 ##   api_url: https://example.com/e2b
+##   ## 必填。本服务的对外地址，沙箱内的 agent 用它回写会话状态。
+##   callback_base_url: https://app-spark.example.com
 ##   ## 可选。API 未返回 sandbox_domain 时的端口域名后缀。
 ##   domain: example.com
 ##   ## 可选。沙箱模板，默认 e2b-python。
 ##   template: e2b-python
 ##   ## 可选。创建沙箱时设置的 E2B 存活期限（秒），默认 3600；活动和重连不会自动续期。
 ##   timeout_seconds: 3600
-##   ## 可选。将来 Agent Runtime 监听的沙箱端口，默认 8000。
+##   ## 可选。Agent Runtime 监听的沙箱端口，默认 8000。
 ##   runtime_port: 8000
 ##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。
 ##   preview_port: 9000
 ##   ## 可选。暴露端口代理使用的协议，默认 https。
 ##   port_scheme: https
+##   ## 可选。沙箱内 agent 的 workspace 与状态目录，两者不能互相包含。
+##   workspace_dir: /data/workspace
+##   state_dir: /data/state
+##   ## 可选。在沙箱内启动 agent 的命令，默认 python -m app_spark_agent。
+##   agent_command: python -m app_spark_agent
+##   ## 可选。agent 输出日志在沙箱内的路径，启动失败时会截取末尾返回。
+##   agent_log_path: /tmp/app-spark-agent.log
+##   ## 可选。等待 agent 通过 /health 健康检查的超时秒数。
+##   startup_timeout_seconds: 60
+##   ## 其余要透给 agent 的 APP_SPARK_AGENT_* 变量，规则与 local_process 相同。
+##   extra_env: {}
 AGENT_RUNTIME_PROVIDER_CONFIG = settings.get("AGENT_RUNTIME_PROVIDER_CONFIG", {})
 
 ## Agent Runtime 调模型走哪条路，可选值见 agent.runtime.constants.ModelSource：

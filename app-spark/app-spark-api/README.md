@@ -137,11 +137,15 @@ cd ../agent && uv sync
 设成 `fake:write-file`——这是 agent 内置的确定性假模型，不发起任何网络请求，
 细节见 [agent/README.md](../agent/README.md) 的「假模型」一节。
 
-`e2b` provider 创建、重连和销毁沙箱，并在数据库保留归属与停止记录。Runtime 和预览地址
-分别来自 `sandbox.get_host(runtime_port)` 与 `sandbox.get_host(preview_port)`；预览端口固定为
-9000。生产 provider 尚不会安装或启动 Agent，因此默认模板下还不能直接完成会话。
-`timeout_seconds` 默认 3600 秒，是创建时设置的 E2B 沙箱存活期限；活动和本 provider 的重连不会自动续期。
-需要连续使用超过一小时的部署，应按 E2B 服务端允许的范围调大该值；要让长会话持续可用，还需在用户活动时续期。
+`e2b` provider 为每个会话创建一个沙箱，通过 envd 执行 `agent_command` 启动模板里预装的 Agent，
+等 `/health` 通过后才记下进程号并返回；启动失败时带上 Agent 日志末尾报错，并销毁沙箱。Agent 的
+配置全部经这次启动的环境变量注入，不继承本服务的环境；状态回写地址是 `callback_base_url` 加上
+保留 FORCE_SCRIPT_NAME 前缀的回写路径，因为沙箱经 Ingress 回调本服务。
+
+已建好沙箱但还没有进程号的记录处于启动中，不会交给任何请求：其他请求看到项目忙，`peek` 和预览
+看到没有 Runtime。启动它的 worker 若死在半路，超过 `startup_timeout_seconds` 加 60 秒后，下一个
+请求会杀掉该沙箱并重建。Runtime 和预览分别走 `get_host(runtime_port)`、`get_host(preview_port)`。
+沙箱存活期 `timeout_seconds` 默认 3600 秒，目前不会随使用续期。
 
 ```yaml
 AGENT_RUNTIME_PROVIDER: e2b
@@ -149,6 +153,10 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   ## 必填：自建 E2B 服务的凭据与管理 API 地址
   api_key: <your-api-key>
   api_url: https://example.com/e2b
+  ## 必填：本服务的对外地址，沙箱内的 Agent 用它回写会话状态
+  callback_base_url: https://app-spark.example.com
+  ## 可选：预装了 Agent 的沙箱模板
+  # template: <agent-template>
   ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
   # domain: sandbox.example.com
 ```
@@ -159,10 +167,9 @@ Runtime 客户端和预览代理会从 provider 获取并附加所需请求头�
 TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
 
 有有效 E2B 配置时，运行
-`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`。
-测试会上传并安装本地构建的 Agent wheel，验证沙箱生命周期、聊天和预览；没有有效配置时跳过。
-真实 E2B 测试固定使用 300 秒的沙箱存活期限，并在测试结束时主动销毁沙箱，避免沿用生产默认值。
-当前测试不验证沙箱内的 Git 或仓库持久化。
+`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`，
+没有配置时跳过。默认模板里没有 Agent，测试先往沙箱里装本地构建的 wheel，再走生产的启动路径；
+沙箱存活期固定 300 秒，结束时主动销毁。不验证沙箱内的 Git 持久化和状态回写。
 
 ### 会话状态的权威副本
 

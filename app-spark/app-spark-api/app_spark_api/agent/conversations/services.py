@@ -611,11 +611,7 @@ async def _renew_runtime_during_run(conversation_id: UUID) -> None:
 
 
 async def _extend_runtime_lifetime(conversation_id: UUID) -> None:
-    """Count a turn as activity for the conversation's Runtime, never failing.
-
-    Called while the event stream is open, so the provider must renew without the database;
-    the e2b provider renews the sandbox this worker served the turn from.
-    """
+    """Count a turn as activity for the conversation's Runtime, never failing."""
     # shield：客户端断开会取消这个流，续期不能被一起取消。失败只记告警，这一轮本身不受影响。
     try:
         await asyncio.shield(get_agent_runtime_provider().extend_lifetime(str(conversation_id)))

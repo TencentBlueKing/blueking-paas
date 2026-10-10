@@ -289,10 +289,11 @@ def agent_health(monkeypatch) -> SimpleNamespace:
             running=state.running,
         )
 
-    monkeypatch.setattr(e2b_module, "probe_agent_health", probe)
-    monkeypatch.setattr(e2b_module, "read_agent_health", read)
-    monkeypatch.setattr(e2b_module, "HEALTH_POLL_INTERVAL_SECONDS", 0.01)
-    monkeypatch.setattr(e2b_module, "REUSE_HEALTH_RETRY_INTERVAL_SECONDS", 0.01)
+    # 探测函数和间隔在 health / constants 上按名字查找，补丁要打在使用处。
+    monkeypatch.setattr(e2b_module.health, "probe_agent_health", probe)
+    monkeypatch.setattr(e2b_module.health, "read_agent_health", read)
+    monkeypatch.setattr(e2b_module.constants, "HEALTH_POLL_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(e2b_module.constants, "REUSE_HEALTH_RETRY_INTERVAL_SECONDS", 0.01)
     return state
 
 
@@ -822,7 +823,7 @@ async def test_a_stuck_control_plane_holds_a_turn_up_only_briefly(e2b, provider,
     """续期挡在一轮的开头和结尾，控制面卡住时不能让这一轮陪着等上 SDK 默认的 60 秒。"""
     project_id, conversation_id = ids()
     first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
-    monkeypatch.setattr(e2b_module, "RENEW_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(e2b_module.constants, "RENEW_TIMEOUT_SECONDS", 0.05)
     e2b.renewal_hangs = True
 
     assert await asyncio.wait_for(provider.ensure(project_id=project_id, conversation_id=conversation_id), 2) == first
@@ -956,7 +957,7 @@ async def test_terminating_lets_the_agent_push_before_the_sandbox_goes(e2b, prov
 async def test_an_agent_that_ignores_sigterm_is_killed_after_the_grace_period(e2b, provider, monkeypatch, caplog):
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
-    monkeypatch.setattr(e2b_module, "STOP_GRACE_SECONDS", 0.05)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.05)
     e2b.sandboxes["sbx-1"].commands.stop_hangs = True
 
     await asyncio.wait_for(provider.terminate(conversation_id), timeout=5)
@@ -1001,7 +1002,7 @@ async def test_reconnecting_counts_against_the_grace_period_of_a_close(e2b, prov
     """结束会话要在 STOP_GRACE_SECONDS 左右返回，重连用掉的时间从等 Agent 的时间里扣。"""
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
-    monkeypatch.setattr(e2b_module, "STOP_GRACE_SECONDS", 0.3)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.3)
     e2b.connect_delay = 0.2
     e2b.sandboxes["sbx-1"].commands.stop_hangs = True
 
@@ -1015,7 +1016,7 @@ async def test_reconnecting_counts_against_the_grace_period_of_a_close(e2b, prov
 async def test_a_control_plane_that_never_answers_does_not_hold_a_close_forever(e2b, provider, monkeypatch):
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
-    monkeypatch.setattr(e2b_module, "STOP_GRACE_SECONDS", 0.05)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.05)
     e2b.connect_delay = 5
 
     with pytest.raises(AgentProvisionError, match="did not say within"):

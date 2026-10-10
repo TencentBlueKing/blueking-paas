@@ -69,11 +69,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_UI_EVENT_PAGE_SIZE = 200
 MAX_UI_EVENT_PAGE_SIZE = 1_000
 
-# How often a running turn renews its Runtime. A sandbox is renewed to its idle timeout plus 60
-# seconds, so a turn longer than that would otherwise be reclaimed mid-turn; half that margin
-# keeps one missed renewal survivable at any idle timeout.
-RUN_RENEWAL_INTERVAL_SECONDS = 30
-
 _CLOSED_MESSAGE = "Conversation {id} has been closed and cannot be advanced"
 
 
@@ -580,9 +575,6 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
     be reported as an HTTP error. AG-UI has its own way to say a run ended badly, and a client
     that receives it can show something better than a stream that simply stopped.
     """
-    # 一轮进行中也要续：只在开头续一次的话，跑得比空闲超时还长的一轮会被 E2B 中途回收。不能按
-    # 收到的数据块来续，长时间的工具调用期间流里可能一个字节都没有。
-    renewing = asyncio.create_task(_renew_runtime_during_run(conversation_id))
     try:
         async for chunk in run.aiter_bytes():
             yield chunk
@@ -597,16 +589,8 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
             }
         )
     finally:
-        renewing.cancel()
-        # 一轮结束时再续一次：Agent 的空闲计时从一轮结束起算，沙箱要从这一刻起比它多活 60 秒。
-        # 流断了、客户端走了也照样续。
-        await _extend_runtime_lifetime(conversation_id)
-
-
-async def _renew_runtime_during_run(conversation_id: UUID) -> None:
-    """Renew the conversation's Runtime every RUN_RENEWAL_INTERVAL_SECONDS until cancelled."""
-    while True:
-        await asyncio.sleep(RUN_RENEWAL_INTERVAL_SECONDS)
+        # 一轮开始时 ensure 已经把存活期续成空闲超时。这里再续一次，从这一轮结束起再算同一个秒数。
+        # 流断了、客户端走了也照样续。进行中不再续，一轮按不超过空闲超时来对待。
         await _extend_runtime_lifetime(conversation_id)
 
 

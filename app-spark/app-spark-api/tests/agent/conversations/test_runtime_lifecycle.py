@@ -187,19 +187,6 @@ async def test_the_end_of_a_turn_renews_its_runtime(provider, conversation):
     assert provider.extended == [str(conversation.id)]
 
 
-async def test_a_long_turn_keeps_renewing_its_runtime_while_it_runs(provider, conversation, monkeypatch):
-    """跑得比空闲超时还长的一轮，中途要一直续，哪怕 Agent 很久不吐一个字节。"""
-    monkeypatch.setattr(services, "RUN_RENEWAL_INTERVAL_SECONDS", 0.01)
-
-    await collect_stream(FakeRun([b"data: {}\n\n"], pause=0.1), conversation)
-
-    # Several renewals while the Agent stayed silent, plus the one at the end of the turn.
-    assert len(provider.extended) >= 3
-    ended_with = len(provider.extended)
-    await asyncio.sleep(0.05)
-    assert len(provider.extended) == ended_with, "renewals must stop once the turn has ended"
-
-
 async def test_a_turn_that_broke_mid_stream_still_renews_its_runtime(provider, conversation):
     chunks = await collect_stream(FakeRun([b"data: {}\n\n"], error=RuntimeError("reset")), conversation)
 

@@ -115,7 +115,7 @@ class AgentRuntimeProvider(abc.ABC):
     async def extend_lifetime(self, conversation_id: str) -> None:  # noqa: B027
         """Push back when the Runtime serving conversation_id is reclaimed for idleness.
 
-        Called while a turn is running and again when it ends. Only turns count as activity.
+        Called at the start of a turn and again when it ends. Only turns count as activity.
         Never raises: a failed renewal must not fail the turn. A provider whose Runtimes have
         no deadline of their own has nothing to do here.
 

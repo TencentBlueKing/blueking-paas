@@ -771,11 +771,11 @@ async def test_terminating_a_sandbox_still_starting_its_agent_stops_it(e2b, prov
 
 # --- 续期：只有对话算活动 ----------------------------------------------------------------------
 
-SANDBOX_TIMEOUT = CONFIG.idle_timeout_seconds + 60
+SANDBOX_TIMEOUT = CONFIG.idle_timeout_seconds
 
 
 async def test_a_sandbox_lives_one_idle_timeout_past_each_turn(e2b, provider):
-    """创建时和每轮开始、结束时都续成「空闲超时 + 60 秒」；Agent 也按同一个空闲超时退出。"""
+    """创建时和每轮开始、结束时都续成空闲超时；Agent 也按同一个秒数退出。"""
     project_id, conversation_id = ids()
 
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)

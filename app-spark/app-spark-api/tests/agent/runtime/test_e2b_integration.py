@@ -293,10 +293,10 @@ async def test_a_crashed_agent_is_replaced_by_a_new_sandbox(e2b_provider: E2BPro
     os.environ.get("APP_SPARK_E2B_IDLE_LIVE") != "1",
     reason="waits three minutes for a real idle reclamation; set APP_SPARK_E2B_IDLE_LIVE=1",
 )
-async def test_an_idle_sandbox_is_reclaimed_one_margin_after_its_agent_exits(
+async def test_an_idle_sandbox_is_reclaimed_when_its_idle_timeout_elapses(
     e2b_config: E2BConfig, agent_bundle: AgentBundle
 ):
-    """空闲超时设为 120 秒时，一轮结束后 180 秒内沙箱被回收，但不会早于 Agent 的空闲退出。"""
+    """空闲超时设为 120 秒时，一轮结束后沙箱在这个秒数左右被回收。"""
     idle_timeout = 120
     provider = BootstrappedE2BProvider(attrs.evolve(e2b_config, idle_timeout_seconds=idle_timeout), agent_bundle)
     conversation_id = str(uuid4())
@@ -306,15 +306,13 @@ async def test_an_idle_sandbox_is_reclaimed_one_margin_after_its_agent_exits(
         assert sandbox is not None
 
         # The Agent never ran a turn, so its idle timer started with its process, just before this;
-        # the renewal is the one a turn's end makes, from which the margin is counted.
+        # the renewal is the one a turn's end makes, and the sandbox deadline is that same interval.
         await provider.extend_lifetime(conversation_id)
         turn_ended = time.monotonic()
 
         while await check_sandbox_running(sandbox):
             elapsed = time.monotonic() - turn_ended
-            assert elapsed < idle_timeout + 60 + IDLE_RECLAIM_SLACK_SECONDS, (
-                "the idle sandbox outlived its idle timeout plus the margin"
-            )
+            assert elapsed < idle_timeout + IDLE_RECLAIM_SLACK_SECONDS, "the idle sandbox outlived its idle timeout"
             await asyncio.sleep(10)
 
         # Gone before the Agent could idle out would mean it was not given the chance to push.

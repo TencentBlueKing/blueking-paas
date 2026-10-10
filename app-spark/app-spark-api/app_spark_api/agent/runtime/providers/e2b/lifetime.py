@@ -57,7 +57,7 @@ class SandboxLifetime:
         await self.renew(sandbox_id)
 
     async def renew(self, sandbox_id: str | None) -> None:
-        """Set this sandbox to expire sandbox_timeout_seconds from now, best effort.
+        """Set this sandbox to expire idle_timeout_seconds from now, best effort.
 
         :param sandbox_id: Sandbox to renew. Nothing is done when the claim has not been bound yet.
         """
@@ -71,7 +71,7 @@ class SandboxLifetime:
             async with asyncio.timeout(constants.RENEW_TIMEOUT_SECONDS):
                 await AsyncSandbox.set_timeout(
                     sandbox_id,
-                    self.config.sandbox_timeout_seconds,
+                    self.config.idle_timeout_seconds,
                     api_key=self.config.api_key,
                     api_url=self.config.api_url,
                     domain=self.config.domain,

@@ -33,11 +33,6 @@ from app_spark_api.agent.runtime.exceptions import (
 )
 from app_spark_api.utils import structure_config, validate_non_empty_string
 
-# How long a sandbox outlives its Agent's idle exit. The Agent's orderly shutdown takes at most
-# 20 seconds (its own hard-exit deadline); the rest covers clock skew between this service and
-# the sandbox, and a turn's end renewal landing a little before the Agent resets its idle timer.
-IDLE_EXIT_MARGIN_SECONDS = 60
-
 
 def validate_agent_extra_env(_: object, attribute: attrs.Attribute[dict[str, str]], value: dict[str, str]) -> None:
     """Validate the extra variables a provider hands to the Agent Runtime it starts.
@@ -113,10 +108,8 @@ class E2BConfig:
     :param domain: Fallback domain for sandbox hosts when the API does not return one.
     :param template: Sandbox template name or ID.
     :param idle_timeout_seconds: How long a sandbox may go without a conversation turn before
-        it is reclaimed (default 1800). The Agent is told to exit after this long idle, pushing
-        its workspace first, and the sandbox's E2B deadline is set this long plus
-        IDLE_EXIT_MARGIN_SECONDS from the start and the end of every turn, and periodically
-        while one runs.
+        it is reclaimed (default 1800). The Agent is told to exit after this same interval, and
+        the sandbox's E2B deadline is set to it at creation and at the start and end of every turn.
     :param max_lifetime_seconds: Age after which a sandbox is replaced at the start of the next
         turn (default 86400). A running turn is never interrupted for it. Must stay below the
         E2B platform's own cap on a sandbox's lifetime, by at least the longest turn expected:
@@ -161,11 +154,6 @@ class E2BConfig:
     agent_log_path: str = attrs.field(default="/tmp/app-spark-agent.log", validator=validate_sandbox_path)
     startup_timeout_seconds: float = attrs.field(default=60.0, validator=attrs.validators.gt(0))
     extra_env: dict[str, str] = attrs.field(factory=dict, validator=validate_agent_extra_env)
-
-    @property
-    def sandbox_timeout_seconds(self) -> int:
-        """E2B deadline to set, counted from now, whenever a sandbox is created or renewed."""
-        return self.idle_timeout_seconds + IDLE_EXIT_MARGIN_SECONDS
 
     @state_dir.validator
     def _validate_state_dir(self, attribute: attrs.Attribute[str], value: str) -> None:

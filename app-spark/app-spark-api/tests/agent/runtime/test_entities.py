@@ -151,7 +151,7 @@ MINIMAL_E2B_CONFIG = {
         ),
         pytest.param({**MINIMAL_E2B_CONFIG, "workspace_dir": "data/workspace"}, "workspace_dir", id="relative-ws"),
         pytest.param({**MINIMAL_E2B_CONFIG, "state_dir": "state"}, "state_dir", id="relative-state"),
-        # 0 would tell the Agent never to idle out, while the sandbox still expired after the margin.
+        # 0 would mean the sandbox is never reclaimed for idleness, and the Agent never exits on its own.
         pytest.param({**MINIMAL_E2B_CONFIG, "idle_timeout_seconds": 0}, "idle_timeout_seconds", id="no-idle-timeout"),
         pytest.param(
             {**MINIMAL_E2B_CONFIG, "max_lifetime_seconds": 0}, "max_lifetime_seconds", id="no-maximum-lifetime"
@@ -167,15 +167,11 @@ def test_an_unusable_e2b_configuration_is_refused_by_name(raw_config, reason):
     assert reason in str(exc_info.value)
 
 
-def test_a_sandbox_outlives_its_agents_idle_exit_by_a_margin():
-    """空闲 30 分钟后 Agent 先推送再退出，沙箱晚 60 秒到期，最长活 24 小时。"""
+def test_the_idle_timeout_is_the_sandbox_deadline():
+    """空闲 30 分钟后回收，沙箱存活期就是这个秒数，最长活 24 小时。"""
     config = structure_e2b_config(MINIMAL_E2B_CONFIG)
 
     assert (config.idle_timeout_seconds, config.max_lifetime_seconds) == (1800, 86400)
-    assert config.sandbox_timeout_seconds == 1800 + 60
-
-    shorter = structure_e2b_config({**MINIMAL_E2B_CONFIG, "idle_timeout_seconds": 120})
-    assert shorter.sandbox_timeout_seconds == 180
 
 
 def test_a_health_snapshot_is_read_from_the_runtimes_own_words():

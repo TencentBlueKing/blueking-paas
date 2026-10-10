@@ -170,7 +170,7 @@ class E2BProvider(AgentRuntimeProvider):
         await self._lifetime.extend(conversation_id)
 
     async def _renew_sandbox(self, sandbox_id: str | None) -> None:
-        """Set this sandbox to expire sandbox_timeout_seconds from now, best effort."""
+        """Set this sandbox to expire idle_timeout_seconds from now, best effort."""
         await self._lifetime.renew(sandbox_id)
 
     async def needs_replacement(self, conversation_id: str) -> bool:
@@ -282,7 +282,7 @@ class E2BProvider(AgentRuntimeProvider):
         try:
             return await AsyncSandbox.create(
                 self.config.template,
-                timeout=self.config.sandbox_timeout_seconds,
+                timeout=self.config.idle_timeout_seconds,
                 api_key=self.config.api_key,
                 api_url=self.config.api_url,
                 domain=self.config.domain,
@@ -321,7 +321,7 @@ class E2BProvider(AgentRuntimeProvider):
             control_plane_url=control_plane_url,
             state_callback=state_callback,
             git_remote=git_remote,
-            # 与沙箱存活期同出一个配置：Agent 空闲到点先推送再退出，沙箱晚它 60 秒到期。
+            # 与沙箱存活期是同一个秒数：空闲到点 Agent 退出，沙箱也在这一刻到期。
             idle_timeout_seconds=config.idle_timeout_seconds,
         )
 

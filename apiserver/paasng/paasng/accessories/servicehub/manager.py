@@ -28,6 +28,7 @@ from django.utils import timezone
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
 from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
+    ServiceDisallowedError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
     UnboundSvcAttachmentDoesNotExist,
@@ -182,6 +183,7 @@ class MixedServiceMgr:
         condition is not met, use `bind_service_use_first_plan` instead.
         """
         DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
+        validate_not_disallowed(service, module)
         return _proxied_svc_dispatcher("bind_service")(
             self, service, module, plan_id=plan_id, env_plan_id_map=env_plan_id_map
         )
@@ -193,6 +195,7 @@ class MixedServiceMgr:
         use the first plan when multiple plans are available instead of raising an exception.
         """
         DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
+        validate_not_disallowed(service, module)
         return _proxied_svc_dispatcher("bind_service_use_first_plan")(self, service, module)
 
     # Dispatch via service type start
@@ -365,6 +368,15 @@ class DuplicatedBindingValidator:
                 raise DuplicatedServiceBoundError(
                     f"Module: {self.module.name} already shared an attachment in service: {service.name}"
                 )
+
+
+def validate_not_disallowed(service: ServiceObj, module: Module) -> None:
+    """:raises: ServiceDisallowedError when the binding policy disallows the module from using the service"""
+    # TODO: Fix the circular import issue
+    from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
+
+    if PlanSelector().is_disallowed(service, module):
+        raise ServiceDisallowedError(f"Module: {module.name} is disallowed to use service {service.name}")
 
 
 @define

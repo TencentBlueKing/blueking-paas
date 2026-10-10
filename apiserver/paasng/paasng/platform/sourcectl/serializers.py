@@ -246,6 +246,12 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
         return attrs
 
 
+class SysSourcePackageUploadViaUrlSLZ(SourcePackageUploadViaUrlSLZ):
+    """应用态上传源码包的请求参数"""
+
+    operator = serializers.CharField(required=True, help_text="源码包上传人用户名，允许使用虚拟账号")
+
+
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):
     package = serializers.FileField(
         help_text="源码包文件",

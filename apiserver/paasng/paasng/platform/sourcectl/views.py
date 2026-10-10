@@ -20,8 +20,12 @@ import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
+from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import User, user_id_encoder
 from blue_krill.storages.blobstore.exceptions import UploadFailedError
 from django.conf import settings
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -42,9 +46,12 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.notifier.client import BkNotificationService
 from paasng.infras.notifier.exceptions import BaseNotifierError
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig, Module
@@ -59,7 +66,7 @@ from paasng.platform.sourcectl.exceptions import (
     PackageAlreadyExists,
     UserNotBindedToSourceProviderError,
 )
-from paasng.platform.sourcectl.models import SvnAccount, VersionInfo
+from paasng.platform.sourcectl.models import SourcePackage, SvnAccount, VersionInfo
 from paasng.platform.sourcectl.package.uploader import upload_package_via_url
 from paasng.platform.sourcectl.perm import UserSourceProviders, render_providers
 from paasng.platform.sourcectl.repo_controller import get_repo_controller, list_git_repositories
@@ -251,8 +258,96 @@ class ModuleSourceProvidersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         return Response(data={"results": results})
 
 
+class SourcePackageUploadViaUrlMixin:
+    """按 URL 上传源码包的核心逻辑，供用户态 / 应用态两个接口复用。
+
+    子类需要自行完成鉴权、模块获取以及操作人（operator）的解析。
+    """
+
+    def do_upload_via_url(self, module: Module, data: dict, operator: User) -> SourcePackage:
+        """下载并上传源码包，返回落库后的 SourcePackage 对象。
+
+        :param module: 目标模块
+        :param data: 已经过调用方各自序列化器校验后的请求参数
+        :param operator: 源码包上传人
+        """
+        allow_overwrite = data["allow_overwrite"]
+        version = data["version"]
+        package_url = data["package_url"]
+        self._validate_optional_build_method(module, data)
+
+        # 提取文件名
+        filename = Path(urlparse(package_url).path).name.split(".")[0]
+        # 保证文件名中会记录版本信息.
+        filename = f"{filename}:{version}" if version not in filename else filename
+        source_package = upload_package_via_url(
+            module, package_url, version, filename, operator, allow_overwrite=allow_overwrite, need_patch=False
+        )
+        self._apply_optional_build_method(module, data, operator)
+        return source_package
+
+    def _validate_optional_build_method(self, module: Module, data: dict) -> None:
+        """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
+        has_build_method_fields = bool(
+            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
+        )
+        if not has_build_method_fields:
+            return
+        if module.get_source_origin() != SourceOrigin.AI_AGENT:
+            raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
+
+    @staticmethod
+    def _build_config_audit_data(build_config: BuildConfig) -> dict:
+        """审计只记本接口会改的字段，不拼完整 ModuleBuildConfigSLZ。"""
+        return {
+            "build_method": build_config.build_method,
+            "dockerfile_path": build_config.dockerfile_path,
+            "docker_build_args": build_config.docker_build_args or {},
+        }
+
+    def _apply_optional_build_method(self, module: Module, data: dict, operator: User) -> None:
+        """按上传参数更新模块构建方式。
+
+        不传 build_method 则保持当前配置。
+        本接口只改 build_method 和 dockerfile 字段，不重绑 slugbuilder / buildpacks。
+        切回 buildpack 时清空 path/args，避免下次读到过期值。
+
+        :param operator: 操作人，用户态接口传入 request.user，应用态接口传入请求体中的上传人
+        """
+        build_method = data.get("build_method")
+        if not build_method:
+            return
+
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        data_before = DataDetail(data=self._build_config_audit_data(build_config))
+
+        # 不走 update_build_config_with_method：那是完整构建配置入口，切 buildpack 还要重绑 bp stack。
+        build_config.build_method = build_method
+        if build_method == RuntimeType.DOCKERFILE:
+            build_config.dockerfile_path = data.get("dockerfile_path") or "Dockerfile"
+            build_config.docker_build_args = data.get("docker_build_args") or {}
+
+        else:
+            build_config.dockerfile_path = None
+            build_config.docker_build_args = {}
+
+        build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
+
+        add_app_audit_record(
+            app_code=module.application.code,
+            tenant_id=module.tenant_id,
+            user=operator.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_CONFIG,
+            module_name=module.name,
+            data_before=data_before,
+            data_after=DataDetail(data=self._build_config_audit_data(build_config)),
+        )
+
+
 @method_decorator(name="list", decorator=swagger_auto_schema(tags=["源码包管理"]))
-class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
+class ModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """管理某个应用模块的源码包"""
 
     serializer_class = slzs.SourcePackageSLZ
@@ -290,78 +385,52 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         module = self.get_module()
         slz = slzs.SourcePackageUploadViaUrlSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        allow_overwrite = data["allow_overwrite"]
-        version = data["version"]
-        package_url = data["package_url"]
-        self._validate_optional_build_method(module, data)
-
-        # 提取文件名
-        filename = Path(urlparse(package_url).path).name.split(".")[0]
-        # 保证文件名中会记录版本信息.
-        filename = f"{filename}:{version}" if version not in filename else filename
-        source_package = upload_package_via_url(
-            module, package_url, version, filename, request.user, allow_overwrite=allow_overwrite, need_patch=False
-        )
-        self._apply_optional_build_method(request, module, data)
+        source_package = self.do_upload_via_url(module, slz.validated_data, request.user)
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
 
-    def _validate_optional_build_method(self, module: Module, data: dict) -> None:
-        """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
-        has_build_method_fields = bool(
-            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
-        )
-        if not has_build_method_fields:
-            return
-        if module.get_source_origin() != SourceOrigin.AI_AGENT:
-            raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
 
-    @staticmethod
-    def _build_config_audit_data(build_config: BuildConfig) -> dict:
-        """审计只记本接口会改的字段，不拼完整 ModuleBuildConfigSLZ。"""
-        return {
-            "build_method": build_config.build_method,
-            "dockerfile_path": build_config.dockerfile_path,
-            "docker_build_args": build_config.docker_build_args or {},
-        }
+class SysModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ViewSet):
+    """应用态源码包管理接口，目前仅支持 AIDEV 为 AI Agent 应用上传源码包。"""
 
-    def _apply_optional_build_method(self, request, module: Module, data: dict) -> None:
-        """按上传参数更新模块构建方式。
+    permission_classes = [sysapi_client_perm_class(ClientAction.UPLOAD_AI_AGENT_SOURCE_PACKAGE)]
 
-        不传 build_method 则保持当前配置。
-        本接口只改 build_method 和 dockerfile 字段，不重绑 slugbuilder / buildpacks。
-        切回 buildpack 时清空 path/args，避免下次读到过期值。
-        """
-        build_method = data.get("build_method")
-        if not build_method:
-            return
+    def get_module(self, code: str, module_name: str) -> Module:
+        """获取目标模块，并校验其所属应用必须是支持包部署的 AI Agent 应用。"""
+        application = get_object_or_404(Application, code=code)
+        if not application.is_ai_agent_app:
+            raise error_codes.AI_AGENT_APP_REQUIRED
 
-        build_config = BuildConfig.objects.get_or_create_by_module(module)
-        data_before = DataDetail(data=self._build_config_audit_data(build_config))
+        try:
+            module = application.get_module(module_name)
+        except Module.DoesNotExist:
+            raise Http404
 
-        # 不走 update_build_config_with_method：那是完整构建配置入口，切 buildpack 还要重绑 bp stack。
-        build_config.build_method = build_method
-        if build_method == RuntimeType.DOCKERFILE:
-            build_config.dockerfile_path = data.get("dockerfile_path") or "Dockerfile"
-            build_config.docker_build_args = data.get("docker_build_args") or {}
+        if not ModuleSpecs(module).deploy_via_package:
+            raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
+        return module
 
-        else:
-            build_config.dockerfile_path = None
-            build_config.docker_build_args = {}
+    def handle_exception(self, exc):
+        if isinstance(exc, PackageAlreadyExists):
+            raise error_codes.PACKAGE_ALREADY_EXISTS
+        if isinstance(exc, UploadFailedError):
+            raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
+        return super().handle_exception(exc)
 
-        build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
-
-        add_app_audit_record(
-            app_code=module.application.code,
-            tenant_id=module.tenant_id,
-            user=request.user.pk,
-            action_id=AppAction.BASIC_DEVELOP,
-            operation=OperationEnum.MODIFY,
-            target=OperationTarget.BUILD_CONFIG,
-            module_name=module.name,
-            data_before=data_before,
-            data_after=DataDetail(data=self._build_config_audit_data(build_config)),
-        )
+    @swagger_auto_schema(
+        request_body=slzs.SysSourcePackageUploadViaUrlSLZ,
+        responses={200: slzs.SourcePackageSLZ()},
+        tags=["源码包管理"],
+        operation_description="提供给 AIDEV 使用的应用态上传源码包接口，仅支持 AI Agent 应用",
+    )
+    def upload_via_url(self, request, code, module_name):
+        """应用态根据 URL 上传源码包，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
+        module = self.get_module(code, module_name)
+        slz = slzs.SysSourcePackageUploadViaUrlSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, data["operator"]))
+        source_package = self.do_upload_via_url(module, data, operator)
+        return Response(data=slzs.SourcePackageSLZ(source_package).data)
 
 
 class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

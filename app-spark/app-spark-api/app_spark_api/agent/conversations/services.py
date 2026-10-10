@@ -387,12 +387,16 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
 
     client = await open_client(conversation, credential=credential)
+
+    # 先回库确认会话还活着，再读 client。open_client 要花好几秒，这中间会话可能已被关掉；
+    # 确认没过会收掉刚拉起来的 Runtime 并返回 409。先碰 client.handle 会把这次拒绝变成 500。
+    await _reject_if_closed_meanwhile(conversation)
+
     logger.info(
         "Conversation %s is using the Agent Runtime at %s",
         conversation.id,
         client.handle.base_url,
     )
-    await _reject_if_closed_meanwhile(conversation)
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)
     logger.info(

@@ -15,7 +15,7 @@ import os
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 from app_spark_agent import settings
 from app_spark_agent.masking import mask_payload, mask_text
@@ -109,12 +109,13 @@ _logger.addFilter(SecretMaskingFilter())
 log = SandboxLoggerAdapter(_logger, {})
 
 
-def _owned_handler(stream_or_path: object, *, name: str) -> logging.Handler:
+def _owned_handler(stream_or_path: Path | TextIO, *, name: str) -> logging.Handler:
     """Build one handler this module owns, with the shared format and filters."""
+
     if isinstance(stream_or_path, Path):
         handler: logging.Handler = logging.FileHandler(stream_or_path, encoding="utf-8")
     else:
-        handler = logging.StreamHandler(stream_or_path)  # type: ignore[arg-type]
+        handler = logging.StreamHandler(stream_or_path)
     handler.setFormatter(logging.Formatter(LOG_FORMAT))
     # Labels first: masking must run on a record the formatter can already render, and the
     # label values themselves are not credentials.

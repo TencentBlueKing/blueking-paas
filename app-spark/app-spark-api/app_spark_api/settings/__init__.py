@@ -387,8 +387,13 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   domain: example.com
 ##   ## 可选。沙箱模板，默认 e2b-python。
 ##   template: e2b-python
-##   ## 可选。创建沙箱时设置的 E2B 存活期限（秒），默认 3600；活动和重连不会自动续期。
-##   timeout_seconds: 3600
+##   ## 可选。空闲多少秒后回收沙箱，默认 1800。同时作为 agent 的空闲退出时间；沙箱存活期在每轮
+##   ## 对话开始和结束时续为这个秒数，预览和查询状态不续期。一轮进行中不再续。
+##   idle_timeout_seconds: 1800
+##   ## 可选。沙箱最长存活秒数，默认 86400；超过后在下一轮对话开始前重建，不打断进行中的对话。
+##   ## 必须比 E2B 平台自己的沙箱存活上限小，至少留出最长一轮对话的时间：否则快到期的沙箱照常被
+##   ## 复用，平台到点直接销毁它，Agent 来不及推送。
+##   max_lifetime_seconds: 86400
 ##   ## 可选。Agent Runtime 监听的沙箱端口，默认 8000。
 ##   runtime_port: 8000
 ##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。

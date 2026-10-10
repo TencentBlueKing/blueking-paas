@@ -20,7 +20,6 @@ from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
 from app_spark_agent.app_supervisor import AppSupervisor
 from app_spark_agent.git.saver import WorkspaceSaver
-from app_spark_agent.launch_tool import LaunchTool
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
 from app_spark_agent.state import (
@@ -31,6 +30,7 @@ from app_spark_agent.state import (
     ConversationContext,
     CursorStore,
 )
+from app_spark_agent.tools import LaunchTool
 
 logger = logging.getLogger(__name__)
 

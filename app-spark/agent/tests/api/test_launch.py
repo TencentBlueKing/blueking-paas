@@ -17,6 +17,7 @@
 """Launching the workspace application through the model's own launch_app tool."""
 
 import socket
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -28,7 +29,8 @@ from fastapi.testclient import TestClient
 
 from app_spark_agent import settings
 from app_spark_agent.app_supervisor import LAUNCH_EVENT_RUN_ID
-from app_spark_agent.launch_tool import MAX_LAUNCHES_PER_RUN, LaunchToolResult
+from app_spark_agent.app_supervisor import supervisor as supervisor_mod
+from app_spark_agent.tools import MAX_LAUNCHES_PER_RUN, LaunchToolResult
 from tests.api.support import ApiFactory, drain_channel, run_turn
 from tests.support.fake_models import named_tool_model
 
@@ -95,6 +97,28 @@ class ModelLauncher:
         """Point the tool at a started Runtime and hand that client back."""
         self.client = api
         return api
+
+
+@pytest.fixture(autouse=True)
+def project_environment_without_uv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stand in for the uv sync before each launch, keeping the real spawn.
+
+    A real sync needs the package index or a warm uv cache, neither of which a unit test can
+    count on. The test interpreter already has fastapi and uvicorn, so the project's interpreter
+    hands over to it. The real uv path is covered by tests/test_project_env.py and the images.
+    """
+
+    async def use_test_interpreter(workspace: Path, _log_path: Path) -> None:
+        python = workspace / ".venv" / "bin" / "python"
+        if python.exists():
+            return
+        python.parent.mkdir(parents=True)
+        # exec rather than a symlink: Python finds its venv next to the path it was started as,
+        # and a symlink with no pyvenv.cfg beside it resolves to the base interpreter instead.
+        python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+        python.chmod(0o755)
+
+    monkeypatch.setattr(supervisor_mod, "sync_project_environment", use_test_interpreter)
 
 
 @pytest.fixture
@@ -182,7 +206,7 @@ def test_the_model_cannot_retry_launching_all_turn(make_api: ApiFactory, launch_
 
     run_turn(api, conversation_id=str(uuid4()))
 
-    # 额度用尽后第三次直接被拒，run 本身照常结束。下一轮重新给额度见 tests/test_launch_tool.py。
+    # 额度用尽后第三次直接被拒，run 本身照常结束。下一轮重新给额度见 tests/tools/test_launch_app.py。
     assert [result.status for result in launcher.results] == ["failed"] * MAX_LAUNCHES_PER_RUN + ["refused"]
     assert api.get("/health").json()["dev_server_status"] == "stopped"
     assert launched_events(api) == []

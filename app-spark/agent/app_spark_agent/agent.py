@@ -1,5 +1,6 @@
 """Construction of the workspace-scoped coding agent."""
 
+import os
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Any, Protocol, cast
@@ -28,13 +29,14 @@ from pydantic_ai_harness.repo_context import RepoContext
 from pydantic_ai_harness.shell import LLM_API_KEY_ENV_PATTERNS
 
 from app_spark_agent import settings
-from app_spark_agent.app_log import AppLogReader, AppLogReadResult
+from app_spark_agent.app_supervisor.project_env import uv_environ
 from app_spark_agent.bkaidev.auth import (
     OPENAI_API_KEY_PLACEHOLDER,
     WithoutAuthorization,
     authorization_headers,
 )
 from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
+from app_spark_agent.tools import build_init_project_tool, build_read_app_log_tool
 
 
 class ApiKeyProvider(Protocol):
@@ -185,7 +187,7 @@ def create_agent(
     :param workspace: Existing directory the agent may inspect and modify.
     :param state_dir: Conversation state directory; the log tool must not point inside it.
     :param extra_tools: Further tools to register, already in the harness's form; a caller
-        holding a LaunchTool hands over launch_tool.as_tool(). The instructions name launch_app
+        holding a tools.LaunchTool hands over its as_tool(). The instructions name launch_app
         unconditionally, so omitting it leaves the model hunting for a tool it was told to use.
     :return: A configured Pydantic AI coding agent.
     :raises NotADirectoryError: If workspace is not an existing directory.
@@ -195,23 +197,21 @@ def create_agent(
         raise NotADirectoryError(f"Workspace is not a directory: {workspace_path}")
 
     resolved_state = state_dir.expanduser().resolve() if state_dir is not None else None
-    reader = AppLogReader(
-        Path(settings.APP_LOG_PATH),
-        workspace=workspace_path,
-        state_dir=resolved_state,
-    )
-
-    def read_app_log() -> AppLogReadResult:
-        """Read this session's application log. The path is not a parameter."""
-        return reader.read()
 
     # read_app_log 要绑 workspace 和 state_dir 才拦得住越界读，那两个路径在这里解析。
-    tools: list[Any] = [read_app_log, *extra_tools]
+    tools: list[Any] = [
+        build_read_app_log_tool(workspace=workspace_path, state_dir=resolved_state),
+        build_init_project_tool(workspace_path),
+        *extra_tools,
+    ]
 
     capabilities: list[AbstractCapability[object]] = [
         FileSystem(root_dir=workspace_path),
         Shell(
             cwd=workspace_path,
+            # 模型可能会出发 uv 相关命令操作依赖源，传入 uv 相关环境变量比如 INDEX_URL 等
+            # 以保持一致性。
+            env=uv_environ(os.environ),
             denied_env_patterns=(
                 *LLM_API_KEY_ENV_PATTERNS,
                 "APP_SPARK_AGENT_*",

@@ -30,6 +30,14 @@ test: ## Run unit tests (excludes e2e)
 run: ## Start the Agent HTTP server
 	uv run python -m app_spark_agent
 
+# Must match settings.PACKAGE_INDEX_URL's default: uv treats a lock recorded against another index
+# as stale, so every new project would re-resolve over the network instead of using the cache.
+APP_TEMPLATE_INDEX ?= https://mirrors.cloud.tencent.com/pypi/simple
+
+.PHONY: lock-app-template
+lock-app-template: ## Re-lock app-template/ (the new-project template) against the default index
+	UV_DEFAULT_INDEX=$(APP_TEMPLATE_INDEX) uv lock --project app-template
+
 .PHONY: update-gitignore-assets
 update-gitignore-assets: ## Refresh vendored github/gitignore templates in git/assets
 	uv run python -m app_spark_agent.git.update_assets

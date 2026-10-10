@@ -22,6 +22,16 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY agent/app_spark_agent ./app_spark_agent
 RUN uv sync --frozen --no-dev
 
+# The new-project template the Agent's init_project tool writes into a workspace. Syncing it once warms the uv
+# cache, so a new project's first launch installs its packages offline; only the cache is kept,
+# because each project builds its own .venv.
+# 
+# INFO: 这个仅在 local_process 模式下有意义，其他 provider 比如 E2B 模式并不会在 api 所在环境
+# 安装 agent 所开发项目的依赖。
+COPY agent/app-template/pyproject.toml agent/app-template/uv.lock ./app-template/
+RUN uv sync --frozen --no-dev --project app-template \
+    && rm -rf app-template/.venv
+
 WORKDIR /app/app-spark-api
 COPY app-spark-api/manage.py app-spark-api/README.md ./
 COPY app-spark-api/app_spark_api ./app_spark_api

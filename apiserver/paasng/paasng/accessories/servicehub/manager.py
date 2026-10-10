@@ -25,6 +25,7 @@ from attrs import define
 from django.http import Http404
 from django.utils import timezone
 
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
 from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
@@ -372,9 +373,6 @@ class DuplicatedBindingValidator:
 
 def validate_not_disallowed(service: ServiceObj, module: Module) -> None:
     """:raises: ServiceDisallowedError when the binding policy disallows the module from using the service"""
-    # TODO: Fix the circular import issue
-    from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
-
     if PlanSelector().is_disallowed(service, module):
         raise ServiceDisallowedError(f"Module: {module.name} is disallowed to use service {service.name}")
 

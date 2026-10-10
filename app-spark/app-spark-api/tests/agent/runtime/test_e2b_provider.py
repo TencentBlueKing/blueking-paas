@@ -35,7 +35,7 @@ from uuid import uuid4
 import attrs
 import pytest
 from django.utils import timezone
-from e2b import AsyncSandbox, NotFoundException, SandboxException
+from e2b import AsyncSandbox, AuthenticationException, NotFoundException, SandboxException
 
 from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
@@ -65,6 +65,7 @@ CONFIG = E2BConfig(
     api_key="e2b-key",
     api_url="https://e2b.example",
     callback_base_url="https://app-spark.example",
+    template="app-spark-agent",
     domain="sandbox.example",
 )
 
@@ -120,6 +121,7 @@ class FakeCommands:
         # What kill -0 finds when the provider asks whether the Agent process still exists.
         self.agent_alive = True
         self.liveness_checks = 0
+        self.liveness_calls: list[dict[str, Any]] = []
 
     async def run(self, cmd: str, **opts: Any) -> FakeProcess:
         if cmd.startswith("kill -TERM"):
@@ -134,6 +136,7 @@ class FakeCommands:
 
         if cmd.startswith("kill -0"):
             self.liveness_checks += 1
+            self.liveness_calls.append({"cmd": cmd, **opts})
             answer = FakeProcess(pid=0, exit_code=0, stderr="")
             answer.stdout = "alive\n" if self.agent_alive else "gone\n"
             return answer
@@ -151,8 +154,10 @@ class FakeFiles:
 
     def __init__(self, sandbox: FakeSandbox) -> None:
         self.sandbox = sandbox
+        self.read_calls: list[dict[str, Any]] = []
 
-    async def read(self, path: str, **_opts: object) -> str:
+    async def read(self, path: str, **opts: object) -> str:
+        self.read_calls.append({"path": path, **opts})
         if self.sandbox.agent_log is None:
             raise NotFoundException(path)
         return self.sandbox.agent_log
@@ -412,11 +417,19 @@ async def test_a_stale_abandoned_view_does_not_release_a_sandbox_bound_since(e2b
 # --- 失败时交还占位 --------------------------------------------------------------------------
 
 
-async def test_a_failed_create_gives_its_claim_back(e2b, provider):
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(SandboxException("quota exceeded"), id="sandbox-error"),
+        # Not a SandboxException; a bad credential must still become a provisioning error, not a 500.
+        pytest.param(AuthenticationException("invalid api key"), id="bad-credentials"),
+    ],
+)
+async def test_a_failed_create_gives_its_claim_back(e2b, provider, error):
     project_id, conversation_id = ids()
-    e2b.create_error = SandboxException("quota exceeded")
+    e2b.create_error = error
 
-    with pytest.raises(AgentProvisionError, match="quota exceeded"):
+    with pytest.raises(AgentProvisionError, match=str(error)):
         await provider.ensure(project_id=project_id, conversation_id=conversation_id)
 
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
@@ -566,9 +579,11 @@ async def test_the_agent_is_started_with_its_whole_configuration(e2b, provider):
 
     (call,) = e2b.sandboxes["sbx-1"].commands.calls
     envs = call["envs"]
-    assert (call["background"], call["timeout"]) == (True, 0)
+    assert (call["background"], call["timeout"], call["user"]) == (True, 0, "user")
+    # By absolute path: envd gives the processes it starts its own PATH, not the template's.
     assert call["cmd"] == (
-        "{ mkdir -p /data/workspace /data && exec python -m app_spark_agent; } >> /tmp/app-spark-agent.log 2>&1"
+        "{ mkdir -p /data/workspace /data && exec /app/.venv/bin/python -m app_spark_agent; }"
+        " >> /tmp/app-spark-agent.log 2>&1"
     )
     # Credentials go to this one process through envd, never through the sandbox's creation.
     (create_opts,) = e2b.create_opts
@@ -656,6 +671,11 @@ def refuse_to_start(sandbox: FakeSandbox) -> None:
     sandbox.commands.run_error = SandboxException("envd refused the process")
 
 
+def refuse_the_user(sandbox: FakeSandbox) -> None:
+    # What envd answers when agent_user does not exist in the template; not a SandboxException.
+    sandbox.commands.run_error = AuthenticationException("invalid username: 'nobody-here'")
+
+
 @pytest.mark.parametrize(
     ("stage_failure", "startup_timeout", "expected"),
     [
@@ -669,6 +689,9 @@ def refuse_to_start(sandbox: FakeSandbox) -> None:
         pytest.param(
             refuse_to_start, 60.0, ("Could not start the Agent", "envd refused the process"), id="envd-refuses"
         ),
+        pytest.param(
+            refuse_the_user, 60.0, ("Could not start the Agent", "invalid username"), id="unknown-agent-user"
+        ),
     ],
 )
 async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
@@ -678,7 +701,9 @@ async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
     message, detail = expected
     agent_health.healthy = False
     e2b.prepare = stage_failure
-    provider = DefaultAccessProvider(attrs.evolve(CONFIG, startup_timeout_seconds=startup_timeout))
+    # Not the default user, so a log read that ignored agent_user would show here.
+    config = attrs.evolve(CONFIG, startup_timeout_seconds=startup_timeout, agent_user="spark")
+    provider = DefaultAccessProvider(config)
 
     with pytest.raises(AgentProvisionError, match=message) as exc_info:
         await provider.ensure(project_id=project_id, conversation_id=conversation_id)
@@ -687,6 +712,28 @@ async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
     assert e2b.sandboxes["sbx-1"].killed
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
     assert (record.active_conversation_id, record.agent_pid, record.stop_reason) == (None, None, "failed")
+    # A start envd refused never ran, so there is no log to read. Every other failure reads the log
+    # once, as the user that wrote it.
+    reads_log = stage_failure not in (refuse_to_start, refuse_the_user)
+    read_users = [call["user"] for call in e2b.sandboxes["sbx-1"].files.read_calls]
+    assert read_users == (["spark"] if reads_log else [])
+
+
+async def test_every_sandbox_command_runs_as_the_configured_user(e2b, agent_health):
+    """启动、探测、停止都用同一个用户：换成别的非 root 用户，kill 会因无权限失败，被误当成进程已退出。"""
+    project_id, conversation_id = ids()
+    provider = DefaultAccessProvider(attrs.evolve(CONFIG, agent_user="spark"))
+    first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    # A probe that fails once, so the next turn asks envd whether the Agent is still there.
+    agent_health.reuse_failures = 1
+
+    assert await provider.ensure(project_id=project_id, conversation_id=conversation_id) == first
+    await provider.terminate(conversation_id)
+
+    commands = e2b.sandboxes["sbx-1"].commands
+    runs = [*commands.calls, *commands.liveness_calls, *commands.stop_calls]
+    assert (len(commands.calls), len(commands.liveness_calls), len(commands.stop_calls)) == (1, 1, 1)
+    assert {call["user"] for call in runs} == {"spark"}
 
 
 # --- 启动中的沙箱不交出去 ----------------------------------------------------------------------

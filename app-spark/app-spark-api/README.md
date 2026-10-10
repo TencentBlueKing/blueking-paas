@@ -138,13 +138,15 @@ cd ../agent && uv sync
 细节见 [agent/README.md](../agent/README.md) 的「假模型」一节。
 
 `e2b` provider 为每个会话创建一个沙箱，通过 envd 执行 `agent_command` 启动模板里预装的 Agent，
-等 `/health` 通过后才记下进程号并返回；启动失败时带上 Agent 日志末尾报错，并销毁沙箱。Agent 的
+等 `/health` 通过后才记下进程号并返回；启动失败时带上 `agent_log_path`（默认
+`/tmp/app-spark-agent.log`）末尾报错，并销毁沙箱。Agent 的
 配置全部经这次启动的环境变量注入，不继承本服务的环境；状态回写地址是 `callback_base_url` 加上
 保留 FORCE_SCRIPT_NAME 前缀的回写路径，因为沙箱经 Ingress 回调本服务。
 
 已建好沙箱但还没有进程号的记录处于启动中，不会交给任何请求：其他请求看到项目忙，`peek` 和预览
 看到没有 Runtime。启动它的 worker 若死在半路，超过 `startup_timeout_seconds` 加 60 秒后，下一个
-请求会杀掉该沙箱并重建。Runtime 和预览分别走 `get_host(runtime_port)`、`get_host(preview_port)`。
+请求会杀掉该沙箱并重建。Runtime 和预览分别走 `get_host(runtime_port)`、`get_host(preview_port)`
+（默认 `8000` 和 `9000`，所有沙箱相同）：Agent 听前者，用户应用听后者。
 
 沙箱的生命周期跟着对话走：
 
@@ -167,10 +169,15 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   api_url: https://example.com/e2b
   ## 必填：本服务的对外地址，沙箱内的 Agent 用它回写会话状态
   callback_base_url: https://app-spark.example.com
-  ## 可选：预装了 Agent 的沙箱模板
-  # template: <agent-template>
+  ## 必填：预装了 Agent 的沙箱模板，由 agent 镜像添加而来（见 agent/README.md「本地镜像」）
+  template: <agent-template>
+  ## 可选：在沙箱内启动、停止、探测 Agent 所用的用户，默认 user
+  # agent_user: user
   ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
   # domain: sandbox.example.com
+  ## 可选：Agent 监听端口与用户应用端口，默认 8000 / 9000，所有沙箱相同
+  # runtime_port: 8000
+  # preview_port: 9000
 ```
 
 `get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
@@ -180,8 +187,10 @@ TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口�
 
 有有效 E2B 配置时，运行
 `APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`，
-没有配置时跳过。默认模板里没有 Agent，测试先往沙箱里装本地构建的 wheel，再走生产的启动路径；
-沙箱存活期固定 300 秒，结束时主动销毁。不验证沙箱内的 Git 持久化和状态回写。
+没有配置、或配置里没有 `template` 时跳过。`template` 必须是由 agent 镜像添加的模板，测试直接用
+生产的 provider 启动模板里的 Agent，不往沙箱里装任何东西；空闲超时设为 300 秒，每一轮会续期，
+`max_lifetime_seconds` 仍用配置值，结束时主动销毁。
+不验证沙箱内的 Git 持久化和状态回写。
 
 ### 会话状态的权威副本
 
@@ -193,8 +202,11 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 | 原始对话记录 | `ConversationMessage` 表 | 暂无对外读接口 |
 | 用户发送的原文 | `ConversationUserMessage` 表 | `GET .../history/`，与 AG-UI 事件一起恢复 |
 | AG-UI 事件历史 | `ConversationUiEvent` 表 | `GET .../ui-events/`，直接读库、不起容器 |
-| 会话上下文 | 制品库 blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
+| 会话上下文 | blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
 | 可恢复检查点 | `ConversationCheckpoint` 行 | 冷启动时先据此把文件放回去 |
+
+上下文 blob 的后端由 `AGENT_CONTEXT_STORAGE.backend` 决定。本地和 Chart 默认是 `host_tmp_path`；
+`bk_repo` 是制品库，多副本 e2b 用它，因为上下文不能只留在单个 Pod 的磁盘上。
 
 **一致性是最终一致的**：Runtime 是在把 AG-UI 事件流全部发完之后才 flush 的，所以客户端收到
 `RUN_FINISHED` 的那一刻，本服务的库可能还差几十毫秒。要等一轮真正落定，看
@@ -365,4 +377,9 @@ SAMEORIGIN` 要换成 `frame-ancestors`。
 ### 镜像构建
 
 项目提供 [Dockerfile](Dockerfile)，以父目录 `app-spark/` 为构建上下文，
-包含 API 和 Agent 各自的生产依赖。**镜像中包含 Agent 是为了支持当前的 `local_process` 驱动。**
+包含 API 和 Agent 各自的生产依赖。镜像里带上 Agent，是为了 `local_process` 在 API 容器里
+`uv run` 拉起 Runtime。
+
+`e2b` 跑的是由 [agent 镜像](../agent/README.md) 做成的沙箱模板。API 镜像负责创建沙箱、注入环境，
+再经 envd 启动模板里的 Agent。两种运行方式在 Chart 里怎么填、e2b 什么时候能多副本，见
+[charts/app-spark-api/README.md](charts/app-spark-api/README.md)。

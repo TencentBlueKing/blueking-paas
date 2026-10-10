@@ -120,6 +120,7 @@ MINIMAL_E2B_CONFIG = {
     "api_key": "e2b-key",
     "api_url": "https://e2b.example",
     "callback_base_url": "https://app-spark.example",
+    "template": "app-spark-agent",
 }
 
 
@@ -133,6 +134,14 @@ MINIMAL_E2B_CONFIG = {
             "callback_base_url",
             id="no-callback-address",
         ),
+        # No default: a template without the Agent would create sandboxes and only time out
+        # starting it, so a missing name has to be refused before any sandbox exists.
+        pytest.param(
+            {k: v for k, v in MINIMAL_E2B_CONFIG.items() if k != "template"},
+            "template",
+            id="no-template",
+        ),
+        pytest.param({**MINIMAL_E2B_CONFIG, "agent_user": ""}, "agent_user", id="empty-agent-user"),
         pytest.param(
             {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data", "state_dir": "/data/state"},
             "state_dir",

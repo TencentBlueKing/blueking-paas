@@ -84,6 +84,29 @@ def test_explicit_values_survive_dynaconf(monkeypatch, key, value, setting):
     assert loaded.get(setting) == value
 
 
+def test_an_e2b_config_leaves_out_the_local_process_defaults(monkeypatch):
+    """values.yaml ships local_process fields as defaults; merged into an e2b config, they would be refused."""
+    e2b_config = {
+        "api_key": "e2b-key",
+        "api_url": "https://bkapi.example.com/api/agent_sandbox/prod/e2b",
+        "callback_base_url": "https://app-spark-api.example.com/api-svc",
+        "template": "app-spark-agent",
+        "agent_user": "user",
+    }
+    data = _render_configmap({"agent.runtimeProvider": "e2b", "agent.runtimeProviderConfig": e2b_config})
+
+    monkeypatch.setenv("CHART_TEST_CONFIG", data["APP_SPARK_API_AGENT_RUNTIME_PROVIDER_CONFIG"])
+    loaded = LazySettings(environments=False, envvar_prefix="CHART_TEST", settings_files=[])
+    assert dict(loaded.get("CONFIG")) == e2b_config
+
+
+def test_the_local_process_defaults_stay_for_local_process():
+    data = _render_configmap()
+
+    for field in ("agent_project_dir", "workspace_root", "state_root"):
+        assert field in data["APP_SPARK_API_AGENT_RUNTIME_PROVIDER_CONFIG"]
+
+
 def test_null_leaf_preserves_application_fallback(monkeypatch):
     data = _render_configmap({"django.secretKey": None, "django.languageCode": None, "django.forceScriptName": None})
     assert "APP_SPARK_API_SECRET_KEY" not in data

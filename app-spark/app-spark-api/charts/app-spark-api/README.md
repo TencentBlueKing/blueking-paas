@@ -8,6 +8,23 @@
 
 目前限定单副本、单 worker；升级或配置变更会重建 Pod，造成短暂不可用并中断运行中的会话。
 
+## e2b 运行方式
+
+`agent.runtimeProvider: e2b` 时，每个会话在 e2b 沙箱里运行 Agent，沙箱模板由
+[agent 镜像](../../../agent/README.md) 添加而来。按 [values.yaml](values.yaml) 中注释的 e2b 示例填写
+`agent.runtimeProviderConfig`，只写 e2b 的字段即可：Helm 会把 values.yaml 里 local_process 的默认字段合并进来，
+Chart 在 e2b 模式下会自动去掉它们。`api_key`、`api_url`、`callback_base_url`、`template` 缺任何一项，渲染直接失败，
+不会等到第一个会话才报错。
+
+e2b 模式可以多副本（`replicaCount` 大于 1），前提是 `agent.contextStorage.backend` 为 `bk_repo`。其余后端
+（包括默认的 `host_tmp_path`）只存在单个 Pod 内，会话换到别的副本冷启动时读不回上下文，Chart 渲染时直接拒绝。
+改用 `bk_repo` 时 `root` 要一起改成通用仓库名：只改 `backend`，Helm 会把默认的路径合并进来，Chart 会拒绝以 `/` 开头的 `root`。
+
+e2b 模式按 RollingUpdate 升级：API 进程退出不会停掉沙箱，新旧 Pod 可以同时在线。上下文存在 `bk_repo` 时，
+API Pod 不往 `/data/app-spark` 写东西，不需要 `persistence`；单副本仍用 `host_tmp_path` 时上下文写在这里。
+设置了 `existingClaim` 时，它必须是 ReadWriteMany：滚动升级和多副本都会让两个 Pod 同时挂这个卷，
+ReadWriteOnce 的卷挂不到别的节点上，新 Pod 会一直 Pending。
+
 ## 部署
 
 以下命令在 app-spark-api 项目目录执行：

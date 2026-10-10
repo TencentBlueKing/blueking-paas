@@ -44,6 +44,7 @@ from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
     AgentUnavailableError,
+    AgentWorkspaceSavePendingError,
     EventPage,
     GitRemote,
     StateCallback,
@@ -386,14 +387,41 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
 
     client = await open_client(conversation, credential=credential)
+
+    # 先回库确认会话还活着，再读 client。open_client 要花好几秒，这中间会话可能已被关掉；
+    # 确认没过会收掉刚拉起来的 Runtime 并返回 409。先碰 client.handle 会把这次拒绝变成 500。
     await _reject_if_closed_meanwhile(conversation)
+
+    logger.info(
+        "Conversation %s is using the Agent Runtime at %s",
+        conversation.id,
+        client.handle.base_url,
+    )
     health = await client.health()
     health = await _resume_if_cold(conversation, client, health)
+    logger.info(
+        "Conversation %s runtime health at %s: context_version=%s dev_server_status=%s running=%s",
+        conversation.id,
+        client.handle.base_url,
+        health.context_version,
+        health.dev_server_status,
+        health.running,
+    )
     message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
         conversation, content=content
     )
     try:
         run = await client.start_run(content=content, context_version=health.context_version)
+    except AgentWorkspaceSavePendingError as exc:
+        # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
+        logger.warning(
+            "Conversation %s at %s refused the run because the previous turn is not saved yet: %s",
+            conversation.id,
+            client.handle.base_url,
+            exc,
+        )
+        await message.adelete()
+        raise
     except BaseException:
         # Runtime 拒绝的请求不应留在历史里；输入必须先于调用创建，才不会把本轮新事件算入游标。
         await message.adelete()
@@ -404,6 +432,12 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         # 否则浏览器断开连接或生成失败，就会丢掉用户输入与 run 的关联信息。
         message.run_id = run.run_id
         await message.asave(update_fields=["run_id", "updated_at"])
+        logger.info(
+            "Conversation %s accepted run %s at %s",
+            conversation.id,
+            run.run_id,
+            client.handle.base_url,
+        )
     except BaseException:
         # 此时连接已经打开，但还没有交给 stream_run；保存失败或任务取消也必须释放它。
         await run.aclose()

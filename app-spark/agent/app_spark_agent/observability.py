@@ -11,14 +11,23 @@ never heard of this module.
 """
 
 import logging
+import os
 import sys
 from collections.abc import MutableMapping
-from typing import Any
+from pathlib import Path
+from typing import Any, TextIO
 
 from app_spark_agent import settings
 from app_spark_agent.masking import mask_payload, mask_text
 
 LOGGER_NAME = "app_spark_agent"
+
+# stderr is what the API's start command redirects into /tmp/app-spark-agent.log. That file is
+# easy to miss and disappears with the sandbox. This copy sits next to the workspace, is owned
+# by the same user the process runs as, and is the path to open while the process is still up.
+# It is still absent when the process never started: nothing in this module runs until then.
+AGENT_LOG_PATH = Path("/data/agent.log")
+_AGENT_LOG_HANDLER_NAME = "app_spark_agent.file"
 
 # Rendered when the injection layer left the label out. An empty field would silently look
 # like a formatting bug in whatever collects these lines.
@@ -100,11 +109,44 @@ _logger.addFilter(SecretMaskingFilter())
 log = SandboxLoggerAdapter(_logger, {})
 
 
-def configure_logging(level: int = logging.INFO) -> None:
-    """Send this process's logs to stderr with sandbox labels and credentials masked.
+def _owned_handler(stream_or_path: Path | TextIO, *, name: str) -> logging.Handler:
+    """Build one handler this module owns, with the shared format and filters."""
 
-    Idempotent: a repeated call replaces the handler it installed rather than adding a second
-    one, so an entry point that runs twice does not double every line.
+    if isinstance(stream_or_path, Path):
+        handler: logging.Handler = logging.FileHandler(stream_or_path, encoding="utf-8")
+    else:
+        handler = logging.StreamHandler(stream_or_path)
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    # Labels first: masking must run on a record the formatter can already render, and the
+    # label values themselves are not credentials.
+    handler.addFilter(SandboxLabelFilter())
+    handler.addFilter(SecretMaskingFilter())
+    handler.set_name(name)
+    # Marks ownership so a second call can tell this handler from one a host application added.
+    handler._app_spark_agent_handler = True  # type: ignore[attr-defined]
+    return handler
+
+
+def _agent_log_file_handler() -> logging.Handler | None:
+    """Open the on-disk copy, or skip it when this process cannot create the file.
+
+    A failure here must not stop the process: stderr is still attached, and a sandbox whose
+    ``/data`` is not writable should keep serving rather than exit over a log file.
+    """
+    path = AGENT_LOG_PATH
+    if not path.parent.is_dir() or not os.access(path.parent, os.W_OK):
+        return None
+    try:
+        return _owned_handler(path, name=_AGENT_LOG_HANDLER_NAME)
+    except OSError:
+        return None
+
+
+def configure_logging(level: int = logging.INFO) -> None:
+    """Send this process's logs to stderr, and to ``/data/agent.log`` when that directory is writable.
+
+    Idempotent: a repeated call replaces the handlers it installed rather than adding a second
+    copy of each, so an entry point that runs twice does not double every line.
 
     :param level: Threshold for the root logger.
     """
@@ -112,18 +154,11 @@ def configure_logging(level: int = logging.INFO) -> None:
     for existing in list(root.handlers):
         if getattr(existing, "_app_spark_agent_handler", False):
             root.removeHandler(existing)
+            existing.close()
 
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    # Labels first: masking must run on a record the formatter can already render, and the
-    # label values themselves are not credentials.
-    handler.addFilter(SandboxLabelFilter())
-    handler.addFilter(SecretMaskingFilter())
-    handler.set_name(LOGGER_NAME)
-    # Marks ownership so a second call can tell this handler from one a host application added.
-    handler._app_spark_agent_handler = True  # type: ignore[attr-defined]
-
-    root.addHandler(handler)
+    root.addHandler(_owned_handler(sys.stderr, name=LOGGER_NAME))
+    if (file_handler := _agent_log_file_handler()) is not None:
+        root.addHandler(file_handler)
     root.setLevel(level)
 
     for name in _UVICORN_LOGGERS:

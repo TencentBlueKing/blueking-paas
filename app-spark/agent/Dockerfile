@@ -4,8 +4,9 @@ USER root
 
 # tini is PID 1: forwards SIGTERM and reaps zombies.
 # git persists the workspace; ca-certificates is what lets it reach an https remote at all.
+# curl is for the model: it checks the launched application's pages with it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tini git ca-certificates \
+    && apt-get install -y --no-install-recommends tini git ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Same Tencent Cloud pip index as apiserver
@@ -21,10 +22,20 @@ ADD ./pyproject.toml .
 ADD ./uv.lock .
 ADD ./README.md .
 ADD ./app_spark_agent ./app_spark_agent
+ADD ./app-template ./app-template
+
+# Copy rather than hardlink: user projects build their .venv under /data, usually another
+# filesystem than the uv cache, and uv would otherwise warn about it in every launch log.
+ENV UV_LINK_MODE=copy
 
 # Frozen runtime deps; workspace and state must be distinct paths under /data
 RUN uv sync --frozen --no-dev \
     && mkdir -p /data/workspace /data/state
+
+# Warm the uv cache with the new-project template's packages, so a new project's first launch
+# installs them offline. Only the cache is kept: each project builds its own .venv.
+RUN uv sync --frozen --no-dev --project app-template \
+    && rm -rf app-template/.venv
 
 ENV PATH="/app/.venv/bin:${PATH}"
 # Listen on 8090; fall back to these paths when APP_SPARK_AGENT_* is unset

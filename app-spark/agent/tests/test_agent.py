@@ -74,8 +74,8 @@ def test_create_agent_scopes_tools_to_workspace(
     assert log_tool.function_schema.json_schema["properties"] == {}
 
 
-def test_extra_tools_reach_the_model_alongside_the_owned_one(tmp_path: Path) -> None:
-    """A caller's tools are registered without displacing read_app_log.
+def test_extra_tools_reach_the_model_alongside_the_owned_ones(tmp_path: Path) -> None:
+    """A caller's tools are registered without displacing read_app_log or init_project.
 
     Dropping launch_app would leave the model hunting for a tool the instructions name.
     """
@@ -87,8 +87,10 @@ def test_extra_tools_reach_the_model_alongside_the_owned_one(tmp_path: Path) -> 
     agent = create_agent(tmp_path, extra_tools=[launch_app])
 
     tools = function_tools(agent)
-    assert set(tools) == {"read_app_log", "launch_app"}
+    assert set(tools) == {"read_app_log", "init_project", "launch_app"}
     assert tools["launch_app"].function_schema.json_schema["properties"] == {}
+    # The model only ever chooses the name; the template decides everything written.
+    assert set(tools["init_project"].function_schema.json_schema["properties"]) == {"name"}
 
 
 def function_tools(agent: Agent[None, str]) -> dict[str, Any]:
@@ -133,6 +135,27 @@ def test_a_credential_is_stripped_from_the_environment_a_subprocess_inherits(
     patterns = shell_of(create_agent(tmp_path)).denied_env_patterns
 
     assert denied(name, patterns)
+
+
+def test_the_shell_runs_uv_against_the_projects_index_not_the_agents_venv(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """`uv add` in the shell must resolve against the index the launch installs from.
+
+    Otherwise the lock it writes names another registry, and the next launch treats it as stale.
+    VIRTUAL_ENV is what the local provider's `uv run` leaves behind; it points at the Agent's own
+    venv, which the project's uv must never be steered towards.
+    """
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
+    monkeypatch.setattr(settings, "PACKAGE_INDEX_URL", "https://pypi.example.com/simple")
+    monkeypatch.setenv("VIRTUAL_ENV", "/app/agent/.venv")
+
+    shell = shell_of(create_agent(tmp_path))
+
+    assert shell.env is not None
+    assert shell.env["UV_DEFAULT_INDEX"] == "https://pypi.example.com/simple"
+    assert not denied("UV_DEFAULT_INDEX", shell.denied_env_patterns)
+    assert "VIRTUAL_ENV" not in shell.env
 
 
 def provider_key_of(model: Any) -> str:

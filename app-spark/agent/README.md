@@ -35,6 +35,7 @@ uv sync
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
 | `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/data/state` | 必须在 workspace 外 |
+| `APP_SPARK_AGENT_PACKAGE_INDEX_URL` | 否 | 用户项目装依赖用的 PyPI 包源，缺省腾讯云镜像 `https://mirrors.cloud.tencent.com/pypi/simple`，不得带凭据（它会写进用户仓库的 `uv.lock`） |
 | `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条。launch 会把应用 stdout/stderr 接到这里，打开失败不阻止已实听的成功 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
 
@@ -123,7 +124,7 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 ## 拉起用户应用
 
 这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。唯一的触发路径是模型自己的 `launch_app`
-工具：进程内直调监督器（`launch_tool.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
+工具：进程内直调监督器（`tools/launch_app.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
 `APP_SPARK_AGENT_*`。只有 agent 第一时间知道代码什么时候真的能跑。失败不中断整轮：原因交回模型，
 它可以读日志改完再拉，单轮最多 2 次。
 
@@ -137,9 +138,9 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 被外面怎么寻址，也不该知道。`launch_app` 只回 `status` 和 `port`，`app.launched` 同理。给模型一个地址，
 它就会把那个地址当成真的报给用户。
 
-启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`
-（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在 `settings.INSTRUCTIONS` 里，两处必须一起改——
-模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
+启动约定：cwd 为 workspace，先 `uv sync --no-dev`，再用项目自己的解释器（`<workspace>/.venv/bin/python`）跑
+`uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在
+`settings.INSTRUCTIONS` 里，两处必须一起改——模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
 
 `--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。会话之间的隔离靠
 每个沙箱分到不同的 `APP_PORT`、以及浏览器只能走控制面的反向代理，不靠改这个监听地址。探针只连
@@ -168,6 +169,18 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 - 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
   不然「失败→改代码→再 launch」会一直烧 token。
 - 子进程的环境整段剥掉 `APP_SPARK_AGENT_` 前缀，然后只把 `APP_SPARK_AGENT_APP_PORT` 加回去（`build_child_environ`）。剥前缀而不是逐个 pop 已知密钥：新增一个配置忘了登记就会漏进应用，而应用是模型写的代码。
+
+### 项目依赖
+
+依赖属于用户项目，不属于平台：`pyproject.toml` 和 `uv.lock` 在 workspace 根目录，随代码保存进 Git。
+
+- 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个文件。
+  workspace 里两个文件都不存在才写，永不覆盖。模型只决定时机和项目名，文件内容由程序给。
+- 模板与提示词是一对：起始包清单逐字写在 `INSTRUCTIONS` 的 Dependencies 一节。改模板依赖时两处一起改，再 `make lock-app-template`。
+- launch 前对齐：每次 launch（含 crash 后的自动重拉）都先 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
+  workspace 里还没有 `pyproject.toml` 时 launch 直接失败，提示模型先调 `init_project`。
+- 模型加依赖：在 Shell 里 `uv add` / `uv remove`（用户提出就允许，不设白名单）。
+- 缓存预热：两个镜像构建时都对模板 `uv sync` 一次再删掉建出来的 `.venv`，只留下 uv 缓存，这样之后项目初次 uv sync 时可以提速。
 
 ## 凭据屏蔽
 
@@ -213,10 +226,12 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
   `context.json`，绝不能从 `log.jsonl` 拼出来。
 - bkaidev 对话中间层（`app_spark_agent/bkaidev/session.py`）只从 `context.json` 取发给
   网关的历史，并读取三份游标；不改写 context，也不往 transcript 写 OpenAI 原始报文。
-- `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
-  8192 字节；文件工具看不见它。
-- `launch_app` 不接受参数，返回 `status` / `port` / `detail`。注入自带 agent 的调用方（嵌入、单测）
-  身上没有这个工具，必须把 `LaunchTool.as_tool()` 交进去，否则模型会去找一个不存在的工具。
+- 平台自己的模型工具在 `app_spark_agent/tools/`，一个工具一个模块、模块名即工具名：
+  - `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
+    8192 字节；文件工具看不见它。
+  - `init_project` 只接受项目名，返回 `status` / `name` / `detail`，见「项目依赖」。
+  - `launch_app` 不接受参数，返回 `status` / `port` / `detail`。注入自带 agent 的调用方（嵌入、单测）
+    身上没有这个工具，必须把 `LaunchTool.as_tool()` 交进去，否则模型会去找一个不存在的工具。
 
 ## 远程持久化
 

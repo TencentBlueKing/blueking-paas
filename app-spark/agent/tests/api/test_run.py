@@ -5,14 +5,19 @@ Runtime streams back, and what happens to a second caller who arrives while a ru
 flight.
 """
 
+import json
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic_ai.messages import ModelMessage, ToolReturnPart
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
 from app_spark_agent import settings
+from app_spark_agent.tools import build_init_project_tool
 from tests.api.support import (
     ApiFactory,
     get_transcript_messages,
@@ -251,6 +256,43 @@ def test_runs_rejects_an_unready_listed_model_gate(
 
     assert resp.status_code == 503
     assert api.get("/health").json()["model_ready"] is False
+
+
+def test_a_turn_that_edits_nothing_leaves_a_new_workspace_empty(make_api: ApiFactory, tmp_path: Path) -> None:
+    """A chat-only turn must not write files: anything it wrote would be saved as a checkpoint.
+
+    The control plane relies on such a conversation having no checkpoint, and resumes it from
+    its archived context alone.
+    """
+    workspace = tmp_path / "runtime-0" / "workspace"
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
+        yield "ok"
+
+    api = make_api(model=FunctionModel(stream_function=stream))
+    run_turn(api, conversation_id=str(uuid4()))
+
+    assert [path.name for path in workspace.iterdir() if path.name != ".git"] == []
+
+
+def test_the_model_creates_the_project_with_init_project(make_api: ApiFactory, tmp_path: Path) -> None:
+    """Registering it on the real agent is test_agent.py's business; this drives it through a run."""
+    workspace = tmp_path / "runtime-0" / "workspace"
+    results: list[dict[str, Any]] = []
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str | DeltaToolCalls]:
+        returns = [part for message in messages for part in message.parts if isinstance(part, ToolReturnPart)]
+        if returns:
+            results.append(json.loads(returns[-1].model_response_str()))
+            yield "ok"
+            return
+        yield {0: DeltaToolCall(name="init_project", json_args='{"name": "Todo Board"}', tool_call_id="init-1")}
+
+    api = make_api(model=FunctionModel(stream_function=stream), tools=[build_init_project_tool(workspace)])
+    run_turn(api, conversation_id=str(uuid4()))
+
+    assert results == [{"status": "created", "name": "todo-board", "detail": ""}]
+    assert sorted(path.name for path in workspace.iterdir() if path.name != ".git") == ["pyproject.toml", "uv.lock"]
 
 
 def test_a_failed_run_does_not_clear_readiness(make_api: ApiFactory) -> None:

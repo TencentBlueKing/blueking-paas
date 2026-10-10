@@ -86,8 +86,20 @@ class App:
         self._calls = 0
         (tmp_path / "workspace").mkdir(exist_ok=True)
 
+        # 依赖对齐也假掉：真 uv 由 test_project_env.py 验。这里只记下每次对齐时已经拉起过几个
+        # 子进程，好断言「先装依赖、再 spawn」；sync_error 不为空时就按它失败。
+        self.synced_after_spawns: list[int] = []
+        self.sync_error: AppLaunchFailed | None = None
+
+        async def sync(_workspace: Path, _log_path: Path) -> None:
+            self.synced_after_spawns.append(len(self.spawned))
+            if self.sync_error is not None:
+                raise self.sync_error
+
         async def answers(_port: int) -> bool:
             return self.listening
+
+        monkeypatch.setattr(supervisor_mod, "sync_project_environment", sync)
 
         # 两个探针都假掉：一个判就绪（应答得了 HTTP），一个判端口有没有被占。真实情况里两者可以
         # 不一致——「占着端口但不说 HTTP」正是留下 TCP 探针的理由，那条由 test_app_probe.py 守。
@@ -178,6 +190,31 @@ def test_spec_starts_the_import_path_the_instructions_promise(tmp_path: Path) ->
     assert APP_IMPORT_PATH in settings.INSTRUCTIONS
     assert spec.argv[-2:] == ("--port", "8123")
     assert spec.cwd == tmp_path
+
+
+def test_spec_runs_the_projects_own_interpreter(tmp_path: Path) -> None:
+    assert build_app_spec(tmp_path, 8123).argv[0] == str(tmp_path / ".venv" / "bin" / "python")
+
+
+async def test_a_failed_install_fails_the_launch_without_spawning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """依赖装不上就别拉：拿缺包的环境起应用，只会把原因换成一个更难读的 ImportError。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_error = AppLaunchFailed("Installing the project's dependencies failed")
+
+    with pytest.raises(AppLaunchFailed, match="dependencies failed"):
+        await app.supervisor.launch()
+    assert app.spawned == []
+    assert await app.supervisor.dev_server_status() is DevServerStatus.NOT_STARTED
+
+
+async def test_a_spawn_error_is_reported_as_a_launch_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """launch_app 只把 AppLaunchError 交回模型，裸 OSError 会掐断整轮。"""
+    app = App(monkeypatch, tmp_path, fail_on=1)
+
+    with pytest.raises(AppLaunchFailed, match="spawn refused"):
+        await app.supervisor.launch()
 
 
 async def test_relaunch_replaces_the_process_and_reuses_the_run_id(

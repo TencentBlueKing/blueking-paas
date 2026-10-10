@@ -17,11 +17,13 @@
 """Start and restart the workspace application so a caller can open it over HTTP.
 
 分三层：process.py 是通用子进程托管，app_spec.py 说清这个应用怎么启，supervisor.py 只管
-策略（一次一个 launch、掉听重启额度、状态、事件）。
+策略（一次一个 launch、掉听重启额度、状态、事件）。project_env.py 管应用所在的项目环境：
+uv 的环境变量，以及每次启动前的依赖对齐。
 """
 
 from app_spark_agent.app_supervisor.app_spec import build_app_spec, build_child_environ
 from app_spark_agent.app_supervisor.process import ManagedProcess, ProcessRegistry, ProcessSpec
+from app_spark_agent.app_supervisor.project_env import sync_project_environment, uv_environ
 from app_spark_agent.app_supervisor.supervisor import AppSupervisor
 from app_spark_agent.app_supervisor.types import (
     APP_PORT_ENV,
@@ -49,4 +51,6 @@ __all__ = [
     "ProcessSpec",
     "build_app_spec",
     "build_child_environ",
+    "sync_project_environment",
+    "uv_environ",
 ]

@@ -56,3 +56,8 @@ class ClientAction(StrStructuredEnum):
 
     # 目前仅供 AIDev 平台使用，用于以应用身份创建 AI Agent 应用
     CREATE_AI_AGENT_APP = EnumField("sysapi:create:ai-agent-app", label=_("创建 AI Agent 应用"))
+
+    # 目前仅供 AIDev 平台使用，用于以应用身份为 AI Agent 应用上传源码包
+    UPLOAD_AI_AGENT_SOURCE_PACKAGE = EnumField(
+        "sysapi:upload:ai-agent-source-package", label=_("上传 AI Agent 源码包")
+    )

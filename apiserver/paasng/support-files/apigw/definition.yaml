@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.5
-  title: "Add agent sandbox volume share and e2b APIs."
-  comment: "Add agent sandbox volume share and e2b APIs."
+  version: 1.4.6
+  title: "Add the system API to upload source packages for AI Agent apps."
+  comment: "Add POST /system/bkapps/applications/{app_code}/modules/{module}/source_package/link/ for AIDEV."
 
 
 stages:

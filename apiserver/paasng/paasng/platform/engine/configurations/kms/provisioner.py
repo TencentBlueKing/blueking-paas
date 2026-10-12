@@ -14,8 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-"""敏感变量的 KMS 托管：冻结配置版本，创建 KMS 凭证与 ESO 资源，并等待目标 Secret 就绪"""
+"""冻结敏感变量为 KMS 配置版本，创建 KMS 凭证与 ESO 资源，并等待目标 Secret 就绪"""
 
 import logging
 import time
@@ -23,17 +22,13 @@ import uuid
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 from django.conf import settings
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.processes.entities import SecretFileMount
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import ResourceMissing
-from paas_wl.infras.resources.base.kres import BaseKresource, KSecret, KServiceAccount
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth, make_kms_client
 from paasng.infras.kms.constants import (
     KMS_SECRET_MOUNT_DIR,
@@ -51,7 +46,6 @@ from paasng.infras.kms.exceptions import (
     KMSValidationError,
 )
 from paasng.infras.kms.manifests import (
-    CLUSTER_SECRET_STORE_KIND,
     EXTERNAL_SECRET_KIND,
     EXTERNAL_SECRETS_API_VERSION,
     build_cluster_secret_store,
@@ -67,23 +61,13 @@ from paasng.infras.kms.naming import (
 )
 from paasng.infras.kms.payload import build_frozen_payload
 from paasng.infras.kms.readiness import SecretReadiness, evaluate_secret_readiness
-from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.configurations.env_var.encryption import (
-    ENCRYPTED_KEYS_ENV_NAME,
-    SECRET_KEY_ENV_VAR_NAME,
-    collect_sensitive_keys,
-    is_encrypted_value,
-)
 from paasng.platform.engine.constants import KMSConfigVersionStatus
-from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment, KMSConfigVersion
-from paasng.platform.modules.models import Module
+
+from .kube import SECRET_API_VERSION, SECRET_KIND, KubeResourceClient, KubeResources
 
 logger = logging.getLogger(__name__)
-
-SECRET_API_VERSION = "v1"
-SECRET_KIND = "Secret"
 
 ERROR_REASON_MAX_CHARS = 255
 
@@ -94,73 +78,6 @@ _PROGRESS_ORDER = (
     KMSConfigVersionStatus.RESOURCES_APPLIED.value,
     KMSConfigVersionStatus.READY.value,
 )
-
-
-class KClusterSecretStore(BaseKresource):
-    """ESO 集群级 SecretStore（external-secrets.io）"""
-
-    kind = CLUSTER_SECRET_STORE_KIND
-
-
-class KExternalSecret(BaseKresource):
-    """ESO ExternalSecret（external-secrets.io）"""
-
-    kind = EXTERNAL_SECRET_KIND
-
-
-_KRES_BY_KIND: dict[str, type[BaseKresource]] = {
-    "ServiceAccount": KServiceAccount,
-    "Secret": KSecret,
-    "ClusterSecretStore": KClusterSecretStore,
-    "ExternalSecret": KExternalSecret,
-}
-
-
-class KubeResources:
-    """KMS 相关 Kubernetes 资源在单个集群中的读写，对外只使用普通 dict"""
-
-    def __init__(self, client: Any):
-        self._client = client
-        self._kres_cache: dict[tuple[str, str], BaseKresource] = {}
-
-    @classmethod
-    def for_cluster(cls, cluster_name: str) -> "KubeResources":
-        return cls(get_client_by_cluster_name(cluster_name))
-
-    def apply(self, manifest: Mapping[str, Any]) -> str:
-        """以 create_or_update 方式提交资源，返回 metadata.uid
-
-        使用 replace 而非 patch：ESO 资源是 CRD，replace 不依赖 resourceVersion，可以无条件更新。
-        """
-        metadata = manifest["metadata"]
-        kres = self._get_kres(manifest["apiVersion"], manifest["kind"])
-        obj, _created = kres.create_or_update(
-            metadata["name"], namespace=metadata.get("namespace"), body=dict(manifest)
-        )
-        return str(obj.to_dict()["metadata"]["uid"])
-
-    def get(self, *, api_version: str, kind: str, name: str, namespace: str | None) -> dict[str, Any] | None:
-        """按名称读取资源，不存在时返回 None"""
-        try:
-            obj = self._get_kres(api_version, kind).get(name, namespace=namespace)
-        except ResourceMissing:
-            return None
-        return obj.to_dict()
-
-    def _get_kres(self, api_version: str, kind: str) -> BaseKresource:
-        cache_key = (api_version, kind)
-        if cache_key not in self._kres_cache:
-            kres_cls = _KRES_BY_KIND.get(kind)
-            if kres_cls is None:
-                raise ValueError(f"unsupported kind: {kind}")
-            self._kres_cache[cache_key] = kres_cls(self._client, api_version=api_version)
-        return self._kres_cache[cache_key]
-
-
-class KubeResourceClient(Protocol):
-    def apply(self, manifest: Mapping[str, Any]) -> str: ...
-
-    def get(self, *, api_version: str, kind: str, name: str, namespace: str | None) -> dict[str, Any] | None: ...
 
 
 @dataclass(frozen=True)
@@ -201,6 +118,30 @@ def load_kms_settings() -> KMSSaaSSettings:
         ready_timeout_seconds=settings.KMS_SECRET_READY_TIMEOUT_SECONDS,
         ready_poll_interval_seconds=settings.KMS_SECRET_READY_POLL_INTERVAL_SECONDS,
     )
+
+
+def provision_kms_secret(
+    env: ModuleEnvironment,
+    deployment: Deployment,
+    sensitive_values: Mapping[str, str],
+    *,
+    kms: KMSClient | None = None,
+    kube: KubeResourceClient | None = None,
+    kms_settings: KMSSaaSSettings | None = None,
+) -> SecretFileMount:
+    """冻结本次部署的敏感变量，创建 KMS 凭证与 ESO 资源，并等待 Secret 就绪
+
+    调用方需保证 namespace 已存在。任何一步失败都会原样抛出，不会降级为明文注入。
+    """
+    version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=kms_settings)
+    # 先绑定到部署再发起远程请求，失败后可以从已记录的版本继续
+    deployment.kms_config_version = version
+    deployment.save(update_fields=["kms_config_version"])
+
+    provisioner = KMSSecretProvisioner(version, kms=kms, kube=kube, kms_settings=kms_settings)
+    provisioner.provision()
+    provisioner.wait_ready()
+    return _build_kms_secret_mount(version)
 
 
 def create_kms_config_version(
@@ -479,125 +420,11 @@ def _hex_id(value: Any) -> str:
     return uuid.UUID(str(value)).hex
 
 
-# 敏感变量加密时写入的元数据变量。托管给 KMS 后，没有剩余密文时不再需要
-_ENCRYPTION_METADATA_NAMES = frozenset({SECRET_KEY_ENV_VAR_NAME, ENCRYPTED_KEYS_ENV_NAME})
-
-# 即使被标记为敏感，也继续作为环境变量注入的内置变量
-KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
-
-
-def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
-    return env.application.feature_flag.has_feature(AppFeatureFlag.KMS_SECRET_INJECTION)
-
-
-def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
-    """拒绝尚未接入 Secret 挂载的应用类型，避免敏感变量丢失"""
-    if env.application.use_isolated_sandbox:
-        raise DeployShouldAbortError("开启 KMS 托管敏感变量后，暂不支持隔离沙箱应用")
-
-
-def collect_kms_managed_keys(env: ModuleEnvironment) -> frozenset[str]:
-    """环境中由 KMS 托管的敏感变量键：用户标记为敏感的变量，以及增强服务的隐藏/移除字段"""
-    return frozenset(collect_sensitive_keys(env)) - KMS_UNMANAGED_ENV_KEYS
-
-
-def collect_kms_managed_keys_by_env(module: Module) -> dict[str, frozenset[str]]:
-    """模块各环境的 KMS 托管键，用于从云原生 BkApp 中剥离敏感变量"""
-    return {env.environment: collect_kms_managed_keys(env) for env in module.envs.all()}
-
-
-def build_kms_secret_mount(version: KMSConfigVersion) -> SecretFileMount:
-    """KMS 托管 Secret 的挂载方式：信封与私钥各为一个只读文件"""
+def _build_kms_secret_mount(version: KMSConfigVersion) -> SecretFileMount:
+    """信封与私钥各为一个只读文件"""
     return SecretFileMount(
         volume_name=KMS_SECRET_VOLUME_NAME,
         secret_name=version.resource_name,
         mount_dir=KMS_SECRET_MOUNT_DIR,
         sub_paths=(SECRET_KEY_ENVELOPE, SECRET_KEY_PRIVATE_KEY),
     )
-
-
-def provision_kms_secret(
-    env: ModuleEnvironment,
-    deployment: Deployment,
-    sensitive_values: Mapping[str, str],
-    *,
-    kms: KMSClient | None = None,
-    kube: KubeResourceClient | None = None,
-    kms_settings: KMSSaaSSettings | None = None,
-) -> SecretFileMount:
-    """冻结本次部署的敏感变量，创建 KMS 凭证与 ESO 资源，并等待 Secret 就绪
-
-    调用方需保证 namespace 已存在。任何一步失败都会原样抛出，不会降级为明文注入。
-    """
-    version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=kms_settings)
-    # 先绑定到部署再发起远程请求，失败后可以从已记录的版本继续
-    deployment.kms_config_version = version
-    deployment.save(update_fields=["kms_config_version"])
-
-    provisioner = KMSSecretProvisioner(version, kms=kms, kube=kube, kms_settings=kms_settings)
-    provisioner.provision()
-    provisioner.wait_ready()
-    return build_kms_secret_mount(version)
-
-
-def strip_kms_managed_env_vars(
-    bkapp_res: crd.BkAppResource,
-    env_name: str,
-    managed_keys_by_env: Mapping[str, frozenset[str]],
-) -> None:
-    """从 BkApp 中移除由 KMS 托管的敏感变量：包括默认配置，以及各环境的覆盖项
-
-    覆盖项按其所属环境的托管键过滤，因此其他环境的敏感值也不会进入本次提交的资源。
-    """
-    deploy_keys = managed_keys_by_env.get(env_name, frozenset())
-    bkapp_res.spec.configuration.env = [var for var in bkapp_res.spec.configuration.env if var.name not in deploy_keys]
-
-    overlay = bkapp_res.spec.envOverlay
-    if overlay is None or not overlay.envVariables:
-        return
-    overlay.envVariables = [
-        var for var in overlay.envVariables if var.name not in managed_keys_by_env.get(var.envName, frozenset())
-    ]
-    if not _has_encrypted_values(bkapp_res):
-        overlay.envVariables = [var for var in overlay.envVariables if var.name not in _ENCRYPTION_METADATA_NAMES]
-
-
-def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
-    """在环境覆盖项中追加 KMS Secret 挂载。operator 会把它应用到业务进程与云原生 Hook 的容器上"""
-    _ensure_mount_not_reserved(bkapp_res, env_name, mount)
-    if bkapp_res.spec.envOverlay is None:
-        bkapp_res.spec.envOverlay = crd.EnvOverlay()
-    bkapp_res.spec.envOverlay.append_item(
-        "mounts",
-        crd.MountOverlay(
-            envName=env_name,
-            name=mount.volume_name,
-            mountPath=mount.mount_dir,
-            source=crd.VolumeSource(secret=crd.SecretSource(name=mount.secret_name)),
-            subPaths=list(mount.sub_paths),
-        ),
-    )
-
-
-def _has_encrypted_values(bkapp_res: crd.BkAppResource) -> bool:
-    values = [var.value for var in bkapp_res.spec.configuration.env]
-    overlay = bkapp_res.spec.envOverlay
-    if overlay is not None and overlay.envVariables:
-        values.extend(var.value for var in overlay.envVariables)
-    return any(is_encrypted_value(value) for value in values)
-
-
-def _ensure_mount_not_reserved(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
-    """用户自定义挂载不得占用 KMS 的卷名或目录，否则 Pod 规格会冲突，或者覆盖保留路径"""
-    mounts: list[crd.Mount | crd.MountOverlay] = list(bkapp_res.spec.mounts or [])
-    if bkapp_res.spec.envOverlay is not None:
-        mounts.extend(m for m in bkapp_res.spec.envOverlay.mounts or [] if m.envName == env_name)
-
-    reserved_dir = mount.mount_dir.rstrip("/")
-    for user_mount in mounts:
-        if (
-            user_mount.name == mount.volume_name
-            or user_mount.mountPath == reserved_dir
-            or user_mount.mountPath.startswith(reserved_dir + "/")
-        ):
-            raise DeployShouldAbortError(f"挂载路径 {user_mount.mountPath} 与 KMS 保留的挂载冲突，请修改后重新部署")

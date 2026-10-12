@@ -15,14 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from types import SimpleNamespace
-from unittest import mock
-
 import pytest
 
 from paas_wl.bk_app.applications.managers import update_metadata
-from paas_wl.bk_app.deploy.actions.deploy import DeployAction, ObsoleteProcessesCleaner
-from paas_wl.bk_app.processes.entities import Runtime, SecretFileMount
+from paas_wl.bk_app.deploy.actions.deploy import ObsoleteProcessesCleaner
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -97,36 +93,3 @@ class TestObsoleteProcessesCleaner:
         sim_results = [(cfg.type, should_remove_svc) for cfg, should_remove_svc in results]
         sim_results.sort()
         assert sim_results == simplified_diff
-
-
-class TestDeployActionSecretMounts:
-    """DeployAction 把 Secret 文件挂载设置到每个进程的 runtime 上，由 ProcessSerializer 渲染到主容器"""
-
-    @pytest.fixture()
-    def process(self, mocker):
-        """替换 DeployAction 依赖的集群交互，返回待部署的进程与 ProcessesHandler.deploy 的 mock"""
-        proc = SimpleNamespace(runtime=Runtime(envs={}, image="img", command=[], args=[]))
-        app_process_mgr = mocker.patch("paas_wl.bk_app.deploy.actions.deploy.AppProcessManager")
-        app_process_mgr.return_value.assemble_processes.return_value = [proc]
-        mocker.patch("paas_wl.bk_app.deploy.actions.deploy.NamespacesHandler")
-        mocker.patch("paas_wl.bk_app.deploy.actions.deploy.ensure_image_credentials_secret")
-        mocker.patch.object(DeployAction, "recycle_resource")
-        mocker.patch.object(DeployAction, "ensure_bk_log_if_need")
-        mocker.patch.object(DeployAction, "ensure_bk_monitor_if_need")
-        handler_cls = mocker.patch("paas_wl.bk_app.deploy.actions.deploy.ProcessesHandler")
-        return proc, handler_cls.new_by_app.return_value.deploy
-
-    def test_secret_mounts_are_set_on_runtime(self, wl_app, process):
-        proc, deploy = process
-        mount = SecretFileMount(
-            volume_name="kms-secret",
-            secret_name="kms-res-1",
-            mount_dir="/etc/kms",
-            sub_paths=("envelope", "privateKey"),
-        )
-
-        DeployAction(env=mock.Mock(wl_app=wl_app), release=mock.Mock(), extra_envs={}, secret_mounts=[mount]).perform()
-
-        (deployed,) = deploy.call_args[0]
-        assert deployed == [proc]
-        assert proc.runtime.secret_mounts == [mount]

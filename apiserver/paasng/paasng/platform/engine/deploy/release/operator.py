@@ -39,13 +39,13 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
-from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.kms_secret import (
+from paasng.platform.engine.configurations.kms import (
     add_kms_secret_mount,
     collect_kms_managed_keys_by_env,
     ensure_kms_injection_supported,
     is_kms_injection_enabled,
     provision_kms_secret,
+    split_kms_managed_env_vars,
     strip_kms_managed_env_vars,
 )
 from paasng.platform.engine.constants import JobStatus
@@ -160,10 +160,8 @@ def release_by_k8s_operator(
         kms_sensitive_values: dict[str, str] = {}
         if is_kms_injection_enabled(env):
             ensure_kms_injection_supported(env)
-            managed_keys_by_env = collect_kms_managed_keys_by_env(env.module)
-            managed_keys = managed_keys_by_env.get(env.environment, frozenset())
-            kms_sensitive_values = {k: v for k, v in get_env_variables(env).items() if k in managed_keys}
-            strip_kms_managed_env_vars(bkapp_res, env.environment, managed_keys_by_env)
+            _, kms_sensitive_values = split_kms_managed_env_vars(env)
+            strip_kms_managed_env_vars(bkapp_res, env.environment, collect_kms_managed_keys_by_env(env.module))
 
         # 部署预检
         preflight_deploy(env, bkapp_res)

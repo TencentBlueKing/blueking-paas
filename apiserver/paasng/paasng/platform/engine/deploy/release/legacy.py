@@ -33,11 +33,11 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
-from paasng.platform.engine.configurations.kms_secret import (
-    collect_kms_managed_keys,
+from paasng.platform.engine.configurations.kms import (
     ensure_kms_injection_supported,
     is_kms_injection_enabled,
     provision_kms_secret,
+    split_kms_managed_env_vars,
 )
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails
@@ -221,16 +221,12 @@ def _get_extra_envs_and_secret_mounts(
         raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
     ensure_kms_injection_supported(env)
 
-    all_values = get_env_variables(env)
-    managed_keys = collect_kms_managed_keys(env)
-    sensitive_values = {key: value for key, value in all_values.items() if key in managed_keys}
+    plain_values, sensitive_values = split_kms_managed_env_vars(env)
     if not sensitive_values:
-        return all_values, []
+        return plain_values, []
 
     NamespacesHandler.new_by_app(env.wl_app).ensure_namespace(env.wl_app.namespace)
-    secret_mount = provision_kms_secret(env, deployment, sensitive_values)
-    plain_values = {key: value for key, value in all_values.items() if key not in managed_keys}
-    return plain_values, [secret_mount]
+    return plain_values, [provision_kms_secret(env, deployment, sensitive_values)]
 
 
 def release_to_k8s(

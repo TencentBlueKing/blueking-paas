@@ -16,15 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
-import json
 
+import bk_kms
 import pytest
 import requests
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives import padding as sym_padding
-from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth
 from paasng.infras.kms.constants import ERROR_CODE_RESOURCE_NOT_FOUND, K8S_SECRET_MAX_BYTES, PLAINTEXT_MAX_CHARS
@@ -96,29 +93,24 @@ def _crypto_info_data(private_key) -> dict:
     }
 
 
-def _decrypt_envelope(envelope_b64: str, private_key) -> str:
-    """按应用端 SDK 的解密规则还原明文"""
-    envelope = json.loads(base64.b64decode(envelope_b64))
-    symmetric_key = private_key.decrypt(
-        base64.b64decode(envelope["encrypted_key"]),
-        asym_padding.OAEP(mgf=asym_padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+def _sdk_private_key(private_key) -> str:
+    """应用端 SDK 要求的私钥格式：Base64 编码的 PEM"""
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
     )
-    raw = base64.b64decode(envelope["ciphertext"])
-    iv, body = raw[:16], raw[16:]
-    decryptor = Cipher(algorithms.AES(symmetric_key), modes.CBC(iv)).decryptor()
-    padded = decryptor.update(body) + decryptor.finalize()
-    unpadder = sym_padding.PKCS7(128).unpadder()
-    return (unpadder.update(padded) + unpadder.finalize()).decode("utf-8")
+    return base64.b64encode(pem).decode("ascii")
 
 
 class TestEncryptCredentialValue:
-    def test_envelope_decrypts_to_plaintext(self, client, rsa_key, monkeypatch):
+    def test_envelope_decrypts_with_app_sdk(self, client, rsa_key, monkeypatch):
         fake = FakeKMSRequest({"/api/v1/get/crypto_info": _crypto_info_data(rsa_key)})
         monkeypatch.setattr(client, "_request", fake)
 
-        envelope = client.encrypt_credential_value("password-123")
+        envelope = client.encrypt_credential_value('{"DB_PASSWORD": "密码-123"}')
 
-        assert _decrypt_envelope(envelope, rsa_key) == "password-123"
+        assert bk_kms.decrypt(envelope, _sdk_private_key(rsa_key)) == '{"DB_PASSWORD": "密码-123"}'
         assert fake.calls == [("POST", "/api/v1/get/crypto_info", {"category": "normal"})]
 
     def test_each_encryption_uses_fresh_key_material(self, client, rsa_key, monkeypatch):

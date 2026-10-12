@@ -79,6 +79,11 @@ ensure-apigw() {
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml --generate-sdks
 
+    # 同步环境 MCP Server。必须在发布之后执行，否则没有已生效的资源版本
+    python manage.py sync_apigw_stage_mcp_servers \
+    --api-name "${api_name}" \
+    -f support-files/apigw/definition.yaml
+
     # 获取网关公钥
     python manage.py fetch_apigw_public_key \
     --api-name "${api_name}"

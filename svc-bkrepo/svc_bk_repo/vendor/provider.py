@@ -18,7 +18,6 @@
 import json
 import logging
 from dataclasses import dataclass
-from enum import Enum
 from typing import Dict, Optional
 
 from django.conf import settings
@@ -29,9 +28,15 @@ from svc_bk_repo.vendor.helper import BKGenericRepoManager, RequestError
 
 logger = logging.getLogger(__name__)
 
-
-class BKRepoErrorCode(str, Enum):
-    REPO_EXISTS = "251008"
+# 蓝鲸制品库(bkrepo)的错误码.
+#
+# NOTE: 不同版本的 bkrepo 错误码并不一致:
+#   - 仓库已存在: 新版本 251007, 旧版本 251008
+#   - 仓库不存在: 新版本 251006, 旧版本 251007
+#   - 用户不存在: 250202
+REPO_EXISTS_ERROR_CODES = frozenset({"251007", "251008"})
+REPO_NOT_FOUND_ERROR_CODES = frozenset({"251006", "251007"})
+USER_NOT_FOUND_ERROR_CODES = frozenset({"250202"})
 
 
 @dataclass
@@ -76,15 +81,15 @@ class Provider(BaseProvider):
         try:
             manager.create_repo(repo=public_repo, public=True, quota=self.quota)
         except RequestError as e:
-            # 仓库已存在: 251008
-            if str(e.code) not in [BKRepoErrorCode.REPO_EXISTS]:
+            # 仓库已存在: 251007(新版本) / 251008(旧版本)
+            if str(e.code) not in REPO_EXISTS_ERROR_CODES:
                 raise
 
         try:
             manager.create_repo(repo=private_repo, public=False, quota=self.quota)
         except RequestError as e:
-            # 仓库已存在: 251008
-            if str(e.code) not in [BKRepoErrorCode.REPO_EXISTS]:
+            # 仓库已存在: 251007(新版本) / 251008(旧版本)
+            if str(e.code) not in REPO_EXISTS_ERROR_CODES:
                 raise
 
         manager.create_user(
@@ -116,13 +121,34 @@ class Provider(BaseProvider):
         )
 
     def delete(self, instance_data: InstanceData):
-        repo = instance_data.credentials["repo"]
+        """回收实例占用的 bkrepo 资源: 私有仓库, 公开仓库, 用户"""
+        private_bucket = instance_data.credentials["private_bucket"]
+        public_bucket = instance_data.credentials["public_bucket"]
         username = instance_data.credentials["username"]
         tenant_id = instance_data.config["tenant_id"]
 
         manager = self.make_manager(tenant_id=tenant_id)
-        manager.delete_user(username=username)
-        manager.delete_repo(repo=repo, forced=True)
+        self._delete_user(manager, username)
+        self._delete_repo(manager, private_bucket)
+        self._delete_repo(manager, public_bucket)
+
+    def _delete_user(self, manager: BKGenericRepoManager, username: str) -> None:
+        """删除用户, 用户已不存在时视作回收完成(支持重复回收)"""
+        try:
+            manager.delete_user(username=username)
+        except RequestError as e:
+            if str(e.code) not in USER_NOT_FOUND_ERROR_CODES:
+                raise
+            logger.info("bkrepo user<%s> not found, skip deleting", username)
+
+    def _delete_repo(self, manager: BKGenericRepoManager, repo: str) -> None:
+        """删除仓库, 仓库已不存在时视作回收完成(支持重复回收)"""
+        try:
+            manager.delete_repo(repo=repo, forced=True)
+        except RequestError as e:
+            if str(e.code) not in REPO_NOT_FOUND_ERROR_CODES:
+                raise
+            logger.info("bkrepo repository<%s> not found, skip deleting", repo)
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         username = instance_data.credentials["username"]

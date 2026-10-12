@@ -39,6 +39,15 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
+from paasng.platform.engine.configurations.config_var import get_env_variables
+from paasng.platform.engine.configurations.kms_secret import (
+    add_kms_secret_mount,
+    collect_kms_managed_keys_by_env,
+    ensure_kms_injection_supported,
+    is_kms_injection_enabled,
+    provision_kms_secret,
+    strip_kms_managed_env_vars,
+)
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
@@ -147,11 +156,25 @@ def release_by_k8s_operator(
             image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
         )
 
+        # 开启 KMS 托管时，敏感变量不再出现在 BkApp 中，改由 KMS 托管的 Secret 文件提供
+        kms_sensitive_values: dict[str, str] = {}
+        if is_kms_injection_enabled(env):
+            ensure_kms_injection_supported(env)
+            managed_keys_by_env = collect_kms_managed_keys_by_env(env.module)
+            managed_keys = managed_keys_by_env.get(env.environment, frozenset())
+            kms_sensitive_values = {k: v for k, v in get_env_variables(env).items() if k in managed_keys}
+            strip_kms_managed_env_vars(bkapp_res, env.environment, managed_keys_by_env)
+
         # 部署预检
         preflight_deploy(env, bkapp_res)
 
         # 下发 k8s 资源前需要确保命名空间存在
         ensure_namespace(env)
+
+        # 有敏感变量时创建 KMS 凭证与 ESO 资源，等待 Secret 就绪后，再把挂载追加到业务进程与云原生 Hook
+        if kms_sensitive_values:
+            secret_mount = provision_kms_secret(env, deployment, kms_sensitive_values)
+            add_kms_secret_mount(bkapp_res, env.environment, secret_mount)
 
         # Apply the ConfigMap resource related with service discovery
         #

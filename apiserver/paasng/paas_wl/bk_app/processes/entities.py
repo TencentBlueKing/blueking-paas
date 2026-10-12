@@ -37,6 +37,20 @@ class Resources:
     requests: Optional[Spec] = None
 
 
+@dataclass(frozen=True)
+class SecretFileMount:
+    """将 Secret 中指定的 key 以只读文件的形式挂载到进程的主容器
+
+    每个 sub_path 对应 Secret 的一个 key，挂载为 `{mount_dir}/{sub_path}` 文件（使用 subPath）。
+    只挂载到主容器，不影响 sidecar 容器。
+    """
+
+    volume_name: str
+    secret_name: str
+    mount_dir: str
+    sub_paths: tuple[str, ...]
+
+
 @dataclass
 class Runtime:
     """运行相关"""
@@ -55,6 +69,8 @@ class Runtime:
     proc_command: str = ""
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
+    # 额外需要挂载到主容器的 Secret 文件（如 KMS 托管的敏感变量信封），仅在发布时设置
+    secret_mounts: List[SecretFileMount] = field(default_factory=list)
 
 
 @dataclass

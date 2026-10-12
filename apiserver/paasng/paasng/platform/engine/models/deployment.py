@@ -137,6 +137,15 @@ class Deployment(OperationVersionBase):
         help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec",
     )
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
+    # 本次部署使用的 KMS 配置版本；未使用 KMS 托管敏感变量时为空。版本记录独立保留，删除部署不删除版本
+    kms_config_version = models.ForeignKey(
+        "engine.KMSConfigVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deployments",
+        help_text="本次部署使用的 KMS 配置版本",
+    )
     # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
     # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
     # such as logs of the service provision actions and hook command executions from cloud-native applications.

@@ -18,6 +18,7 @@
 #########################
 # Serializers & Readers #
 #########################
+import posixpath
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import cattr
@@ -28,7 +29,7 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
 from paas_wl.bk_app.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
-from paas_wl.bk_app.processes.entities import Probe, ProbeSet, Resources, Runtime
+from paas_wl.bk_app.processes.entities import Probe, ProbeSet, Resources, Runtime, SecretFileMount
 from paas_wl.bk_app.processes.exceptions import UnknownProcessTypeError
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
@@ -324,6 +325,25 @@ class InstanceDeserializer(AppEntityDeserializer["Instance", "WlApp"]):
         return health_status.reason or "Unknown", health_status.message
 
 
+def secret_file_volumes(mounts: list[SecretFileMount]) -> list[dict[str, Any]]:
+    """为 Secret 文件挂载生成 Pod 级别的 volumes 定义"""
+    return [{"name": m.volume_name, "secret": {"secretName": m.secret_name}} for m in mounts]
+
+
+def secret_file_volume_mounts(mounts: list[SecretFileMount]) -> list[dict[str, Any]]:
+    """为 Secret 文件挂载生成主容器的 volumeMounts 定义，每个文件以只读 subPath 方式挂载"""
+    return [
+        {
+            "name": m.volume_name,
+            "mountPath": posixpath.join(m.mount_dir, sub_path),
+            "subPath": sub_path,
+            "readOnly": True,
+        }
+        for m in mounts
+        for sub_path in m.sub_paths
+    ]
+
+
 class ProcessSerializer(AppEntitySerializer["Process"]):
     """Serializer for process"""
 
@@ -389,9 +409,11 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
             },
             # TODO: 重构「主入口」时, 允许用户自行填写 containerPort
             "ports": [{"containerPort": settings.CONTAINER_PORT}],
+            # Secret 文件挂载只加到主容器，sidecar 容器不会拿到这些文件
             "volumeMounts": cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
-            ),
+            )
+            + secret_file_volume_mounts(process.runtime.secret_mounts),
             "readinessProbe": readiness_probe,
             "livenessProbe": liveness_probe,
             "startupProbe": startup_probe,
@@ -399,7 +421,8 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
 
         return {
             "containers": [main_container] + cattr.unstructure(addon_mgr.get_sidecars()),
-            "volumes": cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes()),
+            "volumes": cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes())
+            + secret_file_volumes(process.runtime.secret_mounts),
             "imagePullSecrets": process.runtime.image_pull_secrets,
             "nodeSelector": process.schedule.node_selector or None,
             "tolerations": process.schedule.tolerations or None,

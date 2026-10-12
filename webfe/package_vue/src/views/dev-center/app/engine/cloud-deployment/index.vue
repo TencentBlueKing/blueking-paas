@@ -319,14 +319,14 @@ export default {
           moduleId: this.curModuleId,
         });
 
-        const RISK_SERVER = 'gcs_mysql';
+        const RISK_SERVERS = ['gcs_mysql', 'redis', 'paas_redis'];
         const { bound = [], shared = [], unbound = [] } = response;
 
-        // 检查是否存在 RISK_SERVER
+        // 检查是否存在 RISK_SERVERS
         const containsRiskServer = (list, key = 'service') =>
-          list.some((item) => (key === 'service' ? item?.service?.name : item.name) === RISK_SERVER);
+          list.some((item) => RISK_SERVERS.includes(key === 'service' ? item?.service?.name : item.name));
 
-        // 包含 gcs_mysql 服务，添加风险icon提示
+        // 包含 gcs_mysql / redis 服务，添加风险icon提示
         this.isGcsMysqlService =
           containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
       } catch (error) {

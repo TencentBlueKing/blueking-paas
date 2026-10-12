@@ -152,6 +152,13 @@
                         >
                           {{ $t('申请独立的数据库指引') }}
                         </a>
+                        <p class="mt10">
+                          {{
+                            $t(
+                              '平台提供的 Redis 增强服务为容器化部署、未开启持久化存储，无法支持高级别的可用性。如需高可用，不建议使用 Redis 增强服务。'
+                            )
+                          }}
+                        </p>
                         <div class="mt15">
                           <bk-checkbox v-model="isAwareOfRisk">
                             <span class="f12">{{ $t('我已知晓风险') }}</span>

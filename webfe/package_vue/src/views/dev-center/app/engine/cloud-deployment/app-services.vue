@@ -89,6 +89,20 @@
                     </a>
                   </div>
                 </bk-popover>
+                <bk-popover
+                  v-if="hasRedisAlert(row.name)"
+                  placement="top"
+                  width="220"
+                >
+                  <i class="paasng-icon paasng-remind mysql-tip-icon ml5"></i>
+                  <div slot="content">
+                    {{
+                      $t(
+                        '平台提供的 Redis 增强服务为容器化部署、未开启持久化存储，无法支持高级别的可用性。如需高可用，不建议使用 Redis 增强服务。'
+                      )
+                    }}
+                  </div>
+                </bk-popover>
                 <i
                   v-if="$index === rowIndex"
                   class="row-icon paasng-icon paasng-process-file ml5 f14"
@@ -872,6 +886,14 @@ export default {
         name === 'gcs_mysql' &&
         this.userFeature.APP_AVAILABILITY_LEVEL &&
         this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
+    },
+    // 是否展示 Redis 警告提示
+    hasRedisAlert(name) {
+      return (
+        ['redis', 'paas_redis'].includes(name)
+        && this.userFeature.APP_AVAILABILITY_LEVEL
+        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },

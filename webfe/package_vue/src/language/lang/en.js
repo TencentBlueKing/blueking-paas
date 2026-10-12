@@ -3049,6 +3049,7 @@ export default {
   申请独立的数据库指引: 'Guidance for Applying for an Independent Database',
   '为其他 SaaS 或业务提供平台级服务，需要更高的可用性保障。': 'Providing platform-level services for other SaaS or businesses requires higher availability assurance.',
   '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。': 'The GCS-MySQL database provided by the platform is a shared instance and cannot support advanced level availability. Please refer to the documentation to apply for an independent database instance.',
+  '平台提供的 Redis 增强服务为容器化部署、未开启持久化存储，无法支持高级别的可用性。如需高可用，不建议使用 Redis 增强服务。': 'The Redis add-on service provided by the platform is containerized without persistent storage, and cannot support advanced level availability. For high availability, using the Redis add-on service is not recommended.',
   '快速标记为 “测试” 分类': 'Quickly tag as "Test" category',
   '支持 jpg、png 等图片格式': 'Supports image formats like jpg and png',
   '图片尺寸为 72 * 72px': 'Image dimensions are 72 * 72px',

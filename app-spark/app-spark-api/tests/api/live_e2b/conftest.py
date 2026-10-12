@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Install a real Agent into E2B while exercising the API's normal provider path."""
+"""Run the API's normal provider path against the configured Agent template."""
 
 from __future__ import annotations
 
@@ -23,19 +23,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from app_spark_api.agent.runtime import factory as runtime_factory
+from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 from app_spark_api.repository.git.services import provision_project_repository
-from tests.agent.runtime.e2b_support import (
-    AgentBundle,
-    BootstrappedE2BProvider,
-    build_agent_bundle,
-    logger,
-    require_e2b_config,
-)
+from tests.agent.runtime.e2b_support import logger, require_e2b_config
 from tests.api.support import create_reachable_project
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from app_spark_api.agent.runtime.entities import E2BConfig
 
 
@@ -52,26 +45,6 @@ def e2b_config(settings) -> E2BConfig:
     return config
 
 
-@pytest.fixture(scope="session")
-def agent_bundle_factory(tmp_path_factory) -> Callable[[], AgentBundle]:
-    """Build once, and only after a test has passed the E2B configuration gate."""
-    bundle: AgentBundle | None = None
-
-    def get_bundle() -> AgentBundle:
-        nonlocal bundle
-        if bundle is None:
-            bundle = build_agent_bundle(tmp_path_factory.mktemp("live-e2b-agent"))
-        return bundle
-
-    return get_bundle
-
-
-@pytest.fixture
-def agent_bundle(e2b_config: E2BConfig, agent_bundle_factory: Callable[[], AgentBundle]) -> AgentBundle:
-    """Get the wheel bundle after the E2B skip condition has been checked."""
-    return agent_bundle_factory()
-
-
 @pytest.fixture
 def project(bk_user, fake_forgejo):
     """Give the API a project with a provisioned (fake) repository."""
@@ -81,9 +54,9 @@ def project(bk_user, fake_forgejo):
 
 
 @pytest.fixture
-async def e2b_provider(monkeypatch, e2b_config: E2BConfig, agent_bundle: AgentBundle):
-    """Run the API against a provider that test-installs the Agent and cleans up."""
-    provider = BootstrappedE2BProvider(e2b_config, agent_bundle)
+async def e2b_provider(monkeypatch, e2b_config: E2BConfig):
+    """Run the API against the production provider, cleaning up its sandboxes afterwards."""
+    provider = E2BProvider(e2b_config)
     monkeypatch.setattr(runtime_factory, "_provider", provider)
     try:
         yield provider

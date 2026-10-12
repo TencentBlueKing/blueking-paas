@@ -7,11 +7,12 @@
 ```bash
 helm dependency build charts/app-spark-api
 helm lint --strict charts/app-spark-api
-uv run pytest --reuse-db -s --maxfail=1 tests/test_helm_configmap.py tests/test_helm_common.py
+uv run pytest --reuse-db -s --maxfail=1 tests/test_helm_configmap.py tests/test_helm_common.py tests/test_helm_deployment.py
 ```
 
-模板测试覆盖 Ingress class、backend、TLS、资源命名和 selector 兼容性，以及镜像摘要、
-仓库覆盖和拉取凭据合并。
+模板测试覆盖 Ingress class、backend、TLS、资源命名和 selector 兼容性，镜像摘要、
+仓库覆盖和拉取凭据合并，以及各 provider 允许的副本数（e2b 多副本要求 bk_repo 上下文存储）、
+bk_repo 的仓库名、e2b 必填字段和升级策略。
 
 ## kind 集群冒烟验证
 

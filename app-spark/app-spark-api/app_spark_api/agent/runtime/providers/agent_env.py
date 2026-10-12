@@ -39,6 +39,7 @@ def build_agent_env(
     control_plane_url: str | None = None,
     state_callback: StateCallback | None = None,
     git_remote: GitRemote | None = None,
+    idle_timeout_seconds: int | None = None,
 ) -> dict[str, str]:
     """Build the Agent's own configuration, independent of where the Runtime runs.
 
@@ -69,6 +70,8 @@ def build_agent_env(
         together with ``state_callback``; the caller decides whether the public prefix stays.
     :param state_callback: Replication token source; ignored without ``control_plane_url``.
     :param git_remote: Where the Runtime persists its workspace.
+    :param idle_timeout_seconds: How long the Runtime may sit idle before it exits. Given by a
+        provider whose own reclamation is timed against it; omitted to keep the agent's default.
     :return: Variable names mapped to values.
     """
     env = {
@@ -82,6 +85,11 @@ def build_agent_env(
     }
     if port is not None:
         env["PORT"] = str(port)
+
+    # Owned by the provider like the values above: e2b times the sandbox's own expiry against it,
+    # so an extra_env override would let the sandbox die before the Agent has pushed its work.
+    if idle_timeout_seconds is not None:
+        env["IDLE_TIMEOUT_SECONDS"] = str(idle_timeout_seconds)
 
     if control_plane_url is not None and state_callback is not None:
         # An address already scoped to one conversation, plus a token that authorizes only

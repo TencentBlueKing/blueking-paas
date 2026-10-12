@@ -26,6 +26,7 @@ but the database, exactly like a worker in another process.
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
@@ -34,7 +35,7 @@ from uuid import uuid4
 import attrs
 import pytest
 from django.utils import timezone
-from e2b import AsyncSandbox, NotFoundException, SandboxException
+from e2b import AsyncSandbox, AuthenticationException, NotFoundException, SandboxException
 
 from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
@@ -43,6 +44,7 @@ from app_spark_api.agent.runtime.entities import (
     E2BConfig,
     GitRemote,
     ModelAccess,
+    RuntimeHealth,
     StateCallback,
 )
 from app_spark_api.agent.runtime.exceptions import (
@@ -63,6 +65,7 @@ CONFIG = E2BConfig(
     api_key="e2b-key",
     api_url="https://e2b.example",
     callback_base_url="https://app-spark.example",
+    template="app-spark-agent",
     domain="sandbox.example",
 )
 
@@ -96,9 +99,9 @@ class FakeProcess:
 
 
 class FakeCommands:
-    """Records what the provider starts in the sandbox."""
+    """Records what the provider starts in the sandbox, and the stop signals it sends."""
 
-    def __init__(self) -> None:
+    def __init__(self, events: list[str]) -> None:
         self.calls: list[dict[str, Any]] = []
         self.processes: list[FakeProcess] = []
         # Staged before the provider starts the Agent: a start refused by envd, or an Agent that
@@ -107,8 +110,37 @@ class FakeCommands:
         self.exit_code: int | None = None
         # What the shell itself printed, e.g. before it could open the log file.
         self.stderr = ""
+        # Stop commands are kept apart from starts; events orders them against the kill.
+        self.events = events
+        self.stop_calls: list[dict[str, Any]] = []
+        self.stop_started = asyncio.Event()
+        # An Agent that ignores SIGTERM keeps the stop command waiting until it is timed out;
+        # a stop error is what envd's connection layer raises as it is, unwrapped by the SDK.
+        self.stop_hangs = False
+        self.stop_error: Exception | None = None
+        # What kill -0 finds when the provider asks whether the Agent process still exists.
+        self.agent_alive = True
+        self.liveness_checks = 0
+        self.liveness_calls: list[dict[str, Any]] = []
 
     async def run(self, cmd: str, **opts: Any) -> FakeProcess:
+        if cmd.startswith("kill -TERM"):
+            self.stop_calls.append({"cmd": cmd, **opts})
+            self.events.append("stop")
+            self.stop_started.set()
+            if self.stop_error is not None:
+                raise self.stop_error
+            if self.stop_hangs:
+                await asyncio.Event().wait()
+            return FakeProcess(pid=0, exit_code=0, stderr="")
+
+        if cmd.startswith("kill -0"):
+            self.liveness_checks += 1
+            self.liveness_calls.append({"cmd": cmd, **opts})
+            answer = FakeProcess(pid=0, exit_code=0, stderr="")
+            answer.stdout = "alive\n" if self.agent_alive else "gone\n"
+            return answer
+
         if self.run_error is not None:
             raise self.run_error
         self.calls.append({"cmd": cmd, **opts})
@@ -122,8 +154,10 @@ class FakeFiles:
 
     def __init__(self, sandbox: FakeSandbox) -> None:
         self.sandbox = sandbox
+        self.read_calls: list[dict[str, Any]] = []
 
-    async def read(self, path: str, **_opts: object) -> str:
+    async def read(self, path: str, **opts: object) -> str:
+        self.read_calls.append({"path": path, **opts})
         if self.sandbox.agent_log is None:
             raise NotFoundException(path)
         return self.sandbox.agent_log
@@ -140,7 +174,8 @@ class FakeSandbox:
         self.killed = False
         self.info_error: Exception | None = None
         self.kill_error: Exception | None = None
-        self.commands = FakeCommands()
+        self.events: list[str] = []
+        self.commands = FakeCommands(self.events)
         self.files = FakeFiles(self)
         self.agent_log: str | None = None
 
@@ -152,9 +187,10 @@ class FakeSandbox:
     async def is_running(self) -> bool:
         return not self.killed
 
-    async def kill(self) -> None:
+    async def kill(self, **_opts: object) -> None:
         if self.kill_error is not None:
             raise self.kill_error
+        self.events.append("kill")
         self.killed = True
 
     def get_host(self, port: int) -> str:
@@ -176,6 +212,20 @@ class FakeE2B:
         self.on_create: Callable[[int], Awaitable[None]] | None = None
         # Applied to each sandbox before it is handed back, to stage a failure after creation.
         self.prepare: Callable[[FakeSandbox], None] | None = None
+        # Every deadline renewal as (sandbox_id, timeout), and a failure or a stuck control plane
+        # to stage for them.
+        self.renewals: list[tuple[str, int]] = []
+        self.renewal_error: Exception | None = None
+        self.renewal_hangs = False
+        # How long connect takes, to stage a slow control plane while a conversation closes.
+        self.connect_delay = 0.0
+
+    async def set_timeout(self, sandbox_id: str, sandbox_timeout: int, **_opts: object) -> None:
+        if self.renewal_hangs:
+            await asyncio.Event().wait()
+        if self.renewal_error is not None:
+            raise self.renewal_error
+        self.renewals.append((sandbox_id, sandbox_timeout))
 
     async def create(self, template: str, **opts: object) -> FakeSandbox:
         self.create_calls += 1
@@ -194,6 +244,8 @@ class FakeE2B:
 
     async def connect(self, sandbox_id: str, **_opts: object) -> FakeSandbox:
         self.connect_calls += 1
+        if self.connect_delay:
+            await asyncio.sleep(self.connect_delay)
         if self.connect_error is not None:
             raise self.connect_error
         try:
@@ -207,21 +259,46 @@ def e2b(monkeypatch) -> FakeE2B:
     fake = FakeE2B()
     monkeypatch.setattr(AsyncSandbox, "create", staticmethod(fake.create))
     monkeypatch.setattr(AsyncSandbox, "connect", staticmethod(fake.connect))
+    monkeypatch.setattr(AsyncSandbox, "set_timeout", staticmethod(fake.set_timeout))
     return fake
 
 
 @pytest.fixture(autouse=True)
 def agent_health(monkeypatch) -> SimpleNamespace:
-    """Answer the provider's /health probes without a network; healthy unless a test says not."""
-    state = SimpleNamespace(healthy=True, probes=0, probing=asyncio.Event())
+    """Answer the provider's /health probes without a network; healthy unless a test says not.
+
+    healthy answers the probes made while an Agent starts. A reused Agent is read apart from
+    that: its next reuse_failures reads go unanswered, and running says whether it holds a
+    turn.
+    """
+    state = SimpleNamespace(
+        healthy=True, probes=0, probing=asyncio.Event(), reuse_failures=0, running=False, reuse_reads=0
+    )
 
     async def probe(_handle: AgentRuntimeHandle, **_opts: object) -> bool:
         state.probes += 1
         state.probing.set()
         return state.healthy
 
-    monkeypatch.setattr(e2b_module, "probe_agent_health", probe)
-    monkeypatch.setattr(e2b_module, "HEALTH_POLL_INTERVAL_SECONDS", 0.01)
+    async def read(_handle: AgentRuntimeHandle, **_opts: object) -> RuntimeHealth | None:
+        state.reuse_reads += 1
+        if state.reuse_failures > 0:
+            state.reuse_failures -= 1
+            return None
+        return RuntimeHealth(
+            model="fake:write-file",
+            conversation_id=None,
+            context_version=0,
+            log_seq=0,
+            ui_event_seq=0,
+            running=state.running,
+        )
+
+    # 探测函数和间隔在 health / constants 上按名字查找，补丁要打在使用处。
+    monkeypatch.setattr(e2b_module.health, "probe_agent_health", probe)
+    monkeypatch.setattr(e2b_module.health, "read_agent_health", read)
+    monkeypatch.setattr(e2b_module.constants, "HEALTH_POLL_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(e2b_module.constants, "REUSE_HEALTH_RETRY_INTERVAL_SECONDS", 0.01)
     return state
 
 
@@ -340,11 +417,19 @@ async def test_a_stale_abandoned_view_does_not_release_a_sandbox_bound_since(e2b
 # --- 失败时交还占位 --------------------------------------------------------------------------
 
 
-async def test_a_failed_create_gives_its_claim_back(e2b, provider):
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(SandboxException("quota exceeded"), id="sandbox-error"),
+        # Not a SandboxException; a bad credential must still become a provisioning error, not a 500.
+        pytest.param(AuthenticationException("invalid api key"), id="bad-credentials"),
+    ],
+)
+async def test_a_failed_create_gives_its_claim_back(e2b, provider, error):
     project_id, conversation_id = ids()
-    e2b.create_error = SandboxException("quota exceeded")
+    e2b.create_error = error
 
-    with pytest.raises(AgentProvisionError, match="quota exceeded"):
+    with pytest.raises(AgentProvisionError, match=str(error)):
         await provider.ensure(project_id=project_id, conversation_id=conversation_id)
 
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
@@ -399,7 +484,7 @@ async def test_terminating_a_claim_bound_since_it_was_read_still_kills_the_sandb
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
     assert stale["record"].sandbox_id is None
 
-    await _SandboxClaim(stale["record"], other_worker.config).terminate()
+    await _SandboxClaim(stale["record"], other_worker.config).terminate(reason="terminated")
 
     assert e2b.sandboxes["sbx-1"].killed
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
@@ -494,9 +579,11 @@ async def test_the_agent_is_started_with_its_whole_configuration(e2b, provider):
 
     (call,) = e2b.sandboxes["sbx-1"].commands.calls
     envs = call["envs"]
-    assert (call["background"], call["timeout"]) == (True, 0)
+    assert (call["background"], call["timeout"], call["user"]) == (True, 0, "user")
+    # By absolute path: envd gives the processes it starts its own PATH, not the template's.
     assert call["cmd"] == (
-        "{ mkdir -p /data/workspace /data && exec python -m app_spark_agent; } >> /tmp/app-spark-agent.log 2>&1"
+        "{ mkdir -p /data/workspace /data && exec /app/.venv/bin/python -m app_spark_agent; }"
+        " >> /tmp/app-spark-agent.log 2>&1"
     )
     # Credentials go to this one process through envd, never through the sandbox's creation.
     (create_opts,) = e2b.create_opts
@@ -584,6 +671,11 @@ def refuse_to_start(sandbox: FakeSandbox) -> None:
     sandbox.commands.run_error = SandboxException("envd refused the process")
 
 
+def refuse_the_user(sandbox: FakeSandbox) -> None:
+    # What envd answers when agent_user does not exist in the template; not a SandboxException.
+    sandbox.commands.run_error = AuthenticationException("invalid username: 'nobody-here'")
+
+
 @pytest.mark.parametrize(
     ("stage_failure", "startup_timeout", "expected"),
     [
@@ -597,6 +689,9 @@ def refuse_to_start(sandbox: FakeSandbox) -> None:
         pytest.param(
             refuse_to_start, 60.0, ("Could not start the Agent", "envd refused the process"), id="envd-refuses"
         ),
+        pytest.param(
+            refuse_the_user, 60.0, ("Could not start the Agent", "invalid username"), id="unknown-agent-user"
+        ),
     ],
 )
 async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
@@ -606,7 +701,9 @@ async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
     message, detail = expected
     agent_health.healthy = False
     e2b.prepare = stage_failure
-    provider = DefaultAccessProvider(attrs.evolve(CONFIG, startup_timeout_seconds=startup_timeout))
+    # Not the default user, so a log read that ignored agent_user would show here.
+    config = attrs.evolve(CONFIG, startup_timeout_seconds=startup_timeout, agent_user="spark")
+    provider = DefaultAccessProvider(config)
 
     with pytest.raises(AgentProvisionError, match=message) as exc_info:
         await provider.ensure(project_id=project_id, conversation_id=conversation_id)
@@ -615,6 +712,28 @@ async def test_a_failed_start_is_explained_and_gives_its_sandbox_back(
     assert e2b.sandboxes["sbx-1"].killed
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
     assert (record.active_conversation_id, record.agent_pid, record.stop_reason) == (None, None, "failed")
+    # A start envd refused never ran, so there is no log to read. Every other failure reads the log
+    # once, as the user that wrote it.
+    reads_log = stage_failure not in (refuse_to_start, refuse_the_user)
+    read_users = [call["user"] for call in e2b.sandboxes["sbx-1"].files.read_calls]
+    assert read_users == (["spark"] if reads_log else [])
+
+
+async def test_every_sandbox_command_runs_as_the_configured_user(e2b, agent_health):
+    """启动、探测、停止都用同一个用户：换成别的非 root 用户，kill 会因无权限失败，被误当成进程已退出。"""
+    project_id, conversation_id = ids()
+    provider = DefaultAccessProvider(attrs.evolve(CONFIG, agent_user="spark"))
+    first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    # A probe that fails once, so the next turn asks envd whether the Agent is still there.
+    agent_health.reuse_failures = 1
+
+    assert await provider.ensure(project_id=project_id, conversation_id=conversation_id) == first
+    await provider.terminate(conversation_id)
+
+    commands = e2b.sandboxes["sbx-1"].commands
+    runs = [*commands.calls, *commands.liveness_calls, *commands.stop_calls]
+    assert (len(commands.calls), len(commands.liveness_calls), len(commands.stop_calls)) == (1, 1, 1)
+    assert {call["user"] for call in runs} == {"spark"}
 
 
 # --- 启动中的沙箱不交出去 ----------------------------------------------------------------------
@@ -693,3 +812,268 @@ async def test_terminating_a_sandbox_still_starting_its_agent_stops_it(e2b, prov
     assert e2b.sandboxes["sbx-1"].killed
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
     assert (record.active_conversation_id, record.agent_pid, record.stop_reason) == (None, None, "terminated")
+    # No pid means no Agent to signal: it never answered, so it holds nothing to push.
+    assert e2b.sandboxes["sbx-1"].commands.stop_calls == []
+
+
+# --- 续期：只有对话算活动 ----------------------------------------------------------------------
+
+SANDBOX_TIMEOUT = CONFIG.idle_timeout_seconds
+
+
+async def test_a_sandbox_lives_one_idle_timeout_past_each_turn(e2b, provider):
+    """创建时和每轮开始、结束时都续成空闲超时；Agent 也按同一个秒数退出。"""
+    project_id, conversation_id = ids()
+
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    (create_opts,) = e2b.create_opts
+    assert create_opts["timeout"] == SANDBOX_TIMEOUT
+    envs = e2b.sandboxes["sbx-1"].commands.calls[0]["envs"]
+    assert envs[f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS"] == str(CONFIG.idle_timeout_seconds)
+    # Creating the sandbox and waiting for its Agent used up part of the deadline set at creation.
+    assert e2b.renewals == [("sbx-1", SANDBOX_TIMEOUT)]
+
+    # The next turn starts on the same sandbox, and renews it again.
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    assert e2b.renewals == [("sbx-1", SANDBOX_TIMEOUT)] * 2
+
+    # The turn ends.
+    await provider.extend_lifetime(conversation_id)
+    assert e2b.renewals == [("sbx-1", SANDBOX_TIMEOUT)] * 3
+    assert e2b.create_calls == 1
+
+
+async def test_the_idle_timeout_cannot_be_overridden_through_extra_env(e2b):
+    """沙箱的到期时间按配置里的空闲超时算，Agent 必须用同一个值，否则沙箱会先于 Agent 到期。"""
+    config = attrs.evolve(CONFIG, extra_env={f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS": "0"})
+
+    await DefaultAccessProvider(config).ensure(project_id=str(uuid4()), conversation_id=str(uuid4()))
+
+    envs = e2b.sandboxes["sbx-1"].commands.calls[0]["envs"]
+    assert envs[f"{ENV_PREFIX}IDLE_TIMEOUT_SECONDS"] == str(CONFIG.idle_timeout_seconds)
+
+
+async def test_a_failed_renewal_does_not_fail_the_turn(e2b, provider, caplog):
+    project_id, conversation_id = ids()
+    first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    e2b.renewal_error = SandboxException("control plane hiccup")
+
+    assert await provider.ensure(project_id=project_id, conversation_id=conversation_id) == first
+    await provider.extend_lifetime(conversation_id)
+
+    renewal_warnings = [r for r in caplog.records if r.message == "Could not extend the lifetime of E2B sandbox sbx-1"]
+    assert [r.levelname for r in renewal_warnings] == ["WARNING"] * 2
+
+
+async def test_a_stuck_control_plane_holds_a_turn_up_only_briefly(e2b, provider, monkeypatch):
+    """续期挡在一轮的开头和结尾，控制面卡住时不能让这一轮陪着等上 SDK 默认的 60 秒。"""
+    project_id, conversation_id = ids()
+    first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    monkeypatch.setattr(e2b_module.constants, "RENEW_TIMEOUT_SECONDS", 0.05)
+    e2b.renewal_hangs = True
+
+    assert await asyncio.wait_for(provider.ensure(project_id=project_id, conversation_id=conversation_id), 2) == first
+    await asyncio.wait_for(provider.extend_lifetime(conversation_id), 2)
+
+
+async def test_there_is_nothing_to_renew_without_a_started_sandbox(e2b, provider):
+    """会话在本轮中途被结束、或沙箱已被回收：结束时的续期什么也不做，也不报错。"""
+    project_id, conversation_id = ids()
+    await provider.extend_lifetime(conversation_id)
+
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    await provider.terminate(conversation_id)
+    await provider.extend_lifetime(conversation_id)
+
+    assert e2b.renewals == [("sbx-1", SANDBOX_TIMEOUT)]
+
+
+# --- Agent 不可用时重建 ----------------------------------------------------------------------
+
+
+async def test_an_agent_that_does_not_answer_gets_a_new_sandbox(e2b, provider, agent_health):
+    """Agent 空闲退出或崩溃后沙箱还在：整个换掉，而不是在原沙箱里重新拉起 Agent。"""
+    project_id, conversation_id = ids()
+    exchanges = 0
+
+    async def count_exchanges() -> ModelAccess:
+        nonlocal exchanges
+        exchanges += 1
+        return DirectModelAccess(model="fake:write-file")
+
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id, model_access=count_exchanges)
+    old = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    agent_health.reuse_failures = e2b_module.REUSE_HEALTH_ATTEMPTS
+
+    replacement = await provider.ensure(
+        project_id=project_id, conversation_id=conversation_id, model_access=count_exchanges
+    )
+
+    assert replacement.base_url.endswith("sbx-2.sandbox.example")
+    assert exchanges == 2
+    # Stopped the orderly way, in case the Agent is still there and only the probe failed.
+    assert e2b.sandboxes["sbx-1"].events == ["stop", "kill"]
+    await old.arefresh_from_db()
+    assert (old.active_conversation_id, old.stop_reason) == (None, "unhealthy")
+    assert len(e2b.sandboxes["sbx-1"].commands.calls) == 1
+
+
+async def test_unanswered_probes_of_a_live_agent_do_not_cost_a_sandbox(e2b, provider, agent_health):
+    """进程还在时，经端口代理的探测失败可能只是抖了一下：隔一会儿再探，别白让用户等一次冷启动。"""
+    project_id, conversation_id = ids()
+    first = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    agent_health.reuse_failures = e2b_module.REUSE_HEALTH_ATTEMPTS - 1
+
+    assert await provider.ensure(project_id=project_id, conversation_id=conversation_id) == first
+    assert e2b.create_calls == 1
+    assert e2b.sandboxes["sbx-1"].events == []
+    assert e2b.sandboxes["sbx-1"].commands.liveness_checks == e2b_module.REUSE_HEALTH_ATTEMPTS - 1
+
+
+async def test_an_agent_whose_process_is_gone_is_replaced_without_waiting(e2b, provider, agent_health):
+    """空闲退出或崩溃是最常见的情形：进程已不在，就不必再隔秒重探，直接换沙箱。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    agent_health.reuse_failures = e2b_module.REUSE_HEALTH_ATTEMPTS
+    agent_health.reuse_reads = 0
+    e2b.sandboxes["sbx-1"].commands.agent_alive = False
+
+    replacement = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    assert replacement.base_url.endswith("sbx-2.sandbox.example")
+    assert agent_health.reuse_reads == 1
+    old = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
+    assert old.stop_reason == "unhealthy"
+
+
+# --- 最长存活期 ------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("age", "running"),
+    [
+        pytest.param(timedelta(hours=24, minutes=1), False, id="past-the-limit"),
+        pytest.param(timedelta(hours=23, minutes=59), False, id="within-the-limit"),
+        # Another tab's turn is still running; this turn is refused as busy, not by cutting it off.
+        pytest.param(timedelta(hours=24, minutes=1), True, id="past-the-limit-mid-turn"),
+    ],
+)
+async def test_a_sandbox_is_replaced_once_it_reaches_its_maximum_lifetime(e2b, provider, agent_health, age, running):
+    replaced = age > timedelta(hours=24) and not running
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    await E2BSandboxRecord.objects.filter(conversation_id=conversation_id).aupdate(created_at=timezone.now() - age)
+    agent_health.running = running
+
+    assert await provider.needs_replacement(conversation_id) is (age > timedelta(hours=24))
+    handle = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    assert handle.base_url.endswith("sbx-2.sandbox.example" if replaced else "sbx-1.sandbox.example")
+    assert e2b.sandboxes["sbx-1"].events == (["stop", "kill"] if replaced else [])
+    old = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
+    assert old.stop_reason == ("recycled" if replaced else "")
+
+
+async def test_nothing_needs_replacing_without_a_started_sandbox(e2b, provider):
+    assert await provider.needs_replacement(str(uuid4())) is False
+
+
+# --- 优雅停止 --------------------------------------------------------------------------------
+
+
+async def test_terminating_lets_the_agent_push_before_the_sandbox_goes(e2b, provider):
+    """先给 Agent 发 SIGTERM 并等它退出，它在退出前推送工作区；之后才销毁沙箱。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+
+    await provider.terminate(conversation_id)
+
+    sandbox = e2b.sandboxes["sbx-1"]
+    assert sandbox.events == ["stop", "kill"]
+    (stop,) = sandbox.commands.stop_calls
+    # What is left of the grace period after reconnecting.
+    assert e2b_module.STOP_GRACE_SECONDS - 1 < stop["timeout"] <= e2b_module.STOP_GRACE_SECONDS
+    # An Agent that is already gone makes kill fail, and the stop returns at once.
+    assert stop["cmd"].startswith(f"kill -TERM {record.agent_pid} 2>/dev/null || exit 0;")
+    await record.arefresh_from_db()
+    assert (record.active_conversation_id, record.stop_reason) == (None, "terminated")
+
+
+async def test_an_agent_that_ignores_sigterm_is_killed_after_the_grace_period(e2b, provider, monkeypatch, caplog):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.05)
+    e2b.sandboxes["sbx-1"].commands.stop_hangs = True
+
+    await asyncio.wait_for(provider.terminate(conversation_id), timeout=5)
+
+    assert e2b.sandboxes["sbx-1"].events == ["stop", "kill"]
+    assert any("did not exit within" in r.message for r in caplog.records if r.levelname == "WARNING")
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    assert (record.active_conversation_id, record.stop_reason) == (None, "terminated")
+
+
+async def test_a_close_cancelled_while_the_agent_pushes_still_frees_the_project(e2b, provider):
+    """结束会话的请求在等 Agent 那几秒里被断开：会话已经关了，没人会再来收拾，这里必须把沙箱收掉。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    commands = e2b.sandboxes["sbx-1"].commands
+    commands.stop_hangs = True
+
+    closing = asyncio.create_task(provider.terminate(conversation_id))
+    await asyncio.wait_for(commands.stop_started.wait(), timeout=5)
+    closing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await closing
+
+    assert e2b.sandboxes["sbx-1"].killed
+    assert not await E2BSandboxRecord.objects.active_for_project(project_id).aexists()
+
+
+async def test_an_envd_connection_error_while_stopping_still_kills_the_sandbox(e2b, provider):
+    """envd 连接层的错误 SDK 原样抛出、不包成 SandboxException，它也不能让沙箱漏掉。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    e2b.sandboxes["sbx-1"].commands.stop_error = ConnectionResetError("stream reset")
+
+    await provider.terminate(conversation_id)
+
+    assert e2b.sandboxes["sbx-1"].events == ["stop", "kill"]
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    assert (record.active_conversation_id, record.stop_reason) == (None, "terminated")
+
+
+async def test_reconnecting_counts_against_the_grace_period_of_a_close(e2b, provider, monkeypatch):
+    """结束会话要在 STOP_GRACE_SECONDS 左右返回，重连用掉的时间从等 Agent 的时间里扣。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.3)
+    e2b.connect_delay = 0.2
+    e2b.sandboxes["sbx-1"].commands.stop_hangs = True
+
+    started = time.monotonic()
+    await provider.terminate(conversation_id)
+
+    assert time.monotonic() - started < 0.3 + 0.1
+    assert e2b.sandboxes["sbx-1"].killed
+
+
+async def test_a_control_plane_that_never_answers_does_not_hold_a_close_forever(e2b, provider, monkeypatch):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    monkeypatch.setattr(e2b_module.constants, "STOP_GRACE_SECONDS", 0.05)
+    e2b.connect_delay = 5
+
+    with pytest.raises(AgentProvisionError, match="did not say within"):
+        await asyncio.wait_for(provider.terminate(conversation_id), timeout=2)
+
+
+async def test_shutting_the_service_down_does_not_wait_for_each_agent(e2b, provider):
+    """停服时沙箱是一个个停的，每个都等 20 秒就要等 N 倍，所以直接销毁。"""
+    await provider.ensure(project_id=str(uuid4()), conversation_id=str(uuid4()))
+
+    await provider.shutdown()
+
+    assert e2b.sandboxes["sbx-1"].events == ["kill"]

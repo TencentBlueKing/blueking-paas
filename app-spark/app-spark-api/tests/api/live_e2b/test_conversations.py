@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
-from tests.agent.runtime.e2b_support import SANDBOX_WORKSPACE, logger
+from tests.agent.runtime.e2b_support import logger
 from tests.api.support import CONVERSATIONS_URL
 
 if TYPE_CHECKING:
@@ -78,13 +78,15 @@ async def test_chat_turn_runs_through_e2b_provider(aapi_client, project, e2b_pro
     assert b"RUN_STARTED" in body
     assert b"RUN_FINISHED" in body
     assert b"TOOL_CALL_RESULT" in body
-    assert "write an API test note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-1.md")
+    note = f"{e2b_provider.config.workspace_dir}/fake-agent-note-1.md"
+    assert "write an API test note" in await sandbox.files.read(note, user=e2b_provider.config.agent_user)
 
     # 第二轮还是这个已经启动的 Agent。历史留在 Runtime 里，所以它会另写一个文件，而不是改第一份。
     logger.info("Posting a second turn on the same started Agent")
     second = await _run_turn(aapi_client, state["number"], "write a second API test note")
     assert b"RUN_FINISHED" in second
-    assert "write a second API test note" in await sandbox.files.read(f"{SANDBOX_WORKSPACE}/fake-agent-note-2.md")
+    second_note = f"{e2b_provider.config.workspace_dir}/fake-agent-note-2.md"
+    assert "write a second API test note" in await sandbox.files.read(second_note, user=e2b_provider.config.agent_user)
     logger.info("Both turns finished and the sandbox workspace contains both notes")
 
 
@@ -94,13 +96,16 @@ async def test_preview_origin_proxies_to_fixed_e2b_port(aapi_client, project, e2
     sandbox = await e2b_provider.get_sandbox(state["conversation_id"])
     assert sandbox is not None
     preview_dir = "/tmp/app-spark-preview"
-    await sandbox.commands.run(f"mkdir -p {preview_dir}")
-    await sandbox.files.write(f"{preview_dir}/index.html", PREVIEW_MARKER)
+    # As the Agent's user, the way the workspace application it launches would run.
+    user = e2b_provider.config.agent_user
+    await sandbox.commands.run(f"mkdir -p {preview_dir}", user=user)
+    await sandbox.files.write(f"{preview_dir}/index.html", PREVIEW_MARKER, user=user)
     await sandbox.commands.run(
         f"python3 -m http.server {e2b_provider.config.preview_port} "
         f"--bind 0.0.0.0 --directory {preview_dir} > /tmp/app-spark-preview.log 2>&1",
         background=True,
         timeout=0,
+        user=user,
     )
 
     logger.info("Reading API preview origin for sandbox %s", sandbox.sandbox_id)

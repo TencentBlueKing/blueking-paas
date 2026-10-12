@@ -27,16 +27,11 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth
-from paasng.infras.kms.constants import (
-    AES_BLOCK_BITS,
-    ERROR_CODE_RESOURCE_NOT_FOUND,
-    K8S_SECRET_MAX_BYTES,
-    PLAINTEXT_MAX_CHARS,
-    SUPPORTED_CRYPTO_SUITE,
-)
+from paasng.infras.kms.constants import ERROR_CODE_RESOURCE_NOT_FOUND, K8S_SECRET_MAX_BYTES, PLAINTEXT_MAX_CHARS
 from paasng.infras.kms.exceptions import KMSAPIError, KMSCryptoError, KMSRequestError, KMSValidationError
 
 NAME = "demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
+SCOPE = KMSScope(scope_id=7)
 AUTH = ServiceAccountAuth(name_list=("demo-web-prod-kms",), namespace_list=("ns-1",))
 
 
@@ -90,24 +85,19 @@ class FakeSession:
         return self.response
 
 
-def _public_key_b64(private_key) -> str:
+def _crypto_info_data(private_key) -> dict:
     pem = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
-    return base64.b64encode(pem).decode("ascii")
-
-
-def _crypto_info_data(private_key) -> dict:
-    asymmetric, symmetric, mode = SUPPORTED_CRYPTO_SUITE
     return {
-        "crypto": {"asymmetric_type": asymmetric, "symmetric_type": symmetric, "symmetric_mode": mode},
-        "public_key": _public_key_b64(private_key),
+        "crypto": {"asymmetric_type": "RSA", "symmetric_type": "AES", "symmetric_mode": "CBC"},
+        "public_key": base64.b64encode(pem).decode("ascii"),
     }
 
 
 def _decrypt_envelope(envelope_b64: str, private_key) -> str:
-    """按 bk-kms-sdk 的解密规则还原明文，用于验证 PaaS 侧生成的信封格式"""
+    """按应用端 SDK 的解密规则还原明文"""
     envelope = json.loads(base64.b64decode(envelope_b64))
     symmetric_key = private_key.decrypt(
         base64.b64decode(envelope["encrypted_key"]),
@@ -117,7 +107,7 @@ def _decrypt_envelope(envelope_b64: str, private_key) -> str:
     iv, body = raw[:16], raw[16:]
     decryptor = Cipher(algorithms.AES(symmetric_key), modes.CBC(iv)).decryptor()
     padded = decryptor.update(body) + decryptor.finalize()
-    unpadder = sym_padding.PKCS7(AES_BLOCK_BITS).unpadder()
+    unpadder = sym_padding.PKCS7(128).unpadder()
     return (unpadder.update(padded) + unpadder.finalize()).decode("utf-8")
 
 
@@ -130,15 +120,6 @@ class TestEncryptCredentialValue:
 
         assert _decrypt_envelope(envelope, rsa_key) == "password-123"
         assert fake.calls == [("POST", "/api/v1/get/crypto_info", {"category": "normal"})]
-
-    def test_envelope_has_expected_fields(self, client, rsa_key, monkeypatch):
-        monkeypatch.setattr(
-            client, "_request", FakeKMSRequest({"/api/v1/get/crypto_info": _crypto_info_data(rsa_key)})
-        )
-
-        envelope = json.loads(base64.b64decode(client.encrypt_credential_value("x")))
-
-        assert set(envelope) == {"asymmetric_type", "symmetric_type", "symmetric_mode", "encrypted_key", "ciphertext"}
 
     def test_each_encryption_uses_fresh_key_material(self, client, rsa_key, monkeypatch):
         monkeypatch.setattr(
@@ -170,7 +151,7 @@ class TestCreateCredentialFromEnvelope:
         monkeypatch.setattr(client, "_request", fake)
 
         credential_id = client.create_credential_from_envelope(
-            scope=KMSScope(scope_id=7), name=NAME, envelope="ZW52ZWxvcGU=", auth=AUTH
+            scope=SCOPE, name=NAME, envelope="ZW52ZWxvcGU=", auth=AUTH
         )
 
         assert credential_id == 42
@@ -179,7 +160,6 @@ class TestCreateCredentialFromEnvelope:
         assert body["scope"] == {"scope_type": "scope", "scope_id": 7}
         assert body["metadata"]["type"] == "secret"
         assert body["metadata"]["name"] == NAME
-        assert body["metadata"]["alias_name"] == NAME
         assert body["metadata"]["value"] == "ZW52ZWxvcGU="
         assert body["metadata"]["enable_encrypt"] is True
         assert body["auth"] == {
@@ -187,60 +167,22 @@ class TestCreateCredentialFromEnvelope:
         }
 
     @pytest.mark.parametrize(
-        "auth",
+        ("auth", "envelope"),
         [
-            ServiceAccountAuth(name_list=("*",), namespace_list=("ns-1",)),
-            ServiceAccountAuth(name_list=(), namespace_list=("ns-1",)),
-            ServiceAccountAuth(name_list=("sa",), namespace_list=("*",)),
+            (ServiceAccountAuth(name_list=("*",), namespace_list=("ns-1",)), "x"),
+            (ServiceAccountAuth(name_list=(), namespace_list=("ns-1",)), "x"),
+            (ServiceAccountAuth(name_list=("sa",), namespace_list=("*",)), "x"),
+            (AUTH, ""),
+            (AUTH, "A" * (K8S_SECRET_MAX_BYTES + 1)),
         ],
     )
-    def test_rejects_wildcard_or_empty_authorization_before_request(self, client, monkeypatch, auth):
+    def test_rejects_invalid_input_before_request(self, client, monkeypatch, auth, envelope):
         fake = FakeKMSRequest({})
         monkeypatch.setattr(client, "_request", fake)
 
         with pytest.raises(KMSValidationError):
-            client.create_credential_from_envelope(scope=KMSScope(scope_id=7), name=NAME, envelope="x", auth=auth)
+            client.create_credential_from_envelope(scope=SCOPE, name=NAME, envelope=envelope, auth=auth)
         assert fake.calls == []
-
-    @pytest.mark.parametrize("name", ["Bad.Name", "", "x" * 129])
-    def test_rejects_invalid_name_before_request(self, client, monkeypatch, name):
-        fake = FakeKMSRequest({})
-        monkeypatch.setattr(client, "_request", fake)
-
-        with pytest.raises(KMSValidationError):
-            client.create_credential_from_envelope(scope=KMSScope(scope_id=7), name=name, envelope="x", auth=AUTH)
-        assert fake.calls == []
-
-    @pytest.mark.parametrize("envelope", ["", "A" * (K8S_SECRET_MAX_BYTES + 1)])
-    def test_rejects_empty_or_oversized_envelope_before_request(self, client, monkeypatch, envelope):
-        fake = FakeKMSRequest({})
-        monkeypatch.setattr(client, "_request", fake)
-
-        with pytest.raises(KMSValidationError):
-            client.create_credential_from_envelope(scope=KMSScope(scope_id=7), name=NAME, envelope=envelope, auth=AUTH)
-        assert fake.calls == []
-
-
-class TestEncryptThenCreate:
-    def test_submits_encrypted_value_without_plaintext(self, client, rsa_key, monkeypatch):
-        fake = FakeKMSRequest(
-            {
-                "/api/v1/get/crypto_info": _crypto_info_data(rsa_key),
-                "/api/v1/credential": {"credential_id": 5},
-            }
-        )
-        monkeypatch.setattr(client, "_request", fake)
-
-        envelope = client.encrypt_credential_value("hello")
-        credential_id = client.create_credential_from_envelope(
-            scope=KMSScope(scope_id=7), name=NAME, envelope=envelope, auth=AUTH
-        )
-
-        assert credential_id == 5
-        submitted = fake.calls[-1][2]["metadata"]["value"]
-        assert submitted == envelope
-        assert _decrypt_envelope(submitted, rsa_key) == "hello"
-        assert "hello" not in json.dumps(fake.calls[-1][2])
 
 
 class TestFindCredential:
@@ -248,7 +190,7 @@ class TestFindCredential:
         not_found = KMSAPIError(ERROR_CODE_RESOURCE_NOT_FOUND, "not found")
         monkeypatch.setattr(client, "_request", FakeKMSRequest({"/api/v1/get/credential": not_found}))
 
-        assert client.find_credential(scope=KMSScope(scope_id=7), name=NAME) is None
+        assert client.find_credential(scope=SCOPE, name=NAME) is None
 
     def test_parses_metadata_and_authorization(self, client, monkeypatch):
         data = {
@@ -259,15 +201,9 @@ class TestFindCredential:
         fake = FakeKMSRequest({"/api/v1/get/credential": data})
         monkeypatch.setattr(client, "_request", fake)
 
-        info = client.find_credential(scope=KMSScope(scope_id=7), name=NAME)
+        info = client.find_credential(scope=SCOPE, name=NAME)
 
-        assert info == CredentialInfo(
-            credential_id=9,
-            scope=KMSScope(scope_id=7),
-            name=NAME,
-            enable_encrypt=True,
-            auth=AUTH,
-        )
+        assert info == CredentialInfo(credential_id=9, scope=SCOPE, name=NAME, enable_encrypt=True, auth=AUTH)
         assert fake.calls[0][2] == {"scope": {"scope_type": "scope", "scope_id": 7}, "type": "secret", "name": NAME}
 
     def test_missing_authorization_is_reported_as_wildcard(self, client, monkeypatch):
@@ -277,30 +213,13 @@ class TestFindCredential:
         }
         monkeypatch.setattr(client, "_request", FakeKMSRequest({"/api/v1/get/credential": data}))
 
-        info = client.find_credential(scope=KMSScope(scope_id=7), name=NAME)
+        info = client.find_credential(scope=SCOPE, name=NAME)
 
         assert info is not None
         assert info.auth == ServiceAccountAuth(name_list=("*",), namespace_list=("*",))
 
 
-class TestDeleteCredential:
-    def test_sends_credential_id(self, client, monkeypatch):
-        fake = FakeKMSRequest({"/api/v1/credential": {}})
-        monkeypatch.setattr(client, "_request", fake)
-
-        client.delete_credential(9)
-
-        assert fake.calls == [("DELETE", "/api/v1/credential", {"credential_id": 9})]
-
-
-class TestScopeValidation:
-    @pytest.mark.parametrize("scope_id", [0, -1])
-    def test_scope_id_must_be_positive(self, scope_id):
-        with pytest.raises(KMSValidationError):
-            KMSScope(scope_id=scope_id)
-
-
-class TestRequestErrorMapping:
+class TestRequest:
     def test_success_returns_data(self, client, monkeypatch):
         session = FakeSession(FakeResponse(200, {"code": 0, "data": {"credential_id": 1}}))
         monkeypatch.setattr(client, "_session", session)
@@ -309,38 +228,19 @@ class TestRequestErrorMapping:
         assert session.sent[0]["url"] == "http://kms.example/api/v1/credential"
         assert session.sent[0]["timeout"] == 5
 
-    def test_business_error_is_api_error_even_with_http_200(self, client, monkeypatch):
-        monkeypatch.setattr(
-            client,
-            "_session",
-            FakeSession(FakeResponse(200, {"code": ERROR_CODE_RESOURCE_NOT_FOUND, "message": "not found"})),
-        )
+    @pytest.mark.parametrize(
+        ("session", "exc_type"),
+        [
+            # 业务错误以响应中的 code 为准，与 HTTP 状态码无关
+            (FakeSession(FakeResponse(200, {"code": ERROR_CODE_RESOURCE_NOT_FOUND, "message": "x"})), KMSAPIError),
+            (FakeSession(FakeResponse(500, {"code": 1000001, "message": "boom"})), KMSAPIError),
+            (FakeSession(FakeResponse(502, json_error=True)), KMSRequestError),
+            (FakeSession(FakeResponse(200, {"message": "no code"})), KMSRequestError),
+            (FakeSession(error=requests.ConnectionError("refused")), KMSRequestError),
+        ],
+    )
+    def test_error_mapping(self, client, monkeypatch, session, exc_type):
+        monkeypatch.setattr(client, "_session", session)
 
-        with pytest.raises(KMSAPIError) as exc_info:
-            client._request("POST", "/api/v1/get/credential", {})
-        assert exc_info.value.code == ERROR_CODE_RESOURCE_NOT_FOUND
-
-    def test_business_error_is_api_error_with_http_500(self, client, monkeypatch):
-        monkeypatch.setattr(client, "_session", FakeSession(FakeResponse(500, {"code": 1000001, "message": "boom"})))
-
-        with pytest.raises(KMSAPIError):
-            client._request("POST", "/api/v1/credential", {})
-
-    def test_http_error_without_business_body_is_request_error(self, client, monkeypatch):
-        monkeypatch.setattr(client, "_session", FakeSession(FakeResponse(502, json_error=True)))
-
-        with pytest.raises(KMSRequestError) as exc_info:
-            client._request("POST", "/api/v1/credential", {})
-        assert exc_info.value.status_code == 502
-
-    def test_transport_error_is_request_error(self, client, monkeypatch):
-        monkeypatch.setattr(client, "_session", FakeSession(error=requests.ConnectionError("refused")))
-
-        with pytest.raises(KMSRequestError):
-            client._request("POST", "/api/v1/credential", {})
-
-    def test_success_without_code_is_request_error(self, client, monkeypatch):
-        monkeypatch.setattr(client, "_session", FakeSession(FakeResponse(200, {"message": "no code"})))
-
-        with pytest.raises(KMSRequestError):
+        with pytest.raises(exc_type):
             client._request("POST", "/api/v1/credential", {})

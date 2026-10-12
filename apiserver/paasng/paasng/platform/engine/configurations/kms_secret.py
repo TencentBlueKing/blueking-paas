@@ -15,15 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""敏感变量的 KMS 托管：冻结配置版本，创建 KMS 凭证与 ESO 资源，并等待目标 Secret 就绪
-
-- 每次需要托管的部署调用一次 create_kms_config_version，生成新的配置版本，不复用；
-- KMSSecretProvisioner 负责该版本的远端资源：凭证先按名称核对再创建，Kubernetes 资源按名称 create_or_update；
-- 每一步成功后才推进 status。失败时保持在最后完成的步骤，并把安全的错误分类写入 error_reason。
-  已记录的 credential_id 与 UID 让重试可以跳过已完成的步骤。
-
-本模块不删除任何远端资源，清理由删除清理流程负责。
-"""
+"""敏感变量的 KMS 托管：冻结配置版本，创建 KMS 凭证与 ESO 资源，并等待目标 Secret 就绪"""
 
 import logging
 import time
@@ -93,10 +85,9 @@ logger = logging.getLogger(__name__)
 SECRET_API_VERSION = "v1"
 SECRET_KIND = "Secret"
 
-# KMSConfigVersion.error_reason 的最大长度
 ERROR_REASON_MAX_CHARS = 255
 
-# 配置版本的推进顺序。只向前推进：重复执行已完成的步骤时不会把 status 回退
+# status 只向前推进：重复执行已完成的步骤时不会回退
 _PROGRESS_ORDER = (
     KMSConfigVersionStatus.PENDING.value,
     KMSConfigVersionStatus.CREDENTIAL_CREATED.value,
@@ -117,7 +108,6 @@ class KExternalSecret(BaseKresource):
     kind = EXTERNAL_SECRET_KIND
 
 
-# 本模块用到的 kind。按 kind 查找，未列出的 kind 不允许访问
 _KRES_BY_KIND: dict[str, type[BaseKresource]] = {
     "ServiceAccount": KServiceAccount,
     "Secret": KSecret,
@@ -127,10 +117,7 @@ _KRES_BY_KIND: dict[str, type[BaseKresource]] = {
 
 
 class KubeResources:
-    """KMS 相关 Kubernetes 资源在单个集群中的读写
-
-    只封装本模块用到的 kind，对外返回普通 dict，不暴露 kres 对象。
-    """
+    """KMS 相关 Kubernetes 资源在单个集群中的读写，对外只使用普通 dict"""
 
     def __init__(self, client: Any):
         self._client = client
@@ -171,8 +158,6 @@ class KubeResources:
 
 
 class KubeResourceClient(Protocol):
-    """本模块对 Kubernetes 的最小依赖，便于替换为测试替身"""
-
     def apply(self, manifest: Mapping[str, Any]) -> str: ...
 
     def get(self, *, api_version: str, kind: str, name: str, namespace: str | None) -> dict[str, Any] | None: ...
@@ -180,8 +165,6 @@ class KubeResourceClient(Protocol):
 
 @dataclass(frozen=True)
 class KMSSaaSSettings:
-    """本 SaaS 接入 KMS 所需的配置快照"""
-
     scope_id: int
     scope_name: str
     openbao_server: str
@@ -195,7 +178,7 @@ class KMSSaaSSettings:
 
 
 def load_kms_settings() -> KMSSaaSSettings:
-    """从 Django settings 读取配置。必填项缺失时抛出 KMSConfigError，此时尚未发起任何请求"""
+    """从 Django settings 读取配置，必填项缺失时抛出 KMSConfigError"""
     required = {
         "KMS_SAAS_SCOPE_ID": settings.KMS_SAAS_SCOPE_ID > 0,
         "KMS_SAAS_SCOPE_NAME": bool(settings.KMS_SAAS_SCOPE_NAME),
@@ -227,10 +210,7 @@ def create_kms_config_version(
     kms: KMSClient | None = None,
     kms_settings: KMSSaaSSettings | None = None,
 ) -> KMSConfigVersion:
-    """冻结本次部署的敏感变量：生成新的配置版本，本地加密后保存信封，状态为 pending
-
-    只调用 KMS 获取加密信息，不创建任何远端资源。明文只在本函数内存中存在，不落库。
-    记录只在信封生成后才写入，因此不会出现没有信封的配置版本。
+    """冻结本次部署的敏感变量：本地加密后保存信封，生成状态为 pending 的新配置版本，不创建任何远端资源
 
     :raises KMSValidationError: 没有敏感变量，或明文超出上限
     :raises KMSConfigError: KMS 相关配置缺失
@@ -253,7 +233,6 @@ def create_kms_config_version(
     credential_name = build_credential_name(
         app_code=app_code, module_name=module_name, env_name=env_name, version_id=version_id
     )
-    resource_name = build_resource_name(tenant_id=tenant_id, credential_name=credential_name)
     payload = build_frozen_payload(
         config_version_id=version_id,
         module_environment_id=module_environment_id,
@@ -287,9 +266,7 @@ def create_kms_config_version(
         cluster_name=EnvClusterService(module_env).get_cluster_name(),
         namespace=module_env.wl_app.namespace,
         service_account_name=build_service_account_name(app_code=app_code, module_name=module_name, env_name=env_name),
-        # ClusterSecretStore 是集群级资源，名称已包含租户与凭证名，与 ExternalSecret、Secret 共用同一名称
-        cluster_secret_store_name=resource_name,
-        resource_name=resource_name,
+        resource_name=build_resource_name(tenant_id=tenant_id, credential_name=credential_name),
     )
     version.save(force_insert=True)
     return version
@@ -334,7 +311,7 @@ class KMSSecretProvisioner:
     def apply_resources(self) -> None:
         """依次提交 ServiceAccount、ClusterSecretStore、ExternalSecret，并记录后两者的 UID
 
-        顺序有依赖：ESO 用 ExternalSecret 所在 namespace 中的 SA 登录，SA 必须先存在。
+        ESO 用 ExternalSecret 所在 namespace 中的 SA 登录，SA 必须先存在。
         """
         self.ensure_credential()
         version = self.version
@@ -346,7 +323,7 @@ class KMSSecretProvisioner:
             )
             store_uid = self._kube.apply(
                 build_cluster_secret_store(
-                    name=version.cluster_secret_store_name,
+                    name=version.resource_name,
                     server=cfg.openbao_server,
                     kv_path=cfg.kv_path,
                     auth_mount=cfg.k8s_auth_mount,
@@ -361,7 +338,7 @@ class KMSSecretProvisioner:
                 build_external_secret(
                     name=version.resource_name,
                     namespace=version.namespace,
-                    store_name=version.cluster_secret_store_name,
+                    store_name=version.resource_name,
                     target_secret_name=version.resource_name,
                     openbao_key=version.openbao_key,
                     refresh_interval=cfg.refresh_interval,
@@ -373,11 +350,7 @@ class KMSSecretProvisioner:
             self._advance(KMSConfigVersionStatus.RESOURCES_APPLIED)
 
     def wait_ready(self, *, timeout: float | None = None, poll_interval: float | None = None) -> None:
-        """轮询直到目标 Secret 就绪，成功后记录 secret_uid 并进入 ready
-
-        未提交过 Kubernetes 资源时先调用 provision。超时抛出 KMSSecretNotReadyError，
-        error_reason 记录最后一次检查得到的未就绪原因。
-        """
+        """轮询直到目标 Secret 就绪。超时抛出 KMSSecretNotReadyError，error_reason 记录最后一次的未就绪原因"""
         if self.version.status == KMSConfigVersionStatus.READY.value:
             return
         if not self.version.external_secret_uid:
@@ -473,15 +446,14 @@ class KMSSecretProvisioner:
         }
 
     def _advance(self, status: KMSConfigVersionStatus) -> None:
-        current = self.version.status
-        if current not in _PROGRESS_ORDER or _PROGRESS_ORDER.index(current) < _PROGRESS_ORDER.index(status.value):
+        if _PROGRESS_ORDER.index(self.version.status) < _PROGRESS_ORDER.index(status.value):
             self.version.status = status.value
         self.version.error_reason = ""
         self.version.save()
 
     @contextmanager
     def _recording_failure(self) -> Iterator[None]:
-        """失败时记录安全的错误分类后原样抛出。status 保持不变，重试从已完成的步骤继续"""
+        """失败时记录错误分类后原样抛出，status 保持不变"""
         try:
             yield
         except Exception as e:
@@ -504,41 +476,28 @@ def _error_reason(exc: Exception) -> str:
 
 
 def _hex_id(value: Any) -> str:
-    """配置版本 ID 统一为 32 位十六进制字符串，与数据库中的取值一致"""
     return uuid.UUID(str(value)).hex
 
-
-#########################################################################
-# 发布接入：部署流程使用以下函数决定哪些敏感变量交给 KMS，并生成 Secret 挂载
-#########################################################################
 
 # 敏感变量加密时写入的元数据变量。托管给 KMS 后，没有剩余密文时不再需要
 _ENCRYPTION_METADATA_NAMES = frozenset({SECRET_KEY_ENV_VAR_NAME, ENCRYPTED_KEYS_ENV_NAME})
 
-# 即使被标记为敏感，也不交给 KMS 托管、继续作为环境变量注入的内置变量（已确认的决策）
+# 即使被标记为敏感，也继续作为环境变量注入的内置变量
 KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
 
 
 def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
-    """应用是否开启 KMS 托管敏感变量。这是应用级开关，对该应用的所有模块环境生效"""
     return env.application.feature_flag.has_feature(AppFeatureFlag.KMS_SECRET_INJECTION)
 
 
 def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
-    """开启 KMS 时拒绝暂不支持的应用类型，避免敏感变量在没有挂载的情况下丢失
-
-    隔离沙箱（SandboxInstance）的挂载路径尚未接入，列为后续工作。
-    """
+    """拒绝尚未接入 Secret 挂载的应用类型，避免敏感变量丢失"""
     if env.application.use_isolated_sandbox:
         raise DeployShouldAbortError("开启 KMS 托管敏感变量后，暂不支持隔离沙箱应用")
 
 
 def collect_kms_managed_keys(env: ModuleEnvironment) -> frozenset[str]:
-    """环境中由 KMS 托管的敏感变量键
-
-    范围与旧版敏感变量加密保持一致：用户标记为敏感的变量，以及增强服务的隐藏/移除字段。
-    KMS_UNMANAGED_ENV_KEYS 中的内置变量（BKPAAS_APP_SECRET）即使敏感也不在其中，继续作为环境变量注入。
-    """
+    """环境中由 KMS 托管的敏感变量键：用户标记为敏感的变量，以及增强服务的隐藏/移除字段"""
     return frozenset(collect_sensitive_keys(env)) - KMS_UNMANAGED_ENV_KEYS
 
 
@@ -568,13 +527,10 @@ def provision_kms_secret(
 ) -> SecretFileMount:
     """冻结本次部署的敏感变量，创建 KMS 凭证与 ESO 资源，并等待 Secret 就绪
 
-    调用方需保证 namespace 已存在，且 sensitive_values 非空（为空时 create_kms_config_version 会报错）。
-    任何一步失败都会原样抛出，部署随之失败，不会自动降级为明文注入。
-
-    :returns: 需要挂载到主容器的 Secret 文件信息
+    调用方需保证 namespace 已存在。任何一步失败都会原样抛出，不会降级为明文注入。
     """
     version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=kms_settings)
-    # 先把配置版本绑定到本次部署，再发起远程请求，失败后可以从已记录的版本继续
+    # 先绑定到部署再发起远程请求，失败后可以从已记录的版本继续
     deployment.kms_config_version = version
     deployment.save(update_fields=["kms_config_version"])
 

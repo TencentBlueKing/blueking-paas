@@ -14,5 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-"""蓝鲸 KMS 凭证托管接入：直连 KMS 管理接口，在本地完成混合加密后写入凭证"""

@@ -89,11 +89,7 @@ class CredentialInfo:
 
 
 class KMSClient:
-    """KMS 管理接口客户端
-
-    - 不做自动重试。create_credential_from_envelope 结果不明时，应调用 find_credential 按名称核对，而不是换名重建
-    - 业务错误统一抛出 KMSAPIError，其他通信问题抛出 KMSRequestError
-    """
+    """KMS 管理接口客户端。不做自动重试：业务错误抛出 KMSAPIError，其他通信问题抛出 KMSRequestError"""
 
     def __init__(
         self,
@@ -126,9 +122,7 @@ class KMSClient:
         )
 
     def encrypt_credential_value(self, plaintext: str) -> str:
-        """在本地把明文加密为 KMS 信封，返回可保存、可提交的字符串
-
-        明文不离开本进程。同一明文两次加密的结果不同（每次随机生成对称密钥），因此不能用密文比对内容。
+        """在本地把明文加密为 KMS 信封。同一明文两次加密的结果不同，不能用密文比对内容
 
         :raises KMSValidationError: 明文超出上限，或信封超出 Secret 容量限制
         :raises KMSCryptoError: 服务端加密信息不受支持
@@ -149,10 +143,7 @@ class KMSClient:
         description: str = "",
         annotation: str = "",
     ) -> int:
-        """用已加密的信封创建 secret 凭证，返回 credential_id
-
-        信封应由 encrypt_credential_value 生成。调用方需先保存信封再调用本方法，使重试时提交的是同一份内容。
-        固定开启落地存储加密（enable_encrypt）。
+        """用 encrypt_credential_value 生成的信封创建 secret 凭证（固定开启落地存储加密），返回 credential_id
 
         :raises KMSValidationError: 参数超出接口约束，此时尚未发起远程请求
         :raises KMSAPIError: KMS 返回业务错误
@@ -190,16 +181,8 @@ class KMSClient:
         logger.info("KMS credential created, credential_id: %s, name: %s", credential_id, name)
         return credential_id
 
-    def get_credential(self, credential_id: int) -> CredentialInfo:
-        """按 ID 查询凭证元数据"""
-        data = self._request("POST", "/api/v1/get/credential", {"credential_id": credential_id})
-        return _parse_credential(data)
-
     def find_credential(self, *, scope: KMSScope, name: str) -> CredentialInfo | None:
-        """按名称查询 secret 凭证，不存在时返回 None
-
-        用于创建结果不明时核对归属与授权。调用方需自行比对返回的名称、授权与 enable_encrypt。
-        """
+        """按名称查询 secret 凭证，不存在时返回 None"""
         validate_credential_name(name)
         try:
             data = self._request(

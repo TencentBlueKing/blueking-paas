@@ -17,7 +17,7 @@
 
 """冻结敏感变量的明文格式
 
-明文只在本进程内存中存在，用于交给 KMS 信封加密，不落库、不写日志。格式见计划：
+明文只在本进程内存中存在，用于交给 KMS 信封加密，不落库、不写日志。格式为：
 {"schema_version": 1, "config_version_id": "...", "module_environment_id": "...", "env": {...}}
 """
 
@@ -29,11 +29,7 @@ from .exceptions import KMSValidationError
 
 
 def build_frozen_payload(*, config_version_id: str, module_environment_id: str, env_vars: Mapping[str, str]) -> str:
-    """生成稳定序列化的明文 JSON
-
-    键按字典序排列，分隔符固定，保证同样的输入得到同样的文本。超出 KMS 明文上限时直接报错，不自动拆分。
-    错误信息不包含变量内容。
-    """
+    """生成稳定序列化的明文 JSON。超出 KMS 明文上限时直接报错，不自动拆分；错误信息不包含变量内容"""
     for key, value in env_vars.items():
         if not isinstance(key, str) or not isinstance(value, str):
             raise KMSValidationError("sensitive env vars must be string key/value pairs")

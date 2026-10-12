@@ -17,7 +17,6 @@
 
 """KMS 凭证相关的命名、OpenBao 路径与 role 推导
 
-纯函数，不访问 KMS、OpenBao 或 Kubernetes。格式以 KMS 集成说明为准：
 - OpenBao 逻辑路径：{tenant_id}/{scope_type}/{scope_name}/{credential_type}/{credential_name}
 - 消费 role：{tenant_id}.{scope_type}.{scope_name}.{credential_type}.{credential_name}
 """
@@ -49,16 +48,12 @@ def validate_k8s_name(name: str) -> None:
 
 def build_openbao_key(*, tenant_id: str, scope_type: str, scope_name: str, credential_name: str) -> str:
     """凭证在 OpenBao 中的逻辑路径（不含 KV v2 的 data 段），用作 ExternalSecret 的 remoteRef.key"""
-    _validate_path_segments(tenant_id=tenant_id, scope_type=scope_type, scope_name=scope_name)
-    validate_credential_name(credential_name)
-    return f"{tenant_id}/{scope_type}/{scope_name}/{CREDENTIAL_TYPE_SECRET}/{credential_name}"
+    return "/".join(_credential_segments(tenant_id, scope_type, scope_name, credential_name))
 
 
 def build_kms_role(*, tenant_id: str, scope_type: str, scope_name: str, credential_name: str) -> str:
     """KMS 为凭证自动生成的消费 role，用作 Kubernetes 认证的 role 参数"""
-    _validate_path_segments(tenant_id=tenant_id, scope_type=scope_type, scope_name=scope_name)
-    validate_credential_name(credential_name)
-    return f"{tenant_id}.{scope_type}.{scope_name}.{CREDENTIAL_TYPE_SECRET}.{credential_name}"
+    return ".".join(_credential_segments(tenant_id, scope_type, scope_name, credential_name))
 
 
 def build_credential_name(*, app_code: str, module_name: str, env_name: str, version_id: str) -> str:
@@ -102,7 +97,9 @@ def _sanitize_label(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
-def _validate_path_segments(*, tenant_id: str, scope_type: str, scope_name: str) -> None:
+def _credential_segments(tenant_id: str, scope_type: str, scope_name: str, credential_name: str) -> list[str]:
     for field, value in (("tenant_id", tenant_id), ("scope_type", scope_type), ("scope_name", scope_name)):
         if not _PATH_SEGMENT_RE.match(value or ""):
             raise KMSValidationError(f"{field} is not a valid path segment")
+    validate_credential_name(credential_name)
+    return [tenant_id, scope_type, scope_name, CREDENTIAL_TYPE_SECRET, credential_name]

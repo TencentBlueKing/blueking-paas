@@ -118,9 +118,7 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
 
     # 敏感环境变量加密 feature flag
     ENCRYPTED_SECRET_ENV_INJECTION = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
-    # 开启后敏感变量改由蓝鲸 KMS 托管：经 ESO 同步为 Secret 并挂载到 /etc/kms，优先于 ENCRYPTED_SECRET_ENV_INJECTION。
-    # 例外：传统应用的发布前置命令（pre_release）仍获得明文环境变量；云原生应用的发布前钩子只能读取挂载文件。
-    # 开关说明（label）即面向用户的说明，需与上述行为保持一致。
+    # 敏感变量改由蓝鲸 KMS 托管，经 ESO 同步为 Secret 并挂载到 /etc/kms，优先于 ENCRYPTED_SECRET_ENV_INJECTION
     KMS_SECRET_INJECTION = FeatureFlagField(
         label=_(
             "使用蓝鲸 KMS 托管敏感运行环境变量。敏感变量改由挂载的 Secret 文件提供（需使用 SDK 解密）；"

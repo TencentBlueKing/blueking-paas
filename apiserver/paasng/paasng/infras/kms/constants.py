@@ -15,30 +15,24 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""KMS 凭证托管接入的常量，取值来源于 KMS 管理接口文档"""
-
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
-# 调用 KMS 管理接口时携带的请求头。bk-dev 直连使用这两个头，正式服务身份待运维确认
 KMS_USERNAME_HEADER = "X-Bk-Username"
 KMS_TENANT_ID_HEADER = API_HERDER_TENANT_ID
 
-# 接口参数取值
 CRYPTO_CATEGORY_NORMAL = "normal"
 CREDENTIAL_TYPE_SECRET = "secret"
 SCOPE_TYPE_SCOPE = "scope"
 SUPPORTED_SCOPE_TYPES = frozenset({"biz", "biz_set", "scope"})
 
-# 服务端下发的加密套件中，当前实现支持的组合：RSA 包装对称密钥，AES-128-CBC 加密明文
+# 当前只支持 RSA 包装对称密钥、AES-128-CBC 加密明文的组合
 SUPPORTED_CRYPTO_SUITE = ("RSA", "AES", "CBC")
 AES_KEY_BYTES = 16
 AES_BLOCK_BYTES = 16
-AES_BLOCK_BITS = 128
 
-# 业务错误码：资源不存在
 ERROR_CODE_RESOURCE_NOT_FOUND = 1034003
 
-# 长度限制（字符数）。明文上限按解密后的字符数计算
+# 长度限制（字符数）
 PLAINTEXT_MAX_CHARS = 65536
 CREDENTIAL_NAME_MAX_CHARS = 128
 DESCRIPTION_MAX_CHARS = 2048
@@ -46,24 +40,24 @@ ANNOTATION_MAX_CHARS = 10240
 SERVICE_ACCOUNT_NAME_MAX_CHARS = 253
 SERVICE_ACCOUNT_LIST_MAX_ITEMS = 1024
 
-# Kubernetes Secret 对象的数据上限（字节），信封的大小必须低于该值
+# Kubernetes Secret 的数据上限（字节），信封必须小于该值
 K8S_SECRET_MAX_BYTES = 1024 * 1024
 K8S_NAME_MAX_CHARS = 253
 
-# OpenBao 中凭证的字段名（蓝鲸 KMS 约定），ESO 同步到 Kubernetes Secret 后使用下面的字段名
+# 凭证在 OpenBao 中的字段名，以及 ESO 同步到 Secret 后的字段名（应用 SDK 按后者读取挂载文件）
 OPENBAO_ENVELOPE_PROPERTY = "envelope"
 OPENBAO_PRIVATE_KEY_PROPERTY = "private_key"
 SECRET_KEY_ENVELOPE = "envelope"
 SECRET_KEY_PRIVATE_KEY = "privateKey"
 
-# mTLS 客户端证书 Secret 中的字段名，与 bk-apigateway 的约定一致
+# 访问 OpenBao 的 mTLS 客户端证书 Secret 中的字段名
 MTLS_SECRET_KEY_CA = "ca.crt"
 MTLS_SECRET_KEY_CERT = "tls.crt"
 MTLS_SECRET_KEY_PRIVATE_KEY = "tls.key"
 
-# 挂载目录与卷名。卷名必须是 DNS label（最长 63 字符），因此不使用包含租户和凭证名的资源名
+# 卷名必须是 DNS label（最长 63 字符），因此使用固定值，而不是包含租户和凭证名的资源名
 KMS_SECRET_MOUNT_DIR = "/etc/kms"
 KMS_SECRET_VOLUME_NAME = "kms-secret"
 
-# 冻结明文的格式版本，应用端解析时据此校验
+# 明文 payload 的格式版本，应用端解析时据此校验
 FROZEN_PAYLOAD_SCHEMA_VERSION = 1

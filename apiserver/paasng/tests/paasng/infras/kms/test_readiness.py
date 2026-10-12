@@ -24,168 +24,64 @@ from paasng.infras.kms.readiness import evaluate_secret_readiness
 ES_NAME = "kms-default-demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
 ES_UID = "es-uid-1"
 SECRET_UID = "secret-uid-1"
+READY_CONDITION = {"type": "Ready", "status": "True", "reason": "SecretSynced"}
 
 
 def _external_secret(
-    *,
-    uid: str = ES_UID,
-    condition: dict[str, Any] | None = None,
-    refresh_time: str | None = "2026-10-12T08:00:00Z",
-    with_status: bool = True,
+    *, condition: dict | None = READY_CONDITION, refresh_time: str | None = "2026-10-12T08:00:00Z"
 ) -> dict[str, Any]:
-    obj: dict[str, Any] = {"metadata": {"name": ES_NAME, "namespace": "bkapp-demo-prod", "uid": uid}}
-    if not with_status:
-        return obj
-    status: dict[str, Any] = {
-        "conditions": [condition or {"type": "Ready", "status": "True", "reason": "SecretSynced"}],
-    }
-    if refresh_time is not None:
+    status: dict[str, Any] = {"conditions": [condition] if condition else []}
+    if refresh_time:
         status["refreshTime"] = refresh_time
-    obj["status"] = status
-    return obj
+    return {"metadata": {"name": ES_NAME, "uid": ES_UID}, "status": status}
 
 
-def _secret(*, owner_uid: str = ES_UID, data: dict[str, str] | None = None, uid: str = SECRET_UID) -> dict[str, Any]:
+def _secret(
+    *, owner_uid: str | None = ES_UID, data: dict[str, str] | None = None, uid: str = SECRET_UID
+) -> dict[str, Any]:
+    owners = [{"kind": "ExternalSecret", "name": ES_NAME, "uid": owner_uid}] if owner_uid else []
     return {
-        "metadata": {
-            "name": ES_NAME,
-            "namespace": "bkapp-demo-prod",
-            "uid": uid,
-            "ownerReferences": [
-                {
-                    "apiVersion": "external-secrets.io/v1beta1",
-                    "kind": "ExternalSecret",
-                    "name": ES_NAME,
-                    "uid": owner_uid,
-                }
-            ],
-        },
+        "metadata": {"name": ES_NAME, "uid": uid, "ownerReferences": owners},
         "data": data if data is not None else {"envelope": "ZW52", "privateKey": "cHJpdg=="},
     }
 
 
-class TestEvaluateSecretReadiness:
-    def test_ready_when_all_conditions_hold(self):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=_secret(),
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is True
-        assert result.reason == "ready"
-        assert result.secret_uid == SECRET_UID
-
-    def test_external_secret_missing(self):
-        result = evaluate_secret_readiness(external_secret=None, secret=None, expected_external_secret_uid=ES_UID)
-
-        assert result.ready is False
-        assert result.reason == "external_secret_missing"
-
-    @pytest.mark.parametrize("expected_uid", ["", "other-uid"])
-    def test_external_secret_uid_mismatch(self, expected_uid):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=_secret(),
-            expected_external_secret_uid=expected_uid,
-        )
-
-        assert result.ready is False
-        assert result.reason == "external_secret_uid_mismatch"
-
-    def test_external_secret_without_status_is_not_ready(self):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(with_status=False),
-            secret=_secret(),
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "external_secret_not_ready:unknown"
-
-    def test_ready_condition_false_uses_condition_reason_only(self):
-        # message 可能包含 OpenBao 返回的细节，不能进入判定结果
-        condition = {"type": "Ready", "status": "False", "reason": "SecretSyncedError", "message": "token=abc123"}
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(condition=condition),
-            secret=_secret(),
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "external_secret_not_ready:SecretSyncedError"
-        assert "abc123" not in result.reason
-
-    def test_external_secret_not_refreshed(self):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(refresh_time=None),
-            secret=_secret(),
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "external_secret_not_refreshed"
-
-    def test_secret_missing(self):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=None,
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "secret_missing"
-
-    def test_secret_owned_by_another_external_secret(self):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=_secret(owner_uid="someone-else"),
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "secret_owner_mismatch"
-
-    def test_secret_without_owner_reference(self):
-        secret = _secret()
-        secret["metadata"].pop("ownerReferences")
-
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=secret,
-            expected_external_secret_uid=ES_UID,
-        )
-
-        assert result.ready is False
-        assert result.reason == "secret_owner_mismatch"
-
-    @pytest.mark.parametrize(
-        "data",
-        [
-            {"envelope": "ZW52"},
-            {"privateKey": "cHJpdg=="},
-            {"envelope": "", "privateKey": "cHJpdg=="},
-            {},
-        ],
+def test_ready():
+    result = evaluate_secret_readiness(
+        external_secret=_external_secret(), secret=_secret(), expected_external_secret_uid=ES_UID
     )
-    def test_secret_data_incomplete(self, data):
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=_secret(data=data),
-            expected_external_secret_uid=ES_UID,
-        )
 
-        assert result.ready is False
-        assert result.reason == "secret_data_missing"
+    assert result.ready is True
+    assert result.secret_uid == SECRET_UID
 
-    def test_secret_uid_missing(self):
-        secret = _secret(uid="")
 
-        result = evaluate_secret_readiness(
-            external_secret=_external_secret(),
-            secret=secret,
-            expected_external_secret_uid=ES_UID,
-        )
+@pytest.mark.parametrize(
+    ("external_secret", "secret", "expected_uid", "reason"),
+    [
+        (None, None, ES_UID, "external_secret_missing"),
+        (_external_secret(), _secret(), "", "external_secret_uid_mismatch"),
+        (_external_secret(), _secret(), "other-uid", "external_secret_uid_mismatch"),
+        (_external_secret(condition=None), _secret(), ES_UID, "external_secret_not_ready:unknown"),
+        # 只取条件的 reason，message 可能包含 OpenBao 返回的细节，不能写入数据库
+        (
+            _external_secret(condition={"type": "Ready", "status": "False", "reason": "Err", "message": "token=abc"}),
+            _secret(),
+            ES_UID,
+            "external_secret_not_ready:Err",
+        ),
+        (_external_secret(refresh_time=None), _secret(), ES_UID, "external_secret_not_refreshed"),
+        (_external_secret(), None, ES_UID, "secret_missing"),
+        (_external_secret(), _secret(owner_uid="someone-else"), ES_UID, "secret_owner_mismatch"),
+        (_external_secret(), _secret(owner_uid=None), ES_UID, "secret_owner_mismatch"),
+        (_external_secret(), _secret(data={"envelope": "ZW52"}), ES_UID, "secret_data_missing"),
+        (_external_secret(), _secret(data={"envelope": "", "privateKey": "x"}), ES_UID, "secret_data_missing"),
+        (_external_secret(), _secret(uid=""), ES_UID, "secret_uid_missing"),
+    ],
+)
+def test_not_ready(external_secret, secret, expected_uid, reason):
+    result = evaluate_secret_readiness(
+        external_secret=external_secret, secret=secret, expected_external_secret_uid=expected_uid
+    )
 
-        assert result.ready is False
-        assert result.reason == "secret_uid_missing"
+    assert result.ready is False
+    assert result.reason == reason

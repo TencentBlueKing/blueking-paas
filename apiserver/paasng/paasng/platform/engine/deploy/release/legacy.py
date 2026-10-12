@@ -190,7 +190,9 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
 
     # Prepare the env vars and secret mounts before creating the release, so that a failure
     # (e.g. KMS request error) does not leave a release object which is never deployed.
-    extra_envs, secret_mounts = _get_extra_envs_and_secret_mounts(env, deployment, can_provision=start_async_waiting)
+    extra_envs, secret_mounts = _get_extra_envs_and_secret_mounts(
+        env, deployment, from_deploy_flow=start_async_waiting
+    )
     # Create the release and start the background task to wait for the release if needed
     release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile(), secret_mounts=secret_mounts)
     if start_async_waiting:
@@ -204,19 +206,18 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
 
 
 def _get_extra_envs_and_secret_mounts(
-    env: ModuleEnvironment, deployment: Deployment, *, can_provision: bool
+    env: ModuleEnvironment, deployment: Deployment, *, from_deploy_flow: bool
 ) -> Tuple[Dict[str, str], List[SecretFileMount]]:
     """获取本次发布注入的环境变量，以及需要挂载的 Secret 文件
 
-    未开启 KMS 时，保持原有的敏感变量加密注入。开启后，敏感变量由 KMS 托管，只通过 Secret 文件提供，
-    不再出现在 Deployment 的环境变量中。传统前置命令（pre_release）不经过这里，仍使用明文环境变量。
+    开启 KMS 后，敏感变量只通过 Secret 文件提供，不再出现在环境变量中。
 
-    :param can_provision: 是否关联到部署记录。开启 KMS 时必须为 True，否则配置版本无法关联到本次部署
+    :param from_deploy_flow: 是否由部署流程发起。直接重新发布时没有新的部署记录，无法关联 KMS 配置版本
     """
     if not is_kms_injection_enabled(env):
         return get_env_variables(env, encrypt_sensitive=True), []
 
-    if not can_provision:
+    if not from_deploy_flow:
         raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
     ensure_kms_injection_supported(env)
 

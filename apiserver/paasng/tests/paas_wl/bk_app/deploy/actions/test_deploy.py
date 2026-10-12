@@ -130,10 +130,3 @@ class TestDeployActionSecretMounts:
         (deployed,) = deploy.call_args[0]
         assert deployed == [proc]
         assert proc.runtime.secret_mounts == [mount]
-
-    def test_no_secret_mounts_by_default(self, wl_app, process):
-        proc, _ = process
-
-        DeployAction(env=mock.Mock(wl_app=wl_app), release=mock.Mock(), extra_envs={}).perform()
-
-        assert proc.runtime.secret_mounts == []

@@ -17,8 +17,7 @@
 
 """ExternalSecret 与目标 Secret 的就绪判定
 
-纯函数，输入为 Kubernetes 对象的 dict 形式，不访问集群。返回的 reason 只包含固定分类或 ESO 条件的 reason 字段，
-不包含 Secret 内容，也不包含 ESO 条件的 message。
+返回的 reason 会写入数据库，只能包含固定分类或 ESO 条件的 reason 字段，不能包含 Secret 内容或 ESO 条件的 message。
 """
 
 from collections.abc import Mapping

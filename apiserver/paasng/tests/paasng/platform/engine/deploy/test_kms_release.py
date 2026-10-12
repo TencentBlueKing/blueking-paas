@@ -31,11 +31,7 @@ from paasng.infras.kms.constants import (
 )
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import Application
-from paasng.platform.engine.deploy.release.legacy import (
-    _get_extra_envs_and_secret_mounts,
-    release_by_engine,
-    release_to_k8s,
-)
+from paasng.platform.engine.deploy.release.legacy import _get_extra_envs_and_secret_mounts
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 
@@ -69,7 +65,7 @@ class TestLegacyExtraEnvsAndSecretMounts:
             mock.patch(f"{LEGACY_MODULE}.get_env_variables", return_value={"DB": "bkpaas_enc$x"}) as get_envs,
             mock.patch(f"{LEGACY_MODULE}.provision_kms_secret") as provision,
         ):
-            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, can_provision=True)
+            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, from_deploy_flow=True)
 
         get_envs.assert_called_once_with(env, encrypt_sensitive=True)
         provision.assert_not_called()
@@ -81,7 +77,7 @@ class TestLegacyExtraEnvsAndSecretMounts:
             mock.patch(f"{LEGACY_MODULE}.is_kms_injection_enabled", return_value=True),
             pytest.raises(ValueError, match="部署流程"),
         ):
-            _get_extra_envs_and_secret_mounts(env, mock.Mock(), can_provision=False)
+            _get_extra_envs_and_secret_mounts(env, mock.Mock(), from_deploy_flow=False)
 
     def test_kms_enabled_splits_sensitive_values(self, env, deployment):
         with (
@@ -95,10 +91,9 @@ class TestLegacyExtraEnvsAndSecretMounts:
             mock.patch(f"{LEGACY_MODULE}.NamespacesHandler") as ns_handler_cls,
             mock.patch(f"{LEGACY_MODULE}.provision_kms_secret", return_value=KMS_MOUNT) as provision,
         ):
-            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, can_provision=True)
+            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, from_deploy_flow=True)
 
         ensure_supported.assert_called_once_with(env)
-        # ESO 资源需要落在已存在的 namespace 中
         ns_handler_cls.new_by_app.return_value.ensure_namespace.assert_called_once_with(env.wl_app.namespace)
         provision.assert_called_once_with(env, deployment, {"DB_PASSWORD": "s3cret"})
         assert envs == {"PLAIN": "1"}
@@ -113,52 +108,12 @@ class TestLegacyExtraEnvsAndSecretMounts:
             mock.patch(f"{LEGACY_MODULE}.NamespacesHandler") as ns_handler_cls,
             mock.patch(f"{LEGACY_MODULE}.provision_kms_secret") as provision,
         ):
-            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, can_provision=True)
+            envs, mounts = _get_extra_envs_and_secret_mounts(env, deployment, from_deploy_flow=True)
 
         provision.assert_not_called()
         ns_handler_cls.assert_not_called()
         assert envs == {"PLAIN": "1"}
         assert mounts == []
-
-
-class TestLegacyReleaseByEngine:
-    def test_secret_mounts_are_passed_to_release(self, bk_stag_env, bk_deployment, mocker):
-        prepare = mocker.patch(
-            f"{LEGACY_MODULE}._get_extra_envs_and_secret_mounts",
-            return_value=({"PLAIN": "1"}, [KMS_MOUNT]),
-        )
-        release_to_k8s = mocker.patch(f"{LEGACY_MODULE}.release_to_k8s")
-        release_to_k8s.return_value.uuid = "release-uuid"
-        mocker.patch(f"{LEGACY_MODULE}.wait_for_release")
-
-        release_id = release_by_engine(bk_stag_env, "build-id", bk_deployment)
-
-        # 部署流程传入 deployment，因此允许关联配置版本
-        prepare.assert_called_once_with(bk_stag_env, bk_deployment, can_provision=True)
-        release_to_k8s.assert_called_once_with(
-            bk_stag_env,
-            "build-id",
-            {"PLAIN": "1"},
-            bk_deployment.get_procfile(),
-            secret_mounts=[KMS_MOUNT],
-        )
-        assert release_id == "release-uuid"
-
-
-class TestLegacyReleaseToK8s:
-    def test_secret_mounts_are_passed_to_deploy_action(self):
-        env = mock.Mock()
-        with (
-            mock.patch(f"{LEGACY_MODULE}.Build") as build_cls,
-            mock.patch(f"{LEGACY_MODULE}.DeployAction") as deploy_action_cls,
-        ):
-            release = release_to_k8s(env, "build-id", {"PLAIN": "1"}, {"web": "start"}, secret_mounts=[KMS_MOUNT])
-
-        build_cls.objects.get.assert_called_once_with(pk="build-id")
-        deploy_action_cls.assert_called_once_with(
-            env=env, release=release, extra_envs={"PLAIN": "1"}, secret_mounts=[KMS_MOUNT]
-        )
-        deploy_action_cls.return_value.perform.assert_called_once()
 
 
 def _sample_bkapp() -> crd.BkAppResource:

@@ -1579,17 +1579,16 @@ BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
 # ---------------------------------------------
 # KMS 凭证托管（SaaS 运行环境敏感变量）
 # ---------------------------------------------
-# KMS 管理接口的直连地址，不经过 API 网关；为空表示未接入 KMS
+# KMS 管理接口的直连地址（不经过 API 网关），为空表示未接入 KMS
 KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
-# 调用 KMS 管理接口时携带的 X-Bk-Username，正式服务身份待运维确认
+# 调用 KMS 管理接口时携带的 X-Bk-Username
 KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "")
-# 调用 KMS 管理接口的超时时间（秒），连接与读取共用
 KMS_API_TIMEOUT_SECONDS = settings.get("KMS_API_TIMEOUT_SECONDS", default=10, cast="@float")
 
-# SaaS 凭据接入（ESO + OpenBao）。scope 数字 ID 用于 KMS 请求，scope 名称用于 OpenBao 路径与 role，均由运维预建
+# 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role
 KMS_SAAS_SCOPE_ID = settings.get("KMS_SAAS_SCOPE_ID", default=0, cast="@int")
 KMS_SAAS_SCOPE_NAME = settings.get("KMS_SAAS_SCOPE_NAME", "")
-# OpenBao 地址与 KV v2 挂载路径，Kubernetes 认证挂载点（默认值与 bk-apigateway 的网关配置一致）
+# OpenBao 地址、KV v2 挂载路径与 Kubernetes 认证挂载点
 KMS_OPENBAO_SERVER = settings.get("KMS_OPENBAO_SERVER", "")
 KMS_OPENBAO_KV_PATH = settings.get("KMS_OPENBAO_KV_PATH", "secret")
 KMS_OPENBAO_K8S_AUTH_MOUNT = settings.get("KMS_OPENBAO_K8S_AUTH_MOUNT", "kubernetes")

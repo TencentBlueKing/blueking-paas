@@ -156,13 +156,3 @@ class KMSConfigVersionStatus(StrStructuredEnum):
     CREDENTIAL_CREATED = EnumField("credential_created", label=_("KMS 凭证已创建"))
     RESOURCES_APPLIED = EnumField("resources_applied", label=_("Kubernetes 资源已提交"))
     READY = EnumField("ready", label=_("Secret 已就绪"))
-    FAILED = EnumField("failed", label=_("准备失败"))
-
-
-class KMSCleanupStatus(StrStructuredEnum):
-    """KMS 配置版本的远端资源清理状态"""
-
-    NOT_REQUESTED = EnumField("not_requested", label=_("未请求清理"))
-    PENDING = EnumField("pending", label=_("待清理"))
-    FAILED = EnumField("failed", label=_("清理失败，待重试"))
-    DONE = EnumField("done", label=_("已清理"))

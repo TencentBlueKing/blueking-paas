@@ -17,13 +17,10 @@
 
 """KMS 混合加密信封
 
-按 KMS 管理接口文档实现：每次加密生成新的随机 16 字节 AES 密钥与 IV。
+每次加密生成新的随机 16 字节 AES 密钥与 IV：
 - encrypted_key：RSA-OAEP(SHA-256, MGF1-SHA-256, 空 label) 包装的 AES 密钥
 - ciphertext：IV || AES-128-CBC(PKCS#7(明文))
 - 信封 JSON 整体做标准 Base64，结果填入凭证的 metadata.value
-
-与官方 bk-kms-sdk 的解密规则一致：OAEP 使用 SHA-256 与 MGF1-SHA-256、空 label；CBC 前 16 字节为 IV；
-PKCS#7 严格校验。
 """
 
 import base64
@@ -38,7 +35,7 @@ from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from .constants import AES_BLOCK_BITS, AES_BLOCK_BYTES, AES_KEY_BYTES, SUPPORTED_CRYPTO_SUITE
+from .constants import AES_BLOCK_BYTES, AES_KEY_BYTES, SUPPORTED_CRYPTO_SUITE
 from .exceptions import KMSCryptoError, KMSValidationError
 
 
@@ -69,11 +66,10 @@ def hybrid_encrypt(plaintext: str, crypto: CryptoInfo) -> str:
     except UnicodeEncodeError as e:
         raise KMSValidationError("plaintext must be valid UTF-8 text") from e
 
-    # 每次加密都使用新的对称密钥与 IV，不复用
     symmetric_key = secrets.token_bytes(AES_KEY_BYTES)
     iv = secrets.token_bytes(AES_BLOCK_BYTES)
 
-    padder = sym_padding.PKCS7(AES_BLOCK_BITS).padder()
+    padder = sym_padding.PKCS7(AES_BLOCK_BYTES * 8).padder()
     padded = padder.update(raw) + padder.finalize()
     encryptor = Cipher(algorithms.AES(symmetric_key), modes.CBC(iv)).encryptor()
     ciphertext = encryptor.update(padded) + encryptor.finalize()

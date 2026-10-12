@@ -22,6 +22,7 @@ from typing import Dict, Optional
 
 from django.conf import settings
 from paas_service.base_vendor import BaseProvider, InstanceData
+from paas_service.constants import DEFAULT_TENANT_ID
 from paas_service.utils import gen_unique_id, generate_password
 
 from svc_bk_repo.vendor.helper import BKGenericRepoManager, RequestError
@@ -125,7 +126,7 @@ class Provider(BaseProvider):
         private_bucket = instance_data.credentials["private_bucket"]
         public_bucket = instance_data.credentials["public_bucket"]
         username = instance_data.credentials["username"]
-        tenant_id = instance_data.config["tenant_id"]
+        tenant_id = self._resolve_tenant_id(instance_data)
 
         manager = self.make_manager(tenant_id=tenant_id)
         self._delete_user(manager, username)
@@ -154,8 +155,15 @@ class Provider(BaseProvider):
         username = instance_data.credentials["username"]
         password = instance_data.credentials["password"]
         association_users = instance_data.config["association_users"] = json.loads(params.get("app_developers", "[]"))
-        tenant_id = instance_data.config["tenant_id"]
+        tenant_id = self._resolve_tenant_id(instance_data)
 
         manager = self.make_manager(tenant_id=tenant_id)
         manager.update_user(username=username, password=password, association_users=association_users)
         return instance_data
+
+    def _resolve_tenant_id(self, instance_data: InstanceData) -> str:
+        """解析实例访问 BKRepo 时应携带的租户 ID.
+
+        老实例的 config 中缺失 tenant_id，回退到平台默认租户。
+        """
+        return instance_data.config.get("tenant_id") or DEFAULT_TENANT_ID

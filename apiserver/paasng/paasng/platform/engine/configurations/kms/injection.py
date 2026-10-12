@@ -18,29 +18,26 @@
 
 from collections.abc import Mapping
 
+from django.conf import settings
+
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.processes.entities import SecretFileMount
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.env_var.encryption import (
-    ENCRYPTED_KEYS_ENV_NAME,
-    SECRET_KEY_ENV_VAR_NAME,
-    collect_sensitive_keys,
-    is_encrypted_value,
-)
+from paasng.platform.engine.configurations.env_var.encryption import collect_sensitive_keys
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.modules.models import Module
-
-# 敏感变量加密时写入的元数据变量。托管给 KMS 后，没有剩余密文时不再需要
-_ENCRYPTION_METADATA_NAMES = frozenset({SECRET_KEY_ENV_VAR_NAME, ENCRYPTED_KEYS_ENV_NAME})
 
 # 即使被标记为敏感，也继续作为环境变量注入的内置变量
 KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
 
 
 def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
-    return env.application.feature_flag.has_feature(AppFeatureFlag.KMS_SECRET_INJECTION)
+    """平台启用 KMS，且应用开启了「加密运行环境敏感变量」时，敏感变量由 KMS 托管"""
+    if not settings.KMS_ENABLED:
+        return False
+    return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
 
 def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
@@ -86,8 +83,6 @@ def strip_kms_managed_env_vars(
     overlay.envVariables = [
         var for var in overlay.envVariables if var.name not in managed_keys_by_env.get(var.envName, frozenset())
     ]
-    if not _has_encrypted_values(bkapp_res):
-        overlay.envVariables = [var for var in overlay.envVariables if var.name not in _ENCRYPTION_METADATA_NAMES]
 
 
 def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
@@ -105,14 +100,6 @@ def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: Sec
             subPaths=list(mount.sub_paths),
         ),
     )
-
-
-def _has_encrypted_values(bkapp_res: crd.BkAppResource) -> bool:
-    values = [var.value for var in bkapp_res.spec.configuration.env]
-    overlay = bkapp_res.spec.envOverlay
-    if overlay is not None and overlay.envVariables:
-        values.extend(var.value for var in overlay.envVariables)
-    return any(is_encrypted_value(value) for value in values)
 
 
 def _ensure_mount_not_reserved(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:

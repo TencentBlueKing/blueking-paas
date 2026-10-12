@@ -39,7 +39,9 @@ CIPHER_PREFIX = "bkpaas_enc$"
 
 
 def is_encrypted_secret_env_injection_enabled(env: ModuleEnvironment) -> bool:
-    """判断该 env 是否启用敏感环境变量密文注入功能"""
+    """判断该 env 是否启用敏感环境变量密文注入功能。平台启用 KMS 时，敏感变量改由 KMS 托管"""
+    if settings.KMS_ENABLED:
+        return False
     return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
 

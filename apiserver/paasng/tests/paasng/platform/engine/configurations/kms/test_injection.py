@@ -19,17 +19,34 @@ import pytest
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.processes.entities import SecretFileMount
-from paasng.platform.engine.configurations.env_var.encryption import (
-    CIPHER_PREFIX,
-    ENCRYPTED_KEYS_ENV_NAME,
-    SECRET_KEY_ENV_VAR_NAME,
-)
+from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.engine.configurations.env_var.encryption import is_encrypted_secret_env_injection_enabled
 from paasng.platform.engine.configurations.kms.injection import (
     add_kms_secret_mount,
     collect_kms_managed_keys,
+    is_kms_injection_enabled,
     strip_kms_managed_env_vars,
 )
 from paasng.platform.engine.exceptions import DeployShouldAbortError
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+@pytest.mark.parametrize(
+    ("kms_enabled", "app_flag", "expected_kms", "expected_builtin"),
+    [
+        (True, True, True, False),
+        (False, True, False, True),
+        (True, False, False, False),
+    ],
+)
+def test_kms_and_builtin_encryption_are_exclusive(
+    settings, bk_app, bk_stag_env, kms_enabled, app_flag, expected_kms, expected_builtin
+):
+    settings.KMS_ENABLED = kms_enabled
+    bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, app_flag)
+
+    assert is_kms_injection_enabled(bk_stag_env) is expected_kms
+    assert is_encrypted_secret_env_injection_enabled(bk_stag_env) is expected_builtin
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
@@ -76,7 +93,7 @@ class TestStripKMSManagedEnvVars:
             env_vars=[("DB_PASSWORD", "s3cret"), ("PLAIN", "1")],
             overlay_vars=[
                 ("stag", "DB_PASSWORD", "s3cret-stag"),
-                ("prod", "DB_PASSWORD", f"{CIPHER_PREFIX}abc"),
+                ("prod", "DB_PASSWORD", "s3cret-prod"),
                 ("prod", "TOKEN", "tok"),
             ],
         )
@@ -86,37 +103,6 @@ class TestStripKMSManagedEnvVars:
         assert [var.name for var in bkapp.spec.configuration.env] == ["PLAIN"]
         # 覆盖项按各自环境的托管键过滤
         assert _overlay_var_names(bkapp) == [("prod", "DB_PASSWORD")]
-
-    def test_encryption_metadata_removed_when_no_ciphertext_left(self):
-        bkapp = _make_bkapp(
-            overlay_vars=[
-                ("stag", "DB_PASSWORD", f"{CIPHER_PREFIX}abc"),
-                ("stag", SECRET_KEY_ENV_VAR_NAME, "key"),
-                ("stag", ENCRYPTED_KEYS_ENV_NAME, "DB_PASSWORD"),
-            ],
-        )
-
-        strip_kms_managed_env_vars(bkapp, "stag", {"stag": frozenset({"DB_PASSWORD"})})
-
-        assert _overlay_var_names(bkapp) == []
-
-    def test_encryption_metadata_kept_when_other_ciphertext_remains(self):
-        bkapp = _make_bkapp(
-            overlay_vars=[
-                ("stag", "DB_PASSWORD", f"{CIPHER_PREFIX}abc"),
-                ("prod", "TOKEN", f"{CIPHER_PREFIX}def"),
-                ("prod", SECRET_KEY_ENV_VAR_NAME, "key"),
-                ("prod", ENCRYPTED_KEYS_ENV_NAME, "TOKEN"),
-            ],
-        )
-
-        strip_kms_managed_env_vars(bkapp, "stag", {"stag": frozenset({"DB_PASSWORD"})})
-
-        assert _overlay_var_names(bkapp) == [
-            ("prod", "TOKEN"),
-            ("prod", SECRET_KEY_ENV_VAR_NAME),
-            ("prod", ENCRYPTED_KEYS_ENV_NAME),
-        ]
 
 
 KMS_MOUNT = SecretFileMount(

@@ -1582,7 +1582,7 @@ BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
 # KMS 管理接口的直连地址（不经过 API 网关），为空表示未接入 KMS
 KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
 # 调用 KMS 管理接口时携带的 X-Bk-Username
-KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "")
+KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "admin")
 KMS_API_TIMEOUT_SECONDS = settings.get("KMS_API_TIMEOUT_SECONDS", default=10, cast="@float")
 
 # 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role

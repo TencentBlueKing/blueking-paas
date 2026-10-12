@@ -23,13 +23,12 @@ from typing import Dict, Iterable, List, Optional, Sequence
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.accessories.servicehub.manager import (
-    DuplicatedBindingValidator,
     EnvVariableGroup,
     SharedServiceInfo,
     get_db_properties,
     get_db_properties_by_service_type,
     mixed_service_mgr,
-    validate_not_disallowed,
+    validate_new_binding,
 )
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
@@ -64,12 +63,12 @@ class ServiceSharingManager:
         :raises ReferencedAttachmentNotFound: when referenced relationship not found
         :raises SharedAttachmentAlreadyExists: when shared attachment already exists
         :raises ServiceDisallowedError: when the module is disallowed from using the service
+        :raises BindServicePlanError: when the binding policy of the service is invalid
         """
         if ref_module == self.module:
             raise RuntimeError("module can not share from itself")
 
-        DuplicatedBindingValidator(self.module, ServiceBindingType.SHARING).validate(service)
-        validate_not_disallowed(service, self.module)
+        validate_new_binding(service, self.module, ServiceBindingType.SHARING)
 
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=[self.application.pk])
         try:

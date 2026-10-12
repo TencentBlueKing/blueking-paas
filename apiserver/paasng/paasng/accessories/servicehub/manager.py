@@ -25,9 +25,10 @@ from attrs import define
 from django.http import Http404
 from django.utils import timezone
 
-from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
+from paasng.accessories.servicehub.binding_policy.selector import is_service_disallowed
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
 from paasng.accessories.servicehub.exceptions import (
+    BindServicePlanError,
     DuplicatedServiceBoundError,
     ServiceDisallowedError,
     ServiceObjNotFound,
@@ -183,8 +184,7 @@ class MixedServiceMgr:
         Use this method when the user can manually select a plan to bind, if this
         condition is not met, use `bind_service_use_first_plan` instead.
         """
-        DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
-        validate_not_disallowed(service, module)
+        validate_new_binding(service, module, ServiceBindingType.NORMAL)
         return _proxied_svc_dispatcher("bind_service")(
             self, service, module, plan_id=plan_id, env_plan_id_map=env_plan_id_map
         )
@@ -195,8 +195,7 @@ class MixedServiceMgr:
         The difference between this method and `bind_service` is that this method will
         use the first plan when multiple plans are available instead of raising an exception.
         """
-        DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
-        validate_not_disallowed(service, module)
+        validate_new_binding(service, module, ServiceBindingType.NORMAL)
         return _proxied_svc_dispatcher("bind_service_use_first_plan")(self, service, module)
 
     # Dispatch via service type start
@@ -371,9 +370,20 @@ class DuplicatedBindingValidator:
                 )
 
 
-def validate_not_disallowed(service: ServiceObj, module: Module) -> None:
-    """:raises: ServiceDisallowedError when the binding policy disallows the module from using the service"""
-    if PlanSelector().is_disallowed(service, module):
+def validate_new_binding(service: ServiceObj, module: Module, binding_type: ServiceBindingType) -> None:
+    """Validate before creating a new binding relationship(normal or sharing) for the module.
+
+    :raises DuplicatedServiceBoundError: when the module is bound with the service in another type
+    :raises ServiceDisallowedError: when the binding policy disallows the module from using the service
+    :raises BindServicePlanError: when the binding policy is invalid
+    """
+    DuplicatedBindingValidator(module, binding_type).validate(service)
+
+    try:
+        disallowed = is_service_disallowed(service, module)
+    except ValueError as e:
+        raise BindServicePlanError(f"Invalid binding policy of service {service.name}: {e}")
+    if disallowed:
         raise ServiceDisallowedError(f"Module: {module.name} is disallowed to use service {service.name}")
 
 

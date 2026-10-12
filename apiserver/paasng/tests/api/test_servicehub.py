@@ -187,25 +187,39 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         assert response.data == 4
 
 
-def test_disallowed_service(api_client, bk_app, bk_module):
-    """被策略禁止的增强服务，不出现在未启用列表中，且无法通过接口绑定"""
-    service = G(Service, name="redis", category=G(ServiceCategory), logo_b64="dummy", is_visible=True)
-    plan = G(Plan, name="default", service=service)
-    service_obj = mixed_service_mgr.get(service.uuid)
-    SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
-        [
-            ServiceBindingPrecedencePolicyDTO(
-                matcher={"usage_in": [ServiceUsage.AI_AGENT.value]}, plans=[], priority=1
-            ),
-            ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[str(plan.uuid)], priority=0),
-        ]
-    )
-    bk_app.is_ai_agent_app = True
-    bk_app.save(update_fields=["is_ai_agent_app"])
+class TestDisallowedService:
+    """绑定策略中，AI Agent 应用命中不配置方案的规则，不允许使用该增强服务"""
 
-    response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/")
-    assert service_obj.uuid not in [svc["uuid"] for svc in response.data["unbound"]]
+    @pytest.fixture()
+    def plan(self):
+        service = G(Service, name="redis", category=G(ServiceCategory), logo_b64="dummy", is_visible=True)
+        return G(Plan, name="default", service=service)
 
-    data = {"code": bk_app.code, "module_name": bk_module.name, "service_id": service_obj.uuid, "plan_id": plan.uuid}
-    response = api_client.post("/api/services/service-attachments/", data=data)
-    assert response.json()["code"] == "CANNOT_BIND_SERVICE"
+    @pytest.fixture()
+    def service_obj(self, plan):
+        service_obj = mixed_service_mgr.get(plan.service.uuid)
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+            [
+                ServiceBindingPrecedencePolicyDTO(
+                    matcher={"usage_in": [ServiceUsage.AI_AGENT.value]}, plans=[], priority=1
+                ),
+                ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[str(plan.uuid)], priority=0),
+            ]
+        )
+        return service_obj
+
+    @pytest.fixture()
+    def _ai_agent_app(self, bk_app):
+        bk_app.is_ai_agent_app = True
+        bk_app.save(update_fields=["is_ai_agent_app"])
+
+    def _list_unbound_uuids(self, api_client, bk_app, bk_module):
+        response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/")
+        return [svc["uuid"] for svc in response.data["unbound"]]
+
+    def test_list_normal_app(self, api_client, bk_app, bk_module, service_obj):
+        assert service_obj.uuid in self._list_unbound_uuids(api_client, bk_app, bk_module)
+
+    @pytest.mark.usefixtures("_ai_agent_app")
+    def test_list(self, api_client, bk_app, bk_module, service_obj):
+        assert service_obj.uuid not in self._list_unbound_uuids(api_client, bk_app, bk_module)

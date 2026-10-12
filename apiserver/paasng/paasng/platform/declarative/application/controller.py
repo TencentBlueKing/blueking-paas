@@ -29,7 +29,7 @@ from paasng.accessories.publish.market.constant import AppType, ProductSourceUrl
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import ServiceDisallowedError, ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.core.tenant.utils import AppTenantInfo
@@ -301,7 +301,10 @@ class AppDeclarativeController:
             self._sync_module_services_fields(application, module, desc[module_name].services)
 
     def _sync_module_services_fields(self, application: Application, module: Module, services: List[ServiceSpec]):
-        """Sync services related field for single module."""
+        """Sync services related field for single module.
+
+        :raises ControllerError: when the module is disallowed from using any service
+        """
         for service in services:
             try:
                 obj = mixed_service_mgr.find_by_name(service.name)
@@ -309,21 +312,28 @@ class AppDeclarativeController:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
 
-            if service.shared_from:
-                manager = ServiceSharingManager(module)
-                if manager.get_shared_info(service=obj):
-                    logger.info('Skip, service "%s" already created shared attachment', obj.name)
-                    continue
+            try:
+                if service.shared_from:
+                    manager = ServiceSharingManager(module)
+                    if manager.get_shared_info(service=obj):
+                        logger.info('Skip, service "%s" already created shared attachment', obj.name)
+                        continue
 
-                ref_module = application.get_module(service.shared_from)
-                manager.create(service=obj, ref_module=ref_module)
-            else:
-                if mixed_service_mgr.module_is_bound_with(obj, module):
-                    logger.info('Skip, service "%s" already bound', obj.name)
-                    continue
+                    ref_module = application.get_module(service.shared_from)
+                    manager.create(service=obj, ref_module=ref_module)
+                else:
+                    if mixed_service_mgr.module_is_bound_with(obj, module):
+                        logger.info('Skip, service "%s" already bound', obj.name)
+                        continue
 
-                logger.info('Bind service "%s" to Module "%s".', service.name, module)
-                mixed_service_mgr.bind_service_use_first_plan(obj, module)
+                    logger.info('Bind service "%s" to Module "%s".', service.name, module)
+                    mixed_service_mgr.bind_service_use_first_plan(obj, module)
+            except ServiceDisallowedError:
+                raise ControllerError(
+                    _("模块 {module_name} 不支持使用增强服务 {service_name}").format(
+                        module_name=module.name, service_name=service.name
+                    )
+                )
 
     def save_description(self, desc: ApplicationDesc, application: Application, is_creation: bool):
         """Save description to database

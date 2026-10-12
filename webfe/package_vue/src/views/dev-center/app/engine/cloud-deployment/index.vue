@@ -57,11 +57,11 @@
             <bk-tab-panel
               v-for="panel in panels"
               v-bind="panel"
-              :key="`${panel.name}-${isGcsMysqlAlertIcon}`"
+              :key="`${panel.name}-${isHaRiskAlertIcon}`"
             >
               <div slot="label">
                 <i
-                  v-if="panel.name === 'appServices' && isGcsMysqlAlertIcon"
+                  v-if="panel.name === 'appServices' && isHaRiskAlertIcon"
                   class="mr5 paasng-icon paasng-remind"
                   :key="curModuleId"
                 ></i>
@@ -146,7 +146,7 @@ export default {
       dialogCloudAppData: [],
       topBarIndex: 0,
       isYamlLoading: false,
-      isGcsMysqlService: false,
+      isHaRiskService: false,
     };
   },
   computed: {
@@ -192,9 +192,9 @@ export default {
       return this.isCloudNativeApp ? '云原生应用' : '普通应用';
     },
     // 是否显示高级别提示icon
-    isGcsMysqlAlertIcon() {
+    isHaRiskAlertIcon() {
       return (
-        this.isGcsMysqlService &&
+        this.isHaRiskService &&
         this.userFeature.APP_AVAILABILITY_LEVEL &&
         this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
@@ -319,18 +319,18 @@ export default {
           moduleId: this.curModuleId,
         });
 
-        const RISK_SERVERS = ['gcs_mysql', 'redis', 'paas_redis'];
+        const HA_RISK_SERVICES = ['gcs_mysql', 'redis', 'paas_redis'];
         const { bound = [], shared = [], unbound = [] } = response;
 
-        // 检查是否存在 RISK_SERVERS
+        // 检查是否存在 HA_RISK_SERVICES
         const containsRiskServer = (list, key = 'service') =>
-          list.some((item) => RISK_SERVERS.includes(key === 'service' ? item?.service?.name : item.name));
+          list.some((item) => HA_RISK_SERVICES.includes(key === 'service' ? item?.service?.name : item.name));
 
-        // 包含 gcs_mysql / redis 服务，添加风险icon提示
-        this.isGcsMysqlService =
+        // 包含存在可用性风险的增强服务，添加风险icon提示
+        this.isHaRiskService =
           containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
       } catch (error) {
-        this.isGcsMysqlService = false;
+        this.isHaRiskService = false;
       }
     },
   },

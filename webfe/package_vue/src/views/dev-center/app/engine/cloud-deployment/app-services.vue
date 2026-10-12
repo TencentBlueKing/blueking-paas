@@ -72,7 +72,7 @@
                   placement="top"
                   width="220"
                 >
-                  <i class="paasng-icon paasng-remind mysql-tip-icon ml5"></i>
+                  <i class="paasng-icon paasng-remind ha-risk-tip-icon ml5"></i>
                   <div slot="content">
                     {{
                       $t(
@@ -94,7 +94,7 @@
                   placement="top"
                   width="220"
                 >
-                  <i class="paasng-icon paasng-remind mysql-tip-icon ml5"></i>
+                  <i class="paasng-icon paasng-remind ha-risk-tip-icon ml5"></i>
                   <div slot="content">
                     {{
                       $t(
@@ -891,9 +891,9 @@ export default {
     // 是否展示 Redis 警告提示
     hasRedisAlert(name) {
       return (
-        ['redis', 'paas_redis'].includes(name)
-        && this.userFeature.APP_AVAILABILITY_LEVEL
-        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        ['redis', 'paas_redis'].includes(name) &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },
@@ -941,7 +941,7 @@ export default {
     transform: translateX(-6px);
   }
 
-  .mysql-tip-icon {
+  .ha-risk-tip-icon {
     font-size: 14px;
     color: #ea3636;
   }

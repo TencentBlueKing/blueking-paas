@@ -475,9 +475,9 @@ export default {
     // 应用登记为高级别可用性保障时，Redis 增强服务同样无法满足要求
     isRedisAlert() {
       return (
-        ['redis', 'paas_redis'].includes(this.serviceDetail.name)
-        && this.userFeature.APP_AVAILABILITY_LEVEL
-        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        ['redis', 'paas_redis'].includes(this.serviceDetail.name) &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },

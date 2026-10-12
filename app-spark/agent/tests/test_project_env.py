@@ -21,8 +21,11 @@
 那条路径在镜像里端到端验。
 """
 
+import asyncio
+import contextlib
 import os
 import re
+import signal
 import stat
 import tomllib
 from pathlib import Path
@@ -153,6 +156,50 @@ class TestSyncProjectEnvironment:
 
         with pytest.raises(ProcessLookupError):
             os.kill(int(pid_file.read_text()), 0)
+
+    async def test_a_sync_past_the_deadline_keeps_what_uv_printed(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path
+    ) -> None:
+        """卡在哪一步（下载、解析还是构建）只有 uv 已经打出来的那几行说得清。"""
+        monkeypatch.setattr(project_env_mod, "SYNC_TIMEOUT_SECONDS", 0.5)
+        install_fake_uv(monkeypatch, tmp_path, 'echo "Building lxml"; sleep 30')
+        log = tmp_path / "app.log"
+
+        with pytest.raises(AppLaunchFailed, match=r"did not finish within .*\nBuilding lxml$"):
+            await sync_project_environment(workspace, log)
+        assert log.read_text() == "Building lxml\n"
+
+    async def test_a_failure_reports_only_this_syncs_output(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path
+    ) -> None:
+        install_fake_uv(monkeypatch, tmp_path, 'echo "No solution found"; exit 1')
+        log = tmp_path / "app.log"
+        log.write_text("an earlier launch\n")
+
+        with pytest.raises(AppLaunchFailed, match=r"exited with 1\):\nNo solution found$"):
+            await sync_project_environment(workspace, log)
+        assert log.read_text() == "an earlier launch\nNo solution found\n"
+
+    async def test_a_descendant_outside_the_process_group_does_not_hold_up_the_sync(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path
+    ) -> None:
+        """构建后端可能 setsid 出一个继承了 uv 输出的进程，杀 uv 的进程组杀不到它。"""
+        pid_file = tmp_path / "escaped.pid"
+        install_fake_uv(monkeypatch, tmp_path, f'setsid sleep 30 & echo $! > "{pid_file}"; echo "done"')
+        try:
+            async with asyncio.timeout(5):
+                await sync_project_environment(workspace, tmp_path / "app.log")
+        finally:
+            with contextlib.suppress(FileNotFoundError, ProcessLookupError):
+                os.kill(int(pid_file.read_text()), signal.SIGKILL)
+
+    async def test_an_unwritable_log_still_hands_the_failure_to_the_model(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path
+    ) -> None:
+        install_fake_uv(monkeypatch, tmp_path, 'echo "No solution found"; exit 1')
+
+        with pytest.raises(AppLaunchFailed, match=r"\nNo solution found$"):
+            await sync_project_environment(workspace, tmp_path / "missing-dir" / "app.log")
 
     async def test_a_missing_uv_is_reported_as_the_platforms_problem(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path

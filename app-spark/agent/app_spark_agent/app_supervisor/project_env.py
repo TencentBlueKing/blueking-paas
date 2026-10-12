@@ -27,12 +27,14 @@ import asyncio
 import os
 import shutil
 import signal
+import tempfile
 from collections.abc import Mapping
 from pathlib import Path
+from typing import IO
 
 from app_spark_agent import settings
 from app_spark_agent.app_supervisor.types import AppLaunchFailed
-from app_spark_agent.utils import append_text_ignore_unwritable, killpg_ignore_absent
+from app_spark_agent.utils import killpg_ignore_absent
 
 NO_PROJECT_DETAIL = (
     "The workspace has no pyproject.toml, so there are no dependencies to install. "
@@ -96,42 +98,62 @@ async def sync_project_environment(workspace: Path, log_path: Path) -> None:
             "The workspace code did not cause this and cannot fix it; report it to the user."
         )
 
-    try:
-        # 不加 --frozen / --locked：模型手改 pyproject.toml 却没重新锁时，就地重锁比报错让它再跑一遍
-        # 更直接。uv.lock 因此可能在 launch 时被改写，它本来就是项目文件，会随这一轮一起保存。
-        process = await asyncio.create_subprocess_exec(
-            uv,
-            "sync",
-            "--no-dev",
-            cwd=workspace,
-            env=uv_environ(os.environ),
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            # 独立进程组：超时或被取消时，连 uv 拉起的构建后端一起杀掉。
-            start_new_session=True,
-        )
-    except OSError as exc:
-        raise AppLaunchFailed(f"`uv sync` could not be started: {exc}") from exc
+    # uv 的输出直接写进日志文件，不走管道：超时或被取消时已经打出来的诊断照样留在日志里。
+    # 也躲开了管道的一个坑：Process.wait() 要等管道读到 EOF 才返回，构建后端若 setsid 出一个
+    # 继承了输出的进程，杀掉 uv 的进程组也关不掉写端，wait() 就永远等不到，launch 锁跟着不放。
+    with _open_output(log_path) as output:
+        start = output.seek(0, os.SEEK_END)
+        try:
+            # 不加 --frozen / --locked：模型手改 pyproject.toml 却没重新锁时，就地重锁比报错让它再跑一遍
+            # 更直接。uv.lock 因此可能在 launch 时被改写，它本来就是项目文件，会随这一轮一起保存。
+            process = await asyncio.create_subprocess_exec(
+                uv,
+                "sync",
+                "--no-dev",
+                cwd=workspace,
+                env=uv_environ(os.environ),
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=output,
+                stderr=asyncio.subprocess.STDOUT,
+                # 独立进程组：超时或被取消时，连 uv 拉起的构建后端一起杀掉。
+                start_new_session=True,
+            )
+        except OSError as exc:
+            raise AppLaunchFailed(f"`uv sync` could not be started: {exc}") from exc
 
-    try:
-        output, _ = await asyncio.wait_for(process.communicate(), SYNC_TIMEOUT_SECONDS)
-    except TimeoutError:
-        raise AppLaunchFailed(
-            f"Installing the project's dependencies did not finish within {SYNC_TIMEOUT_SECONDS:.0f}s. "
-            "The package index may be unreachable from the sandbox."
-        ) from None
-    finally:
-        # 超时之外，所在的 launch 被取消也走这里。不收掉就会留下一个没人等的 uv。
-        if process.returncode is None:
-            killpg_ignore_absent(process.pid, signal.SIGKILL)
-            await process.wait()
+        try:
+            await asyncio.wait_for(process.wait(), SYNC_TIMEOUT_SECONDS)
+        except TimeoutError:
+            tail = await asyncio.to_thread(_read_tail, output, start)
+            raise AppLaunchFailed(
+                f"Installing the project's dependencies did not finish within {SYNC_TIMEOUT_SECONDS:.0f}s; "
+                f"the package index may be unreachable from the sandbox. The last output of `uv sync`:\n{tail}"
+            ) from None
+        finally:
+            # 超时之外，所在的 launch 被取消也走这里。不收掉就会留下一个没人等的 uv。
+            if process.returncode is None:
+                killpg_ignore_absent(process.pid, signal.SIGKILL)
+                await process.wait()
 
-    # 记录日志，忽略日志记录失败的情况
-    text = output.decode(errors="replace")
-    await asyncio.to_thread(append_text_ignore_unwritable, log_path, text)
-    if process.returncode != 0:
-        raise AppLaunchFailed(
-            f"Installing the project's dependencies failed (`uv sync` exited with {process.returncode}):\n"
-            f"{text[-SYNC_OUTPUT_TAIL_CHARS:].strip()}"
-        )
+        if process.returncode != 0:
+            tail = await asyncio.to_thread(_read_tail, output, start)
+            raise AppLaunchFailed(
+                f"Installing the project's dependencies failed (`uv sync` exited with {process.returncode}):\n{tail}"
+            )
+
+
+def _open_output(log_path: Path) -> IO[bytes]:
+    """Open log_path for uv to append to and for reading its output back."""
+    try:
+        return log_path.open("a+b")
+    except OSError:
+        # 日志写不进去也不能挡住 launch。换成临时文件，失败时照样有输出交回模型。
+        return tempfile.TemporaryFile()
+
+
+def _read_tail(output: IO[bytes], start: int) -> str:
+    """Return the end of what was written to output from offset start on."""
+    end = output.seek(0, os.SEEK_END)
+    # 按字节往回多取一些：UTF-8 一个字符最多 4 字节，截在半个字符上的乱码落在字符截取之外。
+    output.seek(max(start, end - SYNC_OUTPUT_TAIL_CHARS * 4))
+    return output.read().decode(errors="replace")[-SYNC_OUTPUT_TAIL_CHARS:].strip()

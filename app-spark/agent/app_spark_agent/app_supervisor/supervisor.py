@@ -114,6 +114,11 @@ class AppSupervisor:
                 raise AppLaunchConflict("The application port is owned by a process this supervisor did not start.")
 
             # 已是监督器进程：再次 launch 一律先停再拉，好加载新代码。
+            #
+            # 停在 _start_and_wait 的 uv sync 之前，是有意的取舍：sync 失败或很慢（最长
+            # SYNC_TIMEOUT_SECONDS）时，原本能跑的旧版本也已下线，预览停在 stopped，直到模型修好
+            # 依赖再 launch。反过来先 sync 再停，uv 会原地改写旧进程正在用的 .venv，旧进程可能
+            # import 到半新半旧的包；何况模型 launch 就是为了看新代码，旧版本多撑一会儿帮不上它。
             if self._process.living():
                 self._process.stop()
                 # 等的是端口真被放开，同样与「能不能应答」无关。

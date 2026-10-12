@@ -209,7 +209,7 @@ def create_agent(
         FileSystem(root_dir=workspace_path),
         Shell(
             cwd=workspace_path,
-            # 模型可能会出发 uv 相关命令操作依赖源，传入 uv 相关环境变量比如 INDEX_URL 等
+            # 模型可能会触发 uv 相关命令操作依赖源，传入 uv 相关环境变量比如 INDEX_URL 等
             # 以保持一致性。
             env=uv_environ(os.environ),
             denied_env_patterns=(

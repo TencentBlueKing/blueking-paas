@@ -1,8 +1,8 @@
 """Shared helpers that depend on nothing else in the package.
 
-Crash-safe file writes, which both state modules need and neither owns, plus a few small
-process and file helpers whose failure modes are spelled out in their names. The file helpers
-are blocking, so async callers must hand them to ``asyncio.to_thread``.
+Crash-safe file writes, which both state modules need and neither owns, plus a small process
+helper whose failure mode is spelled out in its name. The file helpers are blocking, so async
+callers must hand them to ``asyncio.to_thread``.
 """
 
 import contextlib
@@ -15,12 +15,6 @@ def killpg_ignore_absent(pgid: int, sig: signal.Signals) -> None:
     """Send sig to the process group pgid. A group that has already exited is not an error."""
     with contextlib.suppress(ProcessLookupError):
         os.killpg(pgid, sig)
-
-
-def append_text_ignore_unwritable(path: Path, text: str) -> None:
-    """Append text to path, creating it if needed; drop the text when the file cannot be written."""
-    with contextlib.suppress(OSError), path.open("a", encoding="utf-8") as handle:
-        handle.write(text)
 
 
 def write_atomic(path: Path, data: bytes) -> None:

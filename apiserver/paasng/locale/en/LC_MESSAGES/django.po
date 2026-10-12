@@ -969,11 +969,6 @@ msgstr "get available service plan failed"
 msgid "当前模块不支持使用该增强服务"
 msgstr "The current module is not allowed to use this add-on service"
 
-#: paasng/platform/declarative/application/controller.py:328
-#, python-brace-format
-msgid "模块 {module_name} 不支持使用增强服务 {service_name}"
-msgstr "Module {module_name} is not allowed to use add-on service {service_name}"
-
 #: paasng/accessories/servicehub/views.py:580
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"

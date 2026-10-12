@@ -71,13 +71,7 @@ def get_plan_by_env(
 
 def is_service_disallowed(service: ServiceObj, module: Module) -> bool:
     """Check if the module is disallowed from using the service, which means the matched
-    precedence policy is configured with empty plans.
-
-    The binding and sharing relationship is module-level, so the module is disallowed as long
-    as any env of it is disallowed. For example, when using "cluster_in" matcher, if only the
-    stag env matches a policy with empty plans, the prod env is also unable to use the service.
-
-    :raise ValueError: When the precedence policies are invalid or no policy matches the env.
+    precedence policy of any env is configured with empty plans.
     """
     if (
         ServiceAllocationPolicy.objects.get_type(service, module.tenant_id)

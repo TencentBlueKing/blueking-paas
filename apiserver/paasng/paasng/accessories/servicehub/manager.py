@@ -28,7 +28,6 @@ from django.utils import timezone
 from paasng.accessories.servicehub.binding_policy.selector import is_service_disallowed
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
 from paasng.accessories.servicehub.exceptions import (
-    BindServicePlanError,
     DuplicatedServiceBoundError,
     ServiceDisallowedError,
     ServiceObjNotFound,
@@ -375,16 +374,10 @@ def validate_new_binding(service: ServiceObj, module: Module, binding_type: Serv
 
     :raises DuplicatedServiceBoundError: when the module is bound with the service in another type
     :raises ServiceDisallowedError: when the binding policy disallows the module from using the service
-    :raises BindServicePlanError: when the binding policy is invalid
     """
     DuplicatedBindingValidator(module, binding_type).validate(service)
-
-    try:
-        disallowed = is_service_disallowed(service, module)
-    except ValueError as e:
-        raise BindServicePlanError(f"Invalid binding policy of service {service.name}: {e}")
-    if disallowed:
-        raise ServiceDisallowedError(f"Module: {module.name} is disallowed to use service {service.name}")
+    if is_service_disallowed(service, module):
+        raise ServiceDisallowedError(f"模块 {module.name} 不支持使用增强服务 {service.name}")
 
 
 @define

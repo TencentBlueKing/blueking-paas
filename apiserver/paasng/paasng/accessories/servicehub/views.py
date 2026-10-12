@@ -389,9 +389,11 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         bound_services = list(mixed_service_mgr.list_binded(module, category_id=category.id))
 
         services_in_category = list(mixed_service_mgr.list_by_category(category_id=category.id))
-        unbound_services = self._filter_unbound_services(
-            module, services_in_category, excluded=bound_services + shared_services
-        )
+        unbound_services = []
+        for svc in services_in_category:
+            if svc in bound_services or svc in shared_services or is_service_disallowed(svc, module):
+                continue
+            unbound_services.append(svc)
 
         total = len(bound_services) + len(shared_services) + len(unbound_services)
         return Response(
@@ -416,7 +418,11 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         bound_services = list(mixed_service_mgr.list_binded(module))
 
         services = list(mixed_service_mgr.list_visible())
-        unbound_services = self._filter_unbound_services(module, services, excluded=bound_services + shared_services)
+        unbound_services = []
+        for svc in services:
+            if svc in bound_services or svc in shared_services or is_service_disallowed(svc, module):
+                continue
+            unbound_services.append(svc)
 
         # 已经启用的增强服务
         bound_service_obj_allocations = self._gen_service_obj_allocations(module, bound_services)
@@ -447,24 +453,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "unbound": slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
             }
         )
-
-    @staticmethod
-    def _filter_unbound_services(
-        module: Module, services: List[ServiceObj], excluded: List[ServiceObj]
-    ) -> List[ServiceObj]:
-        """过滤出模块可启用的增强服务，排除已启用（绑定或共享）的、以及绑定策略不允许当前模块使用的服务"""
-        results = []
-        for svc in services:
-            if svc in excluded:
-                continue
-            try:
-                if is_service_disallowed(svc, module):
-                    continue
-            except ValueError:
-                logger.warning("Invalid binding policy of service %s, skip it", svc.uuid, exc_info=True)
-                continue
-            results.append(svc)
-        return results
 
     @staticmethod
     def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
@@ -612,9 +600,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_("不能重复共享"))
         except ServiceDisallowedError:
             raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_("当前模块不支持使用该增强服务"))
-        except BindServicePlanError as e:
-            logger.warning("Unable to share service %s: %s", service_obj.uuid, str(e))
-            raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_("获取可用服务方案失败"))
         return Response({}, status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.SharedServiceInfoSLZ)

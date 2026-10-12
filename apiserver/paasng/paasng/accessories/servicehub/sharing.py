@@ -63,7 +63,6 @@ class ServiceSharingManager:
         :raises ReferencedAttachmentNotFound: when referenced relationship not found
         :raises SharedAttachmentAlreadyExists: when shared attachment already exists
         :raises ServiceDisallowedError: when the module is disallowed from using the service
-        :raises BindServicePlanError: when the binding policy of the service is invalid
         """
         if ref_module == self.module:
             raise RuntimeError("module can not share from itself")

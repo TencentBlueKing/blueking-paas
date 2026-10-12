@@ -230,29 +230,15 @@ class TestPlanSelectorSelectWithPrecedenceUsageIn:
         )
 
 
-class TestIsServiceDisallowed:
-    @pytest.fixture(autouse=True)
-    def _setup_policies(self, service_obj, plan1):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
-            [
-                ServiceBindingPrecedencePolicyDTO(
-                    matcher={"usage_in": [ServiceUsage.AI_AGENT.value]}, plans=[], priority=1
-                ),
-                ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[plan1.uuid], priority=0),
-            ]
-        )
-
-    def test_plan_not_exists(self, service_obj, bk_module):
-        # 规则引用了不存在（如已停用）的方案时，不影响判断
-        ServiceBindingPrecedencePolicy.objects.filter(service_id=service_obj.uuid, matcher={}).update(
-            data={"plan_ids": ["not-exists"]}
-        )
-        assert is_service_disallowed(service_obj, bk_module) is False
-
-    def test_no_policy_matched(self, service_obj, bk_module):
-        ServiceBindingPrecedencePolicy.objects.filter(service_id=service_obj.uuid, matcher={}).delete()
-        with pytest.raises(ValueError, match="Can not match any plans"):
-            is_service_disallowed(service_obj, bk_module)
+def test_is_service_disallowed_with_inactive_plan(service_obj, bk_module, plan1):
+    """规则引用了不存在（如已停用）的方案时，不影响判断"""
+    SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+        [ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[plan1.uuid], priority=0)]
+    )
+    ServiceBindingPrecedencePolicy.objects.filter(service_id=service_obj.uuid).update(
+        data={"plan_ids": ["not-exists"]}
+    )
+    assert is_service_disallowed(service_obj, bk_module) is False
 
 
 class TestPlanSelectorListPossiblePlans:

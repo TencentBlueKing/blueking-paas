@@ -12,11 +12,26 @@ apiserver 启动时可从 KMS 信封读取敏感配置，替代原来以明文�
 
 ESO 将 `envelope`、`privateKey` 同步为 K8s Secret 并以文件方式挂载到上述路径。开启后，信封不可读或解密失败时进程直接启动失败，不会退回明文配置。
 
+使用 bkpaas3 chart 部署时，只需配置 `apiserver.kms`，以上开关和挂载由 chart 完成：
+
+```yaml
+apiserver:
+  kms:
+    enabled: true
+    server: "https://openbao.default.svc:8200"
+    role: "<KMS 提供的 role>"
+    credential: "<KMS 提供的凭证路径>"
+    tls:
+      existingSecret: "openbao-mtls-client"   # 与 release 同一命名空间
+```
+
+chart 会创建 SecretStore、ExternalSecret，并把同步出的 Secret 挂载到 apiserver 镜像的所有容器（web、worker、各 Job 和 CronJob）。init 容器和其他组件不挂载。
+
 ## 信封明文结构
 
 信封解密后是一个 JSON 对象，包含以下几部分，每部分都可以省略：
 
-- `env`：原来通过环境变量提供的敏感配置，**键就是原环境变量名（含 `PAAS_` / `PAAS_WL_` 前缀），值和原来写在环境变量里的内容一模一样**，直接从 values 渲染出的环境变量里复制过来即可。
+- `env`：原来通过环境变量提供的敏感配置，**键就是原环境变量名（含 `PAAS_` / `PAAS_WL_` 前缀），值和原来写在环境变量里的内容一模一样**，直接从 chart 渲染出的 ConfigMap 里复制过来即可。
 - `mysql` / `redis` / `rabbitmq` / `bkrepo`：按“类型.实例.字段”分层的账号密码。和 `env` 中的同类配置同时提供时，以分层部分为准。
 
 完整示例（按需删减）：
@@ -31,7 +46,7 @@ ESO 将 `envelope`、`privateKey` 同步为 K8s Secret 并以文件方式挂载�
     "PAAS_SENTRY_CONFIG": "{dsn='<sentry dsn>'}",
     "PAAS_METRIC_CLIENT_TOKEN_DICT": "{bkmonitor='<监控 token>'}",
     "PAAS_OTEL_BK_DATA_TOKEN": "<trace 上报 token>",
-    "PAAS_ELASTICSEARCH_HOSTS": "[{host='es.example.com', port='9200', http_auth='elastic:<ES 密码>'}]",
+    "PAAS_ELASTICSEARCH_HOSTS": "@json [{\"host\": \"es.example.com\", \"port\": 9200, \"http_auth\": \"elastic:<ES 密码>\", \"use_ssl\": false, \"verify_certs\": true, \"ca_certs\": \"/opt/blueking/es/certs/ca.crt\", \"client_cert\": \"\", \"client_key\": \"\"}]",
     "PAAS_SMART_DOCKER_PASSWORD": "<S-Mart 镜像仓库密码>",
     "PAAS_APP_DOCKER_PASSWORD": "<应用镜像仓库密码>",
     "PAAS_WL_AGENT_SANDBOX_ROUTER_AUTH_TOKEN": "<沙箱路由 token>"
@@ -59,7 +74,7 @@ ESO 将 `envelope`、`privateKey` 同步为 K8s Secret 并以文件方式挂载�
 
 ### env 部分
 
-`env` 的值必须保持和原环境变量完全相同的格式，例如 `PAAS_SENTRY_CONFIG` 要写成 `{dsn='...'}`，不能只写 DSN。
+`env` 的值必须保持和原环境变量完全相同的格式，例如 `PAAS_SENTRY_CONFIG` 要写成 `{dsn='...'}`，不能只写 DSN。最稳妥的做法是用 `helm template` 渲染出 `bkpaas3-apiserver-general-envs` ConfigMap，整段复制对应的值。
 
 | 现有 values 路径 | 信封键 |
 |---|---|
@@ -70,8 +85,8 @@ ESO 将 `envelope`、`privateKey` 同步为 K8s Secret 并以文件方式挂载�
 | `global.trace.otlp.token` | `env.PAAS_OTEL_BK_DATA_TOKEN` |
 | `apiserver.sentryDsn` | `env.PAAS_SENTRY_CONFIG`，值为 `{dsn='<sentryDsn>'}` |
 | `apiserver.serviceMonitor.userToken` | `env.PAAS_METRIC_CLIENT_TOKEN_DICT`，值为 `{bkmonitor='<userToken>'}` |
-| `apiserver.elasticSearch.hosts` | `env.PAAS_ELASTICSEARCH_HOSTS`，整串原样复制（密码在 `http_auth` 中） |
-| `apiserver.extraEnvs` 等自定义环境变量中的敏感项 | `env.<原环境变量名>`，如 `PAAS_SMART_DOCKER_PASSWORD`、`PAAS_IAM_APP_SECRET` |
+| `apiserver.elasticSearch.hostConfig`（或旧的 `hosts`） | `env.PAAS_ELASTICSEARCH_HOSTS`，复制渲染结果，`hostConfig` 渲染为 `@json [...]`，`hosts` 渲染为原字符串 |
+| `apiserver.env` 等自定义环境变量中的敏感项 | `env.<原环境变量名>`，如 `PAAS_SMART_DOCKER_PASSWORD`、`PAAS_IAM_APP_SECRET` |
 
 只有带前缀的环境变量会生效：apiserver 的配置用 `PAAS_` 前缀，workloads 的配置用 `PAAS_WL_` 前缀。没带前缀的键（如 `AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN`）会被忽略，并在日志中告警。
 
@@ -105,13 +120,27 @@ Sensitive setting ELASTICSEARCH_HOSTS is not provided by KMS, using its plaintex
 
 上线后可以按这条告警逐项补齐信封。`ELASTICSEARCH_HOSTS`、`PYTHON_BUILDPACK_PIP_INDEX_URL` 只在其中确实带有账号密码时才告警。
 
-信封补齐后，values 中的明文仍会被 chart 渲染进 ConfigMap / Secret，需要配合 chart 改造（第三步）才能把明文从 values 中去掉。
+## 清空 values 中的明文
+
+信封补齐、apiserver 正常启动后，可以把只有 apiserver 使用的明文从 values 中清空（改为 `""`）：
+
+- `global.healthzToken`、`global.trace.otlp.token`、`apiserver.sentryDsn`
+- `apiserver.externalDatabase.{default,workloads,openPaaS}.password`
+- `apiserver.externalRedis.default.password`、`apiserver.externalRedis.default.sentinel.password`
+- `apiserver.elasticSearch.hostConfig[*].http_auth`
+- `apiserver.celeryBrokerUrl` 中的账号密码（保留 `amqp://:@host:5672/vhost` 结构）
+- `global.bkrepoConfig.bkpaas3Password`：清空后 chart 会渲染默认值 `blueking`，被信封覆盖；同时须将 `global.bkrepoConfig.initEnabled` 设为 `false`，避免初始化任务用默认密码创建账号
+
+以下明文还被其他组件使用，暂时不能清空：
+
+- `global.appSecret`、`global.bkKrillEncryptSecretKey`、`global.paasServicesJwtClientKey`：svc-mysql、svc-rabbitmq、svc-bkrepo、svc-otel 也在使用。
+- `apiserver.serviceMonitor.userToken`：同时渲染进 ServiceMonitor，供 Prometheus 采集使用。
+- 使用内置 `redis` / `mariadb` / `rabbitmq` 时的 `auth.password`：这些子 chart 本身依赖它。
 
 ## 暂不覆盖的范围
 
 以下内容不经过 apiserver 的 settings 加载，本次不处理：
 
-- `apiserver.serviceMonitor.userToken` 渲染进 ServiceMonitor 的 `user_token`：它在 Prometheus 侧使用，不经过 apiserver。
-- `initialCluster.tokenValue` / `keyData`（`PAAS_WL_CLUSTER_TOKEN_VALUE` / `PAAS_WL_CLUSTER_KEY_DATA`）：只在初始化集群的 Job 中直接读取环境变量，并写入数据库。
-- `init_bkrepo` Job 中的 `BKREPO_PASSWORD`，以及 `ADDONS_` / `LESSCODE_` / `ADMIN_BKREPO_*` 等 apiserver 未使用的环境变量。
+- `initialCluster.tokenValue` / `keyData`（`PAAS_WL_CLUSTER_TOKEN_VALUE` / `PAAS_WL_CLUSTER_KEY_DATA`）：只在初始化集群的 Job 中直接读取环境变量，并写入数据库。集群初始化完成后可关闭 `initialCluster.enabled` 并清空。
+- `init_bkrepo` 的命令行密码参数及 `init-bkrepo` Job 的 `BKREPO_PASSWORD`，以及 `ADDONS_` / `LESSCODE_` / `ADMIN_BKREPO_*` 等 apiserver 未使用的环境变量。
 - 已写入数据库的凭证，例如集群日志 ES 配置（`ClusterElasticSearchConfig.password`）、源码仓库 OAuth 配置。这些在数据库中已由 `BKKRILL_ENCRYPT_SECRET_KEY` 加密。

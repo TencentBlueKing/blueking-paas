@@ -37,10 +37,21 @@ ENCRYPTED_KEYS_ENV_NAME = "BKPAAS_ENCRYPTED_ENV_KEYS"
 # 密文前缀，用于区分这是平台注入的密文
 CIPHER_PREFIX = "bkpaas_enc$"
 
+# 即使被标记为敏感，也不交给 KMS 托管、继续以环境变量注入的变量。
+# 平台需要从运行中进程的环境变量读取应用密钥（见 paasng.accessories.app_secret）
+KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
+
 
 def is_encrypted_secret_env_injection_enabled(env: ModuleEnvironment) -> bool:
     """判断该 env 是否启用敏感环境变量密文注入功能。平台启用 KMS 时，敏感变量改由 KMS 托管"""
     if settings.KMS_ENABLED:
+        return False
+    return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
+
+
+def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
+    """平台启用 KMS，且应用开启了「加密运行环境敏感变量」时，敏感变量由 KMS 托管"""
+    if not settings.KMS_ENABLED:
         return False
     return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
@@ -123,6 +134,11 @@ def encrypt_sensitive_values(
 
     Returns the transformed values and the keys that were actually encrypted.
     """
+    if is_kms_injection_enabled(env):
+        # 敏感值改由 KMS 托管的 Secret 文件提供，不能以明文写入 BkApp 修订或环境变量
+        managed_keys = set(sensitive_keys) - KMS_UNMANAGED_ENV_KEYS
+        return {key: value for key, value in values.items() if key not in managed_keys}, set()
+
     encrypted_keys = set(values).intersection(sensitive_keys)
     if not encrypted_keys or not is_encrypted_secret_env_injection_enabled(env):
         return dict(values), set()

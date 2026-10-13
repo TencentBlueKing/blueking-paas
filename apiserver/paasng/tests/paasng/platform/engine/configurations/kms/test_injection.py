@@ -20,11 +20,15 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.processes.entities import SecretFileMount
 from paasng.platform.applications.constants import AppFeatureFlag
-from paasng.platform.engine.configurations.env_var.encryption import is_encrypted_secret_env_injection_enabled
+from paasng.platform.engine.configurations.env_var.encryption import (
+    encrypt_sensitive_values,
+    is_encrypted_secret_env_injection_enabled,
+    is_kms_injection_enabled,
+)
 from paasng.platform.engine.configurations.kms.injection import (
     add_kms_secret_mount,
     collect_kms_managed_keys,
-    is_kms_injection_enabled,
+    ensure_kms_mount_available,
     strip_kms_managed_env_vars,
 )
 from paasng.platform.engine.exceptions import DeployShouldAbortError
@@ -47,6 +51,19 @@ def test_kms_and_builtin_encryption_are_exclusive(
 
     assert is_kms_injection_enabled(bk_stag_env) is expected_kms
     assert is_encrypted_secret_env_injection_enabled(bk_stag_env) is expected_builtin
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+def test_kms_mode_drops_managed_values_instead_of_encrypting(settings, bk_app, bk_stag_env):
+    settings.KMS_ENABLED = True
+    bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
+    values = {"DB_PASSWORD": "s3cret", "BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
+
+    result, encrypted_keys = encrypt_sensitive_values(bk_stag_env, values, {"DB_PASSWORD", "BKPAAS_APP_SECRET"})
+
+    # 写入 BkApp 修订的值不能包含托管的敏感明文
+    assert result == {"BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
+    assert encrypted_keys == set()
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
@@ -117,7 +134,7 @@ def _user_mount(name: str, mount_path: str, env_name: str | None = None) -> crd.
     return crd.Mount(name=name, mountPath=mount_path, source=source)
 
 
-class TestAddKMSSecretMount:
+class TestKMSSecretMount:
     def test_appends_overlay_mount_for_env(self):
         bkapp = _make_bkapp()
 
@@ -140,6 +157,8 @@ class TestAddKMSSecretMount:
             (_user_mount("data", "/etc/kms"), True),
             (_user_mount("data", "/etc/kms/extra"), True),
             (_user_mount("data", "/etc/kms-other"), False),
+            (_user_mount("data", "/etc"), True),
+            (_user_mount("data", "/"), True),
             (_user_mount("data", "/etc/kms", env_name="stag"), True),
             (_user_mount("kms-secret", "/etc/kms", env_name="prod"), False),
         ],
@@ -152,6 +171,6 @@ class TestAddKMSSecretMount:
 
         if conflict:
             with pytest.raises(DeployShouldAbortError):
-                add_kms_secret_mount(bkapp, "stag", KMS_MOUNT)
+                ensure_kms_mount_available(bkapp, "stag")
         else:
-            add_kms_secret_mount(bkapp, "stag", KMS_MOUNT)
+            ensure_kms_mount_available(bkapp, "stag")

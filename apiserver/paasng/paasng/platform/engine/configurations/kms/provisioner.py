@@ -16,13 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 """冻结敏感变量为 KMS 配置版本，创建 KMS 凭证与 ESO 资源，并等待目标 Secret 就绪"""
 
+import hashlib
+import hmac
+import json
 import logging
 import time
 import uuid
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any
 
 from django.conf import settings
 from kubernetes.client.exceptions import ApiException
@@ -33,7 +35,7 @@ from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, Servic
 from paasng.infras.kms.constants import (
     KMS_SECRET_MOUNT_DIR,
     KMS_SECRET_VOLUME_NAME,
-    SCOPE_TYPE_SCOPE,
+    SCOPE_TYPE_CUSTOM,
     SECRET_KEY_ENVELOPE,
     SECRET_KEY_PRIVATE_KEY,
 )
@@ -131,17 +133,47 @@ def provision_kms_secret(
 ) -> SecretFileMount:
     """冻结本次部署的敏感变量，创建 KMS 凭证与 ESO 资源，并等待 Secret 就绪
 
+    敏感变量内容不变时复用已就绪的版本，Secret 名称不变，避免每次部署都新建一套远端资源。
+    复用时同样重新提交资源并检查就绪，集群中的资源被误删也能恢复。
+
     调用方需保证 namespace 已存在。任何一步失败都会原样抛出，不会降级为明文注入。
     """
-    version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=kms_settings)
+    cfg = kms_settings or load_kms_settings()
+    version = _find_reusable_version(env, _content_digest(sensitive_values, cfg.scope_id))
+    if version is None:
+        version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=cfg)
     # 先绑定到部署再发起远程请求，失败后可以从已记录的版本继续
     deployment.kms_config_version = version
     deployment.save(update_fields=["kms_config_version"])
 
-    provisioner = KMSSecretProvisioner(version, kms=kms, kube=kube, kms_settings=kms_settings)
+    provisioner = KMSSecretProvisioner(version, kms=kms, kube=kube, kms_settings=cfg)
     provisioner.provision()
     provisioner.wait_ready()
     return _build_kms_secret_mount(version)
+
+
+def _find_reusable_version(env: ModuleEnvironment, content_digest: str) -> KMSConfigVersion | None:
+    """同一环境、同一集群与 namespace 下，内容相同且已就绪过的最新版本"""
+    return (
+        KMSConfigVersion.objects.filter(
+            app_code=env.application.code,
+            module_name=env.module.name,
+            env_name=env.environment,
+            module_environment_id=str(env.pk),
+            content_digest=content_digest,
+            cluster_name=EnvClusterService(env).get_cluster_name(),
+            namespace=env.wl_app.namespace,
+            status=KMSConfigVersionStatus.READY.value,
+        )
+        .order_by("-created")
+        .first()
+    )
+
+
+def _content_digest(values: Mapping[str, str], scope_id: int) -> str:
+    """敏感变量内容的摘要。使用 HMAC 而不是普通哈希，避免数据库中的摘要被用来离线猜测明文"""
+    content = json.dumps({"scope_id": scope_id, "env": dict(values)}, sort_keys=True, separators=(",", ":"))
+    return hmac.new(settings.SECRET_KEY.encode(), content.encode(), hashlib.sha256).hexdigest()
 
 
 def create_kms_config_version(
@@ -161,9 +193,6 @@ def create_kms_config_version(
     cfg = kms_settings or load_kms_settings()
 
     module = module_env.module
-    if module is None:
-        raise ValueError("module environment has no module")
-
     tenant_id = module_env.tenant_id
     app_code = module_env.application.code
     module_name = module.name
@@ -190,17 +219,18 @@ def create_kms_config_version(
         module_environment_id=module_environment_id,
         status=KMSConfigVersionStatus.PENDING.value,
         envelope=envelope,
+        content_digest=_content_digest(sensitive_env_vars, cfg.scope_id),
         kms_scope_id=cfg.scope_id,
         credential_name=credential_name,
         openbao_key=build_openbao_key(
             tenant_id=tenant_id,
-            scope_type=SCOPE_TYPE_SCOPE,
+            scope_type=SCOPE_TYPE_CUSTOM,
             scope_name=cfg.scope_name,
             credential_name=credential_name,
         ),
         kms_role=build_kms_role(
             tenant_id=tenant_id,
-            scope_type=SCOPE_TYPE_SCOPE,
+            scope_type=SCOPE_TYPE_CUSTOM,
             scope_name=cfg.scope_name,
             credential_name=credential_name,
         ),
@@ -250,7 +280,7 @@ class KMSSecretProvisioner:
             self._advance(KMSConfigVersionStatus.CREDENTIAL_CREATED)
 
     def apply_resources(self) -> None:
-        """依次提交 ServiceAccount、ClusterSecretStore、ExternalSecret，并记录后两者的 UID
+        """依次提交 ServiceAccount、ClusterSecretStore、ExternalSecret，并记录 ExternalSecret 的 UID
 
         ESO 用 ExternalSecret 所在 namespace 中的 SA 登录，SA 必须先存在。
         """
@@ -262,13 +292,14 @@ class KMSSecretProvisioner:
             self._kube.apply(
                 build_service_account(name=version.service_account_name, namespace=version.namespace, labels=labels)
             )
-            store_uid = self._kube.apply(
+            self._kube.apply(
                 build_cluster_secret_store(
                     name=version.resource_name,
                     server=cfg.openbao_server,
                     kv_path=cfg.kv_path,
                     auth_mount=cfg.k8s_auth_mount,
                     role=version.kms_role,
+                    namespace=version.namespace,
                     service_account_name=version.service_account_name,
                     mtls_secret_namespace=cfg.mtls_secret_namespace,
                     mtls_secret_name=cfg.mtls_secret_name,
@@ -286,17 +317,11 @@ class KMSSecretProvisioner:
                     labels=labels,
                 )
             )
-            version.cluster_secret_store_uid = store_uid
             version.external_secret_uid = es_uid
             self._advance(KMSConfigVersionStatus.RESOURCES_APPLIED)
 
     def wait_ready(self, *, timeout: float | None = None, poll_interval: float | None = None) -> None:
-        """轮询直到目标 Secret 就绪。超时抛出 KMSSecretNotReadyError，error_reason 记录最后一次的未就绪原因"""
-        if self.version.status == KMSConfigVersionStatus.READY.value:
-            return
-        if not self.version.external_secret_uid:
-            self.provision()
-
+        """轮询直到目标 Secret 就绪，需先调用 provision。超时抛出 KMSSecretNotReadyError，error_reason 记录最后一次的未就绪原因"""
         timeout = self._cfg.ready_timeout_seconds if timeout is None else timeout
         poll_interval = self._cfg.ready_poll_interval_seconds if poll_interval is None else poll_interval
         deadline = self._clock() + timeout
@@ -308,12 +333,11 @@ class KMSSecretProvisioner:
                 if self._clock() >= deadline:
                     raise KMSSecretNotReadyError(result.reason)
                 self._sleep(poll_interval)
-            self.version.secret_uid = result.secret_uid
             self._advance(KMSConfigVersionStatus.READY)
 
     @property
     def _scope(self) -> KMSScope:
-        return KMSScope(scope_id=self._cfg.scope_id)
+        return KMSScope(scope_id=self.version.kms_scope_id)
 
     @property
     def _auth(self) -> ServiceAccountAuth:
@@ -383,7 +407,7 @@ class KMSSecretProvisioner:
             "paas.bk.tencent.com/code": version.app_code,
             "paas.bk.tencent.com/module-name": version.module_name,
             "paas.bk.tencent.com/environment": version.env_name,
-            "paas.bk.tencent.com/kms-config-version": _hex_id(version.id),
+            "paas.bk.tencent.com/kms-config-version": uuid.UUID(str(version.id)).hex,
         }
 
     def _advance(self, status: KMSConfigVersionStatus) -> None:
@@ -414,10 +438,6 @@ def _error_reason(exc: Exception) -> str:
     else:
         reason = type(exc).__name__
     return reason[:ERROR_REASON_MAX_CHARS]
-
-
-def _hex_id(value: Any) -> str:
-    return uuid.UUID(str(value)).hex
 
 
 def _build_kms_secret_mount(version: KMSConfigVersion) -> SecretFileMount:

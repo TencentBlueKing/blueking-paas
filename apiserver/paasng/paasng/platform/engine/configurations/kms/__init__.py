@@ -17,11 +17,13 @@
 
 """使用蓝鲸 KMS 托管敏感环境变量"""
 
+from paasng.platform.engine.configurations.env_var.encryption import is_kms_injection_enabled
+
 from .injection import (
     add_kms_secret_mount,
     collect_kms_managed_keys_by_env,
     ensure_kms_injection_supported,
-    is_kms_injection_enabled,
+    ensure_kms_mount_available,
     split_kms_managed_env_vars,
     strip_kms_managed_env_vars,
 )
@@ -31,6 +33,7 @@ __all__ = [
     "add_kms_secret_mount",
     "collect_kms_managed_keys_by_env",
     "ensure_kms_injection_supported",
+    "ensure_kms_mount_available",
     "is_kms_injection_enabled",
     "provision_kms_secret",
     "split_kms_managed_env_vars",

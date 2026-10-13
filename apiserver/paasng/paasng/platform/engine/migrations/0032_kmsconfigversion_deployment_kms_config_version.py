@@ -24,9 +24,10 @@ class Migration(migrations.Migration):
                 ('module_name', models.CharField(max_length=64)),
                 ('env_name', models.CharField(max_length=16)),
                 ('module_environment_id', models.CharField(max_length=32)),
-                ('status', models.CharField(choices=[('pending', '已加密，待创建远端凭证'), ('credential_created', 'KMS 凭证已创建'), ('resources_applied', 'Kubernetes 资源已提交'), ('ready', 'Secret 已就绪')], default='pending', max_length=32, verbose_name='准备状态')),
+                ('status', models.CharField(default='pending', max_length=32, verbose_name='准备状态')),
                 ('envelope', models.TextField(verbose_name='KMS 信封（密文）')),
-                ('kms_scope_id', models.IntegerField(null=True, verbose_name='KMS scope ID')),
+                ('content_digest', models.CharField(max_length=64, verbose_name='敏感变量内容摘要')),
+                ('kms_scope_id', models.IntegerField(verbose_name='KMS scope ID')),
                 ('credential_id', models.BigIntegerField(null=True, verbose_name='KMS 凭证 ID')),
                 ('credential_name', models.CharField(max_length=128)),
                 ('openbao_key', models.CharField(max_length=255, verbose_name='OpenBao 路径')),
@@ -35,9 +36,7 @@ class Migration(migrations.Migration):
                 ('namespace', models.CharField(max_length=63)),
                 ('service_account_name', models.CharField(max_length=253)),
                 ('resource_name', models.CharField(max_length=253, verbose_name='ClusterSecretStore、ExternalSecret 与 Secret 共用的名称')),
-                ('cluster_secret_store_uid', models.CharField(blank=True, default='', max_length=64)),
                 ('external_secret_uid', models.CharField(blank=True, default='', max_length=64)),
-                ('secret_uid', models.CharField(blank=True, default='', max_length=64)),
                 ('error_reason', models.CharField(blank=True, default='', max_length=255)),
             ],
             options={
@@ -47,6 +46,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='deployment',
             name='kms_config_version',
-            field=models.ForeignKey(blank=True, help_text='本次部署使用的 KMS 配置版本', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='deployments', to='engine.kmsconfigversion'),
+            field=models.ForeignKey(blank=True, db_constraint=False, help_text='本次部署使用的 KMS 配置版本', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='deployments', to='engine.kmsconfigversion'),
         ),
     ]

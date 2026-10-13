@@ -21,6 +21,8 @@
 """
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
@@ -37,7 +39,7 @@ from .constants import (
     KMS_TENANT_ID_HEADER,
     KMS_USERNAME_HEADER,
     PLAINTEXT_MAX_CHARS,
-    SCOPE_TYPE_SCOPE,
+    SCOPE_TYPE_CUSTOM,
     SERVICE_ACCOUNT_LIST_MAX_ITEMS,
     SERVICE_ACCOUNT_NAME_MAX_CHARS,
     SUPPORTED_SCOPE_TYPES,
@@ -54,7 +56,7 @@ class KMSScope:
     """凭证所属的资源范围，对应接口中的 scope 对象"""
 
     scope_id: int
-    scope_type: str = SCOPE_TYPE_SCOPE
+    scope_type: str = SCOPE_TYPE_CUSTOM
 
     def __post_init__(self):
         if self.scope_type not in SUPPORTED_SCOPE_TYPES:
@@ -113,13 +115,14 @@ class KMSClient:
     def get_crypto_info(self) -> CryptoInfo:
         """获取服务端下发的加密算法与公钥。公钥可能变化，调用方不应长期缓存结果"""
         data = self._request("POST", "/api/v1/get/crypto_info", {"category": CRYPTO_CATEGORY_NORMAL})
-        crypto = _get_dict(data, "crypto")
-        return CryptoInfo(
-            asymmetric_type=_get_str(crypto, "asymmetric_type"),
-            symmetric_type=_get_str(crypto, "symmetric_type"),
-            symmetric_mode=_get_str(crypto, "symmetric_mode"),
-            public_key=_get_str(data, "public_key"),
-        )
+        with _parsing_response("crypto_info"):
+            crypto = data["crypto"]
+            return CryptoInfo(
+                asymmetric_type=str(crypto["asymmetric_type"]),
+                symmetric_type=str(crypto["symmetric_type"]),
+                symmetric_mode=str(crypto["symmetric_mode"]),
+                public_key=str(data["public_key"]),
+            )
 
     def encrypt_credential_value(self, plaintext: str) -> str:
         """在本地把明文加密为 KMS 信封。同一明文两次加密的结果不同，不能用密文比对内容
@@ -177,7 +180,8 @@ class KMSClient:
                 },
             },
         )
-        credential_id = _get_int(data, "credential_id")
+        with _parsing_response("credential"):
+            credential_id = int(data["credential_id"])
         logger.info("KMS credential created, credential_id: %s, name: %s", credential_id, name)
         return credential_id
 
@@ -263,19 +267,19 @@ def _validate_service_account_auth(auth: ServiceAccountAuth) -> None:
 
 
 def _parse_credential(data: dict[str, Any]) -> CredentialInfo:
-    metadata = _get_dict(data, "metadata")
-    scope = _get_dict(data, "scope")
-    service_account = _get_optional_dict(_get_optional_dict(data, "auth"), "service_account")
-    # 响应未返回授权列表即表示不限制，用 "*" 标记，使其与期望的具体授权比对时不一致
-    name_list = service_account.get("name_list") or ["*"]
-    namespace_list = service_account.get("namespace_list") or ["*"]
-    return CredentialInfo(
-        credential_id=_get_int(metadata, "credential_id"),
-        scope=KMSScope(scope_id=_get_int(scope, "scope_id"), scope_type=_get_str(scope, "scope_type")),
-        name=_get_str(metadata, "name"),
-        enable_encrypt=metadata.get("enable_encrypt") is True,
-        auth=ServiceAccountAuth(name_list=tuple(name_list), namespace_list=tuple(namespace_list)),
-    )
+    with _parsing_response("credential"):
+        metadata, scope = data["metadata"], data["scope"]
+        service_account = (data.get("auth") or {}).get("service_account") or {}
+        # 响应未返回授权列表即表示不限制，用 "*" 标记，使其与期望的具体授权比对时不一致
+        name_list = service_account.get("name_list") or ["*"]
+        namespace_list = service_account.get("namespace_list") or ["*"]
+        return CredentialInfo(
+            credential_id=int(metadata["credential_id"]),
+            scope=KMSScope(scope_id=int(scope["scope_id"]), scope_type=str(scope["scope_type"])),
+            name=str(metadata["name"]),
+            enable_encrypt=metadata.get("enable_encrypt") is True,
+            auth=ServiceAccountAuth(name_list=tuple(name_list), namespace_list=tuple(namespace_list)),
+        )
 
 
 def _decode_json_object(resp: requests.Response) -> dict[str, Any] | None:
@@ -286,27 +290,10 @@ def _decode_json_object(resp: requests.Response) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _get_dict(container: dict[str, Any], key: str) -> dict[str, Any]:
-    value = container.get(key)
-    if not isinstance(value, dict):
-        raise KMSRequestError(f"KMS response field `{key}` is missing or invalid")
-    return value
-
-
-def _get_optional_dict(container: dict[str, Any], key: str) -> dict[str, Any]:
-    value = container.get(key)
-    return value if isinstance(value, dict) else {}
-
-
-def _get_str(container: dict[str, Any], key: str) -> str:
-    value = container.get(key)
-    if not isinstance(value, str) or not value:
-        raise KMSRequestError(f"KMS response field `{key}` is missing or invalid")
-    return value
-
-
-def _get_int(container: dict[str, Any], key: str) -> int:
-    value = container.get(key)
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise KMSRequestError(f"KMS response field `{key}` is missing or invalid")
-    return value
+@contextmanager
+def _parsing_response(name: str) -> Iterator[None]:
+    """响应缺少字段或类型不符时，统一转换为 KMSRequestError"""
+    try:
+        yield
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        raise KMSRequestError(f"KMS returned an invalid {name} response") from e

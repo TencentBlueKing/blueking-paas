@@ -20,10 +20,15 @@ from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 KMS_USERNAME_HEADER = "X-Bk-Username"
 KMS_TENANT_ID_HEADER = API_HERDER_TENANT_ID
 
+# 加密算法类别：normal 为国际算法（RSA/AES），当前不支持国密
 CRYPTO_CATEGORY_NORMAL = "normal"
+# 凭证类型：secret 为任意文本类凭证
 CREDENTIAL_TYPE_SECRET = "secret"
-SCOPE_TYPE_SCOPE = "scope"
-SUPPORTED_SCOPE_TYPES = frozenset({"biz", "biz_set", "scope"})
+
+# 凭证所属资源范围的类型：biz（业务）、biz_set（业务集）、scope（KMS 中的自定义范围）。
+# 平台把 SaaS 凭证统一放在由 KMS_SAAS_SCOPE_ID 指定的自定义范围下
+SCOPE_TYPE_CUSTOM = "scope"
+SUPPORTED_SCOPE_TYPES = frozenset({"biz", "biz_set", SCOPE_TYPE_CUSTOM})
 
 # 当前只支持 RSA 包装对称密钥、AES-128-CBC 加密明文的组合
 SUPPORTED_CRYPTO_SUITE = ("RSA", "AES", "CBC")

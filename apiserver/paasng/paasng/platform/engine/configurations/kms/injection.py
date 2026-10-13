@@ -18,26 +18,14 @@
 
 from collections.abc import Mapping
 
-from django.conf import settings
-
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.processes.entities import SecretFileMount
-from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.infras.kms.constants import KMS_SECRET_MOUNT_DIR, KMS_SECRET_VOLUME_NAME
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.env_var.encryption import collect_sensitive_keys
+from paasng.platform.engine.configurations.env_var.encryption import KMS_UNMANAGED_ENV_KEYS, collect_sensitive_keys
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.modules.models import Module
-
-# 即使被标记为敏感，也继续作为环境变量注入的内置变量
-KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
-
-
-def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
-    """平台启用 KMS，且应用开启了「加密运行环境敏感变量」时，敏感变量由 KMS 托管"""
-    if not settings.KMS_ENABLED:
-        return False
-    return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
 
 def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
@@ -56,9 +44,16 @@ def collect_kms_managed_keys_by_env(module: Module) -> dict[str, frozenset[str]]
     return {env.environment: collect_kms_managed_keys(env) for env in module.envs.all()}
 
 
-def split_kms_managed_env_vars(env: ModuleEnvironment) -> tuple[dict[str, str], dict[str, str]]:
-    """把环境变量拆分为（普通变量，由 KMS 托管的敏感变量）"""
-    managed_keys = collect_kms_managed_keys(env)
+def split_kms_managed_env_vars(
+    env: ModuleEnvironment, managed_keys: frozenset[str] | None = None
+) -> tuple[dict[str, str], dict[str, str]]:
+    """把环境变量拆分为（普通变量，由 KMS 托管的敏感变量）
+
+    :param managed_keys: 已经算好的托管键。不传时重新收集，传入可以保证与剥离 BkApp 时使用同一份结果
+    """
+    if managed_keys is None:
+        managed_keys = collect_kms_managed_keys(env)
+
     all_values = get_env_variables(env)
     plain = {key: value for key, value in all_values.items() if key not in managed_keys}
     managed = {key: value for key, value in all_values.items() if key in managed_keys}
@@ -80,16 +75,42 @@ def strip_kms_managed_env_vars(
     overlay = bkapp_res.spec.envOverlay
     if overlay is None or not overlay.envVariables:
         return
+
     overlay.envVariables = [
         var for var in overlay.envVariables if var.name not in managed_keys_by_env.get(var.envName, frozenset())
     ]
 
 
+def ensure_kms_mount_available(bkapp_res: crd.BkAppResource, env_name: str) -> None:
+    """用户自定义挂载不得占用 KMS 的卷名，也不得挂载到 KMS 目录本身、其子目录或上级目录
+
+    需要在创建 KMS 远端资源之前调用，避免检查失败时凭证与集群资源已经创建。
+    """
+    mounts: list[crd.Mount | crd.MountOverlay] = list(bkapp_res.spec.mounts or [])
+    if bkapp_res.spec.envOverlay is not None:
+        mounts.extend(m for m in bkapp_res.spec.envOverlay.mounts or [] if m.envName == env_name)
+
+    reserved_dir = KMS_SECRET_MOUNT_DIR.rstrip("/")
+    for user_mount in mounts:
+        if user_mount.name == KMS_SECRET_VOLUME_NAME:
+            raise DeployShouldAbortError(f"挂载卷名 {user_mount.name} 为 KMS 保留名称，请修改后重新部署")
+
+        user_dir = user_mount.mountPath.rstrip("/")
+        if (
+            user_dir == reserved_dir
+            or _is_parent_dir(user_dir, reserved_dir)
+            or _is_parent_dir(reserved_dir, user_dir)
+        ):
+            raise DeployShouldAbortError(
+                f"挂载路径 {user_mount.mountPath} 会与 KMS 保留目录 {KMS_SECRET_MOUNT_DIR} 冲突，请修改后重新部署"
+            )
+
+
 def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
-    """在环境覆盖项中追加 KMS Secret 挂载。operator 会把它应用到业务进程与云原生 Hook 的容器上"""
-    _ensure_mount_not_reserved(bkapp_res, env_name, mount)
+    """在环境覆盖项中追加 KMS Secret 挂载。operator 会把它应用到 Pod 内的所有容器上"""
     if bkapp_res.spec.envOverlay is None:
         bkapp_res.spec.envOverlay = crd.EnvOverlay()
+
     bkapp_res.spec.envOverlay.append_item(
         "mounts",
         crd.MountOverlay(
@@ -102,17 +123,6 @@ def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: Sec
     )
 
 
-def _ensure_mount_not_reserved(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
-    """用户自定义挂载不得占用 KMS 的卷名或目录，否则 Pod 规格会冲突，或者覆盖保留路径"""
-    mounts: list[crd.Mount | crd.MountOverlay] = list(bkapp_res.spec.mounts or [])
-    if bkapp_res.spec.envOverlay is not None:
-        mounts.extend(m for m in bkapp_res.spec.envOverlay.mounts or [] if m.envName == env_name)
-
-    reserved_dir = mount.mount_dir.rstrip("/")
-    for user_mount in mounts:
-        if (
-            user_mount.name == mount.volume_name
-            or user_mount.mountPath == reserved_dir
-            or user_mount.mountPath.startswith(reserved_dir + "/")
-        ):
-            raise DeployShouldAbortError(f"挂载路径 {user_mount.mountPath} 与 KMS 保留的挂载冲突，请修改后重新部署")
+def _is_parent_dir(parent: str, child: str) -> bool:
+    """parent 为空字符串时表示根目录 /"""
+    return child.startswith(parent + "/")

@@ -25,7 +25,7 @@ from paasng.utils.models import AuditedModel, Char32UUIDField
 
 
 class KMSConfigVersion(AuditedModel):
-    """敏感变量的 KMS 配置版本，每次需要 KMS 托管的部署新建一个，不复用
+    """敏感变量的 KMS 配置版本。敏感变量内容不变的部署复用已就绪的版本，内容变化时新建
 
     只保存标量引用，不设外键：应用、模块或部署删除后记录仍然保留，用于回收远端资源。
     明文、私钥和原始请求都不能写入本表。
@@ -39,20 +39,19 @@ class KMSConfigVersion(AuditedModel):
     env_name = models.CharField(max_length=16)
     module_environment_id = models.CharField(max_length=32)
 
-    status = models.CharField(
-        "准备状态",
-        choices=KMSConfigVersionStatus.get_choices(),
-        max_length=32,
-        default=KMSConfigVersionStatus.PENDING.value,
-    )
+    # 取值见 KMSConfigVersionStatus
+    status = models.CharField("准备状态", max_length=32, default=KMSConfigVersionStatus.PENDING.value)
     # 冻结输入：重试时原样提交同一份信封，不重新读取用户后来修改的变量
     envelope = models.TextField("KMS 信封（密文）")
+    # 信封每次加密结果都不同，用敏感变量内容的 HMAC 判断能否复用版本
+    content_digest = models.CharField("敏感变量内容摘要", max_length=64)
 
     # KMS 侧资源
-    kms_scope_id = models.IntegerField("KMS scope ID", null=True)
+    kms_scope_id = models.IntegerField("KMS scope ID")
     credential_id = models.BigIntegerField("KMS 凭证 ID", null=True)
     credential_name = models.CharField(max_length=128)
     openbao_key = models.CharField("OpenBao 路径", max_length=255)
+    # OpenBao 中只能读取该凭证的 role，如 default.scope.bkpaas3-saas.secret.<credential_name>
     kms_role = models.CharField(max_length=255)
 
     # Kubernetes 侧资源
@@ -60,9 +59,8 @@ class KMSConfigVersion(AuditedModel):
     namespace = models.CharField(max_length=63)
     service_account_name = models.CharField(max_length=253)
     resource_name = models.CharField("ClusterSecretStore、ExternalSecret 与 Secret 共用的名称", max_length=253)
-    cluster_secret_store_uid = models.CharField(max_length=64, blank=True, default="")
+    # 用于判断集群中的 ExternalSecret 是否为本次提交的对象
     external_secret_uid = models.CharField(max_length=64, blank=True, default="")
-    secret_uid = models.CharField(max_length=64, blank=True, default="")
 
     # 只记录安全的错误分类，不记录响应正文或 Secret 内容
     error_reason = models.CharField(max_length=255, blank=True, default="")

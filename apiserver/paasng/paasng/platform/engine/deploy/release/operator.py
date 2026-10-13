@@ -43,6 +43,7 @@ from paasng.platform.engine.configurations.kms import (
     add_kms_secret_mount,
     collect_kms_managed_keys_by_env,
     ensure_kms_injection_supported,
+    ensure_kms_mount_available,
     is_kms_injection_enabled,
     provision_kms_secret,
     split_kms_managed_env_vars,
@@ -160,8 +161,10 @@ def release_by_k8s_operator(
         kms_sensitive_values: dict[str, str] = {}
         if is_kms_injection_enabled(env):
             ensure_kms_injection_supported(env)
-            _, kms_sensitive_values = split_kms_managed_env_vars(env)
-            strip_kms_managed_env_vars(bkapp_res, env.environment, collect_kms_managed_keys_by_env(env.module))
+            ensure_kms_mount_available(bkapp_res, env.environment)
+            managed_keys_by_env = collect_kms_managed_keys_by_env(env.module)
+            _, kms_sensitive_values = split_kms_managed_env_vars(env, managed_keys_by_env[env.environment])
+            strip_kms_managed_env_vars(bkapp_res, env.environment, managed_keys_by_env)
 
         # 部署预检
         preflight_deploy(env, bkapp_res)

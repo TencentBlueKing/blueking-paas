@@ -23,7 +23,6 @@ from paasng.infras.kms.readiness import evaluate_secret_readiness
 
 ES_NAME = "kms-default-demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
 ES_UID = "es-uid-1"
-SECRET_UID = "secret-uid-1"
 READY_CONDITION = {"type": "Ready", "status": "True", "reason": "SecretSynced"}
 
 
@@ -36,12 +35,10 @@ def _external_secret(
     return {"metadata": {"name": ES_NAME, "uid": ES_UID}, "status": status}
 
 
-def _secret(
-    *, owner_uid: str | None = ES_UID, data: dict[str, str] | None = None, uid: str = SECRET_UID
-) -> dict[str, Any]:
+def _secret(*, owner_uid: str | None = ES_UID, data: dict[str, str] | None = None) -> dict[str, Any]:
     owners = [{"kind": "ExternalSecret", "name": ES_NAME, "uid": owner_uid}] if owner_uid else []
     return {
-        "metadata": {"name": ES_NAME, "uid": uid, "ownerReferences": owners},
+        "metadata": {"name": ES_NAME, "uid": "secret-uid-1", "ownerReferences": owners},
         "data": data if data is not None else {"envelope": "ZW52", "privateKey": "cHJpdg=="},
     }
 
@@ -52,7 +49,6 @@ def test_ready():
     )
 
     assert result.ready is True
-    assert result.secret_uid == SECRET_UID
 
 
 @pytest.mark.parametrize(
@@ -75,7 +71,6 @@ def test_ready():
         (_external_secret(), _secret(owner_uid=None), ES_UID, "secret_owner_mismatch"),
         (_external_secret(), _secret(data={"envelope": "ZW52"}), ES_UID, "secret_data_missing"),
         (_external_secret(), _secret(data={"envelope": "", "privateKey": "x"}), ES_UID, "secret_data_missing"),
-        (_external_secret(), _secret(uid=""), ES_UID, "secret_uid_missing"),
     ],
 )
 def test_not_ready(external_secret, secret, expected_uid, reason):

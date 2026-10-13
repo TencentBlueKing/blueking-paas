@@ -144,6 +144,7 @@ class Deployment(OperationVersionBase):
         null=True,
         blank=True,
         related_name="deployments",
+        db_constraint=False,
         help_text="本次部署使用的 KMS 配置版本",
     )
     # The fields that store deployment logs, related to the `OutputStream` model. These fields exist

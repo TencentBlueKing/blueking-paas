@@ -27,6 +27,7 @@ def test_cluster_secret_store():
         kv_path="secret",
         auth_mount="kubernetes",
         role="default.scope.blueking.secret.x",
+        namespace="ns-1",
         service_account_name="demo-web-prod-kms",
         mtls_secret_namespace="paas-system",
         mtls_secret_name="openbao-mtls-client",
@@ -34,9 +35,10 @@ def test_cluster_secret_store():
     )
 
     assert "namespace" not in store["metadata"]
+    # 只有应用所在 namespace 可以引用该 store
+    assert store["spec"]["conditions"] == [{"namespaces": ["ns-1"]}]
     vault = store["spec"]["provider"]["vault"]
-    # 不写 namespace，ESO 才会使用 ExternalSecret 所在 namespace 中的 SA 登录
-    assert vault["auth"]["kubernetes"]["serviceAccountRef"] == {"name": "demo-web-prod-kms"}
+    assert vault["auth"]["kubernetes"]["serviceAccountRef"] == {"name": "demo-web-prod-kms", "namespace": "ns-1"}
     mtls_refs = [vault["caProvider"], vault["tls"]["certSecretRef"], vault["tls"]["keySecretRef"]]
     assert {(ref["namespace"], ref["name"]) for ref in mtls_refs} == {("paas-system", "openbao-mtls-client")}
 

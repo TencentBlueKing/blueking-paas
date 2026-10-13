@@ -42,6 +42,7 @@ from paasng.platform.engine.configurations.kms.provisioner import (
 )
 from paasng.platform.engine.constants import KMSConfigVersionStatus
 from paasng.platform.engine.models import KMSConfigVersion
+from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -257,22 +258,22 @@ class TestKMSSecretProvisioner:
             api_version=ES_API_VERSION, kind="ClusterSecretStore", name=version.resource_name, namespace=None
         )
         assert store["spec"]["provider"]["vault"]["auth"]["kubernetes"]["role"] == version.kms_role
+        assert store["spec"]["conditions"] == [{"namespaces": [version.namespace]}]
         es = kube.get(
             api_version=ES_API_VERSION, kind="ExternalSecret", name=version.resource_name, namespace=version.namespace
         )
         assert es["spec"]["data"][0]["remoteRef"]["key"] == version.openbao_key
-        assert version.cluster_secret_store_uid == store["metadata"]["uid"]
         assert version.external_secret_uid == es["metadata"]["uid"]
 
     def test_provision_is_idempotent(self, version, make_provisioner, kms):
         provisioner = make_provisioner(version)
         provisioner.provision()
-        uids = (version.cluster_secret_store_uid, version.external_secret_uid)
+        es_uid = version.external_secret_uid
 
         provisioner.provision()
 
         assert kms.created == [version.credential_name]
-        assert (version.cluster_secret_store_uid, version.external_secret_uid) == uids
+        assert version.external_secret_uid == es_uid
 
     def test_existing_matching_credential_is_adopted(self, version, make_provisioner, kms):
         provisioner = make_provisioner(version)
@@ -343,7 +344,6 @@ class TestKMSSecretProvisioner:
 
         version.refresh_from_db()
         assert version.status == KMSConfigVersionStatus.READY.value
-        assert version.secret_uid == "secret-uid-1"
 
     def test_wait_ready_timeout_records_last_reason(self, version, make_provisioner):
         provisioner = make_provisioner(version)
@@ -387,6 +387,44 @@ class TestProvisionKMSSecret:
             mount_dir="/etc/kms",
             sub_paths=("envelope", "privateKey"),
         )
+
+    def test_unchanged_values_reuse_ready_version(self, bk_stag_env, bk_deployment, bk_module, kms, kms_cfg):
+        kube = SyncingKube()
+        first = provision_kms_secret(
+            bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+        # 模拟 Secret 被误删：复用时重新提交资源并等待同步
+        kube.objects.clear()
+
+        next_deployment = create_fake_deployment(bk_module, app_environment="stag")
+        second = provision_kms_secret(
+            bk_stag_env, next_deployment, dict(SENSITIVE_ENV), kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+
+        assert second == first
+        assert KMSConfigVersion.objects.count() == 1
+        assert len(kms.created) == 1
+        assert kube.get(
+            api_version="v1", kind="Secret", name=first.secret_name, namespace=bk_stag_env.wl_app.namespace
+        )
+
+    def test_changed_values_create_new_version(self, bk_stag_env, bk_deployment, kms, kms_cfg):
+        kube = SyncingKube()
+        first = provision_kms_secret(
+            bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+
+        second = provision_kms_secret(
+            bk_stag_env,
+            bk_deployment,
+            {**SENSITIVE_ENV, "DB_PASSWORD": "rotated"},
+            kms=kms,
+            kube=kube,
+            kms_settings=kms_cfg,
+        )
+
+        assert second.secret_name != first.secret_name
+        assert KMSConfigVersion.objects.count() == 2
 
     def test_kms_failure_keeps_deployment_linked(self, bk_stag_env, bk_deployment, kms, kms_cfg):
         kube = SyncingKube()

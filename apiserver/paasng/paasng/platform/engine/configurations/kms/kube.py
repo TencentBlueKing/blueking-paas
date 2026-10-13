@@ -16,8 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 """KMS 相关 Kubernetes 资源（ServiceAccount、ESO 资源与 Secret）的读写"""
 
-from collections.abc import Mapping
-from typing import Any, Protocol
+from typing import Any, Dict, Optional, Protocol
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
@@ -49,9 +48,9 @@ _KRES_BY_KIND: dict[str, type[BaseKresource]] = {
 
 
 class KubeResourceClient(Protocol):
-    def apply(self, manifest: Mapping[str, Any]) -> str: ...
+    def apply(self, manifest: Dict[str, Any]) -> str: ...
 
-    def get(self, *, api_version: str, kind: str, name: str, namespace: str | None) -> dict[str, Any] | None: ...
+    def get(self, *, api_version: str, kind: str, name: str, namespace: Optional[str]) -> Optional[Dict[str, Any]]: ...
 
 
 class KubeResources:
@@ -64,19 +63,19 @@ class KubeResources:
     def for_cluster(cls, cluster_name: str) -> "KubeResources":
         return cls(get_client_by_cluster_name(cluster_name))
 
-    def apply(self, manifest: Mapping[str, Any]) -> str:
+    def apply(self, manifest: Dict[str, Any]) -> str:
         """以 create_or_update 方式提交资源，返回 metadata.uid
 
-        使用 replace 而非 patch：ESO 资源是 CRD，replace 不依赖 resourceVersion，可以无条件更新。
+        更新时使用 replace，CRD 资源的 replace 必须携带 resourceVersion，因此由 auto_add_version 自动补齐。
         """
         metadata = manifest["metadata"]
         kres = self._get_kres(manifest["apiVersion"], manifest["kind"])
         obj, _created = kres.create_or_update(
-            metadata["name"], namespace=metadata.get("namespace"), body=dict(manifest)
+            metadata["name"], namespace=metadata.get("namespace"), body=manifest, auto_add_version=True
         )
         return str(obj.to_dict()["metadata"]["uid"])
 
-    def get(self, *, api_version: str, kind: str, name: str, namespace: str | None) -> dict[str, Any] | None:
+    def get(self, *, api_version: str, kind: str, name: str, namespace: Optional[str]) -> Optional[Dict[str, Any]]:
         """按名称读取资源，不存在时返回 None"""
         try:
             obj = self._get_kres(api_version, kind).get(name, namespace=namespace)

@@ -18,7 +18,7 @@
 """KMS 相关 Kubernetes 资源（ESO）的 manifest 构造
 
 - 使用集群级 ClusterSecretStore，mTLS 证书引用平台 namespace 中唯一的一份；
-- 不设置 conditions，SaaS 之间的隔离由 OpenBao role 绑定 SA 名与 namespace 保证。
+- SaaS 之间的隔离由 OpenBao role 绑定 SA 名与 namespace 保证，conditions 额外限制只有应用所在 namespace 可以引用。
 """
 
 from typing import Any
@@ -55,6 +55,7 @@ def build_cluster_secret_store(
     kv_path: str,
     auth_mount: str,
     role: str,
+    namespace: str,
     service_account_name: str,
     mtls_secret_namespace: str,
     mtls_secret_name: str,
@@ -62,15 +63,16 @@ def build_cluster_secret_store(
 ) -> dict[str, Any]:
     """集群级 SecretStore，每个凭证（即每个配置版本）一份，role 与凭证一一对应
 
-    serviceAccountRef 不写 namespace，ESO 会使用引用它的 ExternalSecret 所在 namespace 中的同名 SA 登录。
+    :param namespace: 应用所在 namespace，ESO 使用其中的 service_account_name 登录 OpenBao
 
-    TODO(kms): 每次带敏感变量的部署都会新增一个 ClusterSecretStore，需要自动回收
+    TODO(kms): 敏感变量每次变更都会新增一个 ClusterSecretStore，需要自动回收
     """
     return {
         "apiVersion": EXTERNAL_SECRETS_API_VERSION,
         "kind": CLUSTER_SECRET_STORE_KIND,
         "metadata": {"name": name, "labels": dict(labels)},
         "spec": {
+            "conditions": [{"namespaces": [namespace]}],
             "provider": {
                 "vault": {
                     "server": server,
@@ -98,11 +100,11 @@ def build_cluster_secret_store(
                         "kubernetes": {
                             "mountPath": auth_mount,
                             "role": role,
-                            "serviceAccountRef": {"name": service_account_name},
+                            "serviceAccountRef": {"name": service_account_name, "namespace": namespace},
                         }
                     },
                 }
-            }
+            },
         },
     }
 

@@ -33,11 +33,10 @@ ESO_CONDITION_STATUS_TRUE = "True"
 
 @dataclass(frozen=True)
 class SecretReadiness:
-    """就绪判定结果。ready 为 True 时 secret_uid 为目标 Secret 的 UID"""
+    """就绪判定结果。reason 为未就绪原因，就绪时固定为 ready"""
 
     ready: bool
     reason: str
-    secret_uid: str = ""
 
 
 def evaluate_secret_readiness(
@@ -47,6 +46,10 @@ def evaluate_secret_readiness(
     expected_external_secret_uid: str,
 ) -> SecretReadiness:
     """判断 ExternalSecret 是否已把凭证同步到目标 Secret
+
+    :param external_secret: 从集群读取的 ExternalSecret 对象，不存在时为 None
+    :param secret: 从集群读取的目标 Secret 对象（由 ESO 创建），不存在时为 None
+    :param expected_external_secret_uid: 提交 ExternalSecret 时记录的 UID，用于排除同名的旧对象
 
     就绪需同时满足：
     - ExternalSecret 的 UID 与提交时记录的一致，Ready 条件为 True，且已有 refreshTime；
@@ -61,18 +64,18 @@ def evaluate_secret_readiness(
     es_uid = str(es_metadata.get("uid") or "")
     if not expected_external_secret_uid or es_uid != expected_external_secret_uid:
         return _not_ready("external_secret_uid_mismatch")
-    if problem := _external_secret_problem(external_secret):
-        return _not_ready(problem)
-    if problem := _secret_problem(secret, es_name=es_name, es_uid=es_uid):
-        return _not_ready(problem)
-    return SecretReadiness(ready=True, reason="ready", secret_uid=_uid_of(secret))
+    if reason := _external_secret_unready_reason(external_secret):
+        return _not_ready(reason)
+    if reason := _secret_unready_reason(secret, es_name=es_name, es_uid=es_uid):
+        return _not_ready(reason)
+    return SecretReadiness(ready=True, reason="ready")
 
 
 def _not_ready(reason: str) -> SecretReadiness:
     return SecretReadiness(ready=False, reason=reason)
 
 
-def _external_secret_problem(external_secret: Mapping[str, Any]) -> str | None:
+def _external_secret_unready_reason(external_secret: Mapping[str, Any]) -> str | None:
     """ExternalSecret 尚未完成同步时返回原因，否则返回 None"""
     status = _as_mapping(external_secret.get("status"))
     ready_condition = _find_ready_condition(status)
@@ -84,7 +87,7 @@ def _external_secret_problem(external_secret: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _secret_problem(secret: Mapping[str, Any] | None, *, es_name: str, es_uid: str) -> str | None:
+def _secret_unready_reason(secret: Mapping[str, Any] | None, *, es_name: str, es_uid: str) -> str | None:
     """目标 Secret 不满足就绪条件时返回原因，否则返回 None"""
     if secret is None:
         return "secret_missing"
@@ -94,13 +97,7 @@ def _secret_problem(secret: Mapping[str, Any] | None, *, es_name: str, es_uid: s
     data = _as_mapping(secret.get("data"))
     if not all(data.get(key) for key in (SECRET_KEY_ENVELOPE, SECRET_KEY_PRIVATE_KEY)):
         return "secret_data_missing"
-    if not metadata.get("uid"):
-        return "secret_uid_missing"
     return None
-
-
-def _uid_of(obj: Mapping[str, Any] | None) -> str:
-    return str(_as_mapping(_as_mapping(obj).get("metadata")).get("uid") or "")
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:

@@ -18,7 +18,7 @@
 """Releasing process of an application deployment"""
 
 import logging
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
@@ -219,6 +219,7 @@ def _get_extra_envs_and_secret_mounts(
 
     if not from_deploy_flow:
         raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
+
     ensure_kms_injection_supported(env)
 
     plain_values, sensitive_values = split_kms_managed_env_vars(env)
@@ -234,7 +235,7 @@ def release_to_k8s(
     build_id: str,
     extra_envs: Dict[str, str],
     procfile: Dict[str, str],
-    secret_mounts: Sequence[SecretFileMount] = (),
+    secret_mounts: Optional[List[SecretFileMount]] = None,
 ) -> Release:
     """Create a new release object, and perform DeployAction
 
@@ -253,5 +254,5 @@ def release_to_k8s(
         procfile=procfile,
     )
 
-    DeployAction(env=env, release=release, extra_envs=extra_envs, secret_mounts=secret_mounts).perform()
+    DeployAction(env=env, release=release, extra_envs=extra_envs, secret_mounts=secret_mounts or []).perform()
     return release

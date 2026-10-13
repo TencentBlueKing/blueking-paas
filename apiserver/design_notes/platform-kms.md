@@ -70,6 +70,8 @@ chart 会创建 SecretStore、ExternalSecret，并把同步出的 Secret 挂载�
 }
 ```
 
+按现有 values 自动生成信封的 KMS 凭证声明见 `platform-kms-credential.yaml`，values 不需要改动。
+
 ## values 对照表
 
 ### env 部分
@@ -98,7 +100,7 @@ chart 会创建 SecretStore、ExternalSecret，并把同步出的 Secret 挂载�
 | `apiserver.externalDatabase.workloads.{user,password}` | `mysql.workloads.{username,password}` | `PAAS_WL_DATABASE_USER/PASSWORD` |
 | 自定义的 `PAAS_PAAS_LEGACY_DATABASE_*` | `mysql.legacy.{username,password}` | `PAAS_PAAS_LEGACY_DATABASE_*` |
 | `apiserver.externalDatabase.openPaaS.{user,password}` | `mysql.console.{username,password}` | `PAAS_BK_CONSOLE_DATABASE_USER/PASSWORD` |
-| `apiserver.externalRedis.default.password` | `redis.default.password` | `PAAS_REDIS_URL`，以及 Redis 类型的 `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` |
+| `apiserver.externalRedis.default.auth.password` | `redis.default.password` | `PAAS_REDIS_URL`，以及 Redis 类型的 `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` |
 | `apiserver.externalRedis.default.sentinel.password` | `redis.sentinel.password` | `PAAS_SENTINEL_PASSWORD`、`PAAS_CELERY_*_SENTINEL_PASSWORD` |
 | `apiserver.celeryBrokerUrl` 为 amqp 时的账号密码 | `rabbitmq.default.{username,password}` | amqp 类型的 `CELERY_BROKER_URL` |
 | `global.bkrepoConfig.{bkpaas3Username,bkpaas3Password}` | `bkrepo.default.{username,password}` | `PAAS_BLOBSTORE_BKREPO_CONFIG` 中的 `USERNAME` / `PASSWORD` |
@@ -126,7 +128,7 @@ Sensitive setting ELASTICSEARCH_HOSTS is not provided by KMS, using its plaintex
 
 - `global.healthzToken`、`global.trace.otlp.token`、`apiserver.sentryDsn`
 - `apiserver.externalDatabase.{default,workloads,openPaaS}.password`
-- `apiserver.externalRedis.default.password`、`apiserver.externalRedis.default.sentinel.password`
+- `apiserver.externalRedis.default.auth.password`、`apiserver.externalRedis.default.sentinel.password`
 - `apiserver.elasticSearch.hostConfig[*].http_auth`
 - `apiserver.celeryBrokerUrl` 中的账号密码（保留 `amqp://:@host:5672/vhost` 结构）
 - `global.bkrepoConfig.bkpaas3Password`：清空后 chart 会渲染默认值 `blueking`，被信封覆盖；同时须将 `global.bkrepoConfig.initEnabled` 设为 `false`，避免初始化任务用默认密码创建账号

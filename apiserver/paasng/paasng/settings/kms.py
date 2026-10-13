@@ -121,8 +121,13 @@ def _has_es_http_auth(value: Any) -> bool:
     return isinstance(value, list) and any(isinstance(host, Mapping) and host.get("http_auth") for host in value)
 
 
+def _has_sentry_dsn(value: Any) -> bool:
+    return isinstance(value, Mapping) and bool(value.get("dsn"))
+
+
 # 只在值中确实带有凭证时才告警的配置项，其余敏感配置项有值即告警
 _CREDENTIAL_DETECTORS: Dict[str, Callable[[Any], bool]] = {
+    "SENTRY_CONFIG": _has_sentry_dsn,
     "ELASTICSEARCH_HOSTS": _has_es_http_auth,
     "PYTHON_BUILDPACK_PIP_INDEX_URL": _has_url_password,
 }
@@ -180,7 +185,7 @@ def load_kms_settings(settings: LazySettings) -> LazySettings | KMSSettings:
     if not settings.get("BKKRILL_ENCRYPT_SECRET_KEY"):
         raise ImproperlyConfigured("BKKRILL_ENCRYPT_SECRET_KEY is required")
 
-    overrides = build_account_overrides(settings, credentials)
+    overrides = build_account_overrides(settings, credentials, provided)
     _warn_plaintext(settings, APISERVER_SENSITIVE_KEYS, provided | overrides.keys())
     return KMSSettings(settings, overrides)
 
@@ -196,12 +201,17 @@ def load_kms_workloads_settings(settings: LazySettings) -> LazySettings:
     return settings
 
 
-def build_account_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
-    """根据信封中的账号密码，生成要覆盖的配置项"""
+def build_account_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], provided: Collection[str] = ()
+) -> Dict[str, Any]:
+    """根据信封中的账号密码，生成要覆盖的配置项
+
+    :param provided: 已由信封 env 部分提供的配置项，缺少对应账号部分时不再告警
+    """
     return {
-        **_database_overrides(settings, credentials),
-        **_redis_overrides(settings, credentials),
-        **_bkrepo_overrides(settings, credentials),
+        **_database_overrides(settings, credentials, provided),
+        **_redis_overrides(settings, credentials, provided),
+        **_bkrepo_overrides(settings, credentials, provided),
     }
 
 
@@ -259,7 +269,9 @@ def _warn_plaintext(settings: LazySettings, sensitive_keys: List[str], provided:
             logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", key)
 
 
-def _database_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _database_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], provided: Collection[str]
+) -> Dict[str, Any]:
     overrides = {}
     for prefix, instance, encrypted_url_var in _DATABASES:
         if encrypted_url_var in os.environ:
@@ -267,7 +279,7 @@ def _database_overrides(settings: LazySettings, credentials: Mapping[str, Any]) 
         if not settings.get(f"{prefix}DATABASE_NAME"):
             continue
         if _lookup(credentials, ("mysql", instance)) is None:
-            if settings.get(f"{prefix}DATABASE_PASSWORD"):
+            if f"{prefix}DATABASE_PASSWORD" not in provided and settings.get(f"{prefix}DATABASE_PASSWORD"):
                 _warn_account(f"{prefix}DATABASE_PASSWORD", f"mysql.{instance}")
             continue
         overrides[f"{prefix}DATABASE_USER"] = _require(credentials, ("mysql", instance, "username"))
@@ -275,7 +287,9 @@ def _database_overrides(settings: LazySettings, credentials: Mapping[str, Any]) 
     return overrides
 
 
-def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _redis_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], provided: Collection[str]
+) -> Dict[str, Any]:
     overrides: Dict[str, Any] = {}
     if _lookup(credentials, ("redis", "sentinel")) is not None:
         sentinel_password = _require(credentials, ("redis", "sentinel", "password"))
@@ -294,7 +308,7 @@ def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> 
             raise ImproperlyConfigured(f"KMS does not support the scheme of {key}")
 
         if _lookup(credentials, instance) is None:
-            if any(urlsplit(single_url).password for single_url in url.split(";")):
+            if key not in provided and any(urlsplit(single_url).password for single_url in url.split(";")):
                 _warn_account(key, ".".join(instance))
             continue
         password = _require_url_safe(credentials, (*instance, "password"))
@@ -303,11 +317,13 @@ def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> 
     return overrides
 
 
-def _bkrepo_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _bkrepo_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], provided: Collection[str]
+) -> Dict[str, Any]:
     if not (bkrepo_config := settings.get("BLOBSTORE_BKREPO_CONFIG")):
         return {}
     if _lookup(credentials, ("bkrepo", "default")) is None:
-        if bkrepo_config.get("PASSWORD"):
+        if "BLOBSTORE_BKREPO_CONFIG" not in provided and bkrepo_config.get("PASSWORD"):
             _warn_account("BLOBSTORE_BKREPO_CONFIG", "bkrepo.default")
         return {}
     return {

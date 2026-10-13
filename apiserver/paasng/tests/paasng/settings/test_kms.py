@@ -318,6 +318,17 @@ class TestPlaintextFallback:
             _load(CREDENTIALS, write_kms_files)
         assert "Sensitive setting" not in caplog.text
 
+    def test_no_warning_when_url_provided_by_env(self, write_kms_files, caplog):
+        broker_url = "amqp://mq:p%40ss@mq.example.com:5672/vhost"
+        credentials = {"env": {**CREDENTIALS["env"], "PAAS_CELERY_BROKER_URL": broker_url}}
+        with caplog.at_level(logging.WARNING):
+            settings = _load(
+                credentials, write_kms_files, CELERY_BROKER_URL="amqp://old:old@mq.example.com:5672/vhost"
+            )
+
+        assert settings.get("CELERY_BROKER_URL") == broker_url
+        assert "CELERY_BROKER_URL" not in caplog.text
+
     @pytest.mark.parametrize(
         ("hosts", "warned"),
         [
@@ -330,6 +341,15 @@ class TestPlaintextFallback:
         with caplog.at_level(logging.WARNING):
             _load(CREDENTIALS, write_kms_files)
         assert ("Sensitive setting ELASTICSEARCH_HOSTS" in caplog.text) is warned
+
+    @pytest.mark.parametrize(
+        ("sentry_config", "warned"), [("{dsn='https://k@sentry.example.com/1'}", True), ("{dsn=''}", False)]
+    )
+    def test_sentry_config(self, write_kms_files, caplog, monkeypatch, sentry_config, warned):
+        monkeypatch.setenv("PAAS_KMS_UNITTEST_SENTRY_CONFIG", sentry_config)
+        with caplog.at_level(logging.WARNING):
+            _load(CREDENTIALS, write_kms_files)
+        assert ("Sensitive setting SENTRY_CONFIG" in caplog.text) is warned
 
     def test_elasticsearch_hosts_from_envelope(self, write_kms_files, caplog):
         credentials = copy.deepcopy(CREDENTIALS)

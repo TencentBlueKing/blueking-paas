@@ -319,18 +319,35 @@ class E2BProvider(AgentRuntimeProvider):
             send_forwarded_host=False,
         )
 
+    def publishes_direct_preview(self) -> bool:
+        """Return whether this provider's preview host is opened by the browser itself."""
+        return True
+
+    async def exposed_preview_origin(self, conversation_id: str) -> str | None:
+        """Return the sandbox host get_host reported for the browser to open."""
+
+        # 远程沙箱不走本服务反代。浏览器打开暴露域名，创建时已允许不带令牌访问，
+        # 这里也不把沙箱令牌放进返回值。
+        target = await self.preview_target(conversation_id)
+        if target is None:
+            return None
+
+        return f"{target.base_url.rstrip('/')}/"
+
     async def _create_sandbox(self) -> AsyncSandbox:
         """Ask E2B for a sandbox from the configured template.
 
         :raises AgentProvisionError: If E2B refuses or fails to create one.
         """
         try:
+            # 暴露域名要给浏览器直接打开。不声明公开流量时，不带令牌的请求会被沙箱拒绝。
             return await AsyncSandbox.create(
                 self.config.template,
                 timeout=self.config.idle_timeout_seconds,
                 api_key=self.config.api_key,
                 api_url=self.config.api_url,
                 domain=self.config.domain,
+                network={"allow_public_traffic": True},
             )
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc

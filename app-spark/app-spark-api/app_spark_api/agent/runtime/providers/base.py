@@ -112,6 +112,16 @@ class AgentRuntimeProvider(abc.ABC):
             Runtime is serving the conversation and there is therefore nothing to proxy to.
         """
 
+    def publishes_direct_preview(self) -> bool:
+        """Return whether browsers open this provider's preview on an exposed host."""
+        return False
+
+    async def exposed_preview_origin(self, conversation_id: str) -> str | None:
+        """Return a browser-facing preview URL, or None when preview stays on this service."""
+
+        # local_process 没有公开预览主机。远程沙箱覆盖这个方法，用 conversation_id 去查那个沙箱。
+        return None
+
     async def extend_lifetime(self, conversation_id: str) -> None:  # noqa: B027
         """Push back when the Runtime serving conversation_id is reclaimed for idleness.
 

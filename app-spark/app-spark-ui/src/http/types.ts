@@ -124,7 +124,10 @@ export type DevServerStatus = 'not_started' | 'starting' | 'ready' | 'stopped';
 
 /** GET .../conversations/{number}/preview/ */
 export interface PreviewResponse {
-  /** 末尾带斜杠，直接作为 iframe 的 src。会话一建好就有，Runtime 回收后再拉起也不变。 */
+  /**
+   * 末尾带斜杠，ready 之后作为 iframe 的 src。
+   * 没有暴露域名时是 API 上的 /preview/app/ 路径。远程沙箱是 get_host 查回来的主机，沙箱重建后会变。
+   */
   origin: string;
   dev_server_status: DevServerStatus | null;
 }

@@ -261,13 +261,20 @@ async def get_preview(
 ):
     """拿到用 iframe 打开这个会话的工作区应用的地址，以及那个应用此刻的状态。
 
-    地址由平台签发，会话一建好就有，也不会因为 Runtime 被回收而失效——所以拿到 origin 不等于
-    这一刻就有东西可看，该看 `dev_server_status`。Runtime 联系不上只会让 `dev_server_status` 变成 null，不会让
-    这个接口失败，更不会把地址收回去。
+    当前驱动不发布暴露域名时，地址按这个请求的 Host 签发，会话一建好就有。远程沙箱拉起之后，
+    地址改成当时用 get_host 查回来的暴露域名，不随这次请求的 Host 变化；同一沙箱不变，沙箱重建
+    后换成新的。切回反代或会话结束之后不再返回以前记下的主机。拿到 origin 不等于这一刻就有东西
+    可看，该看 dev_server_status。Runtime 联系不上只会让 dev_server_status 变成 null，不会让
+    这个接口失败。
     """
     conversation = await _get_conversation(request, project_id, number)
     return PreviewResponse(
-        origin=preview.build_preview_origin(request, project_id=project_id, number=number),
+        origin=preview.resolve_preview_origin(
+            request,
+            project_id=project_id,
+            number=number,
+            stored=services.read_published_preview_origin(conversation),
+        ),
         dev_server_status=await services.get_dev_server_status(conversation),
     )
 

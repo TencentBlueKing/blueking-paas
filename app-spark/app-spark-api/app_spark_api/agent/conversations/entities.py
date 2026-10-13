@@ -90,13 +90,19 @@ MAX_RUN_CONTENT_LENGTH = 32 * 1024
 class PreviewResponse(Schema):
     """会话里那个工作区应用该去哪儿打开，以及此刻打不打得开。
 
-    地址和状态是两回事，所以分成两个字段。`origin` 由平台签发，会话一建好就有，Runtime 重启、
-    回收、再拉起都不会变；`dev_server_status` 说的是这一刻沙箱里那个进程能不能服务。前端据此决定
-    是先摆一个占位还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
+    地址和状态是两回事，所以分成两个字段。没有暴露域名时，origin 按本次请求的 Host 签发，会话
+    一建好就有。远程沙箱拉起后，origin 改成 get_host 查回来的暴露域名，同一沙箱不变，沙箱重建
+    后更新。dev_server_status 说的是这一刻沙箱里那个进程能不能服务。前端据此决定是先摆一个占位
+    还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
     """
 
     origin: str = Field(
-        description="用 iframe 打开工作区应用的地址，末尾带斜杠；不随 Runtime 的存亡变化",
+        description=(
+            "用 iframe 打开工作区应用的地址，末尾带斜杠。"
+            "没有暴露域名时是本服务上的预览路径，按本次请求的 Host 签发。"
+            "远程沙箱拉起后是 get_host 查回来的暴露域名，不随本次请求的 Host 变化；"
+            "同一沙箱不变，沙箱重建后更新"
+        ),
     )
     dev_server_status: str | None = Field(
         description=(

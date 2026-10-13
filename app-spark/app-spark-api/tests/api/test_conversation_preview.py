@@ -231,6 +231,87 @@ def stage(monkeypatch):
 # --- 地址 ------------------------------------------------------------------------------------
 
 
+async def test_a_published_preview_host_is_what_the_api_returns(aapi_client, conversation, monkeypatch):
+    """远程沙箱仍在发布暴露域名时，接口把记下的地址原样交出去，不按测试客户端的 Host 重签。"""
+    monkeypatch.setattr(get_agent_runtime_provider(), "publishes_direct_preview", lambda: True)
+    published = "https://9000-sbx.sandbox.example/"
+    conversation.preview_origin = published
+    await conversation.asave(update_fields=["preview_origin"])
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["origin"] == published
+
+
+async def test_a_stored_host_is_not_served_once_preview_stays_on_the_api(aapi_client, conversation):
+    """切回本机反代之后，库里留下的远程主机不再交给浏览器。"""
+    conversation.preview_origin = "https://9000-old.sandbox.example/"
+    await conversation.asave(update_fields=["preview_origin"])
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    origin = response.json()["origin"]
+    assert origin.endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert "9000-old" not in origin
+
+
+async def test_remember_preview_origin_keeps_one_sandbox_and_follows_the_next(monkeypatch, conversation):
+    """同一沙箱的主机名不重写；沙箱重建、get_host 变了才更新。反代 provider 什么也不记。"""
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+    assert conversation.preview_origin is None
+
+    hosts = ["https://9000-sbx-1.sandbox.example/"]
+
+    async def report_exposed_origin(_conversation_id: str) -> str:
+        return hosts[0]
+
+    monkeypatch.setattr(get_agent_runtime_provider(), "exposed_preview_origin", report_exposed_origin)
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+    assert conversation.preview_origin == hosts[0]
+
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+    assert conversation.preview_origin == hosts[0]
+
+    hosts[0] = "https://9000-sbx-2.sandbox.example/"
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+    assert conversation.preview_origin == hosts[0]
+
+
+async def test_remember_preview_origin_drops_a_host_the_provider_no_longer_publishes(conversation):
+    """local_process 不发布暴露域名，必须清掉以前远程沙箱记下的主机。"""
+    conversation.preview_origin = "https://9000-old.sandbox.example/"
+    await conversation.asave(update_fields=["preview_origin"])
+
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+
+    assert conversation.preview_origin is None
+
+
+async def test_remember_preview_origin_keeps_the_host_while_the_sandbox_is_down(monkeypatch, conversation):
+    """远程沙箱暂时不在时留下上次的地址，等重建后再更新。"""
+    kept = "https://9000-sbx.sandbox.example/"
+    conversation.preview_origin = kept
+    await conversation.asave(update_fields=["preview_origin"])
+    provider = get_agent_runtime_provider()
+
+    async def report_no_host(_conversation_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(provider, "exposed_preview_origin", report_no_host)
+    monkeypatch.setattr(provider, "publishes_direct_preview", lambda: True)
+    await services.remember_preview_origin(conversation)
+    await conversation.arefresh_from_db()
+
+    assert conversation.preview_origin == kept
+
+
 async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_client, conversation):
     """地址在会话建好那一刻就有。它不是某个 Runtime 报上来的东西，也就不必等谁先跑起来。"""
     body = (await aapi_client.get(build_preview_url(conversation.number))).json()

@@ -6,6 +6,8 @@ import { getConversationPreview } from '@/http/api';
 import type { DevServerStatus } from '@/http/types';
 import { useProjectStore } from '@/store/project';
 
+import { previewFrameUrl } from './preview-frame-url';
+
 /** 应用拉起要几十秒，更密也不会更快看到页面；每次请求都会再问一次 Runtime。 */
 const POLL_INTERVAL_MS = 5000;
 
@@ -20,23 +22,7 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
   value && KNOWN_STATUSES.has(value) ? value as DevServerStatus : null
 );
 
-/**
- * iframe 要和当前页面同源，否则响应里的 `frame-ancestors 'self'` 会拦住。
- *
- * 接口按它自己看到的 Host 签发绝对地址。本地页面在另一台主机上时，只留路径，
- * 请求仍走页面上的 `/api-svc` 代理。路径本身不改。
- */
-export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
-  if (!origin) return '';
-  let url: URL;
-  try {
-    url = new URL(origin, pageOrigin);
-  } catch {
-    return origin;
-  }
-  if (url.origin === pageOrigin) return url.href;
-  return `${pageOrigin}${url.pathname}${url.search}${url.hash}`;
-};
+export { previewFrameUrl };
 
 /**
  * 当前打开的预览面板要画的地址和状态。
@@ -45,8 +31,8 @@ export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
  * 面板开着就自己打 `GET .../preview/`：进来立刻一次，之后每 5 秒一次，iframe 挂上之后也不停
  * ——进程会自己退出，没有事件通知。离开这个面板，或会话已结束，停掉。不要在后台对每个会话一直打。
  *
- * `origin` 第一次拿到就留下，后面只看 `dev_server_status` 变不变。地址有了不等于页面能开，
- * 只有 `ready` 才把 origin 交给 iframe。
+ * 地址有了不等于页面能开，只有 `ready` 才把 origin 交给 iframe。沙箱重建后主机名会变，
+ * 变了才换 src，同一地址的轮询不重载 iframe。
  *
  * 接口只报地址和状态，模型改了代码这两样都不变，轮询看不出页面该刷新了。所以另给一个 `frameKey`，
  * 一轮对话结束就递增，让 iframe 重新挂一次。
@@ -103,8 +89,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       ) {
         return;
       }
-      // 同一会话里 origin 不变。后面的响应只用来更新状态，避免 iframe 因 src 抖动重载。
-      if (!origin.value && data.origin) origin.value = data.origin;
+      // 同一地址不换 src。远程沙箱重建后 get_host 会变成另一个主机，那时才重载。
+      if (data.origin && data.origin !== origin.value) origin.value = data.origin;
       devServerStatus.value = asDevServerStatus(data.dev_server_status);
       pending.value = false;
     } catch (error) {

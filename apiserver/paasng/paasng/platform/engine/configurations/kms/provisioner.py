@@ -142,7 +142,7 @@ def provision_kms_secret(
     version = _find_reusable_version(env, _content_digest(sensitive_values, cfg.scope_id))
     if version is None:
         version = create_kms_config_version(env, sensitive_values, kms=kms, kms_settings=cfg)
-    # 先绑定到部署再发起远程请求，失败后可以从已记录的版本继续
+    # 先绑定到部署再发起远程请求：失败时仍能从部署记录找到该版本，用于排查与回收。失败过的版本不会被后续部署复用
     deployment.kms_config_version = version
     deployment.save(update_fields=["kms_config_version"])
 

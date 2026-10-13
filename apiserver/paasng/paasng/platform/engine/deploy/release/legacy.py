@@ -213,6 +213,7 @@ def _get_extra_envs_and_secret_mounts(
 
     if not from_deploy_flow:
         raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
+
     return prepare_kms_process_env(env, deployment)
 
 

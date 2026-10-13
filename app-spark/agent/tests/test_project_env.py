@@ -27,6 +27,7 @@ import os
 import re
 import signal
 import stat
+import sys
 import tomllib
 from pathlib import Path
 
@@ -88,6 +89,29 @@ class TestUvEnviron:
             "UV_DEFAULT_INDEX": "https://pypi.example.com/simple",
             "UV_PYTHON_DOWNLOADS": "never",
         }
+
+    def test_drops_the_agents_venv_from_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """否则 Shell 里一个裸 python 用的是 Agent 的包，模型会把「项目缺依赖」当成已经能跑。"""
+        monkeypatch.setattr(sys, "prefix", "/app/.venv")
+        monkeypatch.setattr(sys, "base_prefix", "/usr/local")
+        source = {"PATH": f"/app/.venv/bin/{os.pathsep}/usr/local/bin{os.pathsep}/usr/bin"}
+
+        assert uv_environ(source)["PATH"] == f"/usr/local/bin{os.pathsep}/usr/bin"
+
+    def test_drops_the_venv_a_uv_run_left_behind_from_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "prefix", sys.base_prefix)
+        source = {"PATH": f"/app/agent/.venv/bin{os.pathsep}/usr/bin", "VIRTUAL_ENV": "/app/agent/.venv"}
+
+        assert uv_environ(source)["PATH"] == "/usr/bin"
+
+    def test_keeps_the_system_pythons_bin_when_the_agent_runs_outside_a_venv(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """不在 venv 里时 sys.prefix 是系统目录，拿掉它的 bin 连 uv 和 git 都找不到了。"""
+        monkeypatch.setattr(sys, "prefix", "/usr")
+        monkeypatch.setattr(sys, "base_prefix", "/usr")
+
+        assert uv_environ({"PATH": "/usr/bin"})["PATH"] == "/usr/bin"
 
 
 def install_fake_uv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, body: str) -> None:

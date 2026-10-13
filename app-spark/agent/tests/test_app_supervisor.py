@@ -21,6 +21,8 @@
 """
 
 import asyncio
+import os
+import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -172,14 +174,36 @@ def test_child_env_drops_every_agent_setting_not_just_the_known_secrets() -> Non
     source["APP_SPARK_AGENT_WORKSPACE"] = "/data/workspace"
     source["PATH"] = "/usr/bin"
 
-    env = build_child_environ(8123, source)
+    env = build_child_environ(Path("/data/workspace"), 8123, source)
 
     assert all(key not in env for key in secrets)
     # 不是密钥，一样不给。应用的 cwd 就是 workspace。
     assert "APP_SPARK_AGENT_WORKSPACE" not in env
-    assert env["PATH"] == "/usr/bin"
     # 唯一加回来的一项，尽管它也带前缀。
     assert env[APP_PORT_ENV] == "8123"
+
+
+def test_child_env_activates_the_projects_venv_instead_of_the_agents(monkeypatch: pytest.MonkeyPatch) -> None:
+    """应用按命令名跑 python / pip 时，进的得是项目环境，pip install 也不能改到 Agent 自己的包。"""
+    monkeypatch.setattr(sys, "prefix", "/app/.venv")
+    monkeypatch.setattr(sys, "base_prefix", "/usr/local")
+    source = {
+        "PATH": os.pathsep.join(("/app/.venv/bin", "/usr/local/bin", "/usr/bin")),
+        "VIRTUAL_ENV": "/app/.venv",
+        "UV_PROJECT_ENVIRONMENT": "/app/.venv",
+    }
+
+    env = build_child_environ(Path("/data/workspace"), 8123, source)
+
+    assert env["PATH"] == os.pathsep.join(("/data/workspace/.venv/bin", "/usr/local/bin", "/usr/bin"))
+    assert env["VIRTUAL_ENV"] == "/data/workspace/.venv"
+    assert "UV_PROJECT_ENVIRONMENT" not in env
+
+
+def test_child_env_without_path_still_finds_system_commands() -> None:
+    env = build_child_environ(Path("/data/workspace"), 8123, {})
+
+    assert env["PATH"] == os.pathsep.join(("/data/workspace/.venv/bin", os.defpath))
 
 
 def test_spec_starts_the_import_path_the_instructions_promise(tmp_path: Path) -> None:

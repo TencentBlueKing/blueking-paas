@@ -1,4 +1,6 @@
 import fnmatch
+import os
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -156,6 +158,22 @@ def test_the_shell_runs_uv_against_the_projects_index_not_the_agents_venv(
     assert shell.env["UV_DEFAULT_INDEX"] == "https://pypi.example.com/simple"
     assert not denied("UV_DEFAULT_INDEX", shell.denied_env_patterns)
     assert "VIRTUAL_ENV" not in shell.env
+
+
+def test_the_shell_does_not_find_the_agents_python_on_path(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """A bare `python -c "import fastapi"` must not succeed on the Agent's packages.
+
+    Otherwise the model takes a project that lacks a dependency for one that already runs.
+    """
+    monkeypatch.setattr(settings, "MODEL_API_KEY", "not-used-by-this-test")
+    monkeypatch.setattr(sys, "prefix", "/app/.venv")
+    monkeypatch.setattr(sys, "base_prefix", "/usr/local")
+    monkeypatch.setenv("PATH", os.pathsep.join(("/app/.venv/bin", "/usr/local/bin")))
+
+    shell = shell_of(create_agent(tmp_path))
+
+    assert shell.env is not None
+    assert shell.env["PATH"] == "/usr/local/bin"
 
 
 def provider_key_of(model: Any) -> str:

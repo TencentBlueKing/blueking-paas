@@ -39,18 +39,23 @@ _PROJECT_NAME_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 PROJECT_NAME_MAX_LENGTH = 64
 
 EXISTS_DETAIL = (
-    "The workspace already has a pyproject.toml or uv.lock. Keep using them: add packages with "
+    "The workspace already has a pyproject.toml. Keep using it: add packages with "
     "`uv add` instead of creating the project again."
+)
+
+REPLACED_LOCK_DETAIL = (
+    "The workspace had a uv.lock without a pyproject.toml, which uv cannot use; it was replaced "
+    "together with the new pyproject.toml."
 )
 
 
 class InitProjectResult(BaseModel):
     """init_project 工具返回给模型的结构。
 
-    :param status: created 已建好；exists 项目文件已在，未做任何改动；invalid_name 名字不可用，
+    :param status: created 已建好；exists pyproject.toml 已在，未做任何改动；invalid_name 名字不可用，
         未做任何改动。
     :param name: 写进 pyproject.toml 的项目名，即规范化之后的名字。
-    :param detail: exists 或 invalid_name 的原因。
+    :param detail: exists 或 invalid_name 的原因；created 时说明是否顶掉了一份孤立的 uv.lock。
     """
 
     status: Literal["created", "exists", "invalid_name"]
@@ -69,7 +74,7 @@ class ProjectInitializer:
         self.template = settings.APP_TEMPLATE_DIR if template is None else template
 
     def init(self, raw_name: str) -> InitProjectResult:
-        """Write the template under raw_name, when the workspace has neither project file.
+        """Write the template under raw_name, when the workspace has no pyproject.toml.
 
         Every outcome is folded into the result instead of raised: raising out of a tool ends
         the turn, while the model can simply pick another name.
@@ -84,14 +89,18 @@ class ProjectInitializer:
                 ),
             )
 
-        # 两个都缺才写，永不覆盖：只剩其一说明是用户或模型的选择，补上另一半只会造出一对互不匹配的
-        # 文件，让下一次 uv sync 在模型看不懂的地方失败。
-        if any((self.workspace / filename).exists() for filename in PROJECT_FILES):
+        # 只看 pyproject.toml，与 launch 判「还没有项目」的条件（project_env.NO_PROJECT_DETAIL）一致，
+        # 否则两边会把模型互相推给对方。有 pyproject.toml 就永不覆盖：只缺 uv.lock 时 uv add / uv sync
+        # 会就地补锁，这里补上一份模板锁反而造出一对互不匹配的文件。
+        if (self.workspace / "pyproject.toml").exists():
             return InitProjectResult(status="exists", detail=EXISTS_DETAIL)
 
+        # 反过来只剩 uv.lock 时，uv 什么也做不了（uv add 直接报找不到 pyproject.toml），而提示词又
+        # 禁止模型手写或手改这两个文件。两个文件都按模板重写，写出来的仍是配套的一对。
+        replaced_lock = (self.workspace / "uv.lock").exists()
         for filename, text in self.render(name).items():
             write_atomic(self.workspace / filename, text.encode("utf-8"))
-        return InitProjectResult(status="created", name=name)
+        return InitProjectResult(status="created", name=name, detail=REPLACED_LOCK_DETAIL if replaced_lock else "")
 
     @staticmethod
     def normalize_name(raw: str) -> str | None:
@@ -143,7 +152,7 @@ def build_init_project_tool(workspace: Path) -> Callable[[str], InitProjectResul
 
         Call this once, before writing the application's first file. It writes `pyproject.toml`
         and `uv.lock` at the workspace root, with the starting dependencies already locked.
-        Does nothing when either file already exists.
+        Does nothing when `pyproject.toml` already exists; a `uv.lock` left without one is replaced.
 
         :param name: A short name for the app in lowercase ASCII letters, digits and hyphens,
             for example `todo-board`. Spaces, underscores and dots become hyphens.

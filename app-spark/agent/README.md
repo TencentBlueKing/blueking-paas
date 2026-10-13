@@ -171,17 +171,22 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 - 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
   不然「失败→改代码→再 launch」会一直烧 token。
 - 子进程的环境整段剥掉 `APP_SPARK_AGENT_` 前缀，然后只把 `APP_SPARK_AGENT_APP_PORT` 加回去（`build_child_environ`）。剥前缀而不是逐个 pop 已知密钥：新增一个配置忘了登记就会漏进应用，而应用是模型写的代码。
+- 子进程按「激活了项目 venv」的样子跑：PATH 里去掉 Agent 自己的 venv（镜像里是 `/app/.venv/bin`），把 `<workspace>/.venv/bin` 放最前，
+  `VIRTUAL_ENV` 指向 `<workspace>/.venv`，去掉 `UV_PROJECT_ENVIRONMENT`。主进程的解释器本来就认项目 venv，但应用按命令名
+  跑的 `python` / `pip` / console script 走 PATH，不改就会进 Agent 的环境，`pip install` 会改到 Agent 自己的包。
 
 ### 项目依赖
 
 依赖属于用户项目，不属于平台：`pyproject.toml` 和 `uv.lock` 在 workspace 根目录，随代码保存进 Git。
 
 - 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个文件。
-  workspace 里两个文件都不存在才写，永不覆盖。模型只决定时机和项目名，文件内容由程序给。
+  判断条件和 launch 一样只看 `pyproject.toml`：它在就不动（只缺 `uv.lock` 时 `uv add` / `uv sync` 会就地补锁）；模型只决定时机和项目名，文件内容由程序给。
 - 模板与提示词是一对：起始包清单逐字写在 `INSTRUCTIONS` 的 Dependencies 一节。改模板依赖时两处一起改，再 `make lock-app-template`。
 - launch 前对齐：每次 launch（含 crash 后的自动重拉）都先 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
   workspace 里还没有 `pyproject.toml` 时 launch 直接失败，提示模型先调 `init_project`。
 - 模型加依赖：在 Shell 里 `uv add` / `uv remove`（用户提出就允许，不设白名单）。
+- Shell 的 PATH 同样去掉 Agent 自己的 venv，免得裸 `python -c "import fastapi"` 用 Agent 的包跑通、把「项目缺依赖」
+  误判成能跑。但不把项目 `.venv/bin` 放进去：它要等 `init_project` 和第一次 `uv sync` 之后才存在，跑 Python 走 `uv run`。
 - 缓存预热：两个镜像构建时都对模板 `uv sync` 一次再删掉建出来的 `.venv`，只留下 uv 缓存，这样之后项目初次 uv sync 时可以提速。
 
 ## 凭据屏蔽

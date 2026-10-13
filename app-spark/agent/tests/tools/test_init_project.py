@@ -12,6 +12,7 @@ import pytest
 from app_spark_agent.app_supervisor import uv_environ
 from app_spark_agent.tools.init_project import (
     EXISTS_DETAIL,
+    REPLACED_LOCK_DETAIL,
     InitProjectResult,
     ProjectInitializer,
     build_init_project_tool,
@@ -87,16 +88,29 @@ class TestInit:
 
         assert result.returncode == 0, result.stderr
 
-    @pytest.mark.parametrize("existing", ["pyproject.toml", "uv.lock"])
-    def test_either_file_already_present_leaves_the_workspace_alone(self, tmp_path: Path, existing: str) -> None:
-        """补上另一半只会造出一对互不匹配的文件。"""
-        (tmp_path / existing).write_text("# the user's own\n")
+    def test_an_existing_pyproject_leaves_the_workspace_alone(self, tmp_path: Path) -> None:
+        """补一份模板锁只会造出一对互不匹配的文件；缺的锁由 uv add / uv sync 就地补。"""
+        (tmp_path / "pyproject.toml").write_text("# the user's own\n")
 
         result = ProjectInitializer(tmp_path).init("todo-board")
 
         assert result == InitProjectResult(status="exists", detail=EXISTS_DETAIL)
-        assert sorted(path.name for path in tmp_path.iterdir()) == [existing]
-        assert (tmp_path / existing).read_text() == "# the user's own\n"
+        assert sorted(path.name for path in tmp_path.iterdir()) == ["pyproject.toml"]
+        assert (tmp_path / "pyproject.toml").read_text() == "# the user's own\n"
+
+    def test_a_lone_uv_lock_is_replaced_by_the_template(self, tmp_path: Path) -> None:
+        """只剩 uv.lock 时 launch 让模型调 init_project；这里再拒绝就成了死循环。
+
+        uv add 在没有 pyproject.toml 的目录里直接失败，提示词又禁止手写这两个文件，所以
+        init_project 是唯一能走通的一步。两个文件都按模板重写，仍是配套的一对。
+        """
+        (tmp_path / "uv.lock").write_text("# left behind\n")
+
+        result = ProjectInitializer(tmp_path).init("todo-board")
+
+        assert result == InitProjectResult(status="created", name="todo-board", detail=REPLACED_LOCK_DETAIL)
+        assert sorted(path.name for path in tmp_path.iterdir()) == ["pyproject.toml", "uv.lock"]
+        assert root_package(tmp_path / "uv.lock")["name"] == "todo-board"
 
     def test_an_invalid_name_is_handed_back_instead_of_raised(self, tmp_path: Path) -> None:
         """Raising out of a tool ends the turn; the model can simply pick another name."""

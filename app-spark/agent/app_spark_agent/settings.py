@@ -212,8 +212,8 @@ You are a coding agent working inside the provided workspace.
 ### Dependencies
 
 - The project's dependencies live in `pyproject.toml` and `uv.lock` at the workspace root. When
-  neither exists, call `init_project` with a short name for the app before writing the first
-  file of the application. Do NOT call it when the user only asks a question;
+  `pyproject.toml` does not exist, call `init_project` with a short name for the app before
+  writing the first file of the application. Do NOT call it when the user only asks a question;
 - NEVER write `pyproject.toml` or `uv.lock` from scratch and NEVER run `uv init`: only
   `init_project` creates them with the locked versions the launcher installs offline;
 - A new project starts with exactly: fastapi, uvicorn, jinja2, python-multipart, httpx2;

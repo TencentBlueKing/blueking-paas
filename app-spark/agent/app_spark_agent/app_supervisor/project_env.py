@@ -27,6 +27,7 @@ import asyncio
 import os
 import shutil
 import signal
+import sys
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
@@ -36,6 +37,7 @@ from app_spark_agent import settings
 from app_spark_agent.app_supervisor.types import AppLaunchFailed
 from app_spark_agent.utils import killpg_ignore_absent
 
+# init_project 判「已有项目」也只看 pyproject.toml：只剩 uv.lock 时它会按模板重建，这条指引才走得通。
 NO_PROJECT_DETAIL = (
     "The workspace has no pyproject.toml, so there are no dependencies to install. "
     "Create the project with the `init_project` tool, then launch again."
@@ -54,9 +56,45 @@ SYNC_OUTPUT_TAIL_CHARS = 2000
 _AGENT_ENVIRONMENT_KEYS = frozenset({"VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT"})
 
 
+def project_venv(workspace: Path) -> Path:
+    """Return the virtual environment uv sync builds for the workspace project."""
+    return workspace / ".venv"
+
+
 def project_python(workspace: Path) -> Path:
     """Return the interpreter uv sync builds for the workspace project."""
-    return workspace / ".venv" / "bin" / "python"
+    return project_venv(workspace) / "bin" / "python"
+
+
+def strip_agent_environ(source: Mapping[str, str]) -> dict[str, str]:
+    """Copy source without anything that belongs to the Agent: its settings and its venv.
+
+    The Agent's venv is also dropped from PATH. Left there (the image puts /app/.venv/bin first),
+    a bare `python`, `pip` or `uvicorn` run by the model's Shell or by the application resolves to
+    the Agent's own, so the model sees the Agent's packages instead of the project's, and a
+    `pip install` changes the Agent itself.
+    """
+    agent_bins = _agent_bin_dirs(source)
+    env = {
+        key: value
+        for key, value in source.items()
+        if not key.startswith(settings.ENV_PREFIX) and key not in _AGENT_ENVIRONMENT_KEYS
+    }
+    if "PATH" in env:
+        env["PATH"] = os.pathsep.join(
+            entry for entry in env["PATH"].split(os.pathsep) if os.path.normpath(entry) not in agent_bins
+        )
+    return env
+
+
+def _agent_bin_dirs(source: Mapping[str, str]) -> frozenset[str]:
+    """Return the bin directories of the venvs the Agent runs in, normalized for comparison."""
+    venvs = [source[key] for key in _AGENT_ENVIRONMENT_KEYS if source.get(key)]
+    # 只认真在 venv 里跑的情况：不在 venv 里时 sys.prefix 是系统 Python，它的 bin（如 /usr/bin）
+    # 绝不能从 PATH 里拿掉。
+    if sys.prefix != sys.base_prefix:
+        venvs.append(sys.prefix)
+    return frozenset(os.path.normpath(os.path.join(venv, "bin")) for venv in venvs)
 
 
 def uv_environ(source: Mapping[str, str]) -> dict[str, str]:
@@ -64,12 +102,11 @@ def uv_environ(source: Mapping[str, str]) -> dict[str, str]:
 
     Shared by the sync before each launch and the model's Shell, so that `uv add` in the shell
     resolves against the same index the launch installs from.
+
+    The project's .venv is deliberately not put on PATH: it only exists after init_project and
+    the first sync, and the model reaches it through `uv run` anyway.
     """
-    env = {
-        key: value
-        for key, value in source.items()
-        if not key.startswith(settings.ENV_PREFIX) and key not in _AGENT_ENVIRONMENT_KEYS
-    }
+    env = strip_agent_environ(source)
     env["UV_DEFAULT_INDEX"] = settings.PACKAGE_INDEX_URL
 
     # 沙箱里只有镜像自带的 Python。模型改了 requires-python 时，宁可当场报「找不到解释器」，

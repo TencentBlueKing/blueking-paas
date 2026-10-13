@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('app_code', models.CharField(max_length=64)),
                 ('module_name', models.CharField(max_length=64)),
                 ('env_name', models.CharField(max_length=16)),
-                ('module_environment_id', models.CharField(max_length=32)),
+                ('env_id', models.BigIntegerField(verbose_name='关联的 ModuleEnvironment ID')),
                 ('status', models.CharField(default='pending', max_length=32, verbose_name='准备状态')),
                 ('envelope', models.TextField(verbose_name='KMS 信封（密文）')),
                 ('content_digest', models.CharField(max_length=64, verbose_name='敏感变量内容摘要')),
@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('error_reason', models.CharField(blank=True, default='', max_length=255)),
             ],
             options={
-                'indexes': [models.Index(fields=['app_code', 'module_name', 'env_name'], name='engine_kmsc_app_cod_8d0243_idx')],
+                'indexes': [models.Index(fields=['env_id'], name='engine_kmsc_env_id_ffc18e_idx')],
             },
         ),
         migrations.AddField(

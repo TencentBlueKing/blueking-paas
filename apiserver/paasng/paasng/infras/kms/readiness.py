@@ -64,9 +64,9 @@ def evaluate_secret_readiness(
     es_uid = str(es_metadata.get("uid") or "")
     if not expected_external_secret_uid or es_uid != expected_external_secret_uid:
         return _not_ready("external_secret_uid_mismatch")
-    if reason := _external_secret_unready_reason(external_secret):
+    if reason := _check_external_secret(external_secret):
         return _not_ready(reason)
-    if reason := _secret_unready_reason(secret, es_name=es_name, es_uid=es_uid):
+    if reason := _check_secret(secret, es_name=es_name, es_uid=es_uid):
         return _not_ready(reason)
     return SecretReadiness(ready=True, reason="ready")
 
@@ -75,8 +75,8 @@ def _not_ready(reason: str) -> SecretReadiness:
     return SecretReadiness(ready=False, reason=reason)
 
 
-def _external_secret_unready_reason(external_secret: Mapping[str, Any]) -> str | None:
-    """ExternalSecret 尚未完成同步时返回原因，否则返回 None"""
+def _check_external_secret(external_secret: Mapping[str, Any]) -> str | None:
+    """检查 ExternalSecret 的同步状态，未完成同步时返回原因，否则返回 None"""
     status = _as_mapping(external_secret.get("status"))
     ready_condition = _find_ready_condition(status)
     if ready_condition is None or ready_condition.get("status") != ESO_CONDITION_STATUS_TRUE:
@@ -87,8 +87,8 @@ def _external_secret_unready_reason(external_secret: Mapping[str, Any]) -> str |
     return None
 
 
-def _secret_unready_reason(secret: Mapping[str, Any] | None, *, es_name: str, es_uid: str) -> str | None:
-    """目标 Secret 不满足就绪条件时返回原因，否则返回 None"""
+def _check_secret(secret: Mapping[str, Any] | None, *, es_name: str, es_uid: str) -> str | None:
+    """检查目标 Secret 的就绪状态，不满足时返回原因，否则返回 None"""
     if secret is None:
         return "secret_missing"
     metadata = _as_mapping(secret.get("metadata"))

@@ -159,10 +159,7 @@ def _find_reusable_version(env: ModuleEnvironment, content_digest: str) -> KMSCo
     """
     return (
         KMSConfigVersion.objects.filter(
-            app_code=env.application.code,
-            module_name=env.module.name,
-            env_name=env.environment,
-            module_environment_id=str(env.pk),
+            env_id=env.pk,
             content_digest=content_digest,
             cluster_name=EnvClusterService(env).get_cluster_name(),
             namespace=env.wl_app.namespace,
@@ -201,7 +198,6 @@ def create_kms_config_version(
     app_code = module_env.application.code
     module_name = module.name
     env_name = module_env.environment
-    module_environment_id = str(module_env.pk)
     version_id = uuid.uuid4().hex
 
     credential_name = build_credential_name(
@@ -209,7 +205,7 @@ def create_kms_config_version(
     )
     payload = build_frozen_payload(
         config_version_id=version_id,
-        module_environment_id=module_environment_id,
+        module_environment_id=str(module_env.pk),
         env_vars=sensitive_env_vars,
     )
     envelope = (kms or make_kms_client(tenant_id)).encrypt_credential_value(payload)
@@ -220,7 +216,7 @@ def create_kms_config_version(
         app_code=app_code,
         module_name=module_name,
         env_name=env_name,
-        module_environment_id=module_environment_id,
+        env_id=module_env.pk,
         status=KMSConfigVersionStatus.PENDING.value,
         envelope=envelope,
         content_digest=_content_digest(sensitive_env_vars, cfg.scope_id),

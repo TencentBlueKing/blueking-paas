@@ -37,7 +37,7 @@ class KMSConfigVersion(AuditedModel):
     app_code = models.CharField(max_length=64)
     module_name = models.CharField(max_length=64)
     env_name = models.CharField(max_length=16)
-    module_environment_id = models.CharField(max_length=32)
+    env_id = models.BigIntegerField("关联的 ModuleEnvironment ID")
 
     # 取值见 KMSConfigVersionStatus
     status = models.CharField("准备状态", max_length=32, default=KMSConfigVersionStatus.PENDING.value)
@@ -66,7 +66,7 @@ class KMSConfigVersion(AuditedModel):
     error_reason = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
-        indexes = [models.Index(fields=["app_code", "module_name", "env_name"])]
+        indexes = [models.Index(fields=["env_id"])]
 
     def __str__(self):
         return f"{self.app_code}/{self.module_name}/{self.env_name}/{self.id}"

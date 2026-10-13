@@ -53,7 +53,7 @@ def recycle_stale_kms_config_versions(deployment: Deployment, **kwargs) -> None:
         .values_list("kms_config_version_id", flat=True)[:KEPT_SUCCESSFUL_DEPLOYMENTS]
     )
     stale = (
-        KMSConfigVersion.objects.filter(module_environment_id=str(env.pk), created__lt=deployment.created)
+        KMSConfigVersion.objects.filter(env_id=env.pk, created__lt=deployment.created)
         .exclude(id__in=kept_ids)
         .exclude(deployments__status=JobStatus.PENDING.value)
     )
@@ -62,7 +62,7 @@ def recycle_stale_kms_config_versions(deployment: Deployment, **kwargs) -> None:
 
 def recycle_module_env_kms_config_versions(env: ModuleEnvironment, **kwargs) -> None:
     """模块删除时，回收环境中的全部配置版本"""
-    recycle_kms_config_versions(KMSConfigVersion.objects.filter(module_environment_id=str(env.pk)), **kwargs)
+    recycle_kms_config_versions(KMSConfigVersion.objects.filter(env_id=env.pk), **kwargs)
 
 
 def recycle_kms_config_versions(

@@ -30,11 +30,11 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
-from paas_wl.bk_app.processes.entities import SecretFileMount
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paas_wl.infras.resources.generation.mapper import MapperProcConfig, get_mapper_proc_config
 from paas_wl.infras.resources.generation.version import AppResVerManager
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:

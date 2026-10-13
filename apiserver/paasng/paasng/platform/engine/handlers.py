@@ -18,9 +18,11 @@
 import logging
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.dispatch import receiver
 from django.utils import timezone
 
+from paasng.platform.engine.configurations.kms.recycler import recycle_stale_kms_config_versions
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
@@ -85,3 +87,14 @@ def update_last_deployed_date(sender, deployment: "Deployment", **kwargs):
 
     env.application.last_deployed_date = now
     env.application.save(update_fields=["last_deployed_date"])
+
+
+@receiver(post_appenv_deploy)
+def recycle_kms_config_versions_after_deploy(sender, deployment: "Deployment", **kwargs):
+    """部署成功后回收不再使用的 KMS 配置版本，失败不影响部署结果"""
+    if not settings.KMS_ENABLED or deployment.status != JobStatus.SUCCESSFUL.value:
+        return
+    try:
+        recycle_stale_kms_config_versions(deployment)
+    except Exception:
+        logger.exception("failed to recycle KMS config versions after deployment %s", deployment.pk)

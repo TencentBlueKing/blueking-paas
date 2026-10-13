@@ -29,8 +29,8 @@ from dataclasses import dataclass
 from django.conf import settings
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.processes.entities import SecretFileMount
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth, make_kms_client
 from paasng.infras.kms.constants import (
     KMS_SECRET_MOUNT_DIR,
@@ -153,7 +153,10 @@ def provision_kms_secret(
 
 
 def _find_reusable_version(env: ModuleEnvironment, content_digest: str) -> KMSConfigVersion | None:
-    """同一环境、同一集群与 namespace 下，内容相同且已就绪过的最新版本"""
+    """同一环境、同一集群与 namespace 下，内容相同且已就绪的最新版本
+
+    最近一次处理失败的版本（error_reason 非空）不再复用，避免远端资源损坏后每次部署都卡在同一个版本上。
+    """
     return (
         KMSConfigVersion.objects.filter(
             app_code=env.application.code,
@@ -164,6 +167,7 @@ def _find_reusable_version(env: ModuleEnvironment, content_digest: str) -> KMSCo
             cluster_name=EnvClusterService(env).get_cluster_name(),
             namespace=env.wl_app.namespace,
             status=KMSConfigVersionStatus.READY.value,
+            error_reason="",
         )
         .order_by("-created")
         .first()

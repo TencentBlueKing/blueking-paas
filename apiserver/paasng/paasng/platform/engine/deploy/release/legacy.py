@@ -26,19 +26,13 @@ from pydantic import ValidationError as PyDanticValidationError
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
-from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
-from paas_wl.bk_app.processes.entities import SecretFileMount
 from paas_wl.bk_app.processes.processes import ProcessManager
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
-from paasng.platform.engine.configurations.kms import (
-    ensure_kms_injection_supported,
-    is_kms_injection_enabled,
-    provision_kms_secret,
-    split_kms_managed_env_vars,
-)
+from paasng.platform.engine.configurations.kms import is_kms_injection_enabled, prepare_kms_process_env
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails
 from paasng.platform.engine.deploy.bg_wait.wait_deployment import wait_for_release
@@ -219,15 +213,7 @@ def _get_extra_envs_and_secret_mounts(
 
     if not from_deploy_flow:
         raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
-
-    ensure_kms_injection_supported(env)
-
-    plain_values, sensitive_values = split_kms_managed_env_vars(env)
-    if not sensitive_values:
-        return plain_values, []
-
-    NamespacesHandler.new_by_app(env.wl_app).ensure_namespace(env.wl_app.namespace)
-    return plain_values, [provision_kms_secret(env, deployment, sensitive_values)]
+    return prepare_kms_process_env(env, deployment)
 
 
 def release_to_k8s(

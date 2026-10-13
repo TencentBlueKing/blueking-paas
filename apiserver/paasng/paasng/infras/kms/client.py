@@ -201,7 +201,7 @@ class KMSClient:
         return _parse_credential(data)
 
     def delete_credential(self, credential_id: int) -> None:
-        """删除凭证。调用方需先确认已无消费者（例如对应 Secret 已回收）"""
+        """删除凭证，凭证已不存在时 KMS 同样返回成功。调用方需先确认已无消费者（例如对应 Secret 已回收）"""
         self._request("DELETE", "/api/v1/credential", {"credential_id": credential_id})
         logger.info("KMS credential deleted, credential_id: %s", credential_id)
 

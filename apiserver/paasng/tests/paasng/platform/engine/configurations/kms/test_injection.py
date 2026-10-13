@@ -18,7 +18,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
-from paas_wl.bk_app.processes.entities import SecretFileMount
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.engine.configurations.env_var.encryption import (
     encrypt_sensitive_values,

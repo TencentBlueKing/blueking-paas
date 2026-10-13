@@ -22,8 +22,8 @@ import pytest
 from django.test import override_settings
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.processes.entities import SecretFileMount
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth
 from paasng.infras.kms.exceptions import (
     KMSAPIError,
@@ -40,8 +40,13 @@ from paasng.platform.engine.configurations.kms.provisioner import (
     load_kms_settings,
     provision_kms_secret,
 )
-from paasng.platform.engine.constants import KMSConfigVersionStatus
-from paasng.platform.engine.models import KMSConfigVersion
+from paasng.platform.engine.configurations.kms.recycler import (
+    RECYCLING_REASON,
+    recycle_module_env_kms_config_versions,
+    recycle_stale_kms_config_versions,
+)
+from paasng.platform.engine.constants import JobStatus, KMSConfigVersionStatus
+from paasng.platform.engine.models import Deployment, KMSConfigVersion
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -59,6 +64,7 @@ class FakeKMS(KMSClient):
         self.credentials: dict[str, CredentialInfo] = {}
         self.envelopes: dict[str, str] = {}
         self.created: list[str] = []
+        self.deleted_ids: list[int] = []
         # 创建请求已生效，但调用方收到网络错误
         self.create_outcome_unknown = False
         self.fail_create_with: Exception | None = None
@@ -95,6 +101,10 @@ class FakeKMS(KMSClient):
             raise KMSRequestError("timeout after the request was accepted")
         return self._next_id
 
+    def delete_credential(self, credential_id: int) -> None:
+        self.deleted_ids.append(credential_id)
+        self.credentials = {k: v for k, v in self.credentials.items() if v.credential_id != credential_id}
+
 
 class FakeKube:
     """Kubernetes 替身：按 (apiVersion, kind, namespace, name) 保存对象，UID 在首次 apply 时分配"""
@@ -103,6 +113,7 @@ class FakeKube:
         self.objects: dict[tuple[str, str, str | None, str], dict[str, Any]] = {}
         self.applied_kinds: list[str] = []
         self.fail_apply_with: Exception | None = None
+        self.fail_delete_with: Exception | None = None
         self._seq = 0
 
     def apply(self, manifest):
@@ -126,6 +137,14 @@ class FakeKube:
 
     def get(self, *, api_version, kind, name, namespace):
         return copy.deepcopy(self.objects.get((api_version, kind, namespace, name)))
+
+    def delete(self, *, api_version, kind, name, namespace):
+        if self.fail_delete_with is not None:
+            raise self.fail_delete_with
+        self.objects.pop((api_version, kind, namespace, name), None)
+        # 模拟 ownerReference 级联删除目标 Secret
+        if kind == "ExternalSecret":
+            self.objects.pop(("v1", "Secret", namespace, name), None)
 
     def mark_synced(self, namespace: str, name: str) -> None:
         """模拟 ESO 同步成功：ExternalSecret 变为 Ready，并生成带 ownerReference 的目标 Secret"""
@@ -408,6 +427,21 @@ class TestProvisionKMSSecret:
             api_version="v1", kind="Secret", name=first.secret_name, namespace=bk_stag_env.wl_app.namespace
         )
 
+    def test_failed_version_is_not_reused(self, bk_stag_env, bk_deployment, kms, kms_cfg):
+        kube = SyncingKube()
+        first = provision_kms_secret(
+            bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+        # 模拟复用时远端资源已损坏，等待就绪失败
+        KMSConfigVersion.objects.update(error_reason="external_secret_not_ready:SecretSyncedError")
+
+        second = provision_kms_secret(
+            bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+
+        assert second.secret_name != first.secret_name
+        assert KMSConfigVersion.objects.count() == 2
+
     def test_changed_values_create_new_version(self, bk_stag_env, bk_deployment, kms, kms_cfg):
         kube = SyncingKube()
         first = provision_kms_secret(
@@ -438,3 +472,86 @@ class TestProvisionKMSSecret:
         assert version is not None
         assert version.error_reason == "kms_api_error_1000"
         assert kube.applied_kinds == []
+
+
+@pytest.mark.usefixtures("wl_app", "_cluster")
+class TestRecycleKMSConfigVersions:
+    @pytest.fixture()
+    def kube(self) -> SyncingKube:
+        return SyncingKube()
+
+    @pytest.fixture()
+    def factories(self, kms, kube):
+        return {"kms_factory": lambda tenant_id: kms, "kube_factory": lambda cluster_name: kube}
+
+    @pytest.fixture()
+    def deploy(self, bk_stag_env, bk_module, kms, kube, kms_cfg):
+        """创建一次部署并为其准备 KMS 配置版本；每次使用不同的敏感值，以生成新版本"""
+
+        def _deploy(status: JobStatus = JobStatus.SUCCESSFUL) -> Deployment:
+            deployment = create_fake_deployment(bk_module, app_environment="stag")
+            values = {**SENSITIVE_ENV, "DB_PASSWORD": f"pwd-{deployment.pk}"}
+            provision_kms_secret(bk_stag_env, deployment, values, kms=kms, kube=kube, kms_settings=kms_cfg)
+            Deployment.objects.filter(pk=deployment.pk).update(status=status.value)
+            deployment.refresh_from_db()
+            return deployment
+
+        return _deploy
+
+    def _es_exists(self, kube, version: KMSConfigVersion) -> bool:
+        return bool(
+            kube.get(
+                api_version=ES_API_VERSION,
+                kind="ExternalSecret",
+                name=version.resource_name,
+                namespace=version.namespace,
+            )
+        )
+
+    def test_keeps_latest_two_successful_deployments(self, deploy, kms, kube, factories):
+        first, second, third = deploy(), deploy(), deploy()
+        stale = first.kms_config_version
+
+        recycle_stale_kms_config_versions(third, **factories)
+
+        assert set(KMSConfigVersion.objects.values_list("pk", flat=True)) == {
+            second.kms_config_version_id,
+            third.kms_config_version_id,
+        }
+        assert not self._es_exists(kube, stale)
+        assert not kube.get(
+            api_version=ES_API_VERSION, kind="ClusterSecretStore", name=stale.resource_name, namespace=None
+        )
+        assert kms.deleted_ids == [stale.credential_id]
+        assert self._es_exists(kube, second.kms_config_version)
+
+    def test_skips_versions_of_unfinished_or_newer_deployments(self, deploy, factories):
+        pending = deploy(status=JobStatus.PENDING)
+        failed = deploy(status=JobStatus.FAILED)
+        deploy()
+        current = deploy()
+        newer = deploy(status=JobStatus.PENDING)
+
+        recycle_stale_kms_config_versions(current, **factories)
+
+        remaining = set(KMSConfigVersion.objects.values_list("pk", flat=True))
+        assert pending.kms_config_version_id in remaining
+        assert failed.kms_config_version_id not in remaining
+        assert newer.kms_config_version_id in remaining
+
+    def test_failed_recycling_keeps_record_and_blocks_reuse(self, deploy, kube, factories):
+        first, _, third = deploy(), deploy(), deploy()
+        kube.fail_delete_with = ApiException(status=500, reason="boom")
+
+        recycle_stale_kms_config_versions(third, **factories)
+
+        stale = KMSConfigVersion.objects.get(pk=first.kms_config_version_id)
+        assert stale.error_reason == RECYCLING_REASON
+
+    def test_module_deletion_recycles_all_versions(self, bk_stag_env, deploy, kms, factories):
+        deploy(), deploy(status=JobStatus.PENDING)
+
+        recycle_module_env_kms_config_versions(bk_stag_env, **factories)
+
+        assert KMSConfigVersion.objects.count() == 0
+        assert len(kms.deleted_ids) == 2

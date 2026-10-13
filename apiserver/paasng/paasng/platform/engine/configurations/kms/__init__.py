@@ -24,6 +24,7 @@ from .injection import (
     collect_kms_managed_keys_by_env,
     ensure_kms_injection_supported,
     ensure_kms_mount_available,
+    prepare_kms_process_env,
     split_kms_managed_env_vars,
     strip_kms_managed_env_vars,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "ensure_kms_injection_supported",
     "ensure_kms_mount_available",
     "is_kms_injection_enabled",
+    "prepare_kms_process_env",
     "provision_kms_secret",
     "split_kms_managed_env_vars",
     "strip_kms_managed_env_vars",

@@ -21,6 +21,7 @@ from typing import Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.utils.structure import register
 
 
@@ -35,20 +36,6 @@ class Resources:
 
     limits: Optional[Spec] = None
     requests: Optional[Spec] = None
-
-
-@dataclass(frozen=True)
-class SecretFileMount:
-    """将 Secret 中指定的 key 以只读文件的形式挂载到进程的主容器
-
-    每个 sub_path 对应 Secret 的一个 key，挂载为 `{mount_dir}/{sub_path}` 文件（使用 subPath）。
-    只挂载到主容器，不影响 sidecar 容器。
-    """
-
-    volume_name: str
-    secret_name: str
-    mount_dir: str
-    sub_paths: tuple[str, ...]
 
 
 @dataclass

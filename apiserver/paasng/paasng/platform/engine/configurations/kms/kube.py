@@ -52,6 +52,8 @@ class KubeResourceClient(Protocol):
 
     def get(self, *, api_version: str, kind: str, name: str, namespace: Optional[str]) -> Optional[Dict[str, Any]]: ...
 
+    def delete(self, *, api_version: str, kind: str, name: str, namespace: Optional[str]) -> None: ...
+
 
 class KubeResources:
     """KubeResourceClient 的实现：在单个集群中读写资源，对外只使用普通 dict"""
@@ -82,6 +84,10 @@ class KubeResources:
         except ResourceMissing:
             return None
         return obj.to_dict()
+
+    def delete(self, *, api_version: str, kind: str, name: str, namespace: Optional[str]) -> None:
+        """按名称删除资源，不存在时忽略"""
+        self._get_kres(api_version, kind).delete(name, namespace=namespace)
 
     def _get_kres(self, api_version: str, kind: str) -> BaseKresource:
         return _KRES_BY_KIND[kind](self._client, api_version=api_version)

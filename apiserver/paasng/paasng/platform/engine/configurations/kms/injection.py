@@ -19,13 +19,17 @@
 from collections.abc import Mapping
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
-from paas_wl.bk_app.processes.entities import SecretFileMount
+from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.infras.kms.constants import KMS_SECRET_MOUNT_DIR, KMS_SECRET_VOLUME_NAME
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.env_var.encryption import KMS_UNMANAGED_ENV_KEYS, collect_sensitive_keys
 from paasng.platform.engine.exceptions import DeployShouldAbortError
+from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.models import Module
+
+from .provisioner import provision_kms_secret
 
 
 def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
@@ -58,6 +62,22 @@ def split_kms_managed_env_vars(
     plain = {key: value for key, value in all_values.items() if key not in managed_keys}
     managed = {key: value for key, value in all_values.items() if key in managed_keys}
     return plain, managed
+
+
+def prepare_kms_process_env(
+    env: ModuleEnvironment, deployment: Deployment
+) -> tuple[dict[str, str], list[SecretFileMount]]:
+    """普通应用的进程与 pre_release 命令：返回（普通环境变量，需要挂载的 KMS Secret 文件）
+
+    同一次部署中多次调用时，敏感变量内容不变就会复用同一个配置版本，挂载的 Secret 相同。
+    """
+    ensure_kms_injection_supported(env)
+    plain_values, sensitive_values = split_kms_managed_env_vars(env)
+    if not sensitive_values:
+        return plain_values, []
+
+    NamespacesHandler.new_by_app(env.wl_app).ensure_namespace(env.wl_app.namespace)
+    return plain_values, [provision_kms_secret(env, deployment, sensitive_values)]
 
 
 def strip_kms_managed_env_vars(

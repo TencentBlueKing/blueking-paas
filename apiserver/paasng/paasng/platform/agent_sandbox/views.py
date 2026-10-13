@@ -42,6 +42,7 @@ from paasng.platform.agent_sandbox.artifact import (
     build_preview_url,
     delete_volume_artifact,
 )
+from paasng.platform.agent_sandbox.constants import SandboxDeleteSource, SandboxOperation
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxActiveCountLimitExceeded,
     SandboxAlreadyExists,
@@ -60,7 +61,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     VolumeNotMountable,
     VolumeShareLimitExceeded,
 )
-from paasng.platform.agent_sandbox.mixins import SandboxViewMixin
+from paasng.platform.agent_sandbox.mixins import SandboxViewMixin, record_sandbox_request
 from paasng.platform.agent_sandbox.models import Sandbox, Volume
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.agent_sandbox.resident_daemon_client import get_resident_daemon_client
@@ -380,6 +381,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         request_body=SandboxCreateInputSLZ(),
         responses={status.HTTP_201_CREATED: SandboxCreateOutputSLZ()},
     )
+    @record_sandbox_request(SandboxOperation.CREATE)
     def create(self, request, code):
         """创建一个新的 Agent Sandbox。接口在沙箱就绪、可以接受请求后才返回。"""
         application = self.get_application()
@@ -421,6 +423,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         query_serializer=SandboxListQuerySLZ(),
         responses={status.HTTP_200_OK: SandboxCreateOutputSLZ(many=True)},
     )
+    @record_sandbox_request(SandboxOperation.LIST)
     def list(self, request, code):
         """查询应用下的 Agent Sandbox 列表。
 
@@ -446,12 +449,13 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         return Response(SandboxCreateOutputSLZ(queryset, many=True).data)
 
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
+    @record_sandbox_request(SandboxOperation.DESTROY)
     def destroy(self, request, sandbox_id):
         """停止并销毁一个 Agent Sandbox"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
 
         try:
-            delete_sandbox(sandbox)
+            delete_sandbox(sandbox, delete_source=SandboxDeleteSource.USER)
         except SandboxError:
             logger.exception("Failed to delete agent sandbox")
             raise error_codes.AGENT_SANDBOX_DELETE_FAILED
@@ -464,6 +468,7 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, IsAPIGWVerifiedApp]
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxCreateFolderInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.CREATE_FOLDER)
     def create_folder(self, request, sandbox_id):
         """在 Agent Sandbox 中创建目录。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -481,6 +486,7 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxUploadFileInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.UPLOAD_FILE)
     def upload_file(self, request, sandbox_id):
         """上传文件到 Agent Sandbox。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -498,6 +504,7 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxDeleteFileInputSLZ(), responses={204: ""})
+    @record_sandbox_request(SandboxOperation.DELETE_FILE)
     def delete_file(self, request, sandbox_id):
         """删除 Agent Sandbox 中的文件或目录。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -515,6 +522,7 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=SandboxDownloadFileInputSLZ(), responses={200: ""})
+    @record_sandbox_request(SandboxOperation.DOWNLOAD_FILE)
     def download_file(self, request, sandbox_id):
         """下载 Agent Sandbox 中的文件。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -545,6 +553,7 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["agent_sandbox"], request_body=SandboxExecInputSLZ(), responses={200: SandboxProcessOutputSLZ()}
     )
+    @record_sandbox_request(SandboxOperation.EXEC)
     def exec(self, request, sandbox_id):
         """在 Agent Sandbox 内执行命令。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -575,6 +584,7 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
         request_body=SandboxCodeRunInputSLZ(),
         responses={200: SandboxProcessOutputSLZ()},
     )
+    @record_sandbox_request(SandboxOperation.CODE_RUN)
     def code_run(self, request, sandbox_id):
         """在 Agent Sandbox 内执行代码片段。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)
@@ -596,6 +606,7 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["agent_sandbox"], query_serializer=SandboxGetLogsInputSLZ(), responses={200: SandboxGetLogsOutputSLZ()}
     )
+    @record_sandbox_request(SandboxOperation.LOGS)
     def logs(self, request, sandbox_id):
         """读取 Agent Sandbox 日志。"""
         sandbox = self.get_sandbox_with_perm(request, sandbox_id)

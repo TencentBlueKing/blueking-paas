@@ -35,6 +35,10 @@ class SandboxCreateError(SandboxError):
         self.logs = logs
 
 
+class SandboxNoClusterError(SandboxError):
+    """Raised when no cluster is available for the sandbox's workload type."""
+
+
 class SandboxActiveCountLimitExceeded(SandboxError):
     """Raised when an application has reached the limit of active sandboxes.
 

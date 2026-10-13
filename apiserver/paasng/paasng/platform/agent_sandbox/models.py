@@ -45,7 +45,7 @@ from .e2b.constants import (
 )
 from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded, E2BSandboxNotFound
 from .e2b.keys import generate_api_key, hash_api_key, make_display_prefix
-from .exceptions import SandboxAlreadyExists, SandboxCreateError
+from .exceptions import SandboxAlreadyExists, SandboxNoClusterError
 
 
 class Volume(UuidAuditedModel):
@@ -162,7 +162,7 @@ class SandboxManager(models.Manager):
         try:
             cluster = ClusterAllocator(alloc_ctx).get_default()
         except ValueError as exc:
-            raise SandboxCreateError(f"no available cluster for workload_type={workload_type}: {exc}") from exc
+            raise SandboxNoClusterError(f"no available cluster for workload_type={workload_type}: {exc}") from exc
 
         target = cluster.name
 

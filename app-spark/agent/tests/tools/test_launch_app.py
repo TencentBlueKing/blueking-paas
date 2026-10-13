@@ -27,7 +27,7 @@ from app_spark_agent.app_supervisor import (
     DevServerStatus,
     LaunchResult,
 )
-from app_spark_agent.launch_tool import MAX_LAUNCHES_PER_RUN, LaunchTool
+from app_spark_agent.tools.launch_app import MAX_LAUNCHES_PER_RUN, LaunchTool
 
 
 def make_launched(port: int = 8000, status: DevServerStatus = DevServerStatus.READY) -> LaunchResult:

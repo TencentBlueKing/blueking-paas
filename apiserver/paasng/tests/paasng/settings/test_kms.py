@@ -318,6 +318,32 @@ class TestPlaintextFallback:
             _load(CREDENTIALS, write_kms_files)
         assert "Sensitive setting" not in caplog.text
 
+    @pytest.mark.parametrize(
+        ("hosts", "warned"),
+        [
+            ("[{host='es.example.com', port='9200', http_auth='elastic:pwd'}]", True),
+            ("[{host='es.example.com', port='9200'}]", False),
+        ],
+    )
+    def test_elasticsearch_hosts(self, write_kms_files, caplog, monkeypatch, hosts, warned):
+        monkeypatch.setenv("PAAS_KMS_UNITTEST_ELASTICSEARCH_HOSTS", hosts)
+        with caplog.at_level(logging.WARNING):
+            _load(CREDENTIALS, write_kms_files)
+        assert ("Sensitive setting ELASTICSEARCH_HOSTS" in caplog.text) is warned
+
+    def test_elasticsearch_hosts_from_envelope(self, write_kms_files, caplog):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["env"]["PAAS_ELASTICSEARCH_HOSTS"] = (
+            "[{host='es.example.com', port='9200', http_auth='elastic:pwd'}]"
+        )
+        with caplog.at_level(logging.WARNING):
+            settings = _load(credentials, write_kms_files)
+
+        assert settings.get("ELASTICSEARCH_HOSTS") == [
+            {"host": "es.example.com", "port": "9200", "http_auth": "elastic:pwd"}
+        ]
+        assert "ELASTICSEARCH_HOSTS" not in caplog.text
+
     def test_no_warning_without_password(self, write_kms_files, caplog):
         credentials = copy.deepcopy(CREDENTIALS)
         del credentials["redis"]

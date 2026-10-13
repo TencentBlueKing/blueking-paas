@@ -55,7 +55,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Set, Tuple
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from django.core.exceptions import ImproperlyConfigured
@@ -104,8 +104,28 @@ APISERVER_SENSITIVE_KEYS = [
     "SENTINEL_PASSWORD",
     "CELERY_BROKER_SENTINEL_PASSWORD",
     "CELERY_RESULT_BACKEND_SENTINEL_PASSWORD",
+    "DEFAULT_CACHE_CONFIG",
+    "PLUGIN_REPO_CONF",
+    "SERVICES_VENDOR_CONFIGS",
+    "PAAS_X_BK_DATA_DB_CONF",
+    "ELASTICSEARCH_HOSTS",
 ]
-WORKLOADS_SENSITIVE_KEYS = ["AGENT_SANDBOX_ROUTER_AUTH_TOKEN"]
+WORKLOADS_SENSITIVE_KEYS = ["AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "PYTHON_BUILDPACK_PIP_INDEX_URL"]
+
+
+def _has_url_password(value: Any) -> bool:
+    return isinstance(value, str) and bool(urlsplit(value).password)
+
+
+def _has_es_http_auth(value: Any) -> bool:
+    return isinstance(value, list) and any(isinstance(host, Mapping) and host.get("http_auth") for host in value)
+
+
+# 只在值中确实带有凭证时才告警的配置项，其余敏感配置项有值即告警
+_CREDENTIAL_DETECTORS: Dict[str, Callable[[Any], bool]] = {
+    "ELASTICSEARCH_HOSTS": _has_es_http_auth,
+    "PYTHON_BUILDPACK_PIP_INDEX_URL": _has_url_password,
+}
 
 # (配置项前缀, mysql 实例名, 加密连接串的环境变量名)，与 get_database_conf 的调用保持一致
 _DATABASES: List[Tuple[str, str, str]] = [
@@ -233,7 +253,9 @@ def _apply_env_vars(settings: LazySettings, env_vars: Mapping[str, Any], envvar_
 
 def _warn_plaintext(settings: LazySettings, sensitive_keys: List[str], provided: Collection[str]):
     for key in sensitive_keys:
-        if key not in provided and settings.get(key):
+        if key in provided or not (value := settings.get(key)):
+            continue
+        if _CREDENTIAL_DETECTORS.get(key, bool)(value):
             logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", key)
 
 

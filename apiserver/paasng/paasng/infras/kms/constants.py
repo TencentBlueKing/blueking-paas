@@ -20,7 +20,7 @@ from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 KMS_USERNAME_HEADER = "X-Bk-Username"
 KMS_TENANT_ID_HEADER = API_HERDER_TENANT_ID
 
-# 加密算法类别：normal 为国际算法（RSA/AES），当前不支持国密
+# get_crypto_info 的类别，目前 KMS 只接受 normal。实际算法由 KMS 部署配置决定
 CRYPTO_CATEGORY_NORMAL = "normal"
 # 凭证类型：secret 为任意文本类凭证
 CREDENTIAL_TYPE_SECRET = "secret"
@@ -30,10 +30,9 @@ CREDENTIAL_TYPE_SECRET = "secret"
 SCOPE_TYPE_CUSTOM = "scope"
 SUPPORTED_SCOPE_TYPES = frozenset({"biz", "biz_set", SCOPE_TYPE_CUSTOM})
 
-# 当前只支持 RSA 包装对称密钥、AES-128-CBC 加密明文的组合
-SUPPORTED_CRYPTO_SUITE = ("RSA", "AES", "CBC")
-AES_KEY_BYTES = 16
-AES_BLOCK_BYTES = 16
+# 混合加密中对称密钥与 IV 的长度，AES-128 与 SM4 相同
+SYMMETRIC_KEY_BYTES = 16
+SYMMETRIC_BLOCK_BYTES = 16
 
 ERROR_CODE_RESOURCE_NOT_FOUND = 1034003
 

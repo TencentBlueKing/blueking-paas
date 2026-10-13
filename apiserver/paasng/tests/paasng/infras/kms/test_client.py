@@ -20,6 +20,7 @@ import base64
 import bk_kms
 import pytest
 import requests
+from bkcrypto.asymmetric.ciphers.sm2 import SM2AsymmetricCipher
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -32,9 +33,38 @@ SCOPE = KMSScope(scope_id=7)
 AUTH = ServiceAccountAuth(name_list=("demo-web-prod-kms",), namespace_list=("ns-1",))
 
 
+def _b64(text: str | bytes) -> str:
+    return base64.b64encode(text.encode() if isinstance(text, str) else text).decode("ascii")
+
+
 @pytest.fixture(scope="module")
-def rsa_key():
-    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
+def key_pairs() -> dict[str, tuple[str, str]]:
+    """各非对称算法的（KMS 下发的公钥，应用端 SDK 使用的私钥），均为 Base64 编码的 PEM"""
+    rsa_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    rsa_public = rsa_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    rsa_private = rsa_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    sm2 = SM2AsymmetricCipher()
+    return {
+        "RSA": (_b64(rsa_public), _b64(rsa_private)),
+        "SM2": (_b64(sm2.export_public_key()), _b64(sm2.export_private_key())),
+    }
+
+
+def _crypto_info_data(key_pairs, asymmetric_type="RSA", symmetric_type="AES", symmetric_mode="CBC") -> dict:
+    return {
+        "crypto": {
+            "asymmetric_type": asymmetric_type,
+            "symmetric_type": symmetric_type,
+            "symmetric_mode": symmetric_mode,
+        },
+        "public_key": key_pairs[asymmetric_type][0],
+    }
 
 
 @pytest.fixture
@@ -82,40 +112,26 @@ class FakeSession:
         return self.response
 
 
-def _crypto_info_data(private_key) -> dict:
-    pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    return {
-        "crypto": {"asymmetric_type": "RSA", "symmetric_type": "AES", "symmetric_mode": "CBC"},
-        "public_key": base64.b64encode(pem).decode("ascii"),
-    }
-
-
-def _sdk_private_key(private_key) -> str:
-    """应用端 SDK 要求的私钥格式：Base64 编码的 PEM"""
-    pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    return base64.b64encode(pem).decode("ascii")
-
-
 class TestEncryptCredentialValue:
-    def test_envelope_decrypts_with_app_sdk(self, client, rsa_key, monkeypatch):
-        fake = FakeKMSRequest({"/api/v1/get/crypto_info": _crypto_info_data(rsa_key)})
+    @pytest.mark.parametrize("asymmetric_type", ["RSA", "SM2"])
+    @pytest.mark.parametrize("symmetric_type", ["AES", "SM4"])
+    @pytest.mark.parametrize("symmetric_mode", ["CBC", "CTR"])
+    def test_envelope_decrypts_with_app_sdk(
+        self, client, key_pairs, monkeypatch, asymmetric_type, symmetric_type, symmetric_mode
+    ):
+        data = _crypto_info_data(key_pairs, asymmetric_type, symmetric_type, symmetric_mode)
+        fake = FakeKMSRequest({"/api/v1/get/crypto_info": data})
         monkeypatch.setattr(client, "_request", fake)
 
         envelope = client.encrypt_credential_value('{"DB_PASSWORD": "密码-123"}')
 
-        assert bk_kms.decrypt(envelope, _sdk_private_key(rsa_key)) == '{"DB_PASSWORD": "密码-123"}'
+        sdk_private_key = key_pairs[asymmetric_type][1]
+        assert bk_kms.decrypt(envelope, sdk_private_key) == '{"DB_PASSWORD": "密码-123"}'
         assert fake.calls == [("POST", "/api/v1/get/crypto_info", {"category": "normal"})]
 
-    def test_each_encryption_uses_fresh_key_material(self, client, rsa_key, monkeypatch):
+    def test_each_encryption_uses_fresh_key_material(self, client, key_pairs, monkeypatch):
         monkeypatch.setattr(
-            client, "_request", FakeKMSRequest({"/api/v1/get/crypto_info": _crypto_info_data(rsa_key)})
+            client, "_request", FakeKMSRequest({"/api/v1/get/crypto_info": _crypto_info_data(key_pairs)})
         )
 
         assert client.encrypt_credential_value("same") != client.encrypt_credential_value("same")
@@ -128,9 +144,16 @@ class TestEncryptCredentialValue:
             client.encrypt_credential_value("x" * (PLAINTEXT_MAX_CHARS + 1))
         assert fake.calls == []
 
-    def test_rejects_unsupported_crypto_suite(self, client, rsa_key, monkeypatch):
-        data = _crypto_info_data(rsa_key)
-        data["crypto"]["symmetric_mode"] = "GCM"
+    def test_rejects_unsupported_crypto_suite(self, client, key_pairs, monkeypatch):
+        data = _crypto_info_data(key_pairs, symmetric_mode="GCM")
+        monkeypatch.setattr(client, "_request", FakeKMSRequest({"/api/v1/get/crypto_info": data}))
+
+        with pytest.raises(KMSCryptoError):
+            client.encrypt_credential_value("x")
+
+    def test_rejects_public_key_of_another_algorithm(self, client, key_pairs, monkeypatch):
+        data = _crypto_info_data(key_pairs)
+        data["public_key"] = key_pairs["SM2"][0]
         monkeypatch.setattr(client, "_request", FakeKMSRequest({"/api/v1/get/crypto_info": data}))
 
         with pytest.raises(KMSCryptoError):

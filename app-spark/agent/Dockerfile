@@ -45,6 +45,11 @@ ADD ./pyproject.toml .
 ADD ./uv.lock .
 ADD ./README.md .
 ADD ./app_spark_agent ./app_spark_agent
+ADD ./app-template ./app-template
+
+# Copy rather than hardlink: user projects build their .venv under /data, usually another
+# filesystem than the uv cache, and uv would otherwise warn about it in every launch log.
+ENV UV_LINK_MODE=copy
 
 # Frozen runtime deps; workspace and state must be distinct paths under /data.
 # All of /data belongs to user, not only the two directories: the Agent also writes its
@@ -56,6 +61,11 @@ RUN UV_COMPILE_BYTECODE=1 UV_PYTHON_DOWNLOADS=never uv sync --frozen --no-dev \
     && .venv/bin/python -m compileall -q app_spark_agent \
     && mkdir -p /data/workspace /data/state \
     && chown -R user:user /data
+
+# Warm the uv cache with the new-project template's packages, so a new project's first launch
+# installs them offline. Only the cache is kept: each project builds its own .venv.
+RUN uv sync --frozen --no-dev --project app-template \
+    && rm -rf app-template/.venv
 
 # Only for a local `docker run`: envd gives the processes it starts its own default PATH, so the
 # API service starts the Agent with the venv's python by absolute path.

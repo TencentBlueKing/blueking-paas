@@ -6,6 +6,7 @@
 """
 
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -110,6 +111,24 @@ class AppLogReader:
     def _error(self, reason: str) -> AppLogReadResult:
         """把失败折成 error 结构体。"""
         return AppLogReadResult(status="error", content=f"{READ_ERROR_PREFIX}: {reason}")
+
+
+def build_read_app_log_tool(*, workspace: Path, state_dir: Path | None = None) -> Callable[[], AppLogReadResult]:
+    """Return the read_app_log tool, reading the configured APP_LOG_PATH.
+
+    Name and docstring of the returned function are what the model sees.
+
+    :param workspace: The resolved workspace; the log must not lie inside it.
+    :param state_dir: The resolved conversation state directory; the log must not lie inside it.
+    :raises ValueError: APP_LOG_PATH lies inside workspace or state_dir.
+    """
+    reader = AppLogReader(Path(settings.APP_LOG_PATH), workspace=workspace, state_dir=state_dir)
+
+    def read_app_log() -> AppLogReadResult:
+        """Read this session's application log. The path is not a parameter."""
+        return reader.read()
+
+    return read_app_log
 
 
 def resolve_app_log_path(*, workspace: Path, state_dir: Path | None = None) -> Path:

@@ -306,7 +306,7 @@ paths:
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/deployments/:
     post:
       operationId: deploy_with_module
-      description: App 部署（支持多模块）
+      description: App 部署（支持多模块）。返回的 deployment_id 可用于 get_deployment_result 查询结果，也可作为 streams_history_events 的 channel_id 获取部署日志
       tags:
       - 部署相关接口
       parameters:
@@ -393,7 +393,7 @@ paths:
   /bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/:
     get:
       operationId: get_deployment_result
-      description: 查询部署任务结果, 轮询使用本接口时务必间隔 5s
+      description: 查询部署任务结果，轮询本接口时请间隔至少 5 秒
       tags:
       - 部署相关接口
       parameters:
@@ -640,7 +640,7 @@ paths:
                   properties:
                     source_origin:
                       type: integer
-                      description: 代码来源。1 为授权代码库，6 为仅托管镜像的云原生应用
+                      description: 代码来源，默认为 1。1 为授权代码库，6 为仅托管镜像的云原生应用
                     source_init_template:
                       type: string
                       description: 初始化模板名称
@@ -649,7 +649,7 @@ paths:
                       description: 源码控制类型
                     source_repo_url:
                       type: string
-                      description: 代码仓库或镜像地址
+                      description: 代码仓库或镜像地址。未由平台建仓时必填
                     source_dir:
                       type: string
                       description: 源码目录
@@ -658,14 +658,14 @@ paths:
                       description: 是否由平台新建代码仓库
                     source_repo_auth_info:
                       type: object
-                      description: 仓库认证信息
+                      description: 仓库认证信息。优先使用已 OAuth 授权的代码库（source_origin=1），仅在必要时提供
                       properties:
                         username:
                           type: string
                           description: 用户名
                         password:
                           type: string
-                          description: 密码
+                          description: 密码或访问令牌。属敏感信息，请勿在对话中明文索取或回显，优先使用 OAuth 授权代码库
                 bkapp_spec:
                   type: object
                   description: 应用规格
@@ -1435,10 +1435,13 @@ paths:
           application/json:
             schema:
               type: object
+              description: 不传请求体时查询全部日志；传入请求体时 query 必填
+              required:
+              - query
               properties:
                 query:
                   type: object
-                  description: 日志过滤条件
+                  description: 日志过滤条件，无过滤时可传 {}
                   properties:
                     query_string:
                       type: string
@@ -2343,12 +2346,10 @@ paths:
                 source_config:
                   type: object
                   description: 源码或镜像配置
-                  required:
-                  - source_origin
                   properties:
                     source_origin:
                       type: integer
-                      description: 代码来源。1 为授权代码库，6 为仅托管镜像的云原生应用
+                      description: 代码来源，默认为 1。1 为授权代码库，6 为仅托管镜像的云原生应用
                     source_init_template:
                       type: string
                       description: 初始化模板名称
@@ -2366,14 +2367,14 @@ paths:
                       description: 是否由平台新建代码仓库
                     source_repo_auth_info:
                       type: object
-                      description: 仓库认证信息
+                      description: 仓库认证信息。优先使用已 OAuth 授权的代码库（source_origin=1），仅在必要时提供
                       properties:
                         username:
                           type: string
                           description: 用户名
                         password:
                           type: string
-                          description: 密码
+                          description: 密码或访问令牌。属敏感信息，请勿在对话中明文索取或回显，优先使用 OAuth 授权代码库
                 bkapp_spec:
                   type: object
                   description: 应用规格
@@ -2564,6 +2565,25 @@ paths:
       description: 查看应用模块与增强服务的绑定关系详情
       tags:
       - 增强服务
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: service_id
+        schema:
+          type: string
+        required: true
+        description: 增强服务 UUID，可通过 list_module_services 的 bound[].service.uuid 获取；模块未绑定该服务时返回 404
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -2580,8 +2600,7 @@ paths:
           userVerifiedRequired: true
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn:
-        noneSchema: true
+        descriptionEn: Retrieve the binding detail between a module and an addon service
     delete:
       operationId: unbind_service
       description: 解绑应用模块与增强服务

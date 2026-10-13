@@ -14,8 +14,6 @@ import (
 type Credential struct {
 	Username string
 	Password string
-	// RegistryToken 为静态 Bearer token，存在时直接使用，不走换 token 流程
-	RegistryToken string
 }
 
 func (c Credential) String() string { return "<redacted>" }
@@ -77,10 +75,11 @@ func hostOfAuthKey(key string) string {
 
 func (a dockerAuth) credential() (Credential, error) {
 	switch {
+	// 两种 token 的权限范围在签发时已固定，代理无法按请求的 scope 收窄，也无法在过期后续期
 	case a.IdentityToken != "":
-		return Credential{}, errors.New("identitytoken is not supported, use username/password or registrytoken")
+		return Credential{}, errors.New("identitytoken is not supported, use username/password")
 	case a.RegistryToken != "":
-		return Credential{RegistryToken: a.RegistryToken}, nil
+		return Credential{}, errors.New("registrytoken is not supported, use username/password")
 	case a.Username != "" || a.Password != "":
 		return Credential{Username: a.Username, Password: a.Password}, nil
 	case a.Auth != "":
@@ -94,6 +93,6 @@ func (a dockerAuth) credential() (Credential, error) {
 		}
 		return Credential{Username: user, Password: pass}, nil
 	default:
-		return Credential{}, errors.New("no username/password, auth or registrytoken")
+		return Credential{}, errors.New("no username/password or auth")
 	}
 }

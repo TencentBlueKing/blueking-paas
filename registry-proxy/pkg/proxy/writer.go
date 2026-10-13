@@ -84,10 +84,31 @@ func rewriteLink(v string, upstreamURL *url.URL, prefix string) string {
 	if err != nil || !strings.HasPrefix(u.Path, "/v2/") {
 		return v
 	}
-	if u.Host != "" && !strings.EqualFold(u.Host, upstreamURL.Host) {
+	if u.Host != "" && !sameEndpoint(u, upstreamURL) {
 		return v
 	}
 	u.Scheme, u.Host = "", ""
 	u.Path = "/v2/" + prefix + strings.TrimPrefix(u.Path, "/v2/")
 	return v[:start+1] + u.String() + v[end:]
+}
+
+// sameEndpoint 判断 u 是否指向上游自身：scheme 相同、主机名忽略大小写后相同，
+// 省略的端口按 scheme 补为默认端口，registry.example.com 与 registry.example.com:443 视为同一地址
+func sameEndpoint(u, upstreamURL *url.URL) bool {
+	return strings.EqualFold(u.Scheme, upstreamURL.Scheme) &&
+		strings.EqualFold(u.Hostname(), upstreamURL.Hostname()) &&
+		portOrDefault(u) == portOrDefault(upstreamURL)
+}
+
+func portOrDefault(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return "443"
+	case "http":
+		return "80"
+	}
+	return ""
 }

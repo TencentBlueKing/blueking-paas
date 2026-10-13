@@ -44,8 +44,12 @@ type Upstream struct {
 	authTimeout time.Duration
 	now         func() time.Time
 
-	mu        sync.Mutex
+	mu sync.Mutex
+	// cache 按 scope 缓存 Bearer token，条目数不超过 maxCached
 	cache     map[string]cachedAuth
+	maxCached int
+	// shared 缓存与 scope 无关的 Authorization（Basic 或匿名），存在时不查 cache
+	shared    *cachedAuth
 	challenge *cachedChallenge
 	flight    singleflight.Group
 }
@@ -77,6 +81,7 @@ func FromSpecs(specs []Spec, creds map[string]Credential, opts Options) (map[str
 			authTimeout: opts.AuthTimeout,
 			now:         time.Now,
 			cache:       map[string]cachedAuth{},
+			maxCached:   maxCachedAuths,
 		}
 		if c, ok := creds[strings.ToLower(spec.URL.Host)]; ok {
 			u.cred = &c

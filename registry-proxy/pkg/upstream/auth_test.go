@@ -119,6 +119,31 @@ var _ = Describe("Upstream.Authorization", func() {
 			Expect(hit).To(BeFalse())
 		})
 
+		It("sweeps expired entries when full and stops caching when still full", func() {
+			reg.expiresIn = 100
+			now := time.Now()
+			up.now = func() time.Time { return now }
+			up.maxCached = 2
+
+			_, _, _ = up.Authorization(ctx, pullScope("a/1"))
+			_, _, _ = up.Authorization(ctx, pullScope("a/2"))
+			Expect(up.cache).To(HaveLen(2))
+
+			now = now.Add(91 * time.Second)
+			_, _, _ = up.Authorization(ctx, pullScope("a/3"))
+			Expect(up.cache).To(HaveLen(1), "expired entries must be swept")
+
+			_, _, _ = up.Authorization(ctx, pullScope("a/4"))
+			h, _, err := up.Authorization(ctx, pullScope("a/5"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h).To(Equal("Bearer tk-repository:a/5:pull"))
+			Expect(up.cache).To(HaveLen(2))
+			Expect(up.cache).NotTo(HaveKey(ScopeKey(pullScope("a/5"))))
+
+			_, hit, _ := up.Authorization(ctx, pullScope("a/5"))
+			Expect(hit).To(BeFalse(), "a scope that did not fit must be fetched again")
+		})
+
 		It("fetches only once for concurrent misses of the same scope", func() {
 			var wg sync.WaitGroup
 			for range 20 {
@@ -179,6 +204,21 @@ var _ = Describe("Upstream.Authorization", func() {
 			Expect(h).To(Equal("Basic cm9ib3Q6c2VjcmV0"))
 		})
 
+		It("shares one cached result across scopes", func() {
+			up := newTestUpstream(basicURL, robot)
+			_, hit, _ := up.Authorization(ctx, pullScope("a/1"))
+			Expect(hit).To(BeFalse())
+			h, hit, err := up.Authorization(ctx, pullScope("a/2"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hit).To(BeTrue())
+			Expect(h).To(Equal("Basic cm9ib3Q6c2VjcmV0"))
+			Expect(up.cache).To(BeEmpty())
+
+			up.Invalidate(pullScope("a/2"))
+			_, hit, _ = up.Authorization(ctx, pullScope("a/2"))
+			Expect(hit).To(BeFalse(), "Invalidate must drop the shared result")
+		})
+
 		It("fails without a credential", func() {
 			_, _, err := newTestUpstream(basicURL, nil).Authorization(ctx, nil)
 			Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
@@ -198,11 +238,6 @@ var _ = Describe("Upstream.Authorization", func() {
 			h, _, err := newTestUpstream(openURL, nil).Authorization(ctx, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h).To(BeEmpty())
-		})
-
-		It("uses a static registry token as Bearer", func() {
-			h, _, _ := newTestUpstream(openURL, &Credential{RegistryToken: "static"}).Authorization(ctx, nil)
-			Expect(h).To(Equal("Bearer static"))
 		})
 	})
 })

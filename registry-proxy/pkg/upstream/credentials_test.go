@@ -18,14 +18,12 @@ var _ = Describe("LoadCredentials", func() {
 	It("normalizes hosts and decodes every supported form", func() {
 		creds, err := LoadCredentials(writeDockerConfig(`{"auths": {
 			"Mirrors.Example.com": {"username": "u1", "password": "p1"},
-			"https://registry.example.com:8443/v2/": {"auth": "dTI6cDI6d2l0aDpjb2xvbg=="},
-			"static.example.com": {"registrytoken": "rt"}
+			"https://registry.example.com:8443/v2/": {"auth": "dTI6cDI6d2l0aDpjb2xvbg=="}
 		}}`))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(creds).To(Equal(map[string]Credential{
 			"mirrors.example.com":       {Username: "u1", Password: "p1"},
 			"registry.example.com:8443": {Username: "u2", Password: "p2:with:colon"},
-			"static.example.com":        {RegistryToken: "rt"},
 		}))
 	})
 
@@ -36,6 +34,7 @@ var _ = Describe("LoadCredentials", func() {
 			Expect(err.Error()).NotTo(ContainSubstring("s3cr3t"))
 		},
 		Entry("identitytoken", `{"auths": {"a.com": {"identitytoken": "x"}}}`),
+		Entry("registrytoken", `{"auths": {"a.com": {"registrytoken": "s3cr3t"}}}`),
 		Entry("empty entry", `{"auths": {"a.com": {}}}`),
 		Entry("bad auth", `{"auths": {"a.com": {"auth": "!!"}}}`),
 		Entry("duplicated host", `{"auths": {"a.com": {"auth": "YTpi"}, "https://a.com": {"auth": "YTpi"}}}`),

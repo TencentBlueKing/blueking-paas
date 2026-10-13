@@ -26,6 +26,8 @@ type fakeRegistry struct {
 	manifests map[string][]byte // repo:ref
 	blobs     map[string][]byte // repo@digest
 	uploads   map[string][]byte // upload id
+	// uploadLocation 为最近一次返回的续传地址（路径与查询串）
+	uploadLocation string
 	// redirectBlobs 为 true 时 blob 下载返回 307 到对象存储，否则由上游直接返回数据
 	redirectBlobs bool
 	// storage 模拟对象存储，只提供 307 的目标地址；代理不跟随重定向，测试中不会访问它
@@ -76,6 +78,12 @@ func (f *fakeRegistry) recorded() []recordedRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]recordedRequest(nil), f.requests...)
+}
+
+func (f *fakeRegistry) lastUploadLocation() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.uploadLocation
 }
 
 func (f *fakeRegistry) putBlob(repo string, content []byte) string {
@@ -237,10 +245,12 @@ func (f *fakeRegistry) upload(w http.ResponseWriter, r *http.Request, repo, id s
 			}
 		}
 		id := "upstream-" + randomHex(8)
+		loc := "/v2/" + repo + "/blobs/uploads/" + id + "?_state=s0"
 		f.mu.Lock()
 		f.uploads[id] = nil
+		f.uploadLocation = loc
 		f.mu.Unlock()
-		w.Header().Set("Location", "/v2/"+repo+"/blobs/uploads/"+id+"?_state=s0")
+		w.Header().Set("Location", loc)
 		w.Header().Set("Docker-Upload-UUID", id)
 		w.WriteHeader(http.StatusAccepted)
 	case r.Method == http.MethodPatch:
@@ -254,7 +264,11 @@ func (f *fakeRegistry) upload(w http.ResponseWriter, r *http.Request, repo, id s
 			http.Error(w, "unknown upload", http.StatusNotFound)
 			return
 		}
-		w.Header().Set("Location", f.URL+"/v2/"+repo+"/blobs/uploads/"+id+"?_state=s"+fmt.Sprint(n))
+		loc := "/v2/" + repo + "/blobs/uploads/" + id + "?_state=s" + fmt.Sprint(n)
+		f.mu.Lock()
+		f.uploadLocation = loc
+		f.mu.Unlock()
+		w.Header().Set("Location", f.URL+loc)
 		w.Header().Set("Range", fmt.Sprintf("0-%d", n-1))
 		w.WriteHeader(http.StatusAccepted)
 	case r.Method == http.MethodPut:

@@ -10,6 +10,7 @@ const (
 	DenyTokenMissing      = "token_missing"
 	DenyTokenExpired      = "token_expired"
 	DenyTokenInvalid      = "token_invalid"
+	DenyInvalidQuery      = "invalid_query"
 	DenyRouteNotFound     = "route_not_found"
 	DenyDeleteNotAllowed  = "delete_not_allowed"
 	DenyUnknownUpstream   = "unknown_upstream"

@@ -19,6 +19,9 @@ const (
 	defaultTokenExpiresIn = 60 * time.Second
 	challengeTTL          = 10 * time.Minute
 	maxTokenResponseBytes = 1 << 20
+	// 每个上游按 scope 缓存的 token 条数上限。token 有效期不超过 TokenMaxTTL，
+	// 正常构建在该时间窗内用到的 scope 远少于此；前缀授权下可以用随机仓库名刷出大量 scope
+	maxCachedAuths = 16384
 )
 
 // 上游鉴权失败的归类，取值与拒绝原因一致
@@ -76,9 +79,6 @@ func ScopeKey(scopes []Scope) string {
 // Authorization 返回访问上游所需的 Authorization 头，按 scope 缓存，过期前复用。
 // 返回空串表示匿名访问。hit 表示命中缓存。
 func (u *Upstream) Authorization(ctx context.Context, scopes []Scope) (header string, hit bool, err error) {
-	if u.cred != nil && u.cred.RegistryToken != "" {
-		return "Bearer " + u.cred.RegistryToken, true, nil
-	}
 	key := ScopeKey(scopes)
 	if h, ok := u.cached(key); ok {
 		return h, true, nil
@@ -90,13 +90,11 @@ func (u *Upstream) Authorization(ctx context.Context, scopes []Scope) (header st
 		}
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), u.authTimeout)
 		defer cancel()
-		h, ttl, err := u.fetch(fctx, scopes)
+		h, ttl, perScope, err := u.fetch(fctx, scopes)
 		if err != nil {
 			return "", err
 		}
-		u.mu.Lock()
-		u.cache[key] = cachedAuth{header: h, expires: u.now().Add(ttl)}
-		u.mu.Unlock()
+		u.store(key, cachedAuth{header: h, expires: u.now().Add(ttl)}, perScope)
 		return h, nil
 	})
 	if err != nil {
@@ -110,6 +108,7 @@ func (u *Upstream) Invalidate(scopes []Scope) {
 	key := ScopeKey(scopes)
 	u.mu.Lock()
 	delete(u.cache, key)
+	u.shared = nil
 	u.challenge = nil
 	u.mu.Unlock()
 }
@@ -117,6 +116,12 @@ func (u *Upstream) Invalidate(scopes []Scope) {
 func (u *Upstream) cached(key string) (string, bool) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	if s := u.shared; s != nil {
+		if u.now().Before(s.expires) {
+			return s.header, true
+		}
+		u.shared = nil
+	}
 	c, ok := u.cache[key]
 	if !ok {
 		return "", false
@@ -128,34 +133,58 @@ func (u *Upstream) cached(key string) (string, bool) {
 	return c.header, true
 }
 
-func (u *Upstream) fetch(ctx context.Context, scopes []Scope) (string, time.Duration, error) {
+// store 写入缓存。按 scope 的缓存已满时先清除过期条目，仍然满则不缓存，
+// 只影响后续请求是否需要重新换 token
+func (u *Upstream) store(key string, c cachedAuth, perScope bool) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if !perScope {
+		u.shared = &c
+		return
+	}
+	if len(u.cache) >= u.maxCached {
+		now := u.now()
+		for k, v := range u.cache {
+			if !now.Before(v.expires) {
+				delete(u.cache, k)
+			}
+		}
+		if len(u.cache) >= u.maxCached {
+			return
+		}
+	}
+	u.cache[key] = c
+}
+
+// fetch 换取 Authorization；perScope 表示结果与 scope 相关（Bearer），否则所有 scope 共用
+func (u *Upstream) fetch(ctx context.Context, scopes []Scope) (header string, ttl time.Duration, perScope bool, err error) {
 	ch, err := u.getChallenge(ctx)
 	if err != nil {
-		return "", 0, err
+		return "", 0, false, err
 	}
 	switch strings.ToLower(ch.scheme) {
 	case "":
 		// /v2/ 无需认证：有凭证时仍带上 Basic，兼容只对部分仓库要求认证的上游
 		if u.cred == nil {
-			return "", u.maxTTL, nil
+			return "", u.maxTTL, false, nil
 		}
-		return u.basic(), u.maxTTL, nil
+		return u.basic(), u.maxTTL, false, nil
 	case "basic":
 		if u.cred == nil {
-			return "", 0, authFailed("upstream %s requires credentials but none configured", u.URL.Host)
+			return "", 0, false, authFailed("upstream %s requires credentials but none configured", u.URL.Host)
 		}
-		return u.basic(), u.maxTTL, nil
+		return u.basic(), u.maxTTL, false, nil
 	case "bearer":
 		token, ttl, err := u.requestToken(ctx, ch.params, scopes)
 		if err != nil {
 			u.mu.Lock()
 			u.challenge = nil
 			u.mu.Unlock()
-			return "", 0, err
+			return "", 0, false, err
 		}
-		return "Bearer " + token, ttl, nil
+		return "Bearer " + token, ttl, true, nil
 	default:
-		return "", 0, authFailed("upstream %s: unsupported auth scheme %q", u.URL.Host, ch.scheme)
+		return "", 0, false, authFailed("upstream %s: unsupported auth scheme %q", u.URL.Host, ch.scheme)
 	}
 }
 

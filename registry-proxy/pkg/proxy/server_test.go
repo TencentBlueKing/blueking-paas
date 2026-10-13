@@ -169,6 +169,26 @@ func withQuery(loc, key, value string) string {
 	return u.String()
 }
 
+// expectSession 解出客户端 Location 中会话 token 的 payload（不校验签名），
+// 检查会话绑定的仓库为 path 对应的客户端视角仓库、记录的续传地址为上游返回的 upstreamLoc
+func expectSession(loc, path, upstreamLoc string) {
+	GinkgoHelper()
+	token, ok := strings.CutPrefix(loc, path+"/blobs/uploads/")
+	Expect(ok).To(BeTrue(), "Location %q", loc)
+	payload, _, ok := strings.Cut(token, ".")
+	Expect(ok).To(BeTrue(), "session token %q", token)
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	Expect(err).NotTo(HaveOccurred())
+	var s struct {
+		Repo     string `json:"r"`
+		Location string `json:"l"`
+	}
+	Expect(json.Unmarshal(raw, &s)).To(Succeed())
+	Expect(s.Repo).To(Equal(strings.TrimPrefix(path, "/v2/")))
+	Expect(upstreamLoc).NotTo(BeEmpty())
+	Expect(s.Location).To(Equal(upstreamLoc))
+}
+
 // assertProxyError 检查代理自身产生的 OCI 错误响应：状态码、拒绝原因标记，以及只有 401 带质询
 func assertProxyError(resp *http.Response, body []byte, status int, deny string) {
 	GinkgoHelper()
@@ -407,16 +427,16 @@ var _ = Describe("Server", func() {
 			resp, _ := do(http.MethodPost, e.proxy1.URL+repo+"/blobs/uploads/", tok, nil)
 			loc := resp.Header.Get("Location")
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
-			Expect(loc).To(HavePrefix(repo + "/blobs/uploads/"))
-			Expect(loc).NotTo(ContainSubstring("upstream-"), "upstream upload id leaked")
-			Expect(loc).NotTo(ContainSubstring("_state"), "upstream upload state leaked")
+			expectSession(loc, repo, e.regA.lastUploadLocation())
 
 			resp, _ = do(http.MethodPatch, e.proxy2.URL+loc, tok, chunk1)
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 			loc = resp.Header.Get("Location")
+			expectSession(loc, repo, e.regA.lastUploadLocation())
 			resp, _ = do(http.MethodPatch, e.proxy1.URL+loc, tok, chunk2)
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 			loc = resp.Header.Get("Location")
+			expectSession(loc, repo, e.regA.lastUploadLocation())
 			resp, _ = do(http.MethodPut, e.proxy2.URL+withQuery(loc, "digest", d), tok, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(resp.Header.Get("Location")).To(Equal(repo + "/blobs/" + d))
@@ -481,6 +501,8 @@ var _ = Describe("Server", func() {
 					resp, _ := do(http.MethodPost, target+query(), e.token(), nil)
 					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 					expectNoMountReachedA()
+					entries := e.audit.entries()
+					Expect(entries[len(entries)-1].Reference).To(BeEmpty(), "downgraded mount wrote no blob")
 				},
 				Entry("source on another upstream", func() string { return "?mount=" + d + "&from=" + e.aliasB + "/python/python" }),
 				Entry("source denied by pull_deny", func() string { return "?mount=" + d + "&from=" + e.aliasA + "/bkpaas/other" }),
@@ -496,6 +518,15 @@ var _ = Describe("Server", func() {
 				reqs := e.regA.recorded()
 				q, _ := url.ParseQuery(reqs[len(reqs)-1].Query)
 				Expect(q.Get("from")).To(Equal("python/python"))
+				entries := e.audit.entries()
+				Expect(entries[len(entries)-1].Reference).To(Equal(d))
+			})
+
+			It("audits the digest of a monolithic upload", func() {
+				resp, _ := do(http.MethodPost, target+"?digest="+d, e.token(), nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				entries := e.audit.entries()
+				Expect(entries[len(entries)-1].Reference).To(Equal(d))
 			})
 		})
 	})
@@ -540,6 +571,17 @@ var _ = Describe("Server", func() {
 			Entry("encoded slash", http.MethodGet, "/v2/{A}/python%2Fpython/manifests/3", validToken, 404, "route_not_found"),
 			Entry("tag as blob digest", http.MethodGet, "/v2/{A}/python/python/blobs/latest", validToken, 404, "route_not_found"),
 			Entry("invalid digest", http.MethodGet, "/v2/{A}/python/python/blobs/sha256:..", validToken, 404, "route_not_found"),
+			Entry("invalid upload digest", http.MethodPost, "/v2/{A}/bkpaas/app/blobs/uploads/?digest=sha256:..",
+				validToken, 404, "route_not_found"),
+			Entry("invalid mount digest", http.MethodPost,
+				"/v2/{A}/bkpaas/app/blobs/uploads/?mount=latest&from={A}/python/python", validToken, 404, "route_not_found"),
+			Entry("upload digest with mount", http.MethodPost,
+				"/v2/{A}/bkpaas/app/blobs/uploads/?digest=sha256:ab&mount=sha256:cd&from={A}/python/python",
+				validToken, 404, "route_not_found"),
+			// 上游或其前置网关若把 ; 当作分隔符，会看到代理没看到的 mount / from
+			Entry("semicolon-separated mount", http.MethodPost,
+				"/v2/{A}/bkpaas/app/blobs/uploads/?mount=sha256:x;from={A}/bkpaas/other", validToken, 400, "invalid_query"),
+			Entry("invalid query escape", http.MethodGet, "/v2/{A}/python/python/tags/list?n=%zz", validToken, 400, "invalid_query"),
 		)
 
 		It("returns no body for HEAD", func() {
@@ -606,6 +648,12 @@ var _ = Describe("Server with a permissive authorizer", func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 		for _, r := range e.regA.recorded() {
 			Expect(r.Query).NotTo(ContainSubstring("from"), "upstream A received mount request")
+		}
+
+		resp, _ = do(http.MethodPost, a+"/bkpaas/app/blobs/uploads/?mount="+d, tok, nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		for _, r := range e.regA.recorded() {
+			Expect(r.Query).NotTo(ContainSubstring("mount"), "upstream A received mount request without from")
 		}
 	})
 })

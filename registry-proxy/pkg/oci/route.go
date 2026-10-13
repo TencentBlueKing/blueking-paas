@@ -55,7 +55,8 @@ type Route struct {
 	Repo string
 	// Upstream 为 Repo 的第一段，即上游别名
 	Upstream string
-	// Reference 为 manifest 的 tag 或 digest、blob 的 digest、完成上传时的 digest 参数；不含上传会话标识
+	// Reference 为 manifest 的 tag 或 digest、blob 的 digest，或者上传写入的 blob digest：
+	// 完成上传与一步上传取 digest 参数，挂载取 mount 参数。不含上传会话标识
 	Reference string
 	// Action 为请求所需的动作，路由不支持该方法时为空
 	Action Action
@@ -81,7 +82,8 @@ func (r Route) Valid() bool {
 	case RouteBlob:
 		return digestRE.MatchString(r.Reference)
 	case RouteUpload:
-		return r.MountFrom == "" || repoNameRE.MatchString(r.MountFrom)
+		return (r.Reference == "" || digestRE.MatchString(r.Reference)) &&
+			(r.MountFrom == "" || repoNameRE.MatchString(r.MountFrom))
 	default:
 		return true
 	}
@@ -128,7 +130,16 @@ func ParseRoute(method, path string, query url.Values) Route {
 		case r.Session && method == http.MethodPut:
 			r.Reference = query.Get("digest")
 		case !r.Session && method == http.MethodPost:
+			digest, mount := query.Get("digest"), query.Get("mount")
+			if digest != "" && mount != "" {
+				// 一步上传与挂载互斥，同时出现时无法确定写入的是哪个 blob
+				return Route{Kind: RouteUnknown}
+			}
 			r.MountFrom = query.Get("from")
+			r.Reference = digest
+			if mount != "" {
+				r.Reference = mount
+			}
 		}
 	}
 	return r

@@ -49,7 +49,9 @@ type Server struct {
 
 // reqState 贯穿一次请求的处理过程
 type reqState struct {
-	start    time.Time
+	start time.Time
+	// query 为客户端查询串的唯一解析结果，路由解析、mount 降级与转发都只使用它，转发时重新编码
+	query    url.Values
 	route    oci.Route
 	identity Identity
 	upstream *upstream.Upstream
@@ -109,15 +111,26 @@ func New(opts Options) (*Server, error) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// r.URL.Query() 会静默丢弃含 ; 等无法解析的片段，而上游或其前置网关可能仍把 ; 当作分隔符，
+	// 代理看到的参数与上游看到的必须一致，因此无法完整解析的查询串直接拒绝
+	query, queryErr := url.ParseQuery(r.URL.RawQuery)
+	if queryErr != nil {
+		query = url.Values{}
+	}
 	st := &reqState{
 		start:         s.now(),
-		route:         oci.ParseRoute(r.Method, r.URL.EscapedPath(), r.URL.Query()),
+		query:         query,
+		route:         oci.ParseRoute(r.Method, r.URL.EscapedPath(), query),
 		clientBodyLen: r.ContentLength,
 	}
 	body := &countingBody{ReadCloser: r.Body}
 	r.Body = body
 	rw := &responseWriter{ResponseWriter: w}
 	defer s.finish(st, rw, body, r)
+	if queryErr != nil {
+		s.reject(rw, r, st, http.StatusBadRequest, oci.DenyInvalidQuery)
+		return
+	}
 	s.handle(rw, r, st)
 }
 
@@ -172,17 +185,18 @@ func (s *Server) handle(w *responseWriter, r *http.Request, st *reqState) {
 	// 客户端把所有上游视为同一个 registry，会尝试跨上游挂载；直接转发会让上游按同名路径查找来源仓库。
 	// 缺少 from 的 mount 在部分 registry 上表示「从凭证可读的任意仓库挂载」，而代理的上游账号可读全平台。
 	// 以上情况以及来源不可读时，都去掉 mount / from，降级为普通上传。
-	if query := r.URL.Query(); st.route.Kind == oci.RouteUpload &&
+	if query := st.query; st.route.Kind == oci.RouteUpload &&
 		!st.route.Session && (query.Has("mount") || query.Has("from")) {
 		from := st.route.MountFrom
 		if from == "" || !query.Has("mount") || d.DropMount || oci.UpstreamOf(from) != up.Alias {
 			query.Del("mount")
 			query.Del("from")
 			st.route.MountFrom = ""
+			// 降级后没有写入 mount 指定的 blob
+			st.route.Reference = query.Get("digest")
 		} else {
 			query.Set("from", strings.TrimPrefix(from, up.Alias+"/"))
 		}
-		r.URL.RawQuery = query.Encode()
 	}
 
 	s.forward(w, r, st)
@@ -259,7 +273,7 @@ func (s *Server) upstreamURL(r *http.Request, st *reqState) (*url.URL, error) {
 	target := *st.upstream.URL
 	if !st.route.Session {
 		target.Path = "/v2/" + strings.TrimPrefix(r.URL.Path, "/v2/"+st.upstream.Alias+"/")
-		target.RawQuery = r.URL.RawQuery
+		target.RawQuery = st.query.Encode()
 		return &target, nil
 	}
 
@@ -274,7 +288,7 @@ func (s *Server) upstreamURL(r *http.Request, st *reqState) (*url.URL, error) {
 	}
 	target.Path, target.RawPath, target.RawQuery = loc.Path, loc.RawPath, loc.RawQuery
 	// 客户端只需要提供完成上传时的 digest，其余参数（如 _state）以上游返回的为准
-	if d := r.URL.Query().Get("digest"); d != "" {
+	if d := st.query.Get("digest"); d != "" {
 		q := target.Query()
 		q.Set("digest", d)
 		target.RawQuery = q.Encode()
@@ -316,7 +330,7 @@ func (s *Server) upstreamAuthorization(r *http.Request, st *reqState) (http.Head
 }
 
 // rewriteLocation 改写上游响应的 Location：
-//   - 上传会话（开始上传、续传、查询进度）的地址签名为会话 token，不向客户端暴露上游的上传状态；
+//   - 上传会话（开始上传、续传、查询进度）的地址签名为会话 token，客户端无法改写或拿到其他仓库使用；
 //   - 指向上游 /v2/ 的地址改写为代理的相对地址，并补回别名段；
 //   - 指向其他主机的地址（如 307 到对象存储的预签名地址）原样保留。
 func (s *Server) rewriteLocation(h http.Header, method string, status int, target *url.URL, st *reqState) error {
@@ -329,10 +343,10 @@ func (s *Server) rewriteLocation(h http.Header, method string, status int, targe
 		return err
 	}
 	up := st.upstream
-	sameEndpoint := strings.EqualFold(loc.Scheme, up.URL.Scheme) && strings.EqualFold(loc.Host, up.URL.Host)
+	own := sameEndpoint(loc, up.URL)
 
 	if isUploadSessionResponse(st.route, method, status) {
-		if !sameEndpoint {
+		if !own {
 			return errors.New("upload session Location on a foreign host " + loc.Host)
 		}
 		sess := uploadSession{Repo: st.route.Repo, Location: loc.RequestURI()}
@@ -347,7 +361,7 @@ func (s *Server) rewriteLocation(h http.Header, method string, status int, targe
 		return nil
 	}
 
-	if sameEndpoint && strings.HasPrefix(loc.Path, "/v2/") {
+	if own && strings.HasPrefix(loc.Path, "/v2/") {
 		rel := url.URL{Path: "/v2/" + up.Alias + "/" + strings.TrimPrefix(loc.Path, "/v2/"), RawQuery: loc.RawQuery}
 		h.Set("Location", rel.String())
 	}

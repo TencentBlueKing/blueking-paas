@@ -246,6 +246,14 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
         return attrs
 
 
+class SysSourcePackageUploadViaUrlSLZ(SourcePackageUploadViaUrlSLZ):
+    """应用态上传源码包的请求参数，有意复用父类字段，新增字段默认同步"""
+
+    operator = serializers.CharField(required=True, help_text="源码包上传人用户名，允许使用虚拟账号")
+    # 复写基类中的 version 字段
+    version = serializers.CharField(help_text="源码包版本号", required=True, allow_blank=False)
+
+
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):
     package = serializers.FileField(
         help_text="源码包文件",

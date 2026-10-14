@@ -405,6 +405,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn:
+  /system/bkapps/applications/{app_code}/modules/{module}/source_package/link/:
+    post:
+      operationId: upload_ai_agent_source_package_via_link
+      description: 应用态通过链接上传源码包（仅供 AIDEV 为 AI Agent 应用上传）
+      tags:
+      - 源码包管理
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/source_package/link/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Upload a source package via link for an AI Agent application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/source_package/:
     post:
       operationId: upload_source_package

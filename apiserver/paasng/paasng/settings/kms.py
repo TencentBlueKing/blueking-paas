@@ -44,9 +44,15 @@
     sentry.default.dsn                           SENTRY_CONFIG 中的 dsn
     elasticsearch.default.hosts                  ELASTICSEARCH_HOSTS，按环境变量的规则解析
 
+管理命令通过 get_kms_credential 读取：
+
+    kubernetes.default.ca_data/cert_data/key_data/token  initial_default_cluster 的集群访问凭证
+    bkrepo.admin/default/addons/lesscode.password        init_bkrepo 的各账号密码
+
 镜像仓库密码取 registry.external 与 bkrepo.default 中用户名与原配置一致的一组。
 其他字段忽略，允许多个组件共用一份凭证。字段缺失或为空字符串时视为未提供，
 原配置中仍有明文的敏感配置项照常生效，并输出只含配置项名的告警。
+开启 KMS 后 chart 不再渲染上述明文，BKKRILL_ENCRYPT_SECRET_KEY、SLUG_ENCRYPT_SECRET_KEY 缺失时阻止启动。
 
 Redis 连接串仍由原配置提供（可不带密码），密码原样填入并覆盖连接串中原有的密码，
 因此不能包含 "/"、"?"、"#" 及 "%XX" 形式的内容。
@@ -110,6 +116,9 @@ APISERVER_SENSITIVE_KEYS = [
     "ELASTICSEARCH_HOSTS",
 ]
 WORKLOADS_SENSITIVE_KEYS = ["AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "PYTHON_BUILDPACK_PIP_INDEX_URL"]
+# 开启 KMS 后 chart 不再渲染这些明文，缺失时阻止启动：
+# SLUG_ENCRYPT_SECRET_KEY 未配置时会退回 BKKRILL_ENCRYPT_SECRET_KEY，用错密钥将无法解密已有数据
+REQUIRED_KEYS = ["BKKRILL_ENCRYPT_SECRET_KEY", "SLUG_ENCRYPT_SECRET_KEY"]
 
 
 def _has_url_password(value: Any) -> bool:
@@ -207,6 +216,16 @@ def is_platform_kms_enabled() -> bool:
     return os.environ.get(ENABLED_ENV_VAR) in ("true", "True")
 
 
+def get_kms_credential(path: str) -> Optional[str]:
+    """读取信封中不属于 settings 的凭证（如管理命令使用的集群证书、bkrepo 初始化账号）
+
+    未开启 KMS、字段缺失或为空字符串时返回 None。
+    """
+    if not is_platform_kms_enabled():
+        return None
+    return _lookup(_decrypt_credentials(), path)
+
+
 def load_kms_settings(settings: LazySettings) -> LazySettings | KMSSettings:
     """apiserver 配置：未开启 KMS 时原样返回，开启时写入信封中的配置"""
     if not is_platform_kms_enabled():
@@ -214,8 +233,9 @@ def load_kms_settings(settings: LazySettings) -> LazySettings | KMSSettings:
 
     overrides = build_overrides(settings, _decrypt_credentials())
     kms_settings = KMSSettings(settings, overrides)
-    if not kms_settings.get("BKKRILL_ENCRYPT_SECRET_KEY"):
-        raise ImproperlyConfigured("BKKRILL_ENCRYPT_SECRET_KEY is required")
+    for key in REQUIRED_KEYS:
+        if not kms_settings.get(key):
+            raise ImproperlyConfigured(f"{key} is required")
     _warn_plaintext(settings, APISERVER_SENSITIVE_KEYS, overrides.keys())
     return kms_settings
 

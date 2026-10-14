@@ -22,9 +22,11 @@ from pathlib import Path
 
 from blue_krill.storages.blobstore.bkrepo import BKRepoManager, RepositoryType, RequestError
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand
 
 from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+from paasng.settings.kms import get_kms_credential
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -87,18 +89,19 @@ class Command(BaseCommand):
             "--dry-run", dest="dry_run", default=True, type=str2bool, help="避免意外触发, 若想执行需添加该参数"
         )
         parser.add_argument("--init-enabled", dest="init_enabled", type=str2bool, required=True, default=True)
+        # 开启 KMS 时 chart 不传入密码，未传入的密码从信封中读取
         parser.add_argument("--super-username", dest="super_username", required=True)
-        parser.add_argument("--super-password", dest="super_password", required=True)
+        parser.add_argument("--super-password", dest="super_password", default="")
         parser.add_argument("--bkpaas3-username", dest="bkpaas3_username", required=True)
-        parser.add_argument("--bkpaas3-password", dest="bkpaas3_password", required=True)
+        parser.add_argument("--bkpaas3-password", dest="bkpaas3_password", default="")
         parser.add_argument("--addons-username", dest="addons_username", required=True)
-        parser.add_argument("--addons-password", dest="addons_password", required=True)
+        parser.add_argument("--addons-password", dest="addons_password", default="")
         parser.add_argument("--addons-project", dest="addons_project", required=False, default="bksaas-addons")
         parser.add_argument(
             "--addons-project-name", dest="addons_project_name", required=False, default="bksaas-addons"
         )
         parser.add_argument("--lesscode-username", dest="lesscode_username", required=True)
-        parser.add_argument("--lesscode-password", dest="lesscode_password", required=True)
+        parser.add_argument("--lesscode-password", dest="lesscode_password", default="")
 
     def handle(
         self,
@@ -121,10 +124,23 @@ class Command(BaseCommand):
             logger.info(f"init_enabled is set to {init_enabled}, skip init bkrepo")
             return
 
+        super_password = super_password or get_kms_credential("bkrepo.admin.password") or ""
+        bkpaas3_password = bkpaas3_password or get_kms_credential("bkrepo.default.password") or ""
+        addons_password = addons_password or get_kms_credential("bkrepo.addons.password") or ""
+        lesscode_password = lesscode_password or get_kms_credential("bkrepo.lesscode.password") or ""
+
         # 当且仅当 adminUsername 和 adminPassword 不为空时，会初始化 bkrepo 账号和仓库
         if not (super_username and super_password):
             logger.info("super_username or super_password is empty, skip init bkrepo")
             return
+
+        for name, pwd in (
+            ("bkrepo.default.password", bkpaas3_password),
+            ("bkrepo.addons.password", addons_password),
+            ("bkrepo.lesscode.password", lesscode_password),
+        ):
+            if not pwd:
+                raise ImproperlyConfigured(f"{name} is required when initializing bkrepo")
 
         logger.info("开始初始化 bkrepo")
         manager = self.get_manager(super_username, super_password)

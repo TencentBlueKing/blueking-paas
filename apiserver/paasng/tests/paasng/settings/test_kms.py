@@ -41,6 +41,7 @@ from paasng.settings.kms import (
     ENVELOPE_PATH_ENV_VAR,
     PRIVATE_KEY_ENV_VAR,
     KMSSettings,
+    get_kms_credential,
     load_kms_settings,
     load_kms_workloads_settings,
 )
@@ -192,6 +193,7 @@ def test_disabled(monkeypatch, value):
     settings = _make_settings(**BASE_SETTINGS)
     assert load_kms_settings(settings) is settings
     assert load_kms_workloads_settings(settings) is settings
+    assert get_kms_credential("tokens.healthz.token") is None
 
 
 class TestOverrides:
@@ -239,9 +241,16 @@ class TestOverrides:
         assert settings.get("AGENT_SANDBOX_ROUTER_AUTH_TOKEN") == "router-token"
         assert settings.get("HEALTHZ_TOKEN") == "plain"
 
-    def test_bkkrill_is_required(self, write_kms_files):
-        with pytest.raises(ImproperlyConfigured, match="BKKRILL_ENCRYPT_SECRET_KEY is required"):
-            _load(_without(CREDENTIALS, "encryption.bk_krill"), write_kms_files)
+    @pytest.mark.parametrize(
+        ("missing_path", "key"),
+        [
+            ("encryption.bk_krill", "BKKRILL_ENCRYPT_SECRET_KEY"),
+            ("encryption.slug", "SLUG_ENCRYPT_SECRET_KEY"),
+        ],
+    )
+    def test_required_keys(self, write_kms_files, missing_path, key):
+        with pytest.raises(ImproperlyConfigured, match=f"{key} is required"):
+            _load(_without(CREDENTIALS, missing_path), write_kms_files)
 
     def test_non_string_field(self, write_kms_files):
         credentials = copy.deepcopy(CREDENTIALS)
@@ -356,7 +365,7 @@ class TestPlaintextFallback:
         assert "Sensitive setting" not in caplog.text
 
     def test_missing_fields_use_plaintext_with_warning(self, write_kms_files, caplog):
-        credentials = {"encryption": {"bk_krill": {"secret_key": "krill-key"}}}
+        credentials = {"encryption": {"bk_krill": {"secret_key": "krill-key"}, "slug": {"secret_key": "slug-key"}}}
         with caplog.at_level(logging.WARNING):
             settings = _load(
                 credentials,
@@ -487,3 +496,110 @@ def test_settings_module_in_new_process(write_kms_files):
     assert _parse_redis_url(data["cache"])["password"] == REDIS_PASSWORD
     assert data["broker"] == BROKER_URL
     assert data["bkrepo"] == "bkrepo-password"
+
+
+class TestManagementCommands:
+    def test_initial_default_cluster_reads_from_kms(self, write_kms_files, monkeypatch):
+        from paas_wl.infras.cluster.management.commands.initial_default_cluster import Command, EnvVarKey
+
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["kubernetes"] = {
+            "default": {"ca_data": "kms-ca", "cert_data": "kms-cert", "key_data": "kms-key", "token": "kms-token"}
+        }
+        write_kms_files(credentials)
+        monkeypatch.setenv(EnvVarKey.SUB_PATH_DOMAIN, "apps.example.com")
+        monkeypatch.setenv(EnvVarKey.API_SERVER_URLS, '["https://k8s.example.com:6443"]')
+        for key in (EnvVarKey.CA, EnvVarKey.CERT, EnvVarKey.KEY, EnvVarKey.TOKEN):
+            monkeypatch.setenv(key, "")
+
+        data = Command()._build_cluster_data()
+        assert (data.ca_data, data.cert_data, data.key_data, data.token_value) == (
+            "kms-ca",
+            "kms-cert",
+            "kms-key",
+            "kms-token",
+        )
+
+    def test_init_bkrepo_reads_passwords_from_kms(self, write_kms_files, monkeypatch):
+        from django.conf import settings as django_settings
+        from django.core.management import call_command
+
+        from paasng.plat_admin.initialization.management.commands import init_bkrepo
+
+        monkeypatch.setattr(
+            django_settings,
+            "BLOBSTORE_BKREPO_CONFIG",
+            {"PROJECT": "bkpaas", "ENDPOINT": "http://bkrepo"},
+            raising=False,
+        )
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["bkrepo"] = {
+            "admin": {"username": "admin", "password": "kms-super-pwd"},
+            "default": {"username": "bkpaas3", "password": "kms-bkpaas3-pwd"},
+            "addons": {"username": "addons", "password": "kms-addons-pwd"},
+            "lesscode": {"username": "lesscode", "password": "kms-lesscode-pwd"},
+        }
+        write_kms_files(credentials)
+
+        calls: list[tuple] = []
+
+        class FakeManager:
+            def __init__(self, username, password):
+                calls.append(("manager", username, password))
+
+            def create_project(self, name):
+                calls.append(("project", name))
+
+            def create_user_to_project(self, username, password, association_users, project):
+                calls.append(("user_project", username, password, project))
+
+            def create_repo(self, project, repo, repo_type, public):
+                pass
+
+            def create_user_to_repo(self, username, password, association_users, project, repo):
+                calls.append(("user_repo", username, password, project, repo))
+
+        monkeypatch.setattr(init_bkrepo.Command, "get_manager", staticmethod(FakeManager))
+
+        # 命令行不传任何密码参数
+        call_command(
+            "init_bkrepo",
+            "--dry-run=false",
+            "--init-enabled=true",
+            "--super-username=admin",
+            "--bkpaas3-username=bkpaas3",
+            "--addons-username=addons",
+            "--lesscode-username=lesscode",
+        )
+        assert ("manager", "admin", "kms-super-pwd") in calls
+        assert ("user_project", "bkpaas3", "kms-bkpaas3-pwd", "bkpaas") in calls
+        assert ("user_project", "addons", "kms-addons-pwd", "bksaas-addons") in calls
+        assert (
+            "user_repo",
+            "lesscode",
+            "kms-lesscode-pwd",
+            "bkpaas",
+            "npm",
+        ) in calls
+
+    def test_init_bkrepo_missing_password_raises(self, write_kms_files):
+        from django.core.management import call_command
+
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["bkrepo"] = {
+            "admin": {"username": "admin", "password": "kms-super-pwd"},
+            "default": {"username": "bkpaas3", "password": "kms-bkpaas3-pwd"},
+            "addons": {"username": "addons", "password": ""},
+        }
+        write_kms_files(credentials)
+
+        with pytest.raises(ImproperlyConfigured, match=r"bkrepo\.addons\.password is required"):
+            call_command(
+                "init_bkrepo",
+                "--dry-run=true",
+                "--init-enabled=true",
+                "--super-username=admin",
+                "--bkpaas3-username=bkpaas3",
+                "--addons-username=addons",
+                "--lesscode-username=lesscode",
+            )

@@ -348,4 +348,5 @@ def _to_state(conversation: Conversation, state: ConversationState) -> RuntimeSt
         running=state.running,
         dev_server_status=state.dev_server_status,
         replication_pending=state.replication_pending,
+        runtime_ready=state.runtime_ready,
     )

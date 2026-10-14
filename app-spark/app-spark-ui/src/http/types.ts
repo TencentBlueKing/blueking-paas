@@ -107,6 +107,11 @@ export interface RuntimeStateResponse {
    */
   dev_server_status: DevServerStatus | null;
   replication_pending: boolean;
+  /**
+   * 下一轮能不能直接用现有的运行环境。为 false 时（首次对话、空闲回收后、Agent 不可用、
+   * 到了最长存活期）下一轮要先花几十秒准备运行环境。
+   */
+  runtime_ready: boolean;
 }
 
 /**

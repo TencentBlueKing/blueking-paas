@@ -28,13 +28,14 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 走官网直连时是 | 和 `MODEL` 的 `<provider>:<model>` 一起走官网 Bearer。有任一网关项时不拿它补网关 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 走 bkaidev 时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
-| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，由接入层为每个沙箱分配（缺省 `8000`）。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
-| `APP_SPARK_AGENT_PORT` | 否 | 监听端口，缺省 `8090` |
+| `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，未注入时缺省 `8000`。e2b 注入 `preview_port`（默认 `9000`，各沙箱相同）；`local_process` 为每个 Runtime 分一个不同的端口。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
+| `APP_SPARK_AGENT_PORT` | 否 | 监听端口，未注入时缺省 `8090`。镜像 ENV 里的 `8090` 只对本地 `docker run` 生效；e2b 经 envd 启动时由接入层注入 `runtime_port`（默认 `8000`） |
 | `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
 | `APP_SPARK_AGENT_STATE_DIR` | 本地是；容器缺省 `/data/state` | 必须在 workspace 外 |
+| `APP_SPARK_AGENT_PACKAGE_INDEX_URL` | 否 | 用户项目装依赖用的 PyPI 包源，缺省腾讯云镜像 `https://mirrors.cloud.tencent.com/pypi/simple`，不得带凭据（它会写进用户仓库的 `uv.lock`） |
 | `APP_SPARK_AGENT_APP_LOG_PATH` | 否 | 本会话约定应用日志，缺省 `/data/app.log`。必须在 workspace / state 外；日志工具只读这一条。launch 会把应用 stdout/stderr 接到这里，打开失败不阻止已实听的成功 |
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
 
@@ -79,7 +80,9 @@ curl -sS -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 ```
 
 成功时 JSON 含锁定四字段 `version`、`model_ready`、`running`、`dev_server_status`，以及会话游标
-`conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。kube 探针用同一接口，走 `httpHeaders`。
+`conversation_id`、`context_version`、`log_seq`、`ui_event_seq`。app-spark-api 用同一接口轮询，
+Bearer 是它注入的 Runtime token；自建端口代理另外要沙箱访问令牌。平台探沙箱就绪走的是 envd 的
+`:49983/health`，见下面「cube 约定」。
 `dev_server_status` 是 `not_started` / `starting` / `ready` / `stopped`，不含任何预览地址。
 活着和能服务分开成两档，照 kubernetes 的 liveness / readiness：进程在但端口还答不出是 `starting`，
 进程没了才是 `stopped`。合成一个「健康」会让「慢启动」和「崩了」变成同一个答案，而这两者一个该等、
@@ -123,7 +126,7 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 ## 拉起用户应用
 
 这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。唯一的触发路径是模型自己的 `launch_app`
-工具：进程内直调监督器（`launch_tool.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
+工具：进程内直调监督器（`tools/launch_app.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
 `APP_SPARK_AGENT_*`。只有 agent 第一时间知道代码什么时候真的能跑。失败不中断整轮：原因交回模型，
 它可以读日志改完再拉，单轮最多 2 次。
 
@@ -137,13 +140,13 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 被外面怎么寻址，也不该知道。`launch_app` 只回 `status` 和 `port`，`app.launched` 同理。给模型一个地址，
 它就会把那个地址当成真的报给用户。
 
-启动约定：cwd 为 workspace，用本进程的 Python 跑 `uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`
-（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在 `settings.INSTRUCTIONS` 里，两处必须一起改——
-模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
+启动约定：cwd 为 workspace，先 `uv sync --no-dev`，再用项目自己的解释器（`<workspace>/.venv/bin/python`）跑
+`uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在
+`settings.INSTRUCTIONS` 里，两处必须一起改——模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
 
-`--host 0.0.0.0` 是有意的：预览要从沙箱外访问，所以用户应用对整个 pod 网络可见。会话之间的隔离靠
-每个沙箱分到不同的 `APP_PORT`、以及浏览器只能走控制面的反向代理，不靠改这个监听地址。探针只连
-`127.0.0.1:<APP_PORT>`，和听哪个网卡不是一回事。
+`--host 0.0.0.0` 是有意的：预览要从沙箱外访问。e2b 里每个沙箱是独立网络，应用端口都是接入层注入的
+`preview_port`（默认 `9000`）。会话之间靠沙箱主机名和外面的反向代理分开。`local_process` 的多个
+Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.0.0.1:<APP_PORT>`，和听哪个网卡是两件事。
 
 规则：
 
@@ -168,6 +171,23 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 - 模型单轮最多 launch 2 次（`MAX_LAUNCHES_PER_RUN`），额度按轮清零；第三次直接拒，让它把原因报给用户，
   不然「失败→改代码→再 launch」会一直烧 token。
 - 子进程的环境整段剥掉 `APP_SPARK_AGENT_` 前缀，然后只把 `APP_SPARK_AGENT_APP_PORT` 加回去（`build_child_environ`）。剥前缀而不是逐个 pop 已知密钥：新增一个配置忘了登记就会漏进应用，而应用是模型写的代码。
+- 子进程按「激活了项目 venv」的样子跑：PATH 里去掉 Agent 自己的 venv（镜像里是 `/app/.venv/bin`），把 `<workspace>/.venv/bin` 放最前，
+  `VIRTUAL_ENV` 指向 `<workspace>/.venv`，去掉 `UV_PROJECT_ENVIRONMENT`。主进程的解释器本来就认项目 venv，但应用按命令名
+  跑的 `python` / `pip` / console script 走 PATH，不改就会进 Agent 的环境，`pip install` 会改到 Agent 自己的包。
+
+### 项目依赖
+
+依赖属于用户项目，不属于平台：`pyproject.toml` 和 `uv.lock` 在 workspace 根目录，随代码保存进 Git。
+
+- 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个文件。
+  判断条件和 launch 一样只看 `pyproject.toml`：它在就不动（只缺 `uv.lock` 时 `uv add` / `uv sync` 会就地补锁）；模型只决定时机和项目名，文件内容由程序给。
+- 模板与提示词是一对：起始包清单逐字写在 `INSTRUCTIONS` 的 Dependencies 一节。改模板依赖时两处一起改，再 `make lock-app-template`。
+- launch 前对齐：每次 launch（含 crash 后的自动重拉）都先 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
+  workspace 里还没有 `pyproject.toml` 时 launch 直接失败，提示模型先调 `init_project`。
+- 模型加依赖：在 Shell 里 `uv add` / `uv remove`（用户提出就允许，不设白名单）。
+- Shell 的 PATH 同样去掉 Agent 自己的 venv，免得裸 `python -c "import fastapi"` 用 Agent 的包跑通、把「项目缺依赖」
+  误判成能跑。但不把项目 `.venv/bin` 放进去：它要等 `init_project` 和第一次 `uv sync` 之后才存在，跑 Python 走 `uv run`。
+- 缓存预热：两个镜像构建时都对模板 `uv sync` 一次再删掉建出来的 `.venv`，只留下 uv 缓存，这样之后项目初次 uv sync 时可以提速。
 
 ## 凭据屏蔽
 
@@ -192,6 +212,9 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 只匹配值不匹配键名（否则 `APP_SPARK_AGENT_MODEL_API_KEY` 这种名字在日志里就没法读了）。
 
 日志每条带 `session_id` / `tenant_id`（缺省 `-`），`POST /runs` 在开始和流结束各打一条。
+进程日志写到 stderr，并在 `/data` 可写时再抄一份到 `/data/agent.log`；进程没走到 `main()` 时这个文件不存在。
+e2b 的启动命令另外把 stdout/stderr 重定向到 `agent_log_path`（默认 `/tmp/app-spark-agent.log`），
+启动失败时 API 回带的是这一份的末尾。
 
 ## 会话状态
 
@@ -213,10 +236,12 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
   `context.json`，绝不能从 `log.jsonl` 拼出来。
 - bkaidev 对话中间层（`app_spark_agent/bkaidev/session.py`）只从 `context.json` 取发给
   网关的历史，并读取三份游标；不改写 context，也不往 transcript 写 OpenAI 原始报文。
-- `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
-  8192 字节；文件工具看不见它。
-- `launch_app` 不接受参数，返回 `status` / `port` / `detail`。注入自带 agent 的调用方（嵌入、单测）
-  身上没有这个工具，必须把 `LaunchTool.as_tool()` 交进去，否则模型会去找一个不存在的工具。
+- 平台自己的模型工具在 `app_spark_agent/tools/`，一个工具一个模块、模块名即工具名：
+  - `read_app_log` 只读 `APP_LOG_PATH`（缺省 `/data/app.log`），不接受路径，单次最多尾部
+    8192 字节；文件工具看不见它。
+  - `init_project` 只接受项目名，返回 `status` / `name` / `detail`，见「项目依赖」。
+  - `launch_app` 不接受参数，返回 `status` / `port` / `detail`。注入自带 agent 的调用方（嵌入、单测）
+    身上没有这个工具，必须把 `LaunchTool.as_tool()` 交进去，否则模型会去找一个不存在的工具。
 
 ## 远程持久化
 
@@ -328,7 +353,12 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 
 普通路径从不在屏障里等 push——那是后台任务的事。关停是唯一的例外：进程一走，workspace 盘和
 状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时会调
-`ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去：
+`ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去。
+
+这个窗口是 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS`（8 秒），push 和状态回写共用，先 push 再用剩下的时间
+flush。控制面停 Runtime 的宽限比它长：uvicorn 掐连接 1 秒、本窗口 8 秒、停应用子进程 5 秒，合计仍小于
+`SHUTDOWN_GRACE_SECONDS` / e2b 的 `STOP_GRACE_SECONDS`（都是 20 秒），超时控制面会 SIGKILL。
+空闲退出另有 `IDLE_EXIT_DEADLINE_SECONDS`（20 秒）兜底，有序关停到点还没走完就 `os._exit`。
 
 ### 未保存时的下一轮：有界等待与逃生口
 
@@ -399,18 +429,47 @@ Forgejo 起不来就失败，不会 skip。
 
 ## 本地镜像
 
+镜像就是 e2b 沙箱模板：容器里只常驻 envd，Agent 由 app-spark-api 经 envd 注入环境后启动，所以镜像
+不设 CMD。构建时必须指定 envd 的来源镜像，tag 与平台的 ENVD_REF 保持一致：
+
 ```bash
-make docker-build
+make docker-build CUBE_BASE_ENVD_IMAGE=mirrors.tencent.com/bcs/cube-base-envd:2026.16
+```
+
+本地调试 Agent 时显式带上启动命令（不带命令时容器只起 envd，8090 无人监听）：
+
+```bash
 docker run --rm -p 8090:8090 \
   -e APP_SPARK_AGENT_RUNTIME_TOKEN=replace-me \
   -e APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN=replace-me \
   -e APP_SPARK_AGENT_MODEL_NAME=deepseek-v4-flash \
   -e APP_SPARK_AGENT_MODEL_BASE_URL=https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1 \
-  app-spark-agent:dev
+  app-spark-agent:dev python -m app_spark_agent
 ```
 
-入口为 tini（PID 1）。`make docker-build` 使用 `--load` 写入本地 daemon。镜像内 workspace / state 锁定为 `/data/workspace` 与
-`/data/state`，二者必须是独立路径，文件工具只能看见 `/data/workspace`。
+`make docker-build` 使用 `--load` 写入本地 daemon，平台固定为 `linux/amd64`（底座里的 envd 只有这一种架构）。
+镜像内 workspace / state 锁定为 `/data/workspace` 与 `/data/state`，二者必须是独立路径，文件工具只能看见
+`/data/workspace`。
+
+### cube 约定
+
+镜像从 python:3.14-slim-bookworm 自建，只从 cube-base-envd 复制 envd 和入口脚本，其余照 cube 底座的约定：
+
+- envd 位于 `/usr/bin/envd`（静态链接），入口为 `tini -- /usr/local/bin/cube-entrypoint.sh`。入口先在后台起
+  envd（`ENVD_PORT=49983`，日志默认 `/var/log/envd.log`），没有 CMD 时以 envd 为前台进程。平台通过
+  `:49983/health` 探测就绪，要求约 1 秒内通过。
+- `user` 账户（uid 1000，家目录 `/home/user`，免密 sudo）。app-spark-api 以它的身份启动 Agent，`/data`
+  整个目录归属它：workspace、state、应用日志 `APP_LOG_PATH`（默认 `/data/app.log`），以及 Agent 自己的
+  `/data/agent.log`。
+- envd 启动的进程拿到的 PATH 是 envd 自己的默认值，不含镜像 ENV 里的 `/app/.venv/bin`，所以 app-spark-api
+  用绝对路径 `/app/.venv/bin/python -m app_spark_agent` 启动 Agent。镜像里其余 `APP_SPARK_AGENT_*` 的 ENV 也
+  不会被继承，只对本地 `docker run` 生效。因此沙箱里 Agent 听接入层注入的 `runtime_port`（默认 `8000`），
+  用户应用听 `preview_port`（默认 `9000`）。上面 `docker run -p 8090:8090` 只对应本地调试。
+- 镜像装了 procps、vim、curl，进沙箱可以 `ps -ef`、用 vim 看文件、用 curl 打本机 HTTP。正常情况下只有
+  envd，Agent 由 app-spark-api 启动后才出现，属主为 `user`。Agent 自己的日志在 `/data/agent.log`；启动命令
+  重定向的 stdout/stderr 在 `/tmp/app-spark-agent.log`。
+
+升级 envd：平台 ENVD_REF 变更后，把构建参数换成对应 tag 的 cube-base-envd 重新构建，再更新模板。
 
 ## 开发指南
 

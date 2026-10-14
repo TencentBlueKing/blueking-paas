@@ -68,6 +68,13 @@ class RuntimeStateResponse(Schema):
             "所以单看 running=false 并不代表这一轮已经在库里"
         )
     )
+    # 运行环境空闲回收、Agent 退出或到了最长存活期之后，下一轮要先花几十秒准备，前端靠它提前提示。
+    runtime_ready: bool = Field(
+        description=(
+            "是否有可直接复用的运行环境；为 false 时下一轮对话需要先准备运行环境"
+            "（首次对话、空闲回收后、Agent 不可用或到达最长存活期）"
+        )
+    )
 
 
 # 用户单轮输入的字符上限。

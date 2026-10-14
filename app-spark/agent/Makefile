@@ -2,6 +2,11 @@ IMAGE_NAME ?= app-spark-agent
 IMAGE_TAG ?= dev
 # Registry URL is injected by the pipeline; this is a placeholder, no credentials.
 IMAGE_REPO ?= registry.example.com/app-spark/app-spark-agent
+# The cube base image envd is copied from; its tag must match the platform's ENVD_REF.
+# Required, with no default, so that no build silently picks an envd the platform never validated.
+CUBE_BASE_ENVD_IMAGE ?=
+# envd in the cube base image is linux/amd64 only.
+IMAGE_PLATFORM ?= linux/amd64
 
 .PHONY: help
 help: ## Show available make targets
@@ -30,6 +35,14 @@ test: ## Run unit tests (excludes e2e)
 run: ## Start the Agent HTTP server
 	uv run python -m app_spark_agent
 
+# Must match settings.PACKAGE_INDEX_URL's default: uv treats a lock recorded against another index
+# as stale, so every new project would re-resolve over the network instead of using the cache.
+APP_TEMPLATE_INDEX ?= https://mirrors.cloud.tencent.com/pypi/simple
+
+.PHONY: lock-app-template
+lock-app-template: ## Re-lock app-template/ (the new-project template) against the default index
+	UV_DEFAULT_INDEX=$(APP_TEMPLATE_INDEX) uv lock --project app-template
+
 .PHONY: update-gitignore-assets
 update-gitignore-assets: ## Refresh vendored github/gitignore templates in git/assets
 	uv run python -m app_spark_agent.git.update_assets
@@ -37,8 +50,11 @@ update-gitignore-assets: ## Refresh vendored github/gitignore templates in git/a
 ##@ Build
 
 .PHONY: docker-build
-docker-build: ## Build the local Agent image
-	docker build --load -t $(IMAGE_NAME):dev .
+docker-build: ## Build the local Agent image (requires CUBE_BASE_ENVD_IMAGE)
+	$(if $(CUBE_BASE_ENVD_IMAGE),,$(error CUBE_BASE_ENVD_IMAGE is required, e.g. make docker-build CUBE_BASE_ENVD_IMAGE=<registry>/cube-base-envd:<ENVD_REF>))
+	docker build --load --platform $(IMAGE_PLATFORM) \
+		--build-arg CUBE_BASE_ENVD_IMAGE=$(CUBE_BASE_ENVD_IMAGE) \
+		-t $(IMAGE_NAME):dev .
 
 .PHONY: docker-push
 docker-push: ## Tag and push the Agent image (IMAGE_REPO / IMAGE_TAG)

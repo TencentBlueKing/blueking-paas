@@ -1,6 +1,7 @@
 """就绪门闩：fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套。"""
 
 import pytest
+from marshmallow import ValidationError
 from pytest import MonkeyPatch
 
 from app_spark_agent import settings
@@ -92,3 +93,21 @@ def test_direct_provider_is_only_for_api_key_without_gateway(monkeypatch: Monkey
     monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
 
     assert settings.uses_direct_provider() is False
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://user:secret@pypi.example.com/simple",
+        "https://token@pypi.example.com/simple",
+        "ftp://pypi.example.com/simple",
+        "pypi.example.com/simple",
+    ],
+)
+def test_package_index_url_refuses_credentials_and_non_http(url: str) -> None:
+    with pytest.raises(ValidationError):
+        settings._validate_package_index_url(url)
+
+
+def test_package_index_url_accepts_a_plain_https_url() -> None:
+    settings._validate_package_index_url("https://pypi.example.com/simple")

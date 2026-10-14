@@ -137,11 +137,29 @@ cd ../agent && uv sync
 设成 `fake:write-file`——这是 agent 内置的确定性假模型，不发起任何网络请求，
 细节见 [agent/README.md](../agent/README.md) 的「假模型」一节。
 
-`e2b` provider 创建、重连和销毁沙箱，并在数据库保留归属与停止记录。Runtime 和预览地址
-分别来自 `sandbox.get_host(runtime_port)` 与 `sandbox.get_host(preview_port)`；预览端口固定为
-9000。生产 provider 尚不会安装或启动 Agent，因此默认模板下还不能直接完成会话。
-`timeout_seconds` 默认 3600 秒，是创建时设置的 E2B 沙箱存活期限；活动和本 provider 的重连不会自动续期。
-需要连续使用超过一小时的部署，应按 E2B 服务端允许的范围调大该值；要让长会话持续可用，还需在用户活动时续期。
+`e2b` provider 为每个会话创建一个沙箱，通过 envd 执行 `agent_command` 启动模板里预装的 Agent，
+等 `/health` 通过后才记下进程号并返回；启动失败时带上 `agent_log_path`（默认
+`/tmp/app-spark-agent.log`）末尾报错，并销毁沙箱。Agent 的
+配置全部经这次启动的环境变量注入，不继承本服务的环境；状态回写地址是 `callback_base_url` 加上
+保留 FORCE_SCRIPT_NAME 前缀的回写路径，因为沙箱经 Ingress 回调本服务。
+
+已建好沙箱但还没有进程号的记录处于启动中，不会交给任何请求：其他请求看到项目忙，`peek` 和预览
+看到没有 Runtime。启动它的 worker 若死在半路，超过 `startup_timeout_seconds` 加 60 秒后，下一个
+请求会杀掉该沙箱并重建。Runtime 和预览分别走 `get_host(runtime_port)`、`get_host(preview_port)`
+（默认 `8000` 和 `9000`，所有沙箱相同）：Agent 听前者，用户应用听后者。
+
+沙箱的生命周期跟着对话走：
+
+- 只有对话算活动。每轮开始和结束时，把沙箱存活期续为 `idle_timeout_seconds`
+  （默认 1800）；预览、打开会话、查询状态都不续期。同一个值也作为 Agent 的空闲退出时间。
+- 新一轮开始时先对 Agent 做健康检查。进程已不在就立即销毁旧沙箱并重建；进程还在但不应答，隔一秒
+  再探，共探 3 次仍不应答才重建。不在旧沙箱里重新拉起 Agent。
+- 沙箱存活满 `max_lifetime_seconds`（默认 86400）后，在下一轮开始前重建；有一轮正在跑时不动它。
+  这个值必须比 E2B 平台自己的沙箱存活上限小，至少留出最长一轮的时间。
+- 结束会话时先吊销状态回写凭证，再给 Agent 发 SIGTERM 让它推送，连同重连在内最多等 20 秒，然后
+  销毁沙箱；请求中途被断开也照样销毁并释放占用。销毁旧沙箱以便重建时也走同样的优雅停止。
+
+会话状态接口的 `runtime_ready` 表示下一轮能否直接复用现有沙箱，前端据此显示「正在准备运行环境」。
 
 ```yaml
 AGENT_RUNTIME_PROVIDER: e2b
@@ -149,8 +167,17 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   ## 必填：自建 E2B 服务的凭据与管理 API 地址
   api_key: <your-api-key>
   api_url: https://example.com/e2b
+  ## 必填：本服务的对外地址，沙箱内的 Agent 用它回写会话状态
+  callback_base_url: https://app-spark.example.com
+  ## 必填：预装了 Agent 的沙箱模板，由 agent 镜像添加而来（见 agent/README.md「本地镜像」）
+  template: <agent-template>
+  ## 可选：在沙箱内启动、停止、探测 Agent 所用的用户，默认 user
+  # agent_user: user
   ## 可选：API 未返回 sandbox_domain 时使用的域名后缀
   # domain: sandbox.example.com
+  ## 可选：Agent 监听端口与用户应用端口，默认 8000 / 9000，所有沙箱相同
+  # runtime_port: 8000
+  # preview_port: 9000
 ```
 
 `get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
@@ -159,10 +186,11 @@ Runtime 客户端和预览代理会从 provider 获取并附加所需请求头�
 TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
 
 有有效 E2B 配置时，运行
-`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`。
-测试会上传并安装本地构建的 Agent wheel，验证沙箱生命周期、聊天和预览；没有有效配置时跳过。
-真实 E2B 测试固定使用 300 秒的沙箱存活期限，并在测试结束时主动销毁沙箱，避免沿用生产默认值。
-当前测试不验证沙箱内的 Git 或仓库持久化。
+`APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`，
+没有配置、或配置里没有 `template` 时跳过。`template` 必须是由 agent 镜像添加的模板，测试直接用
+生产的 provider 启动模板里的 Agent，不往沙箱里装任何东西；空闲超时设为 300 秒，每一轮会续期，
+`max_lifetime_seconds` 仍用配置值，结束时主动销毁。
+不验证沙箱内的 Git 持久化和状态回写。
 
 ### 会话状态的权威副本
 
@@ -174,8 +202,11 @@ Runtime 是可丢弃的，所以会话历史的权威副本在本服务这边。
 | 原始对话记录 | `ConversationMessage` 表 | 暂无对外读接口 |
 | 用户发送的原文 | `ConversationUserMessage` 表 | `GET .../history/`，与 AG-UI 事件一起恢复 |
 | AG-UI 事件历史 | `ConversationUiEvent` 表 | `GET .../ui-events/`，直接读库、不起容器 |
-| 会话上下文 | 制品库 blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
+| 会话上下文 | blob + `ConversationContextVersion` 行（一版一行） | 冷启动时注入回 Runtime |
 | 可恢复检查点 | `ConversationCheckpoint` 行 | 冷启动时先据此把文件放回去 |
+
+上下文 blob 的后端由 `AGENT_CONTEXT_STORAGE.backend` 决定。本地和 Chart 默认是 `host_tmp_path`；
+`bk_repo` 是制品库，多副本 e2b 用它，因为上下文不能只留在单个 Pod 的磁盘上。
 
 **一致性是最终一致的**：Runtime 是在把 AG-UI 事件流全部发完之后才 flush 的，所以客户端收到
 `RUN_FINISHED` 的那一刻，本服务的库可能还差几十毫秒。要等一轮真正落定，看
@@ -346,4 +377,9 @@ SAMEORIGIN` 要换成 `frame-ancestors`。
 ### 镜像构建
 
 项目提供 [Dockerfile](Dockerfile)，以父目录 `app-spark/` 为构建上下文，
-包含 API 和 Agent 各自的生产依赖。**镜像中包含 Agent 是为了支持当前的 `local_process` 驱动。**
+包含 API 和 Agent 各自的生产依赖。镜像里带上 Agent，是为了 `local_process` 在 API 容器里
+`uv run` 拉起 Runtime。
+
+`e2b` 跑的是由 [agent 镜像](../agent/README.md) 做成的沙箱模板。API 镜像负责创建沙箱、注入环境，
+再经 envd 启动模板里的 Agent。两种运行方式在 Chart 里怎么填、e2b 什么时候能多副本，见
+[charts/app-spark-api/README.md](charts/app-spark-api/README.md)。

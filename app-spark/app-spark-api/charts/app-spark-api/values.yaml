@@ -1,4 +1,9 @@
-# 当前 local_process provider 在进程内维护 Runtime，只支持单副本、单 worker。
+# local_process provider 在进程内维护 Runtime，只支持单副本、单 worker。
+# e2b provider 的 Runtime 在沙箱里，可以多副本，前提是 agent.contextStorage.backend 为 bk_repo：
+# 其余后端（包括默认的 host_tmp_path）只存在单个 Pod 内，换到别的副本冷启动时读不回来，Chart 渲染时直接拒绝。
+# e2b 模式按 RollingUpdate 升级，上下文在 bk_repo 时 API Pod 不往 /data/app-spark 写东西，不需要 persistence。
+# 若设置了 existingClaim，它必须是 ReadWriteMany：滚动升级和多副本都会让两个 Pod 同时挂这个卷，ReadWriteOnce 的
+# 卷挂不到别的节点上，新 Pod 会一直 Pending（Chart 看不到卷的访问模式，无法替你检查）。
 replicaCount: 1
 
 # 可统一指定 API 和等待迁移镜像的仓库、拉取凭据。
@@ -150,7 +155,9 @@ bkAuth:
 #   commit_author_email: app-spark@localhost.invalid
 
 agent:
+  # local_process（默认）或 e2b。
   # runtimeProvider: local_process
+  # 下面是 local_process 的配置。改用 e2b 时，这三项默认字段会被 Chart 自动去掉，只需写 e2b 的字段。
   runtimeProviderConfig:
     # 镜像中必须包含该项目及提前 uv sync 创建的虚拟环境。
     agent_project_dir: /app/agent
@@ -161,9 +168,31 @@ agent:
     # startup_timeout_seconds: 60.0
     # 只收 APP_SPARK_AGENT_* 变量，且不收模型相关的变量。
     # extra_env: {}
+  # e2b 的配置示例，字段含义见应用 settings 中 AGENT_RUNTIME_PROVIDER_CONFIG 的注释。
+  # 标了必填的四项缺任何一项，Chart 渲染时直接失败：
+  # runtimeProvider: e2b
+  # runtimeProviderConfig:
+  #   # 必填。e2b 服务的凭据，本期与其他敏感项一样经 ConfigMap 注入。
+  #   api_key: ""
+  #   # 必填。APIGW 上的 e2b 接口，网关层认证由 APIGW 处理。
+  #   api_url: https://bkapi.example.com/api/agent_sandbox/prod/e2b
+  #   # 必填。本服务的对外地址（含 ingress.pathPrefix），沙箱内的 Agent 用它回写会话状态。
+  #   callback_base_url: https://app-spark-api.example.com/api-svc
+  #   # 必填。由 agent 镜像添加而来的模板名，没有默认值。
+  #   template: app-spark-agent
+  #   # 可选。API 未返回 sandbox_domain 时的端口域名后缀，以及端口代理的协议。
+  #   # domain: sandbox.example.com
+  #   # port_scheme: https
+  #   # 可选。在沙箱内启动、停止、探测 Agent 所用的用户，默认 user。
+  #   # agent_user: user
   contextStorage:
     backend: host_tmp_path
     root: /data/app-spark/agent-contexts
+  # 多副本时改用 bk_repo：root 为通用仓库名，连接信息取自 blobstoreBkrepoConfig。backend 和 root 必须一起改，
+  # 只改 backend 时 Helm 会把上面的路径合并进来当仓库名，Chart 会拒绝以 / 开头的 root。
+  # contextStorage:
+  #   backend: bk_repo
+  #   root: app-spark-contexts
   # 调模型走哪条路：bkaidev（默认，不填即是）或 direct（直连厂商）。
   # modelSource: bkaidev
   # modelSource 为 direct 时必填。本地验证可把 model 设为 fake:write-file。

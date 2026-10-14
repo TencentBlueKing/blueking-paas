@@ -112,6 +112,27 @@ class AgentRuntimeProvider(abc.ABC):
             Runtime is serving the conversation and there is therefore nothing to proxy to.
         """
 
+    async def extend_lifetime(self, conversation_id: str) -> None:  # noqa: B027
+        """Push back when the Runtime serving conversation_id is reclaimed for idleness.
+
+        Called at the start of a turn and again when it ends. Only turns count as activity.
+        Never raises: a failed renewal must not fail the turn. A provider whose Runtimes have
+        no deadline of their own has nothing to do here.
+
+        :param conversation_id: Conversation whose Runtime was just used.
+        """
+
+    async def needs_replacement(self, conversation_id: str) -> bool:
+        """Tell whether the next turn would replace the Runtime serving conversation_id.
+
+        Read-only, like peek. A provider that never retires a healthy Runtime on its own always
+        answers False.
+
+        :param conversation_id: Conversation to look at.
+        :return: Whether the next ensure is going to start a new Runtime anyway.
+        """
+        return False
+
     @abc.abstractmethod
     async def terminate(self, conversation_id: str) -> None:
         """Shut down the Runtime serving ``conversation_id``, if there is one.

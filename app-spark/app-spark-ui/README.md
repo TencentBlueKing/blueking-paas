@@ -30,7 +30,7 @@ bin 目录下有 2 个钩子文件，可以在项目在开发者中心构建前�
 ### src 目录
 该目录编写 vue 相关代码，包含了 vue、vue-router、vue-store、pinia、api 等能力，详细编写语法可以参阅官方文档。
 
-`src/components/project/` 是真实项目工作室。`src/components/studio/` 是 `/studio` 的 mock 实验面，和 project 的重复是有意保留的副本，删除前不要抽公共层。说明见该目录 [README](src/components/studio/README.md)。
+`src/components/project/` 是项目工作室。
 
 #### AG-UI 事件渲染
 

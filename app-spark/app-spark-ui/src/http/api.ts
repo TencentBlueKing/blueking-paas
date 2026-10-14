@@ -120,8 +120,9 @@ export const listUiEvents = (
   projectId: string,
   number: number,
   query: ListUiEventsQuery = {},
+  config: IFetchConfig = {},
 ): Promise<UiEventPageResponse> => (
-  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query)
+  http.get(`${apiPrefix}/projects/${projectId}/conversations/${number}/ui-events/`, query, config)
 );
 
 /**
@@ -142,6 +143,7 @@ export const startConversationRun = async (
   projectId: string,
   number: number,
   payload: StartRunRequest,
+  signal?: AbortSignal,
 ): Promise<Response> => {
   const response = await fetch(resolveApiUrl(
     `${apiPrefix}/projects/${projectId}/conversations/${number}/runs/`,
@@ -153,6 +155,7 @@ export const startConversationRun = async (
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {

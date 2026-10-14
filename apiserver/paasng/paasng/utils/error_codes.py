@@ -104,6 +104,7 @@ class ErrorCodes:
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
     CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     CANNOT_CREATE_CODEBASE_CONFIG = ErrorCode(_("创建代码库配置失败"))
+    AI_AGENT_APP_REQUIRED = ErrorCode(_("仅 AI Agent 应用支持该操作"), status_code=403)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志

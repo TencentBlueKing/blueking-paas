@@ -71,6 +71,7 @@ export const useProjectStore = defineStore('project', () => {
 
   let enterToken = 0;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
+  // 后端这一轮不靠这条连接。abort 只让当前页面停止读取，任务继续跑；切回来靠轮询补已入库的内容。
   let liveRunAbort: AbortController | null = null;
   let liveRunGeneration = 0;
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。

@@ -3,7 +3,8 @@
   "version": "1.0.3",
   "description": "",
   "scripts": {
-    "dev": "node ./scripts/dev-all.js",
+    "dev": "bk-cli-service-webpack dev",
+    "test": "node ./scripts/dev-all.js",
     "dev:studio": "bk-cli-service-webpack dev",
     "dev:template": "node ./scripts/reset-template.js && npm run dev --prefix template",
     "reset:template": "node ./scripts/reset-template.js",

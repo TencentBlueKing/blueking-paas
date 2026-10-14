@@ -21,7 +21,30 @@ const rewriteApiHost = (value, apiUrl, pageOrigin) => {
     .split(`https://${api.host}`).join(pageOrigin);
 };
 
+const headerValue = (value) => (Array.isArray(value) ? value.join(', ') : (value || ''));
+
+/**
+ * webpack-dev-server 默认 gzip。SSE 没有 Content-Length，压缩中间件会压，gzip 又不按小分片往外冲，
+ * 对话就会停在「正在生成…」。`Cache-Control: no-transform` 是 compression 约定的跳过条件。
+ * 发出去的 /runs/ 同时声明不接受压缩，避免上游网关先把流压住。
+ */
+const keepEventStreamRaw = (proxyRes) => {
+  if (!headerValue(proxyRes.headers['content-type']).includes('text/event-stream')) return;
+  const cache = headerValue(proxyRes.headers['cache-control']);
+  if (!/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(cache)) {
+    proxyRes.headers['cache-control'] = cache ? `${cache}, no-transform` : 'no-transform';
+  }
+};
+
+const requestRawEventStream = (proxyReq, req) => {
+  const path = (req.url || '').split('?')[0];
+  if (req.method === 'POST' && /\/conversations\/[^/]+\/runs\/?$/.test(path)) {
+    proxyReq.setHeader('Accept-Encoding', 'identity');
+  }
+};
+
 const keepPreviewOnPageHost = (proxyRes, req) => {
+  keepEventStreamRaw(proxyRes);
   const host = req.headers.host;
   if (!host) return;
   const forwarded = req.headers['x-forwarded-proto'];
@@ -64,14 +87,8 @@ module.exports = {
             ...(stripApiSvcPrefix ? { pathRewrite: { '^/api-svc': '' } } : {}),
             timeout: 0,
             proxyTimeout: 0,
+            onProxyReq: requestRawEventStream,
             onProxyRes: keepPreviewOnPageHost,
-          },
-          {
-            context: ['/agent'],
-            target: 'http://127.0.0.1:5174',
-            changeOrigin: true,
-            timeout: 0,
-            proxyTimeout: 0,
           },
         ].filter(item => item.target),
       },

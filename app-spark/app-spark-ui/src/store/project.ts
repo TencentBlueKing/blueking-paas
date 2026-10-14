@@ -30,6 +30,8 @@ import {
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
 
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
+/** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
+const CATCH_UP_INTERVAL_MS = 2000;
 
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -65,6 +67,26 @@ export const useProjectStore = defineStore('project', () => {
   const applyCtx = createApplyContext(messages.value);
 
   let enterToken = 0;
+  // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
+  let liveRunAbort: AbortController | null = null;
+  let liveRunGeneration = 0;
+  // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
+  let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
+  let catchUpGeneration = 0;
+
+  const stopCatchUp = () => {
+    catchUpGeneration += 1;
+    if (catchUpTimer != null) {
+      clearTimeout(catchUpTimer);
+      catchUpTimer = null;
+    }
+  };
+
+  const cancelLiveRun = () => {
+    liveRunGeneration += 1;
+    liveRunAbort?.abort();
+    liveRunAbort = null;
+  };
 
   const syncApplyCtx = () => {
     applyCtx.messages = messages.value;
@@ -77,7 +99,7 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.toolCalls = new Map();
   };
 
-  const applyState = (state: RuntimeStateResponse) => {
+  const applyState = (state: RuntimeStateResponse, options?: { syncEventSeq?: boolean }) => {
     conversationNumber.value = state.number;
     conversationId.value = state.conversation_id;
     isLive.value = state.is_live;
@@ -92,12 +114,15 @@ export const useProjectStore = defineStore('project', () => {
     } else if (liveNumber.value === state.number) {
       liveNumber.value = null;
     }
-    if (state.ui_event_seq > uiEventSeq.value) {
+    // 追赶进行中的回复时不能在这里把游标拨到最新：后面还要按旧游标把新事件补进对话框。
+    if (options?.syncEventSeq !== false && state.ui_event_seq > uiEventSeq.value) {
       uiEventSeq.value = state.ui_event_seq;
     }
   };
 
   const reset = () => {
+    stopCatchUp();
+    cancelLiveRun();
     enterToken += 1;
     projectId.value = '';
     conversationNumber.value = null;
@@ -208,7 +233,11 @@ export const useProjectStore = defineStore('project', () => {
    */
   const pullHistory = async () => {
     if (!projectId.value || conversationNumber.value == null) return;
-    const data = await listHistory(projectId.value, conversationNumber.value);
+    const project = projectId.value;
+    const number = conversationNumber.value;
+    const data = await listHistory(project, number);
+    // 请求在路上时可能已经切到别的项目。这份历史属于上一段，不能写进眼前的列表。
+    if (projectId.value !== project || conversationNumber.value !== number) return;
     syncApplyCtx();
     replayHistoryPage(applyCtx, data.records || []);
 
@@ -257,15 +286,27 @@ export const useProjectStore = defineStore('project', () => {
    * 与 `pullHistory` 的分工：这里补的是增量，用户本轮发的内容在调用它之前就已经在界面上了，所以
    * 只认事件，不碰用户输入。
    */
-  const pullUiEvents = async () => {
-    if (!projectId.value || conversationNumber.value == null) return;
+  const pullUiEvents = async (stillCurrent?: () => boolean) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    const generation = liveRunGeneration;
+    if (!targetProjectId || targetNumber == null) return;
     let since = uiEventSeq.value;
 
+    const stillThisConversation = () => (
+      liveRunGeneration === generation
+      && projectId.value === targetProjectId
+      && conversationNumber.value === targetNumber
+      && (!stillCurrent || stillCurrent())
+    );
+
     for (let page = 0; page < UI_EVENT_PAGE_LIMIT; page++) {
-      const data = await listUiEvents(projectId.value, conversationNumber.value, {
+      const data = await listUiEvents(targetProjectId, targetNumber, {
         since,
         limit: 200,
-      });
+      }, { globalError: false });
+      // 这一页在路上时可能已经切走了。事件属于上一段对话，不能补进眼前这段。
+      if (!stillThisConversation()) return;
       const records = data.records || [];
       syncApplyCtx();
       for (const record of records) {
@@ -291,8 +332,16 @@ export const useProjectStore = defineStore('project', () => {
   };
 
   const syncConversationOnce = async () => {
-    if (!projectId.value || conversationNumber.value == null) return;
-    const state = await getConversation(projectId.value, conversationNumber.value);
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    const generation = liveRunGeneration;
+    if (!targetProjectId || targetNumber == null) return;
+    const state = await getConversation(targetProjectId, targetNumber);
+    if (
+      liveRunGeneration !== generation
+      || projectId.value !== targetProjectId
+      || conversationNumber.value !== targetNumber
+    ) return;
     const prevSeq = uiEventSeq.value;
     applyState(state);
     if (prevSeq === 0 && hasConversationContent(messages.value)) {
@@ -302,6 +351,70 @@ export const useProjectStore = defineStore('project', () => {
     if (state.ui_event_seq > prevSeq) {
       await pullUiEvents();
     }
+  };
+
+  /**
+   * 把已经入库、但眼前这页还没画出来的事件补上。
+   *
+   * 不在这里把游标直接拨到会话状态上的最新值：拨过去之后再拉，就会从最新处开始，新字被跳过。
+   */
+  const catchUpOnce = async (still: () => boolean) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (!targetProjectId || targetNumber == null || !still()) return;
+    const prevSeq = uiEventSeq.value;
+    const state = await getConversation(targetProjectId, targetNumber, { globalError: false });
+    if (!still()) return;
+    applyState(state, { syncEventSeq: false });
+    if (state.ui_event_seq > prevSeq) {
+      await pullUiEvents(still);
+    }
+  };
+
+  /**
+   * 这一轮还在跑、或者最后一批还没写完时，隔一段时间补一次历史。
+   *
+   * 本页自己正在读 SSE 时不轮询，两边一起写会把同一段字接两遍。
+   * `running` 和 `replication_pending` 都变成 false 就停：前者是还在生成，后者是生成完了但库里可能还差一截。
+   * 离开这个会话也会停，不在后台追别的项目。
+   */
+  const scheduleCatchUp = (lockComposer: boolean) => {
+    stopCatchUp();
+    if (liveRunAbort) return;
+    if (!projectId.value || conversationNumber.value == null) return;
+    if (!running.value && !replicationPending.value) return;
+
+    const generation = catchUpGeneration;
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (lockComposer) status.value = 'thinking';
+
+    const tick = async () => {
+      catchUpTimer = null;
+      const still = () => (
+        generation === catchUpGeneration
+        && !liveRunAbort
+        && projectId.value === targetProjectId
+        && conversationNumber.value === targetNumber
+      );
+      if (!still()) return;
+      try {
+        await catchUpOnce(still);
+      } catch {
+        // 这次没补上，下一拍再试。切走了由代数丢掉结果。
+      }
+      if (!still()) return;
+      const settling = running.value || replicationPending.value;
+      if (lockComposer) status.value = settling ? 'thinking' : 'idle';
+      if (!settling) return;
+      catchUpTimer = setTimeout(() => {
+        void tick();
+      }, CATCH_UP_INTERVAL_MS);
+    };
+
+    catchUpTimer = setTimeout(() => {
+      void tick();
+    }, CATCH_UP_INTERVAL_MS);
   };
 
   /**
@@ -318,14 +431,19 @@ export const useProjectStore = defineStore('project', () => {
   });
 
   const bindConversation = async (state: RuntimeStateResponse) => {
+    // 换一段要渲染的历史之前先停掉上一轮直播和补历史。两边都属于上一段会话。
+    stopCatchUp();
+    cancelLiveRun();
     applyState(state);
     uiEventSeq.value = 0;
     // 清在拉第一页之前：这一页失败的话，游标就该是「不知道能往前翻到哪」，而不是上一个会话的。
     historyCursor.value = null;
     messages.value = [];
     resetApplyCtx();
+    let historyLoaded = false;
     try {
       await pullHistory();
+      historyLoaded = true;
     } catch (error) {
       console.error('[project] 会话历史加载失败', error);
       messages.value.push(createHistoryErrorMessage());
@@ -335,10 +453,11 @@ export const useProjectStore = defineStore('project', () => {
       // 继续往外抛：调用方那句 toast 才是「刚刚这一下失败了」的即时反馈，两者不重复。
       throw error;
     } finally {
-      // 唯一有资格决定「此刻是不是在回复中」的地方：`running` 是后端现问 Runtime 拿到的，历史事件
-      // 只能告诉我们过去发生过什么。放在回放之后，保证它不会被回放出来的中间态盖掉。
+      // 回放会带上历史里的中间态，这里用进来时问到的 running 盖回去。后面的轮询再按新的状态改。
       status.value = state.running ? 'thinking' : 'idle';
     }
+    // 历史没拉回来就不要在错误提示上接着补事件。这一轮已经结束的会话也不会进来。
+    if (historyLoaded) scheduleCatchUp(true);
   };
 
   /** 项目里还活着的那个会话，一个都没有则返回 null。 */
@@ -366,12 +485,38 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
-  const resolveLiveConversation = async (id: string) => {
-    const live = await findLiveConversation(id);
-    if (live) {
-      return getConversation(id, live.number);
+  /**
+   * 会话状态接口失败时仍把已经入库的对话画出来。
+   *
+   * 列表接口已经给出了会话编号。历史只读库，不依赖这次状态查询。状态里的运行信息拿不到，
+   * 这一轮就不轮询补字，输入框保持可发送。
+   */
+  const showStoredConversation = async (summary: ConversationResponse) => {
+    stopCatchUp();
+    cancelLiveRun();
+    conversationNumber.value = summary.number;
+    conversationId.value = summary.conversation_id;
+    isLive.value = summary.is_live;
+    if (summary.is_live) {
+      liveNumber.value = summary.number;
+    } else if (liveNumber.value === summary.number) {
+      liveNumber.value = null;
     }
-    return startNewConversation(id);
+    running.value = false;
+    replicationPending.value = false;
+    runtimeReady.value = false;
+    uiEventSeq.value = 0;
+    historyCursor.value = null;
+    messages.value = [];
+    resetApplyCtx();
+    status.value = 'idle';
+    try {
+      await pullHistory();
+    } catch (error) {
+      console.error('[project] 会话历史加载失败', error);
+      messages.value.push(createHistoryErrorMessage());
+      resetApplyCtx();
+    }
   };
 
   const enterProject = async (id: string) => {
@@ -380,9 +525,23 @@ export const useProjectStore = defineStore('project', () => {
     projectId.value = id;
     entering.value = true;
     try {
-      const state = await resolveLiveConversation(id);
+      const live = await findLiveConversation(id);
       if (token !== enterToken) return;
-      await bindConversation(state);
+      if (!live) {
+        const state = await startNewConversation(id);
+        if (token !== enterToken) return;
+        await bindConversation(state);
+        return;
+      }
+      try {
+        const state = await getConversation(id, live.number);
+        if (token !== enterToken) return;
+        await bindConversation(state);
+      } catch (error) {
+        if (token !== enterToken) return;
+        console.error('[project] 会话状态加载失败，改为只拉历史', error);
+        await showStoredConversation(live);
+      }
     } finally {
       if (token === enterToken) entering.value = false;
     }
@@ -390,6 +549,8 @@ export const useProjectStore = defineStore('project', () => {
 
   const openConversation = async (number: number) => {
     if (!projectId.value) return;
+    // 先停掉正在读的那一轮。bindConversation 里还会再停一次，这里要盖住等接口的这段时间。
+    cancelLiveRun();
     entering.value = true;
     status.value = 'idle';
     try {
@@ -490,6 +651,10 @@ export const useProjectStore = defineStore('project', () => {
       return;
     }
 
+    // 自己发消息就改由这条 SSE 来画。补历史如果还在飞，不能再写进同一条消息。
+    stopCatchUp();
+    liveRunGeneration += 1;
+
     const userMessage: ChatMessage = {
       id: createId(),
       role: 'user',
@@ -500,6 +665,19 @@ export const useProjectStore = defineStore('project', () => {
       role: 'assistant',
       blocks: [{ type: 'text', text: '' }],
     };
+    const runProjectId = projectId.value;
+    const runNumber = conversationNumber.value;
+    const runGeneration = liveRunGeneration;
+    const controller = new AbortController();
+    liveRunAbort = controller;
+    // 代数在取消时立刻加一，比项目号、会话号变得更早：openConversation 还在等接口时，
+    // 消息列表仍是上一段，不能靠「当前会话号已经变了」来判断。
+    const stillCurrent = () => (
+      liveRunGeneration === runGeneration
+      && projectId.value === runProjectId
+      && conversationNumber.value === runNumber
+    );
+
     messages.value.push(userMessage, assistantMessage);
     syncApplyCtx();
     status.value = 'thinking';
@@ -509,7 +687,7 @@ export const useProjectStore = defineStore('project', () => {
     // 本轮开始输出或已经失败后就不再提示：迟到的状态查询不能把提示又盖回去。
     let preparingOver = false;
     const showPreparingRuntime = () => {
-      if (!preparingOver) liveAssistant.progress = PREPARING_RUNTIME_TEXT;
+      if (!preparingOver && stillCurrent()) liveAssistant.progress = PREPARING_RUNTIME_TEXT;
     };
 
     // 已知没有可用运行环境：这一轮要先准备环境，可能要几十秒，先说清楚在等什么。
@@ -518,7 +696,7 @@ export const useProjectStore = defineStore('project', () => {
     // 手里的状态可能早已过期（离开半小时回来，运行环境已被回收），所以和发消息并行再问一次。
     // 只看 runtime_ready，不走 applyState：它会按 running=false 把「正在回复」改回空闲。
     // 失败不弹窗，最多是少一句提示。
-    getConversation(projectId.value, conversationNumber.value, { globalError: false })
+    getConversation(runProjectId, runNumber, { globalError: false })
       .then((state) => {
         if (!state.runtime_ready) showPreparingRuntime();
       })
@@ -526,11 +704,15 @@ export const useProjectStore = defineStore('project', () => {
 
     try {
       const response = await startConversationRun(
-        projectId.value,
-        conversationNumber.value,
+        runProjectId,
+        runNumber,
         { content },
+        controller.signal,
       );
+      if (!stillCurrent()) return;
       for await (const event of readSseEvents(response)) {
+        // 读到的是上一轮的事件。列表已经换成别的项目或会话，不能再 syncApplyCtx 跟着写过去。
+        if (!stillCurrent()) break;
         if (!preparingOver) {
           preparingOver = true;
           // 开始输出，运行环境已就绪。只清自己设的那句，事件带来的进度留给 applyResult。
@@ -540,6 +722,8 @@ export const useProjectStore = defineStore('project', () => {
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
     } catch (error) {
+      // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
+      if (!stillCurrent()) return;
       const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
       const detail = error instanceof Error ? error.message : '发起对话失败';
       assistantMessage.tone = 'error';
@@ -550,17 +734,20 @@ export const useProjectStore = defineStore('project', () => {
       }
     } finally {
       preparingOver = true;
-      assistantMessage.progress = '';
-      const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
-      if (textBlock && !textBlock.text) {
-        textBlock.text = '本轮对话已结束。';
-      }
-      status.value = 'idle';
-      if (projectId.value && conversationNumber.value != null) {
-        try {
-          await syncConversationOnce();
-        } catch {
-          // 发送结果已展示，追赶失败不覆盖当前消息
+      if (liveRunAbort === controller) liveRunAbort = null;
+      if (stillCurrent()) {
+        assistantMessage.progress = '';
+        const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
+        if (textBlock && !textBlock.text) {
+          textBlock.text = '本轮对话已结束。';
+        }
+        status.value = 'idle';
+        if (projectId.value && conversationNumber.value != null) {
+          try {
+            await syncConversationOnce();
+          } catch {
+            // 发送结果已展示，追赶失败不覆盖当前消息
+          }
         }
       }
     }
@@ -574,6 +761,7 @@ export const useProjectStore = defineStore('project', () => {
     liveNumber,
     uiEventSeq,
     running,
+    replicationPending,
     entering,
     messages,
     status,

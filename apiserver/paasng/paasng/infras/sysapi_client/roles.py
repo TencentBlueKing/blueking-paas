@@ -69,6 +69,8 @@ class ClientPermChecker:
             ClientAction.BUILD_SANDBOX_IMAGE: False,
             # 创建 AI Agent 应用只给 AIDEV，其它角色即使有 MANAGE_APPLICATIONS 也不能调。
             ClientAction.CREATE_AI_AGENT_APP: False,
+            # 上传 AI Agent 源码包只给 AIDEV，其它角色即使有 MANAGE_APPLICATIONS 也不能调。
+            ClientAction.UPLOAD_AI_AGENT_SOURCE_PACKAGE: False,
         }
         basic_reader_perms = nobody_perms | {
             ClientAction.READ_APPLICATIONS: True,
@@ -89,6 +91,7 @@ class ClientPermChecker:
             ClientAction.GRANT_APIGW_PERMISSIONS: True,
             ClientAction.BUILD_SANDBOX_IMAGE: True,
             ClientAction.CREATE_AI_AGENT_APP: True,
+            ClientAction.UPLOAD_AI_AGENT_SOURCE_PACKAGE: True,
         }
 
         return {

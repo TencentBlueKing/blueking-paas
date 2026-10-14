@@ -309,8 +309,8 @@ def _record_lifetime(sandbox_obj: Sandbox, delete_source: SandboxDeleteSource) -
     started_at 是沙箱可用的时刻, deleted_at 是资源回收的时刻.
     创建失败 (err_creating) 的沙箱没有 started_at, 跳过.
     """
-    if sandbox_obj.started_at is None or sandbox_obj.deleted_at is None:
-        logger.info("skip lifetime metric for sandbox %s: no started_at", sandbox_obj.uuid)
+    if sandbox_obj.started_at is None:
+        logger.debug("skip lifetime metric for sandbox %s: no started_at", sandbox_obj.uuid)
         return
 
     try:

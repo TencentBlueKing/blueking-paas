@@ -84,8 +84,8 @@ env = get_env(
         "METRIC_CLIENT_TOKEN",
         "SENTRY_DSN",
     ],
-    # 未提供时会使用代码中公开的默认密钥
-    required_vars=["BKKRILL_ENCRYPT_SECRET_KEY"],
+    # BKKRILL_ENCRYPT_SECRET_KEY 未提供时会使用代码中公开的默认密钥
+    required_vars=["MYSQL_PASSWORD", "BKKRILL_ENCRYPT_SECRET_KEY", "PAAS_SERVICE_JWT_CLIENTS_KEY"],
     # set casting, default value
     DEBUG=(bool, False),
 )

@@ -82,7 +82,7 @@ env = get_env(
         "MONITOR_METRIC_TOKEN",
         "SENTRY_DSN",
     ],
-    required_vars=["BKKRILL_ENCRYPT_SECRET_KEY"],
+    required_vars=["MYSQL_PASSWORD", "BKKRILL_ENCRYPT_SECRET_KEY", "PAAS_SERVICE_JWT_CLIENTS_KEY"],
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)

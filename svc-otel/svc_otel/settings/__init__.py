@@ -86,6 +86,8 @@ env = get_env(
         "METRIC_CLIENT_TOKEN",
         "SENTRY_DSN",
     ],
+    # BKKRILL_ENCRYPT_SECRET_KEY 不必填：现网未配置时一直使用代码中的默认密钥，见 encryption.bk_krill_otel
+    required_vars=["MYSQL_PASSWORD", "PAAS_SERVICE_JWT_CLIENTS_KEY", "BK_APP_SECRET"],
     # set casting, default value
     DEBUG=(bool, False),
 )

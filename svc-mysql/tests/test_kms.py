@@ -168,6 +168,18 @@ def test_required_var(write_kms_files, monkeypatch):
     )
 
 
+def test_required_var_cleared_by_chart(write_kms_files, monkeypatch):
+    """开启 KMS 后 chart 把明文置为空字符串，信封也未提供时阻止启动，并提示缺少的信封字段"""
+    write_kms_files({"jwt": CREDENTIALS["jwt"]})
+    monkeypatch.setenv("MYSQL_PASSWORD", "")
+
+    with pytest.raises(
+        ImproperlyConfigured,
+        match=r"MYSQL_PASSWORD is required, provide it by KMS credential mysql\.svc_mysql\.password",
+    ):
+        get_env(BINDINGS, required_vars=["MYSQL_PASSWORD", "PAAS_SERVICE_JWT_CLIENTS_KEY"])
+
+
 def test_database_url_unsupported(write_kms_files, monkeypatch):
     write_kms_files(CREDENTIALS)
     monkeypatch.setenv("DATABASE_URL", "mysql://user:pass@db/svc")

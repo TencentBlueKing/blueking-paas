@@ -74,7 +74,8 @@ def get_env(
 
     :param bindings: 环境变量名到信封字段路径的映射
     :param sensitive_vars: 未由信封提供而环境变量中仍有值时告警的环境变量
-    :param required_vars: 信封与环境变量都未提供时阻止启动的环境变量
+    :param required_vars: 信封与环境变量都未提供时阻止启动的环境变量。开启 KMS 后 chart 会清空这些明文，
+        缺失时应在启动时报错，而不是等到运行时连接失败或使用代码中公开的默认密钥
     """
     if not is_kms_enabled():
         return environ.Env(**scheme)
@@ -86,7 +87,8 @@ def get_env(
     credentials = build_credentials(_decrypt_envelope(), bindings)
     for var in required_vars:
         if var not in credentials and not os.environ.get(var):
-            raise ImproperlyConfigured(f"{var} is required")
+            hint = f", provide it by KMS credential {bindings[var]}" if var in bindings else ""
+            raise ImproperlyConfigured(f"{var} is required{hint}")
     for var in sensitive_vars:
         if var not in credentials and os.environ.get(var):
             logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", var)

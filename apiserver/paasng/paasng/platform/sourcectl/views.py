@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import datetime as dt
 import logging
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -650,7 +650,7 @@ class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
             return Response({"message": message}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         with promote_repo_privilege_temporary(application):
-            time_str = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+            time_str = datetime.now().strftime("%Y%m%d%H%M%S")
             data = {"tag_name": time_str, "comment": time_str}
             provider = RepoProvider(**svn_type_spec.config_as_arguments())
 

@@ -116,9 +116,14 @@ APISERVER_SENSITIVE_KEYS = [
     "ELASTICSEARCH_HOSTS",
 ]
 WORKLOADS_SENSITIVE_KEYS = ["AGENT_SANDBOX_ROUTER_AUTH_TOKEN", "PYTHON_BUILDPACK_PIP_INDEX_URL"]
-# 开启 KMS 后 chart 不再渲染这些明文，缺失时阻止启动：
+# 开启 KMS 后 chart 不再渲染这些明文，缺失时阻止启动，而不是等到运行时才连接失败或用错密钥：
 # SLUG_ENCRYPT_SECRET_KEY 未配置时会退回 BKKRILL_ENCRYPT_SECRET_KEY，用错密钥将无法解密已有数据
-REQUIRED_KEYS = ["BKKRILL_ENCRYPT_SECRET_KEY", "SLUG_ENCRYPT_SECRET_KEY"]
+REQUIRED_KEYS: Dict[str, str] = {
+    "BK_APP_SECRET": "bkapp_id_secret.default.app_secret",
+    "BKKRILL_ENCRYPT_SECRET_KEY": "encryption.bk_krill.secret_key",
+    "SLUG_ENCRYPT_SECRET_KEY": "encryption.slug.secret_key",
+    "ONE_SIMPLE_JWT_AUTH_KEY": "jwt.services.client_key",
+}
 
 
 def _has_url_password(value: Any) -> bool:
@@ -233,9 +238,7 @@ def load_kms_settings(settings: LazySettings) -> LazySettings | KMSSettings:
 
     overrides = build_overrides(settings, _decrypt_credentials())
     kms_settings = KMSSettings(settings, overrides)
-    for key in REQUIRED_KEYS:
-        if not kms_settings.get(key):
-            raise ImproperlyConfigured(f"{key} is required")
+    _check_required(kms_settings)
     _warn_plaintext(settings, APISERVER_SENSITIVE_KEYS, overrides.keys())
     return kms_settings
 
@@ -285,6 +288,22 @@ def _decrypt_credentials() -> Mapping[str, Any]:
     if not isinstance(credentials, dict):
         raise ImproperlyConfigured("The KMS credential envelope must contain a JSON object")
     return credentials
+
+
+def _check_required(settings: KMSSettings):
+    """必需的凭证在信封与原配置中都没有时阻止启动。数据库与 bkrepo 只在配置了对应实例时才要求"""
+    required = dict(REQUIRED_KEYS)
+    for prefix, instance, _ in _DATABASES:
+        if settings.get(f"{prefix}DATABASE_NAME"):
+            required[f"{prefix}DATABASE_PASSWORD"] = f"mysql.{instance}.password"
+    for key, path in required.items():
+        if not settings.get(key):
+            raise ImproperlyConfigured(f"{key} is required, provide it by KMS credential {path}")
+
+    if (bkrepo_config := settings.get("BLOBSTORE_BKREPO_CONFIG")) and not bkrepo_config.get("PASSWORD"):
+        raise ImproperlyConfigured(
+            "BLOBSTORE_BKREPO_CONFIG.PASSWORD is required, provide it by KMS credential bkrepo.default.password"
+        )
 
 
 def _lookup(credentials: Mapping[str, Any], path: str) -> Optional[str]:

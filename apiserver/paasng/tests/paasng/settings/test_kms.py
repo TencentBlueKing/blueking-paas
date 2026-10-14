@@ -84,6 +84,8 @@ BASE_SETTINGS = {
     "DATABASE_USER": "plain-user",
     "DATABASE_PASSWORD": "plain-password",
     "WL_DATABASE_NAME": "bk_paas3_engine",
+    "WL_DATABASE_PASSWORD": "plain-wl-password",
+    "ONE_SIMPLE_JWT_AUTH_KEY": "plain-jwt-key",
     "REDIS_URL": "redis://:plain@redis.example.com:6379/0",
     "CELERY_BROKER_URL": "amqp://mq:plain@mq.example.com:5672/vhost",
     "BLOBSTORE_BKREPO_CONFIG": {"PROJECT": "bkpaas", "ENDPOINT": "http://bkrepo", "USERNAME": "", "PASSWORD": ""},
@@ -242,15 +244,35 @@ class TestOverrides:
         assert settings.get("HEALTHZ_TOKEN") == "plain"
 
     @pytest.mark.parametrize(
-        ("missing_path", "key"),
+        ("missing_path", "key", "extra_settings"),
         [
-            ("encryption.bk_krill", "BKKRILL_ENCRYPT_SECRET_KEY"),
-            ("encryption.slug", "SLUG_ENCRYPT_SECRET_KEY"),
+            ("encryption.bk_krill", "BKKRILL_ENCRYPT_SECRET_KEY", {}),
+            ("encryption.slug", "SLUG_ENCRYPT_SECRET_KEY", {}),
+            ("bkapp_id_secret.default.app_secret", "BK_APP_SECRET", {}),
+            ("jwt.services.client_key", "ONE_SIMPLE_JWT_AUTH_KEY", {}),
+            ("mysql.apiserver.password", "DATABASE_PASSWORD", {}),
+            ("mysql.workloads.password", "WL_DATABASE_PASSWORD", {}),
+            ("bkrepo.default.password", r"BLOBSTORE_BKREPO_CONFIG\.PASSWORD", {}),
+            # 信封中本来就没有 mysql.open_paas
+            (None, "BK_CONSOLE_DATABASE_PASSWORD", {"BK_CONSOLE_DATABASE_NAME": "open_paas"}),
         ],
     )
-    def test_required_keys(self, write_kms_files, missing_path, key):
-        with pytest.raises(ImproperlyConfigured, match=f"{key} is required"):
-            _load(_without(CREDENTIALS, missing_path), write_kms_files)
+    def test_required_keys(self, write_kms_files, missing_path, key, extra_settings):
+        """开启 KMS 后 chart 会清空这些明文，信封也未提供时阻止启动"""
+        cleared = {
+            "BK_APP_SECRET": "",
+            "ONE_SIMPLE_JWT_AUTH_KEY": "",
+            "DATABASE_PASSWORD": "",
+            "WL_DATABASE_PASSWORD": "",
+        }
+        credentials = _without(CREDENTIALS, missing_path) if missing_path else CREDENTIALS
+        with pytest.raises(ImproperlyConfigured, match=f"{key} is required, provide it by KMS credential"):
+            _load(credentials, write_kms_files, **cleared, **extra_settings)
+
+    def test_database_not_required_when_not_configured(self, write_kms_files):
+        settings = _load(CREDENTIALS, write_kms_files, BK_CONSOLE_DATABASE_NAME="")
+
+        assert not settings.get("BK_CONSOLE_DATABASE_PASSWORD")
 
     def test_non_string_field(self, write_kms_files):
         credentials = copy.deepcopy(CREDENTIALS)
@@ -266,12 +288,14 @@ class TestAccounts:
             write_kms_files,
             BK_CONSOLE_DATABASE_NAME="open_paas",
             BK_CONSOLE_DATABASE_USER="plain-user",
+            BK_CONSOLE_DATABASE_PASSWORD="plain-password",
         )
 
         assert (settings.get("DATABASE_USER"), settings.get("DATABASE_PASSWORD")) == ("paas", DB_PASSWORD)
         assert (settings.get("WL_DATABASE_USER"), settings.get("WL_DATABASE_PASSWORD")) == ("wl", "wl-password")
         # 信封中没有 mysql.open_paas，保持原配置
         assert settings.get("BK_CONSOLE_DATABASE_USER") == "plain-user"
+        assert settings.get("BK_CONSOLE_DATABASE_PASSWORD") == "plain-password"
 
     def test_open_paas_database(self, write_kms_files):
         credentials = copy.deepcopy(CREDENTIALS)

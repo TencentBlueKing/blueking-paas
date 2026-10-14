@@ -77,7 +77,12 @@ chart 会创建 SecretStore、ExternalSecret，生成 `<release>-apiserver-kms-s
 - 提供 `celery.default.uri` 时，`CELERY_BROKER_URL` 整串使用信封中的值；未提供且 broker 为 Redis 时，填入 `redis.default.password`。
 - `redis.default.password` 会原样填入连接串，覆盖其中原有的密码，因此**不能包含 `/`、`?`、`#` 以及 `%XX` 形式的内容**，否则启动报错。
 - 开启 KMS 后，不能再使用旧的加密连接串环境变量（`DATABASE_URL`、`WL_DATABASE_URL`、`PAAS_LEGACY_DATABASE_URL`），否则启动报错。
-- `encryption.bk_krill.secret_key` 和 `encryption.slug.secret_key` 开启 KMS 后必填（chart 不再渲染明文），缺失时启动报错。`encryption.slug.secret_key` 在 chart 中是写死的 `PAAS_SLUG_ENCRYPT_SECRET_KEY`，信封中必须填同一个值，不能单独更换。
+- 开启 KMS 后 chart 不再渲染明文，以下字段必填，缺失时启动报错，错误信息中给出缺少的信封字段：
+  - `encryption.bk_krill.secret_key`、`encryption.slug.secret_key`、`bkapp_id_secret.default.app_secret`、`jwt.services.client_key`；
+  - 原配置中有库名的数据库实例的 `mysql.<实例>.password`（`apiserver`、`workloads` 总是需要，`open_paas` 在配置了 openPaaS 库时需要）；
+  - 配置了 `BLOBSTORE_BKREPO_CONFIG` 时的 `bkrepo.default.password`。
+- `encryption.slug.secret_key` 在 chart 中是写死的 `PAAS_SLUG_ENCRYPT_SECRET_KEY`，信封中必须填同一个值，不能单独更换。
+- Redis 允许无密码部署，`redis.*.password` 不做必填校验。
 
 ## 对运维凭证声明的修改建议
 

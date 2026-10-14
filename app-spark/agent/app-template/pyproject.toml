@@ -1,0 +1,15 @@
+[project]
+name = "app"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.143.0",
+    "httpx2>=2.13.1,<3.0.0",
+    "jinja2>=3.1.6,<4.0.0",
+    "python-multipart>=0.0.32",
+    # The platform starts the application with this uvicorn's command line. Keep it pinned.
+    "uvicorn==0.54.0",
+]
+
+[tool.uv]
+package = false

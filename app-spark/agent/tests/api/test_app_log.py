@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app_spark_agent.app_log import NO_LOG_MESSAGE, AppLogReader, AppLogReadResult
+from app_spark_agent.tools.read_app_log import NO_LOG_MESSAGE, AppLogReader, AppLogReadResult
 from tests.api.support import ApiFactory, get_transcript_messages, run_turn
 from tests.support.fake_models import log_calling_model
 

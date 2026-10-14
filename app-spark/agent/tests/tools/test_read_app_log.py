@@ -12,8 +12,8 @@ from pytest import MonkeyPatch
 
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
-from app_spark_agent.app_log import NO_LOG_MESSAGE, READ_ERROR_PREFIX, AppLogReader
 from app_spark_agent.masking import SECRET_PLACEHOLDER
+from app_spark_agent.tools.read_app_log import NO_LOG_MESSAGE, READ_ERROR_PREFIX, AppLogReader
 from tests.test_agent import function_tools
 
 

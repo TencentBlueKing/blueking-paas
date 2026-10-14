@@ -73,6 +73,7 @@ from paasng.platform.agent_sandbox.exceptions import (
     SandboxExecError,
     SandboxFileError,
     SandboxImageValidateError,
+    SandboxK8sResourceError,
     SandboxNoClusterError,
     VolumeNotFound,
     VolumeNotMountable,
@@ -157,14 +158,15 @@ _CREATE_FAILURE_REASONS: tuple[tuple[type[BaseException], SandboxCreateFailureRe
     (SandboxAlreadyExists, SandboxCreateFailureReason.ALREADY_EXISTS),
     (VolumeNotFound, SandboxCreateFailureReason.VOLUME_INVALID),
     (VolumeNotMountable, SandboxCreateFailureReason.VOLUME_INVALID),
-    (SandboxCreateError, SandboxCreateFailureReason.K8S_ERROR),
+    (SandboxK8sResourceError, SandboxCreateFailureReason.K8S_ERROR),
+    (SandboxCreateError, SandboxCreateFailureReason.START_FAILED),
 )
 
 
 def classify_create_failure(exc: BaseException) -> SandboxCreateFailureReason:
     """把创建沙箱时抛出的异常归到一个指标 reason 上, 只按异常类型判定, 不匹配消息文本.
 
-    :param exc: create_sandbox 抛出的原始异常。
+    :param exc: create_sandbox 抛出的原始异常.
     """
     for exc_type, reason in _CREATE_FAILURE_REASONS:
         if isinstance(exc, exc_type):
@@ -242,14 +244,18 @@ def create_sandbox(
             sandbox_obj.status = SandboxStatus.ERR_CREATING.value
             sandbox_obj.save(update_fields=["status"])
             raise
+
+        # Daemon 已通过就绪探针，且 Router 能把请求转到沙箱 Service。
+        # 最终写库留在 try 内: 它失败同样意味着本次创建对外失败, 需计入失败指标,
+        # 否则领域级指标与请求级指标 (agent_sandbox_requests_total) 口径会不一致。
+        sandbox_obj.status = SandboxStatus.RUNNING.value
+        sandbox_obj.started_at = timezone.now()
+        sandbox_obj.save(update_fields=["status", "started_at", "updated"])
     except Exception as exc:
         _record_create_failure(resolved_workload_type, cluster, exc, started)
         raise
 
-    # Daemon 已通过就绪探针，且 Router 能把请求转到沙箱 Service。
-    sandbox_obj.status = SandboxStatus.RUNNING.value
-    sandbox_obj.started_at = timezone.now()
-    sandbox_obj.save(update_fields=["status", "started_at", "updated"])
+    # 走到这里才算真正就绪, 记录成功耗时
     _record_create_duration(resolved_workload_type, cluster, SandboxRequestResult.SUCCESS, started)
     return sandbox_obj
 
@@ -389,7 +395,9 @@ class AgentSandboxResManager:
             sandbox_created = True
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox workload") from KresAgentSandboxError(
+                str(exc), exc
+            )
 
         # Service 先于就绪等待创建，EndpointSlice controller 可以和容器启动并行。
         # 调用方走的是 Router -> Service，不是 Pod IP。
@@ -398,7 +406,7 @@ class AgentSandboxResManager:
             service_created = True
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
 
         try:
             handler.wait_until_ready(workload.name, self.create_timeout)
@@ -408,7 +416,9 @@ class AgentSandboxResManager:
             raise
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox workload") from KresAgentSandboxError(
+                str(exc), exc
+            )
 
         router_endpoint = get_router_endpoint(self.kres_app.target)
         return KubernetesSandbox(

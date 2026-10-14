@@ -91,7 +91,7 @@
 | 上游响应头原样透传（`WWW-Authenticate`、`Set-Cookie`、逐跳头） | 删除质询、Cookie 与 RFC 7230 逐跳头；`Link` 分页地址改写回客户端视角。实测 Harbor 返回 `Keep-Alive`，透传会导致 HTTP/2 客户端报协议错误 | `strips ... upstream challenges`、`drops hop-by-hop headers for HTTP/2 clients`、`rewrites the Link header of tags/list` |
 | 跨上游 mount 泄露来源路径 | 跨上游、来源不可读、或缺少 `from` 的 mount 去掉 `mount` / `from` 降级为普通上传；缺少 `from` 的 mount 在部分 registry 上表示从凭证可读的任意仓库挂载，而代理账号可读全平台 | `mount downgrades to a plain upload`、`Integration with registry:2` |
 | manifest / blob 的 `DELETE` 会被转发 | 授权钩子第一步拒绝；`Server.handle` 再兜底拒绝，授权钩子被替换也不会转发 | `rejected requests never reach upstream`、`Server with a permissive authorizer` |
-| 查询串的解析与转发不一致（`r.URL.Query()` 静默丢弃含 `;` 的片段，转发却用原始查询串，上游若把 `;` 当分隔符会看到代理没检查过的 `mount` / `from`） | 入口用 `url.ParseQuery` 解析一次，失败返回 400 `invalid_query`；路由解析、mount 降级与转发共用这份结果，转发时重新编码，不使用原始查询串 | `rejected requests never reach upstream` |
+| 查询串的解析与转发不一致（`r.URL.Query()` 静默丢弃含 `;` 的片段，转发却用原始查询串，上游若把 `;` 当分隔符会看到代理没检查过的 `mount` / `from`） | 入口用 `url.ParseQuery` 解析一次，失败返回 400 `invalid_query`；`digest`、`mount`、`from` 出现多次同样返回 400，否则代理读第一个值而上游可能取最后一个；路由解析、mount 降级与转发共用这份结果，转发时重新编码，不使用原始查询串 | `rejected requests never reach upstream` |
 | 路径穿越与编码分隔符 | 路径含 `%` 时视为未知路由；仓库名、tag、digest 按 OCI 规范校验，`..` 等引用返回 404 | `rejected requests never reach upstream` |
 | 上游 401 直接返回 502，不作废缓存、不重试 | 作废对应 scope 的缓存；无请求体的请求重新鉴权后重试一次；仍失败返回 502 `upstream_auth_failed` | `re-authenticates after the upstream revokes its token` |
 | 上游鉴权无超时、忽略 `expires_in`、每次重新质询、误用 `identitytoken`、向明文 realm 发送凭证 | `pkg/upstream/auth.go` 自行实现：30 秒超时，按 `expires_in` 的 90% 过期，缓存质询，singleflight 合并并发未命中，拒绝 `identitytoken` 与 HTTPS 上游的明文 realm | `pkg/upstream/auth_test.go` |

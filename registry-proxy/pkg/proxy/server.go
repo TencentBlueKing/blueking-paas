@@ -110,10 +110,28 @@ func New(opts Options) (*Server, error) {
 	return s, nil
 }
 
+// singleValueParams 是代理据以判定路由与授权的查询参数。代理只读取第一个值，
+// 而上游可能取最后一个，出现多次时无法保证上游执行的就是代理检查过的值
+var singleValueParams = []string{"digest", "mount", "from"}
+
+// parseQuery 解析客户端查询串。代理看到的参数与上游看到的必须一致，以下情况直接拒绝：
+//   - 无法完整解析：r.URL.Query() 会静默丢弃含 ; 等的片段，而上游或其前置网关可能仍把 ; 当作分隔符；
+//   - singleValueParams 中的参数出现多次。
+func parseQuery(raw string) (url.Values, error) {
+	query, err := url.ParseQuery(raw)
+	if err != nil {
+		return nil, err
+	}
+	for _, k := range singleValueParams {
+		if len(query[k]) > 1 {
+			return nil, errors.New("duplicate query parameter " + k)
+		}
+	}
+	return query, nil
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// r.URL.Query() 会静默丢弃含 ; 等无法解析的片段，而上游或其前置网关可能仍把 ; 当作分隔符，
-	// 代理看到的参数与上游看到的必须一致，因此无法完整解析的查询串直接拒绝
-	query, queryErr := url.ParseQuery(r.URL.RawQuery)
+	query, queryErr := parseQuery(r.URL.RawQuery)
 	if queryErr != nil {
 		query = url.Values{}
 	}

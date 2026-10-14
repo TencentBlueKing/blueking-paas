@@ -582,6 +582,15 @@ var _ = Describe("Server", func() {
 			Entry("semicolon-separated mount", http.MethodPost,
 				"/v2/{A}/bkpaas/app/blobs/uploads/?mount=sha256:x;from={A}/bkpaas/other", validToken, 400, "invalid_query"),
 			Entry("invalid query escape", http.MethodGet, "/v2/{A}/python/python/tags/list?n=%zz", validToken, 400, "invalid_query"),
+			// 代理只读取第一个值，上游可能取最后一个
+			Entry("duplicate mount", http.MethodPost,
+				"/v2/{A}/bkpaas/app/blobs/uploads/?digest=sha256:aa&mount=&mount=sha256:bb&from={A}/python/python",
+				validToken, 400, "invalid_query"),
+			Entry("duplicate from", http.MethodPost,
+				"/v2/{A}/bkpaas/app/blobs/uploads/?mount=sha256:aa&from={A}/python/python&from={A}/bkpaas/other",
+				validToken, 400, "invalid_query"),
+			Entry("duplicate digest", http.MethodPut,
+				"/v2/{A}/bkpaas/app/blobs/uploads/session.sig?digest=sha256:aa&digest=sha256:bb", validToken, 400, "invalid_query"),
 		)
 
 		It("returns no body for HEAD", func() {

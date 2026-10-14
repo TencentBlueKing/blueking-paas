@@ -233,6 +233,7 @@ func (u *Upstream) getChallenge(ctx context.Context) (*cachedChallenge, error) {
 
 // requestToken 按 Docker Registry token 规范换取 Bearer token。scope 由代理计算，忽略质询中的 scope。
 func (u *Upstream) requestToken(ctx context.Context, params map[string]string, scopes []Scope) (string, time.Duration, error) {
+	// 按照 oci distribution 规范，不校验 realm 和 registry 是否属于同一主机。只有当上游本身已被入侵时这里才可能有问题
 	realm, err := url.Parse(params["realm"])
 	if err != nil || realm.Host == "" || (realm.Scheme != "https" && realm.Scheme != "http") {
 		return "", 0, authFailed("upstream %s: invalid token realm", u.URL.Host)

@@ -60,6 +60,8 @@ dependencies = [
     "pydantic (==2.12.5)",
     'curlify (==2.2.1)',
     'django-environ (==0.14.0)',
+    'bk-crypto-python-sdk[gm] (==4.1.1)',
+    'bk-kms-sdk (==1.0.0)',
     'apscheduler (==3.11.0)',
     'filelock (==3.18.0)',
     'urllib3 (==1.26.20)',

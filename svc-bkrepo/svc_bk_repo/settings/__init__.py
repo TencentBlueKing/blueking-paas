@@ -19,7 +19,6 @@ import logging
 import os
 from pathlib import Path
 
-import environ
 import pymysql
 import sentry_sdk
 import urllib3
@@ -28,6 +27,8 @@ from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+
+from .kms import get_env
 
 # mysql.base 会 import MySQLdb，必须先把 PyMySQL 伪装成 MySQLdb
 pymysql.install_as_MySQLdb()
@@ -84,9 +85,25 @@ _patched_data_types_prop = cached_property(_patched_data_types)
 _patched_data_types_prop.__set_name__(DatabaseWrapper, "data_types")
 DatabaseWrapper.data_types = _patched_data_types_prop
 
-env = environ.Env(
+env = get_env(
+    {
+        "MYSQL_USER": "mysql.svc_bkrepo.username",
+        "MYSQL_PASSWORD": "mysql.svc_bkrepo.password",
+        "BKKRILL_ENCRYPT_SECRET_KEY": "encryption.bk_krill.secret_key",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY": "jwt.services.client_key",
+    },
+    sensitive_vars=[
+        "MYSQL_PASSWORD",
+        "BKKRILL_ENCRYPT_SECRET_KEY",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY",
+        "SECRET_KEY",
+        "METRIC_CLIENT_TOKEN",
+        "SENTRY_DSN",
+    ],
+    # 未提供时会使用代码中公开的默认密钥
+    required_vars=["BKKRILL_ENCRYPT_SECRET_KEY"],
     # set casting, default value
-    DEBUG=(bool, False)
+    DEBUG=(bool, False),
 )
 
 env.read_env()

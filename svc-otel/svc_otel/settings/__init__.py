@@ -19,7 +19,6 @@ import logging
 import os
 from pathlib import Path
 
-import environ
 import pymysql
 import sentry_sdk
 import urllib3
@@ -28,6 +27,8 @@ from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+
+from .kms import get_env
 
 # Patch the SSL module for compatibility with legacy CA credentials.
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
@@ -66,9 +67,27 @@ pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
 setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
-env = environ.Env(
+env = get_env(
+    {
+        "MYSQL_USER": "mysql.svc_otel.username",
+        "MYSQL_PASSWORD": "mysql.svc_otel.password",
+        "BKKRILL_ENCRYPT_SECRET_KEY": "encryption.bk_krill_otel.secret_key",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY": "jwt.services.client_key",
+        "BK_APP_CODE": "bkapp_id_secret.default.app_code",
+        "BK_APP_SECRET": "bkapp_id_secret.default.app_secret",
+    },
+    sensitive_vars=[
+        "MYSQL_PASSWORD",
+        "BKKRILL_ENCRYPT_SECRET_KEY",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY",
+        "BK_APP_SECRET",
+        "BKAUTH_TOKEN_SECRET_KEY",
+        "SECRET_KEY",
+        "METRIC_CLIENT_TOKEN",
+        "SENTRY_DSN",
+    ],
     # set casting, default value
-    DEBUG=(bool, False)
+    DEBUG=(bool, False),
 )
 
 # read `.env` from 'svc_otel/settings/.env'
@@ -326,8 +345,9 @@ BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default="")
 BK_APP_CODE = env("BK_APP_CODE", default="bk_paas3")
 BK_APP_SECRET = env("BK_APP_SECRET", default="")
 # bk_token 验票所需应用凭证；未单独配置时回落到上面的应用凭证，二者须非空；bk_ticket 不用
-BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default=BK_APP_CODE)
-BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default=BK_APP_SECRET)
+# 不把应用身份作为 env 的默认值，以 "$" 开头的值会被当作其他环境变量的引用
+BKAUTH_TOKEN_APP_CODE = env.str("BKAUTH_TOKEN_APP_CODE", default="") or BK_APP_CODE
+BKAUTH_TOKEN_SECRET_KEY = env.str("BKAUTH_TOKEN_SECRET_KEY", default="") or BK_APP_SECRET
 # 对外版蓝鲸监控的 API 注册在 ESB
 BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default="")
 # 上云版蓝鲸监控的 API 注册在 APIGW

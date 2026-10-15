@@ -98,6 +98,8 @@ chart 会创建 SecretStore、ExternalSecret，生成 `<release>-apiserver-kms-s
 
 开启 KMS 后，chart 会自动把信封已覆盖的环境变量置空、从 Redis 连接串中去掉密码、并在 `migrate` Job 的 `init_bkrepo` 命令中不再传密码参数，无需手动清空 values。
 
+`extraInitial` 中的 npm/pypi/devops 独立初始化镜像尚未接入 KMS。开启 KMS 时，必须关闭这些初始化 Job（`apiserver.extraInitial.<名称>.enabled=false`），否则 chart 会拒绝渲染，避免通过 `BKREPO_PASSWORD` 注入明文密码。相关资源需要在部署后手动上传。
+
 手写在 `apiserver.env` 数组中的敏感项（如 `PAAS_AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN`、`PAAS_PAAS_ANALYSIS_JWT_CONF` 的 `key`）由于是透传数组，需要运维在信封补齐后从 `apiserver.env` 中移除。
 
 ## 未迁移的明文：告警而不阻断
@@ -111,5 +113,4 @@ Sensitive setting ELASTICSEARCH_HOSTS is not provided by KMS, using its plaintex
 ## 暂不覆盖的范围
 
 - ServiceMonitor 中的 `user_token`（供 Prometheus 采集使用，不在容器环境变量中）。
-- `extraInitial`（npm/pypi/devops 独立初始化镜像，默认不启用）中的 `BKREPO_PASSWORD`。
 - 已写入数据库的凭证，例如集群日志 ES 配置（`ClusterElasticSearchConfig.password`）、源码仓库 OAuth 配置。这些在数据库中已由 `BKKRILL_ENCRYPT_SECRET_KEY` 加密。

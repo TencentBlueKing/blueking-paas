@@ -149,7 +149,12 @@ def provision_kms_secret(
     provisioner = KMSSecretProvisioner(version, kms=kms, kube=kube, kms_settings=cfg)
     provisioner.provision()
     provisioner.wait_ready()
-    return _build_kms_secret_mount(version)
+    return SecretFileMount(
+        volume_name=KMS_SECRET_VOLUME_NAME,
+        secret_name=version.resource_name,
+        mount_dir=KMS_SECRET_MOUNT_DIR,
+        sub_paths=(SECRET_KEY_ENVELOPE, SECRET_KEY_PRIVATE_KEY),
+    )
 
 
 def _find_reusable_version(env: ModuleEnvironment, content_digest: str) -> KMSConfigVersion | None:
@@ -210,7 +215,7 @@ def create_kms_config_version(
     )
     envelope = (kms or make_kms_client(tenant_id)).encrypt_credential_value(payload)
 
-    version = KMSConfigVersion(
+    return KMSConfigVersion.objects.create(
         id=version_id,
         tenant_id=tenant_id,
         app_code=app_code,
@@ -239,8 +244,6 @@ def create_kms_config_version(
         service_account_name=build_service_account_name(app_code=app_code, module_name=module_name, env_name=env_name),
         resource_name=build_resource_name(tenant_id=tenant_id, credential_name=credential_name),
     )
-    version.save(force_insert=True)
-    return version
 
 
 class KMSSecretProvisioner:
@@ -266,11 +269,6 @@ class KMSSecretProvisioner:
         self._sleep = sleep
         self._clock = clock
 
-    def provision(self) -> None:
-        """创建凭证并提交 Kubernetes 资源，不等待 Secret 就绪"""
-        self.ensure_credential()
-        self.apply_resources()
-
     def ensure_credential(self) -> None:
         """确保 KMS 凭证存在，并记录 credential_id"""
         if self.version.credential_id is not None:
@@ -279,8 +277,8 @@ class KMSSecretProvisioner:
             self.version.credential_id = self._find_or_create_credential()
             self._advance(KMSConfigVersionStatus.CREDENTIAL_CREATED)
 
-    def apply_resources(self) -> None:
-        """依次提交 ServiceAccount、ClusterSecretStore、ExternalSecret，并记录 ExternalSecret 的 UID
+    def provision(self) -> None:
+        """创建凭证，依次提交 ServiceAccount、ClusterSecretStore、ExternalSecret，并记录 ExternalSecret 的 UID
 
         ESO 用 ExternalSecret 所在 namespace 中的 SA 登录，SA 必须先存在。
         """
@@ -438,13 +436,3 @@ def _error_reason(exc: Exception) -> str:
     else:
         reason = type(exc).__name__
     return reason[:ERROR_REASON_MAX_CHARS]
-
-
-def _build_kms_secret_mount(version: KMSConfigVersion) -> SecretFileMount:
-    """信封与私钥各为一个只读文件"""
-    return SecretFileMount(
-        volume_name=KMS_SECRET_VOLUME_NAME,
-        secret_name=version.resource_name,
-        mount_dir=KMS_SECRET_MOUNT_DIR,
-        sub_paths=(SECRET_KEY_ENVELOPE, SECRET_KEY_PRIVATE_KEY),
-    )

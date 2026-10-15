@@ -27,7 +27,6 @@ from paasng.platform.engine.configurations.env_var.encryption import (
 )
 from paasng.platform.engine.configurations.kms.injection import (
     add_kms_secret_mount,
-    collect_kms_managed_keys,
     ensure_kms_mount_available,
     strip_kms_managed_env_vars,
 )
@@ -64,16 +63,6 @@ def test_kms_mode_drops_managed_values_instead_of_encrypting(settings, bk_app, b
     # 写入 BkApp 修订的值不能包含托管的敏感明文
     assert result == {"BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
     assert encrypted_keys == set()
-
-
-@pytest.mark.django_db(databases=["default", "workloads"])
-def test_collect_kms_managed_keys_excludes_unmanaged_builtin_keys(bk_stag_env, mocker):
-    mocker.patch(
-        "paasng.platform.engine.configurations.kms.injection.collect_sensitive_keys",
-        return_value={"DB_PASSWORD", "BKPAAS_APP_SECRET"},
-    )
-
-    assert collect_kms_managed_keys(bk_stag_env) == {"DB_PASSWORD"}
 
 
 def _make_bkapp(

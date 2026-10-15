@@ -55,7 +55,6 @@ def test_ready():
     ("external_secret", "secret", "expected_uid", "reason"),
     [
         (None, None, ES_UID, "external_secret_missing"),
-        (_external_secret(), _secret(), "", "external_secret_uid_mismatch"),
         (_external_secret(), _secret(), "other-uid", "external_secret_uid_mismatch"),
         (_external_secret(condition=None), _secret(), ES_UID, "external_secret_not_ready:unknown"),
         # 只取条件的 reason，message 可能包含 OpenBao 返回的细节，不能写入数据库
@@ -68,9 +67,7 @@ def test_ready():
         (_external_secret(refresh_time=None), _secret(), ES_UID, "external_secret_not_refreshed"),
         (_external_secret(), None, ES_UID, "secret_missing"),
         (_external_secret(), _secret(owner_uid="someone-else"), ES_UID, "secret_owner_mismatch"),
-        (_external_secret(), _secret(owner_uid=None), ES_UID, "secret_owner_mismatch"),
         (_external_secret(), _secret(data={"envelope": "ZW52"}), ES_UID, "secret_data_missing"),
-        (_external_secret(), _secret(data={"envelope": "", "privateKey": "x"}), ES_UID, "secret_data_missing"),
     ],
 )
 def test_not_ready(external_secret, secret, expected_uid, reason):

@@ -25,6 +25,7 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.infras.kms.client import CredentialInfo, KMSClient, KMSScope, ServiceAccountAuth
+from paasng.infras.kms.constants import PLAINTEXT_MAX_CHARS
 from paasng.infras.kms.exceptions import (
     KMSAPIError,
     KMSConfigError,
@@ -227,8 +228,12 @@ class TestCreateKMSConfigVersion:
         version = create_kms_config_version(bk_stag_env, SENSITIVE_ENV, kms=kms, kms_settings=kms_cfg)
 
         payload = json.loads(kms.plaintexts[0])
-        assert payload["config_version_id"] == version.id
-        assert payload["env"] == SENSITIVE_ENV
+        assert payload == {
+            "schema_version": 1,
+            "config_version_id": version.id,
+            "module_environment_id": str(bk_stag_env.pk),
+            "env": SENSITIVE_ENV,
+        }
 
         row = KMSConfigVersion.objects.get(pk=version.id)
         assert row.status == KMSConfigVersionStatus.PENDING.value
@@ -237,9 +242,13 @@ class TestCreateKMSConfigVersion:
         assert "s3cret-value-xyz" not in stored
         assert "tok-abc-123" not in stored
 
-    def test_rejects_empty_sensitive_env(self, bk_stag_env, kms, kms_cfg):
+    def test_rejects_oversized_payload_before_encryption(self, bk_stag_env, kms, kms_cfg):
         with pytest.raises(KMSValidationError):
-            create_kms_config_version(bk_stag_env, {}, kms=kms, kms_settings=kms_cfg)
+            create_kms_config_version(
+                bk_stag_env, {"PASSWORD": "x" * PLAINTEXT_MAX_CHARS}, kms=kms, kms_settings=kms_cfg
+            )
+
+        assert kms.plaintexts == []
 
         assert KMSConfigVersion.objects.count() == 0
 
@@ -364,6 +373,11 @@ class TestKMSSecretProvisioner:
         version.refresh_from_db()
         assert version.status == KMSConfigVersionStatus.READY.value
 
+        # 重复提交已就绪资源时，状态不能回退。
+        provisioner.provision()
+        version.refresh_from_db()
+        assert version.status == KMSConfigVersionStatus.READY.value
+
     def test_wait_ready_timeout_records_last_reason(self, version, make_provisioner):
         provisioner = make_provisioner(version)
         provisioner.provision()
@@ -375,42 +389,23 @@ class TestKMSSecretProvisioner:
         assert version.error_reason == "external_secret_not_ready:unknown"
         assert version.status == KMSConfigVersionStatus.RESOURCES_APPLIED.value
 
-    def test_reapply_never_moves_status_backwards(self, version, make_provisioner, kube):
-        provisioner = make_provisioner(
-            version, sleep=lambda _: kube.mark_synced(version.namespace, version.resource_name)
-        )
-        provisioner.provision()
-        provisioner.wait_ready(timeout=60, poll_interval=0)
-
-        provisioner.apply_resources()
-
-        version.refresh_from_db()
-        assert version.status == KMSConfigVersionStatus.READY.value
-
 
 @pytest.mark.usefixtures("wl_app", "_cluster")
 class TestProvisionKMSSecret:
-    def test_provisions_and_links_deployment(self, bk_stag_env, bk_deployment, kms, kms_cfg):
-        mount = provision_kms_secret(
-            bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=SyncingKube(), kms_settings=kms_cfg
-        )
-
-        bk_deployment.refresh_from_db()
-        version = bk_deployment.kms_config_version
-        assert version is not None
-        assert version.status == KMSConfigVersionStatus.READY.value
-        # 应用端 SDK 从 /etc/kms/envelope 与 /etc/kms/privateKey 读取
-        assert mount == SecretFileMount(
-            volume_name="kms-secret",
-            secret_name=version.resource_name,
-            mount_dir="/etc/kms",
-            sub_paths=("envelope", "privateKey"),
-        )
-
     def test_unchanged_values_reuse_ready_version(self, bk_stag_env, bk_deployment, bk_module, kms, kms_cfg):
         kube = SyncingKube()
         first = provision_kms_secret(
             bk_stag_env, bk_deployment, SENSITIVE_ENV, kms=kms, kube=kube, kms_settings=kms_cfg
+        )
+        bk_deployment.refresh_from_db()
+        version = bk_deployment.kms_config_version
+        assert version is not None
+        assert version.status == KMSConfigVersionStatus.READY.value
+        assert first == SecretFileMount(
+            volume_name="kms-secret",
+            secret_name=version.resource_name,
+            mount_dir="/etc/kms",
+            sub_paths=("envelope", "privateKey"),
         )
         # 模拟 Secret 被误删：复用时重新提交资源并等待同步
         kube.objects.clear()

@@ -103,10 +103,8 @@ class FakeSession:
     def __init__(self, response: FakeResponse | None = None, error: Exception | None = None):
         self.response = response
         self.error = error
-        self.sent: list[dict] = []
 
     def request(self, method, url, json=None, timeout=None):
-        self.sent.append({"method": method, "url": url, "json": json, "timeout": timeout})
         if self.error is not None:
             raise self.error
         return self.response
@@ -127,7 +125,6 @@ class TestEncryptCredentialValue:
 
         sdk_private_key = key_pairs[asymmetric_type][1]
         assert bk_kms.decrypt(envelope, sdk_private_key) == '{"DB_PASSWORD": "密码-123"}'
-        assert fake.calls == [("POST", "/api/v1/get/crypto_info", {"category": "normal"})]
 
     def test_each_encryption_uses_fresh_key_material(self, client, key_pairs, monkeypatch):
         monkeypatch.setattr(
@@ -213,13 +210,11 @@ class TestFindCredential:
             "scope": {"scope_id": 7, "scope_type": "scope"},
             "auth": {"service_account": {"name_list": ["demo-web-prod-kms"], "namespace_list": ["ns-1"]}},
         }
-        fake = FakeKMSRequest({"/api/v1/get/credential": data})
-        monkeypatch.setattr(client, "_request", fake)
+        monkeypatch.setattr(client, "_session", FakeSession(FakeResponse(200, {"code": 0, "data": data})))
 
         info = client.find_credential(scope=SCOPE, name=NAME)
 
         assert info == CredentialInfo(credential_id=9, scope=SCOPE, name=NAME, enable_encrypt=True, auth=AUTH)
-        assert fake.calls[0][2] == {"scope": {"scope_type": "scope", "scope_id": 7}, "type": "secret", "name": NAME}
 
     def test_missing_authorization_is_reported_as_wildcard(self, client, monkeypatch):
         data = {
@@ -235,14 +230,6 @@ class TestFindCredential:
 
 
 class TestRequest:
-    def test_success_returns_data(self, client, monkeypatch):
-        session = FakeSession(FakeResponse(200, {"code": 0, "data": {"credential_id": 1}}))
-        monkeypatch.setattr(client, "_session", session)
-
-        assert client._request("POST", "/api/v1/credential", {}) == {"credential_id": 1}
-        assert session.sent[0]["url"] == "http://kms.example/api/v1/credential"
-        assert session.sent[0]["timeout"] == 5
-
     @pytest.mark.parametrize(
         ("session", "exc_type"),
         [

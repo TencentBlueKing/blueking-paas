@@ -21,7 +21,7 @@ from collections.abc import Mapping
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.workloads.release_controller.entities import SecretFileMount
-from paasng.infras.kms.constants import KMS_SECRET_MOUNT_DIR, KMS_SECRET_VOLUME_NAME
+from paasng.infras.kms.constants import KMS_ENABLED_ENV_VAR_NAME, KMS_SECRET_MOUNT_DIR, KMS_SECRET_VOLUME_NAME
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.env_var.encryption import KMS_UNMANAGED_ENV_KEYS, collect_sensitive_keys
@@ -77,7 +77,9 @@ def prepare_kms_process_env(
         return plain_values, []
 
     NamespacesHandler.new_by_app(env.wl_app).ensure_namespace(env.wl_app.namespace)
-    return plain_values, [provision_kms_secret(env, deployment, sensitive_values)]
+    mount = provision_kms_secret(env, deployment, sensitive_values)
+    plain_values[KMS_ENABLED_ENV_VAR_NAME] = "true"
+    return plain_values, [mount]
 
 
 def strip_kms_managed_env_vars(
@@ -127,7 +129,7 @@ def ensure_kms_mount_available(bkapp_res: crd.BkAppResource, env_name: str) -> N
 
 
 def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: SecretFileMount) -> None:
-    """在环境覆盖项中追加 KMS Secret 挂载。operator 会把它应用到 Pod 内的所有容器上"""
+    """追加 KMS Secret 挂载及启用标志。operator 会把它们应用到业务进程及 Hook"""
     if bkapp_res.spec.envOverlay is None:
         bkapp_res.spec.envOverlay = crd.EnvOverlay()
 
@@ -140,6 +142,14 @@ def add_kms_secret_mount(bkapp_res: crd.BkAppResource, env_name: str, mount: Sec
             source=crd.VolumeSource(secret=crd.SecretSource(name=mount.secret_name)),
             subPaths=list(mount.sub_paths),
         ),
+    )
+
+    overlay = bkapp_res.spec.envOverlay
+    overlay.envVariables = [
+        var for var in overlay.envVariables or [] if (var.envName, var.name) != (env_name, KMS_ENABLED_ENV_VAR_NAME)
+    ]
+    overlay.append_item(
+        "envVariables", crd.EnvVarOverlay(envName=env_name, name=KMS_ENABLED_ENV_VAR_NAME, value="true")
     )
 
 

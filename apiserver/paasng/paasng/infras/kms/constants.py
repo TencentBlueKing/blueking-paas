@@ -63,5 +63,8 @@ MTLS_SECRET_KEY_PRIVATE_KEY = "tls.key"
 KMS_SECRET_MOUNT_DIR = "/etc/kms"
 KMS_SECRET_VOLUME_NAME = "kms-secret"
 
+# 实际挂载 KMS 文件时向 SaaS 注入的标志，供应用配置初始化使用
+KMS_ENABLED_ENV_VAR_NAME = "BKPAAS_KMS_ENABLED"
+
 # 明文 payload 的格式版本，应用端解析时据此校验
 FROZEN_PAYLOAD_SCHEMA_VERSION = 1

@@ -150,6 +150,10 @@ class TestKMSSecretMount:
             }
         ]
 
+        assert bkapp.to_deployable()["spec"]["envOverlay"]["envVariables"] == [
+            {"envName": "stag", "name": "BKPAAS_KMS_ENABLED", "value": "true"}
+        ]
+
     @pytest.mark.parametrize(
         ("user_mount", "conflict"),
         [

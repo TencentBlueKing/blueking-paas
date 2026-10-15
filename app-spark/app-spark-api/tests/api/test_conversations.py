@@ -49,7 +49,6 @@ from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations import state as conversation_state
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.runtime import AgentUnavailableError
 from app_spark_api.agent.runtime.entities import RuntimeHealth
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
@@ -569,7 +568,61 @@ async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
     assert not any(path for path in workspace.iterdir() if path.name != ".git")
 
 
-async def test_cold_restore_refuses_a_context_newer_than_the_latest_checkpoint(
+async def test_cold_restore_after_file_edit_followed_by_context_only_turn(
+    aapi_client,
+    project,
+    agent,
+    settings,
+    workspace_root,
+):
+    """A conversation that edits files and then has a chat-only turn still cold-restores.
+
+    1. Turn 1 (`fake:write-file`) modifies the workspace -> creates Git checkpoint at
+       `context_version == 1` and archives context v1.
+    2. Turn 2 (`fake:chat`) answers without modifying any tracked/untracked files ->
+       `context_version` advances to 2 while the latest workspace checkpoint stays at v1.
+    3. The sandbox is reclaimed (process terminated, `state_dir` and `workspace` wiped).
+    4. Turn 3 cold-restores both the Turn 1 files from Git and the Turn 2 context from storage.
+    """
+    created = await create_conversation(aapi_client)
+    number, conversation_id = created["number"], created["conversation_id"]
+
+    # Turn 1: writes `fake-agent-note-1.md`, producing context v1 + checkpoint v1.
+    await run_turn(aapi_client, number, "write my first note")
+    first = await wait_for_replication(aapi_client, number)
+    first_checkpoint = await wait_for_checkpoint(conversation_id)
+    assert first["context_version"] == 1
+    assert first_checkpoint.context_version == 1
+
+    workspace = workspace_root / PROJECT_ID
+    original = (workspace / FIRST_NOTE).read_text()
+
+    # Switch the model to `fake:chat` for Turn 2 while keeping `state_dir` and `workspace`
+    # intact (simulating a second turn in the same sandbox that does not modify files).
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    settings.AGENT_DIRECT_MODEL_CONFIG = {"model": "fake:chat"}
+
+    second_events = await run_turn(aapi_client, number, "just explain the code without editing")
+    assert "You said: just explain the code without editing" in assistant_reply(second_events)
+    second = await wait_for_replication(aapi_client, number, after=first)
+    assert second["context_version"] == 2
+
+    # Simulate Cube sandbox reclamation: process, state_dir, and workspace are all gone.
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace)
+
+    # Turn 3 after sandbox reclamation: cold restore succeeds, bringing back Turn 1's file and
+    # Turn 2's conversation context.
+    third_events = await run_turn(aapi_client, number, "continue after sandbox reclamation")
+    assert "You said: continue after sandbox reclamation" in assistant_reply(third_events)
+    assert (workspace / FIRST_NOTE).read_text() == original
+    third = await wait_for_replication(aapi_client, number, after=second)
+    assert third["context_version"] == 3
+
+
+async def test_cold_restore_restores_latest_checkpoint_and_newest_context_when_context_moved_ahead(
     project,
     bk_user,
     settings,
@@ -580,7 +633,7 @@ async def test_cold_restore_refuses_a_context_newer_than_the_latest_checkpoint(
         "root": str(tmp_path / "contexts"),
     }
     conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
-    await conversation_state.asave_context(conversation.id, {"context_version": 1, "messages": []})
+    await conversation_state.asave_context(conversation.id, {"context_version": 1, "messages": ["turn-1"]})
     await checkpoints.arecord(
         conversation.id,
         run_id="run-1",
@@ -592,26 +645,45 @@ async def test_cold_restore_refuses_a_context_newer_than_the_latest_checkpoint(
         ui_event_seq=0,
         state_epoch=conversation.state_epoch,
     )
-    await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+    newest_document = {"context_version": 2, "messages": ["turn-1", "turn-2"]}
+    await conversation_state.asave_context(conversation.id, newest_document)
+    restored_commits: list[str] = []
+    restored_contexts: list[dict[str, Any]] = []
 
     class Client:
         async def restore_workspace(self, commit: str) -> str:
-            pytest.fail(f"workspace restore must not run for stale checkpoint {commit}")
+            restored_commits.append(commit)
+            return "restored"
 
-    with pytest.raises(AgentUnavailableError, match="refusing to combine mismatched"):
-        await conversation_services._resume_if_cold(
-            conversation,
-            Client(),  # type: ignore[arg-type]
-            RuntimeHealth(
-                model="fake:test",
-                conversation_id=None,
-                context_version=0,
-                log_seq=0,
-                ui_event_seq=0,
-                running=False,
-                replication_pending=False,
-            ),
-        )
+        async def restore_context(
+            self,
+            restored: dict[str, Any],
+            *,
+            if_match: int,
+            log_seq: int,
+            ui_event_seq: int,
+        ) -> int:
+            restored_contexts.append(restored)
+            assert if_match == 0
+            return restored["context_version"]
+
+    health = await conversation_services._resume_if_cold(
+        conversation,
+        Client(),  # type: ignore[arg-type]
+        RuntimeHealth(
+            model="fake:test",
+            conversation_id=None,
+            context_version=0,
+            log_seq=0,
+            ui_event_seq=0,
+            running=False,
+            replication_pending=False,
+        ),
+    )
+
+    assert restored_commits == ["a" * 40]
+    assert restored_contexts == [newest_document]
+    assert health.context_version == 2
 
 
 async def test_cold_restore_accepts_context_when_no_checkpoint_was_ever_needed(

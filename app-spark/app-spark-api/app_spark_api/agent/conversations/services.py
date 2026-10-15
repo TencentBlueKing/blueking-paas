@@ -530,50 +530,33 @@ async def _resume_if_cold(
 
 
 async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
-    """Put the workspace back to this conversation's checkpoint, and return its paired context.
+    """Put the workspace back to this conversation's checkpoint, and return the latest context.
 
     When there is no restorable checkpoint, the files are left alone and the newest archived
-    context is returned. If a checkpoint exists but the conversation has advanced past it,
-    restoration fails instead of combining files from the checkpoint with newer memory.
+    context is returned.
 
     :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
     """
     checkpoint = await checkpoints.alatest_restorable(conversation.id)
-    if checkpoint is None:
-        # There is no file snapshot that this service can restore or compare. This is the normal
-        # shape for conversations that only read files or do non-code work, and it is also the
-        # safest useful fallback when an incomplete checkpoint cannot be restored.
-        return await state.aload_context(conversation.id)
-
-    newest = await state.acontext_version(conversation.id)
-    # A checkpoint the conversation has already moved past is not usable, even though both its
-    # halves are here. Seeding the Runtime with an older version would have it re-issue version
-    # numbers this service has already archived, and pairing the newest context with this older
-    # commit would violate the restore invariant instead. Refuse until an operator recovers or
-    # deliberately discards the unmatched state.
-    if checkpoint.context_version != newest:
-        raise AgentUnavailableError(
-            f"Conversation {conversation.id} has archived context version {newest}, but its "
-            f"latest restorable workspace checkpoint only covers version "
-            f"{checkpoint.context_version}; refusing to combine mismatched files and context."
+    if checkpoint is not None:
+        outcome = await client.restore_workspace(checkpoint.commit)
+        logger.info(
+            "Conversation %s restored its workspace to checkpoint %s (%s)",
+            conversation.id,
+            checkpoint.commit,
+            outcome,
         )
 
-    outcome = await client.restore_workspace(checkpoint.commit)
-    document = await state.aload_context_version(conversation.id, checkpoint.context_version)
-    if document is None:
-        # The checkpoint was found *because* its version row exists, so failing to read the
-        # document means the row and the blob disagree. Carrying on would pair files we have
-        # just restored with a context from somewhere else, so this fails out loud.
+    # 决策说明：冷启动不要求 checkpoint.context_version 与最新 context_version 严格相等。
+    # 会话上下文（对话/压缩）与工作区代码（Git 提交）正交：纯对话轮次、上下文压缩或上报失败后重启
+    # 都会使 context 领先于 checkpoint。旧沙箱既已销毁，因版本不等抛 502 只会让项目永久死锁；
+    # 直接恢复最新代码快照与最新上下文，若有差异交由 Agent 自行感知处理。
+    document = await state.aload_context(conversation.id)
+    if checkpoint is not None and document is None:
         raise AgentUnavailableError(
             f"The checkpoint at {checkpoint.commit} names context version "
             f"{checkpoint.context_version}, which is no longer readable."
         )
-    logger.info(
-        "Conversation %s restored its workspace to checkpoint %s (%s)",
-        conversation.id,
-        checkpoint.commit,
-        outcome,
-    )
     return document
 
 

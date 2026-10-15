@@ -4,27 +4,29 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+
+	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
 )
 
 // AuditEntry 是一条审计记录，所有字段都必须输出
 type AuditEntry struct {
-	TS           string `json:"ts"`
-	Sub          string `json:"sub"`
-	JTI          string `json:"jti"`
-	AppCode      string `json:"app_code"`
-	Module       string `json:"module"`
-	RemoteAddr   string `json:"remote_addr"`
-	Method       string `json:"method"`
-	Route        string `json:"route"`
-	Repo         string `json:"repo"`
-	Upstream     string `json:"upstream"`
-	Reference    string `json:"reference"`
-	Status       int    `json:"status"`
-	ReqBytes     int64  `json:"req_bytes"`
-	RespBytes    int64  `json:"resp_bytes"`
-	Ms           int64  `json:"ms"`
-	RedirectHost string `json:"redirect_host"`
-	Deny         string `json:"deny"`
+	TS           string         `json:"ts"`
+	Sub          string         `json:"sub"`
+	JTI          string         `json:"jti"`
+	AppCode      string         `json:"app_code"`
+	Module       string         `json:"module"`
+	RemoteAddr   string         `json:"remote_addr"`
+	Method       string         `json:"method"`
+	Route        string         `json:"route"`
+	Repo         string         `json:"repo"`
+	Upstream     string         `json:"upstream"`
+	Reference    string         `json:"reference"`
+	Status       int            `json:"status"`
+	ReqBytes     int64          `json:"req_bytes"`
+	RespBytes    int64          `json:"resp_bytes"`
+	Ms           int64          `json:"ms"`
+	RedirectHost string         `json:"redirect_host"`
+	Deny         oci.DenyReason `json:"deny"`
 }
 
 // JSONAuditor 把审计记录按行输出为 JSON。写入失败不阻断请求，通过 OnError 通知调用方。

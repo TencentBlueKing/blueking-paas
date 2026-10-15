@@ -14,7 +14,7 @@
 | Envoy / nginx + 外部鉴权服务 | 不采用 | 上传会话绑定、`Location` 改写、mount 降级都需要 Lua / njs 实现，并增加一套需要部署运维的组件 |
 | artifact-gateway、alauda connectors 等 | 不适用 | 完整产品而非可嵌入的库，且以拉取为主 |
 
-自研后的依赖只有 golang-jwt（token 校验）、prometheus client（指标）、yaml 与 x/sync（singleflight），均为成熟库。
+自研后的依赖只有 golang-jwt（token 校验）、prometheus client（指标）、yaml、x/sync（singleflight）与 samber/lo，均为成熟库。
 
 ## 2. 转发层设计
 

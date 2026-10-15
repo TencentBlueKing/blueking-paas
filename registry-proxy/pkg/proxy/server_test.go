@@ -117,7 +117,7 @@ func (e *testEnv) token(mutate ...func(jwt.MapClaims)) string {
 	c := jwt.MapClaims{
 		"iss": buildtoken.Issuer, "aud": testAudience, "sub": "build-1", "jti": "jti-1",
 		"iat": now.Unix(), "exp": now.Add(20 * time.Minute).Unix(), "ver": 1,
-		"app_code": "demo", "module": "default",
+		"app": map[string]any{"code": "demo", "module": "default"},
 		"push": []map[string]any{
 			{"repo": e.aliasA + "/bkpaas/app", "tags": []string{"v1"}},
 			{"repo": e.aliasA + "/bkpaas/app/cache", "tags": []string{"*"}},
@@ -248,7 +248,7 @@ var _ = Describe("Server", func() {
 			Expect(entries[0].Route).To(Equal("ping"))
 			Expect(entries[0].Status).To(Equal(http.StatusUnauthorized))
 			Expect(entries[0].Deny).To(BeEmpty())
-			Expect(entries[1].Deny).To(Equal("token_invalid"))
+			Expect(entries[1].Deny).To(Equal(oci.DenyTokenInvalid))
 			Expect(e.regA.recorded()).To(BeEmpty())
 		})
 	})

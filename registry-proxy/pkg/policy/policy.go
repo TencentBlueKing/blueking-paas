@@ -1,18 +1,22 @@
-// Package policy 按固定顺序对已认证的请求做授权判定，默认拒绝。移植自参考实现 reference/policy.go。
+// Package policy 按固定顺序对已认证的请求做授权判定，默认拒绝。
 package policy
 
 import (
 	"net/http"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/buildtoken"
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
 )
 
-// Decision 是对单个已认证请求的判定。Status 为 0 表示放行并转发上游。
+// Decision 是对单个已认证请求的判定。
 type Decision struct {
+	// Status 是拒绝时的 HTTP 状态码，取 403 或 404。0 表示放行并转发上游。
 	Status int
-	Deny   string
+	// Deny 为空表示放行
+	Deny oci.DenyReason
 	// DropMount 为 true 时去掉 mount/from 参数，把跨仓库挂载降级为普通上传
 	DropMount bool
 }
@@ -41,8 +45,8 @@ func Decide(c *buildtoken.Claims, upstreams map[string]bool, method string, rt o
 
 	if rt.Action == oci.ActionPush {
 		// 3. push 授权：仓库精确匹配；推送 manifest 时引用必须在 tags 内
-		g := pushGrant(c, rt.Repo)
-		if g == nil {
+		g, ok := lo.Find(c.Push, func(item buildtoken.PushGrant) bool { return item.Repo == rt.Repo })
+		if !ok {
 			return Decision{Status: http.StatusForbidden, Deny: oci.DenyPushNotGranted}
 		}
 		if rt.Kind == oci.RouteManifest && !allows(g, rt.Reference) {
@@ -63,21 +67,12 @@ func Decide(c *buildtoken.Claims, upstreams map[string]bool, method string, rt o
 	return Decision{}
 }
 
-// pushGrant 返回该仓库的推送授权。仓库名精确匹配，没有对应授权时返回 nil。
-func pushGrant(c *buildtoken.Claims, repo string) *buildtoken.PushGrant {
-	for i := range c.Push {
-		if c.Push[i].Repo == repo {
-			return &c.Push[i]
-		}
-	}
-	return nil
-}
-
 // PullDecision 返回空串表示允许拉取，否则返回拒绝原因
-func PullDecision(c *buildtoken.Claims, repo string) string {
-	switch {
-	case pushGrant(c, repo) != nil:
+func PullDecision(c *buildtoken.Claims, repo string) oci.DenyReason {
+	if _, ok := lo.Find(c.Push, func(g buildtoken.PushGrant) bool { return g.Repo == repo }); ok {
 		return ""
+	}
+	switch {
 	case matchAny(c.PullDeny, repo):
 		return oci.DenyPullDenied
 	case matchAny(c.Pull, repo):
@@ -98,7 +93,7 @@ func matchAny(patterns []string, repo string) bool {
 }
 
 // allows：tags 含 "*" 时允许任意 tag 与 digest；否则只允许列出的 tag
-func allows(g *buildtoken.PushGrant, ref string) bool {
+func allows(g buildtoken.PushGrant, ref string) bool {
 	for _, t := range g.Tags {
 		if t == "*" || t == ref {
 			return true

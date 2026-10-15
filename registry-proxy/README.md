@@ -161,8 +161,8 @@
 | `cmd/registry-proxy` | 入口：加载配置、JWKS、上游凭证与会话密钥，HTTPS 监听、管理端口（健康检查与指标）、优雅退出 | 启动 |
 | `pkg/config` | 配置加载与校验。影响安全或转发目标的字段没有缺省值，缺失时拒绝启动 | 启动 |
 | `pkg/oci` | 路由解析与路径校验；拒绝原因常量与 OCI 错误响应（含 401 质询） | 0、4；各步的错误响应 |
-| `pkg/buildtoken` | 构建 token（JWT）与 JWKS 校验，移植自参考实现 | 1 |
-| `pkg/policy` | 授权判定，移植自参考实现 | 3 |
+| `pkg/buildtoken` | 构建 token（JWT）与 JWKS 校验 | 1 |
+| `pkg/policy` | 按固定顺序做授权判定，默认拒绝 | 3 |
 | `pkg/authz` | 把 `buildtoken`、`policy` 接入代理的鉴权与授权钩子 | 1、3 |
 | `pkg/upstream` | 别名推导、上游凭证加载、每个上游独立的连接配置、按「上游 + scope」缓存的 Bearer / Basic 鉴权 | 5 |
 | `pkg/proxy` | 协议转发层：钩子接口与主流程、纵深防御、上游发送与 401 重试、响应头清理、`Location` 改写、上传会话签名、审计与指标 | 2、4、5、6、7 |
@@ -181,8 +181,8 @@
 |------|--------|------|
 | TLS 证书 | `tls.cert_file` / `tls.key_file` | 代理必须提供 HTTPS；`plain_http` 仅用于本地测试 |
 | 构建 token 公钥 | `jwks_file`、`audience` | JWKS 由 apiserver 管理命令 `export_build_token_jwks` 导出 |
-| 上游凭证 | `upstream_docker_config_file` | docker config.json 格式，只存在于代理进程内 |
-| 上游别名 | `upstreams[]` | `alias` 必须等于按 URL 主机名推导的值，启动时校验 |
+| 上游凭证 | `upstream.docker_config_file` | docker config.json 格式，只存在于代理进程内 |
+| 上游别名 | `upstream.registries[]` | `alias` 必须等于按 URL 主机名推导的值，启动时校验 |
 | 上传会话密钥 | `upload_session.key_file` | 不少于 32 字节，多副本必须相同；轮换时旧密钥放在 `previous_key_file` |
 
 输出：

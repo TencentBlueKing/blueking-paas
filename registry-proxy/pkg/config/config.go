@@ -36,17 +36,10 @@ type Config struct {
 
 	// Audience 是本代理要求的构建 token aud，格式为 bkpaas-registry-proxy:<集群名>
 	Audience string `yaml:"audience"`
-	// JWKSFile 是 apiserver 导出的构建 token 公钥集合
+	// JWKSFile 是 apiserver 导出的构建 token 公钥集合文件路径
 	JWKSFile string `yaml:"jwks_file"`
 
-	// UpstreamDockerConfigFile 是上游凭证，docker config.json 格式，按主机名匹配上游
-	UpstreamDockerConfigFile string `yaml:"upstream_docker_config_file"`
-	// UpstreamTokenMaxTTL 是上游 Authorization 的最长缓存时间，上游返回的 expires_in 更短时以其为准
-	UpstreamTokenMaxTTL time.Duration `yaml:"upstream_token_max_ttl"`
-	// UpstreamResponseHeaderTimeout 是发出请求（含请求体）后等待上游响应头的超时
-	UpstreamResponseHeaderTimeout time.Duration    `yaml:"upstream_response_header_timeout"`
-	Upstreams                     []UpstreamConfig `yaml:"upstreams"`
-
+	Upstream      UpstreamConfig      `yaml:"upstream"`
 	UploadSession UploadSessionConfig `yaml:"upload_session"`
 
 	// ShutdownTimeout 是收到退出信号后等待在途请求结束的最长时间
@@ -58,8 +51,19 @@ type TLSConfig struct {
 	KeyFile  string `yaml:"key_file"`
 }
 
-// UpstreamConfig 对应配置中的 upstreams[] 字段
+// UpstreamConfig 配置代理连接上游仓库的凭证、超时参数与仓库列表
 type UpstreamConfig struct {
+	// DockerConfigFile 是上游凭证，docker config.json 格式，按主机名匹配上游
+	DockerConfigFile string `yaml:"docker_config_file"`
+	// TokenMaxTTL 是上游 Authorization 的最长缓存时间，上游返回的 expires_in 更短时以其为准
+	TokenMaxTTL time.Duration `yaml:"token_max_ttl"`
+	// ResponseHeaderTimeout 是发出请求（含请求体）后等待上游响应头的超时
+	ResponseHeaderTimeout time.Duration            `yaml:"response_header_timeout"`
+	Registries            []UpstreamRegistryConfig `yaml:"registries"`
+}
+
+// UpstreamRegistryConfig 对应配置中的 upstream.registries[] 字段
+type UpstreamRegistryConfig struct {
 	// Alias 必须等于按 URL 主机推导的别名
 	Alias string `yaml:"alias"`
 	// URL 形如 https://<主机>，协议即上游使用的协议
@@ -107,11 +111,11 @@ func (c *Config) setDefaults() {
 	if c.AdminListen == "" {
 		c.AdminListen = ":9090"
 	}
-	if c.UpstreamTokenMaxTTL == 0 {
-		c.UpstreamTokenMaxTTL = 10 * time.Minute
+	if c.Upstream.TokenMaxTTL == 0 {
+		c.Upstream.TokenMaxTTL = 10 * time.Minute
 	}
-	if c.UpstreamResponseHeaderTimeout == 0 {
-		c.UpstreamResponseHeaderTimeout = 5 * time.Minute
+	if c.Upstream.ResponseHeaderTimeout == 0 {
+		c.Upstream.ResponseHeaderTimeout = 5 * time.Minute
 	}
 	if c.UploadSession.TTL == 0 {
 		c.UploadSession.TTL = time.Hour
@@ -143,34 +147,34 @@ func (c *Config) Validate() error {
 	if c.JWKSFile == "" {
 		add("jwks_file is required")
 	}
-	if c.UpstreamDockerConfigFile == "" {
-		add("upstream_docker_config_file is required")
+	if c.Upstream.DockerConfigFile == "" {
+		add("upstream.docker_config_file is required")
 	}
 	if c.UploadSession.KeyFile == "" {
 		add("upload_session.key_file is required")
 	}
-	if c.UpstreamTokenMaxTTL < 0 || c.UpstreamResponseHeaderTimeout < 0 || c.UploadSession.TTL < 0 || c.ShutdownTimeout < 0 {
+	if c.Upstream.TokenMaxTTL < 0 || c.Upstream.ResponseHeaderTimeout < 0 || c.UploadSession.TTL < 0 || c.ShutdownTimeout < 0 {
 		add("durations must not be negative")
 	}
 
-	if len(c.Upstreams) == 0 {
+	if len(c.Upstream.Registries) == 0 {
 		add("at least one upstream is required")
 	}
 	seen := map[string]bool{}
-	for i, u := range c.Upstreams {
+	for i, u := range c.Upstream.Registries {
 		if err := u.validate(); err != nil {
-			add("upstreams[%d]: %w", i, err)
+			add("upstream.registries[%d]: %w", i, err)
 			continue
 		}
 		if seen[u.Alias] {
-			add("upstreams[%d]: duplicated alias %q", i, u.Alias)
+			add("upstream.registries[%d]: duplicated alias %q", i, u.Alias)
 		}
 		seen[u.Alias] = true
 	}
 	return errors.Join(errs...)
 }
 
-func (u UpstreamConfig) validate() error {
+func (u UpstreamRegistryConfig) validate() error {
 	parsed, err := u.ParseURL()
 	if err != nil {
 		return err
@@ -186,7 +190,7 @@ func (u UpstreamConfig) validate() error {
 }
 
 // ParseURL 解析上游地址，只接受 scheme://host[:port]，不带路径、查询与用户信息
-func (u UpstreamConfig) ParseURL() (*url.URL, error) {
+func (u UpstreamRegistryConfig) ParseURL() (*url.URL, error) {
 	parsed, err := url.Parse(u.URL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid url %q: %w", u.URL, err)

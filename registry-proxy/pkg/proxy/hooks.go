@@ -23,13 +23,15 @@ type Principal interface {
 
 // Authenticator 是 token 鉴权钩子。deny 非空表示认证失败，取值为 token_missing / token_invalid / token_expired。
 type Authenticator interface {
-	Authenticate(r *http.Request) (p Principal, deny string)
+	Authenticate(r *http.Request) (p Principal, deny oci.DenyReason)
 }
 
-// Decision 是授权钩子的判定。Status 为 0 表示放行。
+// Decision 是授权钩子的判定。
 type Decision struct {
+	// Status 是拒绝时的 HTTP 状态码，取 401、403 或 404。0 表示放行。
 	Status int
-	Deny   string
+	// Deny 为空表示放行
+	Deny oci.DenyReason
 	// DropMount 为 true 时去掉 mount/from 参数，把跨仓库挂载降级为普通上传
 	DropMount bool
 }

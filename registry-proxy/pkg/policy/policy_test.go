@@ -13,8 +13,6 @@ import (
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
 )
 
-// 用例移植自参考实现 reference/policy_test.go，样例取自 samples/
-
 const (
 	app   = "/v2/mirrors-example-com/bkpaas/docker/demo/default"
 	cache = "/v2/mirrors-example-com/bkpaas/docker/demo/default/dockerbuild-cache"
@@ -40,7 +38,9 @@ var (
 	allowMount = Decision{DropMount: true}
 )
 
-func deny(status int, reason string) Decision { return Decision{Status: status, Deny: reason} }
+func deny(status int, reason oci.DenyReason) Decision {
+	return Decision{Status: status, Deny: reason}
+}
 
 var _ = Describe("Decide", func() {
 	Context("with kaniko claims", func() {

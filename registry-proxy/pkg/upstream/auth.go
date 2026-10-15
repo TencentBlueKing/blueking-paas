@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
 )
 
 const (
@@ -24,10 +26,10 @@ const (
 	maxCachedAuths = 16384
 )
 
-// 上游鉴权失败的归类，取值与拒绝原因一致
+// 上游鉴权失败的归类，取值就是对应的拒绝原因
 const (
-	ReasonAuthFailed  = "upstream_auth_failed"
-	ReasonUnreachable = "upstream_unreachable"
+	ReasonAuthFailed  = oci.DenyUpstreamAuth
+	ReasonUnreachable = oci.DenyUpstreamUnreached
 )
 
 // Scope 是代理为一次请求计算的上游仓库权限。代理只使用自己计算的 scope，
@@ -46,11 +48,11 @@ func (s Scope) String() string {
 // AuthError 是换取上游 Authorization 失败，Reason 为 ReasonAuthFailed 或 ReasonUnreachable。
 // Error() 只含状态码与主机等排障信息，不含凭证与上游响应体。
 type AuthError struct {
-	Reason string
+	Reason oci.DenyReason
 	Err    error
 }
 
-func (e *AuthError) Error() string { return e.Reason + ": " + e.Err.Error() }
+func (e *AuthError) Error() string { return string(e.Reason) + ": " + e.Err.Error() }
 func (e *AuthError) Unwrap() error { return e.Err }
 
 type cachedAuth struct {
@@ -301,7 +303,7 @@ func authFailed(format string, args ...any) error {
 }
 
 // ReasonOf 返回错误对应的拒绝原因，未归类的错误视为上游不可达
-func ReasonOf(err error) string {
+func ReasonOf(err error) oci.DenyReason {
 	var ae *AuthError
 	if errors.As(err, &ae) {
 		return ae.Reason

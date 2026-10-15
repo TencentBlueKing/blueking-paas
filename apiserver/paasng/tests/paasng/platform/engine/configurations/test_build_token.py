@@ -214,8 +214,7 @@ class TestIssueBuildToken:
         assert len(claims["sub"]) == 36
         assert claims["exp"] - claims["iat"] == TIMEOUT + 300
         assert claims["ver"] == 1
-        assert claims["app_code"] == APP_CODE
-        assert claims["module"] == MODULE
+        assert claims["app"] == {"code": APP_CODE, "module": MODULE}
         assert len(claims["jti"]) == 32
         assert set(claims) == {
             "iss",
@@ -225,8 +224,7 @@ class TestIssueBuildToken:
             "iat",
             "exp",
             "ver",
-            "app_code",
-            "module",
+            "app",
             "push",
             "pull",
             "pull_deny",

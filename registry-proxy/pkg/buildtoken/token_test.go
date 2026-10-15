@@ -45,7 +45,7 @@ func validClaims(now time.Time) jwt.MapClaims {
 	return jwt.MapClaims{
 		"iss": Issuer, "aud": audience, "sub": "4b3a1c1e-5a0f-4c8e-9b7d-2f6f0a1d9e3c",
 		"jti": "5f0c2b7e9d4a4c1e8b3f6a2d1c0e9f87", "iat": now.Unix(), "exp": now.Add(20 * time.Minute).Unix(),
-		"ver": 1, "app_code": "demo", "module": "default",
+		"ver": 1, "app": map[string]any{"code": "demo", "module": "default"},
 		"push":      []map[string]any{{"repo": "mirrors-example-com/bkpaas/docker/demo/default", "tags": []string{"v1"}}},
 		"pull":      []string{"mirrors-example-com/"},
 		"pull_deny": []string{"mirrors-example-com/bkpaas/docker/"},
@@ -78,7 +78,7 @@ var _ = Describe("Verify", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(deny).To(BeEmpty())
 		Expect(c.Subject).NotTo(BeEmpty())
-		Expect(c.AppCode).To(Equal("demo"))
+		Expect(c.App).To(Equal(App{Code: "demo", Module: "default"}))
 		Expect(c.Push).To(HaveLen(1))
 		Expect(c.PullDeny).To(Equal([]string{"mirrors-example-com/bkpaas/docker/"}))
 	})
@@ -102,7 +102,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	DescribeTable("rejects",
-		func(token func(k testKey, now time.Time) string, want string) {
+		func(token func(k testKey, now time.Time) string, want oci.DenyReason) {
 			_, deny, _ := Verify(token(k, now), keys, audience, now)
 			Expect(deny).To(Equal(want))
 		},

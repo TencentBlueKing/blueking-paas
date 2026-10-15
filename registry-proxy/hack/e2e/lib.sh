@@ -190,7 +190,7 @@ start_proxy() {
   while read -r h; do
     [[ -z "$h" ]] && continue
     scheme=https; is_insecure_upstream "$h" && scheme=http
-    ups+="  - alias: $(upstream_alias "$h")"$'\n'"    url: $scheme://$h"$'\n'
+    ups+="    - alias: $(upstream_alias "$h")"$'\n'"      url: $scheme://$h"$'\n'
     n=$((n + 1))
   done < <(all_upstream_hosts)
   if [[ "$n" -eq 0 ]]; then
@@ -206,10 +206,11 @@ tls:
   key_file: $TLS_KEY
 audience: "$AUDIENCE"
 jwks_file: $JWKS
-upstream_docker_config_file: $UPSTREAM_CONFIG
 upload_session:
   key_file: $UPLOAD_KEY
-upstreams:
+upstream:
+  docker_config_file: $UPSTREAM_CONFIG
+  registries:
 $ups
 EOF
 

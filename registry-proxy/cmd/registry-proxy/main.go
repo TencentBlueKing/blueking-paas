@@ -43,94 +43,28 @@ func main() {
 }
 
 func run(configPath string, logger *slog.Logger) error {
+	// 1. 加载配置与监控指标注册表
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
 	}
-	keys, err := buildtoken.LoadJWKSFile(cfg.JWKSFile)
-	if err != nil {
-		return err
-	}
-	creds, err := upstream.LoadCredentials(cfg.UpstreamDockerConfigFile)
-	if err != nil {
-		return err
-	}
-	uploadKey, previousUploadKey, err := cfg.ReadUploadSessionKeys()
-	if err != nil {
-		return err
-	}
-
-	specs := make([]upstream.Spec, 0, len(cfg.Upstreams))
-	for _, u := range cfg.Upstreams {
-		parsed, _ := u.ParseURL() // 已在 config.Validate 中校验
-		specs = append(specs, upstream.Spec{Alias: u.Alias, URL: parsed, SkipTLSVerify: u.SkipTLSVerify})
-	}
-	upstreams, err := upstream.FromSpecs(specs, creds, upstream.Options{
-		TokenMaxTTL:           cfg.UpstreamTokenMaxTTL,
-		ResponseHeaderTimeout: cfg.UpstreamResponseHeaderTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	for _, u := range upstreams {
-		logger.Info("upstream configured", "alias", u.Alias, "url", u.URL.String(), "credential", u.HasCredential())
-	}
-
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	metrics := proxy.NewMetrics(reg)
-	auditor := proxy.NewJSONAuditor(os.Stdout)
-	auditor.OnError = func(err error) {
-		metrics.AuditFailed()
-		logger.Error("write audit log failed", "error", err)
-	}
 
-	handler, err := proxy.New(proxy.Options{
-		Upstreams:                upstreams,
-		Authenticator:            &authz.TokenAuthenticator{Keys: keys, Audience: cfg.Audience},
-		Authorizer:               &authz.PolicyAuthorizer{Upstreams: upstream.Aliases(upstreams)},
-		Auditor:                  auditor,
-		UploadSessionKey:         uploadKey,
-		PreviousUploadSessionKey: previousUploadKey,
-		UploadSessionTTL:         cfg.UploadSession.TTL,
-		Metrics:                  metrics,
-		Logger:                   logger,
-	})
+	// 2. 初始化代理处理器与 HTTP 服务
+	handler, err := newProxyHandler(cfg, metrics, logger)
 	if err != nil {
 		return err
 	}
-
-	mainSrv := &http.Server{
-		Handler:           handler,
-		ReadHeaderTimeout: 30 * time.Second,
-		// 不设置 ReadTimeout / WriteTimeout：单个 blob 可达 GB 级，传输时长不可预估
-		IdleTimeout: 120 * time.Second,
-		ErrorLog:    slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
+	mainSrv, err := newMainServer(cfg, handler, logger)
+	if err != nil {
+		return err
 	}
-	if !cfg.PlainHTTP {
-		cert, err := tls.LoadX509KeyPair(cfg.TLS.CertFile, cfg.TLS.KeyFile)
-		if err != nil {
-			return fmt.Errorf("load tls certificate: %w", err)
-		}
-		mainSrv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
-	}
-
 	var ready atomic.Bool
-	adminMux := http.NewServeMux()
-	adminMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("ok"))
-	})
-	adminMux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		if !ready.Load() {
-			http.Error(w, "not ready", http.StatusServiceUnavailable)
-			return
-		}
-		_, _ = w.Write([]byte("ok"))
-	})
-	adminMux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-	adminSrv := &http.Server{Handler: adminMux, ReadHeaderTimeout: 10 * time.Second}
+	adminSrv := newAdminServer(reg, &ready)
 
-	// 先完成监听，端口冲突等错误在启动阶段暴露
+	// 3. 监听端口并启动服务（先完成监听，使端口冲突等错误在启动阶段暴露）
 	mainLn, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return err
@@ -154,6 +88,7 @@ func run(configPath string, logger *slog.Logger) error {
 	logger.Info("registry-proxy started", "version", version, "listen", cfg.Listen,
 		"admin_listen", cfg.AdminListen, "tls", !cfg.PlainHTTP, "audience", cfg.Audience)
 
+	// 4. 等待退出信号或服务异常，执行优雅停机
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	select {
@@ -171,4 +106,98 @@ func run(configPath string, logger *slog.Logger) error {
 	err = mainSrv.Shutdown(shutdownCtx)
 	_ = adminSrv.Shutdown(shutdownCtx)
 	return err
+}
+
+// newProxyHandler 加载密钥与上游配置，组装 OCI 代理请求处理器
+func newProxyHandler(cfg *config.Config, metrics *proxy.Metrics, logger *slog.Logger) (http.Handler, error) {
+	keys, err := buildtoken.LoadJWKSFile(cfg.JWKSFile)
+	if err != nil {
+		return nil, err
+	}
+	uploadKey, previousUploadKey, err := cfg.ReadUploadSessionKeys()
+	if err != nil {
+		return nil, err
+	}
+	upstreams, err := buildUpstreams(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	auditor := proxy.NewJSONAuditor(os.Stdout)
+	auditor.OnError = func(err error) {
+		metrics.AuditFailed()
+		logger.Error("write audit log failed", "error", err)
+	}
+
+	return proxy.New(proxy.Options{
+		Upstreams:                upstreams,
+		Authenticator:            &authz.TokenAuthenticator{Keys: keys, Audience: cfg.Audience},
+		Authorizer:               &authz.PolicyAuthorizer{Upstreams: upstream.Aliases(upstreams)},
+		Auditor:                  auditor,
+		UploadSessionKey:         uploadKey,
+		PreviousUploadSessionKey: previousUploadKey,
+		UploadSessionTTL:         cfg.UploadSession.TTL,
+		Metrics:                  metrics,
+		Logger:                   logger,
+	})
+}
+
+// buildUpstreams 加载上游凭证并根据配置初始化所有上游仓库实例
+func buildUpstreams(cfg *config.Config, logger *slog.Logger) (map[string]*upstream.Upstream, error) {
+	creds, err := upstream.LoadCredentials(cfg.Upstream.DockerConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	specs := make([]upstream.Spec, 0, len(cfg.Upstream.Registries))
+	for _, u := range cfg.Upstream.Registries {
+		parsed, _ := u.ParseURL() // 已在 config.Validate 中校验
+		specs = append(specs, upstream.Spec{Alias: u.Alias, URL: parsed, SkipTLSVerify: u.SkipTLSVerify})
+	}
+	upstreams, err := upstream.FromSpecs(specs, creds, upstream.Options{
+		TokenMaxTTL:           cfg.Upstream.TokenMaxTTL,
+		ResponseHeaderTimeout: cfg.Upstream.ResponseHeaderTimeout,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range upstreams {
+		logger.Info("upstream configured", "alias", u.Alias, "url", u.URL.String(), "credential", u.HasCredential())
+	}
+	return upstreams, nil
+}
+
+// newMainServer 创建面向构建容器的代理 HTTP/HTTPS 服务
+func newMainServer(cfg *config.Config, handler http.Handler, logger *slog.Logger) (*http.Server, error) {
+	srv := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 30 * time.Second,
+		// 不设置 ReadTimeout / WriteTimeout：单个 blob 可达 GB 级，传输时长不可预估
+		IdleTimeout: 120 * time.Second,
+		ErrorLog:    slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
+	}
+	if !cfg.PlainHTTP {
+		cert, err := tls.LoadX509KeyPair(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("load tls certificate: %w", err)
+		}
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
+	}
+	return srv, nil
+}
+
+// newAdminServer 创建提供探针（/healthz、/readyz）与监控指标（/metrics）的管理服务
+func newAdminServer(reg *prometheus.Registry, ready *atomic.Bool) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if !ready.Load() {
+			http.Error(w, "not ready", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	return &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 }

@@ -17,15 +17,16 @@ tls:
   key_file: /tls/tls.key
 audience: "bkpaas-registry-proxy:default-main"
 jwks_file: /jwks/jwks.json
-upstream_docker_config_file: /secrets/config.json
 upload_session:
   key_file: /secrets/upload.key
-upstreams:
-  - alias: mirrors-example-com
-    url: https://mirrors.example.com
-  - alias: registry-local-5000
-    url: http://registry.local:5000
-    skip_tls_verify: true
+upstream:
+  docker_config_file: /secrets/config.json
+  registries:
+    - alias: mirrors-example-com
+      url: https://mirrors.example.com
+    - alias: registry-local-5000
+      url: http://registry.local:5000
+      skip_tls_verify: true
 `
 
 var _ = Describe("Parse", func() {
@@ -33,10 +34,10 @@ var _ = Describe("Parse", func() {
 		cfg, err := Parse([]byte(validConfig))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.AdminListen).To(Equal(":9090"))
-		Expect(cfg.UpstreamTokenMaxTTL).To(Equal(10 * time.Minute))
+		Expect(cfg.Upstream.TokenMaxTTL).To(Equal(10 * time.Minute))
 		Expect(cfg.UploadSession.TTL).To(Equal(time.Hour))
 
-		u, err := cfg.Upstreams[1].ParseURL()
+		u, err := cfg.Upstream.Registries[1].ParseURL()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(u.String()).To(Equal("http://registry.local:5000"))
 	})
@@ -58,8 +59,8 @@ var _ = Describe("Parse", func() {
 		Entry("audience without prefix", []string{"bkpaas-registry-proxy:default-main", "default-main"}, "audience must be"),
 		Entry("audience without cluster", []string{"bkpaas-registry-proxy:default-main", "bkpaas-registry-proxy:"}, "audience must be"),
 		Entry("missing jwks", []string{"jwks_file: /jwks/jwks.json", ""}, "jwks_file is required"),
-		Entry("missing upstream credentials", []string{"upstream_docker_config_file: /secrets/config.json", ""},
-			"upstream_docker_config_file is required"),
+		Entry("missing upstream credentials", []string{"  docker_config_file: /secrets/config.json\n", ""},
+			"upstream.docker_config_file is required"),
 		Entry("missing upload key", []string{"  key_file: /secrets/upload.key", "  ttl: 1h"}, "upload_session.key_file is required"),
 		Entry("alias mismatch", []string{"alias: mirrors-example-com", "alias: mirrors"}, `must equal "mirrors-example-com"`),
 		Entry("alias with dot", []string{"alias: mirrors-example-com", "alias: mirrors.example.com"}, "must equal"),

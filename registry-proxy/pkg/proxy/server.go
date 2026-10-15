@@ -62,7 +62,7 @@ type reqState struct {
 	// clientBodyLen 为客户端请求体长度：0 表示无请求体，-1 表示长度未知
 	clientBodyLen int64
 	// deny 为拒绝原因，放行时为空
-	deny string
+	deny oci.DenyReason
 }
 
 // forwardedRequestHeaders 是转发给上游的客户端请求头。只放行 OCI 客户端需要的头，
@@ -220,7 +220,7 @@ func (s *Server) handle(w *responseWriter, r *http.Request, st *reqState) {
 	s.forward(w, r, st)
 }
 
-func (s *Server) reject(w http.ResponseWriter, r *http.Request, st *reqState, status int, deny string) {
+func (s *Server) reject(w http.ResponseWriter, r *http.Request, st *reqState, status int, deny oci.DenyReason) {
 	st.deny = deny
 	oci.WriteError(w, r, status, deny)
 }
@@ -405,7 +405,7 @@ func (s *Server) finish(st *reqState, rw *responseWriter, body *countingBody, r 
 	elapsed := s.now().Sub(st.start)
 	s.metrics.observeRequest(st.route.Kind, r.Method, status, elapsed)
 	if st.deny != "" {
-		s.metrics.denied.WithLabelValues(st.deny).Inc()
+		s.metrics.denied.WithLabelValues(string(st.deny)).Inc()
 	}
 	if st.upstream != nil {
 		s.metrics.transferred.WithLabelValues(st.upstream.Alias, "request").Add(float64(body.n))

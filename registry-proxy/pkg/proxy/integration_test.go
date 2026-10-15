@@ -69,7 +69,8 @@ var _ = Describe("Integration with registry:2", Label("integration"), func() {
 		now := time.Now()
 		claims := jwt.MapClaims{
 			"iss": buildtoken.Issuer, "aud": testAudience, "sub": "it", "jti": "it", "ver": 1,
-			"iat": now.Unix(), "exp": now.Add(time.Hour).Unix(), "app_code": "it", "module": "default",
+			"iat": now.Unix(), "exp": now.Add(time.Hour).Unix(),
+			"app": map[string]any{"code": "it", "module": "default"},
 			"push": []map[string]any{
 				{"repo": aliasA + "/" + appRepo, "tags": []string{"v1"}},
 				{"repo": aliasA + "/" + appRepo + "/cache", "tags": []string{"*"}},

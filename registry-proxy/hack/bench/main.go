@@ -247,7 +247,8 @@ func prepareFiles(dir, upHost, alias string) string {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"iss": buildtoken.Issuer, "aud": audience, "sub": "bench", "jti": "bench", "ver": 1,
-		"iat": now.Unix(), "exp": now.Add(time.Hour).Unix(), "app_code": "bench", "module": "default",
+		"iat": now.Unix(), "exp": now.Add(time.Hour).Unix(),
+		"app":  map[string]any{"code": "bench", "module": "default"},
 		"push": []map[string]any{{"repo": alias + "/bench/app", "tags": []string{"*"}}},
 		"pull": []string{alias + "/"},
 	}
@@ -268,15 +269,16 @@ tls:
   key_file: %s
 audience: %q
 jwks_file: %s
-upstream_docker_config_file: %s
 upload_session:
   key_file: %s
-upstreams:
-  - alias: %s
-    url: %s
-    skip_tls_verify: true
+upstream:
+  docker_config_file: %s
+  registries:
+    - alias: %s
+      url: %s
+      skip_tls_verify: true
 `, listen, admin, filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), audience,
-		filepath.Join(dir, "jwks.json"), filepath.Join(dir, "upstream.json"), filepath.Join(dir, "upload.key"), alias, upURL)
+		filepath.Join(dir, "jwks.json"), filepath.Join(dir, "upload.key"), filepath.Join(dir, "upstream.json"), alias, upURL)
 	write(dir, "config.yaml", []byte(cfg))
 }
 

@@ -27,12 +27,12 @@ func (p principal) Identity() proxy.Identity {
 	return proxy.Identity{
 		Subject: p.claims.Subject,
 		TokenID: p.claims.ID,
-		AppCode: p.claims.AppCode,
-		Module:  p.claims.Module,
+		AppCode: p.claims.App.Code,
+		Module:  p.claims.App.Module,
 	}
 }
 
-func (a *TokenAuthenticator) Authenticate(r *http.Request) (proxy.Principal, string) {
+func (a *TokenAuthenticator) Authenticate(r *http.Request) (proxy.Principal, oci.DenyReason) {
 	now := time.Now
 	if a.Now != nil {
 		now = a.Now

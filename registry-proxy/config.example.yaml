@@ -17,13 +17,6 @@ audience: "bkpaas-registry-proxy:default-main"
 # apiserver 导出的公钥集合
 jwks_file: /etc/registry-proxy/jwks/jwks.json
 
-# 上游凭证，docker config.json 格式，按主机名（含端口）匹配上游；只存在于代理进程内
-upstream_docker_config_file: /etc/registry-proxy/secrets/upstream/config.json
-# 上游 Authorization 的最长缓存时间；上游返回的 expires_in 更短时，在其 90% 处刷新（缺省 10m）
-upstream_token_max_ttl: 10m
-# 发完请求后等待上游响应头的超时，不限制 blob 传输时长（缺省 5m）
-upstream_response_header_timeout: 5m
-
 # 上传会话签名密钥，至少 32 字节；多副本之间必须相同，否则同一上传会话落到其他副本时无法继续
 upload_session:
   key_file: /etc/registry-proxy/secrets/upload-session/key
@@ -32,14 +25,22 @@ upload_session:
   # 上传会话有效期（缺省 1h）
   ttl: 1h
 
-# 上游仓库。alias 必须等于按 url 主机名推导的值：转小写后把 "." 与 ":" 替换为 "-"
-upstreams:
-  - alias: mirrors-example-com
-    url: https://mirrors.example.com
-  - alias: registry-example-com
-    url: https://registry.example.com
-    # 对应平台仓库的 skip_tls_verify
-    skip_tls_verify: false
+# 上游仓库配置
+upstream:
+  # 上游凭证，docker config.json 格式，按主机名（含端口）匹配上游；只存在于代理进程内
+  docker_config_file: /etc/registry-proxy/secrets/upstream/config.json
+  # 上游 Authorization 的最长缓存时间；上游返回的 expires_in 更短时，在其 90% 处刷新（缺省 10m）
+  token_max_ttl: 10m
+  # 发完请求后等待上游响应头的超时，不限制 blob 传输时长（缺省 5m）
+  response_header_timeout: 5m
+  # 上游仓库列表。alias 必须等于按 url 主机名推导的值：转小写后把 "." 与 ":" 替换为 "-"
+  registries:
+    - alias: mirrors-example-com
+      url: https://mirrors.example.com
+    - alias: registry-example-com
+      url: https://registry.example.com
+      # 对应平台仓库的 skip_tls_verify
+      skip_tls_verify: false
 
 # 收到退出信号后等待在途请求结束的最长时间（缺省 30s）
 shutdown_timeout: 30s

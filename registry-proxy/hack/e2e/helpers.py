@@ -48,7 +48,7 @@ def merge_configs(out, *paths):
 
 def claims(out, *args):
     """claims <输出文件> --sub S [--pull P]... [--pull-deny P]... [--push REPO=TAG[,TAG]]..."""
-    c = {"sub": "", "app_code": "e2e", "module": "default", "push": [], "pull": [], "pull_deny": []}
+    c = {"sub": "", "app": {"code": "e2e", "module": "default"}, "push": [], "pull": [], "pull_deny": []}
     it = iter(args)
     for flag in it:
         value = next(it)

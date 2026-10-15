@@ -1,4 +1,4 @@
-// Package buildtoken 校验 apiserver 签发的构建 token，移植自参考实现 reference/token.go。
+// Package buildtoken 校验 apiserver 签发的构建 token。
 package buildtoken
 
 import (
@@ -26,11 +26,16 @@ const (
 type Claims struct {
 	jwt.RegisteredClaims
 	Ver      int         `json:"ver"`
-	AppCode  string      `json:"app_code"`
-	Module   string      `json:"module"`
+	App      App         `json:"app"`
 	Push     []PushGrant `json:"push"`
 	Pull     []string    `json:"pull"`
 	PullDeny []string    `json:"pull_deny"`
+}
+
+// App 标识 token 所属的应用模块，只写入审计日志，不参与授权判定
+type App struct {
+	Code   string `json:"code"`
+	Module string `json:"module"`
 }
 
 // PushGrant 限定可推送的仓库（精确匹配）与 tag，tags 含 "*" 表示任意引用
@@ -114,7 +119,7 @@ func LoadJWKS(raw []byte) (KeySet, error) {
 }
 
 // Verify 校验构建 token，失败时返回的 deny 为 token_missing / token_expired / token_invalid
-func Verify(raw string, keys KeySet, audience string, now time.Time) (*Claims, string, error) {
+func Verify(raw string, keys KeySet, audience string, now time.Time) (*Claims, oci.DenyReason, error) {
 	if raw == "" {
 		return nil, oci.DenyTokenMissing, errors.New("missing token")
 	}

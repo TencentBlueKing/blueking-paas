@@ -4,7 +4,7 @@
 //	tokentool jwks -out jwks.json key.pem [key2.pem ...]
 //	tokentool sign -key key.pem -claims claims.json -audience bkpaas-registry-proxy:<集群名> [-timeout 900] [-expired]
 //
-// claims.json 只需包含 sub、app_code、module、push、pull、pull_deny，其余声明由工具补全。
+// claims.json 只需包含 sub、app、push、pull、pull_deny，其余声明由工具补全。
 // 私钥与 token 只写入文件或 stdout。
 package main
 
@@ -111,7 +111,7 @@ func exportJWKS(args []string) error {
 func sign(args []string) error {
 	fs := flag.NewFlagSet("sign", flag.ExitOnError)
 	keyFile := fs.String("key", "", "签名私钥")
-	claimsFile := fs.String("claims", "", "声明模板（sub/app_code/module/push/pull/pull_deny）")
+	claimsFile := fs.String("claims", "", "声明模板（sub/app/push/pull/pull_deny）")
 	audience := fs.String("audience", "", "bkpaas-registry-proxy:<集群名>")
 	timeout := fs.Duration("timeout", 900*time.Second, "BUILD_PROCESS_TIMEOUT")
 	expired := fs.Bool("expired", false, "签发一个已过期的 token，用于负面用例")

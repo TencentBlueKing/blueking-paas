@@ -15,15 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""从 KMS 信封加载增强服务的敏感配置，各增强服务使用内容相同的本文件
+"""从 KMS 信封加载敏感配置；四个独立构建的增强服务保留相同实现。
 
-部署方式沿用 helm-charts 大仓的 KMS 规范：平台组件开关 `PAAS_PLATFORM_KMS_ENABLED` 只读取环境变量，仅接受 "true" 或 "True"；
-私钥从环境变量 `BK_PAAS_KMS_PRIVATE_KEY` 读取，信封从文件 `/etc/secrets/bk-paas-kms` 读取。
-私钥或信封不可用、解密失败时阻止启动。
-
-信封明文按 "凭证类型.实例.字段" 分层，各增强服务在 settings 中声明环境变量与字段路径的对应关系，
-其他字段忽略。字段缺失或为空字符串时视为未提供，环境变量中仍有明文的敏感配置照常生效，
-并输出只含环境变量名的告警。信封中的值按原文使用，不做 "$VAR" 形式的代理解析。
+私钥由 BK_PAAS_KMS_PRIVATE_KEY 注入，信封默认挂载到 /etc/secrets/bk-paas-kms。
+开启 PAAS_PLATFORM_KMS_ENABLED 后解密失败会阻止启动；未提供的字段沿用环境变量。
+信封值按原文使用，不解析 $VAR；明文回退告警仅记录变量名。
 """
 
 import json
@@ -42,9 +38,6 @@ PRIVATE_KEY_ENV_VAR = "BK_PAAS_KMS_PRIVATE_KEY"
 # 仅供本地开发覆盖信封路径，chart 不设置
 ENVELOPE_PATH_ENV_VAR = "BK_PAAS_KMS_ENVELOPE_PATH"
 DEFAULT_ENVELOPE_PATH = "/etc/secrets/bk-paas-kms"
-
-# 带密码的完整连接串，无法只替换其中的密码
-_UNSUPPORTED_ENV_VARS = ["DATABASE_URL"]
 
 
 class KMSEnv(environ.Env):
@@ -80,9 +73,9 @@ def get_env(
     if not is_kms_enabled():
         return environ.Env(**scheme)
 
-    for var in _UNSUPPORTED_ENV_VARS:
-        if os.environ.get(var):
-            raise ImproperlyConfigured(f"KMS does not support {var}")
+    # 完整连接串无法只替换密码，开启 KMS 后使用 MYSQL_* 配置
+    if os.environ.get("DATABASE_URL"):
+        raise ImproperlyConfigured("KMS does not support DATABASE_URL")
 
     credentials = build_credentials(_decrypt_envelope(), bindings)
     for var in required_vars:

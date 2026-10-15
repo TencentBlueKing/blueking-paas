@@ -126,6 +126,14 @@ def test_disabled(monkeypatch, value):
     assert env("DEBUG") is False
 
 
+@pytest.mark.parametrize("other_switch", ["PAAS_SAAS_KMS_ENABLED", "PAAS_KMS_ENABLED", "ENABLE_KMS"])
+def test_other_switches_do_not_enable_platform_kms(monkeypatch, other_switch):
+    monkeypatch.delenv(ENABLED_ENV_VAR, raising=False)
+    monkeypatch.setenv(other_switch, "true")
+
+    assert type(get_env(BINDINGS)) is environ.Env
+
+
 def test_values_from_envelope(write_kms_files, monkeypatch):
     write_kms_files(CREDENTIALS)
     monkeypatch.setenv("MYSQL_PASSWORD", "plain-password")

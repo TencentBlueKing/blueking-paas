@@ -17,7 +17,7 @@
 
 """从 KMS 信封加载增强服务的敏感配置，各增强服务使用内容相同的本文件
 
-部署约定与 helm-charts 大仓的 KMS 规范一致：开关 `ENABLE_KMS` 只读取环境变量，仅接受 "true" 或 "True"；
+部署方式沿用 helm-charts 大仓的 KMS 规范：平台组件开关 `PAAS_PLATFORM_KMS_ENABLED` 只读取环境变量，仅接受 "true" 或 "True"；
 私钥从环境变量 `BK_PAAS_KMS_PRIVATE_KEY` 读取，信封从文件 `/etc/secrets/bk-paas-kms` 读取。
 私钥或信封不可用、解密失败时阻止启动。
 
@@ -37,7 +37,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
 
-ENABLED_ENV_VAR = "ENABLE_KMS"
+ENABLED_ENV_VAR = "PAAS_PLATFORM_KMS_ENABLED"
 PRIVATE_KEY_ENV_VAR = "BK_PAAS_KMS_PRIVATE_KEY"
 # 仅供本地开发覆盖信封路径，chart 不设置
 ENVELOPE_PATH_ENV_VAR = "BK_PAAS_KMS_ENVELOPE_PATH"

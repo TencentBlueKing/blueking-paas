@@ -26,7 +26,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand
 
 from paasng.core.tenant.user import OP_TYPE_TENANT_ID
-from paasng.settings.kms import get_kms_credential
+from paasng.settings.kms import get_kms_credential, is_platform_kms_enabled
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -128,6 +128,9 @@ class Command(BaseCommand):
         bkpaas3_password = bkpaas3_password or get_kms_credential("bkrepo.default.password") or ""
         addons_password = addons_password or get_kms_credential("bkrepo.addons.password") or ""
         lesscode_password = lesscode_password or get_kms_credential("bkrepo.lesscode.password") or ""
+
+        if is_platform_kms_enabled() and not super_password:
+            raise ImproperlyConfigured("bkrepo.admin.password is required when initializing bkrepo")
 
         # 当且仅当 adminUsername 和 adminPassword 不为空时，会初始化 bkrepo 账号和仓库
         if not (super_username and super_password):

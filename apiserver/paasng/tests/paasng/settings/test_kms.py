@@ -606,18 +606,21 @@ class TestManagementCommands:
             "npm",
         ) in calls
 
-    def test_init_bkrepo_missing_password_raises(self, write_kms_files):
+    @pytest.mark.parametrize("missing_account", ["admin", "default", "addons", "lesscode"])
+    def test_init_bkrepo_missing_password_raises(self, write_kms_files, missing_account):
         from django.core.management import call_command
 
         credentials = copy.deepcopy(CREDENTIALS)
         credentials["bkrepo"] = {
             "admin": {"username": "admin", "password": "kms-super-pwd"},
             "default": {"username": "bkpaas3", "password": "kms-bkpaas3-pwd"},
-            "addons": {"username": "addons", "password": ""},
+            "addons": {"username": "addons", "password": "kms-addons-pwd"},
+            "lesscode": {"username": "lesscode", "password": "kms-lesscode-pwd"},
         }
+        credentials["bkrepo"][missing_account]["password"] = ""
         write_kms_files(credentials)
 
-        with pytest.raises(ImproperlyConfigured, match=r"bkrepo\.addons\.password is required"):
+        with pytest.raises(ImproperlyConfigured, match=rf"bkrepo\.{missing_account}\.password is required"):
             call_command(
                 "init_bkrepo",
                 "--dry-run=true",

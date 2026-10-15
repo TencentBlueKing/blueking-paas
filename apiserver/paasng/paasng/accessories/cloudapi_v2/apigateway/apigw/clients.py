@@ -15,13 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
+from bkapi_client_core.apigateway import Operation, OperationGroup, bind_property
 
-from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
-from bkapi_client_core.client import ResponseHeadersRepresenter
-from bkapi_client_core.exceptions import HTTPResponseError
-from requests import Response
-from requests.exceptions import HTTPError
+from paasng.accessories.cloudapi_v2.apigw import BkApigatewayClient
 
 
 class Group(OperationGroup):
@@ -182,35 +178,7 @@ class Group(OperationGroup):
     )
 
 
-class Client(APIGatewayClient):
+class Client(BkApigatewayClient):
     """bk-apigateway client"""
 
-    _api_name = "bk-apigateway"
-
     api = bind_property(Group, name="api")
-
-    def _handle_response_content(
-        self,
-        operation: Operation,
-        response: Response | None,
-    ):
-        # 覆写父类方法, 接受非 JSON 类型的响应 对应网关 v2 响应格式
-        if response is None:
-            return None
-
-        self.check_response_apigateway_error(response)
-
-        try:
-            response.raise_for_status()
-        except HTTPError as err:
-            response_headers_representer = ResponseHeadersRepresenter(response.headers)
-            raise HTTPResponseError(
-                "Error responded by Backend api, %s" % str(err),
-                response=response,
-                response_headers_representer=response_headers_representer,
-            )
-
-        try:
-            return response.json()
-        except (TypeError, json.JSONDecodeError):
-            return response.text

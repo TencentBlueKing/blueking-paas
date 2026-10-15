@@ -124,7 +124,10 @@ func (f *fakeRegistry) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.mu.Lock()
-	f.requests = append(f.requests, recordedRequest{r.Method, r.URL.Path, r.URL.RawQuery, r.Header.Get("Authorization"), r.Header.Get("Cookie"), r.Header.Clone()})
+	f.requests = append(f.requests, recordedRequest{
+		r.Method, r.URL.Path, r.URL.RawQuery,
+		r.Header.Get("Authorization"), r.Header.Get("Cookie"), r.Header.Clone(),
+	})
 	auth, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	valid := ok && f.tokens[auth]
 	f.mu.Unlock()

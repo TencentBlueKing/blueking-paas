@@ -195,7 +195,9 @@ func (p *AuthProvider) store(key string, c cachedAuth, scoped bool) {
 // exchangeAuthorization 用代理凭证向上游换取 Authorization，不查也不写缓存：
 // 先按上游 /v2/ 的质询确定认证方式（质询有缓存），Bearer 时再向 token 服务换 token。
 // scoped 表示结果与 scope 相关（Bearer），否则所有 scope 共用（匿名或 Basic）
-func (p *AuthProvider) exchangeAuthorization(ctx context.Context, scopes []Scope) (header string, ttl time.Duration, scoped bool, err error) {
+func (p *AuthProvider) exchangeAuthorization(
+	ctx context.Context, scopes []Scope,
+) (header string, ttl time.Duration, scoped bool, err error) {
 	ch, err := p.getChallenge(ctx)
 	if err != nil {
 		return "", 0, false, err
@@ -270,7 +272,9 @@ func (p *AuthProvider) getChallenge(ctx context.Context) (*cachedChallenge, erro
 }
 
 // requestToken 按 Docker Registry token 规范换取 Bearer token。scope 由代理计算，忽略质询中的 scope。
-func (p *AuthProvider) requestToken(ctx context.Context, params map[string]string, scopes []Scope) (string, time.Duration, error) {
+func (p *AuthProvider) requestToken(
+	ctx context.Context, params map[string]string, scopes []Scope,
+) (string, time.Duration, error) {
 	// 按照 oci distribution 规范，不校验 realm 和 registry 是否属于同一主机。只有当上游本身已被入侵时这里才可能有问题
 	realm, err := url.Parse(params["realm"])
 	if err != nil || realm.Host == "" || (realm.Scheme != "https" && realm.Scheme != "http") {

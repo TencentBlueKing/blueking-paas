@@ -32,6 +32,7 @@ func (p principal) Identity() proxy.Identity {
 	}
 }
 
+// Authenticate 验证构建 token 是否合法
 func (a *TokenAuthenticator) Authenticate(r *http.Request) (proxy.Principal, oci.DenyReason) {
 	now := time.Now
 	if a.Now != nil {
@@ -63,6 +64,7 @@ type PolicyAuthorizer struct {
 	Upstreams map[string]bool
 }
 
+// Authorize 验证是否满足授权要求
 func (a *PolicyAuthorizer) Authorize(p proxy.Principal, method string, rt oci.Route) proxy.Decision {
 	pr, ok := p.(principal)
 	if !ok {

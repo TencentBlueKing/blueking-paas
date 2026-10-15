@@ -162,7 +162,7 @@ func buildUpstreams(cfg *config.Config, logger *slog.Logger) (map[string]*upstre
 	}
 	for _, u := range upstreams {
 		logger.Info(
-			"upstream configured", "alias", u.Alias, "url", u.URL.String(), "credential", u.Auth.HasCredential()
+			"upstream configured", "alias", u.Alias, "url", u.URL.String(), "credential", u.Auth.HasCredential(),
 		)
 	}
 	return upstreams, nil

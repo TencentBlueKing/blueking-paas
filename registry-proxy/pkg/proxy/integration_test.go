@@ -117,8 +117,16 @@ var _ = Describe("Integration with registry:2", Label("integration"), func() {
 		manifest, _ := json.Marshal(map[string]any{
 			"schemaVersion": 2,
 			"mediaType":     "application/vnd.oci.image.manifest.v1+json",
-			"config":        map[string]any{"mediaType": "application/vnd.oci.image.config.v1+json", "digest": configDigest, "size": len(config)},
-			"layers":        []map[string]any{{"mediaType": "application/vnd.oci.image.layer.v1.tar", "digest": layerDigest, "size": len(layer)}},
+			"config": map[string]any{
+				"mediaType": "application/vnd.oci.image.config.v1+json",
+				"digest":    configDigest,
+				"size":      len(config),
+			},
+			"layers": []map[string]any{{
+				"mediaType": "application/vnd.oci.image.layer.v1.tar",
+				"digest":    layerDigest,
+				"size":      len(layer),
+			}},
 		})
 		mt := withHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json")
 		resp, body = do(http.MethodPut, p1.URL+app+"/manifests/v1", tok, manifest, mt)

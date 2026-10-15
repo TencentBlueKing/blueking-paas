@@ -70,7 +70,10 @@ func WriteError(w http.ResponseWriter, r *http.Request, status int, deny DenyRea
 	if status == http.StatusUnauthorized {
 		h.Set("WWW-Authenticate", Challenge)
 	}
-	body, _ := json.Marshal(errorBody{Errors: []errorItem{{Code: errorCode(status), Message: MessagePrefix + string(deny)}}})
+	body, _ := json.Marshal(errorBody{Errors: []errorItem{{
+		Code:    errorCode(status),
+		Message: MessagePrefix + string(deny),
+	}}})
 	w.WriteHeader(status)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(body)

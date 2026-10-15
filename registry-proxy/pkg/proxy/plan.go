@@ -129,7 +129,9 @@ func upstreamScopes(rt oci.Route, alias aliasMapping) []upstream.Scope {
 	}
 	scopes := []upstream.Scope{{Repo: alias.upstreamRepo(rt.Repo), Actions: actions}}
 	if rt.MountFrom != "" {
-		scopes = append(scopes, upstream.Scope{Repo: alias.upstreamRepo(rt.MountFrom), Actions: []string{string(oci.ActionPull)}})
+		scopes = append(scopes, upstream.Scope{
+			Repo: alias.upstreamRepo(rt.MountFrom), Actions: []string{string(oci.ActionPull)},
+		})
 	}
 	return scopes
 }

@@ -504,7 +504,8 @@ var _ = Describe("Server", func() {
 					entries := e.audit.entries()
 					Expect(entries[len(entries)-1].Reference).To(BeEmpty(), "downgraded mount wrote no blob")
 				},
-				Entry("source on another upstream", func() string { return "?mount=" + d + "&from=" + e.aliasB + "/python/python" }),
+				Entry("source on another upstream",
+					func() string { return "?mount=" + d + "&from=" + e.aliasB + "/python/python" }),
 				Entry("source denied by pull_deny", func() string { return "?mount=" + d + "&from=" + e.aliasA + "/bkpaas/other" }),
 				// 缺少 from 的 mount 在部分 registry 上表示从凭证可读的任意仓库挂载
 				Entry("mount without from", func() string { return "?mount=" + d }),
@@ -553,10 +554,12 @@ var _ = Describe("Server", func() {
 				validToken, 403, "unknown_upstream"),
 			Entry("alias written as host", http.MethodGet, "/v2/mirrors.example.com/python/python/manifests/3",
 				validToken, 403, "unknown_upstream"),
-			Entry("delete manifest", http.MethodDelete, "/v2/{A}/bkpaas/app/manifests/v1", validToken, 403, "delete_not_allowed"),
+			Entry("delete manifest", http.MethodDelete,
+				"/v2/{A}/bkpaas/app/manifests/v1", validToken, 403, "delete_not_allowed"),
 			Entry("delete blob", http.MethodDelete, "/v2/{A}/bkpaas/app/blobs/sha256:x", validToken, 403, "delete_not_allowed"),
 			Entry("tag not granted", http.MethodPut, "/v2/{A}/bkpaas/app/manifests/latest", validToken, 403, "tag_not_granted"),
-			Entry("push not granted", http.MethodPost, "/v2/{A}/bkpaas/other/blobs/uploads/", validToken, 403, "push_not_granted"),
+			Entry("push not granted", http.MethodPost,
+				"/v2/{A}/bkpaas/other/blobs/uploads/", validToken, 403, "push_not_granted"),
 			Entry("pull denied", http.MethodGet, "/v2/{A}/bkpaas/other/manifests/v1", validToken, 403, "pull_denied"),
 			Entry("catalog", http.MethodGet, "/v2/_catalog", validToken, 404, "route_not_found"),
 			Entry("non v2", http.MethodGet, "/api/v2.0/projects", validToken, 404, "route_not_found"),
@@ -567,9 +570,11 @@ var _ = Describe("Server", func() {
 				validToken, 404, "route_not_found"),
 			Entry("alias without repository", http.MethodGet, "/v2/{A}/manifests/3", validToken, 404, "route_not_found"),
 			Entry("dot-dot reference", http.MethodGet, "/v2/{A}/python/python/manifests/..", validToken, 404, "route_not_found"),
-			Entry("encoded dot-dot", http.MethodGet, "/v2/{A}/python/python/manifests/%2e%2e", validToken, 404, "route_not_found"),
+			Entry("encoded dot-dot", http.MethodGet,
+				"/v2/{A}/python/python/manifests/%2e%2e", validToken, 404, "route_not_found"),
 			Entry("encoded slash", http.MethodGet, "/v2/{A}/python%2Fpython/manifests/3", validToken, 404, "route_not_found"),
-			Entry("tag as blob digest", http.MethodGet, "/v2/{A}/python/python/blobs/latest", validToken, 404, "route_not_found"),
+			Entry("tag as blob digest", http.MethodGet,
+				"/v2/{A}/python/python/blobs/latest", validToken, 404, "route_not_found"),
 			Entry("invalid digest", http.MethodGet, "/v2/{A}/python/python/blobs/sha256:..", validToken, 404, "route_not_found"),
 			Entry("invalid upload digest", http.MethodPost, "/v2/{A}/bkpaas/app/blobs/uploads/?digest=sha256:..",
 				validToken, 404, "route_not_found"),
@@ -581,7 +586,8 @@ var _ = Describe("Server", func() {
 			// 上游或其前置网关若把 ; 当作分隔符，会看到代理没看到的 mount / from
 			Entry("semicolon-separated mount", http.MethodPost,
 				"/v2/{A}/bkpaas/app/blobs/uploads/?mount=sha256:x;from={A}/bkpaas/other", validToken, 400, "invalid_query"),
-			Entry("invalid query escape", http.MethodGet, "/v2/{A}/python/python/tags/list?n=%zz", validToken, 400, "invalid_query"),
+			Entry("invalid query escape", http.MethodGet,
+				"/v2/{A}/python/python/tags/list?n=%zz", validToken, 400, "invalid_query"),
 			// 代理只读取第一个值，上游可能取最后一个
 			Entry("duplicate mount", http.MethodPost,
 				"/v2/{A}/bkpaas/app/blobs/uploads/?digest=sha256:aa&mount=&mount=sha256:bb&from={A}/python/python",

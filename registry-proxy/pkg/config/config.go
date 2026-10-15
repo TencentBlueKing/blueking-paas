@@ -46,6 +46,7 @@ type Config struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"`
 }
 
+// TLSConfig 配置代理的 HTTPS 证书
 type TLSConfig struct {
 	CertFile string `yaml:"cert_file"`
 	KeyFile  string `yaml:"key_file"`
@@ -153,7 +154,8 @@ func (c *Config) Validate() error {
 	if c.UploadSession.KeyFile == "" {
 		add("upload_session.key_file is required")
 	}
-	if c.Upstream.TokenMaxTTL < 0 || c.Upstream.ResponseHeaderTimeout < 0 || c.UploadSession.TTL < 0 || c.ShutdownTimeout < 0 {
+	if c.Upstream.TokenMaxTTL < 0 || c.Upstream.ResponseHeaderTimeout < 0 ||
+		c.UploadSession.TTL < 0 || c.ShutdownTimeout < 0 {
 		add("durations must not be negative")
 	}
 

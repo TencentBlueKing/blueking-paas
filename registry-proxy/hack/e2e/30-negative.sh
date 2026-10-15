@@ -28,12 +28,17 @@ PULL_PREFIX="$(upstream_alias "$(host_of "$BASE")")/"
 issue_token "$DIR/valid" -- --sub e2e-negative --pull "$PULL_PREFIX" --push "$REPO=$TAG"
 issue_token "$DIR/nopull" -- --sub e2e-negative-nopull --push "$REPO=$TAG"
 issue_token "$DIR/expired" --expired -- --sub e2e-negative-expired --push "$REPO=$TAG"
-issue_token "$DIR/other-aud" --audience "bkpaas-registry-proxy:other-cluster" -- --sub e2e-negative-aud --push "$REPO=$TAG"
+issue_token "$DIR/other-aud" --audience "bkpaas-registry-proxy:other-cluster" \
+  -- --sub e2e-negative-aud --push "$REPO=$TAG"
 [[ -f "$DIR/rogue.pem" ]] || "$TOKENTOOL" keygen -out "$DIR/rogue.pem"
 issue_token "$DIR/forged" --key "$DIR/rogue.pem" -- --sub e2e-negative-forged --push "$REPO=$TAG"
 
 P="https://$PROXY_ADDR"
-ACCEPT='application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json'
+ACCEPT="$(printf '%s' \
+  'application/vnd.oci.image.index.v1+json,' \
+  'application/vnd.oci.image.manifest.v1+json,' \
+  'application/vnd.docker.distribution.manifest.list.v2+json,' \
+  'application/vnd.docker.distribution.manifest.v2+json')"
 
 # req <token 文件，空表示不带凭证> <方法> <路径> [curl 参数...]，输出状态码
 req() {
@@ -88,7 +93,8 @@ expect "响应头不透传上游 Cookie" "$(grep -ci '^set-cookie:' "$DIR/header
 
 insecure=""
 is_insecure_upstream "$(host_of "$PUSH")" && insecure=1
-probe="$(python3 "$HERE/helpers.py" upstream-token-probe "$(host_of "$PUSH")" "$(path_of "$PUSH")" "$DIR/valid" "$insecure")"
+probe="$(python3 "$HERE/helpers.py" upstream-token-probe \
+  "$(host_of "$PUSH")" "$(path_of "$PUSH")" "$DIR/valid" "$insecure")"
 # 换 token 被拒，或换到的 token 无法上传，都说明构建 token 在上游不具备推送能力
 expect "拿构建 token 直连上游推送" "$probe" token-401 token-403 token-200/upload-401 token-200/upload-403 \
   basic/upload-401 basic/upload-403 anonymous-200

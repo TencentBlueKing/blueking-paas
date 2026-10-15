@@ -124,19 +124,23 @@ func main() {
 		length = -1
 	}
 	start = time.Now()
-	resp = mustDo(client, "PATCH", "https://"+proxyAddr+loc, auth, io.LimitReader(patternReader{}, size), length, http.StatusAccepted)
+	resp = mustDo(client, "PATCH", "https://"+proxyAddr+loc, auth,
+		io.LimitReader(patternReader{}, size), length, http.StatusAccepted)
 	closeBody(resp)
 	ul := time.Since(start)
 	ulPeak := peak.stop()
 	report("上传", up.received.Load(), size, ul, ulPeak, baseline)
 
 	// 延迟：直连上游与经代理交替进行
-	upClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec
+	upClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+	}}
 	direct := make([]time.Duration, 0, *requests)
 	via := make([]time.Duration, 0, *requests)
 	for range *requests {
 		t0 := time.Now()
-		closeBody(mustDo(upClient, "HEAD", up.URL+"/v2/bench/app/manifests/v1", "Bearer "+upstreamToken, nil, -1, http.StatusOK))
+		closeBody(mustDo(upClient, "HEAD", up.URL+"/v2/bench/app/manifests/v1",
+			"Bearer "+upstreamToken, nil, -1, http.StatusOK))
 		direct = append(direct, time.Since(t0))
 		t0 = time.Now()
 		closeBody(mustDo(client, "HEAD", base+"/manifests/v1", auth, nil, -1, http.StatusOK))
@@ -235,10 +239,14 @@ func prepareFiles(dir, upHost, alias string) string {
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	x := base64.RawURLEncoding.EncodeToString(pub)
 	kid := buildtoken.JWKThumbprint(x)
-	jwks, _ := json.Marshal(map[string]any{"keys": []map[string]string{{"kty": "OKP", "crv": "Ed25519", "x": x, "kid": kid, "alg": "EdDSA", "use": "sig"}}})
+	jwks, _ := json.Marshal(map[string]any{"keys": []map[string]string{{
+		"kty": "OKP", "crv": "Ed25519", "x": x, "kid": kid, "alg": "EdDSA", "use": "sig",
+	}}})
 	write(dir, "jwks.json", jwks)
 	write(dir, "upload.key", bytes.Repeat([]byte("u"), 32))
-	cfg, _ := json.Marshal(map[string]any{"auths": map[string]any{upHost: map[string]string{"username": "robot", "password": "bench"}}})
+	cfg, _ := json.Marshal(map[string]any{"auths": map[string]any{
+		upHost: map[string]string{"username": "robot", "password": "bench"},
+	}})
 	write(dir, "upstream.json", cfg)
 	cert, key := selfSignedCert()
 	write(dir, "tls.crt", cert)
@@ -302,7 +310,8 @@ func selfSignedCert() ([]byte, []byte) {
 		log.Fatal(err)
 	}
 	kd, _ := x509.MarshalECPrivateKey(key)
-	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kd})
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kd})
 }
 
 func freeAddr() string {

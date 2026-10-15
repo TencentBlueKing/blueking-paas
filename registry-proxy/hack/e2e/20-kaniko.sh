@@ -62,7 +62,12 @@ run_case() {
   push_repo="$(client_repo "$push")"
 
   # pull 为 base 所在上游，pull_deny 为产物仓库所在的命名空间
-  local targs=(--sub "$sub" --pull "$(upstream_alias "$(host_of "$base")")/" --pull-deny "${push_repo%/*}/" --push "$push_repo=$tag")
+  local targs=(
+    --sub "$sub"
+    --pull "$(upstream_alias "$(host_of "$base")")/"
+    --pull-deny "${push_repo%/*}/"
+    --push "$push_repo=$tag"
+  )
   [[ -n "$cache" ]] && targs+=(--push "$(client_repo "$cache")=*")
   issue_token "$dir/token" -- "${targs[@]}"
   make_builder_config "$dir/token" "$dir/docker"
@@ -71,7 +76,12 @@ run_case() {
   # 探针打印 kaniko 进程环境与挂载的 docker config，模拟用户在 Dockerfile 里窃取凭证
   cat >"$dir/ctx/Dockerfile" <<EOF
 FROM $base
-RUN echo "== probe proc1 environ ==" && (tr '\\0' '\\n' < /proc/1/environ || true) && echo "== probe docker config ==" && (cat /kaniko/.docker/config.json 2>/dev/null || true) && echo && echo "registry-proxy-probe $sub" > /probe.txt
+RUN echo "== probe proc1 environ ==" \
+ && (tr '\\0' '\\n' < /proc/1/environ || true) \
+ && echo "== probe docker config ==" \
+ && (cat /kaniko/.docker/config.json 2>/dev/null || true) \
+ && echo \
+ && echo "registry-proxy-probe $sub" > /probe.txt
 EOF
 
   local log1="$dir/build-1.log" rc
@@ -97,7 +107,9 @@ EOF
 
   local via_proxy direct insecure=()
   via_proxy="$(crane_digest "$dir/docker/config.json" "$(proxy_repo "$push"):$tag" --insecure)"
-  expect "经代理读回的 digest 与构建产物一致" "$([[ -n "$digest" && "$via_proxy" == "$digest" ]] && echo 一致 || echo "不一致:$via_proxy")" 一致
+  expect "经代理读回的 digest 与构建产物一致" \
+    "$([[ -n "$digest" && "$via_proxy" == "$digest" ]] && echo 一致 || echo "不一致:$via_proxy")" \
+    一致
   is_insecure_upstream "$(host_of "$push")" && insecure=(--insecure)
   direct="$(crane_digest "$UPSTREAM_CONFIG" "$push" ${insecure[@]+"${insecure[@]}"})"
   expect "直连上游读回的 digest 与构建产物一致" "$([[ -n "$digest" && "$direct" == "$digest" ]] && echo 一致 || echo "不一致:$direct")" 一致

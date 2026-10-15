@@ -100,7 +100,9 @@ func (s *Server) rewriteLocation(h http.Header, method string, status int, plan 
 			return errors.New("upload session Location on a foreign host " + loc.Host)
 		}
 		// sessionExpiry 为 0（新会话）时由 sign 按有效期设置，续传时沿用原会话的过期时刻
-		token, err := s.sessions.sign(uploadSession{Repo: plan.route.Repo, Location: loc.RequestURI(), Expiry: plan.sessionExpiry})
+		token, err := s.sessions.sign(uploadSession{
+			Repo: plan.route.Repo, Location: loc.RequestURI(), Expiry: plan.sessionExpiry,
+		})
 		if err != nil {
 			return err
 		}

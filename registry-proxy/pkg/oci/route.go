@@ -41,11 +41,31 @@ type routeRule struct {
 }
 
 var rules = []routeRule{
-	{regexp.MustCompile(`^(.+)/manifests/([^/]+)$`), RouteManifest, false, map[string]Action{"GET": ActionPull, "HEAD": ActionPull, "PUT": ActionPush}},
-	{regexp.MustCompile(`^(.+)/blobs/uploads/?$`), RouteUpload, false, map[string]Action{"POST": ActionPush}},
-	{regexp.MustCompile(`^(.+)/blobs/uploads/([^/]+)$`), RouteUpload, true, map[string]Action{"GET": ActionPush, "PATCH": ActionPush, "PUT": ActionPush}},
-	{regexp.MustCompile(`^(.+)/blobs/([^/]+)$`), RouteBlob, false, map[string]Action{"GET": ActionPull, "HEAD": ActionPull}},
-	{regexp.MustCompile(`^(.+)/tags/list$`), RouteTags, false, map[string]Action{"GET": ActionPull}},
+	{
+		regexp.MustCompile(`^(.+)/manifests/([^/]+)$`),
+		RouteManifest, false,
+		map[string]Action{"GET": ActionPull, "HEAD": ActionPull, "PUT": ActionPush},
+	},
+	{
+		regexp.MustCompile(`^(.+)/blobs/uploads/?$`),
+		RouteUpload, false,
+		map[string]Action{"POST": ActionPush},
+	},
+	{
+		regexp.MustCompile(`^(.+)/blobs/uploads/([^/]+)$`),
+		RouteUpload, true,
+		map[string]Action{"GET": ActionPush, "PATCH": ActionPush, "PUT": ActionPush},
+	},
+	{
+		regexp.MustCompile(`^(.+)/blobs/([^/]+)$`),
+		RouteBlob, false,
+		map[string]Action{"GET": ActionPull, "HEAD": ActionPull},
+	},
+	{
+		regexp.MustCompile(`^(.+)/tags/list$`),
+		RouteTags, false,
+		map[string]Action{"GET": ActionPull},
+	},
 }
 
 // Route 是一次请求的解析结果，仓库路径均为客户端视角：<上游别名>/<上游仓库路径>

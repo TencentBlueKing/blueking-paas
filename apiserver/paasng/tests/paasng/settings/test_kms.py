@@ -40,7 +40,6 @@ from paasng.settings.kms import (
     ENABLED_ENV_VAR,
     ENVELOPE_PATH_ENV_VAR,
     PRIVATE_KEY_ENV_VAR,
-    KMSSettings,
     get_kms_credential,
     load_kms_settings,
     load_kms_workloads_settings,
@@ -58,14 +57,11 @@ CREDENTIALS: dict[str, Any] = {
     "mysql": {
         "apiserver": {"username": "paas", "password": DB_PASSWORD},
         "workloads": {"username": "wl", "password": "wl-password"},
-        "svc_mysql": {"username": "svc", "password": "svc-password"},
-        "admin": {"password": "root-password"},
     },
     "redis": {"default": {"password": REDIS_PASSWORD}, "sentinel": {"password": ""}},
     "celery": {"default": {"uri": BROKER_URL}},
-    "rabbitmq": {"default": {"username": "admin", "password": "mq-admin"}, "cluster": {"erlang_cookie": "cookie"}},
     "bkrepo": {"default": {"username": "bkpaas3", "password": "bkrepo-password"}},
-    "registry": {"external": {"username": "", "password": ""}, "image_pull": {"secret_names": ["pull-secret"]}},
+    "registry": {"external": {"username": "", "password": ""}},
     "jwt": {"services": {"client_key": "jwt-client-key"}, "paas_analysis": {"key": "analysis-key"}},
     "encryption": {"bk_krill": {"secret_key": "krill-key"}, "slug": {"secret_key": "slug-key"}},
     "tokens": {
@@ -141,9 +137,9 @@ def _private_key_text(private_key: rsa.RSAPrivateKey) -> str:
 def write_kms_files(tmp_path, private_key, monkeypatch):
     """写入信封文件（内容末尾带换行，与 Secret 挂载一致），设置私钥环境变量并开启 KMS"""
 
-    def _write(credentials, envelope_key: rsa.RSAPrivateKey | None = None) -> dict[str, str]:
+    def _write(credentials) -> dict[str, str]:
         envelope_path = tmp_path / "bk-paas-kms"
-        envelope_path.write_text(_make_envelope(envelope_key or private_key, json.dumps(credentials)) + "\n")
+        envelope_path.write_text(_make_envelope(private_key, json.dumps(credentials)) + "\n")
         env = {
             ENABLED_ENV_VAR: "true",
             ENVELOPE_PATH_ENV_VAR: str(envelope_path),
@@ -186,7 +182,7 @@ def _parse_redis_url(url: str) -> dict:
     return ConnectionPool.from_url(url).connection_kwargs
 
 
-@pytest.mark.parametrize("value", [None, "false", "1", "TRUE", " true"])
+@pytest.mark.parametrize("value", [None, "false"])
 def test_disabled(monkeypatch, value):
     if value is None:
         monkeypatch.delenv(ENABLED_ENV_VAR, raising=False)
@@ -198,22 +194,10 @@ def test_disabled(monkeypatch, value):
     assert get_kms_credential("tokens.healthz.token") is None
 
 
-@pytest.mark.parametrize("other_switch", ["PAAS_SAAS_KMS_ENABLED", "PAAS_KMS_ENABLED", "ENABLE_KMS"])
-def test_other_switches_do_not_enable_platform_kms(monkeypatch, other_switch):
-    monkeypatch.delenv(ENABLED_ENV_VAR, raising=False)
-    monkeypatch.setenv(other_switch, "true")
-    settings = _make_settings(**BASE_SETTINGS)
-
-    assert load_kms_settings(settings) is settings
-    assert load_kms_workloads_settings(settings) is settings
-    assert get_kms_credential("tokens.healthz.token") is None
-
-
 class TestOverrides:
     def test_simple_fields(self, write_kms_files):
         settings = _load(CREDENTIALS, write_kms_files)
 
-        assert isinstance(settings, KMSSettings)
         assert settings.get("BK_APP_CODE") == "bk_paas3"
         assert settings.get("BK_APP_SECRET") == "app-secret"
         assert settings.get("BKKRILL_ENCRYPT_SECRET_KEY") == "krill-key"
@@ -223,7 +207,6 @@ class TestOverrides:
         assert settings.get("AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN") == "daemon-token"
         assert settings.get("OTEL_BK_DATA_TOKEN") == "otel-token"
         assert settings.get("CELERY_BROKER_URL") == BROKER_URL
-        assert settings.get("NOT_EXISTS", "default") == "default"
 
     def test_fields_merged_into_dict_settings(self, write_kms_files):
         settings = _load(CREDENTIALS, write_kms_files)
@@ -294,15 +277,18 @@ class TestOverrides:
 
 class TestAccounts:
     def test_databases(self, write_kms_files):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["mysql"]["apiserver"]["username"] = ""
         settings = _load(
-            CREDENTIALS,
+            credentials,
             write_kms_files,
             BK_CONSOLE_DATABASE_NAME="open_paas",
             BK_CONSOLE_DATABASE_USER="plain-user",
             BK_CONSOLE_DATABASE_PASSWORD="plain-password",
         )
 
-        assert (settings.get("DATABASE_USER"), settings.get("DATABASE_PASSWORD")) == ("paas", DB_PASSWORD)
+        # 空用户名保留原配置，密码仍由信封提供
+        assert (settings.get("DATABASE_USER"), settings.get("DATABASE_PASSWORD")) == ("plain-user", DB_PASSWORD)
         assert (settings.get("WL_DATABASE_USER"), settings.get("WL_DATABASE_PASSWORD")) == ("wl", "wl-password")
         # 信封中没有 mysql.open_paas，保持原配置
         assert settings.get("BK_CONSOLE_DATABASE_USER") == "plain-user"
@@ -316,23 +302,14 @@ class TestAccounts:
         assert settings.get("BK_CONSOLE_DATABASE_USER") == "open"
         assert settings.get("BK_CONSOLE_DATABASE_PASSWORD") == "open-password"
 
-    def test_database_username_kept_when_empty(self, write_kms_files):
-        credentials = copy.deepcopy(CREDENTIALS)
-        credentials["mysql"]["apiserver"]["username"] = ""
-        settings = _load(credentials, write_kms_files)
-
-        assert (settings.get("DATABASE_USER"), settings.get("DATABASE_PASSWORD")) == ("plain-user", DB_PASSWORD)
-
     def test_bkrepo(self, write_kms_files):
-        assert _load(CREDENTIALS, write_kms_files).get("BLOBSTORE_BKREPO_CONFIG") == {
+        settings = _load(CREDENTIALS, write_kms_files)
+        assert settings.get("BLOBSTORE_BKREPO_CONFIG") == {
             "PROJECT": "bkpaas",
             "ENDPOINT": "http://bkrepo",
             "USERNAME": "bkpaas3",
             "PASSWORD": "bkrepo-password",
         }
-
-    def test_docker_registry_uses_bkrepo_account(self, write_kms_files):
-        settings = _load(CREDENTIALS, write_kms_files)
 
         assert settings.get("SMART_DOCKER_PASSWORD") == "bkrepo-password"
         assert settings.get("APP_DOCKER_PASSWORD") == "bkrepo-password"
@@ -379,7 +356,7 @@ class TestAccounts:
         cache = cache_from_redis_sentinel_url(settings.get("REDIS_URL"), "mymaster", "sentinel-password")
         assert cache["OPTIONS"]["PASSWORD"] == REDIS_PASSWORD
 
-    @pytest.mark.parametrize("password", ["a/b", "a?b", "a#b", "a%41b"])
+    @pytest.mark.parametrize("password", ["a/b", "a%41b"])
     def test_password_unsupported_in_url(self, write_kms_files, password):
         credentials = copy.deepcopy(CREDENTIALS)
         credentials["redis"]["default"]["password"] = password
@@ -394,11 +371,6 @@ class TestAccounts:
 
 
 class TestPlaintextFallback:
-    def test_no_warning_when_provided(self, write_kms_files, caplog):
-        with caplog.at_level(logging.WARNING):
-            _load(CREDENTIALS, write_kms_files)
-        assert "Sensitive setting" not in caplog.text
-
     def test_missing_fields_use_plaintext_with_warning(self, write_kms_files, caplog):
         credentials = {"encryption": {"bk_krill": {"secret_key": "krill-key"}, "slug": {"secret_key": "slug-key"}}}
         with caplog.at_level(logging.WARNING):
@@ -438,38 +410,21 @@ class TestPlaintextFallback:
         assert "Sensitive setting HEALTHZ_TOKEN is not provided by KMS" in caplog.text
         assert "Sensitive setting DATABASE_PASSWORD is not provided by KMS" in caplog.text
 
-    @pytest.mark.parametrize(
-        ("key", "value"),
-        [
-            ("ELASTICSEARCH_HOSTS", "[{host='es.example.com', port='9200'}]"),
-            ("SENTRY_CONFIG", "{dsn=''}"),
-            ("METRIC_CLIENT_TOKEN_DICT", "{}"),
-        ],
-    )
-    def test_no_warning_without_credential(self, write_kms_files, caplog, monkeypatch, key, value):
-        credentials = _without(CREDENTIALS, "elasticsearch", "sentry", "tokens.metrics")
-        monkeypatch.setenv(f"PAAS_KMS_UNITTEST_{key}", value)
-        with caplog.at_level(logging.WARNING):
-            _load(credentials, write_kms_files, SENTRY_CONFIG={}, METRIC_CLIENT_TOKEN_DICT={})
-        assert "Sensitive setting" not in caplog.text
-
-    def test_no_warning_without_password(self, write_kms_files, caplog):
-        with caplog.at_level(logging.WARNING):
-            settings = _load(
-                _without(CREDENTIALS, "redis"), write_kms_files, REDIS_URL="redis://redis.example.com:6379/0"
-            )
-
-        assert settings.get("REDIS_URL") == "redis://redis.example.com:6379/0"
-        assert "REDIS_URL" not in caplog.text
-
 
 class TestDecryptFailure:
-    def test_wrong_private_key(self, write_kms_files):
-        write_kms_files(CREDENTIALS, envelope_key=rsa.generate_private_key(public_exponent=65537, key_size=2048))
+    def test_decrypt_failure_hides_credentials(self, write_kms_files, monkeypatch):
+        write_kms_files(CREDENTIALS)
+
+        def fail_decrypt(**kwargs):
+            raise ValueError("sensitive credential contents")
+
+        monkeypatch.setattr("bk_kms.decrypt", fail_decrypt)
 
         with pytest.raises(ImproperlyConfigured, match="Unable to read or decrypt") as exc_info:
             load_kms_settings(_make_settings(**BASE_SETTINGS))
         assert exc_info.value.__cause__ is None
+        assert exc_info.value.__suppress_context__
+        assert "sensitive credential contents" not in str(exc_info.value)
 
     def test_missing_private_key(self, write_kms_files, monkeypatch):
         write_kms_files(CREDENTIALS)

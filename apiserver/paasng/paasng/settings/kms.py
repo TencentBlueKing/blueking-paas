@@ -21,41 +21,8 @@
 私钥从环境变量 `BK_PAAS_KMS_PRIVATE_KEY` 读取，信封从文件 `/etc/secrets/bk-paas-kms` 读取。
 私钥或信封不可用、解密失败时阻止启动。
 
-信封明文按 "凭证类型.实例.字段" 分层，与运维的 bk_paas_runtime_config 凭证一致，apiserver 读取其中：
-
-    bkapp_id_secret.default.app_code/app_secret  BK_APP_CODE / BK_APP_SECRET
-    mysql.apiserver.username/password            DATABASE_USER / DATABASE_PASSWORD
-    mysql.workloads.username/password            WL_DATABASE_USER / WL_DATABASE_PASSWORD
-    mysql.open_paas.username/password            BK_CONSOLE_DATABASE_*、PAAS_LEGACY_DATABASE_*
-    redis.default.password                       填入 REDIS_URL 及 Redis 类型的 CELERY_BROKER_URL/CELERY_RESULT_BACKEND
-    redis.sentinel.password                      各 SENTINEL_PASSWORD
-    celery.default.uri                           CELERY_BROKER_URL，原样使用
-    bkrepo.default.username/password             BLOBSTORE_BKREPO_CONFIG
-    registry.external.username/password          SMART_DOCKER_PASSWORD / APP_DOCKER_PASSWORD
-    jwt.services.client_key                      ONE_SIMPLE_JWT_AUTH_KEY
-    jwt.paas_analysis.key                        PAAS_ANALYSIS_JWT_CONF 中的 key
-    encryption.bk_krill.secret_key               BKKRILL_ENCRYPT_SECRET_KEY
-    encryption.slug.secret_key                   SLUG_ENCRYPT_SECRET_KEY
-    tokens.healthz.token                         HEALTHZ_TOKEN
-    tokens.metrics.token                         METRIC_CLIENT_TOKEN_DICT 中的 bkmonitor
-    tokens.agent_sandbox_daemon.token            AGENT_SANDBOX_RESIDENT_DAEMON_TOKEN
-    tokens.agent_sandbox_router.token            workloads 的 AGENT_SANDBOX_ROUTER_AUTH_TOKEN
-    telemetry.default.token                      OTEL_BK_DATA_TOKEN
-    sentry.default.dsn                           SENTRY_CONFIG 中的 dsn
-    elasticsearch.default.hosts                  ELASTICSEARCH_HOSTS，按环境变量的规则解析
-
-管理命令通过 get_kms_credential 读取：
-
-    kubernetes.default.ca_data/cert_data/key_data/token  initial_default_cluster 的集群访问凭证
-    bkrepo.admin/default/addons/lesscode.password        init_bkrepo 的各账号密码
-
-镜像仓库密码取 registry.external 与 bkrepo.default 中用户名与原配置一致的一组。
-其他字段忽略，允许多个组件共用一份凭证。字段缺失或为空字符串时视为未提供，
-原配置中仍有明文的敏感配置项照常生效，并输出只含配置项名的告警。
-开启 KMS 后 chart 不再渲染上述明文，BKKRILL_ENCRYPT_SECRET_KEY、SLUG_ENCRYPT_SECRET_KEY 缺失时阻止启动。
-
-Redis 连接串仍由原配置提供（可不带密码），密码原样填入并覆盖连接串中原有的密码，
-因此不能包含 "/"、"?"、"#" 及 "%XX" 形式的内容。
+信封字段与 settings 的映射见下方绑定及 apiserver/design_notes/platform-kms.md。
+字段缺失或为空字符串时沿用原配置；必填项仍为空时阻止启动。未迁移的明文只记录配置项名告警。
 """
 
 import functools

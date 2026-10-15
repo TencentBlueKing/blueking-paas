@@ -6,11 +6,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
@@ -47,32 +44,19 @@ type Server struct {
 	now       func() time.Time
 }
 
-// reqState 贯穿一次请求的处理过程
-type reqState struct {
+// reqRecord 是一次请求的审计与指标记录，finish 对所有请求（包括最早被拒绝的）输出它在请求停下时的状态。
+// 每个字段只写一次，且只由 ServeHTTP 与 handle 写入；各处理阶段不读它做判断。
+type reqRecord struct {
+	// start 与 route 在请求进入时写入，route 为路由解析结果
 	start time.Time
-	// query 为客户端查询串的唯一解析结果，路由解析、mount 降级与转发都只使用它，转发时重新编码
-	query    url.Values
-	route    oci.Route
+	route oci.Route
+	// identity 在认证通过后写入
 	identity Identity
-	upstream *upstream.Upstream
-	// session 为本次请求续传的上传会话，非续传请求为空
-	session *uploadSession
-	// scopes 为本次请求换取上游 Authorization 使用的 scope，上游返回 401 时据此作废缓存
-	scopes []upstream.Scope
-	// clientBodyLen 为客户端请求体长度：0 表示无请求体，-1 表示长度未知
-	clientBodyLen int64
-	// deny 为拒绝原因，放行时为空
+	// plan 在生成转发计划后写入，未进入转发阶段的请求为空；审计的路由与上游以它为准
+	plan *forwardPlan
+	// deny 为 handle 返回的拒绝原因，放行时为空
 	deny oci.DenyReason
 }
-
-// forwardedRequestHeaders 是转发给上游的客户端请求头。只放行 OCI 客户端需要的头，
-// 客户端的 Authorization、Cookie 与逐跳头都不会到达上游。
-var forwardedRequestHeaders = []string{
-	"Accept", "Accept-Encoding", "Content-Type", "Content-Range", "Range",
-	"If-Match", "If-None-Match", "If-Modified-Since", "If-Range", "User-Agent",
-}
-
-var copyBufPool = sync.Pool{New: func() any { b := make([]byte, 64<<10); return &b }}
 
 // New 创建代理
 func New(opts Options) (*Server, error) {
@@ -110,65 +94,44 @@ func New(opts Options) (*Server, error) {
 	return s, nil
 }
 
-// singleValueParams 是代理据以判定路由与授权的查询参数。代理只读取第一个值，
-// 而上游可能取最后一个，出现多次时无法保证上游执行的就是代理检查过的值
-var singleValueParams = []string{"digest", "mount", "from"}
-
-// parseQuery 解析客户端查询串。代理看到的参数与上游看到的必须一致，以下情况直接拒绝：
-//   - 无法完整解析：r.URL.Query() 会静默丢弃含 ; 等的片段，而上游或其前置网关可能仍把 ; 当作分隔符；
-//   - singleValueParams 中的参数出现多次。
-func parseQuery(raw string) (url.Values, error) {
-	query, err := url.ParseQuery(raw)
-	if err != nil {
-		return nil, err
-	}
-	for _, k := range singleValueParams {
-		if len(query[k]) > 1 {
-			return nil, errors.New("duplicate query parameter " + k)
-		}
-	}
-	return query, nil
-}
-
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// query 为客户端查询串的唯一解析结果，路由解析、mount 降级与转发都只使用它，转发时重新编码
 	query, queryErr := parseQuery(r.URL.RawQuery)
 	if queryErr != nil {
 		query = url.Values{}
 	}
-	st := &reqState{
-		start:         s.now(),
-		query:         query,
-		route:         oci.ParseRoute(r.Method, r.URL.EscapedPath(), query),
-		clientBodyLen: r.ContentLength,
-	}
+	rt := oci.ParseRoute(r.Method, r.URL.EscapedPath(), query)
+	rec := &reqRecord{start: s.now(), route: rt}
 	body := &countingBody{ReadCloser: r.Body}
 	r.Body = body
 	rw := &responseWriter{ResponseWriter: w}
-	defer s.finish(st, rw, body, r)
+	defer s.finish(rec, rw, body, r)
 	if queryErr != nil {
-		s.reject(rw, r, st, http.StatusBadRequest, oci.DenyInvalidQuery)
+		rec.deny = s.reject(rw, r, http.StatusBadRequest, oci.DenyInvalidQuery)
 		return
 	}
-	s.handle(rw, r, st)
+	rec.deny = s.handle(rw, r, rec, rt, query)
 }
 
-func (s *Server) handle(w *responseWriter, r *http.Request, st *reqState) {
+// handle 依次完成鉴权、/v2/ 探活、授权、纵深防御与转发计划的生成（客户端侧校验，失败返回 4xx），再交给 forward。
+// 返回拒绝原因，放行时为空；只向 rec 写入 identity 与 plan。
+func (s *Server) handle(
+	w *responseWriter, r *http.Request, rec *reqRecord, route oci.Route, query url.Values,
+) oci.DenyReason {
 	p, deny := s.authn.Authenticate(r)
 	if deny != "" {
-		// 未带 token 的 /v2/ 探活是客户端正常的质询流程，审计中不记为拒绝
-		// (reqState deny 会在 finish 中被计入 metrics)
-		if st.route.Kind != oci.RoutePing || deny != oci.DenyTokenMissing {
-			st.deny = deny
-		}
 		oci.WriteError(w, r, http.StatusUnauthorized, deny)
-		return
+		// 未带 token 的 /v2/ 探活是客户端正常的质询流程，审计与指标中不记为拒绝
+		if route.Kind == oci.RoutePing && deny == oci.DenyTokenMissing {
+			return ""
+		}
+		return deny
 	}
-	st.identity = p.Identity()
+	rec.identity = p.Identity()
 
-	if st.route.Kind == oci.RoutePing {
-		if st.route.Action == "" {
-			s.reject(w, r, st, http.StatusNotFound, oci.DenyRouteNotFound)
-			return
+	if route.Kind == oci.RoutePing {
+		if route.Action == "" {
+			return s.reject(w, r, http.StatusNotFound, oci.DenyRouteNotFound)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(oci.APIVersionHeader, "registry/2.0")
@@ -176,261 +139,112 @@ func (s *Server) handle(w *responseWriter, r *http.Request, st *reqState) {
 		if r.Method != http.MethodHead {
 			_, _ = w.Write([]byte("{}"))
 		}
-		return
+		return ""
 	}
 
-	d := s.authz.Authorize(p, r.Method, st.route)
+	d := s.authz.Authorize(p, r.Method, route)
 	if d.Status != 0 {
-		s.reject(w, r, st, d.Status, d.Deny)
-		return
+		return s.reject(w, r, d.Status, d.Deny)
 	}
-	// 以下检查不依赖授权钩子的实现：DELETE、非法路由与未配置的上游永远不转发
+	// 以下检查不依赖授权钩子的实现：DELETE、非法路由与未配置的上游（在 resolve 中）永远不转发
 	switch {
 	case r.Method == http.MethodDelete:
-		s.reject(w, r, st, http.StatusForbidden, oci.DenyDeleteNotAllowed)
-		return
-	case !st.route.Valid():
-		s.reject(w, r, st, http.StatusNotFound, oci.DenyRouteNotFound)
-		return
-	}
-	up, ok := s.upstreams[st.route.Upstream]
-	if !ok {
-		s.reject(w, r, st, http.StatusForbidden, oci.DenyUnknownUpstream)
-		return
-	}
-	st.upstream = up
-
-	// 客户端把所有上游视为同一个 registry，会尝试跨上游挂载；直接转发会让上游按同名路径查找来源仓库。
-	// 缺少 from 的 mount 在部分 registry 上表示「从凭证可读的任意仓库挂载」，而代理的上游账号可读全平台。
-	// 以上情况以及来源不可读时，都去掉 mount / from，降级为普通上传。
-	if query := st.query; st.route.Kind == oci.RouteUpload &&
-		!st.route.Session && (query.Has("mount") || query.Has("from")) {
-		from := st.route.MountFrom
-		if from == "" || !query.Has("mount") || d.DropMount || oci.UpstreamOf(from) != up.Alias {
-			query.Del("mount")
-			query.Del("from")
-			st.route.MountFrom = ""
-			// 降级后没有写入 mount 指定的 blob
-			st.route.Reference = query.Get("digest")
-		} else {
-			query.Set("from", strings.TrimPrefix(from, up.Alias+"/"))
-		}
+		return s.reject(w, r, http.StatusForbidden, oci.DenyDeleteNotAllowed)
+	case !route.Valid():
+		return s.reject(w, r, http.StatusNotFound, oci.DenyRouteNotFound)
 	}
 
-	s.forward(w, r, st)
+	plan, deny := s.resolve(r, route, query, d)
+	if deny != "" {
+		return s.reject(w, r, http.StatusForbidden, deny)
+	}
+	rec.plan = plan
+	return s.forward(w, r, plan)
 }
 
-func (s *Server) reject(w http.ResponseWriter, r *http.Request, st *reqState, status int, deny oci.DenyReason) {
-	st.deny = deny
-	oci.WriteError(w, r, status, deny)
-}
-
-// forward 把已授权的请求转发给上游，并把上游响应改写后流式返回给客户端
-func (s *Server) forward(w *responseWriter, r *http.Request, st *reqState) {
-	up := st.upstream
-	target, err := s.upstreamURL(r, st)
+// forward 按转发计划请求上游，并把上游响应改写后流式返回给客户端。这一阶段的失败都返回 502。
+// 返回拒绝原因，放行时为空。
+func (s *Server) forward(w *responseWriter, r *http.Request, plan *forwardPlan) oci.DenyReason {
+	up, kind := plan.upstream, plan.route.Kind
+	auth, err := s.upstreamAuthorization(r.Context(), plan)
 	if err != nil {
-		s.reject(w, r, st, http.StatusForbidden, oci.DenyUploadSession)
-		return
+		s.log.Warn("upstream authorization failed", "upstream", up.Alias, "route", kind, "error", err)
+		return s.reject(w, r, http.StatusBadGateway, upstream.ReasonOf(err))
 	}
 
-	header, err := s.upstreamAuthorization(r, st)
+	resp, err := s.send(r, plan, upstreamHeader(r, auth))
 	if err != nil {
-		s.reject(w, r, st, http.StatusBadGateway, st.deny)
-		return
-	}
-	for _, k := range forwardedRequestHeaders {
-		if v := r.Header.Values(k); len(v) > 0 {
-			header[k] = v
-		}
-	}
-	if st.clientBodyLen != 0 {
-		// 上游在读取请求体前就拒绝时（如鉴权失败），避免白白上传 GB 级的数据
-		header.Set("Expect", "100-continue")
-	}
-
-	resp, err := s.send(r, st, target, header)
-	if err != nil {
-		if st.deny == "" {
-			st.deny = oci.DenyUpstreamUnreached
-		}
-		s.log.Warn("upstream request failed", "upstream", up.Alias, "route", st.route.Kind, "method", r.Method, "error", err)
-		s.reject(w, r, st, http.StatusBadGateway, st.deny)
-		return
+		s.log.Warn("upstream request failed", "upstream", up.Alias, "route", kind, "method", r.Method, "error", err)
+		return s.reject(w, r, http.StatusBadGateway, upstream.ReasonOf(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusUnauthorized {
 		// 上游拒绝代理自身的凭证，改为 502，避免客户端误以为构建 token 无效
-		s.log.Warn("upstream rejected proxy credentials", "upstream", up.Alias, "route", st.route.Kind, "method", r.Method)
-		s.reject(w, r, st, http.StatusBadGateway, oci.DenyUpstreamAuth)
-		return
+		s.log.Warn("upstream rejected proxy credentials", "upstream", up.Alias, "route", kind, "method", r.Method)
+		return s.reject(w, r, http.StatusBadGateway, oci.DenyUpstreamAuth)
 	}
 
 	h := w.Header()
 	for k, v := range resp.Header {
 		h[k] = v
 	}
-	sanitizeUpstreamHeaders(h, st)
-	if err := s.rewriteLocation(h, r.Method, resp.StatusCode, target, st); err != nil {
-		s.log.Warn("unexpected upstream Location", "upstream", up.Alias, "route", st.route.Kind, "error", err)
-		s.reject(w, r, st, http.StatusBadGateway, oci.DenyUpstreamUnreached)
-		return
+	sanitizeUpstreamHeaders(h, plan)
+	if err := s.rewriteLocation(h, r.Method, resp.StatusCode, plan); err != nil {
+		s.log.Warn("unexpected upstream Location", "upstream", up.Alias, "route", kind, "error", err)
+		return s.reject(w, r, http.StatusBadGateway, oci.DenyUpstreamUnreached)
 	}
 	w.WriteHeader(resp.StatusCode)
 	if r.Method == http.MethodHead {
-		return
+		return ""
 	}
 	buf := copyBufPool.Get().(*[]byte)
 	defer copyBufPool.Put(buf)
 	// 客户端或上游中途断开时 CopyBuffer 返回，上游响应体随即关闭；请求 context 取消后上游连接也会释放
 	_, _ = io.CopyBuffer(w, resp.Body, *buf)
+	return ""
 }
 
-// upstreamURL 计算上游地址：续传请求使用会话中记录的上游地址，其余请求去掉路径中的别名段
-func (s *Server) upstreamURL(r *http.Request, st *reqState) (*url.URL, error) {
-	target := *st.upstream.URL
-	if !st.route.Session {
-		target.Path = "/v2/" + strings.TrimPrefix(r.URL.Path, "/v2/"+st.upstream.Alias+"/")
-		target.RawQuery = st.query.Encode()
-		return &target, nil
-	}
-
-	sess, err := s.sessions.verify(st.route.SessionID, st.route.Repo)
-	if err != nil {
-		return nil, err
-	}
-	st.session = &sess
-	loc, err := url.Parse(sess.Location)
-	if err != nil {
-		return nil, errInvalidSession
-	}
-	target.Path, target.RawPath, target.RawQuery = loc.Path, loc.RawPath, loc.RawQuery
-	// 客户端只需要提供完成上传时的 digest，其余参数（如 _state）以上游返回的为准
-	if d := st.query.Get("digest"); d != "" {
-		q := target.Query()
-		q.Set("digest", d)
-		target.RawQuery = q.Encode()
-	}
-	return &target, nil
-}
-
-// upstreamAuthorization 按代理计算的 scope 换取上游 Authorization，返回只含该头的请求头
-func (s *Server) upstreamAuthorization(r *http.Request, st *reqState) (http.Header, error) {
-	up := st.upstream
-	prefix := up.Alias + "/"
-	// 上游 token 的 scope 是协议里的字符串，与路由动作类型分开
-	actions := []string{string(oci.ActionPull)}
-	if st.route.Action == oci.ActionPush {
-		actions = append(actions, string(oci.ActionPush))
-	}
-	st.scopes = []upstream.Scope{{Repo: strings.TrimPrefix(st.route.Repo, prefix), Actions: actions}}
-	if st.route.MountFrom != "" {
-		st.scopes = append(st.scopes, upstream.Scope{Repo: strings.TrimPrefix(st.route.MountFrom, prefix), Actions: []string{string(oci.ActionPull)}})
-	}
-
-	value, hit, err := up.Authorization(r.Context(), st.scopes)
-	switch {
-	case err != nil:
-		st.deny = upstream.ReasonOf(err)
-		s.metrics.upstreamAuth.WithLabelValues(up.Alias, "error").Inc()
-		s.log.Warn("upstream authorization failed", "upstream", up.Alias, "route", st.route.Kind, "error", err)
-		return nil, err
-	case hit:
-		s.metrics.upstreamAuth.WithLabelValues(up.Alias, "hit").Inc()
-	default:
-		s.metrics.upstreamAuth.WithLabelValues(up.Alias, "miss").Inc()
-	}
-	header := http.Header{}
-	if value != "" {
-		header.Set("Authorization", value)
-	}
-	return header, nil
-}
-
-// rewriteLocation 改写上游响应的 Location：
-//   - 上传会话（开始上传、续传、查询进度）的地址签名为会话 token，客户端无法改写或拿到其他仓库使用；
-//   - 指向上游 /v2/ 的地址改写为代理的相对地址，并补回别名段；
-//   - 指向其他主机的地址（如 307 到对象存储的预签名地址）原样保留。
-func (s *Server) rewriteLocation(h http.Header, method string, status int, target *url.URL, st *reqState) error {
-	raw := h.Get("Location")
-	if raw == "" {
-		return nil
-	}
-	loc, err := target.Parse(raw)
-	if err != nil {
-		return err
-	}
-	up := st.upstream
-	own := sameEndpoint(loc, up.URL)
-
-	if isUploadSessionResponse(st.route, method, status) {
-		if !own {
-			return errors.New("upload session Location on a foreign host " + loc.Host)
-		}
-		sess := uploadSession{Repo: st.route.Repo, Location: loc.RequestURI()}
-		if st.session != nil {
-			sess.Expiry = st.session.Expiry
-		}
-		token, err := s.sessions.sign(sess)
-		if err != nil {
-			return err
-		}
-		h.Set("Location", "/v2/"+st.route.Repo+"/blobs/uploads/"+token)
-		return nil
-	}
-
-	if own && strings.HasPrefix(loc.Path, "/v2/") {
-		rel := url.URL{Path: "/v2/" + up.Alias + "/" + strings.TrimPrefix(loc.Path, "/v2/"), RawQuery: loc.RawQuery}
-		h.Set("Location", rel.String())
-	}
-	return nil
-}
-
-// isUploadSessionResponse 判断响应的 Location 是否为上传会话的续传地址
-func isUploadSessionResponse(rt oci.Route, method string, status int) bool {
-	if rt.Kind != oci.RouteUpload {
-		return false
-	}
-	if !rt.Session {
-		return method == http.MethodPost && status == http.StatusAccepted
-	}
-	return status == http.StatusAccepted || status == http.StatusNoContent
-}
-
-func (s *Server) finish(st *reqState, rw *responseWriter, body *countingBody, r *http.Request) {
+// finish 在请求结束时更新指标并输出审计记录，包括被拒绝和未认证的请求
+func (s *Server) finish(rec *reqRecord, rw *responseWriter, body *countingBody, r *http.Request) {
 	status := rw.status
 	if status == 0 {
 		status = http.StatusOK
 	}
-	elapsed := s.now().Sub(st.start)
-	s.metrics.observeRequest(st.route.Kind, r.Method, status, elapsed)
-	if st.deny != "" {
-		s.metrics.denied.WithLabelValues(string(st.deny)).Inc()
+	// 进入转发阶段的请求以 mount 降级后的路由记审计
+	route := rec.route
+	if rec.plan != nil {
+		route = rec.plan.route
 	}
-	if st.upstream != nil {
-		s.metrics.transferred.WithLabelValues(st.upstream.Alias, "request").Add(float64(body.n))
-		s.metrics.transferred.WithLabelValues(st.upstream.Alias, "response").Add(float64(rw.bytes))
+	elapsed := s.now().Sub(rec.start)
+	s.metrics.observeRequest(route.Kind, r.Method, status, elapsed)
+	if rec.deny != "" {
+		s.metrics.denied.WithLabelValues(string(rec.deny)).Inc()
+	}
+	if rec.plan != nil {
+		alias := rec.plan.upstream.Alias
+		s.metrics.transferred.WithLabelValues(alias, "request").Add(float64(body.n))
+		s.metrics.transferred.WithLabelValues(alias, "response").Add(float64(rw.bytes))
 	}
 	if s.auditor == nil {
 		return
 	}
 	e := AuditEntry{
-		TS:         st.start.UTC().Format(time.RFC3339Nano),
-		Sub:        st.identity.Subject,
-		JTI:        st.identity.TokenID,
-		AppCode:    st.identity.AppCode,
-		Module:     st.identity.Module,
+		TS:         rec.start.UTC().Format(time.RFC3339Nano),
+		Sub:        rec.identity.Subject,
+		JTI:        rec.identity.TokenID,
+		AppCode:    rec.identity.AppCode,
+		Module:     rec.identity.Module,
 		RemoteAddr: remoteIP(r.RemoteAddr),
 		Method:     r.Method,
-		Route:      st.route.Kind,
+		Route:      route.Kind,
 		Status:     status,
 		ReqBytes:   body.n,
 		RespBytes:  rw.bytes,
 		Ms:         elapsed.Milliseconds(),
-		Deny:       st.deny,
+		Deny:       rec.deny,
 	}
-	if st.route.Kind != oci.RoutePing && st.route.Kind != oci.RouteUnknown {
-		e.Repo, e.Upstream, e.Reference = st.route.Repo, st.route.Upstream, st.route.Reference
+	if route.Kind != oci.RoutePing && route.Kind != oci.RouteUnknown {
+		e.Repo, e.Upstream, e.Reference = route.Repo, route.Upstream, route.Reference
 	}
 	if status == http.StatusTemporaryRedirect || status == http.StatusPermanentRedirect {
 		if u, err := url.Parse(rw.Header().Get("Location")); err == nil {
@@ -440,21 +254,8 @@ func (s *Server) finish(st *reqState, rw *responseWriter, body *countingBody, r 
 	s.auditor.Audit(e)
 }
 
-func remoteIP(addr string) string {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addr
-	}
-	return host
-}
-
-type countingBody struct {
-	io.ReadCloser
-	n int64
-}
-
-func (b *countingBody) Read(p []byte) (int, error) {
-	n, err := b.ReadCloser.Read(p)
-	b.n += int64(n)
-	return n, err
+// reject 写出 OCI 错误响应，并原样返回拒绝原因
+func (s *Server) reject(w http.ResponseWriter, r *http.Request, status int, deny oci.DenyReason) oci.DenyReason {
+	oci.WriteError(w, r, status, deny)
+	return deny
 }

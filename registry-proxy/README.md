@@ -1,14 +1,20 @@
 # registry-proxy
 
-构建镜像代理：云原生应用的 kaniko / CNB 构建容器不再持有平台全局仓库账号，只持有 apiserver 为单次构建签发的**构建 token**。
-代理校验 token 与授权后，用自身持有的上游凭证把 OCI Distribution v2 请求转发给真实仓库。
+支持 OCI Distribution v2 的镜像仓库代理，核心能力是**二级 token**：客户端不持有上游仓库的账号，只持有签发方签发的短期 token，
+token 的声明限定了可以推送、拉取的仓库与 tag。代理校验 token 并按声明授权后，用自身持有的上游凭证把请求转发给真实仓库。
+
+## 背景
+
+云原生应用的 kaniko / CNB 构建容器里运行的是用户代码（Dockerfile 的 `RUN`、buildpack 脚本），不能持有可以读写全平台镜像的仓库账号。
+apiserver 为每次构建签发一个二级 token，授权范围只覆盖本应用本模块的产物与缓存仓库；构建容器经代理拉取基础镜像、推送产物。
+下文与代码中的「构建 token」即指这个场景下的二级 token。
 
 ## 设计目标
 
-构建容器里运行的是用户代码（Dockerfile 的 `RUN`、buildpack 脚本），因此把它视为持有构建 token 的攻击者；
-而代理持有的上游账号可以读写全平台镜像。整个请求流程围绕三个目标：
+持有 token 的客户端被视为攻击者（在 PaaS 中它运行的是用户代码）；
+而代理持有的上游账号权限远大于任何一个 token（在 PaaS 中可以读写全平台镜像）。整个请求流程围绕三个目标：
 
-- 构建 token 只能做它的声明允许的事；
+- token 只能做它的声明允许的事；
 - 上游凭证不流出代理进程；
 - 客户端不能把代理引向配置之外的主机或路径。
 
@@ -154,7 +160,9 @@
 
 ## 代码结构
 
-一次请求的调用链为 `ServeHTTP` → `handle`（第 0～4 步）→ `forward`（第 5～6 步）→ `finish`（第 7 步），均在 `pkg/proxy/server.go`。
+一次请求的调用链为 `ServeHTTP` → `handle`（第 0～4 步）→ `resolve`（第 4 步的未配置上游与 mount 降级、第 5 步的上游地址与 scope，
+生成转发计划）→ `forward`（第 5 步的上游 Authorization 与第 6 步）→ `finish`（第 7 步）。`forward` 之前的失败返回 4xx，
+`forward` 只按转发计划与上游通信，失败返回 502。`resolve` 在 `pkg/proxy/plan.go`，其余在 `pkg/proxy/server.go`。
 
 | 目录 | 作用 | 对应流程 |
 |------|------|---------|
@@ -169,9 +177,18 @@
 | `docs/forwarding-design.md` | 转发层选型（不依赖 ociproxy 的原因）、安全设计与上游行为实测 | — |
 | `hack/` | 集成测试、e2e 脚本、上游行为探测、压测与 token 工具 | — |
 
-`pkg/proxy` 内部按文件划分：`hooks.go`（鉴权、授权、审计钩子接口）、`server.go`（主流程、纵深防御、目标解析、`Location` 改写）、
-`transport.go`（上游发送与 401 重试）、`writer.go`（响应头清理与字节统计）、`session.go`（上传会话签名）、
-`audit.go`、`metrics.go`。
+`pkg/proxy` 内部按文件划分：
+
+| 文件 | 内容 |
+|------|------|
+| `server.go` | `Server` 与主流程：`ServeHTTP`、`handle`（含纵深防御）、`forward`、`finish` |
+| `hooks.go` | 鉴权、授权、审计钩子接口 |
+| `request.go` | 客户端查询串解析、请求体字节统计 |
+| `plan.go` | 转发计划：上游地址、续传会话校验、mount 降级、scope，以及客户端与上游视角之间的别名映射 |
+| `transport.go` | 上游请求头白名单、上游 Authorization、发送与 401 重试 |
+| `writer.go` | 响应改写（响应头清理、`Location` 与 `Link` 改写）、响应字节统计 |
+| `session.go` | 上传会话签名与校验 |
+| `audit.go`、`metrics.go` | 审计记录与 Prometheus 指标 |
 
 ## 配置
 

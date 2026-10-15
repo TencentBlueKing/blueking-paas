@@ -31,7 +31,7 @@ var _ = Describe("rewriteLink", func() {
 
 	DescribeTable("rewrites links to the upstream /v2/ into proxy-relative links",
 		func(link, want string) {
-			Expect(rewriteLink(link, up, "alias/")).To(Equal(want))
+			Expect(rewriteLink(link, up, aliasMapping{alias: "alias"})).To(Equal(want))
 		},
 		Entry("relative", `</v2/a/tags/list?n=1>; rel="next"`, `</v2/alias/a/tags/list?n=1>; rel="next"`),
 		Entry("explicit 443", `<https://registry.example.com:443/v2/a/tags/list?n=1>; rel="next"`,

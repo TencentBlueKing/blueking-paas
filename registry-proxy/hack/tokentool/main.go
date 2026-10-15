@@ -89,7 +89,10 @@ func loadKey(path string) (ed25519.PrivateKey, error) {
 
 func publicJWK(priv ed25519.PrivateKey) map[string]string {
 	x := base64.RawURLEncoding.EncodeToString(priv.Public().(ed25519.PublicKey))
-	return map[string]string{"kty": "OKP", "crv": "Ed25519", "x": x, "kid": buildtoken.JWKThumbprint(x), "alg": "EdDSA", "use": "sig"}
+	return map[string]string{
+		"kty": "OKP", "crv": "Ed25519", "x": x, "kid": buildtoken.JWKThumbprint(x),
+		"alg": "EdDSA", "use": "sig",
+	}
 }
 
 func exportJWKS(args []string) error {

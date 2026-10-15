@@ -49,7 +49,7 @@ func newFakeTokenRegistry() *fakeTokenRegistry {
 	return f
 }
 
-func newTestUpstream(rawURL string, cred *Credential) *Upstream {
+func newTestAuth(rawURL string, cred *Credential) *AuthProvider {
 	u, _ := url.Parse(rawURL)
 	creds := map[string]Credential{}
 	if cred != nil {
@@ -57,29 +57,29 @@ func newTestUpstream(rawURL string, cred *Credential) *Upstream {
 	}
 	ups, err := FromSpecs([]Spec{{Alias: "fake", URL: u}}, creds, Options{TokenMaxTTL: 10 * time.Minute})
 	Expect(err).NotTo(HaveOccurred())
-	return ups["fake"]
+	return ups["fake"].Auth
 }
 
 var robot = &Credential{Username: "robot", Password: "secret"}
 
 func pullScope(repo string) []Scope { return []Scope{{Repo: repo, Actions: []string{"pull"}}} }
 
-var _ = Describe("Upstream.Authorization", func() {
+var _ = Describe("AuthProvider.Header", func() {
 	ctx := context.Background()
 
 	Context("with a Bearer upstream", func() {
 		var (
-			reg *fakeTokenRegistry
-			up  *Upstream
+			reg  *fakeTokenRegistry
+			auth *AuthProvider
 		)
 
 		BeforeEach(func() {
 			reg = newFakeTokenRegistry()
-			up = newTestUpstream(reg.URL, robot)
+			auth = newTestAuth(reg.URL, robot)
 		})
 
 		It("requests the proxy-computed scope and ignores the challenge scope", func() {
-			h, hit, err := up.Authorization(ctx, []Scope{{Repo: "bkpaas/app", Actions: []string{"pull", "push"}}})
+			h, hit, err := auth.Header(ctx, []Scope{{Repo: "bkpaas/app", Actions: []string{"pull", "push"}}})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(hit).To(BeFalse())
 			Expect(h).To(Equal("Bearer tk-repository:bkpaas/app:pull,push"))
@@ -89,17 +89,17 @@ var _ = Describe("Upstream.Authorization", func() {
 		It("caches by scope and refetches after Invalidate", func() {
 			scopes := pullScope("python/python")
 			for i := range 3 {
-				_, hit, err := up.Authorization(ctx, scopes)
+				_, hit, err := auth.Header(ctx, scopes)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(hit).To(Equal(i > 0))
 			}
 			Expect(reg.tokenRequests.Load()).To(BeEquivalentTo(1))
 
-			_, hit, _ := up.Authorization(ctx, pullScope("other/repo"))
+			_, hit, _ := auth.Header(ctx, pullScope("other/repo"))
 			Expect(hit).To(BeFalse(), "different scope must not hit cache")
 
-			up.Invalidate(scopes)
-			_, hit, _ = up.Authorization(ctx, scopes)
+			auth.Invalidate(scopes)
+			_, hit, _ = auth.Header(ctx, scopes)
 			Expect(hit).To(BeFalse(), "invalidated scope must not hit cache")
 			Expect(reg.tokenRequests.Load()).To(BeEquivalentTo(3))
 		})
@@ -107,40 +107,40 @@ var _ = Describe("Upstream.Authorization", func() {
 		It("expires the cache at 90% of expires_in", func() {
 			reg.expiresIn = 100
 			now := time.Now()
-			up.now = func() time.Time { return now }
+			auth.now = func() time.Time { return now }
 			scopes := pullScope("a/b")
 
-			_, _, _ = up.Authorization(ctx, scopes)
+			_, _, _ = auth.Header(ctx, scopes)
 			now = now.Add(89 * time.Second)
-			_, hit, _ := up.Authorization(ctx, scopes)
+			_, hit, _ := auth.Header(ctx, scopes)
 			Expect(hit).To(BeTrue())
 			now = now.Add(2 * time.Second)
-			_, hit, _ = up.Authorization(ctx, scopes)
+			_, hit, _ = auth.Header(ctx, scopes)
 			Expect(hit).To(BeFalse())
 		})
 
 		It("sweeps expired entries when full and stops caching when still full", func() {
 			reg.expiresIn = 100
 			now := time.Now()
-			up.now = func() time.Time { return now }
-			up.maxCached = 2
+			auth.now = func() time.Time { return now }
+			auth.maxCached = 2
 
-			_, _, _ = up.Authorization(ctx, pullScope("a/1"))
-			_, _, _ = up.Authorization(ctx, pullScope("a/2"))
-			Expect(up.cache).To(HaveLen(2))
+			_, _, _ = auth.Header(ctx, pullScope("a/1"))
+			_, _, _ = auth.Header(ctx, pullScope("a/2"))
+			Expect(auth.byScope).To(HaveLen(2))
 
 			now = now.Add(91 * time.Second)
-			_, _, _ = up.Authorization(ctx, pullScope("a/3"))
-			Expect(up.cache).To(HaveLen(1), "expired entries must be swept")
+			_, _, _ = auth.Header(ctx, pullScope("a/3"))
+			Expect(auth.byScope).To(HaveLen(1), "expired entries must be swept")
 
-			_, _, _ = up.Authorization(ctx, pullScope("a/4"))
-			h, _, err := up.Authorization(ctx, pullScope("a/5"))
+			_, _, _ = auth.Header(ctx, pullScope("a/4"))
+			h, _, err := auth.Header(ctx, pullScope("a/5"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h).To(Equal("Bearer tk-repository:a/5:pull"))
-			Expect(up.cache).To(HaveLen(2))
-			Expect(up.cache).NotTo(HaveKey(ScopeKey(pullScope("a/5"))))
+			Expect(auth.byScope).To(HaveLen(2))
+			Expect(auth.byScope).NotTo(HaveKey(ScopeKey(pullScope("a/5"))))
 
-			_, hit, _ := up.Authorization(ctx, pullScope("a/5"))
+			_, hit, _ := auth.Header(ctx, pullScope("a/5"))
 			Expect(hit).To(BeFalse(), "a scope that did not fit must be fetched again")
 		})
 
@@ -149,7 +149,7 @@ var _ = Describe("Upstream.Authorization", func() {
 			for range 20 {
 				wg.Go(func() {
 					defer GinkgoRecover()
-					_, _, err := up.Authorization(ctx, pullScope("a/b"))
+					_, _, err := auth.Header(ctx, pullScope("a/b"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 			}
@@ -158,15 +158,15 @@ var _ = Describe("Upstream.Authorization", func() {
 		})
 
 		It("reports a bad credential as auth failed without leaking it", func() {
-			up = newTestUpstream(reg.URL, &Credential{Username: "robot", Password: "wrong"})
-			_, _, err := up.Authorization(ctx, pullScope("a/b"))
+			auth = newTestAuth(reg.URL, &Credential{Username: "robot", Password: "wrong"})
+			_, _, err := auth.Header(ctx, pullScope("a/b"))
 			Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
 			Expect(err.Error()).NotTo(ContainSubstring("wrong"))
 		})
 	})
 
 	It("reports an unreachable upstream", func() {
-		_, _, err := newTestUpstream("http://127.0.0.1:1", robot).Authorization(ctx, pullScope("a/b"))
+		_, _, err := newTestAuth("http://127.0.0.1:1", robot).Header(ctx, pullScope("a/b"))
 		Expect(ReasonOf(err)).To(Equal(ReasonUnreachable))
 	})
 
@@ -181,7 +181,7 @@ var _ = Describe("Upstream.Authorization", func() {
 			map[string]Credential{u.Host: *robot}, Options{TokenMaxTTL: time.Minute})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, _, err = ups["fake"].Authorization(ctx, pullScope("a/b"))
+		_, _, err = ups["fake"].Auth.Header(ctx, pullScope("a/b"))
 		Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
 		Expect(err).To(MatchError(ContainSubstring("plaintext")))
 	})
@@ -199,28 +199,28 @@ var _ = Describe("Upstream.Authorization", func() {
 		})
 
 		It("uses the credential directly", func() {
-			h, _, err := newTestUpstream(basicURL, robot).Authorization(ctx, nil)
+			h, _, err := newTestAuth(basicURL, robot).Header(ctx, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h).To(Equal("Basic cm9ib3Q6c2VjcmV0"))
 		})
 
 		It("shares one cached result across scopes", func() {
-			up := newTestUpstream(basicURL, robot)
-			_, hit, _ := up.Authorization(ctx, pullScope("a/1"))
+			auth := newTestAuth(basicURL, robot)
+			_, hit, _ := auth.Header(ctx, pullScope("a/1"))
 			Expect(hit).To(BeFalse())
-			h, hit, err := up.Authorization(ctx, pullScope("a/2"))
+			h, hit, err := auth.Header(ctx, pullScope("a/2"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(hit).To(BeTrue())
 			Expect(h).To(Equal("Basic cm9ib3Q6c2VjcmV0"))
-			Expect(up.cache).To(BeEmpty())
+			Expect(auth.byScope).To(BeEmpty())
 
-			up.Invalidate(pullScope("a/2"))
-			_, hit, _ = up.Authorization(ctx, pullScope("a/2"))
-			Expect(hit).To(BeFalse(), "Invalidate must drop the shared result")
+			auth.Invalidate(pullScope("a/2"))
+			_, hit, _ = auth.Header(ctx, pullScope("a/2"))
+			Expect(hit).To(BeFalse(), "Invalidate must drop the unscoped result")
 		})
 
 		It("fails without a credential", func() {
-			_, _, err := newTestUpstream(basicURL, nil).Authorization(ctx, nil)
+			_, _, err := newTestAuth(basicURL, nil).Header(ctx, nil)
 			Expect(ReasonOf(err)).To(Equal(ReasonAuthFailed))
 		})
 	})
@@ -235,7 +235,7 @@ var _ = Describe("Upstream.Authorization", func() {
 		})
 
 		It("sends no Authorization without a credential", func() {
-			h, _, err := newTestUpstream(openURL, nil).Authorization(ctx, nil)
+			h, _, err := newTestAuth(openURL, nil).Header(ctx, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h).To(BeEmpty())
 		})
@@ -243,11 +243,11 @@ var _ = Describe("Upstream.Authorization", func() {
 })
 
 var _ = Describe("tokenTTL", func() {
-	up := &Upstream{maxTTL: 5 * time.Minute}
+	auth := &AuthProvider{maxTTL: 5 * time.Minute}
 
 	DescribeTable("expires at 90% of expires_in, capped by maxTTL",
 		func(expiresIn, want time.Duration) {
-			Expect(up.tokenTTL(expiresIn)).To(Equal(want))
+			Expect(auth.tokenTTL(expiresIn)).To(Equal(want))
 		},
 		Entry("missing expires_in", time.Duration(0), defaultTokenExpiresIn*9/10),
 		Entry("100s", 100*time.Second, 90*time.Second),

@@ -8,10 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
-
-	"golang.org/x/sync/singleflight"
 )
 
 // Spec 描述一个上游，由配置转换而来
@@ -31,31 +28,27 @@ type Options struct {
 	AuthTimeout time.Duration
 }
 
-// Upstream 是一个已配置的上游仓库
+// Upstream 是一个已配置的上游仓库（转发目标），对应配置中 upstream.registries 的一项：
+// 描述请求发往哪里、用什么连接，以及向谁取访问凭据。Upstream 本身不发起转发，请求由 proxy 发送。
+//
+// 生命周期：启动时由 FromSpecs 按配置创建，以别名为键组成只读 map 交给 proxy.Server，运行期间不增删，可并发使用。
+//
+// 在一次请求中的位置：
+//   - 目标决议：proxy 按客户端路径第一段的别名查找 Upstream，找不到即拒绝；上游请求的主机只取自 URL，
+//     客户端无法让代理带着凭证访问其他主机；
+//   - 转发前：proxy 按授权结果计算 scope，向 Auth 取上游 Authorization；
+//   - 转发：proxy 通过 Transport 直接 RoundTrip，不跟随重定向；上游返回 401 时通过 Auth 作废缓存；
+//   - 审计与指标：Alias 作为 upstream 维度。
 type Upstream struct {
+	// Alias 为由 URL 主机推导的别名，即客户端路径的第一段
 	Alias string
-	URL   *url.URL
+	// URL 为上游根地址（scheme://host[:port]），所有发往该上游的请求只使用它的主机
+	URL *url.URL
 	// Transport 专用于该上游，TLS 配置按上游区分
 	Transport *http.Transport
-
-	cred        *Credential
-	authClient  *http.Client
-	maxTTL      time.Duration
-	authTimeout time.Duration
-	now         func() time.Time
-
-	mu sync.Mutex
-	// cache 按 scope 缓存 Bearer token，条目数不超过 maxCached
-	cache     map[string]cachedAuth
-	maxCached int
-	// shared 缓存与 scope 无关的 Authorization（Basic 或匿名），存在时不查 cache
-	shared    *cachedAuth
-	challenge *cachedChallenge
-	flight    singleflight.Group
+	// Auth 提供访问该上游所需的 Authorization
+	Auth *AuthProvider
 }
-
-// HasCredential 返回代理是否持有该上游的凭证
-func (u *Upstream) HasCredential() bool { return u.cred != nil }
 
 // FromSpecs 按配置创建全部上游，返回以别名为键的 map；creds 的键为小写主机名（含端口）。
 // 返回的 map 创建后只读，可并发访问。
@@ -72,21 +65,19 @@ func FromSpecs(specs []Spec, creds map[string]Credential, opts Options) (map[str
 			return nil, fmt.Errorf("duplicated upstream alias %q", spec.Alias)
 		}
 		tr := newTransport(spec.SkipTLSVerify, opts.ResponseHeaderTimeout)
-		u := &Upstream{
-			Alias:       spec.Alias,
-			URL:         spec.URL,
-			Transport:   tr,
-			authClient:  &http.Client{Transport: tr, Timeout: opts.AuthTimeout},
-			maxTTL:      opts.TokenMaxTTL,
-			authTimeout: opts.AuthTimeout,
-			now:         time.Now,
-			cache:       map[string]cachedAuth{},
-			maxCached:   maxCachedAuths,
+		auth := &AuthProvider{
+			base:      spec.URL,
+			client:    &http.Client{Transport: tr, Timeout: opts.AuthTimeout},
+			maxTTL:    opts.TokenMaxTTL,
+			timeout:   opts.AuthTimeout,
+			now:       time.Now,
+			byScope:   map[string]cachedAuth{},
+			maxCached: maxCachedAuths,
 		}
 		if c, ok := creds[strings.ToLower(spec.URL.Host)]; ok {
-			u.cred = &c
+			auth.cred = &c
 		}
-		byAlias[spec.Alias] = u
+		byAlias[spec.Alias] = &Upstream{Alias: spec.Alias, URL: spec.URL, Transport: tr, Auth: auth}
 	}
 	return byAlias, nil
 }

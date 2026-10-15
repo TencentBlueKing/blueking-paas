@@ -3,6 +3,7 @@ package proxy
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"sync"
 
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/oci"
@@ -36,8 +37,10 @@ type JSONAuditor struct {
 	OnError func(error)
 }
 
+// NewJSONAuditor ...
 func NewJSONAuditor(w io.Writer) *JSONAuditor { return &JSONAuditor{w: w} }
 
+// Audit 输出审计记录
 func (a *JSONAuditor) Audit(e AuditEntry) {
 	b, err := json.Marshal(e)
 	if err == nil {
@@ -48,4 +51,13 @@ func (a *JSONAuditor) Audit(e AuditEntry) {
 	if err != nil && a.OnError != nil {
 		a.OnError(err)
 	}
+}
+
+// remoteIP 去掉客户端地址中的端口，审计只记录 IP
+func remoteIP(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	return host
 }

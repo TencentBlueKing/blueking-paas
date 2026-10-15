@@ -19,9 +19,7 @@ import json
 
 from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 from bkapi_client_core.client import ResponseHeadersRepresenter
-from bkapi_client_core.exceptions import (
-    HTTPResponseError,
-)
+from bkapi_client_core.exceptions import HTTPResponseError
 from requests import Response
 from requests.exceptions import HTTPError
 
@@ -98,6 +96,22 @@ class Group(OperationGroup):
         Operation,
         name="retrieve_resource_permission_apply_record",
         method="GET",
+        path="/api/v2/inner/gateways/permissions/apply-records/{record_id}/",
+    )
+
+    # 取消待审批的资源权限申请
+    cancel_resource_permission_apply_record = bind_property(
+        Operation,
+        name="cancel_resource_permission_apply_record",
+        method="POST",
+        path="/api/v2/inner/gateways/permissions/apply-records/{record_id}/cancel/",
+    )
+
+    # 删除已取消的资源权限申请
+    delete_resource_permission_apply_record = bind_property(
+        Operation,
+        name="delete_resource_permission_apply_record",
+        method="DELETE",
         path="/api/v2/inner/gateways/permissions/apply-records/{record_id}/",
     )
 

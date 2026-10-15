@@ -122,6 +122,7 @@ class OperationEnum(StrStructuredEnum):
     DISABLE = EnumField("disable", label=_("停用"))
     APPLY = EnumField("apply", label=_("申请"))
     RENEW = EnumField("renew", label=_("续期"))
+    CANCEL = EnumField("cancel", label=_("取消"))
     DEPLOY = EnumField("deploy", label=_("部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
     # 以下是仅用于 Admin42 的操作对象

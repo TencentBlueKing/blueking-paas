@@ -23,6 +23,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2 import serializers
+from paasng.accessories.cloudapi_v2.apply_records import (
+    add_operate_audit_record,
+    handle_apply_record_operate_error,
+    validate_operated_by,
+)
 from paasng.accessories.cloudapi_v2.mcp_servers.clients import MCPServerApiClient
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -99,4 +104,56 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data_after=data_after,
         )
 
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def cancel_mcp_server_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """取消待审批的 MCP Server 权限申请"""
+        app = self.get_application()
+        tenant_id = get_tenant_id_for_app(app.code)
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            MCPServerApiClient(tenant_id=tenant_id).cancel_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        add_operate_audit_record(
+            app_code=app.code,
+            tenant_id=tenant_id,
+            user=request.user.pk,
+            operation=OperationEnum.CANCEL,
+            record_id=record_id,
+            # MCP Server 申请记录不支持通过申请记录 ID 查询单据详情, 使用字典避免展示无效的详情入口
+            detail_data={"record_id": record_id, "record_type": "mcp_server"},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def delete_mcp_server_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """删除已取消的 MCP Server 权限申请"""
+        app = self.get_application()
+        tenant_id = get_tenant_id_for_app(app.code)
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            MCPServerApiClient(tenant_id=tenant_id).delete_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        add_operate_audit_record(
+            app_code=app.code,
+            tenant_id=tenant_id,
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            record_id=record_id,
+            # 记录已被删除, 无法再通过申请记录 ID 查询详情, 使用字典避免展示无效的详情入口
+            detail_data={"record_id": record_id, "record_type": "mcp_server"},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

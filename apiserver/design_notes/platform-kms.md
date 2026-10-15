@@ -7,9 +7,11 @@ apiserver 启动时可从 KMS 信封读取敏感配置，替代原来以明文�
 
 | 输入 | 说明 |
 |---|---|
-| 环境变量 `ENABLE_KMS` | 仅 `true` / `True` 视为开启，其他值或未设置均不开启 |
+| 环境变量 `PAAS_PLATFORM_KMS_ENABLED` | 仅 `true` / `True` 视为开启，其他值或未设置均不开启 |
 | 环境变量 `BK_PAAS_KMS_PRIVATE_KEY` | 私钥内容，取自 KMS 凭证的 `private_key` 属性 |
 | 文件 `/etc/secrets/bk-paas-kms` | 信封内容，取自 KMS 凭证的 `envelope` 属性 |
+
+`PAAS_PLATFORM_KMS_ENABLED` 控制平台组件自身凭证；SaaS 敏感环境变量托管使用独立的 `PAAS_SAAS_KMS_ENABLED` 开关。
 
 开启后，私钥或信封不可用、解密失败时进程直接启动失败，不会退回明文配置。错误信息中不包含凭证内容。
 本地开发可以用环境变量 `BK_PAAS_KMS_ENVELOPE_PATH` 指定其他信封路径。

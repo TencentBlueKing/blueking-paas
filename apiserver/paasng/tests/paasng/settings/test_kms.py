@@ -198,6 +198,17 @@ def test_disabled(monkeypatch, value):
     assert get_kms_credential("tokens.healthz.token") is None
 
 
+@pytest.mark.parametrize("other_switch", ["PAAS_SAAS_KMS_ENABLED", "PAAS_KMS_ENABLED", "ENABLE_KMS"])
+def test_other_switches_do_not_enable_platform_kms(monkeypatch, other_switch):
+    monkeypatch.delenv(ENABLED_ENV_VAR, raising=False)
+    monkeypatch.setenv(other_switch, "true")
+    settings = _make_settings(**BASE_SETTINGS)
+
+    assert load_kms_settings(settings) is settings
+    assert load_kms_workloads_settings(settings) is settings
+    assert get_kms_credential("tokens.healthz.token") is None
+
+
 class TestOverrides:
     def test_simple_fields(self, write_kms_files):
         settings = _load(CREDENTIALS, write_kms_files)

@@ -46,7 +46,7 @@ from paasng.platform.engine.exceptions import DeployShouldAbortError
 def test_kms_and_builtin_encryption_are_exclusive(
     settings, bk_app, bk_stag_env, kms_enabled, app_flag, expected_kms, expected_builtin
 ):
-    settings.KMS_ENABLED = kms_enabled
+    settings.SAAS_KMS_ENABLED = kms_enabled
     bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, app_flag)
 
     assert is_kms_injection_enabled(bk_stag_env) is expected_kms
@@ -55,7 +55,7 @@ def test_kms_and_builtin_encryption_are_exclusive(
 
 @pytest.mark.django_db(databases=["default", "workloads"])
 def test_kms_mode_drops_managed_values_instead_of_encrypting(settings, bk_app, bk_stag_env):
-    settings.KMS_ENABLED = True
+    settings.SAAS_KMS_ENABLED = True
     bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
     values = {"DB_PASSWORD": "s3cret", "BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
 

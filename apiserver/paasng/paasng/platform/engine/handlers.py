@@ -92,7 +92,7 @@ def update_last_deployed_date(sender, deployment: "Deployment", **kwargs):
 @receiver(post_appenv_deploy)
 def recycle_kms_config_versions_after_deploy(sender, deployment: "Deployment", **kwargs):
     """部署成功后回收不再使用的 KMS 配置版本，失败不影响部署结果"""
-    if not settings.KMS_ENABLED or deployment.status != JobStatus.SUCCESSFUL.value:
+    if not settings.SAAS_KMS_ENABLED or deployment.status != JobStatus.SUCCESSFUL.value:
         return
     try:
         recycle_stale_kms_config_versions(deployment)

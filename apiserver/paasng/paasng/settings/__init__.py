@@ -1579,8 +1579,8 @@ BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
 # ---------------------------------------------
 # KMS 凭证托管（SaaS 运行环境敏感变量）
 # ---------------------------------------------
-# 是否启用 KMS：启用后，开启「加密运行环境敏感变量」的应用改由 KMS 托管敏感变量，否则使用平台内置的加密注入
-KMS_ENABLED = settings.get("KMS_ENABLED", False)
+# 是否为 SaaS 敏感环境变量启用 KMS 托管（环境变量 PAAS_SAAS_KMS_ENABLED），与平台自身凭证开关独立
+SAAS_KMS_ENABLED = settings.get("SAAS_KMS_ENABLED", False)
 # KMS 管理接口的直连地址（不经过 API 网关）
 KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
 # 调用 KMS 管理接口时携带的 X-Bk-Username

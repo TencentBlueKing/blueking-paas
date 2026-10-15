@@ -44,14 +44,14 @@ KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
 
 def is_encrypted_secret_env_injection_enabled(env: ModuleEnvironment) -> bool:
     """判断该 env 是否启用敏感环境变量密文注入功能。平台启用 KMS 时，敏感变量改由 KMS 托管"""
-    if settings.KMS_ENABLED:
+    if settings.SAAS_KMS_ENABLED:
         return False
     return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
 
 def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
     """平台启用 KMS，且应用开启了「加密运行环境敏感变量」时，敏感变量由 KMS 托管"""
-    if not settings.KMS_ENABLED:
+    if not settings.SAAS_KMS_ENABLED:
         return False
     return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 

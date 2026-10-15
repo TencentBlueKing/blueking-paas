@@ -147,12 +147,13 @@
           >
             <template slot-scope="{ row }">
               <span
-                v-if="['approved', 'rejected'].includes(row.apply_status)"
+                v-if="['approved', 'rejected', 'canceled'].includes(row.apply_status)"
                 :class="[
                   'paasng-icon',
                   {
                     'paasng-pass': row.apply_status === 'approved',
                     'paasng-reject': row.apply_status === 'rejected',
+                    'paasng-stop': row.apply_status === 'canceled',
                   },
                 ]"
               />
@@ -173,7 +174,7 @@
           </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
-            width="100"
+            width="150"
           >
             <template slot-scope="{ row }">
               <div class="table-operate-buttons">
@@ -184,6 +185,30 @@
                   @click="handleOpenDetail(row)"
                 >
                   {{ $t('详情') }}
+                </bk-button>
+                <bk-button
+                  v-if="canOperateApply(row) && row.apply_status === 'pending'"
+                  theme="primary"
+                  size="small"
+                  text
+                  class="ml-10"
+                  :loading="isRowOperating(row)"
+                  :disabled="isRowOperating(row)"
+                  @click="handleCancelApply(row)"
+                >
+                  {{ $t('取消') }}
+                </bk-button>
+                <bk-button
+                  v-if="canOperateApply(row) && row.apply_status === 'canceled'"
+                  theme="danger"
+                  size="small"
+                  text
+                  class="ml-10"
+                  :loading="isRowOperating(row)"
+                  :disabled="isRowOperating(row)"
+                  @click="handleDeleteApply(row)"
+                >
+                  {{ $t('删除') }}
                 </bk-button>
               </div>
             </template>
@@ -410,6 +435,8 @@ export default {
       isTableError: false,
       searchSelectValue: [],
       searchData: {},
+      // 当前正在执行取消/删除操作的行标识 (用于按钮 loading 与防重复提交)
+      operatingIds: [],
     };
   },
   computed: {
@@ -447,14 +474,20 @@ export default {
           { id: 'approved', name: this.$t('通过') },
           { id: 'pending', name: this.$t('待审批') },
           { id: 'rejected', name: this.$t('已驳回') },
+          { id: 'canceled', name: this.$t('已取消') },
         ];
       }
-      return [
+      const list = [
         { id: 'approved', name: this.$t('全部通过') },
         { id: 'partial_approved', name: this.$t('部分通过') },
         { id: 'rejected', name: this.$t('已驳回') },
         { id: 'pending', name: this.$t('待审批') },
       ];
+      // 组件 API（ESB）未支持取消，其申请记录不会出现已取消状态，故不展示该筛选项
+      if (!this.isComponentApi) {
+        list.push({ id: 'canceled', name: this.$t('已取消') });
+      }
+      return list;
     },
     statusFilters() {
       return this.statusList.map((v) => {
@@ -655,15 +688,20 @@ export default {
       );
     },
 
+    // 状态展示文案
     getStatusDisplay(status) {
       const data = this.statusList.find((item) => item.id === status);
       if (data) {
         return data.name;
       }
+      // 兼容筛选列表尚未包含 canceled 的场景，避免渲染为空
+      if (status === 'canceled') {
+        return this.$t('已取消');
+      }
       return '--';
     },
 
-    handleDateChange(date, type) {
+    handleDateChange(date, _type) {
       this.dateRange = {
         startTime: `${date[0]} 00:00:00`,
         endTime: `${date[1]} 23:59:59`,
@@ -672,9 +710,10 @@ export default {
       this.fetchList();
     },
 
-    handleSelect(value, option) {
-      this.resetPagination();
-      this.fetchList();
+    handleSelect(_value, _option) {
+      // 切换类型需清空筛选条件, 赋值会触发 watcher 刷新列表
+      this.statusValue = '';
+      this.searchSelectValue = [];
       this.$nextTick(() => {
         this.$refs.tableRef?.doLayout();
       });
@@ -692,7 +731,7 @@ export default {
       this.fetchList();
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit, _prevLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchList();
@@ -717,7 +756,27 @@ export default {
         ...item.record,
         ...item.mcp_server,
         ...item,
+        // 显式保留申请记录 id: 展开顺序会导致 row.id 被 mcp_server.id 覆盖
+        record_id: item.record?.id ?? item.record_id,
       }));
+    },
+
+    // 获取申请记录 id (MCP 行的 id 是 MCP Server id, 需使用 record_id)
+    getRecordId(row) {
+      return row.type === 'mcp' ? row.record_id : row.id;
+    },
+
+    // 是否支持取消/删除操作
+    // 仅网关 API 与 MCP Server 的申请记录支持取消, 删除; 组件 API (ESB) 不在本期范围内,
+    // 网关也未提供对应接口，故不展示操作入口，避免将 ESB 记录 ID 误传给网关接口
+    canOperateApply(row) {
+      return row.type === 'gateway' || row.type === 'mcp';
+    },
+
+    // 当前行是否正在执行取消/删除操作 (用于按钮禁用与防重复提交)
+    // 按行记录在途操作, 避免一行请求结束时误清掉其它行的状态
+    isRowOperating(row) {
+      return this.operatingIds.includes(this.getRecordId(row));
     },
 
     // 获取申请记录
@@ -753,7 +812,6 @@ export default {
 
     // 详情侧栏
     async handleOpenDetail(row) {
-      console.log('handleOpenDetail', row);
       this.detailSliderConf.show = true;
       // mcp service 使用当前行数据
       if (row.type === 'mcp') {
@@ -772,6 +830,73 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.detailLoading = false;
+      }
+    },
+
+    // 取消申请: 二次确认
+    handleCancelApply(row) {
+      if (!this.canOperateApply(row) || this.isRowOperating(row)) {
+        return;
+      }
+      this.$bkInfo({
+        title: this.$t('确认取消该申请?'),
+        subTitle: this.$t('取消后该申请将无法继续审批，如需权限请重新申请。'),
+        width: 480,
+        theme: 'warning',
+        maskClose: true,
+        confirmFn: () => this.doApplyRecordAction(row, 'cancel'),
+      });
+    },
+
+    // 删除已取消的申请: 二次确认
+    handleDeleteApply(row) {
+      if (!this.canOperateApply(row) || this.isRowOperating(row)) {
+        return;
+      }
+      this.$bkInfo({
+        title: this.$t('确认删除该申请?'),
+        subTitle: this.$t('删除后不可恢复，请谨慎操作。'),
+        width: 480,
+        theme: 'danger',
+        maskClose: true,
+        confirmFn: () => this.doApplyRecordAction(row, 'delete'),
+      });
+    },
+
+    // 执行取消/删除操作
+    async doApplyRecordAction(row, action) {
+      const recordId = this.getRecordId(row);
+      // 防重复提交: 同一行已有操作在执行时直接返回
+      // 同时兜底拦截不支持操作的类型 (如组件 API), 避免误调网关接口
+      if (recordId === undefined || recordId === null || this.isRowOperating(row) || !this.canOperateApply(row)) {
+        return;
+      }
+      const isMcp = row.type === 'mcp';
+      const actionMap = {
+        cancel: {
+          gateway: 'cancelApplyRecord',
+          mcp: 'cancelMcpApplyRecord',
+          success: this.$t('取消成功'),
+        },
+        delete: {
+          gateway: 'deleteApplyRecord',
+          mcp: 'deleteMcpApplyRecord',
+          success: this.$t('删除成功'),
+        },
+      };
+      const current = actionMap[action];
+      this.operatingIds.push(recordId);
+      try {
+        await this.$store.dispatch(`cloudApi/${isMcp ? current.mcp : current.gateway}`, {
+          appCode: this.appCode,
+          recordId,
+        });
+        this.$bkMessage({ theme: 'success', message: current.success });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.operatingIds = this.operatingIds.filter(id => id !== recordId);
+        this.fetchList();
       }
     },
 
@@ -799,10 +924,10 @@ export default {
           keyword,
           tenantId: this.tenantId,
         });
-        return data.map(({ login_name, bk_username, ...rest }) => ({
+        return data.map(({ login_name: loginName, bk_username: bkUsername, ...rest }) => ({
           ...rest,
-          name: login_name,
-          id: bk_username,
+          name: loginName,
+          id: bkUsername,
         }));
       } catch {
         return [];
@@ -885,6 +1010,14 @@ span.paasng-reject {
   position: relative;
   top: 1px;
   color: #ea3636;
+  font-size: 14px;
+}
+
+/* 已取消: 置灰图标 */
+span.paasng-stop {
+  position: relative;
+  top: 1px;
+  color: #c4c6cc;
   font-size: 14px;
 }
 

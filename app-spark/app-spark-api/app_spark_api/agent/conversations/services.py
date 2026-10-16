@@ -485,9 +485,11 @@ async def _resume_if_cold(
     This is where a cold start actually happens, and it is on the run path rather than at
     provisioning time because that is the first moment the history is genuinely needed.
 
-    A Runtime is only treated as untouched when it reports both no conversation and version 0.
-    Either alone would be ambiguous, and injecting into a Runtime that already holds a
-    conversation would be destroying one.
+    A Runtime is only treated as untouched when it reports no conversation, version 0 and no
+    entries in either channel. Any one alone would be ambiguous, and injecting into a Runtime
+    that already holds a conversation would be destroying one. The channels count because a
+    first turn can fail before committing any context: that Runtime still reads as version 0,
+    but it has numbered entries of its own and can no longer be told where to start.
 
     Files come back before the conversation does. In between the two, the Runtime is a process
     that remembers writing code which is not on disk yet, and a run arriving in that window
@@ -505,12 +507,15 @@ async def _resume_if_cold(
     :return: The health to start the run against, unchanged when there was nothing to resume.
     :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
-    if health.conversation_id is not None or health.context_version != 0:
+    if (
+        health.conversation_id is not None
+        or health.context_version != 0
+        or health.log_seq != 0
+        or health.ui_event_seq != 0
+    ):
         return health
 
     document = await _restore_files(conversation, client)
-    if document is None:
-        return health
 
     # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
     # its commit reached the remote, which is before that turn's events have finished being
@@ -520,6 +525,9 @@ async def _resume_if_cold(
     # the right place for the next entry to go.
     log_seq = await state.alast_seq(conversation.id, state.MESSAGE_CHANNEL)
     ui_event_seq = await state.alast_seq(conversation.id, state.UI_EVENT_CHANNEL)
+    if document is None:
+        return await _resume_numbering_only(conversation, client, health, log_seq=log_seq, ui_event_seq=ui_event_seq)
+
     restored_version = await client.restore_context(
         document,
         if_match=health.context_version,
@@ -535,6 +543,35 @@ async def _resume_if_cold(
         ui_event_seq,
     )
     return attrs.evolve(health, context_version=restored_version)
+
+
+async def _resume_numbering_only(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    health: RuntimeHealth,
+    *,
+    log_seq: int,
+    ui_event_seq: int,
+) -> RuntimeHealth:
+    """Continue a conversation that has entries stored here but no archived context.
+
+    The Runtime pushes its channels before its context, so one lost during the conversation's
+    first turn leaves exactly this behind. There is no memory to hand back, but the numbering
+    still has to continue past what is stored: the ingest treats a repeated seq as a redelivery
+    and drops it, so a Runtime restarting at 1 would lose its first entries without an error.
+    """
+    if log_seq == 0 and ui_event_seq == 0:
+        return health
+
+    await client.restore_cursors(log_seq=log_seq, ui_event_seq=ui_event_seq)
+    logger.warning(
+        "Conversation %s was resumed on a cold Runtime without any archived context, "
+        "continuing from log seq %d and ui event seq %d",
+        conversation.id,
+        log_seq,
+        ui_event_seq,
+    )
+    return attrs.evolve(health, log_seq=log_seq, ui_event_seq=ui_event_seq)
 
 
 async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:

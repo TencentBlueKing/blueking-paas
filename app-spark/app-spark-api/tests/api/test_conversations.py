@@ -46,10 +46,8 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 from app_spark_api.agent.conversations import checkpoints
-from app_spark_api.agent.conversations import services as conversation_services
-from app_spark_api.agent.conversations import state as conversation_state
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.runtime.entities import RuntimeHealth
+from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
@@ -624,164 +622,50 @@ async def test_cold_restore_after_file_edit_followed_by_context_only_turn(
     assert third["context_version"] == 3
 
 
-async def test_cold_restore_restores_latest_checkpoint_and_newest_context_when_context_moved_ahead(
+async def test_a_first_turn_whose_context_never_arrived_keeps_one_flat_history(
+    aapi_client,
     project,
-    bk_user,
-    settings,
-    tmp_path,
+    agent,
+    workspace_root,
 ):
-    settings.AGENT_CONTEXT_STORAGE = {
-        "backend": "host_tmp_path",
-        "root": str(tmp_path / "contexts"),
-    }
-    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
-    await conversation_state.asave_context(conversation.id, {"context_version": 1, "messages": ["turn-1"]})
-    await checkpoints.arecord(
-        conversation.id,
-        run_id="run-1",
-        commit="a" * 40,
-        tag="app-spark/checkpoint/run-1",
-        context_version=1,
-        completed=True,
-        log_seq=0,
-        ui_event_seq=0,
-        state_epoch=conversation.state_epoch,
-    )
-    newest_document = {"context_version": 2, "messages": ["turn-1", "turn-2"]}
-    await conversation_state.asave_context(conversation.id, newest_document)
-    restored_commits: list[str] = []
-    restored_contexts: list[dict[str, Any]] = []
+    """The Runtime is lost after its entries and commit were stored, but before its context was.
 
-    class Client:
-        async def restore_workspace(self, commit: str) -> str:
-            restored_commits.append(commit)
-            return "restored"
-
-        async def restore_context(
-            self,
-            restored: dict[str, Any],
-            *,
-            if_match: int,
-            log_seq: int,
-            ui_event_seq: int,
-        ) -> int:
-            restored_contexts.append(restored)
-            assert if_match == 0
-            return restored["context_version"]
-
-    health = await conversation_services._resume_if_cold(
-        conversation,
-        Client(),  # type: ignore[arg-type]
-        RuntimeHealth(
-            model="fake:test",
-            conversation_id=None,
-            context_version=0,
-            log_seq=0,
-            ui_event_seq=0,
-            running=False,
-            replication_pending=False,
-        ),
-    )
-
-    assert restored_commits == ["a" * 40]
-    assert restored_contexts == [newest_document]
-    assert health.context_version == 2
-
-
-async def test_cold_restore_accepts_context_when_no_checkpoint_was_ever_needed(
-    project,
-    bk_user,
-    settings,
-    tmp_path,
-):
-    settings.AGENT_CONTEXT_STORAGE = {
-        "backend": "host_tmp_path",
-        "root": str(tmp_path / "contexts"),
-    }
-    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
-    document = {"context_version": 1, "messages": []}
-    await conversation_state.asave_context(conversation.id, document)
-    restored_contexts: list[dict[str, Any]] = []
-
-    class Client:
-        async def restore_workspace(self, commit: str) -> str:
-            pytest.fail(f"workspace restore must not run without a checkpoint: {commit}")
-
-        async def restore_context(
-            self,
-            restored: dict[str, Any],
-            *,
-            if_match: int,
-            log_seq: int,
-            ui_event_seq: int,
-        ) -> int:
-            restored_contexts.append(restored)
-            assert if_match == 0
-            assert log_seq == 0
-            assert ui_event_seq == 0
-            return restored["context_version"]
-
-    health = await conversation_services._resume_if_cold(
-        conversation,
-        Client(),  # type: ignore[arg-type]
-        RuntimeHealth(
-            model="fake:test",
-            conversation_id=None,
-            context_version=0,
-            log_seq=0,
-            ui_event_seq=0,
-            running=False,
-            replication_pending=False,
-        ),
-    )
-
-    assert restored_contexts == [document]
-    assert health.context_version == 1
-
-
-async def test_cold_restore_brings_back_a_commit_whose_own_context_was_never_archived(
-    project,
-    bk_user,
-    settings,
-    tmp_path,
-):
-    """An interrupted turn pushed its files, but its context never arrived.
-
-    Its commit is on the Project's branch regardless, so it is restored from, alongside the
-    newest context that was archived -- here the one from before that turn.
+    The channels are pushed before the context, so this is what losing a Runtime during a
+    conversation's first turn leaves behind. With no context to inject, the replacement still
+    has to be told where the numbering stands: starting again at seq 1 would have its first
+    entries dropped here as redeliveries of the ones already stored, while the live stream
+    showed them -- a turn the history could never replay.
     """
-    settings.AGENT_CONTEXT_STORAGE = {
-        "backend": "host_tmp_path",
-        "root": str(tmp_path / "contexts"),
-    }
-    conversation = await conversation_services.create_conversation(project, owner=bk_user.pk)
-    document = {"context_version": 1, "messages": []}
-    await conversation_state.asave_context(conversation.id, document)
-    await checkpoints.arecord(
-        conversation.id,
-        run_id="interrupted-run",
-        commit="a" * 40,
-        tag="app-spark/checkpoint/interrupted-run",
-        context_version=2,
-        completed=False,
-        log_seq=0,
-        ui_event_seq=0,
-        state_epoch=conversation.state_epoch,
-    )
-    restored_commits: list[str] = []
+    state = await create_conversation(aapi_client)
+    number, conversation_id = state["number"], state["conversation_id"]
+    await run_turn(aapi_client, number, "write my first note")
+    first = await wait_for_replication(aapi_client, number)
+    await wait_for_checkpoint(conversation_id)
 
-    class Client:
-        async def restore_workspace(self, commit: str) -> str:
-            restored_commits.append(commit)
-            return "restored"
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    # Stopped first: a Runtime drains on SIGTERM, and would otherwise push the context again.
+    await ConversationContextVersion.objects.filter(conversation_id=conversation_id).adelete()
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace_root / PROJECT_ID)
 
-    restored = await conversation_services._restore_files(
-        conversation,
-        Client(),  # type: ignore[arg-type]
-    )
+    second_events = await run_turn(aapi_client, number, "write another note")
 
-    assert restored_commits == ["a" * 40]
-    assert restored == document
+    # The context is gone, so the second Runtime starts a new one from version 0.
+    after = await wait_for_replication(aapi_client, number, after={**first, "context_version": 0})
+    page = await read_ui_events(aapi_client, number)
+    first_count, total = first["ui_event_seq"], after["ui_event_seq"]
+    assert [record["seq"] for record in page["records"]] == list(range(1, total + 1))
+    # The second turn is stored whole, from its own RUN_STARTED on, rather than only the tail
+    # that happened to number past the first turn.
+    assert page["records"][first_count]["event"]["type"] == "RUN_STARTED"
+    assert page["records"][-1]["event"]["type"] == "RUN_FINISHED"
+    second_run_id = page["records"][-1]["run_id"]
+    assert [record["run_id"] for record in page["records"][first_count:]] == [second_run_id] * (total - first_count)
+    assert event_types(second_events)[0] == "RUN_STARTED"
+    history = await read_history(aapi_client, number)
+    messages = [row["user_message"] for row in history if row["user_message"] is not None]
+    assert [row["after_seq"] for row in messages] == [0, first_count]
 
 
 async def test_a_turn_is_refused_while_another_is_still_running(

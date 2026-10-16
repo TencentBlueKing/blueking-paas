@@ -208,6 +208,32 @@ class AgentRuntimeClient:
             raise AgentUnavailableError(f"The Agent Runtime refused the context with {response.status_code}: {detail}")
         return _restored_version(response)
 
+    async def restore_cursors(self, *, log_seq: int, ui_event_seq: int) -> None:
+        """Seed an empty Runtime with where a conversation's history stands, without a context.
+
+        The cold start for a conversation whose entries reached this service but whose first
+        context never did. There is nothing to hand back as memory, but the numbering still has
+        to continue after the entries already stored here, for the same reason as in
+        :meth:`restore_context`.
+
+        :param log_seq: Last transcript sequence number this service holds.
+        :param ui_event_seq: Last AG-UI event sequence number this service holds.
+        :raises AgentBusyError: If a run is occupying the Runtime, or it already holds history.
+        :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the cursors.
+        """
+        params = {"log_seq": log_seq, "ui_event_seq": ui_event_seq}
+        try:
+            async with self._new_http_client(self._timeout_seconds) as client:
+                response = await client.put("/cursors", params=params)
+        except httpx2.HTTPError as exc:
+            raise AgentUnavailableError(f"Could not restore the cursors on the Agent Runtime: {exc}") from exc
+
+        if response.status_code == HTTPStatus.CONFLICT:
+            raise AgentBusyError(await self._read_error(response))
+        if response.status_code != HTTPStatus.OK:
+            detail = await self._read_error(response)
+            raise AgentUnavailableError(f"The Agent Runtime refused the cursors with {response.status_code}: {detail}")
+
     async def restore_workspace(self, commit: str) -> str:
         """Put the Runtime's files back to one commit, before any conversation is injected.
 

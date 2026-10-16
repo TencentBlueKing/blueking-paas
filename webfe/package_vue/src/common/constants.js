@@ -344,6 +344,7 @@ export const APP_OPERATION = {
   disable: '停用',
   apply: '申请',
   renew: '续期',
+  cancel: '取消',
   deploy: '部署',
   offline: '下架',
   switch: '切换资源方案',

@@ -20,9 +20,11 @@ from typing import Any
 
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
+from requests.exceptions import RequestException
 
 from paasng.accessories.cloudapi_v2.apigateway.apigw.clients import Client
 from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServiceError, ESBServiceError
+from paasng.accessories.cloudapi_v2.apply_records import ApplyRecordOperateError
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway", "prod")
@@ -193,6 +195,24 @@ class ApiGatewayClient:
             raise ApiGatewayServiceError(f"retrieve resource permission apply record error: {e}")
 
         return res.get("data", {})
+
+    def cancel_resource_permission_apply_record(self, app_code: str, record_id: int, operated_by: str) -> None:
+        """取消待审批的资源权限申请"""
+        data: dict[str, Any] = {"target_app_code": app_code, "operated_by": operated_by}
+
+        try:
+            self.client.cancel_resource_permission_apply_record(data=data, path_params={"record_id": record_id})
+        except RequestException as e:
+            raise ApplyRecordOperateError.from_gateway_exception(e) from e
+
+    def delete_resource_permission_apply_record(self, app_code: str, record_id: int, operated_by: str) -> None:
+        """删除已取消的资源权限申请"""
+        params: dict[str, Any] = {"target_app_code": app_code, "operated_by": operated_by}
+
+        try:
+            self.client.delete_resource_permission_apply_record(params=params, path_params={"record_id": record_id})
+        except RequestException as e:
+            raise ApplyRecordOperateError.from_gateway_exception(e) from e
 
     def list_esb_systems(self, user_auth_type: str) -> dict:
         """查询组件系统列表"""

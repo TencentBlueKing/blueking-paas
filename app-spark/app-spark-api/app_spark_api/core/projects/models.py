@@ -45,7 +45,9 @@ class Project(OwnerTimestampedModel):
     """
 
     id = models.CharField(verbose_name="项目 ID", max_length=20, primary_key=True)
-    name = models.CharField(verbose_name="项目名称", max_length=20)
+    # 已删除项目把名称置空以释放租户内唯一约束。MySQL 的唯一索引允许多行 NULL，
+    # 因此同一租户可以留下多个软删除项目，同时不必改成数据库不支持的条件唯一索引。
+    name = models.CharField(verbose_name="项目名称", max_length=20, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField("是否删除", default=False)
 
@@ -56,6 +58,5 @@ class Project(OwnerTimestampedModel):
     default_objects = models.Manager()
 
     class Meta:
-        # 项目名称租户内唯一
-        # TODO: 软删除后应该释放对应的 name
+        # 活跃项目的名称非空，因此这个约束仍保证它们在租户内唯一；软删除行统一存 NULL。
         unique_together = ("tenant_id", "name")

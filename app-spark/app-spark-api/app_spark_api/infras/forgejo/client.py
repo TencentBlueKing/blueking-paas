@@ -125,6 +125,14 @@ class ForgejoClient:
             )
         return repo
 
+    def delete_repository(self, owner: str, name: str) -> None:
+        """Delete a repository, succeeding if it is already gone."""
+        response = self._request("DELETE", f"api/v1/repos/{owner}/{name}")
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            return
+
+        self._raise_for_status(response, f"DELETE repo {owner}/{name}")
+
     def ensure_branch_protection(self, owner: str, name: str, branch: str) -> None:
         """Forbid force-push (and branch deletion) on the working branch.
 

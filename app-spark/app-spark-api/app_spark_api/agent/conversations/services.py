@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import attrs
 from asgiref.sync import sync_to_async
+from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
@@ -40,6 +41,7 @@ from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
+from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
@@ -160,6 +162,28 @@ async def create_conversation(project: Project, *, owner: str | None) -> Convers
     :return: The stored conversation.
     """
     return await sync_to_async(Conversation.objects.create_for_project)(project, owner=owner)
+
+
+def delete_project_conversations(project_id: str) -> None:
+    """Delete every conversation and context document belonging to a Project."""
+    with transaction.atomic():
+        versions = list(
+            ConversationContextVersion.objects.filter(
+                conversation__project_id=project_id,
+            ).select_related("conversation")
+        )
+        stores = [version.get_blob_store() for version in versions]
+
+        # 先保留全部存储位置，再让级联删除会话历史。文件删除失败会回滚这些数据库行，
+        # 下一次项目删除仍能从恢复的版本行重新定位；已经删掉的 blob 按契约可重复删除。
+        Conversation.objects.filter(project_id=project_id).delete()
+        for store in stores:
+            store.delete()
+
+
+async def adelete_project_conversations(project_id: str) -> None:
+    """Async wrapper for :func:`delete_project_conversations`."""
+    await sync_to_async(delete_project_conversations)(project_id)
 
 
 async def close_conversation(conversation: Conversation) -> None:

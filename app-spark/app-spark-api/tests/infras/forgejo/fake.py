@@ -135,6 +135,8 @@ class FakeForgejo:
         """Route one `/repos/{owner}/{name}/...` call, or ``None`` if nothing matches."""
         if method == "GET" and len(rest) == 3:
             return self._get_repo(rest[1], rest[2], request)
+        if method == "DELETE" and len(rest) == 3:
+            return self._delete_repo(rest[1], rest[2])
         if len(rest) < 4:
             return None
         owner, name, resource = rest[1], rest[2], rest[3]
@@ -206,6 +208,16 @@ class FakeForgejo:
             self.drop_next_create_response = False
             return self._json(HTTPStatus.GATEWAY_TIMEOUT, {"message": "lost"})
         return self._json(HTTPStatus.CREATED, repo)
+
+    def _delete_repo(self, owner: str, name: str) -> httpx2.Response:
+        key = (owner, name)
+        if key not in self.repos:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+
+        del self.repos[key]
+        self.heads.pop(key, None)
+        self.protections = {entry for entry in self.protections if entry[:2] != key}
+        return httpx2.Response(HTTPStatus.NO_CONTENT)
 
     def _protect(self, owner: str, name: str, body: dict[str, Any], branch: str | None = None) -> httpx2.Response:
         rule = branch or str(body.get("rule_name") or "main")

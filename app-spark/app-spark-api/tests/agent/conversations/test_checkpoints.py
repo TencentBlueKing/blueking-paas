@@ -138,6 +138,17 @@ class TestLatest:
 
         assert latest_commit(conversation) == "f" * 40
 
+    def test_the_last_reported_wins_even_when_the_context_version_went_backwards(self, conversation):
+        """A Runtime lost before its context was archived leaves a successor counting from 0.
+
+        The older Runtime's checkpoint then carries the higher version, yet the newer commit
+        is what the conversation pushed last.
+        """
+        record(conversation, commit="a" * 40, context_version=2, run_id="run-old-runtime")
+        record(conversation, commit="b" * 40, context_version=0, run_id="run-new-runtime")
+
+        assert latest_commit(conversation) == "b" * 40
+
 
 class TestReReporting:
     """A Runtime whose acknowledgement was lost re-reports; it must not re-commit."""
@@ -212,6 +223,19 @@ class TestRetention:
         state.save_context(conversation.id, context(5))
 
         assert kept_checkpoints(conversation) == {3, 4}
+
+    def test_retention_keeps_the_last_reported_even_when_the_context_version_went_backwards(
+        self, conversation, settings
+    ):
+        settings.AGENT_CHECKPOINTS_KEPT = 1
+        record(conversation, commit="a" * 40, context_version=2, run_id="run-old-runtime")
+        record(conversation, commit="b" * 40, context_version=0, run_id="run-new-runtime")
+
+        checkpoints.reclaim(conversation.id)
+
+        assert set(
+            ConversationCheckpoint.objects.filter(conversation=conversation).values_list("commit", flat=True)
+        ) == {"b" * 40}
 
     def test_the_newest_version_survives_the_most_aggressive_retention(self, conversation, settings):
         """Keeping nothing would delete what a cold start reads, so both caps are floored at one."""

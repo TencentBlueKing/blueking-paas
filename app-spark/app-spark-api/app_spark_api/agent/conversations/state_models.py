@@ -164,6 +164,23 @@ class ConversationContextVersion(TimestampedModel):
         return make_blob_store(self.backend, self.config)
 
 
+class ConversationCheckpointManager(models.Manager["ConversationCheckpoint"]):
+    """检查点的查询。"""
+
+    def newest_first(self, conversation_id: Any) -> models.QuerySet[ConversationCheckpoint]:
+        """一个会话的检查点，最后登记的排在最前。
+
+        不按 ``context_version`` 排：它只是记录，而且会回退——上下文没归档成功就丢了 Runtime 时，
+        新 Runtime 从版本 0 重新计数，旧 Runtime 留下的检查点版本号反而更高。登记先后才是「这个
+        会话最后推了哪个提交」：同一会话的登记在会话锁下串行，Runtime 也是推完才上报。同一微秒内
+        登记的两行再按自增主键分先后。
+
+        :param conversation_id: 检查点所属会话。
+        :return: 排好序、尚未取值的 queryset。
+        """
+        return self.filter(conversation_id=conversation_id).order_by("-created_at", "-pk")
+
+
 class ConversationCheckpoint(TimestampedModel):
     """一个检查点：某个 commit、钉住它的 tag，以及提交时的上下文版本和日志游标。
 
@@ -196,6 +213,8 @@ class ConversationCheckpoint(TimestampedModel):
     log_seq = models.PositiveIntegerField(verbose_name="原始记录游标", default=0)
     ui_event_seq = models.PositiveIntegerField(verbose_name="AG-UI 事件游标", default=0)
     state_epoch = models.PositiveIntegerField(verbose_name="写入时的状态回写代次", default=1)
+
+    objects = ConversationCheckpointManager()
 
     class Meta:
         constraints = [

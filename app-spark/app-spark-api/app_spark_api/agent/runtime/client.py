@@ -24,6 +24,7 @@ answers the same HTTP API, so nothing here needs to know which provider produced
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -190,22 +191,13 @@ class AgentRuntimeClient:
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the restore.
         """
         params = {"log_seq": log_seq, "ui_event_seq": ui_event_seq}
-        try:
-            async with self._new_http_client(self._context_timeout_seconds) as client:
-                response = await client.put(
-                    "/context",
-                    params=params,
-                    headers={"If-Match": str(if_match)},
-                    json=document,
-                )
-        except httpx2.HTTPError as exc:
-            raise AgentUnavailableError(f"Could not restore the context on the Agent Runtime: {exc}") from exc
-
-        if response.status_code == HTTPStatus.CONFLICT:
-            raise AgentBusyError(await self._read_error(response))
-        if response.status_code != HTTPStatus.OK:
-            detail = await self._read_error(response)
-            raise AgentUnavailableError(f"The Agent Runtime refused the context with {response.status_code}: {detail}")
+        async with self._restoring("the context", timeout_seconds=self._context_timeout_seconds) as client:
+            response = await client.put(
+                "/context",
+                params=params,
+                headers={"If-Match": str(if_match)},
+                json=document,
+            )
         return _restored_version(response)
 
     async def restore_cursors(self, *, log_seq: int, ui_event_seq: int) -> None:
@@ -222,17 +214,8 @@ class AgentRuntimeClient:
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the cursors.
         """
         params = {"log_seq": log_seq, "ui_event_seq": ui_event_seq}
-        try:
-            async with self._new_http_client(self._timeout_seconds) as client:
-                response = await client.put("/cursors", params=params)
-        except httpx2.HTTPError as exc:
-            raise AgentUnavailableError(f"Could not restore the cursors on the Agent Runtime: {exc}") from exc
-
-        if response.status_code == HTTPStatus.CONFLICT:
-            raise AgentBusyError(await self._read_error(response))
-        if response.status_code != HTTPStatus.OK:
-            detail = await self._read_error(response)
-            raise AgentUnavailableError(f"The Agent Runtime refused the cursors with {response.status_code}: {detail}")
+        async with self._restoring("the cursors", timeout_seconds=self._timeout_seconds) as client:
+            await client.put("/cursors", params=params)
 
     async def restore_workspace(self, commit: str) -> str:
         """Put the Runtime's files back to one commit, before any conversation is injected.
@@ -252,19 +235,10 @@ class AgentRuntimeClient:
         :raises AgentUnavailableError: If the Runtime cannot be reached, has no Git workspace,
             or cannot reach that commit.
         """
-        try:
-            async with self._new_http_client(self._context_timeout_seconds) as client:
-                response = await client.post("/workspace/restore", params={"commit": commit})
-        except httpx2.HTTPError as exc:
-            raise AgentUnavailableError(f"Could not restore the workspace on the Agent Runtime: {exc}") from exc
-
-        if response.status_code == HTTPStatus.CONFLICT:
-            raise AgentBusyError(await self._read_error(response))
-        if response.status_code != HTTPStatus.OK:
-            detail = await self._read_error(response)
-            raise AgentUnavailableError(
-                f"The Agent Runtime could not restore the workspace to {commit} ({response.status_code}): {detail}"
-            )
+        async with self._restoring(
+            f"the workspace to {commit}", timeout_seconds=self._context_timeout_seconds
+        ) as client:
+            response = await client.post("/workspace/restore", params={"commit": commit})
         return _restore_outcome(response)
 
     async def start_run(
@@ -328,6 +302,42 @@ class AgentRuntimeClient:
             raise AgentUnavailableError(f"The Agent Runtime refused the run with {response.status_code}: {detail}")
 
         return AgentRun(run_id, client, response)
+
+    @asynccontextmanager
+    async def _restoring(self, what: str, *, timeout_seconds: float) -> AsyncIterator[httpx2.AsyncClient]:
+        """Open a client for one cold-start restore request, through which only ``200`` comes back.
+
+        Every restore endpoint refuses the same way: ``409`` while a run (or existing history)
+        occupies the Runtime, anything else when it cannot do what was asked. Requests sent
+        through the yielded client raise for those instead of returning them::
+
+            async with self._restoring("the cursors", timeout_seconds=self._timeout_seconds) as client:
+                await client.put("/cursors", params=params)
+
+        :param what: What is being restored, as it should read in an error message.
+        :param timeout_seconds: Timeout for this exchange.
+        :raises AgentBusyError: If the Runtime answers ``409``.
+        :raises AgentUnavailableError: If the Runtime cannot be reached or answers anything but ``200``.
+        """
+
+        # A response hook rather than a check after the request: the context manager never
+        # sees the response, and the hook keeps the check out of every caller's body.
+        async def refuse_unless_ok(response: httpx2.Response) -> None:
+            if response.status_code == HTTPStatus.OK:
+                return
+            detail = await self._read_error(response)
+            if response.status_code == HTTPStatus.CONFLICT:
+                raise AgentBusyError(detail)
+            raise AgentUnavailableError(
+                f"The Agent Runtime refused to restore {what} ({response.status_code}): {detail}"
+            )
+
+        try:
+            async with self._new_http_client(timeout_seconds) as client:
+                client.event_hooks["response"].append(refuse_unless_ok)
+                yield client
+        except httpx2.HTTPError as exc:
+            raise AgentUnavailableError(f"Could not restore {what} on the Agent Runtime: {exc}") from exc
 
     async def _get_json(self, path: str, *, params: dict[str, int] | None = None) -> Any:
         """Perform one buffered GET and return its decoded body."""

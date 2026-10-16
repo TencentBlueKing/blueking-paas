@@ -122,17 +122,12 @@ def record(
 def latest(conversation_id: Any) -> ConversationCheckpoint | None:
     """返回这个会话最新的检查点，也就是冷启动时用来恢复工作区的那一个。
 
-    按上下文版本排序而不是按时间：版本号就是这个会话推进到了哪一步，而两个检查点的创建时间在同
-    一次重试里可能挨得极近。
+    「最新」指最后登记的那个，见 :meth:`ConversationCheckpointManager.newest_first`。
 
     :param conversation_id: 要恢复的会话。
     :return: 检查点行，没有则 ``None``。
     """
-    return (
-        ConversationCheckpoint.objects.filter(conversation_id=conversation_id)
-        .order_by("-context_version", "-created_at")
-        .first()
-    )
+    return ConversationCheckpoint.objects.newest_first(conversation_id).first()
 
 
 def reclaim(conversation_id: Any) -> Reclaimed:
@@ -160,16 +155,13 @@ def _lock_conversation(conversation_id: Any) -> None:
 def _reclaim_checkpoints(conversation_id: Any) -> int:
     """删掉排在最近 N 个之外的检查点。
 
-    排序和 :func:`latest` 一致（先看上下文版本，同版本再看创建时间），所以留下的永远是这个会话
-    推进得最远的那几个，冷启动要用的那一个必然在内。
+    排序和 :func:`latest` 一致，所以留下的永远是最后登记的那几个，冷启动要用的那一个必然在内。
 
     :param conversation_id: 要回收的会话。
     :return: 删掉的检查点数。
     """
     doomed = list(
-        ConversationCheckpoint.objects.filter(conversation_id=conversation_id)
-        .order_by("-context_version", "-created_at")
-        .values_list("pk", flat=True)[checkpoints_kept() :]
+        ConversationCheckpoint.objects.newest_first(conversation_id).values_list("pk", flat=True)[checkpoints_kept() :]
     )
     if not doomed:
         return 0

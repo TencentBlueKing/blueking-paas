@@ -28,6 +28,12 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
         help_text="按环境分配", child=serializers.ListField(child=serializers.CharField()), required=False
     )
 
+    def validate_env_plans(self, value):
+        for env, plans in value.items():
+            if not plans:
+                raise serializers.ValidationError(f"Plans for env '{env}' cannot be empty.")
+        return value
+
     def validate(self, attrs):
         plans_exists = bool(attrs.get("plans", None))
         env_plans_exists = bool(attrs.get("env_plans", None))
@@ -59,6 +65,12 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
             if not val_list:
                 raise serializers.ValidationError(f"Value list for '{key}' cannot be empty.")
         return value
+
+    def validate(self, attrs):
+        # 非兜底规则允许不分配方案，表示命中该规则的模块不允许使用该增强服务
+        if attrs.get("matcher") and not attrs.get("plans") and not attrs.get("env_plans"):
+            return attrs
+        return super().validate(attrs)
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):

@@ -28,6 +28,7 @@ from rest_framework.response import Response
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.servicehub.exceptions import ServiceDisallowedError
 from paasng.accessories.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
 from paasng.core.tenant.header import validate_tenant_id_header
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
@@ -256,7 +257,10 @@ class LessCodeSystemAPIViewSet(viewsets.ViewSet):
         try:
             mixed_service_mgr.get_module_rel(service_id=svc.uuid, module_id=module.id)
         except SvcAttachmentDoesNotExist:
-            mixed_service_mgr.bind_service_use_first_plan(service=svc, module=module)
+            try:
+                mixed_service_mgr.bind_service_use_first_plan(service=svc, module=module)
+            except ServiceDisallowedError:
+                raise error_codes.CANNOT_BIND_SERVICE.f(_("当前模块不支持使用该增强服务"))
         return Response()
 
     def get_db_service(self, application):

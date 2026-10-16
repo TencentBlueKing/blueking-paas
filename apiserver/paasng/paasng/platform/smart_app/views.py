@@ -386,7 +386,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             with atomic():
                 try:
                     application = handler.handle_app(request.user)
-                except (ControllerError, DescriptionValidationError) as e:
+                except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
                     logger.exception("Failed to update app info！")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
 

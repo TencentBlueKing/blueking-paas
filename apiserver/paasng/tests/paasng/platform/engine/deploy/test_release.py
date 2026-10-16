@@ -22,9 +22,17 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
+from paas_wl.workloads.release_controller.entities import SecretFileMount
+from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
-from paasng.platform.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
-from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
+from paasng.platform.engine.deploy.release.legacy import (
+    ApplicationReleaseMgr,
+    ReleaseResultHandler,
+    release_by_engine,
+)
+from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr, release_by_k8s_operator
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
@@ -130,6 +138,104 @@ class TestBkAppReleaseMgr:
         release_mgr.start()
 
         assert Deployment.objects.get(pk=bk_deployment.id).status == JobStatus.INTERRUPTED
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+class TestKMSRelease:
+    @pytest.fixture()
+    def kms_mount(self, settings, bk_app) -> SecretFileMount:
+        """开启应用的 KMS 托管，并提供已就绪的 Secret 挂载。"""
+        settings.SAAS_KMS_ENABLED = True
+        bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
+        return SecretFileMount(
+            volume_name="kms-secret",
+            secret_name="kms-test",
+            mount_dir="/etc/kms",
+            sub_paths=("envelope", "privateKey"),
+        )
+
+    def test_legacy_release_strips_password_and_waits_for_secret(self, bk_deployment, kms_mount):
+        """普通应用先准备 namespace 和 Secret，再以普通变量及文件挂载发起发布。"""
+        env = bk_deployment.app_environment
+        calls = mock.Mock()
+        calls.provision.return_value = kms_mount
+        calls.release.return_value = mock.Mock(uuid=uuid.uuid4(), version=1)
+        injection_path = "paasng.platform.engine.configurations.kms.injection"
+        release_path = "paasng.platform.engine.deploy.release.legacy"
+        with (
+            mock.patch(f"{injection_path}.collect_sensitive_keys", return_value={"DB_PASSWORD"}),
+            mock.patch(f"{injection_path}.get_env_variables", return_value={"DB_PASSWORD": "secret", "PLAIN": "1"}),
+            mock.patch(f"{injection_path}.NamespacesHandler.new_by_app") as namespace_handler,
+            mock.patch(f"{injection_path}.provision_kms_secret", calls.provision),
+            mock.patch(f"{release_path}.release_to_k8s", calls.release),
+            mock.patch(f"{release_path}.wait_for_release"),
+        ):
+            namespace_handler.return_value.ensure_namespace = calls.ensure_namespace
+            release_by_engine(env, "build-id", deployment=bk_deployment)
+
+        assert calls.mock_calls[:3] == [
+            mock.call.ensure_namespace(env.wl_app.namespace),
+            mock.call.provision(env, bk_deployment, {"DB_PASSWORD": "secret"}),
+            mock.call.release(
+                env,
+                "build-id",
+                {"PLAIN": "1", "BKPAAS_KMS_ENABLED": "true"},
+                bk_deployment.get_procfile(),
+                secret_mounts=[kms_mount],
+            ),
+        ]
+
+    def test_operator_release_strips_password_and_waits_for_secret(self, bk_deployment, kms_mount):
+        """云原生发布提交前剥离敏感变量，并在 namespace 和 Secret 就绪后追加挂载。"""
+        env = bk_deployment.app_environment
+        bkapp = crd.BkAppResource(
+            metadata=ObjectMetadata(name="app"),
+            spec=crd.BkAppSpec(
+                configuration=crd.BkAppConfiguration(
+                    env=[crd.EnvVar(name="DB_PASSWORD", value="secret"), crd.EnvVar(name="PLAIN", value="1")]
+                )
+            ),
+        )
+        calls = mock.Mock()
+        calls.provision.return_value = kms_mount
+        calls.submit.return_value = {"kind": "BkApp"}
+        revision = mock.Mock(pk=1)
+        module_path = "paasng.platform.engine.deploy.release.operator"
+        with (
+            mock.patch(f"{module_path}.AppModelDeploy.objects.create", return_value=mock.Mock(id=1)),
+            mock.patch(f"{module_path}.get_bkapp_resource_for_deploy", return_value=bkapp),
+            mock.patch(
+                f"{module_path}.collect_kms_managed_keys_by_env",
+                return_value={env.environment: frozenset({"DB_PASSWORD"})},
+            ),
+            mock.patch(
+                "paasng.platform.engine.configurations.kms.injection.get_env_variables",
+                return_value={"DB_PASSWORD": "secret", "PLAIN": "1"},
+            ),
+            mock.patch(f"{module_path}.preflight_deploy"),
+            mock.patch(f"{module_path}.ensure_namespace", calls.ensure_namespace),
+            mock.patch(f"{module_path}.provision_kms_secret", calls.provision),
+            mock.patch(f"{module_path}.svc_disc.apply_configmap"),
+            mock.patch(f"{module_path}.deploy_addons_tls_certs"),
+            mock.patch(f"{module_path}.deploy_volume_source"),
+            mock.patch(f"{module_path}.apply_bkapp_to_k8s", calls.submit),
+            mock.patch(f"{module_path}.ensure_bk_log_if_need"),
+            mock.patch(f"{module_path}.sync_service_monitor"),
+            mock.patch(f"{module_path}.WaitAppModelReady.start"),
+        ):
+            release_by_k8s_operator(env, revision, "tester", mock.Mock(image="test:latest"), bk_deployment)
+
+        submitted = calls.submit.call_args.args[1]
+        assert calls.mock_calls[:3] == [
+            mock.call.ensure_namespace(env),
+            mock.call.provision(env, bk_deployment, {"DB_PASSWORD": "secret"}),
+            mock.call.submit(env, submitted),
+        ]
+        assert submitted["spec"]["configuration"]["env"] == [{"name": "PLAIN", "value": "1"}]
+        overlay = submitted["spec"]["envOverlay"]
+        assert overlay["mounts"][0]["source"] == {"secret": {"name": "kms-test"}}
+        assert overlay["mounts"][0]["subPaths"] == ["envelope", "privateKey"]
+        assert overlay["envVariables"] == [{"envName": env.environment, "name": "BKPAAS_KMS_ENABLED", "value": "true"}]
 
 
 class TestReleaseResultHandler:

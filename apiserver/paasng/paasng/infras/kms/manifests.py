@@ -65,7 +65,7 @@ def build_cluster_secret_store(
 
     :param namespace: 应用所在 namespace，ESO 使用其中的 service_account_name 登录 OpenBao
 
-    TODO(kms): 敏感变量每次变更都会新增一个 ClusterSecretStore，需要自动回收
+    敏感变量变更会新增一个 ClusterSecretStore，旧版本由发布成功后的回收流程清理。
     """
     return {
         "apiVersion": EXTERNAL_SECRETS_API_VERSION,

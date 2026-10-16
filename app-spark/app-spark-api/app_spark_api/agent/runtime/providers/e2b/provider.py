@@ -38,7 +38,11 @@ from app_spark_api.agent.runtime.entities import (
     RuntimeHealth,
     StateCallback,
 )
-from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentProvisionError,
+    AgentResourceDeletionError,
+    AgentWorkspaceBusyError,
+)
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
 from app_spark_api.agent.runtime.providers.agent_env import build_agent_env
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
@@ -227,6 +231,22 @@ class E2BProvider(AgentRuntimeProvider):
             record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
             if record is not None:
                 await _SandboxClaim(record, self.config).terminate(reason="terminated")
+
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop a Project's sandbox and delete every credential-bearing record."""
+        try:
+            record = await E2BSandboxRecord.objects.active_for_project(project_id).afirst()
+            if record is not None:
+                async with self._conversation_lock(record.conversation_id):
+                    # 重新查询挡住另一个 worker 已经释放同一占位的竞态；缺失就是清理已经完成。
+                    active = await E2BSandboxRecord.objects.active_for_project(project_id).afirst()
+                    if active is not None:
+                        await _SandboxClaim(active, self.config).terminate(reason="project_deleted")
+
+            # 历史行仍带 runtime token、代理头和流量凭据。项目删除不保留这些诊断记录。
+            await E2BSandboxRecord.objects.filter(project_id=project_id).adelete()
+        except (Exception, asyncio.CancelledError) as exc:
+            raise AgentResourceDeletionError("sandbox") from exc
 
     async def shutdown(self) -> None:
         """Stop all active sandboxes owned by this API service.

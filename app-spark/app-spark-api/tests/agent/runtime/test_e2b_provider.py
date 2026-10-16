@@ -49,6 +49,7 @@ from app_spark_api.agent.runtime.entities import (
 )
 from app_spark_api.agent.runtime.exceptions import (
     AgentProvisionError,
+    AgentResourceDeletionError,
     AgentWorkspaceBusyError,
     ModelCredentialMissingError,
 )
@@ -999,6 +1000,37 @@ async def test_terminating_lets_the_agent_push_before_the_sandbox_goes(e2b, prov
     assert stop["cmd"].startswith(f"kill -TERM {record.agent_pid} 2>/dev/null || exit 0;")
     await record.arefresh_from_db()
     assert (record.active_conversation_id, record.stop_reason) == (None, "terminated")
+
+
+async def test_deleting_project_resources_stops_active_sandbox_and_removes_history(e2b, provider):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    await provider.terminate(conversation_id)
+    active_conversation_id = str(uuid4())
+    await provider.ensure(project_id=project_id, conversation_id=active_conversation_id)
+
+    await provider.delete_project_resources(project_id, [conversation_id, active_conversation_id])
+
+    assert e2b.sandboxes["sbx-2"].events == ["stop", "kill"]
+    assert not await E2BSandboxRecord.objects.filter(project_id=project_id).aexists()
+
+
+async def test_deleting_missing_project_resources_is_idempotent(provider):
+    await provider.delete_project_resources(str(uuid4()), [str(uuid4())])
+
+
+async def test_failed_project_sandbox_stop_preserves_credential_record(e2b, provider):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    e2b.sandboxes["sbx-1"].kill_error = SandboxException("kill refused")
+
+    with pytest.raises(AgentResourceDeletionError) as raised:
+        await provider.delete_project_resources(project_id, [conversation_id])
+
+    assert raised.value.category == "sandbox"
+    record = await E2BSandboxRecord.objects.aget(project_id=project_id)
+    assert record.active_conversation_id == record.conversation_id
+    assert record.runtime_token
 
 
 async def test_an_agent_that_ignores_sigterm_is_killed_after_the_grace_period(e2b, provider, monkeypatch, caplog):

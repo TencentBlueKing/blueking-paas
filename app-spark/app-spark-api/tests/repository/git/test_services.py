@@ -21,10 +21,18 @@ import threading
 import pytest
 from django.db import connection, connections
 
-from app_spark_api.repository.git.constants import STATUS_FAILED, STATUS_READY, write_token_name
+from app_spark_api.infras.forgejo.exceptions import ForgejoError
+from app_spark_api.repository.git.constants import (
+    READ_TOKEN_SCOPE,
+    STATUS_FAILED,
+    STATUS_READY,
+    read_token_name,
+    write_token_name,
+)
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
 from app_spark_api.repository.git.models import ProjectGitRepository
 from app_spark_api.repository.git.services import (
+    delete_project_repository,
     provision_project_repository,
     require_project_git_ready,
     revoke_project_credentials,
@@ -117,6 +125,49 @@ def test_revoke_drops_the_remote_token_and_blocks_ready(project, fake_forgejo):
     assert not any(t["name"] == write_token_name(project.id) for t in fake_forgejo.tokens.values())
     with pytest.raises(GitRepositoryNotReadyError):
         require_project_git_ready(project.id)
+
+
+def test_delete_repository_removes_credentials_remote_and_local_record(project, fake_forgejo):
+    repo = provision_project_repository(project)
+    client = fake_forgejo.client()
+    client.create_token(
+        name=read_token_name(project.id),
+        scopes=[READ_TOKEN_SCOPE],
+        owner=repo.owner,
+        repo_name=repo.name,
+    )
+
+    delete_project_repository(project)
+
+    assert not any(
+        token["name"] in {write_token_name(project.id), read_token_name(project.id)}
+        for token in fake_forgejo.tokens.values()
+    )
+    assert (repo.owner, repo.name) not in fake_forgejo.repos
+    assert not ProjectGitRepository.objects.filter(project=project).exists()
+
+
+def test_delete_repository_is_idempotent_when_resources_are_missing(project, fake_forgejo):
+    delete_project_repository(project)
+    delete_project_repository(project)
+
+    assert not ProjectGitRepository.objects.filter(project=project).exists()
+
+
+def test_delete_repository_can_retry_after_remote_failure(project, fake_forgejo):
+    repo = provision_project_repository(project)
+    fake_forgejo.fail_next_request = True
+
+    with pytest.raises(ForgejoError):
+        delete_project_repository(project)
+
+    assert ProjectGitRepository.objects.filter(project=project).exists()
+    assert (repo.owner, repo.name) in fake_forgejo.repos
+
+    delete_project_repository(project)
+
+    assert not ProjectGitRepository.objects.filter(project=project).exists()
+    assert (repo.owner, repo.name) not in fake_forgejo.repos
 
 
 def test_require_ready_refuses_a_missing_or_failed_row(project, fake_forgejo):

@@ -494,11 +494,13 @@ async def _resume_if_cold(
     would have the model act on the mismatch. Nothing accepts runs until both are done, which
     is what the caller's ordering gives us for free.
 
-    The two halves are not required to describe the same moment. The files come from the latest
-    restorable checkpoint -- or from a newer remote branch tip, when another conversation has
-    developed the Project since -- while the conversation is always the newest archived one.
-    Turns that change no files leave no checkpoint behind, so the conversation being ahead of
-    the files is the ordinary case, and the Agent is left to notice any difference itself.
+    The two halves are not required to describe the same moment. The files belong to the
+    Project: they come from the conversation's latest checkpoint, or from a newer remote branch
+    tip when another conversation has developed the Project since. The conversation is always
+    the newest archived one. Turns that change no files leave no checkpoint behind, so the
+    conversation being ahead of the files is the ordinary case; the files can be ahead too, when
+    a turn's commit was reported but its final context never arrived. Either way the Agent is
+    left to notice the difference itself.
 
     :return: The health to start the run against, unchanged when there was nothing to resume.
     :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
@@ -538,14 +540,14 @@ async def _resume_if_cold(
 async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
     """Put the workspace back to this conversation's checkpoint, and return the latest context.
 
-    When there is no restorable checkpoint, the files are left alone and the newest archived
-    context is returned.
+    When the conversation has never pushed a checkpoint, the files are left alone and the newest
+    archived context is returned.
 
     :raises AgentUnavailableError: If the Runtime cannot restore the checkpoint's commit.
     :raises AgentBusyError: If a run is occupying the Runtime.
     :raises ConversationStateError: If the newest archived context cannot be read back.
     """
-    checkpoint = await checkpoints.alatest_restorable(conversation.id)
+    checkpoint = await checkpoints.alatest(conversation.id)
     if checkpoint is None:
         return await state.aload_context(conversation.id)
 

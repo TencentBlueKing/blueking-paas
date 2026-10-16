@@ -123,17 +123,16 @@ class ConversationContextVersion(TimestampedModel):
     上下文没法从原始记录重放出来——``SummarizingCompaction`` 是一次真实的 LLM 调用——所以这里存
     的就是冷启动唯一能依赖的东西。
 
-    一版一行、一版一份 blob（key 里带版本号），而不是就地覆盖一份「最新的」：检查点要的不是最新
-    版，而是**和某个 commit 配套的那一版**。文件和会话必须描述同一个时刻，否则恢复出来的
-    Runtime 会拿着记得别的文件的模型继续写代码。覆盖式的 blob 只能回答「最新是什么」。
+    一版一行、一版一份 blob（key 里带版本号），而不是就地覆盖一份「最新的」：每一版有自己的 key
+    和行，归档就不用加锁、也不用维护一个可能被慢写入者往回拨的「最新」指针。
 
-    普通冷启动要的「最新一版」，就是这张表里版本号最大的那一行，没有另外的指针。
+    冷启动要的「最新一版」，就是这张表里版本号最大的那一行，没有另外的指针。
 
     backend 与 config 记在行上而不是每次从配置推，是为了部署改了存储配置之后，已经写出去的 blob
     还找得回来。
 
-    保留是有限的，见 :mod:`app_spark_api.agent.conversations.checkpoints` 的回收逻辑：只留被留存
-    下来的检查点引用的版本，加上最近若干版。否则 blob 存储会无上限增长。
+    保留是有限的，见 :mod:`app_spark_api.agent.conversations.checkpoints` 的回收逻辑：只留最近
+    若干版。否则 blob 存储会无上限增长。
     """
 
     conversation = models.ForeignKey(
@@ -166,18 +165,17 @@ class ConversationContextVersion(TimestampedModel):
 
 
 class ConversationCheckpoint(TimestampedModel):
-    """一个可恢复点：某个 commit、钉住它的 tag，以及提交时的上下文版本和日志游标。
+    """一个检查点：某个 commit、钉住它的 tag，以及提交时的上下文版本和日志游标。
 
-    这里存在只说明一半：Runtime 保证了 commit 和 tag 已经到远端。另一半——控制面手上真的存着
-    ``context_version`` 那一版上下文——由 :func:`~app_spark_api.agent.conversations.checkpoints.
-    restorable_checkpoints` 查出来，不落成字段。计划里明确要求「代码已推送、上下文尚未保存」和
-    反过来的情况都不能被误判成完整恢复点。
+    行存在就说明 Runtime 已经把 commit 和 tag 推到远端，可以用来恢复工作区。``context_version``
+    和游标只记录「这次提交是在会话的哪个位置做的」，冷启动不据此挑选上下文，见
+    :mod:`app_spark_api.agent.conversations.checkpoints`。
 
     ``state_epoch`` 一并记下，是为了后续阶段校验写入者租约。这里复用既有的代次概念，不另起一个
     并行的计数器。
 
-    行本身很小，但每一行都钉住一版上下文不让回收，所以检查点也是有保留上限的：只留最近若干个，
-    见 :mod:`app_spark_api.agent.conversations.checkpoints` 的回收逻辑。
+    冷启动只用最新的那一个，所以只留最近若干个，见 :mod:`app_spark_api.agent.conversations.
+    checkpoints` 的回收逻辑。
     """
 
     conversation = models.ForeignKey(
@@ -206,5 +204,5 @@ class ConversationCheckpoint(TimestampedModel):
                 name="uniq_conversation_checkpoint_commit",
             )
         ]
-        # 冷恢复只问一个问题：这个会话最新的可恢复点是哪个。
+        # 冷恢复只问一个问题：这个会话最新的检查点是哪个。
         indexes = [models.Index(fields=["conversation", "-created_at"])]

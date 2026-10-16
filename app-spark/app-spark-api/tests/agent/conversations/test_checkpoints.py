@@ -14,13 +14,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Deciding when a commit and a conversation add up to somewhere worth resuming from.
+"""Which commit a cold start restores the workspace from, and how long the history is kept.
 
-The two halves arrive over different connections and in either order, so most of what is worth
-testing here is the *incomplete* pair: code on the remote with no matching context, and context
-with no commit. Neither is a restore point. A checkpoint only decides which files a cold start
-brings back -- the context it injects is always the newest archived one -- but retention keeps
-exactly the versions checkpoints name, so the two have to agree on what "still here" means.
+A checkpoint is decoupled from the conversation's context: the files follow the Project, and the
+context injected is always the newest archived one. So the order in which a commit and a context
+version arrive must not decide whether the commit can be restored, and retention must not keep
+context versions around on a checkpoint's behalf.
 """
 
 from __future__ import annotations
@@ -69,73 +68,67 @@ def context(version: int) -> dict[str, Any]:
     return {"context_version": version, "messages": [f"turn {version}"]}
 
 
-def record(conversation: Conversation, *, commit: str, context_version: int, run_id: str = "run-a") -> bool:
-    """Report one checkpoint the way the ingest endpoint does, and return what it answered."""
-    return checkpoints.record(
+def record(
+    conversation: Conversation,
+    *,
+    commit: str,
+    context_version: int,
+    run_id: str = "run-a",
+    completed: bool = True,
+) -> None:
+    """Report one checkpoint the way the ingest endpoint does."""
+    checkpoints.record(
         conversation.id,
         run_id=run_id,
         commit=commit,
         tag=f"app-spark/checkpoint/{run_id}",
         context_version=context_version,
-        completed=True,
+        completed=completed,
         log_seq=0,
         ui_event_seq=0,
         state_epoch=conversation.state_epoch,
     )
 
 
-class TestRestorability:
-    """Only a commit *and* its own context version make somewhere to resume from."""
+def latest_commit(conversation: Conversation) -> str | None:
+    checkpoint = checkpoints.latest(conversation.id)
+    return None if checkpoint is None else checkpoint.commit
 
-    def test_a_commit_whose_context_is_archived_is_restorable(self, conversation):
+
+class TestLatest:
+    """A reported commit is on the remote, and that alone makes it the one to restore from."""
+
+    def test_a_commit_whose_context_is_archived_is_offered(self, conversation):
         state.save_context(conversation.id, context(3))
+        record(conversation, commit="a" * 40, context_version=3)
 
-        assert record(conversation, commit="a" * 40, context_version=3) is True
-        assert checkpoints.latest_restorable(conversation.id).commit == "a" * 40
+        assert latest_commit(conversation) == "a" * 40
 
-    def test_a_commit_without_its_context_is_not(self, conversation):
-        """Code pushed, context not saved yet: the row is kept, but it is not a restore point."""
-        assert record(conversation, commit="b" * 40, context_version=1) is False
-        assert checkpoints.latest_restorable(conversation.id) is None
+    def test_a_commit_is_offered_before_its_context_arrives(self, conversation):
+        """The push won the race against the context. The files are already on the remote."""
+        record(conversation, commit="b" * 40, context_version=1)
 
-    def test_a_context_without_a_commit_is_not(self, conversation):
-        """The mirror image, and the one a cold start would otherwise silently accept."""
+        assert latest_commit(conversation) == "b" * 40
+
+    def test_a_context_without_a_commit_offers_nothing(self, conversation):
+        """Chat-only turns change no files, so there is nothing to put back."""
         state.save_context(conversation.id, context(1))
 
-        assert checkpoints.latest_restorable(conversation.id) is None
+        assert latest_commit(conversation) is None
 
-    def test_an_interrupted_commit_is_not_restorable(self, conversation):
+    def test_an_interrupted_commit_is_offered(self, conversation):
+        """Its files are on the Project's branch either way; the flag is only a record."""
         state.save_context(conversation.id, context(1))
+        record(conversation, commit="9" * 40, context_version=1, run_id="run-interrupted", completed=False)
 
-        restorable = checkpoints.record(
-            conversation.id,
-            run_id="run-interrupted",
-            commit="9" * 40,
-            tag="app-spark/checkpoint/run-interrupted",
-            context_version=1,
-            completed=False,
-            log_seq=0,
-            ui_event_seq=0,
-            state_epoch=conversation.state_epoch,
-        )
+        assert latest_commit(conversation) == "9" * 40
 
-        assert restorable is False
-        assert checkpoints.latest_restorable(conversation.id) is None
-
-    def test_a_late_context_makes_an_earlier_commit_restorable(self, conversation):
-        """The push won the race. Nothing re-reports the checkpoint; it simply becomes valid."""
-        assert record(conversation, commit="c" * 40, context_version=2) is False
-
-        state.save_context(conversation.id, context(2))
-
-        assert checkpoints.latest_restorable(conversation.id).commit == "c" * 40
-
-    def test_a_newer_context_does_not_stand_in_for_the_missing_one(self, conversation):
-        """Version 3's document describes turn three, so it cannot vouch for turn two's files."""
+    def test_a_commit_whose_own_version_was_never_archived_is_offered(self, conversation):
+        """Version 2 was skipped, which must not strand the files turn two pushed."""
         record(conversation, commit="d" * 40, context_version=2, run_id="run-b")
         state.save_context(conversation.id, context(3))
 
-        assert checkpoints.latest_restorable(conversation.id) is None
+        assert latest_commit(conversation) == "d" * 40
 
     def test_the_newest_of_several_is_the_one_offered(self, conversation):
         state.save_context(conversation.id, context(1))
@@ -143,7 +136,7 @@ class TestRestorability:
         state.save_context(conversation.id, context(2))
         record(conversation, commit="f" * 40, context_version=2, run_id="run-b")
 
-        assert checkpoints.latest_restorable(conversation.id).commit == "f" * 40
+        assert latest_commit(conversation) == "f" * 40
 
 
 class TestReReporting:
@@ -152,9 +145,9 @@ class TestReReporting:
     def test_reporting_the_same_commit_twice_keeps_one_row(self, conversation):
         state.save_context(conversation.id, context(1))
         record(conversation, commit="a" * 40, context_version=1)
+        record(conversation, commit="a" * 40, context_version=1)
 
-        assert record(conversation, commit="a" * 40, context_version=1) is True
-        assert checkpoints.restorable_checkpoints(conversation.id).count() == 1
+        assert ConversationCheckpoint.objects.filter(conversation=conversation).count() == 1
 
 
 def kept_checkpoints(conversation: Conversation) -> set[int]:
@@ -172,9 +165,9 @@ def kept_versions(conversation: Conversation) -> set[int]:
 
 
 class TestRetention:
-    """Versions are kept per checkpoint, so something has to take the unreferenced ones away."""
+    """Versions and checkpoints are each capped on their own; neither keeps the other alive."""
 
-    def test_old_unreferenced_versions_are_reclaimed(self, conversation, settings):
+    def test_old_versions_are_reclaimed(self, conversation, settings):
         settings.AGENT_CONTEXT_VERSIONS_KEPT = 2
 
         for version in range(1, 6):
@@ -182,7 +175,12 @@ class TestRetention:
 
         assert kept_versions(conversation) == {4, 5}
 
-    def test_a_version_a_checkpoint_needs_survives_reclamation(self, conversation, settings):
+    def test_a_checkpoint_outlives_the_context_version_it_was_made_at(self, conversation, settings):
+        """Edit files once, then chat for a while: the files must still come back.
+
+        This is the regression the pairing used to cause. Pinning the checkpoint's version kept
+        a blob nothing reads; not pinning it, while still asking for it, stranded the files.
+        """
         settings.AGENT_CONTEXT_VERSIONS_KEPT = 1
         state.save_context(conversation.id, context(1))
         record(conversation, commit="a" * 40, context_version=1)
@@ -190,11 +188,8 @@ class TestRetention:
         for version in range(2, 6):
             state.save_context(conversation.id, context(version))
 
-        # Restorability asks for the checkpoint's own version row, so reclaiming it would leave
-        # a cold start with no files to bring back -- which is why retention has to know about
-        # checkpoints at all.
-        assert checkpoints.latest_restorable(conversation.id).commit == "a" * 40
-        assert 1 in kept_versions(conversation)
+        assert kept_versions(conversation) == {5}
+        assert latest_commit(conversation) == "a" * 40
 
     def test_reclaiming_removes_the_blob_as_well_as_the_row(self, conversation, settings, tmp_path):
         settings.AGENT_CONTEXT_VERSIONS_KEPT = 1
@@ -218,23 +213,6 @@ class TestRetention:
 
         assert kept_checkpoints(conversation) == {3, 4}
 
-    def test_dropping_an_old_checkpoint_releases_the_version_it_pinned(self, conversation, settings, tmp_path):
-        """Both ends have to be reclaimed. Capping versions alone leaves every pinned blob forever."""
-        settings.AGENT_CHECKPOINTS_KEPT = 1
-        settings.AGENT_CONTEXT_VERSIONS_KEPT = 1
-
-        state.save_context(conversation.id, context(1))
-        record(conversation, commit="a" * 40, context_version=1, run_id="run-a")
-        state.save_context(conversation.id, context(2))
-        record(conversation, commit="b" * 40, context_version=2, run_id="run-b")
-        state.save_context(conversation.id, context(3))
-
-        # Version 1 went in the same pass as the checkpoint that was holding it, which is what
-        # reclaiming checkpoints before versions buys.
-        assert kept_checkpoints(conversation) == {2}
-        assert kept_versions(conversation) == {2, 3}
-        assert not (tmp_path / "blobs" / f"{conversation.id}-v1.json").exists()
-
     def test_the_newest_version_survives_the_most_aggressive_retention(self, conversation, settings):
         """Keeping nothing would delete what a cold start reads, so both caps are floored at one."""
         settings.AGENT_CHECKPOINTS_KEPT = 0
@@ -247,7 +225,7 @@ class TestRetention:
         assert kept_versions(conversation) == {2}
         assert state.context_version(conversation.id) == 2
         assert state.load_context(conversation.id) == context(2)
-        assert checkpoints.latest_restorable(conversation.id).commit == "a" * 40
+        assert latest_commit(conversation) == "a" * 40
 
     def test_registration_and_retention_take_the_same_conversation_lock(
         self,
@@ -282,7 +260,7 @@ class TestRetention:
 
 
 class TestVersionedDocuments:
-    """Each version keeps its own document, so archiving a newer one never overwrites a pinned one."""
+    """Each version keeps its own document, so archiving a newer one never overwrites an older one."""
 
     def test_an_older_version_keeps_its_own_document_after_a_newer_one_is_archived(self, conversation):
         state.save_context(conversation.id, context(1))

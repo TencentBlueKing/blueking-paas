@@ -203,9 +203,9 @@ def save_context(conversation_id: Any, payload: dict[str, Any]) -> int:
 
     backend, config = blob_location(conversation_id, version)
     make_blob_store(backend, config).put_bytes(json.dumps(payload).encode())
-    # Checkpoint registration and retention use this same conversation lock. Taking it before
-    # publishing the row prevents a concurrent reclaim from computing its keep-set without this
-    # version and then deleting it immediately after it becomes checkpoint-referenced.
+    # Retention takes this same conversation lock. Taking it before publishing the row prevents a
+    # concurrent reclaim from computing its keep-set without this version and then deleting the
+    # row the moment it lands -- which would take away the very newest context.
     with transaction.atomic():
         _lock_conversation(conversation_id)
         archived = context_version(conversation_id)
@@ -292,8 +292,8 @@ def clear(conversation_id: Any) -> None:
     ConversationMessage.objects.filter(conversation_id=conversation_id).delete()
     ConversationUiEvent.objects.filter(conversation_id=conversation_id).delete()
     ConversationUserMessage.objects.filter(conversation_id=conversation_id).delete()
-    # Checkpoints go too: they name context versions that are about to stop existing, and a
-    # checkpoint whose context cannot be read is exactly the half-state cold start must not see.
+    # Checkpoints go too: they are this conversation's record of what it pushed. The commits
+    # themselves stay on the Project's branch, which is where a cold start takes its files from.
     ConversationCheckpoint.objects.filter(conversation_id=conversation_id).delete()
     ConversationContextVersion.objects.filter(conversation_id=conversation_id).delete()
 

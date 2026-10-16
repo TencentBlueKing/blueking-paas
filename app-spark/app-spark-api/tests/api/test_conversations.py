@@ -323,7 +323,7 @@ async def wait_for_replication(
 
 
 async def wait_for_checkpoint(conversation_id: str) -> ConversationCheckpoint:
-    """Wait until the last turn is both pushed to the repository and paired with its context.
+    """Wait until the last turn's commit is on the repository and reported here.
 
     A separate wait from :func:`wait_for_replication`, and deliberately so: the push runs behind
     the run's own barrier precisely so that a network round trip cannot hold up an answer to the
@@ -332,11 +332,11 @@ async def wait_for_checkpoint(conversation_id: str) -> ConversationCheckpoint:
     """
     deadline = time.monotonic() + REPLICATION_TIMEOUT_SECONDS
     while True:
-        checkpoint = await checkpoints.alatest_restorable(conversation_id)
+        checkpoint = await checkpoints.alatest(conversation_id)
         if checkpoint is not None:
             return checkpoint
         if time.monotonic() >= deadline:
-            pytest.fail(f"No restorable checkpoint appeared within {REPLICATION_TIMEOUT_SECONDS}s")
+            pytest.fail(f"No checkpoint appeared within {REPLICATION_TIMEOUT_SECONDS}s")
         await asyncio.sleep(REPLICATION_POLL_INTERVAL_SECONDS)
 
 
@@ -525,7 +525,7 @@ async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(
     # The first turn's file is back, byte for byte, from a commit the checkpoint pinned.
     assert (workspace / FIRST_NOTE).read_text() == original
     # And the second turn continued the conversation rather than restarting it, which is what
-    # says the context came back paired with those files rather than instead of them.
+    # says the context came back alongside those files rather than instead of them.
     assert (workspace / SECOND_NOTE).exists()
 
     after = await wait_for_replication(aapi_client, number, after=first)
@@ -551,7 +551,7 @@ async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
     first = await wait_for_replication(aapi_client, number)
 
     assert "You said: answer without editing files" in assistant_reply(first_events)
-    assert await checkpoints.alatest_restorable(conversation_id) is None
+    assert await checkpoints.alatest(conversation_id) is None
 
     provider = cast("LocalProcessProvider", get_agent_runtime_provider())
     await provider.terminate(conversation_id)
@@ -563,7 +563,7 @@ async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
 
     assert "You said: continue after the cold start" in assistant_reply(second_events)
     assert after["context_version"] > first["context_version"]
-    assert await checkpoints.alatest_restorable(conversation_id) is None
+    assert await checkpoints.alatest(conversation_id) is None
     workspace = workspace_root / PROJECT_ID
     assert not any(path for path in workspace.iterdir() if path.name != ".git")
 
@@ -739,12 +739,17 @@ async def test_cold_restore_accepts_context_when_no_checkpoint_was_ever_needed(
     assert health.context_version == 1
 
 
-async def test_cold_restore_accepts_context_when_no_checkpoint_is_restorable(
+async def test_cold_restore_brings_back_a_commit_whose_own_context_was_never_archived(
     project,
     bk_user,
     settings,
     tmp_path,
 ):
+    """An interrupted turn pushed its files, but its context never arrived.
+
+    Its commit is on the Project's branch regardless, so it is restored from, alongside the
+    newest context that was archived -- here the one from before that turn.
+    """
     settings.AGENT_CONTEXT_STORAGE = {
         "backend": "host_tmp_path",
         "root": str(tmp_path / "contexts"),
@@ -757,22 +762,25 @@ async def test_cold_restore_accepts_context_when_no_checkpoint_is_restorable(
         run_id="interrupted-run",
         commit="a" * 40,
         tag="app-spark/checkpoint/interrupted-run",
-        context_version=1,
+        context_version=2,
         completed=False,
         log_seq=0,
         ui_event_seq=0,
         state_epoch=conversation.state_epoch,
     )
+    restored_commits: list[str] = []
 
     class Client:
         async def restore_workspace(self, commit: str) -> str:
-            pytest.fail(f"incomplete checkpoint must not restore workspace: {commit}")
+            restored_commits.append(commit)
+            return "restored"
 
     restored = await conversation_services._restore_files(
         conversation,
         Client(),  # type: ignore[arg-type]
     )
 
+    assert restored_commits == ["a" * 40]
     assert restored == document
 
 

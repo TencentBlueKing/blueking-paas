@@ -150,11 +150,12 @@ class PluginCallBackApiViewSet(GenericViewSet):
         """
         # 审批结果为不通过，则将版本发布状态为失败
         if ticket_status == ItsmTicketStatus.FINISHED and (not approve_result):
-            gray_status = (
-                constants.GrayReleaseStatus.FULL_APPROVAL_FAILED
-                if strategy == constants.ReleaseStrategy.FULL
-                else constants.GrayReleaseStatus.GRAY_APPROVAL_FAILED
-            )
+            if strategy == constants.ReleaseStrategy.FULL:
+                gray_status = constants.GrayReleaseStatus.FULL_APPROVAL_FAILED
+            elif strategy == constants.ReleaseStrategy.PRE_PROD:
+                gray_status = constants.GrayReleaseStatus.PRE_PROD_APPROVAL_FAILED
+            else:
+                gray_status = constants.GrayReleaseStatus.GRAY_APPROVAL_FAILED
             return CanaryStatus(status=constants.PluginReleaseStatus.FAILED, itsm_gray_status=gray_status)
 
         # 仅发布策略为全量且审批结果为成功时，版本发布的状态才是成功
@@ -166,6 +167,17 @@ class PluginCallBackApiViewSet(GenericViewSet):
             return CanaryStatus(
                 status=constants.PluginReleaseStatus.SUCCESSFUL,
                 itsm_gray_status=constants.GrayReleaseStatus.FULLY_RELEASED,
+            )
+
+        # 预发布审批通过后，版本仍处于发布中，等待后续全量发布
+        if (
+            ticket_status == ItsmTicketStatus.FINISHED
+            and approve_result
+            and strategy == constants.ReleaseStrategy.PRE_PROD
+        ):
+            return CanaryStatus(
+                status=constants.PluginReleaseStatus.PENDING,
+                itsm_gray_status=constants.GrayReleaseStatus.IN_PRE_PROD,
             )
 
         # 单据被撤销，则审批阶段状态设置为已中断

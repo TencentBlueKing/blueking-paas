@@ -162,7 +162,10 @@ files = [
 ]
 
 [package.dependencies]
-bk-crypto-python-sdk = "4.1.1"
+bk-crypto-python-sdk = [
+    {version = "4.1.1"},
+    {version = "4.1.1", extras = ["gm"], optional = true, markers = "extra == \"gm\""},
+]
 
 [package.extras]
 dev = ["build (>=1.2,<2)", "mypy (>=2.3.1,<3)", "pytest (>=8,<10)", "ruff (>=0.9,<1)"]
@@ -2352,4 +2355,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "73e3b6166dedf8a14a0285c40ee101d31f6e6c9f53866905b8ef5bfa73677cd0"
+content-hash = "25f92fd7f917441544acfa8c399aeaf7ed70efbb5d2b4a27ed0f8b69b2bc0249"

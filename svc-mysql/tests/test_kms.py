@@ -65,7 +65,7 @@ def kms_credentials(tmp_path, monkeypatch):
     monkeypatch.setenv("MYSQL_PASSWORD", "")
     monkeypatch.setenv("PAAS_SERVICE_JWT_CLIENTS_KEY", "")
     decrypt = Mock(return_value=json.dumps(CREDENTIALS))
-    monkeypatch.setattr("bk_kms.decrypt", decrypt)
+    monkeypatch.setattr("svc_mysql.settings.kms.decrypt", decrypt)
     return decrypt
 
 
@@ -101,20 +101,27 @@ def test_required_field_missing_after_plaintext_removed(kms_credentials):
         get_env(BINDINGS, required_vars=BINDINGS)
 
 
-@pytest.mark.parametrize("value", [None, 123])
-def test_invalid_field_type_does_not_fall_back(kms_credentials, monkeypatch, value):
-    kms_credentials.return_value = json.dumps({"mysql": {"svc_mysql": {"password": value}}})
+@pytest.mark.parametrize(
+    ("credentials", "path"),
+    [
+        ({"mysql": {"svc_mysql": {"password": None}}}, "mysql.svc_mysql.password"),
+        ({"mysql": {"svc_mysql": 123}}, "mysql.svc_mysql"),
+    ],
+)
+def test_invalid_credential_type_does_not_fall_back(kms_credentials, monkeypatch, credentials, path):
+    kms_credentials.return_value = json.dumps(credentials)
     monkeypatch.setenv("MYSQL_PASSWORD", "plain-password")
 
-    with pytest.raises(ImproperlyConfigured, match=r"KMS requires a string at mysql\.svc_mysql\.password"):
+    with pytest.raises(ImproperlyConfigured) as exc_info:
         get_env(BINDINGS)
+    assert path in str(exc_info.value)
 
 
 def test_database_url_unsupported(kms_credentials, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "mysql://user:pass@db/svc")
 
     with pytest.raises(ImproperlyConfigured, match="DATABASE_URL"):
-        get_env(BINDINGS)
+        get_env(BINDINGS, reject_database_url=True)
 
 
 def test_missing_private_key(kms_credentials, monkeypatch):

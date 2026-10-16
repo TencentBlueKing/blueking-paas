@@ -86,6 +86,8 @@ env = get_env(
     ],
     # BKKRILL_ENCRYPT_SECRET_KEY 未提供时会使用代码中公开的默认密钥
     required_vars=["MYSQL_PASSWORD", "BKKRILL_ENCRYPT_SECRET_KEY", "PAAS_SERVICE_JWT_CLIENTS_KEY"],
+    # KMS 预检先于 .env 加载；开关和必填 KMS 凭证须由 Pod 环境变量和信封提供。
+    reject_database_url=True,
     # set casting, default value
     DEBUG=(bool, False),
 )

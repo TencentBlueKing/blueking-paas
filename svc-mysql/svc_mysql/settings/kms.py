@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Collection, Dict, Mapping, Optional
 
 import environ
+from bk_kms import CryptoBackendUnavailableError, CryptoError, decrypt
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
@@ -49,11 +50,13 @@ class KMSEnv(environ.Env):
 
     def get_value(self, var, cast=None, default=environ.Env.NOTSET, parse_default=False):
         if var in self._credentials:
+            # 不调用父类，避免 django-environ 将以 "$" 开头的信封值当作环境变量引用。
             return self.parse_value(self._credentials[var], cast)
         return super().get_value(var, cast=cast, default=default, parse_default=parse_default)
 
 
 def is_kms_enabled() -> bool:
+    # 此开关在 django-environ 初始化前读取；不能直接 bool()，否则字符串 "false" 也会开启 KMS。
     return os.environ.get(ENABLED_ENV_VAR) in ("true", "True")
 
 
@@ -61,6 +64,7 @@ def get_env(
     bindings: Mapping[str, str],
     sensitive_vars: Collection[str] = (),
     required_vars: Collection[str] = (),
+    reject_database_url: bool = False,
     **scheme,
 ) -> environ.Env:
     """未开启 KMS 时返回普通的 environ.Env，开启时返回优先读取信封的 KMSEnv
@@ -69,13 +73,17 @@ def get_env(
     :param sensitive_vars: 未由信封提供而环境变量中仍有值时告警的环境变量
     :param required_vars: 信封与环境变量都未提供时阻止启动的环境变量。开启 KMS 后 chart 会清空这些明文，
         缺失时应在启动时报错，而不是等到运行时连接失败或使用代码中公开的默认密钥
+    :param reject_database_url: DATABASE_URL 会绕过逐字段的 KMS 凭证时，拒绝该连接串配置
     """
     if not is_kms_enabled():
         return environ.Env(**scheme)
 
-    # 完整连接串无法只替换密码，开启 KMS 后使用 MYSQL_* 配置
-    if os.environ.get("DATABASE_URL"):
-        raise ImproperlyConfigured("KMS does not support DATABASE_URL")
+    # 完整连接串会绕过逐字段的 KMS 凭证，开启 KMS 后应改用独立的 MYSQL_* 配置。
+    if reject_database_url and os.environ.get("DATABASE_URL"):
+        raise ImproperlyConfigured(
+            "KMS does not support DATABASE_URL; configure the database with MYSQL_HOST, MYSQL_PORT, "
+            "MYSQL_NAME, MYSQL_USER, and MYSQL_PASSWORD"
+        )
 
     credentials = build_credentials(_decrypt_envelope(), bindings)
     for var in required_vars:
@@ -102,11 +110,6 @@ def _decrypt_envelope() -> Mapping[str, Any]:
     if not private_key:
         raise ImproperlyConfigured(f"KMS requires {PRIVATE_KEY_ENV_VAR}")
 
-    try:
-        from bk_kms import CryptoBackendUnavailableError, CryptoError, decrypt
-    except ImportError:
-        raise ImproperlyConfigured("KMS requires the bk-kms-sdk package") from None
-
     envelope_path = Path(os.environ.get(ENVELOPE_PATH_ENV_VAR) or DEFAULT_ENVELOPE_PATH)
     try:
         envelope = envelope_path.read_text(encoding="utf-8").strip()
@@ -123,10 +126,13 @@ def _decrypt_envelope() -> Mapping[str, Any]:
 
 
 def _lookup(envelope: Mapping[str, Any], path: str) -> Optional[str]:
-    """取出信封中的字符串，字段不存在或为空字符串时返回 None"""
+    """取出信封中的字符串；缺失或空字符串可回退，已存在的错误节点类型必须报错。"""
     value: Any = envelope
-    for part in path.split("."):
-        if not isinstance(value, Mapping) or part not in value:
+    parts = path.split(".")
+    for index, part in enumerate(parts):
+        if not isinstance(value, Mapping):
+            raise ImproperlyConfigured(f"KMS requires an object at {'.'.join(parts[:index])}")
+        if part not in value:
             return None
         value = value[part]
     if not isinstance(value, str):

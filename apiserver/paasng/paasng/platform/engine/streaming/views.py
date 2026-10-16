@@ -29,6 +29,8 @@ from rest_framework.viewsets import ViewSet
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.workflow import ServerSendEvent
@@ -53,24 +55,9 @@ class StreamViewSet(ViewSet):
 
     def get_subscriber(self, request, channel_id):
         # Do permission check to avoid user viewing logs of others by passing a random channel_id
-        self._check_channel_perm_as_deploy(request, channel_id)
-
-        subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
-        channel_state = subscriber.get_channel_state()
-        if channel_state == "none":
-            raise error_codes.CHANNEL_NOT_FOUND
-        return subscriber
-
-    def _check_channel_perm_as_deploy(self, request, channel_id):
-        """将 channel_id 作为一个有效的 Deployment ID，并进行权限校验"""
-        try:
-            deployment = Deployment.objects.get(pk=channel_id)
-        except Deployment.DoesNotExist:
-            # 阻挡所有非有效 Deployment 的 channel_id
-            raise error_codes.CANNOT_GET_DEPLOYMENT
-
-        app = deployment.app_environment.module.application
+        app = _get_channel_deployment(channel_id).app_environment.module.application
         self.check_object_permissions(request, app)
+        return _make_subscriber(channel_id)
 
     @rate_limits_by_user(UserAction.FETCH_DEPLOY_LOG, window_size=60, threshold=10)
     @swagger_auto_schema(
@@ -125,9 +112,48 @@ class StreamViewSet(ViewSet):
         slz.is_valid(raise_exception=True)
 
         subscriber = self.get_subscriber(request, channel_id)
+        return _render_history_events(subscriber, slz.validated_data["last_event_id"])
 
-        with closing(subscriber):
-            last_event_id = slz.validated_data["last_event_id"]
-            events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
 
-        return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")
+class SysStreamViewSet(ViewSet):
+    """应用态事件流接口，目前仅支持 AIDEV 获取 AI Agent 应用的部署日志。"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+
+    @swagger_auto_schema(
+        query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)}, tags=["streams"]
+    )
+    def history_events(self, request, channel_id):
+        """应用态获取部署日志历史事件，仅允许查询 AI Agent 应用的部署。"""
+        slz = HistoryEventsQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
+        app = _get_channel_deployment(channel_id).app_environment.module.application
+        if not app.is_ai_agent_app:
+            raise error_codes.AI_AGENT_APP_REQUIRED
+
+        subscriber = _make_subscriber(channel_id)
+        return _render_history_events(subscriber, slz.validated_data["last_event_id"])
+
+
+def _get_channel_deployment(channel_id: str) -> Deployment:
+    """将 channel_id 作为一个有效的 Deployment ID 获取部署对象，用于后续鉴权"""
+    try:
+        return Deployment.objects.get(pk=channel_id)
+    except Deployment.DoesNotExist:
+        # 阻挡所有非有效 Deployment 的 channel_id
+        raise error_codes.CANNOT_GET_DEPLOYMENT
+
+
+def _make_subscriber(channel_id: str) -> StreamChannelSubscriber:
+    subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
+    channel_state = subscriber.get_channel_state()
+    if channel_state == "none":
+        raise error_codes.CHANNEL_NOT_FOUND
+    return subscriber
+
+
+def _render_history_events(subscriber: StreamChannelSubscriber, last_event_id: int) -> Response:
+    with closing(subscriber):
+        events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
+    return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")

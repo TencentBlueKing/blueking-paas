@@ -104,6 +104,7 @@ class ErrorCodes:
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
     CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     CANNOT_CREATE_CODEBASE_CONFIG = ErrorCode(_("创建代码库配置失败"))
+    AI_AGENT_APP_REQUIRED = ErrorCode(_("仅 AI Agent 应用支持该操作"), status_code=403)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
@@ -248,6 +249,9 @@ class ErrorCodes:
     AGENT_SANDBOX_SERVICE_NOT_READY = ErrorCode(_("Agent 沙箱服务未就绪"), status_code=502)
     AGENT_SANDBOX_DAEMON_API_ERROR = ErrorCode(_("Agent 沙箱守护进程 API 异常"), status_code=500)
     AGENT_SANDBOX_IMAGE_VALIDATE_FAILED = ErrorCode(_("Agent 沙箱快照镜像验证失败"), status_code=400)
+    AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED = ErrorCode(
+        _("存活的 Agent 沙箱数量已达应用上限（{limit}），请先删除不再使用的沙箱"), status_code=400
+    )
 
     # Agent sandbox volume file (persistence)
     AGENT_SANDBOX_FILE_NOT_FOUND = ErrorCode(_("Agent 沙箱文件不存在"), status_code=404)

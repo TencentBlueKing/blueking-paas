@@ -2,6 +2,14 @@
 {{- $database := .Values.externalDatabase | default dict -}}
 {{- $bkAuth := .Values.bkAuth | default dict -}}
 {{- $agent := .Values.agent | default dict -}}
+{{- $providerConfig := $agent.runtimeProviderConfig -}}
+{{/*
+values.yaml ships the local_process fields as defaults, and Helm deep-merges them into whatever
+runtimeProviderConfig a release sets. The e2b configuration refuses them as unknown fields.
+*/}}
+{{- if and $providerConfig (eq ($agent.runtimeProvider | default "local_process") "e2b") -}}
+{{- $providerConfig = omit $providerConfig "agent_project_dir" "workspace_root" "state_root" -}}
+{{- end -}}
 {{/*
 Keep the mapping explicit; missing groups and keys all resolve to nil.
 Only omit nil: false, 0, empty strings and empty collections are explicit overrides.
@@ -45,7 +53,7 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "BKKRILL_ENCRYPT_SECRET_KEY" $django.encryptSecretKey
   "REPO_SERVER" .Values.repoServer
   "AGENT_RUNTIME_PROVIDER" $agent.runtimeProvider
-  "AGENT_RUNTIME_PROVIDER_CONFIG" $agent.runtimeProviderConfig
+  "AGENT_RUNTIME_PROVIDER_CONFIG" $providerConfig
   "AGENT_CONTEXT_STORAGE" $agent.contextStorage
   "AGENT_MODEL_SOURCE" $agent.modelSource
   "AGENT_DIRECT_MODEL_CONFIG" $agent.directModelConfig

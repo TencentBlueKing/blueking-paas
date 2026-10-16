@@ -23,6 +23,7 @@ import pytest
 from app_spark_api.agent.runtime.entities import (
     EventPage,
     RuntimeHealth,
+    structure_e2b_config,
     structure_local_process_config,
 )
 from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
@@ -113,6 +114,73 @@ def test_an_unusable_configuration_is_refused_by_name(raw_config, reason):
         structure_local_process_config(raw_config)
 
     assert reason in str(exc_info.value)
+
+
+MINIMAL_E2B_CONFIG = {
+    "api_key": "e2b-key",
+    "api_url": "https://e2b.example",
+    "callback_base_url": "https://app-spark.example",
+    "template": "app-spark-agent",
+}
+
+
+@pytest.mark.parametrize(
+    ("raw_config", "reason"),
+    [
+        # A sandbox has no loopback route back to this service, so there is no default to fall
+        # back on the way the local provider has one.
+        pytest.param(
+            {k: v for k, v in MINIMAL_E2B_CONFIG.items() if k != "callback_base_url"},
+            "callback_base_url",
+            id="no-callback-address",
+        ),
+        # No default: a template without the Agent would create sandboxes and only time out
+        # starting it, so a missing name has to be refused before any sandbox exists.
+        pytest.param(
+            {k: v for k, v in MINIMAL_E2B_CONFIG.items() if k != "template"},
+            "template",
+            id="no-template",
+        ),
+        pytest.param({**MINIMAL_E2B_CONFIG, "agent_user": ""}, "agent_user", id="empty-agent-user"),
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data", "state_dir": "/data/state"},
+            "state_dir",
+            id="state-inside-the-workspace",
+        ),
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data/state/ws", "state_dir": "/data/state"},
+            "state_dir",
+            id="workspace-inside-the-state",
+        ),
+        # Compared literally, this would pass as a sibling of the workspace.
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "workspace_dir": "/data/workspace", "state_dir": "/data/x/../workspace/state"},
+            "state_dir",
+            id="state-inside-the-workspace-through-dot-dot",
+        ),
+        pytest.param({**MINIMAL_E2B_CONFIG, "workspace_dir": "data/workspace"}, "workspace_dir", id="relative-ws"),
+        pytest.param({**MINIMAL_E2B_CONFIG, "state_dir": "state"}, "state_dir", id="relative-state"),
+        # 0 would mean the sandbox is never reclaimed for idleness, and the Agent never exits on its own.
+        pytest.param({**MINIMAL_E2B_CONFIG, "idle_timeout_seconds": 0}, "idle_timeout_seconds", id="no-idle-timeout"),
+        pytest.param(
+            {**MINIMAL_E2B_CONFIG, "max_lifetime_seconds": 0}, "max_lifetime_seconds", id="no-maximum-lifetime"
+        ),
+        # Replaced by idle_timeout_seconds: a fixed lifetime from creation is what cut long conversations off.
+        pytest.param({**MINIMAL_E2B_CONFIG, "timeout_seconds": 3600}, "timeout_seconds", id="retired-timeout"),
+    ],
+)
+def test_an_unusable_e2b_configuration_is_refused_by_name(raw_config, reason):
+    with pytest.raises(AgentConfigurationError) as exc_info:
+        structure_e2b_config(raw_config)
+
+    assert reason in str(exc_info.value)
+
+
+def test_the_idle_timeout_is_the_sandbox_deadline():
+    """空闲 30 分钟后回收，沙箱存活期就是这个秒数，最长活 24 小时。"""
+    config = structure_e2b_config(MINIMAL_E2B_CONFIG)
+
+    assert (config.idle_timeout_seconds, config.max_lifetime_seconds) == (1800, 86400)
 
 
 def test_a_health_snapshot_is_read_from_the_runtimes_own_words():

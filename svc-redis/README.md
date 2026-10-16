@@ -125,8 +125,8 @@ config = {
     "redis_version": "v7.0.15",
     # Kubernetes 集群名称
     "cluster_name": "redis-cluster",
-    # 每个 Redis 实例的内存限制
-    "memory_size": "2Gi",
+    # 资源配额，见下方 plan 配置用例。必填，不再支持 memory_size
+    "resources": {"preset": "512"},
     # 服务暴露方式 (必填)
     # - "ClusterDNS": 通过集群内 DNS 访问服务
     # - "TencentCLB": 通过腾讯云负载均衡器暴露服务
@@ -142,6 +142,74 @@ config = {
 
 Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
+
+`resources` 为必填，规格表定义在 `svc_redis/controller/resource_presets.py`。preset 名称对应内存 limit：`512` / `1G` / `2G`。CPU 统一 100m / 500m，内存 request 为 limit 的一半；超过 2Gi 或需要其它配额时显式写 `requests` / `limits`。
+
+**Breaking change**：不再支持历史字段 `memory_size`。升级前请直接修改存量 Plan 的 `config`：删除 `memory_size`，改为 `resources`。已创建的实例不会自动变更规格；未改 plan 就发版会导致创建/删除实例失败。原 `memory_size: 2Gi` 可改为 `{"preset": "2G"}`，`4Gi` / `8Gi` 等需显式写 `requests` / `limits`。
+
+| preset | CPU requests | Memory requests | CPU limits | Memory limits |
+| --- | --- | --- | --- | --- |
+| 512 | 100m | 256Mi | 500m | 512Mi |
+| 1G | 100m | 512Mi | 500m | 1Gi |
+| 2G | 100m | 1Gi | 500m | 2Gi |
+
+常规套餐，使用 preset：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "512"
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+特殊套餐，显式指定 requests / limits：
+
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "requests": {
+      "cpu": "500m",
+      "memory": "1Gi"
+    },
+    "limits": {
+      "cpu": "2",
+      "memory": "2Gi"
+    }
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
+组合使用：
+```json
+{
+  "type": "RedisReplication",
+  "redis_version": "v7.0.15",
+  "cluster_name": "redis-cluster",
+  "resources": {
+    "preset": "1G",
+    "requests": {
+      "cpu": "100m"
+    }
+  },
+  "service_export_type": "TencentCLB",
+  "persistent_storage": false,
+  "monitor": false
+}
+```
+
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 

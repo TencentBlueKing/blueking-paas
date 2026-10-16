@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.4
-  title: "Add the restart_process API."
-  comment: "Add the restart_process API."
+  version: 1.4.6
+  title: "Add the system API to upload source packages for AI Agent apps."
+  comment: "Add POST /system/bkapps/applications/{app_code}/modules/{module}/source_package/link/ for AIDEV."
 
 
 stages:

@@ -15,12 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from decimal import Decimal
 from typing import Iterator
 from unittest import mock
 
 import pytest
+from django.utils import timezone
 
 from paas_wl.bk_app.agent_sandbox.constants import SandboxInstancePhase
 from paas_wl.bk_app.agent_sandbox.kres_entities import (
@@ -28,14 +29,17 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
     AgentSandboxKresApp,
     AgentSandboxPod,
 )
+from paas_wl.infras.resources.base.exceptions import PodTerminatedError, ReadTargetStatusTimeout
 from paas_wl.utils.constants import PodPhase
 from paasng.platform.agent_sandbox.constants import (
+    DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SandboxStatus,
     SandboxWorkloadType,
 )
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxActiveCountLimitExceeded,
     SandboxCreateError,
     SandboxCreateTimeout,
     SandboxError,
@@ -46,6 +50,7 @@ from paasng.platform.agent_sandbox.sandbox import (
     AgentSandboxResManager,
     create_sandbox,
     delete_sandbox,
+    resolve_max_active_sandbox_count,
     resolve_sandbox_resources,
 )
 from paasng.platform.agent_sandbox.workload import get_workload_handler
@@ -67,6 +72,21 @@ def mock_sandbox_provision() -> Iterator[mock.MagicMock]:
     with mock.patch.object(AgentSandboxResManager, "provision") as mock_provision:
         mock_provision.return_value = mock.MagicMock()
         yield mock_provision
+
+
+@contextmanager
+def fake_clock(module: str) -> Iterator[dict[str, float]]:
+    """Patch ``time.monotonic``/``time.sleep`` in ``module`` so sleeping advances a virtual clock."""
+    clock = {"t": 0.0}
+
+    def sleep(seconds: float):
+        clock["t"] += seconds
+
+    with (
+        mock.patch(f"{module}.time.monotonic", side_effect=lambda: clock["t"]),
+        mock.patch(f"{module}.time.sleep", side_effect=sleep),
+    ):
+        yield clock
 
 
 @pytest.fixture()
@@ -99,11 +119,34 @@ class TestCreateSandbox:
         """SandboxInstance workload creates SandboxInstance CR instead of Pod."""
         from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
 
+        order: list[str] = []
+
+        def record(step: str):
+            def _record(*args, **kwargs):
+                order.append(step)
+
+            return _record
+
+        def record_router_ready(*args, **kwargs) -> bool:
+            order.append("router")
+            return True
+
         with (
             mock.patch.object(kres_mod.agent_sandbox_instance_kmodel, "create") as mock_create_cr,
             mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create") as mock_create_pod,
-            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create") as mock_create_svc,
-            mock.patch("paasng.platform.agent_sandbox.workload.SandboxInstanceWorkloadHandler.wait_until_ready"),
+            mock.patch.object(
+                kres_mod.agent_sandbox_svc_kmodel,
+                "create",
+                side_effect=record("service"),
+            ) as mock_create_svc,
+            mock.patch(
+                "paasng.platform.agent_sandbox.workload.SandboxInstanceWorkloadHandler.wait_until_ready",
+                side_effect=record("pod-ready"),
+            ),
+            mock.patch(
+                "paasng.platform.agent_sandbox.sandbox.SandboxDaemonClient.probe_health",
+                side_effect=record_router_ready,
+            ),
             mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
             mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
@@ -120,6 +163,33 @@ class TestCreateSandbox:
         mock_create_cr.assert_called_once()
         mock_create_pod.assert_not_called()
         mock_create_svc.assert_called_once()
+        # Service 先创建，Pod Ready 之后还要等 Router 路径探测成功才返回。
+        assert order == ["service", "pod-ready", "router"]
+
+    def test_router_path_timeout_deletes_workload_and_service(self, bk_app, bk_user, mock_image_validator):
+        """Pod Ready 之后 Router 仍不可达时，创建失败并删掉 workload 和 Service。"""
+        from paas_wl.bk_app.agent_sandbox import kres_entities as kres_mod
+
+        with (
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_pod_kmodel, "delete_by_name") as mock_del_pod,
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "create"),
+            mock.patch.object(kres_mod.agent_sandbox_svc_kmodel, "delete_by_name") as mock_del_svc,
+            mock.patch("paasng.platform.agent_sandbox.workload.PodWorkloadHandler.wait_until_ready"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.NamespacesHandler"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.ensure_image_credential"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.get_router_endpoint", return_value="router.example.com"),
+            mock.patch("paasng.platform.agent_sandbox.sandbox.SandboxDaemonClient.probe_health", return_value=False),
+            fake_clock("paasng.platform.agent_sandbox.sandbox") as clock,
+            pytest.raises(SandboxCreateTimeout, match="router path"),
+        ):
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="route-timeout")
+
+        mock_del_pod.assert_called_once()
+        mock_del_svc.assert_called_once()
+        sandbox = Sandbox.objects.get(application=bk_app, name="route-timeout")
+        assert sandbox.status == SandboxStatus.ERR_CREATING.value
+        assert clock["t"] >= AgentSandboxResManager.route_ready_timeout
 
     @pytest.mark.parametrize(
         "exc",
@@ -230,6 +300,45 @@ class TestCreateSandboxResources:
         sandbox = create_sandbox(application=bk_app, creator=bk_user.pk, name="custom-res")
         assert sandbox.cpu == Decimal(4)
         assert sandbox.memory == Decimal(2)
+
+
+class TestActiveSandboxCountLimit:
+    """Test the per-app sandbox count limit."""
+
+    @pytest.mark.parametrize(("configured", "expected"), [(None, DEFAULT_MAX_ACTIVE_SANDBOX_COUNT), (3, 3)])
+    def test_resolve_max_active_sandbox_count(self, bk_app, configured, expected):
+        """未配置时回退平台默认值, 配置后以配置为准"""
+        if configured is not None:
+            SandboxAppSettings.objects.create(
+                application=bk_app, max_active_sandbox_count=configured, tenant_id=bk_app.tenant_id
+            )
+        assert resolve_max_active_sandbox_count(bk_app) == expected
+
+    def test_create_rejected_when_limit_reached(self, bk_app, bk_user, mock_sandbox_provision):
+        """达到上限后拒绝创建, 且不再下发工作负载"""
+        SandboxAppSettings.objects.create(application=bk_app, max_active_sandbox_count=1, tenant_id=bk_app.tenant_id)
+        create_sandbox(application=bk_app, creator=bk_user.pk, name="limit-1")
+
+        with pytest.raises(SandboxActiveCountLimitExceeded) as exc_info:
+            create_sandbox(application=bk_app, creator=bk_user.pk, name="limit-2")
+
+        assert (exc_info.value.limit, exc_info.value.current) == (1, 1)
+        assert not Sandbox.objects.filter(application=bk_app, name="limit-2").exists()
+        mock_sandbox_provision.assert_called_once()
+
+    @pytest.mark.parametrize("status", [SandboxStatus.DELETED.value, SandboxStatus.ERR_CREATING.value])
+    def test_inactive_sandbox_not_counted(self, bk_app, bk_user, mock_sandbox_provision, status):
+        """已删除, 创建失败的沙箱不再占用配额"""
+        SandboxAppSettings.objects.create(application=bk_app, max_active_sandbox_count=1, tenant_id=bk_app.tenant_id)
+        sandbox = Sandbox.objects.new(
+            application=bk_app, name="inactive", snapshot="python:3.11-alpine", creator=bk_user.pk
+        )
+        sandbox.status = status
+        sandbox.deleted_at = timezone.now() if status == SandboxStatus.DELETED.value else None
+        sandbox.save(update_fields=["status", "deleted_at", "updated"])
+
+        assert Sandbox.objects.count_active(bk_app) == 0
+        create_sandbox(application=bk_app, creator=bk_user.pk, name="after-inactive")
 
 
 # TODO: 利用实际的集群资源来测试沙箱的删除
@@ -343,6 +452,113 @@ class TestWaitForSandboxInstanceRunning:
         mock_pod_logs.assert_called_once_with(mock_client, kres_app.namespace, "si-demo-xyz")
         mock_si.wait_for_status.assert_called_once()
         assert mock_si.wait_for_status.call_args.kwargs["timeout"] == AgentSandboxResManager.create_timeout
+
+    def test_waits_for_pod_after_pod_name_appears(self, bk_app):
+        """CR 先 Running 但还没有 podName，报出之后再等该 Pod 就绪。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
+        mock_client = mock.MagicMock()
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.RUNNING.value
+        mock_si.get.side_effect = [
+            mock.MagicMock(status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName=None)),
+            mock.MagicMock(status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName="si-demo-pod")),
+        ]
+        mock_pod = mock.MagicMock()
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KPod", return_value=mock_pod),
+            fake_clock("paasng.platform.agent_sandbox.workload"),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock_client
+            handler.wait_until_ready("si-demo", timeout=10)
+
+        mock_pod.wait_for_ready.assert_called_once()
+        assert mock_pod.wait_for_ready.call_args.args[0] == "si-demo-pod"
+        assert mock_pod.wait_for_ready.call_args.kwargs["namespace"] == kres_app.namespace
+        # 等 podName 花掉的时间从总预算里扣掉
+        assert mock_pod.wait_for_ready.call_args.kwargs["timeout"] == 9.5
+
+    def test_failed_while_waiting_for_pod_name(self, bk_app):
+        """等待 podName 期间 CR 转为 Failed 时，带诊断抛 SandboxCreateError。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
+        mock_client = mock.MagicMock()
+        failed_status = mock.MagicMock(
+            phase=SandboxInstancePhase.FAILED.value,
+            message="MicroVM boot failed: image pull error",
+            podName=None,
+        )
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.RUNNING.value
+        mock_si.get.return_value = mock.MagicMock(status=failed_status)
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
+            mock.patch("paasng.platform.agent_sandbox.workload.time.sleep"),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock_client
+            with pytest.raises(SandboxCreateError, match="sandbox instance failed to start") as exc_info:
+                handler.wait_until_ready("si-demo", timeout=10)
+
+        assert exc_info.value.logs is not None
+        assert "MicroVM boot failed: image pull error" in exc_info.value.logs
+
+    def test_pod_name_timeout(self, bk_app):
+        """时限内没有 status.podName 时抛 SandboxCreateTimeout，而不是 Pod 状态超时。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.SANDBOX_INSTANCE.value)
+        mock_client = mock.MagicMock()
+        mock_si = mock.MagicMock()
+        mock_si.wait_for_status.return_value = SandboxInstancePhase.RUNNING.value
+        mock_si.get.return_value = mock.MagicMock(
+            status=mock.MagicMock(phase=SandboxInstancePhase.RUNNING.value, podName=None)
+        )
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KSandboxInstance", return_value=mock_si),
+            fake_clock("paasng.platform.agent_sandbox.workload"),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock_client
+            with pytest.raises(SandboxCreateTimeout, match=r"status\.podName"):
+                handler.wait_until_ready("si-demo", timeout=1)
+
+    def test_pod_terminated_raises_create_error(self, bk_app):
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.DEFAULT.value)
+        mock_client = mock.MagicMock()
+        mock_pod = mock.MagicMock()
+        mock_pod.wait_for_ready.side_effect = PodTerminatedError("pod-1")
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KPod", return_value=mock_pod),
+            mock.patch("paasng.platform.agent_sandbox.workload.get_pod_logs", return_value="exited\n"),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock_client
+            with pytest.raises(SandboxCreateError, match="sandbox pod failed to start") as exc_info:
+                handler.wait_until_ready("pod-1", timeout=5)
+
+        assert exc_info.value.logs == "exited\n"
+
+    def test_pod_ready_timeout_is_create_timeout(self, bk_app):
+        """KPod 的状态超时在 handler 边界转成 SandboxCreateTimeout。"""
+        kres_app = AgentSandboxKresApp(paas_app_id=bk_app.code, tenant_id=bk_app.tenant_id, target="default")
+        handler = get_workload_handler(kres_app, SandboxWorkloadType.DEFAULT.value)
+        mock_pod = mock.MagicMock()
+        mock_pod.wait_for_ready.side_effect = ReadTargetStatusTimeout("pod-1", 5)
+
+        with (
+            mock.patch.object(AgentSandboxKresApp, "get_kube_api_client") as mock_get_client,
+            mock.patch("paasng.platform.agent_sandbox.workload.kres.KPod", return_value=mock_pod),
+        ):
+            mock_get_client.return_value.__enter__.return_value = mock.MagicMock()
+            with pytest.raises(SandboxCreateTimeout, match="was not ready"):
+                handler.wait_until_ready("pod-1", timeout=5)
 
 
 class TestWorkloadHandler:

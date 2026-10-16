@@ -43,6 +43,7 @@ from paasng.platform.agent_sandbox.artifact import (
     delete_volume_artifact,
 )
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxActiveCountLimitExceeded,
     SandboxAlreadyExists,
     SandboxArchiveFailed,
     SandboxCreateError,
@@ -380,7 +381,7 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         responses={status.HTTP_201_CREATED: SandboxCreateOutputSLZ()},
     )
     def create(self, request, code):
-        """创建一个新的 Agent Sandbox，新沙箱将自动进入运行状态。"""
+        """创建一个新的 Agent Sandbox。接口在沙箱就绪、可以接受请求后才返回。"""
         application = self.get_application()
         slz = SandboxCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -401,6 +402,8 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
             )
         except SandboxAlreadyExists:
             raise error_codes.AGENT_SANDBOX_ALREADY_EXISTS
+        except SandboxActiveCountLimitExceeded as e:
+            raise error_codes.AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED.f(limit=e.limit)
         except SandboxImageValidateError as e:
             raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
         except (VolumeNotFound, VolumeNotMountable):

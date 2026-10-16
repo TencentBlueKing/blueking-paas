@@ -1,10 +1,11 @@
 """Process logging: sandbox labels arrive on records, credentials do not."""
 
 import logging
+from pathlib import Path
 
 import pytest
 
-from app_spark_agent import settings
+from app_spark_agent import observability, settings
 from app_spark_agent.masking import SECRET_PLACEHOLDER
 from app_spark_agent.observability import (
     LOG_FORMAT,
@@ -145,6 +146,27 @@ def test_a_foreign_record_gets_the_labels_it_lacks(labelled_sandbox: None) -> No
     assert SandboxLabelFilter().filter(record) is True
     assert logging.Formatter(LOG_FORMAT).format(record).endswith("GET /health 200")
     assert record.session_id == "sess-demo"
+
+
+def test_the_same_line_is_copied_to_the_agent_log_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/tmp/app-spark-agent.log is the redirected stderr. This is the other file to open."""
+    root = logging.getLogger()
+    original_handlers = list(root.handlers)
+    original_level = root.level
+    log_path = tmp_path / "agent.log"
+    monkeypatch.setattr(observability, "AGENT_LOG_PATH", log_path)
+    try:
+        configure_logging()
+        logging.getLogger("app_spark_agent.git").info("committed abc to the workspace repository")
+    finally:
+        for handler in root.handlers:
+            if handler not in original_handlers:
+                handler.close()
+        root.handlers = original_handlers
+        root.setLevel(original_level)
+
+    text = log_path.read_text(encoding="utf-8")
+    assert "committed abc to the workspace repository" in text
 
 
 def test_configuring_twice_does_not_duplicate_output() -> None:

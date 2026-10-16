@@ -1,5 +1,47 @@
-{{- if ne (int .Values.replicaCount) 1 }}
-{{- fail "The local_process runtime currently requires replicaCount=1." }}
+{{- $agent := .Values.agent | default dict }}
+{{- $provider := $agent.runtimeProvider | default "local_process" }}
+{{- $contextStorage := $agent.contextStorage | default dict }}
+{{- /*
+Without any contextStorage the application falls back to host_tmp_path; with one that names no
+backend it refuses to start. Either way no replica shares its contexts, so both count as
+host_tmp_path here.
+*/}}
+{{- $contextBackend := get $contextStorage "backend" | default "host_tmp_path" }}
+{{- $replicas := int .Values.replicaCount }}
+{{- if lt $replicas 1 }}
+{{- fail "replicaCount must be at least 1." }}
+{{- end }}
+{{- if gt $replicas 1 }}
+{{- /* local_process keeps every Runtime inside one API process. */}}
+{{- if ne $provider "e2b" }}
+{{- fail "The local_process runtime requires replicaCount=1; only agent.runtimeProvider=e2b can run more replicas." }}
+{{- end }}
+{{- /*
+A conversation's next cold start may land on another replica, which has to read its context back.
+Only bk_repo is shared, so anything else is refused, a misspelled backend included.
+*/}}
+{{- if ne $contextBackend "bk_repo" }}
+{{- fail (printf "replicaCount=%d needs agent.contextStorage.backend=bk_repo, got %q: only bk_repo shares conversation contexts between replicas." $replicas $contextBackend) }}
+{{- end }}
+{{- end }}
+{{- /*
+Helm deep-merges the host_tmp_path root from values.yaml into a contextStorage that only switches
+the backend, and bk_repo would take that path for its repository name.
+*/}}
+{{- if and (eq $contextBackend "bk_repo") (hasPrefix "/" (toString (get $contextStorage "root"))) }}
+{{- fail (printf "agent.contextStorage.root is %q, a path: with backend bk_repo it names the bk_repo generic repository, so set it as well." (get $contextStorage "root")) }}
+{{- end }}
+{{- /*
+The e2b configuration has no defaults for these; missing, the API would only fail at the first
+conversation, since the probes cannot tell.
+*/}}
+{{- if eq $provider "e2b" }}
+{{- $providerConfig := $agent.runtimeProviderConfig | default dict }}
+{{- range $field := list "api_key" "api_url" "callback_base_url" "template" }}
+{{- if not (get $providerConfig $field) }}
+{{- fail (printf "agent.runtimeProviderConfig.%s is required when agent.runtimeProvider is e2b." $field) }}
+{{- end }}
+{{- end }}
 {{- end }}
 apiVersion: apps/v1
 kind: Deployment
@@ -9,9 +51,14 @@ metadata:
     {{- include "app-spark-api.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  # 避免升级期间两个 API 进程同时操作同一份 workspace 和 Runtime 状态。
   strategy:
+    {{- if eq $provider "e2b" }}
+    # Runtime 在沙箱里，API 进程退出不会停掉它们；副本间靠数据库占位互斥，新旧 Pod 可以同时在线。
+    type: RollingUpdate
+    {{- else }}
+    # 避免升级期间两个 API 进程同时操作同一份 workspace 和 Runtime 状态。
     type: Recreate
+    {{- end }}
   selector:
     matchLabels:
       {{- include "app-spark-api.selectorLabels" . | nindent 6 }}

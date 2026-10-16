@@ -36,11 +36,8 @@ from pathlib import Path
 
 import httpx2
 
-from app_spark_api.agent.runtime.constants import ENV_PREFIX
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
-    BkAidevModelAccess,
-    DirectModelAccess,
     GitRemote,
     LocalProcessConfig,
     ModelAccess,
@@ -49,6 +46,7 @@ from app_spark_api.agent.runtime.entities import (
     StateCallback,
 )
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
+from app_spark_api.agent.runtime.providers.agent_env import build_agent_env
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 from app_spark_api.utils.urls import to_path_info
 
@@ -460,64 +458,27 @@ class LocalProcessProvider(AgentRuntimeProvider):
             for name, value in os.environ.items()
             if name in INHERITED_ENV_NAMES or name.startswith(INHERITED_ENV_PREFIXES)
         }
-        # Provider-owned values are applied after `extra_env`: callers may extend the Runtime's
-        # environment, but cannot accidentally replace its identity, state paths, or Bearer.
-        env = {
-            **inherited,
-            **self.config.extra_env,
-            f"{ENV_PREFIX}WORKSPACE": str(workspace_dir),
-            f"{ENV_PREFIX}STATE_DIR": str(state_dir),
-            f"{ENV_PREFIX}RUNTIME_TOKEN": runtime_token,
-            f"{ENV_PREFIX}PROJECT_ID": project_id,
-            # Not left to the agent's own default of 8000: on a shared host that default is the
-            # same number for every conversation, and the second one to launch would lose.
-            f"{ENV_PREFIX}APP_PORT": str(app_port),
-        }
+
+        # The callback path is public (it may include FORCE_SCRIPT_NAME). This provider talks to
+        # uvicorn on loopback, so Ingress never sees the request and the prefix must come off.
+        control_plane_url = None
         if state_callback is not None:
-            # An address already scoped to one conversation, plus a token that authorizes only
-            # that one. Deliberately all the Runtime learns: it replicates to a URL it was
-            # handed, and never has to know what a conversation is or which one it is serving.
-            # The callback path is public (it may include FORCE_SCRIPT_NAME). This provider
-            # talks to uvicorn on loopback, so Ingress never sees the request and the prefix
-            # must come off. A remote sandbox provider would keep it.
-            env[f"{ENV_PREFIX}CONTROL_PLANE_URL"] = (
-                f"{self.config.callback_base_url.rstrip('/')}{to_path_info(state_callback.path)}"
-            )
-            env[f"{ENV_PREFIX}CONTROL_PLANE_TOKEN"] = state_callback.token
-        if git_remote is not None:
-            # Absent these the Runtime keeps its workspace on local disk and says so on
-            # `/health`; it does not quietly behave as though the files were being saved.
-            env[f"{ENV_PREFIX}GIT_REMOTE_URL"] = git_remote.clone_url
-            env[f"{ENV_PREFIX}GIT_BRANCH"] = git_remote.branch
-            env[f"{ENV_PREFIX}GIT_USERNAME"] = git_remote.username
-            env[f"{ENV_PREFIX}GIT_TOKEN"] = git_remote.token
+            control_plane_url = f"{self.config.callback_base_url.rstrip('/')}{to_path_info(state_callback.path)}"
 
-        env.update(self._build_model_env(model_access))
-        return env
-
-    @staticmethod
-    def _build_model_env(model_access: ModelAccess) -> dict[str, str]:
-        """Return the model variables for one Runtime, and only those of its own model source.
-
-        Nothing else can put model variables in the environment -- the inherited part is
-        allow-listed and extra_env refuses them -- so what this returns is the whole story.
-        """
-        match model_access:
-            # 直连厂商：固定 key。fake: 模型不需要 key，就不给。
-            case DirectModelAccess(model=model, api_key=api_key):
-                env = {f"{ENV_PREFIX}MODEL": model}
-                if api_key is not None:
-                    env[f"{ENV_PREFIX}MODEL_API_KEY"] = api_key
-                return env
-
-            # bkaidev：只有用户态 access_token。不给 MODEL_API_KEY，agent 缺 token 时会回落到它，
-            # 那就成了用共享密钥冒充用户。
-            case BkAidevModelAccess(base_url=base_url, model_name=model_name, access_token=access_token):
-                return {
-                    f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN": access_token,
-                    f"{ENV_PREFIX}MODEL_BASE_URL": base_url,
-                    f"{ENV_PREFIX}MODEL_NAME": model_name,
-                }
+        # No PORT here: uvicorn is told its port on the command line.
+        agent_env = build_agent_env(
+            workspace=str(workspace_dir),
+            state_dir=str(state_dir),
+            runtime_token=runtime_token,
+            project_id=project_id,
+            app_port=app_port,
+            model_access=model_access,
+            extra_env=self.config.extra_env,
+            control_plane_url=control_plane_url,
+            state_callback=state_callback,
+            git_remote=git_remote,
+        )
+        return {**inherited, **agent_env}
 
     async def _wait_until_healthy(
         self,

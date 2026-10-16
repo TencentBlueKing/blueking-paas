@@ -103,14 +103,14 @@ class BKGenericRepoManager:
     def update_user(self, username: str, password: str, association_users: List[str]):
         """更新用户信息"""
         client = self.get_client()
-        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/{username}")
+        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/update/info/{username}")
         data = {"admin": True, "name": username, "pwd": password, "asstUsers": association_users}
         return _validate_resp(client.put(url, json=data))
 
     def delete_user(self, username: str):
         """删除用户"""
         client = self.get_client()
-        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/{username}")
+        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/delete/{username}")
         return _validate_resp(client.delete(url))
 
     def create_repo(self, repo: str, public: bool = False, quota: Optional[int] = None):

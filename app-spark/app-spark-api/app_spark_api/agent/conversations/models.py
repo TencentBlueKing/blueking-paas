@@ -149,8 +149,8 @@ class Conversation(OwnerTimestampedModel):
     本地缓冲，不是权威副本。
 
     Runtime 的 workspace 与状态目录也不落库，而是由 provider 的配置按 project_id 与
-    conversation_id 确定性推导出来。等到 provisioning 不再确定性（比如换成远程沙箱，地址由
-    沙箱侧分配）时，再把地址落到这张表上。
+    conversation_id 确定性推导出来。远程沙箱的预览域名例外：它是沙箱创建后用 get_host 查回来的，
+    记在 preview_origin 上。
     """
 
     # 同时就是 AG-UI 的 threadId 和 Agent Runtime 的 conversation_id：一个会话在三处是同一个
@@ -180,6 +180,12 @@ class Conversation(OwnerTimestampedModel):
     # 会话会因为一次无关的重启从 live 变成非 live，而下一轮对话又会把它变回来——这种会自己反复
     # 翻转的状态没法当契约用，也没法回答「这个会话是不是已经被用户结束了」。
     closed_at = models.DateTimeField(verbose_name="结束时间", null=True, default=None)
+
+    # 远程沙箱拉起后，用 get_host(preview_port) 查回来的绝对地址，末尾带斜杠。同一沙箱存续
+    # 期间不变；沙箱重建、主机名变了才改。切回 local_process、以及会话结束时清掉，避免继续
+    # 把已经不用的主机交给浏览器。空着表示这条会话走本服务的 /preview/app/ 反代。
+    # 这个地址在沙箱创建之后才知道，不能从这次 API 请求的 Host 推出来，所以要落库。
+    preview_origin = models.CharField(verbose_name="预览地址", max_length=512, null=True, default=None, blank=True)
 
     tenant_id = tenant_id_field_factory(db_index=False)
 

@@ -117,7 +117,20 @@ _CREDENTIAL_DETECTORS: Dict[str, Callable[[Any], bool]] = {
 
 def _merge_field(field: str) -> Callable[[LazySettings, str, str], Any]:
     """生成更新字典类配置中单个字段的转换函数，其余字段保持原配置"""
-    return lambda settings, key, value: {**(settings.get(key) or {}), field: value}
+
+    def merge(settings: LazySettings, key: str, value: str) -> Any:
+        original = settings.get(key)
+        if original is None:
+            original = {}
+        if not isinstance(original, Mapping):
+            raise ImproperlyConfigured(f"KMS requires {key} to be a mapping")
+        if key == "PAAS_ANALYSIS_JWT_CONF" and not original:
+            # JWT 还需要 algorithm/iss 等非敏感配置，仅有 key 不能启用客户端。
+            logger.warning("PAAS_ANALYSIS_JWT_CONF is disabled, ignoring its KMS key")
+            return original
+        return {**original, field: value}
+
+    return merge
 
 
 def _as_is(settings: LazySettings, key: str, value: str) -> Any:
@@ -168,7 +181,8 @@ _REDIS_SCHEMES = ("redis", "rediss", "sentinel")
 class KMSSettings:
     """优先返回由信封生成的配置项，其余配置项交给原 dynaconf settings
 
-    这些值按原文返回，不经过 dynaconf 对 "@int"、"@format" 等前缀的解析。
+    只提供 get 接口；这些值按原文返回，不经过 dynaconf 对 "@int"、"@format" 等前缀的解析。
+    原 dynaconf 配置内的模板引用仍按原配置解析，不能引用信封覆盖值。
     """
 
     def __init__(self, base: LazySettings, overrides: Dict[str, Any]):
@@ -179,9 +193,6 @@ class KMSSettings:
         if key in self._overrides:
             return self._overrides[key]
         return self._base.get(key, default, *args, **kwargs)
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._base, name)
 
 
 def is_platform_kms_enabled() -> bool:
@@ -280,8 +291,6 @@ def _lookup(credentials: Mapping[str, Any], path: str) -> Optional[str]:
         if not isinstance(value, Mapping) or part not in value:
             return None
         value = value[part]
-    if value is None:
-        return None
     if not isinstance(value, str):
         raise ImproperlyConfigured(f"KMS requires a string at {path}")
     return value if value.strip() else None
@@ -300,7 +309,7 @@ def _warn_plaintext(settings: LazySettings, sensitive_keys: List[str], provided:
         if key in provided or not (value := settings.get(key)):
             continue
         if _CREDENTIAL_DETECTORS.get(key, bool)(value):
-            logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", key)
+            logger.warning("Sensitive setting %s still uses its plaintext config", key)
 
 
 def _warn_account(key: str, path: Optional[str]):
@@ -335,19 +344,27 @@ def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any], ski
     password = _lookup(credentials, "redis.default.password")
     # 未配置时，Celery 默认使用 REDIS_URL，随之生效
     for key in ("REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"):
-        if key in skip or not (url := settings.get(key)):
+        if key in skip or not (original := settings.get(key)):
             continue
-        has_password = any(urlsplit(single_url).password for single_url in url.split(";"))
-        if url.partition("://")[0] not in _REDIS_SCHEMES:
-            if has_password:
-                _warn_account(key, "celery.default.uri" if key == "CELERY_BROKER_URL" else None)
-            continue
-        if password is None:
-            if has_password:
-                _warn_account(key, "redis.default")
-            continue
-        _check_url_safe(password, "redis.default.password")
-        overrides[key] = _with_password(url, password, key)
+        urls = original if isinstance(original, (list, tuple)) else [original]
+        updated = []
+        for url in urls:
+            updated_url = url
+            has_password = any(urlsplit(single_url).password for single_url in url.split(";"))
+            if url.partition("://")[0] not in _REDIS_SCHEMES:
+                if has_password:
+                    _warn_account(key, "celery.default.uri" if key == "CELERY_BROKER_URL" else None)
+            elif password is None:
+                if has_password:
+                    _warn_account(key, "redis.default")
+            else:
+                _check_url_safe(password, "redis.default.password")
+                updated_url = _with_password(url, password, key)
+            updated.append(updated_url)
+        if isinstance(original, (list, tuple)):
+            overrides[key] = type(original)(updated)
+        else:
+            overrides[key] = updated[0]
     return overrides
 
 
@@ -393,7 +410,7 @@ def _check_url_safe(value: str, path: str):
     redis-py 与 blue_krill 不对连接串中的密码做 URL 解码，而 kombu 会，因此凭证只能原样填入，
     不能包含截断连接串的字符，也不能包含会被 URL 解码改变的内容，否则各组件解析出的密码不一致。
     """
-    if any(c in value for c in "/?#") or unquote(value) != value:
+    if any(c in value for c in "/?#;") or any(ord(c) < 32 or ord(c) == 127 for c in value) or unquote(value) != value:
         raise ImproperlyConfigured(f"KMS credential at {path} contains characters unsupported in urls")
 
 

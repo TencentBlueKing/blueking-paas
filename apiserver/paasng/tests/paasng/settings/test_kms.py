@@ -215,6 +215,16 @@ class TestOverrides:
         assert settings.get("SENTRY_CONFIG") == {"dsn": "https://key@sentry.example.com/1", "environment": "prod"}
         assert settings.get("PAAS_ANALYSIS_JWT_CONF") == {"algorithm": "HS256", "iss": "paas", "key": "analysis-key"}
 
+    def test_optional_mapping_settings(self, write_kms_files):
+        settings = _load(CREDENTIALS, write_kms_files, PAAS_ANALYSIS_JWT_CONF={}, SENTRY_CONFIG={})
+
+        assert settings.get("PAAS_ANALYSIS_JWT_CONF") == {}
+        # Sentry 只需 dsn 即可启用，JWT 客户端还需要原配置中的 algorithm/iss。
+        assert settings.get("SENTRY_CONFIG") == {"dsn": "https://key@sentry.example.com/1"}
+
+        with pytest.raises(ImproperlyConfigured, match="KMS requires PAAS_ANALYSIS_JWT_CONF to be a mapping"):
+            _load(CREDENTIALS, write_kms_files, PAAS_ANALYSIS_JWT_CONF="invalid")
+
     @pytest.mark.parametrize(
         "hosts",
         [
@@ -268,9 +278,10 @@ class TestOverrides:
 
         assert not settings.get("BK_CONSOLE_DATABASE_PASSWORD")
 
-    def test_non_string_field(self, write_kms_files):
+    @pytest.mark.parametrize("value", [123, None])
+    def test_non_string_field(self, write_kms_files, value):
         credentials = copy.deepcopy(CREDENTIALS)
-        credentials["tokens"]["healthz"]["token"] = 123
+        credentials["tokens"]["healthz"]["token"] = value
         with pytest.raises(ImproperlyConfigured, match=r"KMS requires a string at tokens\.healthz\.token"):
             _load(credentials, write_kms_files)
 
@@ -342,6 +353,15 @@ class TestAccounts:
 
         assert _parse_redis_url(settings.get("CELERY_BROKER_URL"))["password"] == REDIS_PASSWORD
 
+    @pytest.mark.parametrize(("container", "scheme"), [(list, "redis"), (tuple, "redis"), (list, "amqp")])
+    def test_broker_sequences(self, write_kms_files, container, scheme):
+        original = container([f"{scheme}://:plain@broker1.example.com/0", f"{scheme}://:plain@broker2.example.com/0"])
+        settings = _load(_without(CREDENTIALS, "celery"), write_kms_files, CELERY_BROKER_URL=original)
+
+        urls = settings.get("CELERY_BROKER_URL")
+        assert isinstance(urls, container)
+        assert [url_to_parts(url).password for url in urls] == [REDIS_PASSWORD if scheme == "redis" else "plain"] * 2
+
     def test_sentinel_urls(self, write_kms_files):
         credentials = copy.deepcopy(CREDENTIALS)
         credentials["redis"]["sentinel"] = {"password": "sentinel-password"}
@@ -356,7 +376,7 @@ class TestAccounts:
         cache = cache_from_redis_sentinel_url(settings.get("REDIS_URL"), "mymaster", "sentinel-password")
         assert cache["OPTIONS"]["PASSWORD"] == REDIS_PASSWORD
 
-    @pytest.mark.parametrize("password", ["a/b", "a%41b"])
+    @pytest.mark.parametrize("password", ["a/b", "a%41b", "a;b", "a\nb", "a\tb", "a\rb"])
     def test_password_unsupported_in_url(self, write_kms_files, password):
         credentials = copy.deepcopy(CREDENTIALS)
         credentials["redis"]["default"]["password"] = password
@@ -394,7 +414,7 @@ class TestPlaintextFallback:
             "METRIC_CLIENT_TOKEN_DICT",
             "SENTRY_CONFIG",
         ):
-            assert f"Sensitive setting {key} is not provided by KMS" in caplog.text
+            assert f"Sensitive setting {key}" in caplog.text
         assert "plain-password" not in caplog.text
 
     def test_empty_fields_are_not_provided(self, write_kms_files, caplog):
@@ -407,7 +427,7 @@ class TestPlaintextFallback:
 
         assert settings.get("HEALTHZ_TOKEN") == "plain-token"
         assert settings.get("DATABASE_PASSWORD") == "plain-password"
-        assert "Sensitive setting HEALTHZ_TOKEN is not provided by KMS" in caplog.text
+        assert "Sensitive setting HEALTHZ_TOKEN still uses its plaintext config" in caplog.text
         assert "Sensitive setting DATABASE_PASSWORD is not provided by KMS" in caplog.text
 
 

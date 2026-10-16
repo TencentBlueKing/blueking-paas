@@ -101,6 +101,15 @@ def test_required_field_missing_after_plaintext_removed(kms_credentials):
         get_env(BINDINGS, required_vars=BINDINGS)
 
 
+@pytest.mark.parametrize("value", [None, 123])
+def test_invalid_field_type_does_not_fall_back(kms_credentials, monkeypatch, value):
+    kms_credentials.return_value = json.dumps({"mysql": {"svc_mysql": {"password": value}}})
+    monkeypatch.setenv("MYSQL_PASSWORD", "plain-password")
+
+    with pytest.raises(ImproperlyConfigured, match=r"KMS requires a string at mysql\.svc_mysql\.password"):
+        get_env(BINDINGS)
+
+
 def test_database_url_unsupported(kms_credentials, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "mysql://user:pass@db/svc")
 

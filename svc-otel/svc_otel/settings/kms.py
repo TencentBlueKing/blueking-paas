@@ -129,8 +129,6 @@ def _lookup(envelope: Mapping[str, Any], path: str) -> Optional[str]:
         if not isinstance(value, Mapping) or part not in value:
             return None
         value = value[part]
-    if value is None:
-        return None
     if not isinstance(value, str):
         raise ImproperlyConfigured(f"KMS requires a string at {path}")
     return value if value.strip() else None

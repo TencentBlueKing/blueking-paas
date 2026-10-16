@@ -485,24 +485,37 @@ async def _resume_if_cold(
     This is where a cold start actually happens, and it is on the run path rather than at
     provisioning time because that is the first moment the history is genuinely needed.
 
-    A Runtime is only treated as untouched when it reports both no conversation and version 0.
-    Either alone would be ambiguous, and injecting into a Runtime that already holds a
-    conversation would be destroying one.
+    A Runtime is only treated as untouched when it reports no conversation, version 0 and no
+    entries in either channel. Any one alone would be ambiguous, and injecting into a Runtime
+    that already holds a conversation would be destroying one. The channels count because a
+    first turn can fail before committing any context: that Runtime still reads as version 0,
+    but it has numbered entries of its own and can no longer be told where to start.
 
     Files come back before the conversation does. In between the two, the Runtime is a process
     that remembers writing code which is not on disk yet, and a run arriving in that window
     would have the model act on the mismatch. Nothing accepts runs until both are done, which
     is what the caller's ordering gives us for free.
 
+    The two halves are not required to describe the same moment. The files belong to the
+    Project: they come from the conversation's latest checkpoint, or from a newer remote branch
+    tip when another conversation has developed the Project since. The conversation is always
+    the newest archived one. Turns that change no files leave no checkpoint behind, so the
+    conversation being ahead of the files is the ordinary case; the files can be ahead too, when
+    a turn's commit was reported but its final context never arrived. Either way the Agent is
+    left to notice the difference itself.
+
     :return: The health to start the run against, unchanged when there was nothing to resume.
     :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
-    if health.conversation_id is not None or health.context_version != 0:
+    if (
+        health.conversation_id is not None
+        or health.context_version != 0
+        or health.log_seq != 0
+        or health.ui_event_seq != 0
+    ):
         return health
 
     document = await _restore_files(conversation, client)
-    if document is None:
-        return health
 
     # Read now, not taken from the checkpoint. The checkpoint's own cursors were recorded when
     # its commit reached the remote, which is before that turn's events have finished being
@@ -512,6 +525,9 @@ async def _resume_if_cold(
     # the right place for the next entry to go.
     log_seq = await state.alast_seq(conversation.id, state.MESSAGE_CHANNEL)
     ui_event_seq = await state.alast_seq(conversation.id, state.UI_EVENT_CHANNEL)
+    if document is None:
+        return await _resume_numbering_only(conversation, client, health, log_seq=log_seq, ui_event_seq=ui_event_seq)
+
     restored_version = await client.restore_context(
         document,
         if_match=health.context_version,
@@ -529,50 +545,66 @@ async def _resume_if_cold(
     return attrs.evolve(health, context_version=restored_version)
 
 
-async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
-    """Put the workspace back to this conversation's checkpoint, and return its paired context.
+async def _resume_numbering_only(
+    conversation: Conversation,
+    client: AgentRuntimeClient,
+    health: RuntimeHealth,
+    *,
+    log_seq: int,
+    ui_event_seq: int,
+) -> RuntimeHealth:
+    """Continue a conversation that has entries stored here but no archived context.
 
-    When there is no restorable checkpoint, the files are left alone and the newest archived
-    context is returned. If a checkpoint exists but the conversation has advanced past it,
-    restoration fails instead of combining files from the checkpoint with newer memory.
-
-    :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
+    The Runtime pushes its channels before its context, so one lost during the conversation's
+    first turn leaves exactly this behind. There is no memory to hand back, but the numbering
+    still has to continue past what is stored: the ingest treats a repeated seq as a redelivery
+    and drops it, so a Runtime restarting at 1 would lose its first entries without an error.
     """
-    checkpoint = await checkpoints.alatest_restorable(conversation.id)
+    if log_seq == 0 and ui_event_seq == 0:
+        return health
+
+    await client.restore_cursors(log_seq=log_seq, ui_event_seq=ui_event_seq)
+    logger.warning(
+        "Conversation %s was resumed on a cold Runtime without any archived context, "
+        "continuing from log seq %d and ui event seq %d",
+        conversation.id,
+        log_seq,
+        ui_event_seq,
+    )
+    return attrs.evolve(health, log_seq=log_seq, ui_event_seq=ui_event_seq)
+
+
+async def _restore_files(conversation: Conversation, client: AgentRuntimeClient) -> dict[str, Any] | None:
+    """Put the workspace back to this conversation's checkpoint, and return the latest context.
+
+    When the conversation has never pushed a checkpoint, the files are left alone and the newest
+    archived context is returned.
+
+    :raises AgentUnavailableError: If the Runtime cannot restore the checkpoint's commit.
+    :raises AgentBusyError: If a run is occupying the Runtime.
+    :raises ConversationStateError: If the newest archived context cannot be read back.
+    """
+    checkpoint = await checkpoints.alatest(conversation.id)
     if checkpoint is None:
-        # There is no file snapshot that this service can restore or compare. This is the normal
-        # shape for conversations that only read files or do non-code work, and it is also the
-        # safest useful fallback when an incomplete checkpoint cannot be restored.
         return await state.aload_context(conversation.id)
 
-    newest = await state.acontext_version(conversation.id)
-    # A checkpoint the conversation has already moved past is not usable, even though both its
-    # halves are here. Seeding the Runtime with an older version would have it re-issue version
-    # numbers this service has already archived, and pairing the newest context with this older
-    # commit would violate the restore invariant instead. Refuse until an operator recovers or
-    # deliberately discards the unmatched state.
-    if checkpoint.context_version != newest:
-        raise AgentUnavailableError(
-            f"Conversation {conversation.id} has archived context version {newest}, but its "
-            f"latest restorable workspace checkpoint only covers version "
-            f"{checkpoint.context_version}; refusing to combine mismatched files and context."
-        )
-
+    # 决策说明：冷启动不要求 checkpoint.context_version 与最新 context_version 严格相等。
+    # 会话上下文（对话/压缩）与工作区代码（Git 提交）正交：纯对话轮次、上下文压缩或上报失败后重启
+    # 都会使 context 领先于 checkpoint。旧沙箱既已销毁，因版本不等抛 502 只会让项目永久死锁；
+    # 直接恢复最新代码快照与最新上下文，若有差异交由 Agent 自行感知处理。
     outcome = await client.restore_workspace(checkpoint.commit)
-    document = await state.aload_context_version(conversation.id, checkpoint.context_version)
-    if document is None:
-        # The checkpoint was found *because* its version row exists, so failing to read the
-        # document means the row and the blob disagree. Carrying on would pair files we have
-        # just restored with a context from somewhere else, so this fails out loud.
-        raise AgentUnavailableError(
-            f"The checkpoint at {checkpoint.commit} names context version "
-            f"{checkpoint.context_version}, which is no longer readable."
-        )
+    document = await state.aload_context(conversation.id)
+    # Info rather than a warning when the versions differ: every chat-only turn opens that gap,
+    # and from here it looks the same as a lost push. Logging both is what lets a "the Agent
+    # said it wrote that file" report be traced to the moment each half came from.
     logger.info(
-        "Conversation %s restored its workspace to checkpoint %s (%s)",
+        "Conversation %s restored its workspace to checkpoint %s at context version %d (%s), "
+        "resuming with context version %s",
         conversation.id,
         checkpoint.commit,
+        checkpoint.context_version,
         outcome,
+        None if document is None else document.get("context_version"),
     )
     return document
 

@@ -28,6 +28,7 @@ from app_spark_agent.state import (
     Channel,
     ContextStore,
     ConversationContext,
+    ConversationStateConflict,
     CursorStore,
 )
 from app_spark_agent.tools import LaunchTool
@@ -309,14 +310,36 @@ class ConversationRuntime:
         :raises ConversationStateConflict: If a different context is already active.
         :raises CursorStateError: If the cursor document cannot be written.
         """
+        await self._rebase_channels(log_seq=log_seq, ui_event_seq=ui_event_seq)
+        await self.cursors.record_context_push(context.context_version)
+        return await self.context_store.restore(context)
+
+    async def adopt_numbering(self, *, log_seq: int, ui_event_seq: int) -> None:
+        """Continue a conversation's numbering when there is no context to adopt with it.
+
+        The channels are pushed before the context, so a Runtime lost during a conversation's
+        first turn can leave the control plane holding entries but no context at all. The next
+        Runtime has nothing for :meth:`restore`, yet still has to number after those entries;
+        restarting at 1 would collide with them, and the ingest drops a collision silently.
+
+        :param log_seq: Sequence number the transcript should continue from.
+        :param ui_event_seq: Sequence number the AG-UI event history should continue from.
+        :raises AppendLogError: If either channel already holds entries of its own.
+        :raises ConversationStateConflict: If this Runtime already holds a conversation.
+        :raises CursorStateError: If the cursor document cannot be written.
+        """
+        # A Runtime holding a context is past the point where it could be told where to start.
+        if not self.context_store.context.is_empty:
+            raise ConversationStateConflict("an active conversation cannot be renumbered")
+        await self._rebase_channels(log_seq=log_seq, ui_event_seq=ui_event_seq)
+
+    async def _rebase_channels(self, *, log_seq: int, ui_event_seq: int) -> None:
         bases = {Channel.MESSAGE: log_seq, Channel.UI_EVENT: ui_event_seq}
         # Rebased in memory first: it is the check that can legitimately fail, and failing it
         # before anything is persisted leaves the Runtime exactly as it was.
         self.transcript.rebase(log_seq)
         self.ui_events.rebase(ui_event_seq)
         await self.cursors.rebase(bases)
-        await self.cursors.record_context_push(context.context_version)
-        return await self.context_store.restore(context)
 
     async def flush_replication(self, *, timeout_seconds: float | None = None) -> bool:
         """Wait for the control plane to catch up, if there is one to catch up.

@@ -168,7 +168,7 @@ class TestCommitTurn:
         assert saver.status.local_sha == saver.workspace.head()
         assert saver.status.outstanding
 
-    async def test_an_interrupted_turn_is_reported_as_non_restorable(
+    async def test_an_interrupted_turn_is_reported_as_interrupted(
         self, saver: WorkspaceSaver, workspace_dir: Path, bare_remote: Path
     ) -> None:
         reported: list[Checkpoint] = []

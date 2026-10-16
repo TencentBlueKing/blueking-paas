@@ -16,7 +16,7 @@ import (
 
 // Options 是创建 Server 所需的依赖
 type Options struct {
-	// Upstreams 以别名为键，创建 Server 后不能再修改
+	// Upstreams 由启动配置读取的上游 registry 配置
 	Upstreams     map[string]*upstream.Upstream
 	Authenticator Authenticator
 	Authorizer    Authorizer
@@ -34,14 +34,19 @@ type Options struct {
 
 // Server 是代理的 http.Handler
 type Server struct {
+	// upstreams 以路由中的上游别名为 key，未配置的上游不转发
 	upstreams map[string]*upstream.Upstream
-	authn     Authenticator
-	authz     Authorizer
-	auditor   Auditor
-	metrics   *Metrics
-	log       *slog.Logger
-	sessions  *sessionCodec
-	now       func() time.Time
+	// authn 校验构建 token 并解析出调用方身份
+	authn Authenticator
+	// authz 判定调用方能否访问目标仓库
+	authz Authorizer
+	// auditor 记录审计信息
+	auditor Auditor
+	// sessionSigner 把上传会话签名为 token 作为续传地址交给客户端，续传时验签还原
+	sessionSigner *sessionSigner
+
+	metrics *Metrics
+	logger  *slog.Logger
 }
 
 // reqRecord 是一次请求的审计与指标记录，finish 对所有请求（包括最早被拒绝的）输出它在请求停下时的状态。
@@ -72,28 +77,28 @@ func New(opts Options) (*Server, error) {
 		authz:     opts.Authorizer,
 		auditor:   opts.Auditor,
 		metrics:   opts.Metrics,
-		log:       opts.Logger,
-		now:       time.Now,
+		logger:    opts.Logger,
 	}
 	if s.metrics == nil {
 		s.metrics = NewMetrics(nil)
 	}
-	if s.log == nil {
-		s.log = slog.New(slog.DiscardHandler)
+	if s.logger == nil {
+		s.logger = slog.New(slog.DiscardHandler)
 	}
 	ttl := opts.UploadSessionTTL
 	if ttl <= 0 {
 		ttl = time.Hour
 	}
-	s.sessions = &sessionCodec{
+	s.sessionSigner = &sessionSigner{
 		primary:  opts.UploadSessionKey,
 		previous: opts.PreviousUploadSessionKey,
 		ttl:      ttl,
-		now:      func() time.Time { return s.now() },
+		now:      time.Now,
 	}
 	return s, nil
 }
 
+// ServeHTTP ...
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// query 为客户端查询串的唯一解析结果，路由解析、mount 降级与转发都只使用它，转发时重新编码
 	query, queryErr := parseQuery(r.URL.RawQuery)
@@ -101,7 +106,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		query = url.Values{}
 	}
 	rt := oci.ParseRoute(r.Method, r.URL.EscapedPath(), query)
-	rec := &reqRecord{start: s.now(), route: rt}
+	rec := &reqRecord{start: time.Now(), route: rt}
 	body := &countingBody{ReadCloser: r.Body}
 	r.Body = body
 	rw := &responseWriter{ResponseWriter: w}
@@ -118,7 +123,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handle(
 	w *responseWriter, r *http.Request, rec *reqRecord, route oci.Route, query url.Values,
 ) oci.DenyReason {
-	p, deny := s.authn.Authenticate(r)
+	// 根据请求中的 Token 获取调用方身份
+	principal, deny := s.authn.Authenticate(r)
 	if deny != "" {
 		oci.WriteError(w, r, http.StatusUnauthorized, deny)
 		// 未带 token 的 /v2/ 探活是客户端正常的质询流程，审计与指标中不记为拒绝
@@ -127,7 +133,7 @@ func (s *Server) handle(
 		}
 		return deny
 	}
-	rec.identity = p.Identity()
+	rec.identity = principal.Identity()
 
 	if route.Kind == oci.RoutePing {
 		if route.Action == "" {
@@ -142,11 +148,11 @@ func (s *Server) handle(
 		return ""
 	}
 
-	d := s.authz.Authorize(p, r.Method, route)
+	d := s.authz.Authorize(principal, r.Method, route)
 	if d.Status != 0 {
 		return s.reject(w, r, d.Status, d.Deny)
 	}
-	// 以下检查不依赖授权钩子的实现：DELETE、非法路由与未配置的上游（在 resolve 中）永远不转发
+	// 托底校验：DELETE、非法路由与未配置的上游（在 resolve 中）永远不转发
 	switch {
 	case r.Method == http.MethodDelete:
 		return s.reject(w, r, http.StatusForbidden, oci.DenyDeleteNotAllowed)
@@ -154,6 +160,7 @@ func (s *Server) handle(
 		return s.reject(w, r, http.StatusNotFound, oci.DenyRouteNotFound)
 	}
 
+	// 生成转发计划
 	plan, deny := s.resolve(r, route, query, d)
 	if deny != "" {
 		return s.reject(w, r, http.StatusForbidden, deny)
@@ -166,21 +173,22 @@ func (s *Server) handle(
 // 返回拒绝原因，放行时为空。
 func (s *Server) forward(w *responseWriter, r *http.Request, plan *forwardPlan) oci.DenyReason {
 	up, kind := plan.upstream, plan.route.Kind
+	// 获取缓存的上游 Authorization 头
 	auth, err := s.upstreamAuthorization(r.Context(), plan)
 	if err != nil {
-		s.log.Warn("upstream authorization failed", "upstream", up.Alias, "route", kind, "error", err)
+		s.logger.Warn("upstream authorization failed", "upstream", up.Alias, "route", kind, "error", err)
 		return s.reject(w, r, http.StatusBadGateway, upstream.ReasonOf(err))
 	}
 
 	resp, err := s.send(r, plan, upstreamHeader(r, auth))
 	if err != nil {
-		s.log.Warn("upstream request failed", "upstream", up.Alias, "route", kind, "method", r.Method, "error", err)
+		s.logger.Warn("upstream request failed", "upstream", up.Alias, "route", kind, "method", r.Method, "error", err)
 		return s.reject(w, r, http.StatusBadGateway, upstream.ReasonOf(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusUnauthorized {
 		// 上游拒绝代理自身的凭证，改为 502，避免客户端误以为构建 token 无效
-		s.log.Warn("upstream rejected proxy credentials", "upstream", up.Alias, "route", kind, "method", r.Method)
+		s.logger.Warn("upstream rejected proxy credentials", "upstream", up.Alias, "route", kind, "method", r.Method)
 		return s.reject(w, r, http.StatusBadGateway, oci.DenyUpstreamAuth)
 	}
 
@@ -190,7 +198,7 @@ func (s *Server) forward(w *responseWriter, r *http.Request, plan *forwardPlan) 
 	}
 	sanitizeUpstreamHeaders(h, plan)
 	if err := s.rewriteLocation(h, r.Method, resp.StatusCode, plan); err != nil {
-		s.log.Warn("unexpected upstream Location", "upstream", up.Alias, "route", kind, "error", err)
+		s.logger.Warn("unexpected upstream Location", "upstream", up.Alias, "route", kind, "error", err)
 		return s.reject(w, r, http.StatusBadGateway, oci.DenyUpstreamUnreached)
 	}
 	w.WriteHeader(resp.StatusCode)
@@ -215,7 +223,7 @@ func (s *Server) finish(rec *reqRecord, rw *responseWriter, body *countingBody, 
 	if rec.plan != nil {
 		route = rec.plan.route
 	}
-	elapsed := s.now().Sub(rec.start)
+	elapsed := time.Since(rec.start)
 	s.metrics.observeRequest(route.Kind, r.Method, status, elapsed)
 	if rec.deny != "" {
 		s.metrics.denied.WithLabelValues(string(rec.deny)).Inc()

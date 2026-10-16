@@ -64,7 +64,7 @@ func (s *Server) resolve(r *http.Request, rt oci.Route, query url.Values, d Deci
 	if rt.Session {
 		// 续传请求：路径中的会话 token 是代理签发的，先验签并确认会话属于本仓库，
 		// 再用会话中记录的上游续传地址（路径与查询串）替换，客户端无法改写上游地址或把会话挪到其他仓库
-		sess, err := s.sessions.verify(rt.SessionID, rt.Repo)
+		sess, err := s.sessionSigner.verify(rt.SessionID, rt.Repo)
 		if err != nil {
 			return nil, oci.DenyUploadSession
 		}

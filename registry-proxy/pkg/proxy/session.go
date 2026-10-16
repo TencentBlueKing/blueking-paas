@@ -24,8 +24,8 @@ type uploadSession struct {
 	Expiry int64 `json:"e"`
 }
 
-// sessionCodec 用 HMAC-SHA256 签名上传会话。Previous 为轮换前的密钥，只用于校验。
-type sessionCodec struct {
+// sessionSigner 用 HMAC-SHA256 签名上传会话。Previous 为轮换前的密钥，只用于校验。
+type sessionSigner struct {
 	primary  []byte
 	previous []byte
 	ttl      time.Duration
@@ -35,7 +35,7 @@ type sessionCodec struct {
 var errInvalidSession = errors.New("invalid upload session")
 
 // sign 签发会话 token；s.Expiry 为 0 时按 ttl 设置过期时刻
-func (c *sessionCodec) sign(s uploadSession) (string, error) {
+func (c *sessionSigner) sign(s uploadSession) (string, error) {
 	if s.Expiry == 0 {
 		s.Expiry = c.now().Add(c.ttl).Unix()
 	}
@@ -48,7 +48,7 @@ func (c *sessionCodec) sign(s uploadSession) (string, error) {
 }
 
 // verify 校验签名、过期时间，以及会话是否属于 repo
-func (c *sessionCodec) verify(token, repo string) (uploadSession, error) {
+func (c *sessionSigner) verify(token, repo string) (uploadSession, error) {
 	p, sig64, ok := strings.Cut(token, ".")
 	if !ok {
 		return uploadSession{}, errInvalidSession

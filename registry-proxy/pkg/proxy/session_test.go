@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func newCodec(now *time.Time, primary, previous string) *sessionCodec {
-	return &sessionCodec{
+func newSigner(now *time.Time, primary, previous string) *sessionSigner {
+	return &sessionSigner{
 		primary:  []byte(primary),
 		previous: []byte(previous),
 		ttl:      time.Hour,
@@ -21,15 +21,15 @@ func newCodec(now *time.Time, primary, previous string) *sessionCodec {
 	}
 }
 
-var _ = Describe("sessionCodec", func() {
+var _ = Describe("sessionSigner", func() {
 	var (
 		now time.Time
-		c   *sessionCodec
+		c   *sessionSigner
 	)
 
 	BeforeEach(func() {
 		now = time.Now()
-		c = newCodec(&now, strings.Repeat("a", 32), "")
+		c = newSigner(&now, strings.Repeat("a", 32), "")
 	})
 
 	It("round-trips a path-safe token and keeps the original expiry on resume", func() {
@@ -58,7 +58,7 @@ var _ = Describe("sessionCodec", func() {
 		Entry("other repo", func(tok string) string { return tok }, "alias/app/cache"),
 		Entry("other key", func(string) string {
 			now := time.Now()
-			forged, _ := newCodec(&now, strings.Repeat("b", 32), "").sign(
+			forged, _ := newSigner(&now, strings.Repeat("b", 32), "").sign(
 				uploadSession{Repo: "alias/app", Location: "/v2/app/blobs/uploads/u1"})
 			return forged
 		}, "alias/app"),
@@ -87,18 +87,18 @@ var _ = Describe("sessionCodec", func() {
 
 	It("verifies sessions signed by the previous key during rotation", func() {
 		oldKey, newKey := strings.Repeat("o", 32), strings.Repeat("n", 32)
-		tok, _ := newCodec(&now, oldKey, "").sign(uploadSession{Repo: "a/b", Location: "/v2/b/blobs/uploads/u"})
+		tok, _ := newSigner(&now, oldKey, "").sign(uploadSession{Repo: "a/b", Location: "/v2/b/blobs/uploads/u"})
 
-		_, err := newCodec(&now, newKey, oldKey).verify(tok, "a/b")
+		_, err := newSigner(&now, newKey, oldKey).verify(tok, "a/b")
 		Expect(err).NotTo(HaveOccurred())
-		_, err = newCodec(&now, newKey, "").verify(tok, "a/b")
+		_, err = newSigner(&now, newKey, "").verify(tok, "a/b")
 		Expect(err).To(HaveOccurred(), "session signed by a retired key must be rejected")
 	})
 
 	// 同一把密钥对 payload 直接做的 HMAC（不带签名域）不能通过校验
 	It("separates the signing domain", func() {
 		key := bytes.Repeat([]byte("k"), 32)
-		c = newCodec(&now, string(key), "")
+		c = newSigner(&now, string(key), "")
 		tok, _ := c.sign(uploadSession{Repo: "a/b", Location: "/l"})
 		payload, _, _ := strings.Cut(tok, ".")
 

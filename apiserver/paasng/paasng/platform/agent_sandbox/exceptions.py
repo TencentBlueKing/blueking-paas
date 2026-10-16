@@ -35,6 +35,14 @@ class SandboxCreateError(SandboxError):
         self.logs = logs
 
 
+class SandboxNoClusterError(SandboxError):
+    """Raised when no cluster is available for the sandbox's workload type."""
+
+
+class SandboxK8sResourceError(SandboxError):
+    """Raised when a K8s API call fails while creating the sandbox's resources."""
+
+
 class SandboxActiveCountLimitExceeded(SandboxError):
     """Raised when an application has reached the limit of active sandboxes.
 

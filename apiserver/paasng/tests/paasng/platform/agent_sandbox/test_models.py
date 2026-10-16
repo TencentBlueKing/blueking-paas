@@ -24,7 +24,7 @@ from django.utils import timezone
 from paas_wl.infras.cluster.constants import ClusterUsage
 from paas_wl.infras.cluster.entities import AllocationContext
 from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
-from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxCreateError
+from paasng.platform.agent_sandbox.exceptions import SandboxAlreadyExists, SandboxNoClusterError
 from paasng.platform.agent_sandbox.models import Sandbox
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -65,13 +65,13 @@ class TestSandboxModel:
         assert si_sandbox.workload_type == SandboxWorkloadType.SANDBOX_INSTANCE.value
 
     def test_raises_when_no_cluster(self, bk_app, bk_user):
-        """No available cube cluster surfaces as SandboxCreateError."""
+        """No available cube cluster surfaces as SandboxNoClusterError."""
         with (
             mock.patch(
                 "paasng.platform.agent_sandbox.models.ClusterAllocator.get_default",
                 side_effect=ValueError("no cluster found"),
             ),
-            pytest.raises(SandboxCreateError, match="no available cluster"),
+            pytest.raises(SandboxNoClusterError, match="no available cluster"),
         ):
             Sandbox.objects.new(
                 application=bk_app,

@@ -35,6 +35,7 @@ from paasng.platform.agent_sandbox.constants import (
     DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
+    SandboxDeleteSource,
     SandboxStatus,
     SandboxWorkloadType,
 )
@@ -360,7 +361,7 @@ class TestDeleteSandbox:
         )
 
         with mock.patch.object(AgentSandboxResManager, "destroy_by_name") as mock_destroy:
-            delete_sandbox(sandbox)
+            delete_sandbox(sandbox, delete_source=SandboxDeleteSource.USER)
 
             sandbox.refresh_from_db()
             assert sandbox.status == SandboxStatus.DELETED.value
@@ -380,7 +381,7 @@ class TestDeleteSandbox:
                 side_effect=SandboxError("delete failed"),
             ),
         ):
-            delete_sandbox(sandbox)
+            delete_sandbox(sandbox, delete_source=SandboxDeleteSource.USER)
 
         sandbox.refresh_from_db()
         assert sandbox.status == SandboxStatus.ERR_DELETING.value

@@ -494,6 +494,12 @@ async def _resume_if_cold(
     would have the model act on the mismatch. Nothing accepts runs until both are done, which
     is what the caller's ordering gives us for free.
 
+    The two halves are not required to describe the same moment. The files come from the latest
+    restorable checkpoint -- or from a newer remote branch tip, when another conversation has
+    developed the Project since -- while the conversation is always the newest archived one.
+    Turns that change no files leave no checkpoint behind, so the conversation being ahead of
+    the files is the ordinary case, and the Agent is left to notice any difference itself.
+
     :return: The health to start the run against, unchanged when there was nothing to resume.
     :raises AgentUnavailableError: If a checkpoint exists but its files could not be restored.
     """
@@ -535,28 +541,32 @@ async def _restore_files(conversation: Conversation, client: AgentRuntimeClient)
     When there is no restorable checkpoint, the files are left alone and the newest archived
     context is returned.
 
-    :raises AgentUnavailableError: If a checkpoint exists but cannot be honoured.
+    :raises AgentUnavailableError: If the Runtime cannot restore the checkpoint's commit.
+    :raises AgentBusyError: If a run is occupying the Runtime.
+    :raises ConversationStateError: If the newest archived context cannot be read back.
     """
     checkpoint = await checkpoints.alatest_restorable(conversation.id)
-    if checkpoint is not None:
-        outcome = await client.restore_workspace(checkpoint.commit)
-        logger.info(
-            "Conversation %s restored its workspace to checkpoint %s (%s)",
-            conversation.id,
-            checkpoint.commit,
-            outcome,
-        )
+    if checkpoint is None:
+        return await state.aload_context(conversation.id)
 
     # 决策说明：冷启动不要求 checkpoint.context_version 与最新 context_version 严格相等。
     # 会话上下文（对话/压缩）与工作区代码（Git 提交）正交：纯对话轮次、上下文压缩或上报失败后重启
     # 都会使 context 领先于 checkpoint。旧沙箱既已销毁，因版本不等抛 502 只会让项目永久死锁；
     # 直接恢复最新代码快照与最新上下文，若有差异交由 Agent 自行感知处理。
+    outcome = await client.restore_workspace(checkpoint.commit)
     document = await state.aload_context(conversation.id)
-    if checkpoint is not None and document is None:
-        raise AgentUnavailableError(
-            f"The checkpoint at {checkpoint.commit} names context version "
-            f"{checkpoint.context_version}, which is no longer readable."
-        )
+    # Info rather than a warning when the versions differ: every chat-only turn opens that gap,
+    # and from here it looks the same as a lost push. Logging both is what lets a "the Agent
+    # said it wrote that file" report be traced to the moment each half came from.
+    logger.info(
+        "Conversation %s restored its workspace to checkpoint %s at context version %d (%s), "
+        "resuming with context version %s",
+        conversation.id,
+        checkpoint.commit,
+        checkpoint.context_version,
+        outcome,
+        None if document is None else document.get("context_version"),
+    )
     return document
 
 

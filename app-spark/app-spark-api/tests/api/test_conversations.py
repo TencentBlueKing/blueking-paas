@@ -597,8 +597,10 @@ async def test_cold_restore_after_file_edit_followed_by_context_only_turn(
     workspace = workspace_root / PROJECT_ID
     original = (workspace / FIRST_NOTE).read_text()
 
-    # Switch the model to `fake:chat` for Turn 2 while keeping `state_dir` and `workspace`
-    # intact (simulating a second turn in the same sandbox that does not modify files).
+    # Turn 2 needs a model that does not edit files, and the model is read when the Runtime
+    # process starts -- so this terminate only restarts the process under `fake:chat`. Unlike
+    # the reclamation below, `state_dir` and `workspace` are kept, so the restarted Runtime
+    # picks up where it was rather than cold-restoring.
     provider = cast("LocalProcessProvider", get_agent_runtime_provider())
     await provider.terminate(conversation_id)
     settings.AGENT_DIRECT_MODEL_CONFIG = {"model": "fake:chat"}

@@ -18,13 +18,14 @@
 
 The two halves arrive over different connections and in either order, so most of what is worth
 testing here is the *incomplete* pair: code on the remote with no matching context, and context
-with no commit. Neither is a restore point, and mistaking one for a restore point is the failure
-this whole mechanism exists to prevent -- a Runtime whose files and whose memory disagree does
-not crash, it just quietly writes the wrong code.
+with no commit. Neither is a restore point. A checkpoint only decides which files a cold start
+brings back -- the context it injects is always the newest archived one -- but retention keeps
+exactly the versions checkpoints name, so the two have to agree on what "still here" means.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -189,10 +190,11 @@ class TestRetention:
         for version in range(2, 6):
             state.save_context(conversation.id, context(version))
 
-        # Still restorable, and still restorable to the document that goes with it -- which is
-        # the whole reason retention has to know about checkpoints at all.
+        # Restorability asks for the checkpoint's own version row, so reclaiming it would leave
+        # a cold start with no files to bring back -- which is why retention has to know about
+        # checkpoints at all.
         assert checkpoints.latest_restorable(conversation.id).commit == "a" * 40
-        assert state.load_context_version(conversation.id, 1) == context(1)
+        assert 1 in kept_versions(conversation)
 
     def test_reclaiming_removes_the_blob_as_well_as_the_row(self, conversation, settings, tmp_path):
         settings.AGENT_CONTEXT_VERSIONS_KEPT = 1
@@ -280,18 +282,19 @@ class TestRetention:
 
 
 class TestVersionedDocuments:
-    """Each version keeps its own document, which is what a checkpoint reaches for."""
+    """Each version keeps its own document, so archiving a newer one never overwrites a pinned one."""
 
-    def test_an_older_version_is_readable_after_a_newer_one_is_archived(self, conversation):
+    def test_an_older_version_keeps_its_own_document_after_a_newer_one_is_archived(self, conversation):
         state.save_context(conversation.id, context(1))
         state.save_context(conversation.id, context(2))
 
-        assert state.load_context_version(conversation.id, 1) == context(1)
-        assert state.load_context_version(conversation.id, 2) == context(2)
-        # And the plain cold start still gets the newest, unchanged.
+        assert stored_document(conversation, 1) == context(1)
+        assert stored_document(conversation, 2) == context(2)
+        # And the cold start gets the newest, unchanged.
         assert state.load_context(conversation.id) == context(2)
 
-    def test_a_version_that_was_never_archived_reads_as_missing(self, conversation):
-        state.save_context(conversation.id, context(1))
 
-        assert state.load_context_version(conversation.id, 7) is None
+def stored_document(conversation: Conversation, version: int) -> dict[str, Any]:
+    """Read back the blob one archived version row points at."""
+    row = ConversationContextVersion.objects.get(conversation=conversation, context_version=version)
+    return json.loads(row.get_blob_store().get_bytes())

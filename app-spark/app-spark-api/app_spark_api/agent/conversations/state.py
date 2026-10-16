@@ -242,8 +242,8 @@ def context_version(conversation_id: Any) -> int:
 def load_context(conversation_id: Any) -> dict[str, Any] | None:
     """Return the newest archived context document, or ``None`` when there is none.
 
-    This is the ordinary cold start, the one that has no checkpoint to pair with -- see
-    :func:`load_context_version` for the one that does.
+    This is what every cold start seeds the Runtime with, whether or not a checkpoint was
+    restored first: a checkpoint only decides which files come back, never which context.
 
     :param conversation_id: Conversation to restore.
     :return: The document a cold Runtime can be seeded with.
@@ -252,25 +252,6 @@ def load_context(conversation_id: Any) -> dict[str, Any] | None:
     row = (
         ConversationContextVersion.objects.filter(conversation_id=conversation_id).order_by("-context_version").first()
     )
-    return None if row is None else _read_document(row.get_blob_store())
-
-
-def load_context_version(conversation_id: Any, version: int) -> dict[str, Any] | None:
-    """Return one specific archived context version, or ``None`` when it is no longer kept.
-
-    What a checkpoint restore reads. It must be this version and not the newest one: the point
-    of a checkpoint is that the files and the conversation describe the same moment, and the
-    newest context may well have moved on past the commit being restored.
-
-    :param conversation_id: Conversation to restore.
-    :param version: The exact version wanted.
-    :return: The document, or ``None`` if that version has been reclaimed.
-    :raises ConversationStateError: If the row exists but its document cannot be read back.
-    """
-    row = ConversationContextVersion.objects.filter(
-        conversation_id=conversation_id,
-        context_version=version,
-    ).first()
     return None if row is None else _read_document(row.get_blob_store())
 
 
@@ -324,9 +305,7 @@ aappend_records = sync_to_async(append_records)
 aread_ui_events = sync_to_async(read_ui_events)
 asave_context = sync_to_async(save_context)
 aload_context = sync_to_async(load_context)
-aload_context_version = sync_to_async(load_context_version)
 alast_seq = sync_to_async(last_seq)
-acontext_version = sync_to_async(context_version)
 
 
 def _lock_conversation(conversation_id: Any) -> None:

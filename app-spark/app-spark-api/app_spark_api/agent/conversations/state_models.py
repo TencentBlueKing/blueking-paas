@@ -166,7 +166,7 @@ class ConversationContextVersion(TimestampedModel):
 
 
 class ConversationCheckpoint(TimestampedModel):
-    """一个可恢复点：某个 commit、钉住它的 tag，以及配套的上下文版本和日志游标。
+    """一个可恢复点：某个 commit、钉住它的 tag，以及提交时的上下文版本和日志游标。
 
     这里存在只说明一半：Runtime 保证了 commit 和 tag 已经到远端。另一半——控制面手上真的存着
     ``context_version`` 那一版上下文——由 :func:`~app_spark_api.agent.conversations.checkpoints.

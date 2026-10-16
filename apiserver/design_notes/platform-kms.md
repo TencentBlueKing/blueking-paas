@@ -78,7 +78,7 @@ chart 会创建 SecretStore、ExternalSecret，生成 `<release>-apiserver-kms-s
 - `elasticsearch.default.hosts` 是原来写在环境变量 `PAAS_ELASTICSEARCH_HOSTS` 中的整个字符串。chart 使用 `hostConfig` 数组时，该环境变量的值是 `@json [...]`，信封中也要保存同样的字符串。
 - 镜像仓库密码按原配置中的用户名（`SMART_DOCKER_USERNAME` / `APP_DOCKER_USERNAME`）从 `registry.external` 和 `bkrepo.default` 中选出用户名一致的一组。chart 未启用外部镜像仓库时使用 bkrepo 账号，因此不需要额外字段。
 - 提供 `celery.default.uri` 时，`CELERY_BROKER_URL` 整串使用信封中的值；未提供且 broker 为 Redis 时，填入 `redis.default.password`。
-- `redis.default.password` 会原样填入连接串，覆盖其中原有的密码，因此**不能包含 `/`、`?`、`#`、`;`、控制字符以及 `%XX` 形式的内容**，否则启动报错。Celery 使用列表或元组配置多个 broker 时保留原类型，逐条替换 Redis 地址中的密码。
+- `redis.default.password` 会原样填入连接串，覆盖其中原有的密码，因此**不能包含 `/`、`?`、`#`、`;`、控制字符以及 `%XX` 形式的内容**，否则启动报错。Celery 使用列表或元组配置多个 broker 时，保留 Dynaconf 读取后的容器类型，逐条替换 Redis 地址中的密码。
 - 开启 KMS 后，不能再使用旧的加密连接串环境变量（`DATABASE_URL`、`WL_DATABASE_URL`、`PAAS_LEGACY_DATABASE_URL`），否则启动报错。
 - 开启 KMS 后 chart 不再渲染明文，以下字段必填，缺失时启动报错，错误信息中给出缺少的信封字段：
   - `encryption.bk_krill.secret_key`、`encryption.slug.secret_key`、`bkapp_id_secret.default.app_secret`、`jwt.services.client_key`；

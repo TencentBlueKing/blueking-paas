@@ -356,10 +356,14 @@ class TestAccounts:
     @pytest.mark.parametrize(("container", "scheme"), [(list, "redis"), (tuple, "redis"), (list, "amqp")])
     def test_broker_sequences(self, write_kms_files, container, scheme):
         original = container([f"{scheme}://:plain@broker1.example.com/0", f"{scheme}://:plain@broker2.example.com/0"])
-        settings = _load(_without(CREDENTIALS, "celery"), write_kms_files, CELERY_BROKER_URL=original)
+        write_kms_files(_without(CREDENTIALS, "celery"))
+        base = _make_settings(**{**BASE_SETTINGS, "CELERY_BROKER_URL": original})
+        # Dynaconf 会先把输入的 tuple/list 转为 BoxList，KMS 保留读取后的容器类型。
+        expected_type = type(base.get("CELERY_BROKER_URL"))
+        settings = load_kms_settings(base)
 
         urls = settings.get("CELERY_BROKER_URL")
-        assert isinstance(urls, container)
+        assert type(urls) is expected_type
         assert [url_to_parts(url).password for url in urls] == [REDIS_PASSWORD if scheme == "redis" else "plain"] * 2
 
     def test_sentinel_urls(self, write_kms_files):
@@ -438,7 +442,7 @@ class TestDecryptFailure:
         def fail_decrypt(**kwargs):
             raise ValueError("sensitive credential contents")
 
-        monkeypatch.setattr("bk_kms.decrypt", fail_decrypt)
+        monkeypatch.setattr(kms, "decrypt", fail_decrypt)
 
         with pytest.raises(ImproperlyConfigured, match="Unable to read or decrypt") as exc_info:
             load_kms_settings(_make_settings(**BASE_SETTINGS))

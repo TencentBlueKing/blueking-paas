@@ -89,7 +89,7 @@ class Command(BaseCommand):
             "--dry-run", dest="dry_run", default=True, type=str2bool, help="避免意外触发, 若想执行需添加该参数"
         )
         parser.add_argument("--init-enabled", dest="init_enabled", type=str2bool, required=True, default=True)
-        # 开启 KMS 时 chart 不传入密码，未传入的密码从信封中读取
+        # KMS 改造后 chart 不再把明文密码渲染到 Job 命令参数；留空的密码由 handle 从信封补齐。
         parser.add_argument("--super-username", dest="super_username", required=True)
         parser.add_argument("--super-password", dest="super_password", default="")
         parser.add_argument("--bkpaas3-username", dest="bkpaas3_username", required=True)
@@ -124,12 +124,19 @@ class Command(BaseCommand):
             logger.info(f"init_enabled is set to {init_enabled}, skip init bkrepo")
             return
 
-        super_password = super_password or get_kms_credential("bkrepo.admin.password") or ""
-        bkpaas3_password = bkpaas3_password or get_kms_credential("bkrepo.default.password") or ""
-        addons_password = addons_password or get_kms_credential("bkrepo.addons.password") or ""
-        lesscode_password = lesscode_password or get_kms_credential("bkrepo.lesscode.password") or ""
+        kms_enabled = is_platform_kms_enabled()
+        if kms_enabled:
+            # 从信封补齐 chart 不再传入的密码，仍保留手动执行命令时显式参数优先的行为。
+            if not super_password:
+                super_password = get_kms_credential("bkrepo.admin.password") or ""
+            if not bkpaas3_password:
+                bkpaas3_password = get_kms_credential("bkrepo.default.password") or ""
+            if not addons_password:
+                addons_password = get_kms_credential("bkrepo.addons.password") or ""
+            if not lesscode_password:
+                lesscode_password = get_kms_credential("bkrepo.lesscode.password") or ""
 
-        if is_platform_kms_enabled() and not super_password:
+        if kms_enabled and not super_password:
             raise ImproperlyConfigured("bkrepo.admin.password is required when initializing bkrepo")
 
         # 当且仅当 adminUsername 和 adminPassword 不为空时，会初始化 bkrepo 账号和仓库

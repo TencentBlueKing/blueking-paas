@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Tuple
 from urllib.parse import unquote, urlsplit, urlunsplit
 
+from bk_kms import CryptoBackendUnavailableError, CryptoError, decrypt
 from django.core.exceptions import ImproperlyConfigured
 from dynaconf import LazySettings
 from dynaconf.utils.parse_conf import boolean_fix, parse_conf_data
@@ -138,6 +139,7 @@ def _as_is(settings: LazySettings, key: str, value: str) -> Any:
 
 
 def _parse_like_env_var(settings: LazySettings, key: str, value: str) -> Any:
+    """结构化配置保留原环境变量的 @json/TOML 解析，密码和 Token 则通过 _as_is 按原文返回。"""
     return parse_conf_data(boolean_fix(value), tomlfy=True, box_settings=settings)
 
 
@@ -196,6 +198,7 @@ class KMSSettings:
 
 
 def is_platform_kms_enabled() -> bool:
+    # 此开关在 Dynaconf 初始化前使用；不能直接 bool()，否则字符串 "false" 也会开启 KMS。
     return os.environ.get(ENABLED_ENV_VAR) in ("true", "True")
 
 
@@ -244,14 +247,10 @@ def build_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> D
 
 @functools.cache
 def _decrypt_credentials() -> Mapping[str, Any]:
+    """缓存进程内的信封快照，供 settings 和管理命令共享；信封更新后需重启进程。"""
     private_key = os.environ.get(PRIVATE_KEY_ENV_VAR, "").strip()
     if not private_key:
         raise ImproperlyConfigured(f"KMS requires {PRIVATE_KEY_ENV_VAR}")
-
-    try:
-        from bk_kms import CryptoBackendUnavailableError, CryptoError, decrypt
-    except ImportError:
-        raise ImproperlyConfigured("KMS requires the bk-kms-sdk package") from None
 
     envelope_path = Path(os.environ.get(ENVELOPE_PATH_ENV_VAR) or DEFAULT_ENVELOPE_PATH)
     try:

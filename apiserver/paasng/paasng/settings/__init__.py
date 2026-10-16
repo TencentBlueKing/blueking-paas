@@ -87,7 +87,7 @@ settings = LazySettings(
     environments=False,
     load_dotenv=True,
     includes=[SETTINGS_FILES_GLOB, LOCAL_SETTINGS],
-    # Configure minimal required settings, KMS mode reads it from the envelope instead
+    # BKKRILL_ENCRYPT_SECRET_KEY 在 KMS 模式下由信封提供，跳过原配置源校验，解密后再检查必填项。
     validators=[] if is_platform_kms_enabled() else [Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True)],
     # Env var name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS",

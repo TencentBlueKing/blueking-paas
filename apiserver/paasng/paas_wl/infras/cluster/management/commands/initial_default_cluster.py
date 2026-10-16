@@ -170,6 +170,8 @@ class Command(BaseCommand):
             )
 
         # 证书 / Token 相关配置
+        # 开启 KMS 后 chart 不再注入明文证书 / Token，因此优先读取信封。
+        # 未开启 KMS 或信封字段缺失时返回 None，继续兼容原环境变量配置。
         ca_data = get_kms_credential("kubernetes.default.ca_data") or env.str(EnvVarKey.CA, "")
         cert_data = get_kms_credential("kubernetes.default.cert_data") or env.str(EnvVarKey.CERT, "")
         key_data = get_kms_credential("kubernetes.default.key_data") or env.str(EnvVarKey.KEY, "")

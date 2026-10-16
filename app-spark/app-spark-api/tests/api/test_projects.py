@@ -18,13 +18,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from http import HTTPStatus
 
 import pytest
+from django.utils import timezone
 
-from app_spark_api.agent.conversations.models import ConversationNumber
-from app_spark_api.core.projects import services
+from app_spark_api.agent.conversations.models import Conversation, ConversationNumber
+from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
+from app_spark_api.core.projects import constants, services
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from tests.helpers import create_user
@@ -34,7 +37,9 @@ pytestmark = pytest.mark.django_db(transaction=True)
 PROJECTS_URL = "/api/projects/"
 
 
-async def make_project(*, project_id: str, name: str, owner, tenant_id: str, is_deleted: bool = False) -> Project:
+async def make_project(
+    *, project_id: str, name: str | None, owner, tenant_id: str, is_deleted: bool = False
+) -> Project:
     """Store a Project directly, bypassing the API under test.
 
     Async because these tests are: the sync ORM refuses to run inside a running event loop, and
@@ -61,6 +66,34 @@ async def create_via_api(client, *, project_id: str, name: str):
         data={"id": project_id, "name": name},
         content_type="application/json",
     )
+
+
+async def delete_via_api(client, project_id: str):
+    return await client.delete(f"{PROJECTS_URL}{project_id}/")
+
+
+class RecordingDeletionProvider:
+    """Record Project cleanup calls and optionally fail with a public deletion category."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, list[str]]] = []
+        self.failure_category: str | None = None
+
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        self.calls.append((project_id, conversation_ids))
+        if self.failure_category is not None:
+            raise AgentResourceDeletionError(self.failure_category)
+
+
+@pytest.fixture()
+def deletion_provider(monkeypatch):
+    provider = RecordingDeletionProvider()
+
+    def get_provider():
+        return provider
+
+    monkeypatch.setattr(services, "get_agent_runtime_provider", get_provider)
+    return provider
 
 
 # --- creating ---------------------------------------------------------------------------
@@ -131,6 +164,42 @@ async def test_a_soft_deleted_project_still_holds_on_to_its_id(aapi_client, bk_u
     response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
 
     assert response.status_code == HTTPStatus.CONFLICT
+
+
+async def test_a_soft_deleted_project_releases_its_name(aapi_client, bk_user):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(
+        project_id="deleted-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=tenant_id,
+    )
+    await services.soft_delete_project("deleted-demo")
+
+    response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
+
+    assert response.status_code == HTTPStatus.CREATED
+
+
+async def test_a_tenant_can_keep_multiple_soft_deleted_projects_without_names(bk_user):
+    tenant_id = get_tenant(bk_user).id
+
+    await make_project(project_id="deleted-one", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+    await make_project(project_id="deleted-two", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+
+    assert await Project.default_objects.filter(tenant_id=tenant_id, is_deleted=True, name=None).acount() == 2
+
+
+async def test_soft_delete_releases_name_only_once(bk_user):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
+
+    assert await services.soft_delete_project("spark-demo") is True
+    assert await services.soft_delete_project("spark-demo") is False
+
+    deleted = await Project.default_objects.aget(pk="spark-demo")
+    assert deleted.is_deleted is True
+    assert deleted.name is None
 
 
 async def test_a_name_taken_after_the_check_is_still_reported_as_a_conflict(aapi_client, bk_user, monkeypatch):
@@ -274,12 +343,241 @@ async def test_the_list_of_a_user_without_projects_is_empty_rather_than_missing(
     assert body == {"items": [], "count": 0}
 
 
+# --- deleting ---------------------------------------------------------------------------
+
+
+async def test_deleting_a_project_finishes_cleanup_before_releasing_its_name(aapi_client, bk_user, deletion_provider):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
+    counter = await ConversationNumber.objects.aget(project_id="spark-demo")
+    original_number = counter.last_number
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert response.content == b""
+    assert deletion_provider.calls == [("spark-demo", [])]
+    deleted = await Project.default_objects.aget(pk="spark-demo")
+    assert (deleted.is_deleted, deleted.name) == (True, None)
+    counter = await ConversationNumber.objects.aget(project_id="spark-demo")
+    assert counter.last_number == original_number
+
+    reused = await create_via_api(aapi_client, project_id="new-demo", name="Spark Demo")
+    blocked = await create_via_api(aapi_client, project_id="spark-demo", name="Another Demo")
+    assert reused.status_code == HTTPStatus.CREATED
+    assert (blocked.status_code, blocked.json()["code"]) == (HTTPStatus.CONFLICT, "PROJECT_ID_TAKEN")
+
+
+async def test_deleting_a_project_with_live_conversations_changes_nothing(aapi_client, bk_user, deletion_provider):
+    tenant_id = get_tenant(bk_user).id
+    project = await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=tenant_id,
+    )
+    for number, closed_at in ((2, None), (3, timezone.now()), (5, None)):
+        await Conversation.objects.acreate(
+            project=project,
+            number=number,
+            owner=bk_user,
+            tenant_id=tenant_id,
+            closed_at=closed_at,
+        )
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PROJECT_HAS_UNFINISHED_CONVERSATIONS"
+    assert "2, 5" in response.json()["detail"]
+    assert deletion_provider.calls == []
+    project = await Project.objects.aget(pk="spark-demo")
+    assert project.name == "Spark Demo"
+    assert await Conversation.objects.filter(project=project).acount() == 3
+
+
+async def test_invisible_projects_have_identical_delete_responses(aapi_client, bk_user, deletion_provider):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(
+        project_id="deleted-demo",
+        name=None,
+        owner=bk_user,
+        tenant_id=tenant_id,
+        is_deleted=True,
+    )
+    await make_project(
+        project_id="other-owner",
+        name="Other Owner Secret",
+        owner=create_user(),
+        tenant_id=tenant_id,
+    )
+    await make_project(
+        project_id="other-tenant",
+        name="Other Tenant Secret",
+        owner=bk_user,
+        tenant_id="some-other-tenant",
+    )
+
+    responses = [
+        await delete_via_api(aapi_client, project_id)
+        for project_id in ("missing-demo", "deleted-demo", "other-owner", "other-tenant")
+    ]
+
+    bodies = [response.json() for response in responses]
+    assert {response.status_code for response in responses} == {HTTPStatus.NOT_FOUND}
+    assert bodies == [bodies[0]] * 4
+    assert bodies[0] == {"code": "RESOURCE_NOT_FOUND", "detail": "Resource not found."}
+    assert deletion_provider.calls == []
+
+
+async def test_an_invalid_project_id_is_rejected_before_deletion(aapi_client, deletion_provider):
+    response = await delete_via_api(aapi_client, "Spark")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert deletion_provider.calls == []
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        ("runtime", "sandbox"),
+        ("runtime", "local process"),
+        ("runtime", "local directory"),
+        ("conversation", "context file"),
+        ("repository", "repository"),
+        ("project", "project record"),
+    ],
+)
+async def test_a_deletion_failure_keeps_the_project_visible(
+    aapi_client, bk_user, deletion_provider, monkeypatch, failure
+):
+    stage, category = failure
+    await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+
+    async def fail_cleanup(*_args, **_kwargs):
+        raise OSError("sensitive infrastructure detail")
+
+    if stage == "runtime":
+        deletion_provider.failure_category = category
+    elif stage == "conversation":
+        monkeypatch.setattr(services, "adelete_project_conversations", fail_cleanup)
+    elif stage == "repository":
+        monkeypatch.setattr(services, "adelete_project_repository", fail_cleanup)
+    else:
+        monkeypatch.setattr(services, "soft_delete_project", fail_cleanup)
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.json()["code"] == "PROJECT_DELETE_FAILED"
+    assert category in response.json()["detail"]
+    assert "retried" in response.json()["detail"]
+    assert "sensitive infrastructure detail" not in response.json()["detail"]
+    project = await Project.objects.aget(pk="spark-demo")
+    assert (project.is_deleted, project.name) == (False, "Spark Demo")
+
+
+async def test_a_timed_out_repository_cleanup_is_retryable(aapi_client, bk_user, deletion_provider, monkeypatch):
+    await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+
+    async def wait_for_repository(_project):
+        await asyncio.sleep(60)
+
+    monkeypatch.setattr(services, "adelete_project_repository", wait_for_repository)
+    monkeypatch.setattr(constants, "DELETE_PROJECT_TIMEOUT_SECONDS", 0.01)
+    started_at = asyncio.get_running_loop().time()
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    assert asyncio.get_running_loop().time() - started_at < 1
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "repository" in response.json()["detail"]
+    project = await Project.objects.aget(pk="spark-demo")
+    assert (project.is_deleted, project.name) == (False, "Spark Demo")
+
+
+async def test_a_failed_deletion_can_be_retried(aapi_client, bk_user, deletion_provider):
+    await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+    deletion_provider.failure_category = "sandbox"
+
+    failed = await delete_via_api(aapi_client, "spark-demo")
+    deletion_provider.failure_category = None
+    succeeded = await delete_via_api(aapi_client, "spark-demo")
+
+    assert failed.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert succeeded.status_code == HTTPStatus.NO_CONTENT
+    assert not await Project.objects.filter(pk="spark-demo").aexists()
+
+
+async def test_concurrent_deletes_do_not_report_a_busy_conflict(aapi_client, bk_user, deletion_provider, monkeypatch):
+    await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+
+    async def complete_cleanup(*_args, **_kwargs):
+        await asyncio.sleep(0)
+
+    monkeypatch.setattr(services, "adelete_project_conversations", complete_cleanup)
+    monkeypatch.setattr(services, "adelete_project_repository", complete_cleanup)
+
+    responses = await asyncio.gather(
+        delete_via_api(aapi_client, "spark-demo"),
+        delete_via_api(aapi_client, "spark-demo"),
+    )
+
+    assert HTTPStatus.CONFLICT not in {response.status_code for response in responses}
+    assert {response.status_code for response in responses}.issubset({HTTPStatus.NO_CONTENT, HTTPStatus.NOT_FOUND})
+    assert not await Project.objects.filter(pk="spark-demo").aexists()
+
+
+async def test_nested_resources_are_hidden_after_project_deletion(aapi_client, bk_user, deletion_provider):
+    await make_project(
+        project_id="spark-demo",
+        name="Spark Demo",
+        owner=bk_user,
+        tenant_id=get_tenant(bk_user).id,
+    )
+    assert (await delete_via_api(aapi_client, "spark-demo")).status_code == HTTPStatus.NO_CONTENT
+
+    conversations = await aapi_client.get("/api/projects/spark-demo/conversations/")
+    repository = await aapi_client.get("/api/projects/spark-demo/git-repository/")
+
+    assert conversations.status_code == HTTPStatus.NOT_FOUND
+    assert repository.status_code == HTTPStatus.NOT_FOUND
+
+
 # --- authentication ---------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("method", ["get", "post"])
 async def test_an_anonymous_caller_reaches_no_project_endpoint(aanonymous_api_client, method):
     response = await getattr(aanonymous_api_client, method)(PROJECTS_URL)
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
+
+
+async def test_an_anonymous_caller_cannot_delete_a_project(aanonymous_api_client):
+    response = await delete_via_api(aanonymous_api_client, "spark-demo")
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json()["code"] == "AUTHENTICATION_REQUIRED"

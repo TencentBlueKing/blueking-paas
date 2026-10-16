@@ -16,10 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import uuid
 from unittest import mock
 
 import pytest
 
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
 from paasng.platform.engine.handlers import attach_all_phases
@@ -101,3 +103,25 @@ class TestApplicationPreReleaseExecutor:
 
         assert Deployment.objects.get(pk=deployment.pk).status == JobStatus.INTERRUPTED
         assert ModuleEnvironmentOperations.objects.get(object_uid=deployment.pk).status == JobStatus.INTERRUPTED
+
+    @pytest.mark.usefixtures("_setup_hook")
+    def test_kms_secret_mounted_to_command(self, bk_module_full):
+        deployment = create_fake_deployment(bk_module_full)
+        mount = SecretFileMount(
+            volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/secrets", sub_paths=("envelope",)
+        )
+        module_path = "paasng.platform.engine.deploy.bg_command.pre_release"
+        with (
+            mock.patch(f"{module_path}.is_kms_injection_enabled", return_value=True),
+            mock.patch(f"{module_path}.prepare_kms_process_env", return_value=({"PLAIN": "1"}, [mount])),
+            mock.patch(f"{module_path}.update_image_runtime_config"),
+            mock.patch(f"{module_path}.exec_command", return_value=str(uuid.uuid4())) as exec_command,
+            mock.patch(f"{module_path}.CommandPoller"),
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream"),
+        ):
+            attach_all_phases(sender=deployment.app_environment, deployment=deployment)
+            ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()
+
+        # 敏感变量只以文件形式提供给命令 Pod
+        assert exec_command.call_args.kwargs["extra_envs"] == {"PLAIN": "1"}
+        assert exec_command.call_args.kwargs["secret_mounts"] == [mount]

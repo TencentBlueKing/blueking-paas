@@ -1577,6 +1577,32 @@ BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
 )
 
 # ---------------------------------------------
+# KMS 凭证托管（SaaS 运行环境敏感变量）
+# ---------------------------------------------
+# 是否为 SaaS 敏感环境变量启用 KMS 托管（环境变量 PAAS_SAAS_KMS_ENABLED），与平台自身凭证开关独立
+SAAS_KMS_ENABLED = settings.get("SAAS_KMS_ENABLED", False)
+# KMS 管理接口的直连地址（不经过 API 网关）
+KMS_API_BASE_URL = settings.get("KMS_API_BASE_URL", "")
+# 调用 KMS 管理接口时携带的 X-Bk-Username
+KMS_API_USERNAME = settings.get("KMS_API_USERNAME", "admin")
+KMS_API_TIMEOUT_SECONDS = settings.get("KMS_API_TIMEOUT_SECONDS", default=10, cast="@float")
+
+# 预建的 KMS scope：数字 ID 用于 KMS 请求，名称用于 OpenBao 路径与 role
+KMS_SAAS_SCOPE_ID = settings.get("KMS_SAAS_SCOPE_ID", default=0, cast="@int")
+KMS_SAAS_SCOPE_NAME = settings.get("KMS_SAAS_SCOPE_NAME", "")
+# OpenBao 地址、KV v2 挂载路径与 Kubernetes 认证挂载点
+KMS_OPENBAO_SERVER = settings.get("KMS_OPENBAO_SERVER", "")
+KMS_OPENBAO_KV_PATH = settings.get("KMS_OPENBAO_KV_PATH", "secret")
+KMS_OPENBAO_K8S_AUTH_MOUNT = settings.get("KMS_OPENBAO_K8S_AUTH_MOUNT", "kubernetes")
+# 集群中唯一一份 mTLS 客户端证书 Secret（含 ca.crt、tls.crt、tls.key），由 ClusterSecretStore 跨 namespace 引用
+KMS_OPENBAO_MTLS_SECRET_NAMESPACE = settings.get("KMS_OPENBAO_MTLS_SECRET_NAMESPACE", "")
+KMS_OPENBAO_MTLS_SECRET_NAME = settings.get("KMS_OPENBAO_MTLS_SECRET_NAME", "openbao-mtls-client")
+# ESO 刷新周期；就绪等待的轮询间隔与超时（秒）
+KMS_SECRET_REFRESH_INTERVAL = settings.get("KMS_SECRET_REFRESH_INTERVAL", "1h")
+KMS_SECRET_READY_POLL_INTERVAL_SECONDS = settings.get("KMS_SECRET_READY_POLL_INTERVAL_SECONDS", default=5, cast="@int")
+KMS_SECRET_READY_TIMEOUT_SECONDS = settings.get("KMS_SECRET_READY_TIMEOUT_SECONDS", default=300, cast="@int")
+
+# ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
 

@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -34,6 +34,7 @@ from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paas_wl.infras.resources.generation.mapper import MapperProcConfig, get_mapper_proc_config
 from paas_wl.infras.resources.generation.version import AppResVerManager
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
@@ -43,11 +44,18 @@ logger = logging.getLogger(__name__)
 
 
 class DeployAction:
-    def __init__(self, env: ModuleEnvironment, release: "Release", extra_envs: Dict):
+    def __init__(
+        self,
+        env: ModuleEnvironment,
+        release: "Release",
+        extra_envs: Dict,
+        secret_mounts: Sequence[SecretFileMount] = (),
+    ):
         self.env = env
         self.wl_app = env.wl_app
         self.release = release
         self.extra_envs = extra_envs
+        self.secret_mounts = list(secret_mounts)
 
         if not self.release.build:
             raise BuildMissingError(f"no build related to release, app_name={self.wl_app.name}")
@@ -62,10 +70,12 @@ class DeployAction:
         self.ns_handler.ensure_namespace(self.wl_app.namespace)
         ensure_image_credentials_secret(self.wl_app)
         # update deploy info in scheduler module
-        processes = AppProcessManager(app=self.wl_app).assemble_processes(extra_envs=self.extra_envs)
+        processes = list(AppProcessManager(app=self.wl_app).assemble_processes(extra_envs=self.extra_envs))
+        for proc in processes:
+            proc.runtime.secret_mounts = list(self.secret_mounts)
         handler = ProcessesHandler.new_by_app(self.wl_app)
         try:
-            handler.deploy(list(processes))
+            handler.deploy(processes)
         except KubeException as e:
             self.release.fail(summary=f"deployed {str(self.release.uuid)[:7]} which failed for: {e}")
             raise

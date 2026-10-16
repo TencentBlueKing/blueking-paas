@@ -164,10 +164,10 @@ class ConversationContextVersion(TimestampedModel):
         return make_blob_store(self.backend, self.config)
 
 
-class ConversationCheckpointManager(models.Manager["ConversationCheckpoint"]):
-    """检查点的查询。"""
+class ConversationCheckpointQuerySet(models.QuerySet["ConversationCheckpoint"]):
+    """检查点的查询集。"""
 
-    def newest_first(self, conversation_id: Any) -> models.QuerySet[ConversationCheckpoint]:
+    def newest_first(self, conversation_id: Any) -> ConversationCheckpointQuerySet:
         """一个会话的检查点，最后登记的排在最前。
 
         不按 ``context_version`` 排：它只是记录，而且会回退——上下文没归档成功就丢了 Runtime 时，
@@ -214,7 +214,7 @@ class ConversationCheckpoint(TimestampedModel):
     ui_event_seq = models.PositiveIntegerField(verbose_name="AG-UI 事件游标", default=0)
     state_epoch = models.PositiveIntegerField(verbose_name="写入时的状态回写代次", default=1)
 
-    objects = ConversationCheckpointManager()
+    objects = ConversationCheckpointQuerySet.as_manager()
 
     class Meta:
         constraints = [

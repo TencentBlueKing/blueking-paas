@@ -122,7 +122,7 @@ def record(
 def latest(conversation_id: Any) -> ConversationCheckpoint | None:
     """返回这个会话最新的检查点，也就是冷启动时用来恢复工作区的那一个。
 
-    「最新」指最后登记的那个，见 :meth:`ConversationCheckpointManager.newest_first`。
+    「最新」指最后登记的那个，见 :meth:`ConversationCheckpointQuerySet.newest_first`。
 
     :param conversation_id: 要恢复的会话。
     :return: 检查点行，没有则 ``None``。

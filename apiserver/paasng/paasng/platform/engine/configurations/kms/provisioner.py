@@ -242,7 +242,7 @@ def create_kms_config_version(
         cluster_name=EnvClusterService(module_env).get_cluster_name(),
         namespace=module_env.wl_app.namespace,
         service_account_name=build_service_account_name(app_code=app_code, module_name=module_name, env_name=env_name),
-        resource_name=build_resource_name(tenant_id=tenant_id, credential_name=credential_name),
+        resource_name=build_resource_name(credential_name=credential_name),
     )
 
 

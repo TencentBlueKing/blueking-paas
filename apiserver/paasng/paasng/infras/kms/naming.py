@@ -72,14 +72,13 @@ def build_credential_name(*, app_code: str, module_name: str, env_name: str, ver
     return name
 
 
-def build_resource_name(*, tenant_id: str, credential_name: str) -> str:
+def build_resource_name(*, credential_name: str) -> str:
     """ClusterSecretStore、ExternalSecret 与目标 Secret 共用的名称
 
-    ClusterSecretStore 是集群级资源，名称需在集群内唯一，因此包含租户；凭证名已包含应用、模块、环境与配置版本。
+    app_code 全局唯一，凭证名已包含应用、模块、环境与配置版本，无需再添加租户前缀。
     """
     validate_credential_name(credential_name)
-    base = _sanitize_label(tenant_id)
-    name = f"kms-{base}-{credential_name}"
+    name = f"kms-{credential_name}"
     validate_k8s_name(name)
     return name
 

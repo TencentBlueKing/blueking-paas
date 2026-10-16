@@ -61,7 +61,11 @@ def build_cluster_secret_store(
     mtls_secret_name: str,
     labels: dict[str, str],
 ) -> dict[str, Any]:
-    """集群级 SecretStore，每个凭证（即每个配置版本）一份，role 与凭证一一对应
+    """构造 ClusterSecretStore，每个凭证（即每个配置版本）一份，role 与凭证一一对应
+
+    使用 ClusterSecretStore 是为了跨 namespace 引用平台统一维护的 mTLS 证书 Secret，
+    无需向每个应用 namespace 分发证书；SecretStore 的 Secret 引用限于其所在 namespace。
+    通过 conditions 将本 Store 的使用范围限制为应用 namespace。
 
     :param namespace: 应用所在 namespace，ESO 使用其中的 service_account_name 登录 OpenBao
 

@@ -21,7 +21,7 @@ import pytest
 
 from paasng.infras.kms.readiness import evaluate_secret_readiness
 
-ES_NAME = "kms-default-demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
+ES_NAME = "kms-demo-web-prod-0b1f4c2e8d3a4f6b9c1d2e3f4a5b6c7d"
 ES_UID = "es-uid-1"
 READY_CONDITION = {"type": "Ready", "status": "True", "reason": "SecretSynced"}
 

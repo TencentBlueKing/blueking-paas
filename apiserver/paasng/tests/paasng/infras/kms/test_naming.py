@@ -62,10 +62,6 @@ class TestOpenBaoKeyAndRole:
 
 
 class TestResourceNames:
-    def test_resource_name_includes_tenant(self):
-        name = naming.build_resource_name(tenant_id="default", credential_name=f"demo-web-prod-{VERSION_HEX}")
-        other_tenant_name = naming.build_resource_name(
-            tenant_id="Tenant_1", credential_name=f"demo-web-prod-{VERSION_HEX}"
-        )
-        assert name != other_tenant_name
-        assert other_tenant_name.startswith("kms-tenant-1-")
+    def test_resource_name_uses_credential_name(self):
+        name = naming.build_resource_name(credential_name=f"demo-web-prod-{VERSION_HEX}")
+        assert name == f"kms-demo-web-prod-{VERSION_HEX}"

@@ -60,7 +60,7 @@ MTLS_SECRET_KEY_CERT = "tls.crt"
 MTLS_SECRET_KEY_PRIVATE_KEY = "tls.key"
 
 # 卷名必须是 DNS label（最长 63 字符），因此使用固定值，而不是包含租户和凭证名的资源名
-KMS_SECRET_MOUNT_DIR = "/etc/kms"
+KMS_SECRET_MOUNT_DIR = "/etc/secrets"
 KMS_SECRET_VOLUME_NAME = "kms-secret"
 
 # 实际挂载 KMS 文件时向 SaaS 注入的标志，供应用配置初始化使用

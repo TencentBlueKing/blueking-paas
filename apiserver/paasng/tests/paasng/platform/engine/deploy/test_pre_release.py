@@ -108,7 +108,7 @@ class TestApplicationPreReleaseExecutor:
     def test_kms_secret_mounted_to_command(self, bk_module_full):
         deployment = create_fake_deployment(bk_module_full)
         mount = SecretFileMount(
-            volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/kms", sub_paths=("envelope",)
+            volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/secrets", sub_paths=("envelope",)
         )
         module_path = "paasng.platform.engine.deploy.bg_command.pre_release"
         with (

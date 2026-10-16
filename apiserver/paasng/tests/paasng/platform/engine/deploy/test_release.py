@@ -150,7 +150,7 @@ class TestKMSRelease:
         return SecretFileMount(
             volume_name="kms-secret",
             secret_name="kms-test",
-            mount_dir="/etc/kms",
+            mount_dir="/etc/secrets",
             sub_paths=("envelope", "privateKey"),
         )
 

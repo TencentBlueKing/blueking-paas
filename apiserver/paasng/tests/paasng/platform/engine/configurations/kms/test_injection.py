@@ -112,7 +112,7 @@ class TestStripKMSManagedEnvVars:
 
 
 KMS_MOUNT = SecretFileMount(
-    volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/kms", sub_paths=("envelope", "privateKey")
+    volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/secrets", sub_paths=("envelope", "privateKey")
 )
 
 
@@ -133,7 +133,7 @@ class TestKMSSecretMount:
             {
                 "envName": "stag",
                 "name": "kms-secret",
-                "mountPath": "/etc/kms",
+                "mountPath": "/etc/secrets",
                 "source": {"secret": {"name": "kms-res-1"}},
                 "subPaths": ["envelope", "privateKey"],
             }
@@ -147,13 +147,13 @@ class TestKMSSecretMount:
         ("user_mount", "conflict"),
         [
             (_user_mount("kms-secret", "/data"), True),
-            (_user_mount("data", "/etc/kms"), True),
-            (_user_mount("data", "/etc/kms/extra"), True),
-            (_user_mount("data", "/etc/kms-other"), False),
+            (_user_mount("data", "/etc/secrets"), True),
+            (_user_mount("data", "/etc/secrets/extra"), True),
+            (_user_mount("data", "/etc/secrets-other"), False),
             (_user_mount("data", "/etc"), True),
             (_user_mount("data", "/"), True),
-            (_user_mount("data", "/etc/kms", env_name="stag"), True),
-            (_user_mount("kms-secret", "/etc/kms", env_name="prod"), False),
+            (_user_mount("data", "/etc/secrets", env_name="stag"), True),
+            (_user_mount("kms-secret", "/etc/secrets", env_name="prod"), False),
         ],
     )
     def test_conflicts_with_user_mounts(self, user_mount, conflict):

@@ -30,14 +30,14 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 MOUNT = SecretFileMount(
     volume_name="kms-secret",
     secret_name="kms-res-1",
-    mount_dir="/etc/kms",
+    mount_dir="/etc/secrets",
     sub_paths=("envelope", "privateKey"),
 )
 
-MOUNT_ENVELOPE = {"name": "kms-secret", "mountPath": "/etc/kms/envelope", "subPath": "envelope", "readOnly": True}
+MOUNT_ENVELOPE = {"name": "kms-secret", "mountPath": "/etc/secrets/envelope", "subPath": "envelope", "readOnly": True}
 MOUNT_PRIVATE_KEY = {
     "name": "kms-secret",
-    "mountPath": "/etc/kms/privateKey",
+    "mountPath": "/etc/secrets/privateKey",
     "subPath": "privateKey",
     "readOnly": True,
 }

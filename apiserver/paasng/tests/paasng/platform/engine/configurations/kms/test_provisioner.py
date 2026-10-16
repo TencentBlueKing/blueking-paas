@@ -404,7 +404,7 @@ class TestProvisionKMSSecret:
         assert first == SecretFileMount(
             volume_name="kms-secret",
             secret_name=version.resource_name,
-            mount_dir="/etc/kms",
+            mount_dir="/etc/secrets",
             sub_paths=("envelope", "privateKey"),
         )
         # 模拟 Secret 被误删：复用时重新提交资源并等待同步

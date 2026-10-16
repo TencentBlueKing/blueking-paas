@@ -31,14 +31,14 @@ MOUNT = SecretFileMount(
     volume_name="kms-secret",
     secret_name="kms-res-1",
     mount_dir="/etc/secrets",
-    sub_paths=("envelope", "privateKey"),
+    sub_paths=("envelope", "private-key"),
 )
 
 MOUNT_ENVELOPE = {"name": "kms-secret", "mountPath": "/etc/secrets/envelope", "subPath": "envelope", "readOnly": True}
 MOUNT_PRIVATE_KEY = {
     "name": "kms-secret",
-    "mountPath": "/etc/secrets/privateKey",
-    "subPath": "privateKey",
+    "mountPath": "/etc/secrets/private-key",
+    "subPath": "private-key",
     "readOnly": True,
 }
 VOLUME = {"name": "kms-secret", "secret": {"secretName": "kms-res-1"}}

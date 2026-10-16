@@ -112,7 +112,7 @@ class TestStripKMSManagedEnvVars:
 
 
 KMS_MOUNT = SecretFileMount(
-    volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/secrets", sub_paths=("envelope", "privateKey")
+    volume_name="kms-secret", secret_name="kms-res-1", mount_dir="/etc/secrets", sub_paths=("envelope", "private-key")
 )
 
 
@@ -135,7 +135,7 @@ class TestKMSSecretMount:
                 "name": "kms-secret",
                 "mountPath": "/etc/secrets",
                 "source": {"secret": {"name": "kms-res-1"}},
-                "subPaths": ["envelope", "privateKey"],
+                "subPaths": ["envelope", "private-key"],
             }
         ]
 

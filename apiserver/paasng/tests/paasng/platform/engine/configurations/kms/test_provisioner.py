@@ -163,7 +163,7 @@ class FakeKube:
                 "uid": "secret-uid-1",
                 "ownerReferences": [{"kind": "ExternalSecret", "name": name, "uid": es["metadata"]["uid"]}],
             },
-            "data": {"envelope": "ZW52", "privateKey": "cHJpdg=="},
+            "data": {"envelope": "ZW52", "private-key": "cHJpdg=="},
         }
 
 
@@ -405,7 +405,7 @@ class TestProvisionKMSSecret:
             volume_name="kms-secret",
             secret_name=version.resource_name,
             mount_dir="/etc/secrets",
-            sub_paths=("envelope", "privateKey"),
+            sub_paths=("envelope", "private-key"),
         )
         # 模拟 Secret 被误删：复用时重新提交资源并等待同步
         kube.objects.clear()

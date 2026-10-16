@@ -39,7 +39,7 @@ def _secret(*, owner_uid: str | None = ES_UID, data: dict[str, str] | None = Non
     owners = [{"kind": "ExternalSecret", "name": ES_NAME, "uid": owner_uid}] if owner_uid else []
     return {
         "metadata": {"name": ES_NAME, "uid": "secret-uid-1", "ownerReferences": owners},
-        "data": data if data is not None else {"envelope": "ZW52", "privateKey": "cHJpdg=="},
+        "data": data if data is not None else {"envelope": "ZW52", "private-key": "cHJpdg=="},
     }
 
 

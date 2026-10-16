@@ -151,7 +151,7 @@ class TestKMSRelease:
             volume_name="kms-secret",
             secret_name="kms-test",
             mount_dir="/etc/secrets",
-            sub_paths=("envelope", "privateKey"),
+            sub_paths=("envelope", "private-key"),
         )
 
     def test_legacy_release_strips_password_and_waits_for_secret(self, bk_deployment, kms_mount):
@@ -234,7 +234,7 @@ class TestKMSRelease:
         assert submitted["spec"]["configuration"]["env"] == [{"name": "PLAIN", "value": "1"}]
         overlay = submitted["spec"]["envOverlay"]
         assert overlay["mounts"][0]["source"] == {"secret": {"name": "kms-test"}}
-        assert overlay["mounts"][0]["subPaths"] == ["envelope", "privateKey"]
+        assert overlay["mounts"][0]["subPaths"] == ["envelope", "private-key"]
         assert overlay["envVariables"] == [{"envName": env.environment, "name": "BKPAAS_KMS_ENABLED", "value": "true"}]
 
 

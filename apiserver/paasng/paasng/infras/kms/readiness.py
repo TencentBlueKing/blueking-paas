@@ -54,7 +54,7 @@ def evaluate_secret_readiness(
     就绪需同时满足：
     - ExternalSecret 的 UID 与提交时记录的一致，Ready 条件为 True，且已有 refreshTime；
     - 目标 Secret 存在，且 ownerReference 指向该 ExternalSecret（creationPolicy 为 Owner 时由 ESO 设置）；
-    - 目标 Secret 同时包含 envelope 与 privateKey 两个非空字段。
+    - 目标 Secret 同时包含 envelope 与 private-key 两个非空字段。
     """
     if external_secret is None:
         return _not_ready("external_secret_missing")

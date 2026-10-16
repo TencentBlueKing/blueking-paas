@@ -52,7 +52,7 @@ K8S_NAME_MAX_CHARS = 253
 OPENBAO_ENVELOPE_PROPERTY = "envelope"
 OPENBAO_PRIVATE_KEY_PROPERTY = "private_key"
 SECRET_KEY_ENVELOPE = "envelope"
-SECRET_KEY_PRIVATE_KEY = "privateKey"
+SECRET_KEY_PRIVATE_KEY = "private-key"
 
 # 访问 OpenBao 的 mTLS 客户端证书 Secret 中的字段名
 MTLS_SECRET_KEY_CA = "ca.crt"

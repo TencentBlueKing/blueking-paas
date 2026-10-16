@@ -58,7 +58,7 @@ def test_external_secret_maps_to_sdk_secret_keys():
     assert es["spec"]["target"] == {"name": "kms-x", "creationPolicy": "Owner", "deletionPolicy": "Retain"}
     assert es["spec"]["data"] == [
         {"secretKey": "envelope", "remoteRef": {"key": OPENBAO_KEY, "property": "envelope"}},
-        {"secretKey": "privateKey", "remoteRef": {"key": OPENBAO_KEY, "property": "private_key"}},
+        {"secretKey": "private-key", "remoteRef": {"key": OPENBAO_KEY, "property": "private_key"}},
     ]
 
 

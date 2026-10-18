@@ -21,12 +21,19 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import environ
 import pytest
 from django.core.exceptions import ImproperlyConfigured
-from svc_mysql.settings.kms import ENABLED_ENV_VAR, ENVELOPE_PATH_ENV_VAR, PRIVATE_KEY_ENV_VAR, get_env
+
+# 导入 kms 子模块会先执行 settings；仅在导入期间提供最小配置，避免收集测试时依赖部署环境。
+# 导入结束后恢复原环境，后续测试仍由 fixture 控制 KMS 开关和凭证。
+with patch.dict(
+    os.environ,
+    {"PAAS_PLATFORM_KMS_ENABLED": "false", "PAAS_SERVICE_JWT_CLIENTS_KEY": "test-only-key", "SENTRY_DSN": ""},
+):
+    from svc_mysql.settings.kms import ENABLED_ENV_VAR, ENVELOPE_PATH_ENV_VAR, PRIVATE_KEY_ENV_VAR, get_env
 
 DB_PASSWORD = "$HOME p@ss:/w#rd?"
 SERVICES = [

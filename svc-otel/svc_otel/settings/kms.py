@@ -34,7 +34,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
 
-ENABLED_ENV_VAR = "PAAS_PLATFORM_KMS_ENABLED"
+KMS_ENABLED_ENV_VAR = "PAAS_PLATFORM_KMS_ENABLED"
 PRIVATE_KEY_ENV_VAR = "BK_PAAS_KMS_PRIVATE_KEY"
 # 仅供本地开发覆盖信封路径，chart 不设置
 ENVELOPE_PATH_ENV_VAR = "BK_PAAS_KMS_ENVELOPE_PATH"
@@ -57,7 +57,7 @@ class KMSEnv(environ.Env):
 
 def is_kms_enabled() -> bool:
     # 此开关在 django-environ 初始化前读取；不能直接 bool()，否则字符串 "false" 也会开启 KMS。
-    return os.environ.get(ENABLED_ENV_VAR) in ("true", "True")
+    return os.environ.get(KMS_ENABLED_ENV_VAR) in ("true", "True")
 
 
 def get_env(
@@ -86,13 +86,16 @@ def get_env(
         )
 
     credentials = build_credentials(_decrypt_envelope(), bindings)
+
     for var in required_vars:
         if var not in credentials and not os.environ.get(var):
             hint = f", provide it by KMS credential {bindings[var]}" if var in bindings else ""
             raise ImproperlyConfigured(f"{var} is required{hint}")
+
     for var in sensitive_vars:
         if var not in credentials and os.environ.get(var):
             logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", var)
+
     return KMSEnv(credentials, **scheme)
 
 
@@ -129,12 +132,14 @@ def _lookup(envelope: Mapping[str, Any], path: str) -> Optional[str]:
     """取出信封中的字符串；缺失或空字符串可回退，已存在的错误节点类型必须报错。"""
     value: Any = envelope
     parts = path.split(".")
+
     for index, part in enumerate(parts):
         if not isinstance(value, Mapping):
             raise ImproperlyConfigured(f"KMS requires an object at {'.'.join(parts[:index])}")
         if part not in value:
             return None
         value = value[part]
+
     if not isinstance(value, str):
         raise ImproperlyConfigured(f"KMS requires a string at {path}")
     return value if value.strip() else None

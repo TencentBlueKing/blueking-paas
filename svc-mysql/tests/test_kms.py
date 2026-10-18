@@ -33,7 +33,7 @@ with patch.dict(
     os.environ,
     {"PAAS_PLATFORM_KMS_ENABLED": "false", "PAAS_SERVICE_JWT_CLIENTS_KEY": "test-only-key", "SENTRY_DSN": ""},
 ):
-    from svc_mysql.settings.kms import ENABLED_ENV_VAR, ENVELOPE_PATH_ENV_VAR, PRIVATE_KEY_ENV_VAR, get_env
+    from svc_mysql.settings.kms import KMS_ENABLED_ENV_VAR, ENVELOPE_PATH_ENV_VAR, PRIVATE_KEY_ENV_VAR, get_env
 
 DB_PASSWORD = "$HOME p@ss:/w#rd?"
 SERVICES = [
@@ -63,7 +63,7 @@ def kms_credentials(tmp_path, monkeypatch):
     """仅替换 SDK 解密边界，文件读取及配置解析使用实际实现。"""
     envelope = tmp_path / "envelope"
     envelope.write_text("encrypted-envelope\n")
-    monkeypatch.setenv(ENABLED_ENV_VAR, "true")
+    monkeypatch.setenv(KMS_ENABLED_ENV_VAR, "true")
     monkeypatch.setenv(ENVELOPE_PATH_ENV_VAR, str(envelope))
     monkeypatch.setenv(PRIVATE_KEY_ENV_VAR, "private-key")
     for var in ("DATABASE_URL", "BKKRILL_ENCRYPT_SECRET_KEY", "BKAUTH_TOKEN_SECRET_KEY"):
@@ -77,7 +77,7 @@ def kms_credentials(tmp_path, monkeypatch):
 
 
 def test_disabled_does_not_read_envelope(kms_credentials, monkeypatch):
-    monkeypatch.delenv(ENABLED_ENV_VAR)
+    monkeypatch.delenv(KMS_ENABLED_ENV_VAR)
     monkeypatch.setenv("PAAS_SAAS_KMS_ENABLED", "true")
     monkeypatch.setenv("MYSQL_PASSWORD", "plain-password")
 

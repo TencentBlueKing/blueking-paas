@@ -15,7 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""沿用 loaddata 的事务和加密字段，只在内存中替换方案配置。"""
+"""Chart 开启 KMS 后不再把方案密码和 TLS 私钥写入 fixture。
+
+初始化时从现有信封取得完整方案配置，只在内存中替换 fixture 的 config，
+再沿用 loaddata 和 Plan.config 的加密字段保存；业务仍从数据库读取方案。
+三个服务独立构建镜像，因此各自提供同名命令，与 Chart 初始化 Job 配套发布。"""
 
 import json
 from collections.abc import Mapping
@@ -35,11 +39,13 @@ class Command(LoadDataCommand):
 
     def handle(self, *fixture_labels, **options):
         self.plan_configs = None
+        # 未开启 KMS 时完全沿用原 loaddata 流程，不要求信封或额外方案配置。
         if not is_kms_enabled():
             return super().handle(*fixture_labels, **options)
 
         # 各服务的现有信封新增 service_plans，以方案 UUID 为键保存完整配置。
-        # 不生成明文文件；正常 ORM 保存会通过 Plan.config 的 EncryptField 加密落库。
+        # 必须替换完整配置，避免仅补密码时遗漏 TLS 私钥等敏感字段。
+        # 不生成明文文件；fixture 保存仍通过 Plan.config 的 EncryptField 加密落库。
         self.plan_configs = _decrypt_envelope().get("service_plans")
         if not isinstance(self.plan_configs, Mapping):
             raise KMSFixtureError("KMS requires a service_plans object")

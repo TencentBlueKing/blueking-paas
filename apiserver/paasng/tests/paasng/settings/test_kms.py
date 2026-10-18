@@ -24,6 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from cryptography.hazmat.primitives import hashes, padding, serialization
@@ -37,8 +38,8 @@ from redis import ConnectionPool
 
 from paasng.settings import kms
 from paasng.settings.kms import (
-    ENABLED_ENV_VAR,
     ENVELOPE_PATH_ENV_VAR,
+    KMS_ENABLED_ENV_VAR,
     PRIVATE_KEY_ENV_VAR,
     get_kms_credential,
     load_kms_settings,
@@ -47,7 +48,7 @@ from paasng.settings.kms import (
 from paasng.settings.utils import cache_from_redis_sentinel_url
 
 # 包含 dynaconf 前缀等特殊字符，校验账号密码按原文使用
-DB_PASSWORD = "@int p@ss:/w#rd?$HOME"
+DB_PASSWORD = "p@ss:/w#rd?$HOME"
 REDIS_PASSWORD = "r@dis:p$ss%zz"
 BROKER_URL = "amqp://mq:p%40ss@mq.example.com:5672/vhost"
 
@@ -141,7 +142,7 @@ def write_kms_files(tmp_path, private_key, monkeypatch):
         envelope_path = tmp_path / "bk-paas-kms"
         envelope_path.write_text(_make_envelope(private_key, json.dumps(credentials)) + "\n")
         env = {
-            ENABLED_ENV_VAR: "true",
+            KMS_ENABLED_ENV_VAR: "true",
             ENVELOPE_PATH_ENV_VAR: str(envelope_path),
             PRIVATE_KEY_ENV_VAR: _private_key_text(private_key),
         }
@@ -185,9 +186,9 @@ def _parse_redis_url(url: str) -> dict:
 @pytest.mark.parametrize("value", [None, "false"])
 def test_disabled(monkeypatch, value):
     if value is None:
-        monkeypatch.delenv(ENABLED_ENV_VAR, raising=False)
+        monkeypatch.delenv(KMS_ENABLED_ENV_VAR, raising=False)
     else:
-        monkeypatch.setenv(ENABLED_ENV_VAR, value)
+        monkeypatch.setenv(KMS_ENABLED_ENV_VAR, value)
     settings = _make_settings(**BASE_SETTINGS)
     assert load_kms_settings(settings) is settings
     assert load_kms_workloads_settings(settings) is settings
@@ -195,6 +196,60 @@ def test_disabled(monkeypatch, value):
 
 
 class TestOverrides:
+    @pytest.mark.parametrize(
+        "value", ["plain-secret", "123", "true", "@int 123", '@json ["first", "second"]', "@str 123"]
+    )
+    @pytest.mark.parametrize(
+        ("path", "key"),
+        [
+            ("bkapp_id_secret.default.app_secret", "BK_APP_SECRET"),
+            ("mysql.apiserver.password", "DATABASE_PASSWORD"),
+            ("bkrepo.default.password", "SMART_DOCKER_PASSWORD"),
+            ("redis.sentinel.password", "SENTINEL_PASSWORD"),
+        ],
+    )
+    def test_direct_settings_preserve_environment_parsing(self, write_kms_files, monkeypatch, path, key, value):
+        """同一份 values 迁移到信封后，直接环境变量的值与类型保持一致。"""
+        credentials = copy.deepcopy(CREDENTIALS)
+        node = credentials
+        parts = path.split(".")
+        for part in parts[:-1]:
+            node = node[part]
+        node[parts[-1]] = value
+        monkeypatch.setenv(f"PAAS_KMS_BEFORE_{key}", value)
+        before = LazySettings(environments=False, ENVVAR_PREFIX_FOR_DYNACONF="PAAS_KMS_BEFORE")
+        expected = before.get(key)
+
+        actual = _load(credentials, write_kms_files).get(key)
+
+        assert actual == expected
+        assert type(actual) is type(expected)
+
+    def test_environment_template_and_get_cast_preserve_original_behavior(self, write_kms_files, monkeypatch):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["tokens"]["healthz"]["token"] = "@format {env[PAAS_KMS_BEFORE_BK_APP_SECRET]}"
+        monkeypatch.setenv("PAAS_KMS_BEFORE_BK_APP_SECRET", "app-secret")
+        monkeypatch.setenv("PAAS_KMS_BEFORE_HEALTHZ_TOKEN", "@format {env[PAAS_KMS_BEFORE_BK_APP_SECRET]}")
+        before = LazySettings(environments=False, ENVVAR_PREFIX_FOR_DYNACONF="PAAS_KMS_BEFORE")
+        settings = _load(credentials, write_kms_files)
+
+        assert settings.get("HEALTHZ_TOKEN") == before.get("HEALTHZ_TOKEN")
+        assert settings.get("BK_APP_SECRET", cast="@str") == before.get("BK_APP_SECRET", cast="@str")
+
+    @pytest.mark.parametrize("value", ["123", "@int 123", '@json ["first", "second"]'])
+    def test_nested_token_preserves_chart_string_semantics(self, write_kms_files, monkeypatch, value):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["tokens"]["metrics"]["token"] = value
+        # 与 Chart 原来的 TOML 字典加载一致，包括 Dynaconf 对嵌套前缀的解析。
+        monkeypatch.setenv("PAAS_KMS_BEFORE_METRIC_CLIENT_TOKEN_DICT", f"{{bkmonitor='{value}'}}")
+        before = LazySettings(environments=False, ENVVAR_PREFIX_FOR_DYNACONF="PAAS_KMS_BEFORE")
+
+        actual = _load(credentials, write_kms_files).get("METRIC_CLIENT_TOKEN_DICT")["bkmonitor"]
+        expected = before.get("METRIC_CLIENT_TOKEN_DICT")["bkmonitor"]
+
+        assert actual == expected
+        assert type(actual) is type(expected)
+
     def test_simple_fields(self, write_kms_files):
         settings = _load(CREDENTIALS, write_kms_files)
 
@@ -278,7 +333,7 @@ class TestOverrides:
 
         assert not settings.get("BK_CONSOLE_DATABASE_PASSWORD")
 
-    @pytest.mark.parametrize("value", [123, None])
+    @pytest.mark.parametrize("value", [123])
     def test_non_string_field(self, write_kms_files, value):
         credentials = copy.deepcopy(CREDENTIALS)
         credentials["tokens"]["healthz"]["token"] = value
@@ -395,6 +450,44 @@ class TestAccounts:
 
 
 class TestPlaintextFallback:
+    @pytest.mark.parametrize("path", ["elasticsearch", "elasticsearch.default", "elasticsearch.default.hosts"])
+    @pytest.mark.parametrize("value", [None, "", "  "])
+    def test_empty_optional_component_uses_plaintext_with_warning(self, write_kms_files, caplog, path, value):
+        credentials = copy.deepcopy(CREDENTIALS)
+        node = credentials
+        parts = path.split(".")
+        for part in parts[:-1]:
+            node = node[part]
+        node[parts[-1]] = value
+        hosts = [{"host": "es.example.com", "http_auth": "elastic:fallback-password"}]
+
+        with caplog.at_level(logging.WARNING):
+            settings = _load(credentials, write_kms_files, ELASTICSEARCH_HOSTS=hosts)
+
+        assert settings.get("ELASTICSEARCH_HOSTS") == hosts
+        assert "Sensitive setting ELASTICSEARCH_HOSTS still uses its plaintext config" in caplog.text
+        assert "fallback-password" not in caplog.text
+
+    def test_unused_optional_component_does_not_warn(self, write_kms_files, caplog):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["elasticsearch"] = None
+
+        with caplog.at_level(logging.WARNING):
+            settings = _load(credentials, write_kms_files, ELASTICSEARCH_HOSTS=[])
+
+        assert settings.get("ELASTICSEARCH_HOSTS") == []
+        assert "Sensitive setting ELASTICSEARCH_HOSTS" not in caplog.text
+
+    @pytest.mark.parametrize("value", ["malformed-private-value", 123, ["malformed-private-value"]])
+    def test_nonempty_invalid_component_structure_is_rejected(self, write_kms_files, value):
+        credentials = copy.deepcopy(CREDENTIALS)
+        credentials["elasticsearch"]["default"] = value
+
+        with pytest.raises(ImproperlyConfigured, match=r"KMS requires an object at elasticsearch.default") as exc_info:
+            _load(credentials, write_kms_files)
+
+        assert "malformed-private-value" not in str(exc_info.value)
+
     def test_missing_fields_use_plaintext_with_warning(self, write_kms_files, caplog):
         credentials = {"encryption": {"bk_krill": {"secret_key": "krill-key"}, "slug": {"secret_key": "slug-key"}}}
         with caplog.at_level(logging.WARNING):
@@ -513,6 +606,38 @@ def test_settings_module_in_new_process(write_kms_files):
 
 
 class TestManagementCommands:
+    @pytest.mark.parametrize(
+        ("init_enabled", "dry_run", "should_fail"),
+        [(True, False, True), (True, True, False), (False, False, False)],
+    )
+    def test_init_bkrepo_without_kms_requires_admin_password_for_execution(
+        self, monkeypatch, init_enabled, dry_run, should_fail
+    ):
+        from django.core.management import call_command
+
+        from paasng.plat_admin.initialization.management.commands import init_bkrepo
+
+        monkeypatch.setenv(KMS_ENABLED_ENV_VAR, "false")
+        manager = Mock()
+        monkeypatch.setattr(init_bkrepo.Command, "get_manager", manager)
+        args = [
+            "init_bkrepo",
+            f"--dry-run={str(dry_run).lower()}",
+            f"--init-enabled={str(init_enabled).lower()}",
+            "--super-username=admin",
+            "--bkpaas3-username=bkpaas3",
+            "--addons-username=addons",
+            "--lesscode-username=lesscode",
+        ]
+
+        if should_fail:
+            with pytest.raises(ImproperlyConfigured, match="provide --super-password"):
+                call_command(*args)
+        else:
+            call_command(*args)
+
+        manager.assert_not_called()
+
     def test_initial_default_cluster_reads_from_kms(self, write_kms_files, monkeypatch):
         from paas_wl.infras.cluster.management.commands.initial_default_cluster import Command, EnvVarKey
 

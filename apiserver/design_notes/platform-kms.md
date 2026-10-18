@@ -71,13 +71,14 @@ chart 会创建 SecretStore、ExternalSecret，生成 `<release>-apiserver-kms-s
 
 取值规则：
 
-- 字段缺失或为空字符串时视为未提供，apiserver 保持原有配置来源。字段存在但不是字符串时启动报错。
+- 字段缺失、null 或空字符串时视为未提供，apiserver 保持原有配置来源；使用原配置中的敏感值时记录 warning，仅包含配置项名。非空节点结构错误或最终字段不是字符串时启动报错。
+- 运维直接搬运现有 values，无需预先转换。原来直接作为环境变量读取的字段继续按 Dynaconf 规则解析，包括数字、布尔值、`@int`、`@json` 等；原来嵌在字典中的字段继续按嵌套配置规则解析，普通数字字符串不会变成数字。
 - 只需要在信封里放账号密码，主机、端口、库名仍由原配置提供。只有原配置里有该实例的 `*_DATABASE_NAME` 时，对应的 `mysql.<实例>` 才会生效；`username` 为空时保留原用户名。
 - `METRIC_CLIENT_TOKEN_DICT`、`SENTRY_CONFIG`、`PAAS_ANALYSIS_JWT_CONF` 只替换其中的单个字段，其余字段保持原配置。
 - `PAAS_ANALYSIS_JWT_CONF` 原配置为空时保持禁用，仅提供信封中的 key 不会启用 JWT 客户端；algorithm、iss 等非敏感字段仍需原配置提供。
 - `elasticsearch.default.hosts` 是原来写在环境变量 `PAAS_ELASTICSEARCH_HOSTS` 中的整个字符串。chart 使用 `hostConfig` 数组时，该环境变量的值是 `@json [...]`，信封中也要保存同样的字符串。
 - 镜像仓库密码按原配置中的用户名（`SMART_DOCKER_USERNAME` / `APP_DOCKER_USERNAME`）从 `registry.external` 和 `bkrepo.default` 中选出用户名一致的一组。chart 未启用外部镜像仓库时使用 bkrepo 账号，因此不需要额外字段。
-- 提供 `celery.default.uri` 时，`CELERY_BROKER_URL` 整串使用信封中的值；未提供且 broker 为 Redis 时，填入 `redis.default.password`。
+- 提供 `celery.default.uri` 时，`CELERY_BROKER_URL` 整串按原环境变量的 Dynaconf 规则解析；未提供且 broker 为 Redis 时，填入 `redis.default.password`。
 - `redis.default.password` 会原样填入连接串，覆盖其中原有的密码，因此**不能包含 `/`、`?`、`#`、`;`、控制字符以及 `%XX` 形式的内容**，否则启动报错。Celery 使用列表或元组配置多个 broker 时，保留 Dynaconf 读取后的容器类型，逐条替换 Redis 地址中的密码。
 - 开启 KMS 后，不能再使用旧的加密连接串环境变量（`DATABASE_URL`、`WL_DATABASE_URL`、`PAAS_LEGACY_DATABASE_URL`），否则启动报错。
 - 开启 KMS 后 chart 不再渲染明文，以下字段必填，缺失时启动报错，错误信息中给出缺少的信封字段：

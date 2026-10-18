@@ -136,8 +136,13 @@ class Command(BaseCommand):
             if not lesscode_password:
                 lesscode_password = get_kms_credential("bkrepo.lesscode.password") or ""
 
-        if kms_enabled and not super_password:
-            raise ImproperlyConfigured("bkrepo.admin.password is required when initializing bkrepo")
+        # 实际执行时缺少管理员密码必须失败，不能跳过初始化却让部署 Job 显示成功。
+        # KMS 模式保留 dry-run 时的凭证校验，非 KMS 模式保留原有预览行为。
+        if not super_password and (kms_enabled or not dry_run):
+            raise ImproperlyConfigured(
+                "bkrepo.admin.password is required when initializing bkrepo; "
+                "provide --super-password or configure the KMS credential"
+            )
 
         # 当且仅当 adminUsername 和 adminPassword 不为空时，会初始化 bkrepo 账号和仓库
         if not (super_username and super_password):

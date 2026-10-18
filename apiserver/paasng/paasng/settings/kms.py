@@ -210,7 +210,7 @@ def get_kms_credential(path: str) -> Optional[str]:
     """
     if not is_platform_kms_enabled():
         return None
-    return _lookup(_decrypt_credentials(), path)
+    return _read_credential_field(_decrypt_credentials(), path)
 
 
 def load_kms_settings(settings: LazySettings) -> LazySettings | KMSSettings:
@@ -230,19 +230,19 @@ def load_kms_workloads_settings(settings: LazySettings) -> LazySettings | KMSSet
     if not is_platform_kms_enabled():
         return settings
 
-    overrides = _binding_overrides(settings, _decrypt_credentials(), _WORKLOADS_BINDINGS)
+    overrides = _build_binding_overrides(settings, _decrypt_credentials(), _WORKLOADS_BINDINGS)
     _warn_plaintext(settings, WORKLOADS_SENSITIVE_KEYS, overrides.keys())
     return KMSSettings(settings, overrides)
 
 
 def build_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
     """根据信封生成 apiserver 要覆盖的配置项"""
-    overrides = _binding_overrides(settings, credentials, _APISERVER_BINDINGS)
-    overrides.update(_database_overrides(settings, credentials))
-    overrides.update(_bkrepo_overrides(settings, credentials))
-    overrides.update(_docker_registry_overrides(settings, credentials))
+    overrides = _build_binding_overrides(settings, credentials, _APISERVER_BINDINGS)
+    overrides.update(_build_database_overrides(settings, credentials))
+    overrides.update(_build_bkrepo_overrides(settings, credentials))
+    overrides.update(_build_docker_registry_overrides(settings, credentials))
     # celery.default.uri 已提供完整的 CELERY_BROKER_URL，不再向其中填入 Redis 密码
-    overrides.update(_redis_overrides(settings, credentials, skip=overrides.keys()))
+    overrides.update(_build_redis_overrides(settings, credentials, skip=overrides.keys()))
     return overrides
 
 
@@ -284,7 +284,7 @@ def _check_required(settings: KMSSettings):
         )
 
 
-def _lookup(credentials: Mapping[str, Any], path: str) -> Optional[str]:
+def _read_credential_field(credentials: Mapping[str, Any], path: str) -> Optional[str]:
     """取出信封中的字符串；缺失、null 或空字符串表示未提供，沿用原配置。
 
     可选组件允许留空；非空节点的类型错误仍阻止启动，避免错误结构被当成未配置。
@@ -307,10 +307,12 @@ def _lookup(credentials: Mapping[str, Any], path: str) -> Optional[str]:
     return value if value.strip() else None
 
 
-def _binding_overrides(settings: LazySettings, credentials: Mapping[str, Any], bindings: _Bindings) -> Dict[str, Any]:
+def _build_binding_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], bindings: _Bindings
+) -> Dict[str, Any]:
     overrides = {}
     for key, (path, convert) in bindings.items():
-        if (value := _lookup(credentials, path)) is not None:
+        if (value := _read_credential_field(credentials, path)) is not None:
             overrides[key] = convert(settings, key, value)
     return overrides
 
@@ -323,38 +325,41 @@ def _warn_plaintext(settings: LazySettings, sensitive_keys: List[str], provided:
             logger.warning("Sensitive setting %s still uses its plaintext config", key)
 
 
-def _warn_account(key: str, path: Optional[str]):
+def _warn_using_original_config(key: str, path: Optional[str]):
+    """信封未提供凭证、继续使用原配置时告警；只记录配置名和字段路径，不记录值。"""
     if path is None:
         logger.warning("Sensitive setting %s is not provided by KMS, using its plaintext config", key)
     else:
         logger.warning("Sensitive setting %s is not provided by KMS (%s), using its plaintext config", key, path)
 
 
-def _database_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_database_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
     overrides = {}
     for prefix, instance, encrypted_url_var in _DATABASES:
         if encrypted_url_var in os.environ:
             raise ImproperlyConfigured(f"KMS does not support the encrypted database url {encrypted_url_var}")
         if not settings.get(f"{prefix}DATABASE_NAME"):
             continue
-        if (password := _lookup(credentials, f"mysql.{instance}.password")) is None:
+        if (password := _read_credential_field(credentials, f"mysql.{instance}.password")) is None:
             if settings.get(f"{prefix}DATABASE_PASSWORD"):
-                _warn_account(f"{prefix}DATABASE_PASSWORD", f"mysql.{instance}")
+                _warn_using_original_config(f"{prefix}DATABASE_PASSWORD", f"mysql.{instance}")
             continue
         overrides[f"{prefix}DATABASE_PASSWORD"] = _parse_like_env_var(settings, f"{prefix}DATABASE_PASSWORD", password)
-        if (username := _lookup(credentials, f"mysql.{instance}.username")) is not None:
+        if (username := _read_credential_field(credentials, f"mysql.{instance}.username")) is not None:
             overrides[f"{prefix}DATABASE_USER"] = _parse_like_env_var(settings, f"{prefix}DATABASE_USER", username)
     return overrides
 
 
-def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any], skip: Collection[str]) -> Dict[str, Any]:
+def _build_redis_overrides(
+    settings: LazySettings, credentials: Mapping[str, Any], skip: Collection[str]
+) -> Dict[str, Any]:
     overrides: Dict[str, Any] = {}
-    if (sentinel_password := _lookup(credentials, "redis.sentinel.password")) is not None:
+    if (sentinel_password := _read_credential_field(credentials, "redis.sentinel.password")) is not None:
         overrides.update(
             {key: _parse_like_env_var(settings, key, sentinel_password) for key in _SENTINEL_PASSWORD_KEYS}
         )
 
-    password = _lookup(credentials, "redis.default.password")
+    password = _read_credential_field(credentials, "redis.default.password")
     # 未配置时，Celery 默认使用 REDIS_URL，随之生效
     for key in ("REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"):
         if key in skip or not (original := settings.get(key)):
@@ -366,13 +371,13 @@ def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any], ski
             has_password = any(urlsplit(single_url).password for single_url in url.split(";"))
             if url.partition("://")[0] not in _REDIS_SCHEMES:
                 if has_password:
-                    _warn_account(key, "celery.default.uri" if key == "CELERY_BROKER_URL" else None)
+                    _warn_using_original_config(key, "celery.default.uri" if key == "CELERY_BROKER_URL" else None)
             elif password is None:
                 if has_password:
-                    _warn_account(key, "redis.default")
+                    _warn_using_original_config(key, "redis.default")
             else:
                 _check_url_safe(password, "redis.default.password")
-                updated_url = _with_password(url, password, key)
+                updated_url = _replace_url_password(url, password, key)
             updated.append(updated_url)
         if isinstance(original, (list, tuple)):
             overrides[key] = type(original)(updated)
@@ -381,14 +386,14 @@ def _redis_overrides(settings: LazySettings, credentials: Mapping[str, Any], ski
     return overrides
 
 
-def _bkrepo_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_bkrepo_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
     if not (bkrepo_config := settings.get("BLOBSTORE_BKREPO_CONFIG")):
         return {}
-    if (password := _lookup(credentials, "bkrepo.default.password")) is None:
+    if (password := _read_credential_field(credentials, "bkrepo.default.password")) is None:
         if bkrepo_config.get("PASSWORD"):
-            _warn_account("BLOBSTORE_BKREPO_CONFIG", "bkrepo.default")
+            _warn_using_original_config("BLOBSTORE_BKREPO_CONFIG", "bkrepo.default")
         return {}
-    username = _lookup(credentials, "bkrepo.default.username")
+    username = _read_credential_field(credentials, "bkrepo.default.username")
     return {
         "BLOBSTORE_BKREPO_CONFIG": {
             **bkrepo_config,
@@ -400,7 +405,7 @@ def _bkrepo_overrides(settings: LazySettings, credentials: Mapping[str, Any]) ->
     }
 
 
-def _docker_registry_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_docker_registry_overrides(settings: LazySettings, credentials: Mapping[str, Any]) -> Dict[str, Any]:
     """chart 在启用外部镜像仓库时使用 registry.external 的账号，否则使用 bkrepo.default 的账号，
     此处按原配置中的用户名选出对应的一组。
 
@@ -410,7 +415,10 @@ def _docker_registry_overrides(settings: LazySettings, credentials: Mapping[str,
     """
     accounts = []
     for instance in ("registry.external", "bkrepo.default"):
-        username, password = _lookup(credentials, f"{instance}.username"), _lookup(credentials, f"{instance}.password")
+        username, password = (
+            _read_credential_field(credentials, f"{instance}.username"),
+            _read_credential_field(credentials, f"{instance}.password"),
+        )
         if username is not None and password is not None:
             accounts.append((_parse_like_env_var(settings, "", username), password))
 
@@ -436,7 +444,7 @@ def _check_url_safe(value: str, path: str):
         raise ImproperlyConfigured(f"KMS credential at {path} contains characters unsupported in urls")
 
 
-def _with_password(url: str, password: str, key: str) -> str:
+def _replace_url_password(url: str, password: str, key: str) -> str:
     """将密码填入连接串，保留原有的用户名，支持以 ";" 分隔的多个 sentinel 地址"""
     results = []
     for single_url in url.split(";"):

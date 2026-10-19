@@ -159,7 +159,9 @@ export default {
     filterTableData() {
       const keyword = this.searchValue.trim().toLowerCase();
       if (!keyword) return this.tableData;
-      return this.tableData.filter(item => item.code.toLowerCase().includes(keyword) || item.appCode.toLowerCase().includes(keyword));
+      return this.tableData.filter(
+        item => item.code.toLowerCase().includes(keyword) || item.appCode.toLowerCase().includes(keyword),
+      );
     },
   },
   created() {

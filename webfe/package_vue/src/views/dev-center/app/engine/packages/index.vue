@@ -56,14 +56,6 @@
             <i class="paasng-icon paasng-jump-link" />
           </a>
         </div>
-        <!-- <div class="bk-alert bk-alert-info mb10" v-if="isLesscodeApp">
-                    <i class="bk-icon icon-info"></i>
-                    <div class="bk-alert-content">
-                        <div class="bk-alert-title">该模块部署版本包由“蓝鲸运维开发平台”提供</div>
-                        <div class="bk-alert-description"></div>
-                    </div>
-                    <a :href="GLOBAL.LINK.LESSCODE_INDEX" target="_blank"> {{ $t('点击前往') }} <i class="paasng-icon paasng-jump-link"></i></a>
-                </div> -->
       </div>
       <bk-table
         v-bkloading="{ isLoading: isDataLoading }"
@@ -385,7 +377,7 @@ export default {
           params,
         });
 
-        res.results.forEach((item) => {
+        res.results.forEach(item => {
           item.size = (item.package_size / 1024 / 1024).toFixed(2);
         });
         this.packageList = res.results;

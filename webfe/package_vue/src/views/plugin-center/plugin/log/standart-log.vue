@@ -72,18 +72,6 @@
           >
             {{ formatTime(log.timestamp) }}
           </span>
-          <!-- <div>
-                        <span v-if="log.process_id.length < 5" class="mouseStyle">{{log.process_id}}</span>
-                        <span v-else style="cursor: pointer;" v-bk-tooltips.right="{ theme: 'light', content: log.process_id }">{{processIdSlice(log.process_id)}}</span>
-                    </div>
-                    <template v-if="streamLogFilters.length">
-                        <span class="pod-name" style="cursor: default;">{{log.podShortName}}</span>
-                    </template>
-                    <template v-else>
-                        <div class="pod-name" @click="handleAddStreamLogFilters(log)">
-                            <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{log.podShortName}}</span>
-                        </div>
-                    </template> -->
           <pre
             class="message"
             v-dompurify-html="log.message || '--'"
@@ -122,8 +110,7 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -295,7 +282,7 @@ export default {
       };
 
       const filters = this.streamLogFilters;
-      filters.forEach((filter) => {
+      filters.forEach(filter => {
         if (!params.query.terms) {
           params.query.terms = {};
         }
@@ -387,7 +374,7 @@ export default {
     setKeywordHight(text) {
       const keywords = this.logParams.keyword.split(';');
       if (keywords.length) {
-        keywords.forEach((keyword) => {
+        keywords.forEach(keyword => {
           keyword = keyword.trim();
           if (keyword) {
             const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
@@ -429,7 +416,7 @@ export default {
         // this.lastScrollId = res.scroll_id;
         // logs: [message 日志内容, timestamp 时间戳]
         const data = res.logs.reverse();
-        data.forEach((item) => {
+        data.forEach(item => {
           item.message = this.highlight(logXss.process(item.message));
           // item.podShortName = item.pod_name.split('-').reverse()[0];
         });
@@ -503,7 +490,7 @@ export default {
       this.logParams.stream = '';
       this.logParams.levelname = '';
 
-      params.forEach((item) => {
+      params.forEach(item => {
         const type = item.id;
         const selectItem = item.value;
         this.logParams[type] = selectItem.id;
@@ -865,8 +852,8 @@ export default {
   .stream-log {
     display: flex;
     margin-bottom: 8px;
-    font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-      'Arial';
+    font-family:
+      Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑', 'Arial';
 
     .pod-name {
       min-width: 95px;

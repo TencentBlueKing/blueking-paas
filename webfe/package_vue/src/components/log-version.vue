@@ -210,7 +210,8 @@ export default {
         h4,
         h5 {
             margin: 10px 0;
-            font: normal 14px/1.5 "Helvetica Neue",Helvetica Neue,Helvetica,Arial,Lantinghei SC,Hiragino Sans GB,Microsoft Yahei,sans-serif;
+            font: normal 14px/1.5 "Helvetica Neue", Helvetica Neue, Helvetica, Arial, Lantinghei SC,
+                Hiragino Sans GB, Microsoft Yahei, sans-serif;
             color: #34383e;
             height: auto;
             font-weight: bold;

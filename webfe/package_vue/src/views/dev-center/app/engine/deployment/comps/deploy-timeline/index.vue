@@ -43,7 +43,11 @@
       <div class="paas-timeline-section">
         <div
           v-if="item.tag !== ''"
-          :class="['paas-timeline-title', { 'is-weight': !!item.stage }, { 'is-default': item.status === 'default' && !item.stage }]"
+          :class="[
+            'paas-timeline-title',
+            { 'is-weight': !!item.stage },
+            { 'is-default': item.status === 'default' && !item.stage },
+          ]"
         >
           <template v-if="item.status === 'skip'">
             <s style="color: #c4c6cc;">{{ item.tag }}</s>

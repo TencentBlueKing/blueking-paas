@@ -380,7 +380,9 @@ export default {
     getDiffData(row) {
       const { module_name: moduleName, environment, data_before: dataBefore, data_after: dataAfter } = row;
 
-      const getDataPromise = data => (data ? this.getDeployVersionDetails(moduleName, environment, data) : Promise.resolve(null));
+      const getDataPromise = data => (
+        data ? this.getDeployVersionDetails(moduleName, environment, data) : Promise.resolve(null)
+      );
 
       const promises = [getDataPromise(dataBefore?.data), getDataPromise(dataAfter?.data)];
 

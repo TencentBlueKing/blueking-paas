@@ -226,7 +226,8 @@
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
               class="error-tips pt10"
             >
-              {{ $t('蓝鲸运维开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
+              {{ $t('蓝鲸运维开发平台的应用 ID 只能由小写字母组成, 所属应用') }}
+              {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
               {{ $t('故无法在当前应用下创建蓝鲸运维开发平台的模块。') }}
             </div>
           </div>

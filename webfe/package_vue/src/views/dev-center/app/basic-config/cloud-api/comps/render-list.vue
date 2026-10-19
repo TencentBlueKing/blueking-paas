@@ -667,7 +667,9 @@ export default {
             continue;
           }
           const val = [
-            ...this.apiList.filter(api => api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1),
+            ...this.apiList.filter(
+              api => api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1,
+            ),
           ];
           filterArr.push(...val);
         }
@@ -676,7 +678,9 @@ export default {
         this.allData = filterArr;
       } else {
         this.allData = [
-          ...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1),
+          ...this.apiList.filter(
+            api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1,
+          ),
         ];
       }
       this.resetPaginationByData();

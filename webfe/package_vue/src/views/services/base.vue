@@ -55,7 +55,9 @@ export default {
   methods: {
     initNavData() {
       const navData = JSON.parse(JSON.stringify(toolsNavigationData));
-      const filteredNavData = navData.filter(item => item.name !== 'smartBuildTool' || this.userFeature?.SMART_APP_BUILDER !== false);
+      const filteredNavData = navData.filter(
+        item => item.name !== 'smartBuildTool' || this.userFeature?.SMART_APP_BUILDER !== false,
+      );
       const result = processNavData(filteredNavData);
       this.navCategories = result.navCategories;
       this.navItems = result.navItems;

@@ -567,7 +567,9 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(
+            nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName,
+          );
           reject(router);
         }
       });

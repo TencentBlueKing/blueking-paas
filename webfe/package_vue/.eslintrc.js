@@ -26,8 +26,8 @@ module.exports = {
     require: 'readonly',
   },
   rules: {
-    // Existing templates contain long translated strings and inline expressions. Keep reporting them without blocking CI.
-    'max-len': 'warn',
+    // Keep line-length violations as merge-blocking errors.
+    'max-len': 'error',
     // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格
     'vue/space-unary-ops': [
       'error',

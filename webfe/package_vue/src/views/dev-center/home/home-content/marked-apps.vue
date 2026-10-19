@@ -248,7 +248,9 @@ export default {
 
       // 应用租户模式过滤
       if (this.currentTenantFilters && this.currentTenantFilters.length > 0) {
-        filteredApps = filteredApps.filter(item => this.currentTenantFilters.includes(item.application.app_tenant_mode));
+        filteredApps = filteredApps.filter(
+          item => this.currentTenantFilters.includes(item.application.app_tenant_mode),
+        );
       }
 
       this.markedApps = filteredApps;

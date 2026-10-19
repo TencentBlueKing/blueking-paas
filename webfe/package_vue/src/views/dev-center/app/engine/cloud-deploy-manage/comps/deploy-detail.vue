@@ -142,7 +142,9 @@
               >
                 <span
                   v-bk-tooltips="{
-                    content: `<p>reason: ${instance.terminated_info?.reason}</p>exit_code: ${instance.terminated_info?.exit_code}`,
+                    content:
+                      `<p>reason: ${instance.terminated_info?.reason}</p>`
+                      + `exit_code: ${instance.terminated_info?.exit_code}`,
                     placement: 'bottom',
                     offset: '0, -10',
                     disabled: !instance.terminated_info?.reason,

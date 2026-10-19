@@ -87,7 +87,10 @@
                     {{ $t('蓝鲸 S-mart 源码包') }}
                   </template>
                   <div v-else>
-                    {{ curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸运维开发平台提供源码包') }}
+                    {{ curAppModule.source_origin === 1
+                      || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP
+                      ? $t('代码库')
+                      : $t('蓝鲸运维开发平台提供源码包') }}
                     <a
                       v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
                       :href="lessCodeData.address_in_lesscode || 'javascript:;'"
@@ -140,7 +143,10 @@
         </div>
 
         <div
-          v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.NORMAL_APP || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP"
+          v-if="
+            curAppModule.source_origin === GLOBAL.APP_TYPES.NORMAL_APP
+              || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP
+          "
           class="module-info-item mt15"
         >
           <div class="title">
@@ -154,7 +160,11 @@
               <div
                 v-for="(item, index) in sourceControlTypes"
                 :key="index"
-                :class="['code-depot-item mr10', { 'on': item.value === selectedSourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
+                :class="[
+                  'code-depot-item mr10',
+                  { on: item.value === selectedSourceControlType },
+                  { disabled: sourceControlDisabled && item.value === 'bk_svn' },
+                ]"
                 @click="changeSelectedSourceControl(item.value)"
               >
                 <img :src="getSourceImage(item.imgSrc)">
@@ -413,7 +423,8 @@
             {{ $t('出口 IP 管理') }}
           </div>
           <div class="info">
-            {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }} <strong class="strong"> {{ $t('每次打开开关后，需重新部署方可生效。') }} </strong>
+            {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
+            <strong class="strong"> {{ $t('每次打开开关后，需重新部署方可生效。') }} </strong>
           </div>
           <div class="content no-border">
             <div class="pre-release-wrapper">
@@ -423,7 +434,11 @@
                 </div>
                 <div class="switcher-wrapper">
                   <span
-                    v-if="gatewayInfos.stag.created !== 'Invalid date' && gatewayInfos.stag.node_ip_addresses.length && !gatewayInfosStagLoading"
+                    v-if="
+                      gatewayInfos.stag.created !== 'Invalid date'
+                        && gatewayInfos.stag.node_ip_addresses.length
+                        && !gatewayInfosStagLoading
+                    "
                     class="f12 date-tip"
                     @click="stopCapturing"
                   >{{ gatewayInfos.stag.created + $t('已获取') }}</span>
@@ -470,7 +485,11 @@
                 </div>
                 <div class="switcher-wrapper">
                   <span
-                    v-if="gatewayInfos.prod.created !== 'Invalid date' && gatewayInfos.prod.node_ip_addresses.length && !gatewayInfosProdLoading"
+                    v-if="
+                      gatewayInfos.prod.created !== 'Invalid date'
+                        && gatewayInfos.prod.node_ip_addresses.length
+                        && !gatewayInfosProdLoading
+                    "
                     class="f12 date-tip"
                     @click="stopCapturing"
                   >{{ gatewayInfos.prod.created + $t('已获取') }}</span>
@@ -591,13 +610,17 @@
       <div>
         <p> {{ $t('切换后应用的短域名会指向到') }} {{ curAppModule.name }} {{ $t('模块：') }} </p>
         <p class="info-p">
-          1、stag-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.stag) }} : {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的预发布环境') }}
+          1、stag-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.stag) }} :
+          {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的预发布环境') }}
         </p>
         <p class="info-p">
-          2、prod-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境') }}
+          2、prod-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：
+          {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境') }}
         </p>
         <p class="info-p">
-          3、{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }}
+          3、{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：
+          {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span>
+          {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }}
         </p>
         <p class="info-p">
           {{ $t('请完全评估切换影响后，再进行主模块切换。') }}( <a
@@ -935,7 +958,8 @@ export default {
       const match = this.gitExtendConfig[this.selectedSourceControlType];
 
       if (match && !match.authInfo) {
-        return this.curAppModule.repo.trunk_url === this.sourceControlChangeForm.sourceRepoUrl && this.curAppModule.repo.source_dir === this.sourceControlChangeForm.sourceDir;
+        return this.curAppModule.repo.trunk_url === this.sourceControlChangeForm.sourceRepoUrl
+          && this.curAppModule.repo.source_dir === this.sourceControlChangeForm.sourceDir;
       }
 
       if (match && match.authInfo) {
@@ -1025,7 +1049,10 @@ export default {
         this.getGatewayInfos('stag');
         this.getGatewayInfos('prod');
       }
-      if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+      if (
+        this.curAppModule.source_origin === 1
+        || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+      ) {
         await this.fetchSourceControlTypes();
       }
       const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
@@ -1099,7 +1126,10 @@ export default {
     },
 
     resetSourceType() {
-      if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+      if (
+        this.curAppModule.source_origin === 1
+        || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+      ) {
         this.selectedSourceControlType = this.curAppModule.repo.type;
         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
@@ -1378,7 +1408,10 @@ export default {
         this.initTemplateType = this.curAppModule.template_display_name;
         this.renderRepoInfoIndex += 1;
 
-        if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+        if (
+          this.curAppModule.source_origin === 1
+          || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+        ) {
           this.selectedSourceControlType = this.curAppModule.repo.type;
           this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
           this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
@@ -1387,7 +1420,9 @@ export default {
             this.gitExtendConfig[this.curAppModule.repo.type].sourceDir = this.curAppModule.repo.source_dir || '';
           }
           if (['bare_svn', 'bare_git'].includes(this.curAppModule.repo.type)) {
-            this.gitExtendConfig[this.curAppModule.repo.type].authInfo.account = this.curAppModule.repo_auth_info.username;
+            this.gitExtendConfig[
+              this.curAppModule.repo.type
+            ].authInfo.account = this.curAppModule.repo_auth_info.username;
             this.gitExtendConfig[this.curAppModule.repo.type].authInfo.password = '';
             this.gitExtendConfig[this.curAppModule.repo.type].sourceDir = this.curAppModule.repo.source_dir || '';
           }
@@ -1408,7 +1443,9 @@ export default {
     },
 
     sureSwitch() {
-      this.selectedSourceControlName = this.sourceControlTypes.find(item => item.value === this.selectedSourceControlType).name;
+      this.selectedSourceControlName = this.sourceControlTypes.find(
+        item => item.value === this.selectedSourceControlType,
+      ).name;
       const config = this.gitExtendConfig[this.selectedSourceControlType];
       let sourceRepoUrl = config.selectedRepoUrl;
       switch (this.selectedSourceControlType) {

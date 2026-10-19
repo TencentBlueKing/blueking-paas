@@ -672,7 +672,9 @@ export default {
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
-      const readDataLength = (payload?.envs[envType] || []).filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
+      const readDataLength = (payload?.envs[envType] || []).filter(
+        (e, readIndex) => !e.isEdit && readIndex <= envIndex,
+      ).length;
       const validateFromIndex = envIndex - readDataLength; // 当前点击保存的输入框下标
       await this.$refs.urlInfoForm[validateFromIndex].validate(); // 校验
       const curUrlParams = {

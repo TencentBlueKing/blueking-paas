@@ -196,7 +196,9 @@ export default {
         return this.sandboxEnvVars;
       }
       const searchTerm = this.searchValue.toLowerCase();
-      return this.sandboxEnvVars.filter(({ key, value }) => key.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm));
+      return this.sandboxEnvVars.filter(
+        ({ key, value }) => key.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm),
+      );
     },
     htmlConfig() {
       return this.baseHtmlConfig('#sandbox-env-html', 'add');

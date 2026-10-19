@@ -88,7 +88,9 @@
           - {{ $t('然后在相应的元素使用') }}<code>bk-trace</code> {{ $t('属性配置参数来进行埋点，具体参数如下') }}
         </p>
         <div class="examples">
-          &lt;bk-button theme="primary" :title="$t('submit')" bk-trace="{id: 'UserSearchButton', action: 'click', category: 'UserManage'}"&gt;$t('search')&lt;/bk-button&gt;
+          &lt;bk-button theme="primary" :title="$t('submit')"
+          bk-trace="{id: 'UserSearchButton', action: 'click', category: 'UserManage'}"&gt;
+          $t('search')&lt;/bk-button&gt;
         </div>
         <p class="tips">
           - {{ $t('js脚本会在初初化后对页面的带有') }}<code>bk-trace</code> {{ $t('属性元素进行监听并自动上报定义的参数') }}

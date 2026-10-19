@@ -6,7 +6,11 @@
         <div
           v-for="(item, index) in renderOrganizationList"
           :key="item.id"
-          :class="['organization-item', { focus: index === organizationIndex || item.selected }, { 'is-disabled': item.disabled }]"
+          :class="[
+            'organization-item',
+            { focus: index === organizationIndex || item.selected },
+            { 'is-disabled': item.disabled },
+          ]"
           :title="item.full_name"
           @click.stop="nodeClick(item)">
           <img class="folder-icon" src="./images/file-close.svg" alt="">
@@ -177,7 +181,9 @@ export default {
 
     setCheckStatusByIndex() {
       if (this.organizationIndex !== -1) {
-        const currentOrganizationItem = this.renderOrganizationList.find((item, index) => index === this.organizationIndex);
+        const currentOrganizationItem = this.renderOrganizationList.find(
+          (item, index) => index === this.organizationIndex,
+        );
         if (!currentOrganizationItem.disabled) {
           currentOrganizationItem.is_selected = !currentOrganizationItem.is_selected;
           this.$emit('on-checked', currentOrganizationItem.is_selected, !currentOrganizationItem.is_selected, currentOrganizationItem.is_selected, currentOrganizationItem);

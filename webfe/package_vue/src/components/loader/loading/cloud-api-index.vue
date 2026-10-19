@@ -47,9 +47,11 @@
       width="250"
       height="32"
     />
+    <!-- eslint-disable max-len -- Preserve generated SVG path data. -->
     <path
       d="M 262 97 h 918 v 42 H 262 z M 262 153 h 918 v 20 H 262 z M 262 195 h 918 v 20 H 262 z M 262 237 h 918 v 20 H 262 z M 262 279 h 918 v 20 H 262 z M 262 321 h 918 v 20 H 262 z"
     />
+    <!-- eslint-enable max-len -->
     <rect
       x="0"
       y="0"

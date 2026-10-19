@@ -505,7 +505,9 @@ export default {
         return;
       }
       this.isFilter = true;
-      const filterList = this.dataList.filter(item => item.app_name.indexOf(this.filterKey) !== -1 || item.app_code.indexOf(this.filterKey) !== -1);
+      const filterList = this.dataList.filter(
+        item => item.app_name.indexOf(this.filterKey) !== -1 || item.app_code.indexOf(this.filterKey) !== -1,
+      );
       this.curSearchData.splice(0, this.curSearchData.length, ...filterList);
       this.pageConf.current = 1;
       const total = filterList.length;

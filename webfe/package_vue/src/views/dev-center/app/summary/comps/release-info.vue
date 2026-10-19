@@ -9,7 +9,9 @@
           </p>
           <p>
             <i class="paasng-icon paasng-dynamic-line text-primary middle-list-icon" />
-            {{ $t('由') }}<span class="gruy">{{ appDeployInfo.username }}</span>{{ $t('于') }} {{ smartTime(appDeployInfo.time,'smartShorten') }} {{ appDeployInfo.isEnvOfflined ? $t('下架') : $t('部署') }}
+            {{ $t('由') }}<span class="gruy">{{ appDeployInfo.username }}</span>{{ $t('于') }}
+            {{ smartTime(appDeployInfo.time, 'smartShorten') }}
+            {{ appDeployInfo.isEnvOfflined ? $t('下架') : $t('部署') }}
           </p>
           <!-- <p v-if="baseInfo.canPublishToMarket && curAppModule.is_default"> -->
           <p v-if="curAppModule.is_default && environment === 'prod'">

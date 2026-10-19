@@ -10,6 +10,7 @@
     @after-leave="handleAfterLeave"
   >
     <div class="content">
+      <!-- eslint-disable max-len -- Preserve the complete translation key. -->
       <paasng-alert
         v-if="!isMcpService"
         class="mb-16"
@@ -32,6 +33,7 @@
           )
         "
       />
+      <!-- eslint-enable max-len -->
       <bk-table
         ref="batchTable"
         style="width: 100%"

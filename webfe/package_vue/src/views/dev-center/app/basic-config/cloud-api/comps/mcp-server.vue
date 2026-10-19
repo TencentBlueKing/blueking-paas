@@ -59,6 +59,7 @@
               v-if="row.permission?.status === 'pending'"
               ext-cls="applying"
             />
+            <!-- eslint-disable max-len -- Preserve the complete translation key. -->
             <span
               v-else
               :class="['dot-icon', 'paasng-icon', row.permission?.status]"
@@ -115,6 +116,7 @@
             >
               <i class="paasng-icon paasng-cc-lang"></i>
             </span>
+            <!-- eslint-enable max-len -->
           </component>
           <span v-else-if="column.prop === 'description'">
             <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>

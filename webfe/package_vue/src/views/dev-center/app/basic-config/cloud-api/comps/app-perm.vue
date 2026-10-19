@@ -600,7 +600,9 @@ export default {
       }
       this.isFilter = true;
       this.allData = [
-        ...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1),
+        ...this.apiList.filter(
+          api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1,
+        ),
       ];
       this.pagination.count = this.allData.length;
 

@@ -1307,7 +1307,9 @@ export default {
         // 判断是否提供选择仓库类型
         this.codeRepositoryConfig.creationRepositories = res.filter(item => item.repo_creation_enabled);
 
-        this.sourceControlTypeItem =          this.sourceControlTypes.find(item => item.imgSrc === this.sourceControlTypeItem)?.imgSrc
+        this.sourceControlTypeItem = this.sourceControlTypes.find(
+          item => item.imgSrc === this.sourceControlTypeItem,
+        )?.imgSrc
           ?? this.sourceControlTypes[0]?.imgSrc;
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {

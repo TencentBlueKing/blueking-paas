@@ -50,7 +50,9 @@
                   <!-- 执行中 -->
                   <p v-if="migrationStatus.ongoing_migration">
                     <i class="fa fa-spinner init-loading" />
-                    <span v-if="migrationStatus.ongoing_migration.apply_type === &quot;migrate&quot;"> {{ $t('执行') }} </span>
+                    <span v-if="migrationStatus.ongoing_migration.apply_type === &quot;migrate&quot;">
+                      {{ $t('执行') }}
+                    </span>
                     <span v-else> {{ $t('回滚') }} </span>
                     - {{ migrationStatus.ongoing_migration.description }}
                     <pre
@@ -119,6 +121,7 @@
                           @click="confirmMigrationFinished"
                         > {{ $t('确认迁移') }} </a>
                       </template>
+                      <!-- eslint-disable max-len -- Preserve legacy migration conditions without changing behavior. -->
                       <template v-else-if="(migrationStatus.is_v3_prod_available || migrationStatus.is_v3_stag_available) && confirmBtnEnabled">
                         <a
                           v-if="!migrationFlagObj.is_prod_deployed && !migrationFlagObj.is_stag_deployed"
@@ -147,6 +150,7 @@
                           </bk-popover>
                         </template>
                       </template>
+                      <!-- eslint-enable max-len -->
                       <template v-else>
                         <bk-popover placement="top">
                           <a
@@ -159,7 +163,10 @@
                               {{ $t('请先部署应用并确认功能正常') }}
                               <router-link
                                 class="ps-link"
-                                :to="{ name: 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }"
+                                :to="{
+                                  name: 'appDeployForStag',
+                                  params: { id: currentMigrationId, moduleId: 'default' },
+                                }"
                               >
                                 <i class="paasng-icon paasng-angle-double-right" /> {{ $t('现在去部署') }}
                               </router-link>
@@ -183,10 +190,18 @@
                           <div slot="content">
                             <p>
                               {{ migrationStatus.is_v3_prod_available && migrationStatus.is_v3_stag_available
-                                ? $t('应用预发布环境和生产环境都未下架') : migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? $t('应用生产环境未下架') : $t('应用预发布环境未下架') }}
+                                ? $t('应用预发布环境和生产环境都未下架')
+                                : migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available
+                                  ? $t('应用生产环境未下架')
+                                  : $t('应用预发布环境未下架') }}
                               <router-link
                                 class="ps-link"
-                                :to="{ name: migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? 'appDeployForProd' : 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }"
+                                :to="{
+                                  name: migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available
+                                    ? 'appDeployForProd'
+                                    : 'appDeployForStag',
+                                  params: { id: currentMigrationId, moduleId: 'default' },
+                                }"
                               >
                                 {{ $t('现在去下架') }}
                               </router-link>
@@ -622,7 +637,9 @@
         @submit.prevent="submitMigrateApp"
       >
         <div class="spacing-x1">
-          {{ $t('该操作 ') }} <span style="font-weight: bold;"> {{ $t('无法撤回') }} </span> 。{{ $t('请在严格验证应用网页端、移动端等可以正常访问后，输入应用 ID') }} <code>{{ currentMigrationId }}</code> {{ $t('确认迁移：') }}
+          {{ $t('该操作 ') }} <span style="font-weight: bold;"> {{ $t('无法撤回') }} </span> 。
+          {{ $t('请在严格验证应用网页端、移动端等可以正常访问后，输入应用 ID') }}
+          <code>{{ currentMigrationId }}</code> {{ $t('确认迁移：') }}
         </div>
         <div class="ps-form-group">
           <input
@@ -963,7 +980,15 @@ export default {
     },
     readmeCheckboxChanged() {
       // 迁移须知文档中的checkbox有变动时需要对应修改页面迁移按钮的可用状态
-      if (this.noOutterAuthorize && this.noOutterDb && this.noStacklessPython && this.noNfsOrFileupload && this.noApiGateway && this.finshedMigrationReadme && this.noOutterLink) {
+      if (
+        this.noOutterAuthorize
+        && this.noOutterDb
+        && this.noStacklessPython
+        && this.noNfsOrFileupload
+        && this.noApiGateway
+        && this.finshedMigrationReadme
+        && this.noOutterLink
+      ) {
         this.bAllPreConfirmChecked = true;
       } else {
         this.bAllPreConfirmChecked = false;

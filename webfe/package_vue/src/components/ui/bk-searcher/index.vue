@@ -152,7 +152,7 @@
 </template>
 
 <script>
-/* eslint-disable vue/no-mutating-props -- This legacy component updates the caller-owned filter collections in place. */
+/* eslint-disable vue/no-mutating-props -- Updates caller-owned filter collections in place. */
 import clickoutside from './clickoutside';
 
 /**
@@ -331,7 +331,8 @@ export default {
     this.filterListCache.splice(0, this.filterListCache.length, ...filterList);
 
     const { searchWrapper, searchParamsWrapper } = this.$refs;
-    this.searcherDropdownLeft =      getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) + this.searchParamsItemMargin;
+    const searchParamsOffset = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper);
+    this.searcherDropdownLeft = searchParamsOffset + this.searchParamsItemMargin;
 
     // 绑定清除 searchParams 的方法，父组件调用方式如下：
     // this.$refs.bkSearcher.$emit('resetSearchParams')
@@ -515,7 +516,7 @@ export default {
       const valueContainerNode = target.querySelector('.value-container');
 
       const { searchWrapper } = this.$refs;
-      this.searcherDropdownLeft =        getActualLeft(target)
+      this.searcherDropdownLeft = getActualLeft(target)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)

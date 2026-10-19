@@ -152,7 +152,6 @@
                 {{ $t('环境变量配置') }}
               </p>
               <p class="desc">
-                <!-- <a class="link-a" :href="GLOBAL.DOC.ENV_VAR_INLINE" target="_blank"> {{ $t('文档：什么是内置环境变量？') }} </a> -->
                 {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
                 <span
                   class="built-in-env"

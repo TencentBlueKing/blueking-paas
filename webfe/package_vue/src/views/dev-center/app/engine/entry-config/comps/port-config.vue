@@ -85,10 +85,23 @@
                         >
                           <a
                             href="javascript:;"
-                            :class="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? 'disabled' : ''"
-                            :title="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? `${port.name}端口已设置为主入口` : `设置${port.name}端口为主入口`"
+                            :class="
+                              processIngress.service_port_name === port.name
+                                && processIngress.service_name === service.name ? 'disabled' : ''
+                            "
+                            :title="
+                              processIngress.service_port_name === port.name
+                                && processIngress.service_name === service.name
+                                ? `${port.name}端口已设置为主入口`
+                                : `设置${port.name}端口为主入口`
+                            "
                           >
-                            <template v-if="processIngress.service_port_name === port.name && processIngress.service_name === service.name">
+                            <template
+                              v-if="
+                                processIngress.service_port_name === port.name
+                                  && processIngress.service_name === service.name
+                              "
+                            >
                               <span
                                 class="ps-text ps-text-ellipsis f12"
                                 style="max-width: 80px;"
@@ -493,7 +506,10 @@ export default {
           this.processServices = res.proc_services.map((service) => {
             service.ports.forEach((port) => {
               // 当前端口为主入口
-              if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
+              if (
+                this.processIngress.service_name === service.name
+                && this.processIngress.service_port_name === port.name
+              ) {
                 port.isMainEntry = true;
               }
             });
@@ -595,7 +611,10 @@ export default {
       this.processServices.forEach((service) => {
         service.ports.forEach((port) => {
           // 当前端口为主入口
-          if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
+          if (
+            this.processIngress.service_name === service.name
+            && this.processIngress.service_port_name === port.name
+          ) {
             port.isMainEntry = true;
           } else {
             port.isMainEntry = false;

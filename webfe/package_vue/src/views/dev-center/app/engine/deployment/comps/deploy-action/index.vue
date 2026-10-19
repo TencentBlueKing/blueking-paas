@@ -484,7 +484,6 @@
             >
               <span>{{ `${$t('部署至')}${envName}` }}</span>
             </bk-button>
-            <!-- <a class="vm" href="javascript: void(0);" @click="handleShowCommits" v-if="canShowCommits"> {{ $t('查看代码版本差异') }} </a> -->
             <div
               v-if="canShowCommits || (deploymentInfo && !isAppOffline)"
               class="operate"
@@ -730,9 +729,9 @@
                     <!-- <a :href="item.value" target="_blank" v-if="item.text === $t('地址')"> {{ $t('点击访问') }} </a> -->
                     <a
                       v-if="
-                        item.text === $t('源码管理') &&
-                          lessCodeFlag &&
-                          curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP
+                        item.text === $t('源码管理')
+                          && lessCodeFlag
+                          && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP
                       "
                       :target="lessCodeData.address_in_lesscode ? '_blank' : ''"
                       :href="lessCodeData.address_in_lesscode || 'javascript:;'"
@@ -1577,6 +1576,7 @@ export default {
 
     computedBoxFixed() {
       const box = document.querySelector('.deploy-action-box');
+      // eslint-disable-next-line max-len -- Preserve the disabled legacy selector.
       // const box = document.getElementById('deploying-box') || document.getElementById('offlineing-box') || document.getElementById('success-box') || document.getElementById('fail-box')
       if (box && box.getBoundingClientRect) {
         const elementRect = box?.getBoundingClientRect();

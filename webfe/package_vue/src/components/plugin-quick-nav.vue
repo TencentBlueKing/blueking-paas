@@ -184,7 +184,9 @@ export default {
       if (this.searchValue === '') {
         this.viewPluinList = this.pluginList;
       }
-      this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
+      this.viewPluinList = this.pluginList.filter(
+        item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1,
+      );
     }, 100),
 
     getTarget(pluginId, pdId) {

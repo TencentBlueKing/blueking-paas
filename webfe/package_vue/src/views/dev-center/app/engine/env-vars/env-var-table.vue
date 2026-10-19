@@ -304,7 +304,9 @@ export default {
       let filteredList = [...this.varList];
 
       if (this.active !== 'all') {
-        filteredList = filteredList.filter(item => item.environment_name === this.active || item.isNew || item.isBatchDeleted);
+        filteredList = filteredList.filter(
+          item => item.environment_name === this.active || item.isNew || item.isBatchDeleted,
+        );
       }
       // 过滤掉标记为删除的行
       return filteredList.filter(item => !item.isBatchDeleted);
@@ -545,7 +547,9 @@ export default {
 
     // 设置指定行的编辑状态（供父组件调用）
     setEditingStatus(data, isEditing) {
-      const curIndex = this.varList.findIndex(item => item.key === data.key && item.environment_name === data.environment_name);
+      const curIndex = this.varList.findIndex(
+        item => item.key === data.key && item.environment_name === data.environment_name,
+      );
       const row = this.varList[curIndex];
       if (row) {
         row.isEditing = isEditing;
@@ -609,7 +613,9 @@ export default {
 
     // 批量删除行
     batchDel(row) {
-      const deleteIndex = this.varList.findIndex(item => item.id === row.id && item.environment_name === row.environment_name);
+      const deleteIndex = this.varList.findIndex(
+        item => item.id === row.id && item.environment_name === row.environment_name,
+      );
       // 标记为批量删除状态
       this.$set(this.varList[deleteIndex], 'isBatchDeleted', true);
       this.syncFormDataWithFilteredList();

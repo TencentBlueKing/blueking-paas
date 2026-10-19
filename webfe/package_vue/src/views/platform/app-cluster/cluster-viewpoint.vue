@@ -249,7 +249,8 @@ export default {
       // 过滤数据，检查 name 和 bcs_cluster_id 是否包含搜索词
       this.displayClusterList = this.tenantList.filter((item) => {
         const nameMatches = item.name && item.name.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-        const clusterIdMatches = item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+        const clusterIdMatches = item.bcs_cluster_id
+          && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
         return nameMatches || clusterIdMatches;
       });
     },

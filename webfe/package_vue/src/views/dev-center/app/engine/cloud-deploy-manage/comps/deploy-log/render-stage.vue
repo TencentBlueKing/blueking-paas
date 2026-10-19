@@ -143,7 +143,8 @@ export default {
                 line-height: 20px;
                 font-size: 12px;
                 color: #c4c6cc;
-                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
+                font-family: Consolas, source code pro, Bitstream Vera Sans Mono, Courier, monospace,
+                    \\5FAE\8F6F\96C5\9ED1, Arial;
             }
         }
     }
@@ -176,7 +177,8 @@ export default {
                 line-height: 20px;
                 font-size: 12px;
                 color: #c4c6cc;
-                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
+                font-family: Consolas, source code pro, Bitstream Vera Sans Mono, Courier, monospace,
+                    \\5FAE\8F6F\96C5\9ED1, Arial;
             }
         }
     }

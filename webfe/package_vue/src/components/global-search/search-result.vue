@@ -171,7 +171,8 @@ export default {
       let allCount = 0;
       try {
         this.curSearchKeyword = this.searchValue;
-        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu()].map(item => this.promiseWithError(item)));
+        const requests = [this.fetchApp(), this.fetchIwiki(), this.fetchDocu()];
+        const res = await Promise.all(requests.map(item => this.promiseWithError(item)));
         res.forEach((item, index) => {
           const { count, results } = item;
           allCount += count;

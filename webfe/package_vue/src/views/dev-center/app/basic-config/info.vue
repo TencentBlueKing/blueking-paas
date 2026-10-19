@@ -530,7 +530,9 @@ export default {
       const { logoData } = this.appBaseInfoConfig;
 
       // 添加必填字段
-      Object.entries({ name, tag_id: tagId, availability_level: availabilityLevel }).forEach(([key, value]) => value !== undefined && formData.append(key, value));
+      Object.entries({ name, tag_id: tagId, availability_level: availabilityLevel }).forEach(([key, value]) => {
+        if (value !== undefined) formData.append(key, value);
+      });
 
       if (logoData) {
         formData.append('logo', logoData);

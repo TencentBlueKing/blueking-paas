@@ -40,11 +40,13 @@ OPERATED_BY_MAX_LENGTH = 32
 
 
 class ApplyRecordOperateError(Exception):
-    """网关申请记录 取消/删除 操作失败
+    """网关 取消/删除 申请记录失败
+
+    保留网关的状态码与错误信息, 供转换为 PaaS 统一错误时区分 "记录不存在", "状态不合法" 等场景.
 
     :param message: 网关返回的错误信息, 可能为空
     :param status_code: 网关返回的 HTTP 状态码, 网络异常等场景下为空
-    :param gateway_error_code: 网关层错误码 (如 APP_NO_PERMISSION)
+    :param gateway_error_code: 网关层错误码, 由响应头标记
     """
 
     def __init__(
@@ -59,67 +61,38 @@ class ApplyRecordOperateError(Exception):
         self.gateway_error_code = gateway_error_code
 
     @classmethod
-    def from_gateway_exception(cls, exc: Exception) -> "ApplyRecordOperateError":
-        """根据网关请求异常构造, 自动提取状态码, 错误信息与网关层错误码"""
-        status_code, message = extract_gateway_error(exc)
+    def from_exception(cls, exc: Exception) -> "ApplyRecordOperateError":
+        """从网关请求异常构造, 提取状态码, 错误信息与网关层错误码"""
+        status_code = getattr(exc, "response_status_code", None)
         # 网关层错误 (应用认证, 资源授权失败等) 由响应头标记, 此时请求未到达业务后端
         gateway_error_code = str(getattr(exc, "error_code", "") or "")
+
+        body = None
+        response_json = getattr(exc, "response_json", None)
+        if callable(response_json):
+            try:
+                body = response_json()
+            except ValueError:
+                body = None
+
+        # 网关业务错误固定返回 {"error": {"code": ..., "message": ...}}
+        error = body.get("error") if isinstance(body, dict) else None
+        message = str(error.get("message") or "") if isinstance(error, dict) else ""
+
         return cls(message=message, status_code=status_code, gateway_error_code=gateway_error_code)
-
-
-def extract_gateway_error(exc: Exception) -> tuple[int | None, str]:
-    """从网关请求异常中提取 (status_code, message)
-
-    优先取响应体中error.message, 其次兼容 DRF 风格的 detail/message, 最后回退到原始响应文本.
-    """
-    status_code = getattr(exc, "response_status_code", None)
-
-    body = None
-    response_json = getattr(exc, "response_json", None)
-    if callable(response_json):
-        try:
-            body = response_json()
-        except Exception:  # noqa: BLE001 - 响应体可能不是合法的 JSON
-            body = None
-
-    if isinstance(body, dict):
-        error = body.get("error")
-        if isinstance(error, dict) and error.get("message"):
-            return status_code, str(error["message"])
-        for key in ("detail", "message"):
-            if body.get(key):
-                return status_code, str(body[key])
-
-    # 兜底: 使用原始响应文本, 避免错误信息过长
-    response_text = getattr(exc, "response_text", "") or ""
-    return status_code, str(response_text)[:500] or str(exc)
-
-
-# 网关返回的错误信息中表示 "接口未注册" 的关键字
-_API_NOT_FOUND_MARKERS = ("API not found",)
 
 
 def _to_api_error(exc: ApplyRecordOperateError) -> APIError:
     """将网关异常转换为 PaaS 的统一错误"""
-    # 网关层拒绝时请求不会到达业务后端, 需与业务层的 "记录不存在" 区分开, 否则会误导排查方向.
-    # 两者的处置方式不同: 接口未注册需发布并同步网关资源, 未授权则需在网关上为调用方授权资源
-    if exc.gateway_error_code:
-        if any(marker in exc.message for marker in _API_NOT_FOUND_MARKERS):
-            return error_codes.CLOUD_API_GATEWAY_API_NOT_REGISTERED
+    if not exc.gateway_error_code:
+        if exc.status_code == 404:
+            return error_codes.CLOUD_API_APPLY_RECORD_NOT_FOUND
 
-        return error_codes.CLOUD_API_GATEWAY_PERMISSION_DENIED
+        if exc.status_code == 400:
+            if exc.message:
+                return error_codes.CLOUD_API_APPLY_RECORD_STATUS_INVALID.f(exc.message, replace=True)
+            return error_codes.CLOUD_API_APPLY_RECORD_STATUS_INVALID
 
-    if exc.status_code == 404:
-        # 记录不存在, 不属于当前应用或不在当前租户范围内, 网关不区分这几种场景
-        return error_codes.CLOUD_API_APPLY_RECORD_NOT_FOUND
-
-    if exc.status_code == 400:
-        # 状态不合法 (如非待审批的申请被取消) 等业务错误, 透传网关返回的信息
-        if exc.message:
-            return error_codes.CLOUD_API_APPLY_RECORD_STATUS_INVALID.f(exc.message, replace=True)
-        return error_codes.CLOUD_API_APPLY_RECORD_STATUS_INVALID
-
-    # 其余情况 (500/502/503, 网络异常等) 统一提示服务暂不可用
     return error_codes.CLOUD_API_SERVICE_UNAVAILABLE
 
 

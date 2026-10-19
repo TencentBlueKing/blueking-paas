@@ -127,7 +127,7 @@ class MCPServerApiClient:
         try:
             self.client.cancel_permission_apply_record(data=data, path_params={"record_id": record_id})
         except RequestException as e:
-            raise ApplyRecordOperateError.from_gateway_exception(e) from e
+            raise ApplyRecordOperateError.from_exception(e) from e
 
     def delete_permission_apply_record(self, app_code: str, record_id: int, operated_by: str) -> None:
         """删除已取消的 MCP Server 权限申请"""
@@ -136,4 +136,4 @@ class MCPServerApiClient:
         try:
             self.client.delete_permission_apply_record(params=params, path_params={"record_id": record_id})
         except RequestException as e:
-            raise ApplyRecordOperateError.from_gateway_exception(e) from e
+            raise ApplyRecordOperateError.from_exception(e) from e

@@ -15,11 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""云 API 权限申请记录 取消/删除 的公共逻辑
+"""云 API 权限申请记录 取消/删除 的错误处理
 
 网关 (bk-apigateway) 的取消, 删除接口在状态不合法, 记录不存在等场景下会返回
 {"error": {"code": ..., "message": ...}} 格式的错误响应, 本模块负责将其转换为
-PaaS 统一的错误响应, 并记录应用的审计信息.
+PaaS 统一的错误响应.
 """
 
 import logging
@@ -28,9 +28,6 @@ from typing import Iterator
 
 from blue_krill.web.std_error import APIError
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -121,43 +118,3 @@ def validate_operated_by(operated_by: str) -> str:
     if not operated_by or not operated_by.strip() or len(operated_by) > OPERATED_BY_MAX_LENGTH:
         raise error_codes.CLOUD_API_OPERATED_BY_INVALID
     return operated_by
-
-
-def add_operate_audit_record(
-    *,
-    app_code: str,
-    tenant_id: str,
-    user: str,
-    operation: OperationEnum,
-    record_id: int,
-    gateway_name: str = "",
-    detail_data: str | int | dict | list | None = None,
-) -> None:
-    """记录申请记录取消/删除的审计信息
-
-    :param app_code: 应用 ID, 即操作所属的应用
-    :param user: encode 后的用户名, 即 request.user.pk
-    :param operation: 操作类型, 取消或删除
-    :param record_id: 申请记录 ID, 用于审计追溯
-    :param gateway_name: 网关名称, 用于审计追溯
-    :param detail_data: 记录在审计中的详情数据. DataType.CLOUD_API_RECORD + 申请记录 ID 时.
-        操作记录页面会提供 "查看详情" 入口并通过 ID 查询单据详情; 若单据已不可查询 (如已删除的申请,
-        MCP Server 申请), 应传入字典以避免展示无效的详情入口.
-    """
-    if detail_data is None:
-        detail_data = record_id
-
-    try:
-        add_app_audit_record(
-            app_code=app_code,
-            tenant_id=tenant_id,
-            user=user,
-            action_id=AppAction.MANAGE_CLOUD_API,
-            operation=operation,
-            target=OperationTarget.CLOUD_API,
-            attribute=gateway_name,
-            result_code=ResultCode.SUCCESS,
-            data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=detail_data),
-        )
-    except Exception:
-        logger.exception("Failed to add audit record for operate apply record")

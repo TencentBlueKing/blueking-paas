@@ -24,7 +24,6 @@ from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2 import serializers
 from paasng.accessories.cloudapi_v2.apply_records import (
-    add_operate_audit_record,
     handle_apply_record_operate_error,
     validate_operated_by,
 )
@@ -121,15 +120,23 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 app_code=app.code, record_id=record_id, operated_by=operated_by
             )
 
-        add_operate_audit_record(
-            app_code=app.code,
-            tenant_id=tenant_id,
-            user=request.user.pk,
-            operation=OperationEnum.CANCEL,
-            record_id=record_id,
-            # MCP Server 申请记录不支持通过申请记录 ID 查询单据详情, 使用字典避免展示无效的详情入口
-            detail_data={"record_id": record_id, "record_type": "mcp_server"},
-        )
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.CANCEL,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                # MCP Server 申请记录不支持通过申请记录 ID 查询单据详情, 使用字典避免展示无效的详情入口
+                data_after=DataDetail(
+                    type=DataType.CLOUD_API_RECORD, data={"record_id": record_id, "record_type": "mcp_server"}
+                ),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for cancel mcp server apply record")
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -147,13 +154,21 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 app_code=app.code, record_id=record_id, operated_by=operated_by
             )
 
-        add_operate_audit_record(
-            app_code=app.code,
-            tenant_id=tenant_id,
-            user=request.user.pk,
-            operation=OperationEnum.DELETE,
-            record_id=record_id,
-            # 记录已被删除, 无法再通过申请记录 ID 查询详情, 使用字典避免展示无效的详情入口
-            detail_data={"record_id": record_id, "record_type": "mcp_server"},
-        )
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                # 记录已被删除, 无法再通过申请记录 ID 查询详情, 使用字典避免展示无效的详情入口
+                data_after=DataDetail(
+                    type=DataType.CLOUD_API_RECORD, data={"record_id": record_id, "record_type": "mcp_server"}
+                ),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for delete mcp server apply record")
+
         return Response(status=status.HTTP_204_NO_CONTENT)

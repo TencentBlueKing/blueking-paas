@@ -353,7 +353,7 @@ class ListAppRequestLogsInputSLZ(serializers.Serializer):
         """校验查询时间范围
 
         - time_end 必须大于 time_start
-        - time_end 若为未来时间，截断为当前时间
+        - time_end 若为未来时间, 截断为当前时间
         - time_start 不得早于当前时间前 REQUEST_LOG_MAX_LOOKBACK_DAYS 天, 边界值允许
         """
         time_start = attrs["time_start"]

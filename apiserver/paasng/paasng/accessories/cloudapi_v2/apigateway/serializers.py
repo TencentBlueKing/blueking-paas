@@ -24,7 +24,7 @@ from paasng.accessories.cloudapi.constants import (
     GrantDimensionEnum,
     PermissionApplyExpireDaysEnum,
 )
-from paasng.accessories.cloudapi_v2.constants import MAX_QUERY_RANGE_DAYS
+from paasng.accessories.cloudapi_v2.constants import REQUEST_LOG_MAX_LOOKBACK_DAYS
 
 # ============ 网关 API 相关 ============
 
@@ -354,7 +354,7 @@ class ListAppRequestLogsInputSLZ(serializers.Serializer):
 
         - time_end 必须大于 time_start
         - time_end 若为未来时间，截断为当前时间
-        - time_start 不得早于当前时间前 MAX_QUERY_RANGE_DAYS 天, 边界值允许
+        - time_start 不得早于当前时间前 REQUEST_LOG_MAX_LOOKBACK_DAYS 天, 边界值允许
         """
         time_start = attrs["time_start"]
         now = int(timezone.now().timestamp())
@@ -362,9 +362,9 @@ class ListAppRequestLogsInputSLZ(serializers.Serializer):
 
         if time_end <= time_start:
             raise serializers.ValidationError(_("结束时间必须大于起始时间"))
-        if time_start < now - MAX_QUERY_RANGE_DAYS * 24 * 60 * 60:
+        if time_start < now - REQUEST_LOG_MAX_LOOKBACK_DAYS * 24 * 60 * 60:
             raise serializers.ValidationError(
-                _("起始时间不得早于当前时间前 %(days)s 天") % {"days": MAX_QUERY_RANGE_DAYS}
+                _("起始时间不得早于当前时间前 %(days)s 天") % {"days": REQUEST_LOG_MAX_LOOKBACK_DAYS}
             )
 
         attrs["time_end"] = time_end

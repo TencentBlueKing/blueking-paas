@@ -24,5 +24,5 @@ class PermissionApplyStatus(StrStructuredEnum):
     PENDING = EnumField("pending", label="待审批")
 
 
-# 调用流水日志可查询的最大时间跨度 (天): time_start 不得早于当前时间前该天数, 边界值允许.
-MAX_QUERY_RANGE_DAYS = 180
+# 调用流水日志的最早可回溯天数 (日志保留窗口): time_start 不得早于当前时间前该天数, 边界值允许.
+REQUEST_LOG_MAX_LOOKBACK_DAYS = 180

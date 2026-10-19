@@ -25,6 +25,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2.apigateway import serializers
 from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
+from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServiceError
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
@@ -32,6 +33,7 @@ from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.dictx import get_items
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -340,3 +342,20 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             app_code=app.code, record_id=record_id
         )
         return self._response_with_serializer(serializers.GetAppESBComponentPermissionApplyRecordOutputSLZ, data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.ListAppAlarmRecordsInputSLZ,
+        responses={200: serializers.ListAppAlarmRecordsOutputSLZ},
+        tags=["CloudAPIV2"],
+    )
+    def list_app_alarm_records(self, request, *args, **kwargs):
+        """查询应用维度告警记录"""
+        validated_data = self._validate(serializers.ListAppAlarmRecordsInputSLZ, data=request.query_params)
+
+        app, tenant_id = self._get_app_and_tenant()
+        try:
+            data = self._get_client(tenant_id, request).list_app_alarm_records(app_code=app.code, **validated_data)
+        except ApiGatewayServiceError as e:
+            raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
+
+        return self._response_with_serializer(serializers.ListAppAlarmRecordsOutputSLZ, data)

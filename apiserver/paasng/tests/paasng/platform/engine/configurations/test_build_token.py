@@ -238,12 +238,12 @@ class TestIssueBuildToken:
         assert claims["push"] == [{"repo": CLIENT_REPO, "tags": [TAG, "cnb-build-cache"]}]
 
     def test_pull_scope(self, build_proc):
-        """AC-T05：平台仓库中仅本应用产物与缓存可读，其他应用不可读"""
+        """AC-T05：平台仓库中的镜像（含其他应用的产物）均可读"""
         claims = _verify(
             issue_build_token(build_proc, _kaniko_metadata(), _registry(), CLUSTER), _load_keyset().to_jwks()
         )
         assert claims["pull"] == [f"{ALIAS}/"]
-        assert claims["pull_deny"] == [f"{ALIAS}/{NAMESPACE}/"]
+        assert claims["pull_deny"] == []
 
     def test_registry_with_port(self, build_proc):
         image = f"registry.local:5000/{NAMESPACE}/{APP_CODE}/{MODULE}:{TAG}"

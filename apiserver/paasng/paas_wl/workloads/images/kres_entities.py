@@ -44,7 +44,11 @@ class ImageCredentials(AppEntity):
         serializer = ImageCredentialsSerializer
 
     @classmethod
-    def load_from_app(cls, app: WlApp) -> "ImageCredentials":
+    def load_from_app(cls, app: WlApp, with_builtin: bool = True) -> "ImageCredentials":
+        """加载应用的镜像凭证：用户配置的凭证，以及平台仓库的内置凭证
+
+        :param with_builtin: 是否加入平台仓库的内置凭证。为 False 时只返回用户配置的凭证
+        """
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
@@ -52,6 +56,8 @@ class ImageCredentials(AppEntity):
         ]
 
         def should_inject_builtin_image_credential():
+            if not with_builtin:
+                return False
             # 明确说明当前集群不注入内置镜像凭证的，需要跳过（如：用户托管的集群的情况）
             annos = get_cluster_by_app(app).annotations
             return annos.get(ClusterAnnotationKey.SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL) != "true"

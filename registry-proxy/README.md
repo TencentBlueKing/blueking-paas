@@ -70,9 +70,9 @@ apiserver 为每次构建签发一个二级 token，授权范围只覆盖本应�
   4. 拉取：命中 `push` 的仓库放行 → 命中 `pull_deny` 拒绝 → 命中 `pull` 放行 → 其余拒绝；
   5. mount：来源不可读或跨上游时，标记为需要降级。
 - **目的**：
-  - 推送按仓库和 tag 精确授权，防止构建覆盖其他应用的镜像或本应用的其他 tag（例如 `latest`）；
-  - `pull_deny` 覆盖整个平台命名空间，防止读取其他应用的镜像；
-  - `push` 授权优先于 `pull_deny`，本应用的产物与缓存仓库也在该命名空间下，这样才能读取构建缓存；
+  - 推送按仓库和 tag 精确授权，防止构建覆盖其他应用（或其他沙箱镜像）的镜像或本构建产物的其他 tag（例如 `latest`）；
+  - `push` 授权的仓库总是可读，否则 `pull_deny` 覆盖到产物所在目录时，构建会读不到自己的缓存；
+  - apiserver 目前签发的 `pull_deny` 为空，平台仓库（沙箱为沙箱仓库）中的镜像对构建均可读；
   - 有的上游签发的 token 不按 scope 限权，这一步就是那里唯一的访问控制。
 
 ### 4. 纵深防御
@@ -175,6 +175,7 @@ apiserver 为每次构建签发一个二级 token，授权范围只覆盖本应�
 | `pkg/upstream` | 别名推导、上游凭证加载、每个上游独立的连接配置、按「上游 + scope」缓存的 Bearer / Basic 鉴权 | 5 |
 | `pkg/proxy` | 协议转发层：钩子接口与主流程、纵深防御、上游发送与 401 重试、响应头清理、`Location` 改写、上传会话签名、审计与指标 | 2、4、5、6、7 |
 | `docs/forwarding-design.md` | 转发层选型（不依赖 ociproxy 的原因）、安全设计与上游行为实测 | — |
+| `docs/deployment.md` | 部署、密钥分发与轮换、开启与回滚集群开关、告警与容量规划 | — |
 | `hack/` | 集成测试、e2e 脚本、上游行为探测、压测与 token 工具 | — |
 
 `pkg/proxy` 内部按文件划分：
@@ -192,7 +193,9 @@ apiserver 为每次构建签发一个二级 token，授权范围只覆盖本应�
 
 ## 配置
 
-见 [`config.example.yaml`](config.example.yaml)。必需的输入：
+部署到集群（`bkpaas-registry-proxy` Chart，每个应用集群、沙箱集群一套）见 [`docs/deployment.md`](docs/deployment.md)。
+
+配置文件见 [`config.example.yaml`](config.example.yaml)。必需的输入：
 
 | 输入 | 配置项 | 说明 |
 |------|--------|------|

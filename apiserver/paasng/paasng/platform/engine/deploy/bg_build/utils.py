@@ -28,14 +28,22 @@ from django.conf import settings
 from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
+from paas_wl.infras.cluster.utils import get_cluster_by_app, get_image_registry_by_app
 from paas_wl.infras.resources.utils.basic import get_slugbuilder_resources
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.text import b64encode
+from paas_wl.workloads.images.entities import ImageCredential
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
+from paasng.platform.engine.configurations.build_token import issue_build_token
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 from paasng.platform.engine.configurations.image import cnb_cache_image, kaniko_cache_repository
+from paasng.platform.engine.configurations.registry_proxy import (
+    BUILD_TOKEN_USERNAME,
+    BuildRegistryProxy,
+    get_build_registry_proxy,
+)
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -64,6 +72,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
     store = make_blob_store(bucket)
     app: "WlApp" = bp.app
     env_vars: Dict[str, str] = {}
+    registry_proxy = get_build_registry_proxy(app, metadata)
 
     # TODO: 支持构建镜像到私有仓库
     # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
@@ -79,8 +88,12 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
             ),
             OUTPUT_IMAGE=output_image,
             CACHE_REPO=kaniko_cache_repository(image_repository),
-            DOCKER_CONFIG_JSON=b64encode(json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())),
         )
+        # 经镜像代理构建时，平台仓库的真实凭证不得进入构建环境
+        if not registry_proxy:
+            env_vars["DOCKER_CONFIG_JSON"] = b64encode(
+                json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())
+            )
     elif metadata.use_cnb:
         # build application as image
         image_repository = metadata.image_repository
@@ -144,7 +157,43 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
 
     update_env_vars_with_metadata(env_vars, metadata)
 
+    # 最后写入，覆盖 metadata.extra_envs 中按平台仓库生成的 SKIP_TLS_VERIFY_REGISTRIES 等配置
+    if registry_proxy:
+        env_vars.pop("INSECURE_REGISTRIES", None)
+        env_vars.update(generate_kaniko_proxy_env_vars(bp, metadata, registry_proxy))
+
     return env_vars
+
+
+def generate_kaniko_proxy_env_vars(
+    bp: BuildProcess, metadata: BuildMetadata, registry_proxy: BuildRegistryProxy
+) -> Dict[str, str]:
+    """生成 kaniko 经镜像代理构建时需要改写的环境变量：产物与缓存经代理推送，平台仓库的 base image
+    经 `--registry-map` 从代理拉取，构建容器只持有构建 token
+
+    :raises BuildTokenUnavailable: 无法签发构建 token
+    """
+    app: "WlApp" = bp.app
+    image_repository = metadata.image_repository
+    if image_repository is None:
+        raise ValueError("image_repository is required for Dockerfile builds")
+
+    token = issue_build_token(bp, metadata, get_image_registry_by_app(app), get_cluster_by_app(app).name)
+    # 不注入平台内置凭证，用户配置的私有仓库凭证保留；与代理地址同名的用户凭证被代理凭证覆盖
+    credentials = ImageCredentials.load_from_app(app, with_builtin=False)
+    credentials.credentials.append(
+        ImageCredential(registry=registry_proxy.address, username=BUILD_TOKEN_USERNAME, password=token)
+    )
+    return {
+        "OUTPUT_IMAGE": registry_proxy.rewrite(metadata.image),
+        "CACHE_REPO": kaniko_cache_repository(registry_proxy.rewrite(image_repository)),
+        "DOCKER_CONFIG_JSON": b64encode(json.dumps(credentials.build_dockerconfig())),
+        # 只映射平台仓库主机，其他主机的镜像仍直连
+        "REGISTRY_MAP": registry_proxy.registry_map,
+        # 代理失败时不得回退直连平台仓库
+        "SKIP_DEFAULT_REGISTRY_FALLBACK": "true",
+        "SKIP_TLS_VERIFY_REGISTRIES": registry_proxy.address if registry_proxy.skip_tls_verify else "",
+    }
 
 
 def generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:

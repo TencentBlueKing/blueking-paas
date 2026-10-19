@@ -2,7 +2,7 @@
 
 以应用身份部署 AI Agent 应用到指定环境。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
 
-部署逻辑与用户态接口 `deploy_with_module` 一致，仅部署操作人由请求体中的 `operator` 指定。应用态部署不支持构建调试（`advanced_options.debug_enabled`）。
+部署逻辑与用户态接口 `deploy_with_module` 一致，仅部署操作人由请求体中的 `operator` 指定。`operator` 只用于记录操作人，不校验其应用权限，也不受环境部署角色保护限制。应用态部署不支持构建调试（`advanced_options.debug_enabled`）。
 
 ### 请求参数
 
@@ -21,7 +21,7 @@
 | version_type | string | 是 | 版本类型，源码包部署时传 package |
 | version_name | string | 是 | 版本名称，源码包部署时为源码包版本号 |
 | revision | string | 否 | 版本信息，源码包部署时为源码包版本号 |
-| operator | string | 是 | 部署操作人用户名，允许使用虚拟账号 |
+| operator | string | 是 | 部署操作人用户名，仅用于记录操作人，允许使用虚拟账号 |
 | advanced_options | object | 否 | 高级选项，与用户态部署接口一致，不支持 debug_enabled |
 
 ### 请求示例

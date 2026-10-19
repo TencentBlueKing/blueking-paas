@@ -2,7 +2,7 @@
 
 Deploy an AI Agent application to the specified environment using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
 
-The deployment logic is the same as the user-facing API `deploy_with_module`. Only the operator is specified by the `operator` field in the request body. Build debugging (`advanced_options.debug_enabled`) is not supported.
+The deployment logic is the same as the user-facing API `deploy_with_module`. Only the operator is specified by the `operator` field in the request body. The `operator` is only recorded as the operator; its application permissions are not checked, and the environment deployment role protection does not apply. Build debugging (`advanced_options.debug_enabled`) is not supported.
 
 ### Request Parameters
 
@@ -21,7 +21,7 @@ The deployment logic is the same as the user-facing API `deploy_with_module`. On
 | version_type | string | Yes | Version type, use package when deploying via source package |
 | version_name | string | Yes | Version name, the source package version when deploying via source package |
 | revision | string | No | Revision, the source package version when deploying via source package |
-| operator | string | Yes | Username of the operator. Virtual accounts are allowed. |
+| operator | string | Yes | Username of the operator, only used for recording. Virtual accounts are allowed. |
 | advanced_options | object | No | Advanced options, same as the user-facing API, debug_enabled is not supported |
 
 ### Request Example

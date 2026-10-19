@@ -97,15 +97,6 @@ class DeploymentCreateMixin:
     子类需要自行完成鉴权、参数校验以及操作人（operator）的解析。
     """
 
-    @staticmethod
-    def check_deploy_role(env: ModuleEnvironment, operator: User):
-        """校验操作人是否满足环境的部署角色限制"""
-        roles = fetch_user_roles(env.application.code, operator.username)
-        try:
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
-        except RoleNotAllowError:
-            raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
-
     def do_deploy(self, env: ModuleEnvironment, params: Dict, operator: User) -> Deployment:
         """发起部署，返回已启动后台部署任务的 Deployment 对象。
 
@@ -244,7 +235,12 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
     def deploy(self, request, code, module_name, environment):
         """部署应用"""
         env = self.get_env_via_path()
-        self.check_deploy_role(env, request.user)
+
+        roles = fetch_user_roles(code, request.user.username)
+        try:
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
+        except RoleNotAllowError:
+            raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
 
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -531,9 +527,8 @@ class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, AIAgentAppIn
         if params["advanced_options"].get("debug_enabled"):
             raise error_codes.CANNOT_DEPLOY_APP.f(_("应用态部署不支持构建调试"))
 
+        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, params["operator"]))
-        self.check_deploy_role(env, operator)
-
         deployment = self.do_deploy(env, params, operator)
         return JsonResponse(
             data={"deployment_id": deployment.id, "stream_url": f"/streams/{deployment.id}"},

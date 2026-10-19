@@ -2,7 +2,7 @@
 
 Take an AI Agent application module offline from the specified environment using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
 
-The offline logic is the same as the user-facing API `module_offline`. Only the operator is specified by the `operator` field in the request body.
+The offline logic is the same as the user-facing API `module_offline`. Only the operator is specified by the `operator` field in the request body. The `operator` is only recorded as the operator; its application permissions are not checked, and the environment deployment role protection does not apply.
 
 ### Request Parameters
 
@@ -18,7 +18,7 @@ The offline logic is the same as the user-facing API `module_offline`. Only the 
 
 | Field | Type | Required | Description |
 | ------- | ------ | ---------- | ------------- |
-| operator | string | Yes | Username of the operator. Virtual accounts are allowed. |
+| operator | string | Yes | Username of the operator, only used for recording. Virtual accounts are allowed. |
 
 ### Request Example
 

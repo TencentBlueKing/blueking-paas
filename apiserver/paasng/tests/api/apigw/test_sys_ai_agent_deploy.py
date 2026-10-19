@@ -79,6 +79,16 @@ def deploy_data() -> dict:
     }
 
 
+def _enable_admin_only_protection(env):
+    """Only allow the administrators to deploy / offline the env."""
+    G(
+        EnvRoleProtection,
+        module_env=env,
+        allowed_role=ApplicationRole.ADMINISTRATOR,
+        operation=EnvRoleOperation.DEPLOY.value,
+    )
+
+
 @dataclass
 class FakeHint:
     reason: str = "fake reason"
@@ -87,9 +97,14 @@ class FakeHint:
 class TestSysDeploy:
     """应用态部署接口测试"""
 
-    def test_deploy_success(self, sys_aidev_api_client, ai_agent_app, bk_module: Module, deploy_data: dict):
-        """AIDEV 可以用应用态凭证部署 AI Agent 应用，操作人为请求体中的 operator。"""
-        deployment = create_fake_deployment(bk_module, app_environment="stag")
+    @pytest.fixture()
+    def deployment(self, bk_module: Module) -> Deployment:
+        """The deployment returned by the stubbed `initialize_deployment`."""
+        return create_fake_deployment(bk_module, app_environment="stag")
+
+    @pytest.fixture()
+    def initialize(self, deployment: Deployment):
+        """Stub out the deploy task and the redis lock, yield the mocked `initialize_deployment`."""
         with (
             mock.patch(
                 "paasng.platform.engine.views.deploy.initialize_deployment", return_value=deployment
@@ -98,7 +113,13 @@ class TestSysDeploy:
             mock.patch("paasng.platform.engine.views.deploy.DeploymentCoordinator") as coordinator_cls,
         ):
             coordinator_cls.return_value.acquire_lock.return_value = True
-            resp = sys_aidev_api_client.post(_deploy_url(ai_agent_app.code, bk_module.name), data=deploy_data)
+            yield initialize
+
+    def test_deploy_success(
+        self, sys_aidev_api_client, ai_agent_app, bk_module: Module, deploy_data: dict, deployment, initialize
+    ):
+        """AIDEV 可以用应用态凭证部署 AI Agent 应用，操作人为请求体中的 operator。"""
+        resp = sys_aidev_api_client.post(_deploy_url(ai_agent_app.code, bk_module.name), data=deploy_data)
 
         assert resp.status_code == status.HTTP_201_CREATED, resp.json()
         assert resp.json() == {"deployment_id": str(deployment.id), "stream_url": f"/streams/{deployment.id}"}
@@ -117,20 +138,16 @@ class TestSysDeploy:
         assert resp.json()["code"] == "CANNOT_DEPLOY_APP"
         assert not Deployment.objects.exists()
 
-    def test_operator_role_restricted(
-        self, sys_aidev_api_client, ai_agent_app, bk_module: Module, bk_stag_env, deploy_data: dict
+    def test_operator_role_not_checked(
+        self, sys_aidev_api_client, ai_agent_app, bk_module: Module, bk_stag_env, deploy_data: dict, initialize
     ):
-        """部署角色限制按请求体中的 operator 校验，operator 不是应用管理员时被拒绝。"""
-        G(
-            EnvRoleProtection,
-            module_env=bk_stag_env,
-            allowed_role=ApplicationRole.ADMINISTRATOR,
-            operation=EnvRoleOperation.DEPLOY.value,
-        )
-        resp = sys_aidev_api_client.post(_deploy_url(ai_agent_app.code, bk_module.name), data=deploy_data)
+        """operator 仅做审计：即使环境开启了部署角色保护、operator 不是应用成员，也不查询 IAM、正常部署。"""
+        _enable_admin_only_protection(bk_stag_env)
+        with mock.patch("paasng.platform.engine.views.deploy.fetch_user_roles") as fetch_user_roles:
+            resp = sys_aidev_api_client.post(_deploy_url(ai_agent_app.code, bk_module.name), data=deploy_data)
 
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.json()["code"] == "RESTRICT_ROLE_DEPLOY_ENABLED"
+        assert resp.status_code == status.HTTP_201_CREATED, resp.json()
+        fetch_user_roles.assert_not_called()
 
     @pytest.mark.parametrize("client_fixture", NON_AIDEV_CLIENTS)
     def test_non_aidev_client_denied(
@@ -254,6 +271,21 @@ class TestSysOffline:
         assert start_archive_step.call_args.kwargs["operator"] == user_id_encoder.encode(
             settings.USER_TYPE, operator.username
         )
+
+    def test_operator_role_not_checked(self, sys_aidev_api_client, ai_agent_app, bk_module: Module, bk_stag_env):
+        """operator 仅做审计：即使环境开启了部署角色保护、operator 不是应用成员，也不查询 IAM、正常下架。"""
+        _enable_admin_only_protection(bk_stag_env)
+        offline_op = OfflineOperation.objects.create(app_environment=bk_stag_env)
+        with (
+            mock.patch("paasng.platform.engine.views.misc.start_archive_step", return_value=offline_op),
+            mock.patch("paasng.platform.engine.views.misc.fetch_user_roles") as fetch_user_roles,
+        ):
+            resp = sys_aidev_api_client.post(
+                _offline_url(ai_agent_app.code, bk_module.name), data={"operator": create_user().username}
+            )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.json()
+        fetch_user_roles.assert_not_called()
 
     def test_operator_required(self, sys_aidev_api_client, ai_agent_app, bk_module: Module):
         """必须指定下架操作人。"""

@@ -75,18 +75,11 @@ class OfflineMixin:
 
     @staticmethod
     def do_offline(env: ModuleEnvironment, operator: User) -> OfflineOperation:
-        """校验操作人的部署角色限制后发起下架，返回下架操作对象。
+        """发起下架，返回下架操作对象。
 
         :param env: 目标环境
         :param operator: 下架操作人
         """
-        roles = fetch_user_roles(env.application.code, operator.username)
-        try:
-            # 现在部署和下架使用相同的操作识别
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
-        except RoleNotAllowError:
-            raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
-
         try:
             return start_archive_step(env=env, operator=operator.pk)
         except Deployment.DoesNotExist:
@@ -130,7 +123,16 @@ class OfflineViewset(OfflineMixin, viewsets.ViewSet, ApplicationCodeInPathMixin)
         serializer = CreateOfflineOperationSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        offline_operation = self.do_offline(module.get_envs(environment), request.user)
+        app_environment = module.get_envs(environment)
+
+        roles = fetch_user_roles(application.code, request.user.username)
+        try:
+            # 现在部署和下架使用相同的操作识别
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=app_environment, roles=roles)
+        except RoleNotAllowError:
+            raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
+
+        offline_operation = self.do_offline(app_environment, request.user)
         return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
 
     def get_offline_result(self, request, code, module_name, uuid):
@@ -172,8 +174,9 @@ class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
 
         serializer = SysCreateOfflineOperationSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
 
+        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
         offline_operation = self.do_offline(env, operator)
         return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
 

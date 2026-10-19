@@ -22,3 +22,7 @@ class PermissionApplyStatus(StrStructuredEnum):
     APPROVED = EnumField("approved", label="通过")
     REJECTED = EnumField("rejected", label="驳回")
     PENDING = EnumField("pending", label="待审批")
+
+
+# 调用流水日志可查询的最大时间跨度 (天): time_start 不得早于当前时间前该天数, 边界值允许.
+MAX_QUERY_RANGE_DAYS = 180

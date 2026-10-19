@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.accessories.cloudapi.constants import (
@@ -22,6 +24,7 @@ from paasng.accessories.cloudapi.constants import (
     GrantDimensionEnum,
     PermissionApplyExpireDaysEnum,
 )
+from paasng.accessories.cloudapi_v2.constants import MAX_QUERY_RANGE_DAYS
 
 # ============ 网关 API 相关 ============
 
@@ -326,3 +329,72 @@ class PaginatedESBComponentPermissionApplyRecordOutputSLZ(serializers.Serializer
 # ------------ get_app_esb_component_permission_apply_record ------------
 class GetAppESBComponentPermissionApplyRecordOutputSLZ(ESBComponentPermissionApplyRecordOutputSLZ):
     """ESB 组件权限申请记录详情"""
+
+
+# ============ 应用调用流水日志相关 ============
+
+
+# ------------ list_app_request_logs ------------
+class ListAppRequestLogsInputSLZ(serializers.Serializer):
+    """应用调用流水日志查询参数"""
+
+    gateway_name = serializers.CharField(required=False, allow_blank=True, help_text="网关名称")
+    resource_name = serializers.CharField(required=False, allow_blank=True, help_text="资源名称")
+    request_id = serializers.CharField(required=False, allow_blank=True, help_text="请求 ID")
+    status = serializers.IntegerField(
+        required=False, allow_null=True, min_value=100, max_value=599, help_text="响应状态码"
+    )
+    time_start = serializers.IntegerField(required=True, help_text="起始时间(Unix 时间戳, 秒)")
+    time_end = serializers.IntegerField(required=True, help_text="结束时间(Unix 时间戳, 秒)")
+    offset = serializers.IntegerField(required=False, default=0, min_value=0, help_text="偏移量")
+    limit = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页条数")
+
+    def validate(self, attrs: dict) -> dict:
+        """校验查询时间范围
+
+        - time_end 必须大于 time_start
+        - time_end 必须小于当前时间, 不允许查询未来时间
+        - time_start 不得早于当前时间前 MAX_QUERY_RANGE_DAYS 天, 边界值允许
+        """
+        time_start = attrs["time_start"]
+        time_end = attrs["time_end"]
+        now = int(timezone.now().timestamp())
+
+        if time_end <= time_start:
+            raise serializers.ValidationError(_("结束时间必须大于起始时间"))
+        if time_end >= now:
+            raise serializers.ValidationError(_("结束时间必须小于当前时间"))
+        if time_start < now - MAX_QUERY_RANGE_DAYS * 24 * 60 * 60:
+            raise serializers.ValidationError(
+                _("起始时间不得早于当前时间前 %(days)s 天") % {"days": MAX_QUERY_RANGE_DAYS}
+            )
+
+        return attrs
+
+
+class AppRequestLogOutputSLZ(serializers.Serializer):
+    """应用调用流水日志"""
+
+    request_id = serializers.CharField(required=False, help_text="请求 ID")
+    timestamp = serializers.IntegerField(required=False, help_text="请求时间(Unix 时间戳, 秒)")
+    gateway_name = serializers.CharField(required=False, help_text="网关名称")
+    stage = serializers.CharField(required=False, help_text="环境")
+    resource_id = serializers.IntegerField(required=False, help_text="资源 ID")
+    resource_name = serializers.CharField(required=False, help_text="资源名称")
+    method = serializers.CharField(required=False, help_text="请求方法")
+    http_host = serializers.CharField(required=False, help_text="请求域名")
+    http_path = serializers.CharField(required=False, help_text="请求路径")
+    status = serializers.IntegerField(required=False, help_text="响应状态码")
+    request_duration = serializers.IntegerField(required=False, help_text="请求耗时(毫秒)")
+    code_name = serializers.CharField(required=False, help_text="错误码名称")
+    error = serializers.CharField(required=False, help_text="错误信息")
+    response_desc = serializers.CharField(required=False, help_text="响应描述")
+
+
+class ListAppRequestLogsOutputSLZ(serializers.Serializer):
+    """应用调用流水日志列表"""
+
+    count = serializers.IntegerField(default=0, help_text="总条数")
+    has_next = serializers.BooleanField(default=False, help_text="是否有下一页")
+    has_previous = serializers.BooleanField(default=False, help_text="是否有上一页")
+    results = AppRequestLogOutputSLZ(many=True, default=list, help_text="调用流水日志列表")

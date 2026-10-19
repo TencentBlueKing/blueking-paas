@@ -194,9 +194,9 @@ export default {
     // 是否显示高级别提示icon
     isHaRiskAlertIcon() {
       return (
-        this.isHaRiskService &&
-        this.userFeature.APP_AVAILABILITY_LEVEL &&
-        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        this.isHaRiskService
+        && this.userFeature.APP_AVAILABILITY_LEVEL
+        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },
@@ -327,8 +327,9 @@ export default {
           list.some((item) => HA_RISK_SERVICES.includes(key === 'service' ? item?.service?.name : item.name));
 
         // 包含存在可用性风险的增强服务，添加风险icon提示
-        this.isHaRiskService =
-          containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
+        this.isHaRiskService = containsRiskServer(bound)
+          || containsRiskServer(shared)
+          || containsRiskServer(unbound, 'unbound');
       } catch (error) {
         this.isHaRiskService = false;
       }

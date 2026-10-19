@@ -164,9 +164,9 @@
                   @click="handleOfflineApp(deploymentInfo)"
                   :disabled="
                     !!deploymentInfo.state.offline.pending
-                    || !!deploymentInfo.state.deployment.pending
-                    || !deploymentInfo.state.deployment.latest
-                    || deploymentInfo.state.offline.latest_succeeded
+                      || !!deploymentInfo.state.deployment.pending
+                      || !deploymentInfo.state.deployment.latest
+                      || deploymentInfo.state.offline.latest_succeeded
                   "
                   :loading="!!deploymentInfo.state.offline.pending"
                 >

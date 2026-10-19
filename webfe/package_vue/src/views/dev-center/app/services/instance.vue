@@ -82,6 +82,27 @@
             </bk-alert>
 
             <bk-alert
+              v-if="isRedisAlert"
+              style="margin-bottom: 16px"
+              type="warning"
+              :show-icon="false"
+            >
+              <div
+                slot="title"
+                class="risk-warning flex-row"
+              >
+                <i class="paasng-icon paasng-remind f14"></i>
+                <div>
+                  {{
+                    $t(
+                      '平台提供的 Redis 增强服务为容器化部署、未开启持久化存储，无法支持高级别的可用性。如需高可用，不建议使用 Redis 增强服务。'
+                    )
+                  }}
+                </div>
+              </div>
+            </bk-alert>
+
+            <bk-alert
               v-if="delAppDialog.moduleList.length > 0"
               style="margin-bottom: 16px"
               type="info"
@@ -447,6 +468,14 @@ export default {
     isGcsMysqlAlert() {
       return (
         this.serviceDetail.name === 'gcs_mysql' &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
+    },
+    // 应用登记为高级别可用性保障时，Redis 增强服务同样无法满足要求
+    isRedisAlert() {
+      return (
+        ['redis', 'paas_redis'].includes(this.serviceDetail.name) &&
         this.userFeature.APP_AVAILABILITY_LEVEL &&
         this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );

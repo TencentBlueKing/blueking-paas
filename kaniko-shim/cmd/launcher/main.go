@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,6 +68,11 @@ const (
 	SkipTLSVerifyRegistriesEnvVarKey = "SKIP_TLS_VERIFY_REGISTRIES"
 	// RegistryMirrorsEnvVarKey The env var key that store RegistryMirrors
 	RegistryMirrorsEnvVarKey = "REGISTRY_MIRRORS"
+	// RegistryMapEnvVarKey The env var key that store RegistryMap.
+	// NOTE: Do not use `KANIKO_REGISTRY_MAP`, kaniko executor reads it directly from the inherited env.
+	RegistryMapEnvVarKey = "REGISTRY_MAP"
+	// SkipDefaultRegistryFallbackEnvVarKey The env var key that store SkipDefaultRegistryFallback
+	SkipDefaultRegistryFallbackEnvVarKey = "SKIP_DEFAULT_REGISTRY_FALLBACK"
 )
 
 var (
@@ -101,6 +107,12 @@ var (
 	registryMirrors = flag.String("registry-mirrors",
 		os.Getenv(RegistryMirrorsEnvVarKey),
 		"Set this flag if you want to use a registry mirror instead of the default index.docker.io. Join with ',' for multiple registry mirrors.")
+	registryMap = flag.String("registry-map",
+		os.Getenv(RegistryMapEnvVarKey),
+		"Remap registries to pull images from, each item is in format '<registry>=<prefix>'. Join with ',' for multiple registry maps.")
+	skipDefaultRegistryFallback = flag.String("skip-default-registry-fallback",
+		os.Getenv(SkipDefaultRegistryFallbackEnvVarKey),
+		"Set to 'true' to fail the build instead of falling back to the original registry when the mapped or mirror registries fail.")
 )
 
 func init() {
@@ -123,6 +135,13 @@ func main() {
 			fmt.Errorf("outputImage is empty"),
 			fmt.Sprintf("please provide outputImage by --output-image or env variable %s", OutputImageEnvVarKey),
 		)
+		os.Exit(1)
+	}
+
+	// Validate registry options before doing anything, an invalid value must not be ignored silently
+	registryOpts, err := parseRegistryOptions()
+	if err != nil {
+		logger.Error(err, "Invalid registry options")
 		os.Exit(1)
 	}
 
@@ -149,7 +168,7 @@ func main() {
 	logger.Info("Start building...")
 	ctx := context.Background()
 	signal := make(chan int)
-	cmd, err := buildKanikoExecutorCmd(ctx, signal)
+	cmd, err := buildKanikoExecutorCmd(ctx, signal, registryOpts)
 	if err != nil {
 		logger.Error(err, "    !! Failed to start build process")
 		os.Exit(1)
@@ -218,7 +237,31 @@ func setupDockerConfigJson(dockerConfigJson string) error {
 	return nil
 }
 
-func buildKanikoExecutorCmd(ctx context.Context, signal chan int) (*exec.Cmd, error) {
+// registryOptions: 需要校验后才能传给 kaniko 的仓库参数
+type registryOptions struct {
+	registryMaps                []string
+	skipDefaultRegistryFallback bool
+}
+
+func parseRegistryOptions() (registryOptions, error) {
+	var opts registryOptions
+	maps, err := utils.ParseRegistryMap(*registryMap)
+	if err != nil {
+		return opts, errors.Wrapf(err, "invalid %s", RegistryMapEnvVarKey)
+	}
+	opts.registryMaps = maps
+
+	if *skipDefaultRegistryFallback != "" {
+		skip, err := strconv.ParseBool(*skipDefaultRegistryFallback)
+		if err != nil {
+			return opts, errors.Wrapf(err, "invalid %s", SkipDefaultRegistryFallbackEnvVarKey)
+		}
+		opts.skipDefaultRegistryFallback = skip
+	}
+	return opts, nil
+}
+
+func buildKanikoExecutorCmd(ctx context.Context, signal chan int, registryOpts registryOptions) (*exec.Cmd, error) {
 	args := []string{
 		"--dockerfile", *dockerfilePath,
 		"--context", fmt.Sprintf("dir://%s", BuildContextDir),
@@ -256,6 +299,12 @@ func buildKanikoExecutorCmd(ctx context.Context, signal chan int) (*exec.Cmd, er
 		for _, registryMirror := range parts {
 			args = append(args, "--registry-mirror", registryMirror)
 		}
+	}
+	for _, m := range registryOpts.registryMaps {
+		args = append(args, "--registry-map", m)
+	}
+	if registryOpts.skipDefaultRegistryFallback {
+		args = append(args, "--skip-default-registry-fallback")
 	}
 
 	cmd := exec.CommandContext(ctx, "/kaniko/executor", args...)

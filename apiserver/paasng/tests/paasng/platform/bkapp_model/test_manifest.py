@@ -205,6 +205,38 @@ class TestEnvVarsManifestConstructor:
             crd.EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
         ]
 
+    @override_settings(KMS_ENABLED=True)
+    def test_kms_omits_sensitive_vars_from_bkapp(self, bk_module, bk_stag_env, blank_resource):
+        ApplicationFeatureFlag.objects.set_feature(
+            AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True, bk_module.application
+        )
+        ConfigVar.objects.create(
+            module=bk_module,
+            environment_id=ENVIRONMENT_ID_FOR_GLOBAL,
+            key="LOONG_SENSITIVE",
+            value="secret",
+            is_global=True,
+            is_sensitive=True,
+        )
+        ConfigVar.objects.create(
+            module=bk_module,
+            environment=bk_stag_env,
+            key="STAG_SECRET",
+            value="secret",
+            is_sensitive=True,
+        )
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_PLAIN", value="1")
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+
+        rendered_names = {var.name for var in blank_resource.spec.configuration.env}
+        rendered_names.update(var.name for var in blank_resource.spec.envOverlay.envVariables)
+        assert "LOONG_SENSITIVE" not in rendered_names
+        assert "STAG_SECRET" not in rendered_names
+        assert crd.EnvVarOverlay(envName="stag", name="STAG_PLAIN", value="1") in (
+            blank_resource.spec.envOverlay.envVariables
+        )
+
 
 class TestBuiltinAnnotsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):

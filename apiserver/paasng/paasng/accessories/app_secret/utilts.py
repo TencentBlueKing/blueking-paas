@@ -23,6 +23,7 @@ from django.conf import settings
 
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.configurations.env_var.encryption import is_kms_injection_enabled
 from paasng.platform.engine.utils.query import DeploymentGetter
 
 if typing.TYPE_CHECKING:
@@ -45,7 +46,11 @@ def get_app_secret_in_instance(ins_list: List["Instance"]) -> Optional[str]:
 
 
 def get_deployed_secret_list(application: Application) -> list:
-    """查询应用各个模块、环境下内置环境变量 BKPAAS_APP_SECRET 的值"""
+    """查询应用各个模块、环境下内置环境变量 BKPAAS_APP_SECRET 的值
+
+    开启 KMS 托管的环境中，该变量不再出现在进程的环境变量里，平台无法读取，
+    此时返回 `kms_managed=True` 且 `bk_app_secret=None` 的条目，由前端提示用户进入容器自行查看。
+    """
     envs = ModuleEnvironment.objects.filter(module__in=application.modules.all()).all()
     deployed_secret_list = []
 
@@ -66,12 +71,15 @@ def get_deployed_secret_list(application: Application) -> list:
             if bk_app_secret:
                 break
 
-        if bk_app_secret is not None:
+        # 仍在运行旧版本（尚未按 KMS 重新部署）的进程环境变量里还有密钥，此时按原有方式展示
+        kms_managed = bk_app_secret is None and is_kms_injection_enabled(env)
+        if bk_app_secret is not None or kms_managed:
             deployed_secret_list.append(
                 {
                     "module": env.module.name,
                     "environment": env.environment,
                     "bk_app_secret": bk_app_secret,
+                    "kms_managed": kms_managed,
                     "latest_deployed_at": latest_deployed_at,
                 }
             )

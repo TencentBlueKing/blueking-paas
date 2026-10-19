@@ -27,6 +27,7 @@ from paasng.platform.engine.configurations.env_var.encryption import (
 )
 from paasng.platform.engine.configurations.kms.injection import (
     add_kms_secret_mount,
+    collect_kms_managed_keys,
     ensure_kms_mount_available,
     strip_kms_managed_env_vars,
 )
@@ -58,11 +59,29 @@ def test_kms_mode_drops_managed_values_instead_of_encrypting(settings, bk_app, b
     bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
     values = {"DB_PASSWORD": "s3cret", "BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
 
-    result, encrypted_keys = encrypt_sensitive_values(bk_stag_env, values, {"DB_PASSWORD", "BKPAAS_APP_SECRET"})
+    result, encrypted_keys = encrypt_sensitive_values(bk_stag_env, values, {"DB_PASSWORD"})
 
-    # 写入 BkApp 修订的值不能包含托管的敏感明文
-    assert result == {"BKPAAS_APP_SECRET": "app-secret", "PLAIN": "1"}
+    # 写入 BkApp 修订的值不能包含托管的敏感明文，内置应用密钥即使未被标记为敏感也由 KMS 托管
+    assert result == {"PLAIN": "1"}
     assert encrypted_keys == set()
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+def test_app_secret_is_always_kms_managed(settings, bk_stag_env):
+    settings.SAAS_KMS_ENABLED = True
+
+    assert "BKPAAS_APP_SECRET" in collect_kms_managed_keys(bk_stag_env)
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+def test_app_secret_stays_plain_without_kms(settings, bk_app, bk_stag_env):
+    settings.SAAS_KMS_ENABLED = False
+    bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, False)
+    values = {"BKPAAS_APP_SECRET": "app-secret"}
+
+    result, _ = encrypt_sensitive_values(bk_stag_env, values, set())
+
+    assert result == values
 
 
 def _make_bkapp(

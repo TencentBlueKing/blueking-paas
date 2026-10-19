@@ -47,6 +47,7 @@ from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.engine.configurations.env_var.encryption import is_app_kms_injection_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +203,14 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app_secret_in_config_var = get_app_secret_in_env_var(application.code).bk_app_secret
 
-        return Response(AppSecretInEnvVarSLZ({"app_secret_in_config_var": app_secret_in_config_var}).data)
+        return Response(
+            AppSecretInEnvVarSLZ(
+                {
+                    "app_secret_in_config_var": app_secret_in_config_var,
+                    "kms_enabled": is_app_kms_injection_enabled(application),
+                }
+            ).data
+        )
 
     @swagger_auto_schema(tags=["环境变量默认密钥"], responses={"200": DeployedSecretSLZ(many=True)})
     def get_deployed_secret(self, request, code):

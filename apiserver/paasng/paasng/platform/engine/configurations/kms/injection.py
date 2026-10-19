@@ -24,7 +24,10 @@ from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.infras.kms.constants import KMS_ENABLED_ENV_VAR_NAME, KMS_SECRET_MOUNT_DIR, KMS_SECRET_VOLUME_NAME
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.env_var.encryption import KMS_UNMANAGED_ENV_KEYS, collect_sensitive_keys
+from paasng.platform.engine.configurations.env_var.encryption import (
+    KMS_ALWAYS_MANAGED_ENV_KEYS,
+    collect_sensitive_keys,
+)
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.models import Module
@@ -39,8 +42,8 @@ def ensure_kms_injection_supported(env: ModuleEnvironment) -> None:
 
 
 def collect_kms_managed_keys(env: ModuleEnvironment) -> frozenset[str]:
-    """环境中由 KMS 托管的敏感变量键：用户标记为敏感的变量，以及增强服务的隐藏/移除字段"""
-    return frozenset(collect_sensitive_keys(env)) - KMS_UNMANAGED_ENV_KEYS
+    """环境中由 KMS 托管的敏感变量键：用户标记为敏感的变量、增强服务的隐藏/移除字段，以及内置的应用密钥"""
+    return frozenset(collect_sensitive_keys(env)) | KMS_ALWAYS_MANAGED_ENV_KEYS
 
 
 def collect_kms_managed_keys_by_env(module: Module) -> dict[str, frozenset[str]]:

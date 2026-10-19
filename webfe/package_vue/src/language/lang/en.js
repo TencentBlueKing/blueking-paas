@@ -2245,6 +2245,8 @@ export default {
   最近部署时间: 'Last deployment time',
   '与默认密钥不一致，': 'Inconsistent with the default key,',
   部署以更新密钥: 'Deploy to update keys',
+  '应用已开启 KMS，BKPAAS_APP_SECRET 由 KMS 托管。如需确认容器内当前使用的密钥，请进入容器执行：':
+    'KMS is enabled for this application, and BKPAAS_APP_SECRET is managed by KMS. To check the secret currently used in the container, enter the container and run:',
   更换默认密钥: 'Change default key',
   禁用密钥: 'Disable key',
   '禁用此密钥后，蓝鲸云 API 将拒绝此密钥的所有请求。操作预计在 15 分钟内生效。': 'After disabling this key, the blueking Cloud API will reject all requests for this key. The action is expected to take effect within 15 minutes.',

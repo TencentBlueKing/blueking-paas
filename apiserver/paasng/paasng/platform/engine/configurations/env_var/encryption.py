@@ -25,7 +25,7 @@ from django.conf import settings
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.constants import AppFeatureFlag
-from paasng.platform.applications.models import AppEnvEncryptionKey, ModuleEnvironment
+from paasng.platform.applications.models import AppEnvEncryptionKey, Application, ModuleEnvironment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 
 # 密钥的环境变量名
@@ -37,9 +37,9 @@ ENCRYPTED_KEYS_ENV_NAME = "BKPAAS_ENCRYPTED_ENV_KEYS"
 # 密文前缀，用于区分这是平台注入的密文
 CIPHER_PREFIX = "bkpaas_enc$"
 
-# 即使被标记为敏感，也不交给 KMS 托管、继续以环境变量注入的变量。
-# 平台需要从运行中进程的环境变量读取应用密钥（见 paasng.accessories.app_secret）
-KMS_UNMANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
+# 开启 KMS 托管后，无论用户是否标记为敏感，都必须交给 KMS 托管、不再以环境变量明文注入的内置变量。
+# 平台不再从进程环境变量读取它，已部署环境的密钥改由用户进入容器自行查看（见 paasng.accessories.app_secret）
+KMS_ALWAYS_MANAGED_ENV_KEYS = frozenset({"BKPAAS_APP_SECRET"})
 
 
 def is_encrypted_secret_env_injection_enabled(env: ModuleEnvironment) -> bool:
@@ -51,9 +51,14 @@ def is_encrypted_secret_env_injection_enabled(env: ModuleEnvironment) -> bool:
 
 def is_kms_injection_enabled(env: ModuleEnvironment) -> bool:
     """平台启用 KMS，且应用开启了「加密运行环境敏感变量」时，敏感变量由 KMS 托管"""
+    return is_app_kms_injection_enabled(env.application)
+
+
+def is_app_kms_injection_enabled(application: "Application") -> bool:
+    """应用级判断：平台启用 KMS，且应用开启了「加密运行环境敏感变量」"""
     if not settings.SAAS_KMS_ENABLED:
         return False
-    return env.application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
+    return application.feature_flag.has_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION)
 
 
 def collect_sensitive_keys(env: ModuleEnvironment) -> set[str]:
@@ -136,7 +141,7 @@ def encrypt_sensitive_values(
     """
     if is_kms_injection_enabled(env):
         # 敏感值改由 KMS 托管的 Secret 文件提供，不能以明文写入 BkApp 修订或环境变量
-        managed_keys = set(sensitive_keys) - KMS_UNMANAGED_ENV_KEYS
+        managed_keys = set(sensitive_keys) | KMS_ALWAYS_MANAGED_ENV_KEYS
         return {key: value for key, value in values.items() if key not in managed_keys}, set()
 
     encrypted_keys = set(values).intersection(sensitive_keys)

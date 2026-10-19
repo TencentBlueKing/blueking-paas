@@ -353,22 +353,21 @@ class ListAppRequestLogsInputSLZ(serializers.Serializer):
         """校验查询时间范围
 
         - time_end 必须大于 time_start
-        - time_end 必须小于当前时间, 不允许查询未来时间
+        - time_end 若为未来时间，截断为当前时间
         - time_start 不得早于当前时间前 MAX_QUERY_RANGE_DAYS 天, 边界值允许
         """
         time_start = attrs["time_start"]
-        time_end = attrs["time_end"]
         now = int(timezone.now().timestamp())
+        time_end = min(attrs["time_end"], now)
 
         if time_end <= time_start:
             raise serializers.ValidationError(_("结束时间必须大于起始时间"))
-        if time_end >= now:
-            raise serializers.ValidationError(_("结束时间必须小于当前时间"))
         if time_start < now - MAX_QUERY_RANGE_DAYS * 24 * 60 * 60:
             raise serializers.ValidationError(
                 _("起始时间不得早于当前时间前 %(days)s 天") % {"days": MAX_QUERY_RANGE_DAYS}
             )
 
+        attrs["time_end"] = time_end
         return attrs
 
 

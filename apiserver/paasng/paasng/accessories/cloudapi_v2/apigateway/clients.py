@@ -365,14 +365,14 @@ class ApiGatewayClient:
             "offset": offset,
             "limit": limit,
         }
-        # 可选参数为 None 时不下发
+        # 可选参数为 None 或空字符串时不下发
         optional_params: dict[str, Any] = {
             "gateway_name": gateway_name,
             "resource_name": resource_name,
             "request_id": request_id,
             "status": status,
         }
-        params.update({key: value for key, value in optional_params.items() if value is not None})
+        params.update({key: value for key, value in optional_params.items() if value not in (None, "")})
 
         # 网关契约中 app_code 为路径参数
         try:

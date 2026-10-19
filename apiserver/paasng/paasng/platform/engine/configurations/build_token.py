@@ -264,8 +264,8 @@ def make_build_token_claims(
         "iat": now,
         "exp": now + settings.BUILD_PROCESS_TIMEOUT + TOKEN_GRACE_SECONDS,
         "ver": CLAIMS_VERSION,
-        "app_code": app_code,
-        "module": module_name,
+        # 只用于镜像代理的审计日志，不参与授权
+        "app": {"code": app_code, "module": module_name},
         "push": push,
         # 平台仓库中其他应用的镜像不可读；本应用的产物与缓存仓库因 push 授权优先于 pull_deny 而可读
         "pull": [f"{alias}/"],

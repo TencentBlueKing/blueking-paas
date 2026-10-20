@@ -205,7 +205,7 @@ class TestEnvVarsManifestConstructor:
             crd.EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
         ]
 
-    @override_settings(KMS_ENABLED=True)
+    @override_settings(SAAS_KMS_ENABLED=True)
     def test_kms_omits_sensitive_vars_from_bkapp(self, bk_module, bk_stag_env, blank_resource):
         ApplicationFeatureFlag.objects.set_feature(
             AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True, bk_module.application

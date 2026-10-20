@@ -896,6 +896,7 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.operatingIds = this.operatingIds.filter(id => id !== recordId);
+        this.pagination.current = 1;
         this.fetchList();
       }
     },

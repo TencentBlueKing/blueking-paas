@@ -129,9 +129,8 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 operation=OperationEnum.CANCEL,
                 target=OperationTarget.CLOUD_API,
                 result_code=ResultCode.SUCCESS,
-                # MCP Server 申请记录不支持通过申请记录 ID 查询单据详情, 使用字典避免展示无效的详情入口
                 data_after=DataDetail(
-                    type=DataType.CLOUD_API_RECORD, data={"record_id": record_id, "record_type": "mcp_server"}
+                    type=DataType.RAW_DATA, data={"record_id": record_id, "record_type": "mcp_server"}
                 ),
             )
         except Exception:
@@ -163,9 +162,8 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 operation=OperationEnum.DELETE,
                 target=OperationTarget.CLOUD_API,
                 result_code=ResultCode.SUCCESS,
-                # 记录已被删除, 无法再通过申请记录 ID 查询详情, 使用字典避免展示无效的详情入口
                 data_after=DataDetail(
-                    type=DataType.CLOUD_API_RECORD, data={"record_id": record_id, "record_type": "mcp_server"}
+                    type=DataType.RAW_DATA, data={"record_id": record_id, "record_type": "mcp_server"}
                 ),
             )
         except Exception:

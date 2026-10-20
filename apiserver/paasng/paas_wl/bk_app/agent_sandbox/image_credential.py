@@ -39,14 +39,21 @@ def generate_dockerconfig_b64() -> str:
 
     :return: base64 编码的 Docker 认证配置 JSON 字符串
     """
+    return make_dockerconfig_b64(
+        settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST,
+        settings.AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME,
+        settings.AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD,
+    )
+
+
+def make_dockerconfig_b64(registry: str, username: str, password: str) -> str:
+    """生成只包含单个仓库凭证、base64 编码的 Docker 认证配置"""
     config = {
         "auths": {
-            settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST: {
-                "username": settings.AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME,
-                "password": settings.AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD,
-                "auth": b64encode(
-                    f"{settings.AGENT_SANDBOX_DOCKER_REGISTRY_USERNAME}:{settings.AGENT_SANDBOX_DOCKER_REGISTRY_PASSWORD}"
-                ),
+            registry: {
+                "username": username,
+                "password": password,
+                "auth": b64encode(f"{username}:{password}"),
             }
         }
     }

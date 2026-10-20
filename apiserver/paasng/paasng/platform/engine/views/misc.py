@@ -18,7 +18,8 @@
 import datetime
 import logging
 
-from bkpaas_auth.models import user_id_encoder
+from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import User, user_id_encoder
 from django.conf import settings
 from django.http import JsonResponse
 from django.utils.translation import gettext as _
@@ -30,6 +31,8 @@ from rest_framework.response import Response
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
@@ -37,7 +40,8 @@ from paasng.misc.monitoring.metrics.exceptions import (
 )
 from paasng.misc.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import AIAgentAppInPathMixin, ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models.deployment import Deployment
@@ -51,17 +55,55 @@ from paasng.platform.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsResultSerializer,
     ResourceMetricsSLZ,
+    SysCreateOfflineOperationSLZ,
 )
 from paasng.platform.engine.utils.query import OfflineOperationGetter
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
 
-class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class OfflineMixin:
+    """发起下架 / 查询下架结果的核心逻辑，供用户态 / 应用态两个接口复用。
+
+    子类需要自行完成鉴权、环境获取以及操作人（operator）的解析。
+    """
+
+    @staticmethod
+    def do_offline(env: ModuleEnvironment, operator: User) -> OfflineOperation:
+        """发起下架，返回下架操作对象。
+
+        :param env: 目标环境
+        :param operator: 下架操作人
+        """
+        try:
+            return start_archive_step(env=env, operator=operator.pk)
+        except Deployment.DoesNotExist:
+            # 未曾部署，跳过该环境的下架操作
+            raise error_codes.CANNOT_OFFLINE_APP.f(_("没有找到对应的部署记录，不允许下架"))
+        except OfflineOperationExistError:
+            # 在规定时间内，存在下架操作
+            raise error_codes.CANNOT_OFFLINE_APP.f(_("存在正在进行的下架任务，请勿重复操作"))
+        except Exception as e:
+            logger.exception("app offline error")
+            raise error_codes.CANNOT_OFFLINE_APP.f(str(e))
+
+    @staticmethod
+    def get_offline_operation(module: Module, uuid: str) -> OfflineOperation:
+        """获取模块下的下架操作，不存在时抛出 CANNOT_GET_OFFLINE"""
+        try:
+            return OfflineOperation.objects.get(id=uuid, app_environment__module=module)
+        except OfflineOperation.DoesNotExist:
+            raise error_codes.CANNOT_GET_OFFLINE.f(
+                _(f"{module.application.code} 没有id为 {uuid} 的下架记录")  # noqa: INT001
+            )
+
+
+class OfflineViewset(OfflineMixin, viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
     应用下线相关API
     基于stop process实现
@@ -90,22 +132,8 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except RoleNotAllowError:
             raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
 
-        try:
-            offline_operation = start_archive_step(env=app_environment, operator=request.user.pk)
-        except Deployment.DoesNotExist:
-            # 未曾部署，跳过该环境的下架操作
-            raise error_codes.CANNOT_OFFLINE_APP.f(_("没有找到对应的部署记录，不允许下架"))
-        except OfflineOperationExistError:
-            # 在规定时间内，存在下架操作
-            raise error_codes.CANNOT_OFFLINE_APP.f(_("存在正在进行的下架任务，请勿重复操作"))
-        except Exception as e:
-            logger.exception("app offline error")
-            raise error_codes.CANNOT_OFFLINE_APP.f(str(e))
-        else:
-            result = {
-                "offline_operation_id": offline_operation.id,
-            }
-            return JsonResponse(data=result, status=status.HTTP_201_CREATED)
+        offline_operation = self.do_offline(app_environment, request.user)
+        return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
 
     def get_offline_result(self, request, code, module_name, uuid):
         """
@@ -116,14 +144,8 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         application = self.get_application()
         module = application.get_module(module_name)
-
-        try:
-            offline_operation = OfflineOperation.objects.get(id=uuid, app_environment__module=module)
-        except OfflineOperation.DoesNotExist:
-            raise error_codes.CANNOT_GET_OFFLINE.f(_(f"{code} 没有id为 {uuid} 的下架记录"))  # noqa: INT001
-        else:
-            data = OfflineOperationSLZ(instance=offline_operation).data
-            return JsonResponse(data)
+        offline_operation = self.get_offline_operation(module, uuid)
+        return JsonResponse(OfflineOperationSLZ(instance=offline_operation).data)
 
     def get_resumable_offline_operations(self, request, code, module_name, environment):
         """查询可恢复的下架操作"""
@@ -134,6 +156,35 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         serializer = OfflineOperationSLZ(instance=offline_operation)
         return Response({"result": serializer.data})
+
+
+class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
+    """应用态下架接口，目前仅支持 AIDEV 下架 AI Agent 应用。"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+
+    @swagger_auto_schema(
+        request_body=SysCreateOfflineOperationSLZ,
+        tags=["部署相关接口"],
+        operation_description="提供给 AIDEV 使用的应用态下架接口，仅支持 AI Agent 应用",
+    )
+    def offline(self, request, code, module_name, environment):
+        """应用态发起下架，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
+        env = self.get_ai_agent_env_via_path()
+
+        serializer = SysCreateOfflineOperationSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
+        offline_operation = self.do_offline(env, operator)
+        return JsonResponse(data={"offline_operation_id": offline_operation.id}, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(responses={200: OfflineOperationSLZ}, tags=["部署相关接口"])
+    def get_offline_result(self, request, code, module_name, uuid):
+        """应用态查询下架任务结果，仅允许查询 AI Agent 应用。"""
+        offline_operation = self.get_offline_operation(self.get_ai_agent_module_via_path(), uuid)
+        return JsonResponse(OfflineOperationSLZ(instance=offline_operation).data)
 
 
 class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):

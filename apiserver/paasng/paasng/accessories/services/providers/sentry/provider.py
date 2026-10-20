@@ -160,7 +160,12 @@ class SentryProvider(BaseProvider):
         return True
 
     def delete(self, instance_data: InstanceData):
-        raise NotImplementedError
+        """Sentry 不支持资源回收，直接返回，由上层清理本地记录。
+
+        NOTE: 抛 NotImplementedError 会被上层视作删除失败，导致本地实例记录无法清理；
+        与 `ResourcePoolProvider.delete()` 在实例不可回收时的处理方式保持一致.
+        """
+        logger.info("sentry service does not support recycling, skip deleting remote resource")
 
     def stats(self, instance):
         raise NotImplementedError

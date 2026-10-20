@@ -48,11 +48,11 @@ class ClientAction(StrStructuredEnum):
     READ_DB_CREDENTIAL = EnumField("sysapi:read:db-credential", label=_("读取 DB 凭证信息"))
     BIND_DB_SERVICE = EnumField("sysapi:bind:db-service", label=_("绑定 DB 服务"))
 
-    # 目前仅供 AIDev 平台使用， 用于为 AI Agent 应用授权访问平台网关下的 Agent Sandbox 相关 API 的权限。
+    # 目前仅供 AIDev 平台使用
     GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))
-
-    # 目前仅供 AIDev 平台使用，用于构建 Agent Sandbox 镜像
     BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))
-
-    # 目前仅供 AIDev 平台使用，用于以应用身份创建 AI Agent 应用
     CREATE_AI_AGENT_APP = EnumField("sysapi:create:ai-agent-app", label=_("创建 AI Agent 应用"))
+    UPLOAD_AI_AGENT_SOURCE_PACKAGE = EnumField(
+        "sysapi:upload:ai-agent-source-package", label=_("上传 AI Agent 源码包")
+    )
+    DEPLOY_AI_AGENT_APP = EnumField("sysapi:deploy:ai-agent-app", label=_("部署/下架 AI Agent 应用"))

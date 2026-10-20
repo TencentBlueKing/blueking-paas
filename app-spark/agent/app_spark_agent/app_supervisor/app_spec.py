@@ -17,12 +17,12 @@
 """How the workspace application is started: the command, the environment, the log file."""
 
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
 from app_spark_agent import settings
 from app_spark_agent.app_supervisor.process import ProcessSpec
+from app_spark_agent.app_supervisor.project_env import project_python, project_venv, strip_agent_environ
 from app_spark_agent.app_supervisor.types import APP_PORT_ENV
 
 # 模型被要求把应用导出成这个路径，启动方也只启这一个。settings.INSTRUCTIONS 里写着同一条
@@ -34,11 +34,13 @@ APP_LISTEN_HOST = "0.0.0.0"
 
 
 def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
-    """Describe the uvicorn child that serves the workspace application."""
+    """Describe the uvicorn child that serves the workspace application.
+
+    Runs the project's own interpreter, which sync_project_environment has just built.
+    """
     return ProcessSpec(
-        # 用本进程的 Python，确保跑的是装了 uvicorn 的那个解释器。
         argv=(
-            sys.executable,
+            str(project_python(workspace)),
             "-m",
             "uvicorn",
             APP_IMPORT_PATH,
@@ -48,20 +50,26 @@ def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
             str(port),
         ),
         cwd=workspace,
-        env=build_child_environ(port),
+        env=build_child_environ(workspace, port),
         log_path=Path(settings.APP_LOG_PATH),
     )
 
 
-def build_child_environ(port: int, source: Mapping[str, str] | None = None) -> dict[str, str]:
-    """Copy the parent environment, drop every agent setting, and inject the app port."""
+def build_child_environ(workspace: Path, port: int, source: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Copy the parent environment, drop every agent setting, and inject the app port.
+
+    The child runs as if the project's venv were activated. Its interpreter already imports from
+    that venv, but a command the application runs by name (`python`, `pip`, a console script)
+    goes through PATH, which would otherwise lead into the Agent's venv.
+    """
 
     # 整段剥前缀，不是逐个 pop 已知密钥：新增配置忘了登记就会漏进应用，而应用是模型写的代码。
-    env = {
-        key: value
-        for key, value in (os.environ if source is None else source).items()
-        if not key.startswith(settings.ENV_PREFIX)
-    }
+    env = strip_agent_environ(os.environ if source is None else source)
+
+    venv = project_venv(workspace)
+    env["VIRTUAL_ENV"] = str(venv)
+    # 没有 PATH（或剥完只剩空）时 exec 按 os.defpath 找命令，只写项目 bin 会把系统目录一并丢掉。
+    env["PATH"] = os.pathsep.join((str(venv / "bin"), env.get("PATH") or os.defpath))
 
     # 应用自己不选端口。加在剥离之后，这个 key 本身带前缀。
     env[APP_PORT_ENV] = str(port)

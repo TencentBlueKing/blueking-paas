@@ -1,7 +1,7 @@
 <template>
   <div class="project-switcher">
     <bk-popover
-      v-model:isShow="visible"
+      ref="popoverRef"
       theme="light"
       placement="bottom-start"
       trigger="click"
@@ -9,7 +9,8 @@
       :padding="0"
       :offset="4"
       ext-cls="project-switcher-popover"
-      @after-show="fetchProjects"
+      @after-show="onPopoverShow"
+      @after-hidden="onAfterHidden"
     >
       <div class="project-switcher__trigger" :class="{ 'is-open': visible }">
         <span class="project-switcher__name">{{ currentName }}</span>
@@ -74,6 +75,7 @@ import { Message } from 'bkui-vue';
 import { AngleDown, Plus, Search } from 'bkui-vue/lib/icon';
 import AppModal from '@/components/project/AppModal.vue';
 import CreateProjectDialog from '@/components/project/CreateProjectDialog.vue';
+import { usePopoverVisible } from '@/composables/use-popover-visible';
 import { listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import { useProjectStore } from '@/store/project';
@@ -82,7 +84,13 @@ const router = useRouter();
 const { projectId } = storeToRefs(useProjectStore());
 const projects = ref<ProjectResponse[]>([]);
 const keyword = ref('');
-const visible = ref(false);
+const {
+  popoverRef,
+  visible,
+  onAfterShow,
+  onAfterHidden,
+  close,
+} = usePopoverVisible();
 const confirmVisible = ref(false);
 const createVisible = ref(false);
 const pendingProjectId = ref('');
@@ -99,6 +107,11 @@ const filteredProjects = computed(() => {
     item.name.toLowerCase().includes(text) || item.id.toLowerCase().includes(text)
   ));
 });
+
+const onPopoverShow = () => {
+  onAfterShow();
+  fetchProjects();
+};
 
 const fetchProjects = async () => {
   try {
@@ -121,7 +134,7 @@ const fetchProjects = async () => {
 };
 
 const handleSelect = (id: string) => {
-  visible.value = false;
+  close();
   if (!id || id === projectId.value) return;
   pendingProjectId.value = id;
   confirmVisible.value = true;
@@ -140,11 +153,15 @@ const handleConfirm = () => {
 };
 
 const openCreate = () => {
-  visible.value = false;
+  close();
   createVisible.value = true;
 };
 
 const enterCreated = (created: ProjectResponse) => {
+  // 列表只在挂载和下拉展开时拉取。创建后立刻跳转，不把这条补进去，触发器只能退回显示 id。
+  if (!projects.value.some(item => item.id === created.id)) {
+    projects.value.unshift(created);
+  }
   router.push({ name: 'project', params: { projectId: created.id } });
 };
 

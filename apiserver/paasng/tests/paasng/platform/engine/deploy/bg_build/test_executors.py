@@ -18,7 +18,8 @@
 import base64
 import json
 import time
-from typing import Dict
+from types import SimpleNamespace
+from typing import Dict, List
 from unittest import mock
 
 import pytest
@@ -33,8 +34,19 @@ from paasng.platform.engine.deploy.bg_build.executors import (
 )
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import NullStream
+from tests.paasng.platform.engine.deploy.bg_build.conftest import enable_registry_proxy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+class RecordingStream(NullStream):
+    """记录写入的消息"""
+
+    def __init__(self):
+        self.messages: List[str] = []
+
+    def write_message(self, message, stream=None):
+        self.messages.append(message)
 
 
 class TestDefaultBuildProcessExecutor:
@@ -62,6 +74,45 @@ class TestDefaultBuildProcessExecutor:
         ):
             bpe.execute(BuildMetadata(image=""))
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"
+
+
+@pytest.mark.usefixtures("_platform_registry", "signing_key")
+class TestDefaultBuildProcessExecutorWithRegistryProxy:
+    @pytest.fixture(autouse=True)
+    def _attach_phases(self, bk_deployment_full):
+        attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
+
+    @pytest.fixture()
+    def builder(self):
+        """mock 构建 Pod 相关的操作，返回 start_slugbuilder 与 BuildHandler 实例的 mock"""
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
+            ) as start_slugbuilder,
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler") as build_handler_cls,
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"),
+        ):
+            yield SimpleNamespace(
+                start_slugbuilder=start_slugbuilder, handler=build_handler_cls.new_by_app.return_value
+            )
+
+    def test_credential_unavailable(
+        self, settings, wl_app, bk_deployment_full, build_proc, dockerfile_metadata, builder
+    ):
+        settings.BUILD_TOKEN_SIGNING_KEYS = []
+        enable_registry_proxy(wl_app)
+        stream = RecordingStream()
+
+        DefaultBuildProcessExecutor(bk_deployment_full, build_proc, stream).execute(dockerfile_metadata)
+
+        assert build_proc.status == BuildStatus.FAILED
+        # 不启动构建 Pod，也不回退为注入真实凭证
+        assert not builder.start_slugbuilder.called
+        expected = "image credential unavailable: build token signing key is not configured"
+        assert any(expected in m for m in stream.messages)
+        bk_deployment_full.refresh_from_db()
+        assert bk_deployment_full.err_detail == expected
 
 
 class StubBkCIPipelineClient:

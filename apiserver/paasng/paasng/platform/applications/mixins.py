@@ -24,6 +24,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 from .models import Application, ModuleEnvironment
 
@@ -120,3 +121,37 @@ class ApplicationCodeInPathMixin:
             except KeyError:
                 continue
         raise ValueError(f"{param_names} not found in self.kwargs(path variables)")
+
+
+class AIAgentAppInPathMixin:
+    """供应用态（系统 API）接口使用，根据路径参数获取 AI Agent 应用下的模块/环境。
+
+    不做任何用户维度的权限校验，调用方需要通过 sysapi 客户端权限保证安全。
+    """
+
+    kwargs: Dict[str, Any]
+
+    def get_ai_agent_module_via_path(self) -> Module:
+        """获取目标模块，其所属应用必须是 AI Agent 应用。
+
+        - required path vars: code, module_name
+        """
+        application = get_object_or_404(Application, code=self.kwargs["code"])
+        if not application.is_ai_agent_app:
+            raise error_codes.AI_AGENT_APP_REQUIRED
+
+        try:
+            return application.get_module(self.kwargs.get("module_name"))
+        except Module.DoesNotExist:
+            raise Http404
+
+    def get_ai_agent_env_via_path(self) -> ModuleEnvironment:
+        """获取目标环境，其所属应用必须是 AI Agent 应用。
+
+        - required path vars: code, module_name, environment
+        """
+        module = self.get_ai_agent_module_via_path()
+        try:
+            return module.get_envs(environment=self.kwargs["environment"])
+        except ModuleEnvironment.DoesNotExist:
+            raise Http404

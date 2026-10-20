@@ -36,6 +36,7 @@ from paas_wl.infras.cluster.models import (
 )
 from paas_wl.infras.resources.base.base import invalidate_global_configuration_pool
 from paasng.core.tenant.user import get_init_tenant_id
+from paasng.settings.kms import get_kms_credential
 
 env = Env()
 
@@ -169,10 +170,12 @@ class Command(BaseCommand):
             )
 
         # 证书 / Token 相关配置
-        ca_data = env.str(EnvVarKey.CA, "")
-        cert_data = env.str(EnvVarKey.CERT, "")
-        key_data = env.str(EnvVarKey.KEY, "")
-        token_value = env.str(EnvVarKey.TOKEN, "")
+        # 开启 KMS 后 chart 不再注入明文证书 / Token，因此优先读取信封。
+        # 未开启 KMS 或信封字段缺失时返回 None，继续兼容原环境变量配置。
+        ca_data = get_kms_credential("kubernetes.default.ca_data") or env.str(EnvVarKey.CA, "")
+        cert_data = get_kms_credential("kubernetes.default.cert_data") or env.str(EnvVarKey.CERT, "")
+        key_data = get_kms_credential("kubernetes.default.key_data") or env.str(EnvVarKey.KEY, "")
+        token_value = get_kms_credential("kubernetes.default.token") or env.str(EnvVarKey.TOKEN, "")
 
         if not ((ca_data and cert_data and key_data) or token_value):
             raise ValueError(f"{EnvVarKey.CA}, {EnvVarKey.CERT}, {EnvVarKey.KEY} or {EnvVarKey.TOKEN} must be set")

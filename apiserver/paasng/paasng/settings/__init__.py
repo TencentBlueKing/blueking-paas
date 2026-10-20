@@ -61,6 +61,7 @@ from dynaconf import LazySettings, Validator
 
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
+from .kms import is_platform_kms_enabled, load_kms_settings
 from .utils import (
     IAM_VERSION_V3,
     IAM_VERSION_V4,
@@ -86,14 +87,14 @@ settings = LazySettings(
     environments=False,
     load_dotenv=True,
     includes=[SETTINGS_FILES_GLOB, LOCAL_SETTINGS],
-    validators=[
-        # Configure minimal required settings
-        Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
-    ],
+    # BKKRILL_ENCRYPT_SECRET_KEY 在 KMS 模式下由信封提供，跳过原配置源校验，解密后再检查必填项。
+    validators=[] if is_platform_kms_enabled() else [Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True)],
     # Env var name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS",
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
+# 平台 KMS 开启时，写入信封中的敏感配置，须在读取任何配置项之前完成
+settings = load_kms_settings(settings)
 
 _notset = object()
 

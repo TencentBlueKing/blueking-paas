@@ -37,7 +37,7 @@ helm upgrade --install app-spark-api charts/app-spark-api \
 kubectl --context kind-bkms-ut -n app-spark-helm-test get pods,jobs,pvc
 ```
 
-MySQL 与 API 各挂载一个 1Gi PVC。Chart 的迁移 Job 创建数据库表，外部等待镜像完成后启动 API。
+API 挂载一个 1Gi PVC。MySQL 的数据目录是 emptyDir，并且必须挂在 `/var/lib/mysql` 上：镜像把这个路径声明成 VOLUME，不挂载就会在宿主机留下匿名卷。Chart 的迁移 Job 创建数据库表，外部等待镜像完成后启动 API。
 修改 `kind-values.yaml` 的镜像 tag 时，构建和 load 命令也应同步修改。
 
 ### 验证 Service、SSE 和 local process
@@ -73,5 +73,5 @@ helm upgrade app-spark-api charts/app-spark-api \
 验证后必须重新执行正常的 Helm upgrade 命令恢复 release，再运行 smoke 脚本确认恢复。
 
 测试资源可以保留供排查。需要清理时，先确认 namespace 中只有本次测试数据；
-删除 `app-spark-helm-test` namespace 会连同两个 PVC 一起删除，默认 StorageClass
-通常也会回收其数据。
+删除 `app-spark-helm-test` namespace 会连同 API 的 PVC 一起删除，默认 StorageClass
+通常也会回收其数据。MySQL 用的是 emptyDir，Pod 删除后数据目录就没了。

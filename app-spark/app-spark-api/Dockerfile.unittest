@@ -1,3 +1,5 @@
+# 单测用的 MySQL 由流水线在旁边另起。那个容器要把 /var/lib/mysql 挂成 tmpfs 并加
+# --innodb-use-native-aio=0：mysql 镜像把这个路径声明成 VOLUME，不挂载就会在构建机上留下匿名卷。
 FROM python:3.14-slim-bookworm
 ENV UV_NO_DEV=0
 RUN mkdir -p ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf

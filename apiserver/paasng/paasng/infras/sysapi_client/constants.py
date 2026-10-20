@@ -55,3 +55,4 @@ class ClientAction(StrStructuredEnum):
     UPLOAD_AI_AGENT_SOURCE_PACKAGE = EnumField(
         "sysapi:upload:ai-agent-source-package", label=_("上传 AI Agent 源码包")
     )
+    DEPLOY_AI_AGENT_APP = EnumField("sysapi:deploy:ai-agent-app", label=_("部署/下架 AI Agent 应用"))

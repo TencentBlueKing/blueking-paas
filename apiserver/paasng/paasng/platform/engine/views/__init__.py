@@ -23,8 +23,8 @@ from .configvar import (
     ConflictedConfigVarsViewSet,
 )
 from .configvar_preset import PresetConfigVarViewSet
-from .deploy import DeploymentViewSet, DeployOptionsViewSet, DeployPhaseViewSet
-from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
+from .deploy import DeploymentViewSet, DeployOptionsViewSet, DeployPhaseViewSet, SysDeploymentViewSet
+from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset, SysOfflineViewSet
 from .release import ReleasedInfoViewSet, ReleasesViewset
 
 __all__ = [
@@ -43,4 +43,6 @@ __all__ = [
     "ProcessResourceMetricsViewset",
     "ReleasedInfoViewSet",
     "ReleasesViewset",
+    "SysDeploymentViewSet",
+    "SysOfflineViewSet",
 ]

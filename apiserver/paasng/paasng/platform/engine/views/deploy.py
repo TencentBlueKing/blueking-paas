@@ -19,6 +19,7 @@ import logging
 from dataclasses import asdict
 from typing import Dict, Optional
 
+from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.encoder import user_id_encoder
 from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
@@ -42,9 +43,11 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.mixins import AIAgentAppInPathMixin, ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import get_build_debug_timeout, get_use_bk_ci_pipeline
@@ -68,6 +71,7 @@ from paasng.platform.engine.serializers import (
     DeployOptionsSLZ,
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
+    SysCreateDeploymentSLZ,
 )
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter, get_latest_deploy_options
@@ -87,7 +91,111 @@ from paasng.utils.error_codes import error_codes
 logger = logging.getLogger(__name__)
 
 
-class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class DeploymentCreateMixin:
+    """创建部署的核心逻辑，供用户态 / 应用态两个接口复用。
+
+    子类需要自行完成鉴权、参数校验以及操作人（operator）的解析。
+    """
+
+    def do_deploy(self, env: ModuleEnvironment, params: Dict, operator: User) -> Deployment:
+        """发起部署，返回已启动后台部署任务的 Deployment 对象。
+
+        :param env: 目标环境
+        :param params: 已经过调用方各自序列化器校验后的请求参数
+        :param operator: 部署操作人
+        """
+        module = env.module
+
+        # 选择历史构建的镜像时需要传递 build_id
+        build = None
+        if build_id := params["advanced_options"].get("build_id"):
+            if not Build.objects.filter(pk=build_id, artifact_deleted=False).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
+            if not Deployment.objects.filter(build_id=build_id).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
+            build = Build.objects.get(pk=build_id)
+
+        version_info = self._get_version_info(operator, module, params, build=build)
+
+        coordinator = DeploymentCoordinator(env)
+        if not coordinator.acquire_lock():
+            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
+
+        deployment = None
+        try:
+            with coordinator.release_on_error():
+                deployment = initialize_deployment(
+                    env=env,
+                    operator=operator.pk,
+                    version_info=version_info,
+                    advanced_options=params["advanced_options"],
+                )
+                coordinator.set_deployment(deployment)
+                # Start a background deploy task
+                DeployTaskRunner(deployment).start()
+        except Exception as exception:  # noqa: BLE001
+            self._handle_deploy_failed(env, deployment, exception)
+
+        assert deployment is not None
+        DEPLOYMENT_INFO_COUNTER.labels(
+            source_type=module.source_type, environment=env.environment, status="successful"
+        ).inc()
+        return deployment
+
+    @staticmethod
+    def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
+        """Get VersionInfo from user inputted params"""
+        version_name = params["version_name"]
+
+        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision=version_name)
+
+        if build is not None:
+            # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo
+            # 但实际上这个 VersionInfo 里的信息并未被使用
+            # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
+            image_tag = build.image_tag or ""
+            return VersionInfo(version_type=VersionType.IMAGE.value, version_name=image_tag, revision=image_tag)
+
+        version_type = params["version_type"]
+        revision = params.get("revision")
+        try:
+            # 尝试根据 smart_revision 获取最新的 revision
+            version_service = get_version_service(module, operator=user.pk)
+            revision = version_service.extract_smart_revision(f"{version_type}:{version_name}")
+        except GitLabBranchNameBugError as e:
+            raise error_codes.CANNOT_GET_REVISION.f(str(e))
+        except NotImplementedError:
+            logger.debug(
+                "The current source code system does not support parsing the version unique ID from the version name"
+            )
+        except Exception:
+            logger.exception("Failed to parse version information.")
+
+        # 如果根据 smart_revision 找不到版本信息时, 就使用前端传递的版本信息 revision
+        # 如果前端没有提供 revision 信息, 就报错
+        if not revision:
+            raise error_codes.CANNOT_GET_REVISION
+        return VersionInfo(revision, version_name, version_type)
+
+    @staticmethod
+    def _handle_deploy_failed(env: ModuleEnvironment, deployment: Optional[Deployment], exception: Exception):
+        DEPLOYMENT_INFO_COUNTER.labels(
+            source_type=env.module.source_type, environment=env.environment, status="failed"
+        ).inc()
+        if deployment is not None:
+            deployment.status = "failed"
+            deployment.save(update_fields=["status", "updated"])
+        logger.exception("Deploy request exception, please try again later")
+
+        if isinstance(exception, DescriptionValidationError):
+            raise ValidationError(_("应用描述文件校验失败：{exception}").format(exception=exception))
+        elif isinstance(exception, DownloadFailedError):
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("对象存储服务异常, 请稍后再试"))
+        raise error_codes.CANNOT_DEPLOY_APP.f(_("部署请求异常，请稍候再试"))
+
+
+class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
     应用部署相关API
     基于engine的build & release
@@ -126,11 +234,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=CreateDeploymentSLZ, responses={"201": CreateDeploymentResponseSLZ()})
     def deploy(self, request, code, module_name, environment):
         """部署应用"""
-        application = self.get_application()
-        module = application.get_module(module_name)
-        env = module.get_envs(environment)
+        env = self.get_env_via_path()
 
-        roles = fetch_user_roles(application.code, request.user.username)
+        roles = fetch_user_roles(code, request.user.username)
         try:
             env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
         except RoleNotAllowError:
@@ -141,6 +247,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         params = serializer.data
 
         # 构建调试: 验证构建方式是否支持
+        module = env.module
         if params["advanced_options"].get("debug_enabled"):
             if not user_has_feature(AFF.ALLOW_BUILD_DEBUG)().has_permission(request, self):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("你暂无权限使用构建调试功能"))
@@ -149,95 +256,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if not ModuleRuntimeManager(module).is_cnb_runtime:
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("当前构建方式不支持构建调试, 仅支持 CNB 构建"))
 
-        # 选择历史构建的镜像时需要传递 build_id
-        build = None
-        if build_id := params["advanced_options"].get("build_id"):
-            if not Build.objects.filter(pk=build_id, artifact_deleted=False).exists():
-                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
-            if not Deployment.objects.filter(build_id=build_id).exists():
-                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
-            build = Build.objects.get(pk=build_id)
-
-        version_info = self._get_version_info(request.user, module, params, build=build)
-
-        coordinator = DeploymentCoordinator(env)
-        if not coordinator.acquire_lock():
-            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
-
-        deployment = None
-        try:
-            with coordinator.release_on_error():
-                deployment = initialize_deployment(
-                    env=env,
-                    operator=request.user.pk,
-                    version_info=version_info,
-                    advanced_options=params["advanced_options"],
-                )
-                coordinator.set_deployment(deployment)
-                # Start a background deploy task
-                DeployTaskRunner(deployment).start()
-        except Exception as exception:  # noqa: BLE001
-            self._handle_deploy_failed(module, deployment, exception)
-
-        assert deployment is not None
-        DEPLOYMENT_INFO_COUNTER.labels(
-            source_type=module.source_type, environment=environment, status="successful"
-        ).inc()
+        deployment = self.do_deploy(env, params, request.user)
         return JsonResponse(
             data={"deployment_id": deployment.id, "stream_url": f"/streams/{deployment.id}"},
             status=status.HTTP_201_CREATED,
         )
-
-    @staticmethod
-    def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
-        """Get VersionInfo from user inputted params"""
-        version_name = params["version_name"]
-
-        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision=version_name)
-
-        if build is not None:
-            # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo
-            # 但实际上这个 VersionInfo 里的信息并未被使用
-            # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
-            image_tag = build.image_tag or ""
-            return VersionInfo(version_type=VersionType.IMAGE.value, version_name=image_tag, revision=image_tag)
-
-        version_type = params["version_type"]
-        revision = params.get("revision")
-        try:
-            # 尝试根据 smart_revision 获取最新的 revision
-            version_service = get_version_service(module, operator=user.pk)
-            revision = version_service.extract_smart_revision(f"{version_type}:{version_name}")
-        except GitLabBranchNameBugError as e:
-            raise error_codes.CANNOT_GET_REVISION.f(str(e))
-        except NotImplementedError:
-            logger.debug(
-                "The current source code system does not support parsing the version unique ID from the version name"
-            )
-        except Exception:
-            logger.exception("Failed to parse version information.")
-
-        # 如果根据 smart_revision 找不到版本信息时, 就使用前端传递的版本信息 revision
-        # 如果前端没有提供 revision 信息, 就报错
-        if not revision:
-            raise error_codes.CANNOT_GET_REVISION
-        return VersionInfo(revision, version_name, version_type)
-
-    def _handle_deploy_failed(self, module: Module, deployment: Optional[Deployment], exception: Exception):
-        DEPLOYMENT_INFO_COUNTER.labels(
-            source_type=module.source_type, environment=self.kwargs["environment"], status="failed"
-        ).inc()
-        if deployment is not None:
-            deployment.status = "failed"
-            deployment.save(update_fields=["status", "updated"])
-        logger.exception("Deploy request exception, please try again later")
-
-        if isinstance(exception, DescriptionValidationError):
-            raise ValidationError(_("应用描述文件校验失败：{exception}").format(exception=exception))
-        elif isinstance(exception, DownloadFailedError):
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("对象存储服务异常, 请稍后再试"))
-        raise error_codes.CANNOT_DEPLOY_APP.f(_("部署请求异常，请稍候再试"))
 
     @swagger_auto_schema(
         responses={200: DeploymentResultSLZ},
@@ -248,20 +271,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """查询部署任务结果"""
         query_slz = DeploymentResultQuerySLZ(data=request.query_params)
         query_slz.is_valid(raise_exception=True)
-        include_ansi_codes = query_slz.validated_data.get("include_ansi_codes", False)
-
         deployment = _get_deployment(self.get_module_via_path(), uuid)
-        logs = get_all_logs(deployment)
-        if not include_ansi_codes:
-            logs = strip_ansi(logs)
-        hint = get_failure_hint(deployment)
-        result = {
-            "status": deployment.status,
-            "logs": logs,
-            "error_detail": deployment.err_detail,
-            "error_tips": asdict(hint),
-        }
-        return JsonResponse(result)
+        return JsonResponse(_render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
 
     def export_deployment_log(self, request, code, module_name, uuid):
         """导出部署日志"""
@@ -495,6 +506,49 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         }
 
 
+class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
+    """应用态部署接口，目前仅支持 AIDEV 部署 AI Agent 应用。"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+
+    @swagger_auto_schema(
+        request_body=SysCreateDeploymentSLZ,
+        responses={"201": CreateDeploymentResponseSLZ()},
+        tags=["部署相关接口"],
+        operation_description="提供给 AIDEV 使用的应用态部署接口，仅支持 AI Agent 应用",
+    )
+    def deploy(self, request, code, module_name, environment):
+        """应用态部署应用，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
+        env = self.get_ai_agent_env_via_path()
+
+        serializer = SysCreateDeploymentSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.data
+        if params["advanced_options"].get("debug_enabled"):
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("应用态部署不支持构建调试"))
+
+        # operator 仅用于记录操作人，不做 IAM 角色校验：AIDEV 将用户加入应用成员后，IAM 权限存在生效延迟
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, params["operator"]))
+        deployment = self.do_deploy(env, params, operator)
+        return JsonResponse(
+            data={"deployment_id": deployment.id, "stream_url": f"/streams/{deployment.id}"},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        responses={200: DeploymentResultSLZ},
+        query_serializer=DeploymentResultQuerySLZ(),
+        paginator_inspectors=[],
+        tags=["部署相关接口"],
+    )
+    def get_deployment_result(self, request, code, module_name, uuid):
+        """应用态查询部署任务结果，仅允许查询 AI Agent 应用。"""
+        query_slz = DeploymentResultQuerySLZ(data=request.query_params)
+        query_slz.is_valid(raise_exception=True)
+        deployment = _get_deployment(self.get_ai_agent_module_via_path(), uuid)
+        return JsonResponse(_render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
+
+
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -576,3 +630,17 @@ def _get_deployment(module: Module, uuid: str) -> Deployment:
             _("模块 {module_name} 下没有 id 为 {id} 的部署记录"), module_name=module.name, id=uuid
         )
     return deployment
+
+
+def _render_deployment_result(deployment: Deployment, include_ansi_codes: bool) -> Dict:
+    """Render the result of a deployment, including status, logs and failure hints."""
+    logs = get_all_logs(deployment)
+    if not include_ansi_codes:
+        logs = strip_ansi(logs)
+    hint = get_failure_hint(deployment)
+    return {
+        "status": deployment.status,
+        "logs": logs,
+        "error_detail": deployment.err_detail,
+        "error_tips": asdict(hint),
+    }

@@ -28,6 +28,8 @@ from app_spark_agent.state import (
     Channel,
     ContextStore,
     ConversationContext,
+    ConversationStateConflict,
+    CursorStateError,
     CursorStore,
 )
 from app_spark_agent.tools import LaunchTool
@@ -299,7 +301,8 @@ class ConversationRuntime:
 
         Cursors are seeded before the context is written, and the seeding also marks the
         incoming context version as already replicated -- it came from the control plane, so
-        pushing it straight back would upload megabytes to no effect.
+        pushing it straight back would upload megabytes to no effect. When the context then
+        fails to land, the seeding is undone so that the same restore can be retried.
 
         :param context: Context to adopt, as the control plane archived it.
         :param log_seq: Sequence number the transcript should continue from.
@@ -309,14 +312,67 @@ class ConversationRuntime:
         :raises ConversationStateConflict: If a different context is already active.
         :raises CursorStateError: If the cursor document cannot be written.
         """
+        async with self._numbering_undone_on_failure():
+            await self._rebase_channels(log_seq=log_seq, ui_event_seq=ui_event_seq)
+            await self.cursors.record_context_push(context.context_version)
+            return await self.context_store.restore(context)
+
+    async def adopt_numbering(self, *, log_seq: int, ui_event_seq: int) -> None:
+        """Continue a conversation's numbering when there is no context to adopt with it.
+
+        The channels are pushed before the context, so a Runtime lost during a conversation's
+        first turn can leave the control plane holding entries but no context at all. The next
+        Runtime has nothing for :meth:`restore`, yet still has to number after those entries;
+        restarting at 1 would collide with them, and the ingest drops a collision silently.
+
+        :param log_seq: Sequence number the transcript should continue from.
+        :param ui_event_seq: Sequence number the AG-UI event history should continue from.
+        :raises AppendLogError: If either channel already holds entries of its own.
+        :raises ConversationStateConflict: If this Runtime already holds a conversation.
+        :raises CursorStateError: If the cursor document cannot be written.
+        """
+        # A Runtime holding a context is past the point where it could be told where to start.
+        if not self.context_store.context.is_empty:
+            raise ConversationStateConflict("an active conversation cannot be renumbered")
+        await self._rebase_channels(log_seq=log_seq, ui_event_seq=ui_event_seq)
+
+    async def _rebase_channels(self, *, log_seq: int, ui_event_seq: int) -> None:
         bases = {Channel.MESSAGE: log_seq, Channel.UI_EVENT: ui_event_seq}
         # Rebased in memory first: it is the check that can legitimately fail, and failing it
         # before anything is persisted leaves the Runtime exactly as it was.
         self.transcript.rebase(log_seq)
         self.ui_events.rebase(ui_event_seq)
         await self.cursors.rebase(bases)
-        await self.cursors.record_context_push(context.context_version)
-        return await self.context_store.restore(context)
+
+    @asynccontextmanager
+    async def _numbering_undone_on_failure(self) -> AsyncGenerator[None]:
+        """Put the channel bases and the cursor document back if the block raises.
+
+        A Runtime left with seeded cursors but no context reports non-zero cursors on
+        ``/health``, which the control plane reads as history of the Runtime's own: it stops
+        offering the restore, and the conversation carries on with no memory. Undoing the
+        seeding keeps the Runtime looking untouched, so the next attempt can restore it again.
+
+        Only sound under the run guard, where no run can append between the snapshot and the
+        undo. A process that dies part-way gets no undo at all.
+        """
+        bases = [(self.transcript, self.transcript.base_seq), (self.ui_events, self.ui_events.base_seq)]
+        cursors = self.cursors.snapshot()
+        try:
+            yield
+        except BaseException:
+            for log, base_seq in bases:
+                if log.base_seq != base_seq:
+                    log.rebase(base_seq)
+            # A channel holding entries refused its rebase before the document was written, and
+            # its replication may have moved the document since; putting the snapshot back
+            # would then rewind that progress instead of undoing ours.
+            if self.transcript.is_empty and self.ui_events.is_empty:
+                try:
+                    await self.cursors.revert(cursors)
+                except CursorStateError:
+                    logger.exception("the cursors seeded by a failed restore could not be rolled back")
+            raise
 
     async def flush_replication(self, *, timeout_seconds: float | None = None) -> bool:
         """Wait for the control plane to catch up, if there is one to catch up.

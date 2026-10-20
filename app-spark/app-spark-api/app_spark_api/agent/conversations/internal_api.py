@@ -148,19 +148,21 @@ class ContextResponse(Schema):
 
 
 class CheckpointRequest(Schema):
-    """一个已经到达远端的提交，以及它配套的会话位置。"""
+    """一个已经到达远端的提交，以及做这次提交时会话所在的位置。"""
 
     commit: str = Field(min_length=7, max_length=64, description="已推送的提交 SHA")
     tag: str = Field(min_length=1, max_length=255, description="钉住该提交的远端 tag")
     run_id: str = Field(min_length=1, max_length=64, description="产生这次提交的 run")
-    context_version: int = Field(ge=0, description="和这次提交配套的上下文版本")
+    context_version: int = Field(ge=0, description="做这次提交时的上下文版本，只作记录")
     completed: bool = Field(description="该 run 是否完整结束并提交了最终上下文")
 
 
 class CheckpointResponse(Schema):
-    """这个检查点此刻能不能用来恢复。"""
+    """检查点已登记。"""
 
-    restorable: bool = Field(description="代码和配套上下文是否都已就位")
+    # 登记即可恢复，所以恒为 true。字段保留下来，是因为已部署的 Runtime 仍会读它：缺了这个字段，
+    # 它会当成 false 记一条「上下文还没到」的误导日志。
+    restorable: bool = Field(default=True, description="恒为 true，仅为兼容旧版 Runtime 保留")
 
 
 @router.post(
@@ -220,23 +222,21 @@ async def put_context(
     f"{{conversation_id}}/state/{CHECKPOINT_SEGMENT}",
     response={**ERROR_RESPONSES, HTTPStatus.OK: CheckpointResponse},
     url_name="internal-put-checkpoint",
-    summary="登记一个已推送到远端的可恢复点",
+    summary="登记一个已推送到远端的检查点",
 )
 async def put_checkpoint(
     request: HttpRequest,
     payload: CheckpointRequest,
     conversation_id: UUID = CONVERSATION_ID,
 ):
-    """记下 Runtime 刚推上去的那次提交，并回答它现在能不能用来恢复。
+    """记下 Runtime 刚推上去的那次提交。
 
     游标不由 Runtime 报，而是在这里就地读当前已存到哪：Runtime 报的是它自己以为推到了哪，一旦
-    某个批次其实没落库，恢复就会从一个并不存在的位置继续。这里读到的是真的存下来的。
-
-    ``restorable`` 为 false 不是错误，是「代码到了、上下文还没到」这个正常的中间态。Runtime 之后
-    重报同一个检查点即可，不需要——也不应该——再做一次提交。
+    某个批次其实没落库，恢复就会从一个并不存在的位置继续。这里读到的是真的存下来的。这两个游标
+    只作排查用，冷启动不从这里取游标。
     """
     conversation = await _authorized_conversation(request, conversation_id)
-    restorable = await checkpoints.arecord(
+    await checkpoints.arecord(
         conversation_id,
         run_id=payload.run_id,
         commit=payload.commit,
@@ -247,7 +247,7 @@ async def put_checkpoint(
         ui_event_seq=await state.alast_seq(conversation_id, state.UI_EVENT_CHANNEL),
         state_epoch=conversation.state_epoch,
     )
-    return CheckpointResponse(restorable=restorable)
+    return CheckpointResponse()
 
 
 async def _append(

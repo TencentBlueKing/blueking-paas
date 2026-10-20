@@ -74,10 +74,10 @@ def get_context_storage_config() -> ContextStorageConfig:
 def blob_location(conversation_id: UUID, version: int) -> tuple[str, dict[str, str]]:
     """Return the backend name and blob-store configuration for one context version.
 
-    Every version gets its own key. Sharing one key per conversation would be smaller, but a
-    checkpoint has to be able to reach *the version its commit goes with*, and an overwritten
-    blob cannot answer that -- restoring would pair a commit with whatever context happened to
-    be written last. What bounds the growth is retention, not overwriting; see
+    Every version gets its own key. Sharing one key per conversation would be smaller, but then
+    two writers landing at once would race on the same blob, and a slow one could put an older
+    document back over a newer one. With a key per version each writer owns its own blob and row,
+    so archiving needs no lock. What bounds the growth is retention, not overwriting; see
     :mod:`app_spark_api.agent.conversations.checkpoints`.
 
     Example::

@@ -113,10 +113,10 @@
 #   backend: host_tmp_path
 #   root: /tmp/app-spark/agent-contexts
 
-## 除被检查点引用的版本外，一个会话还额外保留多少个最近的上下文版本（小于 1 会被抬回 1）
+## 一个会话保留多少个最近的上下文版本（小于 1 会被抬回 1；冷启动只读最新一版）
 # AGENT_CONTEXT_VERSIONS_KEPT: 5
 
-## 一个会话保留多少个最近的检查点（每个检查点都会钉住一份上下文 blob 不被回收）
+## 一个会话保留多少个最近的检查点（冷启动只用最新一个，其余供排查）
 # AGENT_CHECKPOINTS_KEPT: 3
 
 ## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走普通 JSON 请求体，一份 context

@@ -12,7 +12,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app_spark_agent.state import STATE_SCHEMA_VERSION, ConversationContext
+from app_spark_agent.state import STATE_SCHEMA_VERSION, Channel, ConversationContext, CursorStore
+from app_spark_agent.state import context as context_module
 from tests.api.support import (
     COLD_VERSION,
     cold_context,
@@ -178,6 +179,57 @@ def test_a_runtime_that_already_wrote_history_refuses_to_be_renumbered(api: Test
 
     assert refused.status_code == 409
     assert [record["seq"] for record in drain_channel(api, "/log")] == seqs_before
+
+
+def test_a_context_that_fails_to_land_can_be_restored_again(
+    api: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Seeded cursors without a context would read as history of this Runtime's own.
+
+    The control plane then stops offering the restore, and the conversation carries on with no
+    memory -- across restarts too, because the seeded cursors are on disk.
+    """
+    conversation_id = str(uuid4())
+    payload = cold_context(conversation_id)
+    params = {"log_seq": 40, "ui_event_seq": 55}
+
+    def disk_full(path: Path, data: bytes) -> None:
+        raise OSError("No space left on device")
+
+    write_atomic = context_module.write_atomic
+    monkeypatch.setattr(context_module, "write_atomic", disk_full)
+    with pytest.raises(OSError, match="No space left"):
+        api.put("/context", params=params, json=payload)
+
+    health: dict[str, Any] = api.get("/health").json()
+    assert (health["conversation_id"], health["log_seq"], health["ui_event_seq"]) == (None, 0, 0)
+    assert health["pushed_context_version"] == 0
+    reopened = CursorStore(tmp_path / "runtime-0" / "state" / "cursors.json")
+    assert (reopened.channel(Channel.MESSAGE).base_seq, reopened.pushed_context_version) == (0, 0)
+
+    monkeypatch.setattr(context_module, "write_atomic", write_atomic)
+    assert api.put("/context", params=params, json=payload).status_code == 200
+    run_turn(api, conversation_id=conversation_id)
+    assert next(record["seq"] for record in drain_channel(api, "/log")) == 41
+
+
+def test_a_refused_context_leaves_the_numbering_alone(api: TestClient) -> None:
+    """The channels are still empty, so the seeding goes through before the context is refused."""
+    conversation_id = str(uuid4())
+    assert api.put("/context", json=cold_context(conversation_id)).status_code == 200
+
+    refused = api.put(
+        "/context",
+        params={"log_seq": 40, "ui_event_seq": 55},
+        json=cold_context(context_version=COLD_VERSION + 1),
+    )
+
+    assert refused.status_code == 409
+    health: dict[str, Any] = api.get("/health").json()
+    assert (health["log_seq"], health["ui_event_seq"]) == (0, 0)
+    assert health["pushed_context_version"] == COLD_VERSION
+    run_turn(api, conversation_id=conversation_id)
+    assert next(record["seq"] for record in drain_channel(api, "/log")) == 1
 
 
 @pytest.mark.parametrize("params", [{"log_seq": -1}, {"ui_event_seq": -1}])

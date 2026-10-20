@@ -22,17 +22,18 @@ import asyncio
 
 from asgiref.sync import sync_to_async
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 
 from app_spark_api.agent.conversations.models import Conversation
-from app_spark_api.agent.conversations.services import adelete_project_conversations
+from app_spark_api.agent.conversations.services import (
+    aclose_project_conversations,
+    adelete_project_conversations,
+)
 from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects import constants
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
     ProjectDeletionError,
-    ProjectHasUnfinishedConversationsError,
     ProjectIdTakenError,
     ProjectNameTakenError,
 )
@@ -87,35 +88,17 @@ async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:
         raise ProjectNameTakenError(f"Project name {name} is already taken in tenant {tenant_id}")
 
 
-async def soft_delete_project(project_id: str) -> bool:
-    """Mark an active Project deleted and release its display name."""
-    now = timezone.now()
-
-    # 条件更新让并发删除只有一个请求完成最终状态切换；另一个看到 0 行后按已删除处理。
-    changed = await Project.objects.filter(pk=project_id).aupdate(
-        is_deleted=True,
-        name=None,
-        updated_at=now,
-    )
-
-    return bool(changed)
-
-
 async def delete_project(project: Project) -> None:
     """Delete every located Project resource before hiding the Project itself."""
-    current_category = "project record"
+    current_category = "conversation"
 
     try:
         async with asyncio.timeout(constants.DELETE_PROJECT_TIMEOUT_SECONDS):
-            live_numbers = [
-                number
-                async for number in Conversation.objects.filter(project=project, closed_at__isnull=True)
-                .order_by("number")
-                .values_list("number", flat=True)
-            ]
-            if live_numbers:
-                # 任何外部回收前先一次性报出全部未结束会话，保证 409 不产生部分删除。
-                raise ProjectHasUnfinishedConversationsError(live_numbers)
+            # 先结束活跃会话，否则 Runtime 停掉后还能被新的一轮重新拉起来。
+            try:
+                await aclose_project_conversations(project.pk)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
 
             conversation_ids = [
                 str(conversation_id)
@@ -146,7 +129,7 @@ async def delete_project(project: Project) -> None:
 
             current_category = "project record"
             try:
-                changed = await soft_delete_project(project.pk)
+                changed = await Project.objects.asoft_delete(project.pk)
             except Exception as exc:
                 raise ProjectDeletionError(current_category) from exc
 

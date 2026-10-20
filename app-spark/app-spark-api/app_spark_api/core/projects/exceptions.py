@@ -33,14 +33,6 @@ class ProjectNameTakenError(ProjectConflictError):
     """同租户下已经有同名 Project 了。"""
 
 
-class ProjectHasUnfinishedConversationsError(Exception):
-    """Project 仍有会话可继续推进，删除不能开始。"""
-
-    def __init__(self, numbers: list[int]):
-        self.numbers = numbers
-        super().__init__(f"Conversations {', '.join(map(str, numbers))} are not finished")
-
-
 class ProjectDeletionError(Exception):
     """One category of Project resource could not be deleted."""
 

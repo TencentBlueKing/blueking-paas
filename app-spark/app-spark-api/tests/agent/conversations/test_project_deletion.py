@@ -14,11 +14,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from app_spark_api.agent.conversations import state
 from app_spark_api.agent.conversations.models import Conversation, ConversationNumber, ConversationUserMessage
-from app_spark_api.agent.conversations.services import delete_project_conversations
+from app_spark_api.agent.conversations.services import aclose_project_conversations, delete_project_conversations
 from app_spark_api.agent.conversations.state_models import (
     ConversationCheckpoint,
     ConversationContextVersion,
@@ -58,6 +61,27 @@ def make_conversation(project, bk_user) -> Conversation:
     )
 
     return conversation
+
+
+async def test_closing_project_conversations_ends_live_ones_and_revokes_their_tokens(project, bk_user):
+    closed_before = timezone.now() - timedelta(days=1)
+    live = await Conversation.objects.acreate(project=project, number=1, owner=bk_user, tenant_id=project.tenant_id)
+    closed = await Conversation.objects.acreate(
+        project=project,
+        number=2,
+        owner=bk_user,
+        tenant_id=project.tenant_id,
+        closed_at=closed_before,
+    )
+
+    await aclose_project_conversations(project.id)
+
+    await live.arefresh_from_db()
+    await closed.arefresh_from_db()
+    assert live.closed_at is not None
+    assert live.state_epoch == 2
+    # 已经结束的会话不再动：结束时间保持原样，它的回写凭证早在结束时就吊销过了。
+    assert (closed.closed_at, closed.state_epoch) == (closed_before, 1)
 
 
 def test_delete_project_conversations_removes_history_and_blobs_but_keeps_counter(project, bk_user):

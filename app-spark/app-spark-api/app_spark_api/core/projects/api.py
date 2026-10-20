@@ -29,7 +29,6 @@ from app_spark_api.core.projects.entities import ProjectCreateRequest, ProjectRe
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
     ProjectDeletionError,
-    ProjectHasUnfinishedConversationsError,
     ProjectIdTakenError,
     ProjectNameTakenError,
 )
@@ -98,7 +97,7 @@ async def list_projects(request: HttpRequest):
     summary="删除一个 Project 及其资源",
 )
 async def delete_project(request: HttpRequest, project_id: str = PROJECT_ID):
-    """Delete a Project visible to its owner and release its resources."""
+    """Delete a Project visible to its owner, ending its live conversations and releasing its resources."""
     user = authenticated_user(request)
     project = await aget_object_or_404(
         Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id),
@@ -107,9 +106,6 @@ async def delete_project(request: HttpRequest, project_id: str = PROJECT_ID):
 
     try:
         await services.delete_project(project)
-    except ProjectHasUnfinishedConversationsError as exc:
-        numbers = ", ".join(map(str, exc.numbers))
-        raise error_codes.PROJECT_HAS_UNFINISHED_CONVERSATIONS.f(numbers=numbers) from exc
     except ProjectAlreadyDeletedError as exc:
         # 并发删除已经完成后，该项目与请求开始前就已删除的项目保持相同的不可见响应。
         raise error_codes.RESOURCE_NOT_FOUND from exc

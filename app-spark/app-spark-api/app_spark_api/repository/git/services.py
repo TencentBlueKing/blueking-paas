@@ -211,6 +211,7 @@ async def arevoke_project_credentials(project: Project) -> ProjectGitRepository:
 
 
 async def adelete_project_repository(project: Project) -> None:
+    """Async wrapper for :func:`delete_project_repository`."""
     await sync_to_async(delete_project_repository)(project)
 
 

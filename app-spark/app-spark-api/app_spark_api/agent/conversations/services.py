@@ -164,9 +164,23 @@ async def create_conversation(project: Project, *, owner: str | None) -> Convers
     return await sync_to_async(Conversation.objects.create_for_project)(project, owner=owner)
 
 
+async def aclose_project_conversations(project_id: str) -> None:
+    """End every live conversation of a Project and revoke their state-ingest tokens."""
+    closed_at = timezone.now()
+
+    # 推进 state_epoch：Runtime 停止前的最后一次状态回写会被拒绝。
+    await (
+        Conversation.objects.get_queryset()
+        .filter(project_id=project_id)
+        .live()
+        .aupdate(closed_at=closed_at, updated_at=closed_at, state_epoch=F("state_epoch") + 1)
+    )
+
+
 def delete_project_conversations(project_id: str) -> None:
     """Delete every conversation and context document belonging to a Project."""
     with transaction.atomic():
+        # 级联删除会带走记着 blob 位置的版本行，所以要先读出来。
         versions = list(
             ConversationContextVersion.objects.filter(
                 conversation__project_id=project_id,
@@ -174,10 +188,14 @@ def delete_project_conversations(project_id: str) -> None:
         )
         stores = [version.get_blob_store() for version in versions]
 
-        # 先保留全部存储位置，再让级联删除会话历史。文件删除失败会回滚这些数据库行，
-        # 下一次项目删除仍能从恢复的版本行重新定位；已经删掉的 blob 按契约可重复删除。
         Conversation.objects.filter(project_id=project_id).delete()
-        for store in stores:
+        for version, store in zip(versions, stores, strict=True):
+            logger.debug(
+                "Deleting context version %s of conversation %s for project %s",
+                version.context_version,
+                version.conversation_id,
+                project_id,
+            )
             store.delete()
 
 

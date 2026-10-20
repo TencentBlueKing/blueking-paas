@@ -100,7 +100,8 @@ class E2BSandboxRecord(TimestampedModel):
     agent_pid = models.PositiveIntegerField(verbose_name="Agent 进程 ID", null=True)
 
     # Lifecycle history remains after active ownership has been released. Supported reasons:
-    # ``terminated`` (conversation stopped on request), ``project_deleted`` (Project cleanup),
+    # ``terminated`` (conversation stopped on request), ``project_deleted`` (Project cleanup, logs
+    # only: the row is deleted right after),
     # ``expired`` (found gone), ``failed`` (provisioning raised), ``abandoned`` (the worker never
     # came back: the claim was never bound, or it was bound but the Agent was never recorded as
     # started), ``unhealthy`` (replaced at the start of a turn because its Agent did not answer

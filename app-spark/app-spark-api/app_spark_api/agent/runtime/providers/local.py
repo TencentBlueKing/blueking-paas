@@ -186,6 +186,11 @@ class LocalProcessProvider(AgentRuntimeProvider):
         """
         return Path(self.config.state_root) / conversation_id
 
+    def log_path(self, conversation_id: str) -> Path:
+        """Return the file a conversation's Runtime writes its own output to."""
+        state_dir = self.state_dir(conversation_id)
+        return state_dir.parent / f"{state_dir.name}-uvicorn.log"
+
     async def ensure(
         self,
         *,
@@ -264,26 +269,24 @@ class LocalProcessProvider(AgentRuntimeProvider):
     async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
         """Stop local Runtimes and remove their Project and conversation directories."""
         async with self._lock:
-            # 删除项目时会话都已结束，但以前的停止可能失败。先停掉仍由本 worker 持有的进程，
-            # 才能安全删除它们正在使用的目录。
+            # 先停掉本 worker 仍持有的进程，才能安全删除它们正在用的目录。
             for conversation_id in conversation_ids:
                 runtime = self._runtimes.get(conversation_id)
                 if runtime is not None:
                     try:
                         await asyncio.to_thread(_terminate, runtime.process)
-                    except (Exception, asyncio.CancelledError) as exc:
+                    except Exception as exc:
                         raise AgentResourceDeletionError("local process") from exc
                     self._forget(conversation_id)
 
             paths = [self.workspace_dir(project_id)]
             for conversation_id in conversation_ids:
-                state_dir = self.state_dir(conversation_id)
-                paths.extend([state_dir, state_dir.parent / f"{state_dir.name}-uvicorn.log"])
+                paths.extend([self.state_dir(conversation_id), self.log_path(conversation_id)])
 
             try:
                 # 缺失路径按幂等成功；权限和 I/O 错误必须归到本地目录并继续向上传递。
                 await asyncio.to_thread(_delete_paths, paths)
-            except (Exception, asyncio.CancelledError) as exc:
+            except Exception as exc:
                 raise AgentResourceDeletionError("local directory") from exc
 
     async def shutdown(self) -> None:
@@ -361,7 +364,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         # applications at the same time instead of the second one failing to bind.
         port, app_port = self._reserve_ports()
         base_url = f"http://127.0.0.1:{port}"
-        log_path = state_dir.parent / f"{state_dir.name}-uvicorn.log"
+        log_path = self.log_path(conversation_id)
         runtime_token = secrets.token_urlsafe(32)
 
         # Creating directories and forking a process both block, and this runs inside a request

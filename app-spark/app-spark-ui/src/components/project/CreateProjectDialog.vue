@@ -7,6 +7,7 @@
     :confirm-disabled="submitting || !projectName.trim()"
     :cancel-disabled="submitting"
     :closeable="!submitting"
+    :close-on-mask="false"
     :focus-confirm="false"
     @confirm="submit"
   >

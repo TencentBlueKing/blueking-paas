@@ -38,7 +38,11 @@ from app_spark_api.agent.runtime.entities import (
     RuntimeHealth,
     StateCallback,
 )
-from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentProvisionError,
+    AgentResourceDeletionError,
+    AgentWorkspaceBusyError,
+)
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
 from app_spark_api.agent.runtime.providers.agent_env import build_agent_env
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
@@ -223,10 +227,28 @@ class E2BProvider(AgentRuntimeProvider):
         :param conversation_id: Conversation whose sandbox should stop.
         :raises AgentProvisionError: If E2B could not stop the sandbox.
         """
+        await self._terminate_conversation(conversation_id, reason="terminated")
+
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop a Project's sandbox and delete every credential-bearing record."""
+        try:
+            # 锁按会话 ID 分，先查出占着 workspace 的会话才知道拿哪把锁。
+            record = await E2BSandboxRecord.objects.active_for_project(project_id).afirst()
+            if record is not None:
+                await self._terminate_conversation(record.conversation_id, reason="project_deleted")
+
+            # 历史行仍带 runtime token、代理头和流量凭据。项目删除不保留这些诊断记录。
+            await E2BSandboxRecord.objects.filter(project_id=project_id).adelete()
+        except Exception as exc:
+            raise AgentResourceDeletionError("sandbox") from exc
+
+    async def _terminate_conversation(self, conversation_id: str, *, reason: str) -> None:
+        """Stop the sandbox a conversation holds, if it still holds one once the lock is taken."""
         async with self._conversation_lock(conversation_id):
+            # 等锁期间占位可能已被释放或替换，所以拿到锁后重新读。
             record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
             if record is not None:
-                await _SandboxClaim(record, self.config).terminate(reason="terminated")
+                await _SandboxClaim(record, self.config).terminate(reason=reason)
 
     async def shutdown(self) -> None:
         """Stop all active sandboxes owned by this API service.

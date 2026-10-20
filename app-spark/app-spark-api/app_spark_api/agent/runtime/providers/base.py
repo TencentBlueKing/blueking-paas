@@ -142,6 +142,14 @@ class AgentRuntimeProvider(abc.ABC):
         """
 
     @abc.abstractmethod
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop a Project's Runtimes and delete provider-owned storage and credentials.
+
+        :param project_id: Project whose provider resources are being deleted.
+        :param conversation_ids: Every stored conversation identity of the Project.
+        """
+
+    @abc.abstractmethod
     async def shutdown(self) -> None:
         """Shut down every Runtime this provider is responsible for.
 

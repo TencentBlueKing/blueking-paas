@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import attrs
 from asgiref.sync import sync_to_async
+from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
@@ -40,6 +41,7 @@ from app_spark_api.agent.conversations import checkpoints, state
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
+from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
     AgentRuntimeClient,
@@ -160,6 +162,46 @@ async def create_conversation(project: Project, *, owner: str | None) -> Convers
     :return: The stored conversation.
     """
     return await sync_to_async(Conversation.objects.create_for_project)(project, owner=owner)
+
+
+async def aclose_project_conversations(project_id: str) -> None:
+    """End every live conversation of a Project and revoke their state-ingest tokens."""
+    closed_at = timezone.now()
+
+    # 推进 state_epoch：Runtime 停止前的最后一次状态回写会被拒绝。
+    await (
+        Conversation.objects.get_queryset()
+        .filter(project_id=project_id)
+        .live()
+        .aupdate(closed_at=closed_at, updated_at=closed_at, state_epoch=F("state_epoch") + 1)
+    )
+
+
+def delete_project_conversations(project_id: str) -> None:
+    """Delete every conversation and context document belonging to a Project."""
+    with transaction.atomic():
+        # 级联删除会带走记着 blob 位置的版本行，所以要先读出来。
+        versions = list(
+            ConversationContextVersion.objects.filter(
+                conversation__project_id=project_id,
+            ).select_related("conversation")
+        )
+        stores = [version.get_blob_store() for version in versions]
+
+        Conversation.objects.filter(project_id=project_id).delete()
+        for version, store in zip(versions, stores, strict=True):
+            logger.debug(
+                "Deleting context version %s of conversation %s for project %s",
+                version.context_version,
+                version.conversation_id,
+                project_id,
+            )
+            store.delete()
+
+
+async def adelete_project_conversations(project_id: str) -> None:
+    """Async wrapper for :func:`delete_project_conversations`."""
+    await sync_to_async(delete_project_conversations)(project_id)
 
 
 async def close_conversation(conversation: Conversation) -> None:

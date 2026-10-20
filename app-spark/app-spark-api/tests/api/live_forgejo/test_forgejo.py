@@ -209,6 +209,39 @@ async def test_two_projects_get_isolated_private_repositories(aapi_client, forge
     assert after.returncode != 0
 
 
+async def test_deleting_a_project_removes_its_real_repository_and_credentials(
+    aapi_client, forgejo_settings, settings, tmp_path
+):
+    """Unit tests run against a fake that only mimics the DELETE semantics; this is the real one."""
+    settings.AGENT_RUNTIME_PROVIDER = "local_process"
+    settings.AGENT_RUNTIME_PROVIDER_CONFIG = {
+        "agent_project_dir": str(tmp_path / "agent"),
+        "workspace_root": str(tmp_path / "workspaces"),
+        "state_root": str(tmp_path / "agent-state"),
+    }
+    project_id = _project_id("del")
+    repository = await _create_project(aapi_client, project_id)
+    assert repository["status"] == STATUS_READY
+    row = await ProjectGitRepository.objects.aget(project_id=project_id)
+    token = row.write_token
+    assert token
+    username = forgejo_settings.service_account
+    pushed = _clone_and_push(row.clone_url, token, username, "before-delete.txt")
+    assert pushed.returncode == 0, pushed.stderr
+
+    deleted = await aapi_client.delete(f"/api/projects/{project_id}/")
+
+    assert deleted.status_code == HTTPStatus.NO_CONTENT, deleted.content
+    assert not await ProjectGitRepository.objects.filter(project_id=project_id).aexists()
+    with ForgejoClient(forgejo_settings.forgejo_client_config()) as client:
+        assert client.get_repo(row.owner, row.name) is None
+        # 仓库已不存在时再删一次也算成功，这是部分完成的项目删除能够重试的前提。
+        client.delete_repository(row.owner, row.name)
+    work = Path(tempfile.mkdtemp(prefix="forgejo-deleted-"))
+    after = _git(token, "ls-remote", row.clone_url, cwd=work, username=username)
+    assert after.returncode != 0
+
+
 async def test_the_archive_endpoint_returns_a_real_zip_of_the_pushed_source(aapi_client, forgejo_settings):
     """The unit tests mock the archive bytes, so packing is only ever checked here."""
     project_id = _project_id("zip")

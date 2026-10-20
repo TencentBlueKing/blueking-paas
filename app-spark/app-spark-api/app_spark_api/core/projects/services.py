@@ -18,12 +18,27 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from asgiref.sync import sync_to_async
 from django.db import IntegrityError, transaction
 
-from app_spark_api.core.projects.exceptions import ProjectIdTakenError, ProjectNameTakenError
+from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.services import (
+    aclose_project_conversations,
+    adelete_project_conversations,
+)
+from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.core.projects import constants
+from app_spark_api.core.projects.exceptions import (
+    ProjectAlreadyDeletedError,
+    ProjectDeletionError,
+    ProjectIdTakenError,
+    ProjectNameTakenError,
+)
 from app_spark_api.core.projects.models import Project
-from app_spark_api.repository.git.services import aprovision_project_repository
+from app_spark_api.repository.git.services import adelete_project_repository, aprovision_project_repository
 
 
 async def create_project(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:
@@ -60,16 +75,69 @@ async def create_project(*, project_id: str, name: str, owner: str, tenant_id: s
 async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:
     """ID 或名称已被占用就直接拒掉，并说清楚是哪一个。
 
-    用 ``default_objects`` 而不是 ``objects``：软删除的 Project 仍然占着主键和
-    ``(tenant_id, name)`` 唯一约束，查占用时必须把它们也算进去。
+    项目 ID 用 ``default_objects`` 查，因为软删除行仍占着主键。名称只查活跃项目：
+    软删除会把名称置空，同一租户可以重新使用原名称。
 
     :raises ProjectIdTakenError: ID 已被占用。ID 是全局唯一的，不分租户。
     :raises ProjectNameTakenError: 同租户下已有同名项目。
     """
     if await Project.default_objects.filter(pk=project_id).aexists():
         raise ProjectIdTakenError(f"Project id {project_id} is already taken")
-    if await Project.default_objects.filter(tenant_id=tenant_id, name=name).aexists():
+
+    if await Project.objects.filter(tenant_id=tenant_id, name=name).aexists():
         raise ProjectNameTakenError(f"Project name {name} is already taken in tenant {tenant_id}")
+
+
+async def delete_project(project: Project) -> None:
+    """Delete every located Project resource before hiding the Project itself."""
+    current_category = "conversation"
+
+    try:
+        async with asyncio.timeout(constants.DELETE_PROJECT_TIMEOUT_SECONDS):
+            # 先结束活跃会话，否则 Runtime 停掉后还能被新的一轮重新拉起来。
+            try:
+                await aclose_project_conversations(project.pk)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
+
+            conversation_ids = [
+                str(conversation_id)
+                async for conversation_id in Conversation.objects.filter(project=project).values_list("id", flat=True)
+            ]
+
+            current_category = "sandbox"
+            try:
+                provider = get_agent_runtime_provider()
+                await provider.delete_project_resources(project.pk, conversation_ids)
+            except AgentResourceDeletionError as exc:
+                raise ProjectDeletionError(exc.category) from exc
+            except Exception as exc:
+                # 内置 provider 会给出更精确的类别；未知 provider 的运行环境统一按沙箱对外描述。
+                raise ProjectDeletionError(current_category) from exc
+
+            current_category = "context file"
+            try:
+                await adelete_project_conversations(project.pk)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
+
+            current_category = "repository"
+            try:
+                await adelete_project_repository(project)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
+
+            current_category = "project record"
+            try:
+                changed = await Project.objects.asoft_delete(project.pk)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
+
+            # 并发请求已经完成最终切换时，本请求按「已删除项目不可见」返回统一 404。
+            if not changed:
+                raise ProjectAlreadyDeletedError
+    except TimeoutError as exc:
+        raise ProjectDeletionError(current_category) from exc
 
 
 def _insert(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:

@@ -45,7 +45,11 @@ from app_spark_api.agent.runtime.entities import (
     PreviewTarget,
     StateCallback,
 )
-from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentProvisionError,
+    AgentResourceDeletionError,
+    AgentWorkspaceBusyError,
+)
 from app_spark_api.agent.runtime.providers.agent_env import build_agent_env
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 from app_spark_api.utils.urls import to_path_info
@@ -182,6 +186,11 @@ class LocalProcessProvider(AgentRuntimeProvider):
         """
         return Path(self.config.state_root) / conversation_id
 
+    def log_path(self, conversation_id: str) -> Path:
+        """Return the file a conversation's Runtime writes its own output to."""
+        state_dir = self.state_dir(conversation_id)
+        return state_dir.parent / f"{state_dir.name}-uvicorn.log"
+
     async def ensure(
         self,
         *,
@@ -256,6 +265,29 @@ class LocalProcessProvider(AgentRuntimeProvider):
             # on it would stall every other request this worker is serving.
             await asyncio.to_thread(_terminate, runtime.process)
             self._forget(conversation_id)
+
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop local Runtimes and remove their Project and conversation directories."""
+        async with self._lock:
+            # 先停掉本 worker 仍持有的进程，才能安全删除它们正在用的目录。
+            for conversation_id in conversation_ids:
+                runtime = self._runtimes.get(conversation_id)
+                if runtime is not None:
+                    try:
+                        await asyncio.to_thread(_terminate, runtime.process)
+                    except Exception as exc:
+                        raise AgentResourceDeletionError("local process") from exc
+                    self._forget(conversation_id)
+
+            paths = [self.workspace_dir(project_id)]
+            for conversation_id in conversation_ids:
+                paths.extend([self.state_dir(conversation_id), self.log_path(conversation_id)])
+
+            try:
+                # 缺失路径按幂等成功；权限和 I/O 错误必须归到本地目录并继续向上传递。
+                await asyncio.to_thread(_delete_paths, paths)
+            except Exception as exc:
+                raise AgentResourceDeletionError("local directory") from exc
 
     async def shutdown(self) -> None:
         async with self._lock:
@@ -332,7 +364,7 @@ class LocalProcessProvider(AgentRuntimeProvider):
         # applications at the same time instead of the second one failing to bind.
         port, app_port = self._reserve_ports()
         base_url = f"http://127.0.0.1:{port}"
-        log_path = state_dir.parent / f"{state_dir.name}-uvicorn.log"
+        log_path = self.log_path(conversation_id)
         runtime_token = secrets.token_urlsafe(32)
 
         # Creating directories and forking a process both block, and this runs inside a request
@@ -522,6 +554,15 @@ def _free_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return int(probe.getsockname()[1])
+
+
+def _delete_paths(paths: list[Path]) -> None:
+    """Delete provider-owned directories and files, succeeding when they are absent."""
+    for path in paths:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
 
 
 def _tail(log_path: Path, lines: int = LOG_TAIL_LINES) -> str:

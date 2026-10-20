@@ -1,4 +1,4 @@
-# Build from app-spark/: docker build -f app-spark-api/Dockerfile -t app-spark-api:0.1.0 .
+# Build from app-spark-api/: docker build -t app-spark-api:0.1.0 .
 FROM python:3.14-slim-bookworm
 
 RUN apt-get update \
@@ -10,34 +10,15 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
     PYTHONUNBUFFERED=1
 
-WORKDIR /app/app-spark-api
-COPY app-spark-api/pyproject.toml app-spark-api/uv.lock ./
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# local_process spawns Agent processes inside this API container. It needs the sibling
-# project AND its own preinstalled virtualenv; --no-sync must never download on a request.
-WORKDIR /app/agent
-COPY agent/pyproject.toml agent/uv.lock agent/README.md ./
-RUN uv sync --frozen --no-dev --no-install-project
-COPY agent/app_spark_agent ./app_spark_agent
-RUN uv sync --frozen --no-dev
-
-# The new-project template the Agent's init_project tool writes into a workspace. Syncing it once warms the uv
-# cache, so a new project's first launch installs its packages offline; only the cache is kept,
-# because each project builds its own .venv.
-# 
-# INFO: 这个仅在 local_process 模式下有意义，其他 provider 比如 E2B 模式并不会在 api 所在环境
-# 安装 agent 所开发项目的依赖。
-COPY agent/app-template/pyproject.toml agent/app-template/uv.lock ./app-template/
-RUN uv sync --frozen --no-dev --project app-template \
-    && rm -rf app-template/.venv
-
-WORKDIR /app/app-spark-api
-COPY app-spark-api/manage.py app-spark-api/README.md ./
-COPY app-spark-api/app_spark_api ./app_spark_api
+COPY manage.py README.md ./
+COPY app_spark_api ./app_spark_api
 RUN mkdir -p /data/app-spark
 
 EXPOSE 8000
-# Reap Agent children and forward shutdown signals to the API process.
+# Forward shutdown signals and reap any child process the API starts.
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--timeout-graceful-shutdown", "30"]

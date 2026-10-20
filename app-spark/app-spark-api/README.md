@@ -376,9 +376,19 @@ SAMEORIGIN` 要换成 `frame-ancestors`。
 
 ### 镜像构建
 
-项目提供 [Dockerfile](Dockerfile)，以父目录 `app-spark/` 为构建上下文，
-包含 API 和 Agent 各自的生产依赖。镜像里带上 Agent，是为了 `local_process` 在 API 容器里
-`uv run` 拉起 Runtime。
+项目提供 [Dockerfile](Dockerfile)，在本目录构建，只包含 API 的生产依赖与源码。
+生产和预发布使用 `e2b` provider，镜像里没有 Agent 项目；即使误配成 `local_process`，
+也无法在 API 容器里拉起 Runtime。
+
+本地开发和测试若需要在 API 容器里使用 `local_process`，必须显式选择
+[Dockerfile.local](Dockerfile.local)，并以父目录 `app-spark/` 为构建上下文。
+这个镜像同时包含 API、Agent 及双方的虚拟环境，不得用于生产或预发布，也不得推送为正式
+app-spark-api 镜像。
+
+```bash
+docker build -t app-spark-api:production .
+docker build -f Dockerfile.local -t app-spark-api:local ..
+```
 
 `e2b` 跑的是由 [agent 镜像](../agent/README.md) 做成的沙箱模板。API 镜像负责创建沙箱、注入环境，
 再经 envd 启动模板里的 Agent。两种运行方式在 Chart 里怎么填、e2b 什么时候能多副本，见

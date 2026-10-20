@@ -24,7 +24,8 @@ bk_repo 的仓库名、e2b 必填字段和升级策略。
 
 ```bash
 helm dependency build charts/app-spark-api
-docker build -f Dockerfile -t app-spark-api:helm-test-external-wait ..
+# 这组冒烟测试覆盖 local_process，所以必须显式使用仅供开发与测试的镜像。
+docker build -f Dockerfile.local -t app-spark-api:helm-test-external-wait ..
 docker pull mysql:8.4.11
 docker pull groundnuty/k8s-wait-for:v1.5.1
 kind load docker-image app-spark-api:helm-test-external-wait mysql:8.4.11 groundnuty/k8s-wait-for:v1.5.1 --name bkms-ut

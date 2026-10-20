@@ -694,10 +694,6 @@ export default {
       if (data) {
         return data.name;
       }
-      // 兼容筛选列表尚未包含 canceled 的场景，避免渲染为空
-      if (status === 'canceled') {
-        return this.$t('已取消');
-      }
       return '--';
     },
 
@@ -835,9 +831,6 @@ export default {
 
     // 取消申请: 二次确认
     handleCancelApply(row) {
-      if (!this.canOperateApply(row) || this.isRowOperating(row)) {
-        return;
-      }
       this.$bkInfo({
         title: this.$t('确认取消该申请?'),
         subTitle: this.$t('取消后该申请将无法继续审批，如需权限请重新申请。'),
@@ -850,9 +843,6 @@ export default {
 
     // 删除已取消的申请: 二次确认
     handleDeleteApply(row) {
-      if (!this.canOperateApply(row) || this.isRowOperating(row)) {
-        return;
-      }
       this.$bkInfo({
         title: this.$t('确认删除该申请?'),
         subTitle: this.$t('删除后不可恢复，请谨慎操作。'),

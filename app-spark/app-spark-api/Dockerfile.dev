@@ -1,0 +1,41 @@
+# 仅供本地开发与测试：镜像内同时包含 API 与 Agent，以便 local_process 在容器里拉起 Runtime。
+# 与线上环境使用的 Dockerfile 不同——生产 / 预发布镜像不含 Agent，禁止用本文件发布正式镜像。
+# 基础镜像、系统包、uv 版本和启动命令与 Dockerfile 保持一致，修改时两边同步。
+# 构建上下文必须是父目录 app-spark/：
+#   docker build -f app-spark-api/Dockerfile.dev -t app-spark-api:dev .
+FROM python:3.14-slim-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl git procps tini vim \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir uv==0.10.0
+
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app/app-spark-api
+COPY app-spark-api/pyproject.toml app-spark-api/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# local_process 需要同镜像里的 Agent 项目和预装虚拟环境；--no-sync 避免请求路径上再解析依赖。
+WORKDIR /app/agent
+COPY agent/pyproject.toml agent/uv.lock agent/README.md ./
+RUN uv sync --frozen --no-dev --no-install-project
+COPY agent/app_spark_agent ./app_spark_agent
+RUN uv sync --frozen --no-dev
+
+# 预热 init_project 用的依赖缓存。每个生成项目仍会自建 .venv，所以模板自己的 .venv 装完就删掉。
+COPY agent/app-template/pyproject.toml agent/app-template/uv.lock ./app-template/
+RUN uv sync --frozen --no-dev --project app-template \
+    && rm -rf app-template/.venv
+
+WORKDIR /app/app-spark-api
+COPY app-spark-api/manage.py app-spark-api/README.md ./
+COPY app-spark-api/app_spark_api ./app_spark_api
+RUN mkdir -p /data/app-spark
+
+EXPOSE 8000
+# local_process 会拉起 Agent 子进程，用 tini 转发停机信号并回收子进程。
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--timeout-graceful-shutdown", "30"]

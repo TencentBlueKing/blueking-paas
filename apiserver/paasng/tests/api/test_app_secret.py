@@ -22,9 +22,10 @@ import pytest
 from django_dynamic_fixture import G
 from rest_framework.reverse import reverse
 
+from paasng.accessories.app_secret.utilts import get_deployed_secret_list
 from paasng.infras.oauth2.api import BkAppSecret
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 
 pytestmark = pytest.mark.django_db
 
@@ -351,3 +352,50 @@ class TestAppSecret:
         ):
             response = api_client.get(reverse("api.app_secret.deployed_secret", args=(bk_app.code,)))
             assert response.status_code == status_code
+
+
+class TestGetDeployedSecretList:
+    @pytest.fixture()
+    def mock_process(self):
+        process = mock.Mock(instances=[mock.Mock(envs={})])
+        with (
+            mock.patch("paasng.accessories.app_secret.utilts.ProcessManager") as manager,
+            mock.patch("paasng.accessories.app_secret.utilts.get_latest_deployed_at", return_value=None),
+        ):
+            manager.return_value.list_processes.return_value = [process]
+            yield process
+
+    def test_kms_managed_env_has_no_readable_secret(self, bk_app, bk_stag_env, settings, mock_process):
+        settings.SAAS_KMS_ENABLED = True
+        bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
+
+        result = [item for item in get_deployed_secret_list(bk_app) if item["environment"] == "stag"]
+
+        assert [(item["bk_app_secret"], item["kms_managed"]) for item in result] == [(None, True)]
+
+    def test_secret_in_process_env_is_still_reported(self, bk_app, bk_stag_env, settings, mock_process):
+        settings.SAAS_KMS_ENABLED = True
+        bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, True)
+        mock_process.instances[0].envs = {f"{settings.CONFIGVAR_SYSTEM_PREFIX}APP_SECRET": "old-app-secret"}
+
+        result = [item for item in get_deployed_secret_list(bk_app) if item["environment"] == "stag"]
+
+        assert [(item["bk_app_secret"], item["kms_managed"]) for item in result] == [("old-app-secret", False)]
+
+
+class TestDefaultSecretKMSFlag:
+    @pytest.mark.parametrize(
+        ("platform_kms", "app_flag", "expected"),
+        [(True, True, True), (True, False, False), (False, True, False)],
+    )
+    def test_kms_enabled(self, bk_app, api_client, settings, platform_kms, app_flag, expected):
+        settings.SAAS_KMS_ENABLED = platform_kms
+        bk_app.feature_flag.set_feature(AppFeatureFlag.ENCRYPTED_SECRET_ENV_INJECTION, app_flag)
+        with mock.patch(
+            "paasng.accessories.app_secret.views.get_app_secret_in_env_var",
+            return_value=mock.Mock(bk_app_secret="default-app-secret"),
+        ):
+            response = api_client.get(reverse("api.app_secret.default_secret", args=(bk_app.code,)))
+
+        assert response.status_code == 200
+        assert response.data["kms_enabled"] is expected

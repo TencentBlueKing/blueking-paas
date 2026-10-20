@@ -16,12 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, Optional
+from dataclasses import asdict
+from typing import Dict, List, Optional, Sequence
 
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
 from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paas_wl.workloads.release_controller.hooks.entities import CommandTemplate
 from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.core.core.storages.redisdb import get_default_redis
@@ -40,6 +42,7 @@ def exec_command(
     operator: str,
     stream_channel_id: Optional[str] = None,
     extra_envs: Optional[Dict] = None,
+    secret_mounts: Sequence[SecretFileMount] = (),
 ) -> str:
     """run a command in a built slug."""
     wl_app = env.wl_app
@@ -50,17 +53,28 @@ def exec_command(
         build=build,
         operator=operator,
     )
-    execute_bg_command.delay(cmd_obj.uuid, stream_channel_id=stream_channel_id, extra_envs=extra_envs or {})
+    execute_bg_command.delay(
+        cmd_obj.uuid,
+        stream_channel_id=stream_channel_id,
+        extra_envs=extra_envs or {},
+        secret_mounts=[asdict(m) for m in secret_mounts],
+    )
     return str(cmd_obj.uuid)
 
 
 @shared_task
-def execute_bg_command(uuid: str, stream_channel_id: Optional[str] = None, extra_envs: Optional[Dict] = None):
+def execute_bg_command(
+    uuid: str,
+    stream_channel_id: Optional[str] = None,
+    extra_envs: Optional[Dict] = None,
+    secret_mounts: Optional[List[Dict]] = None,
+):
     """execute a command.
 
     :param uuid: pk of Command
     :param stream_channel_id: RedisStreamChannel id
     :param extra_envs: extra env vars
+    :param secret_mounts: Secret files to mount, each item is a dict of SecretFileMount's fields
     """
     command = Command.objects.get(pk=uuid)
     stream: DeployStream
@@ -74,7 +88,8 @@ def execute_bg_command(uuid: str, stream_channel_id: Optional[str] = None, extra
     else:
         stream = ConsoleStream()
 
-    executor = AppCommandExecutor(command=command, stream=stream, extra_envs=extra_envs or {})
+    mounts = [SecretFileMount(**{**m, "sub_paths": tuple(m["sub_paths"])}) for m in secret_mounts or []]
+    executor = AppCommandExecutor(command=command, stream=stream, extra_envs=extra_envs or {}, secret_mounts=mounts)
     executor.perform()
 
 

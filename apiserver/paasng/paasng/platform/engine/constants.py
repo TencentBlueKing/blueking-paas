@@ -147,3 +147,12 @@ class ReplicasPolicy(StrStructuredEnum):
 
     WEB_FORM_PRIORITY = EnumField("web_form_priority", label=_("页面配置优先"))
     APP_DESC_PRIORITY = EnumField("app_desc_priority", label=_("描述文件优先"))
+
+
+class KMSConfigVersionStatus(StrStructuredEnum):
+    """KMS 配置版本的准备状态，按顺序推进；失败时停在已完成的最后一步"""
+
+    PENDING = EnumField("pending", label=_("已加密，待创建远端凭证"))
+    CREDENTIAL_CREATED = EnumField("credential_created", label=_("KMS 凭证已创建"))
+    RESOURCES_APPLIED = EnumField("resources_applied", label=_("Kubernetes 资源已提交"))
+    READY = EnumField("ready", label=_("Secret 已就绪"))

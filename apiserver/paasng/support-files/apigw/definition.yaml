@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.7
-  title: "Add the system APIs to deploy and offline AI Agent apps."
-  comment: "Add system APIs for AIDEV to deploy / offline AI Agent apps and query results and deployment logs."
+  version: 1.4.8
+  title: "Rename the system APIs for deploying and offlining AI Agent apps."
+  comment: "Prefix the user-facing resource names with sys_: sys_deploy_with_module, sys_get_deployment_result, sys_streams_history_events, sys_module_offline, sys_get_offline_result."
 
 
 stages:

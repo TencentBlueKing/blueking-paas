@@ -430,8 +430,8 @@ paths:
         descriptionEn: Upload a source package via link for an AI Agent application with system API credentials
   /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/deployments/:
     post:
-      operationId: sys_deploy_ai_agent_app
-      description: 应用态部署 AI Agent 应用（仅供 AIDEV 使用）
+      operationId: sys_deploy_with_module
+      description: App 部署（支持多模块），系统调用接口
       tags:
       - 部署相关接口
       x-bk-apigateway-resource:
@@ -450,11 +450,11 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Deploy an AI Agent application with system API credentials
+        descriptionEn: Deploy an app (multi-module). System API.
   /system/bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/:
     get:
-      operationId: sys_get_ai_agent_deployment_result
-      description: 应用态查询 AI Agent 应用部署任务结果（仅供 AIDEV 使用）
+      operationId: sys_get_deployment_result
+      description: 查询部署任务结果，系统调用接口
       tags:
       - 部署相关接口
       x-bk-apigateway-resource:
@@ -473,11 +473,11 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Get the deployment result of an AI Agent application with system API credentials
+        descriptionEn: Get the deployment result. System API.
   /system/streams/{channel_id}/history_events:
     get:
-      operationId: sys_ai_agent_streams_history_events
-      description: 应用态获取 AI Agent 应用部署日志流（仅供 AIDEV 使用）
+      operationId: sys_streams_history_events
+      description: 获取部署日志流，系统调用接口
       tags:
       - 部署相关接口
       x-bk-apigateway-resource:
@@ -496,11 +496,11 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Get the deployment log events of an AI Agent application with system API credentials
+        descriptionEn: Get the deployment log stream. System API.
   /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/offlines/:
     post:
-      operationId: sys_ai_agent_module_offline
-      description: 应用态下架 AI Agent 应用模块（仅供 AIDEV 使用）
+      operationId: sys_module_offline
+      description: 应用模块下架，系统调用接口
       tags:
       - 部署相关接口
       x-bk-apigateway-resource:
@@ -519,11 +519,11 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Take an AI Agent application module offline with system API credentials
+        descriptionEn: Take an application module offline. System API.
   /system/bkapps/applications/{app_code}/modules/{module}/offlines/{offline_operation_id}/result/:
     get:
-      operationId: sys_get_ai_agent_offline_result
-      description: 应用态查询 AI Agent 应用下架任务结果（仅供 AIDEV 使用）
+      operationId: sys_get_offline_result
+      description: 查询下架任务结果，系统调用接口
       tags:
       - 部署相关接口
       x-bk-apigateway-resource:
@@ -542,7 +542,7 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn: Get the offline result of an AI Agent application with system API credentials
+        descriptionEn: Get the offline result. System API.
   /bkapps/applications/{app_code}/modules/{module}/source_package/:
     post:
       operationId: upload_source_package

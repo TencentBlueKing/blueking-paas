@@ -156,11 +156,11 @@ bkAuth:
 
 agent:
   # 生产和预发布必须设为 e2b，并填写下方 e2b 配置。local_process 仅供使用
-  # Dockerfile.local 构建镜像的本地开发与测试；正式 API 镜像不包含 /app/agent。
+  # Dockerfile.dev 构建镜像的本地开发与测试；正式 API 镜像不包含 /app/agent。
   # runtimeProvider: local_process
   # 下面是 local_process 的开发配置。改用 e2b 时，这三项默认字段会被 Chart 自动去掉，只需写 e2b 的字段。
   runtimeProviderConfig:
-    # Dockerfile.local 构建的镜像包含该项目及提前 uv sync 创建的虚拟环境。
+    # Dockerfile.dev 构建的镜像包含该项目及提前 uv sync 创建的虚拟环境。
     agent_project_dir: /app/agent
     workspace_root: /data/app-spark/workspaces
     # state_root 必须在 workspace_root 之外。

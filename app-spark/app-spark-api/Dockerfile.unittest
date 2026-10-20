@@ -11,6 +11,8 @@ COPY app_spark_api ./app_spark_api
 COPY tests ./tests
 # 部分单测会验证 Chart 中的配置 configmap 逻辑，因此一并加入
 COPY charts ./charts
+# 单测会检查生产镜像与开发镜像的构建定义保持隔离
+COPY Dockerfile Dockerfile.dockerignore Dockerfile.dev Dockerfile.dev.dockerignore ./
 RUN uv sync --frozen \
     && uv pip install --python /app/.venv/bin/python 'mypy>=2.3.0,<3.0.0' 'pytest>=9.1.1' 'pytest-asyncio>=1.3.0' \
     && /app/.venv/bin/python -c "import mypy, pytest"

@@ -2,15 +2,15 @@
 
 ## local_process 运行方式
 
-`local_process` 仅供本地开发与测试。它必须使用 [Dockerfile.local](../../Dockerfile.local)
+`local_process` 仅供本地开发与测试。它必须使用 [Dockerfile.dev](../../Dockerfile.dev)
 构建的镜像，该镜像同时包含 API、Agent 及各自的虚拟环境。构建上下文必须是父目录
 `app-spark/`，不能只使用 API 项目目录。
 
 ```bash
-docker build -f Dockerfile.local -t app-spark-api:local ..
+docker build -f Dockerfile.dev -t app-spark-api:dev ..
 ```
 
-Dockerfile.local 不得进入生产或预发布流水线，也不得推送为正式 app-spark-api 镜像。
+Dockerfile.dev 不得进入生产或预发布流水线，也不得推送为正式 app-spark-api 镜像。
 
 目前限定单副本、单 worker；升级或配置变更会重建 Pod，造成短暂不可用并中断运行中的会话。
 
@@ -44,7 +44,7 @@ docker build -t registry.example.com/app-spark-api:0.1.0 .
 docker push registry.example.com/app-spark-api:0.1.0
 ```
 
-生产流水线只能使用 Dockerfile，构建上下文为 `app-spark-api/`，不能引用 Dockerfile.local。
+生产流水线只能使用 Dockerfile，构建上下文为 `app-spark-api/`，不能引用 Dockerfile.dev。
 按 [values.yaml](values.yaml) 准备 `values-production.yaml`，填写 e2b 的实际环境配置。
 可选业务配置未定义或为 `null` 时沿用应用默认值；显式的 `false`、`0` 和空值仍会生效。
 

@@ -1,4 +1,4 @@
-# Dockerfile.local builds from this directory. Keep developer configuration and virtualenvs out
+# app-spark-api/Dockerfile.dev builds from this directory. Keep developer configuration and virtualenvs out
 # of the context, including with legacy builders that ignore per-Dockerfile ignore files.
 # Production builds from app-spark-api/ and uses that directory's Dockerfile.dockerignore.
 **/.venv

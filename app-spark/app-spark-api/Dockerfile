@@ -1,4 +1,5 @@
 # Build from app-spark-api/: docker build -t app-spark-api:0.1.0 .
+# Keep the base image, system packages, uv version and command in sync with Dockerfile.dev.
 FROM python:3.14-slim-bookworm
 
 RUN apt-get update \

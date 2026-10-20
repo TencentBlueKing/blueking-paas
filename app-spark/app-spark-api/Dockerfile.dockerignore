@@ -1,18 +1,11 @@
-# Build context is this project directory. Never ship credentials, host virtualenvs,
-# charts, tests or other non-runtime paths into the production image context.
-**/.venv
-**/.git
+# Build context is this project directory. Only ship runtime sources; in particular, never send
+# settings_local.yaml, .env, credentials, host virtualenvs, charts or tests.
+**
+!pyproject.toml
+!uv.lock
+!README.md
+!manage.py
+!app_spark_api/**
 **/__pycache__/
 **/*.pyc
 **/.mypy_cache/
-**/.ruff_cache/
-**/.pytest_cache/
-**/.env
-**/.env.*
-**/settings_local.yaml
-**/settings_files/
-**/values-production.yaml
-**/manifests_ref/
-**/charts/
-**/tests/
-**/docs/

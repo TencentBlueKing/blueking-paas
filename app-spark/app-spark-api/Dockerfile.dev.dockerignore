@@ -1,20 +1,16 @@
-# Dockerfile.local uses app-spark/ as its build context. It admits the sibling Agent only for
+# Dockerfile.dev uses app-spark/ as its build context. It admits the sibling Agent only for
 # local_process development while excluding credentials, host virtualenvs and unrelated projects.
+# Never re-include a bare directory such as !agent/: that admits everything under it, .venv included.
 **
-!app-spark-api/
 !app-spark-api/pyproject.toml
 !app-spark-api/uv.lock
 !app-spark-api/README.md
 !app-spark-api/manage.py
-!app-spark-api/app_spark_api/
 !app-spark-api/app_spark_api/**
-!agent/
 !agent/pyproject.toml
 !agent/uv.lock
 !agent/README.md
-!agent/app_spark_agent/
 !agent/app_spark_agent/**
-!agent/app-template/
 !agent/app-template/pyproject.toml
 !agent/app-template/uv.lock
 **/__pycache__/

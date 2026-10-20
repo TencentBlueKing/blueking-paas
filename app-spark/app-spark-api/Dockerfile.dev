@@ -1,7 +1,8 @@
 # 仅供本地开发与测试：镜像内同时包含 API 与 Agent，以便 local_process 在容器里拉起 Runtime。
 # 与线上环境使用的 Dockerfile 不同——生产 / 预发布镜像不含 Agent，禁止用本文件发布正式镜像。
+# 基础镜像、系统包、uv 版本和启动命令与 Dockerfile 保持一致，修改时两边同步。
 # 构建上下文必须是父目录 app-spark/：
-#   docker build -f app-spark-api/Dockerfile.local -t app-spark-api:local .
+#   docker build -f app-spark-api/Dockerfile.dev -t app-spark-api:dev .
 FROM python:3.14-slim-bookworm
 
 RUN apt-get update \

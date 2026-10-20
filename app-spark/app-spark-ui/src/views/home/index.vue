@@ -99,14 +99,13 @@
                   </button>
                   <div
                     class="project-card__more"
-                    :class="{ 'is-open': menuId === row.id }"
+                    @keydown.esc.prevent="closeMenu"
                   >
                     <button
                       type="button"
                       class="project-card__more-btn"
+                      aria-haspopup="menu"
                       aria-label="项目操作"
-                      :aria-expanded="menuId === row.id"
-                      @click="toggleMenu(row.id)"
                     >
                       <span aria-hidden="true" />
                       <span aria-hidden="true" />
@@ -171,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Plus } from 'bkui-vue/lib/icon';
 import { listProjects } from '@/http/api';
@@ -188,7 +187,6 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const deleteVisible = ref(false);
 const deletingProject = ref<ProjectResponse | null>(null);
-const menuId = ref('');
 const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
 
@@ -220,36 +218,27 @@ const openCreate = () => {
   dialogVisible.value = true;
 };
 
-const toggleMenu = (id: string) => {
-  menuId.value = menuId.value === id ? '' : id;
+const closeMenu = (event: KeyboardEvent) => {
+  const current = event.currentTarget;
+  if (current instanceof HTMLElement) current.querySelector('button')?.blur();
 };
 
 const openDelete = (row: ProjectResponse) => {
-  menuId.value = '';
   deletingProject.value = row;
   deleteVisible.value = true;
 };
 
 const handleDeleted = async () => {
-  if (projects.value.length <= 1 && pagination.current > 1) {
+  const removedId = deletingProject.value?.id;
+  if (removedId && projects.value.some(item => item.id === removedId)) {
+    projects.value = projects.value.filter(item => item.id !== removedId);
+    pagination.count = Math.max(0, pagination.count - 1);
+  }
+  if (!projects.value.length && pagination.current > 1) {
     pagination.current -= 1;
   }
   await fetchProjects();
 };
-
-const onDocumentClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement | null;
-  if (target?.closest('.project-card__more')) return;
-  menuId.value = '';
-};
-
-onMounted(() => {
-  document.addEventListener('click', onDocumentClick);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocumentClick);
-});
 
 const fetchProjects = async () => {
   loading.value = true;
@@ -482,7 +471,7 @@ fetchProjects();
 }
 
 .project-card__more-btn:hover,
-.project-card__more.is-open .project-card__more-btn {
+.project-card__more:focus-within .project-card__more-btn {
   background: #f3f4f7;
 }
 
@@ -502,7 +491,6 @@ fetchProjects();
 }
 
 .project-card__more:hover .project-card__menu,
-.project-card__more.is-open .project-card__menu,
 .project-card__more:focus-within .project-card__menu {
   display: block;
 }

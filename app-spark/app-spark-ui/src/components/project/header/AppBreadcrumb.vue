@@ -71,7 +71,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import { AngleDown, Plus, Search } from 'bkui-vue/lib/icon';
 import AppModal from '@/components/project/AppModal.vue';
 import CreateProjectDialog from '@/components/project/CreateProjectDialog.vue';

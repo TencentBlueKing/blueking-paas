@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import AppModal from '@/components/project/AppModal.vue';
 import { createProject } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';

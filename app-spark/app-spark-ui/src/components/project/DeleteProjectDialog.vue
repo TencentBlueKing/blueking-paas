@@ -26,7 +26,6 @@
       </p>
       <label class="delete-dialog__field">
         <input
-          ref="inputRef"
           v-model="typedId"
           placeholder="请输入项目 ID"
           :class="{ 'is-error': Boolean(error) }"
@@ -62,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import AppModal from '@/components/project/AppModal.vue';
 import { deleteProject } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
@@ -85,7 +84,6 @@ const visible = computed({
 const typedId = ref('');
 const error = ref('');
 const submitting = ref(false);
-const inputRef = ref<HTMLInputElement>();
 
 const idMatches = computed(() => (
   Boolean(props.project) && typedId.value.trim() === props.project.id

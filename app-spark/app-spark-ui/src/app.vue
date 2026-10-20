@@ -5,7 +5,7 @@ import {
 import { useUser } from '@/store/user';
 import { getUserInfo } from '@/http/api';
 import { redirectToLogin } from '@/common/auth';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 
 const isLoading = ref(true);
 const user = useUser();

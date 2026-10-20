@@ -64,30 +64,10 @@ export const createProject = (payload: ProjectCreateRequest): Promise<ProjectRes
   http.post(`${apiPrefix}/projects/`, payload)
 );
 
-/** 删除项目。无请求体；成功后列表不再返回该项目。 */
-export const deleteProject = async (projectId: string): Promise<void> => {
-  try {
-    await http.delete(`${apiPrefix}/projects/${projectId}/`, {}, {
-      responseType: 'text',
-      globalError: false,
-    });
-  } catch (error) {
-    if (!(error instanceof RequestError) || typeof error.response !== 'string' || !error.response) {
-      throw error;
-    }
-    try {
-      const data = JSON.parse(error.response);
-      throw new RequestError(
-        data?.code ?? error.code,
-        data?.detail || data?.message || error.message,
-        data,
-      );
-    } catch (parseError) {
-      if (parseError instanceof RequestError) throw parseError;
-      throw error;
-    }
-  }
-};
+/** 删除项目。无请求体；成功后列表不再返回该项目。失败文案由确认框展示。 */
+export const deleteProject = (projectId: string): Promise<void> => (
+  http.delete(`${apiPrefix}/projects/${projectId}/`, {}, { globalError: false })
+);
 
 /**
  * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。

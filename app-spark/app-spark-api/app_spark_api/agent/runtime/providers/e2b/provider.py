@@ -294,10 +294,11 @@ class E2BProvider(AgentRuntimeProvider):
     async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
         """Return the exposed host for the sandbox's fixed workspace-app port.
 
-        Answered from the record alone, without asking E2B whether the sandbox is still up:
-        every asset of a previewed page comes through here. The host and the proxy tokens are
-        fixed for a sandbox's lifetime, and a sandbox that has gone makes the proxied request
-        fail as unreachable, which is the truthful answer anyway.
+        Answered from the record alone, without asking E2B whether the sandbox is still up.
+        The browser opens a public host directly, so page assets do not come through this
+        service; the headers are only for the proxy path. The host is fixed for a sandbox's
+        lifetime, and a sandbox that has gone makes that host unreachable, which is the
+        truthful answer anyway.
 
         :param conversation_id: Conversation whose application is to be previewed.
         :return: Externally reachable base URL and port-proxy headers, or ``None`` when no

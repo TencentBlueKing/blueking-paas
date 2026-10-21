@@ -7,7 +7,8 @@
     "build": "bk-cli-service-webpack build",
     "build:container": "node ./scripts/build-container.js",
     "server": "node ./paas-server/index.js",
-    "lint:style": "stylelint **/*.{html,vue,css,sass,scss,less} --fix"
+    "lint:style": "stylelint **/*.{html,vue,css,sass,scss,less} --fix",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test src/composables/preview-frame-url.test.ts"
   },
   "keywords": [
     "vue3",

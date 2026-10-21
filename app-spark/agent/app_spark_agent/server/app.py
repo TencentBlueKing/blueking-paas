@@ -100,7 +100,16 @@ def create_runtime_app(
                     await runtime.replicator.aclose()
                 await asyncio.to_thread(runtime.lifecycle.shutdown)
 
-    app = FastAPI(title="App-Spark Agent Runtime", version=VERSION, lifespan=lifespan)
+    # 沙箱允许公开流量后，换个端口就能打到这里。交互文档和 OpenAPI 不校验 Bearer，
+    # 会把接口结构暴露出去，所以关掉。业务路由仍各自校验 Runtime token。
+    app = FastAPI(
+        title="App-Spark Agent Runtime",
+        version=VERSION,
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
     # The views read the runtime back through a dependency, which is what keeps them plain
     # module-level functions instead of closures over this factory.
     attach_runtime(app, runtime)

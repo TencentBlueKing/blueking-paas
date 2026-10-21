@@ -54,7 +54,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
-  /** origin 是沙箱暴露的主机，不是本服务的反代路径。 */
+  /** direct 为 true 时，origin 是沙箱暴露的主机，不是本服务的反代路径。 */
   const direct = ref(false);
   const devServerStatus = ref<DevServerStatus | null>(null);
   /** 作为 iframe 的 key，变了就重新挂载、重新请求页面。 */

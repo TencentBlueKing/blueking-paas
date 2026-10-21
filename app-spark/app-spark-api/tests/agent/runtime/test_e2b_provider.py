@@ -610,7 +610,7 @@ async def test_the_exposed_host_is_what_the_browser_opens(e2b, provider):
 
 
 async def test_the_preview_target_does_not_ask_e2b(e2b, provider):
-    """预览页的每个静态资源都会走这里。集成测试对得上真实地址，这里只证明这一步不再请求 E2B。"""
+    """查预览地址不再请求 E2B。浏览器直连时静态资源不经过这里，集成测试对得上真实地址。"""
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
     e2b.connect_calls = 0

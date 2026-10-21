@@ -23,7 +23,7 @@ uv sync
 
 | 变量 | 必需 | 说明 |
 |------|------|------|
-| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 所有 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面） |
+| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 业务 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面）。交互文档和 OpenAPI 不提供 |
 | `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` | 走 bkaidev 时是 | 用户态 access_token。出站只放进 `X-Bkapi-Authorization`。不参与官网直连 |
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 走官网直连时是 | 和 `MODEL` 的 `<provider>:<model>` 一起走官网 Bearer。有任一网关项时不拿它补网关 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |

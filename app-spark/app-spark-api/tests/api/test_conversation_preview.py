@@ -38,6 +38,7 @@ import pytest
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime import (
+    AgentProvisionError,
     AgentRuntimeClient,
     AgentRuntimeHandle,
     AgentUnavailableError,
@@ -268,6 +269,45 @@ async def test_a_private_target_stays_behind_the_proxy(aapi_client, conversation
 
     assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
     assert body["direct"] is False
+
+
+async def test_an_unreadable_preview_target_falls_back_to_the_proxy(aapi_client, conversation, monkeypatch):
+    """沙箱记录读不出来不能让轮询接口失败，否则前端一次失败就停掉。"""
+
+    async def refuse(_conversation_id: str) -> None:
+        raise AgentProvisionError("unusable sandbox metadata")
+
+    monkeypatch.setattr(get_agent_runtime_provider(), "preview_target", refuse)
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["direct"] is False
+    assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["dev_server_status"] is None
+
+
+async def test_an_uninspectable_runtime_keeps_the_address_and_drops_the_status(
+    aapi_client, conversation, stage, monkeypatch
+):
+    """控制面问不到时地址照旧交出去，状态报 null，接口仍是 200。"""
+    stage(conversation, app="https://9000-sbx.sandbox.example", public=True, dev_server_status="ready")
+
+    async def refuse(_conversation_id: str) -> None:
+        raise AgentProvisionError("control plane hiccup")
+
+    monkeypatch.setattr(get_agent_runtime_provider(), "peek", refuse)
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert (body["origin"], body["direct"], body["dev_server_status"]) == (
+        "https://9000-sbx.sandbox.example/",
+        True,
+        None,
+    )
 
 
 async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_client, conversation):

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,7 @@ from app_spark_api.agent.conversations.entities import (
     UiEventRecord,
 )
 from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
@@ -46,6 +48,8 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
     from app_spark_api.agent.conversations.services import ConversationState
+
+logger = logging.getLogger(__name__)
 
 router = Router(tags=["conversations"], auth=login_required)
 
@@ -265,7 +269,17 @@ async def get_preview(
     dev_server_status。Runtime 联系不上只会让 dev_server_status 变成 null，不会让这个接口失败。
     """
     conversation = await _get_conversation(request, project_id, number)
-    target = await services.get_preview_target(conversation)
+
+    # 记录损坏时退回反代地址。轮询接口一失败，前端在一次都没成功过时就会停掉，预览卡在占位上。
+    try:
+        target = await services.get_preview_target(conversation)
+    except AgentProvisionError:
+        logger.info(
+            "Conversation %s has no usable preview target, falling back to the proxy origin",
+            conversation.id,
+        )
+        target = None
+
     dev_server_status = await services.get_dev_server_status(conversation)
 
     # 远程沙箱的暴露域名由浏览器直接打开，不随这次请求的 Host 变，沙箱重建后跟着换。

@@ -90,19 +90,21 @@ MAX_RUN_CONTENT_LENGTH = 32 * 1024
 class PreviewResponse(Schema):
     """会话里那个工作区应用该去哪儿打开，以及此刻打不打得开。
 
-    地址和状态是两回事，所以分成两个字段。没有暴露域名时，origin 按本次请求的 Host 签发，会话
-    一建好就有。远程沙箱拉起后，origin 改成 get_host 查回来的暴露域名，同一沙箱不变，沙箱重建
-    后更新。dev_server_status 说的是这一刻沙箱里那个进程能不能服务。前端据此决定是先摆一个占位
-    还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
+    地址和状态是两回事，所以分成两个字段。没有可直连的沙箱时，origin 是本服务上的反代路径，按
+    本次请求的 Host 签发，会话一建好就有。远程沙箱拉起后，origin 是 get_host 查回来的暴露域名，
+    每次现查，沙箱重建后跟着变。dev_server_status 说的是这一刻沙箱里那个进程能不能服务。前端据此
+    决定是先摆一个占位还是直接把 iframe 挂上去，而不是靠 URL 有没有值来猜。
     """
 
     origin: str = Field(
         description=(
             "用 iframe 打开工作区应用的地址，末尾带斜杠。"
-            "没有暴露域名时是本服务上的预览路径，按本次请求的 Host 签发。"
-            "远程沙箱拉起后是 get_host 查回来的暴露域名，不随本次请求的 Host 变化；"
-            "同一沙箱不变，沙箱重建后更新"
+            "direct 为 false 时是本服务上的反代路径，按本次请求的 Host 签发；"
+            "为 true 时是远程沙箱的暴露域名，沙箱重建后会变"
         ),
+    )
+    direct: bool = Field(
+        description="origin 是否是沙箱暴露的主机，由浏览器直接打开；false 表示经本服务反代",
     )
     dev_server_status: str | None = Field(
         description=(

@@ -64,40 +64,6 @@ def test_the_origin_keeps_the_public_ingress_prefix(settings, request_factory):
     assert origin == "http://testserver/api-svc/api/projects/spark-demo/conversations/3/preview/app/"
 
 
-def test_a_stored_sandbox_host_does_not_follow_the_request(request_factory):
-    """远程沙箱记下的是 get_host 的域名。换 API 的 Host，iframe 地址不变。"""
-    stored = "https://9000-sbx.sandbox.example/"
-    origins = [
-        preview.resolve_preview_origin(
-            request_factory.get("/preview/", HTTP_HOST=host),
-            project_id="p",
-            number=3,
-            stored=stored,
-        )
-        for host in ("api.example.com", "other.example.com")
-    ]
-
-    assert origins == [stored, stored]
-
-
-def test_without_a_stored_host_the_api_path_follows_the_request(request_factory):
-    """local_process 和 e2b 反代没有这列，地址仍是本服务上的 /preview/app/，并跟着 Host 走。"""
-    origins = [
-        preview.resolve_preview_origin(
-            request_factory.get("/preview/", HTTP_HOST=host),
-            project_id="p",
-            number=3,
-            stored=None,
-        )
-        for host in ("api.example.com", "other.example.com")
-    ]
-
-    assert origins[0].startswith("http://api.example.com/")
-    assert origins[1].startswith("http://other.example.com/")
-    assert all(origin.endswith("/conversations/3/preview/app/") for origin in origins)
-    assert origins[0] != origins[1]
-
-
 def test_the_origin_does_not_depend_on_which_path_asked_for_it(request_factory):
     """它是（会话, 本服务地址）的函数。不是的话就不能在会话刚建好、还没人请求过时也签得出来。"""
     from_resource = preview.build_preview_origin(

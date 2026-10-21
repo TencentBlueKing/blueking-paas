@@ -24,8 +24,6 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
   value && KNOWN_STATUSES.has(value) ? value as DevServerStatus : null
 );
 
-export { previewFrameUrl };
-
 /**
  * 当前打开的预览面板要画的地址和状态。
  *
@@ -56,6 +54,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
+  /** origin 是沙箱暴露的主机，不是本服务的反代路径。 */
+  const direct = ref(false);
   const devServerStatus = ref<DevServerStatus | null>(null);
   /** 作为 iframe 的 key，变了就重新挂载、重新请求页面。 */
   const frameKey = ref(0);
@@ -148,7 +148,10 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
         return;
       }
       // 同一地址不换 src。远程沙箱重建后 get_host 会变成另一个主机，那时才重载。
-      if (data.origin && data.origin !== origin.value) origin.value = data.origin;
+      if (data.origin && data.origin !== origin.value) {
+        origin.value = data.origin;
+        direct.value = data.direct;
+      }
       devServerStatus.value = asDevServerStatus(data.dev_server_status);
       pending.value = false;
       resolved = true;
@@ -184,6 +187,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       trackedKey = nextKey;
       generation += 1;
       origin.value = '';
+      direct.value = false;
       devServerStatus.value = null;
       pending.value = true;
       resolved = false;
@@ -257,7 +261,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   /** 只有 ready 才有 src。空串表示摘掉 iframe，回到占位。 */
   const frameSrc = computed(() => (
     phase.value === 'ready' && origin.value
-      ? previewFrameUrl(origin.value, window.location.origin)
+      ? previewFrameUrl(origin.value, direct.value, window.location.origin)
       : ''
   ));
 

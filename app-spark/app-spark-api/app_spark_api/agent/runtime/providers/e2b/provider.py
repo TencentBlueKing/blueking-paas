@@ -317,22 +317,9 @@ class E2BProvider(AgentRuntimeProvider):
             # Our self-hosted E2B port proxy rejects a forwarded host different from its
             # exposed-port host with HTTP 400 (`bad target`).
             send_forwarded_host=False,
+            # 浏览器直接打开暴露域名，不走本服务反代。沙箱创建时已允许不带令牌访问。
+            public=True,
         )
-
-    def publishes_direct_preview(self) -> bool:
-        """Return whether this provider's preview host is opened by the browser itself."""
-        return True
-
-    async def exposed_preview_origin(self, conversation_id: str) -> str | None:
-        """Return the sandbox host get_host reported for the browser to open."""
-
-        # 远程沙箱不走本服务反代。浏览器打开暴露域名，创建时已允许不带令牌访问，
-        # 这里也不把沙箱令牌放进返回值。
-        target = await self.preview_target(conversation_id)
-        if target is None:
-            return None
-
-        return f"{target.base_url.rstrip('/')}/"
 
     async def _create_sandbox(self) -> AsyncSandbox:
         """Ask E2B for a sandbox from the configured template.

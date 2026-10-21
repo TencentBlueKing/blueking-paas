@@ -16,13 +16,13 @@
 
 """经由本服务打开某个会话的工作区应用。
 
-没有记下暴露域名的会话，浏览器不会被指到沙箱上，而是指回这里，由这里转发。这层间接是这条路径
-能被鉴权的全部原因：请求先过完平台登录和项目归属校验，才够得着模型写的那个进程。于是这条预览
-地址本身不是凭据，把它给一个打不开这个会话的人，他什么也拿不到。
+provider 的 preview_target 没标 public 时，浏览器不会被指到沙箱上，而是指回这里，由这里转发。
+这层间接是这条路径能被鉴权的全部原因：请求先过完平台登录和项目归属校验，才够得着模型写的那个
+进程。于是这条预览地址本身不是凭据，把它给一个打不开这个会话的人，他什么也拿不到。
 
 这条地址也不落库。它是「这个会话」加「本服务对外的地址」的纯函数，存一列只会在服务搬家之后变成
-一个没人会去更新的旧值。远程沙箱的暴露域名是另一回事：那是沙箱创建后用 get_host 查回来的，记在会话
-的 preview_origin 上，浏览器直接打开。那些请求不进这个模块，这里也不给它加沙箱令牌。
+一个没人会去更新的旧值。标了 public 的远程沙箱另算：浏览器直接打开 get_host 给出的暴露域名，
+那个地址每次从 provider 现查，请求不进这个模块，这里也不给它加沙箱令牌。
 
 同源的代价分两层，别混在一起看。摘掉转发请求上的 Cookie 和 Authorization，防的是「应用读到平台
 凭据」；而「应用以用户身份调平台」是浏览器自己发的同源请求，根本不经过反代，摘首部管不到——那一
@@ -116,16 +116,6 @@ NOSNIFF_HEADER = {"x-content-type-options": "nosniff"}
 # 浏览器就按启发式把旧的 HTML、JS 当成新鲜的直接复用，iframe 重载了也还是旧页面。no-cache 不是
 # 不缓存，而是每次先带着 ETag 回源问一句，没改就是 304。应用自己声明了缓存策略时尊重它。
 DEFAULT_CACHE_CONTROL = "no-cache"
-
-
-def resolve_preview_origin(request: HttpRequest, *, project_id: str, number: int, stored: str | None) -> str:
-    """Return the iframe URL, preferring a stored sandbox host over this request."""
-
-    # 记下的是沙箱创建后用 get_host 查回来的域名，不随这次请求的 Host 变。
-    if stored:
-        return stored
-
-    return build_preview_origin(request, project_id=project_id, number=number)
 
 
 def build_preview_origin(request: HttpRequest, *, project_id: str, number: int) -> str:

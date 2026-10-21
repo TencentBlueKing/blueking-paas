@@ -96,7 +96,7 @@ class AgentRuntimeProvider(abc.ABC):
 
     @abc.abstractmethod
     async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
-        """Return where, and how, this service should proxy the conversation's preview to.
+        """Return where the conversation's preview is served, and how to reach it.
 
         The workspace application, not the Runtime's own API: what a user opens when they want
         to look at what the agent built. Asking the provider is the whole point -- where that
@@ -104,23 +104,16 @@ class AgentRuntimeProvider(abc.ABC):
         it is the one thing the sandbox itself cannot say, since nothing inside it knows how
         the outside addresses it.
 
+        The same answer serves both ways of opening it: when ``public`` is set the browser goes
+        to ``base_url`` itself, otherwise this service proxies there with ``http_headers``.
+
         This never starts anything, for the same reason :meth:`peek` does not: looking at a
         conversation must not provision an agent for it.
 
-        :param conversation_id: Conversation whose application is to be proxied.
+        :param conversation_id: Conversation whose application is to be previewed.
         :return: The application's address plus the transport it needs, or ``None`` when no
-            Runtime is serving the conversation and there is therefore nothing to proxy to.
+            Runtime is serving the conversation and there is therefore nothing to open.
         """
-
-    def publishes_direct_preview(self) -> bool:
-        """Return whether browsers open this provider's preview on an exposed host."""
-        return False
-
-    async def exposed_preview_origin(self, conversation_id: str) -> str | None:
-        """Return a browser-facing preview URL, or None when preview stays on this service."""
-
-        # local_process 没有公开预览主机。远程沙箱覆盖这个方法，用 conversation_id 去查那个沙箱。
-        return None
 
     async def extend_lifetime(self, conversation_id: str) -> None:  # noqa: B027
         """Push back when the Runtime serving conversation_id is reclaimed for idleness.

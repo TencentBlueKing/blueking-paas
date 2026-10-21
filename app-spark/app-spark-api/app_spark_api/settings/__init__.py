@@ -399,7 +399,8 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   runtime_port: 8000
 ##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。
 ##   preview_port: 9000
-##   ## 可选。暴露端口代理使用的协议，默认 https。
+##   ## 可选。暴露端口代理使用的协议，默认 https。预览由浏览器直接打开这个协议的地址，平台页面是
+##   ## https 时这里也必须是 https，否则 iframe 会被当成混合内容拦掉。
 ##   port_scheme: https
 ##   ## 可选。沙箱内 agent 的 workspace 与状态目录，两者不能互相包含。
 ##   workspace_dir: /data/workspace

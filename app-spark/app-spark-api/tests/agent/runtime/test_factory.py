@@ -22,7 +22,6 @@ import pytest
 
 from app_spark_api.agent.runtime.exceptions import AgentConfigurationError
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider, make_agent_runtime_provider
-from app_spark_api.agent.runtime.providers.e2b import E2BProvider
 from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
 CONFIG = {
@@ -37,21 +36,6 @@ def test_the_local_provider_is_built_from_its_configuration():
 
     assert isinstance(provider, LocalProcessProvider)
     assert provider.config.agent_project_dir == CONFIG["agent_project_dir"]
-
-
-E2B_CONFIG = {
-    "api_key": "e2b-key",
-    "api_url": "https://e2b.example",
-    "callback_base_url": "https://app-spark.example",
-    "template": "app-spark-agent",
-}
-
-
-def test_the_e2b_provider_publishes_its_preview_host():
-    provider = make_agent_runtime_provider("e2b", E2B_CONFIG)
-
-    assert isinstance(provider, E2BProvider)
-    assert provider.publishes_direct_preview() is True
 
 
 def test_an_unknown_provider_is_refused_by_name():

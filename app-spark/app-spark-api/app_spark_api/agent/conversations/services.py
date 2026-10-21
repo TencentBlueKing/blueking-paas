@@ -233,14 +233,11 @@ async def close_conversation(conversation: Conversation) -> None:
         await Conversation.objects.get_queryset()
         .filter(pk=conversation.pk)
         .live()
-        .aupdate(closed_at=closed_at, updated_at=closed_at, preview_origin=None)
+        .aupdate(closed_at=closed_at, updated_at=closed_at)
     )
     if not changed:
         raise ConversationClosedError(f"Conversation {conversation.id} has already been closed")
-
     conversation.closed_at = closed_at
-    # 会话结束就拆掉沙箱，暴露域名不能再交给浏览器。
-    conversation.preview_origin = None
 
     await terminate_runtime(conversation)
 
@@ -275,65 +272,7 @@ async def open_client(conversation: Conversation, *, credential: UserCredential 
         git_remote=await sync_to_async(_git_remote)(repo),
         model_access=partial(resolve_model_access, credential),
     )
-    # 沙箱已经在了，才能查到 get_host。local_process 这里得到 None，预览地址继续现签。
-    await remember_preview_origin(conversation)
     return AgentRuntimeClient(handle)
-
-
-def read_published_preview_origin(conversation: Conversation) -> str | None:
-    """Return the stored exposed host when this provider still publishes one."""
-
-    # 切回 local_process 之后，库里可能还留着远程沙箱的主机。那一列不再交给浏览器，
-    # 预览改走本服务的反代。远程沙箱暂时不在时仍返回上次记下的地址。
-    if not get_agent_runtime_provider().publishes_direct_preview():
-        return None
-
-    return conversation.preview_origin
-
-
-async def remember_preview_origin(conversation: Conversation) -> None:
-    """Store the remote sandbox host once ensure has a sandbox to ask."""
-
-    provider = get_agent_runtime_provider()
-    origin = await provider.exposed_preview_origin(str(conversation.id))
-    # 远程沙箱暂时没有：留下上次的地址，等重建后再更新。local_process 不发布暴露域名，
-    # 必须清掉以前记下的主机，否则切回本机之后预览还指着那个地址。
-    if origin is None:
-        if not provider.publishes_direct_preview():
-            await _write_preview_origin(conversation, None)
-
-        return
-
-    await _write_preview_origin(conversation, origin)
-
-
-async def _clear_preview_origin(conversation: Conversation) -> None:
-    """Drop the exposed host from the row, even if this process already sees it empty."""
-
-    conversation.preview_origin = None
-    if conversation.pk is None:
-        return
-
-    updated_at = timezone.now()
-    await Conversation.objects.filter(pk=conversation.pk).aupdate(preview_origin=None, updated_at=updated_at)
-    conversation.updated_at = updated_at
-
-
-async def _write_preview_origin(conversation: Conversation, origin: str | None) -> None:
-    """Persist preview_origin when it actually changed."""
-
-    if origin == conversation.preview_origin:
-        return
-
-    conversation.preview_origin = origin
-    # open_client 的测试会拿一个还没落库的会话进来，那时没有行可写。
-    if conversation.pk is None:
-        return
-
-    # aupdate 绕过 save()，auto_now 不会自己动。
-    updated_at = timezone.now()
-    await Conversation.objects.filter(pk=conversation.pk).aupdate(preview_origin=origin, updated_at=updated_at)
-    conversation.updated_at = updated_at
 
 
 def _git_remote(repo: ProjectGitRepository) -> GitRemote:
@@ -368,9 +307,6 @@ async def terminate_runtime(conversation: Conversation) -> None:
     :param conversation: Conversation whose Runtime should be stopped.
     """
     await revoke_state_access(conversation)
-    # 不看内存里的旧值。close 的 UPDATE 和 open_client 的写入可能交错，这里按「Runtime
-    # 正在被收掉」再清一次库，盖住结束之后又写回去的那一笔。
-    await _clear_preview_origin(conversation)
 
     # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 20 秒再销毁沙箱。凭证已吊销，
     # Agent 退出前最后那次状态回写会被拒绝，会话历史以此前已回写的为准。

@@ -261,21 +261,24 @@ async def get_preview(
 ):
     """拿到用 iframe 打开这个会话的工作区应用的地址，以及那个应用此刻的状态。
 
-    当前驱动不发布暴露域名时，地址按这个请求的 Host 签发，会话一建好就有。远程沙箱拉起之后，
-    地址改成当时用 get_host 查回来的暴露域名，不随这次请求的 Host 变化；同一沙箱不变，沙箱重建
-    后换成新的。切回反代或会话结束之后不再返回以前记下的主机。拿到 origin 不等于这一刻就有东西
-    可看，该看 dev_server_status。Runtime 联系不上只会让 dev_server_status 变成 null，不会让
-    这个接口失败。
+    地址每次向 provider 现查，不落库。拿到 origin 不等于这一刻就有东西可看，该看
+    dev_server_status。Runtime 联系不上只会让 dev_server_status 变成 null，不会让这个接口失败。
     """
     conversation = await _get_conversation(request, project_id, number)
+    target = await services.get_preview_target(conversation)
+    dev_server_status = await services.get_dev_server_status(conversation)
+
+    # 远程沙箱的暴露域名由浏览器直接打开，不随这次请求的 Host 变，沙箱重建后跟着换。
+    if target is not None and target.public:
+        return PreviewResponse(
+            origin=f"{target.base_url.rstrip('/')}/", direct=True, dev_server_status=dev_server_status
+        )
+
+    # 其余情况指回本服务的反代：local_process 的回环地址浏览器打不开，沙箱还没起来时也没有主机可给。
     return PreviewResponse(
-        origin=preview.resolve_preview_origin(
-            request,
-            project_id=project_id,
-            number=number,
-            stored=services.read_published_preview_origin(conversation),
-        ),
-        dev_server_status=await services.get_dev_server_status(conversation),
+        origin=preview.build_preview_origin(request, project_id=project_id, number=number),
+        direct=False,
+        dev_server_status=dev_server_status,
     )
 
 

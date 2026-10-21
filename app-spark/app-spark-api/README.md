@@ -357,11 +357,16 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 预览是三件事，分开看才对：**平台签发能打开的地址**、**agent 保证约定端口在听**、**前端决定什么时候
 摆给人看**。沙箱只管中间那件——它不知道自己被外面怎么寻址，`app.launched` 里也就没有 url。
 
-`GET .../conversations/<n>/preview/` 返回 `origin` 和 `dev_server_status`。`origin` 是本服务自己的一条
-路径 `.../preview/app/`，前端直接拿去当 iframe 的 `src`；它不依赖 Runtime 存活，会话一建好就有，也不
-落库（由请求推导）。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` / `ready` /
-`stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，继续等
-就好，Runtime 那边不会因此重启它。
+`GET .../conversations/<n>/preview/` 返回 `origin`、`direct` 和 `dev_server_status`，前端拿 `origin`
+当 iframe 的 `src`，地址不落库，每次现查。provider 的 `preview_target` 标了 `public`（E2B）时，
+`origin` 是沙箱用 `get_host` 给出的暴露域名，`direct` 为 true，浏览器直接打开，沙箱创建时已允许不带
+令牌访问；沙箱重建后主机会变。其余情况 `origin` 是本服务自己的一条路径 `.../preview/app/`，由请求
+推导，会话一建好就有。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` /
+`ready` / `stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，
+继续等就好，Runtime 那边不会因此重启它。
+
+E2B 直连意味着暴露域名本身就能打开预览，不经过平台登录；`allow_public_traffic` 是整个沙箱的开关，
+Agent Runtime 端口另有 Bearer token 保护。平台页面是 https 时 `port_scheme` 必须是 https。
 
 `.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
 预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的

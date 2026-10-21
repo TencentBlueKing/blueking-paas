@@ -46,12 +46,6 @@ class RecordingProvider:
             conversation_id=kwargs["conversation_id"], base_url="http://127.0.0.1:1", runtime_token="t"
         )
 
-    def publishes_direct_preview(self) -> bool:
-        return False
-
-    async def exposed_preview_origin(self, conversation_id: str) -> None:
-        return None
-
 
 @pytest.fixture()
 def resolved_credentials(monkeypatch) -> list[UserCredential | None]:

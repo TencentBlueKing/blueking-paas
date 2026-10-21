@@ -1,13 +1,16 @@
-/** API 反代把应用挂在这段路径下。远程沙箱暴露出来的主机没有它。 */
-const API_PREVIEW_PATH = '/preview/app/';
-
 /**
- * 路径仍是 API 的 /preview/app/ 时，折回当前页面，请求继续走页面上的代理。
- * 暴露出来的预览主机原样当作 iframe src。
+ * 反代地址要和当前页面同源，否则响应里的 `frame-ancestors 'self'` 会拦住。接口按它自己看到的
+ * Host 签发绝对地址，本地页面在另一台主机上时只留路径，请求仍走页面上的 `/api-svc` 代理。
+ *
+ * `direct` 为 true 时是沙箱暴露的主机，原样当作 iframe src。
  */
-export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
+export const previewFrameUrl = (origin: string, direct: boolean, pageOrigin: string): string => {
   if (!origin) {
     return '';
+  }
+
+  if (direct) {
+    return origin;
   }
 
   let url: URL;
@@ -15,10 +18,6 @@ export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
     url = new URL(origin, pageOrigin);
   } catch {
     return origin;
-  }
-
-  if (!url.pathname.includes(API_PREVIEW_PATH)) {
-    return url.href;
   }
 
   if (url.origin === pageOrigin) {

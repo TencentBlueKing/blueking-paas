@@ -597,16 +597,16 @@ async def test_a_401_is_not_taken_for_expiry_unless_the_control_plane_confirms_i
 
 
 async def test_the_exposed_host_is_what_the_browser_opens(e2b, provider):
-    """远程沙箱的预览地址就是 get_host，不带沙箱令牌，也不再问一遍 E2B。"""
+    """远程沙箱的预览地址就是 get_host，标成 public 交给浏览器直接打开。"""
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
-    e2b.connect_calls = 0
+
+    target = await provider.preview_target(conversation_id)
 
     record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
-    assert await provider.exposed_preview_origin(conversation_id) == (
-        f"https://{CONFIG.preview_port}-{record.sandbox_id}.{record.sandbox_domain}/"
-    )
-    assert e2b.connect_calls == 0
+    assert target is not None
+    assert target.public
+    assert target.base_url == f"https://{CONFIG.preview_port}-{record.sandbox_id}.{record.sandbox_domain}"
 
 
 async def test_the_preview_target_does_not_ask_e2b(e2b, provider):

@@ -183,6 +183,7 @@ agent:
   #   # 必填。由 agent 镜像添加而来的模板名，没有默认值。
   #   template: app-spark-agent
   #   # 可选。API 未返回 sandbox_domain 时的端口域名后缀，以及端口代理的协议。
+  #   # 预览由浏览器直接打开，平台页面是 https 时 port_scheme 也必须是 https，否则会被当成混合内容拦掉。
   #   # domain: sandbox.example.com
   #   # port_scheme: https
   #   # 可选。在沙箱内启动、停止、探测 Agent 所用的用户，默认 user。

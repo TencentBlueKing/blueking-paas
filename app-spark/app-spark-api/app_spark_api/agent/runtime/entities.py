@@ -296,7 +296,7 @@ class AgentRuntimeHandle:
 
 @attrs.frozen
 class PreviewTarget:
-    """Where a conversation's workspace application is proxied to, and how to reach it.
+    """Where a conversation's workspace application is served, and how to reach it.
 
     :param base_url: Scheme-and-authority base URL of the application.
     :param http_headers: Transport headers the provider's port proxy requires, e.g. its access
@@ -304,11 +304,15 @@ class PreviewTarget:
     :param send_forwarded_host: Whether the application may be told the browser's host through
         ``X-Forwarded-Host``. A provider sets it to ``False`` when something between this
         service and the application routes by that header and rejects a foreign host.
+    :param public: Whether the browser opens ``base_url`` itself instead of this service's
+        proxy. Only for a host that answers without ``http_headers``; a loopback address such
+        as local_process's is never public.
     """
 
     base_url: str
     http_headers: dict[str, str] = attrs.field(factory=dict, repr=False)
     send_forwarded_host: bool = True
+    public: bool = False
 
 
 @attrs.frozen

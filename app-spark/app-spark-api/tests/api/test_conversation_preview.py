@@ -216,11 +216,15 @@ def stage(monkeypatch):
         app: str | None = None,
         http_headers: dict[str, str] | None = None,
         send_forwarded_host: bool = True,
+        public: bool = False,
         dev_server_status=_NO_RUNTIME,
     ) -> None:
         if app is not None:
             apps[str(conversation.id)] = PreviewTarget(
-                base_url=app, http_headers=http_headers or {}, send_forwarded_host=send_forwarded_host
+                base_url=app,
+                http_headers=http_headers or {},
+                send_forwarded_host=send_forwarded_host,
+                public=public,
             )
         if dev_server_status is not _NO_RUNTIME:
             statuses[str(conversation.id)] = dev_server_status
@@ -231,85 +235,39 @@ def stage(monkeypatch):
 # --- 地址 ------------------------------------------------------------------------------------
 
 
-async def test_a_published_preview_host_is_what_the_api_returns(aapi_client, conversation, monkeypatch):
-    """远程沙箱仍在发布暴露域名时，接口把记下的地址原样交出去，不按测试客户端的 Host 重签。"""
-    monkeypatch.setattr(get_agent_runtime_provider(), "publishes_direct_preview", lambda: True)
-    published = "https://9000-sbx.sandbox.example/"
-    conversation.preview_origin = published
-    await conversation.asave(update_fields=["preview_origin"])
+async def test_a_public_target_is_handed_to_the_browser_as_is(aapi_client, conversation, stage):
+    """远程沙箱的暴露域名原样交出去，不按测试客户端的 Host 重签。"""
+    stage(conversation, app="https://9000-sbx.sandbox.example", public=True)
 
     response = await aapi_client.get(build_preview_url(conversation.number))
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json()["origin"] == published
+    body = response.json()
+    assert (body["origin"], body["direct"]) == ("https://9000-sbx.sandbox.example/", True)
 
 
-async def test_a_stored_host_is_not_served_once_preview_stays_on_the_api(aapi_client, conversation):
-    """切回本机反代之后，库里留下的远程主机不再交给浏览器。"""
-    conversation.preview_origin = "https://9000-old.sandbox.example/"
-    await conversation.asave(update_fields=["preview_origin"])
+async def test_the_public_host_follows_a_rebuilt_sandbox(aapi_client, conversation, stage):
+    """地址不落库，沙箱重建、get_host 换了主机，下一次查询就是新的。"""
+    stage(conversation, app="https://9000-sbx-1.sandbox.example", public=True)
+    first = (await aapi_client.get(build_preview_url(conversation.number))).json()
 
-    response = await aapi_client.get(build_preview_url(conversation.number))
+    stage(conversation, app="https://9000-sbx-2.sandbox.example", public=True)
+    second = (await aapi_client.get(build_preview_url(conversation.number))).json()
 
-    assert response.status_code == HTTPStatus.OK
-    origin = response.json()["origin"]
-    assert origin.endswith(f"/conversations/{conversation.number}/preview/app/")
-    assert "9000-old" not in origin
-
-
-async def test_remember_preview_origin_keeps_one_sandbox_and_follows_the_next(monkeypatch, conversation):
-    """同一沙箱的主机名不重写；沙箱重建、get_host 变了才更新。反代 provider 什么也不记。"""
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
-    assert conversation.preview_origin is None
-
-    hosts = ["https://9000-sbx-1.sandbox.example/"]
-
-    async def report_exposed_origin(_conversation_id: str) -> str:
-        return hosts[0]
-
-    monkeypatch.setattr(get_agent_runtime_provider(), "exposed_preview_origin", report_exposed_origin)
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
-    assert conversation.preview_origin == hosts[0]
-
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
-    assert conversation.preview_origin == hosts[0]
-
-    hosts[0] = "https://9000-sbx-2.sandbox.example/"
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
-    assert conversation.preview_origin == hosts[0]
+    assert (first["origin"], second["origin"]) == (
+        "https://9000-sbx-1.sandbox.example/",
+        "https://9000-sbx-2.sandbox.example/",
+    )
 
 
-async def test_remember_preview_origin_drops_a_host_the_provider_no_longer_publishes(conversation):
-    """local_process 不发布暴露域名，必须清掉以前远程沙箱记下的主机。"""
-    conversation.preview_origin = "https://9000-old.sandbox.example/"
-    await conversation.asave(update_fields=["preview_origin"])
+async def test_a_private_target_stays_behind_the_proxy(aapi_client, conversation, stage):
+    """local_process 的回环地址浏览器打不开，仍指回本服务的反代。"""
+    stage(conversation, app="http://127.0.0.1:9001")
 
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
+    body = (await aapi_client.get(build_preview_url(conversation.number))).json()
 
-    assert conversation.preview_origin is None
-
-
-async def test_remember_preview_origin_keeps_the_host_while_the_sandbox_is_down(monkeypatch, conversation):
-    """远程沙箱暂时不在时留下上次的地址，等重建后再更新。"""
-    kept = "https://9000-sbx.sandbox.example/"
-    conversation.preview_origin = kept
-    await conversation.asave(update_fields=["preview_origin"])
-    provider = get_agent_runtime_provider()
-
-    async def report_no_host(_conversation_id: str) -> None:
-        return None
-
-    monkeypatch.setattr(provider, "exposed_preview_origin", report_no_host)
-    monkeypatch.setattr(provider, "publishes_direct_preview", lambda: True)
-    await services.remember_preview_origin(conversation)
-    await conversation.arefresh_from_db()
-
-    assert conversation.preview_origin == kept
+    assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["direct"] is False
 
 
 async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_client, conversation):
@@ -317,6 +275,7 @@ async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_cl
     body = (await aapi_client.get(build_preview_url(conversation.number))).json()
 
     assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["direct"] is False
     # 不是回环地址：那是「浏览器和后端同机」时才碰巧对的答案。
     assert "127.0.0.1" not in body["origin"]
     # 地址有了但没东西可看，这两件事是分开的。

@@ -8,17 +8,22 @@ const page = 'http://studio.example.com';
 test('an API preview path folds back onto the page', () => {
   const origin = 'https://api.example.com/api/projects/p/conversations/3/preview/app/?x=1#top';
   assert.equal(
-    previewFrameUrl(origin, page),
+    previewFrameUrl(origin, false, page),
     'http://studio.example.com/api/projects/p/conversations/3/preview/app/?x=1#top',
   );
 });
 
 test('an API preview path on the same host stays put', () => {
   const origin = `${page}/api/projects/p/conversations/3/preview/app/`;
-  assert.equal(previewFrameUrl(origin, page), origin);
+  assert.equal(previewFrameUrl(origin, false, page), origin);
 });
 
-test('an exposed preview host is the iframe src', () => {
+test('a direct preview host is the iframe src', () => {
   const origin = 'https://9000-sbx.sandbox.example/';
-  assert.equal(previewFrameUrl(origin, page), origin);
+  assert.equal(previewFrameUrl(origin, true, page), origin);
+});
+
+test('a direct host keeps its own path, even one that looks like the proxy', () => {
+  const origin = 'https://9000-sbx.sandbox.example/preview/app/';
+  assert.equal(previewFrameUrl(origin, true, page), origin);
 });

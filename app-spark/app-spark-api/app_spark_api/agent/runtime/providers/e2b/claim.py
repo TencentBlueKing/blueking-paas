@@ -28,7 +28,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from django.utils import timezone
-from e2b import AsyncSandbox, NotFoundException, SandboxException
+from e2b import AsyncSandbox, AuthenticationException, NotFoundException, SandboxException
 from e2b.connection_config import ConnectionConfig
 from packaging.version import InvalidVersion, Version
 
@@ -236,7 +236,8 @@ class _SandboxClaim(SandboxAgentStop):
         :param require_started: Treat a sandbox whose Agent has not answered /health yet as not
             serving. Only stopping a sandbox wants it regardless.
         :return: The connected sandbox, or ``None`` if it is not running, not created yet, or
-            (when required) its Agent has not started.
+            (when required) its Agent has not started. A sandbox whose host answers 401 counts
+            as not running only once the control plane confirms it no longer exists.
         :raises AgentWorkspaceBusyError: When reconciling a claim another request is still
             provisioning, or whose Agent another request is still starting.
         :raises AgentProvisionError: If E2B cannot say whether the sandbox is running.
@@ -264,6 +265,12 @@ class _SandboxClaim(SandboxAgentStop):
                 return sandbox
         except NotFoundException:
             pass
+        except AuthenticationException as exc:
+            # 自建 E2B 的入口网关对已被回收的沙箱主机名回 401 unauthorized，而不是 404 或 502，
+            # 只看 envd 这一侧分不清“沙箱没了”和“令牌不对”，交给控制面判断。
+            if not await self._is_gone_from_control_plane(sandbox_id):
+                raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
+            logger.info("E2B sandbox %s is gone from the control plane; its host answered 401", sandbox_id)
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
         if reconcile:
@@ -292,6 +299,25 @@ class _SandboxClaim(SandboxAgentStop):
                 raise AgentProvisionError(f"Could not rebuild E2B sandbox {sandbox_id}: {exc}") from exc
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not inspect E2B sandbox {sandbox_id}: {exc}") from exc
+
+    async def _is_gone_from_control_plane(self, sandbox_id: str) -> bool:
+        """Tell whether the control plane confirms that a sandbox no longer exists.
+
+        Anything short of a NotFound answer, a failed request included, counts as not gone, so
+        a live sandbox is never released on a guess.
+        """
+        try:
+            await AsyncSandbox.get_info(
+                sandbox_id,
+                api_key=self.config.api_key,
+                api_url=self.config.api_url,
+                domain=self.config.domain,
+            )
+        except NotFoundException:
+            return True
+        except constants.SANDBOX_ERRORS:
+            logger.warning("Could not ask the E2B control plane about sandbox %s", sandbox_id, exc_info=True)
+        return False
 
     def rebuild_sandbox(self) -> AsyncSandbox:
         """Build an SDK object from the record alone; nothing here reaches the network.

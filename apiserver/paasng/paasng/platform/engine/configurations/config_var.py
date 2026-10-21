@@ -345,6 +345,7 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
         sys_var("TURBO_URL", settings.BK_TURBO_URL, _("蓝鲸编译加速平台访问地址")),
         sys_var("PIPELINE_URL", settings.BK_PIPELINE_URL, _("蓝鲸流水线访问地址")),
         sys_var("NODEMAN_URL", settings.BK_NODEMAN_URL, _("蓝鲸节点管理平台地址")),
+        sys_var("NODEMGR_URL", settings.BK_NODEMGR_URL, _("蓝鲸节点管理 3.0 平台地址")),
         sys_var("BCS_URL", settings.BK_BCS_URL, _("蓝鲸容器管理平台地址")),
         sys_var("BSCP_URL", settings.BK_BSCP_URL, _("蓝鲸服务配置中心地址")),
         sys_var("AUDIT_URL", settings.BK_AUDIT_URL, _("蓝鲸审计中心地址")),

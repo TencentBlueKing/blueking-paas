@@ -183,6 +183,10 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
 `get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
 Runtime 客户端和预览代理会从 provider 获取并附加所需请求头。
 
+自建 E2B 的入口网关对已被回收的沙箱主机名回 `401 unauthorized`，而不是 404 或 502。重连时
+envd 回 401，provider 会再向控制面查一次（`get_info`）：控制面确认沙箱不存在，就按到期（`expired`）
+处理并释放占位；否则照旧报错，不会放掉一个可能还活着的沙箱。
+
 TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
 
 有有效 E2B 配置时，运行

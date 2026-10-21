@@ -21,6 +21,7 @@
 - SaaS 之间的隔离由 OpenBao role 绑定 SA 名与 namespace 保证，conditions 额外限制只有应用所在 namespace 可以引用。
 """
 
+import re
 from typing import Any
 
 from .constants import (
@@ -65,7 +66,9 @@ def build_cluster_secret_store(
 
     使用 ClusterSecretStore 是为了跨 namespace 引用平台统一维护的 mTLS 证书 Secret，
     无需向每个应用 namespace 分发证书；SecretStore 的 Secret 引用限于其所在 namespace。
-    通过 conditions 将本 Store 的使用范围限制为应用 namespace。
+    通过 conditions 将本 Store 的使用范围限制为应用 namespace。不能使用 conditions.namespaces：
+    ESO 将其转换为 `kubernetes.io/metadata.name` 标签选择器，而 1.21 以下的集群不会自动为
+    namespace 添加该标签，会导致所有 ExternalSecret 被拒绝；namespaceRegexes 直接匹配名称。
 
     :param namespace: 应用所在 namespace，ESO 使用其中的 service_account_name 登录 OpenBao
 
@@ -76,7 +79,7 @@ def build_cluster_secret_store(
         "kind": CLUSTER_SECRET_STORE_KIND,
         "metadata": {"name": name, "labels": dict(labels)},
         "spec": {
-            "conditions": [{"namespaces": [namespace]}],
+            "conditions": [{"namespaceRegexes": [f"^{re.escape(namespace)}$"]}],
             "provider": {
                 "vault": {
                     "server": server,

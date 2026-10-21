@@ -269,10 +269,10 @@ class _SandboxClaim(SandboxAgentStop):
             # 自建 E2B 的入口网关对已被回收的沙箱主机名回 401 unauthorized，而不是 404 或 502，
             # 只看 envd 这一侧分不清“沙箱没了”和“令牌不对”，交给控制面判断。
             if not await self._is_gone_from_control_plane(sandbox_id):
-                raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
+                raise AgentProvisionError(f"Could not inspect E2B sandbox {sandbox_id}: {exc}") from exc
             logger.info("E2B sandbox %s is gone from the control plane; its host answered 401", sandbox_id)
         except constants.SANDBOX_ERRORS as exc:
-            raise AgentProvisionError(f"Could not inspect E2B sandbox {record.sandbox_id}: {exc}") from exc
+            raise AgentProvisionError(f"Could not inspect E2B sandbox {sandbox_id}: {exc}") from exc
         if reconcile:
             await self._release("expired")
         return None

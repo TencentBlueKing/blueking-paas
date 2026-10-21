@@ -1,5 +1,7 @@
 # Build from app-spark-api/: docker build -t app-spark-api:0.1.0 .
-# Keep the base image, system packages, uv version and command in sync with Dockerfile.dev.
+# Keep the base image, system packages, uv version and command in sync with Dockerfile.dev,
+# except --workers: Dockerfile.dev serves local_process, which keeps Runtimes in one process.
+# The worker count must match charts/app-spark-api/templates/deployment.yaml for e2b.
 FROM python:3.14-slim-bookworm
 
 RUN apt-get update \
@@ -22,4 +24,4 @@ RUN mkdir -p /data/app-spark
 EXPOSE 8000
 # Forward shutdown signals and reap any child process the API starts.
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "8", "--timeout-graceful-shutdown", "30"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "30"]

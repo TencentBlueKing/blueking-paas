@@ -7,13 +7,15 @@
     >
       <div
         class="app-modal__mask"
-        @click="close"
+        :class="{ 'app-modal__mask--static': !closeOnMask }"
+        @click="onMaskClick"
       />
       <div
         class="app-modal__panel"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="titleId"
+        :style="{ width: panelWidth }"
       >
         <header class="app-modal__head">
           <h2 :id="titleId">{{ title }}</h2>
@@ -58,7 +60,10 @@ const props = withDefaults(defineProps<{
   confirmDisabled?: boolean;
   cancelDisabled?: boolean;
   closeable?: boolean;
+  /** 点击遮罩空白区域是否关闭；创建/删除等需确认的弹窗应设为 false */
+  closeOnMask?: boolean;
   focusConfirm?: boolean;
+  panelWidth?: string;
 }>(), {
   description: '',
   confirmText: '确定',
@@ -66,7 +71,9 @@ const props = withDefaults(defineProps<{
   confirmDisabled: false,
   cancelDisabled: false,
   closeable: true,
+  closeOnMask: true,
   focusConfirm: true,
+  panelWidth: 'min(440px, 100%)',
 });
 
 const emit = defineEmits<{
@@ -80,6 +87,11 @@ const confirmRef = ref<HTMLButtonElement>();
 const close = () => {
   if (!props.closeable) return;
   emit('update:modelValue', false);
+};
+
+const onMaskClick = () => {
+  if (!props.closeOnMask) return;
+  close();
 };
 
 watch(() => props.modelValue, (visible) => {
@@ -106,9 +118,13 @@ watch(() => props.modelValue, (visible) => {
   cursor: pointer;
 }
 
+.app-modal__mask--static {
+  cursor: default;
+}
+
 .app-modal__panel {
   position: relative;
-  width: min(440px, 100%);
+  max-width: 100%;
   padding: 28px 28px 24px;
   background: #fff;
   border-radius: 20px;

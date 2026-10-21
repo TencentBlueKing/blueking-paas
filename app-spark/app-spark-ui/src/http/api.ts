@@ -64,6 +64,11 @@ export const createProject = (payload: ProjectCreateRequest): Promise<ProjectRes
   http.post(`${apiPrefix}/projects/`, payload)
 );
 
+/** 删除项目。无请求体；成功后列表不再返回该项目。失败文案由确认框展示。 */
+export const deleteProject = (projectId: string): Promise<void> => (
+  http.delete(`${apiPrefix}/projects/${projectId}/`, {}, { globalError: false })
+);
+
 /**
  * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。
  */

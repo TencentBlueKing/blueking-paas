@@ -109,14 +109,11 @@ class BaseManagementBackend(ABC):
     ) -> int:
         """创建管理空间，若已存在则返回已有空间的 ID
 
-        监控/日志权限的写入时机两个版本不同：V3 由后续的更新操作事后补齐（该权限是后来新增的
-        逻辑，为让存量分级管理员平滑迁移，只能通过更新补充）。V4 `create_space` 只接受本系统
-        角色，跨系统范围写入会被拒绝，因此 V4 创建时只写 bk_paas3 权限范围。
+        监控空间通常晚于管理空间创建，监控/日志的权限范围一般由 `update_management_space_scopes` 事后补齐。
 
-        :param init_members: 初始管理员用户名列表。V3、V4 创建时都会写入；为空则该空间没有管理员。
-            V4 暂无空间成员增删接口，存量迁移必须一次把全部管理员带上
-        :param bk_space_id: 蓝鲸监控空间在权限中心的资源 ID。V3 忽略该参数，仍通过更新分级
-            管理员事后补齐；V4 当前忽略，不能把监控/日志角色写入本系统管理空间
+        :param init_members: 初始管理员用户名列表。V3、V4 创建时都会写入；为空则该空间没有管理员
+        :param bk_space_id: 蓝鲸监控空间在权限中心的资源 ID。V4 传入时创建空间即写入监控/日志的
+            权限范围；V3 忽略该参数
         :returns: 管理空间 ID
         """
 
@@ -144,11 +141,7 @@ class BaseManagementBackend(ABC):
     def update_management_space_scopes(
         self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: str | None = None
     ):
-        """为管理空间追加监控、日志空间的授权范围
-
-        note: V4 暂未提供管理空间的更新接口。V4 下应在创建空间时一次性写齐授权范围，
-            该方法在 V4 实现中记录错误后返回，避免阻断监控/日志接入。
-        """
+        """为管理空间追加监控、日志空间的授权范围"""
 
     # ---------------- 用户组与成员 ----------------
 

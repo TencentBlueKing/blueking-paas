@@ -17,10 +17,11 @@
 
 from celery import shared_task
 
-from paasng.infras.iam.base.constants import IAMVersion
-from paasng.infras.iam.client import BKIAMClient
+from paasng.infras.iam import utils
+from paasng.infras.iam.base.dto import UserGroup
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
-from paasng.infras.iam.shim import get_iam_version
+from paasng.infras.iam.shim import get_management_backend
+from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
@@ -33,18 +34,21 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
     :param app_name: 应用名称
     :param bk_space_id: 蓝鲸监控空间ID
     """
-    tenant_id = get_tenant_id_for_app(app_code)
-    iam_client = BKIAMClient(tenant_id)
+    backend = get_management_backend(get_tenant_id_for_app(app_code))
 
-    # V4 创建管理空间时已一次性写齐三系统权限范围，不存在事后补的场景，
-    # 也不调用「更新管理空间」（V4 暂未提供该接口，见 BKIAMV4ManagementBackend）。
-    if get_iam_version() == IAMVersion.V3:
-        grade_manager_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
-        iam_client.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
+    # 1. 把监控、日志空间纳入管理空间的权限范围，用户组只能被授予该范围内的权限
+    space_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
+    backend.update_management_space_scopes(space_id, app_code, app_name, bk_space_id)
 
-    user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role")
-    user_groups_list = [{"id": user_group.user_group_id, "role": user_group.role} for user_group in user_groups]
+    user_groups = [
+        UserGroup(
+            id=group.user_group_id,
+            name=utils.gen_user_group_name(app_code, ApplicationRole(group.role)),
+            role=group.role,
+        )
+        for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role")
+    ]
 
     # 2. 给应用的管理员、开发者、运营者添加监控平台、日志平台权限
-    iam_client.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups_list)
-    iam_client.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups_list)
+    backend.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups)
+    backend.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups)

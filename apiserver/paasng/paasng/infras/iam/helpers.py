@@ -62,7 +62,6 @@ def add_role_members(
     tenant_id = get_tenant_id_for_app(app_code)
     backend = get_management_backend(tenant_id, operator)
     # 如果是管理者，还要添加成分级管理员 / 管理空间管理员。
-    # V4 暂无空间成员增删接口，实现只记日志不抛错，不影响用户组操作。
     if role == ApplicationRole.ADMINISTRATOR:
         backend.add_management_space_members(
             ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
@@ -93,7 +92,6 @@ def delete_role_members(
     tenant_id = get_tenant_id_for_app(app_code)
     backend = get_management_backend(tenant_id, operator)
     # 如果是管理者，还要从分级管理员 / 管理空间管理员中移除。
-    # V4 暂无空间成员增删接口，实现只记日志不抛错，不影响用户组操作。
     if role == ApplicationRole.ADMINISTRATOR:
         backend.delete_management_space_members(
             ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
@@ -157,7 +155,6 @@ def remove_user_all_roles(app_code: str, usernames: Union[List[str], str], *, op
     backend = get_management_backend(tenant_id, operator)
 
     # 先清理掉分级管理员 / 管理空间管理员权限。
-    # V4 暂无空间成员增删接口，实现只记日志不抛错，不影响后续用户组清理。
     backend.delete_management_space_members(
         ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
         usernames,
@@ -205,10 +202,7 @@ def delete_builtin_user_groups(app_code: str, *, operator: str | None = None):
 
 
 def delete_grade_manager(app_code: str, *, operator: str | None = None):
-    """删除应用的分级管理员 / 管理空间
-
-    V4 暂无删除管理空间接口，实现只记日志不抛错；本地记录仍删除，避免应用删除被打断。
-    """
+    """删除应用的分级管理员 / 管理空间"""
     grade_manager = ApplicationGradeManager.objects.filter(app_code=app_code).first()
     if not grade_manager:
         return

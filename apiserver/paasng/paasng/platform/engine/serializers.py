@@ -119,6 +119,12 @@ class CreateDeploymentSLZ(serializers.Serializer):
         return bool(re.match(r"^sha256:[0-9a-f]{64}$", revision))
 
 
+class SysCreateDeploymentSLZ(CreateDeploymentSLZ):
+    """应用态创建部署的请求参数，有意复用父类字段，新增字段默认同步"""
+
+    operator = serializers.CharField(required=True, help_text="部署操作人用户名，允许使用虚拟账号")
+
+
 class CreateDeploymentResponseSLZ(serializers.Serializer):
     deployment_id = serializers.CharField()
     stream_url = serializers.URLField()
@@ -257,6 +263,12 @@ class GetReleasedInfoSLZ(serializers.Serializer):
 
 class CreateOfflineOperationSLZ(serializers.Serializer):
     pass
+
+
+class SysCreateOfflineOperationSLZ(CreateOfflineOperationSLZ):
+    """应用态发起下架的请求参数"""
+
+    operator = serializers.CharField(required=True, help_text="下架操作人用户名，允许使用虚拟账号")
 
 
 class OfflineOperationSLZ(serializers.ModelSerializer):

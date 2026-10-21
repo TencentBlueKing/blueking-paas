@@ -49,6 +49,8 @@ from paasng.infras.bk_ci.client import BkCIPipelineClient
 from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.infras.bk_ci.exceptions import BkCIGatewayServiceError
 from paasng.platform.applications.tenant import get_tenant_id_for_app
+from paasng.platform.engine.configurations.build_token import BuildTokenUnavailable
+from paasng.platform.engine.configurations.registry_proxy import make_credential_unavailable_message
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
     BkCIPipelineBuildNotSuccess,
@@ -63,6 +65,7 @@ from paasng.platform.engine.deploy.bg_build.utils import (
     generate_slug_path,
     prepare_slugbuilder_template,
 )
+from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.utils.output import DeployStream, Style
@@ -81,7 +84,34 @@ _POD_LOG_READ_TIMEOUT = 5 * 60
 _BKCI_PIPELINE_BUILD_TIMEOUT = 12 * 60
 
 
-class DefaultBuildProcessExecutor(DeployStep):
+class RegistryProxyFailureMixin:
+    """经镜像代理构建时的失败处理：签发构建 token 失败时直接终止构建，不得回退为注入平台仓库的真实凭证
+
+    构建过程中代理返回的错误保留在构建日志中。
+    """
+
+    deployment: Deployment
+    stream: DeployStream
+    bp: BuildProcess
+
+    def generate_env_vars(self, metadata: BuildMetadata) -> Dict[str, str]:
+        """生成构建环境变量
+
+        :raises DeployShouldAbortError: 镜像凭证不可用，此时不得启动构建
+        """
+        try:
+            return generate_builder_env_vars(self.bp, metadata)
+        except BuildTokenUnavailable as e:
+            raise DeployShouldAbortError(make_credential_unavailable_message(e.reason)) from e
+
+    def fail_with_reason(self, message: str):
+        """以明确的原因结束构建，原因需已写入日志流"""
+        # 只更新单个字段，避免用本进程中过期的 deployment 对象覆盖其他字段
+        Deployment.objects.filter(pk=self.deployment.pk).update(err_detail=message)
+        self.bp.update_status(BuildStatus.FAILED)
+
+
+class DefaultBuildProcessExecutor(RegistryProxyFailureMixin, DeployStep):
     """
     Execute a build process, using k8s pod to build and upload image or slug package,
     it's a blocking operation and should be executed in a celery task.
@@ -107,7 +137,7 @@ class DefaultBuildProcessExecutor(DeployStep):
                 self.ns_handler = NamespacesHandler.new_by_app(self.wl_app)
 
             with self.procedure("构建环境变量"):
-                env_vars = generate_builder_env_vars(self.bp, metadata)
+                env_vars = self.generate_env_vars(metadata)
 
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
@@ -133,6 +163,9 @@ class DefaultBuildProcessExecutor(DeployStep):
             # 绑定Build对象
             build_instance = self.create_and_bind_build_instance(metadata=metadata)
             self.stream.write_message("Generated build id: %s" % build_instance.uuid)
+        except DeployShouldAbortError as e:
+            # 原因已由 procedure 写入日志流
+            self.fail_with_reason(str(e))
         except ReadTargetStatusTimeout as e:
             logger.exception(
                 f"builder pod did not reach the target status within the timeout period during deploy[{self.bp}]"
@@ -185,8 +218,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             for raw_line in self.build_handler.get_build_log(
                 name=self._builder_name, follow=True, timeout=_POD_LOG_READ_TIMEOUT, namespace=self.wl_app.namespace
             ):
-                line = force_str(raw_line)
-                self.stream.write_message(line)
+                self.stream.write_message(force_str(raw_line))
         except Exception:
             logger.warning("failed to watch build logs for App: %s", self.wl_app.name)
             # 解析失败，直接将当前步骤置为失败
@@ -355,7 +387,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)
 
 
-class PipelineBuildProcessExecutor(DeployStep):
+class PipelineBuildProcessExecutor(RegistryProxyFailureMixin, DeployStep):
     """
     Execute a build process, using bk_ci pipeline to build and upload image,
     it's a blocking operation and should be executed in a celery task.
@@ -386,7 +418,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         """Execute the build process"""
         try:
             with self.procedure("构建环境变量"):
-                env_vars = generate_builder_env_vars(self.bp, metadata)
+                env_vars = self.generate_env_vars(metadata)
 
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
@@ -404,6 +436,9 @@ class PipelineBuildProcessExecutor(DeployStep):
             build_inst = self._create_and_bind_build_instance(metadata=metadata)
             self.stream.write_message("Generated build id: %s" % build_inst.uuid)
 
+        except DeployShouldAbortError as e:
+            # 原因已由 procedure 写入日志流
+            self.fail_with_reason(str(e))
         except BkCIGatewayServiceError:
             logger.exception(f"call bk_ci pipeline failed during deploy[{self.bp}]")
             self.stream.write_message(Style.Error("Call bk_ci pipeline failed, please contact the administrator"))

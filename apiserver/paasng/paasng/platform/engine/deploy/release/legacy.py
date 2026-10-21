@@ -18,7 +18,7 @@
 """Releasing process of an application deployment"""
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
@@ -27,10 +27,12 @@ from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
 from paas_wl.bk_app.processes.processes import ProcessManager
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
+from paasng.platform.engine.configurations.kms import is_kms_injection_enabled, prepare_kms_process_env
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails
 from paasng.platform.engine.deploy.bg_wait.wait_deployment import wait_for_release
@@ -180,9 +182,13 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
     if not deployment:
         raise ValueError("No deployment object can be found")
 
+    # Prepare the env vars and secret mounts before creating the release, so that a failure
+    # (e.g. KMS request error) does not leave a release object which is never deployed.
+    extra_envs, secret_mounts = _get_extra_envs_and_secret_mounts(
+        env, deployment, from_deploy_flow=start_async_waiting
+    )
     # Create the release and start the background task to wait for the release if needed
-    extra_envs = get_env_variables(env, encrypt_sensitive=True)
-    release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile())
+    release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile(), secret_mounts=secret_mounts)
     if start_async_waiting:
         wait_for_release(
             env=env,
@@ -193,8 +199,30 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
     return str(release.uuid)
 
 
+def _get_extra_envs_and_secret_mounts(
+    env: ModuleEnvironment, deployment: Deployment, *, from_deploy_flow: bool
+) -> Tuple[Dict[str, str], List[SecretFileMount]]:
+    """获取本次发布注入的环境变量，以及需要挂载的 Secret 文件
+
+    开启 KMS 后，敏感变量只通过 Secret 文件提供，不再出现在环境变量中。
+
+    :param from_deploy_flow: 是否由部署流程发起。直接重新发布时没有新的部署记录，无法关联 KMS 配置版本
+    """
+    if not is_kms_injection_enabled(env):
+        return get_env_variables(env, encrypt_sensitive=True), []
+
+    if not from_deploy_flow:
+        raise ValueError("开启 KMS 托管敏感变量后，需要通过部署流程发布，不支持直接重新发布")
+
+    return prepare_kms_process_env(env, deployment)
+
+
 def release_to_k8s(
-    env: ModuleEnvironment, build_id: str, extra_envs: Dict[str, str], procfile: Dict[str, str]
+    env: ModuleEnvironment,
+    build_id: str,
+    extra_envs: Dict[str, str],
+    procfile: Dict[str, str],
+    secret_mounts: Optional[List[SecretFileMount]] = None,
 ) -> Release:
     """Create a new release object, and perform DeployAction
 
@@ -202,6 +230,7 @@ def release_to_k8s(
     :param build_id: The ID of the finished build object.
     :param extra_envs: env vars of current environment
     :param procfile: Procfile to run the process
+    :param secret_mounts: Secret files to mount into the main container, e.g. the KMS secret.
 
     :return: The created release object.
     """
@@ -212,5 +241,5 @@ def release_to_k8s(
         procfile=procfile,
     )
 
-    DeployAction(env=env, release=release, extra_envs=extra_envs).perform()
+    DeployAction(env=env, release=release, extra_envs=extra_envs, secret_mounts=secret_mounts or []).perform()
     return release

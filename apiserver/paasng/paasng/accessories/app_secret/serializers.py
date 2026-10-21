@@ -46,9 +46,13 @@ class AppSecretIdSLZ(serializers.Serializer):
 class DeployedSecretSLZ(serializers.Serializer):
     module = serializers.CharField(help_text="模块")
     environment = serializers.CharField(help_text="环境")
-    bk_app_secret = SecretField(help_text="密钥")
+    bk_app_secret = SecretField(help_text="密钥，开启 KMS 托管的环境为 null")
+    kms_managed = serializers.BooleanField(default=False, help_text="密钥是否由 KMS 托管，平台无法读取其值")
     latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
 
 
 class AppSecretInEnvVarSLZ(serializers.Serializer):
     app_secret_in_config_var = SecretField(help_text="环境变量默认密钥")
+    kms_enabled = serializers.BooleanField(
+        default=False, help_text="应用是否开启 KMS 托管，开启后 BKPAAS_APP_SECRET 需进入容器查看"
+    )

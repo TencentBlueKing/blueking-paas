@@ -80,6 +80,13 @@ class ClusterAnnotationKey(StrStructuredEnum):
     SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL = EnumField(
         "skip_inject_builtin_image_credential", label=_("跳过内置镜像凭证注入")
     )
+    # 构建镜像代理：开启后构建容器只持有构建 token，经代理访问平台仓库。只能人工切换，代理故障时不得自动关闭
+    ENABLE_BUILD_REGISTRY_PROXY = EnumField("enable_build_registry_proxy", label=_("构建时启用镜像代理"))
+    # 镜像代理地址，格式为 host[:port]，不带协议与路径
+    BUILD_REGISTRY_PROXY_ADDRESS = EnumField("build_registry_proxy_address", label=_("构建镜像代理地址"))
+    BUILD_REGISTRY_PROXY_SKIP_TLS_VERIFY = EnumField(
+        "build_registry_proxy_skip_tls_verify", label=_("构建镜像代理跳过证书校验")
+    )
     # NOTE: 该配置仅对普通应用生效，云原生应用需要在 Operator 的 Helm Chart Values 中配置
     INGRESS_CLASS_NAME = EnumField("ingress_class_name", label=_("Ingress 类名"))
     # 集群 slugbuilder 资源配额，其值格式如下（非字符串）：

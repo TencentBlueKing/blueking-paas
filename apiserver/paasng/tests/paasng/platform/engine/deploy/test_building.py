@@ -21,9 +21,12 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
+from paas_wl.bk_app.applications.models.build import BuildProcess
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
+from paasng.platform.engine.configurations.build_token import BuildTokenUnavailable
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
+from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
@@ -142,6 +145,29 @@ class TestNormalApp:
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
+@pytest.mark.usefixtures("_with_wl_apps")
+class TestDockerBuilderWithRegistryProxy:
+    def test_credential_unavailable(self, bk_cnative_app, bk_module_full, bk_deployment_full):
+        attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
+        builder = DockerBuilder.from_deployment_id(bk_deployment_full.id)
+        with (
+            mock.patch("paasng.platform.engine.deploy.building.RuntimeImageInfo"),
+            mock.patch(
+                "paasng.platform.engine.deploy.building.get_build_registry_proxy",
+                side_effect=BuildTokenUnavailable("build token signing key is not configured"),
+            ),
+            mock.patch("paasng.platform.engine.deploy.building.start_bg_build_process") as start_bg_build_process,
+            pytest.raises(
+                DeployShouldAbortError, match="image credential unavailable: build token signing key is not configured"
+            ),
+        ):
+            builder.launch_build_processes("source.tar.gz")
+
+        assert not start_bg_build_process.delay.called
+        assert not BuildProcess.objects.filter(app=bk_deployment_full.app_environment.wl_app).exists()
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
 class TestCloudNative:
     def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full):
@@ -218,6 +244,26 @@ class TestBuildProcessResultHandler:
 
         deployment.refresh_from_db()
         assert deployment.status == status
+
+    @pytest.mark.parametrize(
+        ("recorded_reason", "expected"),
+        [
+            ("image credential unavailable: build token signing key is not configured", None),
+            (None, "Building failed, please check logs for more details"),
+        ],
+    )
+    def test_failed_with_recorded_reason(self, bk_module, deployment, recorded_reason, expected):
+        Deployment.objects.filter(pk=deployment.pk).update(err_detail=recorded_reason)
+        params = {"build_process_id": deployment.build_process_id, "deployment_id": deployment.id}
+        result = CallbackResult(
+            status=CallbackStatus.NORMAL, data={"build_id": None, "build_status": JobStatus.FAILED.value}
+        )
+
+        BuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
+
+        deployment.refresh_from_db()
+        assert deployment.status == JobStatus.FAILED.value
+        assert deployment.err_detail == (expected or recorded_reason)
 
     def test_succeeded(self, bk_module, deployment):
         params = {"build_process_id": deployment.build_process_id, "deployment_id": deployment.id}

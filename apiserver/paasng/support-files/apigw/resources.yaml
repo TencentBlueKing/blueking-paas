@@ -428,6 +428,121 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Upload a source package via link for an AI Agent application with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/deployments/:
+    post:
+      operationId: sys_deploy_ai_agent_app
+      description: 应用态部署 AI Agent 应用（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/deployments/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Deploy an AI Agent application with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/:
+    get:
+      operationId: sys_get_ai_agent_deployment_result
+      description: 应用态查询 AI Agent 应用部署任务结果（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the deployment result of an AI Agent application with system API credentials
+  /system/streams/{channel_id}/history_events:
+    get:
+      operationId: sys_ai_agent_streams_history_events
+      description: 应用态获取 AI Agent 应用部署日志流（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/streams/{channel_id}/history_events
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the deployment log events of an AI Agent application with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/offlines/:
+    post:
+      operationId: sys_ai_agent_module_offline
+      description: 应用态下架 AI Agent 应用模块（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/offlines/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Take an AI Agent application module offline with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/offlines/{offline_operation_id}/result/:
+    get:
+      operationId: sys_get_ai_agent_offline_result
+      description: 应用态查询 AI Agent 应用下架任务结果（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/offlines/{offline_operation_id}/result/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the offline result of an AI Agent application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/source_package/:
     post:
       operationId: upload_source_package

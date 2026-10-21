@@ -44,6 +44,7 @@ from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.models import ObservabilityConfig, ProcessSpecEnvOverlay
+from paasng.platform.engine.configurations.kms.recycler import recycle_module_env_kms_config_versions
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -624,6 +625,10 @@ class ModuleCleaner:
         """main entrance to clean module"""
         logger.info("going to delete services related to Module<%s>", self.module)
         self.delete_services()
+
+        logger.info("going to recycle KMS resources related to Module<%s>", self.module)
+        for env in self.module.get_envs():
+            recycle_module_env_kms_config_versions(env)
 
         logger.info("going to delete EngineApp related to Module<%s>", self.module)
         self.delete_engine_apps()

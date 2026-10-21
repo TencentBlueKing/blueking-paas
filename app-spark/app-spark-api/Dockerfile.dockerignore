@@ -1,19 +1,11 @@
-# This Dockerfile uses app-spark/ as its build context. Only ship runtime sources;
-# in particular, never send settings_local.yaml, .env, credentials or host virtualenvs.
+# Build context is this project directory. Only ship runtime sources; in particular, never send
+# settings_local.yaml, .env, credentials, host virtualenvs, charts or tests.
 **
-!app-spark-api/
-!app-spark-api/pyproject.toml
-!app-spark-api/uv.lock
-!app-spark-api/README.md
-!app-spark-api/manage.py
-!app-spark-api/app_spark_api/
-!app-spark-api/app_spark_api/**
-!agent/
-!agent/pyproject.toml
-!agent/uv.lock
-!agent/README.md
-!agent/app_spark_agent/
-!agent/app_spark_agent/**
+!pyproject.toml
+!uv.lock
+!README.md
+!manage.py
+!app_spark_api/**
 **/__pycache__/
 **/*.pyc
 **/.mypy_cache/

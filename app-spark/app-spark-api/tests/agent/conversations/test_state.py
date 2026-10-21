@@ -30,7 +30,7 @@ import pytest
 
 from app_spark_api.agent.conversations import state
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
-from app_spark_api.agent.conversations.state_models import ConversationMessage
+from app_spark_api.agent.conversations.state_models import ConversationContextVersion, ConversationMessage
 from app_spark_api.core.projects.models import Project
 
 pytestmark = pytest.mark.django_db
@@ -236,7 +236,7 @@ def test_a_superseded_push_archives_nothing(conversation) -> None:
 
     state.save_context(conversation.id, {"context_version": 3, "messages": ["old"]})
 
-    assert state.load_context_version(conversation.id, 3) is None
+    assert not ConversationContextVersion.objects.filter(conversation=conversation, context_version=3).exists()
 
 
 @pytest.mark.parametrize("version", [None, -1, "4", True])

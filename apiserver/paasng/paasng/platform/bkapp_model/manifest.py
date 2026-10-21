@@ -375,11 +375,15 @@ class EnvVarsManifestConstructor(ManifestConstructor):
     def _make_config_var_overlays(
         environment: ModuleEnvironment, config_vars: list[ConfigVar]
     ) -> list[crd.EnvVarOverlay]:
-        """Encrypt and map config variables for one target environment."""
+        """Encrypt and map config variables for one target environment.
+
+        KMS 托管的敏感变量不会出现在返回值里，发布阶段再写入信封，这里不能按原列表取值。
+        """
         encrypted_values = UnifiedEnvVarsReader(environment).encrypt_config_vars(config_vars)
         return [
             crd.EnvVarOverlay(envName=environment.environment, name=var.key, value=encrypted_values[var.key])
             for var in config_vars
+            if var.key in encrypted_values
         ]
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):

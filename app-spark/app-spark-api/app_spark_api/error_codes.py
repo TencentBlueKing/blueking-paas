@@ -47,6 +47,11 @@ class ErrorCodes:
     # --- Projects ---------------------------------------------------------------------------------
     PROJECT_ID_TAKEN = ErrorCode(_("Project id `{project_id}` is already taken."), status_code=HTTPStatus.CONFLICT)
     PROJECT_NAME_TAKEN = ErrorCode(_("Project name `{name}` is already taken."), status_code=HTTPStatus.CONFLICT)
+    # 失败前已完成的步骤不会回滚（会话已结束、部分资源可能已删除），所以只承诺可以重试。
+    PROJECT_DELETE_FAILED = ErrorCode(
+        _("Failed to delete {category}. Some resources may already be deleted; please retry the deletion."),
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+    )
     # A missing Project has no code of its own: `aget_object_or_404` already says it plainly, and
     # the endpoints nested under one only need the *inner* resource to be named. See RESOURCE_NOT_FOUND.
 

@@ -27,7 +27,7 @@ import (
 	"github.com/TencentBlueking/blueking-paas/registry-proxy/pkg/buildtoken"
 )
 
-// exp = iat + BUILD_PROCESS_TIMEOUT + tokenGrace
+// exp = iat + 构建超时（-timeout，应用构建为 BUILD_PROCESS_TIMEOUT，沙箱镜像构建为 600 秒）+ tokenGrace
 const tokenGrace = 300 * time.Second
 
 func main() {

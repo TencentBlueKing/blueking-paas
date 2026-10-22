@@ -294,10 +294,11 @@ class E2BProvider(AgentRuntimeProvider):
     async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
         """Return the exposed host for the sandbox's fixed workspace-app port.
 
-        Answered from the record alone, without asking E2B whether the sandbox is still up:
-        every asset of a previewed page comes through here. The host and the proxy tokens are
-        fixed for a sandbox's lifetime, and a sandbox that has gone makes the proxied request
-        fail as unreachable, which is the truthful answer anyway.
+        Answered from the record alone, without asking E2B whether the sandbox is still up.
+        The browser opens a public host directly, so page assets do not come through this
+        service; the headers are only for the proxy path. The host is fixed for a sandbox's
+        lifetime, and a sandbox that has gone makes that host unreachable, which is the
+        truthful answer anyway.
 
         :param conversation_id: Conversation whose application is to be previewed.
         :return: Externally reachable base URL and port-proxy headers, or ``None`` when no
@@ -317,6 +318,8 @@ class E2BProvider(AgentRuntimeProvider):
             # Our self-hosted E2B port proxy rejects a forwarded host different from its
             # exposed-port host with HTTP 400 (`bad target`).
             send_forwarded_host=False,
+            # 浏览器直接打开暴露域名，不走本服务反代。沙箱创建时已允许不带令牌访问。
+            public=True,
         )
 
     async def _create_sandbox(self) -> AsyncSandbox:
@@ -325,12 +328,14 @@ class E2BProvider(AgentRuntimeProvider):
         :raises AgentProvisionError: If E2B refuses or fails to create one.
         """
         try:
+            # 暴露域名要给浏览器直接打开。不声明公开流量时，不带令牌的请求会被沙箱拒绝。
             return await AsyncSandbox.create(
                 self.config.template,
                 timeout=self.config.idle_timeout_seconds,
                 api_key=self.config.api_key,
                 api_url=self.config.api_url,
                 domain=self.config.domain,
+                network={"allow_public_traffic": True},
             )
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc

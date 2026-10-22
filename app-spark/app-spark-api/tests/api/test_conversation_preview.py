@@ -38,6 +38,7 @@ import pytest
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime import (
+    AgentProvisionError,
     AgentRuntimeClient,
     AgentRuntimeHandle,
     AgentUnavailableError,
@@ -216,11 +217,15 @@ def stage(monkeypatch):
         app: str | None = None,
         http_headers: dict[str, str] | None = None,
         send_forwarded_host: bool = True,
+        public: bool = False,
         dev_server_status=_NO_RUNTIME,
     ) -> None:
         if app is not None:
             apps[str(conversation.id)] = PreviewTarget(
-                base_url=app, http_headers=http_headers or {}, send_forwarded_host=send_forwarded_host
+                base_url=app,
+                http_headers=http_headers or {},
+                send_forwarded_host=send_forwarded_host,
+                public=public,
             )
         if dev_server_status is not _NO_RUNTIME:
             statuses[str(conversation.id)] = dev_server_status
@@ -231,11 +236,86 @@ def stage(monkeypatch):
 # --- 地址 ------------------------------------------------------------------------------------
 
 
+async def test_a_public_target_is_handed_to_the_browser_as_is(aapi_client, conversation, stage):
+    """远程沙箱的暴露域名原样交出去，不按测试客户端的 Host 重签。"""
+    stage(conversation, app="https://9000-sbx.sandbox.example", public=True)
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert (body["origin"], body["direct"]) == ("https://9000-sbx.sandbox.example/", True)
+
+
+async def test_the_public_host_follows_a_rebuilt_sandbox(aapi_client, conversation, stage):
+    """地址不落库，沙箱重建、get_host 换了主机，下一次查询就是新的。"""
+    stage(conversation, app="https://9000-sbx-1.sandbox.example", public=True)
+    first = (await aapi_client.get(build_preview_url(conversation.number))).json()
+
+    stage(conversation, app="https://9000-sbx-2.sandbox.example", public=True)
+    second = (await aapi_client.get(build_preview_url(conversation.number))).json()
+
+    assert (first["origin"], second["origin"]) == (
+        "https://9000-sbx-1.sandbox.example/",
+        "https://9000-sbx-2.sandbox.example/",
+    )
+
+
+async def test_a_private_target_stays_behind_the_proxy(aapi_client, conversation, stage):
+    """local_process 的回环地址浏览器打不开，仍指回本服务的反代。"""
+    stage(conversation, app="http://127.0.0.1:9001")
+
+    body = (await aapi_client.get(build_preview_url(conversation.number))).json()
+
+    assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["direct"] is False
+
+
+async def test_an_unreadable_preview_target_falls_back_to_the_proxy(aapi_client, conversation, monkeypatch):
+    """沙箱记录读不出来不能让轮询接口失败，否则前端一次失败就停掉。"""
+
+    async def refuse(_conversation_id: str) -> None:
+        raise AgentProvisionError("unusable sandbox metadata")
+
+    monkeypatch.setattr(get_agent_runtime_provider(), "preview_target", refuse)
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["direct"] is False
+    assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["dev_server_status"] is None
+
+
+async def test_an_uninspectable_runtime_keeps_the_address_and_drops_the_status(
+    aapi_client, conversation, stage, monkeypatch
+):
+    """控制面问不到时地址照旧交出去，状态报 null，接口仍是 200。"""
+    stage(conversation, app="https://9000-sbx.sandbox.example", public=True, dev_server_status="ready")
+
+    async def refuse(_conversation_id: str) -> None:
+        raise AgentProvisionError("control plane hiccup")
+
+    monkeypatch.setattr(get_agent_runtime_provider(), "peek", refuse)
+
+    response = await aapi_client.get(build_preview_url(conversation.number))
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert (body["origin"], body["direct"], body["dev_server_status"]) == (
+        "https://9000-sbx.sandbox.example/",
+        True,
+        None,
+    )
+
+
 async def test_a_conversation_can_be_opened_before_anything_has_been_run(aapi_client, conversation):
     """地址在会话建好那一刻就有。它不是某个 Runtime 报上来的东西，也就不必等谁先跑起来。"""
     body = (await aapi_client.get(build_preview_url(conversation.number))).json()
 
     assert body["origin"].endswith(f"/conversations/{conversation.number}/preview/app/")
+    assert body["direct"] is False
     # 不是回环地址：那是「浏览器和后端同机」时才碰巧对的答案。
     assert "127.0.0.1" not in body["origin"]
     # 地址有了但没东西可看，这两件事是分开的。

@@ -44,6 +44,7 @@ from app_spark_api.agent.conversations.models import Conversation, ConversationU
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
 from app_spark_api.agent.runtime import (
+    AgentProvisionError,
     AgentRuntimeClient,
     AgentUnavailableError,
     AgentWorkspaceSavePendingError,
@@ -111,17 +112,25 @@ class ConversationState:
 async def get_dev_server_status(conversation: Conversation) -> str | None:
     """Ask the live Runtime how the conversation's application is doing, without starting one.
 
-    Deliberately never fails. The preview address does not depend on a Runtime -- it stays the
-    same across restarts and is issued before the first turn -- so a Runtime that cannot be
-    reached is something to report as "nothing to show right now", not an error that should take
-    the address away with it.
+    Deliberately never fails. A Runtime that cannot be reached, or whose sandbox cannot be
+    inspected, is reported as nothing to show right now. The preview address is a separate
+    query and, for a remote sandbox, changes when that sandbox is replaced.
 
     :param conversation: Conversation whose application is being looked at.
     :return: The Runtime's own word for the application's state, or ``None`` when nothing could
         be asked. A client only has to branch on whether there is a status at all: no second,
         derived field says the same thing in other words.
     """
-    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+    # peek 问不了控制面时抛的是 AgentProvisionError，不是连不上 Runtime 时的 AgentUnavailableError。
+    # 不接住的话预览轮询会 502，和上面「这个查询不会失败」相反。
+    try:
+        handle = await get_agent_runtime_provider().peek(str(conversation.id))
+    except AgentProvisionError:
+        logger.info(
+            "Conversation %s has a Runtime that cannot be inspected, reporting its application as unknown",
+            conversation.id,
+        )
+        return None
 
     # 没有 Runtime 是常态而不是故障：会话可能刚建、也可能被回收过。
     if handle is None:
@@ -142,11 +151,12 @@ async def get_dev_server_status(conversation: Conversation) -> str | None:
 
 
 async def get_preview_target(conversation: Conversation) -> PreviewTarget | None:
-    """Return where, and how, this service should proxy the conversation's preview to.
+    """Return where the conversation's preview is served, and how a caller reaches it.
 
-    :param conversation: Conversation whose application is to be proxied.
-    :return: The application's address with its transport headers, or ``None`` when no
-        Runtime is serving the conversation.
+    :param conversation: Conversation whose application is to be previewed.
+    :return: The application's address with its transport, or ``None`` when no Runtime is
+        serving the conversation. A public target is opened by the browser; any other target
+        is proxied by this service.
     """
     return await get_agent_runtime_provider().preview_target(str(conversation.id))
 

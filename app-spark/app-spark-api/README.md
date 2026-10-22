@@ -180,14 +180,12 @@ AGENT_RUNTIME_PROVIDER_CONFIG:
   # preview_port: 9000
 ```
 
-`get_host()` 返回的端口地址必须能从 API 服务访问。当前自建端口代理要求沙箱访问令牌，
-Runtime 客户端和预览代理会从 provider 获取并附加所需请求头。
+`get_host()` 返回的端口地址必须能从 API 服务访问。新建沙箱允许公开流量，预览端口不带令牌就能
+打开，浏览器直接访问。Runtime 客户端访问 Agent 端口时仍附带沙箱访问令牌。
 
 自建 E2B 的入口网关对已被回收的沙箱主机名回 `401 unauthorized`，而不是 404 或 502。重连时
 envd 回 401，provider 会再向控制面查一次（`get_info`）：控制面确认沙箱不存在，就按到期（`expired`）
 处理并释放占位；否则照旧报错，不会放掉一个可能还活着的沙箱。
-
-TODO：以后 `get_host()` 返回的地址无需 token 鉴权时，简化端口请求头及其恢复记录逻辑。
 
 有有效 E2B 配置时，运行
 `APP_SPARK_API_FORCE_SCRIPT_NAME='@none' uv run pytest -s tests/agent/runtime/test_e2b_integration.py tests/api/live_e2b/`，
@@ -357,11 +355,17 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 预览是三件事，分开看才对：**平台签发能打开的地址**、**agent 保证约定端口在听**、**前端决定什么时候
 摆给人看**。沙箱只管中间那件——它不知道自己被外面怎么寻址，`app.launched` 里也就没有 url。
 
-`GET .../conversations/<n>/preview/` 返回 `origin` 和 `dev_server_status`。`origin` 是本服务自己的一条
-路径 `.../preview/app/`，前端直接拿去当 iframe 的 `src`；它不依赖 Runtime 存活，会话一建好就有，也不
-落库（由请求推导）。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` / `ready` /
-`stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，继续等
-就好，Runtime 那边不会因此重启它。
+`GET .../conversations/<n>/preview/` 返回 `origin`、`direct` 和 `dev_server_status`，前端拿 `origin`
+当 iframe 的 `src`，地址不落库，每次现查。provider 的 `preview_target` 标了 `public`（E2B）时，
+`origin` 是沙箱用 `get_host` 给出的暴露域名，`direct` 为 true，浏览器直接打开，沙箱创建时已允许不带
+令牌访问；沙箱重建后主机会变。其余情况 `origin` 是本服务自己的一条路径 `.../preview/app/`，由请求
+推导，会话一建好就有。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` /
+`ready` / `stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，
+继续等就好，Runtime 那边不会因此重启它。
+
+E2B 直连意味着暴露域名本身就能打开预览，不经过平台登录；`allow_public_traffic` 是整个沙箱的开关。
+Agent Runtime 的业务路由另有 Bearer token 保护，交互文档和 OpenAPI 不对外提供。平台页面是 https 时
+`port_scheme` 必须是 https。
 
 `.../preview/app/<任意路径>` 是反向代理，鉴权与 `.../ui-events/` 一致：平台登录加项目归属复查，所以
 预览 URL 不是凭据。转发时摘掉 `Cookie` / `Authorization`，反方向摘掉 `Set-Cookie`。上游由 provider 的
@@ -372,18 +376,19 @@ Runtime 分一个应用端口，于是多个会话能同时预览。没有 Runti
 客户端自己带的那份不透传；读 `X-Forwarded-Prefix` 的框架能靠它把自己生成的链接
 拼对。
 
-**同源是这块最大的妥协。** 应用是模型写的代码，却和控制面共享 origin，它的 JS 一句
-`fetch("/api/...")` 就能带着用户登录态调平台。HTML 响应因此带一条 CSP，把 `connect-src` /
-`form-action` 锁在预览前缀下，代价是应用不能从浏览器直连第三方。干净的解法是换独立主机名，难点
-在鉴权。上游路径怎么拼、响应头怎么改，都写在 `conversations/preview.py` 里。
+**反代路径上，同源是最大的妥协。** 走 `.../preview/app/` 时，应用是模型写的代码，却和控制面共享
+origin，它的 JS 一句 `fetch("/api/...")` 就能带着用户登录态调平台。HTML 响应因此带一条 CSP，把
+`connect-src` / `form-action` 锁在预览前缀下，代价是应用不能从浏览器直连第三方。上游路径怎么拼、
+响应头怎么改，都写在 `conversations/preview.py` 里。直连的沙箱主机和平台不是同一个源，这段 CSP
+打不到直连响应上，下面列的反代缺口在直连上也不存在。
 
-两个部署前提：在 Ingress 上终结 TLS 时要配 `SECURE_PROXY_SSL_HEADER`，否则 `origin` 签成
+反代地址的两个部署前提：在 Ingress 上终结 TLS 时要配 `SECURE_PROXY_SSL_HEADER`，否则 `origin` 签成
 `http://`，前端是 https 就按 mixed content 拦掉；前端与本服务不同源时，`X-Frame-Options:
-SAMEORIGIN` 要换成 `frame-ancestors`。
+SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_scheme`，不走这个签发。
 
-反代的已知缺口（都等换独立主机名时连同鉴权一起重做，不在这一轮补）：不支持 WebSocket（`Upgrade`
-属逐跳首部，且 Django 的 `StreamingHttpResponse` 代理不了）；请求体整份进内存，没有流式上传；HTML
-正文里的根绝对路径（`/static/app.css`）仍会 404——重定向那一类已经在响应里改写了，正文没有改写。
+反代的已知缺口：不支持 WebSocket（`Upgrade` 属逐跳首部，且 Django 的 `StreamingHttpResponse`
+代理不了）；请求体整份进内存，没有流式上传；HTML 正文里的根绝对路径（`/static/app.css`）仍会
+404——重定向那一类已经在响应里改写了，正文没有改写。
 
 ## 部署相关
 

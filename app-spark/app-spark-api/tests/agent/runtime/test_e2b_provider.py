@@ -596,8 +596,21 @@ async def test_a_401_is_not_taken_for_expiry_unless_the_control_plane_confirms_i
     assert e2b.create_calls == 1
 
 
+async def test_the_exposed_host_is_what_the_browser_opens(e2b, provider):
+    """远程沙箱的预览地址就是 get_host，标成 public 交给浏览器直接打开。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    target = await provider.preview_target(conversation_id)
+
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    assert target is not None
+    assert target.public
+    assert target.base_url == f"https://{CONFIG.preview_port}-{record.sandbox_id}.{record.sandbox_domain}"
+
+
 async def test_the_preview_target_does_not_ask_e2b(e2b, provider):
-    """预览页的每个静态资源都会走这里。集成测试对得上真实地址，这里只证明这一步不再请求 E2B。"""
+    """查预览地址不再请求 E2B。浏览器直连时静态资源不经过这里，集成测试对得上真实地址。"""
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
     e2b.connect_calls = 0
@@ -656,8 +669,10 @@ async def test_the_agent_is_started_with_its_whole_configuration(e2b, provider):
         " >> /tmp/app-spark-agent.log 2>&1"
     )
     # Credentials go to this one process through envd, never through the sandbox's creation.
+    # 暴露域名要给浏览器直接打开，创建时声明不带令牌也能访问。
     (create_opts,) = e2b.create_opts
     assert not {"envs", "env_vars", "metadata"} & set(create_opts)
+    assert create_opts["network"] == {"allow_public_traffic": True}
     assert envs[f"{ENV_PREFIX}PORT"] == str(CONFIG.runtime_port)
     assert envs[f"{ENV_PREFIX}APP_PORT"] == str(CONFIG.preview_port)
     assert envs[f"{ENV_PREFIX}WORKSPACE"] == "/data/workspace"

@@ -41,5 +41,8 @@
   "include": [
     "./**/*",
     ".eslintrc.js",
+  ],
+  "exclude": [
+    "**/*.test.ts"
   ]
 }

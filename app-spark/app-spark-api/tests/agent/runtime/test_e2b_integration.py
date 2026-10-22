@@ -106,7 +106,7 @@ async def test_e2b_provider_creates_and_stops_sandbox(e2b_provider: E2BProvider)
         f"{e2b_provider.config.port_scheme}://{sandbox.get_host(e2b_provider.config.preview_port)}"
     )
     assert target.http_headers == handle.http_headers
-    assert target.send_forwarded_host is False
+    assert (target.send_forwarded_host, target.public) == (False, True)
     result = await sandbox.commands.run("printf 'agent-sandbox-ready'", user=e2b_provider.config.agent_user)
     assert result.stdout == "agent-sandbox-ready"
 
@@ -265,9 +265,7 @@ async def test_a_crashed_agent_is_replaced_by_a_new_sandbox(e2b_provider: E2BPro
     os.environ.get("APP_SPARK_E2B_IDLE_LIVE") != "1",
     reason="waits three minutes for a real idle reclamation; set APP_SPARK_E2B_IDLE_LIVE=1",
 )
-async def test_an_idle_sandbox_is_reclaimed_when_its_idle_timeout_elapses(
-    e2b_config: E2BConfig, agent_bundle: AgentBundle
-):
+async def test_an_idle_sandbox_is_reclaimed_when_its_idle_timeout_elapses(e2b_config: E2BConfig):
     """空闲超时设为 120 秒时，一轮结束后沙箱在这个秒数左右被回收。"""
     idle_timeout = 120
     provider = FakeModelE2BProvider(attrs.evolve(e2b_config, idle_timeout_seconds=idle_timeout))

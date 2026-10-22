@@ -161,3 +161,11 @@ def test_a_restored_runtime_reports_the_history_it_inherited_as_replicated(
     assert reported["pushed_log_seq"] == 40
     assert reported["pushed_ui_event_seq"] == 55
     assert reported["pushed_context_version"] == reported["context_version"]
+
+
+def test_interactive_docs_are_not_served(api: TestClient) -> None:
+    """公开流量下换个端口就能打到 Runtime。文档路由不校验 Bearer，所以不提供。"""
+    raw = TestClient(api.app)
+
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert raw.get(path).status_code == 404

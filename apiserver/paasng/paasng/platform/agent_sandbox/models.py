@@ -473,3 +473,40 @@ class E2BSandbox(UuidAuditedModel):
 
     def __str__(self):
         return f"{self.sandbox_id}({self.application_id})"
+
+
+class E2BSandboxTemplate(UuidAuditedModel):
+    """平台登记的 e2b 沙箱模板，由运维通过 ``e2b_sandbox_template`` 命令维护。
+
+    模板的真实定义在 e2b 网关侧，这里只登记展示用的元数据与状态：
+
+    - ``enabled``：SDK 只能用已启用的模板创建沙箱
+    - ``is_public``：页面只展示已启用且公开的模板。不公开的模板（如某些服务自用的）
+      仍可由知道 ``template_id`` 的调用方通过 SDK 使用，它不是访问控制
+
+    ``template_id`` 须与网关侧一致，由运维登记时保证，平台不做校验。
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
+    template_id = models.CharField(verbose_name="模板标识", max_length=128, unique=True, help_text="与网关侧一致")
+    name = models.CharField(verbose_name="名称", max_length=64)
+    description = models.TextField(verbose_name="描述", blank=True, default="")
+    # 以下字段仅供展示，不参与创建沙箱，实际规格以网关侧模板为准
+    image = models.CharField(verbose_name="镜像", max_length=256, blank=True, default="")
+    cpu_count = models.PositiveIntegerField(verbose_name="CPU 核数", null=True)
+    memory_mb = models.PositiveIntegerField(verbose_name="内存（MB）", null=True)
+    disk_size_mb = models.PositiveIntegerField(verbose_name="磁盘（MB）", null=True)
+    timeout = models.PositiveIntegerField(verbose_name="默认存活秒数", null=True)
+    network = models.CharField(verbose_name="网络", max_length=128, blank=True, default="")
+    region = models.CharField(verbose_name="地域", max_length=64, blank=True, default="")
+    prewarm_count = models.PositiveIntegerField(verbose_name="预热数量", null=True)
+    enabled = models.BooleanField(verbose_name="是否启用", default=True)
+    # 默认不公开：漏配时只是页面上看不到，不会把内部模板误展示出去
+    is_public = models.BooleanField(verbose_name="是否公开", default=False, help_text="是否在开发者中心页面展示")
+
+    class Meta:
+        ordering = ["template_id"]
+
+    def __str__(self):
+        return self.template_id

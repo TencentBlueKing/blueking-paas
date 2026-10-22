@@ -19,12 +19,16 @@ import logging
 
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2.apigateway import serializers
 from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
+from paasng.accessories.cloudapi_v2.apply_records import (
+    handle_apply_record_operate_error,
+    validate_operated_by,
+)
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
@@ -208,6 +212,66 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             app_code=app.code, record_id=record_id
         )
         return self._response_with_serializer(serializers.RetrieveResourcePermissionApplyRecordOutputSLZ, data)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def cancel_resource_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """取消待审批的资源权限申请"""
+        app, tenant_id = self._get_app_and_tenant()
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            self._get_client(tenant_id, request).cancel_resource_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.CANCEL,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for cancel apply record")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def delete_resource_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """删除已取消的资源权限申请"""
+        app, tenant_id = self._get_app_and_tenant()
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            self._get_client(tenant_id, request).delete_resource_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                data_after=DataDetail(type=DataType.RAW_DATA, data={"record_id": record_id, "record_type": "gateway"}),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for delete apply record")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         query_serializer=serializers.ListESBSystemsInputSLZ,

@@ -69,11 +69,22 @@ urlpatterns = [
         views.GatewayAPIViewSet.as_view({"get": "list_resource_permission_apply_records"}),
         name="api.cloudapi.v2.resource_permission_apply_records",
     ),
-    # 资源权限申请记录详情
+    # 资源权限申请记录详情 (DELETE: 删除已取消的申请记录)
     path(
         "apps/<slug:app_code>/inner/gateways/permissions/apply-records/<int:record_id>/",
-        views.GatewayAPIViewSet.as_view({"get": "retrieve_resource_permission_apply_record"}),
+        views.GatewayAPIViewSet.as_view(
+            {
+                "get": "retrieve_resource_permission_apply_record",
+                "delete": "delete_resource_permission_apply_record",
+            }
+        ),
         name="api.cloudapi.v2.resource_permission_apply_record_detail",
+    ),
+    # 取消待审批的资源权限申请
+    path(
+        "apps/<slug:app_code>/inner/gateways/permissions/apply-records/<int:record_id>/cancel/",
+        views.GatewayAPIViewSet.as_view({"post": "cancel_resource_permission_apply_record"}),
+        name="api.cloudapi.v2.resource_permission_apply_record_cancel",
     ),
     # ============ ESB 组件 API 相关 ============
     # 查询组件系统列表

@@ -20,22 +20,22 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from paasng.accessories.cloudapi_v2.apigateway.apigw.clients import Client
+from paasng.accessories.cloudapi_v2.apigw import BkApigatewayClient
 
 
-class TestClientHandleResponseContent:
-    """Test Client._handle_response_content method"""
+class TestBkApigatewayClientHandleResponseContent:
+    """Test BkApigatewayClient._handle_response_content method"""
 
     @pytest.fixture()
     def client(self):
         """Create a Client instance for testing"""
-        return Client(endpoint="http://example.com", stage="prod")
+        return BkApigatewayClient(endpoint="http://example.com", stage="prod")
 
     def test_handle_204_no_content_response(self, client, mocker):
-        """
-        测试 client 在处理 204 No Content 响应时正常工作
-        v2 网关的响应可能不为 JSON, 而 bkapi_client_core 默认会认为所有响应都是 JSON,
-        故 patch 了 `_handle_response_content` 方法
+        """client 需正确处理 204 No Content 响应
+
+        v2 网关的写入类接口 (申请/取消/删除等) 正常响应 204 且响应体为空,
+        而 bkapi_client_core 默认会认为所有响应都是 JSON, 故 patch 了 `_handle_response_content` 方法
         """
         mock_response = Mock()
         mock_response.status_code = 204

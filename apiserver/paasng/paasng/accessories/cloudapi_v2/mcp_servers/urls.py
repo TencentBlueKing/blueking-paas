@@ -44,4 +44,16 @@ urlpatterns = [
         views.MCPServerAPIViewSet.as_view({"get": "list_mcp_server_permissions_apply_records"}),
         name="api.cloudapi.v2.mcp_server_permissions_apply_records",
     ),
+    # 取消待审批的权限申请
+    path(
+        "apps/<slug:app_code>/inner/mcp-servers/permissions/apply-records/<int:record_id>/cancel/",
+        views.MCPServerAPIViewSet.as_view({"post": "cancel_mcp_server_permission_apply_record"}),
+        name="api.cloudapi.v2.mcp_server_permission_apply_record_cancel",
+    ),
+    # 删除已取消的权限申请
+    path(
+        "apps/<slug:app_code>/inner/mcp-servers/permissions/apply-records/<int:record_id>/",
+        views.MCPServerAPIViewSet.as_view({"delete": "delete_mcp_server_permission_apply_record"}),
+        name="api.cloudapi.v2.mcp_server_permission_apply_record_detail",
+    ),
 ]

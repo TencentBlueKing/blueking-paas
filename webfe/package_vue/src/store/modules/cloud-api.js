@@ -96,6 +96,24 @@ export default {
     },
 
     /**
+     * 取消资源权限申请
+     * @param {Object} params 请求参数：appCode, recordId
+     */
+    cancelApplyRecord({}, { appCode, recordId }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/gateways/permissions/apply-records/${recordId}/cancel/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+     * 删除已取消的资源权限申请
+     * @param {Object} params 请求参数：appCode, recordId
+     */
+    deleteApplyRecord({}, { appCode, recordId }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/gateways/permissions/apply-records/${recordId}/`;
+      return http.delete(url, {}, config);
+    },
+
+    /**
      * 检查是否允许按网关申请资源权限
      * @param {Object} params 请求参数：appCode, gatewayName
      */
@@ -250,6 +268,24 @@ export default {
     getMcpServerApplyRecords({}, { appCode, ...requsetParams }) {
       const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/apply-records/?${json2Query(requsetParams)}`;
       return http.get(url);
+    },
+
+    /**
+     * MCP-取消 MCP Server 权限申请
+     * @param {Object} params 请求参数：appCode, recordId
+     */
+    cancelMcpApplyRecord({}, { appCode, recordId }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/apply-records/${recordId}/cancel/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+     * MCP-删除已取消的 MCP Server 权限申请
+     * @param {Object} params 请求参数：appCode, recordId
+     */
+    deleteMcpApplyRecord({}, { appCode, recordId }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/apply-records/${recordId}/`;
+      return http.delete(url, {}, config);
     },
   },
 };

@@ -389,6 +389,13 @@ export default {
   全部通过: 'Pass all',
   全部驳回: 'Reject All',
   已驳回: 'Rejected',
+  已取消: 'Canceled',
+  '确认取消该申请?': 'Confirm canceling this application?',
+  '确认删除该申请?': 'Confirm deleting this application?',
+  '取消后该申请将无法继续审批，如需权限请重新申请。':
+    'After canceling, this application cannot be approved. Please apply again if you need the permission.',
+  '删除后不可恢复，请谨慎操作。': 'Deletion is irreversible, please proceed with caution.',
+  操作失败: 'Operation failed',
   今天: 'Today',
   最近7天: 'Last 7 days',
   最近15天: 'Last 15 days',

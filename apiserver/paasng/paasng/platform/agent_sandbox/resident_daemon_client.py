@@ -106,7 +106,6 @@ class ResidentDaemonClient:
         self,
         base_path: str,
         rel_path: str = "",
-        *,
         is_recursive: bool = False,
         page: int = 1,
         page_size: int = 100,

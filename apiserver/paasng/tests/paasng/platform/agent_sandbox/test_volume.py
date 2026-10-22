@@ -200,9 +200,7 @@ class TestUnshareVolume:
         assert not volume.allows_mount_by(other_app)
 
 
-def _create_sandbox(
-    bk_app: Any, *, volume: Volume | None = None, status: str = SandboxStatus.PENDING.value
-) -> Sandbox:
+def _create_sandbox(bk_app: Any, volume: Volume | None = None, status: str = SandboxStatus.PENDING.value) -> Sandbox:
     """Create a Sandbox record mounting a volume, without provisioning any resource.
 
     :param bk_app: The application owning the sandbox.

@@ -42,7 +42,7 @@ class TestVolumeAPI:
         ],
     )
     def test_operating_other_app_volume_returns_404(
-        self, *, api_client: APIClient, bk_app: Any, bk_user, url_name: str, method: str, payload: dict | None
+        self, api_client: APIClient, bk_app: Any, bk_user, url_name: str, method: str, payload: dict | None
     ) -> None:
         """Knowing another app's volume UUID is not enough to operate on it."""
         other_app = create_app(owner_username=bk_user.username)

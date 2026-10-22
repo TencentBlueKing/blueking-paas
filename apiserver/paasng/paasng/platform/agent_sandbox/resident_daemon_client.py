@@ -39,26 +39,9 @@ from .exceptions import (
     SandboxFileTooLarge,
     SandboxServiceNotReady,
 )
+from .utils import extract_error_detail
 
 DEFAULT_REQUEST_TIMEOUT = 60
-
-
-def _extract_error_detail(resp: requests.Response) -> str | None:
-    """Best-effort extract the daemon's human-readable error message.
-
-    The resident daemon returns JSON error bodies shaped as ``{"message": ..., "timestamp": ...,
-    "path": ..., "method": ...}`` (see ``httputil.ErrorResponse``). Non-JSON or missing ``message``
-    bodies yield ``None`` so callers can fall back to a generic message.
-    """
-    try:
-        body = resp.json()
-    except ValueError:
-        return None
-    if isinstance(body, dict):
-        msg = body.get("message")
-        if isinstance(msg, str) and msg:
-            return msg
-    return None
 
 
 class FileItem(TypedDict):
@@ -179,7 +162,7 @@ class ResidentDaemonClient:
             resp.raise_for_status()
         except requests.HTTPError as exc:
             status_code = exc.response.status_code
-            detail = _extract_error_detail(exc.response)
+            detail = extract_error_detail(exc.response)
             if status_code == 404:
                 raise SandboxFileNotFound(detail or f"file not found on {path}")
             if status_code == 413:

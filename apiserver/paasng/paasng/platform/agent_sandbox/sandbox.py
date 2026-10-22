@@ -358,7 +358,10 @@ class AgentSandboxResManager:
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
 
-        router_endpoint = get_router_endpoint(self.kres_app.target)
+        try:
+            router_endpoint = get_router_endpoint(self.kres_app.target)
+        except RuntimeError as exc:
+            raise SandboxError(f"failed to resolve sandbox router endpoint: {exc}") from exc
         return KubernetesSandbox(
             entity=entity,
             router_endpoint=router_endpoint,

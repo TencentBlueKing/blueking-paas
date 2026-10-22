@@ -60,3 +60,39 @@ PROCESS_OPERATE_COUNTER = Counter("process_operate", "", ("environment", "operat
 
 # e2b 沙箱对账。outcome 取值见 E2BReconcileOutcome
 E2B_SANDBOX_RECONCILED_COUNTER = Counter("e2b_sandbox_reconciled", "", ("cluster", "outcome"))
+
+# 沙箱接口请求总数. operation 取值见 SandboxOperation, result 取值见 SandboxRequestResult
+AGENT_SANDBOX_REQUESTS_COUNTER = Counter("agent_sandbox_requests", "", ("app_code", "operation", "result"))
+
+# 沙箱接口请求耗时(秒)
+AGENT_SANDBOX_REQUEST_DURATION_HISTOGRAM = Histogram(
+    "agent_sandbox_request_duration_seconds",
+    "",
+    ("operation", "result"),
+    buckets=[0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600],
+)
+
+# 沙箱就绪耗时(秒). result 取值见 SandboxRequestResult:
+# 成功时是 "创建并等到就绪" 的总耗时, 失败时是从开始创建到判定失败的耗时
+AGENT_SANDBOX_CREATE_DURATION_HISTOGRAM = Histogram(
+    "agent_sandbox_create_duration_seconds",
+    "",
+    ("workload_type", "cluster", "result"),
+    buckets=[1, 2, 5, 10, 30, 60, 120, 180, 300, 420, 600],
+)
+
+# 沙箱创建失败原因. reason 取值见 SandboxCreateFailureReason
+AGENT_SANDBOX_CREATE_FAILURES_COUNTER = Counter(
+    "agent_sandbox_create_failures", "", ("workload_type", "cluster", "reason")
+)
+
+# 沙箱存活时长(秒), 按 deleted_at - started_at 计算; delete_source 取值见 SandboxDeleteSource
+AGENT_SANDBOX_LIFETIME_HISTOGRAM = Histogram(
+    "agent_sandbox_lifetime_seconds",
+    "",
+    ("workload_type", "delete_source"),
+    buckets=[30, 60, 300, 600, 1800, 3600, 7200, 21600, 43200, 86400],
+)
+
+# e2b 网关调用. method 是 HTTP 动词, outcome 取值见 E2BGatewayOutcome
+E2B_GATEWAY_REQUESTS_COUNTER = Counter("e2b_gateway_requests", "", ("cluster", "method", "outcome"))

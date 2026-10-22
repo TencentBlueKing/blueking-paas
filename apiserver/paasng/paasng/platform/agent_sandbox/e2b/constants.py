@@ -79,3 +79,13 @@ class E2BReconcileOutcome(StrStructuredEnum):
     ORPHAN_KILLED = EnumField("orphan_killed", label="已销毁孤儿实例")
     ORPHAN_KILL_FAILED = EnumField("orphan_kill_failed", label="销毁孤儿失败")
     CLUSTER_SKIPPED = EnumField("cluster_skipped", label="集群被跳过")
+
+
+class E2BGatewayOutcome(StrStructuredEnum):
+    """网关调用指标 ``e2b_gateway_requests_total`` 的 outcome 取值"""
+
+    SUCCESS = EnumField("success", label="调用成功")
+    NOT_FOUND = EnumField("not_found", label="网关返回 404")
+    TIMEOUT = EnumField("timeout", label="调用超时")
+    UNAVAILABLE = EnumField("unavailable", label="网关不可达")
+    ERROR = EnumField("error", label="网关返回错误")

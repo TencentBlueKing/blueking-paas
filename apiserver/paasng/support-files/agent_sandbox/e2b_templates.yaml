@@ -1,0 +1,35 @@
+# 平台登记的 e2b 沙箱模板，执行以下命令生效：
+#   python manage.py e2b_sandbox_template apply -f support-files/agent_sandbox/e2b_templates.yaml
+#
+# 字段对应集群中 SandboxTemplate 资源（advanced.bkbcs.tencent.com/v1beta1）：
+#   template_id   <- spec.template.metadata.labels["advanced.bkbcs.tencent.com/e2b-template"]，不是资源名
+#   cpu_count     <- spec.template.spec.domain.cpu.cores
+#   memory_mb     <- spec.template.spec.domain.memory
+#   disk_size_mb  <- spec.template.spec.domain.devices.disks 中 rootfsDisk 的 size，未声明时留空
+#   image         <- spec.template.spec.podTemplate.containers[name=main].image
+# 资源字段仅供页面展示，实际规格以集群中的模板为准，修改集群模板后需同步更新本文件。
+# 未写 is_public 的模板不在开发者中心展示，但知道 template_id 仍可通过 SDK 使用。
+
+- template_id: e2b-envd
+  name: 基础环境
+  description: 通用的 Linux 沙箱环境，带 20GB 根文件系统磁盘，适合执行命令、读写文件等通用任务
+  image: mirrors.tencent.com/bcs/cube-base-envd:2026.16
+  cpu_count: 2
+  memory_mb: 4096
+  disk_size_mb: 20480
+  is_public: true
+
+- template_id: e2b-python
+  name: Python 代码执行
+  description: 预置 Python 代码执行环境，适合运行 Agent 生成的代码片段
+  image: mirrors.tencent.com/bcs/sandbox-code:20260728
+  cpu_count: 2
+  memory_mb: 4096
+  is_public: true
+
+- template_id: e2b-app-spark
+  name: app-spark 专用
+  description: app-spark 智能体服务自用的模板，不对外公开
+  image: mirrors.tencent.com/bkpaas/app-spark-agent:1792565940
+  cpu_count: 2
+  memory_mb: 4096

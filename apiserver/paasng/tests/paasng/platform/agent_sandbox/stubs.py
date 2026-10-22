@@ -212,6 +212,11 @@ class StubResidentDaemonClient:
         # 幂等: 不存在也视为成功
         self._files.pop((base_path, rel_path), None)
 
+    def delete_volume(self, base_path) -> None:
+        """删除整个 volume 目录下的所有文件 (内存实现, 幂等)"""
+        for key in [key for key in self._files if key[0] == base_path]:
+            del self._files[key]
+
     def close(self) -> None:
         """Close the client (no-op for stub)."""
 

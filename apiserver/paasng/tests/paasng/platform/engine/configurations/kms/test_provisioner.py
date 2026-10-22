@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 import copy
 import json
+import re
 from typing import Any
 
 import pytest
@@ -286,7 +287,7 @@ class TestKMSSecretProvisioner:
             api_version=ES_API_VERSION, kind="ClusterSecretStore", name=version.resource_name, namespace=None
         )
         assert store["spec"]["provider"]["vault"]["auth"]["kubernetes"]["role"] == version.kms_role
-        assert store["spec"]["conditions"] == [{"namespaces": [version.namespace]}]
+        assert store["spec"]["conditions"] == [{"namespaceRegexes": [f"^{re.escape(version.namespace)}$"]}]
         es = kube.get(
             api_version=ES_API_VERSION, kind="ExternalSecret", name=version.resource_name, namespace=version.namespace
         )

@@ -36,7 +36,7 @@ def test_cluster_secret_store():
 
     assert "namespace" not in store["metadata"]
     # 只有应用所在 namespace 可以引用该 store
-    assert store["spec"]["conditions"] == [{"namespaces": ["ns-1"]}]
+    assert store["spec"]["conditions"] == [{"namespaceRegexes": ["^ns\\-1$"]}]
     vault = store["spec"]["provider"]["vault"]
     assert vault["auth"]["kubernetes"]["serviceAccountRef"] == {"name": "demo-web-prod-kms", "namespace": "ns-1"}
     mtls_refs = [vault["caProvider"], vault["tls"]["certSecretRef"], vault["tls"]["keySecretRef"]]

@@ -148,7 +148,12 @@ async def start_run(
 
     # 所有 ORM 操作都必须在返回 StreamingHttpResponse 之前做完：生成器要跑到 run 结束为止，
     # 中途碰 ORM 会把一条数据库连接钉在一次可能长达数分钟的 run 上。
-    run = await services.start_run(conversation, content=payload.content, credential=get_user_credential(request))
+    run = await services.start_run(
+        conversation,
+        content=payload.content,
+        credential=get_user_credential(request),
+        model_code=payload.model_code,
+    )
 
     return StreamingHttpResponse(
         services.stream_run(run, conversation.id),

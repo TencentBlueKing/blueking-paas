@@ -26,7 +26,11 @@ from app_spark_api.agent.runtime.entities import (
     structure_bkaidev_model_config,
     structure_direct_model_config,
 )
-from app_spark_api.agent.runtime.exceptions import ModelAccessConfigurationError, ModelCredentialMissingError
+from app_spark_api.agent.runtime.exceptions import (
+    ModelAccessConfigurationError,
+    ModelCredentialMissingError,
+    ModelNotAvailableError,
+)
 from app_spark_api.infras.bk_access_token import AccessTokenBackendConfig, get_access_token_backend_cls
 
 if TYPE_CHECKING:
@@ -45,6 +49,44 @@ def get_model_source() -> ModelSource:
         return ModelSource(settings.AGENT_MODEL_SOURCE)
     except ValueError as exc:
         raise ModelAccessConfigurationError(f"Unknown AGENT_MODEL_SOURCE: {settings.AGENT_MODEL_SOURCE!r}") from exc
+
+
+def resolve_run_model_name(model_code: str | None) -> str | None:
+    """Check the model a turn asked for and return the name to forward to the Runtime.
+
+    Runs on every turn, so it only reads settings: no token exchange and no call upstream. The
+    gateway still has the last word on a name that passes here, and refuses it inside the run.
+
+    Example::
+
+        model_name = resolve_run_model_name(payload.model_code)
+        await client.start_run(content=content, context_version=version, model_name=model_name)
+
+    :param model_code: The model the turn asked for, None when it asked for none.
+    :return: The name to send as forwardedProps.modelName, or None to let the Runtime use its
+        default model.
+    :raises ModelNotAvailableError: If this deployment does not offer the model.
+    :raises ModelAccessConfigurationError: If the model source or its settings are invalid.
+    """
+    # 没带模型就交给 Runtime 用沙箱默认模型，不必读任何配置。
+    if model_code is None:
+        return None
+
+    # direct 只有一个内置模型，沙箱启动时已经定了，带了也不用转发。比对的是 <provider>:<model>
+    # 冒号后面那段，和列表接口给前端的编码是同一个。
+    if get_model_source() == ModelSource.DIRECT:
+        builtin = structure_direct_model_config(settings.AGENT_DIRECT_MODEL_CONFIG).model.partition(":")[2]
+        if model_code != builtin:
+            raise ModelNotAvailableError(f"Model {model_code!r} is not the built-in model {builtin!r}")
+
+        return None
+
+    # 推荐列表为空时不收窄，名字原样交给网关裁决；非空时只放行列表里的。
+    config = structure_bkaidev_model_config(settings.BKAIDEV_MODEL_CONFIG)
+    if config.recommended_models and model_code not in config.recommended_models:
+        raise ModelNotAvailableError(f"Model {model_code!r} is not in BKAIDEV_MODEL_CONFIG.recommended_models")
+
+    return model_code
 
 
 def _require_setting(name: str, value: object) -> str:

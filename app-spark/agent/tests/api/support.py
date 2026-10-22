@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
-from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.models import Model
 
 from app_spark_agent.git import WorkspaceSaver
 from app_spark_agent.server import create_runtime_app
@@ -65,7 +65,7 @@ class ApiFactory(Protocol):
     def __call__(
         self,
         *,
-        model: FunctionModel | None = None,
+        model: Model | None = None,
         capabilities: Sequence[AbstractCapability[object]] = (),
         tools: Sequence[Any] = (),
     ) -> TestClient: ...
@@ -74,7 +74,7 @@ class ApiFactory(Protocol):
 def build_test_client(
     tmp_path: Path,
     *,
-    model: FunctionModel,
+    model: Model,
     capabilities: Sequence[AbstractCapability[object]] = (),
     tools: Sequence[Any] = (),
     make_saver: Callable[[Path], WorkspaceSaver] | None = None,

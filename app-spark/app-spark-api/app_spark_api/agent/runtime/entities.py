@@ -227,11 +227,13 @@ class BkAidevModelConfig:
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
     :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    :param recommended_models: Model codes a turn may ask for, in display order. Empty means
+        any well-formed code is passed on and the gateway decides.
     """
 
-    # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
-    # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
+    # 没带模型的一轮、刚重建的沙箱都用它托底，缺了 Runtime 就起不来可用的模型，所以这里必须有值。
     default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+    recommended_models: tuple[str, ...] = attrs.field(default=())
 
 
 @attrs.frozen

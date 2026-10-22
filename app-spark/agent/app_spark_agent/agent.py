@@ -56,16 +56,13 @@ def build_model() -> Model:
 
     # 网关三件套齐全。协议仍是 Chat Completions，鉴权换头，不用 MODEL_API_KEY。
     if mode == settings.ModelMode.GATEWAY:
-        model_name = settings.resolved_model_name()
-        profile = settings.openai_capability_profile(model_name)
         token = settings.gateway_access_token()
-        assert profile is not None
         assert token is not None
         return _build_gateway_model(
-            model_name,
+            settings.resolved_model_name(),
             settings.MODEL_BASE_URL.strip(),
             token,
-            profile=profile,
+            profile=settings.openai_capability_profile(),
         )
 
     # 只注入了 MODEL_API_KEY：按 MODEL 的 <provider>:<model> 走官网。
@@ -87,8 +84,8 @@ def _build_gateway_model(
     """用 OpenAI 兼容客户端拨 bkaidev。
 
     api_key 只填占位 empty，过网关靠 X-Bkapi-Authorization。profile 必须由调用方
-    传入（对照表里那份打开了 tools / JSON 输出的档），不能交给 pydantic-ai 按名字
-    猜——表外或保守推断会把工具调用静默关掉，进程看起来正常，模型却调不了工具。
+    传入（打开了 tools / JSON 输出的那份固定档），不能交给 pydantic-ai 按名字猜——
+    保守推断会把工具调用静默关掉，进程看起来正常，模型却调不了工具。
     """
     client = AsyncOpenAI(
         base_url=base_url,
@@ -106,7 +103,7 @@ def _build_gateway_model(
 async def _unready_stream(_messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str]:
     """未就绪占位：被调用说明门闩被绕过了。"""
     raise RuntimeError(
-        "model is not ready: fake, MODEL_API_KEY alone, or BK_AIDEV_ACCESS_TOKEN with MODEL_BASE_URL and a listed MODEL_NAME"
+        "model is not ready: fake, MODEL_API_KEY alone, or BK_AIDEV_ACCESS_TOKEN with MODEL_BASE_URL and MODEL_NAME"
     )
     yield ""
 
@@ -130,6 +127,27 @@ def _build_inferred_model() -> Model:
     return infer_model(settings.MODEL, provider_factory=provider_factory)
 
 
+def build_run_model(default: Model | str | None, model_name: str) -> Model:
+    """Build the model one turn asked for by name, on the default model's gateway client."""
+
+    # 只有网关模型能按名字换：调用方已经在 direct / fake 下拒掉了 modelName，走到这里还不是
+    # OpenAIChatModel 说明门闩被绕过了。
+    if not isinstance(default, OpenAIChatModel):
+        raise TypeError(f"only a gateway model can be swapped by name, got {type(default).__name__}")
+
+    # 和默认模型同名就是默认模型，不必再包一层。
+    if model_name == default.model_name:
+        return default
+
+    # 复用默认模型的 AsyncOpenAI：基址、用户 token、HTTP 连接池都在它身上，每轮只多一个轻量的模型
+    # 对象。不按名字缓存，推荐列表为空时名字是任意的，缓存会随它无限增长。
+    return OpenAIChatModel(
+        model_name,
+        provider=OpenAIProvider(openai_client=default.client),
+        profile=settings.openai_capability_profile(),
+    )
+
+
 def file_read_key(call: ToolCallPart) -> str | None:
     """Return the path a file-read tool call refers to, or None for any other call.
 
@@ -143,7 +161,7 @@ def file_read_key(call: ToolCallPart) -> str | None:
     return path if isinstance(path, str) else None
 
 
-def build_compaction() -> TieredCompaction[object]:
+def build_compaction(model: Model) -> TieredCompaction[object]:
     """Build the escalation used to keep a long conversation inside the context window.
 
     Tiers run cheap-to-expensive and stop as soon as the history fits the target, so the
@@ -151,6 +169,7 @@ def build_compaction() -> TieredCompaction[object]:
     and deduplicating cannot reclaim enough. Each tier's own trigger is ignored inside
     TieredCompaction, which drives them directly.
 
+    :param model: The sandbox's default model, which writes every summary.
     :return: The tiered compaction capability the agent is built with.
     """
     return TieredCompaction[object](
@@ -161,7 +180,10 @@ def build_compaction() -> TieredCompaction[object]:
                 max_tokens=1,
                 keep_pairs=settings.COMPACTION_KEEP_TOOL_RESULT_PAIRS,
             ),
+            # 显式绑默认模型：不给的话它借用本轮模型，用户每选一个模型，总结就换一个模型写，
+            # 选了贵模型连压缩一起变贵。
             SummarizingCompaction[object](
+                model=model,
                 max_messages=1,
                 keep_messages=settings.COMPACTION_KEEP_MESSAGES,
                 keep_user_messages=True,
@@ -198,6 +220,9 @@ def create_agent(
 
     resolved_state = state_dir.expanduser().resolve() if state_dir is not None else None
 
+    # 对话和压缩共用这一个实例，每轮换模型时 build_run_model 也从它身上取客户端。
+    model = build_model()
+
     # read_app_log 要绑 workspace 和 state_dir 才拦得住越界读，那两个路径在这里解析。
     tools: list[Any] = [
         build_read_app_log_tool(workspace=workspace_path, state_dir=resolved_state),
@@ -224,10 +249,10 @@ def create_agent(
             filenames=("AGENTS.md",),
             nested_traversal=True,
         ),
-        build_compaction(),
+        build_compaction(model),
     ]
     return Agent(
-        build_model(),
+        model,
         instructions=settings.INSTRUCTIONS,
         capabilities=capabilities,
         tools=tools,

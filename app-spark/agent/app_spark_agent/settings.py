@@ -109,20 +109,16 @@ MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 # bk_app_secret。本组件不调创建空间 / 智能体的 API。
 BK_AIDEV_ACCESS_TOKEN = env.str("BK_AIDEV_ACCESS_TOKEN", "") or None
 
-# 不带 vendor 前缀的模型名（如 deepseek-v4-flash），必须落在 MODEL_PROFILES。
+# 沙箱默认模型，不带 vendor 前缀（如 deepseek-v4-flash）。没指定模型的一轮和上下文压缩都用它；
+# 每轮可以用 forwardedProps.modelName 换成别的名字，能不能调由网关按用户 token 裁决。
 MODEL_NAME = env.str("MODEL_NAME", "")
 
 # bkaidev LLM 网关 OpenAI 兼容入口，注入到 v1 这一层，不要带 /chat/completions。
 # prod 示例：https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1。
 MODEL_BASE_URL = env.str("MODEL_BASE_URL", "")
 
-# MODEL_NAME → 能力档。表外名称不得走「按名字猜测」的保守档，否则工具调用会静默关掉。
-# 值是档位标识，不是拼进请求的 vendor 前缀。
-MODEL_PROFILES: dict[str, str] = {
-    "deepseek-v4-flash": "deepseek",
-}
-
-# 对照表内每一档都必须显式打开工具调用和结构化输出，禁止落到 pydantic-ai 的保守推断。
+# 网关下不管模型名是什么都用这一档，不交给 pydantic-ai 按名字推断：推断出的档会关掉
+# supports_tool_return_schema，保守档甚至会把工具调用静默关掉。
 _TOOL_AND_STRUCTURED_PROFILE = OpenAIModelProfile(
     supports_tools=True,
     supports_json_schema_output=True,
@@ -398,8 +394,8 @@ def uses_direct_provider() -> bool:
 
 
 def _gateway_ready() -> bool:
-    """网关三件套齐全，且模型名在对照表内。"""
-    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+    """网关三件套齐全。"""
+    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and bool(resolved_model_name())
 
 
 def model_mode() -> ModelMode:
@@ -425,15 +421,8 @@ def resolved_model_name() -> str:
     return MODEL_NAME.strip()
 
 
-def model_profile(name: str | None = None) -> str | None:
-    """对照表中的能力档；表外名称返回 None，调用方必须当成未就绪。"""
-    return MODEL_PROFILES.get(name if name is not None else resolved_model_name())
-
-
-def openai_capability_profile(name: str | None = None) -> OpenAIModelProfile | None:
-    """列出模型对应的显式 OpenAI 能力档；表外名称返回 None，不得猜测。"""
-    if model_profile(name) is None:
-        return None
+def openai_capability_profile() -> OpenAIModelProfile:
+    """网关模型统一使用的显式 OpenAI 能力档。"""
     return _TOOL_AND_STRUCTURED_PROFILE
 
 

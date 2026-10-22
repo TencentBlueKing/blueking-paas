@@ -30,10 +30,12 @@ from app_spark_agent.agent import (
     _build_gateway_model,
     build_compaction,
     build_model,
+    build_run_model,
     create_agent,
     file_read_key,
 )
 from app_spark_agent.bkaidev.auth import BKAPI_AUTHORIZATION_HEADER, OPENAI_API_KEY_PLACEHOLDER
+from tests.support.fake_models import text_model
 
 
 def test_create_agent_scopes_tools_to_workspace(
@@ -255,13 +257,11 @@ async def test_gateway_request_omits_bearer_authorization(monkeypatch: MonkeyPat
             },
         )
 
-    profile = settings.openai_capability_profile("deepseek-v4-flash")
-    assert profile is not None
     model = _build_gateway_model(
         "deepseek-v4-flash",
         "https://bkaidev.test/v1",
         "user-access-token",
-        profile=profile,
+        profile=settings.openai_capability_profile(),
         transport=httpx2.MockTransport(handler),
     )
     await model.client.chat.completions.create(
@@ -294,7 +294,7 @@ def test_incomplete_gateway_settings_do_not_infer_a_public_provider(
 
 def test_compaction_escalates_from_cheap_to_expensive() -> None:
     """The summarizing tier costs a model call, so it must be the last resort, not the first."""
-    compaction = build_compaction()
+    compaction = build_compaction(text_model(("ok",)))
 
     assert [type(tier) for tier in compaction.tiers] == [
         ClampOversizedMessages,
@@ -305,6 +305,54 @@ def test_compaction_escalates_from_cheap_to_expensive() -> None:
     # An absolute budget rather than a fraction of the window; `settings.py` pins why that
     # number is what it is.
     assert compaction.target_tokens == settings.COMPACTION_TARGET_TOKENS
+
+
+def test_summaries_are_written_by_the_default_model(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """Left without a model the summarizing tier borrows the turn's, which a user can now pick."""
+    set_gateway_settings(monkeypatch)
+
+    agent = create_agent(tmp_path)
+
+    compaction = next(item for item in agent.root_capability.capabilities if isinstance(item, TieredCompaction))
+    summarizing = next(tier for tier in compaction.tiers if isinstance(tier, SummarizingCompaction))
+    assert summarizing.model is agent.model
+
+
+def test_a_turns_model_shares_the_default_models_gateway_client(monkeypatch: MonkeyPatch) -> None:
+    set_gateway_settings(monkeypatch)
+    default = build_model()
+
+    model = build_run_model(default, "hy3")
+
+    assert isinstance(default, OpenAIChatModel)
+    assert isinstance(model, OpenAIChatModel)
+    assert model.model_name == "hy3"
+    # Same AsyncOpenAI, so the same base URL, user token and connection pool: nothing new per turn.
+    assert model.client is default.client
+    # A name the old allowlist never knew still gets exactly the default model's capabilities.
+    assert model.profile == default.profile
+    assert model.profile["supports_tool_return_schema"] is True
+
+
+def test_a_turn_naming_the_default_model_gets_the_default_model(monkeypatch: MonkeyPatch) -> None:
+    set_gateway_settings(monkeypatch)
+    default = build_model()
+
+    assert build_run_model(default, "deepseek-v4-flash") is default
+
+
+def test_only_a_gateway_model_can_be_swapped_by_name() -> None:
+    with pytest.raises(TypeError):
+        build_run_model(text_model(("ok",)), "hy3")
+
+
+def set_gateway_settings(monkeypatch: MonkeyPatch) -> None:
+    """Configure a complete gateway whose default model is deepseek-v4-flash."""
+    monkeypatch.setattr(settings, "MODEL", "deepseek:deepseek-v4-flash")
+    monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-access-token")
+    monkeypatch.setattr(settings, "MODEL_API_KEY", None)
+    monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
+    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
 
 
 def test_file_read_key_matches_the_harness_read_tool() -> None:

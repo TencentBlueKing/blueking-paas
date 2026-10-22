@@ -53,7 +53,7 @@ from app_spark_api.agent.runtime import (
     StateCallback,
 )
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
-from app_spark_api.agent.runtime.model_access import resolve_model_access
+from app_spark_api.agent.runtime.model_access import resolve_model_access, resolve_run_model_name
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -411,7 +411,13 @@ async def read_ui_events(
     return EventPage(since=since, last_seq=last_seq, records=records)
 
 
-async def start_run(conversation: Conversation, *, content: str, credential: UserCredential | None = None) -> AgentRun:
+async def start_run(
+    conversation: Conversation,
+    *,
+    content: str,
+    credential: UserCredential | None = None,
+    model_code: str | None = None,
+) -> AgentRun:
     """Submit one turn and return its open event stream.
 
     The context version is read from ``/health`` immediately before the run rather than
@@ -421,8 +427,10 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
     :param conversation: Conversation the turn belongs to.
     :param content: The user's message.
     :param credential: The caller's BlueKing login, passed to :func:`open_client`.
+    :param model_code: The model this turn asked for; None runs it on the Runtime's default.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
+    :raises ModelNotAvailableError: If this deployment does not offer ``model_code``.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
     :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
@@ -437,6 +445,10 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
     # 会照常把 Runtime 重新拉起来，被回收的 workspace 也会被重新占上。
     if not conversation.is_live:
         raise ConversationClosedError(_CLOSED_MESSAGE.format(id=conversation.id))
+
+    # 模型不可用时在拉起沙箱、写入用户消息之前就拒掉：这一轮本来就不会发生，不该为它付启动成本，
+    # 也不该在历史里留一条没有回答的输入。
+    model_name = resolve_run_model_name(model_code)
 
     client = await open_client(conversation, credential=credential)
 
@@ -463,7 +475,11 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         conversation, content=content
     )
     try:
-        run = await client.start_run(content=content, context_version=health.context_version)
+        run = await client.start_run(
+            content=content,
+            context_version=health.context_version,
+            model_name=model_name,
+        )
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
         logger.warning(

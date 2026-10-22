@@ -46,7 +46,8 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 from app_spark_api.agent.conversations import checkpoints
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations import services as conversation_services
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
@@ -201,11 +202,14 @@ async def create_conversation(client: AsyncClient) -> dict[str, Any]:
     return json.loads(response.content)
 
 
-async def post_run(client: AsyncClient, number: int, prompt: str) -> Any:
+async def post_run(client: AsyncClient, number: int, prompt: str, *, model_code: str | None = None) -> Any:
     """Submit one turn without judging how it was answered."""
+    payload: dict[str, Any] = {"content": prompt}
+    if model_code is not None:
+        payload["model_code"] = model_code
     return await client.post(
         f"/api/projects/{PROJECT_ID}/conversations/{number}/runs/",
-        data={"content": prompt},
+        data=payload,
         content_type="application/json",
     )
 
@@ -688,6 +692,50 @@ async def test_a_turn_is_refused_while_another_is_still_running(
     assert json.loads(second.content)["detail"] == (
         "The Agent Runtime is already executing a run for this conversation."
     )
+
+
+async def test_a_turn_on_the_built_in_model_runs_like_one_without_a_model(aapi_client, project, chat_agent):
+    # direct 下 AGENT_DIRECT_MODEL_CONFIG.model 是 fake:chat，内置模型的编码就是冒号后的 chat。
+    state = await create_conversation(aapi_client)
+
+    response = await post_run(aapi_client, state["number"], "hello", model_code="chat")
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
+
+
+@pytest.mark.usefixtures("chat_agent")
+@pytest.mark.parametrize(
+    ("source", "model_code"),
+    [
+        pytest.param("direct", "hy3", id="direct-not-the-built-in-model"),
+        pytest.param("bkaidev", "kimi-26", id="bkaidev-not-in-the-recommended-list"),
+    ],
+)
+async def test_a_turn_on_a_model_not_offered_is_refused_before_anything_starts(
+    aapi_client, project, settings, source, model_code
+):
+    settings.AGENT_MODEL_SOURCE = source
+    settings.BKAIDEV_MODEL_CONFIG = {"recommended_models": ["deepseek-v4-flash", "hy3"]}
+    # 不经 API 建会话，这样它还没有 Runtime：拒绝之后仍然没有，才说明校验排在拉起沙箱之前。
+    conversation = await conversation_services.create_conversation(project, owner=project.owner)
+
+    response = await post_run(aapi_client, conversation.number, "hello", model_code=model_code)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, response.content
+    assert json.loads(response.content)["code"] == "MODEL_NOT_AVAILABLE"
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    assert await provider.peek(str(conversation.id)) is None
+    assert not await ConversationUserMessage.objects.filter(conversation=conversation).aexists()
+
+
+@pytest.mark.parametrize("model_code", [pytest.param("", id="empty"), pytest.param("m" * 65, id="longer-than-64")])
+async def test_a_malformed_model_code_is_a_validation_error(aapi_client, project, chat_agent, model_code):
+    state = await create_conversation(aapi_client)
+
+    response = await post_run(aapi_client, state["number"], "hello", model_code=model_code)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, response.content
 
 
 async def test_a_second_conversation_on_one_project_is_refused(aapi_client, project, agent):

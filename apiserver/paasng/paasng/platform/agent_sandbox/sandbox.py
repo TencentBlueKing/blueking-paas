@@ -459,7 +459,10 @@ class AgentSandboxResManager:
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
 
-        router_endpoint = get_router_endpoint(self.kres_app.target)
+        try:
+            router_endpoint = get_router_endpoint(self.kres_app.target)
+        except RuntimeError as exc:
+            raise SandboxError(f"failed to resolve sandbox router endpoint: {exc}") from exc
         return KubernetesSandbox(
             entity=entity,
             router_endpoint=router_endpoint,
@@ -572,7 +575,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
                 # and leave stderr empty since the daemon doesn't separate them
                 return ExecResult(stdout=result.output, stderr="", exit_code=result.exit_code)
         except SandboxDaemonAPIError as exc:
-            raise SandboxExecError(f"failed to execute command: {exc}")
+            raise SandboxExecError("failed to execute command", detail=exc.detail) from exc
 
     def code_run(self, content: str, language: str = "Python") -> CodeRunResult:
         """Run a piece of code inside the sandbox."""
@@ -593,7 +596,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.create_folder(path=path, mode=mode)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to create folder: {exc}")
+            raise SandboxFileError("failed to create folder", detail=exc.detail) from exc
 
     def upload_file(self, file: bytes, remote_path: str, timeout: int = 30 * 60) -> None:
         """Upload a file to the sandbox via daemon API.
@@ -606,7 +609,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.upload_file(file_content=file, dest_path=remote_path, timeout=timeout)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to upload file: {exc}")
+            raise SandboxFileError("failed to upload file", detail=exc.detail) from exc
 
     def delete_file(self, path: str, recursive: bool = False) -> None:
         """Delete a file from the sandbox via daemon API.
@@ -618,7 +621,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.delete_file(path=path, recursive=recursive)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to delete file: {exc}")
+            raise SandboxFileError("failed to delete file", detail=exc.detail) from exc
 
     def download_file(self, remote_path: str, timeout: int = 30 * 60) -> bytes:
         """Download a file from the sandbox via daemon API.
@@ -631,7 +634,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 return client.download_file(path=remote_path, timeout=timeout)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to download file: {exc}")
+            raise SandboxFileError("failed to download file", detail=exc.detail) from exc
 
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""

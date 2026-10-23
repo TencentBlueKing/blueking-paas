@@ -332,3 +332,52 @@ class ApiGatewayClient:
             if e.response_status_code == 404:
                 raise ApiGatewayServiceError(f"apigw {gateway_name} or api resources not found")
             raise ApiGatewayServiceError(f"grant apigw {gateway_name} permissions error: {e}")
+
+    # ============ 应用调用流水日志相关 ============
+
+    def list_app_request_logs(
+        self,
+        app_code: str,
+        time_start: int,
+        time_end: int,
+        gateway_name: str | None = None,
+        resource_name: str | None = None,
+        request_id: str | None = None,
+        status: int | None = None,
+        offset: int = 0,
+        limit: int = 10,
+    ) -> dict:
+        """获取应用维度调用流水日志
+
+        :param app_code: 应用 Code, 作为路径参数下发
+        :param time_start: 起始时间, Unix 时间戳 (秒)
+        :param time_end: 结束时间，Unix 时间戳 (秒)
+        :param gateway_name: 网关名称, 精确匹配
+        :param resource_name: 资源名称, 精确匹配
+        :param request_id: 请求 ID, 精确匹配
+        :param status: 响应状态码
+        :param offset: 偏移量
+        :param limit: 每页条数
+        """
+        params: dict[str, Any] = {
+            "time_start": time_start,
+            "time_end": time_end,
+            "offset": offset,
+            "limit": limit,
+        }
+        # 可选参数为 None 或空字符串时不下发
+        optional_params: dict[str, Any] = {
+            "gateway_name": gateway_name,
+            "resource_name": resource_name,
+            "request_id": request_id,
+            "status": status,
+        }
+        params.update({key: value for key, value in optional_params.items() if value not in (None, "")})
+
+        # 网关契约中 app_code 为路径参数
+        try:
+            res = self.client.list_app_request_logs(params=params, path_params={"app_code": app_code})
+        except (APIGatewayResponseError, ResponseError) as e:
+            raise ApiGatewayServiceError(f"list app request logs error: {e}")
+
+        return res.get("data", {})

@@ -167,6 +167,16 @@ class Group(OperationGroup):
         path="/api/v2/sync/gateways/{gateway_name}/permissions/grant/",
     )
 
+    # ============ 应用监控相关 ============
+
+    # 应用维度调用流水日志
+    list_app_request_logs = bind_property(
+        Operation,
+        name="list_app_request_logs",
+        method="GET",
+        path="/api/v2/inner/apps/{app_code}/monitor/request-logs/",
+    )
+
 
 class Client(APIGatewayClient):
     """bk-apigateway client"""

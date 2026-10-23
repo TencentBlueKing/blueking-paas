@@ -45,7 +45,7 @@ from .e2b.constants import (
 )
 from .e2b.exceptions import E2BApiKeyGenerateError, E2BApiKeyQuotaExceeded, E2BSandboxNotFound
 from .e2b.keys import generate_api_key, hash_api_key, make_display_prefix
-from .exceptions import SandboxAlreadyExists, SandboxCreateError
+from .exceptions import SandboxAlreadyExists, SandboxNoClusterError
 
 
 class Volume(UuidAuditedModel):
@@ -57,6 +57,8 @@ class Volume(UuidAuditedModel):
     name = models.CharField(verbose_name="卷名称", max_length=256, help_text="应用内唯一标识")
     display_name = models.CharField(verbose_name="显示名称", max_length=256, blank=True, default="")
     deleted_at = models.DateTimeField("删除时间", null=True)
+    # 进入删除流程的中间状态: 非空即表示该卷已不可再挂载, 但共享存储目录可能尚未清理完成.
+    deleting_at = models.DateTimeField("开始删除时间", null=True)
     tenant_id = tenant_id_field_factory()
     shared_app_codes = models.JSONField(
         verbose_name="共享给的应用 code 列表",
@@ -162,7 +164,7 @@ class SandboxManager(models.Manager):
         try:
             cluster = ClusterAllocator(alloc_ctx).get_default()
         except ValueError as exc:
-            raise SandboxCreateError(f"no available cluster for workload_type={workload_type}: {exc}") from exc
+            raise SandboxNoClusterError(f"no available cluster for workload_type={workload_type}: {exc}") from exc
 
         target = cluster.name
 

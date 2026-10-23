@@ -23,11 +23,13 @@ from urllib.parse import quote
 import requests
 
 from paas_wl.infras.cluster.models import ClusterE2BConfig
+from paasng.misc.metrics import E2B_GATEWAY_REQUESTS_COUNTER
 
 from .clusters import get_e2b_cluster_config
 from .constants import (
     GATEWAY_CREATE_TIMEOUT_SECONDS,
     GATEWAY_REQUEST_TIMEOUT_SECONDS,
+    E2BGatewayOutcome,
 )
 from .exceptions import (
     E2BGatewayError,
@@ -49,6 +51,8 @@ class E2BGatewayClient:
 
     def __init__(self, config: ClusterE2BConfig):
         self.config = config
+        # cluster 是非空外键；调用方经 get_e2b_cluster_config 时已 select_related
+        self.cluster_name = config.cluster.name
         self.base_url = config.control_plane_url.rstrip("/")
         self._session = requests.Session()
         self._session.headers["X-API-Key"] = config.api_key
@@ -123,15 +127,29 @@ class E2BGatewayClient:
             resp = self._session.request(method, f"{self.base_url}{path}", timeout=timeout, **kwargs)
             resp.raise_for_status()
         except requests.Timeout as exc:
+            self._record_request(method, E2BGatewayOutcome.TIMEOUT)
             raise E2BGatewayTimeout(f"gateway timed out on {method} {path}") from exc
         except requests.HTTPError as exc:
             status = exc.response.status_code
             if status == 404:
+                self._record_request(method, E2BGatewayOutcome.NOT_FOUND)
                 raise E2BGatewayNotFound(f"gateway returned 404 on {method} {path}") from exc
             logger.warning("e2b gateway returned %s on %s %s: %s", status, method, path, exc.response.text[:500])
+            self._record_request(method, E2BGatewayOutcome.ERROR)
             raise E2BGatewayError(f"gateway returned {status} on {method} {path}") from exc
         except requests.RequestException as exc:
             # 连接被拒、DNS 失败、TLS 握手失败等，都归为「暂时连不上」
+            self._record_request(method, E2BGatewayOutcome.UNAVAILABLE)
             raise E2BGatewayUnavailable(f"cannot reach gateway on {method} {path}: {exc}") from exc
         else:
+            self._record_request(method, E2BGatewayOutcome.SUCCESS)
             return resp
+
+    def _record_request(self, method: str, outcome: E2BGatewayOutcome) -> None:
+        """记录一次网关调用, 埋点失败只记日志."""
+        try:
+            E2B_GATEWAY_REQUESTS_COUNTER.labels(
+                cluster=self.cluster_name, method=method.upper(), outcome=outcome.value
+            ).inc()
+        except Exception:
+            logger.warning("failed to record e2b gateway request metric", exc_info=True)

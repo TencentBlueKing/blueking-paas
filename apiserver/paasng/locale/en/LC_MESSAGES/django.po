@@ -5309,6 +5309,10 @@ msgstr "No e2b sandbox cluster is currently available"
 msgid "e2b 沙箱不存在"
 msgstr "e2b sandbox not found"
 
+#: paasng/utils/error_codes.py:276
+msgid "e2b 沙箱服务暂不可用，请稍后重试"
+msgstr "The e2b sandbox service is temporarily unavailable, please retry later"
+
 #: paasng/utils/error_codes.py:273
 msgid "生成保留前缀授权码失败"
 msgstr "Generate reserved prefix auth code failed"

@@ -39,6 +39,14 @@ class SandboxCreateError(SandboxError):
         self.logs = logs
 
 
+class SandboxNoClusterError(SandboxError):
+    """Raised when no cluster is available for the sandbox's workload type."""
+
+
+class SandboxK8sResourceError(SandboxError):
+    """Raised when a K8s API call fails while creating the sandbox's resources."""
+
+
 class SandboxActiveCountLimitExceeded(SandboxError):
     """Raised when an application has reached the limit of active sandboxes.
 
@@ -120,3 +128,7 @@ class VolumeGranteeNotFound(SandboxError):
 
 class VolumeShareLimitExceeded(SandboxError):
     """Raised when a volume has reached the maximum number of granted applications."""
+
+
+class VolumeInUse(SandboxError):
+    """Raised when live sandboxes still mount the volume, so it must not be deleted."""

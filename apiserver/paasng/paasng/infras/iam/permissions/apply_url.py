@@ -22,6 +22,10 @@ from django.conf import settings
 from iam import IAM
 from iam.apply import models
 
+from paasng.infras.iam.base.constants import IAMVersion
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.shim import get_iam_version
+
 from .request import ActionResourcesRequest
 
 logger = logging.getLogger(__name__)
@@ -35,6 +39,12 @@ class ApplyURLGenerator:
 
         参考 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#14-获取无权限申请跳转url
         """
+        if get_iam_version() == IAMVersion.V4:
+            return cls._generate_v4_apply_url(tenant_id, action_request_list)
+        return cls._generate_v3_apply_url(tenant_id, action_request_list)
+
+    @classmethod
+    def _generate_v3_apply_url(cls, tenant_id: str, action_request_list: List[ActionResourcesRequest]) -> str:
         app = cls._make_application(action_request_list)
         _iam = IAM(
             settings.IAM_APP_CODE,
@@ -44,9 +54,19 @@ class ApplyURLGenerator:
         )
         ok, message, url = _iam.get_apply_url(app)
         if not ok:
-            logger.error("generate_apply_url failed: %s", message)
-            return settings.BK_IAM_URL
+            logger.error("generate_apply_url from bkiam v3 failed: %s", message)
+            return settings.BK_IAM_EFFECTIVE_URL
         return url
+
+    @staticmethod
+    def _generate_v4_apply_url(tenant_id: str, action_request_list: List[ActionResourcesRequest]) -> str:
+        from paasng.infras.iam.v4.apply_url import fetch_apply_url
+
+        try:
+            return fetch_apply_url(tenant_id, action_request_list)
+        except BKIAMGatewayServiceError:
+            logger.exception("generate_apply_url from bkiam v4 failed")
+            return settings.BK_IAM_EFFECTIVE_URL
 
     @staticmethod
     def _make_application(action_request_list: List[ActionResourcesRequest]) -> models.Application:

@@ -47,8 +47,7 @@ def register_builtin_user_groups_and_grade_manager(application: Application, add
     )
     ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=space_id, tenant_id=tenant_id)
 
-    # 2. 将创建者添加为分级管理员的成员。V4 的 managers 已在创建空间时写入，
-    #    且 V4 暂无空间成员增删接口，这里不再补调，避免把创建流程打断。
+    # 2. 将创建者添加为分级管理员的成员。V4 的 managers 已在创建空间时写入，无需补调。
     if get_iam_version() == IAMVersion.V3:
         backend.add_management_space_members(space_id, [creator], operator=creator)
 

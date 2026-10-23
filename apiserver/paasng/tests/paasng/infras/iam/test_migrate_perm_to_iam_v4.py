@@ -213,10 +213,25 @@ class TestMigrate:
         # 未指定的应用不受影响，本地 ID 仍是 V3 的值
         assert ApplicationGradeManager.objects.get(app_code=other.code).grade_manager_id == V3_SPACE_ID
 
+    def test_grants_observability_permissions_with_v4_group_ids(self, migrate, bk_app_with_v3_perm, v4_backend):
+        with mock.patch(
+            f"{COMMAND_MODULE}.get_or_create_bk_monitor_space",
+            return_value=(mock.Mock(iam_resource_id="-100"), True),
+        ) as get_space:
+            migrate()
+
+        # 迁移时本地仍是 V3 的 ID，不能交给按本地 ID 授权的异步任务
+        assert get_space.call_args.kwargs["grant_iam_permission"] is False
+        user_groups = v4_backend.create_builtin_user_groups.return_value
+        for method in ["grant_user_group_policies_in_bk_monitor", "grant_user_group_policies_in_bk_log"]:
+            getattr(v4_backend, method).assert_called_once_with("-100", bk_app_with_v3_perm.name, user_groups)
+
     def test_skip_observability_scope(self, migrate, bk_app_with_v3_perm, v4_backend):
         migrate("--skip-observability-scope")
 
         assert v4_backend.create_management_space.call_args.kwargs["bk_space_id"] is None
+        v4_backend.grant_user_group_policies_in_bk_monitor.assert_not_called()
+        v4_backend.grant_user_group_policies_in_bk_log.assert_not_called()
 
     def test_exclude_users_are_not_migrated(self, migrate, bk_app_with_v3_perm, v4_backend):
         migrate("--exclude-users", "dev2")

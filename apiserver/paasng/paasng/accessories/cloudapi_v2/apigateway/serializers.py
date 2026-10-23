@@ -356,8 +356,7 @@ class ListAppAlarmRecordsInputSLZ(serializers.Serializer):
         - 传 resource_name 时必须同时传 gateway_name
         """
         time_start = attrs["time_start"]
-        now = int(timezone.now().timestamp())
-        time_end = min(attrs["time_end"], now)
+        time_end = attrs["time_end"]
 
         if time_end <= time_start:
             raise serializers.ValidationError(_("结束时间必须大于起始时间"))
@@ -365,7 +364,8 @@ class ListAppAlarmRecordsInputSLZ(serializers.Serializer):
         if attrs.get("resource_name") and not attrs.get("gateway_name"):
             raise serializers.ValidationError({"gateway_name": _("传 resource_name 时，必须同时传 gateway_name")})
 
-        attrs["time_end"] = time_end
+        now = int(timezone.now().timestamp())
+        attrs["time_end"] = min(time_end, now)
         return attrs
 
 
@@ -386,8 +386,6 @@ class AppAlarmRecordOutputSLZ(serializers.Serializer):
 
     def get_status_display(self, obj) -> str:
         """优先使用网关返回的 status_display, 缺失时按告警状态回退到本地枚举文案"""
-        if not isinstance(obj, dict):
-            return ""
         return obj.get("status_display") or AlarmRecordStatus.get_choice_label(obj.get("status") or "")
 
 

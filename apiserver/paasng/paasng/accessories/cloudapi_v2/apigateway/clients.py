@@ -368,7 +368,7 @@ class ApiGatewayClient:
             "gateway_name": gateway_name,
             "resource_name": resource_name,
         }
-        params.update({key: value for key, value in optional_params.items() if value is not None})
+        params.update({key: value for key, value in optional_params.items() if value not in (None, "")})
 
         try:
             res = self.client.list_app_alarm_records(params=params, path_params={"app_code": app_code})

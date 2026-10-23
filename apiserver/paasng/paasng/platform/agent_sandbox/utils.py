@@ -17,13 +17,15 @@
 
 import requests
 
+from .exceptions import SandboxError
+
 
 def extract_error_detail(resp: requests.Response) -> str | None:
     """Best-effort extract the daemon's human-readable error message.
 
-    The resident daemon returns JSON error bodies shaped as ``{"message": ..., "timestamp": ...,
-    "path": ..., "method": ...}`` (see ``httputil.ErrorResponse``). Non-JSON or missing ``message``
-    bodies yield ``None`` so callers can fall back to a generic message.
+    Both the sandbox daemon and the resident daemon returns JSON error bodies shaped as
+    ``{"message": ..., "timestamp": ..., "path": ..., "method": ...}`` (see ``httputil.ErrorResponse``).
+    Non-JSON or missing ``message`` bodies yield ``None`` so callers can fall back to a generic message.
     """
     try:
         body = resp.json()
@@ -34,3 +36,16 @@ def extract_error_detail(resp: requests.Response) -> str | None:
         if isinstance(msg, str) and msg:
             return msg
     return None
+
+
+def public_detail(exc: SandboxError) -> str | None:
+    """Return the client-safe error text for API responses, or None if unavailable.
+
+    Only exc.detail is safe to expose; str(exc) is log-only.
+    """
+    if not isinstance(exc, SandboxError):
+        return None
+    detail = exc.detail
+    if not isinstance(detail, str):
+        return None
+    return detail.strip() or None

@@ -150,7 +150,8 @@ class ResidentDaemonClient:
         Maps daemon status codes to domain exceptions:
         404 -> SandboxFileNotFound, 413 -> SandboxFileTooLarge, 415 -> SandboxFileNotPreviewable,
         502 -> SandboxServiceNotReady, 5xx on archive -> SandboxArchiveFailed, others -> SandboxDaemonAPIError.
-        Each carries the daemon's human-readable ``message`` (from its JSON error body) as ``detail``.
+        Each exception carries the daemon's human-readable ``message`` (from its JSON error body) as
+        ``detail`` -- the client-safe channel -- while the message keeps the internal ``path`` for logs.
         """
         try:
             resp = self._session.request(
@@ -164,15 +165,15 @@ class ResidentDaemonClient:
             status_code = exc.response.status_code
             detail = extract_error_detail(exc.response)
             if status_code == 404:
-                raise SandboxFileNotFound(detail or f"file not found on {path}")
+                raise SandboxFileNotFound(f"file not found on {path}", detail=detail)
             if status_code == 413:
-                raise SandboxFileTooLarge(detail or f"file too large on {path}")
+                raise SandboxFileTooLarge(f"file too large on {path}", detail=detail)
             if status_code == 415:
-                raise SandboxFileNotPreviewable(detail or f"file not previewable on {path}")
+                raise SandboxFileNotPreviewable(f"file not previewable on {path}", detail=detail)
             if path.endswith("/archive") and status_code >= 500:
-                raise SandboxArchiveFailed(detail or f"archive failed with HTTP {status_code}")
+                raise SandboxArchiveFailed(f"archive failed with HTTP {status_code}", detail=detail)
             if status_code == 502:
-                raise SandboxServiceNotReady(detail or "resident daemon service is not ready")
+                raise SandboxServiceNotReady("resident daemon service is not ready", detail=detail)
             raise SandboxDaemonAPIError(f"HTTP error {status_code} on {path}", status_code=status_code, detail=detail)
         except requests.RequestException as exc:
             raise SandboxDaemonAPIError(f"Request failed: {exc}")

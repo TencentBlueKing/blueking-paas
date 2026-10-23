@@ -69,6 +69,20 @@ def get_plan_by_env(
     return plan
 
 
+def is_service_disallowed(service: ServiceObj, module: Module) -> bool:
+    """Check if the module is disallowed from using the service, which means the matched
+    precedence policy of any env is configured with empty plans.
+    """
+    if (
+        ServiceAllocationPolicy.objects.get_type(service, module.tenant_id)
+        != ServiceAllocationPolicyType.RULE_BASED.value
+    ):
+        return False
+
+    selector = PlanSelector()
+    return any(not selector.match_precedence_policy(service, env).get_plan_ids(env) for env in module.envs.all())
+
+
 class PlanSelector:
     """The selector that helps to select the plans based on the configured policies"""
 
@@ -129,6 +143,14 @@ class PlanSelector:
         :return: A list plans based on the ServiceBindingPrecedencePolicy.
         :raise ValueError: If no precedence policy matches the env object.
         """
+        policy_obj = self.match_precedence_policy(service, env)
+        return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
+
+    def match_precedence_policy(self, service: ServiceObj, env: ModuleEnvironment) -> BindingPrecedencePolicy:
+        """Get the first precedence policy which matches the env object.
+
+        :raise ValueError: If the policies are invalid or no precedence policy matches the env object.
+        """
         precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(
             service_id=service.uuid, tenant_id=env.tenant_id
         ).order_by("-priority")
@@ -140,7 +162,7 @@ class PlanSelector:
             # If the policy does not match the env object, try the next one
             if not policy_obj.match(env):
                 continue
-            return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
+            return policy_obj
         raise ValueError("Can not match any plans")
 
     @staticmethod

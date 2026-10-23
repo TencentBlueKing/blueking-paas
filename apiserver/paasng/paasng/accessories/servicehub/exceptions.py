@@ -74,6 +74,10 @@ class BindServicePlanError(Exception):
         self.message = message
 
 
+class ServiceDisallowedError(BindServicePlanError):
+    """raised when the binding policy disallows the module from using the service"""
+
+
 # Plan Selector Errors start
 
 

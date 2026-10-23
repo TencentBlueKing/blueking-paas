@@ -126,6 +126,9 @@
                       {{ $t('方案（生产环境）') }}：{{ getPlanNames(item.env_plans?.prod)?.join(', ') }}
                     </span>
                   </template>
+                  <template v-else-if="!item.plans?.length">
+                    <span class="tag">{{ $t('不可使用') }}</span>
+                  </template>
                   <template v-else>
                     <span
                       v-for="planName in getPlanNames(item.plans)"

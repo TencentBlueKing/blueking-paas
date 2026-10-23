@@ -27,10 +27,12 @@ from paasng.accessories.servicehub.binding_policy.selector import (
     PlanSelector,
     PossiblePlansResultType,
     get_plan_by_env,
+    is_service_disallowed,
 )
 from paasng.accessories.servicehub.constants import ServiceUsage
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceBindingPrecedencePolicy
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import AppEnvName
 from tests.api.test_cnative_migration import get_random_string
@@ -226,6 +228,17 @@ class TestPlanSelectorSelectWithPrecedenceUsageIn:
                 ),
             ]
         )
+
+
+def test_is_service_disallowed_with_inactive_plan(service_obj, bk_module, plan1):
+    """规则引用了不存在（如已停用）的方案时，不影响判断"""
+    SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_rule_based(
+        [ServiceBindingPrecedencePolicyDTO(matcher={}, plans=[plan1.uuid], priority=0)]
+    )
+    ServiceBindingPrecedencePolicy.objects.filter(service_id=service_obj.uuid).update(
+        data={"plan_ids": ["not-exists"]}
+    )
+    assert is_service_disallowed(service_obj, bk_module) is False
 
 
 class TestPlanSelectorListPossiblePlans:

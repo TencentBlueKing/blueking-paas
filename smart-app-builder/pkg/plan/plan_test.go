@@ -97,7 +97,7 @@ modules:
 		})
 
 		Expect(buildPlan.BuildGroups[0].ModuleNames).To(Equal([]string{"api"}))
-		Expect(buildPlan.BuildGroups[0].RequiredBuildpacks).To(Equal("oci-embedded bk-buildpack-go ... v216"))
+		Expect(buildPlan.BuildGroups[0].RequiredBuildpacks).To(Equal("oci-embedded bk-buildpack-go ... v238"))
 		Expect(buildPlan.BuildGroups[0].OutputImageTarName).To(Equal("api.tar"))
 
 		Expect(buildPlan.BuildGroups[1].ModuleNames).To(Equal([]string{"web", "worker"}))

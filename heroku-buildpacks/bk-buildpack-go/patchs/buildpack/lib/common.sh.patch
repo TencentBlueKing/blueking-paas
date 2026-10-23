@@ -1,0 +1,25 @@
+--- buildpack/lib/common.sh
++++ buildpack/lib/common.sh
+@@ -99,6 +99,12 @@
+ 	output::step "Fetching ${fileName}"
+ 	local url
+ 	url="$(<"${FilesJSON}" jq -r '."'"${fileName}"'".URL')"
++	# -- Added by blueking builder-stack --
++	# 设置了 GO_BUCKET_URL 时，按 ${GO_BUCKET_URL}/${fileName} 平铺下载，SHA 仍用 files.json 里的值校验。
++	if [[ -n "${GO_BUCKET_URL:-}" ]]; then
++		url="${GO_BUCKET_URL%/}/${fileName}"
++		echo "Using GO_BUCKET_URL: ${url}" | output::indent
++	fi
+ 	# shellcheck disable=SC2312
+ 	${CURL} -o "${fileName}" "${url}" 2>&1 | output::indent
+ 	# shellcheck disable=SC2310
+@@ -174,6 +180,9 @@
+ 	envFlags+=("GONOPROXY")
+ 	envFlags+=("GOVERSION")
+ 	envFlags+=("GO_INSTALL_PACKAGE_SPEC")
++	# -- Added by blueking builder-stack --
++	# 上游白名单里没有 GO_BUCKET_URL。要在 ensureGo 下载前从 env dir 导出，否则下载地址改写看不到它。
++	envFlags+=("GO_BUCKET_URL")
+ 	envFlags+=("GO_INSTALL_TOOLS_IN_IMAGE")
+ 	envFlags+=("GO_SETUP_GOPATH_FOR_MODULE_CACHE")
+ 	envFlags+=("GO_TEST_SKIP_BENCHMARK")

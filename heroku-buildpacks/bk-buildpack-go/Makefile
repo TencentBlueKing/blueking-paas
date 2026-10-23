@@ -12,9 +12,10 @@ clean:  ## 清理产物
 	rm -rf ${ROOT}/output
 
 .PHONY: pack
-pack: ${ROOT}/output  ## 打包 buildpack
+pack: ${ROOT}/output patch  ## 打包 buildpack
 	$(eval name ?= bk-buildpack-go-${version}.tar)
 	cd buildpack && tar cvhf ${ROOT}/output/${name} --exclude=test *
+	make unpatch
 
 
 ##@ Test
@@ -26,6 +27,16 @@ test:  ## 单元测试
 			-w /data \
 			bats/bats:v1.4.1 \
 			/data/tests
+
+
+##@ Misc
+.PHONY: patch
+patch:
+	patch buildpack/lib/common.sh patchs/buildpack/lib/common.sh.patch
+
+.PHONY: unpatch
+unpatch:
+	patch -R buildpack/lib/common.sh patchs/buildpack/lib/common.sh.patch
 
 
 .PHONY: help

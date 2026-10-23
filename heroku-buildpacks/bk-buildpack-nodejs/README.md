@@ -20,13 +20,13 @@
 ## 已有 patch
 
 - bin/compile.patch: 添加对 pre-compile，post-compile hook 的支持
-- lib/binaries.sh.patch: 支持从自定义对象存储仓库中下载 nodejs 二进制文件
+- lib/runtimes/nodejs.sh.patch: 支持从自定义对象存储仓库中下载 nodejs 二进制文件
 
 ## 自定义环境变量说明
 
 ### NODE_BINARY_MIRROR_URL
 
-指定 Node.js 二进制文件的自定义下载源地址，用于替换 [默认配置文件](https://github.com/heroku/heroku-buildpack-nodejs/blob/v304/inventory/node.toml) 中的官方仓库地址。
+指定 Node.js 二进制文件的自定义下载源地址，用于替换 [默认配置文件](https://github.com/heroku/heroku-buildpack-nodejs/blob/v375/inventory/node.toml) 中的官方仓库地址。
 
 **使用场景：**
 - 内网环境无法访问 nodejs.org 官方源

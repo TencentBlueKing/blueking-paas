@@ -129,6 +129,12 @@ class ErrorCodes:
         _("Could not obtain an access token for the model. Please retry later."),
         status_code=HTTPStatus.BAD_GATEWAY,
     )
+    # An error rather than an empty list: an empty list reads as "this deployment has no models",
+    # which turns a network failure into what looks like a configuration problem.
+    MODEL_CATALOG_UNAVAILABLE = ErrorCode(
+        _("The model list is unavailable. Please retry later."),
+        status_code=HTTPStatus.BAD_GATEWAY,
+    )
 
     # --- Workspace application preview --------------------------------------------------------------
     # Two separate failures, because only the first one is the user's to fix. No Runtime means

@@ -31,6 +31,7 @@ from app_spark_api.agent.conversations.api import router as conversations_router
 from app_spark_api.agent.conversations.exceptions import ConversationClosedError, InvalidHistoryCursorError
 from app_spark_api.agent.conversations.internal_api import router as conversation_state_router
 from app_spark_api.agent.conversations.state import ConversationStateError
+from app_spark_api.agent.model_catalog.api import router as model_catalog_router
 from app_spark_api.agent.runtime import (
     AgentBusyError,
     AgentRuntimeError,
@@ -43,6 +44,7 @@ from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.api import router as accounts_router
 from app_spark_api.infras.bk_access_token import AccessTokenError
+from app_spark_api.infras.bkaidev import BkAidevGatewayError
 from app_spark_api.infras.forgejo.exceptions import ForgejoError
 from app_spark_api.repository.git.api import router as git_repository_router
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
@@ -55,6 +57,7 @@ logger = logging.getLogger(__name__)
 
 root_router = Router()
 root_router.add_router("/accounts/", accounts_router)
+root_router.add_router("/models/", model_catalog_router)
 root_router.add_router("/projects/", projects_router)
 root_router.add_router("/projects/{project_id}/git-repository/", git_repository_router)
 root_router.add_router("/projects/{project_id}/conversations/", conversations_router)
@@ -87,6 +90,7 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     ModelAccessConfigurationError: error_codes.MODEL_ACCESS_CONFIGURATION_ERROR,
     ModelCredentialMissingError: error_codes.MODEL_CREDENTIAL_MISSING,
     AccessTokenError: error_codes.MODEL_ACCESS_TOKEN_UNAVAILABLE,
+    BkAidevGatewayError: error_codes.MODEL_CATALOG_UNAVAILABLE,
     AgentRuntimeError: error_codes.AGENT_UNAVAILABLE,
     AuthenticationError: error_codes.AUTHENTICATION_REQUIRED,
     PermissionDenied: error_codes.PERMISSION_DENIED,

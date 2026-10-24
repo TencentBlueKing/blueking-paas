@@ -99,9 +99,11 @@ AGENT_MODEL_SOURCE: bkaidev
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
 ## app 身份用 APP_CODE / APP_SECRET。
 ## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+## recommended_models 是模型列表提供给用户选择的模型，顺序即展示顺序；为空时不过滤。
 # BKAIDEV_MODEL_CONFIG:
 #   default_model_name: deepseek-v4-flash
-## AGENT_MODEL_SOURCE 为 direct 时必填，字段见 DirectModelAccess
+#   recommended_models: [deepseek-v4.1-flash, deepseek-v4-flash, hy4-preview, qwen3-5-397B]
+## AGENT_MODEL_SOURCE 为 direct 时必填，字段见 DirectModelConfig
 # AGENT_DIRECT_MODEL_CONFIG:
 #   model: deepseek:deepseek-v4-flash
 #   api_key: ...
@@ -125,6 +127,14 @@ AGENT_MODEL_SOURCE: bkaidev
 后者请求体另带 `AUTH_ENV_NAME`（默认 `prod`）作为 `env_name`。本服务不落库也不缓存 token：签发
 服务在现有 token 仍有效时原样返回，所以新开会话不会把用户已在用的 token 废掉。已在跑的 Runtime
 继续对话时不会再换票。bkaidev 的 Runtime 拿不到 `app_secret`，也拿不到直连用的固定 key。
+
+**模型列表**：`GET /api/models/` 告诉前端可选哪些模型、不指定时用哪个（`default_code`）、能否
+切换（`switchable`）。bkaidev 下每次都用当前用户换票，调网关 `GET .../llm/v1/models` 取本应用可用
+的模型，剔除网关明确标记不能调工具的，再按 `recommended_models` 过滤和排序；不缓存。网关拿不到
+列表时返回 502 `MODEL_CATALOG_UNAVAILABLE`，不返回空列表。每个模型只给编码、名称、上下文窗口和
+是否支持图像输入：网关卡片只有这些，名称用编码代替。direct 下只读
+`AGENT_DIRECT_MODEL_CONFIG`，返回那一个模型，`switchable` 为 false，不换票也不访问网络，
+`api_key` 不出现在响应里。
 
 **前置条件**：local_process 用 `uv run --project <agent_project_dir> --no-sync` 拉起 Runtime，
 `--no-sync` 意味着它不会在请求路径上解析依赖，所以 agent 的虚拟环境必须提前备好：

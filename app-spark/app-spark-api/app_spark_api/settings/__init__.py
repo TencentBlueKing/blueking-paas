@@ -429,6 +429,10 @@ AGENT_MODEL_SOURCE = settings.get("AGENT_MODEL_SOURCE", "bkaidev")
 ##   model: deepseek:deepseek-v4-flash
 ##   ## 可选。厂商 API Key，fake: 模型不需要。
 ##   api_key: ''
+##   ## 以下均可选，只用于模型列表接口的展示，不注入 Runtime。
+##   ## name 缺省取 model 冒号后的部分；context_window 是上下文窗口的 token 数，缺省为未知。
+##   name: DeepSeek V4 Flash
+##   context_window: 128000
 AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选，字段详见 BkAidevModelConfig。
@@ -442,6 +446,14 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 ## BKAIDEV_MODEL_CONFIG:
 ##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash，须是 agent 支持的模型名。
 ##   default_model_name: deepseek-v4-flash
+##   ## 可选。模型列表接口提供给用户选择的模型编码，顺序即展示顺序；为空时不过滤，返回网关对本应用
+##   ## 开放、且能调工具的全部模型。编码不能重复；非空时必须包含 default_model_name，否则服务启动失败。
+##   ## 改动后重启生效。
+##   recommended_models:
+##     - deepseek-v4.1-flash
+##     - deepseek-v4-flash
+##     - hy4-preview
+##     - qwen3-5-397B
 BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob

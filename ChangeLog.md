@@ -8,6 +8,7 @@
 - 更新：升级 bk-buildpack-python 到 v358，支持 Python 3.14 / 3.15 与 uv，不再支持 Python 3.9
 - 更新：bk-buildpack-python 继续支持 BUILDPACK_S3_BASE_URL，Python 运行时与 uv 都从该目录下载；安装 pip / Pipenv / Poetry 时使用 PIP_INDEX_URL 指向的内部镜像
 - 新增：bk-buildpack-python 构建时把 uv.lock 中来自公网 PyPI 的包改为从 PIP_INDEX_URL 指向的镜像下载，uv 项目无需感知平台镜像地址
+- 更新：bk-buildpack-python 存在多个包管理器文件时，按 Pipenv > pip > Poetry > uv 选第一个并告警（与 v285 一致）
 
 ## v2.4.0
 

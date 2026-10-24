@@ -37,6 +37,7 @@
 - bin/compile.patch: 埋点 hook（setup-user-compile-hook、pre-install、post-install、pre-install-dependencies、post-install-dependencies），并加载 apt buildpack 导出的环境变量
 - lib/python.sh.patch: 设置了 BUILDPACK_S3_BASE_URL 时，从该目录下载 Python 运行时（上游 v302 起不再支持这个变量）
 - lib/uv.sh.patch: 设置了 BUILDPACK_S3_BASE_URL 时，从同一目录下载 uv，文件名为 `uv-<版本>-<arch>-unknown-linux-gnu.tar.gz`
+- lib/package_manager.sh.patch: 存在多个包管理器文件时，按 Pipenv > pip > Poetry > uv 选第一个并告警，不再直接报错（与 v285 一致）
 - lib/pip.sh.patch、lib/poetry.sh.patch、lib/pipenv.sh.patch: 安装 pip / Poetry / Pipenv 时保留上游的 `--isolated`，并显式传入 PIP_INDEX_URL（及 PIP_INDEX_HOST），从内部 PyPI 镜像下载
 
 包管理器（pip、Pipenv、Poetry、uv）的支持情况和使用方式见 [docs/package-managers.md](docs/package-managers.md)。

@@ -61,6 +61,7 @@ patch:
 	patch buildpack/lib/pip.sh patches/buildpack/lib/pip.sh.patch
 	patch buildpack/lib/poetry.sh patches/buildpack/lib/poetry.sh.patch
 	patch buildpack/lib/pipenv.sh patches/buildpack/lib/pipenv.sh.patch
+	patch buildpack/lib/package_manager.sh patches/buildpack/lib/package_manager.sh.patch
 	rsync -a --delete ./hooks buildpack/
 
 
@@ -72,6 +73,7 @@ unpatch:
 	patch -R buildpack/lib/pip.sh patches/buildpack/lib/pip.sh.patch
 	patch -R buildpack/lib/poetry.sh patches/buildpack/lib/poetry.sh.patch
 	patch -R buildpack/lib/pipenv.sh patches/buildpack/lib/pipenv.sh.patch
+	patch -R buildpack/lib/package_manager.sh patches/buildpack/lib/package_manager.sh.patch
 	rm -r buildpack/hooks
 
 

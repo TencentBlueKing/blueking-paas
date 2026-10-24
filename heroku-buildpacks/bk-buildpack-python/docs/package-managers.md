@@ -12,7 +12,7 @@ bk-buildpack-python v358 基于上游 heroku-buildpack-python v358，支持 pip�
 | uv | 0.13.4 | `pyproject.toml` + `uv.lock` + `.python-version` | `uv sync --locked --no-default-groups` |
 
 - 包管理器的版本由构建工具固定，应用不能指定。
-- 每个应用只能有一种包管理器文件。同时存在多种（例如 `requirements.txt` 和 `uv.lock`）时构建失败。
+- 按应用根目录中的文件识别包管理器，`pyproject.toml` 不参与识别。同时存在多种时按 Pipenv > pip > Poetry > uv 选第一个，并在日志中告警。
 - 只有 `Pipfile`、没有 `Pipfile.lock` 时构建失败。
 - 只有 `setup.py`、没有任何包管理器文件时构建失败。如需继续用 pip 以可编辑模式安装，新建 `requirements.txt`，内容为 `--editable .`。
 
@@ -53,7 +53,7 @@ package-mode = false
 3. 构建时只安装 main 组的依赖，dev 等其他组不会安装。
 4. 构建工具会关闭 Poetry 的虚拟环境，依赖直接安装到应用的 Python 环境中。
 
-构建环境不能访问公网 PyPI 时，用 `poetry export -f requirements.txt -o requirements.txt` 导出依赖，改由 pip 安装（Poetry 2 需要安装 poetry-plugin-export 插件）。构建源码中不要同时保留 `poetry.lock`，否则会因存在多个包管理器文件而构建失败。
+构建环境不能访问公网 PyPI 时，用 `poetry export -f requirements.txt -o requirements.txt` 导出依赖并一起提交（Poetry 2 需要安装 poetry-plugin-export 插件），构建时由 pip 安装；`poetry.lock` 可以保留。
 
 ## uv
 

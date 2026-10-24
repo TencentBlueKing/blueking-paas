@@ -2,7 +2,7 @@ api = "0.4"
 
 [buildpack]
   id = "bk-buildpack-go"
-  version = "v216"
+  version = "v238"
   name = "bk-buildpack-go"
 
 [[stacks]]

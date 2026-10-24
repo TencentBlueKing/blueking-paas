@@ -22,12 +22,12 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 .PHONY: patch
 patch:
 	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
-	patch buildpack/lib/binaries.sh patchs/buildpack/lib/binaries.sh.patch
+	patch buildpack/lib/runtimes/nodejs.sh patchs/buildpack/lib/runtimes/nodejs.sh.patch
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
-	patch -R buildpack/lib/binaries.sh patchs/buildpack/lib/binaries.sh.patch
+	patch -R buildpack/lib/runtimes/nodejs.sh patchs/buildpack/lib/runtimes/nodejs.sh.patch
 
 
 .PHONY: help

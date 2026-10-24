@@ -1,7 +1,7 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 NAME := bk-buildpack-nodejs
-VERSION := v304
+VERSION := v375
 
 ##@ Build
 .PHONY: package

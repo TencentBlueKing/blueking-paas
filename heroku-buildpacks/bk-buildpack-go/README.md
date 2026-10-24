@@ -25,5 +25,6 @@
 - run_hook: 用于调用其他钩子的工具脚本，可顺序尝试执行多个脚本，目前主要用于驱动 bin/pre-compile 与 bin/post-compile
 
 ## 已有 patch
-- bin/compile.patch: hooks 埋点
-- files.json.patch: 新增支持的 golang 二进制版本
+- lib/common.sh.patch:
+  - 恢复 GO_BUCKET_URL。上游 v232 起改为固定从 go.dev 下载，IDC 不一定访问得到。设置后按 `${GO_BUCKET_URL}/${文件名}` 平铺获取，SHA 仍用 files.json 里的值校验
+  - 把 GO_BUCKET_URL 加入 env dir 白名单。GOPROXY 上游白名单里已经有，不用改

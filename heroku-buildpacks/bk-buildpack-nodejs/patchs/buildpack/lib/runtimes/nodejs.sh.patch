@@ -1,0 +1,20 @@
+--- buildpack/lib/runtimes/nodejs.sh
++++ buildpack/lib/runtimes/nodejs.sh
+@@ -146,6 +146,17 @@
+ 		[[ "${lts_upper_bound_enforced}" == "true" ]] && runtimes::nodejs::_warn_lts_upper_bound "${requested_version}" "${version}"
+ 		[[ "${eol}" == "true" ]] && runtimes::nodejs::_warn_eol "${version}"
+ 
++		# -- Added by blueking builder-stack --
++		if [[ -n "${NODE_BINARY_MIRROR_URL:-}" ]]; then
++			local mirror_url="${NODE_BINARY_MIRROR_URL%/}/"
++			if [[ "${NODE_BINARY_MIRROR_FLAT:-}" == "true" ]]; then
++				download_url="${mirror_url}${download_url##*/}"
++			else
++				download_url="${download_url/https:\/\/nodejs.org\/download\/release\//${mirror_url}}"
++			fi
++			echo "Using custom mirror url: ${download_url}"
++		fi
++
+ 		echo "Downloading and installing node ${version}..."
+ 
+ 		[[ "${version}" == "22.5.0" ]] && runtimes::nodejs::_warn_known_bad_release

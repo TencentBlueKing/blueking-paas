@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v2.5.0
+
+- 更新：升级 bk-buildpack-nodejs 到 v375
+- 更新：升级 bk-buildpack-go 到 v238
+- 更新：bk-buildpack-go 继续支持 GO_BUCKET_URL，从指定地址下载 Go 二进制。上游 v238 已去掉该变量
+
+## v2.4.0
+
+- 新增：构建入口支持调试标记文件，以及构建结束后保活
+- 更新：heroku-24 基础镜像版本到 24.v181
+
 ## v2.3.0
 
 - 新增：bk-buildpack-nodejs 支持从自定义源下载 nodejs 二进制

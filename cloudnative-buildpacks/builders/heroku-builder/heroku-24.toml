@@ -29,12 +29,12 @@ version = "v285"
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-nodejs/cnb-buildpack"
 id = "bk-buildpack-nodejs"
-version = "v304"
+version = "v375"
 
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
 id = "bk-buildpack-go"
-version = "v216"
+version = "v238"
 
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-apt/cnb-buildpack"
@@ -64,12 +64,12 @@ version = "v285"
 [[order]]
 [[order.group]]
 id = "bk-buildpack-nodejs"
-version = "v304"
+version = "v375"
 
 [[order]]
 [[order.group]]
 id = "bk-buildpack-go"
-version = "v216"
+version = "v238"
 
 [[order]]
 [[order.group]]

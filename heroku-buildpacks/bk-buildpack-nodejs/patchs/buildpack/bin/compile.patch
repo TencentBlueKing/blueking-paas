@@ -1,12 +1,26 @@
-319a320,324
-> fi
-> 
-> # -- Added by blueking builder-stack --
-> if [[ -f "$BUILD_DIR/bin/pre-compile" ]]; then
->   source "$BUILD_DIR/bin/pre-compile"
-403a409,413
-> # -- Added by blueking builder-stack --
-> if [[ -f "$BUILD_DIR/bin/post-compile" ]]; then
->   source "$BUILD_DIR/bin/post-compile"
-> fi
-> 
+--- buildpack/bin/compile
++++ buildpack/bin/compile
+@@ -451,6 +451,11 @@
+ 	fi
+ fi
+ 
++# -- Added by blueking builder-stack --
++if [[ -f "${BUILD_DIR}/bin/pre-compile" ]]; then
++	source "${BUILD_DIR}/bin/pre-compile"
++fi
++
+ restore_cache() {
+ 	local cache_status cache_directories restore_cache_start_time
+ 	restore_cache_start_time=$(build_data::current_unix_realtime)
+@@ -541,6 +546,11 @@
+ output::step "Installing dependencies"
+ build_data::set_string "build_step" "install-dependencies"
+ build_dependencies
++
++# -- Added by blueking builder-stack --
++if [[ -f "${BUILD_DIR}/bin/post-compile" ]]; then
++	source "${BUILD_DIR}/bin/post-compile"
++fi
+ 
+ cache_build() {
+ 	local cache_directories cache_build_start_time

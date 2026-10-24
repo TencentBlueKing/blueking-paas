@@ -47,6 +47,20 @@ def get_model_source() -> ModelSource:
         raise ModelAccessConfigurationError(f"Unknown AGENT_MODEL_SOURCE: {settings.AGENT_MODEL_SOURCE!r}") from exc
 
 
+def check_model_source_settings() -> None:
+    """Refuse, at startup, a bkaidev model configuration that could never serve a model list.
+
+    :raises ModelAccessConfigurationError: If BKAIDEV_MODEL_CONFIG is invalid while bkaidev is
+        the model source.
+    """
+    # 只在 bkaidev 下校验：direct 部署用不到这份配置，不该因为它起不来。来源名本身写错时也放过，
+    # 那会在第一次用到模型时报给运维，不属于这里要挡的东西。
+    if settings.AGENT_MODEL_SOURCE != ModelSource.BKAIDEV:
+        return
+
+    structure_bkaidev_model_config(settings.BKAIDEV_MODEL_CONFIG)
+
+
 def _require_setting(name: str, value: object) -> str:
     """Return a non-empty settings string, or say which top-level key the operator must set."""
     text = value.strip() if isinstance(value, str) else ""
@@ -115,8 +129,27 @@ async def resolve_model_access(
     :raises AccessTokenUnavailableError: If the token service could not give a token.
     """
     if get_model_source() == ModelSource.DIRECT:
-        return structure_direct_model_config(settings.AGENT_DIRECT_MODEL_CONFIG)
+        return structure_direct_model_config(settings.AGENT_DIRECT_MODEL_CONFIG).to_access()
 
+    return await resolve_bkaidev_model_access(credential, transport=transport)
+
+
+async def resolve_bkaidev_model_access(
+    credential: UserCredential | None,
+    *,
+    transport: httpx2.AsyncBaseTransport | None = None,
+) -> BkAidevModelAccess:
+    """Return the bkaidev gateway address, default model and this user's token.
+
+    Shared by a Runtime about to start and by the model list, which calls the same gateway with
+    the same token.
+
+    :param credential: The user's BlueKing login, None when the request carried none.
+    :param transport: httpx transport for the token service; tests inject MockTransport.
+    :raises ModelAccessConfigurationError: If the bkaidev settings are invalid.
+    :raises ModelCredentialMissingError: If the request has no login.
+    :raises AccessTokenUnavailableError: If the token service could not give a token.
+    """
     # 先校验配置再看登录态：配置缺失是运维问题，不该让用户误以为重新登录就能解决。
     config = structure_bkaidev_model_config(settings.BKAIDEV_MODEL_CONFIG)
     token_backend_config = build_access_token_backend_config()

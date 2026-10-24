@@ -227,18 +227,39 @@ class BkAidevModelConfig:
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
     :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    :param recommended_models: Model codes offered for picking, in the order they are shown.
+        Empty means every model the gateway offers this app.
     """
 
     # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
     # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
     default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+    recommended_models: list[str] = attrs.field(
+        factory=list,
+        validator=attrs.validators.deep_iterable(member_validator=validate_non_empty_string),
+    )
+
+    @recommended_models.validator
+    def _validate_recommended_models(self, attribute: attrs.Attribute[list[str]], value: list[str]) -> None:
+        # 重复的编码会让下拉框出现两个一样的选项，多半是配置时复制粘贴出了错。
+        seen: set[str] = set()
+        for code in value:
+            if code in seen:
+                raise ValueError(f"{attribute.name} lists {code!r} more than once")
+
+            seen.add(code)
+
+        # 用户不选时跑的是默认模型。它不在推荐列表里，下拉框就显示不出用户实际在用的那个。
+        if value and self.default_model_name not in seen:
+            raise ValueError(
+                f"default_model_name {self.default_model_name!r} is not in {attribute.name}; "
+                "a non-empty list must include the model used when the user picks none"
+            )
 
 
 @attrs.frozen
 class DirectModelAccess:
     """What a Runtime is told to call a model vendor directly, with a fixed key.
-
-    Also the shape of AGENT_DIRECT_MODEL_CONFIG: there is nothing to resolve per user.
 
     :param model: pydantic-ai model string, ``<provider>:<model>``, or ``fake:<scenario>``.
     :param api_key: The vendor key; omitted for ``fake:`` models.
@@ -246,6 +267,30 @@ class DirectModelAccess:
 
     model: str = attrs.field(validator=validate_non_empty_string)
     api_key: str | None = attrs.field(default=None, repr=False)
+
+
+@attrs.frozen
+class DirectModelConfig:
+    """The shape of AGENT_DIRECT_MODEL_CONFIG: one fixed model, and how to show it.
+
+    There is nothing to resolve per user. Only model and api_key reach a Runtime; the rest is
+    for the model list, and api_key never does.
+
+    :param model: pydantic-ai model string, ``<provider>:<model>``, or ``fake:<scenario>``.
+    :param api_key: The vendor key; omitted for ``fake:`` models.
+    :param name: Display name; defaults to the part of model after the colon.
+    :param context_window: The most tokens one request may hold, input and output together;
+        None when unknown.
+    """
+
+    model: str = attrs.field(validator=validate_non_empty_string)
+    api_key: str | None = attrs.field(default=None, repr=False)
+    name: str = ""
+    context_window: int | None = None
+
+    def to_access(self) -> DirectModelAccess:
+        """Return what a Runtime calling this model is given."""
+        return DirectModelAccess(model=self.model, api_key=self.api_key)
 
 
 @attrs.frozen
@@ -448,11 +493,11 @@ def structure_bkaidev_model_config(raw_config: object) -> BkAidevModelConfig:
     return structure_config(raw_config, BkAidevModelConfig, error_cls=ModelAccessConfigurationError)
 
 
-def structure_direct_model_config(raw_config: object) -> DirectModelAccess:
+def structure_direct_model_config(raw_config: object) -> DirectModelConfig:
     """Structure and validate the direct model configuration.
 
     :param raw_config: Mapping from settings, typically loaded from YAML.
-    :return: What every directly-calling Runtime is given.
+    :return: The fixed model, its key, and how to show it.
     :raises ModelAccessConfigurationError: If the configuration is invalid.
     """
-    return structure_config(raw_config, DirectModelAccess, error_cls=ModelAccessConfigurationError)
+    return structure_config(raw_config, DirectModelConfig, error_cls=ModelAccessConfigurationError)

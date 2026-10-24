@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# 在安装应用依赖之前执行（由 bin/compile source，可以直接使用 package_manager、output:: 等变量和函数）。
+#
+# uv 不读 pip.conf，uv.lock 里又记录了每个包在公网 PyPI 上的完整下载地址，内网构建会下载失败。
+# 开发者照常对着公网 PyPI 生成锁文件；这里把 uv.lock 中来自公网 PyPI 的包改为从 PIP_INDEX_URL 指向的镜像下载，
+# 装完由 post-install-dependencies 还原。Poetry、Pipenv 不做替换，按开发者自己的配置下载。
+# shellcheck disable=SC2154 # package_manager 由 bin/compile 设置
+
+bk_pypi_mirror="${PIP_INDEX_URL:-}"
+bk_pypi_mirror="${bk_pypi_mirror%/}"
+bk_uv_lock_backup=""
+bk_uv_default_index_set=""
+
+bk_restore_uv_lock() {
+	if [[ -n "${bk_uv_lock_backup}" && -f "${bk_uv_lock_backup}" ]]; then
+		cp -f "${bk_uv_lock_backup}" "${BUILD_DIR}/uv.lock"
+		rm -f "${bk_uv_lock_backup}"
+	fi
+
+	bk_uv_lock_backup=""
+}
+
+# 开发者在源码或环境变量里自己配置了 uv 的索引时以开发者为准：只改锁文件、不改配置，
+# uv sync --locked 会认为锁文件已过期。
+bk_uv_index_configured() {
+	[[ -n "${UV_DEFAULT_INDEX:-}${UV_INDEX:-}${UV_INDEX_URL:-}${UV_EXTRA_INDEX_URL:-}" ]] && return 0
+
+	local config
+	for config in "${BUILD_DIR}/pyproject.toml" "${BUILD_DIR}/uv.toml"; do
+		[[ -f "${config}" ]] || continue
+		# pyproject.toml 里的配置在 [tool.uv] / [[tool.uv.index]] 下，uv.toml 里直接写在顶层 / [[index]] 下。
+		awk -v toplevel="$([[ "${config}" == */uv.toml ]] && echo 1 || echo 0)" '
+			BEGIN { in_uv = toplevel }
+			/^\[\[(tool\.uv\.)?index\]\]/ { found = 1 }
+			/^\[/ { in_uv = ($0 ~ /^\[tool\.uv\][[:space:]]*$/); next }
+			in_uv && /^[[:space:]]*(index|index-url|extra-index-url|default-index|find-links)[[:space:]]*=/ { found = 1 }
+			END { exit !found }
+		' "${config}" && return 0
+	done
+
+	return 1
+}
+
+if [[ "${package_manager}" == "uv" && -n "${bk_pypi_mirror}" ]] \
+	&& grep -qF 'source = { registry = "https://pypi.org/simple" }' "${BUILD_DIR}/uv.lock"; then
+	if bk_uv_index_configured; then
+		output::step "Skipping PyPI mirror for uv: uv index is configured by the app"
+	elif [[ "${bk_pypi_mirror}" != */simple ]]; then
+		# 包文件地址按 <镜像前缀>/packages 推导，只适用于与 PyPI 同布局的镜像。
+		output::step "Skipping PyPI mirror for uv: PIP_INDEX_URL doesn't end with /simple"
+	else
+		bk_uv_lock_backup="$(mktemp)"
+		cp "${BUILD_DIR}/uv.lock" "${bk_uv_lock_backup}"
+		# 依赖安装失败时上游直接 exit，post-install-dependencies 不会执行；
+		# 开发沙箱会在原工作区重新构建，所以退出时也必须还原。
+		trap bk_restore_uv_lock EXIT
+
+		BK_UV_MIRROR="${bk_pypi_mirror}" BK_UV_MIRROR_FILES="${bk_pypi_mirror%/simple}/packages" \
+			awk -f "${BUILDPACK_DIR}/hooks/uv-lock-mirror.awk" "${bk_uv_lock_backup}" >"${BUILD_DIR}/uv.lock"
+
+		# --locked 会核对锁文件里的索引与当前配置，默认索引必须同时指向镜像。
+		export UV_DEFAULT_INDEX="${bk_pypi_mirror}"
+		# shellcheck disable=SC2034 # 由 post-install-dependencies 读取
+		bk_uv_default_index_set=1
+		# 镜像地址可能带账号密码，日志里去掉。
+		output::step "Using PyPI mirror for uv: $(sed -E 's#://[^/@]+@#://***@#' <<<"${bk_pypi_mirror}")"
+	fi
+fi

@@ -1,0 +1,27 @@
+--- buildpack/lib/python.sh
++++ buildpack/lib/python.sh
+@@ -4,7 +4,12 @@
+ # however, it helps Shellcheck realise the options under which these functions will run.
+ set -euo pipefail
+ 
++# -- Added by blueking builder-stack --
++# 上游 v302 起不再读 BUILDPACK_S3_BASE_URL。内网构建靠它把运行时下载指向内部制品库。
+ S3_BASE_URL="https://heroku-buildpack-python.s3.dualstack.us-east-1.amazonaws.com"
++if [[ -n "${BUILDPACK_S3_BASE_URL:-}" ]]; then
++	S3_BASE_URL="${BUILDPACK_S3_BASE_URL%/}"
++fi
+ 
+ function python::install() {
+ 	local build_dir="${1}"
+@@ -30,6 +35,11 @@
+ 		arch=$(dpkg --print-architecture)
+ 		# e.g.: https://heroku-buildpack-python.s3.dualstack.us-east-1.amazonaws.com/python-3.14.0-ubuntu-24.04-amd64.tar.zst
+ 		local python_url="${S3_BASE_URL}/python-${python_full_version}-ubuntu-${ubuntu_version}-${arch}.tar.zst"
++		# -- Added by blueking builder-stack --
++		# 上游的失败提示只写版本号，内部制品库缺包时要看到实际请求的地址。
++		if [[ -n "${BUILDPACK_S3_BASE_URL:-}" ]]; then
++			echo "Using BUILDPACK_S3_BASE_URL: ${python_url}" | output::indent
++		fi
+ 
+ 		local error_log
+ 		error_log=$(mktemp)

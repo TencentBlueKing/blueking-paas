@@ -1,0 +1,14 @@
+--- buildpack/lib/uv.sh
++++ buildpack/lib/uv.sh
+@@ -28,6 +28,11 @@
+ 		# e.g.: `x86_64` or `aarch64`.
+ 		gnu_arch=$(arch)
+ 		local uv_url="https://releases.astral.sh/github/uv/releases/download/${UV_VERSION}/uv-${gnu_arch}-unknown-linux-gnu.tar.gz"
++		# -- Added by blueking builder-stack --
++		# 和 Python 运行时放在同一个目录。上游文件名不带版本号，同目录里要靠版本号区分。
++		if [[ -n "${BUILDPACK_S3_BASE_URL:-}" ]]; then
++			uv_url="${BUILDPACK_S3_BASE_URL%/}/uv-${UV_VERSION}-${gnu_arch}-unknown-linux-gnu.tar.gz"
++		fi
+ 
+ 		local error_log
+ 		error_log=$(mktemp)

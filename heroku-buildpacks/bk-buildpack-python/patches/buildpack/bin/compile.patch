@@ -1,21 +1,61 @@
-95a96,107
-> 
-> # Initialise INCLUDE_PATH Variable
-> INCLUDE_PATH=${INCLUDE_PATH:-}
-> 
-> # -- Export Path variables from 000_apt.sh if exists --
-> APT_PROFILE_FILE=${APT_PROFILE_FILE:-"/layers/bk-buildpack-apt/profile/profile.d/000_apt.sh"}
-> if [[ -f $APT_PROFILE_FILE ]]; then
->     source $APT_PROFILE_FILE
-> fi
-> 
-> # -- Added by blueking builder-stack --
-> source ${BUILDPACK_DIR}/hooks/setup-user-compile-hook
-166a179,181
-> # -- Added by blueking builder-stack --
-> source ${BUILDPACK_DIR}/hooks/pre-install
-> 
-298a314,316
-> # -- Added by blueking builder-stack --
-> source ${BUILDPACK_DIR}/hooks/post-install
-> 
+--- buildpack/bin/compile
++++ buildpack/bin/compile
+@@ -86,6 +86,18 @@
+ export LD_LIBRARY_PATH="/app/.heroku/python/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+ export PKG_CONFIG_PATH="/app/.heroku/python/lib/pkg-config${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+ 
++# Initialise INCLUDE_PATH Variable
++INCLUDE_PATH=${INCLUDE_PATH:-}
++
++# -- Export Path variables from 000_apt.sh if exists --
++APT_PROFILE_FILE=${APT_PROFILE_FILE:-"/layers/bk-buildpack-apt/profile/profile.d/000_apt.sh"}
++if [[ -f $APT_PROFILE_FILE ]]; then
++    source $APT_PROFILE_FILE
++fi
++
++# -- Added by blueking builder-stack --
++source ${BUILDPACK_DIR}/hooks/setup-user-compile-hook
++
+ cd "${BUILD_DIR}"
+ 
+ # Runs a `bin/pre_compile` script if found in the app source, allowing build customisation.
+@@ -160,6 +172,9 @@
+ 	ln -nsf "${BUILD_DIR}/.heroku/python" /app/.heroku/python
+ fi
+ 
++# -- Added by blueking builder-stack --
++source ${BUILDPACK_DIR}/hooks/pre-install
++
+ python::install "${BUILD_DIR}" "${STACK}" "${python_full_version}" "${python_major_version}" "${python_version_origin}"
+ 
+ # Install the package manager and related tools.
+@@ -183,6 +198,9 @@
+ esac
+ build_data::set_duration "package_manager_install_duration" "${package_manager_install_start_time}"
+ 
++# -- Added by blueking builder-stack --
++source ${BUILDPACK_DIR}/hooks/pre-install-dependencies
++
+ # Install app dependencies.
+ dependencies_install_start_time=$(build_data::current_unix_realtime)
+ case "${package_manager}" in
+@@ -204,6 +222,9 @@
+ esac
+ build_data::set_duration "dependencies_install_duration" "${dependencies_install_start_time}"
+ 
++# -- Added by blueking builder-stack --
++source ${BUILDPACK_DIR}/hooks/post-install-dependencies
++
+ # Support for NLTK corpora.
+ nltk_downloader_start_time=$(build_data::current_unix_realtime)
+ # TODO: Migrate this script to functions under `lib/` and stop running it in a subshell.
+@@ -292,6 +313,9 @@
+ # Install sane-default script for $WEB_CONCURRENCY and $FORWARDED_ALLOW_IPS.
+ cp "${BUILDPACK_DIR}/vendor/WEB_CONCURRENCY.sh" "${WEB_CONCURRENCY_PROFILE_PATH}"
+ cp "${BUILDPACK_DIR}/vendor/python.gunicorn.sh" "${GUNICORN_PROFILE_PATH}"
++
++# -- Added by blueking builder-stack --
++source ${BUILDPACK_DIR}/hooks/post-install
+ 
+ # Runs a `bin/post_compile` script if found in the app source, allowing build customisation.
+ hooks::run_hook "post_compile"

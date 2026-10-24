@@ -54,27 +54,6 @@ teardown() {
     [[ "${output}" =~ "trusted-host = pypi.qq.com" ]]
 }
 
-@test "default pip version" {
-    export PIP_UPDATE="0.0.0"
-    run bash_with_trap ${ROOT_DIR}/hooks/pre-install 'echo ${PIP_UPDATE}'
-    [ "${status}" = 0 ]
-    [ "${output}" = "0.0.0" ]
-}
-
-@test "specified pip version" {
-    export PIP_VERSION="x.x.x"
-    run bash_with_trap ${ROOT_DIR}/hooks/pre-install 'echo ${PIP_UPDATE}'
-    [ "${status}" = 0 ]
-    [ "${output}" = "x.x.x" ]
-}
-
-@test "unset pip version" {
-    export PIP_VERSION="x.x.x"
-    run bash_with_trap ${ROOT_DIR}/hooks/pre-install 'echo ${PIP_VERSION}'
-    [ "${status}" = 0 ]
-    [ "${output}" = "" ]
-}
-
 @test "steps fixes" {
     run bash ${ROOT_DIR}/hooks/pre-install
     [ "${status}" = 0 ]
@@ -93,4 +72,28 @@ teardown() {
 
     run cat ${BIN_DIR}/steps/gdal
     [ "${output}" = "#!/usr/bin/env bash" ]
+}
+@test "works under set -u without pip env" {
+    run env -u PIP_INDEX_URL -u PIP_EXTRA_INDEX_URL -u PIP_INDEX_HOST \
+        bash -c "set -eu; BUILDPACK_DIR='${ROOT_DIR}'; source '${ROOT_DIR}/hooks/pre-install'; echo \"args=\${#BK_PIP_BOOTSTRAP_ARGS[@]}\""
+
+    [ "${status}" = 0 ]
+    [[ "${output}" =~ "args=0" ]]
+}
+
+@test "bootstrap args use main index only" {
+    run env PIP_INDEX_URL=https://pypi.example.com/simple/ PIP_EXTRA_INDEX_URL=https://extra.example.com/simple/ PIP_INDEX_HOST=pypi.example.com \
+        bash -c "set -eu; BUILDPACK_DIR='${ROOT_DIR}'; source '${ROOT_DIR}/hooks/pre-install'; echo \"args=\${BK_PIP_BOOTSTRAP_ARGS[*]}\""
+
+    [ "${status}" = 0 ]
+    [[ "${output}" =~ "args=--index-url https://pypi.example.com/simple/ --trusted-host pypi.example.com" ]]
+}
+
+@test "PIP_VERSION kept but no longer exported" {
+    run env PIP_VERSION=26.2.2 \
+        bash -c "set -eu; BUILDPACK_DIR='${ROOT_DIR}'; source '${ROOT_DIR}/hooks/pre-install'; echo \"value=\${PIP_VERSION}\"; bash -c 'echo \"child=\${PIP_VERSION:-unset}\"'"
+
+    [ "${status}" = 0 ]
+    [[ "${output}" =~ "value=26.2.2" ]]
+    [[ "${output}" =~ "child=unset" ]]
 }

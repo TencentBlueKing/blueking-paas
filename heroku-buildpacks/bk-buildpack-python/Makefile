@@ -41,11 +41,11 @@ lint-in-container:
 			--network=host \
 			-v `pwd`:/data \
 			pipelinecomponents/shellcheck \
-			bash -c "shellcheck -e SC2034,SC2154,SC2206 /data/hook/* && echo good job"
+			bash -c "shellcheck -s bash -e SC2034,SC2154,SC2206 \$$(grep -l '^#!/usr/bin/env bash' /data/hooks/*) && echo good job"
 
 .PHONY: lint
 lint:
-	@shellcheck -e SC2034,SC2154,SC2206 /data/hook/* && echo good job
+	@shellcheck -s bash -e SC2034,SC2154,SC2206 $$(grep -l '^#!/usr/bin/env bash' hooks/*) && echo good job
 
 
 .PHONY: update
@@ -56,12 +56,22 @@ update: unpatch ## 更新 buildpack
 .PHONY: patch
 patch: 
 	patch buildpack/bin/compile patches/buildpack/bin/compile.patch
+	patch buildpack/lib/python.sh patches/buildpack/lib/python.sh.patch
+	patch buildpack/lib/uv.sh patches/buildpack/lib/uv.sh.patch
+	patch buildpack/lib/pip.sh patches/buildpack/lib/pip.sh.patch
+	patch buildpack/lib/poetry.sh patches/buildpack/lib/poetry.sh.patch
+	patch buildpack/lib/pipenv.sh patches/buildpack/lib/pipenv.sh.patch
 	rsync -a --delete ./hooks buildpack/
 
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patches/buildpack/bin/compile.patch
+	patch -R buildpack/lib/python.sh patches/buildpack/lib/python.sh.patch
+	patch -R buildpack/lib/uv.sh patches/buildpack/lib/uv.sh.patch
+	patch -R buildpack/lib/pip.sh patches/buildpack/lib/pip.sh.patch
+	patch -R buildpack/lib/poetry.sh patches/buildpack/lib/poetry.sh.patch
+	patch -R buildpack/lib/pipenv.sh patches/buildpack/lib/pipenv.sh.patch
 	rm -r buildpack/hooks
 
 

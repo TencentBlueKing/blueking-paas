@@ -1,0 +1,18 @@
+--- buildpack/lib/pip.sh
++++ buildpack/lib/pip.sh
+@@ -48,12 +48,15 @@
+ 
+ 	# `--isolated`: Prevents any custom pip configuration added by third party buildpacks (via env
+ 	#               vars or global config files) from breaking package manager bootstrapping.
++	# -- Added by blueking builder-stack --
++	# --isolated 下 pip.conf 不生效，内网需要显式传入平台的主索引（由 hooks/pre-install 设置）。
+ 	# shellcheck disable=SC2310 # This function is invoked in an 'if' condition so set -e will be disabled.
+ 	if ! {
+ 		python "${bundled_pip_module_path}" \
+ 			install \
+ 			--disable-pip-version-check \
+ 			--isolated \
++			${BK_PIP_BOOTSTRAP_ARGS[@]+"${BK_PIP_BOOTSTRAP_ARGS[@]}"} \
+ 			--no-cache-dir \
+ 			--no-input \
+ 			--quiet \

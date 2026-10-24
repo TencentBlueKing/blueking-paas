@@ -7,6 +7,7 @@
 ```bash
 .
 ├── buildpack      -- heroku-buildpack-python
+├── docs           -- 使用说明
 ├── hooks          -- 钩子脚本
 ├── patches        -- 修改补丁
 ├── tests          -- 基于 bats 的脚本测试
@@ -29,11 +30,17 @@
 - setup-user-compile-hook: 兼容 pre-compile/post-compile
 - pre-install: 安装 python 前的 hook
 - post-install: 安装 python 后的 hook
+- pre-install-dependencies: 安装应用依赖前，把 uv.lock 中来自公网 PyPI 的包改为从 PIP_INDEX_URL 指向的镜像下载（改写逻辑见 uv-lock-mirror.awk）
+- post-install-dependencies: 安装应用依赖后，还原 uv.lock
 
 ### 已有 patch
-- collectstatic.patch: 替换 heroku 的开发文档地址
-- python.patch: 替换 heroku 的开发文档地址
-- pip-install.patch: 实现使用 pip-tools 安装依赖的功能
+- bin/compile.patch: 埋点 hook（setup-user-compile-hook、pre-install、post-install、pre-install-dependencies、post-install-dependencies），并加载 apt buildpack 导出的环境变量
+- lib/python.sh.patch: 设置了 BUILDPACK_S3_BASE_URL 时，从该目录下载 Python 运行时（上游 v302 起不再支持这个变量）
+- lib/uv.sh.patch: 设置了 BUILDPACK_S3_BASE_URL 时，从同一目录下载 uv，文件名为 `uv-<版本>-<arch>-unknown-linux-gnu.tar.gz`
+- lib/package_manager.sh.patch: 存在多个包管理器文件时，按 Pipenv > pip > Poetry > uv 选第一个并告警，不再直接报错（与 v285 一致）
+- lib/pip.sh.patch、lib/poetry.sh.patch、lib/pipenv.sh.patch: 安装 pip / Poetry / Pipenv 时保留上游的 `--isolated`，并显式传入 PIP_INDEX_URL（及 PIP_INDEX_HOST），从内部 PyPI 镜像下载
+
+包管理器（pip、Pipenv、Poetry、uv）的支持情况和使用方式见 [docs/package-managers.md](docs/package-managers.md)。
 
 ### 校验 hook 脚本
 
@@ -75,9 +82,7 @@ OPTIONS:
 python buildpack 可通过环境变量开启部分特性
 
 - `DISABLE_COLLECTSTATIC`: 禁用 `django` 收集静态文件的步骤
-- `PIP_VERSION`: 指定需要安装的 `pip` 版本
+- `BUILDPACK_S3_BASE_URL`: Python 运行时与 uv 的下载目录，不设置时从上游公网地址下载
 - `PIP_INDEX_URL`: 设置 index-url
 - `PIP_EXTRA_INDEX_URL`: 设置 extra-index-url
 - `PIP_INDEX_HOST`: 设置 `trusted-host`
-- `STRICT_PIP_MODE`: 使用 `pip-tools` 锁定依赖
-- `PIP_TOOLS_VERSION`: 指定需要安装的 `pip-tools` 版本, 不指定将根据 `pip` 和 `python` 版本进行探测

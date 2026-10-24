@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# 在安装应用依赖之后执行（由 bin/compile source）。
+#
+# 还原 pre-install-dependencies 改过的 uv.lock，产物里保留开发者提交的原样。
+
+bk_restore_uv_lock
+trap - EXIT
+
+# 只回收自己设置的变量，开发者原本就有的值不动。
+if [[ -n "${bk_uv_default_index_set}" ]]; then
+	unset UV_DEFAULT_INDEX
+fi
+
+unset -f bk_restore_uv_lock bk_uv_index_configured
+unset bk_pypi_mirror bk_uv_lock_backup bk_uv_default_index_set

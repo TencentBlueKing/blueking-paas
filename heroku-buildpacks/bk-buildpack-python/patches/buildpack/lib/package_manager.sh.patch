@@ -1,0 +1,51 @@
+--- buildpack/lib/package_manager.sh
++++ buildpack/lib/package_manager.sh
+@@ -127,38 +127,23 @@
+ 			exit 1
+ 			;;
+ 		*)
+-			output::error <<-EOF
+-				Error: Multiple Python package manager files were found.
++			# -- Modified by blueking builder-stack --
++			# 上游在这里直接报错。沿用 v285 的行为：按 Pipenv > pip > Poetry > uv 选第一个并告警，
++			# 存量应用升级后不会因此构建失败，Poetry 项目也能保留 poetry.lock、导出 requirements.txt 交给 pip 安装。
++			echo "${package_managers_found[0]}"
+ 
++			output::warning <<-EOF
++				Warning: Multiple Python package manager files were found.
++
+ 				Exactly one package manager file should be present in your app's
+ 				source code, however, several were found:
+ 
+ 				$(printf -- "%s\n" "${package_managers_found_display_text[@]}")
+ 
+-				Previously, the buildpack guessed which package manager to use
+-				and installed your dependencies with the first package manager
+-				listed above. However, this implicit behaviour was deprecated
+-				in November 2024 and is now no longer supported.
+-
+-				You must decide which package manager you want to use with your
+-				app, and then delete the file(s) and any config from the others.
+-
+-				If you aren't sure which package manager to use, we recommend
+-				trying uv, since it supports lockfiles, is extremely fast, and
+-				is actively maintained by a full-time team:
+-				https://docs.astral.sh/uv/
+-
+-				Note: If you use a third-party uv or Poetry buildpack, you must
+-				remove it from your app, since it's no longer required and the
+-				requirements.txt file it generates will trigger this error. See:
+-				https://devcenter.heroku.com/articles/managing-buildpacks#remove-classic-buildpacks
++				The buildpack will install your dependencies using the first
++				package manager listed above. Delete the file(s) of the others
++				if this isn't what you want.
+ 			EOF
+-			build_data::set_string "failure_reason" "package-manager::multiple-found"
+-			build_data::set_string "failure_detail" "$(
+-				IFS=,
+-				echo "${package_managers_found[*]}"
+-			)"
+-			exit 1
+ 			;;
+ 	esac
+ }

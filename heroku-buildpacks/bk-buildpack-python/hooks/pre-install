@@ -30,17 +30,33 @@ buildpack_sqlite3_install(){
 mkdir -p ~/.pip/
 echo "[global]" > ~/.pip/pip.conf
 
+# 本脚本由 bin/compile 在 set -u 下 source，没注入的变量要给默认值，否则整个构建会中断。
+
 # set pip index-url
-if [ -n "${PIP_INDEX_URL}" ]; then
+if [ -n "${PIP_INDEX_URL:-}" ]; then
     echo "index-url = ${PIP_INDEX_URL}" >> ~/.pip/pip.conf
 fi
 
 # set pip extra-index-url
-if [ -n "${PIP_EXTRA_INDEX_URL}" ]; then
+if [ -n "${PIP_EXTRA_INDEX_URL:-}" ]; then
     echo "extra-index-url = ${PIP_EXTRA_INDEX_URL}" >> ~/.pip/pip.conf
 fi
 
 # set pip trusted-host
-if [ -n "${PIP_INDEX_HOST}" ]; then
+if [ -n "${PIP_INDEX_HOST:-}" ]; then
     echo "trusted-host = ${PIP_INDEX_HOST}" >> ~/.pip/pip.conf
+fi
+
+# pip 会把 PIP_VERSION 当作 --version，只打印版本、什么都不装。上游 lib/pip.sh 用同名变量记录要装的 pip 版本，
+# 应用若导出了 PIP_VERSION，这个导出属性会保留下来，所以这里只取消导出、保留值。
+export -n PIP_VERSION 2>/dev/null || true
+
+# 安装 pip / Pipenv / Poetry 自身时保留上游的 --isolated（不受应用的 PIP_* 和 pip.conf 影响），
+# 只显式传入平台的主索引；extra-index-url 不参与这三个工具的安装。由 lib/{pip,pipenv,poetry}.sh 的补丁使用。
+BK_PIP_BOOTSTRAP_ARGS=()
+if [ -n "${PIP_INDEX_URL:-}" ]; then
+    BK_PIP_BOOTSTRAP_ARGS+=(--index-url "${PIP_INDEX_URL}")
+fi
+if [ -n "${PIP_INDEX_HOST:-}" ]; then
+    BK_PIP_BOOTSTRAP_ARGS+=(--trusted-host "${PIP_INDEX_HOST}")
 fi

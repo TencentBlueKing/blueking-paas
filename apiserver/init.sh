@@ -327,8 +327,7 @@ ensure-blueking-image() {
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}"
 
-    # 目前还是维持 heroku-18 版本镜像为默认（如果没有其他默认镜像），兼容目前数量较多的低版本 Python 应用
-    # FIXME 后续需要推动 Python 开发框架、SaaS 等往 3.11+ 迁移，届时即可将 heroku-24 设为默认
+    # heroku-24 镜像会先于此处初始化并设为默认；仅当未配置 heroku-24 镜像（且没有其他默认镜像）时，heroku-18 镜像才作为默认
     cnb_image_name="blueking-cloudnative"
     python manage.py manage_image \
     --type "cnb" \
@@ -366,7 +365,8 @@ ensure-noble-image() {
     --description_zh_cn "${PAAS_NOBLE_CNB_IMAGE_DESC_ZH_CN:-"基于 Ubuntu，支持多构建工具组合构建"}" \
     --description_en "${PAAS_NOBLE_CNB_IMAGE_DESC_EN:-"Ubuntu-based, multi-buildpack combination build support"}" \
     --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
-    --label secureEncrypted=1 supportHttp=true isCloudNativeBuilder=true cnative_app=1
+    --label secureEncrypted=1 supportHttp=true isCloudNativeBuilder=true cnative_app=1 \
+    --default
     python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${apt_buildpack_name}" --stack heroku-24
     python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${golang_buildpack_name}" --stack heroku-24
     python manage.py bind_buildpacks --image "${noble_image_name}" --buildpack-name "${python_buildpack_name}" --stack heroku-24
@@ -437,12 +437,7 @@ ensure-runtimes() {
     golang_buildpack_name=bk-buildpack-go
     ensure-golang-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${golang_buildpack_name}"
 
-    # blueking image
-    ensure-blueking-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
-
-    # legacy blueking image
-    ensure-legacy-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
-
+    # heroku-24 需先于 heroku-18 初始化，使其在没有默认镜像时优先成为默认镜像
     if [[ -n "${PAAS_HEROKU_NOBLE_BUILDER_IMAGE}" && -n "${PAAS_HEROKU_NOBLE_RUNNER_IMAGE}" ]]; then
         # heroku-24 noble buildpacks
         noble_apt_buildpack_name=bk-buildpack-apt
@@ -456,6 +451,12 @@ ensure-runtimes() {
     else
         echo "Skipping heroku-24 runtime initialization because PAAS_HEROKU_NOBLE_BUILDER_IMAGE or PAAS_HEROKU_NOBLE_RUNNER_IMAGE is empty"
     fi
+
+    # blueking image
+    ensure-blueking-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
+
+    # legacy blueking image
+    ensure-legacy-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
 }
 
 ensure-init-data() {

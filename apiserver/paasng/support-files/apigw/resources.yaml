@@ -718,6 +718,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get the offline result. System API.
+  /system/bkapps/applications/{app_code}/:
+    get:
+      operationId: sys_get_app_info
+      description: 应用态查询 AI Agent 应用信息、部署模式与访问地址（仅供 AIDEV 使用）
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the AI Agent application's info, deploy mode and exposed urls with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/source_package/:
     post:
       operationId: upload_source_package

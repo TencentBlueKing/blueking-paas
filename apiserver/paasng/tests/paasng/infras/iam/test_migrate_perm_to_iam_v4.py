@@ -226,10 +226,26 @@ class TestMigrate:
         for method in ["grant_user_group_policies_in_bk_monitor", "grant_user_group_policies_in_bk_log"]:
             getattr(v4_backend, method).assert_called_once_with("-100", bk_app_with_v3_perm.name, user_groups)
 
+    def test_writes_space_scopes_before_granting(self, migrate, bk_app_with_v3_perm, v4_backend):
+        """同名空间已存在时创建请求里的范围不会生效，授权前必须先把监控、日志写进空间范围"""
+        with mock.patch(
+            f"{COMMAND_MODULE}.get_or_create_bk_monitor_space",
+            return_value=(mock.Mock(iam_resource_id="-100"), False),
+        ):
+            migrate("--operator", "someone")
+
+        v4_backend.update_management_space_scopes.assert_called_once_with(
+            V4_SPACE_ID, bk_app_with_v3_perm.code, bk_app_with_v3_perm.name, "-100", operator="someone"
+        )
+        called = [name for name, _, _ in v4_backend.mock_calls]
+        assert called.index("update_management_space_scopes") < called.index("grant_user_group_policies_in_bk_monitor")
+        assert called.index("update_management_space_scopes") < called.index("grant_user_group_policies_in_bk_log")
+
     def test_skip_observability_scope(self, migrate, bk_app_with_v3_perm, v4_backend):
         migrate("--skip-observability-scope")
 
         assert v4_backend.create_management_space.call_args.kwargs["bk_space_id"] is None
+        v4_backend.update_management_space_scopes.assert_not_called()
         v4_backend.grant_user_group_policies_in_bk_monitor.assert_not_called()
         v4_backend.grant_user_group_policies_in_bk_log.assert_not_called()
 

@@ -246,8 +246,12 @@ class Command(BaseCommand):
             members = role_members.get(ApplicationRole(group.role), [])
             member_failures.extend(self._add_members(v4_backend, group.id, members, ApplicationRole(group.role)))
 
-        # 4. 给用户组授予监控、日志权限
+        # 4. 给用户组授予监控、日志权限。同名空间已存在时创建请求会被 409 拒绝，其中的权限范围不会写入，
+        #    用户组权限又必须落在空间范围内，因此授权前先覆盖写入一次空间范围
         if bk_space_id:
+            v4_backend.update_management_space_scopes(
+                space_id, app_code, application.name, bk_space_id, operator=self.operator
+            )
             v4_backend.grant_user_group_policies_in_bk_monitor(bk_space_id, application.name, user_groups)
             v4_backend.grant_user_group_policies_in_bk_log(bk_space_id, application.name, user_groups)
 

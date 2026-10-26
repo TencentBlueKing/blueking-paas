@@ -18,6 +18,10 @@
 class SandboxError(Exception):
     """The base exception for agent sandbox errors."""
 
+    def __init__(self, message: str, *, detail: str | None = None):
+        super().__init__(message)
+        self.detail = detail
+
 
 class SandboxCreateTimeout(SandboxError):
     """Raised when creating a sandbox times out."""
@@ -30,8 +34,8 @@ class SandboxAlreadyExists(SandboxError):
 class SandboxCreateError(SandboxError):
     """Raised when creating a sandbox fails."""
 
-    def __init__(self, message: str, logs: str | None = None):
-        super().__init__(message)
+    def __init__(self, message: str, logs: str | None = None, detail: str | None = None):
+        super().__init__(message, detail=detail)
         self.logs = logs
 
 
@@ -48,10 +52,11 @@ class SandboxActiveCountLimitExceeded(SandboxError):
 
     :param limit: The max number of sandboxes the application may keep at the same time.
     :param current: The number of active sandboxes the application had when the check ran.
+    :param detail: Client-safe description, see :class:`SandboxError`.
     """
 
-    def __init__(self, message: str, limit: int, current: int):
-        super().__init__(message)
+    def __init__(self, message: str, limit: int, current: int, detail: str | None = None):
+        super().__init__(message, detail=detail)
         self.limit = limit
         self.current = current
 
@@ -81,9 +86,8 @@ class SandboxDaemonAPIError(SandboxError):
     """
 
     def __init__(self, message: str, *, status_code: int | None = None, detail: str | None = None):
-        super().__init__(message)
+        super().__init__(message, detail=detail)
         self.status_code = status_code
-        self.detail = detail
 
 
 class SandboxImageValidateError(SandboxError):

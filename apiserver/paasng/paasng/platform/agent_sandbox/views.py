@@ -97,6 +97,7 @@ from paasng.platform.agent_sandbox.serializers import (
     VolumeOutputSLZ,
     VolumeShareInputSLZ,
 )
+from paasng.platform.agent_sandbox.utils import public_detail
 from paasng.platform.agent_sandbox.volume import delete_volume, share_volume, unshare_volume
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import get_tenant_id_for_app
@@ -211,6 +212,8 @@ def handle_volume_file_errors(action: str):
     - ``SandboxDaemonAPIError``: 4xx 视为客户端错误透传(不记录), 5xx/传输层错误记录后转 DAEMON_API_ERROR。
     - ``SandboxError``(兜底): 记录后转 FILE_OPERATION_FAILED。
 
+    对外只透传 ``public_detail(exc)``; 传输层错误、内部配置问题等仅返回通用错误码文案, 详细信息留在日志里。
+
     各 action 仍可在方法体内保留自己的领域异常分支(如 ``SandboxFileNotFound`` /
     ``SandboxFileTooLarge`` / ``SandboxArchiveFailed``), 它们会先于此处的兜底分支命中,
     从而保持各 action 原有的精确语义。
@@ -227,11 +230,12 @@ def handle_volume_file_errors(action: str):
             except SandboxFileNotFound:
                 raise error_codes.AGENT_SANDBOX_FILE_NOT_FOUND
             except SandboxDaemonAPIError as exc:
+                detail = public_detail(exc)
                 if exc.status_code is not None and 400 <= exc.status_code < 500:
-                    # 客户端错误(如非法路径): 透传 daemon 错误信息, 不记录 traceback
-                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+                    # 客户端错误(如非法路径): 透传 daemon 返回的安全信息, 不记录 traceback
+                    raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(detail)
                 logger.exception("Failed to %s in volume: %s", action, volume_id)
-                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR
+                raise error_codes.AGENT_SANDBOX_DAEMON_API_ERROR.f(detail)
             except SandboxError:
                 logger.exception("Failed to %s in volume: %s", action, volume_id)
                 raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
@@ -418,7 +422,8 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin, S
         except SandboxActiveCountLimitExceeded as e:
             raise error_codes.AGENT_SANDBOX_ACTIVE_COUNT_LIMIT_EXCEEDED.f(limit=e.limit)
         except SandboxImageValidateError as e:
-            raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(str(e))
+            logger.exception("Failed to validate snapshot image")
+            raise error_codes.AGENT_SANDBOX_IMAGE_VALIDATE_FAILED.f(public_detail(e))
         except (VolumeNotFound, VolumeNotMountable):
             # 未授权与不存在返回同一错误码，避免用 volume_id 探测其他应用的 Volume
             raise error_codes.AGENT_SANDBOX_VOLUME_NOT_FOUND
@@ -491,9 +496,9 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             get_sandbox_client(sandbox).create_folder(path=data["path"], mode=data["mode"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to create folder in sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxUploadFileInputSLZ(), responses={204: ""})
@@ -509,9 +514,9 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             get_sandbox_client(sandbox).upload_file(file=data["file"].read(), remote_path=data["path"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to upload file to sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxDeleteFileInputSLZ(), responses={204: ""})
@@ -527,9 +532,9 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             get_sandbox_client(sandbox).delete_file(path=data["path"], recursive=data["recursive"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to delete file in sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=SandboxDownloadFileInputSLZ(), responses={200: ""})
@@ -545,9 +550,9 @@ class AgentSandboxFSViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             content = get_sandbox_client(sandbox).download_file(remote_path=data["path"])
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to download file from sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED.f(public_detail(exc))
 
         filename = PurePosixPath(data["path"]).name or "sandbox-file"
         response = HttpResponse(content, content_type="application/octet-stream")
@@ -585,9 +590,9 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             )
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to execute command in sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
         return Response(SandboxProcessOutputSLZ(result).data)
 
     @swagger_auto_schema(
@@ -609,9 +614,9 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
         except SandboxServiceNotReady:
             raise error_codes.AGENT_SANDBOX_SERVICE_NOT_READY
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to run code in sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
         return Response(SandboxProcessOutputSLZ(result).data)
 
     @swagger_auto_schema(
@@ -632,9 +637,9 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             )
         except SandboxExecTimeout:
             raise error_codes.AGENT_SANDBOX_PROCESS_EXEC_TIMEOUT
-        except SandboxError:
+        except SandboxError as exc:
             logger.exception("Failed to get logs from sandbox: %s", sandbox.uuid)
-            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
         return Response(SandboxGetLogsOutputSLZ({"logs": logs}).data)
 
 

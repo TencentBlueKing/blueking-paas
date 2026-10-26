@@ -4,6 +4,14 @@ Get the add-on service instances bound to an AI Agent application module with sy
 
 The response structure is the same as the user-facing `get_service_instance_by_module` API. A 404 is returned when the module is not bound with the service.
 
+#### Tenant
+
+The system API does not rely on user login state; the tenant is passed via the `X-Bk-Tenant-Id` header:
+
+- Global apps (`app_tenant_mode` is `global`) are available to all tenants;
+- Single-tenant apps are only available under the tenant matching their `app_tenant_id`, other tenants receive 403 `APP_TENANT_MISMATCH`;
+- The header is ignored when multi-tenant mode is disabled.
+
 ### Request Parameters
 
 #### 1. Path parameters
@@ -21,7 +29,7 @@ None.
 ### Request Example
 
 ```
-curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/services/a31e476d-5ec0-29b0-564e-5f81b5a5ef32/
+curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' -H 'X-Bk-Tenant-Id: default' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/services/a31e476d-5ec0-29b0-564e-5f81b5a5ef32/
 ```
 
 ### Response Example

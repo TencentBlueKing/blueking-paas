@@ -21,9 +21,11 @@ from unittest import mock
 import pytest
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from rest_framework import status
 
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.offline import OfflineOperation
@@ -117,6 +119,25 @@ class TestSysDeploy:
         assert initialize.call_args.kwargs["operator"] == user_id_encoder.encode(
             settings.USER_TYPE, deploy_data["operator"]
         )
+
+    def test_deploy_single_tenant_mismatch_denied(
+        self, sys_aidev_api_client, ai_agent_app, bk_module: Module, deploy_data: dict, initialize
+    ):
+        """多租户模式下, 单租户应用对其租户之外的应用态请求返回 403 APP_TENANT_MISMATCH"""
+        ai_agent_app.app_tenant_mode = AppTenantMode.SINGLE.value
+        ai_agent_app.app_tenant_id = "t1"
+        ai_agent_app.save(update_fields=["app_tenant_mode", "app_tenant_id"])
+
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            resp = sys_aidev_api_client.post(
+                _deploy_url(ai_agent_app.code, bk_module.name),
+                data=deploy_data,
+                headers={"X-Bk-Tenant-Id": "t2"},
+            )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.json()["code"] == "APP_TENANT_MISMATCH"
+        initialize.assert_not_called()
 
     def test_debug_not_allowed(self, sys_aidev_api_client, ai_agent_app, bk_module: Module, deploy_data: dict):
         """应用态部署不支持构建调试。"""
@@ -245,6 +266,31 @@ class TestSysStreamsHistoryEvents:
 
 class TestSysOffline:
     """应用态下架接口测试"""
+
+    def test_offline_single_tenant_mismatch_denied(
+        self, sys_aidev_api_client, ai_agent_app, bk_module: Module, bk_stag_env
+    ):
+        """多租户模式下, 单租户应用对其租户之外的应用态请求返回 403 APP_TENANT_MISMATCH"""
+        ai_agent_app.app_tenant_mode = AppTenantMode.SINGLE.value
+        ai_agent_app.app_tenant_id = "t1"
+        ai_agent_app.save(update_fields=["app_tenant_mode", "app_tenant_id"])
+
+        offline_op = OfflineOperation.objects.create(app_environment=bk_stag_env)
+        with (
+            override_settings(ENABLE_MULTI_TENANT_MODE=True),
+            mock.patch(
+                "paasng.platform.engine.views.misc.start_archive_step", return_value=offline_op
+            ) as start_archive_step,
+        ):
+            resp = sys_aidev_api_client.post(
+                _offline_url(ai_agent_app.code, bk_module.name),
+                data={"operator": create_user().username},
+                headers={"X-Bk-Tenant-Id": "t2"},
+            )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.json()["code"] == "APP_TENANT_MISMATCH"
+        start_archive_step.assert_not_called()
 
     def test_offline_success(self, sys_aidev_api_client, ai_agent_app, bk_module: Module, bk_stag_env):
         """AIDEV 可以下架 AI Agent 应用，操作人为请求体中的 operator。"""

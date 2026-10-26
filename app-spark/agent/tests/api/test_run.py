@@ -17,6 +17,8 @@ from pydantic_ai.messages import ModelMessage, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
 from app_spark_agent import settings
+from app_spark_agent.app_arch.architecture import SYNC_FILENAMES
+from app_spark_agent.app_arch.python import PYTHON_PROJECT_FILES
 from app_spark_agent.tools import build_init_project_tool
 from tests.api.support import (
     ApiFactory,
@@ -291,8 +293,22 @@ def test_the_model_creates_the_project_with_init_project(make_api: ApiFactory, t
     api = make_api(model=FunctionModel(stream_function=stream), tools=[build_init_project_tool(workspace)])
     run_turn(api, conversation_id=str(uuid4()))
 
-    assert results == [{"status": "created", "name": "todo-board", "detail": ""}]
-    assert sorted(path.name for path in workspace.iterdir() if path.name != ".git") == ["pyproject.toml", "uv.lock"]
+    initialized_files = (*PYTHON_PROJECT_FILES, *SYNC_FILENAMES)
+    assert results == [
+        {
+            "status": "synced",
+            "files": list(initialized_files),
+            "changed": list(initialized_files),
+            "errcode": "",
+            "detail": "Created Python project todo-board.",
+        }
+    ]
+    assert sorted(path.name for path in workspace.iterdir() if path.name != ".git") == [
+        ".python-version",
+        "app_desc.yaml",
+        "pyproject.toml",
+        "uv.lock",
+    ]
 
 
 def test_a_failed_run_does_not_clear_readiness(make_api: ApiFactory) -> None:

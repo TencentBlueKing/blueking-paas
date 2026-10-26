@@ -24,6 +24,7 @@ After editing Python files, run `uv run ruff format {filename}` and `uv run mypy
 ## Model tools
 
 * The platform's own tools live in `app_spark_agent/tools/`, one module per tool, named after the tool the model sees. A tool's function name and docstring are what the model sees, and `settings.INSTRUCTIONS` names the tools: rename both together.
+* Reusable definitions for Agent-built application architecture live in `app_spark_agent/app_arch/`: shared file results in `files.py`, language concerns in `python.py`, Developer Center manifests in `app_desc.py`, and the `AppArchitecture` entry point in `architecture.py`. Model tools are thin adapters over these modules.
 
 ## User project dependencies
 

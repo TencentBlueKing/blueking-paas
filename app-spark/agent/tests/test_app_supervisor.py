@@ -30,6 +30,9 @@ from pathlib import Path
 import pytest
 
 from app_spark_agent import settings
+from app_spark_agent.app_arch.app_desc import render_app_desc
+from app_spark_agent.app_arch.files import AppArchErrorCode, FileSyncResult, FileSyncStatus
+from app_spark_agent.app_arch.python import APP_IMPORT_PATH, PYTHON_VERSION
 from app_spark_agent.app_supervisor import (
     APP_PORT_ENV,
     LAUNCH_EVENT_RUN_ID,
@@ -42,7 +45,6 @@ from app_spark_agent.app_supervisor import (
 )
 from app_spark_agent.app_supervisor import process as process_mod
 from app_spark_agent.app_supervisor import supervisor as supervisor_mod
-from app_spark_agent.app_supervisor.app_spec import APP_IMPORT_PATH
 from app_spark_agent.server.lifecycle import AppProcessRegistry
 from app_spark_agent.state import AppendLog
 
@@ -218,6 +220,53 @@ def test_spec_starts_the_import_path_the_instructions_promise(tmp_path: Path) ->
 
 def test_spec_runs_the_projects_own_interpreter(tmp_path: Path) -> None:
     assert build_app_spec(tmp_path, 8123).argv[0] == str(tmp_path / ".venv" / "bin" / "python")
+
+
+async def test_launch_repairs_platform_configuration_before_spawning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = App(monkeypatch, tmp_path)
+    workspace = tmp_path / "workspace"
+    (workspace / "app_desc.yaml").write_text("stale\n")
+
+    await app.supervisor.launch()
+
+    assert (workspace / "app_desc.yaml").read_text() == render_app_desc(settings.APP_PORT)
+    assert (workspace / ".python-version").read_text() == f"{PYTHON_VERSION}\n"
+    assert len(app.spawned) == 1
+
+
+async def test_platform_configuration_write_failure_prevents_spawn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail_sync(*_args: object) -> FileSyncResult:
+        return FileSyncResult(
+            status=FileSyncStatus.FAILED,
+            errcode=AppArchErrorCode.WRITE_FAILED,
+            detail="Could not synchronize app_desc.yaml: disk full",
+        )
+
+    monkeypatch.setattr(supervisor_mod.AppArchitecture, "sync", fail_sync)
+    app = App(monkeypatch, tmp_path)
+
+    with pytest.raises(AppLaunchFailed, match=r"platform configuration.*disk full"):
+        await app.supervisor.launch()
+
+    assert app.synced_after_spawns == [0]
+    assert app.spawned == []
+
+
+async def test_a_launch_without_a_project_does_not_create_platform_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = App(monkeypatch, tmp_path)
+    app.sync_error = AppLaunchFailed("The workspace has no pyproject.toml")
+
+    with pytest.raises(AppLaunchFailed, match="no pyproject"):
+        await app.supervisor.launch()
+
+    assert list((tmp_path / "workspace").iterdir()) == []
+    assert app.spawned == []
 
 
 async def test_a_failed_install_fails_the_launch_without_spawning(

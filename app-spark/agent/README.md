@@ -179,7 +179,8 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 
 依赖属于用户项目，不属于平台：`pyproject.toml` 和 `uv.lock` 在 workspace 根目录，随代码保存进 Git。
 
-- 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个文件。
+- 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个依赖文件，
+  并生成下文的平台配置。
   判断条件和 launch 一样只看 `pyproject.toml`：它在就不动（只缺 `uv.lock` 时 `uv add` / `uv sync` 会就地补锁）；模型只决定时机和项目名，文件内容由程序给。
 - 模板与提示词是一对：起始包清单逐字写在 `INSTRUCTIONS` 的 Dependencies 一节。改模板依赖时两处一起改，再 `make lock-app-template`。
 - launch 前对齐：每次 launch（含 crash 后的自动重拉）都先 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
@@ -188,6 +189,23 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 - Shell 的 PATH 同样去掉 Agent 自己的 venv，免得裸 `python -c "import fastapi"` 用 Agent 的包跑通、把「项目缺依赖」
   误判成能跑。但不把项目 `.venv/bin` 放进去：它要等 `init_project` 和第一次 `uv sync` 之后才存在，跑 Python 走 `uv run`。
 - 缓存预热：两个镜像构建时都对模板 `uv sync` 一次再删掉建出来的 `.venv`，只留下 uv 缓存，这样之后项目初次 uv sync 时可以提速。
+
+### 平台配置
+
+`app_desc.yaml` 和 `.python-version` 是平台生成文件，必须随源码保存。
+
+- `init_project` 创建项目时首次写入；
+- 无参数工具 `sync_platform_config` 会补齐缺失文件并覆盖过期内容，模型不手写；
+- 每次手动或自动 launch 在启动子进程前也会同步。同步失败则 launch 失败，不能留下“预览可用但无法部署”的项目；
+
+相关的可复用实现集中在 `app_spark_agent/app_arch/`：
+
+- `files.py` 提供所有生成文件共用的原子写入和 `synced` / `unchanged` / `failed` 结果协议；
+- `python.py` 管 Python 项目模板、运行时版本和 uvicorn 参数；
+- `app_desc.py` 管开发者中心 `app_desc.yaml` 的格式；
+- `architecture.py` 提供 `AppArchitecture` 主入口，供模型工具和应用启动器直接复用。
+
+`app_supervisor/app_spec.py` 与 `app_desc.yaml` 共用 `python.py` 的 uvicorn 参数，避免修改一边后配置漂移。
 
 ## 凭据屏蔽
 

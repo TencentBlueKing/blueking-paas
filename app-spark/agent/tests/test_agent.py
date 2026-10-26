@@ -77,7 +77,7 @@ def test_create_agent_scopes_tools_to_workspace(
 
 
 def test_extra_tools_reach_the_model_alongside_the_owned_ones(tmp_path: Path) -> None:
-    """A caller's tools are registered without displacing read_app_log or init_project.
+    """A caller's tools are registered without displacing the workspace-bound tools.
 
     Dropping launch_app would leave the model hunting for a tool the instructions name.
     """
@@ -89,8 +89,9 @@ def test_extra_tools_reach_the_model_alongside_the_owned_ones(tmp_path: Path) ->
     agent = create_agent(tmp_path, extra_tools=[launch_app])
 
     tools = function_tools(agent)
-    assert set(tools) == {"read_app_log", "init_project", "launch_app"}
+    assert set(tools) == {"read_app_log", "init_project", "sync_platform_config", "launch_app"}
     assert tools["launch_app"].function_schema.json_schema["properties"] == {}
+    assert tools["sync_platform_config"].function_schema.json_schema["properties"] == {}
     # The model only ever chooses the name; the template decides everything written.
     assert set(tools["init_project"].function_schema.json_schema["properties"]) == {"name"}
 

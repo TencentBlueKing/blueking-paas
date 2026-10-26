@@ -34,6 +34,7 @@ from pathlib import Path
 import pytest
 
 from app_spark_agent import settings
+from app_spark_agent.app_arch.python import PYTHON_VERSION
 from app_spark_agent.app_supervisor import AppLaunchFailed, sync_project_environment, uv_environ
 from app_spark_agent.app_supervisor import project_env as project_env_mod
 
@@ -59,6 +60,11 @@ class TestTemplate:
         dependencies = tomllib.loads((TEMPLATE / "pyproject.toml").read_text())["project"]["dependencies"]
 
         assert [dep for dep in dependencies if dep.startswith("uvicorn")] == ["uvicorn==0.54.0"]
+
+    def test_python_version_matches_the_project_template(self) -> None:
+        project = tomllib.loads((TEMPLATE / "pyproject.toml").read_text())["project"]
+
+        assert project["requires-python"] == f">={PYTHON_VERSION}"
 
     def test_the_lock_was_resolved_against_the_default_index(self) -> None:
         """对着别的包源锁出来的 uv.lock，在缺省包源下会被 uv 判为过期，新项目首次启动就得联网重锁。"""

@@ -27,7 +27,6 @@ V3 与 V4 的授权数据完全隔离，本地表同一行不会并存两版 ID�
 几项 V4 侧的限制会体现在迁移结果上：
 
 - 授权有效期上限 365 天（`V4_MAX_PERMISSION_DAYS`），迁移写入的权限一年后到期，平台侧没有续期机制
-- 没有空间成员增删接口，管理空间的管理员只能在创建时一次性写齐，迁移后管理员名单变化无法同步到空间
 - 迁移期间本地表会处于「部分应用已是 V4 ID、部分仍是 V3 ID」的中间态，须在停服窗口内执行
 
 命令幂等，可重跑：V4 侧同名的管理空间与用户组会被回查复用，本地 ID 以映射文件中记录的 V3 ID 为准。
@@ -230,7 +229,7 @@ class Command(BaseCommand):
                 "member_failures": [],
             }
 
-        # 2. V4 的管理空间在创建时一次性写齐权限范围与管理员，事后都没有补写的接口
+        # 2. 管理空间创建时一次性写齐权限范围与管理员
         bk_space_id = None if self.skip_observability_scope else self._resolve_bk_space_id(application)
         v4_backend = BKIAMV4ManagementBackend(tenant_id, self.operator)
         space_id = v4_backend.create_management_space(
@@ -247,7 +246,16 @@ class Command(BaseCommand):
             members = role_members.get(ApplicationRole(group.role), [])
             member_failures.extend(self._add_members(v4_backend, group.id, members, ApplicationRole(group.role)))
 
-        # 4. 本地 ID 换成 V4 的值
+        # 4. 给用户组授予监控、日志权限。同名空间已存在时创建请求会被 409 拒绝，其中的权限范围不会写入，
+        #    用户组权限又必须落在空间范围内，因此授权前先覆盖写入一次空间范围
+        if bk_space_id:
+            v4_backend.update_management_space_scopes(
+                space_id, app_code, application.name, bk_space_id, operator=self.operator
+            )
+            v4_backend.grant_user_group_policies_in_bk_monitor(bk_space_id, application.name, user_groups)
+            v4_backend.grant_user_group_policies_in_bk_log(bk_space_id, application.name, user_groups)
+
+        # 5. 本地 ID 换成 V4 的值
         with transaction.atomic():
             self._rewrite_local_ids(app_code, tenant_id, space_id, user_groups)
 
@@ -319,7 +327,8 @@ class Command(BaseCommand):
     def _resolve_bk_space_id(self, application: Application) -> str:
         """取监控空间的资源 ID，用于把监控/日志的权限范围一次写进管理空间"""
         try:
-            space, _ = get_or_create_bk_monitor_space(application)
+            # 此时本地记录的仍是 V3 的 ID，不能由异步任务按本地 ID 授权
+            space, _ = get_or_create_bk_monitor_space(application, grant_iam_permission=False)
         except Exception as e:
             raise RuntimeError(
                 f"无法获取应用 {application.code} 的蓝鲸监控空间，监控/日志权限范围写不进管理空间。"

@@ -36,6 +36,9 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.iam.shim import get_paas_system_id
 from paasng.infras.iam.v4.http import BKIAMV4BaseClient
 from paasng.infras.iam.v4.spaces import (
+    build_log_permission_scope,
+    build_monitor_permission_scope,
+    build_observability_permission_scope,
     build_paas_permission_scope,
     build_subject_scope,
 )
@@ -60,24 +63,13 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         init_members: List[str] | None = None,
         bk_space_id: str | None = None,
     ) -> int:
-        """创建应用管理空间，写入本系统权限范围
-        TODO 目前 iamV4 不支持跨系统授予角色（如监控/日志系统下的运营角色），待监控修复
-        """
-        system_id = get_paas_system_id()
-        permission_scope = build_paas_permission_scope(app_code, system_id)
-        if bk_space_id:
-            logger.warning(
-                "iam v4 create_space only accepts roles of the current system, "
-                "skip monitor/log permission scope. bk_space_id=%s",
-                bk_space_id,
-            )
-
+        """创建应用管理空间。传入监控空间 ID 时一并写入监控、日志的权限范围"""
         return self._create_space(
-            system_id=system_id,
+            system_id=get_paas_system_id(),
             name=utils.gen_grade_manager_name(app_code),
             description=utils.gen_grade_manager_desc(app_code),
             managers=self._resolve_managers(init_members),
-            permission_scope=permission_scope,
+            permission_scope=_build_space_permission_scope(app_code, bk_space_id),
             reuse_on_conflict=lambda: self.fetch_management_space(app_code),
         )
 
@@ -86,48 +78,58 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         return self._fetch_space_id(get_paas_system_id(), utils.gen_grade_manager_name(app_code), app_code)
 
     def delete_management_space(self, space_id: int):
-        """删除管理空间
-
-        TODO: 待 IAM 补齐删除管理空间接口后在此接入（V3 对应 `v2_management_delete_grade_manager`）。
-            当前只记录错误后返回，避免阻断应用删除；受影响：应用删除、强制删除、平台管理下架时
-            IAM 侧空间不回收，会累积脏数据。
-        """
-        logger.error("iam v4 does not support deleting management space, skip. space_id=%s", space_id)
+        """删除管理空间。空间已不存在时视为删除成功，保证应用删除可重入"""
+        self._delete_if_exists(
+            self.client.delete_space,
+            path_params={"system_id": get_paas_system_id(), "space_id": space_id},
+        )
 
     def fetch_management_space_members(self, space_id: int) -> List[str]:
         """查询管理空间管理员，对应 V3 的分级管理员成员列表"""
         return self._retrieve_space_managers(get_paas_system_id(), space_id)
 
     def add_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
-        """向管理空间添加管理员
+        """向管理空间添加管理员，重复的管理员由权限中心自动去重"""
+        # 参考 v3 逻辑，admin 用户拥有全量权限，不需要成为管理员
+        usernames = [name for name in usernames if name != settings.ADMIN_USERNAME]
+        if not usernames:
+            return
 
-        TODO: 待 IAM 补齐空间成员增删接口后在此接入。当前 `managers` 仅能在创建空间时指定，
-            这里只记录错误后返回，避免阻断用户组成员变更；受影响：后续把用户提升为应用管理员时，
-            无法同步为空间管理员。
-        """
-        logger.error("iam v4 does not support adding management space members, skip. space_id=%s", space_id)
+        self.call(
+            self.client.add_space_manager,
+            path_params={"system_id": get_paas_system_id(), "space_id": space_id},
+            data={"usernames": usernames},
+            for_write=True,
+            operator=operator,
+        )
 
     def delete_management_space_members(self, space_id: int, usernames: List[str], operator: str | None = None):
-        """删除管理空间管理员
+        """删除管理空间管理员"""
+        if not usernames:
+            return
 
-        TODO: 待 IAM 补齐空间成员增删接口后在此接入。当前只记录错误后返回，避免阻断用户组成员变更；
-            受影响：移除应用管理员后对方仍保留空间管理员身份，可继续审批授权。
-        """
-        logger.error("iam v4 does not support deleting management space members, skip. space_id=%s", space_id)
+        self.call(
+            self.client.delete_space_manager,
+            path_params={"system_id": get_paas_system_id(), "space_id": space_id},
+            params={"usernames": ",".join(usernames)},
+            for_write=True,
+            operator=operator,
+        )
 
     def update_management_space_scopes(
         self, space_id: int, app_code: str, app_name: str, bk_space_id: str, operator: str | None = None
     ):
         """为管理空间追加监控、日志空间的授权范围
 
-        V4 不需要该能力：管理空间均为新建，创建时已一次性写齐 bk_paas3、
-        bk_monitorv3、bk_log_search 三个系统的权限范围（见 `create_management_space`），
-        不存在 V3 那种「事后给存量分级管理员补授权范围」的场景。
-        V3 对应接口为 `management_grade_managers_update`。
-        仅当出现空间创建后才需要变更授权范围的新场景时才会走到这里，只记录错误后返回，
-        不实现绕行方案。
+        接口为覆盖式更新，因此请求体同时带上本系统的权限范围
         """
-        logger.error("iam v4 does not support updating management space scopes, skip. space_id=%s", space_id)
+        self.call(
+            self.client.update_space_permission_scope,
+            path_params={"system_id": get_paas_system_id(), "space_id": space_id},
+            data=_build_space_permission_scope(app_code, bk_space_id),
+            for_write=True,
+            operator=operator,
+        )
 
     # ---------------- 用户组与成员 ----------------
 
@@ -165,13 +167,12 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
         return created
 
     def delete_user_groups(self, user_group_ids: List[int]):
-        """删除指定的用户组
-
-        V4 尚未提供删除用户组接口（V3 对应 `v2_management_grade_manager_delete_group`）。
-        应用删除会调用本方法，缺接口时只记日志，避免阻断本地清理。
-        待权限中心补齐删除接口后，在此处接入即可。
-        """
-        logger.error("iam v4 does not support deleting user groups, skip. group_ids=%s", user_group_ids)
+        """删除指定的用户组。用户组已不存在时视为删除成功，保证应用删除可重入"""
+        for group_id in user_group_ids:
+            self._delete_if_exists(
+                self.client.delete_group,
+                path_params={"system_id": get_paas_system_id(), "group_id": group_id},
+            )
 
     def fetch_user_group_members(self, user_group_id: int) -> List[str]:
         """查询用户组成员，经 paginate 自动翻页（单页上限 100），不静默截断。
@@ -201,13 +202,10 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
     def grant_user_group_policies(self, app_code: str, app_name: str, groups: List[UserGroup]):
         """为内建用户组授予开发者中心的权限
 
-        V4 仅允许在 `system_mgmt_create_group` 时一次性指定权限范围，没有给已有用户组补授权的接口
-        （V3 对应 `v2_management_groups_policies_grant`）。
-        受影响的业务场景：角色权限调整后无法对存量用户组补授；`regrant_user_group_policies` 命令在 V4 下不可用。
-        正常创建链路已在 `create_builtin_user_groups` 中写入权限，不应再调用本方法。
-        待权限中心补齐更新用户组权限接口后，在此处接入即可。
+        正常创建链路已在 `create_builtin_user_groups` 中写入权限，这里用于给存量用户组补授
         """
-        raise BKIAMCapabilityNotSupportedError("grant policies to existing user groups")
+        for group in groups:
+            self._grant_group_permissions([group], _build_group_permissions(app_code, ApplicationRole(group.role)))
 
     def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
         """回收用户组的指定应用操作权限
@@ -221,20 +219,17 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):
         """为内建用户组授予监控平台的空间权限
 
-        V4 没有给已有用户组补授权的接口，跨系统授权也无法在本系统 `create_group` 时写入。
-        受影响的业务场景：应用接入监控后，管理员/开发者/运营者用户组无法获得监控空间权限。
-        待权限中心补齐补授权接口且监控系统接入 V4 后，在此处接入即可。
+        三个内建用户组统一授予业务运维角色。V3 额外只给管理员组的 MCP 操作，V4 暂无对应角色。
+        须先通过 `update_management_space_scopes` 把监控空间纳入管理空间的权限范围。
         """
-        raise BKIAMCapabilityNotSupportedError("grant policies to existing user groups (bk_monitor)")
+        self._grant_group_permissions(groups, build_monitor_permission_scope(bk_space_id))
 
     def grant_user_group_policies_in_bk_log(self, bk_space_id: str, app_name: str, groups: List[UserGroup]):
         """为内建用户组授予日志平台的空间权限
 
-        V4 没有给已有用户组补授权的接口，跨系统授权也无法在本系统 `create_group` 时写入。
-        受影响的业务场景：应用接入日志后，内建用户组无法获得日志空间权限。
-        待权限中心补齐补授权接口且日志系统接入 V4 后，在此处接入即可。
+        须先通过 `update_management_space_scopes` 把监控空间纳入管理空间的权限范围。
         """
-        raise BKIAMCapabilityNotSupportedError("grant policies to existing user groups (bk_log)")
+        self._grant_group_permissions(groups, build_log_permission_scope(bk_space_id))
 
     # ---------------- 内部方法 ----------------
 
@@ -339,6 +334,28 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
                 return group["id"]
         raise BKIAMApiError(f"failed to find existing user group [{name}]")
 
+    def _grant_group_permissions(self, groups: List[UserGroup], permissions: List[Dict]):
+        for group in groups:
+            try:
+                self.call(
+                    self.client.create_group_permission,
+                    path_params={"system_id": get_paas_system_id(), "group_id": group.id},
+                    data={"permissions": permissions},
+                    for_write=True,
+                )
+            except BKIAMApiHTTPError as exc:
+                if exc.status_code != HTTPStatus.CONFLICT:
+                    raise
+                logger.info("iam v4 group permission already exists, skip. group_id=%s", group.id)
+
+    def _delete_if_exists(self, operation, path_params: Dict):
+        try:
+            self.call(operation, path_params=path_params, for_write=True)
+        except BKIAMApiHTTPError as exc:
+            if exc.status_code != HTTPStatus.NOT_FOUND:
+                raise
+            logger.info("iam v4 resource already deleted, skip. path_params=%s", path_params)
+
     def _mutate_group_members(self, operation, user_group_id: int, usernames: List[str], operator: str | None = None):
         """批量增删组成员"""
         usernames = [name for name in usernames if name != settings.ADMIN_USERNAME]
@@ -357,6 +374,13 @@ class BKIAMV4ManagementBackend(BaseManagementBackend, BKIAMV4BaseClient):
 def _to_user_members(usernames: List[str]) -> List[Dict]:
     # 参考 v3 逻辑，admin 用户拥有全量权限，不应占用配额也不需要授权
     return [{"id": name, "type": "user"} for name in usernames if name != settings.ADMIN_USERNAME]
+
+
+def _build_space_permission_scope(app_code: str, bk_space_id: str | None = None) -> List[Dict]:
+    scope = build_paas_permission_scope(app_code)
+    if bk_space_id:
+        scope.extend(build_observability_permission_scope(bk_space_id))
+    return scope
 
 
 def _build_group_permissions(app_code: str, role: ApplicationRole) -> List[Dict]:

@@ -21,17 +21,17 @@ from typing import Tuple
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_space_manager
 from paasng.infras.bkmonitorv3.definitions import gen_bk_monitor_space
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.infras.iam.base.constants import IAMVersion
-from paasng.infras.iam.shim import get_iam_version
 from paasng.infras.iam.tasks import add_monitoring_space_permission
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
-def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
+def create_bk_monitor_space(application: Application, grant_iam_permission: bool = True) -> BKMonitorSpace:
     """create bk monitor space associated to the given application
 
     :param application:
+    :param grant_iam_permission: whether to grant the monitor/log permissions to the builtin user groups
+        asynchronously, the caller should grant by itself if it is False
     :return: BKMonitorSpace
     """
     tenant_id = get_tenant_id_for_app(application.code)
@@ -42,9 +42,8 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     except Exception:  # noqa: BLE001
         space = mgr.create_space(gen_bk_monitor_space(application))
 
-    # IAM V3：存量数据没有监控日志权限，这里统一通过异步任务补授
-    # IAM V4：创建管理空间时已一次性带上权限范围，不用额外处理
-    if get_iam_version() == IAMVersion.V3:
+    # 监控空间晚于管理空间创建，监控、日志权限统一通过异步任务补授
+    if grant_iam_permission:
         add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.iam_resource_id)
     return BKMonitorSpace.objects.update_or_create(
         application=application,
@@ -60,15 +59,18 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     )[0]
 
 
-def get_or_create_bk_monitor_space(application: Application) -> Tuple[BKMonitorSpace, bool]:
+def get_or_create_bk_monitor_space(
+    application: Application, grant_iam_permission: bool = True
+) -> Tuple[BKMonitorSpace, bool]:
     """get or create bk monitor space associated to the given application
 
     :param application:
+    :param grant_iam_permission: see `create_bk_monitor_space`
     :return: Tuple[BKMonitorSpace, whether a bk monitor space was created]
     """
     with suppress(BKMonitorSpace.DoesNotExist):
         return BKMonitorSpace.objects.get(application=application), False
-    return create_bk_monitor_space(application), True
+    return create_bk_monitor_space(application, grant_iam_permission), True
 
 
 def update_or_create_bk_monitor_space(application: Application) -> Tuple[BKMonitorSpace, bool]:

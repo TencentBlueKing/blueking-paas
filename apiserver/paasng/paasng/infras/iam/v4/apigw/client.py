@@ -177,6 +177,35 @@ class Group(OperationGroup):
         method="GET",
         path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/",
     )
+    delete_space = bind_property(
+        Operation,
+        name="delete_space",
+        method="DELETE",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/",
+    )
+    # 覆盖式更新，请求体直接是权限范围数组（不包 `permission_scope` 字段），遗漏的条目会被移除
+    update_space_permission_scope = bind_property(
+        Operation,
+        name="update_space_permission_scope",
+        method="PUT",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/permission-scope/",
+    )
+
+    # ---------------- 管理空间：管理员 ----------------
+    # 添加时请求体为 {"usernames": [...]}，重复的管理员由权限中心自动去重；
+    # 删除时经查询参数 usernames 传逗号分隔的用户名
+    add_space_manager = bind_property(
+        Operation,
+        name="add_space_manager",
+        method="POST",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/managers/",
+    )
+    delete_space_manager = bind_property(
+        Operation,
+        name="delete_space_manager",
+        method="DELETE",
+        path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/managers/",
+    )
 
     # ---------------- 用户组与成员 ----------------
     list_group = bind_property(
@@ -190,6 +219,12 @@ class Group(OperationGroup):
         name="create_group",
         method="POST",
         path="/api/v1/open/mgmt/systems/{system_id}/spaces/{space_id}/groups/",
+    )
+    delete_group = bind_property(
+        Operation,
+        name="delete_group",
+        method="DELETE",
+        path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/",
     )
     add_group_member = bind_property(
         Operation,
@@ -208,6 +243,22 @@ class Group(OperationGroup):
         name="delete_group_member",
         method="DELETE",
         path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/members/",
+    )
+    # 新增的权限必须落在用户组所属管理空间的权限范围内
+    create_group_permission = bind_property(
+        Operation,
+        name="create_group_permission",
+        method="POST",
+        path="/api/v1/open/mgmt/systems/{system_id}/groups/{group_id}/permissions/",
+    )
+
+    # ---------------- 申请链接 ----------------
+    # 按操作维度生成无权限申请链接，系统标识放在请求体而非路径中
+    generate_perm_apply_url = bind_property(
+        Operation,
+        name="generate_perm_apply_url",
+        method="POST",
+        path="/api/v1/open/application/permission-apply-urls/",
     )
 
 

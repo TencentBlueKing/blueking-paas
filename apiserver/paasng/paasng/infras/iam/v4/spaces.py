@@ -34,19 +34,33 @@ from paasng.infras.iam.v4.definitions import PAAS_RESOURCE_TYPE_ID
 # 监控 / 日志系统的业务运维角色，两端 ID 一致
 SPACE_OPERATOR_ROLE_ID = "space_operator"
 
+# 监控的业务运维角色关联空间、APM 应用、RUM 应用、仪表盘四类资源，均以监控空间作为资源范围
+BK_MONITOR_SPACE_RELATED_RESOURCE_TYPES = ["space", "apm_application", "rum_application", "grafana_dashboard"]
+
+# 日志的业务运维角色关联空间、采集项、ES 源、索引集四类资源，均以监控空间作为资源范围
+BK_LOG_SPACE_RELATED_RESOURCE_TYPES = ["space", "collection", "es_source", "indices"]
+
 
 def build_subject_scope() -> Dict:
     """人员范围：全员可被授权，与 V3 的 `subject_scopes = [{type: "*", id: "*"}]` 对齐"""
     return {"users": ["*"]}
 
 
-def build_resource_instances(resource_type: str, instance_id: str) -> List[Dict]:
+def build_resource_instances(
+    resource_type: str,
+    instance_id: str,
+    related_resource_type_ids: Sequence[str] | None = None,
+) -> List[Dict]:
+    """
+    :param related_resource_type_ids: 角色关联的资源类型，缺省为实例自身的资源类型
+    """
     return [
         {
-            "related_resource_type_id": resource_type,
+            "related_resource_type_id": related_type,
             "is_any": False,
             "instances": [{"id": instance_id, "type": resource_type}],
         }
+        for related_type in related_resource_type_ids or [resource_type]
     ]
 
 
@@ -55,29 +69,29 @@ def build_permission_scope(
     resource_type: str,
     instance_id: str,
     system_id: str | None = None,
+    related_resource_type_ids: Sequence[str] | None = None,
 ) -> List[Dict]:
     """按角色列表构造 V4 权限范围
 
-    :param system_id: 跨系统范围时写入目标系统 ID，便于请求体中区分三个系统
+    :param system_id: 角色所属系统，跨系统授权时必填；为空时权限中心按本系统的角色处理
     """
     scopes = []
     for role_id in role_ids:
         item: Dict = {
             "id": role_id,
-            "resources": build_resource_instances(resource_type, instance_id),
+            "resources": build_resource_instances(resource_type, instance_id, related_resource_type_ids),
         }
         if system_id:
-            item["system"] = system_id
+            item["system_id"] = system_id
         scopes.append(item)
     return scopes
 
 
-def build_paas_permission_scope(app_code: str, system_id: str) -> List[Dict]:
+def build_paas_permission_scope(app_code: str) -> List[Dict]:
     return build_permission_scope(
         [str(role) for role in AppRole],
         PAAS_RESOURCE_TYPE_ID,
         app_code,
-        system_id=system_id,
     )
 
 
@@ -88,6 +102,7 @@ def build_monitor_permission_scope(bk_space_id: str) -> List[Dict]:
         ResourceType.BkMonitorSpace,
         bk_space_id,
         system_id=BK_MONITOR_SYSTEM_ID,
+        related_resource_type_ids=BK_MONITOR_SPACE_RELATED_RESOURCE_TYPES,
     )
 
 
@@ -98,4 +113,10 @@ def build_log_permission_scope(bk_space_id: str) -> List[Dict]:
         ResourceType.BkMonitorSpace,
         bk_space_id,
         system_id=BK_LOG_SYSTEM_ID,
+        related_resource_type_ids=BK_LOG_SPACE_RELATED_RESOURCE_TYPES,
     )
+
+
+def build_observability_permission_scope(bk_space_id: str) -> List[Dict]:
+    """监控、日志两个系统的空间权限范围"""
+    return [*build_monitor_permission_scope(bk_space_id), *build_log_permission_scope(bk_space_id)]

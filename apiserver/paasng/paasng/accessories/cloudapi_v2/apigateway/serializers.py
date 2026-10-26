@@ -399,6 +399,9 @@ class ListAppRequestLogsOutputSLZ(serializers.Serializer):
     results = AppRequestLogOutputSLZ(many=True, default=list, help_text="调用流水日志列表")
 
 
+# ============ 应用告警记录相关 ============
+
+
 # ------------ list_app_alarm_records ------------
 class ListAppAlarmRecordsInputSLZ(serializers.Serializer):
     """应用告警记录查询参数"""

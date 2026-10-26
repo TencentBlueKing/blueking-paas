@@ -382,6 +382,8 @@ class ApiGatewayClient:
 
         return res.get("data", {})
 
+    # ============ 应用告警记录相关 ============
+
     def list_app_alarm_records(
         self,
         app_code: str,

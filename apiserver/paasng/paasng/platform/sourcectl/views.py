@@ -50,6 +50,7 @@ from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig, Module
@@ -529,6 +530,26 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": "", "repo_url": repo_url})
 
 
+def list_alternative_versions(module: Module, application: Application, operator_user_id: str) -> list[dict]:
+    """列出模块可用的分支/标签等版本信息, 并按 AlternativeVersionSLZ 序列化返回"""
+    try:
+        version_service = get_version_service(module, operator=operator_user_id)
+        return slzs.AlternativeVersionSLZ(
+            version_service.list_alternative_versions(),
+            many=True,
+            context={"is_smart_app": application.is_smart_app},
+        ).data
+    except UserNotBindedToSourceProviderError:
+        raise error_codes.NEED_TO_BIND_OAUTH_INFO
+    except AccessTokenForbidden:
+        raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
+    except SvnException:
+        raise error_codes.CANNOT_GET_REPO.f(_("无法获取 SVN 分支信息, 请检查仓库地址和鉴权信息"))
+    except Exception:
+        logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
+        raise error_codes.CANNOT_GET_REPO.f(_("%s的仓库信息查询异常") % application.code)
+
+
 class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -536,24 +557,8 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取蓝鲸应用的代码分支信息"""
         application = self.get_application()
         module = application.get_module(module_name)
-        try:
-            version_service = get_version_service(module, operator=request.user.pk)
-            alternative_versions = slzs.AlternativeVersionSLZ(
-                version_service.list_alternative_versions(),
-                many=True,
-                context={"is_smart_app": application.is_smart_app},
-            ).data
-        except UserNotBindedToSourceProviderError:
-            raise error_codes.NEED_TO_BIND_OAUTH_INFO
-        except AccessTokenForbidden:
-            raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
-        except SvnException:
-            raise error_codes.CANNOT_GET_REPO.f(_("无法获取 SVN 分支信息, 请检查仓库地址和鉴权信息"))
-        except Exception:
-            logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
-            raise error_codes.CANNOT_GET_REPO.f(_("%s的仓库信息查询异常") % code)
-        else:
-            return Response({"results": alternative_versions})
+        versions = list_alternative_versions(module, application, operator_user_id=request.user.pk)
+        return Response({"results": versions})
 
     def get_diff_commit_logs(self, request, code, module_name, from_revision, to_revision):
         """获取蓝鲸应用2个代码版本之间的提交记录(大于from_revision, 小于等于to_revision之间的提交纪录)
@@ -623,6 +628,19 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logger.exception("Unknown error occurred when getting compare url, user_id: %s", request.user.pk)
             raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))  # noqa: INT001
         return Response({"result": compare_url})
+
+
+class SysRepoDataViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态源码分支接口, 目前仅支持 AIDEV 查询 AI Agent 应用的代码分支"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_AI_AGENT_APP)]
+
+    @swagger_auto_schema(tags=["应用/模块信息查询"], operation_id="sys_get_repo_branches")
+    def get_repo_branches(self, request, code, module_name):
+        """应用态获取蓝鲸应用的代码分支信息, 仅 AIDEV 可调用, 仅允许操作 AI Agent 应用"""
+        module = self.get_managed_module_via_path()
+        versions = list_alternative_versions(module, module.application, operator_user_id=module.owner)
+        return Response({"results": versions})
 
 
 class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):

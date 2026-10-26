@@ -38,7 +38,11 @@ from app_spark_api.agent.runtime.entities import (
     RuntimeHealth,
     StateCallback,
 )
-from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentProvisionError,
+    AgentResourceDeletionError,
+    AgentWorkspaceBusyError,
+)
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
 from app_spark_api.agent.runtime.providers.agent_env import build_agent_env
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
@@ -223,10 +227,28 @@ class E2BProvider(AgentRuntimeProvider):
         :param conversation_id: Conversation whose sandbox should stop.
         :raises AgentProvisionError: If E2B could not stop the sandbox.
         """
+        await self._terminate_conversation(conversation_id, reason="terminated")
+
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop a Project's sandbox and delete every credential-bearing record."""
+        try:
+            # 锁按会话 ID 分，先查出占着 workspace 的会话才知道拿哪把锁。
+            record = await E2BSandboxRecord.objects.active_for_project(project_id).afirst()
+            if record is not None:
+                await self._terminate_conversation(record.conversation_id, reason="project_deleted")
+
+            # 历史行仍带 runtime token、代理头和流量凭据。项目删除不保留这些诊断记录。
+            await E2BSandboxRecord.objects.filter(project_id=project_id).adelete()
+        except Exception as exc:
+            raise AgentResourceDeletionError("sandbox") from exc
+
+    async def _terminate_conversation(self, conversation_id: str, *, reason: str) -> None:
+        """Stop the sandbox a conversation holds, if it still holds one once the lock is taken."""
         async with self._conversation_lock(conversation_id):
+            # 等锁期间占位可能已被释放或替换，所以拿到锁后重新读。
             record = await E2BSandboxRecord.objects.active_for_conversation(conversation_id).afirst()
             if record is not None:
-                await _SandboxClaim(record, self.config).terminate(reason="terminated")
+                await _SandboxClaim(record, self.config).terminate(reason=reason)
 
     async def shutdown(self) -> None:
         """Stop all active sandboxes owned by this API service.
@@ -272,10 +294,11 @@ class E2BProvider(AgentRuntimeProvider):
     async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
         """Return the exposed host for the sandbox's fixed workspace-app port.
 
-        Answered from the record alone, without asking E2B whether the sandbox is still up:
-        every asset of a previewed page comes through here. The host and the proxy tokens are
-        fixed for a sandbox's lifetime, and a sandbox that has gone makes the proxied request
-        fail as unreachable, which is the truthful answer anyway.
+        Answered from the record alone, without asking E2B whether the sandbox is still up.
+        The browser opens a public host directly, so page assets do not come through this
+        service; the headers are only for the proxy path. The host is fixed for a sandbox's
+        lifetime, and a sandbox that has gone makes that host unreachable, which is the
+        truthful answer anyway.
 
         :param conversation_id: Conversation whose application is to be previewed.
         :return: Externally reachable base URL and port-proxy headers, or ``None`` when no
@@ -295,6 +318,8 @@ class E2BProvider(AgentRuntimeProvider):
             # Our self-hosted E2B port proxy rejects a forwarded host different from its
             # exposed-port host with HTTP 400 (`bad target`).
             send_forwarded_host=False,
+            # 浏览器直接打开暴露域名，不走本服务反代。沙箱创建时已允许不带令牌访问。
+            public=True,
         )
 
     async def _create_sandbox(self) -> AsyncSandbox:
@@ -303,12 +328,14 @@ class E2BProvider(AgentRuntimeProvider):
         :raises AgentProvisionError: If E2B refuses or fails to create one.
         """
         try:
+            # 暴露域名要给浏览器直接打开。不声明公开流量时，不带令牌的请求会被沙箱拒绝。
             return await AsyncSandbox.create(
                 self.config.template,
                 timeout=self.config.idle_timeout_seconds,
                 api_key=self.config.api_key,
                 api_url=self.config.api_url,
                 domain=self.config.domain,
+                network={"allow_public_traffic": True},
             )
         except constants.SANDBOX_ERRORS as exc:
             raise AgentProvisionError(f"Could not create an E2B sandbox: {exc}") from exc

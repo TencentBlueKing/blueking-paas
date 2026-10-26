@@ -16,12 +16,22 @@
 # to the current version of the project delivered to anyone in the future.
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class PermissionApplyStatus(StrStructuredEnum):
     APPROVED = EnumField("approved", label="通过")
     REJECTED = EnumField("rejected", label="驳回")
     PENDING = EnumField("pending", label="待审批")
+
+
+class AlarmRecordStatus(StrStructuredEnum):
+    """应用维度告警记录状态"""
+
+    RECEIVED = EnumField("received", label=_("已接收"))
+    SKIPPED = EnumField("skipped", label=_("已忽略"))
+    SUCCESS = EnumField("success", label=_("告警成功"))
+    FAILURE = EnumField("failure", label=_("告警失败"))
 
 
 # 调用流水日志的最早可回溯天数 (日志保留窗口): time_start 不得早于当前时间前该天数, 边界值允许.

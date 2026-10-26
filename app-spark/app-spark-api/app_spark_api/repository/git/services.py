@@ -145,6 +145,39 @@ def revoke_project_credentials(
         return repo
 
 
+def delete_project_repository(
+    project: Project,
+    *,
+    client: ForgejoClient | None = None,
+) -> None:
+    """Delete a Project's Git credentials, remote repository, and local record."""
+    config = get_repo_server_config()
+
+    with transaction.atomic():
+        repo = ProjectGitRepository.objects.select_for_update().filter(project=project).first()
+        owner = repo.owner if repo is not None else config.org
+        name = repo.name if repo is not None else project.id
+        owned_client = client is None
+        forgejo = client or make_forgejo_client(config)
+        try:
+            # Token names are deterministic, so clean by both stored ID and name. The read token
+            # is normally short-lived but may remain after a worker dies during provisioning.
+            if repo is not None and repo.write_token_id is not None:
+                forgejo.delete_token(repo.write_token_id)
+            forgejo.delete_tokens_named(write_token_name(project.id))
+            forgejo.delete_tokens_named(read_token_name(project.id))
+
+            # Deleting an already-absent repository is success, which makes a partially completed
+            # project deletion safe to retry.
+            forgejo.delete_repository(owner, name)
+        finally:
+            if owned_client:
+                forgejo.close()
+
+        if repo is not None:
+            repo.delete()
+
+
 def require_project_git_ready(project_id: str) -> ProjectGitRepository:
     """Refuse to start an Agent unless the Project's repository is ``ready``.
 
@@ -175,6 +208,11 @@ async def aprovision_project_repository(project: Project) -> ProjectGitRepositor
 
 async def arevoke_project_credentials(project: Project) -> ProjectGitRepository:
     return await sync_to_async(revoke_project_credentials)(project)
+
+
+async def adelete_project_repository(project: Project) -> None:
+    """Async wrapper for :func:`delete_project_repository`."""
+    await sync_to_async(delete_project_repository)(project)
 
 
 def _provision_remote(repo: ProjectGitRepository, config: RepoServerConfig, client: ForgejoClient) -> None:

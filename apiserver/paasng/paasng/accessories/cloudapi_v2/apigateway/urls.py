@@ -125,4 +125,10 @@ urlpatterns = [
         views.GatewayAPIViewSet.as_view({"get": "list_app_request_logs"}),
         name="api.cloudapi.v2.app_request_logs",
     ),
+    # 应用维度告警记录
+    path(
+        "apps/<slug:app_code>/inner/monitor/alarm-records/",
+        views.GatewayAPIViewSet.as_view({"get": "list_app_alarm_records"}),
+        name="api.cloudapi.v2.app_alarm_records",
+    ),
 ]

@@ -15,9 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
 from paasng.platform.agent_sandbox.models import E2BApiKey
+from paasng.utils.serializers import UserNameField
 
 
 class E2BApiKeyCreateInputSLZ(serializers.Serializer):
@@ -66,3 +68,42 @@ class E2BSandboxCreateInputSLZ(serializers.Serializer):
 
 class E2BSandboxTimeoutInputSLZ(serializers.Serializer):
     timeout = serializers.IntegerField(min_value=1, help_text="从此刻起的存活秒数")
+
+
+class E2BConsoleApiKeyOutputSLZ(E2BApiKeyOutputSLZ):
+    """开发者中心页面展示用，比 APIGW 版本多一个签发人。"""
+
+    owner = UserNameField(read_only=True, help_text="签发人")
+
+    class Meta(E2BApiKeyOutputSLZ.Meta):
+        fields = [*E2BApiKeyOutputSLZ.Meta.fields, "owner"]
+
+
+class E2BConsoleSandboxListInputSLZ(serializers.Serializer):
+    template_id = serializers.CharField(required=False, help_text="只列出使用该模板的沙箱")
+
+
+class _GatewayDateTimeField(serializers.DateTimeField):
+    """网关返回的是 ISO 8601 字符串，平台的 DateTimeField 只接受 datetime（要转本地时区），需先解析。"""
+
+    def to_representation(self, value):
+        if isinstance(value, str):
+            value = parse_datetime(value)
+        return super().to_representation(value)
+
+
+class E2BConsoleSandboxOutputSLZ(serializers.Serializer):
+    """把网关列表条目转成平台风格的字段。
+
+    按白名单输出：网关条目里的 ``clientID`` 属于内部标识，不下发给页面。
+    列表条目本身不含 ``domain`` / ``envdAccessToken``，白名单也保证将来网关加了这些字段时不会被带出去。
+    """
+
+    sandbox_id = serializers.CharField(source="sandboxID", help_text="沙箱 ID")
+    template_id = serializers.CharField(source="templateID", help_text="模板标识")
+    state = serializers.CharField(help_text="运行状态，running / paused")
+    cpu_count = serializers.IntegerField(source="cpuCount", help_text="CPU 核数")
+    memory_mb = serializers.IntegerField(source="memoryMB", help_text="内存（MB）")
+    disk_size_mb = serializers.IntegerField(source="diskSizeMB", help_text="磁盘（MB）")
+    started_at = _GatewayDateTimeField(source="startedAt", help_text="启动时间")
+    end_at = _GatewayDateTimeField(source="endAt", help_text="预计回收时间")

@@ -17,8 +17,8 @@
 
 import datetime
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Literal
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Dict, List, Literal
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base import kres
@@ -30,7 +30,7 @@ from paas_wl.infras.resources.utils.basic import (
 )
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
-from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
+from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec, SecretFileMount
 from paas_wl.workloads.release_controller.hooks.entities import CommandKubeAdaptor
 from paas_wl.workloads.release_controller.hooks.kres_slzs import CommandDeserializer, CommandSerializer
 
@@ -57,6 +57,7 @@ class Command(AppEntity):
     :param phase_message: Command(Pod) 处于 phase 的原因
     :param main_container_exit_code: 主容器退出的状态码
     :param main_container_fail_message: 主容器执行失败的原因
+    :param secret_mounts: 额外挂载到主容器的 Secret 文件（如 KMS 托管的敏感变量信封）
     """
 
     runtime: ContainerRuntimeSpec
@@ -72,6 +73,7 @@ class Command(AppEntity):
     phase_message: str | None = None
     main_container_exit_code: int | None = None
     main_container_fail_message: str | None = None
+    secret_mounts: List[SecretFileMount] = field(default_factory=list)
 
     class Meta:
         kres_class = kres.KPod
@@ -79,7 +81,12 @@ class Command(AppEntity):
         serializer = CommandSerializer
 
     @classmethod
-    def from_db_obj(cls, command: "CommandModel", extra_envs: Dict | None = None) -> "Command":
+    def from_db_obj(
+        cls,
+        command: "CommandModel",
+        extra_envs: Dict | None = None,
+        secret_mounts: List[SecretFileMount] | None = None,
+    ) -> "Command":
         envs = command.get_envs()
         envs.update(extra_envs or {})
         envs = render_vars_dict(envs, context=VarsRenderContext(process_type="sys-cmd"))
@@ -106,6 +113,7 @@ class Command(AppEntity):
             type_=command.type,
             version=command.version,
             start_time=None,
+            secret_mounts=secret_mounts or [],
         )
 
 

@@ -5,17 +5,6 @@ metadata:
   name: app-spark-forgejo-helm-test
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mysql-data
-  namespace: app-spark-forgejo-helm-test
-spec:
-  accessModes: [ReadWriteOnce]
-  resources:
-    requests:
-      storage: 1Gi
----
-apiVersion: v1
 kind: Service
 metadata:
   name: mysql
@@ -57,16 +46,20 @@ spec:
               value: forgejo
             - name: MYSQL_PASSWORD
               value: forgejo-test-only
+          args:
+            # 测试库只有几 MB。默认 redo log 是 100MB，没必要占这么多。
+            - --innodb-redo-log-capacity=8388608
           ports:
             - containerPort: 3306
           readinessProbe:
             tcpSocket:
               port: 3306
             periodSeconds: 2
+          # mysql 镜像把 /var/lib/mysql 声明成 VOLUME。这个路径必须挂载，否则运行时
+          # 会另建匿名卷；容器删了卷还在。emptyDir 跟 Pod 一起没。
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
       volumes:
         - name: mysql-data
-          persistentVolumeClaim:
-            claimName: mysql-data
+          emptyDir: {}

@@ -1,0 +1,16 @@
+# Fallback for builds from this directory that do not pick a per-Dockerfile ignore file:
+# Dockerfile.unittest, and Dockerfile under legacy builders that skip Dockerfile.dockerignore.
+# Dockerfile.unittest copies tests and charts, so only developer configuration is excluded here.
+**/.venv
+**/.git
+**/__pycache__
+**/*.pyc
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.env
+**/.env.*
+**/settings_local.yaml
+**/settings_files
+**/values-production.yaml
+**/manifests_ref

@@ -31,3 +31,15 @@ class ProjectIdTakenError(ProjectConflictError):
 
 class ProjectNameTakenError(ProjectConflictError):
     """同租户下已经有同名 Project 了。"""
+
+
+class ProjectDeletionError(Exception):
+    """One category of Project resource could not be deleted."""
+
+    def __init__(self, category: str):
+        self.category = category
+        super().__init__(f"Failed to delete {category}")
+
+
+class ProjectAlreadyDeletedError(Exception):
+    """A concurrent request completed the Project's final soft deletion."""

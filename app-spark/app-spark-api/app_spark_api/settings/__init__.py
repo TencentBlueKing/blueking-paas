@@ -353,7 +353,8 @@ REPO_SERVER = settings.get(
 # --------
 
 ## 用什么方式为一个会话拉起 Agent Runtime，可选值见 agent.runtime.constants.AgentRuntimeProviderType，
-## local_process 在本机 spawn agent；e2b 为每个会话创建一个沙箱，并在沙箱内启动 Agent。
+## local_process 在本机 spawn agent，预览由本服务反代。e2b 为每个会话创建一个沙箱，并在沙箱内
+## 启动 Agent，预览直接打开 get_host 查回来的域名。
 AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 
 ## 上述驱动方式各自的配置，字段以对应的 config 类为准。
@@ -398,7 +399,8 @@ AGENT_RUNTIME_PROVIDER = settings.get("AGENT_RUNTIME_PROVIDER", "local_process")
 ##   runtime_port: 8000
 ##   ## 可选。工作区应用固定监听的沙箱端口，默认 9000。
 ##   preview_port: 9000
-##   ## 可选。暴露端口代理使用的协议，默认 https。
+##   ## 可选。暴露端口代理使用的协议，默认 https。预览由浏览器直接打开这个协议的地址，平台页面是
+##   ## https 时这里也必须是 https，否则 iframe 会被当成混合内容拦掉。
 ##   port_scheme: https
 ##   ## 可选。沙箱内 agent 的 workspace 与状态目录，两者不能互相包含。
 ##   workspace_dir: /data/workspace
@@ -449,16 +451,14 @@ AGENT_CONTEXT_STORAGE = settings.get(
     {"backend": "host_tmp_path", "root": "/tmp/app-spark/agent-contexts"},
 )
 
-## 除被检查点引用的版本外，一个会话还额外保留多少个最近的上下文版本。每一版单独存一份 blob，
-## 检查点才够得到「和它的提交配套的那一版」；代价是版本会累积，所以保留策略是硬性配套的。
-## 给的是「回收得不那么激进」的余量：正在进行的一轮可能已经推了新上下文但检查点还没到。
+## 一个会话保留多少个最近的上下文版本。每一版单独存一份 blob（写入因此不用加锁、也不用维护
+## 「最新」指针），代价是版本会累积，所以要有保留上限。冷启动只读最新一版，多留的几版是排障和
+## 人工恢复的余量。
 ## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
 AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
 
-## 一个会话保留多少个最近的检查点。检查点行本身很小，真正的成本在它钉住的上下文版本——每个
-## 检查点都让一份 blob 不能被回收，所以不限量的检查点等于不限量的 blob。
-## 3 是余量而不是刚好够用：实际能被用上的只有「和最新上下文版本配套」的那一个（见
-## services._restore_files），多留两个是为了容忍上报与归档之间的乱序。
+## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 services._restore_files），
+## 多留的几行只用于排查；行本身很小，不钉住任何上下文版本。
 AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
 
 ## 请求体读入内存的上限（字节）。必须调高：Runtime 回写状态走的是普通 JSON 请求体，而一份

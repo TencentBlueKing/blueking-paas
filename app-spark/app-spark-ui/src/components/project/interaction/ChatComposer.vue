@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import { Close, ImageFill } from 'bkui-vue/lib/icon';
 import { appendImages } from './read-image';
 import type { ChatImage } from './types';

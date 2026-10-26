@@ -21,6 +21,7 @@ from typing import Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paasng.utils.structure import register
 
 
@@ -55,6 +56,8 @@ class Runtime:
     proc_command: str = ""
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
+    # 额外需要挂载到主容器的 Secret 文件（如 KMS 托管的敏感变量信封），仅在发布时设置
+    secret_mounts: List[SecretFileMount] = field(default_factory=list)
 
 
 @dataclass

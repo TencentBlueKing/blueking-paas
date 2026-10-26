@@ -389,9 +389,11 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
             },
             # TODO: 重构「主入口」时, 允许用户自行填写 containerPort
             "ports": [{"containerPort": settings.CONTAINER_PORT}],
+            # Secret 文件挂载只加到主容器，sidecar 容器不会拿到这些文件
             "volumeMounts": cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
-            ),
+            )
+            + [m for mount in process.runtime.secret_mounts for m in mount.to_volume_mounts()],
             "readinessProbe": readiness_probe,
             "livenessProbe": liveness_probe,
             "startupProbe": startup_probe,
@@ -399,7 +401,8 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
 
         return {
             "containers": [main_container] + cattr.unstructure(addon_mgr.get_sidecars()),
-            "volumes": cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes()),
+            "volumes": cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes())
+            + [mount.to_volume() for mount in process.runtime.secret_mounts],
             "imagePullSecrets": process.runtime.image_pull_secrets,
             "nodeSelector": process.schedule.node_selector or None,
             "tolerations": process.schedule.tolerations or None,

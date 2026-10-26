@@ -18,7 +18,6 @@
 import logging
 import os
 
-import environ
 import pymysql
 import sentry_sdk
 import urllib3
@@ -27,6 +26,8 @@ from django.db.backends.mysql.schema import DatabaseSchemaEditor
 from django.utils.functional import cached_property
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+
+from .kms import get_env
 
 # Patch the SSL module for compatibility with legacy CA credentials.
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
@@ -65,7 +66,24 @@ pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
 setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
-env = environ.Env()
+env = get_env(
+    {
+        "MYSQL_USER": "mysql.svc_rabbitmq.username",
+        "MYSQL_PASSWORD": "mysql.svc_rabbitmq.password",
+        "BKKRILL_ENCRYPT_SECRET_KEY": "encryption.bk_krill.secret_key",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY": "jwt.services.client_key",
+        "SECRET_KEY": "django.svc_rabbitmq.secret_key",
+    },
+    sensitive_vars=[
+        "MYSQL_PASSWORD",
+        "BKKRILL_ENCRYPT_SECRET_KEY",
+        "PAAS_SERVICE_JWT_CLIENTS_KEY",
+        "SECRET_KEY",
+        "MONITOR_METRIC_TOKEN",
+        "SENTRY_DSN",
+    ],
+    required_vars=["MYSQL_PASSWORD", "BKKRILL_ENCRYPT_SECRET_KEY", "PAAS_SERVICE_JWT_CLIENTS_KEY"],
+)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

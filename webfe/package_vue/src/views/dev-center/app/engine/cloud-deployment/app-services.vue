@@ -891,7 +891,7 @@ export default {
     // 是否展示 Redis 警告提示
     hasRedisAlert(name) {
       return (
-        ['redis', 'paas_redis'].includes(name) &&
+        ['redis', 'paas_redis', 'bk_paas_redis'].includes(name) &&
         this.userFeature.APP_AVAILABILITY_LEVEL &&
         this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );

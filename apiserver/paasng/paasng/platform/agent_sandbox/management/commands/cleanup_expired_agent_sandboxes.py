@@ -27,7 +27,7 @@ from django.utils import timezone
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
-from paasng.platform.agent_sandbox.constants import SandboxStatus
+from paasng.platform.agent_sandbox.constants import SandboxDeleteSource, SandboxStatus
 from paasng.platform.agent_sandbox.exceptions import SandboxError
 from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import delete_sandbox
@@ -73,7 +73,7 @@ def _delete_expired_sandbox(sandbox_uuid: uuid.UUID) -> _DeleteResult:
     close_old_connections()
     sandbox = Sandbox.objects.select_related("application").get(uuid=sandbox_uuid)
     try:
-        delete_sandbox(sandbox)
+        delete_sandbox(sandbox, delete_source=SandboxDeleteSource.EXPIRED)
     except SandboxError as exc:
         return _DeleteResult(success=False, sandbox=sandbox, error=exc)
     return _DeleteResult(success=True, sandbox=sandbox)

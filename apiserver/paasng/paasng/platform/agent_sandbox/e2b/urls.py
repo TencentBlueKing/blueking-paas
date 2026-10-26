@@ -18,13 +18,36 @@
 from django.urls import path
 
 from .sandbox_views import E2BSandboxViewSet
-from .views import E2BApiKeyViewSet
+from .views import E2BApiKeyViewSet, E2BConsoleApiKeyViewSet, E2BConsoleSandboxViewSet
 
 # e2b 协议端点的挂载前缀。用户侧要设 E2B_API_URL=https://<domain>/api/agent_sandbox/e2b，
 # SDK 拿它当 httpx 的 base_url，再接协议规定的相对路径（/sandboxes、/v2/sandboxes 等）。
 E2B_PROTOCOL_PREFIX = "api/agent_sandbox/e2b/"
 
+# 开发者中心页面用的管理端点，不能挂在协议前缀下，否则会与 e2b 协议的路径冲突
+E2B_CONSOLE_PREFIX = "api/bkapps/applications/<slug:code>/agent_sandbox/e2b/"
+
 urlpatterns = [
+    path(
+        E2B_CONSOLE_PREFIX + "api_keys/",
+        E2BConsoleApiKeyViewSet.as_view({"post": "create", "get": "list"}),
+        name="agent_sandbox.e2b.console.api_key",
+    ),
+    path(
+        E2B_CONSOLE_PREFIX + "api_keys/<uuid:key_id>",
+        E2BConsoleApiKeyViewSet.as_view({"delete": "destroy"}),
+        name="agent_sandbox.e2b.console.api_key.destroy",
+    ),
+    path(
+        E2B_CONSOLE_PREFIX + "sandboxes/",
+        E2BConsoleSandboxViewSet.as_view({"get": "list"}),
+        name="agent_sandbox.e2b.console.sandboxes",
+    ),
+    path(
+        E2B_CONSOLE_PREFIX + "sandboxes/<str:sandbox_id>",
+        E2BConsoleSandboxViewSet.as_view({"delete": "destroy"}),
+        name="agent_sandbox.e2b.console.sandboxes.destroy",
+    ),
     path(
         "api/agent_sandbox/applications/<slug:code>/e2b/api_keys/",
         E2BApiKeyViewSet.as_view({"post": "create", "get": "list"}),

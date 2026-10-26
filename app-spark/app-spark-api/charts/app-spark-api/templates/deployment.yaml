@@ -105,7 +105,8 @@ spec:
             - --port
             - "8000"
             - --workers
-            - "1"
+            {{- /* local_process keeps every Runtime inside one API process; others match the Dockerfile. */}}
+            - {{ eq $provider "local_process" | ternary "1" "4" | quote }}
             - --timeout-graceful-shutdown
             - "30"
           ports:

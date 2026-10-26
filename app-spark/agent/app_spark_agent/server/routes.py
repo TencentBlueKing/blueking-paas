@@ -203,6 +203,31 @@ async def restore_context(
         )
 
 
+@router.put("/cursors", dependencies=[Depends(require_bearer)])
+async def adopt_cursors(
+    runtime: RuntimeDep,
+    log_seq: int = Query(ge=0),
+    ui_event_seq: int = Query(ge=0),
+) -> JSONResponse:
+    """Tell an empty Runtime where a conversation's history stands, with no context to inject.
+
+    The counterpart of ``PUT /context`` for a conversation whose entries reached the control
+    plane but whose first context never did. Both cursors are required: unlike a context
+    restore there is nothing else in the request, so omitting one can only be a mistake.
+
+    :param log_seq: Sequence number the raw transcript should continue from.
+    :param ui_event_seq: Sequence number the AG-UI event history should continue from.
+    """
+    async with runtime.run_guard.exclusive():
+        try:
+            await runtime.adopt_numbering(log_seq=log_seq, ui_event_seq=ui_event_seq)
+        except (ConversationStateConflict, AppendLogError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except CursorStateError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return JSONResponse({"log_seq": runtime.transcript.last_seq, "ui_event_seq": runtime.ui_events.last_seq})
+
+
 @router.post("/workspace/restore", dependencies=[Depends(require_bearer)])
 async def restore_workspace(runtime: RuntimeDep, commit: str = Query(min_length=7)) -> JSONResponse:
     """Bring the workspace to a checkpoint, before any context is injected or any run accepted.

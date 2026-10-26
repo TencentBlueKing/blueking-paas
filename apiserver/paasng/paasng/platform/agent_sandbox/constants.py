@@ -42,6 +42,52 @@ class SandboxWorkloadType(StrStructuredEnum):
     SANDBOX_INSTANCE = EnumField("sandbox_instance", label="SandboxInstance")
 
 
+class SandboxDeleteSource(StrStructuredEnum):
+    """沙箱删除来源, 指标 ``agent_sandbox_lifetime_seconds`` 的 delete_source 取值."""
+
+    USER = EnumField("user", label="用户主动删除")
+    EXPIRED = EnumField("expired", label="过期被清理")
+
+
+class SandboxCreateFailureReason(StrStructuredEnum):
+    """沙箱创建失败原因, 指标 ``agent_sandbox_create_failures_total`` 的 reason 取值."""
+
+    NO_CLUSTER = EnumField("no_cluster", label="没有可用集群")
+    IMAGE_VALIDATE = EnumField("image_validate", label="快照镜像校验失败")
+    TIMEOUT = EnumField("timeout", label="等待就绪超时")
+    K8S_ERROR = EnumField("k8s_error", label="K8s API 调用失败")
+    START_FAILED = EnumField("start_failed", label="工作负载启动失败")
+    QUOTA_EXCEEDED = EnumField("quota_exceeded", label="超出应用沙箱数量上限")
+    ALREADY_EXISTS = EnumField("already_exists", label="同名沙箱已存在")
+    VOLUME_INVALID = EnumField("volume_invalid", label="共享卷挂载不合法")
+    UNKNOWN = EnumField("unknown", label="其他未归类的原因")
+
+
+class SandboxOperation(StrStructuredEnum):
+    """沙箱接口的操作名, 指标 ``agent_sandbox_requests_total`` 的 operation 取值.
+
+    只覆盖沙箱生命周期与文件/进程接口.
+    """
+
+    CREATE = EnumField("create", label="创建沙箱")
+    LIST = EnumField("list", label="查询沙箱列表")
+    DESTROY = EnumField("destroy", label="销毁沙箱")
+    CREATE_FOLDER = EnumField("create_folder", label="创建目录")
+    UPLOAD_FILE = EnumField("upload_file", label="上传文件")
+    DELETE_FILE = EnumField("delete_file", label="删除文件")
+    DOWNLOAD_FILE = EnumField("download_file", label="下载文件")
+    EXEC = EnumField("exec", label="执行命令")
+    CODE_RUN = EnumField("code_run", label="执行代码")
+    LOGS = EnumField("logs", label="读取日志")
+
+
+class SandboxRequestResult(StrStructuredEnum):
+    """接口调用结果, 指标 ``agent_sandbox_requests_total`` 与两个耗时直方图的 result 取值"""
+
+    SUCCESS = EnumField("success", label="成功")
+    FAILURE = EnumField("failure", label="失败")
+
+
 # 沙箱默认的 TTL（Time To Live）时长
 SANDBOX_DEFAULT_TTL_SECONDS = 30 * 60
 

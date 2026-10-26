@@ -381,3 +381,45 @@ class ApiGatewayClient:
             raise ApiGatewayServiceError(f"list app request logs error: {e}")
 
         return res.get("data", {})
+
+    def list_app_alarm_records(
+        self,
+        app_code: str,
+        time_start: int,
+        time_end: int,
+        status: str | None = None,
+        gateway_name: str | None = None,
+        resource_name: str | None = None,
+        offset: int = 0,
+        limit: int = 10,
+    ) -> dict:
+        """获取应用维度告警记录
+
+        :param app_code: 应用 Code, 作为路径参数下发
+        :param time_start: 起始时间, Unix 时间戳 (秒)
+        :param time_end: 结束时间, Unix 时间戳 (秒)
+        :param status: 告警状态, 可选值见 AlarmRecordStatus
+        :param gateway_name: 网关名称, 精确匹配
+        :param resource_name: 资源名称, 精确匹配, 传该参数时必须同时传 gateway_name
+        :param offset: 偏移量
+        :param limit: 每页条数
+        """
+        params: dict[str, Any] = {
+            "time_start": time_start,
+            "time_end": time_end,
+            "offset": offset,
+            "limit": limit,
+        }
+        optional_params: dict[str, Any] = {
+            "status": status,
+            "gateway_name": gateway_name,
+            "resource_name": resource_name,
+        }
+        params.update({key: value for key, value in optional_params.items() if value not in (None, "")})
+
+        try:
+            res = self.client.list_app_alarm_records(params=params, path_params={"app_code": app_code})
+        except (APIGatewayResponseError, ResponseError) as e:
+            raise ApiGatewayServiceError(f"list app alarm records error: {e}")
+
+        return res.get("data", {})

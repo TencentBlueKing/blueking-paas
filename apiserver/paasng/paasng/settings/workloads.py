@@ -43,6 +43,8 @@ from pathlib import Path
 
 from dynaconf import LazySettings
 
+from .kms import load_kms_workloads_settings
+
 BASE_DIR = Path(__file__).parents[2]
 
 SETTINGS_FILES_GLOB = str(BASE_DIR / "settings_files/*.yaml")
@@ -59,6 +61,8 @@ settings = LazySettings(
     # 保持与 apiserver 项目一致
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
+# 平台 KMS 开启时，写入信封中的敏感配置，须在读取任何配置项之前完成
+settings = load_kms_workloads_settings(settings)
 
 # ---------------
 # 运行时默认配置

@@ -203,9 +203,9 @@ def save_context(conversation_id: Any, payload: dict[str, Any]) -> int:
 
     backend, config = blob_location(conversation_id, version)
     make_blob_store(backend, config).put_bytes(json.dumps(payload).encode())
-    # Checkpoint registration and retention use this same conversation lock. Taking it before
-    # publishing the row prevents a concurrent reclaim from computing its keep-set without this
-    # version and then deleting it immediately after it becomes checkpoint-referenced.
+    # Retention takes this same conversation lock. Taking it before publishing the row prevents a
+    # concurrent reclaim from computing its keep-set without this version and then deleting the
+    # row the moment it lands -- which would take away the very newest context.
     with transaction.atomic():
         _lock_conversation(conversation_id)
         archived = context_version(conversation_id)
@@ -242,8 +242,8 @@ def context_version(conversation_id: Any) -> int:
 def load_context(conversation_id: Any) -> dict[str, Any] | None:
     """Return the newest archived context document, or ``None`` when there is none.
 
-    This is the ordinary cold start, the one that has no checkpoint to pair with -- see
-    :func:`load_context_version` for the one that does.
+    This is what every cold start seeds the Runtime with, whether or not a checkpoint was
+    restored first: a checkpoint only decides which files come back, never which context.
 
     :param conversation_id: Conversation to restore.
     :return: The document a cold Runtime can be seeded with.
@@ -252,25 +252,6 @@ def load_context(conversation_id: Any) -> dict[str, Any] | None:
     row = (
         ConversationContextVersion.objects.filter(conversation_id=conversation_id).order_by("-context_version").first()
     )
-    return None if row is None else _read_document(row.get_blob_store())
-
-
-def load_context_version(conversation_id: Any, version: int) -> dict[str, Any] | None:
-    """Return one specific archived context version, or ``None`` when it is no longer kept.
-
-    What a checkpoint restore reads. It must be this version and not the newest one: the point
-    of a checkpoint is that the files and the conversation describe the same moment, and the
-    newest context may well have moved on past the commit being restored.
-
-    :param conversation_id: Conversation to restore.
-    :param version: The exact version wanted.
-    :return: The document, or ``None`` if that version has been reclaimed.
-    :raises ConversationStateError: If the row exists but its document cannot be read back.
-    """
-    row = ConversationContextVersion.objects.filter(
-        conversation_id=conversation_id,
-        context_version=version,
-    ).first()
     return None if row is None else _read_document(row.get_blob_store())
 
 
@@ -311,8 +292,8 @@ def clear(conversation_id: Any) -> None:
     ConversationMessage.objects.filter(conversation_id=conversation_id).delete()
     ConversationUiEvent.objects.filter(conversation_id=conversation_id).delete()
     ConversationUserMessage.objects.filter(conversation_id=conversation_id).delete()
-    # Checkpoints go too: they name context versions that are about to stop existing, and a
-    # checkpoint whose context cannot be read is exactly the half-state cold start must not see.
+    # Checkpoints go too: they are this conversation's record of what it pushed. The commits
+    # themselves stay on the Project's branch, which is where a cold start takes its files from.
     ConversationCheckpoint.objects.filter(conversation_id=conversation_id).delete()
     ConversationContextVersion.objects.filter(conversation_id=conversation_id).delete()
 
@@ -324,9 +305,7 @@ aappend_records = sync_to_async(append_records)
 aread_ui_events = sync_to_async(read_ui_events)
 asave_context = sync_to_async(save_context)
 aload_context = sync_to_async(load_context)
-aload_context_version = sync_to_async(load_context_version)
 alast_seq = sync_to_async(last_seq)
-acontext_version = sync_to_async(context_version)
 
 
 def _lock_conversation(conversation_id: Any) -> None:

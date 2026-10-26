@@ -184,6 +184,21 @@
             v-copy="appSecret"
           />
         </p>
+        <!-- 开启 KMS 的应用：BKPAAS_APP_SECRET 不再以明文注入环境变量，需进入容器查看 -->
+        <div
+          v-if="kmsEnabled"
+          class="kms-secret-tips"
+        >
+          <p>{{ $t('应用已开启 KMS，BKPAAS_APP_SECRET 由 KMS 托管。如需确认容器内当前使用的密钥，请进入容器执行：') }}</p>
+          <div class="kms-command-box">
+            <code class="kms-command">{{ kmsViewSecretCommand }}</code>
+            <span
+              class="paasng-icon paasng-general-copy icon-color copy"
+              style="cursor: pointer"
+              v-copy="kmsViewSecretCommand"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- 更换默认密钥按钮 -->
@@ -492,6 +507,10 @@ export default {
       changeDefaultVisible: false,
       curSelectedDefaultSecret: '',
       deployedSecretList: [],
+      // 应用是否开启 KMS 托管
+      kmsEnabled: false,
+      // 框架启动时已把 KMS 信封解密到进程环境变量，直接在容器中读取即可
+      kmsViewSecretCommand: 'python manage.py shell -c "import os; print(os.environ[\'BKPAAS_APP_SECRET\'])"',
       optionSecretList: [],
       curViewSecret: {},
       isTableLoading: false,
@@ -833,6 +852,7 @@ export default {
         const res = await this.$store.dispatch('authenticationInfo/getDefaultSecret', { appCode: this.appCode });
         this.defaultSecret = res.app_secret_in_config_var;
         this.curSelectedDefaultSecret = res.app_secret_in_config_var;
+        this.kmsEnabled = !!res.kms_enabled;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -844,8 +864,10 @@ export default {
     async getDeployedSecret() {
       try {
         const res = await this.$store.dispatch('authenticationInfo/getDeployedSecret', { appCode: this.appCode });
-        this.deployedSecretList = res;
-        const formatRes = res.reduce((arr, obj) => {
+        // KMS 托管的环境读不到密钥，不参与「是否与默认密钥一致」的判断
+        const readableRes = res.filter((item) => !item.kms_managed);
+        this.deployedSecretList = readableRes;
+        const formatRes = readableRes.reduce((arr, obj) => {
           const foundIndex = arr.findIndex((item) => item.module === obj.module);
           if (foundIndex !== -1) {
             arr[foundIndex].data.unshift(obj);
@@ -1196,6 +1218,28 @@ export default {
       font-size: 12px;
       margin-left: 16px;
       line-height: 22px;
+    }
+  }
+  .kms-secret-tips {
+    margin-top: 8px;
+    color: #63656e;
+    .kms-command-box {
+      display: flex;
+      align-items: flex-start;
+      margin-top: 4px;
+      padding: 6px 12px;
+      background: #fff;
+      border: 1px solid #dcdee5;
+      border-radius: 2px;
+      .kms-command {
+        flex: 1;
+        margin-right: 12px;
+        font-size: 12px;
+        line-height: 20px;
+        color: #313238;
+        word-break: break-all;
+        white-space: pre-wrap;
+      }
     }
   }
   /deep/ .deployed-secret {

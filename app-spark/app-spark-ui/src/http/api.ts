@@ -64,6 +64,11 @@ export const createProject = (payload: ProjectCreateRequest): Promise<ProjectRes
   http.post(`${apiPrefix}/projects/`, payload)
 );
 
+/** 删除项目。无请求体；成功后列表不再返回该项目。失败文案由确认框展示。 */
+export const deleteProject = (projectId: string): Promise<void> => (
+  http.delete(`${apiPrefix}/projects/${projectId}/`, {}, { globalError: false })
+);
+
 /**
  * 项目的 Git 仓库状态，其中 `archive_url` 是源码下载地址。项目尚未建仓时 404。
  */
@@ -93,8 +98,9 @@ export const getConversation = (
 /**
  * 这个会话的工作区应用该去哪儿打开，以及此刻打不打得开。
  *
- * 会话一创建就可以问。`origin` 末尾带斜杠，直接当作 iframe 的 src；能不能看只看
- * `dev_server_status`。Runtime 联系不上时仍是 200，地址照常返回，所以这里关掉全局报错：
+ * 会话一创建就可以问。`origin` 末尾带斜杠；`direct` 为 false 时先折回当前页面再当 iframe 的
+ * src，为 true 时原样使用。能不能看只看 `dev_server_status`。Runtime 联系不上时仍是 200，
+ * 地址照常返回，所以这里关掉全局报错：
  * 预览面板会每 5 秒打一次，一句 toast 不该跟着响。
  */
 export const getConversationPreview = (

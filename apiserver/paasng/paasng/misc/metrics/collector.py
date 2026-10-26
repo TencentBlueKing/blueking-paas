@@ -23,6 +23,7 @@ from typing_extensions import Protocol
 from paasng.misc.metrics.basic_services.blob_store import BlobStoreAvailableMetric
 from paasng.misc.metrics.basic_services.mysql import MySQLAvailableMetric
 from paasng.misc.metrics.basic_services.redis import RedisAvailableMetric
+from paasng.misc.metrics.sandbox import E2BSandboxCountMetric, SandboxCountMetric
 from paasng.misc.metrics.workloads.deployment import UnavailableDeploymentTotalMetric
 
 
@@ -73,3 +74,6 @@ cb_metric_collector.add(MySQLAvailableMetric)
 cb_metric_collector.add(RedisAvailableMetric)
 # 添加原 workloads metric 指标
 cb_metric_collector.add(UnavailableDeploymentTotalMetric)
+# 添加沙箱数量 metric 指标
+cb_metric_collector.add(SandboxCountMetric)
+cb_metric_collector.add(E2BSandboxCountMetric)

@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import { Plus } from 'bkui-vue/lib/icon';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
 import { useProjectStore } from '@/store/project';

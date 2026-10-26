@@ -8,12 +8,13 @@ import (
 
 // Identity 是已认证请求的身份，写入审计日志
 type Identity struct {
-	// Subject 为 BuildProcess ID
+	// Subject 为构建 ID：应用构建为 BuildProcess ID，沙箱镜像构建为 ImageBuildRecord ID
 	Subject string
 	// TokenID 为构建 token 的 jti
 	TokenID string
 	AppCode string
-	Module  string
+	// Module 仅应用构建携带，沙箱镜像构建为空
+	Module string
 }
 
 // Principal 是鉴权钩子的输出，原样交给授权钩子

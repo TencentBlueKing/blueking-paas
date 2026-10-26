@@ -100,7 +100,16 @@ def create_runtime_app(
                     await runtime.replicator.aclose()
                 await asyncio.to_thread(runtime.lifecycle.shutdown)
 
-    app = FastAPI(title="App-Spark Agent Runtime", version=VERSION, lifespan=lifespan)
+    # 沙箱允许公开流量后，换个端口就能打到这里。交互文档和 OpenAPI 不校验 Bearer，
+    # 会把接口结构暴露出去，所以关掉。业务路由仍各自校验 Runtime token。
+    app = FastAPI(
+        title="App-Spark Agent Runtime",
+        version=VERSION,
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
     # The views read the runtime back through a dependency, which is what keeps them plain
     # module-level functions instead of closures over this factory.
     attach_runtime(app, runtime)
@@ -130,17 +139,14 @@ def create_app_from_settings() -> FastAPI:
 def _checkpoint_reporter(control_plane: ControlPlaneClient) -> CheckpointReporter:
     """Build the callback that tells the control plane about a saved checkpoint.
 
-    The version travelling in the checkpoint was taken at commit time, not read here. A
-    checkpoint whose files and whose conversation describe different moments is not a restore
-    point, it is a way to resume into a workspace that does not match what the model remembers --
-    and by the time a push lands, the conversation may have moved on to the next turn.
-
-    A ``restorable`` of ``False`` is not an error. It means the control plane has the code but
-    not yet the matching context, which it resolves for itself once the context arrives.
+    The version travelling in the checkpoint was taken at commit time, not read here: by the
+    time a push lands, the conversation may have moved on to the next turn, and the record is
+    meant to say which turn wrote these files. The control plane does not pair it with a context
+    version on restore -- files follow the Project, the conversation is always the newest one.
     """
 
     async def report(checkpoint: Checkpoint) -> None:
-        restorable = await control_plane.put_checkpoint(
+        await control_plane.put_checkpoint(
             {
                 "commit": checkpoint.commit,
                 "tag": checkpoint.tag,
@@ -149,12 +155,6 @@ def _checkpoint_reporter(control_plane: ControlPlaneClient) -> CheckpointReporte
                 "completed": checkpoint.completed,
             }
         )
-        if not restorable:
-            logger.info(
-                "the control plane took checkpoint %s but does not hold context version %d yet",
-                checkpoint.commit,
-                checkpoint.context_version,
-            )
 
     return report
 

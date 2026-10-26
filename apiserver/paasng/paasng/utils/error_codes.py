@@ -263,7 +263,8 @@ class ErrorCodes:
     AGENT_SANDBOX_VOLUME_NOT_FOUND = ErrorCode(_("Volume 不存在"), status_code=404)
     AGENT_SANDBOX_VOLUME_ALREADY_EXISTS = ErrorCode(_("Volume 已存在"), status_code=409)
     AGENT_SANDBOX_VOLUME_CREATE_FAILED = ErrorCode(_("Volume 创建失败"))
-    AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"))
+    AGENT_SANDBOX_VOLUME_DELETE_FAILED = ErrorCode(_("Volume 删除失败"), status_code=500)
+    AGENT_SANDBOX_VOLUME_IN_USE = ErrorCode(_("Volume 仍被沙箱挂载，无法删除"), status_code=409)
     AGENT_SANDBOX_VOLUME_SHARE_LIMIT_EXCEEDED = ErrorCode(_("Volume 授权应用数量已达上限"), status_code=400)
 
     # Agent sandbox e2b compatibility
@@ -273,6 +274,7 @@ class ErrorCodes:
     AGENT_SANDBOX_E2B_API_KEY_CREATE_FAILED = ErrorCode(_("e2b API Key 签发失败"))
     AGENT_SANDBOX_E2B_NO_AVAILABLE_CLUSTER = ErrorCode(_("暂无可用的 e2b 沙箱集群"), status_code=503)
     AGENT_SANDBOX_E2B_SANDBOX_NOT_FOUND = ErrorCode(_("e2b 沙箱不存在"), status_code=404)
+    AGENT_SANDBOX_E2B_SERVICE_UNAVAILABLE = ErrorCode(_("e2b 沙箱服务暂不可用，请稍后重试"), status_code=503)
 
     CANNOT_CREATE_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("生成保留前缀授权码失败"))
     CANNOT_DELETE_USED_RESERVED_PREFIX_AUTH_CODE = ErrorCode(_("已使用的保留前缀授权码不能被删除"))

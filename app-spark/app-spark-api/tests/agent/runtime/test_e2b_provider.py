@@ -49,6 +49,7 @@ from app_spark_api.agent.runtime.entities import (
 )
 from app_spark_api.agent.runtime.exceptions import (
     AgentProvisionError,
+    AgentResourceDeletionError,
     AgentWorkspaceBusyError,
     ModelCredentialMissingError,
 )
@@ -173,6 +174,8 @@ class FakeSandbox:
         self.connection_config = SimpleNamespace(sandbox_headers={"X-Access-Token": f"envd-{sandbox_id}"})
         self.killed = False
         self.info_error: Exception | None = None
+        # What envd's /health answers with instead of a verdict, e.g. a gateway's 401.
+        self.running_error: Exception | None = None
         self.kill_error: Exception | None = None
         self.events: list[str] = []
         self.commands = FakeCommands(self.events)
@@ -185,6 +188,8 @@ class FakeSandbox:
         return SimpleNamespace(sandbox_domain=self.sandbox_domain, envd_version="0.2.0")
 
     async def is_running(self) -> bool:
+        if self.running_error is not None:
+            raise self.running_error
         return not self.killed
 
     async def kill(self, **_opts: object) -> None:
@@ -208,6 +213,9 @@ class FakeE2B:
         self.create_started = asyncio.Event()
         self.create_error: Exception | None = None
         self.connect_error: Exception | None = None
+        # The control plane's own view of one sandbox, asked by ID rather than through envd.
+        self.info_calls: list[str] = []
+        self.info_error: Exception | None = None
         # Runs inside `create` before it answers, which is where a race or a failure is staged.
         self.on_create: Callable[[int], Awaitable[None]] | None = None
         # Applied to each sandbox before it is handed back, to stage a failure after creation.
@@ -253,12 +261,22 @@ class FakeE2B:
         except KeyError:
             raise NotFoundException(sandbox_id) from None
 
+    async def get_info(self, sandbox_id: str, **_opts: object) -> SimpleNamespace:
+        self.info_calls.append(sandbox_id)
+        if self.info_error is not None:
+            raise self.info_error
+        if sandbox_id not in self.sandboxes:
+            raise NotFoundException(f"Sandbox {sandbox_id} not found")
+        return SimpleNamespace(sandbox_id=sandbox_id)
+
 
 @pytest.fixture
 def e2b(monkeypatch) -> FakeE2B:
     fake = FakeE2B()
     monkeypatch.setattr(AsyncSandbox, "create", staticmethod(fake.create))
     monkeypatch.setattr(AsyncSandbox, "connect", staticmethod(fake.connect))
+    # Only the control-plane form, called on the class; a bound sandbox's own get_info is the fake's.
+    monkeypatch.setattr(AsyncSandbox, "get_info", staticmethod(fake.get_info))
     monkeypatch.setattr(AsyncSandbox, "set_timeout", staticmethod(fake.set_timeout))
     return fake
 
@@ -526,8 +544,73 @@ async def test_a_control_plane_hiccup_while_looking_does_not_release_the_sandbox
     assert (record.active_conversation_id, record.stop_reason) == (conversation_id, "")
 
 
+async def test_a_reclaimed_sandbox_whose_host_answers_401_is_released_and_replaced(e2b, provider, monkeypatch):
+    """自建 E2B 的网关对早已回收的沙箱回 401：控制面确认它不在了，就按到期释放，下一轮换新沙箱。
+
+    走的是真实的重建路径：控制面忘了它，connect 回 404，只能按库里的元数据重建 SDK 对象再问 envd。
+    """
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    del e2b.sandboxes["sbx-1"]
+
+    async def unauthorized(_self: AsyncSandbox, **_opts: object) -> bool:
+        raise AuthenticationException("unauthorized")
+
+    monkeypatch.setattr(AsyncSandbox, "is_running", unauthorized)
+
+    # 只看不放：状态轮询拿到“没有在跑的沙箱”，记录留给下一个要用它的请求去释放。
+    assert await provider.peek(conversation_id) is None
+    record = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
+    assert (record.active_conversation_id, record.stop_reason) == (conversation_id, "")
+
+    replacement = await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    await record.arefresh_from_db()
+    assert (record.active_project_id, record.active_conversation_id, record.stop_reason) == (None, None, "expired")
+    assert "sbx-2" in replacement.base_url
+    assert e2b.info_calls == ["sbx-1", "sbx-1"]
+
+
+@pytest.mark.parametrize(
+    "stage",
+    [
+        pytest.param(lambda e2b: None, id="control-plane-still-knows-it"),
+        pytest.param(
+            lambda e2b: setattr(e2b, "info_error", SandboxException("control plane hiccup")),
+            id="control-plane-cannot-answer",
+        ),
+    ],
+)
+async def test_a_401_is_not_taken_for_expiry_unless_the_control_plane_confirms_it(e2b, provider, stage):
+    """401 本身说明不了沙箱没了；控制面没确认不存在，就照旧报错，不能放掉一个可能还活着的沙箱。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    e2b.sandboxes["sbx-1"].running_error = AuthenticationException("unauthorized")
+    stage(e2b)
+
+    with pytest.raises(AgentProvisionError, match="unauthorized"):
+        await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    record = await E2BSandboxRecord.objects.aget(sandbox_id="sbx-1")
+    assert (record.active_conversation_id, record.stop_reason) == (conversation_id, "")
+    assert e2b.create_calls == 1
+
+
+async def test_the_exposed_host_is_what_the_browser_opens(e2b, provider):
+    """远程沙箱的预览地址就是 get_host，标成 public 交给浏览器直接打开。"""
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+
+    target = await provider.preview_target(conversation_id)
+
+    record = await E2BSandboxRecord.objects.aget(conversation_id=conversation_id)
+    assert target is not None
+    assert target.public
+    assert target.base_url == f"https://{CONFIG.preview_port}-{record.sandbox_id}.{record.sandbox_domain}"
+
+
 async def test_the_preview_target_does_not_ask_e2b(e2b, provider):
-    """预览页的每个静态资源都会走这里。集成测试对得上真实地址，这里只证明这一步不再请求 E2B。"""
+    """查预览地址不再请求 E2B。浏览器直连时静态资源不经过这里，集成测试对得上真实地址。"""
     project_id, conversation_id = ids()
     await provider.ensure(project_id=project_id, conversation_id=conversation_id)
     e2b.connect_calls = 0
@@ -586,8 +669,10 @@ async def test_the_agent_is_started_with_its_whole_configuration(e2b, provider):
         " >> /tmp/app-spark-agent.log 2>&1"
     )
     # Credentials go to this one process through envd, never through the sandbox's creation.
+    # 暴露域名要给浏览器直接打开，创建时声明不带令牌也能访问。
     (create_opts,) = e2b.create_opts
     assert not {"envs", "env_vars", "metadata"} & set(create_opts)
+    assert create_opts["network"] == {"allow_public_traffic": True}
     assert envs[f"{ENV_PREFIX}PORT"] == str(CONFIG.runtime_port)
     assert envs[f"{ENV_PREFIX}APP_PORT"] == str(CONFIG.preview_port)
     assert envs[f"{ENV_PREFIX}WORKSPACE"] == "/data/workspace"
@@ -999,6 +1084,37 @@ async def test_terminating_lets_the_agent_push_before_the_sandbox_goes(e2b, prov
     assert stop["cmd"].startswith(f"kill -TERM {record.agent_pid} 2>/dev/null || exit 0;")
     await record.arefresh_from_db()
     assert (record.active_conversation_id, record.stop_reason) == (None, "terminated")
+
+
+async def test_deleting_project_resources_stops_active_sandbox_and_removes_history(e2b, provider):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    await provider.terminate(conversation_id)
+    active_conversation_id = str(uuid4())
+    await provider.ensure(project_id=project_id, conversation_id=active_conversation_id)
+
+    await provider.delete_project_resources(project_id, [conversation_id, active_conversation_id])
+
+    assert e2b.sandboxes["sbx-2"].events == ["stop", "kill"]
+    assert not await E2BSandboxRecord.objects.filter(project_id=project_id).aexists()
+
+
+async def test_deleting_missing_project_resources_is_idempotent(provider):
+    await provider.delete_project_resources(str(uuid4()), [str(uuid4())])
+
+
+async def test_failed_project_sandbox_stop_preserves_credential_record(e2b, provider):
+    project_id, conversation_id = ids()
+    await provider.ensure(project_id=project_id, conversation_id=conversation_id)
+    e2b.sandboxes["sbx-1"].kill_error = SandboxException("kill refused")
+
+    with pytest.raises(AgentResourceDeletionError) as raised:
+        await provider.delete_project_resources(project_id, [conversation_id])
+
+    assert raised.value.category == "sandbox"
+    record = await E2BSandboxRecord.objects.aget(project_id=project_id)
+    assert record.active_conversation_id == record.conversation_id
+    assert record.runtime_token
 
 
 async def test_an_agent_that_ignores_sigterm_is_killed_after_the_grace_period(e2b, provider, monkeypatch, caplog):

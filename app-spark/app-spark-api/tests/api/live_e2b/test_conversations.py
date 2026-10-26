@@ -24,6 +24,7 @@ from collections.abc import AsyncIterator
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+import httpx2
 import pytest
 
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
@@ -90,8 +91,8 @@ async def test_chat_turn_runs_through_e2b_provider(aapi_client, project, e2b_pro
     logger.info("Both turns finished and the sandbox workspace contains both notes")
 
 
-async def test_preview_origin_proxies_to_fixed_e2b_port(aapi_client, project, e2b_provider):
-    """The API's preview URL reaches the sandbox app through its fixed port host."""
+async def test_preview_origin_is_the_public_e2b_port_host(aapi_client, project, e2b_provider):
+    """The API hands out the sandbox's fixed port host, and it answers without any token."""
     state = await _create_conversation(aapi_client)
     sandbox = await e2b_provider.get_sandbox(state["conversation_id"])
     assert sandbox is not None
@@ -111,17 +112,19 @@ async def test_preview_origin_proxies_to_fixed_e2b_port(aapi_client, project, e2
     logger.info("Reading API preview origin for sandbox %s", sandbox.sandbox_id)
     metadata = await aapi_client.get(f"{CONVERSATIONS_URL}{state['number']}/preview/")
     assert metadata.status_code == HTTPStatus.OK, metadata.content
-    origin = json.loads(metadata.content)["origin"]
-    assert origin.endswith(f"{CONVERSATIONS_URL}{state['number']}/preview/app/")
-    assert sandbox.get_host(e2b_provider.config.preview_port) not in origin
+    body = json.loads(metadata.content)
+    host = sandbox.get_host(e2b_provider.config.preview_port)
+    assert body["origin"] == f"{e2b_provider.config.port_scheme}://{host}/"
+    assert body["direct"] is True
 
-    preview_path = f"{CONVERSATIONS_URL}{state['number']}/preview/app/"
-    for attempt in range(10):
-        response = await aapi_client.get(preview_path)
-        if response.status_code == HTTPStatus.OK:
-            break
-        if attempt == 9:
-            pytest.fail(f"Preview app never became reachable: {response.status_code}")
-        await asyncio.sleep(1)
-    assert PREVIEW_MARKER.encode() in await _stream_body(response)
-    logger.info("Preview URL proxied the sandbox application successfully")
+    # 浏览器直连时不带任何沙箱令牌，这里也只发一个裸请求，证明沙箱确实接受公开流量。
+    async with httpx2.AsyncClient(timeout=10) as client:
+        for attempt in range(10):
+            response = await client.get(body["origin"])
+            if response.status_code == HTTPStatus.OK:
+                break
+            if attempt == 9:
+                pytest.fail(f"Preview app never became reachable: {response.status_code}")
+            await asyncio.sleep(1)
+    assert PREVIEW_MARKER in response.text
+    logger.info("Preview host served the sandbox application without a token")

@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 from attr import define, field
 from django.utils.encoding import force_str
@@ -26,6 +26,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
+from paas_wl.workloads.release_controller.entities import SecretFileMount
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
 from paasng.platform.engine.utils.output import DeployStream, Style
 
@@ -44,6 +45,7 @@ class AppCommandExecutor:
     command: "Command"
     stream: "DeployStream"
     extra_envs: Dict = field(factory=dict)
+    secret_mounts: List[SecretFileMount] = field(factory=list)
 
     kmodel: CommandKModel = field(init=False)
     command_handler: CommandHandler = field(init=False)
@@ -57,7 +59,9 @@ class AppCommandExecutor:
         if self.command.status != CommandStatus.PENDING.value:
             raise CommandRerunError("Can't re-run command, please create another one.")
 
-        self.kmodel = CommandKModel.from_db_obj(self.command, extra_envs=self.extra_envs)
+        self.kmodel = CommandKModel.from_db_obj(
+            self.command, extra_envs=self.extra_envs, secret_mounts=self.secret_mounts
+        )
         self.command_handler = CommandHandler.new_by_app(self.command.app)
         self.step_name = CommandType(self.command.type).get_step_name()
 

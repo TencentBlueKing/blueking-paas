@@ -21,8 +21,9 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.utils.encoding import force_str
 
-from paas_wl.bk_app.agent_sandbox.image_credential import generate_dockerconfig_b64
+from paas_wl.bk_app.agent_sandbox.image_credential import generate_dockerconfig_b64, make_dockerconfig_b64
 from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
@@ -30,8 +31,15 @@ from paas_wl.infras.resources.base.kres import KNamespace, KPod
 from paas_wl.utils.constants import PodPhase
 from paas_wl.utils.text import b64encode
 from paasng.platform.agent_sandbox.image_build.constants import ImageBuildStatus
+from paasng.platform.agent_sandbox.image_build.registry_proxy import (
+    get_image_build_registry_proxy,
+    image_build_repository,
+    issue_image_build_token,
+)
 from paasng.platform.agent_sandbox.models import ImageBuildRecord
+from paasng.platform.engine.configurations.build_token import BuildTokenUnavailable
 from paasng.platform.engine.configurations.image import kaniko_cache_repository
+from paasng.platform.engine.configurations.registry_proxy import BUILD_TOKEN_USERNAME, BuildRegistryProxy
 from paasng.utils.blobstore import make_blob_store
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
@@ -57,7 +65,8 @@ class KanikoBuildExecutor:
         """
         self.build = build
 
-        client = self._make_client()
+        self.cluster = self._allocate_cluster()
+        client = get_client_by_cluster_name(self.cluster.name)
         self.kns = KNamespace(client)
         self.kpod = KPod(client)
 
@@ -79,6 +88,10 @@ class KanikoBuildExecutor:
 
         try:
             self._create_build_pod()
+        except BuildTokenUnavailable as e:
+            # 镜像代理开关已开启但无法经代理构建，不得回退为注入沙箱仓库的真实凭证
+            logger.warning("Image credential unavailable for image build %s: %s", self.build.uuid, e.reason)
+            self.build.mark_as_completed(ImageBuildStatus.FAILED, build_logs=str(e))
         except Exception:
             logger.exception("Failed to create build pod for image build %s", self.build.uuid)
             self.build.mark_as_completed(ImageBuildStatus.FAILED, build_logs="Failed to create build pod")
@@ -88,10 +101,9 @@ class KanikoBuildExecutor:
         finally:
             self._cleanup_pod()
 
-    def _make_client(self):
-        """Allocate the sandbox cluster and return a Kubernetes API client."""
-        cluster = ClusterAllocator(AllocationContext.create_for_agent_sandbox(self.build.tenant_id)).get_default()
-        return get_client_by_cluster_name(cluster.name)
+    def _allocate_cluster(self) -> Cluster:
+        """Allocate the sandbox cluster to run the build pod."""
+        return ClusterAllocator(AllocationContext.create_for_agent_sandbox(self.build.tenant_id)).get_default()
 
     def _ensure_namespace(self):
         """Ensure the build namespace exists."""
@@ -99,28 +111,58 @@ class KanikoBuildExecutor:
         self.kns.wait_for_default_sa(self.namespace, timeout=15)
 
     def _build_env_vars(self) -> list[dict]:
-        """Build the environment variables for the Kaniko Pod."""
-        output_image_info = parse_image(self.build.output_image)
+        """Build the environment variables for the Kaniko Pod.
 
+        :raises BuildTokenUnavailable: 沙箱集群已开启镜像代理，但无法经代理构建
+        """
         env_vars = {
             "SOURCE_GET_URL": self._generate_source_get_url(),
-            "OUTPUT_IMAGE": self.build.output_image,
             "DOCKERFILE_PATH": self.build.dockerfile_path,
-            "CACHE_REPO": kaniko_cache_repository(f"{output_image_info.domain}/{output_image_info.name}"),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
-            "DOCKER_CONFIG_JSON": generate_dockerconfig_b64(),
-            "SKIP_TLS_VERIFY_REGISTRIES": (
-                settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST
-                if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY
-                else ""
-            ),
         }
+
+        # 经镜像代理构建时，沙箱仓库的真实凭证不得进入构建环境
+        if registry_proxy := get_image_build_registry_proxy(self.cluster.annotations):
+            env_vars.update(self._build_proxy_env_vars(registry_proxy))
+        else:
+            output_image_info = parse_image(self.build.output_image)
+            env_vars.update(
+                {
+                    "OUTPUT_IMAGE": self.build.output_image,
+                    "CACHE_REPO": kaniko_cache_repository(f"{output_image_info.domain}/{output_image_info.name}"),
+                    "DOCKER_CONFIG_JSON": generate_dockerconfig_b64(),
+                    "SKIP_TLS_VERIFY_REGISTRIES": (
+                        settings.AGENT_SANDBOX_DOCKER_REGISTRY_HOST
+                        if settings.AGENT_SANDBOX_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+                        else ""
+                    ),
+                }
+            )
 
         if self.build.docker_build_args:
             # 避免 value 有 "," 导致字符分割时异常, 将内容进行 base64 编码
             env_vars["BUILD_ARG"] = ",".join([b64encode(f"{k}={v}") for k, v in self.build.docker_build_args.items()])
 
         return [{"name": k, "value": str(v)} for k, v in env_vars.items()]
+
+    def _build_proxy_env_vars(self, registry_proxy: BuildRegistryProxy) -> dict[str, str]:
+        """生成经镜像代理构建时需要改写的环境变量：产物与缓存经代理推送，沙箱仓库的 base image
+        经 `--registry-map` 从代理拉取，构建容器只持有构建 token
+
+        :raises BuildTokenUnavailable: 无法签发构建 token
+        """
+        token = issue_image_build_token(self.build, self.cluster.name, ttl=_DEFAULT_BUILD_TIMEOUT)
+        _, repository = image_build_repository(self.build)
+        return {
+            "OUTPUT_IMAGE": registry_proxy.rewrite(self.build.output_image),
+            "CACHE_REPO": kaniko_cache_repository(registry_proxy.rewrite(repository)),
+            "DOCKER_CONFIG_JSON": make_dockerconfig_b64(registry_proxy.address, BUILD_TOKEN_USERNAME, token),
+            # 只映射沙箱仓库主机，其他主机的镜像仍直连
+            "REGISTRY_MAP": registry_proxy.registry_map,
+            # 代理失败时不得回退直连沙箱仓库
+            "SKIP_DEFAULT_REGISTRY_FALLBACK": "true",
+            "SKIP_TLS_VERIFY_REGISTRIES": registry_proxy.address if registry_proxy.skip_tls_verify else "",
+        }
 
     def _generate_source_get_url(self) -> str:
         """Generate a presigned download URL for the prepared source tarball."""

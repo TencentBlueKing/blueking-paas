@@ -359,3 +359,20 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
 
         return self._response_with_serializer(serializers.ListAppRequestLogsOutputSLZ, data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.ListAppAlarmRecordsInputSLZ,
+        responses={200: serializers.ListAppAlarmRecordsOutputSLZ},
+        tags=["CloudAPIV2"],
+    )
+    def list_app_alarm_records(self, request, *args, **kwargs):
+        """查询应用维度告警记录"""
+        validated_data = self._validate(serializers.ListAppAlarmRecordsInputSLZ, data=request.query_params)
+
+        app, tenant_id = self._get_app_and_tenant()
+        try:
+            data = self._get_client(tenant_id, request).list_app_alarm_records(app_code=app.code, **validated_data)
+        except ApiGatewayServiceError as e:
+            raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
+
+        return self._response_with_serializer(serializers.ListAppAlarmRecordsOutputSLZ, data)

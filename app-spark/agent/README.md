@@ -23,7 +23,7 @@ uv sync
 
 | 变量 | 必需 | 说明 |
 |------|------|------|
-| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 所有 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面） |
+| `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 业务 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面）。交互文档和 OpenAPI 不提供 |
 | `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` | 走 bkaidev 时是 | 用户态 access_token。出站只放进 `X-Bkapi-Authorization`。不参与官网直连 |
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 走官网直连时是 | 和 `MODEL` 的 `<provider>:<model>` 一起走官网 Bearer。有任一网关项时不拿它补网关 |
 | `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
@@ -116,12 +116,12 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
 运行的 `contextVersion` 是 `0`。
 
-`/log`、`/ui-events`、`GET/PUT /context` 同样需要 Bearer。
+`/log`、`/ui-events`、`GET/PUT /context`、`PUT /cursors` 同样需要 Bearer。
 
 以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标、运行标志，以及
 `pushed_*` 复制游标与 `replication_pending`（都只在配了控制面时才有意义），`/log` 与
 `/ui-events` 按游标增量读取两条日志，`/context` 导出当前上下文（也可向空 Runtime 注入冷会话
-上下文并播种 seq）。
+上下文并播种 seq），`PUT /cursors` 只播种 seq、不注入上下文。
 
 ## 拉起用户应用
 
@@ -262,7 +262,14 @@ e2b 的启动命令另外把 stdout/stderr 重定向到 `agent_log_path`（默�
 - **flush 判断的是控制面是否真正追平**，不是单次调用有没有报错。发现缺口时会继续补齐并重新
   触发后台任务。
 - **冷启动必须播种 seq**：`PUT /context?log_seq=40&ui_event_seq=55` 会让新记录从 41 和 56
-  继续，避免与控制面已有记录撞号。
+  继续，避免与控制面已有记录撞号。控制面的 ingest 把撞号当成重发，静默丢掉，所以漏播不会报错。
+- **没有上下文也要播种**：日志先于上下文推送，第一轮跑到一半丢掉的 Runtime 会让控制面只有
+  记录、没有任何一版上下文。这时用 `PUT /cursors?log_seq=40&ui_event_seq=55`，两个参数都必填。
+  它和 `PUT /context` 一样只接受空 Runtime：已持有会话或任一通道已有记录时回 409。
+- **`PUT /context` 失败会撤回播种**：游标和 `pushed_context_version` 先于上下文写盘，上下文
+  没写上（写盘出错、与已有会话冲突）时会回滚到请求之前，`/health` 仍报全 0，控制面可以原样
+  重试。控制面把非 0 游标当成“Runtime 已有自己的历史”，不回滚的话它不会再注入上下文。进程
+  在两次写盘之间退出时没有回滚，这个缺口仍在。
 
 已知缺口：旧 Runtime 的 `run_id` 不会在空状态目录中参与重放检测，控制面应始终为每轮生成新的
 UUID。workspace 源码的持久化见下一节。
@@ -388,10 +395,10 @@ push 成功之后，这一轮的提交会被打上一个**不可移动的远端 
 上报的内容是 `commit` + `tag` + `run_id` + `context_version` + `completed`。其中
 `context_version` 取自
 **做 commit 的那一刻**，不是 push 落地的那一刻：push 可能几秒后才回来，那时会话可能已经是下
-一轮了，拿那个版本配这一轮的文件就是错的配对。
+一轮了，拿那个版本记这一轮的文件就记错了。它只是「这些文件是哪一轮写的」的记录：控制面冷启动
+时不拿它去配对上下文——文件跟 Project 走，上下文总是注入最新的那一版。
 
-控制面的回答 `restorable=false` **不是错误**，它表示「代码到了、配套上下文还没到」这个正常的
-中间态；上下文到了之后控制面自己会认。相对地，只要检查点还没上报成功，这一轮就仍然算
+控制面收下检查点，它就是这个会话冷启动时的恢复目标。只要检查点还没上报成功，这一轮就仍然算
 `outstanding`——「已保存」的含义是**可恢复**，不只是**已落盘**。上报失败时重试的是**同一个检
 查点**，绝不重新 commit 一次：代码已经在远端了，再提交只会多出一个内容相同的 SHA。
 

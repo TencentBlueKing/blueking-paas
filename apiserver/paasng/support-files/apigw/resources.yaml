@@ -741,6 +741,29 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get the AI Agent application's info, deploy mode and exposed urls with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/:
+    get:
+      operationId: sys_get_service_instance_by_module
+      description: 应用态查询 AI Agent 应用模块绑定的增强服务实例（含 admin_url，仅供 AIDEV 使用）
+      tags:
+      - 增强服务
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the add-on service instances bound to an AI Agent application module with system API credentials
   /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/list/:
     get:
       operationId: sys_list_processes

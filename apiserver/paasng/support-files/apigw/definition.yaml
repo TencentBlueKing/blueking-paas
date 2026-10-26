@@ -49,7 +49,6 @@ stages:
         protocol_type: "streamable_http"
         category_names:
           - "Official"
-          - "Security"
       - name: "deploy-with-module"
         title: "开发者中心(PaaS 平台)模块部署"
         description: "创建应用与模块，配置环境变量和增强服务，部署指定模块，并查询部署结果、日志与进程状态。"

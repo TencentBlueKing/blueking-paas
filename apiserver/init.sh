@@ -82,6 +82,14 @@ ensure-apigw() {
     # 获取网关公钥
     python manage.py fetch_apigw_public_key \
     --api-name "${api_name}"
+
+    # 同步环境 MCP Server。必须在发布之后执行，否则没有已生效的资源版本；
+    # MCP 为增量能力，同步失败不应阻断初始化流程，仅输出告警
+    if ! python manage.py sync_apigw_stage_mcp_servers \
+    --api-name "${api_name}" \
+    -f support-files/apigw/definition.yaml; then
+        echo "WARNING: sync apigw stage mcp servers failed, skipped" >&2
+    fi
 }
 
 # 初始化 apt buildpack

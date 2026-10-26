@@ -35,6 +35,19 @@ paths:
       description: 获取 App 简明信息列表
       tags:
       - 应用/模块信息查询
+      parameters:
+      - in: query
+        name: app_status
+        schema:
+          type: string
+        required: false
+        description: 按应用状态过滤：not_deployed、normal、offline
+      - in: query
+        name: source_origin
+        schema:
+          type: integer
+        required: false
+        description: 按代码来源过滤，1 为授权代码库
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -293,9 +306,73 @@ paths:
   /bkapps/applications/{app_code}/modules/{module}/envs/{env}/deployments/:
     post:
       operationId: deploy_with_module
-      description: App 部署（支持多模块）
+      description: App 部署（支持多模块）。返回的 deployment_id 可用于 get_deployment_result 查询结果，也可作为 streams_history_events 的 channel_id 获取部署日志
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境，stag 或 prod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version_type
+              - version_name
+              properties:
+                version_type:
+                  type: string
+                  description: 版本类型。branch、tag、trunk、image、package
+                version_name:
+                  type: string
+                  description: 版本名称，如分支名、Tag 名或 trunk
+                revision:
+                  type: string
+                  description: 版本信息，如 git commit hash。version_type 为 image 时须为 sha256 开头的镜像 digest
+                advanced_options:
+                  type: object
+                  description: 高级部署选项
+                  properties:
+                    build_only:
+                      type: boolean
+                      description: 是否仅构建，不发布
+                    image_pull_policy:
+                      type: string
+                      description: 镜像拉取策略
+                    dev_hours_spent:
+                      type: number
+                      description: 开发时长
+                    special_tag:
+                      type: string
+                      description: 指定构建的镜像 tag
+                    build_id:
+                      type: string
+                      description: 构建产物 ID，提供时跳过构建
+                    invoke_message:
+                      type: string
+                      description: 触发信息
+                    debug_enabled:
+                      type: boolean
+                      description: 是否开启构建调试
+        required: true
+        description: ''
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -316,9 +393,34 @@ paths:
   /bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/:
     get:
       operationId: get_deployment_result
-      description: 查询部署任务结果
+      description: 查询部署任务结果，轮询本接口时请间隔至少 5 秒
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称
+      - in: path
+        name: deployment_id
+        schema:
+          type: string
+        required: true
+        description: 部署任务 ID
+      - in: query
+        name: include_ansi_codes
+        schema:
+          type: boolean
+        required: false
+        description: 是否在日志中保留 ANSI 转义序列
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -342,6 +444,43 @@ paths:
       description: 获取 App 部署历史
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: query
+        name: environment
+        schema:
+          type: string
+        required: false
+        description: 按环境过滤，stag 或 prod
+      - in: query
+        name: operator
+        schema:
+          type: string
+        required: false
+        description: 按操作人过滤
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        required: false
+        description: 每页数量，默认 12
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: false
+        description: 偏移量
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -365,6 +504,19 @@ paths:
       description: 获取部署日志流
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: channel_id
+        schema:
+          type: string
+        required: true
+        description: 部署日志流 ID，即部署接口返回的 deployment_id
+      - in: query
+        name: last_event_id
+        schema:
+          type: integer
+        required: false
+        description: 最后一个事件 ID，只返回其后的事件
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -572,6 +724,13 @@ paths:
       description: 查看应用下所有的模块
       tags:
       - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -593,6 +752,81 @@ paths:
       operationId: create_module
       description: 创建模块
       tags: []
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - source_config
+              - bkapp_spec
+              properties:
+                name:
+                  type: string
+                  description: 模块名称
+                source_config:
+                  type: object
+                  description: 源码或镜像配置
+                  properties:
+                    source_origin:
+                      type: integer
+                      description: 代码来源，默认为 1。1 为授权代码库，6 为仅托管镜像的云原生应用
+                    source_init_template:
+                      type: string
+                      description: 初始化模板名称
+                    source_control_type:
+                      type: string
+                      description: 源码控制类型
+                    source_repo_url:
+                      type: string
+                      description: 代码仓库或镜像地址。未由平台建仓时必填
+                    source_dir:
+                      type: string
+                      description: 源码目录
+                    auto_create_repo:
+                      type: boolean
+                      description: 是否由平台新建代码仓库
+                    source_repo_auth_info:
+                      type: object
+                      description: 仓库认证信息。优先使用已 OAuth 授权的代码库（source_origin=1），仅在必要时提供
+                      properties:
+                        username:
+                          type: string
+                          description: 用户名
+                        password:
+                          type: string
+                          description: 密码或访问令牌。属敏感信息，请勿在对话中明文索取或回显，优先使用 OAuth 授权代码库
+                bkapp_spec:
+                  type: object
+                  description: 应用规格
+                  required:
+                  - build_config
+                  properties:
+                    build_config:
+                      type: object
+                      description: 构建配置
+                      required:
+                      - build_method
+                      properties:
+                        build_method:
+                          type: string
+                          description: 构建方式。buildpack、dockerfile、custom_image
+                        dockerfile_path:
+                          type: string
+                          description: Dockerfile 路径，dockerfile 构建时使用
+                        image_repository:
+                          type: string
+                          description: 镜像仓库。custom_image 时必填，且须与 source_repo_url 一致
+        required: true
+        description: ''
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -616,6 +850,25 @@ paths:
       description: 查询应用模块环境部署信息
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module_name
+        schema:
+          type: string
+        required: true
+        description: 模块名称
+      - in: path
+        name: environment
+        schema:
+          type: string
+        required: true
+        description: 环境，stag 或 prod
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -754,6 +1007,25 @@ paths:
       description: 查询应用模块环境部署信息
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module_name
+        schema:
+          type: string
+        required: true
+        description: 模块名称
+      - in: path
+        name: environment
+        schema:
+          type: string
+        required: true
+        description: 环境，stag 或 prod
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -1074,6 +1346,13 @@ paths:
       description: 查看应用信息
       tags:
       - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -1240,6 +1519,79 @@ paths:
       description: 查询应用标准输出日志
       tags:
       - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: query
+        name: time_range
+        schema:
+          type: string
+        required: true
+        description: 时间范围：5m、1h、3h、6h、12h、1d、3d、7d、customized
+      - in: query
+        name: start_time
+        schema:
+          type: string
+        required: false
+        description: 开始时间，格式 %Y-%m-%d %H:%M:%S，time_range 为 customized 时必填
+      - in: query
+        name: end_time
+        schema:
+          type: string
+        required: false
+        description: 结束时间，格式 %Y-%m-%d %H:%M:%S，time_range 为 customized 时必填
+      - in: query
+        name: scroll_id
+        schema:
+          type: string
+        required: false
+        description: 滚动查询 ID，翻页时传入上一次返回的 scroll_id
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: false
+        description: 偏移量
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        required: false
+        description: 每页数量，默认 100
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 不传请求体时查询全部日志；传入请求体时 query 必填
+              required:
+              - query
+              properties:
+                query:
+                  type: object
+                  description: 日志过滤条件，无过滤时可传 {}
+                  properties:
+                    query_string:
+                      type: string
+                      description: 查询语句
+                    terms:
+                      type: object
+                      description: '多值精准匹配，如 {"process_id": ["web"]}'
+                    exclude:
+                      type: object
+                      description: terms 取反
+        required: false
+        description: ''
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: false
@@ -1263,6 +1615,31 @@ paths:
       description: 获取应用环境所有进程与实例信息
       tags:
       - 部署相关接口
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: env
+        schema:
+          type: string
+        required: true
+        description: 环境，stag 或 prod
+      - in: query
+        name: only_latest_version
+        schema:
+          type: boolean
+        required: false
+        description: 是否仅展示最后一个版本的进程
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: false
@@ -1932,6 +2309,31 @@ paths:
       description: 查看应用模块的环境变量列表
       tags:
       - 环境配置
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: query
+        name: environment_name
+        schema:
+          type: string
+        required: false
+        description: 按生效环境过滤：stag、prod、_global_
+      - in: query
+        name: order_by
+        schema:
+          type: string
+        required: false
+        description: 排序方式，默认 -created，可选 key
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -1955,6 +2357,25 @@ paths:
       description: 通过 key 查询环境变量
       tags:
       - 环境配置
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: config_var_key
+        schema:
+          type: string
+        required: true
+        description: 环境变量名，须匹配 [A-Z][A-Z0-9_]*
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -1977,6 +2398,25 @@ paths:
       description: 通过 key 创建或更新环境变量
       tags:
       - 环境配置
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: config_var_key
+        schema:
+          type: string
+        required: true
+        description: 环境变量名，须匹配 [A-Z][A-Z0-9_]*
       requestBody:
         content:
           application/json:
@@ -2021,6 +2461,81 @@ paths:
       operationId: create_cloud_native_app
       description: 创建云原生应用
       tags: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              - name
+              - source_config
+              - bkapp_spec
+              properties:
+                code:
+                  type: string
+                  description: 应用 ID
+                name:
+                  type: string
+                  description: 应用名称
+                is_plugin_app:
+                  type: boolean
+                  description: 是否为插件应用
+                source_config:
+                  type: object
+                  description: 源码或镜像配置
+                  properties:
+                    source_origin:
+                      type: integer
+                      description: 代码来源，默认为 1。1 为授权代码库，6 为仅托管镜像的云原生应用
+                    source_init_template:
+                      type: string
+                      description: 初始化模板名称
+                    source_control_type:
+                      type: string
+                      description: 源码控制类型
+                    source_repo_url:
+                      type: string
+                      description: 代码仓库或镜像地址。未由平台建仓时必填
+                    source_dir:
+                      type: string
+                      description: 源码目录
+                    auto_create_repo:
+                      type: boolean
+                      description: 是否由平台新建代码仓库
+                    source_repo_auth_info:
+                      type: object
+                      description: 仓库认证信息。优先使用已 OAuth 授权的代码库（source_origin=1），仅在必要时提供
+                      properties:
+                        username:
+                          type: string
+                          description: 用户名
+                        password:
+                          type: string
+                          description: 密码或访问令牌。属敏感信息，请勿在对话中明文索取或回显，优先使用 OAuth 授权代码库
+                bkapp_spec:
+                  type: object
+                  description: 应用规格
+                  required:
+                  - build_config
+                  properties:
+                    build_config:
+                      type: object
+                      description: 构建配置
+                      required:
+                      - build_method
+                      properties:
+                        build_method:
+                          type: string
+                          description: 构建方式。buildpack、dockerfile、custom_image
+                        dockerfile_path:
+                          type: string
+                          description: Dockerfile 路径，dockerfile 构建时使用
+                        image_repository:
+                          type: string
+                          description: 镜像仓库。custom_image 时必填，且须与 source_repo_url 一致
+        required: true
+        description: ''
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -2067,6 +2582,19 @@ paths:
       description: 获取应用的代码仓库分支信息
       tags:
       - 应用/模块信息查询
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -2090,6 +2618,19 @@ paths:
       description: 查看应用模块的增强服务（已绑定、共享、未绑定）
       tags:
       - 增强服务
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -2162,6 +2703,25 @@ paths:
       description: 查看应用模块与增强服务的绑定关系详情
       tags:
       - 增强服务
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: module
+        schema:
+          type: string
+        required: true
+        description: 模块名称，默认模块为 default
+      - in: path
+        name: service_id
+        schema:
+          type: string
+        required: true
+        description: 增强服务 UUID，可通过 list_module_services 的 bound[].service.uuid 获取；模块未绑定该服务时返回 404
       x-bk-apigateway-resource:
         isPublic: true
         allowApplyPermission: true
@@ -2178,8 +2738,7 @@ paths:
           userVerifiedRequired: true
           appVerifiedRequired: true
           resourcePermissionRequired: true
-        descriptionEn:
-        noneSchema: true
+        descriptionEn: Retrieve the binding detail between a module and an addon service
     delete:
       operationId: unbind_service
       description: 解绑应用模块与增强服务

@@ -30,6 +30,55 @@ stages:
           hosts:
             - host: "{{ environ.PAAS_BKPAAS_HOST }}"
               weight: 100
+    # 社区版初始化时由 sync_apigw_stage_mcp_servers 注册，须在资源版本发布之后执行
+    mcp_servers:
+      - name: "perm-management"
+        title: "PaaS 平台权限管理"
+        description: "为当前应用查询网关及资源，申请、续期网关资源权限，并查询申请记录与审批结果。"
+        resource_names:
+          - "list_gateways"
+          - "list_gateway_permission_resources"
+          - "check_is_allowed_apply_by_gateway"
+          - "apply_gateway_resource_permission"
+          - "list_app_resource_permissions"
+          - "renew_resource_permission"
+          - "list_resource_permission_apply_records"
+          - "retrieve_resource_permission_apply_record"
+        is_public: true
+        status: 1
+        protocol_type: "streamable_http"
+        category_names:
+          - "Official"
+      - name: "deploy-with-module"
+        title: "开发者中心(PaaS 平台)模块部署"
+        description: "创建应用与模块，配置环境变量和增强服务，部署指定模块，并查询部署结果、日志与进程状态。"
+        resource_names:
+          - "get_minimal_app_list"
+          - "list_app_modules"
+          - "get_app_info"
+          - "search_standard_log_with_post"
+          - "get_repo_branches"
+          - "deploy_with_module"
+          - "get_deployments_list"
+          - "streams_history_events"
+          - "module_env_released_info"
+          - "module_env_released_state"
+          - "list_processes"
+          - "get_deployment_result"
+          - "create_module"
+          - "set_config_var_value"
+          - "create_cloud_native_app"
+          - "get_service_instance_by_module"
+          - "list_module_services"
+          - "bind_service"
+          - "list_config_vars"
+          - "get_config_var"
+        is_public: true
+        status: 1
+        protocol_type: "streamable_http"
+        category_names:
+          - "Official"
+          - "DevOps"
 
 grant_permissions:
   - bk_app_code: "{{ settings.BK_APP_CODE }}"

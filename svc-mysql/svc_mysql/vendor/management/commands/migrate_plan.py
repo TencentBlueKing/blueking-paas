@@ -27,6 +27,7 @@ apiserver 不会回滚 plan。
     不传 --module 时处理范围内所有已绑定 MySQL 的模块。
     不传 --environment 时 prepare、switch、revert 处理 stag 和 prod。
     --developer 是这个实例的联系人，不传则留空。再次 prepare 时以最新一次为准。
+    --egress-ip 是新库授权的来源 IP，可重复，不传则允许全部来源（%）。只在新建目标库时生效。
     还没开通的环境这里没有实例，要靠 apiserver 命令切绑定 plan，下次部署才会用目标 plan。
     源库由运维在切换后确认没有连接再删除，本命令不删库。源库删除后不要再 revert。
 
@@ -37,6 +38,10 @@ apiserver 不会回滚 plan。
     # 只处理指定模块和环境。--module、--environment 都可以重复
     python manage.py migrate_plan prepare --app-code <app_code> --target-plan mysql-8.0 \
         --module default --module api --environment prod
+
+    # 只授权指定来源访问新库
+    python manage.py migrate_plan prepare --app-code <app_code> --target-plan mysql-8.0 \
+        --egress-ip 10.0.0.1 --egress-ip 10.0.0.2
 
     # 查看全部迁移记录，或按状态筛选
     python manage.py migrate_plan status
@@ -53,11 +58,12 @@ import base64
 
 from django.core.management.base import BaseCommand, CommandError
 
+from svc_mysql.vendor.models import PlanMigrationStatus
 from svc_mysql.vendor.plan_migration import (
     MigrationScope,
     prepare_migrations,
     query_migrations,
-    render_copy_blocks,
+    render_handoffs,
     render_status,
     resolve_target_plan,
     revert_migrations,
@@ -65,6 +71,7 @@ from svc_mysql.vendor.plan_migration import (
 )
 
 DEFAULT_ENVIRONMENTS = ["stag", "prod"]
+DEFAULT_EGRESS_IPS = ["%"]
 
 
 class Command(BaseCommand):
@@ -91,23 +98,25 @@ class Command(BaseCommand):
         scope = _scope_from_options(options, default_environments=True)
         target_plan = resolve_target_plan(options["target_plan"])
         developer = options.get("developer") or ""
-        sections, skipped, failures = prepare_migrations(scope, target_plan, developer)
-        for message in skipped:
+        egress_ips = options.get("egress_ips") or list(DEFAULT_EGRESS_IPS)
+        result = prepare_migrations(scope, target_plan, developer, egress_ips)
+        for message in result.skipped:
             self.stderr.write(message + "\n")
-        if sections:
-            block = render_copy_blocks(sections, developer)
+        if result.handoffs:
+            block = render_handoffs(result.handoffs, developer)
             self.stdout.write(block)
-            # 可见文本在前，剪贴板只放这段，不含下面的提示。
-            self.stdout.write(_wrap_osc52(block))
-        self.stderr.write(f"预分配完成 {len(sections)} 条，跳过 {len(skipped)} 条\n")
+            # 重定向到文件或管道时不写转义序列，避免污染输出；剪贴板只放连接信息，不含下面的提示
+            if self.stdout.isatty():
+                self.stdout.write(_wrap_osc52(block), ending="")
+        self.stderr.write(f"预分配完成 {len(result.handoffs)} 条，跳过 {len(result.skipped)} 条\n")
         self.stderr.write(
             "下一步：把标准输出里的连接信息交给运维同步数据。同步完成后执行 "
             f"migrate_plan switch --app-code {scope.app_code} 。切换后到 apiserver 执行 "
             f"migrate_mysql_plan --app-code {scope.app_code} --target-plan {target_plan.name} ，"
             "再重新部署。\n"
         )
-        if failures:
-            raise CommandError(f"以下实例预分配失败: {', '.join(failures)}")
+        if result.failures:
+            raise CommandError(f"以下实例预分配失败: {', '.join(result.failures)}")
 
     def _switch(self, options: dict) -> None:
         scope = _scope_from_options(options, default_environments=True)
@@ -145,6 +154,13 @@ class Command(BaseCommand):
         _add_scope(parser, app_required=True)
         parser.add_argument("--target-plan", dest="target_plan", required=True, help="目标 plan 名称")
         parser.add_argument("--developer", dest="developer", default="", help="联系人，不传则留空")
+        parser.add_argument(
+            "--egress-ip",
+            dest="egress_ips",
+            action="append",
+            default=None,
+            help="新库授权的来源 IP，可重复。不传则为 %%，允许全部来源；plan 的 auth_ip_list 始终会授权",
+        )
 
     def _add_switch(self, subparsers) -> None:
         parser = subparsers.add_parser("switch", help="把已预分配的实例切换到目标库")
@@ -160,7 +176,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--status",
             dest="status",
-            choices=["prepared", "switched", "superseded"],
+            choices=PlanMigrationStatus.values,
             default=None,
             help=(
                 "按状态筛选，不传则不过滤。"
@@ -184,7 +200,7 @@ def _add_scope(parser, *, app_required: bool) -> None:
         "--environment",
         dest="environments",
         action="append",
-        choices=["stag", "prod"],
+        choices=DEFAULT_ENVIRONMENTS,
         default=None,
         help="环境，可重复。prepare/switch/revert 不传则包含 stag 和 prod；status 不传则不过滤",
     )

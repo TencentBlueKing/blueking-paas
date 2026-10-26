@@ -31,6 +31,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand, CommandError
 
 from paasng.accessories.servicehub.exceptions import SvcAttachmentDoesNotExist
+from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient
 from paasng.accessories.servicehub.remote.exceptions import RemoteClientError
 from paasng.accessories.servicehub.remote.manager import RemoteServiceMgr
@@ -38,9 +39,6 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.platform.applications.models import Application
 
 DEFAULT_ENVIRONMENTS = ["stag", "prod"]
-
-# 表示读取实例失败。不能用 None，None 表示环境还没开通实例
-_MISSING = object()
 
 
 class Command(BaseCommand):
@@ -137,8 +135,9 @@ def align_mysql_plans(
                     continue
                 # 已开通的环境要以 svc-mysql 上实例的实际 plan 为准，读不到时无法判断 switch 是否完成，
                 # 宁可不改绑定，避免绑定和实例 plan 不一致导致下次部署失败
-                instance_plan_id = _read_instance_plan(client, attachment)
-                if instance_plan_id is _MISSING:
+                try:
+                    instance_plan_id = _read_instance_plan(client, attachment)
+                except RemoteClientError:
                     skipped.append(f"{label} 读取实例失败，绑定未改")
                     continue
                 message, did_update = align_binding(attachment, target_plan.uuid, instance_plan_id, label)
@@ -167,14 +166,14 @@ def align_binding(attachment, target_plan_id: str, instance_plan_id: str | None,
     return f"{label} 尚未开通，绑定已改为目标 plan。下次部署会按这个 plan 开通", True
 
 
-def _read_instance_plan(client, attachment):
-    """从 svc-mysql 读取绑定实例当前的 plan id。未开通返回 None，读取失败返回 _MISSING。"""
+def _read_instance_plan(client: RemoteServiceClient, attachment: RemoteServiceEngineAppAttachment) -> str | None:
+    """从 svc-mysql 读取绑定实例当前的 plan id。未开通返回 None。
+
+    :raises RemoteClientError: 读取实例失败
+    """
     if not attachment.service_instance_id:
         return None
-    try:
-        return client.retrieve_instance(str(attachment.service_instance_id)).get("plan")
-    except RemoteClientError:
-        return _MISSING
+    return client.retrieve_instance(str(attachment.service_instance_id)).get("plan")
 
 
 def _get_plan_by_name(service, name: str):

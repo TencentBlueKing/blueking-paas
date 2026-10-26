@@ -17,13 +17,14 @@
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from django.core.management.base import CommandError
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
-from paas_service.base_vendor import get_provider_cls
+from paas_service.base_vendor import BaseProvider, InstanceData, get_provider_cls
 from paas_service.models import Plan, ServiceInstance, ServiceInstanceConfig
 
 from svc_mysql.vendor.models import PlanMigration, PlanMigrationStatus
@@ -43,7 +44,9 @@ class InstanceRef:
 
 
 @dataclass
-class CopySection:
+class ConnectionHandoff:
+    """交给运维同步数据用的新旧库连接信息，不含密码。"""
+
     app_code: str
     module: str
     environment: str
@@ -54,8 +57,15 @@ class CopySection:
 
 @dataclass
 class PrepareOutcome:
-    section: CopySection | None = None
+    handoff: ConnectionHandoff | None = None
     skipped: str | None = None
+
+
+@dataclass
+class PrepareResult:
+    handoffs: list[ConnectionHandoff]
+    skipped: list[str]
+    failures: list[str]
 
 
 @dataclass
@@ -122,20 +132,22 @@ def list_bound_instances(scope: MigrationScope) -> list[InstanceRef]:
 
 
 def prepare_migrations(
-    scope: MigrationScope, target_plan: Plan, developer: str
-) -> tuple[list[CopySection], list[str], list[str]]:
-    """预分配目标库。目标 plan 冲突在创建任何库之前拒绝。"""
+    scope: MigrationScope, target_plan: Plan, developer: str, egress_ips: list[str]
+) -> PrepareResult:
+    """预分配目标库。服务不一致、目标 plan 冲突都在创建任何库之前拒绝。
+
+    :param egress_ips: 新库授权的来源 IP，"%" 表示允许全部来源
+    """
     refs = list_bound_instances(scope)
+    _reject_service_mismatch(refs, target_plan)
     _reject_target_plan_conflicts(refs, target_plan)
 
-    sections: list[CopySection] = []
+    handoffs: list[ConnectionHandoff] = []
     skipped: list[str] = []
     failures: list[str] = []
     for ref in refs:
-        if ref.instance.service_id and ref.instance.service_id != target_plan.service_id:
-            raise CommandError(f"{_make_label(ref)} 所属服务与目标 plan 不一致")
         try:
-            outcome = _prepare_one(ref, target_plan, developer)
+            outcome = _prepare_one(ref, target_plan, developer, egress_ips)
         except CommandError as exc:
             # 身份对不上或凭证不完整时只失败这一条，其他实例继续。
             failures.append(f"{_make_label(ref)}：{exc}")
@@ -151,9 +163,9 @@ def prepare_migrations(
             continue
         if outcome.skipped:
             skipped.append(outcome.skipped)
-        if outcome.section:
-            sections.append(outcome.section)
-    return sections, skipped, failures
+        if outcome.handoff:
+            handoffs.append(outcome.handoff)
+    return PrepareResult(handoffs=handoffs, skipped=skipped, failures=failures)
 
 
 def switch_migrations(scope: MigrationScope) -> BatchResult:
@@ -176,11 +188,11 @@ def query_migrations(scope: MigrationScope) -> list[PlanMigration]:
     return list(_build_migration_queryset(scope, status=scope.status))
 
 
-def render_copy_blocks(sections: list[CopySection], developer: str) -> str:
+def render_handoffs(handoffs: list[ConnectionHandoff], developer: str) -> str:
     """生成给运维复制的纯文本。不含密码。"""
-    grouped: dict[tuple[str, str], list[CopySection]] = {}
-    for section in sections:
-        grouped.setdefault((section.app_code, section.module), []).append(section)
+    grouped: dict[tuple[str, str], list[ConnectionHandoff]] = {}
+    for handoff in handoffs:
+        grouped.setdefault((handoff.app_code, handoff.module), []).append(handoff)
 
     blocks: list[str] = []
     for (app_code, module), items in grouped.items():
@@ -229,7 +241,9 @@ def render_status(records: list[PlanMigration]) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
-def _apply_each(records: list[PlanMigration], action, failure_log: str) -> BatchResult:
+def _apply_each(
+    records: list[PlanMigration], action: Callable[[PlanMigration], None], failure_log: str
+) -> BatchResult:
     labels: list[str] = []
     failures: list[str] = []
     for record in records:
@@ -245,7 +259,7 @@ def _apply_each(records: list[PlanMigration], action, failure_log: str) -> Batch
     return BatchResult(labels=labels, failures=failures)
 
 
-def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> PrepareOutcome:
+def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str, egress_ips: list[str]) -> PrepareOutcome:
     """在目标 plan 上为单个实例建库并创建 prepared 记录，已准备过的实例不重复建库。"""
     with transaction.atomic():
         # 锁住实例，避免两个 prepare 同时给同一实例建库、留下两条 prepared 记录
@@ -260,7 +274,7 @@ def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> Prepare
                     f"{_make_label(ref)} 已有待切换记录，目标 plan 是 {prepared.target_plan.name}，与 {target_plan.name} 不同"
                 )
             _refresh_source_snapshot(prepared, instance, developer)
-            return PrepareOutcome(section=_build_section(instance, prepared))
+            return PrepareOutcome(handoff=_build_handoff(instance, prepared))
 
         # 实例已经在目标 plan，或已有切到目标 plan 的 switched 记录，无需再迁移
         already_on_target = instance.plan_id == target_plan.pk
@@ -275,33 +289,39 @@ def _prepare_one(ref: InstanceRef, target_plan: Plan, developer: str) -> Prepare
         # 上一轮迁移的 switched 记录会在新记录建好后标成 superseded，此后不能再 revert。
         # 核对放在建库之前：实例和上一轮记录对不上时直接失败，不会白建一个目标库
         previous = _lock_matching_switched_records(instance)
-        instance_data = _create_target_database(instance, target_plan, ref)
-        _ensure_credential_keys(instance_data.credentials)
-        record = PlanMigration.objects.create(
-            instance=instance,
-            app_code=ref.app_code,
-            module=ref.module,
-            environment=ref.environment,
-            developer=developer,
-            source_plan=instance.plan,
-            target_plan=target_plan,
-            source_credentials=json.dumps(instance.get_credentials()),
-            target_credentials=json.dumps(instance_data.credentials),
-            source_config=_parse_config(instance.config),
-            target_config=_parse_config(instance_data.config),
-            status=PlanMigrationStatus.PREPARED,
-            tenant_id=instance.tenant_id,
-        )
-        for old in previous:
-            old.status = PlanMigrationStatus.SUPERSEDED
-            old.save(update_fields=["status", "updated"])
+        provider = get_provider_cls()(**target_plan.get_config())
+        instance_data = _create_target_database(provider, ref, egress_ips)
+        try:
+            _ensure_credential_keys(instance_data.credentials)
+            record = PlanMigration.objects.create(
+                instance=instance,
+                app_code=ref.app_code,
+                module=ref.module,
+                environment=ref.environment,
+                developer=developer,
+                source_plan=instance.plan,
+                target_plan=target_plan,
+                source_credentials=json.dumps(instance.get_credentials()),
+                target_credentials=json.dumps(instance_data.credentials),
+                source_config=_parse_config(instance.config),
+                target_config=_parse_config(instance_data.config),
+                status=PlanMigrationStatus.PREPARED,
+                tenant_id=instance.tenant_id,
+            )
+            for old in previous:
+                old.status = PlanMigrationStatus.SUPERSEDED
+                old.save(update_fields=["status", "updated"])
+        except Exception:
+            # 事务回滚后不会留下迁移记录，目标库也要删掉，否则重试会再建一个、旧的无人认领
+            _drop_target_database(provider, instance_data, ref)
+            raise
         logger.info(
             "prepared mysql plan migration for %s instance=%s target_plan=%s",
             _make_label(ref),
             instance.uuid,
             target_plan.name,
         )
-        return PrepareOutcome(section=_build_section(instance, record))
+        return PrepareOutcome(handoff=_build_handoff(instance, record))
 
 
 def _switch_one(record: PlanMigration) -> None:
@@ -360,18 +380,29 @@ def _revert_one(record: PlanMigration) -> None:
         logger.info("reverted mysql plan migration for %s instance=%s", _make_label(locked), instance.uuid)
 
 
-def _create_target_database(instance: ServiceInstance, target_plan: Plan, ref: InstanceRef):
-    provider_cls = get_provider_cls()
-    provider = provider_cls(**target_plan.get_config())
+def _create_target_database(provider: BaseProvider, ref: InstanceRef, egress_ips: list[str]) -> InstanceData:
     # provider 用它生成库名和用户名（截取前 16 位），便于运维从库名认出所属应用
     preferred_name = f"{ref.app_code}-{ref.module}-{ref.environment}"
-    # 新库默认授权全部来源。provider 会把它和 plan 的 auth_ip_list 并在一起。
+    # provider 会把 egress_ips 和 plan 的 auth_ip_list 并在一起授权
     return provider.create(
         params={
             "engine_app_name": preferred_name,
-            "egress_info": json.dumps({"egress_ips": ["%"]}),
+            "egress_info": json.dumps({"egress_ips": egress_ips}),
         }
     )
+
+
+def _drop_target_database(provider: BaseProvider, instance_data: InstanceData, ref: InstanceRef) -> None:
+    try:
+        provider.delete(instance_data)
+    except Exception as exc:  # noqa: BLE001
+        # 只记录异常类型，消息里可能有 SQL 和密码；库名交给运维手工清理
+        logger.error(  # noqa: TRY400
+            "drop orphan mysql database failed: %s name=%s error=%s",
+            _make_label(ref),
+            instance_data.credentials.get("name"),
+            type(exc).__name__,
+        )
 
 
 def _refresh_source_snapshot(record: PlanMigration, instance: ServiceInstance, developer: str) -> None:
@@ -382,9 +413,9 @@ def _refresh_source_snapshot(record: PlanMigration, instance: ServiceInstance, d
     record.save(update_fields=["developer", "source_plan", "source_credentials", "source_config", "updated"])
 
 
-def _build_section(instance: ServiceInstance, record: PlanMigration) -> CopySection:
+def _build_handoff(instance: ServiceInstance, record: PlanMigration) -> ConnectionHandoff:
     service_name = instance.service.name if instance.service_id else "mysql"
-    return CopySection(
+    return ConnectionHandoff(
         app_code=record.app_code,
         module=record.module,
         environment=record.environment,
@@ -392,6 +423,16 @@ def _build_section(instance: ServiceInstance, record: PlanMigration) -> CopySect
         source_credentials=instance.get_credentials(),
         target_credentials=_load_credentials(record.target_credentials),
     )
+
+
+def _reject_service_mismatch(refs: list[InstanceRef], target_plan: Plan) -> None:
+    mismatched = [
+        _make_label(ref)
+        for ref in refs
+        if ref.instance.service_id and ref.instance.service_id != target_plan.service_id
+    ]
+    if mismatched:
+        raise CommandError(f"这些实例所属服务与目标 plan 不一致: {', '.join(mismatched)}")
 
 
 def _reject_target_plan_conflicts(refs: list[InstanceRef], target_plan: Plan) -> None:

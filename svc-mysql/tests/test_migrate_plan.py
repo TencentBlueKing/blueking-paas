@@ -153,7 +153,56 @@ def test_prepare_keeps_instance_and_prints_copy_block(service, source_plan, targ
     assert "GCS_MYSQL_NAME: new-prod" in stdout
     assert OLD_PASSWORD not in stdout
     assert NEW_PASSWORD not in stdout
+    assert "\033]52;" not in stdout
     assert PlanMigration.objects.filter(status=PlanMigrationStatus.PREPARED).count() == 2
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_ips"),
+    [
+        ([], ["%"]),
+        (["--egress-ip", "10.0.0.8", "--egress-ip", "10.0.0.9"], ["10.0.0.8", "10.0.0.9"]),
+    ],
+)
+def test_prepare_passes_egress_ips(service, source_plan, target_plan, provider, extra_args, expected_ips):
+    """新库授权来源默认为 %，传 --egress-ip 时按传入的授权。"""
+    bind_instance(service, source_plan, "default", "stag", name="old-stag")
+
+    run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag", *extra_args)
+
+    params = provider.create.call_args.kwargs["params"]
+    assert json.loads(params["egress_info"]) == {"egress_ips": expected_ips}
+
+
+def test_prepare_rejects_service_mismatch_before_creating(service, source_plan, target_plan, provider):
+    """任一实例所属服务与目标 plan 不同，整批在建库前拒绝。"""
+    other_service = Service.objects.create(
+        name="other_mysql", category=1, display_name_zh_cn="MySQL", display_name_en="MySQL"
+    )
+    other_source = Plan.objects.create(name="plan-x", service=other_service, properties={}, config="{}")
+    bind_instance(service, source_plan, "default", "stag", name="old-stag")
+    bind_instance(other_service, other_source, "default", "prod", name="old-prod")
+
+    with pytest.raises(CommandError, match="所属服务与目标 plan 不一致"):
+        run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b")
+
+    provider.create.assert_not_called()
+    assert not PlanMigration.objects.exists()
+
+
+def test_prepare_drops_database_when_record_fails(service, source_plan, target_plan, provider):
+    """建库之后写记录失败时删掉新库，不留下没有记录的库。"""
+    bind_instance(service, source_plan, "default", "stag", name="old-stag")
+
+    with (
+        patch.object(PlanMigration.objects, "create", side_effect=RuntimeError("boom")),
+        pytest.raises(CommandError, match="预分配失败"),
+    ):
+        run_migrate("prepare", "--app-code", APP_CODE, "--target-plan", "plan-b", "--environment", "stag")
+
+    provider.delete.assert_called_once()
+    assert provider.delete.call_args.args[0].credentials["name"] == "new-stag"
+    assert not PlanMigration.objects.exists()
 
 
 def test_prepare_again_reuses_database(service, source_plan, target_plan, provider):

@@ -135,12 +135,14 @@ bkAuth:
   # 换票时的 env_name（prod / test）；backendType 为 bk_token 时不使用。
   # authEnvName: prod
 
-# 使用 bk_repo 存储时填写 PROJECT、ENDPOINT、USERNAME、PASSWORD。
+# 蓝鲸制品库连接信息，必填：发布用的源码包只能存在制品库。会话上下文用 bk_repo 存储时也取自这里。
 # blobstoreBkrepoConfig:
 #   PROJECT: ""
 #   ENDPOINT: ""
 #   USERNAME: ""
 #   PASSWORD: ""
+# 存放发布用源码包的通用仓库名，需事先在上面的 PROJECT 下建好，默认 app-spark-source-packages。
+# blobstoreBucketSourcePackages: app-spark-source-packages
 
 # Git 持久化（repo-server）。API 进程启动必须配置，省略该键则无法启动。
 # repoServer:

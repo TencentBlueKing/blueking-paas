@@ -23,6 +23,7 @@ from app_spark_api.infras.forgejo.entities import (
     ForgejoClientConfig,
     RemoteBranch,
     RemoteRepository,
+    RemoteTag,
 )
 from app_spark_api.infras.forgejo.exceptions import ForgejoError, ForgejoUnavailableError
 
@@ -35,4 +36,5 @@ __all__ = [
     "ForgejoUnavailableError",
     "RemoteBranch",
     "RemoteRepository",
+    "RemoteTag",
 ]

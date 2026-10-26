@@ -305,6 +305,28 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 
 未设置 `APP_SPARK_FORGEJO_LIVE=1` 时该目录不会被收集；一旦设置，缺少 Forgejo 会失败而不是跳过。
 
+#### 发布用的源码包
+
+发布时把某个 commit 的源码打成 tgz 传到蓝鲸制品库，再签一个预签名地址交给发布流程去下载，
+见 `repository/git/source_packages.py`。
+
+每次上传记一行 `ProjectSourcePackage`，以「Project + commit SHA」唯一：主分支会被反复发布，只有
+SHA 能区分版本；同一个 SHA 不论经由主分支还是 tag 选中都只上传一次，后来者复用已有记录。
+
+包不会永久保存。上传、复用和签地址都会刷新行上的 `last_used_at`，长期没人用的包由命令回收，建议
+用定时任务每天跑一次：
+
+```bash
+python manage.py delete_unused_source_packages            # 删除 15 天未被使用的包
+python manage.py delete_unused_source_packages --days 30  # 自定义天数
+python manage.py delete_unused_source_packages --dry-run  # 只列出，不删除
+```
+
+因为预签名地址只有制品库能给，`BLOBSTORE_BKREPO_CONFIG` 是必填配置，缺了在第一次打包时就报
+`ImproperlyConfigured`，不会先去下载归档。包所在的通用仓库由 `BLOBSTORE_BUCKET_SOURCE_PACKAGES`
+指定（默认 `app-spark-source-packages`），需事先建好。测试里制品库一律是内存假实现（`fake_bkrepo`
+fixture），真实 Forgejo 测试会检查推送的提交和 tag 打出来的内容。
+
 #### Runtime 怎么拿到仓库
 
 起 Runtime 时把 `GitRemote`（clone 地址、分支、服务账号、写 token）交给 provider，由它写进子进程

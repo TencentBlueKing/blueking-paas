@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.accessories.cloudapi.constants import (
@@ -22,6 +24,7 @@ from paasng.accessories.cloudapi.constants import (
     GrantDimensionEnum,
     PermissionApplyExpireDaysEnum,
 )
+from paasng.accessories.cloudapi_v2.constants import AlarmRecordStatus
 
 # ============ 网关 API 相关 ============
 
@@ -326,3 +329,68 @@ class PaginatedESBComponentPermissionApplyRecordOutputSLZ(serializers.Serializer
 # ------------ get_app_esb_component_permission_apply_record ------------
 class GetAppESBComponentPermissionApplyRecordOutputSLZ(ESBComponentPermissionApplyRecordOutputSLZ):
     """ESB 组件权限申请记录详情"""
+
+
+# ============ 应用告警记录相关 ============
+
+
+# ------------ list_app_alarm_records ------------
+class ListAppAlarmRecordsInputSLZ(serializers.Serializer):
+    """应用告警记录查询参数"""
+
+    status = serializers.ChoiceField(
+        choices=AlarmRecordStatus.get_choices(), required=False, allow_blank=True, help_text="告警状态"
+    )
+    gateway_name = serializers.CharField(required=False, allow_blank=True, help_text="网关名称")
+    resource_name = serializers.CharField(required=False, allow_blank=True, help_text="资源名称")
+    time_start = serializers.IntegerField(required=True, help_text="起始时间(Unix 时间戳, 秒)")
+    time_end = serializers.IntegerField(required=True, help_text="结束时间(Unix 时间戳, 秒)")
+    offset = serializers.IntegerField(required=False, default=0, min_value=0, help_text="偏移量")
+    limit = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页条数")
+
+    def validate(self, attrs: dict) -> dict:
+        """校验查询条件
+
+        - time_end 必须大于 time_start
+        - time_end 若为未来时间, 截断为当前时间
+        - 传 resource_name 时必须同时传 gateway_name
+        """
+        time_start = attrs["time_start"]
+        time_end = attrs["time_end"]
+
+        if time_end <= time_start:
+            raise serializers.ValidationError(_("结束时间必须大于起始时间"))
+
+        if attrs.get("resource_name") and not attrs.get("gateway_name"):
+            raise serializers.ValidationError({"gateway_name": _("传 resource_name 时，必须同时传 gateway_name")})
+
+        now = int(timezone.now().timestamp())
+        attrs["time_end"] = min(time_end, now)
+        return attrs
+
+
+class AppAlarmRecordOutputSLZ(serializers.Serializer):
+    """应用告警记录"""
+
+    id = serializers.IntegerField(help_text="告警记录 ID")
+    alarm_id = serializers.CharField(required=False, help_text="告警平台事件 ID")
+    status = serializers.CharField(required=False, help_text="告警状态")
+    status_display = serializers.SerializerMethodField(help_text="告警状态描述")
+    created_time = serializers.CharField(required=False, help_text="告警创建时间")
+    gateway_name = serializers.CharField(required=False, help_text="网关名称")
+    stage = serializers.CharField(required=False, help_text="环境")
+    resource_id = serializers.IntegerField(required=False, allow_null=True, help_text="资源 ID")
+    resource_name = serializers.CharField(required=False, help_text="资源名称")
+    request_id = serializers.CharField(required=False, help_text="请求 ID")
+    message = serializers.CharField(required=False, help_text="告警消息")
+
+    def get_status_display(self, obj) -> str:
+        """优先使用网关返回的 status_display, 缺失时按告警状态回退到本地枚举文案"""
+        return obj.get("status_display") or AlarmRecordStatus.get_choice_label(obj.get("status") or "")
+
+
+class ListAppAlarmRecordsOutputSLZ(serializers.Serializer):
+    """应用告警记录列表"""
+
+    count = serializers.IntegerField(default=0, help_text="总条数")
+    results = AppAlarmRecordOutputSLZ(many=True, default=list, help_text="告警记录列表")

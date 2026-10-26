@@ -85,8 +85,8 @@ class FakeForgejo:
         self.archive_status = HTTPStatus.OK
         # Tags per repository, name -> commit SHA, keyed the same way as `repos`.
         self.tags: dict[tuple[str, str], dict[str, str]] = {}
-        # Source trees by commit SHA, served as real `tar.gz` archives because source
-        # packaging repacks what it downloads. A commit without an entry gets DEFAULT_TREE.
+        # Source trees by commit SHA, served as real `tar.gz` archives so tests can read the
+        # stored source packages back. A commit without an entry gets DEFAULT_TREE.
         self.trees: dict[str, dict[str, bytes]] = {}
         # Every archive ref that was downloaded, in order, e.g. `3f2a....tar.gz`.
         self.archive_requests: list[str] = []

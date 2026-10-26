@@ -19,8 +19,8 @@
 Two operations, kept apart on purpose:
 
 * :meth:`RepoPackager.upload` resolves the working branch or a tag to a commit, packs that
-  commit and records it. It is slow -- an archive download, a repack and an upload -- but it
-  happens once per commit, and its result is reused until it is reclaimed.
+  commit and records it. It is slow -- an archive download and an upload -- but it happens
+  once per commit, and its result is reused until it is reclaimed.
 * :func:`generate_source_package_url` signs a download URL for a recorded package. It is cheap
   and is meant to be called whenever a release needs a URL, because the URL expires while the
   package does not.
@@ -39,9 +39,7 @@ from __future__ import annotations
 
 import logging
 import re
-import tempfile
 from datetime import timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -60,7 +58,7 @@ from app_spark_api.repository.git.exceptions import (
 from app_spark_api.repository.git.factory import make_forgejo_client
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from app_spark_api.repository.storage.blob_stores import BkRepo
-from app_spark_api.repository.storage.utils import compress_directory, generate_temp_file, uncompress_directory
+from app_spark_api.repository.storage.utils import generate_temp_file
 
 if TYPE_CHECKING:
     from app_spark_api.infras.forgejo.client import ForgejoClient
@@ -105,8 +103,12 @@ class RepoPackager:
     def upload(self, tag: str | None = None) -> ProjectSourcePackage:
         """Pack the repository at ``tag``, or at its working branch's tip, and upload it to BkRepo.
 
-        The package is a gzip tarball with the source files at its root and no Git metadata. A
-        commit that has been packed before is not packed again: its existing record is marked
+        The package is Forgejo's ``tar.gz`` archive of the commit, uploaded unchanged: the source
+        tree nested under one directory named after the repository, e.g. ``{repo}/app.py``, and
+        no Git metadata. It is not repacked to lift the files to the root, because the Developer
+        Center accepts a package whose source sits in a single subdirectory.
+
+        A commit that has been packed before is not packed again: its existing record is marked
         used and returned, because a commit's content cannot change. So re-releasing the working
         branch uploads only when something has been pushed since, or the old package has been
         reclaimed.
@@ -119,7 +121,7 @@ class RepoPackager:
         :return: The record of the uploaded, or previously uploaded, package.
         :raises GitRepositoryNotReadyError: The remote repository does not exist yet.
         :raises SourceRefNotFoundError: ``tag`` is not a tag of the repository.
-        :raises SourcePackageError: The archive could not be repacked or uploaded.
+        :raises SourcePackageError: The archive could not be uploaded.
         :raises django.core.exceptions.ImproperlyConfigured: ``BLOBSTORE_BKREPO_CONFIG`` is
             missing or incomplete.
         :raises app_spark_api.infras.forgejo.exceptions.ForgejoError: Forgejo was unreachable
@@ -144,7 +146,10 @@ class RepoPackager:
             # Built before the download so a missing BkRepo configuration fails before any work.
             store = BkRepo(bucket=bucket, key=key)
             with generate_temp_file(suffix=f".{SOURCE_PACKAGE_SUFFIX}") as package_path:
-                SourceArchivePacker(forgejo, repo).pack(commit, package_path)
+                with package_path.open("wb") as handle:
+                    forgejo.download_archive(
+                        owner=repo.owner, name=repo.name, ref=commit, suffix=SOURCE_PACKAGE_SUFFIX, handle=handle
+                    )
                 size = package_path.stat().st_size
                 try:
                     store.put(package_path)
@@ -211,54 +216,6 @@ class RepoPackager:
         # Every slash-separated component must be non-empty, not start with a dot, and not end
         # with `.lock`; e.g. `release/v1` is fine, `release//v1` and `.hidden` are not.
         return all(part and not part.startswith(".") and not part.endswith(".lock") for part in tag.split("/"))
-
-
-class SourceArchivePacker:
-    """Turns Forgejo's archive of a commit into a package with the source tree at its root.
-
-    Forgejo's archive is not usable as-is: it nests everything under a directory named after
-    the repository, while a release expects the files at the package root.
-
-    :param forgejo: Client to download the archive with; not closed here.
-    :param repo: Repository the commit belongs to.
-    """
-
-    def __init__(self, forgejo: ForgejoClient, repo: ProjectGitRepository) -> None:
-        self._forgejo = forgejo
-        self._repo = repo
-
-    def pack(self, commit: str, package_path: Path) -> None:
-        """Write ``commit``'s source tree to ``package_path`` as a tarball rooted at the tree.
-
-        :param commit: Full SHA of the commit to pack.
-        :param package_path: Local file to write the package to, replacing its content.
-        :raises SourcePackageError: The archive could not be unpacked, had an unexpected
-            layout, or could not be packed again.
-        :raises app_spark_api.infras.forgejo.exceptions.ForgejoError: The download failed.
-        """
-        repo = self._repo
-        with (
-            generate_temp_file(suffix=".tar.gz") as archive_path,
-            tempfile.TemporaryDirectory(prefix="app-spark-source-") as extracted,
-        ):
-            with archive_path.open("wb") as handle:
-                self._forgejo.download_archive(
-                    owner=repo.owner, name=repo.name, ref=commit, suffix="tar.gz", handle=handle
-                )
-            try:
-                uncompress_directory(archive_path, extracted)
-                compress_directory(self._archive_root(Path(extracted)), package_path)
-            except RuntimeError as exc:
-                raise SourcePackageError(f"Repacking the archive of {repo.project_id}@{commit} failed") from exc
-
-    @staticmethod
-    def _archive_root(extracted: Path) -> Path:
-        """Return the single top-level directory Forgejo nests an archive's tree under."""
-        entries = list(extracted.iterdir())
-        if len(entries) != 1 or entries[0].is_symlink() or not entries[0].is_dir():
-            names = sorted(entry.name for entry in entries)
-            raise SourcePackageError(f"Expected the archive to hold one top-level directory, found {names}")
-        return entries[0]
 
 
 def generate_source_package_url(package: ProjectSourcePackage, *, expires_in: int = DEFAULT_URL_EXPIRES_IN) -> str:

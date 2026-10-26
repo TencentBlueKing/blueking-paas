@@ -267,18 +267,16 @@ async def test_the_archive_endpoint_returns_a_real_zip_of_the_pushed_source(aapi
     assert response.headers["Content-Disposition"].startswith(f'attachment; filename="{project_id}-')
     body = await read_streaming_response(response)
     with zipfile.ZipFile(io.BytesIO(body)) as archive:
-        # Forgejo nests the tree under a top-level directory named after the ref.
         names = archive.namelist()
-        assert any(name.endswith("/downloaded.txt") for name in names), names
-        # The pushed commit, not the `auto_init` one the repository was created with, and
-        # no `.git` -- an archive is source, not history.
-        assert not any(".git/" in name for name in names), names
+    # The pushed commit, not the `auto_init` one the repository was created with, nested under
+    # a directory named after the repository, and no `.git` -- an archive is source, not history.
+    assert sorted(names) == [f"{row.name}/", f"{row.name}/README.md", f"{row.name}/downloaded.txt"], names
 
 
 async def test_source_packages_hold_the_real_tree_of_the_chosen_commit(
     aapi_client, forgejo_settings, fake_bkrepo, tmp_path
 ):
-    """Only a real Forgejo shows the archive layout the repack strips and what a tag resolves to.
+    """Only a real Forgejo shows the archive layout the package relies on and what a tag resolves to.
 
     BkRepo stays faked: what is checked is what would have been uploaded.
     """
@@ -318,9 +316,21 @@ async def test_source_packages_hold_the_real_tree_of_the_chosen_commit(
     assert head_package.commit_sha == tip
     assert tag_package.commit_sha == tagged
     assert head_package.repo_full_name == f"{forgejo_settings.org}/{project_id}"
-    assert head_package.size == len(fake_bkrepo.objects[(head_package.bucket, head_package.key)])
-    assert _package_names(fake_bkrepo, head_package) == {"README.md", "released.txt", "after-tag.txt"}
-    assert _package_names(fake_bkrepo, tag_package) == {"README.md", "released.txt"}
+    stored = fake_bkrepo.objects[(head_package.bucket, head_package.key)]
+    assert head_package.size == len(stored)
+    # Nested under a directory named after the repository, which the Developer Center accepts.
+    assert _package_names(fake_bkrepo, head_package) == {
+        f"{row.name}/README.md",
+        f"{row.name}/released.txt",
+        f"{row.name}/after-tag.txt",
+    }
+    assert _package_names(fake_bkrepo, tag_package) == {f"{row.name}/README.md", f"{row.name}/released.txt"}
+    # Uploaded as Forgejo served it, not repacked; Forgejo caches the archive per commit, so
+    # downloading it again gives the same bytes.
+    served = io.BytesIO()
+    with ForgejoClient(forgejo_settings.forgejo_client_config()) as client:
+        client.download_archive(owner=row.owner, name=row.name, ref=tip, suffix="tar.gz", handle=served)
+    assert served.getvalue() == stored
     # Packing the same tip again reuses the row rather than uploading a duplicate.
     again = await RepoPackager(row).aupload()
     assert again.pk == head_package.pk
@@ -329,10 +339,10 @@ async def test_source_packages_hold_the_real_tree_of_the_chosen_commit(
 
 
 def _package_names(fake_bkrepo, package) -> set[str]:
-    """Regular files in a stored package, relative to its root; anything nested would show."""
+    """Regular files in a stored package, by the path stored in it."""
     data = fake_bkrepo.objects[(package.bucket, package.key)]
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
-        return {member.name.removeprefix("./") for member in archive.getmembers() if member.isfile()}
+        return {member.name for member in archive.getmembers() if member.isfile()}
 
 
 async def test_a_mis_scoped_probe_is_removed_from_the_working_tree(aapi_client, forgejo_settings, tmp_path):

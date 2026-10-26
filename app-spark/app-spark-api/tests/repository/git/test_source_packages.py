@@ -17,7 +17,7 @@
 """Packing a commit into BkRepo, and signing where a release can fetch it from.
 
 Forgejo is the in-memory fake and BkRepo is faked under blue_krill's client; the live Forgejo
-tests are what check a real archive survives the repack.
+tests are what check the layout of a real archive.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ from http import HTTPStatus
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
+from app_spark_api.infras.forgejo import ForgejoClient
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git import source_packages
 from app_spark_api.repository.git.exceptions import (
@@ -39,7 +40,7 @@ from app_spark_api.repository.git.exceptions import (
 )
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from app_spark_api.repository.git.services import provision_project_repository
-from app_spark_api.repository.git.source_packages import RepoPackager, SourceArchivePacker
+from app_spark_api.repository.git.source_packages import RepoPackager
 from tests.infras.forgejo.fake import DEFAULT_TREE
 
 pytestmark = pytest.mark.django_db
@@ -62,7 +63,7 @@ def head(repo, fake_forgejo):
 
 
 def package_files(fake_bkrepo, package: ProjectSourcePackage) -> dict[str, bytes]:
-    """Unpack a stored package, keyed by path relative to the package root."""
+    """Unpack a stored package, keyed by the path stored in it, e.g. ``{repo}/README.md``."""
     data = fake_bkrepo.objects[(package.bucket, package.key)]
     files = {}
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
@@ -70,8 +71,13 @@ def package_files(fake_bkrepo, package: ProjectSourcePackage) -> dict[str, bytes
             if member.isfile():
                 extracted = archive.extractfile(member)
                 assert extracted is not None
-                files[member.name.removeprefix("./")] = extracted.read()
+                files[member.name] = extracted.read()
     return files
+
+
+def in_repo_dir(repo, tree: dict[str, bytes]) -> dict[str, bytes]:
+    """``tree`` as Forgejo archives it: nested under a directory named after the repository."""
+    return {f"{repo.name}/{path}": content for path, content in tree.items()}
 
 
 class TestUploadSourcePackage:
@@ -86,8 +92,8 @@ class TestUploadSourcePackage:
         assert package.key.startswith(f"appspark-src-packages/{repo.project_id}/{head}/")
         assert package.key.endswith(".tar.gz")
         assert package.size == len(fake_bkrepo.objects[(BUCKET, package.key)])
-        # Forgejo nests the tree under `{repo}/`; a release expects the files at the root.
-        assert package_files(fake_bkrepo, package) == DEFAULT_TREE
+        # Uploaded as Forgejo archived it; the Developer Center takes the source from the subdirectory.
+        assert package_files(fake_bkrepo, package) == in_repo_dir(repo, DEFAULT_TREE)
 
     def test_a_tag_packs_the_commit_it_points_at(self, repo, head, fake_forgejo, fake_bkrepo):
         fake_forgejo.tags[(repo.owner, repo.name)] = {"v1.0.0": TAGGED_COMMIT}
@@ -96,7 +102,7 @@ class TestUploadSourcePackage:
         package = RepoPackager(repo).upload(tag="v1.0.0")
 
         assert package.commit_sha == TAGGED_COMMIT
-        assert package_files(fake_bkrepo, package) == TAGGED_TREE
+        assert package_files(fake_bkrepo, package) == in_repo_dir(repo, TAGGED_TREE)
         # Cut from the commit rather than the name, so a push in between cannot change it.
         assert fake_forgejo.archive_requests == [f"{TAGGED_COMMIT}.tar.gz"]
 
@@ -140,23 +146,23 @@ class TestUploadSourcePackage:
         assert second.commit_sha == head
         # A fresh key, so the reclaimer's late delete of the old blob cannot reach this one.
         assert second.key != first.key
-        assert package_files(fake_bkrepo, second) == DEFAULT_TREE
+        assert package_files(fake_bkrepo, second) == in_repo_dir(repo, DEFAULT_TREE)
 
     def test_losing_a_race_to_record_the_same_commit_discards_this_upload(self, repo, head, fake_bkrepo, monkeypatch):
-        pack = SourceArchivePacker.pack
+        download_archive = ForgejoClient.download_archive
 
-        def concurrent_release_records_first(packer, commit, package_path):
-            pack(packer, commit, package_path)
+        def concurrent_release_records_first(client, **kwargs):
+            download_archive(client, **kwargs)
             ProjectSourcePackage.objects.create(
                 project=repo.project,
                 repo_full_name=f"{repo.owner}/{repo.name}",
-                commit_sha=commit,
+                commit_sha=kwargs["ref"],
                 bucket=BUCKET,
                 key="appspark-src-packages/winner.tar.gz",
                 size=1,
             )
 
-        monkeypatch.setattr(SourceArchivePacker, "pack", concurrent_release_records_first)
+        monkeypatch.setattr(ForgejoClient, "download_archive", concurrent_release_records_first)
 
         package = RepoPackager(repo).upload()
 
@@ -175,8 +181,8 @@ class TestUploadSourcePackage:
 
         assert (first.commit_sha, second.commit_sha) == (head, pushed)
         assert first.key != second.key
-        assert package_files(fake_bkrepo, first) == DEFAULT_TREE
-        assert package_files(fake_bkrepo, second) == {"README.md": b"# pushed\n"}
+        assert package_files(fake_bkrepo, first) == in_repo_dir(repo, DEFAULT_TREE)
+        assert package_files(fake_bkrepo, second) == in_repo_dir(repo, {"README.md": b"# pushed\n"})
         assert ProjectSourcePackage.objects.filter(project=repo.project).count() == 2
 
     def test_an_unknown_tag_is_refused(self, repo, fake_bkrepo):
@@ -224,24 +230,6 @@ class TestUploadSourcePackage:
 
         assert fake_bkrepo.objects == {}
         assert not ProjectSourcePackage.objects.exists()
-
-    def test_an_archive_not_nested_under_one_directory_is_refused(self, repo, head, fake_bkrepo, monkeypatch):
-        """Guards against a Forgejo upgrade changing the layout and shipping a wrongly rooted package."""
-
-        def flat_archive(*, handle, **kwargs):
-            with tarfile.open(fileobj=handle, mode="w:gz") as archive:
-                for name in ("a.txt", "b.txt"):
-                    info = tarfile.TarInfo(name)
-                    archive.addfile(info, io.BytesIO(b""))
-
-        monkeypatch.setattr(
-            "app_spark_api.infras.forgejo.client.ForgejoClient.download_archive", _static(flat_archive)
-        )
-
-        with pytest.raises(SourcePackageError, match=r"one top-level directory, found \['a.txt', 'b.txt'\]"):
-            RepoPackager(repo).upload()
-
-        assert fake_bkrepo.objects == {}
 
     # The wrapper runs the ORM on another thread, which only sees committed rows.
     @pytest.mark.django_db(transaction=True)
@@ -310,12 +298,3 @@ class TestGenerateSourcePackageUrl:
 
         assert url
         assert fake_bkrepo.signed[-1][2] == 60
-
-
-def _static(function):
-    """Let a plain function stand in for a method, ignoring the bound client."""
-
-    def method(self, **kwargs):
-        return function(**kwargs)
-
-    return method

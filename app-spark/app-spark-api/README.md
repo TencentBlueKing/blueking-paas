@@ -310,6 +310,9 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 发布时把某个 commit 的源码打成 tgz 传到蓝鲸制品库，再签一个预签名地址交给发布流程去下载，
 见 `repository/git/source_packages.py`。
 
+包就是 Forgejo 对该 commit 的 `tar.gz` 归档，原样上传，不解压重打。源码在包里套着一层以仓库名
+命名的目录（`{repo}/...`），开发者中心支持源码位于单个子目录内，所以不必把文件提到包根目录。
+
 每次上传记一行 `ProjectSourcePackage`，以「Project + commit SHA」唯一：主分支会被反复发布，只有
 SHA 能区分版本；同一个 SHA 不论经由主分支还是 tag 选中都只上传一次，后来者复用已有记录。
 

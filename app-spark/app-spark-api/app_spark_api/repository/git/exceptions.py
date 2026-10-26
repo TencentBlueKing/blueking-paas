@@ -37,4 +37,4 @@ class SourceRefNotFoundError(GitBackendError):
 
 
 class SourcePackageError(GitBackendError):
-    """源码包没能打出来、传上制品库，或者没能为它签出下载地址。"""
+    """源码包没能传上制品库，或者没能为它签出下载地址。"""

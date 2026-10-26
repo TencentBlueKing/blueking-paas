@@ -38,13 +38,6 @@ def _branches_url(app_code: str, module_name: str) -> str:
 
 
 @pytest.fixture()
-def ai_agent_app(bk_app: "Application") -> "Application":
-    bk_app.is_ai_agent_app = True
-    bk_app.save(update_fields=["is_ai_agent_app"])
-    return bk_app
-
-
-@pytest.fixture()
 def stubbed_version_service():
     alternative_version = AlternativeVersion(
         name="master",

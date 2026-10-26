@@ -25,7 +25,6 @@ from django_dynamic_fixture import G
 from rest_framework import status
 
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -58,14 +57,6 @@ def _offline_url(app_code: str, module_name: str, env: str = "stag") -> str:
 
 def _offline_result_url(app_code: str, module_name: str, offline_id: str) -> str:
     return f"/sys/api/bkapps/applications/{app_code}/modules/{module_name}/offlines/{offline_id}/result/"
-
-
-@pytest.fixture()
-def ai_agent_app(bk_app: Application) -> Application:
-    """An AI Agent application."""
-    bk_app.is_ai_agent_app = True
-    bk_app.save(update_fields=["is_ai_agent_app"])
-    return bk_app
 
 
 @pytest.fixture()

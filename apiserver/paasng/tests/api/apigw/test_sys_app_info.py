@@ -37,13 +37,6 @@ def _detail_url(app_code: str) -> str:
     return f"/sys/api/bkapps/applications/{app_code}/"
 
 
-@pytest.fixture()
-def ai_agent_app(bk_app: Application) -> Application:
-    bk_app.is_ai_agent_app = True
-    bk_app.save(update_fields=["is_ai_agent_app"])
-    return bk_app
-
-
 @pytest.fixture(autouse=True)
 def patch_exposed_links():
     with mock.patch(

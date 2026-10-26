@@ -41,14 +41,6 @@ def _service_instance_url(app_code: str, module_name: str, service_id: str = SER
 
 
 @pytest.fixture()
-def ai_agent_app(bk_app: "Application") -> "Application":
-    """An AI Agent application."""
-    bk_app.is_ai_agent_app = True
-    bk_app.save(update_fields=["is_ai_agent_app"])
-    return bk_app
-
-
-@pytest.fixture()
 def service_instance() -> ServiceInstanceObj:
     return ServiceInstanceObj(
         uuid=str(uuid.uuid4()),
@@ -106,8 +98,7 @@ class TestSysGetServiceInstanceByModule:
             assert result["service_instance"]["config"]["admin_url"] == service_instance.config["admin_url"]
             assert result["service_instance"]["credentials"] == '{"username": "user", "password": "pwd"}'
 
-        # operator 为可选查询参数, 仅用于记录调用来源, 不影响查询结果
-        resp = sys_aidev_api_client.get(_service_instance_url(ai_agent_app.code, bk_module.name) + "?operator=admin")
+        resp = sys_aidev_api_client.get(_service_instance_url(ai_agent_app.code, bk_module.name))
         assert resp.status_code == status.HTTP_200_OK, resp.json()
         assert resp.json()["count"] == len(bk_module.envs.all())
 

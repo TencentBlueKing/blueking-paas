@@ -55,10 +55,10 @@
       <bk-form-item
         v-if="!data.hasEnv"
         :label="$t(labelText)"
-        :required="true"
+        :required="!allowEmptyPlans"
         :property="'cluster'"
         :error-display-type="'normal'"
-        :desc="$t(tips)"
+        :desc="$t(allowEmptyPlans ? '不选择方案表示命中该规则的应用无法使用此服务' : tips)"
         desc-type="icon"
         :desc-icon="isCluster ? '' : 'icon-info-circle'"
       >
@@ -221,7 +221,7 @@ export default {
         cluster: [
           {
             validator: () => {
-              return this.data.clusters.length;
+              return this.allowEmptyPlans || this.data.clusters.length;
             },
             message: this.$t('必填项'),
             trigger: 'blur',
@@ -263,6 +263,10 @@ export default {
     },
     isCluster() {
       return this.labelText === '集群';
+    },
+    // 服务方案的非兜底规则允许不选方案，表示命中该规则的应用无法使用此服务
+    allowEmptyPlans() {
+      return !this.isCluster && !this.isLastCard;
     },
   },
   methods: {

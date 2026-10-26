@@ -34,7 +34,7 @@ from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService, get_bound_env_exposed_url_type
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import ServiceDisallowedError, ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.accounts.utils import get_oauth_credential_by_repo, get_oauth_credential_by_user
@@ -709,7 +709,10 @@ class DefaultServicesBinder:
                 logger.exception("应用<%s>获取预设增强服务<%s>失败", self.application.code, service_name)
                 continue
 
-            mixed_service_mgr.bind_service_use_first_plan(service_obj, self.module)
+            try:
+                mixed_service_mgr.bind_service_use_first_plan(service_obj, self.module)
+            except ServiceDisallowedError:
+                logger.info("模块<%s>不允许使用预设增强服务<%s>，跳过绑定", self.module.name, service_name)
 
 
 def make_engine_app_name(module: Module, app_code: str, env: str) -> str:

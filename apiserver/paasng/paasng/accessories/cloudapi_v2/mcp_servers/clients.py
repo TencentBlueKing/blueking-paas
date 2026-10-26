@@ -19,7 +19,9 @@ import json
 
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
+from requests.exceptions import RequestException
 
+from paasng.accessories.cloudapi_v2.apply_records import ApplyRecordOperateError
 from paasng.accessories.cloudapi_v2.mcp_servers.apigw.clients import Client
 from paasng.accessories.cloudapi_v2.mcp_servers.exceptions import MCPServerApiGatewayServiceError
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
@@ -117,3 +119,21 @@ class MCPServerApiClient:
             self.client.apply_permissions(data=data)
         except (APIGatewayResponseError, ResponseError) as e:
             raise MCPServerApiGatewayServiceError(f"apply permissions error: {e}")
+
+    def cancel_permission_apply_record(self, app_code: str, record_id: int, operated_by: str) -> None:
+        """取消待审批的 MCP Server 权限申请"""
+        data = {"target_app_code": app_code, "operated_by": operated_by}
+
+        try:
+            self.client.cancel_permission_apply_record(data=data, path_params={"record_id": record_id})
+        except RequestException as e:
+            raise ApplyRecordOperateError.from_exception(e) from e
+
+    def delete_permission_apply_record(self, app_code: str, record_id: int, operated_by: str) -> None:
+        """删除已取消的 MCP Server 权限申请"""
+        params = {"target_app_code": app_code, "operated_by": operated_by}
+
+        try:
+            self.client.delete_permission_apply_record(params=params, path_params={"record_id": record_id})
+        except RequestException as e:
+            raise ApplyRecordOperateError.from_exception(e) from e

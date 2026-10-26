@@ -15,7 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
+from bkapi_client_core.apigateway import Operation, OperationGroup, bind_property
+
+from paasng.accessories.cloudapi_v2.apigw import BkApigatewayClient
 
 
 class Group(OperationGroup):
@@ -40,6 +42,22 @@ class Group(OperationGroup):
         path="/api/v2/inner/mcp-server/permissions/apply-records/",
     )
 
+    # 取消待审批的 MCP Server 权限申请
+    cancel_permission_apply_record = bind_property(
+        Operation,
+        name="cancel_permission_apply_record",
+        method="POST",
+        path="/api/v2/inner/mcp-server/permissions/apply-records/{record_id}/cancel/",
+    )
+
+    # 删除已取消的 MCP Server 权限申请
+    delete_permission_apply_record = bind_property(
+        Operation,
+        name="delete_permission_apply_record",
+        method="DELETE",
+        path="/api/v2/inner/mcp-server/permissions/apply-records/{record_id}/",
+    )
+
     apply_permissions = bind_property(
         Operation,
         name="apply_permissions",
@@ -48,9 +66,7 @@ class Group(OperationGroup):
     )
 
 
-class Client(APIGatewayClient):
+class Client(BkApigatewayClient):
     """mcp server client"""
-
-    _api_name = "bk-apigateway"
 
     api = bind_property(Group, name="api")

@@ -23,6 +23,7 @@ class PermissionApplyStatus(StrStructuredEnum):
     APPROVED = EnumField("approved", label="通过")
     REJECTED = EnumField("rejected", label="驳回")
     PENDING = EnumField("pending", label="待审批")
+    CANCELED = EnumField("canceled", label="已取消")
 
 
 class AlarmRecordStatus(StrStructuredEnum):

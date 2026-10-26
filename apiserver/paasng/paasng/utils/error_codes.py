@@ -45,6 +45,13 @@ class ErrorCodes:
     # 云 API 管理
     QUERY_API_LIST_FAILED = ErrorCode(_("查询API列表失败"))
     CLIENT_CREDENTIALS_MISSING = ErrorCode(_("应用身份凭证缺失"))
+    # 云 API 权限申请记录取消/删除
+    CLOUD_API_APPLY_RECORD_NOT_FOUND = ErrorCode(_("云 API 权限申请记录不存在"), status_code=404)
+    CLOUD_API_APPLY_RECORD_STATUS_INVALID = ErrorCode(
+        _("云 API 权限申请记录状态已变更，请刷新后重试"), status_code=400
+    )
+    CLOUD_API_OPERATED_BY_INVALID = ErrorCode(_("当前用户标识不符合云 API 要求，无法执行该操作"), status_code=400)
+    CLOUD_API_SERVICE_UNAVAILABLE = ErrorCode(_("云 API 服务暂不可用，请稍后重试"), status_code=503)
     # 应用创建 & 删除
     CANNOT_CREATE_APP = ErrorCode(_("应用创建失败"))
     CANNOT_CREATE_APP_BKAUTH_CONFLICT = ErrorCode(

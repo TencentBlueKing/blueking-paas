@@ -23,6 +23,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2 import serializers
+from paasng.accessories.cloudapi_v2.apply_records import (
+    handle_apply_record_operate_error,
+    validate_operated_by,
+)
 from paasng.accessories.cloudapi_v2.mcp_servers.clients import MCPServerApiClient
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -98,5 +102,71 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             result_code=ResultCode.SUCCESS,
             data_after=data_after,
         )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def cancel_mcp_server_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """取消待审批的 MCP Server 权限申请"""
+        app = self.get_application()
+        tenant_id = get_tenant_id_for_app(app.code)
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            MCPServerApiClient(tenant_id=tenant_id).cancel_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.CANCEL,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                data_after=DataDetail(
+                    type=DataType.RAW_DATA, data={"record_id": record_id, "record_type": "mcp_server"}
+                ),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for cancel mcp server apply record")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        responses={204: None},
+        tags=["CloudAPIV2"],
+    )
+    def delete_mcp_server_permission_apply_record(self, request, record_id: int, *args, **kwargs):
+        """删除已取消的 MCP Server 权限申请"""
+        app = self.get_application()
+        tenant_id = get_tenant_id_for_app(app.code)
+        operated_by = validate_operated_by(request.user.username)
+
+        with handle_apply_record_operate_error():
+            MCPServerApiClient(tenant_id=tenant_id).delete_permission_apply_record(
+                app_code=app.code, record_id=record_id, operated_by=operated_by
+            )
+
+        try:
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.CLOUD_API,
+                result_code=ResultCode.SUCCESS,
+                data_after=DataDetail(
+                    type=DataType.RAW_DATA, data={"record_id": record_id, "record_type": "mcp_server"}
+                ),
+            )
+        except Exception:
+            logger.exception("Failed to add audit record for delete mcp server apply record")
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -32,6 +32,8 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.masked_curlify import MASKED_CONTENT
+from tests.paasng.platform.engine.setup_utils import create_fake_deployment
+from tests.utils.auth import create_user
 
 logger = logging.getLogger(__name__)
 
@@ -268,6 +270,19 @@ class TestDeploymentViewSet:
         initialize.assert_called_once()
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_DEPLOY_APP", "detail": "部署失败: 部署请求异常，请稍候再试"}
+
+    @pytest.mark.parametrize(("is_operator", "expected_status"), [(True, 200), (False, 400)])
+    def test_user_interrupt_only_by_operator(self, api_client, bk_app, bk_module, is_operator, expected_status):
+        """用户态只允许部署发起人中断；应用态的中断不受此限制。"""
+        operator = bk_app.owner if is_operator else create_user().pk
+        deployment = create_fake_deployment(bk_module, operator=operator)
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/deployments/{deployment.id}/interruptions/"
+
+        with mock.patch("paasng.platform.engine.views.deploy.interrupt_deployment") as interrupt:
+            resp = api_client.post(url)
+
+        assert resp.status_code == expected_status, resp.json()
+        assert interrupt.called is is_operator
 
 
 class TestDeployOptionsViewSet:

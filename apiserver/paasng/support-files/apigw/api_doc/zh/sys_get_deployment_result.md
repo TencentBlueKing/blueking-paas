@@ -1,8 +1,8 @@
 ### 功能描述
 
-以应用身份查询 AI Agent 应用的部署任务结果。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
+以应用身份查询应用的部署任务结果。调用方须具备 AIDEV 或 AppSpark 系统角色，且只能查询自己管理的应用，否则返回 403：AIDEV 只能查询 AI Agent 应用，AppSpark 只能查询默认模块源码来源仍为 AppSpark 的应用，且只能查询默认模块在生产环境的部署。
 
-返回结果与用户态接口 `get_deployment_result` 一致。
+返回结果与用户态接口 `get_deployment_result` 一致。部署成功时 `access_url` 为该环境的默认访问地址，可直接分享给用户。
 
 ### 请求参数
 
@@ -10,7 +10,7 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| app_code | string | 是 | 应用 ID，必须是 AI Agent 应用 |
+| app_code | string | 是 | 应用 ID，必须是调用方管理的应用 |
 | module | string | 是 | 模块名称 |
 | deployment_id | string | 是 | 部署任务 ID |
 
@@ -40,7 +40,8 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
             "text": "日志查询",
             "link": "http://bkpaas.example.com/developer-center/apps/appid/default/log?tab=stream"
         }]
-    }
+    },
+    "access_url": null
 }
 ```
 
@@ -54,3 +55,4 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
 | error_tips.matched_solutions_found | boolean | 是否有匹配的 tips |
 | error_tips.possible_reason | string | 可能导致部署错误的原因 |
 | error_tips.helpers | object | 辅助信息，包含文本和链接 |
+| access_url | string | 部署成功时为该环境的默认访问地址（不含自定义域名）；其余状态，或环境当前未在运行时为 null |

@@ -1,6 +1,9 @@
 ### Function Description
 
-Take an AI Agent application module offline from the specified environment using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
+Take an application module offline from the specified environment using application credentials. The caller must have the AIDEV or AppSpark system role and can only operate on the applications it manages, otherwise 403 is returned:
+
+- AIDEV: the target application must be an AI Agent application
+- AppSpark: the source origin of the target application's default module must still be AppSpark, only the default module can be operated on (other modules return 403), and `env` must be prod; passing stag returns 400
 
 The offline logic is the same as the user-facing API `module_offline`. Only the operator is specified by the `operator` field in the request body. The `operator` is only recorded as the operator; its application permissions are not checked, and the environment deployment role protection does not apply.
 
@@ -10,9 +13,9 @@ The offline logic is the same as the user-facing API `module_offline`. Only the 
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code | string | Yes | Application ID. Must be an AI Agent application |
+| app_code | string | Yes | Application ID. Must be an application managed by the caller |
 | module | string | Yes | Module name, e.g., "default" |
-| env | string | Yes | Environment name, available values: "stag" / "prod" |
+| env | string | Yes | Environment name, available values: "stag" / "prod". AppSpark can only pass "prod" |
 
 #### 2. Interface Parameters
 

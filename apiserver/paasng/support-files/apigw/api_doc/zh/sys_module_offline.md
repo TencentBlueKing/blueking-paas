@@ -1,6 +1,9 @@
 ### 功能描述
 
-以应用身份将 AI Agent 应用模块从指定环境下架。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
+以应用身份将应用模块从指定环境下架。调用方须具备 AIDEV 或 AppSpark 系统角色，且只能操作自己管理的应用，否则返回 403：
+
+- AIDEV：目标应用必须是 AI Agent 应用
+- AppSpark：目标应用默认模块的源码来源必须仍为 AppSpark，只能操作默认模块（其他模块返回 403），且 env 只能是 prod，传 stag 返回 400
 
 下架逻辑与用户态接口 `module_offline` 一致，仅下架操作人由请求体中的 `operator` 指定。`operator` 只用于记录操作人，不校验其应用权限，也不受环境部署角色保护限制。
 
@@ -10,9 +13,9 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| app_code | string | 是 | 应用 ID，必须是 AI Agent 应用 |
+| app_code | string | 是 | 应用 ID，必须是调用方管理的应用 |
 | module | string | 是 | 模块名称，如 "default" |
-| env | string | 是 | 环境名称，可选值 "stag" / "prod" |
+| env | string | 是 | 环境名称，可选值 "stag" / "prod"，AppSpark 只能传 "prod" |
 
 #### 2、接口参数
 

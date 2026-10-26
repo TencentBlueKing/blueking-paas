@@ -1,6 +1,9 @@
 ### 功能描述
 
-以应用身份，通过下载链接为 AI Agent 应用上传源码包。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
+以应用身份，通过下载链接为应用上传源码包。调用方须具备 AIDEV 或 AppSpark 系统角色，且只能操作自己管理的应用，否则返回 403：
+
+- AIDEV：目标应用必须是 AI Agent 应用
+- AppSpark：目标应用默认模块的源码来源必须仍为 AppSpark，且只能操作默认模块（其他模块返回 403）。用户在开发者中心将其切换为代码仓库后，应用不再归 AppSpark 管理
 
 上传逻辑与用户态接口一致，仅上传人由请求体中的 `operator` 指定，响应中的 `operator` 即为该用户。
 
@@ -10,7 +13,7 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| app_code | string | 是 | 应用 ID，必须是 AI Agent 应用 |
+| app_code | string | 是 | 应用 ID，必须是调用方管理的应用 |
 | module | string | 是 | 模块名称 |
 
 #### 2、接口参数
@@ -21,7 +24,7 @@
 | version | string | 是 | 源码包版本号，必须显式传入，不支持传空字符串或 null |
 | operator | string | 是 | 源码包上传人用户名，记录为源码包的上传人，允许使用虚拟账号 |
 | allow_overwrite | boolean | 否 | 是否允许覆盖原有的源码包，默认 false |
-| build_method | string | 否 | 构建方式，仅 AI Agent 应用支持。可选值：buildpack、dockerfile，不传则保持模块当前配置 |
+| build_method | string | 否 | 构建方式，仅 AI Agent 和 AppSpark 应用支持。可选值：buildpack、dockerfile，不传则保持模块当前配置 |
 | dockerfile_path | string | 否 | Dockerfile 路径，build_method 为 dockerfile 时生效，默认 Dockerfile |
 | docker_build_args | object | 否 | Docker 构建参数，build_method 为 dockerfile 时生效，默认 {} |
 

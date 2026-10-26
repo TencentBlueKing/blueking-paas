@@ -72,7 +72,7 @@ urlpatterns = [
         views.ModuleSourcePackageViewSet.as_view({"post": "upload_via_url"}),
         name="api.sourcectl.source_package.create_via_url",
     ),
-    # 应用态源码包管理，仅供 AIDEV 为 AI Agent 应用上传源码包
+    # 应用态源码包管理：AIDEV 为 AI Agent 应用、AppSpark 为 AppSpark 应用上传源码包
     re_path(
         make_app_pattern(r"/source_package/link/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
         views.SysModuleSourcePackageViewSet.as_view({"post": "upload_via_url"}),

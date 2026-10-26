@@ -21,7 +21,6 @@ from unittest import mock
 import pytest
 
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
-from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 
@@ -46,8 +45,10 @@ class TestInterruptDeployment:
             interrupt_deployment(deployment, bk_user)
             assert mocked_interrupt.called is engine_called
 
-    def test_failed_incorrect_user(self, bk_module):
+    def test_other_user_allowed(self, bk_module):
+        """领域函数不限制中断人，谁能中断由调用方决定：用户态只允许发起人，应用态不限制。"""
         deployment = create_fake_deployment(bk_module)
-        with pytest.raises(DeployInterruptionFailed):
-            # Use a user different with deployment operator
-            interrupt_deployment(deployment, user=create_user())
+        interrupt_deployment(deployment, user=create_user())
+
+        deployment.refresh_from_db()
+        assert deployment.build_int_requested_at is not None

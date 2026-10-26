@@ -123,6 +123,7 @@ class OperationEnum(StrStructuredEnum):
     APPLY = EnumField("apply", label=_("申请"))
     RENEW = EnumField("renew", label=_("续期"))
     DEPLOY = EnumField("deploy", label=_("部署"))
+    INTERRUPT_DEPLOY = EnumField("interrupt_deploy", label=_("中断部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
     # 以下是仅用于 Admin42 的操作对象
     MODIFY_PLAN = EnumField("switch", label=_("切换资源方案"))

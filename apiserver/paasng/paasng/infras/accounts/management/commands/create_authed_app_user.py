@@ -37,6 +37,7 @@ ROLE_CHOICES = [
     ClientRole.LIGHT_APP_MAINTAINER.value,
     ClientRole.LESSCODE.value,
     ClientRole.AIDEV.value,
+    ClientRole.APP_SPARK.value,
 ]
 
 
@@ -62,7 +63,8 @@ class Command(BaseCommand):
             default=ClientRole.BASIC_READER.value,
             help=(
                 'User role, choices: 50 - "basic reader"(default); '
-                '60 - "basic maintainer"; 70 - "light app maintainer"; 80 - "lesscode system"; 90 - "AIDev system".'
+                '60 - "basic maintainer"; 70 - "light app maintainer"; 80 - "lesscode system"; 90 - "AIDev system"; '
+                '100 - "AppSpark system".'
             ),
         )
 

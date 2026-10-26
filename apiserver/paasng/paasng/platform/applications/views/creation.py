@@ -38,7 +38,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType, DeployPolicy
+from paasng.platform.applications.constants import AppEnvironment, AppLanguage, ApplicationType, DeployPolicy
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import (
     AIAgentAppCreateInputSLZ,
@@ -235,6 +235,22 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         return self._init_application(user, params, engine_params, source_origin, env_cluster_names)
 
+    def create_app_spark_app_for_user(self, user: User, params: Dict) -> Response:
+        """为指定用户创建 AppSpark 应用：标准云原生应用，默认模块使用 AppSpark 上传的源码包部署。
+
+        只创建不部署。源码包和构建方式由 AppSpark 后续通过上传源码包接口提供。
+        """
+        source_origin = SourceOrigin.APP_SPARK
+        engine_params = {
+            "source_origin": source_origin,
+            # AppSpark 生成的都是 Python 应用；没有模板可读语言，buildpack 构建时靠它绑定 Python 构建工具
+            "language": AppLanguage.PYTHON.value,
+        }
+        # 与页面新建的云原生应用一样走默认集群，不接受调用方指定
+        env_cluster_names: Dict[str, str] = {}
+
+        return self._init_application(user, params, engine_params, source_origin, env_cluster_names)
+
     def _init_ai_agent_app_via_git(self, user: User, params: Dict) -> Response:
         """使用 git 仓库源码部署创建 AI Agent 应用，支持 buildpack / dockerfile 构建。"""
         # AI Agent 应用不支持指定集群，使用默认集群（env_cluster_names 传空）
@@ -426,7 +442,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # Create engine related data
         # `source_init_template` is optional
         source_init_template = engine_params.get("source_init_template", "")
-        language = ""
+        # 没有模板的来源（如 AppSpark）由调用方直接指定语言，用于绑定对应的构建工具
+        language = engine_params.get("language", "")
         if source_init_template:
             language = Template.objects.get(name=source_init_template).language
 

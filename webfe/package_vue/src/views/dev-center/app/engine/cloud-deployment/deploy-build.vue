@@ -75,9 +75,9 @@ export default {
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
-    // AIDEV 插件
+    // AIDEV 插件和 AppSpark 应用都用平台托管的源码包部署，可切换为代码仓库
     isAidevPlugin() {
-      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.AIDEV;
+      return [this.GLOBAL.APP_TYPES.AIDEV, this.GLOBAL.APP_TYPES.APP_SPARK].includes(this.curAppModule.source_origin);
     },
   },
   created() {

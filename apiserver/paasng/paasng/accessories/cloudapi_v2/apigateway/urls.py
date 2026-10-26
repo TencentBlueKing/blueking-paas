@@ -129,6 +129,13 @@ urlpatterns = [
         views.GatewayAPIViewSet.as_view({"get": "get_app_esb_component_permission_apply_record"}),
         name="api.cloudapi.v2.esb_component_permission_apply_record_detail",
     ),
+    # ============ 调用流水日志相关 ============
+    # 应用维度调用流水日志
+    path(
+        "apps/<slug:app_code>/inner/monitor/request-logs/",
+        views.GatewayAPIViewSet.as_view({"get": "list_app_request_logs"}),
+        name="api.cloudapi.v2.app_request_logs",
+    ),
     # ============ 监控告警相关 ============
     # 应用维度告警记录
     path(

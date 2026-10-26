@@ -33,3 +33,7 @@ class AlarmRecordStatus(StrStructuredEnum):
     SKIPPED = EnumField("skipped", label=_("已忽略"))
     SUCCESS = EnumField("success", label=_("告警成功"))
     FAILURE = EnumField("failure", label=_("告警失败"))
+
+
+# 调用流水日志的最早可回溯天数 (日志保留窗口): time_start 不得早于当前时间前该天数, 边界值允许.
+REQUEST_LOG_MAX_LOOKBACK_DAYS = 180

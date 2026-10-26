@@ -179,6 +179,14 @@ class Group(OperationGroup):
 
     # ============ 应用监控相关 ============
 
+    # 应用维度调用流水日志
+    list_app_request_logs = bind_property(
+        Operation,
+        name="list_app_request_logs",
+        method="GET",
+        path="/api/v2/inner/apps/{app_code}/monitor/request-logs/",
+    )
+
     # 应用维度告警记录
     list_app_alarm_records = bind_property(
         Operation,

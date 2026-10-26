@@ -408,6 +408,23 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._response_with_serializer(serializers.GetAppESBComponentPermissionApplyRecordOutputSLZ, data)
 
     @swagger_auto_schema(
+        query_serializer=serializers.ListAppRequestLogsInputSLZ,
+        responses={200: serializers.ListAppRequestLogsOutputSLZ},
+        tags=["CloudAPIV2"],
+    )
+    def list_app_request_logs(self, request, *args, **kwargs):
+        """查询应用维度调用流水日志"""
+        validated_data = self._validate(serializers.ListAppRequestLogsInputSLZ, data=request.query_params)
+
+        app, tenant_id = self._get_app_and_tenant()
+        try:
+            data = self._get_client(tenant_id, request).list_app_request_logs(app_code=app.code, **validated_data)
+        except ApiGatewayServiceError as e:
+            raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
+
+        return self._response_with_serializer(serializers.ListAppRequestLogsOutputSLZ, data)
+
+    @swagger_auto_schema(
         query_serializer=serializers.ListAppAlarmRecordsInputSLZ,
         responses={200: serializers.ListAppAlarmRecordsOutputSLZ},
         tags=["CloudAPIV2"],

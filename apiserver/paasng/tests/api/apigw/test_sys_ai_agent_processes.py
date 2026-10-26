@@ -17,6 +17,7 @@
 
 
 import datetime
+import uuid
 from types import SimpleNamespace
 from unittest import mock
 
@@ -26,12 +27,14 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import ProcessesInfo
 from paas_wl.bk_app.processes.entities import Runtime
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.audit.models import AppOperationRecord
+from paasng.platform.applications.constants import DeployPolicy
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 
@@ -94,6 +97,56 @@ def wl_processes_info(stag_env) -> ProcessesInfo:
     return ProcessesInfo(processes=[process], rv_proc="100", rv_inst="200")
 
 
+@pytest.fixture()
+def sandbox_env(module: Module):
+    """把应用切换为隔离沙箱部署模式 (由 CR 直接渲染 Pod, 无 Deployment)"""
+    application = module.application
+    application.deploy_policy = DeployPolicy.ISOLATED.value
+    application.save(update_fields=["deploy_policy"])
+    return module.envs.get(environment="stag")
+
+
+@pytest.fixture()
+def list_instances_only(sandbox_env):
+    wl_app = sandbox_env.wl_app
+    other_app = mock.MagicMock(spec=WlApp, name="ut-other-wl-app", uuid=uuid.uuid4().hex, module_name="other")
+
+    def _build_process(app, name: str) -> Process:
+        instance = Instance(
+            app=app,
+            name=f"{app.name}--{name}-0",
+            process_type=name,
+            image="docker.example.com/bkpaas/docker/foo/default:1.0.0",
+            start_time="2024-08-16T02:07:55Z",
+            state="Running",
+            rich_status="Running",
+            ready=True,
+            version=3,
+        )
+        process = Process(
+            app=app,
+            name=f"{app.name}--{name}",
+            type=name,
+            version=3,
+            replicas=1,
+            schedule=Schedule(cluster_name="default", tolerations=[], node_selector={}),
+            runtime=Runtime(envs={}, image=instance.image, command=[], args=[]),
+            instances=[instance],
+        )
+        process.fulfill_runtime(replicas=1, success=1, metadata=SimpleNamespace(name=f"{app.name}--{name}"))
+        return process
+
+    with mock.patch(
+        "paas_wl.bk_app.processes.views.ProcInstByEnvListWatcher.list_instances_only",
+        return_value=ProcessesInfo(
+            processes=[_build_process(wl_app, "web"), _build_process(other_app, "web")],
+            rv_proc="300",
+            rv_inst="300",
+        ),
+    ) as list_instances_only:
+        yield list_instances_only
+
+
 class TestSysListProcesses:
     """应用态查询进程接口测试"""
 
@@ -142,6 +195,25 @@ class TestSysListProcesses:
         assert (instance["process_type"], instance["state"], instance["ready"]) == ("web", "Running", True)
 
         list_processes.assert_called_once_with()
+
+    def test_list_sandbox_app_instances_only(
+        self,
+        sys_aidev_api_client,
+        ai_agent_app_with_wl_apps: Application,
+        module: Module,
+        sandbox_env,
+        list_instances_only: mock.MagicMock,
+    ):
+        """隔离沙箱应用没有 Deployment, 按 Pod 构造进程状态, 且只包含路径对应应用的实例"""
+        resp = sys_aidev_api_client.get(_list_url(ai_agent_app_with_wl_apps.code, module.name))
+
+        assert resp.status_code == status.HTTP_200_OK, resp.json()
+        data = resp.json()
+        assert len(data["processes"]["items"]) == 1
+        assert data["processes"]["items"][0]["type"] == "web"
+        assert len(data["instances"]["items"]) == 1
+        assert data["instances"]["items"][0]["state"] == "Running"
+        assert data["processes"]["metadata"]["resource_version"] == "300"
 
     def test_list_basic_maintainer_denied(
         self, sys_api_client, ai_agent_app_with_wl_apps: Application, module: Module

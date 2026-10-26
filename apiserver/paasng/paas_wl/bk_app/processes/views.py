@@ -38,7 +38,7 @@ from urllib3.exceptions import ReadTimeoutError
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
-from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
+from paas_wl.bk_app.processes.controllers import ProcessesInfo, get_proc_ctl, judge_operation_frequent
 from paas_wl.bk_app.processes.exceptions import (
     InstanceNotFound,
     ProcessNotFound,
@@ -389,16 +389,26 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         wl_app = self.get_wl_app_via_path()
         return self._list_processes(request, env, wl_app)
 
-    def _list_processes(self, request, env: ModuleEnvironment, wl_app: WlApp) -> Response:
+    def _list_processes(
+        self,
+        request,
+        env: ModuleEnvironment,
+        wl_app: WlApp,
+        processes_status: ProcessesInfo | None = None,
+    ) -> Response:
         """查询指定环境的进程与进程实例实际状态，支持通过 release_id 参数过滤结果。
 
         用户态 / 应用态两个接口共用该逻辑。
+
+        :param processes_status: 预先取得的进程状态. 使用隔离沙箱的应用没有 Deployment,
+            需由调用方传入按实例构造的状态 (见 SysListAndWatchProcsViewSet.list).
         """
         slz = ListProcessesQuerySLZ(data=request.query_params, context={"wl_app": wl_app})
         slz.is_valid(raise_exception=True)
         release_id = slz.validated_data["release_id"]
 
-        processes_status = ProcInstByModuleEnvListWatcher(env).list()
+        if processes_status is None:
+            processes_status = ProcInstByModuleEnvListWatcher(env).list()
         # Get extra infos
         proc_extra_infos = []
         for proc_spec in processes_status.processes:
@@ -651,4 +661,14 @@ class SysListAndWatchProcsViewSet(ListAndWatchProcsViewSet, SysManagedAppInPathM
     def list(self, request, code, module_name, environment):
         """应用态获取当前进程与进程实例实际状态，仅 AIDEV 可调用，仅允许查询 AI Agent 应用。"""
         env = self.get_managed_env_via_path()
-        return self._list_processes(request, env, env.wl_app)
+        # 使用隔离沙箱的应用由 CR 直接渲染 Pod, 不存在对应的 Deployment, 需要按实例构造进程状态
+        if env.application.use_isolated_sandbox:
+            processes_status = ProcInstByEnvListWatcher(env.application, env.environment).list_instances_only()
+            processes_status = ProcessesInfo(
+                processes=[p for p in processes_status.processes if p.app.pk == env.wl_app.pk],
+                rv_proc=processes_status.rv_proc,
+                rv_inst=processes_status.rv_inst,
+            )
+        else:
+            processes_status = None
+        return self._list_processes(request, env, env.wl_app, processes_status=processes_status)

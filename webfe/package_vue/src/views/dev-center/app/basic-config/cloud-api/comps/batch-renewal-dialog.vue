@@ -237,7 +237,7 @@ export default {
       }
       const renewalDuration = this.formData.expired * 30 * 24 * 60 * 60 * 1000;
       const expiresIn = Number(payload.expires_in);
-      const baseTime =        payload.permission_status === 'expired' || !expiresIn || expiresIn <= 0
+      const baseTime = payload.permission_status === 'expired' || !expiresIn || expiresIn <= 0
         ? this.curTime
         : this.curTime + expiresIn * 1000;
       return formatDate(baseTime + renewalDuration);

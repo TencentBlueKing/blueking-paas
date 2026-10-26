@@ -1129,7 +1129,7 @@ export default {
     handleItemClick(env, type, moduleName, $event) {
       $event && $event.stopPropagation();
 
-      const appRouterInfo =        env === 'stag'
+      const appRouterInfo = env === 'stag'
         ? {
           name: 'appDeploy',
           params: {

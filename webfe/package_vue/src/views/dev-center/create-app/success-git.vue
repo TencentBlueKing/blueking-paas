@@ -254,7 +254,7 @@ export default {
     this.getCurrentUser();
   },
   mounted() {
-    const objectKey =      localStorage.getItem(this.$route.query.objectKey) === 'undefined'
+    const objectKey = localStorage.getItem(this.$route.query.objectKey) === 'undefined'
       ? ''
       : localStorage.getItem(this.$route.query.objectKey);
     const extraInfo = JSON.parse(objectKey || '{}');
@@ -268,7 +268,7 @@ export default {
       });
     },
     handlePageJump(name, moduleId) {
-      const targetRouteName =        name === 'process' ? (this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess') : name;
+      const targetRouteName = name === 'process' ? (this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess') : name;
       this.$router.push({
         name: targetRouteName,
         params: {

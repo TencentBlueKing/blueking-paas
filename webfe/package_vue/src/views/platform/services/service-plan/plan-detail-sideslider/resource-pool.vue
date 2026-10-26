@@ -251,7 +251,7 @@ export default {
             rules.push(`${label} = ${displayValue}`);
           } else {
             // 多个值用 IN
-            const displayValues =              key === 'env_name' ? values.map(v => envLabelMap[v] || v).join(', ') : values.join(', ');
+            const displayValues = key === 'env_name' ? values.map(v => envLabelMap[v] || v).join(', ') : values.join(', ');
             rules.push(`${label} IN (${displayValues})`);
           }
         }

@@ -483,7 +483,7 @@ export default {
       const { searchWrapper, searchParamsWrapper } = this.$refs;
       // this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper)
       //     + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode)
-      this.searcherDropdownLeft =        getActualLeft(searchParamsWrapper)
+      this.searcherDropdownLeft = getActualLeft(searchParamsWrapper)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)

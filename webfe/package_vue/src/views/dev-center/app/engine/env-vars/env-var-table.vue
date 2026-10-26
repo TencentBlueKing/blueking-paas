@@ -393,11 +393,12 @@ export default {
       if (!currentRow || !currentRow.environment_name) return true;
 
       // 查找相同环境和KEY的行
-      const duplicateCount = this.formData.varList.filter((item, i) => i !== index // 排除当前行
-          && item.key === value
-          && item.environment_name === currentRow.environment_name
-          && !item.isBatchDeleted, // 排除标记删除的行
-      ).length;
+      const duplicateCount = this.formData.varList.filter((item, i) => (
+        i !== index // 排除当前行
+        && item.key === value
+        && item.environment_name === currentRow.environment_name
+        && !item.isBatchDeleted // 排除标记删除的行
+      )).length;
 
       return duplicateCount === 0;
     },

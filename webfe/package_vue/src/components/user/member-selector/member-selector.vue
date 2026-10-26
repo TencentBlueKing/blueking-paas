@@ -194,7 +194,7 @@ export default {
       const host = location.host;
       const protocol = location.protocol;
       const typeList = ['rtx', 'email', 'all'];
-      const prefix =        host.indexOf(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`) > -1
+      const prefix = host.indexOf(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`) > -1
         ? `http://o.${window.GLOBAL_CONFIG.IED_DOMAIN}/component/compapi/tof3/`
         : host.indexOf(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`) > -1
           ? `${protocol}//api.open.${window.GLOBAL_CONFIG.WOA_DOMAIN}/component/compapi/tof3/`

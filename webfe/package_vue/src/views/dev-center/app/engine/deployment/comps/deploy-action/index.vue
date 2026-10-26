@@ -1360,7 +1360,7 @@ export default {
       return false;
     },
     curDeployStage() {
-      const flag =        this.isWatchDeploying
+      const flag = this.isWatchDeploying
         || this.isDeploySuccess
         || this.isDeployFail
         || this.isDeployInterrupted
@@ -1497,7 +1497,7 @@ export default {
     this.ansiUp = new AU.default();
 
     window.addEventListener('scroll', () => {
-      this.isScrollFixed =        (this.isWatchDeploying
+      this.isScrollFixed = (this.isWatchDeploying
           || this.isWatchOfflineing
           || this.isDeploySuccess
           || this.isDeployFail
@@ -1794,7 +1794,7 @@ export default {
         }
       }
 
-      this.confirmDeployConf.title =        this.environment === 'stag' ? this.$t('确认部署预发布环境？') : this.$t('确认部署生产环境？');
+      this.confirmDeployConf.title = this.environment === 'stag' ? this.$t('确认部署预发布环境？') : this.$t('确认部署生产环境？');
 
       const branchInfo = this.branchesMap[this.branchSelection];
 

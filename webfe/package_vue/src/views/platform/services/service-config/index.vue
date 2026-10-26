@@ -351,7 +351,7 @@ export default {
     updateFilterCounts(totalCount, notConfiguredCount) {
       const configuredCount = totalCount - notConfiguredCount;
       this.filterList.forEach((filter) => {
-        filter.count =          {
+        filter.count = {
           all: totalCount,
           notConfigured: notConfiguredCount,
           configured: configuredCount,

@@ -74,7 +74,7 @@ export default {
       const md = new MarkdownIt();
       let markdownContent = '';
       // 引入md文件/区分语言环境
-      markdownContent =        this.localLanguage === 'en'
+      markdownContent = this.localLanguage === 'en'
         ? require(`!!raw-loader!@/assets/md/en/${this.md}`).default
         : require(`!!raw-loader!@/assets/md/${this.md}`).default;
       const htmlStr = md.render(markdownContent);

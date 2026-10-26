@@ -616,7 +616,7 @@ export default {
         const usernameMatch = !searchValues?.length || (item.user?.username && searchSet.has(item.user.username));
 
         // 2. 检查权限是否匹配（如果 selectedRole 有值且不是 'all'）
-        const roleMatch =          !selectedRole
+        const roleMatch = !selectedRole
           || selectedRole === 'all'
           || item.roles?.some((role) => {
             switch (selectedRole) {

@@ -2153,7 +2153,7 @@ export default {
 
     // 实时日志列表 时间 | 进程名 高亮
     keyLight(item) {
-      const text =        `<span style="color: #4491e1">[${item.ts}]</span>`
+      const text = `<span style="color: #4491e1">[${item.ts}]</span>`
         + ` <span style="color: #ffa65f">${item.process_name}</span>: ${item.message}`;
       return text;
     },

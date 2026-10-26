@@ -238,7 +238,7 @@ export default {
                 });
               });
 
-              maxThresholdConfig.text =                maxThreshold === -1
+              maxThresholdConfig.text = maxThreshold === -1
                 ? '--'
                 : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
               v.maxThresholdConfig = maxThresholdConfig;

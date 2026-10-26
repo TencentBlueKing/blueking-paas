@@ -1082,7 +1082,7 @@ export default {
         conflicted_source: conflictedSource,
       } = conflictItem;
       const basicText = overrideConflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
-      const conflictSourceMessage =        conflictedSource === 'builtin_addons'
+      const conflictSourceMessage = conflictedSource === 'builtin_addons'
         ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflictedDetail })
         : this.$t('和平台的内置环境变量冲突');
 

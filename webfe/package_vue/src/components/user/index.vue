@@ -107,7 +107,7 @@ export default {
 
         // 对外统一 emit 数组格式（保持父组件接口兼容：.join(), .length, [0] 等数组操作）
         const currentNormalized = this.normalizedValue;
-        const isSame =          normalizedVal.length === currentNormalized.length
+        const isSame = normalizedVal.length === currentNormalized.length
           && normalizedVal.every((v, i) => v === currentNormalized[i]);
 
         if (!isSame) {

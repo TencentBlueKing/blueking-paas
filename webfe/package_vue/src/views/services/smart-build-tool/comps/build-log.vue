@@ -126,7 +126,7 @@ export default {
     // 获取滚动容器元素
     getScrollContainer() {
       const bkLogEl = this.$refs.bkLog?.$el;
-      const scrollContainer =        bkLogEl.querySelector('.log-scroll-container')
+      const scrollContainer = bkLogEl.querySelector('.log-scroll-container')
         || bkLogEl.querySelector('[style*="overflow"]')
         || bkLogEl.querySelector('.bk-log-virtual-scroll')
         || bkLogEl;

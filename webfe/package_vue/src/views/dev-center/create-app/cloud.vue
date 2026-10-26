@@ -1070,7 +1070,7 @@ export default {
         Go: 'go.mod',
       };
       // 获取当前语言类型
-      const currentLanguage =        this.getCurrentTemplate()?.language || (this.isEmptyTemplate ? 'Python' : this.buttonActive) || 'Python';
+      const currentLanguage = this.getCurrentTemplate()?.language || (this.isEmptyTemplate ? 'Python' : this.buttonActive) || 'Python';
 
       return [{ name: languageFileMap[currentLanguage] || languageFileMap.Python }];
     },

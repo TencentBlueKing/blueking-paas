@@ -200,7 +200,7 @@ export default {
   },
   computed: {
     displayPlatformList() {
-      const filterCondition =        this.filterValue === 'all'
+      const filterCondition = this.filterValue === 'all'
         ? () => true
         : this.filterValue === 'notConfigured'
           ? item => !item.policies

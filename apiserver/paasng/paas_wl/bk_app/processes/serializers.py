@@ -426,6 +426,12 @@ class UpdateProcessSLZ(serializers.Serializer):
             raise ValidationError(_("scaling_config 配置格式有误：{}").format(e))
 
 
+class SysUpdateProcessSLZ(UpdateProcessSLZ):
+    """Serializer for updating processes of the system API"""
+
+    operator = serializers.CharField(required=True, help_text=_("操作人用户名，仅用于记录操作人，允许使用虚拟账号"))
+
+
 class ListProcessesQuerySLZ(serializers.Serializer):
     """Serializer for query params of list API"""
 

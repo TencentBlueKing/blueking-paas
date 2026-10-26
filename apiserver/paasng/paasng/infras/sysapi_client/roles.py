@@ -74,6 +74,8 @@ class ClientPermChecker:
             ClientAction.DEPLOY_APPLICATIONS: False,
             # 查询 AI Agent 应用信息（应用、分支、进程、增强服务实例）只给 AIDEV。
             ClientAction.READ_AI_AGENT_APP: False,
+            # 管理 AI Agent 应用进程（启停、扩缩容）只给 AIDEV。
+            ClientAction.MANAGE_AI_AGENT_PROCESS: False,
             # 创建 AppSpark 应用只给 APP_SPARK，AIDEV 也不能调。
             ClientAction.CREATE_APP_SPARK_APP: False,
         }
@@ -99,6 +101,7 @@ class ClientPermChecker:
             ClientAction.UPLOAD_SOURCE_PACKAGE: True,
             ClientAction.DEPLOY_APPLICATIONS: True,
             ClientAction.READ_AI_AGENT_APP: True,
+            ClientAction.MANAGE_AI_AGENT_PROCESS: True,
         }
         # AppSpark 只拿发布所需的几个动作，不继承基础管理角色的通用应用管理权限。
         app_spark_perms = nobody_perms | {

@@ -86,3 +86,17 @@ urlpatterns = [
         name="api.process.restart",
     ),
 ]
+
+# 应用态进程操作，仅供 AIDEV 操作 AI Agent 应用
+urlpatterns += [
+    re_path(
+        make_app_pattern(r"/processes/list/$", prefix="sys/api/bkapps/applications/"),
+        views.SysListAndWatchProcsViewSet.as_view({"get": "list"}),
+        name="sys.api.list_processes",
+    ),
+    re_path(
+        make_app_pattern(r"/processes/$", prefix="sys/api/bkapps/applications/"),
+        views.SysProcessesViewSet.as_view({"post": "update"}),
+        name="sys.api.processes.update",
+    ),
+]

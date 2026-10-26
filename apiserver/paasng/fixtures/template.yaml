@@ -27,10 +27,10 @@
     updated: !!timestamp '2022-09-01 12:00:00.000000+00:00'
     name: dj2_with_auth
     type: 'normal'
-    display_name_zh_cn: 蓝鲸应用开发框架（Django5.x）
-    display_name_en: BlueKing APP framework(Django5.x)
-    description_zh_cn: Python + Django5.x，集成用户鉴权、日志处理等基础功能模块
-    description_en: Python + Django5.x, integrated user authentication, log processing, etc.
+    display_name_zh_cn: 蓝鲸应用开发框架（Django）
+    display_name_en: BlueKing APP framework(Django)
+    description_zh_cn: Python + Django，集成用户鉴权、日志处理等基础功能模块
+    description_en: Python + Django, integrated user authentication, log processing, etc.
     language: Python
     market_ready: true
     preset_services_config:

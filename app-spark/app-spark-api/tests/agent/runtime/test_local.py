@@ -33,7 +33,7 @@ from app_spark_api.agent.runtime.entities import (
     PreviewTarget,
     StateCallback,
 )
-from app_spark_api.agent.runtime.exceptions import AgentProvisionError
+from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentResourceDeletionError
 from app_spark_api.agent.runtime.providers import local as local_mod
 from app_spark_api.agent.runtime.providers.local import LocalProcessProvider
 
@@ -101,6 +101,68 @@ def register_runtime(provider: LocalProcessProvider, conversation_id: str, *, ap
         log_path=provider.state_dir(conversation_id),
         app_port=app_port,
     )
+
+
+@pytest.mark.asyncio
+async def test_delete_project_resources_stops_runtime_and_removes_directories(tmp_path, monkeypatch):
+    provider = _provider(tmp_path)
+    register_runtime(provider, "conversation-a", app_port=9000)
+    workspace = provider.workspace_dir("p")
+    state_dir = provider.state_dir("conversation-a")
+    log_path = state_dir.parent / "conversation-a-uvicorn.log"
+    workspace.mkdir(parents=True)
+    state_dir.mkdir(parents=True)
+    log_path.write_text("runtime log")
+    stopped = []
+
+    def record_stopped_process(process):
+        stopped.append(process)
+
+    monkeypatch.setattr(local_mod, "_terminate", record_stopped_process)
+
+    await provider.delete_project_resources("p", ["conversation-a"])
+
+    assert len(stopped) == 1
+    assert not provider._runtimes
+    assert not workspace.exists()
+    assert not state_dir.exists()
+    assert not log_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_project_resources_ignores_missing_local_resources(tmp_path):
+    provider = _provider(tmp_path)
+
+    await provider.delete_project_resources("p", ["conversation-a"])
+
+
+async def test_delete_project_resources_identifies_process_stop_failure(tmp_path, monkeypatch):
+    provider = _provider(tmp_path)
+    register_runtime(provider, "conversation-a", app_port=9000)
+
+    def fail_to_stop(_process):
+        raise OSError("cannot stop")
+
+    monkeypatch.setattr(local_mod, "_terminate", fail_to_stop)
+
+    with pytest.raises(AgentResourceDeletionError) as raised:
+        await provider.delete_project_resources("p", ["conversation-a"])
+
+    assert raised.value.category == "local process"
+
+
+async def test_delete_project_resources_identifies_directory_failure(tmp_path, monkeypatch):
+    provider = _provider(tmp_path)
+
+    def fail_to_delete(_paths):
+        raise PermissionError("cannot delete")
+
+    monkeypatch.setattr(local_mod, "_delete_paths", fail_to_delete)
+
+    with pytest.raises(AgentResourceDeletionError) as raised:
+        await provider.delete_project_resources("p", ["conversation-a"])
+
+    assert raised.value.category == "local directory"
 
 
 def test_local_process_strips_force_script_name_from_the_callback(settings, tmp_path):

@@ -96,7 +96,7 @@ class AgentRuntimeProvider(abc.ABC):
 
     @abc.abstractmethod
     async def preview_target(self, conversation_id: str) -> PreviewTarget | None:
-        """Return where, and how, this service should proxy the conversation's preview to.
+        """Return where the conversation's preview is served, and how to reach it.
 
         The workspace application, not the Runtime's own API: what a user opens when they want
         to look at what the agent built. Asking the provider is the whole point -- where that
@@ -104,12 +104,15 @@ class AgentRuntimeProvider(abc.ABC):
         it is the one thing the sandbox itself cannot say, since nothing inside it knows how
         the outside addresses it.
 
+        The same answer serves both ways of opening it: when ``public`` is set the browser goes
+        to ``base_url`` itself, otherwise this service proxies there with ``http_headers``.
+
         This never starts anything, for the same reason :meth:`peek` does not: looking at a
         conversation must not provision an agent for it.
 
-        :param conversation_id: Conversation whose application is to be proxied.
+        :param conversation_id: Conversation whose application is to be previewed.
         :return: The application's address plus the transport it needs, or ``None`` when no
-            Runtime is serving the conversation and there is therefore nothing to proxy to.
+            Runtime is serving the conversation and there is therefore nothing to open.
         """
 
     async def extend_lifetime(self, conversation_id: str) -> None:  # noqa: B027
@@ -139,6 +142,14 @@ class AgentRuntimeProvider(abc.ABC):
 
         Terminating an unknown conversation is not an error: callers clean up after failures
         they may not have caused.
+        """
+
+    @abc.abstractmethod
+    async def delete_project_resources(self, project_id: str, conversation_ids: list[str]) -> None:
+        """Stop a Project's Runtimes and delete provider-owned storage and credentials.
+
+        :param project_id: Project whose provider resources are being deleted.
+        :param conversation_ids: Every stored conversation identity of the Project.
         """
 
     @abc.abstractmethod

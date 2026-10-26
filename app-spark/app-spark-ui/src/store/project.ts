@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import type { ChatImage, ChatMessage } from '@/components/project/interaction/types';
 import {
   closeConversation,

@@ -172,10 +172,24 @@ class PluginReleaseType(StrStructuredEnum):
 
 
 class ReleaseStrategy(StrStructuredEnum):
-    """插件发布策略"""
+    """插件发布策略（发布流程中的具体步骤）"""
 
     GRAY = EnumField("gray", label=_("灰度发布"))
     FULL = EnumField("full", label=_("全量发布"))
+    PRE_PROD = EnumField("pre_prod", label=_("预发布"))
+
+
+class ReleaseProcess(StrStructuredEnum):
+    """正式发布流程类型"""
+
+    DEFAULT = EnumField("default", label=_("默认发布"))
+    TENCENT_STANDARD = EnumField("tencent_standard", label=_("腾讯代码规范工具发布"))
+
+
+class ReleaseStrategyType:
+    """第三方（Codecc）发布策略类型，回调 Codecc API 时使用"""
+
+    PRE_PROD = 4
 
 
 class StatusPollingMethod(StrStructuredEnum):
@@ -200,6 +214,9 @@ class GrayReleaseStatus(StrStructuredEnum):
     GRAY_APPROVAL_IN_PROGRESS = EnumField("gray_approval_in_progress", label="灰度发布审批中")
     IN_GRAY = EnumField("in_gray", label="灰度中")
     GRAY_APPROVAL_FAILED = EnumField("gray_approval_failed", label="灰度审批失败")
+    PRE_PROD_APPROVAL_IN_PROGRESS = EnumField("pre_prod_approval_in_progress", label="预发布审批中")
+    IN_PRE_PROD = EnumField("in_pre_prod", label="预发布完成")
+    PRE_PROD_APPROVAL_FAILED = EnumField("pre_prod_approval_failed", label="预发布审批失败")
     FULL_APPROVAL_IN_PROGRESS = EnumField("full_approval_in_progress", label="全量发布审批中")
     FULLY_RELEASED = EnumField("fully_released", label="已全量发布")
     FULL_APPROVAL_FAILED = EnumField("full_approval_failed", label="全量发布审批失败")

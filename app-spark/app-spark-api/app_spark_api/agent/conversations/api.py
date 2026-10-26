@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,7 @@ from app_spark_api.agent.conversations.entities import (
     UiEventRecord,
 )
 from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.runtime.exceptions import AgentProvisionError
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
@@ -46,6 +48,8 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
     from app_spark_api.agent.conversations.services import ConversationState
+
+logger = logging.getLogger(__name__)
 
 router = Router(tags=["conversations"], auth=login_required)
 
@@ -261,14 +265,34 @@ async def get_preview(
 ):
     """拿到用 iframe 打开这个会话的工作区应用的地址，以及那个应用此刻的状态。
 
-    地址由平台签发，会话一建好就有，也不会因为 Runtime 被回收而失效——所以拿到 origin 不等于
-    这一刻就有东西可看，该看 `dev_server_status`。Runtime 联系不上只会让 `dev_server_status` 变成 null，不会让
-    这个接口失败，更不会把地址收回去。
+    地址每次向 provider 现查，不落库。拿到 origin 不等于这一刻就有东西可看，该看
+    dev_server_status。Runtime 联系不上只会让 dev_server_status 变成 null，不会让这个接口失败。
     """
     conversation = await _get_conversation(request, project_id, number)
+
+    # 记录损坏时退回反代地址。轮询接口一失败，前端在一次都没成功过时就会停掉，预览卡在占位上。
+    try:
+        target = await services.get_preview_target(conversation)
+    except AgentProvisionError:
+        logger.info(
+            "Conversation %s has no usable preview target, falling back to the proxy origin",
+            conversation.id,
+        )
+        target = None
+
+    dev_server_status = await services.get_dev_server_status(conversation)
+
+    # 远程沙箱的暴露域名由浏览器直接打开，不随这次请求的 Host 变，沙箱重建后跟着换。
+    if target is not None and target.public:
+        return PreviewResponse(
+            origin=f"{target.base_url.rstrip('/')}/", direct=True, dev_server_status=dev_server_status
+        )
+
+    # 其余情况指回本服务的反代：local_process 的回环地址浏览器打不开，沙箱还没起来时也没有主机可给。
     return PreviewResponse(
         origin=preview.build_preview_origin(request, project_id=project_id, number=number),
-        dev_server_status=await services.get_dev_server_status(conversation),
+        direct=False,
+        dev_server_status=dev_server_status,
     )
 
 

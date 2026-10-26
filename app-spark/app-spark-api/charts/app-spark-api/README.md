@@ -2,19 +2,32 @@
 
 ## local_process 运行方式
 
-当前 Agent 通过 `local_process` 在 API 容器内启动，因此 [Dockerfile](../../Dockerfile)
-同时包含 API、Agent 及各自的虚拟环境。构建上下文必须是父目录 `app-spark/`，
-不能只使用 API 项目目录。
+`local_process` 仅供本地开发与测试。它必须使用 [Dockerfile.dev](../../Dockerfile.dev)
+构建的镜像，该镜像同时包含 API、Agent 及各自的虚拟环境。构建上下文必须是父目录
+`app-spark/`，不能只使用 API 项目目录。
+
+```bash
+docker build -f Dockerfile.dev -t app-spark-api:dev ..
+```
+
+Dockerfile.dev 不得进入生产或预发布流水线，也不得推送为正式 app-spark-api 镜像。
 
 目前限定单副本、单 worker；升级或配置变更会重建 Pod，造成短暂不可用并中断运行中的会话。
 
 ## e2b 运行方式
+
+生产和预发布镜像使用 [Dockerfile](../../Dockerfile)，在 `app-spark-api/` 目录下构建，
+其中不包含 Agent 项目、Agent 虚拟环境或项目模板依赖缓存。对应部署必须把
+`agent.runtimeProvider` 配为 `e2b`。
 
 `agent.runtimeProvider: e2b` 时，每个会话在 e2b 沙箱里运行 Agent，沙箱模板由
 [agent 镜像](../../../agent/README.md) 添加而来。按 [values.yaml](values.yaml) 中注释的 e2b 示例填写
 `agent.runtimeProviderConfig`，只写 e2b 的字段即可：Helm 会把 values.yaml 里 local_process 的默认字段合并进来，
 Chart 在 e2b 模式下会自动去掉它们。`api_key`、`api_url`、`callback_base_url`、`template` 缺任何一项，渲染直接失败，
 不会等到第一个会话才报错。
+
+e2b 模式每个 Pod 跑 4 个 uvicorn worker，与 Dockerfile 的默认命令一致；同一 Pod 内的 worker 共享
+`/data/app-spark`，所以单副本用 `host_tmp_path` 也没问题。
 
 e2b 模式可以多副本（`replicaCount` 大于 1），前提是 `agent.contextStorage.backend` 为 `bk_repo`。其余后端
 （包括默认的 `host_tmp_path`）只存在单个 Pod 内，会话换到别的副本冷启动时读不回上下文，Chart 渲染时直接拒绝。
@@ -30,11 +43,12 @@ ReadWriteOnce 的卷挂不到别的节点上，新 Pod 会一直 Pending。
 以下命令在 app-spark-api 项目目录执行：
 
 ```bash
-docker build -f Dockerfile -t registry.example.com/app-spark-api:0.1.0 ..
+docker build -t registry.example.com/app-spark-api:0.1.0 .
 docker push registry.example.com/app-spark-api:0.1.0
 ```
 
-按 [values.yaml](values.yaml) 准备 `values-production.yaml`，填写实际环境配置。
+生产流水线只能使用 Dockerfile，构建上下文为 `app-spark-api/`，不能引用 Dockerfile.dev。
+按 [values.yaml](values.yaml) 准备 `values-production.yaml`，填写 e2b 的实际环境配置。
 可选业务配置未定义或为 `null` 时沿用应用默认值；显式的 `false`、`0` 和空值仍会生效。
 
 ```bash

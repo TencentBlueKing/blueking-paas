@@ -124,8 +124,12 @@ export type DevServerStatus = 'not_started' | 'starting' | 'ready' | 'stopped';
 
 /** GET .../conversations/{number}/preview/ */
 export interface PreviewResponse {
-  /** 末尾带斜杠，直接作为 iframe 的 src。会话一建好就有，Runtime 回收后再拉起也不变。 */
+  /**
+   * 末尾带斜杠，ready 之后作为 iframe 的 src。
+   * direct 为 false 时是 API 上的 /preview/app/ 路径；为 true 时是沙箱暴露的主机，沙箱重建后会变。
+   */
   origin: string;
+  direct: boolean;
   dev_server_status: DevServerStatus | null;
 }
 

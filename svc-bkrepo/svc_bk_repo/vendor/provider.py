@@ -134,16 +134,20 @@ class Provider(BaseProvider):
         self._delete_repo(manager, public_bucket)
 
     def _delete_user(self, manager: BKGenericRepoManager, username: str) -> None:
-        """删除用户, 用户已不存在时视作回收完成(支持重复回收)"""
+        """删除用户, 用户已不存在时视作删除完成 (支持重复删除)
+
+        NOTE: 删除仓库才是回收实例的主要目的, 因此删除用户失败时仅记录日志.
+        """
         try:
             manager.delete_user(username=username)
         except RequestError as e:
-            if str(e.code) not in USER_NOT_FOUND_ERROR_CODES:
-                raise
-            logger.info("bkrepo user<%s> not found, skip deleting", username)
+            if str(e.code) in USER_NOT_FOUND_ERROR_CODES:
+                logger.info("bkrepo user<%s> not found, skip deleting", username)
+            else:
+                logger.warning("failed to delete bkrepo user<%s>, skip deleting: %s", username, e)
 
     def _delete_repo(self, manager: BKGenericRepoManager, repo: str) -> None:
-        """删除仓库, 仓库已不存在时视作回收完成(支持重复回收)"""
+        """删除仓库, 仓库已不存在时视作删除完成 (支持重复删除)"""
         try:
             manager.delete_repo(repo=repo, forced=True)
         except RequestError as e:

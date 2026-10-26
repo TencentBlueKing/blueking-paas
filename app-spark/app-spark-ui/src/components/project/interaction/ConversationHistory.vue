@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import { TextFile } from 'bkui-vue/lib/icon';
 import type { ConversationResponse } from '@/http/types';
 import { useProjectStore } from '@/store/project';

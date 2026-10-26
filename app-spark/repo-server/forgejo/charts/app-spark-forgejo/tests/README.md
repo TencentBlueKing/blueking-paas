@@ -47,7 +47,7 @@ kubectl --context kind-bkms-ut -n app-spark-forgejo-helm-test get pods,jobs,pvc,
 release 名就叫 `app-spark-forgejo`，这样 fullname 与 release 同名，
 [verify-job.yaml](verify-job.yaml) 里的 ConfigMap / Secret / Service 名才能写死。
 
-MySQL 与 Forgejo 各挂一个 1Gi PVC。`kind-values.yaml` 有意把 `ingress.host` 设成集群里
+Forgejo 挂一个 1Gi PVC。MySQL 的数据目录是 emptyDir，并且必须挂在 `/var/lib/mysql` 上，避免镜像的 VOLUME 在宿主机留下匿名卷。`kind-values.yaml` 有意把 `ingress.host` 设成集群里
 解析不到的主机名：生产就是这个形状（对外地址走 Ingress，集群内调用方走 Service），
 顺带验证两者不一致时 Git over HTTP 仍然可用。改镜像 tag 时构建和 load 命令要同步改。
 
@@ -99,4 +99,4 @@ init Job 等就绪超时后标记 Failed。验证后必须重新执行正常的 
 
 测试资源可以保留供排查。需要清理时，先确认 namespace 中只有本次测试数据：
 `kind-values.yaml` 里 `persistence.retainOnDelete=false`，所以删除
-`app-spark-forgejo-helm-test` namespace 会连同两个 PVC 一起删除。
+`app-spark-forgejo-helm-test` namespace 会连同 Forgejo 的 PVC 一起删除。MySQL 用的是 emptyDir。

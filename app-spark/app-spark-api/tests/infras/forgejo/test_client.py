@@ -56,6 +56,17 @@ def test_a_lost_create_response_is_recovered_by_get():
     assert (ORG, "spark-a") in fake.repos
 
 
+def test_delete_repository_is_idempotent():
+    fake = FakeForgejo()
+    client = _client(fake)
+    client.ensure_private_repo(owner=ORG, name="spark-a", default_branch="main")
+
+    client.delete_repository(ORG, "spark-a")
+    client.delete_repository(ORG, "spark-a")
+
+    assert (ORG, "spark-a") not in fake.repos
+
+
 def test_a_public_repository_is_refused():
     fake = FakeForgejo()
     fake.repos[(ORG, "public-one")] = {

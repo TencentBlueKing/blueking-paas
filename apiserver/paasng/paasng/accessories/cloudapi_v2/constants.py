@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class PermissionApplyStatus(StrStructuredEnum):
@@ -23,3 +24,12 @@ class PermissionApplyStatus(StrStructuredEnum):
     REJECTED = EnumField("rejected", label="驳回")
     PENDING = EnumField("pending", label="待审批")
     CANCELED = EnumField("canceled", label="已取消")
+
+
+class AlarmRecordStatus(StrStructuredEnum):
+    """应用维度告警记录状态"""
+
+    RECEIVED = EnumField("received", label=_("已接收"))
+    SKIPPED = EnumField("skipped", label=_("已忽略"))
+    SUCCESS = EnumField("success", label=_("告警成功"))
+    FAILURE = EnumField("failure", label=_("告警失败"))

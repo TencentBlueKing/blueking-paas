@@ -21,7 +21,12 @@ from typing import Optional
 
 from rest_framework import serializers
 
-from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRole
+from paasng.bk_plugins.pluginscenter.constants import (
+    PluginReleaseStatus,
+    PluginRole,
+    ReleaseStrategy,
+    ReleaseStrategyType,
+)
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 
@@ -68,6 +73,8 @@ class PluginRequestCreateSLZ(PluginRequestSLZ):
     """创建插件的时候需要初始化可见范围，所以需要将可见范围一起同步"""
 
     visible_range = serializers.SerializerMethodField()
+    # Codecc 插件审批时会把平台管理员添加到插件的管理员中，创建时需同步给第三方
+    administrator = serializers.SerializerMethodField(help_text="平台管理员")
 
     def get_visible_range(self, obj) -> Optional[dict]:
         if not hasattr(obj, "visible_range"):
@@ -76,6 +83,9 @@ class PluginRequestCreateSLZ(PluginRequestSLZ):
             "bkci_project": obj.visible_range.bkci_project,
             "organization": obj.visible_range.organization,
         }
+
+    def get_administrator(self, obj) -> list:
+        return obj.pd.administrator or []
 
 
 @i18n
@@ -131,6 +141,13 @@ class PluginStrategySLZ(serializers.Serializer):
     strategy = serializers.CharField(help_text="灰度策略")
     bkci_project = serializers.JSONField(help_text="蓝盾项目ID")
     organization = serializers.JSONField(help_text="组织")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # 预发布回调第三方时补充 type，对应 Codecc 枚举 PRE_PROD(4, "pre_prod")
+        if instance and getattr(instance, "strategy", None) == ReleaseStrategy.PRE_PROD:
+            data["type"] = ReleaseStrategyType.PRE_PROD
+        return data
 
 
 class PluginReleaseAPIRequestSLZ(serializers.Serializer):

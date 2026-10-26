@@ -19,3 +19,6 @@
 # 首字符限定为字母，是为了避免出现纯数字 ID——那种 ID 在 URL 和日志里很容易被当成别的东西。
 # 长度 2-20，上限对齐 `Project.id` 的 max_length。
 PROJECT_ID_PATTERN = r"^[a-z][a-z0-9-]{1,19}$"
+
+# 删除在请求内同步完成；外部存储不响应时也不能无限占住 Web worker。
+DELETE_PROJECT_TIMEOUT_SECONDS = 120

@@ -37,6 +37,14 @@ class AgentProvisionError(AgentRuntimeError):
     """An Agent Runtime could not be brought up for a conversation."""
 
 
+class AgentResourceDeletionError(AgentRuntimeError):
+    """A provider could not delete one category of Project-owned resource."""
+
+    def __init__(self, category: str):
+        self.category = category
+        super().__init__(f"Could not delete {category}")
+
+
 class AgentWorkspaceBusyError(AgentRuntimeError):
     """Another conversation already holds a live Runtime on the same workspace.
 

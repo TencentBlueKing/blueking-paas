@@ -6,6 +6,8 @@ import { getConversationPreview } from '@/http/api';
 import type { DevServerStatus } from '@/http/types';
 import { useProjectStore } from '@/store/project';
 
+import { previewFrameUrl } from './preview-frame-url';
+
 /** 应用拉起要几十秒，更密也不会更快看到页面；每次请求都会再问一次 Runtime。 */
 const POLL_INTERVAL_MS = 5000;
 /** 连续这么多次都失败，就当这个接口坏了，不再每 5 秒打一遍。中间成功一次就重新计数。 */
@@ -23,24 +25,6 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
 );
 
 /**
- * iframe 要和当前页面同源，否则响应里的 `frame-ancestors 'self'` 会拦住。
- *
- * 接口按它自己看到的 Host 签发绝对地址。本地页面在另一台主机上时，只留路径，
- * 请求仍走页面上的 `/api-svc` 代理。路径本身不改。
- */
-export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
-  if (!origin) return '';
-  let url: URL;
-  try {
-    url = new URL(origin, pageOrigin);
-  } catch {
-    return origin;
-  }
-  if (url.origin === pageOrigin) return url.href;
-  return `${pageOrigin}${url.pathname}${url.search}${url.hash}`;
-};
-
-/**
  * 当前打开的预览面板要画的地址和状态。
  *
  * 没有推送。`app.launched` 只落库，不进正在进行的 `/runs` SSE，对话流里等不到「可以预览了」。
@@ -52,8 +36,8 @@ export const previewFrameUrl = (origin: string, pageOrigin: string): string => {
  * 停掉之后，对话框里出现新的回复，或重新进入这个会话，计数回到 0 再问。
  * 不要在后台对每个会话一直打。
  *
- * `origin` 第一次拿到就留下，后面只看 `dev_server_status` 变不变。地址有了不等于页面能开，
- * 只有 `ready` 才把 origin 交给 iframe。
+ * 地址有了不等于页面能开，只有 `ready` 才把 origin 交给 iframe。沙箱重建后主机名会变，
+ * 变了才换 src，同一地址的轮询不重载 iframe。
  *
  * 接口只报地址和状态，模型改了代码这两样都不变，轮询看不出页面该刷新了。所以另给一个 `frameKey`，
  * 一轮对话结束就递增，让 iframe 重新挂一次。
@@ -70,6 +54,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
+  /** direct 为 true 时，origin 是沙箱暴露的主机，不是本服务的反代路径。 */
+  const direct = ref(false);
   const devServerStatus = ref<DevServerStatus | null>(null);
   /** 作为 iframe 的 key，变了就重新挂载、重新请求页面。 */
   const frameKey = ref(0);
@@ -161,8 +147,11 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       ) {
         return;
       }
-      // 同一会话里 origin 不变。后面的响应只用来更新状态，避免 iframe 因 src 抖动重载。
-      if (!origin.value && data.origin) origin.value = data.origin;
+      // 同一地址不换 src。远程沙箱重建后 get_host 会变成另一个主机，那时才重载。
+      if (data.origin && data.origin !== origin.value) {
+        origin.value = data.origin;
+        direct.value = data.direct;
+      }
       devServerStatus.value = asDevServerStatus(data.dev_server_status);
       pending.value = false;
       resolved = true;
@@ -198,6 +187,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       trackedKey = nextKey;
       generation += 1;
       origin.value = '';
+      direct.value = false;
       devServerStatus.value = null;
       pending.value = true;
       resolved = false;
@@ -271,7 +261,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   /** 只有 ready 才有 src。空串表示摘掉 iframe，回到占位。 */
   const frameSrc = computed(() => (
     phase.value === 'ready' && origin.value
-      ? previewFrameUrl(origin.value, window.location.origin)
+      ? previewFrameUrl(origin.value, direct.value, window.location.origin)
       : ''
   ));
 

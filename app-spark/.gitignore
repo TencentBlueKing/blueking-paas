@@ -17,3 +17,5 @@ app-spark-ui/.bk.local.env
 .cursor/skills/
 .cursor/agents/
 .cursor/hooks.json
+
+app-spark-prototype

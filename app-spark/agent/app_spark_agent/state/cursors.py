@@ -151,6 +151,35 @@ class CursorStore:
                 return
             await self._persist(self._payload.model_copy(update={"pushed_context_version": version}))
 
+    def snapshot(self) -> CursorsPayload:
+        """Return the document as it stands now, for :meth:`revert` to put back.
+
+        Example::
+
+            before = cursors.snapshot()
+            try:
+                await cursors.rebase({Channel.MESSAGE: 40})
+                await write_something_else()
+            except BaseException:
+                await cursors.revert(before)
+                raise
+        """
+        return self._payload
+
+    async def revert(self, snapshot: CursorsPayload) -> None:
+        """Put back a document :meth:`snapshot` returned, undoing every change made since.
+
+        Unlike the other writers this may move a cursor backwards, so it is only for undoing a
+        multi-step update that failed part-way, while nothing else can have moved the cursors.
+
+        :param snapshot: Document returned by :meth:`snapshot`.
+        :raises CursorStateError: If the document cannot be written.
+        """
+        async with self._lock:
+            if self._payload == snapshot:
+                return
+            await self._persist(snapshot)
+
     async def _persist(self, payload: CursorsPayload) -> None:
         try:
             await asyncio.to_thread(write_atomic, self.path, payload.model_dump_json().encode())

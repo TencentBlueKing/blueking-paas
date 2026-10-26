@@ -79,25 +79,50 @@
                 v-for="row in projects"
                 :key="row.id"
               >
-                <article
-                  class="project-card"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="`进入项目 ${row.name}`"
-                  @click="enterProject(row)"
-                  @keydown.enter.prevent="enterProject(row)"
-                  @keydown.space.prevent="enterProject(row)"
-                >
-                  <header class="project-card__top">
-                    <h3>{{ row.name }}</h3>
-                    <p class="project-card__id">{{ row.id }}</p>
-                  </header>
-                  <footer class="project-card__foot">
-                    <time :datetime="row.updated_at">
-                      更新于 {{ timeFormatter(row.updated_at, 'YYYY-MM-DD HH:mm') }}
-                    </time>
-                    <span>进入</span>
-                  </footer>
+                <article class="project-card">
+                  <button
+                    type="button"
+                    class="project-card__open"
+                    :aria-label="`进入项目 ${row.name}`"
+                    @click="enterProject(row)"
+                  >
+                    <header class="project-card__top">
+                      <h3>{{ row.name }}</h3>
+                      <p class="project-card__id">{{ row.id }}</p>
+                    </header>
+                    <footer class="project-card__foot">
+                      <time :datetime="row.updated_at">
+                        更新于 {{ timeFormatter(row.updated_at, 'YYYY-MM-DD HH:mm') }}
+                      </time>
+                      <span>进入</span>
+                    </footer>
+                  </button>
+                  <div
+                    class="project-card__more"
+                    @keydown.esc.prevent="closeMenu"
+                  >
+                    <button
+                      type="button"
+                      class="project-card__more-btn"
+                      aria-haspopup="menu"
+                      aria-label="项目操作"
+                    >
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                    </button>
+                    <div class="project-card__menu" role="menu">
+                      <div class="project-card__menu-panel">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          @click="openDelete(row)"
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </article>
               </li>
             </ul>
@@ -136,6 +161,11 @@
       v-model="dialogVisible"
       @created="enterProject"
     />
+    <DeleteProjectDialog
+      v-model="deleteVisible"
+      :project="deletingProject"
+      @deleted="handleDeleted"
+    />
   </HomeLayout>
 </template>
 
@@ -146,6 +176,7 @@ import { Plus } from 'bkui-vue/lib/icon';
 import { listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import CreateProjectDialog from '@/components/project/CreateProjectDialog.vue';
+import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
 import HomeLayout from '@/layouts/HomeLayout.vue';
 import { timeFormatter } from '@/common/util';
 import { useUser } from '@/store/user';
@@ -154,6 +185,8 @@ const router = useRouter();
 const user = useUser();
 const loading = ref(false);
 const dialogVisible = ref(false);
+const deleteVisible = ref(false);
+const deletingProject = ref<ProjectResponse | null>(null);
 const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
 
@@ -165,7 +198,7 @@ const greeting = computed(() => {
 const pagination = reactive({
   current: 1,
   count: 0,
-  limit: 11,
+  limit: 30,
 });
 
 const totalPages = computed(() => (
@@ -183,6 +216,28 @@ const handlePageChange = (page: number) => {
 
 const openCreate = () => {
   dialogVisible.value = true;
+};
+
+const closeMenu = (event: KeyboardEvent) => {
+  const current = event.currentTarget;
+  if (current instanceof HTMLElement) current.querySelector('button')?.blur();
+};
+
+const openDelete = (row: ProjectResponse) => {
+  deletingProject.value = row;
+  deleteVisible.value = true;
+};
+
+const handleDeleted = async () => {
+  const removedId = deletingProject.value?.id;
+  if (removedId && projects.value.some(item => item.id === removedId)) {
+    projects.value = projects.value.filter(item => item.id !== removedId);
+    pagination.count = Math.max(0, pagination.count - 1);
+  }
+  if (!projects.value.length && pagination.current > 1) {
+    pagination.current -= 1;
+  }
+  await fetchProjects();
 };
 
 const fetchProjects = async () => {
@@ -218,6 +273,9 @@ fetchProjects();
   --accent: #2f5bff;
   --focus: #1f46d6;
   width: 100%;
+  /* 一行最多 8 张：8×280 + 7×18。更宽时整页居中，问候语和卡片左边对齐。 */
+  max-width: 2366px;
+  margin-inline: auto;
   color: var(--ink);
 }
 
@@ -280,7 +338,7 @@ fetchProjects();
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 18px;
   margin: 0;
   padding: 0;
@@ -299,29 +357,48 @@ fetchProjects();
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: 0 12px 28px rgba(18, 28, 48, 0.06);
-  cursor: pointer;
 }
 
 .project-card {
+  position: relative;
   justify-content: space-between;
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
 }
 
+.create-card {
+  cursor: pointer;
+}
+
 .project-card:hover,
 .create-card:hover {
+  z-index: 2;
   transform: translateY(-3px);
   box-shadow: 0 18px 36px rgba(18, 28, 48, 0.1);
 }
 
-.project-card:focus,
-.create-card:focus {
-  outline: none;
-}
-
-.project-card:focus-visible,
 .create-card:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+
+.project-card__open {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 180px;
+  padding: 0 28px 0 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.project-card__open:focus,
+.project-card__open:focus-visible {
+  outline: none;
 }
 
 .project-card h3 {
@@ -354,9 +431,94 @@ fetchProjects();
   border-top: 1px solid var(--line);
 }
 
+.project-card__foot time,
+.project-card__foot span {
+  white-space: nowrap;
+}
+
 .project-card__foot span {
   color: #7b91ff;
   font-weight: 500;
+}
+
+.project-card__more {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+}
+
+.project-card__more-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.project-card__more-btn span {
+  display: block;
+  width: 3px;
+  height: 3px;
+  background: #7a8494;
+  border-radius: 50%;
+}
+
+.project-card__more-btn:hover,
+.project-card__more:focus-within .project-card__more-btn {
+  background: #f3f4f7;
+}
+
+.project-card__more-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.project-card__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 2;
+  display: none;
+  /* 上边距留在菜单范围内，鼠标从点点点移下来时悬停不会断。 */
+  padding-top: 6px;
+}
+
+.project-card__more:hover .project-card__menu,
+.project-card__more:focus-within .project-card__menu {
+  display: block;
+}
+
+.project-card__menu-panel {
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(18, 28, 48, 0.12);
+}
+
+.project-card__menu button {
+  display: block;
+  min-width: 88px;
+  height: 36px;
+  padding: 0 16px;
+  color: #3a84ff;
+  font-size: 14px;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.project-card__menu button:hover {
+  background: #f3f6ff;
 }
 
 .create-card {

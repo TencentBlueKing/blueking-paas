@@ -26,7 +26,7 @@ import json
 import re
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import jwt
@@ -197,50 +197,83 @@ def _parse_signing_keys(raw_keys: Any) -> list[SigningKey]:
 
 
 # ------------------
-# 签发
+# 授权范围
 # ------------------
 
 
-def make_build_token_claims(
-    *,
-    build_process_id: str,
-    app_code: str,
-    module_name: str,
-    metadata: "BuildMetadata",
-    registry: "AppImageRegistry",
-    cluster_name: str,
-    now: int,
-) -> dict[str, Any]:
-    """按本次构建推导 token 声明，授权范围仅覆盖本应用本模块的产物与缓存
+@dataclass(frozen=True)
+class BuildTokenScope:
+    """构建 token 的授权范围，仓库路径均为代理视角：<上游别名>/<上游仓库路径>
 
-    :param build_process_id: BuildProcess 的 UUID
-    :param registry: 应用的平台仓库，即 `get_image_registry_by_app()` 的返回值
-    :param cluster_name: 应用所在集群名，镜像代理以此区分 audience
-    :param now: 签发时刻，unix 秒
-    :raises BuildTokenUnavailable: 平台仓库配置、构建类型或产物镜像不满足签发条件
+    :param push: 可推送的仓库（精确匹配）与 tag
+    :param pull: 可拉取的仓库，以 / 结尾为前缀匹配
+    :param pull_deny: 禁止拉取的仓库，优先于 pull；push 授权的仓库不受其限制
     """
-    if not registry.host or not registry.namespace:
+
+    push: list[dict[str, Any]]
+    pull: list[str]
+    pull_deny: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class BuildTokenAudit:
+    """构建 token 中仅用于审计的声明，与镜像代理审计日志的字段一一对应，代理不据此授权
+
+    :param app_code: 应用构建为应用 code；沙箱镜像构建为调用构建 API 的蓝鲸应用 code
+    :param module: 模块名，沙箱镜像构建为空串
+    """
+
+    app_code: str
+    module: str = ""
+
+    def to_claims(self) -> dict[str, dict[str, str]]:
+        return {"app": {"code": self.app_code, "module": self.module}}
+
+
+def get_registry_upstream_alias(host: str, namespace: str) -> str:
+    """校验平台仓库的 host 与 namespace，返回其在代理中的上游别名
+
+    :raises BuildTokenUnavailable: host、namespace 为空或非法
+    """
+    if not host or not namespace:
         raise BuildTokenUnavailable("platform image registry host or namespace is empty")
-    if any(not seg for seg in registry.namespace.split("/")):
-        raise BuildTokenUnavailable(f"invalid platform image registry namespace: {registry.namespace}")
+    if any(not seg for seg in namespace.split("/")):
+        raise BuildTokenUnavailable(f"invalid platform image registry namespace: {namespace}")
     try:
-        alias = make_upstream_alias(registry.host)
+        return make_upstream_alias(host)
     except ValueError:
         raise BuildTokenUnavailable(
-            f"cannot derive an upstream alias from the platform image registry host: {registry.host}"
+            f"cannot derive an upstream alias from the platform image registry host: {host}"
         ) from None
-    if not cluster_name:
-        raise BuildTokenUnavailable("cluster name is empty")
+
+
+def extract_image_tag(image: str, repository: str, owner: str) -> str:
+    """校验产物镜像位于平台按规则推导出的仓库中，返回其 tag。不信任调用方传入的产物地址，避免授权越出本次构建
+
+    :param owner: 仓库归属的描述，仅用于错误信息
+    :raises BuildTokenUnavailable: 产物镜像不在该仓库中，或不是合法的 tag 引用
+    """
+    image_prefix = f"{repository}:"
+    tag = image.removeprefix(image_prefix)
+    if not image.startswith(image_prefix) or not _IMAGE_TAG_REGEX.fullmatch(tag):
+        raise BuildTokenUnavailable(f"build image does not belong to {owner}: {image}")
+    return tag
+
+
+def make_module_build_scope(
+    app_code: str, module_name: str, metadata: "BuildMetadata", registry: "AppImageRegistry"
+) -> BuildTokenScope:
+    """应用模块构建的授权范围：仅覆盖本应用本模块的产物与缓存
+
+    :param registry: 应用的平台仓库，即 `get_image_registry_by_app()` 的返回值
+    :raises BuildTokenUnavailable: 平台仓库配置、构建类型或产物镜像不满足签发条件
+    """
+    alias = get_registry_upstream_alias(registry.host, registry.namespace)
 
     # 与 generate_image_repository_by_env 共用 module_image_repository；代理侧仓库用上游别名替换 host
     repo_path = module_repo_path(registry.namespace, app_code, module_name)
     repository = module_image_repository(registry.host, registry.namespace, app_code, module_name)
-    image_prefix = f"{repository}:"
-    tag = metadata.image.removeprefix(image_prefix)
-    if not metadata.image.startswith(image_prefix) or not _IMAGE_TAG_REGEX.fullmatch(tag):
-        raise BuildTokenUnavailable(
-            f"build image does not belong to this module's platform registry repository: {metadata.image}"
-        )
+    tag = extract_image_tag(metadata.image, repository, "this module's platform registry repository")
 
     client_repo = f"{alias}/{repo_path}"
     if metadata.use_dockerfile:
@@ -256,20 +289,48 @@ def make_build_token_claims(
     else:
         raise BuildTokenUnavailable("build token is only supported for Dockerfile and buildpack image builds")
 
+    # 平台仓库中的镜像（含其他应用的产物）均可读，推送仅限本应用本模块
+    return BuildTokenScope(push=push, pull=[f"{alias}/"])
+
+
+# ------------------
+# 签发
+# ------------------
+
+
+def make_build_token_claims(
+    *,
+    subject: str,
+    cluster_name: str,
+    ttl: int,
+    scope: BuildTokenScope,
+    audit: BuildTokenAudit,
+    now: int,
+) -> dict[str, Any]:
+    """生成构建 token 的声明
+
+    :param subject: 本次构建的唯一标识，代理据此在审计日志中追溯构建
+    :param cluster_name: 构建所在集群名，镜像代理以此区分 audience
+    :param ttl: 构建的超时时间（秒），token 在此基础上再保留 TOKEN_GRACE_SECONDS
+    :param audit: 仅用于审计的声明，代理不据此授权
+    :param now: 签发时刻，unix 秒
+    :raises BuildTokenUnavailable: 集群名为空
+    """
+    if not cluster_name:
+        raise BuildTokenUnavailable("cluster name is empty")
+
     return {
+        **audit.to_claims(),
         "iss": ISSUER,
         "aud": AUDIENCE_PREFIX + cluster_name,
-        "sub": build_process_id,
+        "sub": subject,
         "jti": uuid.uuid4().hex,
         "iat": now,
-        "exp": now + settings.BUILD_PROCESS_TIMEOUT + TOKEN_GRACE_SECONDS,
+        "exp": now + ttl + TOKEN_GRACE_SECONDS,
         "ver": CLAIMS_VERSION,
-        # 只用于镜像代理的审计日志，不参与授权
-        "app": {"code": app_code, "module": module_name},
-        "push": push,
-        # 平台仓库中其他应用的镜像不可读；本应用的产物与缓存仓库因 push 授权优先于 pull_deny 而可读
-        "pull": [f"{alias}/"],
-        "pull_deny": [f"{alias}/{registry.namespace}/"],
+        "push": scope.push,
+        "pull": scope.pull,
+        "pull_deny": scope.pull_deny,
     }
 
 
@@ -279,19 +340,10 @@ def sign_build_token(claims: dict[str, Any], key: SigningKey) -> str:
     )
 
 
-def issue_build_token(
-    bp: "BuildProcess",
-    metadata: "BuildMetadata",
-    registry: "AppImageRegistry",
-    cluster_name: str,
-    now: int | None = None,
-) -> str:
-    """为构建签发构建 token。返回值等同于凭证，不得写入日志
+def load_active_signing_key() -> SigningKey:
+    """获取当前用于签发的密钥
 
-    :param registry: 应用的平台仓库，即 `get_image_registry_by_app(bp.app)` 的返回值
-    :param cluster_name: 应用所在集群名，即 `get_cluster_by_app(bp.app).name`
-    :param now: 签发时刻，unix 秒，默认为当前时刻
-    :raises BuildTokenUnavailable: 未配置签名密钥，或本次构建不满足签发条件
+    :raises BuildTokenUnavailable: 未配置签名密钥或配置非法
     """
     try:
         keyset = load_signing_key_set()
@@ -300,16 +352,56 @@ def issue_build_token(
         raise BuildTokenUnavailable(f"invalid build token signing key configuration: {e}") from None
     if not keyset:
         raise BuildTokenUnavailable("build token signing key is not configured")
+    return keyset.active
 
-    wl_app = bp.app
+
+def issue_token(
+    *,
+    subject: str,
+    cluster_name: str,
+    ttl: int,
+    scope: BuildTokenScope,
+    audit: BuildTokenAudit,
+    now: int | None = None,
+) -> str:
+    """按授权范围签发构建 token。返回值等同于凭证，不得写入日志，参数含义见 make_build_token_claims
+
+    :param now: 签发时刻，unix 秒，默认为当前时刻
+    :raises BuildTokenUnavailable: 未配置签名密钥，或声明不满足签发条件
+    """
+    key = load_active_signing_key()
     claims = make_build_token_claims(
-        # 统一为带连字符的 36 位格式
-        build_process_id=str(uuid.UUID(str(bp.uuid))),
-        app_code=wl_app.paas_app_code,
-        module_name=wl_app.module_name,
-        metadata=metadata,
-        registry=registry,
+        subject=subject,
         cluster_name=cluster_name,
+        ttl=ttl,
+        scope=scope,
+        audit=audit,
         now=int(time.time()) if now is None else now,
     )
-    return sign_build_token(claims, keyset.active)
+    return sign_build_token(claims, key)
+
+
+def issue_build_token(
+    bp: "BuildProcess",
+    metadata: "BuildMetadata",
+    registry: "AppImageRegistry",
+    cluster_name: str,
+    now: int | None = None,
+) -> str:
+    """为应用模块构建签发构建 token。返回值等同于凭证，不得写入日志
+
+    :param registry: 应用的平台仓库，即 `get_image_registry_by_app(bp.app)` 的返回值
+    :param cluster_name: 应用所在集群名，即 `get_cluster_by_app(bp.app).name`
+    :param now: 签发时刻，unix 秒，默认为当前时刻
+    :raises BuildTokenUnavailable: 未配置签名密钥，或本次构建不满足签发条件
+    """
+    wl_app = bp.app
+    return issue_token(
+        # 统一为带连字符的 36 位格式
+        subject=str(uuid.UUID(str(bp.uuid))),
+        cluster_name=cluster_name,
+        ttl=settings.BUILD_PROCESS_TIMEOUT,
+        scope=make_module_build_scope(wl_app.paas_app_code, wl_app.module_name, metadata, registry),
+        audit=BuildTokenAudit(app_code=wl_app.paas_app_code, module=wl_app.module_name),
+        now=now,
+    )

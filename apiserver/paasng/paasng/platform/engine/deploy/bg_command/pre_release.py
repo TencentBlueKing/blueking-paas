@@ -25,6 +25,7 @@ from paas_wl.workloads.release_controller.hooks.entities import CommandTemplate
 from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
+from paasng.platform.engine.configurations.kms import is_kms_injection_enabled, prepare_kms_process_env
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_command.tasks import exec_command
@@ -61,7 +62,11 @@ class ApplicationPreReleaseExecutor(DeployStep):
             update_image_runtime_config(deployment=self.deployment)
 
         with self.procedure("初始化指令执行环境"):
-            extra_envs = get_env_variables(self.engine_app.env)
+            env = self.engine_app.env
+            if is_kms_injection_enabled(env):
+                extra_envs, secret_mounts = prepare_kms_process_env(env, self.deployment)
+            else:
+                extra_envs, secret_mounts = get_env_variables(env), []
             command_id = exec_command(
                 self.engine_app.env,
                 command_template=CommandTemplate(
@@ -72,6 +77,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
                 operator=str(self.deployment.operator),
                 stream_channel_id=str(self.deployment.id),
                 extra_envs=extra_envs,
+                secret_mounts=secret_mounts,
             )
 
         self.state_mgr.update(pre_release_id=command_id)

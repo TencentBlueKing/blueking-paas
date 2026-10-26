@@ -30,6 +30,7 @@ from paasng.accessories.publish.entrance.preallocated import get_preallocated_ur
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.configurations.kms import is_kms_injection_enabled
 from paasng.platform.engine.deploy.release.legacy import release_by_engine
 from paasng.platform.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL
 from paasng.platform.engine.serializers import DeploymentSLZ, GetReleasedInfoSLZ, OfflineOperationSLZ
@@ -133,6 +134,10 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             application_envs = module.envs.all()
         else:
             application_envs = module.envs.filter(environment=environment)
+
+        # 直接发布不会产生新的部署记录，无法关联 KMS 配置版本
+        if any(is_kms_injection_enabled(env) for env in application_envs):
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("开启 KMS 托管敏感变量后，不支持跳过构建直接发布，请重新部署"))
 
         for application_env in application_envs:
             build_id = get_latest_build_id(application_env)

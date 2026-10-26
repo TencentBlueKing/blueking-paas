@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import ChatComposer from './ChatComposer.vue';
 import ChatMessageList from './ChatMessageList.vue';
 import ConversationArchive from './ConversationArchive.vue';

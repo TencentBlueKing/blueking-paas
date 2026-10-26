@@ -55,14 +55,15 @@ def checkpoint_tag(run_id: str) -> str:
 
 @dataclass(frozen=True)
 class Checkpoint:
-    """One restorable point: which commit, pinned under which tag, produced by which turn.
+    """One restore point: which commit, pinned under which tag, produced by which turn.
 
     :param run_id: The turn that produced the commit.
     :param conversation_id: The conversation that turn belonged to.
     :param commit: The commit SHA, confirmed on the remote.
     :param tag: The immovable remote tag keeping that commit reachable.
-    :param context_version: The conversation version these files go with.
-    :param completed: Whether the run committed a final context matching these files.
+    :param context_version: Where the conversation stood when these files were committed. A
+        record of which turn wrote them, not a pairing the restore has to honour.
+    :param completed: Whether the run's event stream reached its end.
     """
 
     run_id: str
@@ -577,7 +578,7 @@ class WorkspaceSaver:
             detail=self._status.detail if self._status.uncommitted else "",
             retriable=not self._status.uncommitted,
         )
-        logger.info("checkpoint %s at %s is restorable", checkpoint.tag, checkpoint.commit)
+        logger.info("checkpoint %s at %s was reported to the control plane", checkpoint.tag, checkpoint.commit)
 
     def _adopt_existing_state(self) -> None:
         """Read the workspace's starting position, once, at startup.

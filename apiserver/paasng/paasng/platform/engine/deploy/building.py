@@ -37,6 +37,7 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.bkapp_model.services import upsert_proc_svc_by_spec_version
 from paasng.platform.declarative.deployment.controller import DeployHandleResult
 from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.engine.configurations.build_token import BuildTokenUnavailable
 from paasng.platform.engine.configurations.building import (
     SlugbuilderInfo,
     get_build_args,
@@ -48,11 +49,19 @@ from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,
     generate_image_repository_by_env,
 )
+from paasng.platform.engine.configurations.registry_proxy import (
+    get_build_registry_proxy,
+    make_credential_unavailable_message,
+)
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import HandleAppDescriptionError, InitDeployDescHandlerError
+from paasng.platform.engine.exceptions import (
+    DeployShouldAbortError,
+    HandleAppDescriptionError,
+    InitDeployDescHandlerError,
+)
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
@@ -399,6 +408,18 @@ class DockerBuilder(BaseBuilder):
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
             "SKIP_TLS_VERIFY_REGISTRIES": image_registry.host if image_registry.skip_tls_verify else "",
         }
+        build_metadata = BuildMetadata(
+            image=app_image,
+            image_repository=app_image_repository,
+            use_dockerfile=True,
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+        # 镜像代理的开启前置条件不满足时，不创建构建任务
+        try:
+            get_build_registry_proxy(env.wl_app, build_metadata)
+        except BuildTokenUnavailable as e:
+            raise DeployShouldAbortError(make_credential_unavailable_message(e.reason)) from e
 
         # Create the Build object and start a background build task
         build_process = BuildProcess.objects.new(
@@ -408,14 +429,6 @@ class DockerBuilder(BaseBuilder):
             source_tar_path=source_tar_path,
             version_info=self.version_info,
             invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
-        )
-
-        build_metadata = BuildMetadata(
-            image=app_image,
-            image_repository=app_image_repository,
-            use_dockerfile=True,
-            extra_envs=extra_envs,
-            bkapp_revision_id=bkapp_revision_id,
         )
 
         # Start the background build process
@@ -521,7 +534,9 @@ class BuildProcessResultHandler(CallbackHandler):
 
         state_mgr.update(build_id=build_id, build_status=build_status, build_process_id=build_process_id)
         if build_status == BuildStatus.FAILED:
-            state_mgr.finish(JobStatus.FAILED, "Building failed, please check logs for more details")
+            # 构建过程已记录明确的失败原因（如 image credential unavailable）时，优先展示该原因
+            err_detail = state_mgr.deployment.err_detail or "Building failed, please check logs for more details"
+            state_mgr.finish(JobStatus.FAILED, err_detail)
         elif build_status == BuildStatus.INTERRUPTED:
             state_mgr.finish(JobStatus.INTERRUPTED, "Building interrupted")
         else:

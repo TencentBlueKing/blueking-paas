@@ -25,6 +25,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     GrayReleaseStatus,
     PluginReleaseStatus,
     PluginRole,
+    ReleaseProcess,
     ReleaseStageInvokeMethod,
     ReleaseStrategy,
 )
@@ -140,14 +141,26 @@ def submit_canary_release_ticket(
 
     # 组装提单数据,包含插件的基本信息和灰度发布信息
     basic_fields = _get_basic_fields(pd, plugin)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.name}]灰度发布审批"}]
+    title_map = {
+        ReleaseStrategy.FULL: f"插件[{plugin.name}]全量发布审批",
+        ReleaseStrategy.PRE_PROD: f"插件[{plugin.name}]预发布审批",
+    }
+    title_fields = [
+        {
+            "key": "title",
+            "value": title_map.get(release_strategy.strategy, f"插件[{plugin.name}]灰度发布审批"),
+        }
+    ]
     itsm_fields = basic_fields + title_fields + canary_fields
 
     service_name = release_strategy.get_itsm_service_name(is_release_strategy_organization_changed(version))
     service_id = ApprovalService.objects.get(service_name=service_name).service_id
 
-    # 灰度审批是由插件的管理员审批，需要单独添加审批字段
-    if release_strategy.strategy == ReleaseStrategy.GRAY:
+    # 默认流程的灰度审批由插件管理员审批，需要单独添加审批字段
+    if (
+        release_strategy.strategy == ReleaseStrategy.GRAY
+        and version.release_process != ReleaseProcess.TENCENT_STANDARD
+    ):
         plugin_admins = members_api.fetch_role_members(plugin, PluginRole.ADMINISTRATOR)
         itsm_fields += [
             # 插件管理员
@@ -169,11 +182,12 @@ def submit_canary_release_ticket(
     release_strategy.itsm_detail = itsm_detail
     release_strategy.save()
     # 更新版本的灰度状态
-    release_status = (
-        GrayReleaseStatus.FULL_APPROVAL_IN_PROGRESS
-        if release_strategy.strategy == ReleaseStrategy.FULL
-        else GrayReleaseStatus.GRAY_APPROVAL_IN_PROGRESS
-    )
+    if release_strategy.strategy == ReleaseStrategy.FULL:
+        release_status = GrayReleaseStatus.FULL_APPROVAL_IN_PROGRESS
+    elif release_strategy.strategy == ReleaseStrategy.PRE_PROD:
+        release_status = GrayReleaseStatus.PRE_PROD_APPROVAL_IN_PROGRESS
+    else:
+        release_status = GrayReleaseStatus.GRAY_APPROVAL_IN_PROGRESS
     version.gray_status = release_status
     version.save()
     return itsm_detail

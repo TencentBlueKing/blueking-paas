@@ -58,7 +58,10 @@ def get_e2b_cluster_config(cluster_name: str) -> ClusterE2BConfig:
 
     :raises E2BClusterNotConfigured: 集群未登记 e2b 配置，或配置已被停用
     """
-    config = ClusterE2BConfig.objects.filter(cluster__name=cluster_name, enabled=True).first()
+    # 监控指标需要集群名做标签
+    config = (
+        ClusterE2BConfig.objects.select_related("cluster").filter(cluster__name=cluster_name, enabled=True).first()
+    )
     if config is None:
         raise E2BClusterNotConfigured(f"cluster {cluster_name} missing")
 

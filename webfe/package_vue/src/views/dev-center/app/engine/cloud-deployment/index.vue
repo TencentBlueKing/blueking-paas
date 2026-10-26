@@ -319,7 +319,7 @@ export default {
           moduleId: this.curModuleId,
         });
 
-        const HA_RISK_SERVICES = ['gcs_mysql', 'redis', 'paas_redis'];
+        const HA_RISK_SERVICES = ['gcs_mysql', 'redis', 'paas_redis', 'bk_paas_redis'];
         const { bound = [], shared = [], unbound = [] } = response;
 
         // 检查是否存在 HA_RISK_SERVICES

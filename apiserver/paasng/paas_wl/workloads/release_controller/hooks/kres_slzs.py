@@ -134,7 +134,8 @@ class CommandSerializer(AppEntitySerializer["Command"]):
                 "resources": obj.runtime.resources,
                 "volumeMounts": cattr.unstructure(
                     get_app_logging_volume_mounts(obj.app) + addon_mgr.get_volume_mounts()
-                ),
+                )
+                + [m for mount in obj.secret_mounts for m in mount.to_volume_mounts()],
             }
         ] + cattr.unstructure(addon_mgr.get_sidecars())
 
@@ -149,7 +150,8 @@ class CommandSerializer(AppEntitySerializer["Command"]):
             },
             "spec": {
                 "containers": containers,
-                "volumes": cattr.unstructure(get_app_logging_volume(obj.app) + addon_mgr.get_volumes()),
+                "volumes": cattr.unstructure(get_app_logging_volume(obj.app) + addon_mgr.get_volumes())
+                + [mount.to_volume() for mount in obj.secret_mounts],
                 "restartPolicy": "Never",
                 "nodeSelector": obj.schedule.node_selector,
                 "tolerations": obj.schedule.tolerations,

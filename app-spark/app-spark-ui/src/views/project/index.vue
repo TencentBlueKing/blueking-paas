@@ -17,7 +17,7 @@
 import { onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import { Message } from 'bkui-vue';
+import Message from '@/common/message';
 import InteractionPanel from '@/components/project/interaction/index.vue';
 import WorkspacePanel from '@/components/project/workspace/index.vue';
 import ProjectLayout from '@/layouts/ProjectLayout.vue';

@@ -116,7 +116,8 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     # 持久存储挂载卷相关的 feature flag
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
-    # 敏感环境变量加密 feature flag
+    # 敏感环境变量加密 feature flag。平台启用 KMS（settings.SAAS_KMS_ENABLED）时，敏感变量改由 KMS 托管，
+    # 经 ESO 同步为 Secret 并挂载到 /etc/secrets；否则以平台内置的密文形式注入环境变量
     ENCRYPTED_SECRET_ENV_INJECTION = FeatureFlagField(label=_("加密运行环境敏感变量"), default=False)
     # 允许应用自定义自动扩缩容指标的阈值（如 cpuUtilization）
     CUSTOM_AUTOSCALING_THRESHOLD = FeatureFlagField(label=_("允许修改自动扩容阈值"), default=False)

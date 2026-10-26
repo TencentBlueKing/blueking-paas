@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import socket
+from typing import TYPE_CHECKING
 
 import httpx2
 import pytest
@@ -36,6 +37,9 @@ import pytest
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.entities import AgentRuntimeHandle
 from app_spark_api.agent.runtime.exceptions import AgentBusyError, AgentUnavailableError
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 CONVERSATION_ID = "6f1c5f6e-0a5d-4f4a-9a1e-1f4f0f2b3c4d"
 RUNTIME_TOKEN = "runtime-token-for-client-tests"
@@ -258,3 +262,42 @@ async def test_a_refusal_that_is_not_json_still_says_something_useful():
 
     with pytest.raises(AgentUnavailableError, match="upstream connect error"):
         await client.start_run(content="hello", context_version=1)
+
+
+# --- Cold-start restores ---------------------------------------------------------------------
+
+# Path of each restore endpoint, and how the client is asked to call it.
+RESTORES: dict[str, Callable[[AgentRuntimeClient], Awaitable[object]]] = {
+    "/context": lambda client: client.restore_context({}, if_match=0, log_seq=0, ui_event_seq=0),
+    "/cursors": lambda client: client.restore_cursors(log_seq=0, ui_event_seq=0),
+    "/workspace/restore": lambda client: client.restore_workspace("a" * 40),
+}
+
+
+async def test_a_restored_workspace_reports_what_the_runtime_did():
+    client = runtime_answering({"/workspace/restore": (200, b'{"outcome":"superseded"}')})
+
+    assert await client.restore_workspace("a" * 40) == "superseded"
+
+
+@pytest.mark.parametrize("path", RESTORES)
+async def test_a_busy_runtime_refuses_every_restore_as_busy(path):
+    client = runtime_answering({path: (409, b'{"detail":"a run is already in progress"}')})
+
+    with pytest.raises(AgentBusyError, match="a run is already in progress"):
+        await RESTORES[path](client)
+
+
+@pytest.mark.parametrize("path", RESTORES)
+async def test_any_other_restore_refusal_is_not_mistaken_for_a_busy_runtime(path):
+    client = runtime_answering({path: (500, b'{"detail":"commit is not on the remote"}')})
+
+    with pytest.raises(AgentUnavailableError, match="commit is not on the remote") as exc_info:
+        await RESTORES[path](client)
+    assert not isinstance(exc_info.value, AgentBusyError)
+
+
+@pytest.mark.parametrize("path", RESTORES)
+async def test_a_restore_reports_a_runtime_that_is_not_listening(path, dead_handle):
+    with pytest.raises(AgentUnavailableError, match="Could not restore"):
+        await RESTORES[path](AgentRuntimeClient(dead_handle))

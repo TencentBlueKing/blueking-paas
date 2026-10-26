@@ -45,11 +45,19 @@ from paas_wl.bk_app.agent_sandbox.kres_entities import (
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.misc.metrics import (
+    AGENT_SANDBOX_CREATE_DURATION_HISTOGRAM,
+    AGENT_SANDBOX_CREATE_FAILURES_COUNTER,
+    AGENT_SANDBOX_LIFETIME_HISTOGRAM,
+)
 from paasng.platform.agent_sandbox.constants import (
     DEFAULT_MAX_ACTIVE_SANDBOX_COUNT,
     DEFAULT_SANDBOX_CPU,
     DEFAULT_SANDBOX_MEMORY,
     SANDBOX_DEFAULT_TTL_SECONDS,
+    SandboxCreateFailureReason,
+    SandboxDeleteSource,
+    SandboxRequestResult,
     SandboxStatus,
     SandboxWorkloadType,
 )
@@ -57,12 +65,18 @@ from paasng.platform.agent_sandbox.daemon_client import SandboxDaemonClient
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxActiveCountLimitExceeded,
+    SandboxAlreadyExists,
     SandboxCreateError,
     SandboxCreateTimeout,
     SandboxDaemonAPIError,
     SandboxError,
     SandboxExecError,
     SandboxFileError,
+    SandboxImageValidateError,
+    SandboxK8sResourceError,
+    SandboxNoClusterError,
+    VolumeNotFound,
+    VolumeNotMountable,
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
 from paasng.platform.agent_sandbox.image_validator import check_snapshot_image_exists
@@ -135,6 +149,31 @@ def ensure_sandbox_quota(application: Application) -> None:
         )
 
 
+# 创建失败原因的分类表, 按从具体到宽泛排列.
+_CREATE_FAILURE_REASONS: tuple[tuple[type[BaseException], SandboxCreateFailureReason], ...] = (
+    (SandboxNoClusterError, SandboxCreateFailureReason.NO_CLUSTER),
+    (SandboxImageValidateError, SandboxCreateFailureReason.IMAGE_VALIDATE),
+    (SandboxCreateTimeout, SandboxCreateFailureReason.TIMEOUT),
+    (SandboxActiveCountLimitExceeded, SandboxCreateFailureReason.QUOTA_EXCEEDED),
+    (SandboxAlreadyExists, SandboxCreateFailureReason.ALREADY_EXISTS),
+    (VolumeNotFound, SandboxCreateFailureReason.VOLUME_INVALID),
+    (VolumeNotMountable, SandboxCreateFailureReason.VOLUME_INVALID),
+    (SandboxK8sResourceError, SandboxCreateFailureReason.K8S_ERROR),
+    (SandboxCreateError, SandboxCreateFailureReason.START_FAILED),
+)
+
+
+def classify_create_failure(exc: BaseException) -> SandboxCreateFailureReason:
+    """把创建沙箱时抛出的异常归到一个指标 reason 上, 只按异常类型判定, 不匹配消息文本.
+
+    :param exc: create_sandbox 抛出的原始异常.
+    """
+    for exc_type, reason in _CREATE_FAILURE_REASONS:
+        if isinstance(exc, exc_type):
+            return reason
+    return SandboxCreateFailureReason.UNKNOWN
+
+
 def create_sandbox(
     application: Application,
     creator: str,
@@ -164,52 +203,91 @@ def create_sandbox(
     :param workload_type: Sandbox workload type (``default`` / ``sandbox_instance``), optional.
     :raises SandboxActiveCountLimitExceeded: If the application has reached its max number of sandboxes.
     """
-    ensure_sandbox_quota(application)
+    started = time.monotonic()
+    resolved_workload_type = workload_type or SandboxWorkloadType.DEFAULT.value
+    # 失败时集群名取不到 (分配不到集群), 用空串占位
+    cluster = ""
 
-    # Pre-validate that the snapshot image exists in the registry before creating resources.
-    # This avoids a long timeout when the pod tries to pull a non-existent image.
-    # Skip validation for the default image — it is platform-maintained and expected to exist.
-    snapshot_image = snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE
-    if snapshot:
-        check_snapshot_image_exists(snapshot_image)
-
-    # 资源限制不由用户指定, 而是按 app 级配置回退平台默认值解析
-    cpu, memory = resolve_sandbox_resources(application)
-
-    sandbox_obj = Sandbox.objects.new(
-        application=application,
-        name=name,
-        snapshot=snapshot_image,
-        snapshot_entrypoint=snapshot_entrypoint,
-        env_vars=env_vars,
-        creator=creator,
-        workspace=workspace,
-        ttl_seconds=ttl_seconds,
-        volume_mounts=volume_mounts,
-        cpu=cpu,
-        memory=memory,
-        workload_type=workload_type or SandboxWorkloadType.DEFAULT.value,
-    )
-
-    mgr = AgentSandboxResManager(application, sandbox_obj.target)
     try:
-        mgr.provision(sandbox_obj)
-    except SandboxError:
-        sandbox_obj.status = SandboxStatus.ERR_CREATING.value
-        sandbox_obj.save(update_fields=["status"])
+        ensure_sandbox_quota(application)
+
+        # Pre-validate that the snapshot image exists in the registry before creating resources.
+        # This avoids a long timeout when the pod tries to pull a non-existent image.
+        # Skip validation for the default image — it is platform-maintained and expected to exist.
+        snapshot_image = snapshot or settings.AGENT_SANDBOX_DEFAULT_IMAGE
+        if snapshot:
+            check_snapshot_image_exists(snapshot_image)
+
+        # 资源限制不由用户指定, 而是按 app 级配置回退平台默认值解析
+        cpu, memory = resolve_sandbox_resources(application)
+
+        sandbox_obj = Sandbox.objects.new(
+            application=application,
+            name=name,
+            snapshot=snapshot_image,
+            snapshot_entrypoint=snapshot_entrypoint,
+            env_vars=env_vars,
+            creator=creator,
+            workspace=workspace,
+            ttl_seconds=ttl_seconds,
+            volume_mounts=volume_mounts,
+            cpu=cpu,
+            memory=memory,
+            workload_type=resolved_workload_type,
+        )
+        cluster = sandbox_obj.target
+
+        mgr = AgentSandboxResManager(application, sandbox_obj.target)
+        try:
+            mgr.provision(sandbox_obj)
+        except SandboxError:
+            sandbox_obj.status = SandboxStatus.ERR_CREATING.value
+            sandbox_obj.save(update_fields=["status"])
+            raise
+
+        # Daemon 已通过就绪探针，且 Router 能把请求转到沙箱 Service。
+        # 最终写库留在 try 内: 它失败同样意味着本次创建对外失败, 需计入失败指标,
+        # 否则领域级指标与请求级指标 (agent_sandbox_requests_total) 口径会不一致。
+        sandbox_obj.status = SandboxStatus.RUNNING.value
+        sandbox_obj.started_at = timezone.now()
+        sandbox_obj.save(update_fields=["status", "started_at", "updated"])
+    except Exception as exc:
+        _record_create_failure(resolved_workload_type, cluster, exc, started)
         raise
 
-    # Daemon 已通过就绪探针，且 Router 能把请求转到沙箱 Service。
-    sandbox_obj.status = SandboxStatus.RUNNING.value
-    sandbox_obj.started_at = timezone.now()
-    sandbox_obj.save(update_fields=["status", "started_at", "updated"])
+    # 走到这里才算真正就绪, 记录成功耗时
+    _record_create_duration(resolved_workload_type, cluster, SandboxRequestResult.SUCCESS, started)
     return sandbox_obj
 
 
-def delete_sandbox(sandbox_obj: Sandbox) -> None:
+def _record_create_duration(workload_type: str, cluster: str, result: SandboxRequestResult, started: float) -> None:
+    """记录一次创建耗时, 埋点自身失败不能影响创建结果的返回."""
+    try:
+        AGENT_SANDBOX_CREATE_DURATION_HISTOGRAM.labels(
+            workload_type=workload_type, cluster=cluster, result=result.value
+        ).observe(time.monotonic() - started)
+    except Exception:
+        logger.warning("failed to record sandbox create duration metric", exc_info=True)
+
+
+def _record_create_failure(workload_type: str, cluster: str, exc: BaseException, started: float) -> None:
+    """记录一次创建失败, 埋点自身失败不能掩盖原始的创建异常."""
+    try:
+        reason = classify_create_failure(exc)
+        AGENT_SANDBOX_CREATE_FAILURES_COUNTER.labels(
+            workload_type=workload_type, cluster=cluster, reason=reason.value
+        ).inc()
+    except Exception:
+        logger.warning("failed to record sandbox create failure metric", exc_info=True)
+
+    _record_create_duration(workload_type, cluster, SandboxRequestResult.FAILURE, started)
+
+
+def delete_sandbox(sandbox_obj: Sandbox, *, delete_source: SandboxDeleteSource) -> None:
     """Stop and delete a sandbox.
 
     :param sandbox_obj: The sandbox to delete.
+    :param delete_source: Why the sandbox is deleted (not stored on the model).
     """
     mgr = AgentSandboxResManager(sandbox_obj.application, sandbox_obj.target)
     try:
@@ -222,6 +300,25 @@ def delete_sandbox(sandbox_obj: Sandbox) -> None:
     sandbox_obj.status = SandboxStatus.DELETED.value
     sandbox_obj.deleted_at = timezone.now()
     sandbox_obj.save(update_fields=["status", "deleted_at", "updated"])
+    _record_lifetime(sandbox_obj, delete_source)
+
+
+def _record_lifetime(sandbox_obj: Sandbox, delete_source: SandboxDeleteSource) -> None:
+    """记录沙箱存活时长, deleted_at - started_at.
+
+    started_at 是沙箱可用的时刻, deleted_at 是资源回收的时刻.
+    创建失败 (err_creating) 的沙箱没有 started_at, 跳过.
+    """
+    if sandbox_obj.started_at is None:
+        logger.debug("skip lifetime metric for sandbox %s: no started_at", sandbox_obj.uuid)
+        return
+
+    try:
+        AGENT_SANDBOX_LIFETIME_HISTOGRAM.labels(
+            workload_type=sandbox_obj.workload_type, delete_source=delete_source.value
+        ).observe((sandbox_obj.deleted_at - sandbox_obj.started_at).total_seconds())
+    except Exception:
+        logger.warning("failed to record sandbox lifetime metric", exc_info=True)
 
 
 def get_sandbox_client(sandbox_obj: Sandbox) -> "KubernetesSandbox":
@@ -298,7 +395,9 @@ class AgentSandboxResManager:
             sandbox_created = True
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox workload") from KresAgentSandboxError(
+                str(exc), exc
+            )
 
         # Service 先于就绪等待创建，EndpointSlice controller 可以和容器启动并行。
         # 调用方走的是 Router -> Service，不是 Pod IP。
@@ -307,7 +406,7 @@ class AgentSandboxResManager:
             service_created = True
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox service") from KresAgentSandboxError(str(exc), exc)
 
         try:
             handler.wait_until_ready(workload.name, self.create_timeout)
@@ -317,7 +416,9 @@ class AgentSandboxResManager:
             raise
         except ApiException as exc:
             self._cleanup_sandbox_on_create_error(handler, sandbox_obj.name, sandbox_created, service_created)
-            raise SandboxError("failed to create sandbox workload") from KresAgentSandboxError(str(exc), exc)
+            raise SandboxK8sResourceError("failed to create sandbox workload") from KresAgentSandboxError(
+                str(exc), exc
+            )
 
         router_endpoint = get_router_endpoint(self.kres_app.target)
         return KubernetesSandbox(
@@ -358,7 +459,10 @@ class AgentSandboxResManager:
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc
 
-        router_endpoint = get_router_endpoint(self.kres_app.target)
+        try:
+            router_endpoint = get_router_endpoint(self.kres_app.target)
+        except RuntimeError as exc:
+            raise SandboxError(f"failed to resolve sandbox router endpoint: {exc}") from exc
         return KubernetesSandbox(
             entity=entity,
             router_endpoint=router_endpoint,
@@ -471,7 +575,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
                 # and leave stderr empty since the daemon doesn't separate them
                 return ExecResult(stdout=result.output, stderr="", exit_code=result.exit_code)
         except SandboxDaemonAPIError as exc:
-            raise SandboxExecError(f"failed to execute command: {exc}")
+            raise SandboxExecError("failed to execute command", detail=exc.detail) from exc
 
     def code_run(self, content: str, language: str = "Python") -> CodeRunResult:
         """Run a piece of code inside the sandbox."""
@@ -492,7 +596,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.create_folder(path=path, mode=mode)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to create folder: {exc}")
+            raise SandboxFileError("failed to create folder", detail=exc.detail) from exc
 
     def upload_file(self, file: bytes, remote_path: str, timeout: int = 30 * 60) -> None:
         """Upload a file to the sandbox via daemon API.
@@ -505,7 +609,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.upload_file(file_content=file, dest_path=remote_path, timeout=timeout)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to upload file: {exc}")
+            raise SandboxFileError("failed to upload file", detail=exc.detail) from exc
 
     def delete_file(self, path: str, recursive: bool = False) -> None:
         """Delete a file from the sandbox via daemon API.
@@ -517,7 +621,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 client.delete_file(path=path, recursive=recursive)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to delete file: {exc}")
+            raise SandboxFileError("failed to delete file", detail=exc.detail) from exc
 
     def download_file(self, remote_path: str, timeout: int = 30 * 60) -> bytes:
         """Download a file from the sandbox via daemon API.
@@ -530,7 +634,7 @@ class KubernetesSandbox(SandboxProcess, SandboxFS):
             with self.daemon_client() as client:
                 return client.download_file(path=remote_path, timeout=timeout)
         except SandboxDaemonAPIError as exc:
-            raise SandboxFileError(f"failed to download file: {exc}")
+            raise SandboxFileError("failed to download file", detail=exc.detail) from exc
 
     def daemon_client(self) -> SandboxDaemonClient:
         """Get the daemon client for this sandbox."""

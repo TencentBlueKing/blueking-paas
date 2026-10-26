@@ -23,7 +23,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from paasng.platform.agent_sandbox.constants import SandboxStatus, SandboxWorkloadType
+from paasng.platform.agent_sandbox.constants import SandboxDeleteSource, SandboxStatus, SandboxWorkloadType
 from paasng.platform.agent_sandbox.exceptions import (
     SandboxActiveCountLimitExceeded,
     SandboxAlreadyExists,
@@ -206,7 +206,7 @@ class TestAgentSandboxViewSetDestroy:
             resp = api_client.delete(destroy_url)
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        mock_delete.assert_called_once_with(sandbox_obj)
+        mock_delete.assert_called_once_with(sandbox_obj, delete_source=SandboxDeleteSource.USER)
 
     def test_destroy_sandbox_not_found(self, api_client: APIClient) -> None:
         """Verify sandbox destruction returns 404 when sandbox not found.

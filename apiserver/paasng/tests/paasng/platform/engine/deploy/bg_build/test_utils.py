@@ -15,15 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import base64
+import json
 from types import SimpleNamespace
 from typing import Dict
 from unittest import mock
 
+import jwt
 import pytest
 import urllib3
 from django.conf import settings
 
 from paas_wl.bk_app.applications.entities import BuildMetadata
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.utils.text import b64encode
+from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.platform.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,
@@ -31,9 +38,34 @@ from paasng.platform.engine.deploy.bg_build.utils import (
     prepare_slugbuilder_template,
     update_env_vars_with_metadata,
 )
+from tests.paasng.platform.engine.deploy.bg_build.conftest import (
+    PLATFORM_PASSWORD,
+    PROXY,
+    REGISTRY_ALIAS,
+    REGISTRY_HOST,
+    REGISTRY_NAMESPACE,
+    enable_registry_proxy,
+    set_cluster_annotations,
+)
 
 urllib3.disable_warnings()
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+@pytest.fixture()
+def user_credential(wl_app) -> AppImageCredential:
+    """用户为私有仓库配置的镜像凭证"""
+    return AppImageCredential.objects.create(
+        app=wl_app,
+        registry="private.example.com/foo",
+        username="user",
+        password="user-pass",
+        tenant_id=wl_app.tenant_id,
+    )
+
+
+def _decode_docker_config(value: str) -> Dict:
+    return json.loads(base64.b64decode(value))
 
 
 class TestEnvVars:
@@ -63,6 +95,95 @@ class TestEnvVars:
 
         assert metadata.extra_envs["a"] == env["a"]
         assert env["REQUIRED_BUILDPACKS"] == "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2"
+
+
+@pytest.mark.usefixtures("_platform_registry", "user_credential", "signing_key")
+class TestKanikoEnvVarsWithRegistryProxy:
+    @pytest.mark.parametrize("enabled", [None, "false", "True"])
+    def test_disabled(self, wl_app, build_proc, dockerfile_metadata, enabled):
+        if enabled is not None:
+            set_cluster_annotations(wl_app, enable_build_registry_proxy=enabled, build_registry_proxy_address=PROXY)
+
+        env_vars = generate_builder_env_vars(build_proc, dockerfile_metadata)
+
+        # 与改造前完全一致
+        assert list(env_vars)[:4] == ["SOURCE_GET_URL", "OUTPUT_IMAGE", "CACHE_REPO", "DOCKER_CONFIG_JSON"]
+        env_vars.pop("SOURCE_GET_URL")
+        expected = {
+            "OUTPUT_IMAGE": dockerfile_metadata.image,
+            "CACHE_REPO": f"{dockerfile_metadata.image_repository}/dockerbuild-cache",
+            "DOCKER_CONFIG_JSON": b64encode(json.dumps(ImageCredentials.load_from_app(wl_app).build_dockerconfig())),
+            **settings.BUILD_EXTRA_ENV_VARS,
+            **(
+                get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL)
+                if settings.PYTHON_BUILDPACK_PIP_INDEX_URL
+                else {}
+            ),
+            **dockerfile_metadata.extra_envs,
+        }
+        assert env_vars == expected
+        assert REGISTRY_HOST in _decode_docker_config(env_vars["DOCKER_CONFIG_JSON"])["auths"]
+
+    @pytest.mark.parametrize(("skip_tls_verify", "expected_skip_tls"), [("true", PROXY), (None, ""), ("false", "")])
+    def test_enabled(self, wl_app, build_proc, dockerfile_metadata, signing_key, skip_tls_verify, expected_skip_tls):
+        annos = {} if skip_tls_verify is None else {"build_registry_proxy_skip_tls_verify": skip_tls_verify}
+        enable_registry_proxy(wl_app, **annos)
+        original_image = dockerfile_metadata.image
+
+        env_vars = generate_builder_env_vars(build_proc, dockerfile_metadata)
+
+        repo_path = f"{REGISTRY_NAMESPACE}/{wl_app.paas_app_code}/{wl_app.module_name}"
+        assert env_vars["OUTPUT_IMAGE"] == f"{PROXY}/{REGISTRY_ALIAS}/{repo_path}:main-3f2a1bc"
+        assert env_vars["CACHE_REPO"] == f"{PROXY}/{REGISTRY_ALIAS}/{repo_path}/dockerbuild-cache"
+        assert env_vars["REGISTRY_MAP"] == f"{REGISTRY_HOST}={PROXY}/{REGISTRY_ALIAS}"
+        assert env_vars["SKIP_DEFAULT_REGISTRY_FALLBACK"] == "true"
+        # 覆盖 extra_envs 中按平台仓库生成的值
+        assert env_vars["SKIP_TLS_VERIFY_REGISTRIES"] == expected_skip_tls
+        assert "INSECURE_REGISTRIES" not in env_vars
+        # 其他变量保持不变
+        assert env_vars["REGISTRY_MIRRORS"] == "mirror.example.com"
+        assert env_vars["DOCKERFILE_PATH"] == "Dockerfile"
+        # 部署引用的仍是真实仓库地址
+        assert dockerfile_metadata.image == original_image
+
+        auths = _decode_docker_config(env_vars["DOCKER_CONFIG_JSON"])["auths"]
+        assert set(auths) == {"private.example.com/foo", PROXY}
+        assert auths["private.example.com/foo"]["password"] == "user-pass"
+        proxy_auth = auths[PROXY]
+        token = proxy_auth["password"]
+        assert proxy_auth["username"] == "bkpaas-build"
+        assert proxy_auth["auth"] == b64encode(f"bkpaas-build:{token}")
+        claims = jwt.decode(
+            token,
+            jwt.PyJWK(signing_key.public_jwk()).key,
+            algorithms=["EdDSA"],
+            audience=f"bkpaas-registry-proxy:{get_cluster_by_app(wl_app).name}",
+        )
+        assert claims["push"][0] == {"repo": f"{REGISTRY_ALIAS}/{repo_path}", "tags": ["main-3f2a1bc"]}
+
+        # 构建环境中不存在平台全局仓库账号
+        assert all(PLATFORM_PASSWORD not in v for v in env_vars.values())
+        assert all(PLATFORM_PASSWORD not in json.dumps(item) for item in auths.values())
+
+    def test_proxy_credential_overrides_user_credential(self, wl_app, build_proc, dockerfile_metadata):
+        AppImageCredential.objects.create(
+            app=wl_app, registry=PROXY, username="user", password="user-pass", tenant_id=wl_app.tenant_id
+        )
+        enable_registry_proxy(wl_app)
+
+        env_vars = generate_builder_env_vars(build_proc, dockerfile_metadata)
+
+        assert _decode_docker_config(env_vars["DOCKER_CONFIG_JSON"])["auths"][PROXY]["username"] == "bkpaas-build"
+
+    def test_cnb_build_not_affected(self, wl_app, build_proc):
+        enable_registry_proxy(wl_app)
+        repo = f"{REGISTRY_HOST}/{REGISTRY_NAMESPACE}/{wl_app.paas_app_code}/{wl_app.module_name}"
+        metadata = BuildMetadata(image=f"{repo}:v1", image_repository=repo, use_cnb=True)
+
+        env_vars = generate_builder_env_vars(build_proc, metadata)
+
+        assert env_vars["OUTPUT_IMAGE"] == f"{repo}:v1"
+        assert "REGISTRY_MAP" not in env_vars
 
 
 class TestUtils:

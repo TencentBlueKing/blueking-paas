@@ -15,6 +15,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.db import models
+from django.db.models import F
+from django.utils import timezone
 
 from app_spark_api.core.tenant.fields import tenant_id_field_factory
 from app_spark_api.utils.models import BkUserField, OwnerTimestampedModel
@@ -37,6 +39,24 @@ class ProjectManager(models.Manager["Project"]):
         """
         return self.filter(owner=owner, tenant_id=tenant_id).order_by("-created_at", "id")
 
+    async def asoft_delete(self, project_id: str) -> bool:
+        """把一个活跃 Project 标记为已删除，并释放它的名称。
+
+        :param project_id: 要删除的 Project。
+        :return: 是否由本次调用完成了删除。Project 不存在或已被删除时返回 ``False``。
+        """
+        now = timezone.now()
+
+        # MySQL 按 SET 顺序从左到右求值，name_at_deletion 必须排在 name 之前。
+        changed = await self.filter(pk=project_id).aupdate(
+            is_deleted=True,
+            name_at_deletion=F("name"),
+            name=None,
+            updated_at=now,
+        )
+
+        return bool(changed)
+
 
 class Project(OwnerTimestampedModel):
     """app-spark 的 Project 是开发者通过自然语言开发的 SaaS 项目，可以被发布到蓝鲸运营系统 PaaS 平台。
@@ -45,7 +65,11 @@ class Project(OwnerTimestampedModel):
     """
 
     id = models.CharField(verbose_name="项目 ID", max_length=20, primary_key=True)
-    name = models.CharField(verbose_name="项目名称", max_length=20)
+    # 已删除项目把名称置空以释放租户内唯一约束。MySQL 的唯一索引允许多行 NULL，
+    # 因此同一租户可以留下多个软删除项目，同时不必改成数据库不支持的条件唯一索引。
+    name = models.CharField(verbose_name="项目名称", max_length=20, null=True)
+    # 删除前的名称，只作记录，不参与唯一约束。
+    name_at_deletion = models.CharField(verbose_name="删除前的项目名称", max_length=20, blank=True, default="")
     creator = BkUserField()
     is_deleted = models.BooleanField("是否删除", default=False)
 
@@ -56,6 +80,5 @@ class Project(OwnerTimestampedModel):
     default_objects = models.Manager()
 
     class Meta:
-        # 项目名称租户内唯一
-        # TODO: 软删除后应该释放对应的 name
+        # 活跃项目的名称非空，因此这个约束仍保证它们在租户内唯一；软删除行统一存 NULL。
         unique_together = ("tenant_id", "name")

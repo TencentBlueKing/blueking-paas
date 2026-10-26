@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Set, Tuple, cast
+from typing import Callable, Dict, List, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 # A flag value for parallel patching, turned on by default. A unittest might patch this value to
 # alter the behaviour.
 _PARALLEL_PATCHING = True
+
+_CNB_DIR_PREFIX = "/cnb/"
+# The PATH used by container runtimes when the image doesn't set one
+_DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 
 def dispatch_package_to_modules(
@@ -206,6 +210,9 @@ def dispatch_cnb_image_to_registry(
         config_path = safe_resolve_subpath(image_tmp_folder, tarball_manifest.config)
         cnb_layers_image_json = ImageJSON(**json.loads(config_path.read_text()))
         base_image_json.config = cnb_layers_image_json.config
+        base_image_json.config.Env = inject_extra_env_paths(
+            base_image_json.config.Env, bksmart_settings.cnb_base_image.extra_env_paths
+        )
         image_ref._initial_config = base_image_json.json(
             exclude_unset=True, exclude_defaults=True, separators=(",", ":")
         )
@@ -228,6 +235,39 @@ def dispatch_cnb_image_to_registry(
         module, policy, operator=operator, image_sha256_signature=image_sha256_signature
     )
     return source_package
+
+
+def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[str]]) -> List[str]:
+    """Insert extra directories into the path-like variables of an image config's Env
+
+    :param env: The Env of the image config, items are in "KEY=VALUE" format.
+    :param extra_paths: The directories to insert, in {var name: [dir, ...]} format.
+    :return: The new Env list, directories which already exist won't be inserted again.
+    """
+    result = list(env or [])
+    for name, dirs in extra_paths.items():
+        idx = next((i for i, item in enumerate(result) if item.startswith(f"{name}=")), None)
+        if idx is not None:
+            current = [p for p in result[idx].split("=", 1)[1].split(":") if p]
+        else:
+            current = _DEFAULT_PATH.split(":") if name == "PATH" else []
+
+        new_dirs = [d for d in dirs if d not in current]
+        if not new_dirs:
+            continue
+
+        # The process types (e.g. "web") are resolved via the leading "/cnb/*" dirs in PATH,
+        # the extra dirs must come after them to avoid shadowing the processes.
+        pos = 0
+        while pos < len(current) and current[pos].startswith(_CNB_DIR_PREFIX):
+            pos += 1
+        item = f"{name}={':'.join(current[:pos] + new_dirs + current[pos:])}"
+
+        if idx is not None:
+            result[idx] = item
+        else:
+            result.append(item)
+    return result
 
 
 def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:

@@ -52,6 +52,9 @@ class CNBBaseImageConf(BaseModel):
     """cloud native S-Mart 基础镜像配置, 用于配置合并镜像层时的基础镜像"""
 
     image_config: dict = Field(default=settings.SMART_CNB_IMAGE_CONF, description="云原生基础镜像配置")
+    extra_env_paths: dict[str, list[str]] = Field(
+        default=settings.SMART_CNB_IMAGE_EXTRA_ENV_PATHS, description="需要写入镜像 Env 的 buildpack 目录"
+    )
 
     def get_name(self, image_id: str) -> str:
         """根据基础镜像 ID, 获取云原生基础镜像名称"""

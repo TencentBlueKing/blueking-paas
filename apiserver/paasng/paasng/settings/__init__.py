@@ -1406,6 +1406,20 @@ for image_conf in SMART_CNB_IMAGE_CONF.values():
     if not image_name.startswith(smart_cnb_image_name_prefix):
         image_conf["name"] = f"{smart_cnb_image_name_prefix}{image_name}"
 
+# S-Mart CNB 镜像中需要写入镜像 Env 的 buildpack 目录, 格式为 {环境变量名: [目录, ...]}。
+# buildpack 设置的环境变量只在经过 launcher 时生效, 写入镜像 Env 后, 直接进入容器也能使用 python 等命令
+SMART_CNB_IMAGE_EXTRA_ENV_PATHS = settings.get(
+    "SMART_CNB_IMAGE_EXTRA_ENV_PATHS",
+    {
+        "PATH": ["/app/.heroku/python/bin"],
+        "LD_LIBRARY_PATH": [
+            "/app/.heroku/python/lib",
+            "/app/.apt/usr/lib/x86_64-linux-gnu",
+            "/app/.apt/usr/lib",
+        ],
+    },
+)
+
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 

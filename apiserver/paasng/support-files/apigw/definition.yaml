@@ -10,13 +10,11 @@ apigateway:
   maintainers:
     - "admin"
 
-
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.9
-  title: "Open the system APIs for publishing AppSpark apps."
-  comment: "Add create_sys_app_spark_app and sys_interrupt_deployment (for both AIDEV and AppSpark); allow the AppSpark role to upload source packages, deploy, read deployment logs and offline AppSpark apps; add access_url to sys_get_deployment_result."
-
+  version: 1.4.10
+  title: "Add system APIs for AIDEV to query AI Agent app info, repo branches, add-ons, and manage processes."
+  comment: "Add sys_get_app_info, sys_get_repo_branches, sys_get_service_instance_by_module, sys_list_processes and sys_update_process for AI Agent applications."
 
 stages:
   - name: "prod"

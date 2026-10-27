@@ -28,6 +28,8 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
+from paasng.accessories.publish.entrance.exposer import get_exposed_links
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
@@ -38,10 +40,12 @@ from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import LightApplicationViewSetErrorCode
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
+from paasng.platform.applications.mixins import SysManagedAppInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_third_app
 from paasng.platform.applications.views.creation import ApplicationCreateViewSet
 from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -365,4 +369,31 @@ class SysAppViewSet(viewsets.ViewSet):
         return Response(
             data={"bk_app_code": application.code, "bk_app_secret": secret},
             status=status.HTTP_201_CREATED,
+        )
+
+
+class SysApplicationViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态应用信息查询接口, 目前仅支持 AIDEV 查询 AI Agent 应用"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_AI_AGENT_APP)]
+
+    @swagger_auto_schema(
+        responses={200: slzs.SysApplicationDetailOutputSLZ()},
+        tags=["应用/模块信息查询"],
+        operation_id="sys_get_app_info",
+    )
+    def retrieve(self, request, code):
+        """应用态查询应用信息, 部署模式与访问地址, 仅 AIDEV 可调用, 仅允许查询 AI Agent 应用."""
+        application = self.get_managed_application_via_path()
+        application._deploy_info = get_exposed_links(application)
+        application._preferred_prod_url = MarketConfig.objects.get_preferred_prod_url_by_app(application)
+
+        return Response(
+            slzs.SysApplicationDetailOutputSLZ(
+                {
+                    "application": application,
+                    "web_config": application.config_info,
+                    "migration_status": get_migration_process_status(application),
+                }
+            ).data
         )

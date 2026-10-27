@@ -19,6 +19,7 @@ from paasng.infras.accounts.views import OauthTokenViewSet
 from paasng.utils.basic import re_path
 
 from . import views
+from .views.sys_api import SysApplicationViewSet
 
 urlpatterns = [
     # Every API startswith '/api/bkapps', 'bkapps' refers to blueking applications namespace
@@ -221,6 +222,11 @@ urlpatterns += [
         r"^sys/api/bkapps/(?P<sys_id>[^/]+)/third_app/$",
         views.SysAppViewSet.as_view({"post": "create_sys_third_app"}),
         name="sys.applications.create_third_app.sys",
+    ),
+    re_path(
+        r"^sys/api/bkapps/applications/(?P<code>[^/]+)/$",
+        SysApplicationViewSet.as_view({"get": "retrieve"}),
+        name="sys.api.applications.detail",
     ),
 ]
 

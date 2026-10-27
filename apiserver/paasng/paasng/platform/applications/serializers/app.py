@@ -262,6 +262,14 @@ class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
     )
 
 
+class SysApplicationDetailOutputSLZ(serializers.Serializer):
+    """应用态查询应用信息的返回结果"""
+
+    application = ApplicationWithDeployInfoSLZ(help_text="应用详情")
+    web_config = serializers.DictField(help_text="应用级功能配置")
+    migration_status = serializers.DictField(help_text="云原生迁移状态")
+
+
 class ApplicationRelationSLZ(serializers.Serializer):
     id = serializers.CharField()
     code = serializers.CharField()

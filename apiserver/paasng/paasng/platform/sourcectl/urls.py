@@ -94,6 +94,11 @@ urlpatterns += [
         name="api.repo.branches",
     ),
     re_path(
+        make_app_pattern("/repo/branches/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
+        views.SysRepoDataViewSet.as_view({"get": "get_repo_branches"}),
+        name="sys.api.repo.branches",
+    ),
+    re_path(
         make_app_pattern("/repo/tags/$", include_envs=False),
         views.SVNRepoTagsView.as_view(),
         name="api.applications.repo.tags",

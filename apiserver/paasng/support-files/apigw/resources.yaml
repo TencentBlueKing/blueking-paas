@@ -718,6 +718,121 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get the offline result. System API.
+  /system/bkapps/applications/{app_code}/:
+    get:
+      operationId: sys_get_app_info
+      description: 应用态查询 AI Agent 应用信息、部署模式与访问地址（仅供 AIDEV 使用）
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the AI Agent application's info, deploy mode and exposed urls with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/repo/branches/:
+    get:
+      operationId: sys_get_repo_branches
+      description: 应用态查询 AI Agent 应用可选的代码分支与标签（仅供 AIDEV 使用）
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/repo/branches/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the deployable branches and tags of an AI Agent application with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/:
+    get:
+      operationId: sys_get_service_instance_by_module
+      description: 应用态查询 AI Agent 应用模块绑定的增强服务实例（含 admin_url，仅供 AIDEV 使用）
+      tags:
+      - 增强服务
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the add-on service instances bound to an AI Agent application module with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/list/:
+    get:
+      operationId: sys_list_processes
+      description: 应用态查询 AI Agent 应用环境的进程与实例实际状态（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/list/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List the actual processes and instances of an AI Agent application environment with system API credentials
+  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/:
+    post:
+      operationId: sys_update_process
+      description: 应用态启动、停止 AI Agent 应用进程或调整副本数（仅供 AIDEV 使用）
+      tags:
+      - 部署相关接口
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Start, stop or scale a process of an AI Agent application with system API credentials
   /bkapps/applications/{app_code}/modules/{module}/source_package/:
     post:
       operationId: upload_source_package

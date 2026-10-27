@@ -58,6 +58,8 @@ class ClientAction(StrStructuredEnum):
     UPLOAD_SOURCE_PACKAGE = EnumField("sysapi:upload:source-package", label=_("上传源码包"))
     # 包含部署、查部署结果、中断部署、读取部署日志、下架、查下架结果
     DEPLOY_APPLICATIONS = EnumField("sysapi:deploy:applications", label=_("部署/下架应用"))
+    READ_AI_AGENT_APP = EnumField("sysapi:read:ai-agent-app", label=_("查询 AI Agent 应用信息"))
+    MANAGE_AI_AGENT_PROCESS = EnumField("sysapi:manage:ai-agent-process", label=_("管理 AI Agent 应用进程"))
 
     # 仅供 AppSpark 使用
     CREATE_APP_SPARK_APP = EnumField("sysapi:create:app-spark-app", label=_("创建 AppSpark 应用"))

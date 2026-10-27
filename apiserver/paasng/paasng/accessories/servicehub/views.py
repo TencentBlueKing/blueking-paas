@@ -17,7 +17,7 @@
 
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Type
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -27,7 +27,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -66,7 +66,7 @@ from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
 from paasng.platform.applications.serializers import ApplicationMembersInfoSLZ
@@ -109,6 +109,38 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         for env in self.get_module_via_path().get_envs():
             services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)["services_info"]
         return Response(data=slzs.ModuleServiceInfoSLZ(services_info).data)
+
+
+def get_module_service_instances(
+    module: Module, service: ServiceObj, instance_serializer: Type[serializers.Serializer]
+) -> Dict[str, Any]:
+    """获取模块与增强服务的绑定关系详情, 包含各环境的实例信息与方案信息
+
+    :param instance_serializer: 实例信息的序列化器, 用户态使用含凭证的 ServiceInstanceInfoSLZ,
+        应用态使用不含凭证的 SysServiceInstanceInfoSLZ
+    """
+
+    results = []
+    plans = {}
+    for env in module.envs.all():
+        for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
+            instance = rel.get_instance()
+            results.append(
+                {
+                    "service_instance": instance,
+                    "environment": env.environment,
+                    "environment_name": AppEnvName.get_choice_label(env.environment),
+                    "usage": "{}",
+                }
+            )
+
+        for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service.uuid):
+            plans[env.environment] = slzs.PlanForDisplaySLZ(rel.get_plan()).data
+            # Only read the first one
+            break
+
+    serializer = instance_serializer(results, many=True)
+    return {"count": len(results), "results": serializer.data, "plans": plans}
 
 
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -202,27 +234,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not mixed_service_mgr.module_is_bound_with(service, module):
             raise Http404
 
-        results = []
-        plans = {}
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
-                instance = rel.get_instance()
-                results.append(
-                    {
-                        "service_instance": instance,
-                        "environment": env.environment,
-                        "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "usage": "{}",
-                    }
-                )
-
-            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service.uuid):
-                plans[env.environment] = slzs.PlanForDisplaySLZ(rel.get_plan()).data
-                # Only read the first one
-                break
-
-        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data, "plans": plans})
+        return Response(get_module_service_instances(module, service, slzs.ServiceInstanceInfoSLZ))
 
     @swagger_auto_schema(response_serializer=slzs.PossiblePlansOutputSLZ)
     def list_possible_plans(self, request, code, module_name, service_id):
@@ -297,6 +309,25 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data_before=DataDetail(data=service.config if service else None),
         )
         return Response(status=status.HTTP_200_OK)
+
+
+class SysModuleServicesViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态增强服务接口"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_AI_AGENT_APP)]
+
+    @swagger_auto_schema(tags=["增强服务"], operation_id="sys_get_service_instance_by_module")
+    def retrieve(self, request, code, module_name, service_id):
+        """应用态查看应用模块与增强服务的绑定关系详情, 仅 AIDEV 可调用, 仅允许操作 AI Agent 应用"""
+        module = self.get_managed_module_via_path()
+        service = mixed_service_mgr.get_or_404(service_id)
+
+        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
+        if not mixed_service_mgr.module_is_bound_with(service, module):
+            raise Http404
+
+        # 应用态仅返回实例 config 等必要信息
+        return Response(get_module_service_instances(module, service, slzs.SysServiceInstanceInfoSLZ))
 
 
 class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

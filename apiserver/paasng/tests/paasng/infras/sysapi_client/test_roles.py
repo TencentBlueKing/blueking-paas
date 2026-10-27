@@ -37,6 +37,12 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.DEPLOY_APPLICATIONS) is True
         assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.DEPLOY_APPLICATIONS) is False
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.DEPLOY_APPLICATIONS) is False
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.READ_AI_AGENT_APP) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.READ_AI_AGENT_APP) is False
+        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.READ_AI_AGENT_APP) is False
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.MANAGE_AI_AGENT_PROCESS) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
+        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.MANAGE_AI_AGENT_PROCESS) is False
 
     @pytest.mark.parametrize(
         ("action", "expected"),
@@ -47,6 +53,8 @@ class TestClientPermChecker:
             # 不继承基础管理角色，也拿不到 AIDEV 的专用动作
             (ClientAction.READ_APPLICATIONS, False),
             (ClientAction.CREATE_AI_AGENT_APP, False),
+            (ClientAction.READ_AI_AGENT_APP, False),
+            (ClientAction.MANAGE_AI_AGENT_PROCESS, False),
         ],
     )
     def test_app_spark_perms(self, action: ClientAction, expected: bool):

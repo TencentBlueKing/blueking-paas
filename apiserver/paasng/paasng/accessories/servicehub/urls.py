@@ -84,6 +84,11 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
     ),
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
+        views.SysModuleServicesViewSet.as_view({"get": "retrieve"}),
+        name="sys.api.services.detail",
+    ),
     # Manager service attachments (from services side)
     re_path(
         r"^api/services/service-attachments/$",

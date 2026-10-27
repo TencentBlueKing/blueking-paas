@@ -34,6 +34,7 @@ class ErrorCodes:
     APP_AUTHENTICATED_ALREADY_EXISTS = ErrorCode(_("应用已经添加了授权关系"))
     SYSAPI_CLIENT_ALREADY_EXISTS = ErrorCode(_("指定的 sysapi client 已存在"))
     SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
+    APP_TENANT_MISMATCH = ErrorCode(_("应用不在当前租户的可用范围内"), status_code=403)
 
     # 用户与通知相关
     ERROR_SENDING_NOTIFICATION = ErrorCode(_("发送通知消息失败，请稍候重试"))

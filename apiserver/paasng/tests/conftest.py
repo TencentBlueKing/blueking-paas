@@ -566,6 +566,12 @@ def sys_aidev_api_client():
     return _build_api_client(role=ClientRole.AIDEV)
 
 
+@pytest.fixture()
+def sys_app_spark_api_client():
+    """Return an authenticated client which has a system API client with APP_SPARK permissions"""
+    return _build_api_client(role=ClientRole.APP_SPARK)
+
+
 def _build_api_client(role: ClientRole):
     """Helper function to build an API client with the given role"""
     client = SysAPIClient.objects.create(name="test_client", role=role)

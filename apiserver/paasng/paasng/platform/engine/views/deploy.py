@@ -37,6 +37,7 @@ from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.deploy.app_res.controllers import BUILD_PROCESS_ID_LABEL_KEY, BuildHandler
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.smart_advisor.utils import get_failure_hint
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -45,13 +46,15 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
+from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.mixins import AIAgentAppInPathMixin, ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import get_build_debug_timeout, get_use_bk_ci_pipeline
-from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
+from paasng.platform.engine.constants import JobStatus, ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
@@ -72,6 +75,7 @@ from paasng.platform.engine.serializers import (
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
     SysCreateDeploymentSLZ,
+    SysInterruptDeploymentSLZ,
 )
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter, get_latest_deploy_options
@@ -338,6 +342,10 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
           检查到的部署状态码为准。
         """
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        # 用户态只允许中断自己发起的部署；应用态由调用方系统决定谁能中断，见 SysDeploymentViewSet.interrupt
+        if deployment.operator != request.user.pk:
+            raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(_("无法中断由他人发起的部署"))
+
         try:
             interrupt_deployment(deployment, request.user)
         except DeployInterruptionFailed as e:
@@ -506,20 +514,20 @@ class DeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, ApplicationCode
         }
 
 
-class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
-    """应用态部署接口，目前仅支持 AIDEV 部署 AI Agent 应用。"""
+class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态部署接口：AIDEV 只能操作 AI Agent 应用，AppSpark 只能操作 AppSpark 应用。"""
 
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
 
     @swagger_auto_schema(
         request_body=SysCreateDeploymentSLZ,
         responses={"201": CreateDeploymentResponseSLZ()},
         tags=["部署相关接口"],
-        operation_description="提供给 AIDEV 使用的应用态部署接口，仅支持 AI Agent 应用",
+        operation_description="提供给 AIDEV / AppSpark 使用的应用态部署接口，只能操作调用方管理的应用",
     )
     def deploy(self, request, code, module_name, environment):
-        """应用态部署应用，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
-        env = self.get_ai_agent_env_via_path()
+        """应用态部署应用，只允许操作调用方管理的应用，AppSpark 只能部署生产环境。"""
+        env = self.get_managed_env_via_path()
 
         serializer = SysCreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -542,11 +550,48 @@ class SysDeploymentViewSet(DeploymentCreateMixin, viewsets.ViewSet, AIAgentAppIn
         tags=["部署相关接口"],
     )
     def get_deployment_result(self, request, code, module_name, uuid):
-        """应用态查询部署任务结果，仅允许查询 AI Agent 应用。"""
+        """应用态查询部署任务结果，只允许查询调用方管理的应用。"""
         query_slz = DeploymentResultQuerySLZ(data=request.query_params)
         query_slz.is_valid(raise_exception=True)
-        deployment = _get_deployment(self.get_ai_agent_module_via_path(), uuid)
+        deployment = _get_deployment(self.get_managed_module_via_path(), uuid)
+        self.ensure_env_allowed_for_client(deployment.app_environment.environment)
         return JsonResponse(_render_deployment_result(deployment, query_slz.validated_data["include_ansi_codes"]))
+
+    @swagger_auto_schema(request_body=SysInterruptDeploymentSLZ, tags=["部署相关接口"])
+    def interrupt(self, request, code, module_name, uuid):
+        """应用态中断部署，只允许操作调用方管理的应用。
+
+        与用户态中断不同，这里不要求 operator 是部署发起人，operator 只记作操作人。
+        接口成功只代表中断请求已受理，最终以部署结果的 interrupted 状态为准。
+        """
+        deployment = _get_deployment(self.get_managed_module_via_path(), uuid)
+        # 路径里没有环境，按部署所在环境校验，避免 AppSpark 中断用户在预发布环境手动发起的部署
+        self.ensure_env_allowed_for_client(deployment.app_environment.environment)
+
+        serializer = SysInterruptDeploymentSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, serializer.data["operator"]))
+
+        try:
+            interrupt_deployment(deployment, operator)
+        except DeployInterruptionFailed as e:
+            raise error_codes.DEPLOY_INTERRUPTION_FAILED.f(str(e))
+
+        # 部署记录里的操作人是部署发起人，应用态中断可能由别人发起，所以单独留一条审计记录
+        env = deployment.app_environment
+        add_app_audit_record(
+            app_code=env.application.code,
+            tenant_id=env.application.tenant_id,
+            user=operator.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.INTERRUPT_DEPLOY,
+            target=OperationTarget.APP,
+            module_name=env.module.name,
+            environment=env.environment,
+            access_type=AccessType.API,
+            data_after=DataDetail(data={"deployment_id": str(deployment.id)}),
+        )
+        return Response({})
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -643,4 +688,18 @@ def _render_deployment_result(deployment: Deployment, include_ansi_codes: bool) 
         "logs": logs,
         "error_detail": deployment.err_detail,
         "error_tips": asdict(hint),
+        "access_url": _get_access_url(deployment),
     }
+
+
+def _get_access_url(deployment: Deployment) -> Optional[str]:
+    """Return the default access address of the deployed environment, only for successful deployments.
+
+    The address is read from the environment's current state: it's None if the environment has
+    been taken offline since this deployment, even though the deployment itself succeeded.
+    """
+    if deployment.status != JobStatus.SUCCESSFUL:
+        return None
+
+    exposed_url = get_exposed_url(deployment.app_environment)
+    return exposed_url.address if exposed_url else None

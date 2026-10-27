@@ -65,3 +65,33 @@ def test_get_deployment_result(api_client, prepare_data, query, expected):
         rsp = api_client.get(url)
         assert rsp.status_code == 200
         assert rsp.json().get("logs") == expected
+
+
+@dataclass
+class FakeExposedURL:
+    address: str
+
+
+@pytest.mark.parametrize(
+    ("job_status", "expected"),
+    [
+        ("successful", "https://demo.apps.example.com/"),
+        ("failed", None),
+    ],
+)
+def test_get_deployment_result_access_url(api_client, bk_app, bk_module, job_status, expected):
+    """用户态与应用态共用结果渲染，部署成功时同样返回环境默认访问地址"""
+    deployment = create_fake_deployment(bk_module, status=job_status)
+    url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/deployments/{deployment.id}/result/"
+    with (
+        mock.patch("paasng.platform.engine.views.deploy.get_all_logs", return_value=""),
+        mock.patch("paasng.platform.engine.views.deploy.get_failure_hint", fake_get_failure_hint),
+        mock.patch(
+            "paasng.platform.engine.views.deploy.get_exposed_url",
+            return_value=FakeExposedURL(address="https://demo.apps.example.com/"),
+        ),
+    ):
+        rsp = api_client.get(url)
+
+    assert rsp.status_code == 200
+    assert rsp.json()["access_url"] == expected

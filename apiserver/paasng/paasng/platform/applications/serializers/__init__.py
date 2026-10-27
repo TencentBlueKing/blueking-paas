@@ -61,6 +61,7 @@ from .creation import (
     CreationOptionsOutputSLZ,
     LessCodeAppCreateInputSLZ,
     SysAIAgentAppCreateInputSLZ,
+    SysAppSparkAppCreateInputSLZ,
     ThirdPartyAppCreateInputSLZ,
 )
 from .fields import AppIDField, AppIDSMartField, ApplicationField, AppNameField
@@ -122,6 +123,7 @@ __all__ = [
     "RoleField",
     "SearchApplicationSLZ",
     "SysAIAgentAppCreateInputSLZ",
+    "SysAppSparkAppCreateInputSLZ",
     "SysThirdPartyApplicationSLZ",
     "ThirdPartyAppCreateInputSLZ",
     "UpdateApplicationNameSLZ",

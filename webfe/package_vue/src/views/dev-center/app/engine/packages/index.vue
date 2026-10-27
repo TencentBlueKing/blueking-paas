@@ -13,7 +13,7 @@
     >
       <span>{{ isSmartApp ? $t('包版本管理') : $t('源码信息') }}</span>
       <bk-button
-        v-if="curAppInfo.application?.is_ai_agent_app"
+        v-if="canSwitchToCodeRepository"
         text
         class="f12 ml10"
         @click="switchToCodeRepository"
@@ -322,6 +322,13 @@ export default {
     },
     isSmartApp() {
       return this.curAppInfo.application?.is_smart_app;
+    },
+    // AI Agent 应用和 AppSpark 来源的模块可以从源码包部署切换为代码仓库部署（切换后不可改回）
+    canSwitchToCodeRepository() {
+      return (
+        this.curAppInfo.application?.is_ai_agent_app ||
+        this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.APP_SPARK
+      );
     },
     maxPackageSize() {
       return window.BK_MAX_PACKAGE_SIZE || 500;

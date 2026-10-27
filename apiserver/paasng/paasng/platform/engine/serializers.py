@@ -125,6 +125,14 @@ class SysCreateDeploymentSLZ(CreateDeploymentSLZ):
     operator = serializers.CharField(required=True, help_text="部署操作人用户名，允许使用虚拟账号")
 
 
+class SysInterruptDeploymentSLZ(serializers.Serializer):
+    """应用态中断部署的请求参数"""
+
+    operator = serializers.CharField(
+        required=True, help_text="中断操作人用户名，只记入操作记录，不要求是部署发起人，允许使用虚拟账号"
+    )
+
+
 class CreateDeploymentResponseSLZ(serializers.Serializer):
     deployment_id = serializers.CharField()
     stream_url = serializers.URLField()
@@ -203,6 +211,9 @@ class DeploymentResultSLZ(serializers.Serializer):
     logs = serializers.CharField(help_text="部署日志, 纯文本")
     error_detail = serializers.CharField(help_text="错误详情")
     error_tips = DeploymentErrorTipsSLZ()
+    access_url = serializers.CharField(
+        help_text="部署成功时为该环境的默认访问地址，其余状态或环境已下架时为 null", allow_null=True
+    )
 
 
 class DeploymentResultQuerySLZ(serializers.Serializer):

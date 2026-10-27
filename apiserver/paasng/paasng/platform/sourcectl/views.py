@@ -24,8 +24,7 @@ from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import User, user_id_encoder
 from blue_krill.storages.blobstore.exceptions import UploadFailedError
 from django.conf import settings
-from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -50,8 +49,7 @@ from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig, Module
@@ -295,14 +293,14 @@ class SourcePackageUploadViaUrlMixin:
         return super().handle_exception(exc)  # type: ignore[misc]
 
     def _validate_optional_build_method(self, module: Module, data: dict) -> None:
-        """上传前校验：仅 AI Agent 允许携带构建方式相关字段。"""
+        """上传前校验：仅 AI Agent 和 AppSpark 来源允许携带构建方式相关字段。"""
         has_build_method_fields = bool(
             data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
         )
         if not has_build_method_fields:
             return
-        if module.get_source_origin() != SourceOrigin.AI_AGENT:
-            raise ValidationError({"build_method": _("仅 AI Agent 应用支持在上传源码包时指定构建方式")})
+        if module.get_source_origin() not in (SourceOrigin.AI_AGENT, SourceOrigin.APP_SPARK):
+            raise ValidationError({"build_method": _("仅 AI Agent 和 AppSpark 应用支持在上传源码包时指定构建方式")})
 
     @staticmethod
     def _build_config_audit_data(build_config: BuildConfig) -> dict:
@@ -390,22 +388,14 @@ class ModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ModelV
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
 
 
-class SysModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ViewSet):
-    """应用态源码包管理接口，目前仅支持 AIDEV 为 AI Agent 应用上传源码包。"""
+class SysModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态源码包管理接口，AIDEV 为 AI Agent 应用、AppSpark 为 AppSpark 应用上传源码包。"""
 
-    permission_classes = [sysapi_client_perm_class(ClientAction.UPLOAD_AI_AGENT_SOURCE_PACKAGE)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.UPLOAD_SOURCE_PACKAGE)]
 
-    def get_module(self, code: str, module_name: str) -> Module:
-        """获取目标模块，并校验其所属应用必须是支持包部署的 AI Agent 应用。"""
-        application = get_object_or_404(Application, code=code)
-        if not application.is_ai_agent_app:
-            raise error_codes.AI_AGENT_APP_REQUIRED
-
-        try:
-            module = application.get_module(module_name)
-        except Module.DoesNotExist:
-            raise Http404
-
+    def get_module(self) -> Module:
+        """获取目标模块，校验其所属应用归调用方管理，且模块使用源码包部署。"""
+        module = self.get_managed_module_via_path()
         if not ModuleSpecs(module).deploy_via_package:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
         return module
@@ -414,11 +404,11 @@ class SysModuleSourcePackageViewSet(SourcePackageUploadViaUrlMixin, viewsets.Vie
         request_body=slzs.SysSourcePackageUploadViaUrlSLZ,
         responses={200: slzs.SourcePackageSLZ()},
         tags=["源码包管理"],
-        operation_description="提供给 AIDEV 使用的应用态上传源码包接口，仅支持 AI Agent 应用",
+        operation_description="提供给 AIDEV / AppSpark 使用的应用态上传源码包接口，只能操作调用方管理的应用",
     )
     def upload_via_url(self, request, code, module_name):
-        """应用态根据 URL 上传源码包，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
-        module = self.get_module(code, module_name)
+        """应用态根据 URL 上传源码包，AIDEV 只能操作 AI Agent 应用，AppSpark 只能操作 AppSpark 应用。"""
+        module = self.get_module()
         slz = slzs.SysSourcePackageUploadViaUrlSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -458,6 +448,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    @transaction.atomic
     @swagger_auto_schema(request_body=slzs.RepoBackendModifySLZ(), tags=["sourcectl"])
     def modify(self, request, code, module_name):
         application = self.get_application()
@@ -468,12 +459,6 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
-
-        if module.get_source_origin() == SourceOrigin.AI_AGENT:
-            # AI agent 应用切换源码仓库后，需要将该应用来源更改为 Authorized VCS
-            # 切换到源码部署模式之后, 不可再切换为包部署模式
-            module.source_origin = SourceOrigin.AUTHORIZED_VCS
-            module.save(update_fields=["source_origin"])
 
         slz = slzs.RepoBackendModifySLZ(data=self.request.data, context={"is_image_repo": False})
         slz.is_valid(raise_exception=True)
@@ -502,6 +487,12 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Exception:
             logger.exception("Fail to bind repo")
             raise error_codes.CANNOT_BIND_REPO.f(_("请稍候再试"))
+
+        # 绑定成功后才改来源：切换后不可再改回包部署，AppSpark 应用也就此脱离 AppSpark 管理，
+        # 参数校验或绑定失败时不能留下一个「来源已改、仓库没绑上」的模块
+        if module.get_source_origin() in (SourceOrigin.AI_AGENT, SourceOrigin.APP_SPARK):
+            module.source_origin = SourceOrigin.AUTHORIZED_VCS
+            module.save(update_fields=["source_origin"])
 
         repo_updated.send(sender=self, module_id=module.id, operator=request.user.username)
 

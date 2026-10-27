@@ -50,6 +50,8 @@ class SourceOrigin(IntStructuredEnum):
     CNATIVE_IMAGE = EnumField(6, "CNative Image")
     # AI agent 工具应用，使用蓝鲸 AI 平台提供的源码包部署
     AI_AGENT = EnumField(7, "AI Agent")
+    # AppSpark 发布的标准云原生应用，使用 AppSpark 上传的源码包部署；只能由 AppSpark 的系统 API 创建
+    APP_SPARK = EnumField(8, "AppSpark")
 
     @classmethod
     def get_default_origins(cls) -> List["SourceOrigin"]:
@@ -57,7 +59,12 @@ class SourceOrigin(IntStructuredEnum):
 
     @classmethod
     def get_package_origins(cls) -> List["SourceOrigin"]:
-        return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
+        return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT, SourceOrigin.APP_SPARK]
+
+    @classmethod
+    def get_sys_only_origins(cls) -> List["SourceOrigin"]:
+        """只能由系统 API 建出的来源，用户态创建应用或模块时不能指定"""
+        return [SourceOrigin.APP_SPARK]
 
 
 class AppCategory(StrStructuredEnum):

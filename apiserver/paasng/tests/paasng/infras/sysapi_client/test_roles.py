@@ -15,6 +15,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+import pytest
+
 from paasng.infras.sysapi_client.constants import ClientAction, ClientRole
 from paasng.infras.sysapi_client.roles import ClientPermChecker
 
@@ -32,6 +34,20 @@ class TestClientPermChecker:
         assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.BIND_DB_SERVICE) is True
         assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.CREATE_AI_AGENT_APP) is True
         assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.CREATE_AI_AGENT_APP) is False
-        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.DEPLOY_AI_AGENT_APP) is True
-        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.DEPLOY_AI_AGENT_APP) is False
-        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.DEPLOY_AI_AGENT_APP) is False
+        assert perm_checker.role_can_do(ClientRole.AIDEV, ClientAction.DEPLOY_APPLICATIONS) is True
+        assert perm_checker.role_can_do(ClientRole.BASIC_MAINTAINER, ClientAction.DEPLOY_APPLICATIONS) is False
+        assert perm_checker.role_can_do(ClientRole.LESSCODE, ClientAction.DEPLOY_APPLICATIONS) is False
+
+    @pytest.mark.parametrize(
+        ("action", "expected"),
+        [
+            (ClientAction.UPLOAD_SOURCE_PACKAGE, True),
+            (ClientAction.DEPLOY_APPLICATIONS, True),
+            (ClientAction.CREATE_APP_SPARK_APP, True),
+            # 不继承基础管理角色，也拿不到 AIDEV 的专用动作
+            (ClientAction.READ_APPLICATIONS, False),
+            (ClientAction.CREATE_AI_AGENT_APP, False),
+        ],
+    )
+    def test_app_spark_perms(self, action: ClientAction, expected: bool):
+        assert ClientPermChecker().role_can_do(ClientRole.APP_SPARK, action) is expected

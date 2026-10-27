@@ -1,6 +1,9 @@
 ### Function Description
 
-Upload a source code package for an AI Agent application according to the download link, using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
+Upload a source code package for an application according to the download link, using application credentials. The caller must have the AIDEV or AppSpark system role and can only operate on the applications it manages, otherwise 403 is returned:
+
+- AIDEV: the target application must be an AI Agent application
+- AppSpark: the source origin of the target application's default module must still be AppSpark, and only the default module can be operated on (other modules return 403). Once a user switches it to a code repository in the Developer Center, the application is no longer managed by AppSpark
 
 The upload logic is the same as the user-facing API. Only the uploader is specified by the `operator` field in the request body, and the `operator` in the response is that user.
 
@@ -10,7 +13,7 @@ The upload logic is the same as the user-facing API. Only the uploader is specif
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code | string | Yes | Application ID. Must be an AI Agent application |
+| app_code | string | Yes | Application ID. Must be an application managed by the caller |
 | module | string | Yes | Module name |
 
 #### 2. Interface Parameters
@@ -21,7 +24,7 @@ The upload logic is the same as the user-facing API. Only the uploader is specif
 | version | string | Yes | Source code package version number. It must be provided explicitly; an empty string or `null` is not accepted |
 | operator | string | Yes | Username of the uploader, recorded as the owner of the source package. Virtual accounts are allowed. |
 | allow_overwrite | boolean | No | Whether to allow overwriting the original source code package. Default false. |
-| build_method | string | No | Build method. Only supported by AI Agent apps. Values: buildpack, dockerfile. If omitted, the module's current build method is kept. |
+| build_method | string | No | Build method. Only supported by AI Agent and AppSpark apps. Values: buildpack, dockerfile. If omitted, the module's current build method is kept. |
 | dockerfile_path | string | No | Dockerfile path. Effective when build_method is dockerfile. Defaults to Dockerfile. |
 | docker_build_args | object | No | Docker build arguments. Effective when build_method is dockerfile. Defaults to {}. |
 

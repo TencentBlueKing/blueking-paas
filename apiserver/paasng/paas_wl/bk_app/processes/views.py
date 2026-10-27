@@ -77,7 +77,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.misc.audit.constants import OperationTarget
+from paasng.misc.audit.constants import AccessType, OperationTarget
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
@@ -155,10 +155,12 @@ def do_update_process(
     autoscaling: bool,
     target_replicas: int | None = None,
     scaling_config: AutoscalingConfig | None = None,
+    access_type: int = AccessType.WEB,
 ) -> Dict:
     """执行进程操作并记录审计，返回操作后的目标副本数与目标状态。
 
     :param operator: 操作人（bkpaas user id），仅用于审计记录
+    :param access_type: 审计的访问方式，用户态走网页，系统 API 入口应传 API
     """
     # TODO 由于云原生应用去除了对 ProcessSpec model 的依赖, 因此暂时不做操作频率限制, 待后续评估后再添加?
     if wl_app.type == WlAppType.DEFAULT:
@@ -197,6 +199,7 @@ def do_update_process(
         operation=operate_type,
         target=OperationTarget.PROCESS,
         attribute=process_type,
+        access_type=access_type,
     )
     return {"target_replicas": target_replicas, "target_status": target_status}
 
@@ -638,6 +641,7 @@ class SysProcessesViewSet(GenericViewSet, SysManagedAppInPathMixin):
                 autoscaling=data["autoscaling"],
                 target_replicas=data.get("target_replicas"),
                 scaling_config=data.get("scaling_config"),
+                access_type=AccessType.API,
             ),
         )
 

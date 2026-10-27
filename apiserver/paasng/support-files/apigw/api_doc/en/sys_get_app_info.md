@@ -2,14 +2,6 @@
 
 Get the information, deploy mode and exposed urls of an AI Agent application with system API credentials. The caller must have the AIDEV system role and the target application must be an AI Agent application, otherwise a 403 is returned.
 
-#### Tenant
-
-System APIs do not depend on the user login state, the tenant is passed by the `X-Bk-Tenant-Id` header:
-
-- A global application (`app_tenant_mode` is `global`) is available to all tenants;
-- A single-tenant application is only available to the tenant in its `app_tenant_id`, other tenants get a 403 `APP_TENANT_MISMATCH`;
-- The header is ignored when multi-tenant mode is not enabled.
-
 ### Request Parameters
 
 #### Path parameters
@@ -21,7 +13,7 @@ System APIs do not depend on the user login state, the tenant is passed by the `
 ### Request Example
 
 ```
-curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' -H 'X-Bk-Tenant-Id: default' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/
+curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/
 ```
 
 ### Response Example

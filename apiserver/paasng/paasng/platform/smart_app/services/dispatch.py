@@ -238,18 +238,27 @@ def dispatch_cnb_image_to_registry(
 
 
 def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[str]]) -> List[str]:
-    """Insert extra directories into the path-like variables of an image config's Env
+    """Insert extra directories into the path-like variables (e.g. PATH) of an image config's Env
+
+    The dirs are inserted right after the leading "/cnb/*" dirs, existing dirs are skipped and
+    a missing variable is added. Example::
+
+        env = ["PATH=/cnb/process:/usr/bin"]
+        extra_paths = {"PATH": ["/app/py/bin"], "LD_LIBRARY_PATH": ["/app/py/lib"]}
+        # => ["PATH=/cnb/process:/app/py/bin:/usr/bin", "LD_LIBRARY_PATH=/app/py/lib"]
 
     :param env: The Env of the image config, items are in "KEY=VALUE" format.
     :param extra_paths: The directories to insert, in {var name: [dir, ...]} format.
-    :return: The new Env list, directories which already exist won't be inserted again.
+    :return: The new Env list.
     """
     result = list(env or [])
     for name, dirs in extra_paths.items():
+        # Locate the "NAME=..." item and split its value into dirs
         idx = next((i for i, item in enumerate(result) if item.startswith(f"{name}=")), None)
         if idx is not None:
             current = [p for p in result[idx].split("=", 1)[1].split(":") if p]
         else:
+            # Setting PATH overrides the runtime's default one, so keep the default dirs
             current = _DEFAULT_PATH.split(":") if name == "PATH" else []
 
         new_dirs = [d for d in dirs if d not in current]
@@ -263,6 +272,7 @@ def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[st
             pos += 1
         item = f"{name}={':'.join(current[:pos] + new_dirs + current[pos:])}"
 
+        # Replace the original item in place, or append a new one
         if idx is not None:
             result[idx] = item
         else:

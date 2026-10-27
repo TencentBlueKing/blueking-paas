@@ -34,6 +34,30 @@ import AppHeader from '@/components/layout/AppHeader.vue';
     scroll-snap-type: y proximity;
   }
 
+  .project-body :deep(.project-resize-layout) {
+    display: contents;
+  }
+
+  .project-body :deep(.bk-resize-layout-aside),
+  .project-body :deep(.bk-resize-layout-main) {
+    flex: 0 0 calc(100vh - var(--nav-h));
+    width: 100% !important;
+    min-width: 0;
+    min-height: 0;
+    scroll-snap-align: start;
+  }
+
+  .project-body :deep(.bk-resize-layout-aside) {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .project-body :deep(.bk-resize-layout-aside)::after,
+  .project-body :deep(.bk-resize-trigger),
+  .project-body :deep(.bk-resize-collapse) {
+    display: none;
+  }
+
   .project-body :deep(.interaction-panel),
   .project-body :deep(.workspace-panel) {
     flex: 0 0 calc(100vh - var(--nav-h));
@@ -44,8 +68,7 @@ import AppHeader from '@/components/layout/AppHeader.vue';
   }
 
   .project-body :deep(.interaction-panel) {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    border: 0;
   }
 }
 </style>

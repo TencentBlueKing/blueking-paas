@@ -34,6 +34,8 @@ const { phase, frameSrc, frameKey, waiting } = useConversationPreview(panelOpen)
   display: flex;
   flex: 1;
   flex-direction: column;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
 }
 </style>

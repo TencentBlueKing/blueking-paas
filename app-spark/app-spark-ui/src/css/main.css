@@ -16,11 +16,6 @@
   background: #d7e0ff;
 }
 
-* {
-  scrollbar-color: #c4c6cc transparent;
-  scrollbar-width: thin;
-}
-
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -37,4 +32,11 @@
 *::-webkit-scrollbar-track,
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: #c4c6cc transparent;
+    scrollbar-width: thin;
+  }
 }

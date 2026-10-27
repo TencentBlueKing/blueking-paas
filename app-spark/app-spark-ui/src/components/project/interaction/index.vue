@@ -141,11 +141,11 @@ const handleLoadEarlier = async () => {
 .interaction-panel {
   display: flex;
   flex-direction: column;
-  width: 400px;
-  min-width: 280px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   overflow-x: clip;
   background: #fff;
-  border-right: 1px solid var(--line, #e4e9f1);
 }
 
 .interaction-panel__header {
@@ -179,6 +179,28 @@ const handleLoadEarlier = async () => {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.interaction-panel__body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.interaction-panel__body::-webkit-scrollbar-thumb,
+.interaction-panel__body::-webkit-scrollbar-thumb:hover,
+.interaction-panel__body::-webkit-scrollbar-thumb:active {
+  background-color: #c4c6cc;
+  background-clip: padding-box;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.interaction-panel__body::-webkit-scrollbar-track,
+.interaction-panel__body::-webkit-scrollbar-track:hover,
+.interaction-panel__body::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .interaction-panel__earlier {

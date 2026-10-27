@@ -7,14 +7,30 @@
     color="#f3f5f8"
   >
     <ProjectLayout>
-      <InteractionPanel />
-      <WorkspacePanel />
+      <ResizeLayout
+        class="project-resize-layout"
+        placement="left"
+        :initial-divide="400"
+        :min="280"
+        :max="1000"
+        :border="false"
+        immediate
+        collapsible
+      >
+        <template #aside>
+          <InteractionPanel />
+        </template>
+        <template #main>
+          <WorkspacePanel />
+        </template>
+      </ResizeLayout>
     </ProjectLayout>
   </bk-loading>
 </template>
 
 <script setup lang="ts">
 import { onUnmounted, watch } from 'vue';
+import { ResizeLayout } from 'bkui-vue';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
@@ -60,5 +76,12 @@ onUnmounted(() => {
 
 .project-page-loading :deep(.bk-loading-indicator) {
   z-index: 21;
+}
+
+.project-resize-layout {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 </style>

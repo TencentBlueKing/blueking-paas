@@ -4,14 +4,6 @@ Retrieve the List of Code Repository Branches for an Application Module with sys
 
 The response structure is the same as the user-facing `get_repo_branches` API.
 
-#### Tenant
-
-The system API does not rely on user login state; the tenant is passed via the `X-Bk-Tenant-Id` header:
-
-- Global apps (`app_tenant_mode` is `global`) are available to all tenants;
-- Single-tenant apps are only available under the tenant matching their `app_tenant_id`, other tenants receive 403 `APP_TENANT_MISMATCH`;
-- The header is ignored when multi-tenant mode is disabled.
-
 ### Request Parameters
 
 #### 1. Path parameters
@@ -28,7 +20,7 @@ None.
 ### Request Example
 
 ```
-curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' -H 'X-Bk-Tenant-Id: default' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/repo/branches/
+curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/repo/branches/
 ```
 
 ### Response Example

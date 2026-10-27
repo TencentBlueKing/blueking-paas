@@ -2,14 +2,6 @@
 
 以应用身份查询 AI Agent 应用指定环境的进程与进程实例**实际状态**（用于企微 wxaibot 进程巡检）。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
 
-#### 租户说明
-
-应用态接口不依赖用户登录态，租户通过 `X-Bk-Tenant-Id` 请求头传递：
-
-- 全租户应用（`app_tenant_mode` 为 `global`）对所有租户可用；
-- 单租户应用仅在其 `app_tenant_id` 对应租户下可用，其余租户返回 403 `APP_TENANT_MISMATCH`；
-- 未开启多租户模式时忽略该请求头。
-
 ### 请求参数
 
 #### 1、路径参数
@@ -29,7 +21,7 @@
 ### 请求示例
 
 ```
-curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' -H 'X-Bk-Tenant-Id: default' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/envs/stag/processes/list/
+curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/stag/system/bkapps/applications/ai-demo/modules/default/envs/stag/processes/list/
 ```
 
 ### 返回结果示例

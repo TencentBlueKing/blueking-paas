@@ -223,7 +223,7 @@ ensure-noble-golang-buildpack() {
     vendor_url="$1"
     buildpack_name="$2"
 
-    noble_go_buildpack_version="${PAAS_NOBLE_GO_BUILDPACK_VERSION:-v216}"
+    noble_go_buildpack_version="${PAAS_NOBLE_GO_BUILDPACK_VERSION:-v238}"
     noble_go_buildpack_address="${PAAS_NOBLE_GO_BUILDPACK_ADDRESS:-blueking/go}"
 
     python manage.py manage_buildpack \
@@ -231,8 +231,8 @@ ensure-noble-golang-buildpack() {
     --stack heroku-24 \
     --display_name_zh_cn "blueking/go" \
     --display_name_en "blueking/go" \
-    --description_zh_cn "${PAAS_NOBLE_GO_BUILDPACK_DESC_ZH_CN:-"默认 Go 版本为 1.24，最大支持版本 1.25.4"}" \
-    --description_en "${PAAS_NOBLE_GO_BUILDPACK_DESC_EN:-"默认 Go 版本为 1.24，最大支持版本 1.25.4"}" \
+    --description_zh_cn "${PAAS_NOBLE_GO_BUILDPACK_DESC_ZH_CN:-"默认 Go 版本为 1.25.14，最大支持版本 1.27.3"}" \
+    --description_en "${PAAS_NOBLE_GO_BUILDPACK_DESC_EN:-"Default Go version is 1.25.14, highest supported version is 1.27.3"}" \
     --tag "${noble_go_buildpack_version}" \
     --language Go \
     --type "${PAAS_NOBLE_GO_BUILDPACK_TYPE:-oci-embedded}" \
@@ -248,7 +248,7 @@ ensure-noble-python-buildpack() {
     vendor_url="$3"
     buildpack_name="$4"
 
-    noble_python_buildpack_version="${PAAS_NOBLE_PYTHON_BUILDPACK_VERSION:-v285}"
+    noble_python_buildpack_version="${PAAS_NOBLE_PYTHON_BUILDPACK_VERSION:-v358}"
     noble_python_buildpack_address="${PAAS_NOBLE_PYTHON_BUILDPACK_ADDRESS:-blueking/python}"
     noble_python_pip_index_url="${PAAS_NOBLE_BUILDPACK_PYTHON_PIP_INDEX_URL:-${PAAS_BUILDPACK_PYTHON_PIP_INDEX_URL:-https://mirrors.tencent.com/pypi/simple}}"
     noble_python_pip_extra_index_url="${PAAS_NOBLE_BUILDPACK_PYTHON_PIP_EXTRA_INDEX_URL:-${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/}"
@@ -259,8 +259,8 @@ ensure-noble-python-buildpack() {
     --stack heroku-24 \
     --display_name_zh_cn "blueking/python" \
     --display_name_en "blueking/python" \
-    --description_zh_cn "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_ZH_CN:-"蓝鲸 Python 云原生构建包（3.11.14 / 3.12.12 / 3.13.11）"}" \
-    --description_en "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_EN:-"Blueking Python Cloud Native Buildpack (3.11.14 / 3.12.12 / 3.13.11)"}" \
+    --description_zh_cn "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_ZH_CN:-"蓝鲸 Python 云原生构建包（3.11.17 / 3.12.15 / 3.13.17 / 3.14.9 / 3.15.1），未指定版本时默认 3.14"}" \
+    --description_en "${PAAS_NOBLE_PYTHON_BUILDPACK_DESC_EN:-"Blueking Python Cloud Native Buildpack (3.11.17 / 3.12.15 / 3.13.17 / 3.14.9 / 3.15.1). Unspecified version defaults to 3.14"}" \
     --tag "${noble_python_buildpack_version}" \
     --language Python \
     --type "${PAAS_NOBLE_PYTHON_BUILDPACK_TYPE:-oci-embedded}" \
@@ -277,7 +277,7 @@ ensure-noble-nodejs-buildpack() {
     vendor_url="$1"
     buildpack_name="$2"
 
-    noble_nodejs_buildpack_version="${PAAS_NOBLE_NODEJS_BUILDPACK_VERSION:-v304}"
+    noble_nodejs_buildpack_version="${PAAS_NOBLE_NODEJS_BUILDPACK_VERSION:-v375}"
     noble_nodejs_buildpack_address="${PAAS_NOBLE_NODEJS_BUILDPACK_ADDRESS:-blueking/nodejs}"
     noble_nodejs_npm_registry="${PAAS_NOBLE_BUILDPACK_NODEJS_NPM_REGISTRY:-${PAAS_BUILDPACK_NODEJS_BLUEKING_NPM_REGISTRY:-https://mirrors.tencent.com/npm/}}"
 
@@ -286,8 +286,8 @@ ensure-noble-nodejs-buildpack() {
     --stack heroku-24 \
     --display_name_zh_cn "blueking/nodejs" \
     --display_name_en "blueking/nodejs" \
-    --description_zh_cn "${PAAS_NOBLE_NODEJS_BUILDPACK_DESC_ZH_CN:-"蓝鲸 NodeJS 云原生构建包（v304）"}" \
-    --description_en "${PAAS_NOBLE_NODEJS_BUILDPACK_DESC_EN:-"Blueking NodeJS Cloud Native Buildpack (v304)"}" \
+    --description_zh_cn "${PAAS_NOBLE_NODEJS_BUILDPACK_DESC_ZH_CN:-"蓝鲸 NodeJS 云原生构建包（v375）"}" \
+    --description_en "${PAAS_NOBLE_NODEJS_BUILDPACK_DESC_EN:-"Blueking NodeJS Cloud Native Buildpack (v375)"}" \
     --tag "${noble_nodejs_buildpack_version}" \
     --language NodeJS \
     --type "${PAAS_NOBLE_NODEJS_BUILDPACK_TYPE:-oci-embedded}" \

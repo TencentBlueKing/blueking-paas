@@ -54,6 +54,14 @@ from paasng.utils.validators import (
 )
 
 
+def reject_sys_only_origin(source_origin: int) -> int:
+    """拒绝只能由系统 API 建出的来源，供用户态创建应用 / 模块的序列化器使用"""
+    if SourceOrigin(source_origin) in SourceOrigin.get_sys_only_origins():
+        raise ValidationError(_("不支持使用该源码来源"))
+
+    return source_origin
+
+
 def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
     """根据 SourceOrigin 校验 build_method"""
     origin_specs = SourceOriginSpecs.get(source_origin)
@@ -174,6 +182,9 @@ class CreateModuleSLZ(serializers.Serializer):
             raise ValidationError(_("名称为 {} 的模块已存在").format(name))
         return name
 
+    def validate_source_origin(self, source_origin: int) -> int:
+        return reject_sys_only_origin(source_origin)
+
     def validate_source_init_template(self, tmpl_name):
         # 创建模块的时候，只能使用普通应用模板
         if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
@@ -285,6 +296,9 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     repo_name = serializers.CharField(
         help_text="新建代码仓库的名称，不传则使用平台创自动分配仓库", required=False, allow_blank=True, default=None
     )
+
+    def validate_source_origin(self, source_origin: int) -> int:
+        return reject_sys_only_origin(source_origin)
 
     def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:

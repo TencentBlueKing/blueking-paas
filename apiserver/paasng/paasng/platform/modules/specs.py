@@ -178,6 +178,21 @@ class AIAgentSpecs(PackageMixin, SourceOriginSpecs):
         return [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]
 
 
+class AppSparkSpecs(PackageMixin, SourceOriginSpecs):
+    """Specs for source_origin: APP_SPARK
+
+    构建方式由模块 BuildConfig 决定，AppSpark 上传源码包时可以在 buildpack / dockerfile 之间切换。
+    """
+
+    source_origin = SourceOrigin.APP_SPARK
+    # 覆盖 PackageMixin 的写死值，让 ModuleSpecs 回落到 BuildConfig.build_method
+    runtime_type = None  # type: ignore[assignment]
+
+    @classmethod
+    def supported_runtime_types(cls) -> List[RuntimeType]:
+        return [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]
+
+
 class SMartSpecs(PackageMixin, SourceOriginSpecs):
     """Specs for source_origin: S_MART"""
 

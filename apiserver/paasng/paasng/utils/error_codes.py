@@ -112,6 +112,9 @@ class ErrorCodes:
     CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     CANNOT_CREATE_CODEBASE_CONFIG = ErrorCode(_("创建代码库配置失败"))
     AI_AGENT_APP_REQUIRED = ErrorCode(_("仅 AI Agent 应用支持该操作"), status_code=403)
+    APP_SPARK_APP_REQUIRED = ErrorCode(_("应用不归 AppSpark 管理"), status_code=403)
+    APP_SPARK_MODULE_REQUIRED = ErrorCode(_("AppSpark 只能操作应用的默认模块"), status_code=403)
+    SYSAPI_ENV_NOT_ALLOWED = ErrorCode(_("当前调用方不允许操作该环境"))
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志

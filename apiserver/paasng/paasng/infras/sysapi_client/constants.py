@@ -28,6 +28,7 @@ class ClientRole(IntStructuredEnum):
 
     LESSCODE = EnumField(80, label=_("lesscode 系统专用角色"))
     AIDEV = EnumField(90, label=_("AIDev 系统专用角色"))
+    APP_SPARK = EnumField(100, label=_("AppSpark 系统专用角色"))
 
 
 class ClientAction(StrStructuredEnum):
@@ -52,7 +53,11 @@ class ClientAction(StrStructuredEnum):
     GRANT_APIGW_PERMISSIONS = EnumField("sysapi:grant:apigw-permissions", label=_("授权网关 API 权限"))
     BUILD_SANDBOX_IMAGE = EnumField("sysapi:build:sandbox-image", label=_("构建沙箱镜像"))
     CREATE_AI_AGENT_APP = EnumField("sysapi:create:ai-agent-app", label=_("创建 AI Agent 应用"))
-    UPLOAD_AI_AGENT_SOURCE_PACKAGE = EnumField(
-        "sysapi:upload:ai-agent-source-package", label=_("上传 AI Agent 源码包")
-    )
-    DEPLOY_AI_AGENT_APP = EnumField("sysapi:deploy:ai-agent-app", label=_("部署/下架 AI Agent 应用"))
+
+    # AIDev 与 AppSpark 共用：各自只能操作自己管理的应用，归属由视图按调用方角色判断
+    UPLOAD_SOURCE_PACKAGE = EnumField("sysapi:upload:source-package", label=_("上传源码包"))
+    # 包含部署、查部署结果、中断部署、读取部署日志、下架、查下架结果
+    DEPLOY_APPLICATIONS = EnumField("sysapi:deploy:applications", label=_("部署/下架应用"))
+
+    # 仅供 AppSpark 使用
+    CREATE_APP_SPARK_APP = EnumField("sysapi:create:app-spark-app", label=_("创建 AppSpark 应用"))

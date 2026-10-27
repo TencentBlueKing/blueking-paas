@@ -13,9 +13,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.8
-  title: "Rename the system APIs for deploying and offlining AI Agent apps."
-  comment: "Prefix the user-facing resource names with sys_: sys_deploy_with_module, sys_get_deployment_result, sys_streams_history_events, sys_module_offline, sys_get_offline_result."
+  version: 1.4.9
+  title: "Open the system APIs for publishing AppSpark apps."
+  comment: "Add create_sys_app_spark_app and sys_interrupt_deployment (for both AIDEV and AppSpark); allow the AppSpark role to upload source packages, deploy, read deployment logs and offline AppSpark apps; add access_url to sys_get_deployment_result."
 
 
 stages:

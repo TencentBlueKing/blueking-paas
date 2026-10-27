@@ -42,12 +42,13 @@ def interrupt_deployment(deployment: Deployment, user: User):
     After finished doing above things, the deployment process MIGHT be stopped if anything goes OK, while
     the interruption may have no effects at all if the deployment was not in the right status.
 
+    This method does not check whether `user` is allowed to interrupt the deployment, the caller
+    must do that, e.g. the user-facing API only allows the operator of the deployment.
+
     :param deployment: Deployment object to interrupt
     :param user: User who invoked interruption
     :raises: DeployInterruptionFailed
     """
-    if deployment.operator != user.pk:
-        raise DeployInterruptionFailed(_("无法中断由他人发起的部署"))
     if deployment.status in JobStatus.get_finished_states():
         raise DeployInterruptionFailed(_("无法中断，部署已处于结束状态"))
 

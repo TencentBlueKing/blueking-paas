@@ -1,8 +1,8 @@
 ### Function Description
 
-Query the deployment result of an AI Agent application using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
+Query the deployment result of an application using application credentials. The caller must have the AIDEV or AppSpark system role and can only query the applications it manages, otherwise 403 is returned: AIDEV can only query AI Agent applications, and AppSpark can only query applications whose default module's source origin is still AppSpark, and only deployments of the default module in the production environment.
 
-The response is the same as the user-facing API `get_deployment_result`.
+The response is the same as the user-facing API `get_deployment_result`. When the deployment succeeds, `access_url` is the default access address of the environment and can be shared with users.
 
 ### Request Parameters
 
@@ -10,7 +10,7 @@ The response is the same as the user-facing API `get_deployment_result`.
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code | string | Yes | Application ID. Must be an AI Agent application |
+| app_code | string | Yes | Application ID. Must be an application managed by the caller |
 | module | string | Yes | Module name |
 | deployment_id | string | Yes | Deployment task ID |
 
@@ -40,7 +40,8 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
             "text": "Log Query",
             "link": "http://bkpaas.example.com/developer-center/apps/appid/default/log?tab=stream"
         }]
-    }
+    },
+    "access_url": null
 }
 ```
 
@@ -54,3 +55,4 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
 | error_tips.matched_solutions_found | boolean | Whether there are matched tips |
 | error_tips.possible_reason | string | Possible reasons for deployment errors |
 | error_tips.helpers | object | Auxiliary information, including text and links |
+| access_url | string | The default access address of the environment (custom domains excluded) when the deployment succeeds; null for other statuses, or when the environment is not running at the moment |

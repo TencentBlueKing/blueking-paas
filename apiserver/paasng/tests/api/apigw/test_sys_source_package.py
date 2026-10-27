@@ -24,7 +24,9 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from rest_framework import status
 
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -170,3 +172,45 @@ class TestSysUploadSourcePackageViaLink:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["code"] == "UNSUPPORTED_SOURCE_ORIGIN"
+
+
+@pytest.fixture()
+def app_spark_module(bk_module):
+    """默认模块来源为 AppSpark 的模块，其所属应用归 AppSpark 管理。"""
+    bk_module.source_origin = SourceOrigin.APP_SPARK
+    bk_module.save(update_fields=["source_origin"])
+    return bk_module
+
+
+class TestAppSparkUploadSourcePackageViaLink:
+    """AppSpark 复用应用态上传源码包接口的测试"""
+
+    @pytest.fixture(autouse=True)
+    def _allow_upload_host(self, settings):
+        # Set the allowed hosts otherwise the URL validation will fail
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+
+    @pytest.fixture()
+    def upload_data(self) -> dict:
+        """Request body for uploading, the operator is a newly created user."""
+        return {
+            "package_url": "https://example.com/pkg.tar.gz",
+            "version": "0.0.1",
+            "allow_overwrite": True,
+            "operator": create_user().username,
+        }
+
+    def test_upload_with_dockerfile(self, sys_app_spark_api_client, app_spark_module, upload_data, patch_download):
+        """AppSpark 上传源码包时可以把构建方式切到 dockerfile，不传路径时默认为 Dockerfile。"""
+        resp = sys_app_spark_api_client.post(
+            _sys_upload_url(app_spark_module.application.code, app_spark_module.name),
+            data={**upload_data, "build_method": "dockerfile"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.json()
+        assert SourcePackage.objects.filter(module=app_spark_module, version="0.0.1").exists()
+
+        build_config = BuildConfig.objects.get(module=app_spark_module)
+        assert build_config.build_method == RuntimeType.DOCKERFILE
+        assert build_config.dockerfile_path == "Dockerfile"

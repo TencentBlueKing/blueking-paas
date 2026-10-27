@@ -35,6 +35,7 @@ export const PLATFORM_CONFIG = {
         SCENE_APP: 5,
         CNATIVE_IMAGE: 6, //仅镜像的云原生
         AIDEV: 7, // AIDEV插件
+        APP_SPARK: 8, // AppSpark 发布的应用
     },
 
     // 默认使用的代码库类型

@@ -217,40 +217,25 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
         return validate_ai_agent_create_mode(attrs)
 
 
-@i18n
-class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
-    """应用态创建 AI Agent 应用，管理员取已注册的 operator。"""
+class SysOperatorAsAdminMixin:
+    """应用态创建应用的公共逻辑：管理员取请求中的 operator，并校验其租户与应用租户一致。
 
-    code = AppIDField()
-    name = I18NExtend(AppNameField())
-    operator = serializers.CharField(required=True, help_text="管理员用户名，允许使用虚拟账号")
-    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境")
-    is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
-    source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
-    bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
+    子类需要同时继承 AppTenantMixin，并声明 code、name、operator 字段。
+    """
 
-    def to_internal_value(self, data):
-        # AppNameField 在字段校验阶段就要租户范围，AppTenantMixin.validate 发生在字段校验之后。
+    context: Dict[str, Any]
+    # 没有 UserProfile 的虚拟账号能否当管理员。虚拟账号无法校验租户，成为管理员后真实用户也拿不到管理权限。
+    allow_virtual_operator = True
+
+    def set_app_tenant_context(self, data: Dict[str, Any]) -> None:
+        """AppNameField 在字段校验阶段就要租户范围，AppTenantMixin.validate 发生在字段校验之后，所以提前写入 context。"""
         if not settings.ENABLE_MULTI_TENANT_MODE:
             self.context["app_tenant_id"] = stub_app_tenant_info().app_tenant_id
         else:
             self.context["app_tenant_id"] = data.get("app_tenant_id", "")
 
-        ret = super().to_internal_value(data)
-        return apply_ai_agent_create_defaults(ret)
-
-    def validate_code(self, code: str) -> str:
-        # 应用态单独要求 ai- 前缀，不写入保留前缀列表，避免改变用户态创建规则。
-        if not code.startswith(AI_AGENT_APP_CODE_PREFIX):
-            raise ValidationError(_("应用 ID 必须以 {prefix} 开头").format(prefix=AI_AGENT_APP_CODE_PREFIX))
-
-        return code
-
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        attrs = super().validate(attrs)
-        attrs = validate_ai_agent_create_mode(attrs)
-        self._reject_vcs_delegation(attrs)
-
+    def resolve_operator_as_admin(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """组装租户信息并解析 operator，写入 app_tenant_info 和 operator_user。"""
         # AppTenantMixin 已写入 mode/id/tenant_id，组装给创建链路使用。
         app_tenant_info = AppTenantInfo(
             app_tenant_mode=attrs["app_tenant_mode"],
@@ -261,28 +246,16 @@ class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
 
         user_id = user_id_encoder.encode(settings.USER_TYPE, attrs["operator"])
         profile = UserProfile.objects.filter(user=user_id).first()
-        # 虚拟账号没有对应的 UserProfile，跳过租户一致性校验
-        if profile is not None:
+
+        # 虚拟账号没有对应的 UserProfile，允许时跳过租户一致性校验
+        if profile is None:
+            if not self.allow_virtual_operator:
+                raise ValidationError({"operator": _("operator 未在开发者中心注册")})
+        else:
             self._validate_operator_tenant(profile, app_tenant_info)
 
         attrs["operator_user"] = get_user_by_user_id(user_id)
         return attrs
-
-    def _reject_vcs_delegation(self, attrs: Dict[str, Any]) -> None:
-        """拒绝借 operator 的 VCS OAuth 代建仓或写模板。"""
-
-        source_config = attrs.get("source_config")
-        if not source_config:
-            return
-
-        if source_config.get("auto_create_repo"):
-            raise ValidationError({"source_config": _("应用态创建不支持由平台代建代码仓库")})
-
-        if source_config.get("write_template_to_repo"):
-            raise ValidationError({"source_config": _("应用态创建不支持将模板写入代码仓库")})
-
-        if source_config.get("repo_group") or source_config.get("repo_name"):
-            raise ValidationError({"source_config": _("应用态创建不支持指定新建仓库的项目组或名称")})
 
     def _validate_operator_tenant(self, profile: UserProfile, app_tenant_info: AppTenantInfo) -> None:
         """校验 operator 所属租户与将要创建的应用租户一致。"""
@@ -300,6 +273,82 @@ class SysAIAgentAppCreateInputSLZ(AppTenantMixin):
         # 单租户应用的管理员必须属于该应用所属租户。
         if profile.tenant_id != app_tenant_info.tenant_id:
             raise ValidationError({"operator": _("operator 与应用不属于同一租户")})
+
+
+@i18n
+class SysAIAgentAppCreateInputSLZ(SysOperatorAsAdminMixin, AppTenantMixin):
+    """应用态创建 AI Agent 应用，管理员取请求中的 operator。"""
+
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
+    operator = serializers.CharField(required=True, help_text="管理员用户名，允许使用虚拟账号")
+    is_isolated = serializers.BooleanField(default=False, help_text="是否部署到隔离环境")
+    is_engineless = serializers.BooleanField(default=False, help_text="是否创建为无引擎外链应用，用户列表不可见")
+    source_config = ModuleSourceConfigSLZ(required=False, help_text=_("git 源码配置，传入则使用 git 仓库部署"))
+    bkapp_spec = BkAppSpecSLZ(required=False, help_text=_("构建配置，配合 source_config 使用"))
+
+    def to_internal_value(self, data):
+        self.set_app_tenant_context(data)
+        ret = super().to_internal_value(data)
+        return apply_ai_agent_create_defaults(ret)
+
+    def validate_code(self, code: str) -> str:
+        # 应用态单独要求 ai- 前缀，不写入保留前缀列表，避免改变用户态创建规则。
+        if not code.startswith(AI_AGENT_APP_CODE_PREFIX):
+            raise ValidationError(_("应用 ID 必须以 {prefix} 开头").format(prefix=AI_AGENT_APP_CODE_PREFIX))
+
+        return code
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        attrs = super().validate(attrs)
+        attrs = validate_ai_agent_create_mode(attrs)
+        self._reject_vcs_delegation(attrs)
+        return self.resolve_operator_as_admin(attrs)
+
+    def _reject_vcs_delegation(self, attrs: Dict[str, Any]) -> None:
+        """拒绝借 operator 的 VCS OAuth 代建仓或写模板。"""
+
+        source_config = attrs.get("source_config")
+        if not source_config:
+            return
+
+        if source_config.get("auto_create_repo"):
+            raise ValidationError({"source_config": _("应用态创建不支持由平台代建代码仓库")})
+
+        if source_config.get("write_template_to_repo"):
+            raise ValidationError({"source_config": _("应用态创建不支持将模板写入代码仓库")})
+
+        if source_config.get("repo_group") or source_config.get("repo_name"):
+            raise ValidationError({"source_config": _("应用态创建不支持指定新建仓库的项目组或名称")})
+
+
+@i18n
+class SysAppSparkAppCreateInputSLZ(SysOperatorAsAdminMixin, AppTenantMixin):
+    """应用态创建 AppSpark 应用：标准云原生应用，默认模块来源为 AppSpark，管理员为 operator。"""
+
+    # 管理员只在创建时设置一次，之后由用户在开发者中心自行维护，所以必须是能登录的真实用户
+    allow_virtual_operator = False
+
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
+    operator = serializers.CharField(required=True, help_text="管理员用户名，必须是已在开发者中心注册的用户")
+
+    def to_internal_value(self, data):
+        self.set_app_tenant_context(data)
+        ret = super().to_internal_value(data)
+        ret.update(
+            {
+                "type": ApplicationType.CLOUD_NATIVE.value,
+                "engine_enabled": True,
+                "is_plugin_app": False,
+                "is_ai_agent_app": False,
+            }
+        )
+        return ret
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        attrs = super().validate(attrs)
+        return self.resolve_operator_as_admin(attrs)
 
 
 class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):

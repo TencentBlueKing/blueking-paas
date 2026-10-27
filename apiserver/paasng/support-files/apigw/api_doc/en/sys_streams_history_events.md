@@ -1,6 +1,9 @@
 ### Function Description
 
-Query the deployment logs of an AI Agent application using application credentials. The caller must have the AIDEV system role, and the application of the deployment must be an AI Agent application, otherwise 403 is returned.
+Query deployment logs using application credentials. The caller must have the AIDEV or AppSpark system role and can only query deployments of the applications it manages, otherwise 403 is returned:
+
+- AIDEV: the application of the deployment must be an AI Agent application
+- AppSpark: the source origin of the application's default module must still be AppSpark, and only deployments of the default module in the production environment can be queried (other modules return 403, and the staging environment returns 400)
 
 The response is the same as the user-facing API `streams_history_events`.
 

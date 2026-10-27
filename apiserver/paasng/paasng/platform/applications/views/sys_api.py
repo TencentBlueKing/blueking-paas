@@ -305,6 +305,10 @@ class SysAppViewSet(viewsets.ViewSet):
         if self.action == "create_ai_agent_app":
             return [sysapi_client_perm_class(ClientAction.CREATE_AI_AGENT_APP)()]
 
+        # 创建 AppSpark 应用只给 APP_SPARK，AIDEV 和 BASIC_MAINTAINER 都不能调。
+        if self.action == "create_app_spark_app":
+            return [sysapi_client_perm_class(ClientAction.CREATE_APP_SPARK_APP)()]
+
         return super().get_permissions()
 
     @transaction.atomic
@@ -320,6 +324,21 @@ class SysAppViewSet(viewsets.ViewSet):
         params = serializer.validated_data
         operator_user = params.pop("operator_user")
         return ApplicationCreateViewSet().create_ai_agent_app_for_user(operator_user, params)
+
+    @transaction.atomic
+    @swagger_auto_schema(
+        request_body=slzs.SysAppSparkAppCreateInputSLZ,
+        responses={status.HTTP_201_CREATED: slzs.ApplicationCreateOutputSLZ()},
+        tags=["创建 AppSpark 应用"],
+    )
+    def create_app_spark_app(self, request):
+        """给 AppSpark 提供的应用态创建应用接口，管理员为请求中的已注册用户，只创建不部署。"""
+        serializer = slzs.SysAppSparkAppCreateInputSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
+        # operator 成为应用的创建者，创建后由 post_create_application 信号把创建者加入管理者用户组
+        operator_user = params.pop("operator_user")
+        return ApplicationCreateViewSet().create_app_spark_app_for_user(operator_user, params)
 
     @swagger_auto_schema(request_body=slzs.SysThirdPartyApplicationSLZ, tags=["创建第三方(外链)应用"])
     def create_sys_third_app(self, request, sys_id):

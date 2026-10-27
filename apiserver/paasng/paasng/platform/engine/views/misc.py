@@ -40,7 +40,7 @@ from paasng.misc.monitoring.metrics.exceptions import (
 )
 from paasng.misc.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
-from paasng.platform.applications.mixins import AIAgentAppInPathMixin, ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
@@ -158,19 +158,19 @@ class OfflineViewset(OfflineMixin, viewsets.ViewSet, ApplicationCodeInPathMixin)
         return Response({"result": serializer.data})
 
 
-class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
-    """应用态下架接口，目前仅支持 AIDEV 下架 AI Agent 应用。"""
+class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, SysManagedAppInPathMixin):
+    """应用态下架接口：AIDEV 只能操作 AI Agent 应用，AppSpark 只能操作 AppSpark 应用。"""
 
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
 
     @swagger_auto_schema(
         request_body=SysCreateOfflineOperationSLZ,
         tags=["部署相关接口"],
-        operation_description="提供给 AIDEV 使用的应用态下架接口，仅支持 AI Agent 应用",
+        operation_description="提供给 AIDEV / AppSpark 使用的应用态下架接口，只能操作调用方管理的应用",
     )
     def offline(self, request, code, module_name, environment):
-        """应用态发起下架，仅 AIDEV 可调用，仅允许操作 AI Agent 应用。"""
-        env = self.get_ai_agent_env_via_path()
+        """应用态发起下架，只允许操作调用方管理的应用，AppSpark 只能下架生产环境。"""
+        env = self.get_managed_env_via_path()
 
         serializer = SysCreateOfflineOperationSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -182,8 +182,9 @@ class SysOfflineViewSet(OfflineMixin, viewsets.ViewSet, AIAgentAppInPathMixin):
 
     @swagger_auto_schema(responses={200: OfflineOperationSLZ}, tags=["部署相关接口"])
     def get_offline_result(self, request, code, module_name, uuid):
-        """应用态查询下架任务结果，仅允许查询 AI Agent 应用。"""
-        offline_operation = self.get_offline_operation(self.get_ai_agent_module_via_path(), uuid)
+        """应用态查询下架任务结果，只允许查询调用方管理的应用。"""
+        offline_operation = self.get_offline_operation(self.get_managed_module_via_path(), uuid)
+        self.ensure_env_allowed_for_client(offline_operation.app_environment.environment)
         return JsonResponse(OfflineOperationSLZ(instance=offline_operation).data)
 
 

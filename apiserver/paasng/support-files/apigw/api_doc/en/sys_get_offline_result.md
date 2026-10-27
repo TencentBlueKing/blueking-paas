@@ -1,6 +1,6 @@
 ### Function Description
 
-Query the offline result of an AI Agent application using application credentials. The caller must have the AIDEV system role, and the target application must be an AI Agent application, otherwise 403 is returned.
+Query the offline result of an application using application credentials. The caller must have the AIDEV or AppSpark system role and can only query the applications it manages, otherwise 403 is returned: AIDEV can only query AI Agent applications, and AppSpark can only query applications whose default module's source origin is still AppSpark, and only offline tasks of the default module in the production environment.
 
 The response is the same as the user-facing API `get_offline_result`.
 
@@ -10,7 +10,7 @@ The response is the same as the user-facing API `get_offline_result`.
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code | string | Yes | Application ID. Must be an AI Agent application |
+| app_code | string | Yes | Application ID. Must be an application managed by the caller |
 | module | string | Yes | Module name, e.g., "default" |
 | offline_operation_id | string | Yes | UUID of the offline task |
 

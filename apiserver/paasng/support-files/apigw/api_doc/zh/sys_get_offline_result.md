@@ -1,6 +1,6 @@
 ### 功能描述
 
-以应用身份查询 AI Agent 应用的下架任务结果。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
+以应用身份查询应用的下架任务结果。调用方须具备 AIDEV 或 AppSpark 系统角色，且只能查询自己管理的应用，否则返回 403：AIDEV 只能查询 AI Agent 应用，AppSpark 只能查询默认模块源码来源仍为 AppSpark 的应用，且只能查询默认模块在生产环境的下架任务。
 
 返回结果与用户态接口 `get_offline_result` 一致。
 
@@ -10,7 +10,7 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| app_code | string | 是 | 应用 ID，必须是 AI Agent 应用 |
+| app_code | string | 是 | 应用 ID，必须是调用方管理的应用 |
 | module | string | 是 | 模块名称，如 "default" |
 | offline_operation_id | string | 是 | 下架任务的 uuid |
 

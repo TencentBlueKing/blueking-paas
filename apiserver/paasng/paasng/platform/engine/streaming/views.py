@@ -31,6 +31,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
+from paasng.platform.applications.mixins import SysManagedAppInPathMixin
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.workflow import ServerSendEvent
@@ -115,22 +116,22 @@ class StreamViewSet(ViewSet):
         return _render_history_events(subscriber, slz.validated_data["last_event_id"])
 
 
-class SysStreamViewSet(ViewSet):
-    """应用态事件流接口，目前仅支持 AIDEV 获取 AI Agent 应用的部署日志。"""
+class SysStreamViewSet(ViewSet, SysManagedAppInPathMixin):
+    """应用态事件流接口：AIDEV 获取 AI Agent 应用、AppSpark 获取 AppSpark 应用的部署日志。"""
 
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_AI_AGENT_APP)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
 
     @swagger_auto_schema(
         query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)}, tags=["streams"]
     )
     def history_events(self, request, channel_id):
-        """应用态获取部署日志历史事件，仅允许查询 AI Agent 应用的部署。"""
+        """应用态获取部署日志历史事件，只允许查询调用方管理的应用的部署。"""
         slz = HistoryEventsQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
-        app = _get_channel_deployment(channel_id).app_environment.module.application
-        if not app.is_ai_agent_app:
-            raise error_codes.AI_AGENT_APP_REQUIRED
+        # 路径里只有部署 ID，没有应用和模块，所以按部署所在的环境校验归属。
+        # 同一个权限动作 AIDEV 和 AppSpark 都有，漏掉这一步就能读到对方应用的日志
+        self.ensure_env_managed_by_client(_get_channel_deployment(channel_id).app_environment)
 
         subscriber = _make_subscriber(channel_id)
         return _render_history_events(subscriber, slz.validated_data["last_event_id"])

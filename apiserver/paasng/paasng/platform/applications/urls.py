@@ -213,6 +213,11 @@ urlpatterns += [
         name="sys.applications.create_ai_agent_app",
     ),
     re_path(
+        r"^sys/api/bkapps/app_spark/$",
+        views.SysAppViewSet.as_view({"post": "create_app_spark_app"}),
+        name="sys.applications.create_app_spark_app",
+    ),
+    re_path(
         r"^sys/api/bkapps/(?P<sys_id>[^/]+)/third_app/$",
         views.SysAppViewSet.as_view({"post": "create_sys_third_app"}),
         name="sys.applications.create_third_app.sys",

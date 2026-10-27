@@ -36,7 +36,8 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' ht
 			"text": "Try searching in FAQ",
 			"link": "https://bk.tencent.com/docs/"
 		}]
-	}
+	},
+	"access_url": null
 }
 ```
 
@@ -50,3 +51,4 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' ht
 | error_tips.matched_solutions_found | boolean | Yes | Whether there are matched tips |
 | error_tips.possible_reason | string | Yes | Possible reasons for deployment errors |
 | error_tips.helpers | object | Yes | Auxiliary information, including text and links |
+| access_url | string | No | The default access address of the environment (custom domains excluded) when the deployment succeeds; null for other statuses, or when the environment is not running at the moment |

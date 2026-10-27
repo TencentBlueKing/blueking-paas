@@ -148,10 +148,11 @@ class TestRepoBackendControlViewSet:
         assert response.json()["repo_type"] == "github"
 
     @pytest.mark.usefixtures("_with_wl_apps")
-    def test_modify_ai_agent_app_changes_source_origin(self, api_client, bk_app, bk_module, url):
-        """测试 AI Agent 应用修改仓库时会更改 source_origin"""
+    @pytest.mark.parametrize("package_origin", [SourceOrigin.AI_AGENT, SourceOrigin.APP_SPARK])
+    def test_modify_package_app_changes_source_origin(self, api_client, bk_app, bk_module, url, package_origin):
+        """测试 AI Agent / AppSpark 应用修改仓库时会把 source_origin 改为授权代码库，AppSpark 应用就此脱离管理"""
 
-        bk_module.source_origin = SourceOrigin.AI_AGENT
+        bk_module.source_origin = package_origin
         bk_module.save()
 
         new_repo_url = "https://github.com/example/ai-agent-repo.git"
@@ -174,6 +175,27 @@ class TestRepoBackendControlViewSet:
         # 验证数据已更新
         bk_module.refresh_from_db()
         assert bk_module.source_origin == SourceOrigin.AUTHORIZED_VCS
+
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_bind_failed_keeps_source_origin(self, api_client, bk_app, bk_module, url):
+        """绑定仓库失败时不改来源，否则 AppSpark 应用会在没切成功的情况下永久脱离管理。"""
+        bk_module.source_origin = SourceOrigin.APP_SPARK
+        bk_module.save()
+
+        data = {
+            "source_control_type": "github",
+            "source_repo_url": "https://github.com/example/repo.git",
+            "source_dir": "",
+            "source_repo_auth_info": {},
+        }
+        repo_connector = get_repo_connector("github", bk_module)
+        with mock.patch.object(type(repo_connector), "bind", side_effect=RuntimeError("bind failed")):
+            response = api_client.post(url, data=data)
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "CANNOT_BIND_REPO"
+        bk_module.refresh_from_db()
+        assert bk_module.source_origin == SourceOrigin.APP_SPARK
 
     def test_cannot_switch_to_bk_svn(self, api_client, bk_app, bk_module, url):
         """测试不能切换到蓝鲸 SVN 仓库"""

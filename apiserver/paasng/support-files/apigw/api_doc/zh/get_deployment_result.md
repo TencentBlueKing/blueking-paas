@@ -35,7 +35,8 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
 			"text": "去 FAQ 查询试试",
 			"link": "https://bk.tencent.com/docs/"
 		}]
-	}
+	},
+	"access_url": null
 }
 ```
 
@@ -49,3 +50,4 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
 | error_tips.matched_solutions_found | boolean | 是 | 是否有匹配的 tips |
 | error_tips.possible_reason | string | 是 | 可能导致部署错误的原因 |
 | error_tips.helpers | object | 是 | 辅助信息，包含文本和链接 |
+| access_url | string | 否 | 部署成功时为该环境的默认访问地址（不含自定义域名）；其余状态，或环境当前未在运行时为 null |

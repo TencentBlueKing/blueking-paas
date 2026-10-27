@@ -25,10 +25,15 @@ from app_spark_agent.app_arch.python import build_proc_command
 # https://github.com/TencentBlueKing/blueking-paas/blob/main/apiserver/paasng/tests/paasng/platform/smart_app/assets/cnb-image/app_desc.yaml
 APP_DESC_FILENAME = "app_desc.yaml"
 
+# 平台规范约定的部署端口，与预览端口（settings.APP_PORT）是两个概念：app_desc.yaml 随源码保存，
+# 写进去的只能是部署常量。按预览端口写，换个 Runtime 或运行模式 launch 一次就会在 Git 里留下
+# 与用户改动无关的 diff。
+DEPLOY_PORT = 5000
 
-def render_app_desc(port: int) -> str:
+
+def render_app_desc() -> str:
     """Return the complete platform-owned app_desc.yaml document."""
-    command = build_proc_command(port)
+    command = build_proc_command(DEPLOY_PORT)
     return f"""specVersion: 3
 module:
   language: Python
@@ -40,11 +45,11 @@ module:
           - name: web
             exposedType:
               name: bk/http
-            targetPort: {port}
+            targetPort: {DEPLOY_PORT}
             port: 80
 """
 
 
-def sync_app_desc(workspace: Path, port: int) -> FileSyncResult:
+def sync_app_desc(workspace: Path) -> FileSyncResult:
     """Create or repair the Developer Center application description."""
-    return sync_text_files(workspace, {APP_DESC_FILENAME: render_app_desc(port)})
+    return sync_text_files(workspace, {APP_DESC_FILENAME: render_app_desc()})

@@ -149,8 +149,8 @@ FAKE_DELAY_SECONDS = env.float("FAKE_DELAY_SECONDS", 2.0, validate=Range(min=0))
 # Agent 的系统提示词。它和 agent.py 里挂载的能力是配套的——提示词里提到的「file 工具」
 # 「shell 工具」「AGENTS.md」分别对应 FileSystem、Shell、RepoContext 三个能力。
 #
-# App Framework 一节里的 main:app 与 app_supervisor 里构造的启动命令是一对：那边启的就是这个
-# 导入路径，模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
+# App Framework 一节里的 main:app 与 app_arch/python.py 的 APP_IMPORT_PATH 是一对：预览和部署启的
+# 都是这个导入路径，模型写成别的入口名，launch 一定失败。两处要一起改，不要只动一边。
 #
 # Dependencies 一节列出的起始包与 app-template/pyproject.toml 的依赖是一对：模型以为新项目里
 # 有什么，模板里就得有什么。改模板依赖时两处一起改。uvicorn 那条也和启动命令是一对：启动器

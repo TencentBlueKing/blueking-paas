@@ -73,7 +73,7 @@ def test_a_new_app_starts_from_the_project_template(
             "status": "synced",
             "files": list(INITIALIZED_FILES),
             "changed": list(INITIALIZED_FILES),
-            "errcode": "",
+            "errcode": None,
             "detail": f"Created Python project {PROJECT_NAME}.",
         }
     ]

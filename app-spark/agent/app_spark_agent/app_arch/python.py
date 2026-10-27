@@ -36,8 +36,9 @@ PYTHON_VERSION = "3.14"
 PYTHON_VERSION_FILENAME = ".python-version"
 PYTHON_PROJECT_FILES = ("pyproject.toml", "uv.lock")
 
-# 模型被要求把应用导出成这个路径，预览和部署也只启这一个。settings.INSTRUCTIONS 写着同一条
-# 约定，三处要一起改：模型写成别的入口名，launch 和部署都会失败。
+# 模型被要求把应用导出成这个路径，预览（app_supervisor/app_spec.py）和部署（app_desc.yaml 的
+# procCommand）都从这里取。settings.INSTRUCTIONS 的 App Framework 一节写着同一条约定，这两处要
+# 一起改，tests/test_app_supervisor.py 守着：模型写成别的入口名，launch 和部署都会失败。
 APP_IMPORT_PATH = "main:app"
 
 # 听所有网卡，给沙箱外的预览代理和 PaaS Service 访问。判活仍只连 127.0.0.1。
@@ -83,7 +84,7 @@ def build_uvicorn_args(port: int) -> tuple[str, ...]:
 
 
 def build_proc_command(port: int) -> str:
-    """Return the portable deployment command equivalent to the preview command."""
+    """Return the portable deployment command equivalent to the preview command on port."""
     return shlex.join(("python", *build_uvicorn_args(port)))
 
 

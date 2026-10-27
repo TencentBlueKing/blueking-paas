@@ -25,14 +25,16 @@ init_project and sync are deliberately separate:
 
 - init_project is one-time project creation. It takes a project name, creates pyproject.toml
   and uv.lock from the Python template only when pyproject.toml is absent, and then runs sync.
-  An existing pyproject.toml returns unchanged immediately: initialization never replaces the
-  project's dependency baseline, and repairing generated files remains sync's job;
+  An existing pyproject.toml is left alone, since initialization never replaces the project's
+  dependency baseline, but sync still runs: a retry after a half-finished init_project (project
+  written, generated files not) must finish the job instead of reporting nothing to do;
 - sync is repeatable maintenance. It takes no project name, never creates or rewrites
   pyproject.toml or uv.lock, and can run whenever generated files are missing or stale,
   including immediately before every application launch.
 
 In short, init_project establishes the project once; sync keeps its generated architecture
-files correct over time.
+files correct over time. Neither takes a port: app_desc.yaml carries the platform's fixed
+deployment port, not the port the preview happens to run on.
 """
 
 from pathlib import Path
@@ -58,17 +60,17 @@ class AppArchitecture:
     def __init__(self, workspace: Path) -> None:
         self.workspace = workspace
 
-    def init_project(self, raw_name: str, port: int) -> FileSyncResult:
+    def init_project(self, raw_name: str) -> FileSyncResult:
         """Create the Python project once, then synchronize its generated files."""
         project = sync_python_project(self.workspace, raw_name)
-        if project.status is not FileSyncStatus.SYNCED:
+        if project.status is FileSyncStatus.FAILED:
             return project
 
-        return merge_sync_results(project, self.sync(port))
+        return merge_sync_results(project, self.sync())
 
-    def sync(self, port: int) -> FileSyncResult:
+    def sync(self) -> FileSyncResult:
         """Create or repair the generated architecture files without touching the project baseline."""
         return merge_sync_results(
-            sync_app_desc(self.workspace, port),
+            sync_app_desc(self.workspace),
             sync_python_version(self.workspace),
         )

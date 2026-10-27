@@ -16,16 +16,13 @@
 
 """模型侧的 init_project：真要开始写代码时，由模型自己从模板建出 Python 项目。
 
-什么时候建、叫什么名字交给模型，文件内容交给程序：pyproject.toml 里 uvicorn 的版本钉死、
-uv.lock 与模板逐字一致，这些是启动器和离线安装依赖的东西，不能指望模型照着抄对。
-
-具体的 Python 项目文件生成由 app_arch/python.py 提供，统一结果协议由 app_arch 直接交给模型。
+只是 AppArchitecture.init_project 的薄适配：为什么由程序而不是模型写文件内容，见 app_arch/python.py；
+建项目与同步平台配置的分工，见 app_arch/architecture.py。
 """
 
 from collections.abc import Callable
 from pathlib import Path
 
-from app_spark_agent import settings
 from app_spark_agent.app_arch.architecture import AppArchitecture
 from app_spark_agent.app_arch.files import FileSyncResult
 
@@ -44,11 +41,12 @@ def build_init_project_tool(workspace: Path) -> Callable[[str], FileSyncResult]:
         Call this once, before writing the application's first file. It writes `pyproject.toml`
         and `uv.lock` with the starting dependencies already locked, plus the platform-owned
         `app_desc.yaml` and `.python-version` files required for deployment.
-        Does nothing when `pyproject.toml` already exists; a `uv.lock` left without one is replaced.
+        When `pyproject.toml` already exists it keeps the project files as they are and only
+        repairs the platform files; a `uv.lock` left without one is replaced.
 
         :param name: A short name for the app in lowercase ASCII letters, digits and hyphens,
             for example `todo-board`. Spaces, underscores and dots become hyphens.
         """
-        return architecture.init_project(name, settings.APP_PORT)
+        return architecture.init_project(name)
 
     return init_project

@@ -89,14 +89,17 @@ class App:
         self._fail_on = fail_on
         self._calls = 0
         (tmp_path / "workspace").mkdir(exist_ok=True)
+        (tmp_path / "workspace" / "pyproject.toml").write_text("# the project\n")
 
         # 依赖对齐也假掉：真 uv 由 test_project_env.py 验。这里只记下每次对齐时已经拉起过几个
         # 子进程，好断言「先装依赖、再 spawn」；sync_error 不为空时就按它失败。
         self.synced_after_spawns: list[int] = []
+        self.python_versions_at_sync: list[str] = []
         self.sync_error: AppLaunchFailed | None = None
 
-        async def sync(_workspace: Path, _log_path: Path) -> None:
+        async def sync(workspace: Path, _log_path: Path) -> None:
             self.synced_after_spawns.append(len(self.spawned))
+            self.python_versions_at_sync.append((workspace / ".python-version").read_text())
             if self.sync_error is not None:
                 raise self.sync_error
 
@@ -231,9 +234,21 @@ async def test_launch_repairs_platform_configuration_before_spawning(
 
     await app.supervisor.launch()
 
-    assert (workspace / "app_desc.yaml").read_text() == render_app_desc(settings.APP_PORT)
+    assert (workspace / "app_desc.yaml").read_text() == render_app_desc()
     assert (workspace / ".python-version").read_text() == f"{PYTHON_VERSION}\n"
     assert len(app.spawned) == 1
+
+
+async def test_launch_repairs_the_python_version_before_uv_reads_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A stale .python-version makes uv sync fail first, so repairing it afterwards would never run."""
+    app = App(monkeypatch, tmp_path)
+    (tmp_path / "workspace" / ".python-version").write_text("3.13\n")
+
+    await app.supervisor.launch()
+
+    assert app.python_versions_at_sync == [f"{PYTHON_VERSION}\n"]
 
 
 async def test_platform_configuration_write_failure_prevents_spawn(
@@ -252,7 +267,7 @@ async def test_platform_configuration_write_failure_prevents_spawn(
     with pytest.raises(AppLaunchFailed, match=r"platform configuration.*disk full"):
         await app.supervisor.launch()
 
-    assert app.synced_after_spawns == [0]
+    assert app.synced_after_spawns == []
     assert app.spawned == []
 
 
@@ -260,12 +275,13 @@ async def test_a_launch_without_a_project_does_not_create_platform_configuration
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = App(monkeypatch, tmp_path)
-    app.sync_error = AppLaunchFailed("The workspace has no pyproject.toml")
+    (tmp_path / "workspace" / "pyproject.toml").unlink()
 
     with pytest.raises(AppLaunchFailed, match="no pyproject"):
         await app.supervisor.launch()
 
     assert list((tmp_path / "workspace").iterdir()) == []
+    assert app.synced_after_spawns == []
     assert app.spawned == []
 
 

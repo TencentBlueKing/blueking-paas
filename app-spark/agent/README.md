@@ -141,8 +141,8 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 它就会把那个地址当成真的报给用户。
 
 启动约定：cwd 为 workspace，先 `uv sync --no-dev`，再用项目自己的解释器（`<workspace>/.venv/bin/python`）跑
-`uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`（`app_supervisor/app_spec.py`）。`main:app` 这条入口名同时写在
-`settings.INSTRUCTIONS` 里，两处必须一起改——模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
+`uvicorn main:app --host 0.0.0.0 --port <APP_PORT>`（`app_supervisor/app_spec.py`，参数来自 `app_arch/python.py`）。
+`main:app` 这条入口名同时写在 `settings.INSTRUCTIONS` 里，两处必须一起改——模型写成别的入口名，launch 一定失败。应用自己不选端口，端口由启动命令决定。
 
 `--host 0.0.0.0` 是有意的：预览要从沙箱外访问。e2b 里每个沙箱是独立网络，应用端口都是接入层注入的
 `preview_port`（默认 `9000`）。会话之间靠沙箱主机名和外面的反向代理分开。`local_process` 的多个
@@ -181,9 +181,10 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 
 - 建项目：模型真要开始写代码时调 `init_project(name)` 工具（`tools/init_project.py`），按 `app-template/` 写出两个依赖文件，
   并生成下文的平台配置。
-  判断条件和 launch 一样只看 `pyproject.toml`：它在就不动（只缺 `uv.lock` 时 `uv add` / `uv sync` 会就地补锁）；模型只决定时机和项目名，文件内容由程序给。
+  判断条件和 launch 一样只看 `pyproject.toml`：它在就不动依赖文件（只缺 `uv.lock` 时 `uv add` / `uv sync` 会就地补锁），
+  但仍会同步平台配置，上一次只写成一半时重试即可补齐；模型只决定时机和项目名，文件内容由程序给。
 - 模板与提示词是一对：起始包清单逐字写在 `INSTRUCTIONS` 的 Dependencies 一节。改模板依赖时两处一起改，再 `make lock-app-template`。
-- launch 前对齐：每次 launch（含 crash 后的自动重拉）都先 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
+- launch 前对齐：每次 launch（含 crash 后的自动重拉）在同步平台配置之后 `uv sync --no-dev`，上限 300s，输出追加到应用日志。
   workspace 里还没有 `pyproject.toml` 时 launch 直接失败，提示模型先调 `init_project`。
 - 模型加依赖：在 Shell 里 `uv add` / `uv remove`（用户提出就允许，不设白名单）。
 - Shell 的 PATH 同样去掉 Agent 自己的 venv，免得裸 `python -c "import fastapi"` 用 Agent 的包跑通、把「项目缺依赖」
@@ -196,7 +197,10 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 
 - `init_project` 创建项目时首次写入；
 - 无参数工具 `sync_platform_config` 会补齐缺失文件并覆盖过期内容，模型不手写；
-- 每次手动或自动 launch 在启动子进程前也会同步。同步失败则 launch 失败，不能留下“预览可用但无法部署”的项目；
+- 每次手动或自动 launch 确认项目存在后、`uv sync` 之前也会同步：`.python-version` 是 uv 选解释器的输入，残留的过期版本
+  会让 `uv sync` 先失败，排在它后面就修不到了。没有项目时不写；同步失败则 launch 失败，不能留下“预览可用但无法部署”的项目；
+- `app_desc.yaml` 里的进程命令和 `targetPort` 用平台规范的部署端口 `5000`（`app_desc.DEPLOY_PORT`），与预览端口
+  `APP_SPARK_AGENT_APP_PORT` 无关：它随源码保存，不能因为最后在哪个沙箱里预览而变。
 
 相关的可复用实现集中在 `app_spark_agent/app_arch/`：
 
@@ -205,7 +209,7 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
 - `app_desc.py` 管开发者中心 `app_desc.yaml` 的格式；
 - `architecture.py` 提供 `AppArchitecture` 主入口，供模型工具和应用启动器直接复用。
 
-`app_supervisor/app_spec.py` 与 `app_desc.yaml` 共用 `python.py` 的 uvicorn 参数，避免修改一边后配置漂移。
+`app_supervisor/app_spec.py` 与 `app_desc.yaml` 共用 `python.py` 的 uvicorn 参数（端口各自传入），避免修改一边后配置漂移。
 
 ## 凭据屏蔽
 

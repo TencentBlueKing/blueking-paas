@@ -34,7 +34,7 @@ from app_spark_agent.app_supervisor.process import (
     http_get_answers,
     tcp_port_is_open,
 )
-from app_spark_agent.app_supervisor.project_env import sync_project_environment
+from app_spark_agent.app_supervisor.project_env import require_project, sync_project_environment
 from app_spark_agent.app_supervisor.types import (
     CRASH_RETRY_INTERVAL_SECONDS,
     CRASH_RETRY_LIMIT,
@@ -219,19 +219,23 @@ class AppSupervisor:
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until it answers, or fail if it exits first."""
 
-        # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
-        # 多少时间，不值得为跳过它去自己判断锁文件变没变。先走这一步也避免在还没有项目的
-        # workspace 里留下平台配置文件。
-        await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
+        # 先确认有项目，避免在还没有项目的 workspace 里留下平台配置文件。
+        require_project(self.workspace)
 
-        # 项目存在且依赖已对齐，再写部署配置。写不成则不启动，否则会产生「预览能跑、代码却
-        # 因为缺平台必需文件而不能部署」的项目。
-        spec = build_app_spec(self.workspace, self.port)
-        sync_result = await asyncio.to_thread(self._app_arch.sync, self.port)
+        # 平台配置要赶在 uv sync 之前写：.python-version 是 uv 选解释器的输入，残留的过期版本
+        # 会让 uv sync 先失败（沙箱里禁止下载解释器），修复就永远轮不到。写不成则不启动，否则会
+        # 产生「预览能跑、代码却因为缺平台必需文件而不能部署」的项目。
+        sync_result = await asyncio.to_thread(self._app_arch.sync)
         if sync_result.status is FileSyncStatus.FAILED:
             raise AppLaunchFailed(
                 f"The platform configuration could not be saved ({sync_result.errcode}): {sync_result.detail}"
             )
+
+        # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
+        # 多少时间，不值得为跳过它去自己判断锁文件变没变。
+        await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
+
+        spec = build_app_spec(self.workspace, self.port)
 
         try:
             self._process.start(spec)

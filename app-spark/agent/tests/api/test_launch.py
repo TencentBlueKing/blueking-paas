@@ -101,7 +101,7 @@ class ModelLauncher:
 
 @pytest.fixture(autouse=True)
 def project_environment_without_uv(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stand in for the uv sync before each launch, keeping the real spawn.
+    """Stand in for the project check and uv sync before each launch, keeping the real spawn.
 
     A real sync needs the package index or a warm uv cache, neither of which a unit test can
     count on. The test interpreter already has fastapi and uvicorn, so the project's interpreter
@@ -119,6 +119,8 @@ def project_environment_without_uv(monkeypatch: pytest.MonkeyPatch) -> None:
         python.chmod(0o755)
 
     monkeypatch.setattr(supervisor_mod, "sync_project_environment", use_test_interpreter)
+    # These workspaces hold just the app, without the pyproject.toml a real sync would need.
+    monkeypatch.setattr(supervisor_mod, "require_project", lambda _workspace: None)
 
 
 @pytest.fixture

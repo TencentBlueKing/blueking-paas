@@ -8,7 +8,7 @@ from app_spark_agent.tools.sync_platform_config import build_sync_platform_confi
 
 
 def test_model_tool_reports_what_it_repaired(tmp_path: Path) -> None:
-    tool = build_sync_platform_config_tool(tmp_path, port=5000)
+    tool = build_sync_platform_config_tool(tmp_path)
 
     result = tool()
 

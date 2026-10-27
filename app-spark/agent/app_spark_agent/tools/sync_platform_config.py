@@ -18,23 +18,21 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from app_spark_agent import settings
 from app_spark_agent.app_arch.architecture import AppArchitecture
 from app_spark_agent.app_arch.files import FileSyncResult
 
 
-def build_sync_platform_config_tool(workspace: Path, *, port: int | None = None) -> Callable[[], FileSyncResult]:
+def build_sync_platform_config_tool(workspace: Path) -> Callable[[], FileSyncResult]:
     """Return the platform configuration repair tool bound to workspace."""
     architecture = AppArchitecture(workspace)
-    target_port = settings.APP_PORT if port is None else port
 
     def sync_platform_config() -> FileSyncResult:
         """Create or repair the platform-owned files required to deploy this application.
 
-        Takes no arguments. It synchronizes `app_desc.yaml` with the platform's launch command
+        Takes no arguments. It synchronizes `app_desc.yaml` with the platform's deployment command
         and port, and pins `.python-version` to the supported Python runtime. Do not edit either
         generated file by hand.
         """
-        return architecture.sync(target_port)
+        return architecture.sync()
 
     return sync_platform_config

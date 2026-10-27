@@ -47,14 +47,14 @@ class FileSyncResult(BaseModel):
         could not produce the required files.
     :param files: All files owned by the operation.
     :param changed: Files replaced before the operation completed.
-    :param errcode: Stable failure reason for programmatic handling.
+    :param errcode: Stable failure reason for programmatic handling; None unless status is failed.
     :param detail: Human-readable context suitable for returning to the model.
     """
 
     status: FileSyncStatus
     files: tuple[str, ...] = ()
     changed: tuple[str, ...] = ()
-    errcode: str = ""
+    errcode: AppArchErrorCode | None = None
     detail: str = ""
 
 

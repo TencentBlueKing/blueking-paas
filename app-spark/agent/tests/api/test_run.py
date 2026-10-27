@@ -299,7 +299,7 @@ def test_the_model_creates_the_project_with_init_project(make_api: ApiFactory, t
             "status": "synced",
             "files": list(initialized_files),
             "changed": list(initialized_files),
-            "errcode": "",
+            "errcode": None,
             "detail": "Created Python project todo-board.",
         }
     ]

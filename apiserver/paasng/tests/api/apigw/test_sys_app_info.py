@@ -21,7 +21,6 @@ import pytest
 from rest_framework import status
 
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
-from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.models import Application
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -42,14 +41,6 @@ def patch_exposed_links():
         "paasng.platform.applications.views.sys_api.get_exposed_links", return_value=FAKE_DEPLOY_INFO
     ) as mocked:
         yield mocked
-
-
-@pytest.fixture()
-def single_tenant_app(ai_agent_app: Application) -> Application:
-    ai_agent_app.app_tenant_mode = AppTenantMode.SINGLE.value
-    ai_agent_app.app_tenant_id = "t1"
-    ai_agent_app.save(update_fields=["app_tenant_mode", "app_tenant_id"])
-    return ai_agent_app
 
 
 class TestSysGetAppInfo:

@@ -2,7 +2,7 @@
 
 Get the add-on service instances bound to an AI Agent application module with system API credentials, including the observability entrance in `admin_url`. The caller must have the AIDEV system role and the target application must be an AI Agent application, otherwise a 403 is returned.
 
-The response structure is the same as the user-facing `get_service_instance_by_module` API. A 404 is returned when the module is not bound with the service.
+The response structure is similar to the user-facing `get_service_instance_by_module` API, but **credentials and other sensitive data are not returned** (only the instance `config` and environment info). A 404 is returned when the module is not bound with the service.
 
 #### Tenant
 
@@ -45,9 +45,6 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
                     "env": "stag",
                     "admin_url": "https://bkm.example.com/?space_uid=bksaas__ai-demo#/apm/application"
                 },
-                "credentials": "{}",
-                "sensitive_fields": [],
-                "hidden_fields": {}
             },
             "environment": "stag",
             "environment_name": "Staging",
@@ -70,9 +67,6 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
 | count | int | Number of results |
 | results | list | Detailed service instance list |
 | results[].service_instance.config | object | Service instance config, **the observability entrance is the `admin_url` field** |
-| results[].service_instance.credentials | string | Service credentials (JSON string, sensitive fields removed) |
-| results[].service_instance.sensitive_fields | list | Sensitive fields |
-| results[].service_instance.hidden_fields | object | Hidden fields |
 | results[].environment | string | Environment name, e.g. "stag" |
 | results[].environment_name | string | Environment display name |
 | results[].usage | string | Usage information |

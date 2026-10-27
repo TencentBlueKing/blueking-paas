@@ -171,6 +171,21 @@ class ServiceInstanceInfoSLZ(serializers.Serializer):
     usage = serializers.CharField()
 
 
+class SysServiceInstanceSLZ(serializers.Serializer):
+    """增强服务实例-应用态精简序列化器, 仅返回实例 config"""
+
+    config = serializers.JSONField()
+
+
+class SysServiceInstanceInfoSLZ(serializers.Serializer):
+    """应用态的实例信息包装层, service_instance 使用精简序列化器"""
+
+    service_instance = SysServiceInstanceSLZ()
+    environment = serializers.CharField()
+    environment_name = serializers.CharField()
+    usage = serializers.CharField()
+
+
 # 增强服务按名称聚合
 class ServiceWithInstsSLZ(serializers.Serializer):
     uuid = serializers.CharField()

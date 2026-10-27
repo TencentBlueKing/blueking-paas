@@ -2,7 +2,7 @@
 
 以应用身份查询 AI Agent 应用模块绑定的增强服务实例，其中包括可观测性入口 `admin_url`。调用方须具备 AIDEV 系统角色，且目标应用必须是 AI Agent 应用，否则返回 403。
 
-返回结构与用户态接口 `get_service_instance_by_module` 一致，模块与增强服务未绑定时返回 404。
+返回结构与用户态接口 `get_service_instance_by_module` 类似，但**不包含凭证等敏感信息**（仅返回实例 `config` 与环境信息）；模块与增强服务未绑定时返回 404。
 
 #### 租户说明
 
@@ -47,9 +47,6 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
                     "env": "stag",
                     "admin_url": "https://bkm.example.com/?space_uid=bksaas__ai-demo#/apm/application"
                 },
-                "credentials": "{}",
-                "sensitive_fields": [],
-                "hidden_fields": {}
             },
             "environment": "stag",
             "environment_name": "预发布环境",
@@ -72,9 +69,6 @@ curl -X GET -H 'x-bkapi-authorization: {"bk_app_code": "bkaidev", "bk_app_secret
 | count | int | 返回结果的数量 |
 | results | list | 服务实例的详细信息列表 |
 | results[].service_instance.config | object | 服务实例配置，**可观测性入口为其中的 `admin_url` 字段** |
-| results[].service_instance.credentials | string | 服务实例凭证（JSON 格式字符串，敏感字段已隐藏） |
-| results[].service_instance.sensitive_fields | list | 敏感字段列表 |
-| results[].service_instance.hidden_fields | object | 隐藏字段 |
 | results[].environment | string | 环境标识，如 "stag" |
 | results[].environment_name | string | 环境名称 |
 | results[].usage | string | 服务实例的使用信息 |

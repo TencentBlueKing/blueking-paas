@@ -96,7 +96,8 @@ class TestSysGetServiceInstanceByModule:
         assert {r["environment"] for r in body["results"]} == set(envs)
         for result in body["results"]:
             assert result["service_instance"]["config"]["admin_url"] == service_instance.config["admin_url"]
-            assert result["service_instance"]["credentials"] == '{"username": "user", "password": "pwd"}'
+            # 应用态接口不返回任何凭证内容 (内层实例信息仅含 config)
+            assert set(result["service_instance"]) == {"config"}
 
         resp = sys_aidev_api_client.get(_service_instance_url(ai_agent_app.code, bk_module.name))
         assert resp.status_code == status.HTTP_200_OK, resp.json()

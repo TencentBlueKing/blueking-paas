@@ -27,13 +27,19 @@ GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 1
 #
 # 这个值不能自己定。控制面停 Runtime 时给的是 ``SHUTDOWN_GRACE_SECONDS``（见 app-spark-api 的
 # local_process provider），超时就 SIGKILL，而关停要按顺序花掉：
-#   uvicorn 掐连接 1s + 本值 + 停应用子进程 5s = 14s < 20s
+#   uvicorn 掐连接 1s + 停下进行中的一轮 RUN_STOP_TIMEOUT_SECONDS 5s + 本值 + 停应用子进程 5s
+#   = 19s < 25s
 # 改这里必须回头看那个常量，否则 drain 会被杀在半路，等于一点没送出去。
 SHUTDOWN_DRAIN_TIMEOUT_SECONDS = 8.0
 
+# 关停时给进行中的一轮多少秒按「停止」收尾（提交上下文、本地提交文件）；到点直接取消任务，
+# 文件照样提交，只是这一轮的上下文不再提交。一轮不随连接断开而结束，所以这一步只能在这里做。
+# 计入上面那串关停预算。
+RUN_STOP_TIMEOUT_SECONDS = 5.0
+
 # 空闲退出发出 SIGTERM 后，等有序关停走完的上限；到点无条件 ``os._exit``。
-# 比上面那串 14s 留出余量：它是兜底，不是正常路径的预算。
-IDLE_EXIT_DEADLINE_SECONDS = 20.0
+# 比上面那串 19s 留出余量：它是兜底，不是正常路径的预算。
+IDLE_EXIT_DEADLINE_SECONDS = 25.0
 
 env = Env(prefix=ENV_PREFIX)
 env.read_env(".env")

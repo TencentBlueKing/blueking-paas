@@ -30,3 +30,11 @@ class ConversationClosedError(Exception):
 
 class InvalidHistoryCursorError(Exception):
     """翻历史时带来的游标不是本服务签发的，或者签发格式已经换掉了。"""
+
+
+class RunNotFoundError(Exception):
+    """这个会话里没有这一轮：run_id 不是本会话接受过的某一轮对话。"""
+
+
+class RunNotInProgressError(Exception):
+    """这一轮属于这个会话，但此刻没有在跑：已经结束了，或者它所在的 Runtime 已经不在了。"""

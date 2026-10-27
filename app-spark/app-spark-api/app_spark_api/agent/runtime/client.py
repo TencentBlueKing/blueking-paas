@@ -303,6 +303,31 @@ class AgentRuntimeClient:
 
         return AgentRun(run_id, client, response)
 
+    async def stop_run(self, run_id: str) -> bool:
+        """Ask the Runtime to stop the run in progress, without waiting for it to wind down.
+
+        The run ends the way a finished one does -- its stream closes, its context is committed
+        -- so the caller learns it is over from ``running`` on :meth:`health`, not from here.
+
+        :param run_id: The run meant. The Runtime refuses any other, so a late request cannot
+            stop the turn that came after.
+        :return: ``True`` when the stop was accepted, also for a repeated request; ``False`` when
+            ``run_id`` is not the run in progress, including one that has already ended.
+        :raises AgentUnavailableError: If the Runtime cannot be reached or answers oddly.
+        """
+        try:
+            async with self._new_http_client(self._timeout_seconds) as client:
+                response = await client.post(f"/runs/{run_id}/stop")
+        except httpx2.HTTPError as exc:
+            raise AgentUnavailableError(f"Could not ask the Agent Runtime to stop run {run_id}: {exc}") from exc
+        if response.status_code == HTTPStatus.ACCEPTED:
+            return True
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            return False
+        raise AgentUnavailableError(
+            f"The Agent Runtime answered the stop of run {run_id} with {response.status_code}: {response.text[:200]}"
+        )
+
     @asynccontextmanager
     async def _restoring(self, what: str, *, timeout_seconds: float) -> AsyncIterator[httpx2.AsyncClient]:
         """Open a client for one cold-start restore request, through which only ``200`` comes back.

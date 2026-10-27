@@ -1187,7 +1187,7 @@ async def test_a_control_plane_that_never_answers_does_not_hold_a_close_forever(
 
 
 async def test_shutting_the_service_down_does_not_wait_for_each_agent(e2b, provider):
-    """停服时沙箱是一个个停的，每个都等 20 秒就要等 N 倍，所以直接销毁。"""
+    """停服时沙箱是一个个停的，每个都等 25 秒就要等 N 倍，所以直接销毁。"""
     await provider.ensure(project_id=str(uuid4()), conversation_id=str(uuid4()))
 
     await provider.shutdown()

@@ -80,7 +80,8 @@ export const useProjectStore = defineStore('project', () => {
 
   let enterToken = 0;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
-  // 后端这一轮不靠这条连接。abort 只让当前页面停止读取，任务继续跑；切回来靠轮询补已入库的内容。
+  // 后端这一轮不靠这条连接：abort、刷新页面、网络中断都只让当前页面停止读取，这一轮在 Runtime 里
+  // 照常跑完；切回来靠轮询补已入库的内容。
   let liveRunAbort: AbortController | null = null;
   let liveRunGeneration = 0;
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
@@ -379,6 +380,28 @@ export const useProjectStore = defineStore('project', () => {
     if (state.ui_event_seq > prevSeq) {
       await pullUiEvents();
     }
+  };
+
+  /**
+   * 本页读的 SSE 结束之后，把这一段会话对齐到服务端。
+   *
+   * 流结束不等于这一轮结束：网络中断、本服务重启都会让流提前断开，而这一轮仍在 Runtime 里跑。
+   * 那样就不能只补一次，否则输入框被放开、剩下的内容再也不会出现。这时整段重新渲染、再轮询补齐，
+   * 和进入一个正在回复的会话走同一条路。不在原地续补：读 SSE 时游标不前进，从本轮开头再拉入库
+   * 事件，会把已经画出来的字再接一遍。
+   */
+  const settleAfterLiveRun = async (stillCurrent: () => boolean) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (!targetProjectId || targetNumber == null) return;
+    const state = await getConversation(targetProjectId, targetNumber, { globalError: false });
+    // 问的路上切走了：状态属于上一段会话。
+    if (!stillCurrent()) return;
+    if (state.running) {
+      await bindConversation(state);
+      return;
+    }
+    await syncConversationOnce();
   };
 
   /**
@@ -823,7 +846,7 @@ export const useProjectStore = defineStore('project', () => {
         status.value = 'idle';
         if (projectId.value && conversationNumber.value != null) {
           try {
-            await syncConversationOnce();
+            await settleAfterLiveRun(stillCurrent);
           } catch {
             // 发送结果已展示，追赶失败不覆盖当前消息
           }

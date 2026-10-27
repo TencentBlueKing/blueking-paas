@@ -1,19 +1,16 @@
 """HTTP views: health, drain, context, and the AG-UI run."""
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import Callable
 from typing import Annotated, Any, cast
 
+from ag_ui.core import RunErrorEvent
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
+from pydantic_ai.exceptions import RunCancelled
 from pydantic_ai.run import AgentRunResult
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.responses import JSONResponse, Response
-
-# Imported at runtime, not under TYPE_CHECKING: this module's annotations are read by tooling
-# and by the framework, and a name that only exists for a type checker turns any such read into
-# a NameError. ``starlette.types`` is a module of aliases, so importing it costs nothing.
-from starlette.types import Receive, Scope, Send
 
 from app_spark_agent import VERSION, settings
 from app_spark_agent.git import GitError
@@ -21,8 +18,9 @@ from app_spark_agent.git import GitError
 # Imported under a different name: `log` already means "append-only channel" in this module.
 from app_spark_agent.observability import log as logger
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
-from app_spark_agent.server.run_input import PreparedRun, prepare_run, request_with_body
-from app_spark_agent.server.runtime import ConversationRuntime, RunLease, RuntimeBusyError
+from app_spark_agent.server.run_input import prepare_run, request_with_body
+from app_spark_agent.server.run_task import RunStopper, RuntimeClosingError
+from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
 from app_spark_agent.state import (
     AppendLog,
     AppendLogError,
@@ -41,25 +39,6 @@ SSE_RESPONSE_HEADERS = {
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
 }
-
-
-class _HoldStreamingResponse(StreamingResponse):
-    """SSE response that holds a lease and still uses Starlette disconnect handling.
-
-    The parent cancels the generator on ``http.disconnect``; ``generate``'s
-    ``finally`` releases a lease that was entered. This path covers handshake
-    failure when the generator never started.
-    """
-
-    def __init__(self, content: Any, lease: RunLease, **kwargs: Any) -> None:
-        super().__init__(content, **kwargs)
-        self._lease = lease
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        try:
-            await super().__call__(scope, receive, send)
-        finally:
-            self._lease.release_if_never_started()
 
 
 def attach_runtime(app: FastAPI, runtime: ConversationRuntime) -> None:
@@ -108,6 +87,7 @@ async def health(runtime: RuntimeDep) -> dict[str, object]:
         "version": VERSION,
         "model_ready": settings.is_model_ready(),
         "running": runtime.run_guard.busy,
+        "run_id": runtime.runs.current.run_id if runtime.runs.current is not None else None,
         "dev_server_status": await runtime.app_supervisor.dev_server_status(),
         "model": settings.MODEL,
         "conversation_id": context.conversation_id,
@@ -267,7 +247,12 @@ async def run(
     runtime: RuntimeDep,
     allow_unsaved: bool = Query(default=False),
 ) -> Response:
-    """Run one conversation turn and stream it back as AG-UI events.
+    """Start one conversation turn and stream it back as AG-UI events.
+
+    The turn runs as a task of its own: this response only follows it. A client that hangs up
+    stops receiving events and nothing else -- the turn runs to its end, and what it produced
+    reaches the control plane the same way as for a client that stayed. Stopping a turn is
+    ``POST /runs/{run_id}/stop``. Refused with ``503`` once shutdown has begun.
 
     :param allow_unsaved: Proceed even though the previous turn's files have not reached the Git
         remote. The escape hatch from the gate below; the next turn's changes pile on top of the
@@ -282,17 +267,33 @@ async def run(
         raise RuntimeBusyError("An Agent run is already in progress.")
 
     try:
-        response, prepared = await _start_run(runtime, request)
-    except Exception:
+        return await _start_run(runtime, request, release=lease.release)
+    except RuntimeClosingError as exc:
+        lease.release()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except BaseException:
         lease.release()
         raise
-    return _hold_run_stream(
-        response,
-        lease,
-        runtime=runtime,
-        run_id=prepared.run_id,
-        conversation_id=prepared.conversation_id,
-    )
+
+
+@router.post("/runs/{run_id}/stop", dependencies=[Depends(require_bearer)])
+async def stop_run(run_id: str, runtime: RuntimeDep) -> JSONResponse:
+    """Ask the turn in progress to stop, and return without waiting for it to.
+
+    The turn winds down the way a finished one does: its event stream ends with
+    ``RUN_FINISHED``, what it had done so far is committed as the conversation's context, and
+    its files are committed as an interrupted turn. ``running`` on ``/health`` going false is
+    the sign it is over.
+
+    :param run_id: The turn to stop. Naming it is what keeps a late request from stopping the
+        turn after it.
+    :return: ``202`` while the turn winds down, also for a repeated request; ``404`` when
+        ``run_id`` is not the turn in progress, including one that has already ended.
+    """
+    if not runtime.runs.request_stop(run_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such run in progress.")
+    logger.info("run stop requested run_id=%s", run_id)
+    return JSONResponse({"run_id": run_id, "stopping": True}, status_code=status.HTTP_202_ACCEPTED)
 
 
 async def _require_previous_turn_saved(runtime: ConversationRuntime) -> None:
@@ -332,14 +333,17 @@ async def _require_previous_turn_saved(runtime: ConversationRuntime) -> None:
     )
 
 
-async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Response, PreparedRun]:
-    """Validate one AG-UI run and return its streaming response.
+async def _start_run(
+    runtime: ConversationRuntime,
+    request: Request,
+    *,
+    release: Callable[[], None],
+) -> StreamingResponse:
+    """Validate one AG-UI run, start it, and return a response following its events.
 
-    The caller owns the run guard: this only builds the response, and the stream it wraps is
-    still running when it returns.
-
-    :return: ``(response, prepared)`` -- the open AG-UI stream, and the validated run whose ids
-        the barrier records on the commit.
+    :param release: Hands the run guard back. From the moment the run has started it belongs to
+        the run's task, which calls it once the turn is over; until then the caller still owns it.
+    :return: The open AG-UI stream.
     """
     context = runtime.context_store.context
     prepared = prepare_run(await request.body(), context, runtime.transcript)
@@ -379,6 +383,10 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Re
         conversation_id=prepared.conversation_id,
         run_id=prepared.run_id,
     )
+    stopper = RunStopper()
+    # Set by the agent itself, not inferred from the stop request: a stop that lands as the
+    # turn is finishing anyway is a no-op, and that turn did complete.
+    cancelled = False
 
     async def commit_context(result: AgentRunResult[Any]) -> None:
         # The authoritative end-of-run context: whatever compaction left behind, which
@@ -388,74 +396,60 @@ async def _start_run(runtime: ConversationRuntime, request: Request) -> tuple[Re
             conversation_id=prepared.conversation_id,
         )
 
+    async def commit_stopped_context(stopped: RunCancelled) -> None:
+        nonlocal cancelled
+        cancelled = True
+        # A stopped turn still happened: its files are on disk, and the next turn's model has
+        # to know what it did to them. pydantic-ai has already closed out the tool calls that
+        # never returned, so this history can be handed to a model as it is.
+        await runtime.context_store.commit(
+            stopped.all_messages(),
+            conversation_id=prepared.conversation_id,
+        )
+
+    async def finish(stream_completed: bool) -> None:
+        # Local, fast, and deterministic, which is what makes it safe here: this also runs for
+        # a turn cancelled outright at shutdown, where a network push could not be relied on
+        # to finish. Pushing is the background saver's job.
+        await runtime.save_workspace(
+            run_id=prepared.run_id,
+            conversation_id=prepared.conversation_id,
+            completed=stream_completed and not cancelled,
+        )
+        # Shutting down: the lifespan drains right after this, against the deadline it has left,
+        # which a full flush timeout here would overrun.
+        if runtime.runs.closing:
+            return
+        # The barrier makes a normally completed Runtime disposable. A failed flush must still
+        # release the guard: local files remain durable and the background replicator keeps
+        # retrying, while `/health` exposes that the control plane is behind.
+        if not await runtime.flush_replication():
+            logger.warning(
+                "releasing the run guard while the control plane is still behind; "
+                "this Runtime is not safe to discard yet"
+            )
+
     events = adapter.run_stream(
         message_history=context.messages,
         conversation_id=prepared.conversation_id,
         run_id=prepared.run_id,
-        capabilities=[recorder],
+        capabilities=[recorder, stopper],
         on_complete=commit_context,
+        on_cancel=commit_stopped_context,
     )
-    return (
-        adapter.streaming_response(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)),
-        prepared,
+    encoder = adapter.build_event_stream()
+    run = runtime.runs.start(
+        run_id=prepared.run_id,
+        stopper=stopper,
+        events=encoder.encode_stream(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)),
+        finish=finish,
+        release=release,
+        error_frame=lambda message: encoder.encode_event(RunErrorEvent(message=message)),
     )
-
-
-def _hold_run_stream(
-    response: Response,
-    lease: RunLease,
-    *,
-    runtime: ConversationRuntime,
-    run_id: str,
-    conversation_id: str,
-) -> _HoldStreamingResponse:
-    """Hold the run lease through streaming, the workspace commit, and the replication barrier."""
-    inner = cast(StreamingResponse, response)
-    existing_background = inner.background
-
-    async def generate() -> AsyncIterator[str | bytes | memoryview]:
-        lease.mark_entered()
-        completed = False
-        try:
-            async for chunk in inner.body_iterator:
-                yield chunk
-            # Only reached when the event stream ran to its end. A client that hung up leaves
-            # this false, and the commit message says so. Whether the *model* succeeded is a
-            # different question, answered by the transcript rather than by the repository.
-            completed = True
-        finally:
-            # The barrier makes a normally completed Runtime disposable. A failed flush must
-            # still release the lease: local files remain durable and the background replicator
-            # keeps retrying, while `/health` exposes that the control plane is behind.
-            try:
-                if existing_background is not None:
-                    await existing_background()
-                # Local, fast, and deterministic, which is what makes it safe here: this runs on
-                # a client disconnect too, where a network push could not be relied on to finish.
-                # Pushing is the background saver's job.
-                await runtime.save_workspace(
-                    run_id=run_id,
-                    conversation_id=conversation_id,
-                    completed=completed,
-                )
-                if not await runtime.flush_replication():
-                    logger.warning(
-                        "releasing the run guard while the control plane is still behind; "
-                        "this Runtime is not safe to discard yet"
-                    )
-            finally:
-                lease.release()
-                # Reached on a client disconnect as well as on a completed turn, so this says
-                # the stream is over and not that the run succeeded.
-                logger.info("run stream closed run_id=%s", run_id)
-
-    headers = {**dict(inner.headers), **SSE_RESPONSE_HEADERS}
-    return _HoldStreamingResponse(
-        generate(),
-        lease,
-        status_code=inner.status_code,
-        media_type=inner.media_type or "text/event-stream",
-        headers=headers,
+    return StreamingResponse(
+        run.events.subscribe(),
+        media_type=encoder.content_type,
+        headers={**(encoder.response_headers or {}), **SSE_RESPONSE_HEADERS},
     )
 
 

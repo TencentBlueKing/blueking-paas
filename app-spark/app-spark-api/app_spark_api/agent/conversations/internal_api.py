@@ -25,6 +25,7 @@ Runtime cannot write into a conversation that is not its own even if it learns t
 from __future__ import annotations
 
 import json
+import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +42,7 @@ from app_spark_api.agent.conversations.tokens import (
     StateTokenClaims,
     read_state_token,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
@@ -83,6 +85,8 @@ async def runtime_token_required(request: HttpRequest) -> StateTokenClaims | Non
     except InvalidStateToken:
         return None
 
+
+logger = logging.getLogger(__name__)
 
 router = Router(tags=["internal"], auth=runtime_token_required)
 
@@ -190,7 +194,10 @@ async def append_ui_events(
     payload: AppendRequest,
     conversation_id: UUID = CONVERSATION_ID,
 ):
-    return await _append(request, conversation_id, "ui_event", payload)
+    response = await _append(request, conversation_id, "ui_event", payload)
+    if any(_ends_a_run(record.event) for record in payload.records):
+        await _extend_runtime_lifetime(conversation_id)
+    return response
 
 
 @router.put(
@@ -264,6 +271,32 @@ async def _append(
     except state.ConversationStateError as exc:
         raise error_codes.INVALID_CONVERSATION_STATE from exc
     return AppendResponse(last_seq=stored_through)
+
+
+# AG-UI's last event of every run, finished or failed. A stopped run ends with RUN_FINISHED too.
+_RUN_END_EVENT_TYPES = frozenset({"RUN_FINISHED", "RUN_ERROR"})
+
+
+def _ends_a_run(event: Any) -> bool:
+    return isinstance(event, dict) and event.get("type") in _RUN_END_EVENT_TYPES
+
+
+async def _extend_runtime_lifetime(conversation_id: UUID) -> None:
+    """Restart the Runtime's idle countdown now that one of its turns has ended.
+
+    A turn does not end with the client's stream any more, so the renewal the stream makes on its
+    way out can come long before the turn is over -- or never, for a turn nobody was following.
+    The turn's last event reaching this service is the one moment that is always seen.
+
+    Best effort: the batch is already stored, and the Runtime must not re-send it just because a
+    renewal failed. The worst a missed renewal does is let the Runtime expire sooner.
+    """
+    try:
+        await get_agent_runtime_provider().extend_lifetime(str(conversation_id))
+    except Exception:
+        logger.warning(
+            "Could not extend the Agent Runtime lifetime of conversation %s", conversation_id, exc_info=True
+        )
 
 
 async def _authorized_conversation(request: HttpRequest, conversation_id: UUID) -> Conversation:

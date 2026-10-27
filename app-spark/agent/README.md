@@ -30,7 +30,7 @@ uv sync
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 走 bkaidev 时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，未注入时缺省 `8000`。e2b 注入 `preview_port`（默认 `9000`，各沙箱相同）；`local_process` 为每个 Runtime 分一个不同的端口。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，未注入时缺省 `8090`。镜像 ENV 里的 `8090` 只对本地 `docker run` 生效；e2b 经 envd 启动时由接入层注入 `runtime_port`（默认 `8000`） |
-| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（20s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
+| `APP_SPARK_AGENT_IDLE_TIMEOUT_SECONDS` | 否 | 空闲秒数，从进程启动起算，每次 `POST /runs` 结束后重置；从未收到 `/runs` 也会到期退出。缺省 `1800`。到期发 SIGTERM 走有序关停（见下面的「关停时多等一步」），而不是直接 `os._exit`；有序关停在 `IDLE_EXIT_DEADLINE_SECONDS`（25s）内走不完才硬退。`GET /health` 不续命。`<= 0` 关闭空闲退出 |
 | `APP_SPARK_AGENT_SESSION_ID` | 否 | 只进日志与指标 |
 | `APP_SPARK_AGENT_TENANT_ID` | 否 | 只进日志与指标，不做业务分支 |
 | `APP_SPARK_AGENT_WORKSPACE` | 本地是；容器缺省 `/data/workspace` | Agent 工具可见目录 |
@@ -111,7 +111,12 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 ```
 
 错误码：401（Token 缺失或错误）、409（已有运行中 run）、503（模型未就绪）、422（非法 AG-UI 请求）。
-没有独立取消接口；客户端断开 SSE 即取消。
+
+一轮 run 是 Runtime 自己的后台任务，SSE 只是它的订阅者：**客户端断开 SSE 不会中断这一轮**，它会照常
+跑完、提交上下文和文件、回写控制面。`/health` 的 `running` 与 `run_id` 说明此刻是否有一轮在跑、是哪一轮。
+
+要停下一轮，调用 `POST /runs/{run_id}/stop`（同样需要 Bearer）。它只发出请求、立即返回 202，重复调用
+也是 202；被停下的一轮按 pydantic-ai 的取消收尾：SSE 以 `RUN_FINISHED` 结束，没返回的工具调用记为 interrupted，已做的部分照样提交为会话上下文，文件提交为 `(interrupted)`。`running` 变回 false 即收尾完毕。
 
 请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
 运行的 `contextVersion` 是 `0`。
@@ -349,15 +354,14 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 
 拆成两半，位置不同：
 
-- **屏障内**（`_hold_run_stream` 的 `finally`）只做**本地 commit**。纯本地、快、确定性强。
-  它跑在工作线程上，而线程不可取消，所以即使这个 `finally` 是在一个已被取消的任务里执行的，
-  commit 也能落地。
+- **屏障内**（run 任务收尾时调用的 `finish`，见 `server/run_task.py`）只做**本地 commit**。
+  纯本地、快、确定性强。它跑在工作线程上，而线程不可取消，所以即使收尾是在一个已被取消的任务里
+  执行的，commit 也能落地。
 - **屏障外**由后台任务做 **push**，自带重试。
 
-为什么 push 不能放屏障里：那个 `finally` 在客户端断开时同样会执行，而 uvicorn 的
-`GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS` 是 1 秒、会主动切断 SSE——相当大一部分保存动作发生在
-已取消的任务里，一次网络往返在那个位置没法保证做完。何况它还会把一轮对话挂在网络上，用户
-看到的就是「卡住了」。
+为什么 push 不能放屏障里：关停时进行中的一轮只有 `RUN_STOP_TIMEOUT_SECONDS`（5 秒）收尾，
+超时就被直接取消——一部分保存动作发生在已取消的任务里，一次网络往返在那个位置没法保证做完。
+何况它还会把一轮对话挂在网络上，用户看到的就是「卡住了」。
 
 由此得到一条必须说清楚的结论：**一轮 run 的流结束，只代表代码已在本地提交，不代表已经存到
 远端。** 两者是不同的状态，`/health` 分别报：
@@ -373,7 +377,7 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 | `workspace.needs_attention` | 重试也过不去的失败：分叉、token 被拒、超出体积上限 |
 | `workspace.uncommitted` | 上一次本地提交失败后，工作区是否仍有未记录的改动 |
 
-一轮 run 无论成败都会 commit：客户端中途断开时写了一半的文件也值得留着，但 commit message
+一轮 run 无论成败都会 commit：被停下或被取消时写了一半的文件也值得留着，但 commit message
 会写成 `(interrupted)` 且带 `Turn-Status: interrupted`。这类提交仍会推到工作分支并上报给控制
 面，供后续人工检查或继续修改，但上报会标记 `completed=false`，不能成为自动恢复点：
 `on_complete` 尚未提交新上下文时，上一版上下文并不能准确描述这些半成品文件。
@@ -381,13 +385,14 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 ### 关停时多等一步
 
 普通路径从不在屏障里等 push——那是后台任务的事。关停是唯一的例外：进程一走，workspace 盘和
-状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时会调
-`ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去。
+状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时先停下进行中的一轮
+（`RUN_STOP_TIMEOUT_SECONDS`，5 秒，到点直接取消；这一步不等回写），再调 `ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去。
 
 这个窗口是 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS`（8 秒），push 和状态回写共用，先 push 再用剩下的时间
-flush。控制面停 Runtime 的宽限比它长：uvicorn 掐连接 1 秒、本窗口 8 秒、停应用子进程 5 秒，合计仍小于
-`SHUTDOWN_GRACE_SECONDS` / e2b 的 `STOP_GRACE_SECONDS`（都是 20 秒），超时控制面会 SIGKILL。
-空闲退出另有 `IDLE_EXIT_DEADLINE_SECONDS`（20 秒）兜底，有序关停到点还没走完就 `os._exit`。
+flush。控制面停 Runtime 的宽限比它长：uvicorn 掐连接 1 秒、停下进行中的一轮 5 秒、本窗口 8 秒、停应用子进程
+5 秒，合计仍小于
+`SHUTDOWN_GRACE_SECONDS` / e2b 的 `STOP_GRACE_SECONDS`（都是 25 秒），超时控制面会 SIGKILL。
+空闲退出另有 `IDLE_EXIT_DEADLINE_SECONDS`（25 秒）兜底，有序关停到点还没走完就 `os._exit`。
 
 ### 未保存时的下一轮：有界等待与逃生口
 

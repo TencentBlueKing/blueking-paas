@@ -32,7 +32,7 @@ import pytest
 from asgiref.sync import async_to_sync
 from django.test import Client
 
-from app_spark_api.agent.conversations import services, state
+from app_spark_api.agent.conversations import internal_api, services, state
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.tokens import mint_state_token
@@ -119,6 +119,26 @@ def ui_events(*seqs: int) -> list[dict[str, Any]]:
     return [{"seq": seq, "run_id": "run-a", "timestamp": TIMESTAMP, "event": {"type": "CUSTOM"}} for seq in seqs]
 
 
+class RecordingProvider:
+    """Stands in for the provider; only the lifetime renewal is reachable from the ingest."""
+
+    def __init__(self) -> None:
+        self.extended: list[str] = []
+        self.error: Exception | None = None
+
+    async def extend_lifetime(self, conversation_id: str) -> None:
+        if self.error is not None:
+            raise self.error
+        self.extended.append(conversation_id)
+
+
+@pytest.fixture(autouse=True)
+def provider(monkeypatch) -> RecordingProvider:
+    fake = RecordingProvider()
+    monkeypatch.setattr(internal_api, "get_agent_runtime_provider", lambda: fake)
+    return fake
+
+
 # --- Pushing -------------------------------------------------------------------------------
 
 
@@ -157,6 +177,31 @@ def test_a_batch_that_would_leave_a_gap_is_answered_with_the_real_cursor(
     response = runtime.post("messages", messages(9, 10))
 
     assert json.loads(response.content) == {"last_seq": 1}
+
+
+def ending_a_run(seq: int, event_type: str) -> list[dict[str, Any]]:
+    return [{"seq": seq, "run_id": "run-a", "timestamp": TIMESTAMP, "event": {"type": event_type}}]
+
+
+@pytest.mark.parametrize("event_type", ["RUN_FINISHED", "RUN_ERROR"])
+def test_the_end_of_a_run_renews_its_runtime(runtime: RuntimeCaller, provider: RecordingProvider, event_type) -> None:
+    """A turn outlives the client's stream, so its last event arriving here is when it is over."""
+    assert runtime.post("ui-events", ui_events(1)).status_code == HTTPStatus.OK
+    assert provider.extended == []
+
+    assert runtime.post("ui-events", ending_a_run(2, event_type)).status_code == HTTPStatus.OK
+
+    assert provider.extended == [str(runtime.conversation.id)]
+
+
+def test_a_failed_renewal_does_not_refuse_the_batch(runtime: RuntimeCaller, provider: RecordingProvider) -> None:
+    """The batch is stored already: refusing it would only make the Runtime send it again."""
+    provider.error = RuntimeError("control plane down")
+
+    response = runtime.post("ui-events", ending_a_run(1, "RUN_FINISHED"))
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert state.last_seq(runtime.conversation.id, state.UI_EVENT_CHANNEL) == 1
 
 
 def test_a_malformed_record_is_refused(runtime: RuntimeCaller) -> None:

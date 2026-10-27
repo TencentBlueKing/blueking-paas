@@ -34,6 +34,7 @@ reason rather than failing in a way nobody can read.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import shutil
 import subprocess
@@ -688,6 +689,93 @@ async def test_a_turn_is_refused_while_another_is_still_running(
     assert json.loads(second.content)["detail"] == (
         "The Agent Runtime is already executing a run for this conversation."
     )
+
+
+class BrowserReading:
+    """Reads a run's SSE the way a browser tab does, and can be closed the way one is.
+
+    Closing cancels the reading task, which is what Django's ASGI handler does to a streaming
+    response whose client disconnected: the cancellation lands on whatever the stream was
+    awaiting -- here, the next bytes from the Runtime.
+    """
+
+    def __init__(self, response: Any) -> None:
+        self.events: list[dict[str, Any]] = []
+        self._started = asyncio.Event()
+        self._task = asyncio.create_task(self._read(response.streaming_content))
+
+    async def _read(self, stream: AsyncIterator[bytes]) -> None:
+        async for chunk in stream:
+            self.events.extend(
+                json.loads(line.removeprefix("data:").strip())
+                for line in chunk.decode().replace("\r\n", "\n").splitlines()
+                if line.startswith("data:")
+            )
+            self._started.set()
+
+    async def started(self) -> str:
+        """Wait for the first event and return the run id it carries."""
+        await asyncio.wait_for(self._started.wait(), REPLICATION_TIMEOUT_SECONDS)
+        assert self.events[0]["type"] == "RUN_STARTED"
+        return str(self.events[0]["runId"])
+
+    async def finished(self) -> list[dict[str, Any]]:
+        await asyncio.wait_for(self._task, REPLICATION_TIMEOUT_SECONDS)
+        return self.events
+
+    async def close(self) -> None:
+        self._task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._task
+
+
+async def test_a_turn_runs_to_its_end_after_the_browser_goes_away(aapi_client, project, slow_agent):
+    """Reloading the page used to cancel the turn mid-way, losing its context with it."""
+    state = await create_conversation(aapi_client)
+    number = state["number"]
+
+    browser = BrowserReading(await post_run(aapi_client, number, "take your time"))
+    await browser.started()
+    # `fake:slow` is stalled after its first chunk, so this lands while the turn is under way.
+    await browser.close()
+
+    settled = await wait_for_replication(aapi_client, number, after=state)
+
+    # A context version is only committed by a turn that got to its end.
+    assert settled["context_version"] == 1
+    records = (await read_ui_events(aapi_client, number))["records"]
+    assert records[-1]["event"]["type"] == "RUN_FINISHED"
+    assert "Thinking about: take your time" in assistant_reply([record["event"] for record in records])
+
+
+async def test_a_turn_can_be_stopped_while_it_runs(aapi_client, project, slow_agent):
+    state = await create_conversation(aapi_client)
+    number = state["number"]
+    stop_url = f"/api/projects/{PROJECT_ID}/conversations/{number}/runs/{{run_id}}/stop/"
+
+    browser = BrowserReading(await post_run(aapi_client, number, "never mind"))
+    run_id = await browser.started()
+    # A client that reloaded has no SSE to read the run id from; the state carries it.
+    assert (await read_state(aapi_client, number))["run_id"] == run_id
+
+    stopped = await aapi_client.post(stop_url.format(run_id=run_id))
+
+    assert stopped.status_code == HTTPStatus.ACCEPTED, stopped.content
+    assert json.loads(stopped.content) == {"run_id": run_id}
+    # The stream ends the way a finished turn's does, long before the stalled model would have.
+    assert event_types(await browser.finished())[-1] == "RUN_FINISHED"
+    settled = await wait_for_replication(aapi_client, number, after=state)
+    # Stopped is not lost: what the turn did is part of the context the next one is given.
+    assert settled["context_version"] == 1
+    assert settled["run_id"] is None
+
+    # Over now, so there is nothing to stop -- and a run this conversation never had is not one.
+    again = await aapi_client.post(stop_url.format(run_id=run_id))
+    assert again.status_code == HTTPStatus.CONFLICT, again.content
+    assert json.loads(again.content)["code"] == "RUN_NOT_RUNNING"
+    unknown = await aapi_client.post(stop_url.format(run_id="not-a-run-of-this-conversation"))
+    assert unknown.status_code == HTTPStatus.NOT_FOUND, unknown.content
+    assert json.loads(unknown.content)["code"] == "RUN_NOT_FOUND"
 
 
 async def test_a_second_conversation_on_one_project_is_refused(aapi_client, project, agent):

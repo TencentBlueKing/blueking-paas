@@ -46,9 +46,9 @@ REUSE_HEALTH_ATTEMPTS = 3
 REUSE_HEALTH_RETRY_INTERVAL_SECONDS = 1.0
 
 # 结束会话最多花多久，重连、发信号、等 Agent 退出都算在内，只有最后那次 kill 另算。Agent 有序关停
-# 最多要 1 秒断连接、8 秒推送加回写、5 秒停应用子进程（见 agent settings 里的
+# 最多要 1 秒断连接、5 秒停下进行中的一轮、8 秒推送加回写、5 秒停应用子进程（见 agent settings 里的
 # SHUTDOWN_DRAIN_TIMEOUT_SECONDS），剩下的留给重连。
-STOP_GRACE_SECONDS = 20
+STOP_GRACE_SECONDS = 25
 
 # 沙箱里的停止命令每隔多久看一次 Agent 退出了没有。
 STOP_POLL_INTERVAL_SECONDS = 0.2

@@ -102,9 +102,10 @@ LOG_TAIL_LINES = 40
 # whole orderly shutdown, because that is where an unpushed workspace commit and un-replicated
 # state get their last chance to leave the sandbox -- killing it early throws away exactly the
 # work this service asked it to persist. The Agent's own budget is the sum documented on
-# `SHUTDOWN_DRAIN_TIMEOUT_SECONDS` in the agent settings: 1s to drop connections, 8s to drain,
-# 5s to stop application children. Raising any of those means raising this.
-SHUTDOWN_GRACE_SECONDS = 20
+# `SHUTDOWN_DRAIN_TIMEOUT_SECONDS` in the agent settings: 1s to drop connections, 5s to stop the
+# run in progress, 8s to drain, 5s to stop application children. Raising any of those means
+# raising this.
+SHUTDOWN_GRACE_SECONDS = 25
 
 # 抽两个不重复的端口。一次就中是常态；上限只是不让「每次都撞上已预留端口」变成死循环。
 PORT_RESERVE_ATTEMPTS = 32

@@ -27,7 +27,8 @@ import attrs
 import pytest
 
 from app_spark_api.agent.conversations import services
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations.exceptions import RunNotFoundError, RunNotInProgressError
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.runtime import AgentRuntimeHandle, AgentUnavailableError, RuntimeHealth
 from app_spark_api.core.projects.models import Project
 
@@ -74,6 +75,9 @@ class FakeClient:
 
     health_error: Exception | None = None
     answer: RuntimeHealth = HEALTH
+    # What POST /runs/{id}/stop answers, and the run ids it was asked to stop.
+    stop_accepted: bool = True
+    stopped: list[str] = []
 
     def __init__(self, handle: AgentRuntimeHandle, **_kwargs: Any) -> None:
         self.handle = handle
@@ -82,6 +86,10 @@ class FakeClient:
         if self.health_error is not None:
             raise self.health_error
         return self.answer
+
+    async def stop_run(self, run_id: str) -> bool:
+        self.stopped.append(run_id)
+        return self.stop_accepted
 
 
 class FakeRun:
@@ -110,6 +118,8 @@ def provider(monkeypatch) -> FakeProvider:
     monkeypatch.setattr(services, "AgentRuntimeClient", FakeClient)
     monkeypatch.setattr(FakeClient, "health_error", None)
     monkeypatch.setattr(FakeClient, "answer", HEALTH)
+    monkeypatch.setattr(FakeClient, "stop_accepted", True)
+    monkeypatch.setattr(FakeClient, "stopped", [])
     return fake
 
 
@@ -175,6 +185,65 @@ async def test_a_runtime_past_its_lifetime_mid_turn_is_not_replaced_so_it_is_rea
     state = await services.get_state(conversation)
 
     assert (state.running, state.runtime_ready) == (True, True)
+
+
+async def test_the_state_names_the_turn_in_progress(provider, conversation):
+    """刷新页面后的客户端手里没有 SSE 里的 runId，要停下这一轮，只能从会话状态里拿。"""
+    FakeClient.answer = attrs.evolve(HEALTH, run_id="run-1")
+
+    state = await services.get_state(conversation)
+
+    assert state.run_id == "run-1"
+
+
+# --- 停止一轮 ---------------------------------------------------------------------------------
+
+
+# The service reads the run back through the async ORM, which runs on a connection of its own:
+# rows left uncommitted in the test's transaction would be invisible to it, or lock it out.
+STOP_TESTS = pytest.mark.django_db(transaction=True)
+
+
+async def accepted_run(conversation: Conversation, run_id: str) -> None:
+    """Record that the conversation accepted this run, the way start_run does."""
+    message = await ConversationUserMessage.objects.acreate(conversation=conversation, content="hi", run_id=run_id)
+    assert message.run_id == run_id
+
+
+@STOP_TESTS
+async def test_a_stop_is_handed_to_the_runtime_running_the_turn(provider, conversation):
+    await accepted_run(conversation, "run-1")
+
+    await services.stop_run(conversation, "run-1")
+
+    assert FakeClient.stopped == ["run-1"]
+
+
+@STOP_TESTS
+async def test_a_run_of_another_conversation_is_never_asked_about(provider, conversation):
+    with pytest.raises(RunNotFoundError):
+        await services.stop_run(conversation, "run-of-someone-else")
+
+    assert FakeClient.stopped == []
+
+
+@STOP_TESTS
+async def test_a_turn_with_no_runtime_left_is_not_in_progress(provider, conversation):
+    """只看不拉：为了停一轮去拉起一个 Runtime，只会多出一个空转的沙箱。"""
+    await accepted_run(conversation, "run-1")
+    provider.handle = None
+
+    with pytest.raises(RunNotInProgressError):
+        await services.stop_run(conversation, "run-1")
+
+
+@STOP_TESTS
+async def test_a_turn_that_has_already_ended_is_not_in_progress(provider, conversation):
+    await accepted_run(conversation, "run-1")
+    FakeClient.stop_accepted = False
+
+    with pytest.raises(RunNotInProgressError):
+        await services.stop_run(conversation, "run-1")
 
 
 # --- 一轮结束时续期 ----------------------------------------------------------------------------

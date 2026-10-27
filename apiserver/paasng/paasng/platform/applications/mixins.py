@@ -22,8 +22,6 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.models import WlApp
-from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.header import validate_tenant_id_header
 from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.platform.applications.constants import AppEnvironment
@@ -146,12 +144,6 @@ class SysManagedAppInPathMixin:
         application = get_object_or_404(Application, code=self.kwargs["code"])
         ensure_app_managed_by_client(application, self._get_client_role())
 
-        # 全租户应用对所有租户可用
-        if application.app_tenant_mode == AppTenantMode.GLOBAL.value:
-            return application
-
-        if application.app_tenant_id != validate_tenant_id_header(self.request):
-            raise error_codes.APP_TENANT_MISMATCH
         return application
 
     def get_managed_module_via_path(self) -> Module:

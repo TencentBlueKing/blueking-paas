@@ -33,6 +33,7 @@ from paas_wl.bk_app.processes.entities import Runtime
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.infras.resources.kube_res.base import Schedule
+from paasng.misc.audit.constants import AccessType
 from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import DeployPolicy
 from paasng.platform.applications.models import Application
@@ -287,6 +288,8 @@ class TestSysUpdateProcess:
         audit_record.assert_called_once()
         kwargs = audit_record.call_args.kwargs
         assert kwargs["user"] == user_id_encoder.encode(settings.USER_TYPE, OPERATOR)
+        # 系统 API 发起的操作
+        assert kwargs["access_type"] == AccessType.API
         assert (kwargs["app_code"], kwargs["operation"], kwargs["attribute"]) == (
             ai_agent_app_with_wl_apps.code,
             "stop",

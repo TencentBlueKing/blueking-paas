@@ -376,7 +376,7 @@ def test_dispatch_cnb_image_to_registry(
     config_req = [req for req in mock_adapter.request_history if req.method == "PATCH"][-1]
     env = _get_uploaded_image_env(config_req)
     assert env["PATH"] == expected_path
-    assert env["LD_LIBRARY_PATH"].startswith("/app/.heroku/python/lib:")
+    assert env["LD_LIBRARY_PATH"] == "/app/.heroku/python/lib"
 
 
 def _get_uploaded_image_env(config_req) -> dict[str, str]:

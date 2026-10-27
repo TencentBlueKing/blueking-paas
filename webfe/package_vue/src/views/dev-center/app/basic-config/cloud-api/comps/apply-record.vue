@@ -162,6 +162,16 @@
                 ext-cls="applying"
               />
               {{ getStatusDisplay(row.apply_status) }}
+              <bk-button
+                v-if="!isComponentApi && !isMcpService && row.apply_status === 'pending' && row.approval_url"
+                theme="primary"
+                text
+                class="ml-6"
+                @click="handleCopyApprovalUrl(row.approval_url)"
+              >
+                <i class="paasng-icon paasng-link"></i>
+                {{ $t('复制审批链接') }}
+              </bk-button>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -250,7 +260,10 @@
               <template v-else>{{ field.value || '--' }}</template>
               <bk-button
                 v-if="
-                  field.isApplyStatus && isMcpService && curRecord.apply_status === 'pending' && curRecord?.approval_url
+                  field.isApplyStatus &&
+                    !isComponentApi &&
+                    curRecord.apply_status === 'pending' &&
+                    curRecord?.approval_url
                 "
                 theme="primary"
                 text

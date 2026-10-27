@@ -32,7 +32,11 @@ watch(() => route.params.projectId, async (projectId) => {
   if (!id) return;
   try {
     await projectStore.enterProject(id);
+    if (String(route.params.projectId || '') !== id) return;
+    const initialMessage = projectStore.consumeInitialMessage(id);
+    if (initialMessage) await projectStore.sendMessage(initialMessage);
   } catch (error) {
+    projectStore.consumeInitialMessage(id);
     Message({
       theme: 'error',
       message: error instanceof Error ? error.message : '进入项目失败',

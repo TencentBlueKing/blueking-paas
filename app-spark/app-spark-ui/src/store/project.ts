@@ -54,6 +54,8 @@ export const useProjectStore = defineStore('project', () => {
   const entering = ref(false);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
+  // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
+  const pendingInitialMessage = ref<{ projectId: string; content: string } | null>(null);
   // 取更早一页历史用的游标，null 表示已经翻到会话开头（或者还没拉过第一页）。
   const historyCursor = ref<string | null>(null);
   const loadingEarlier = ref(false);
@@ -101,6 +103,17 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.messages = messages.value;
     applyCtx.byId = new Map();
     applyCtx.toolCalls = new Map();
+  };
+
+  const queueInitialMessage = (id: string, content: string) => {
+    const text = content.trim();
+    pendingInitialMessage.value = id && text ? { projectId: id, content: text } : null;
+  };
+
+  const consumeInitialMessage = (id: string): string => {
+    const pending = pendingInitialMessage.value;
+    pendingInitialMessage.value = null;
+    return pending?.projectId === id ? pending.content : '';
   };
 
   const applyState = (state: RuntimeStateResponse, options?: { syncEventSeq?: boolean }) => {
@@ -828,6 +841,8 @@ export const useProjectStore = defineStore('project', () => {
     returnToLiveConversation,
     fetchLiveConversation,
     fetchArchivedConversations,
+    queueInitialMessage,
+    consumeInitialMessage,
     sendMessage,
   };
 });

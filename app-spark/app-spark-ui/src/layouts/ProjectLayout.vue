@@ -1,99 +1,51 @@
 <template>
   <div class="project-layout">
-    <bk-navigation
-      class="project-nav"
-      navigation-type="top-bottom"
-      side-title="App-Spark"
-      :need-menu="false"
-      :head-height="56"
-      @click="handleNavClick"
-    >
-      <template #side-icon>
-        <TreeApplicationShape />
-      </template>
-      <template #header>
-        <StudioHeader />
-      </template>
-      <div class="project-body">
-        <slot />
-      </div>
-    </bk-navigation>
+    <AppHeader />
+    <main class="project-body">
+      <slot />
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { TreeApplicationShape } from 'bkui-vue/lib/icon';
-import StudioHeader from '@/components/project/header/StudioHeader.vue';
-
-const router = useRouter();
-
-const handleNavClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (target.closest('.bk-navigation-title')) {
-    router.push({ name: 'home' });
-  }
-};
+import AppHeader from '@/components/layout/AppHeader.vue';
 </script>
 
 <style lang="postcss" scoped>
 .project-layout {
-  --ink: #12141a;
-  --muted: #5c6573;
-  --faint: #88919e;
-  --line: #e4e9f1;
-  --canvas: #ffffff;
-  --surface: #ffffff;
-  --accent: #3d6dff;
-  --accent-soft: #eef2ff;
-  --rail-h: 56px;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
+  overflow: hidden;
   color: var(--ink);
-}
-
-.project-nav {
-  height: 100%;
 }
 
 .project-body {
   display: flex;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   background: var(--canvas);
 }
 
-:deep(.bk-navigation-wrapper) {
-  height: calc(100vh - 56px);
-}
+@media (max-width: 760px) {
+  .project-body {
+    flex-direction: column;
+    overflow-y: auto;
+    scroll-snap-type: y proximity;
+  }
 
-:deep(.bk-navigation-wrapper .navigation-container) {
-  max-width: none;
-}
+  .project-body :deep(.interaction-panel),
+  .project-body :deep(.workspace-panel) {
+    flex: 0 0 calc(100vh - var(--nav-h));
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    scroll-snap-align: start;
+  }
 
-:deep(.navigation-container .container-content) {
-  padding: 0;
-  max-width: none;
-  height: 100%;
-}
-
-:deep(.bk-navigation-title) {
-  flex-basis: 200px;
-  cursor: pointer;
-  border-bottom: none;
-}
-
-:deep(.bk-navigation-title .title-icon) {
-  color: #6aa1ff;
-}
-
-:deep(.bk-navigation-title .title-desc) {
-  color: #fff;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-:deep(.bk-navigation-header .header-right) {
-  flex: 1;
-  min-width: 0;
+  .project-body :deep(.interaction-panel) {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
 }
 </style>

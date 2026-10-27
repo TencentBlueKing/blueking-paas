@@ -72,3 +72,15 @@ export function fromNowFormatter(val: string) {
   // 语言在实例上指定，而不是 `dayjs.locale('zh-cn')` 全局切换：后者会顺带改掉其他地方的格式化结果。
   return val ? dayjs(val).locale('zh-cn').fromNow() : '--';
 }
+
+/**
+ * 面向用户展示的请求错误。代理返回 HTML 或纯文本时，JSON 解析异常没有业务含义，不应原样暴露。
+ */
+export function readableError(error: unknown, fallback: string) {
+  if (!(error instanceof Error)) return fallback;
+  const message = error.message.trim();
+  if (!message || error instanceof SyntaxError || /is not valid JSON|Unexpected token/i.test(message)) {
+    return fallback;
+  }
+  return message;
+}

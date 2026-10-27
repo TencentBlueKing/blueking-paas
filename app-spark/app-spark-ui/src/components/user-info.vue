@@ -14,29 +14,56 @@ const userInfo = ref(user.user);
     placement="bottom-end"
     theme="light"
   >
-    <span class="user-name">
-      {{ userInfo.display_name || userInfo.username }}
+    <button
+      type="button"
+      class="user-name"
+      :aria-label="`账号菜单：${userInfo.display_name || userInfo.username || '当前用户'}`"
+    >
+      <span class="user-name__text">{{ userInfo.display_name || userInfo.username || '账号' }}</span>
       <angle-down-line />
-    </span>
+    </button>
     <template #content>
-      <span
+      <button
+        type="button"
         class="logout"
         @click="logout"
-      >退出</span>
+      >退出</button>
     </template>
   </bk-popover>
 </template>
 
 <style lang="postcss" scoped>
 .user-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  color: inherit;
   cursor: pointer;
   font-size: 14px;
+  background: transparent;
+  border: 0;
 }
+
 .logout {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   width: 50px;
+  height: 30px;
+  padding: 0;
+  color: var(--ink);
   cursor: pointer;
   font-size: 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.user-name:focus-visible,
+.logout:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
 }
 </style>

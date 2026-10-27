@@ -188,7 +188,7 @@ watch(() => props.modelValue, (open) => {
 .delete-dialog__id {
   padding: 0;
   color: #ea3636;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
   background: none;
@@ -247,7 +247,6 @@ watch(() => props.modelValue, (open) => {
   height: 32px;
   padding: 0 16px;
   font-size: 14px;
-  border-radius: 2px;
   cursor: pointer;
 }
 

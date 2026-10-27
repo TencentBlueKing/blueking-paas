@@ -9,44 +9,114 @@
       :padding="0"
       :offset="4"
       ext-cls="project-switcher-popover"
-      @after-show="onPopoverShow"
-      @after-hidden="onAfterHidden"
+      @after-show="handlePopoverShow"
+      @after-hidden="handlePopoverHidden"
     >
-      <div class="project-switcher__trigger" :class="{ 'is-open': visible }">
+      <button
+        type="button"
+        class="project-switcher__trigger"
+        :class="{ 'is-open': visible }"
+        aria-haspopup="menu"
+        :aria-expanded="visible"
+      >
         <span class="project-switcher__name">{{ currentName }}</span>
-        <AngleDown class="project-switcher__arrow" />
-      </div>
+        <AppIcon class="project-switcher__arrow" name="chevron-down" />
+      </button>
       <template #content>
-        <div class="project-switcher__panel">
-          <div class="project-switcher__search">
-            <Search class="project-switcher__search-icon" />
-            <input
-              v-model="keyword"
-              class="project-switcher__search-input"
-              placeholder="输入项目名称搜索"
+        <div class="project-switcher__panel" role="menu">
+          <div
+            class="project-switcher__recent-owner"
+            @mouseenter="showRecent()"
+            @mouseleave="scheduleRecentHide"
+            @focusin="showRecent()"
+            @focusout="scheduleRecentHide"
+          >
+            <bk-popover
+              trigger="manual"
+              placement="right-start"
+              theme="light"
+              :is-show="recentVisible"
+              :arrow="false"
+              :padding="0"
+              :offset="4"
+              boundary="body"
+              ext-cls="project-recent-popover"
             >
+              <button
+                ref="recentTriggerRef"
+                type="button"
+                class="project-switcher__action"
+                role="menuitem"
+                aria-haspopup="menu"
+                :aria-expanded="recentVisible"
+                @click="toggleRecent"
+                @keydown.right.prevent="showRecent(true)"
+              >
+                <AppIcon name="clock" />
+                <span>最近项目</span>
+                <AppIcon class="project-switcher__chevron" name="chevron-right" />
+              </button>
+              <template #content>
+                <div
+                  ref="recentPanelRef"
+                  class="project-switcher__submenu"
+                  role="menu"
+                  aria-label="最近项目"
+                  @mouseenter="cancelRecentHide"
+                  @mouseleave="scheduleRecentHide"
+                  @focusin="cancelRecentHide"
+                  @focusout="scheduleRecentHide"
+                  @keydown.left.prevent="closeRecent(true)"
+                  @keydown.esc.stop.prevent="closeRecent(true)"
+                >
+                  <div
+                    v-if="recentLoading"
+                    class="project-switcher__status is-loading"
+                    role="status"
+                  >
+                    <span class="project-switcher__spinner" aria-hidden="true" />
+                    加载中…
+                  </div>
+                  <div v-else-if="recentError" class="project-switcher__status is-error">
+                    <span>{{ recentError }}</span>
+                    <button type="button" class="project-switcher__retry" @click="fetchRecentProjects">
+                      重试
+                    </button>
+                  </div>
+                  <div v-else-if="!recentProjects.length" class="project-switcher__status">
+                    暂无其他项目
+                  </div>
+                  <template v-else>
+                    <button
+                      v-for="item in recentProjects"
+                      :key="item.id"
+                      type="button"
+                      class="project-switcher__row"
+                      role="menuitem"
+                      @click="handleSelect(item.id)"
+                    >
+                      <span>{{ item.name || item.id }}</span>
+                      <time>{{ fromNowFormatter(item.updated_at) }}</time>
+                    </button>
+                  </template>
+                </div>
+              </template>
+            </bk-popover>
           </div>
-          <ul class="project-switcher__list">
-            <li
-              v-for="item in filteredProjects"
-              :key="item.id"
-              :class="[
-                'project-switcher__item',
-                { 'is-selected': item.id === projectId },
-              ]"
-              @click="handleSelect(item.id)"
-            >
-              <span class="project-switcher__item-name">{{ item.name || item.id }}</span>
-              <span class="project-switcher__item-tag">{{ item.id }}</span>
-            </li>
-            <li v-if="!filteredProjects.length" class="project-switcher__empty">
-              没有匹配的项目
-            </li>
-          </ul>
-          <div class="project-switcher__footer" @click="openCreate">
-            <Plus class="project-switcher__footer-icon" />
-            新建项目
-          </div>
+          <div class="project-switcher__separator" role="separator" />
+          <button type="button" class="project-switcher__action" role="menuitem" @click="openRename">
+            <AppIcon name="pencil" />
+            <span>重命名</span>
+          </button>
+          <button
+            type="button"
+            class="project-switcher__action is-danger"
+            role="menuitem"
+            @click="openDelete"
+          >
+            <AppIcon name="trash" />
+            <span>删除</span>
+          </button>
         </div>
       </template>
     </bk-popover>
@@ -60,21 +130,42 @@
       @update:modelValue="onConfirmVisible"
     />
 
-    <CreateProjectDialog
-      v-model="createVisible"
-      @created="enterCreated"
+    <AppModal
+      v-model="renameVisible"
+      :title="`重命名 — ${currentName}`"
+      confirm-text="确认"
+      :confirm-disabled="!renameInput.trim() || renameInput.trim() === currentName"
+      :focus-confirm="false"
+      @confirm="confirmRename"
+    >
+      <label class="rename-demo">
+        <span>新名字</span>
+        <input
+          v-model="renameInput"
+          maxlength="20"
+          placeholder="给项目起个好记的名字"
+        >
+        <em>{{ renameInput.trim().length }}/20</em>
+      </label>
+    </AppModal>
+
+    <DeleteProjectDialog
+      v-model="deleteVisible"
+      :project="deletingProject"
+      @deleted="handleDeleted"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
-import { AngleDown, Plus, Search } from 'bkui-vue/lib/icon';
+import { fromNowFormatter } from '@/common/util';
+import AppIcon from '@/components/AppIcon.vue';
 import AppModal from '@/components/project/AppModal.vue';
-import CreateProjectDialog from '@/components/project/CreateProjectDialog.vue';
+import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
 import { listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
@@ -83,7 +174,6 @@ import { useProjectStore } from '@/store/project';
 const router = useRouter();
 const { projectId } = storeToRefs(useProjectStore());
 const projects = ref<ProjectResponse[]>([]);
-const keyword = ref('');
 const {
   popoverRef,
   visible,
@@ -92,25 +182,52 @@ const {
   close,
 } = usePopoverVisible();
 const confirmVisible = ref(false);
-const createVisible = ref(false);
 const pendingProjectId = ref('');
+const renameVisible = ref(false);
+const renameInput = ref('');
+const deleteVisible = ref(false);
+const deletingProject = ref<ProjectResponse | null>(null);
+const demoNames = reactive<Record<string, string>>({});
+const recentTriggerRef = ref<HTMLButtonElement>();
+const recentPanelRef = ref<HTMLElement>();
+const recentVisible = ref(false);
+const recentLoading = ref(false);
+const recentError = ref('');
+let recentHideTimer = 0;
 
-const currentName = computed(() => {
+const currentProject = computed<ProjectResponse | null>(() => {
   const current = projects.value.find(item => item.id === projectId.value);
-  return current?.name || projectId.value || '选择项目';
+  if (current) {
+    return {
+      ...current,
+      name: demoNames[current.id] || current.name,
+    };
+  }
+  if (!projectId.value) return null;
+  return {
+    id: projectId.value,
+    name: demoNames[projectId.value] || projectId.value,
+    created_at: '',
+    updated_at: '',
+  };
 });
 
-const filteredProjects = computed(() => {
-  const text = keyword.value.trim().toLowerCase();
-  if (!text) return projects.value;
-  return projects.value.filter(item => (
-    item.name.toLowerCase().includes(text) || item.id.toLowerCase().includes(text)
-  ));
-});
+const currentName = computed(() => currentProject.value?.name || '选择项目');
 
-const onPopoverShow = () => {
+const recentProjects = computed(() => (
+  projects.value
+    .filter(item => item.id !== projectId.value)
+    .slice(0, 20)
+));
+
+const handlePopoverShow = () => {
   onAfterShow();
-  fetchProjects();
+  closeRecent();
+};
+
+const handlePopoverHidden = () => {
+  onAfterHidden();
+  closeRecent();
 };
 
 const fetchProjects = async () => {
@@ -133,7 +250,52 @@ const fetchProjects = async () => {
   }
 };
 
+const fetchRecentProjects = async () => {
+  recentLoading.value = true;
+  recentError.value = '';
+  try {
+    const data = await listProjects({ page: 1, page_size: 21 });
+    projects.value = data.items || [];
+  } catch (error) {
+    recentError.value = error instanceof Error ? error.message : '获取最近项目失败';
+  } finally {
+    recentLoading.value = false;
+  }
+};
+
+const cancelRecentHide = () => {
+  window.clearTimeout(recentHideTimer);
+};
+
+const closeRecent = (restoreFocus = false) => {
+  cancelRecentHide();
+  recentVisible.value = false;
+  if (restoreFocus) nextTick(() => recentTriggerRef.value?.focus());
+};
+
+const scheduleRecentHide = () => {
+  cancelRecentHide();
+  recentHideTimer = window.setTimeout(() => closeRecent(), 120);
+};
+
+const showRecent = (focusFirst = false) => {
+  cancelRecentHide();
+  if (!recentVisible.value) {
+    recentVisible.value = true;
+    fetchRecentProjects();
+  }
+  if (focusFirst) {
+    nextTick(() => recentPanelRef.value?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
+  }
+};
+
+const toggleRecent = () => {
+  if (recentVisible.value) closeRecent();
+  else showRecent();
+};
+
 const handleSelect = (id: string) => {
+  closeRecent();
   close();
   if (!id || id === projectId.value) return;
   pendingProjectId.value = id;
@@ -152,176 +314,303 @@ const handleConfirm = () => {
   router.push({ name: 'project', params: { projectId: nextId } });
 };
 
-const openCreate = () => {
+const openRename = () => {
+  closeRecent();
   close();
-  createVisible.value = true;
+  renameInput.value = currentName.value;
+  renameVisible.value = true;
 };
 
-const enterCreated = (created: ProjectResponse) => {
-  // 列表只在挂载和下拉展开时拉取。创建后立刻跳转，不把这条补进去，触发器只能退回显示 id。
-  if (!projects.value.some(item => item.id === created.id)) {
-    projects.value.unshift(created);
-  }
-  router.push({ name: 'project', params: { projectId: created.id } });
+const confirmRename = () => {
+  const name = renameInput.value.trim();
+  if (!projectId.value || !name || name === currentName.value) return;
+  demoNames[projectId.value] = name;
+  renameVisible.value = false;
+  Message({
+    theme: 'success',
+    message: '名称已更新',
+  });
+};
+
+const openDelete = () => {
+  closeRecent();
+  close();
+  deletingProject.value = currentProject.value;
+  deleteVisible.value = true;
+};
+
+const handleDeleted = () => {
+  deleteVisible.value = false;
+  deletingProject.value = null;
+  router.replace({ name: 'projects' });
 };
 
 onMounted(fetchProjects);
+onBeforeUnmount(cancelRecentHide);
 </script>
 
 <style lang="postcss" scoped>
 .project-switcher__trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  min-width: 160px;
-  max-width: 260px;
+  gap: 4px;
+  min-width: 0;
+  max-width: 280px;
   height: 32px;
-  padding: 0 10px;
-  color: #fff;
+  padding: 0 6px 0 8px;
+  color: var(--ink);
   cursor: pointer;
-  background: #1e252f;
-  border: 1px solid #3a414c;
-  border-radius: 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
 }
 
+.project-switcher__trigger:hover,
 .project-switcher__trigger.is-open {
-  border-color: #3a84ff;
+  background: #eef1f6;
 }
 
 .project-switcher__name {
-  flex: 1;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .project-switcher__arrow {
-  margin-left: 8px;
-  color: #c4c6cc;
+  flex-shrink: 0;
+  color: var(--faint);
   font-size: 16px;
+  transition: transform 160ms ease;
+}
+
+.project-switcher__trigger.is-open .project-switcher__arrow {
+  transform: rotate(180deg);
 }
 
 .project-switcher__panel {
-  width: 280px;
-  overflow: hidden;
-  background: #1b2129;
-  border: 1px solid #3a414c;
-  border-radius: 2px;
+  box-sizing: border-box;
+  width: 168px;
+  padding: 6px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 12px 32px rgba(16, 22, 34, 0.14),
+    0 0 0 1px rgba(16, 22, 34, 0.05);
 }
 
-.project-switcher__search {
+.project-switcher__action {
   display: flex;
-  align-items: center;
-  height: 40px;
-  padding: 0 12px;
-  border-bottom: 1px solid #2d3540;
-}
-
-.project-switcher__search-icon {
-  margin-right: 8px;
-  color: #979ba5;
-  font-size: 14px;
-}
-
-.project-switcher__search-input {
-  flex: 1;
-  color: #dcdee5;
-  font-size: 12px;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
   background: transparent;
-  border: none;
+  border: 0;
+  border-radius: 8px;
+}
+
+.project-switcher__action:hover,
+.project-switcher__action:focus-visible,
+.project-switcher__action[aria-expanded="true"] {
+  background: var(--subtle-bg);
   outline: none;
 }
 
-.project-switcher__search-input::placeholder {
-  color: #63656e;
-}
-
-.project-switcher__list {
-  max-height: 240px;
-  margin: 0;
-  padding: 4px 0;
-  overflow: auto;
-  list-style: none;
-}
-
-.project-switcher__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 36px;
-  padding: 0 12px;
-  color: #c4c6cc;
-  cursor: pointer;
-}
-
-.project-switcher__item:hover {
-  background: #242c38;
-}
-
-.project-switcher__item.is-selected {
-  color: #3a84ff;
-  background: #2a3a55;
-}
-
-.project-switcher__item-name {
-  flex: 1;
-  overflow: hidden;
-  font-size: 13px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.project-switcher__item-tag {
+.project-switcher__action > :deep(.app-icon) {
   flex-shrink: 0;
-  margin-left: 8px;
-  padding: 0 6px;
-  color: #c4c6cc;
-  font-size: 12px;
-  line-height: 18px;
-  background: #3a414c;
-  border-radius: 2px;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 15px;
 }
 
-.project-switcher__item.is-selected .project-switcher__item-tag {
-  color: #dcdee5;
+.project-switcher__action.is-danger,
+.project-switcher__action.is-danger > :deep(.app-icon) {
+  color: var(--danger);
 }
 
-.project-switcher__empty {
-  padding: 16px 12px;
-  color: #63656e;
-  font-size: 12px;
-  text-align: center;
+.project-switcher__action.is-danger:hover,
+.project-switcher__action.is-danger:focus-visible {
+  background: var(--danger-soft);
 }
 
-.project-switcher__footer {
+.project-switcher__recent-owner,
+.project-switcher__recent-owner :deep(.bk-popover) {
+  display: block;
+  width: 100%;
+}
+
+.project-switcher__chevron {
+  flex-shrink: 0;
+  margin: 2px -2px 0 auto;
+  color: var(--faint);
+  font-size: 14px;
+}
+
+.project-switcher__separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+
+.project-switcher__submenu {
+  box-sizing: border-box;
+  width: 248px;
+  min-height: 56px;
+  max-height: min(420px, calc(100vh - 16px));
+  padding: 6px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 12px 32px rgba(16, 22, 34, 0.14),
+    0 0 0 1px rgba(16, 22, 34, 0.05);
+}
+
+.project-switcher__row {
   display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.project-switcher__row:hover,
+.project-switcher__row:focus-visible {
+  background: var(--subtle-bg);
+  outline: none;
+}
+
+.project-switcher__row > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-switcher__row > time {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-switcher__status {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  height: 40px;
-  padding: 0 12px;
-  color: #dcdee5;
+  gap: 8px;
+  min-height: 44px;
+  padding: 12px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.project-switcher__status.is-error {
+  color: var(--danger);
+}
+
+.project-switcher__spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: project-switcher-spin 0.8s linear infinite;
+}
+
+.project-switcher__retry {
+  padding: 0;
+  color: var(--accent);
   font-size: 13px;
   cursor: pointer;
-  border-top: 1px solid #2d3540;
+  background: transparent;
+  border: 0;
 }
 
-.project-switcher__footer:hover {
-  color: #3a84ff;
-  background: #242c38;
+@keyframes project-switcher-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.project-switcher__footer-icon {
-  margin-right: 6px;
-  font-size: 14px;
+.rename-demo {
+  position: relative;
+  display: block;
+  margin-top: 22px;
+}
+
+.rename-demo > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rename-demo input {
+  width: 100%;
+  height: 42px;
+  padding: 0 52px 0 12px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.rename-demo input:focus {
+  border-color: var(--accent-focus);
+  box-shadow: 0 0 0 3px rgba(61, 109, 255, 0.12);
+  outline: none;
+}
+
+.rename-demo em {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  color: var(--faint);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.project-switcher__trigger:focus-visible,
+.project-switcher__action:focus-visible,
+.project-switcher__row:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: -2px;
 }
 </style>
 
 <style lang="postcss">
 .project-switcher-popover,
 .project-switcher-popover.bk-popover,
-.project-switcher-popover .bk-pop2-content {
+.project-switcher-popover .bk-pop2-content,
+.project-recent-popover,
+.project-recent-popover.bk-popover,
+.project-recent-popover .bk-pop2-content {
   padding: 0 !important;
   background: transparent !important;
-  border: none !important;
+  border: 0 !important;
   box-shadow: none !important;
 }
 </style>

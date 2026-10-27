@@ -90,4 +90,10 @@ const isRunning = computed(() => props.tool.state === 'running');
     opacity: 1;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-call__dot.is-live {
+    animation: none;
+  }
+}
 </style>

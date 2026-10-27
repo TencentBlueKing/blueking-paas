@@ -1,12 +1,40 @@
 .app {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  background: #fff;
-  color: #12141a;
-  font-size: 14px;
-  text-align: left;
   width: 100vw;
   height: 100vh;
-  overflow: auto;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  text-align: left;
+  background: var(--canvas);
+}
+
+.app ::selection {
+  color: var(--ink);
+  background: #d7e0ff;
+}
+
+* {
+  scrollbar-color: #c4c6cc transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #c4c6cc;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }

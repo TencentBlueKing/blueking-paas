@@ -1412,8 +1412,12 @@ SMART_CNB_IMAGE_EXTRA_ENV_PATHS = settings.get(
     "SMART_CNB_IMAGE_EXTRA_ENV_PATHS",
     {
         "PATH": ["/app/.heroku/python/bin"],
-        # python 为动态链接, 缺少 libpython 所在目录时无法启动
-        "LD_LIBRARY_PATH": ["/app/.heroku/python/lib"],
+        # python 为动态链接, 缺少 libpython 所在目录时无法启动; 部分 python 包依赖 Aptfile 安装的系统库
+        "LD_LIBRARY_PATH": [
+            "/app/.heroku/python/lib",
+            "/app/.apt/usr/lib/x86_64-linux-gnu",
+            "/app/.apt/usr/lib",
+        ],
     },
 )
 

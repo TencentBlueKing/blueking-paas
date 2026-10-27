@@ -184,6 +184,9 @@ class OfflineOperationSLZ(serializers.Serializer):
     status = serializers.ChoiceField(choices=JobStatus.get_choices())
     created = serializers.DateTimeField(help_text="操作时间")
 
+    class Meta:
+        ref_name = "paas_wl.bk_app.processes.OfflineOperationSLZ"
+
 
 def make_operation_group_slz(child: serializers.Serializer):
     return type(

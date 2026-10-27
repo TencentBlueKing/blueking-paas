@@ -238,41 +238,40 @@ def dispatch_cnb_image_to_registry(
 
 
 def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[str]]) -> List[str]:
-    """Insert extra directories into the path-like variables (e.g. PATH) of an image config's Env
+    """将额外的目录插入镜像配置 Env 中的路径类变量（如 PATH）
 
-    The dirs are inserted right after the leading "/cnb/*" dirs, existing dirs are skipped and
-    a missing variable is added. Example::
+    目录插在开头的 "/cnb/*" 目录之后, 已存在的目录跳过, 变量不存在时新增。示例::
 
         env = ["PATH=/cnb/process:/usr/bin"]
         extra_paths = {"PATH": ["/app/py/bin"], "LD_LIBRARY_PATH": ["/app/py/lib"]}
         # => ["PATH=/cnb/process:/app/py/bin:/usr/bin", "LD_LIBRARY_PATH=/app/py/lib"]
 
-    :param env: The Env of the image config, items are in "KEY=VALUE" format.
-    :param extra_paths: The directories to insert, in {var name: [dir, ...]} format.
-    :return: The new Env list.
+    :param env: 镜像配置的 Env, 每项为 "KEY=VALUE" 格式
+    :param extra_paths: 需要插入的目录, 格式为 {变量名: [目录, ...]}
+    :return: 新的 Env 列表
     """
     result = list(env or [])
     for name, dirs in extra_paths.items():
-        # Locate the "NAME=..." item and split its value into dirs
+        # 找到 "NAME=..." 这一项, 并将其值拆分为目录列表
         idx = next((i for i, item in enumerate(result) if item.startswith(f"{name}=")), None)
         if idx is not None:
             current = [p for p in result[idx].split("=", 1)[1].split(":") if p]
         else:
-            # Setting PATH overrides the runtime's default one, so keep the default dirs
+            # 设置 PATH 会覆盖容器运行时的默认值, 因此需要保留默认目录
             current = _DEFAULT_PATH.split(":") if name == "PATH" else []
 
         new_dirs = [d for d in dirs if d not in current]
         if not new_dirs:
             continue
 
-        # The process types (e.g. "web") are resolved via the leading "/cnb/*" dirs in PATH,
-        # the extra dirs must come after them to avoid shadowing the processes.
+        # 进程类型（如 "web"）依赖 PATH 开头的 "/cnb/*" 目录查找,
+        # 额外目录必须放在它们之后, 避免同名命令遮蔽进程
         pos = 0
         while pos < len(current) and current[pos].startswith(_CNB_DIR_PREFIX):
             pos += 1
         item = f"{name}={':'.join(current[:pos] + new_dirs + current[pos:])}"
 
-        # Replace the original item in place, or append a new one
+        # 原来有这一项则原地替换, 否则追加
         if idx is not None:
             result[idx] = item
         else:

@@ -115,6 +115,26 @@ class TestDeleteUnusedSourcePackages:
         assert not ProjectSourcePackage.objects.exists()
         assert reclaimed.orphaned_keys == [first.key, second.key]
 
+    def test_a_blob_bkrepo_refuses_to_delete_is_reported(self, make_package, fake_bkrepo):
+        """BkRepo answers a refusal with an error code, not a network error, and it still orphans the blob."""
+        stale = make_package(days_ago=16)
+        fake_bkrepo.refuse_deletes_with = "250114"
+
+        reclaimed = source_packages.delete_unused_source_packages()
+
+        assert not ProjectSourcePackage.objects.filter(pk=stale.pk).exists()
+        assert reclaimed.orphaned_keys == [stale.key]
+        assert (BUCKET, stale.key) in fake_bkrepo.objects
+
+    def test_a_blob_already_gone_is_not_reported(self, make_package, fake_bkrepo):
+        stale = make_package(days_ago=16)
+        del fake_bkrepo.objects[(BUCKET, stale.key)]
+
+        reclaimed = source_packages.delete_unused_source_packages()
+
+        assert [package.pk for package in reclaimed.packages] == [stale.pk]
+        assert reclaimed.orphaned_keys == []
+
     def test_missing_bkrepo_configuration_deletes_no_row(self, make_package, settings):
         stale = make_package(days_ago=16)
         settings.BLOBSTORE_BKREPO_CONFIG = None
@@ -156,6 +176,13 @@ class TestCommand:
         """So a scheduled run that leaves blobs behind is noticed rather than logged and forgotten."""
         stale = make_package(days_ago=16)
         fake_bkrepo.fail_deletes = True
+
+        with pytest.raises(CommandError, match=f"Could not delete 1 blob\\(s\\) from BkRepo: {stale.key}"):
+            call_command("delete_unused_source_packages", stdout=io.StringIO())
+
+    def test_a_delete_bkrepo_refuses_fails_the_command(self, make_package, fake_bkrepo):
+        stale = make_package(days_ago=16)
+        fake_bkrepo.refuse_deletes_with = "251006"
 
         with pytest.raises(CommandError, match=f"Could not delete 1 blob\\(s\\) from BkRepo: {stale.key}"):
             call_command("delete_unused_source_packages", stdout=io.StringIO())

@@ -121,7 +121,8 @@ class RepoPackager:
         :return: The record of the uploaded, or previously uploaded, package.
         :raises GitRepositoryNotReadyError: The remote repository does not exist yet.
         :raises SourceRefNotFoundError: ``tag`` is not a tag of the repository.
-        :raises SourcePackageError: The archive could not be uploaded.
+        :raises SourcePackageError: The archive could not be uploaded, or a concurrent upload of
+            the same commit won and its package was reclaimed before it could be reused.
         :raises django.core.exceptions.ImproperlyConfigured: ``BLOBSTORE_BKREPO_CONFIG`` is
             missing or incomplete.
         :raises app_spark_api.infras.forgejo.exceptions.ForgejoError: Forgejo was unreachable
@@ -161,22 +162,32 @@ class RepoPackager:
             if self._client is None:
                 forgejo.close()
 
-        package, created = ProjectSourcePackage.objects.get_or_create(
-            project_id=repo.project_id,
-            commit_sha=commit,
-            defaults={
-                "repo_full_name": f"{repo.owner}/{repo.name}",
-                "bucket": bucket,
-                "key": key,
-                "size": size,
-                "tenant_id": repo.project.tenant_id,
-            },
-        )
+        try:
+            package, created = ProjectSourcePackage.objects.get_or_create(
+                project_id=repo.project_id,
+                commit_sha=commit,
+                defaults={
+                    "repo_full_name": f"{repo.owner}/{repo.name}",
+                    "bucket": bucket,
+                    "key": key,
+                    "size": size,
+                    "tenant_id": repo.project.tenant_id,
+                },
+            )
+        except Exception:
+            # No row records the blob just uploaded, so reclamation would never find it.
+            _delete_blob(store)
+            raise
         if not created:
             # A concurrent release of the same commit recorded its upload first. Its row stands,
             # so the blob uploaded here is referenced by nothing and would never be reclaimed.
             _delete_blob(store)
-            package.mark_used()
+            if not package.mark_used():
+                # Reclamation deleted that row in between, so no blob is left to hand out.
+                raise SourcePackageError(
+                    f"The source package of {repo.project_id}@{commit} was reclaimed while being recorded; "
+                    "upload it again"
+                )
         return package
 
     async def aupload(self, tag: str | None = None) -> ProjectSourcePackage:

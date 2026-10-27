@@ -19,8 +19,9 @@
 from __future__ import annotations
 
 import pytest
+from blue_krill.storages.blobstore.exceptions import RequestError
 
-from app_spark_api.repository.storage.blob_stores import HostTmpPath, make_blob_store
+from app_spark_api.repository.storage.blob_stores import BkRepo, HostTmpPath, make_blob_store
 from app_spark_api.repository.storage.constants import StorageBackend
 from app_spark_api.repository.storage.exceptions import StorageConfigurationError
 
@@ -64,6 +65,41 @@ def test_the_file_pair_and_the_bytes_pair_see_the_same_blob(tmp_path):
 def test_fetching_a_missing_blob_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         HostTmpPath(tmp_path / "absent.json").get_bytes()
+
+
+class TestBkRepoDelete:
+    BUCKET = "bucket"
+    KEY = "dir/blob.tar.gz"
+
+    def test_the_blob_is_removed(self, fake_bkrepo):
+        fake_bkrepo.objects[(self.BUCKET, self.KEY)] = b"blob"
+
+        BkRepo(bucket=self.BUCKET, key=self.KEY).delete()
+
+        assert fake_bkrepo.objects == {}
+
+    def test_a_blob_already_gone_counts_as_deleted(self, fake_bkrepo):
+        """Reclamation may be retried after a previous attempt got further than it recorded."""
+        BkRepo(bucket=self.BUCKET, key=self.KEY).delete()
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # A missing repository is a 404 too; only the node-not-found code means the blob is gone.
+            "251006",
+            # Bad credentials.
+            "250114",
+        ],
+    )
+    def test_any_other_refusal_is_raised(self, fake_bkrepo, code):
+        fake_bkrepo.objects[(self.BUCKET, self.KEY)] = b"blob"
+        fake_bkrepo.refuse_deletes_with = code
+
+        with pytest.raises(RequestError) as excinfo:
+            BkRepo(bucket=self.BUCKET, key=self.KEY).delete()
+
+        assert excinfo.value.code == code
+        assert (self.BUCKET, self.KEY) in fake_bkrepo.objects
 
 
 def test_make_blob_store_rejects_an_unknown_backend():

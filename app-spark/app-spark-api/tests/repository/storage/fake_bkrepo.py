@@ -30,12 +30,15 @@ from typing import Any, BinaryIO
 import requests
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError, RequestError, UploadFailedError
 
+from app_spark_api.repository.storage.blob_stores import BKREPO_NODE_NOT_FOUND
+
 BKREPO_CONFIG = {
     "PROJECT": "bkpaas",
     "ENDPOINT": "https://bkrepo.example.com",
     "USERNAME": "username",
     "PASSWORD": "password",
 }
+SOURCE_PACKAGES_BUCKET = "app-spark-source-packages"
 
 
 class FakeBkRepoServer:
@@ -47,6 +50,8 @@ class FakeBkRepoServer:
     :ivar fail_signing: Make signing fail the way blue_krill reports it.
     :ivar fail_deletes: Make deletes fail the way an unreachable BkRepo does, which blue_krill
         lets through as a ``requests`` error rather than a ``RequestError``.
+    :ivar refuse_deletes_with: Make deletes fail with this BkRepo error code, which blue_krill
+        raises as a ``RequestError``, e.g. ``"250114"`` for bad credentials.
     """
 
     def __init__(self) -> None:
@@ -55,6 +60,7 @@ class FakeBkRepoServer:
         self.fail_uploads = False
         self.fail_signing = False
         self.fail_deletes = False
+        self.refuse_deletes_with: str | None = None
 
     def client(self, bucket: str, **kwargs: Any) -> FakeGenericRepo:
         return FakeGenericRepo(self, bucket, **kwargs)
@@ -83,7 +89,11 @@ class FakeGenericRepo:
     def delete_file(self, key: str, *args: Any, **kwargs: Any) -> None:
         if self.server.fail_deletes:
             raise requests.ConnectionError("connection refused")
-        self.server.objects.pop((self.bucket, key), None)
+        if self.server.refuse_deletes_with is not None:
+            raise RequestError("delete refused", code=self.server.refuse_deletes_with)
+        # A real BkRepo answers a missing object with an error code rather than success.
+        if self.server.objects.pop((self.bucket, key), None) is None:
+            raise RequestError(f"Node [/{key}] not found", code=BKREPO_NODE_NOT_FOUND)
 
     def generate_presigned_url(self, key: str, expires_in: int, signature_type: Any = None, **kwargs: Any) -> str:
         if self.server.fail_signing:

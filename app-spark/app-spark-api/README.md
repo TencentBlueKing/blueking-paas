@@ -325,10 +325,21 @@ python manage.py delete_unused_source_packages --days 30  # 自定义天数
 python manage.py delete_unused_source_packages --dry-run  # 只列出，不删除
 ```
 
+回收先删行再删制品库对象。对象已不存在（制品库错误码 `251010`）算删除成功；其余删不掉的情况
+（网络错误、鉴权失败、仓库不存在等）会列出对象 key 并让命令以失败退出，以便有人去手工清理。
+
 因为预签名地址只有制品库能给，`BLOBSTORE_BKREPO_CONFIG` 是必填配置，缺了在第一次打包时就报
 `ImproperlyConfigured`，不会先去下载归档。包所在的通用仓库由 `BLOBSTORE_BUCKET_SOURCE_PACKAGES`
-指定（默认 `app-spark-source-packages`），需事先建好。测试里制品库一律是内存假实现（`fake_bkrepo`
+指定（默认 `app-spark-source-packages`），需事先建好。测试里制品库默认是内存假实现（`fake_bkrepo`
 fixture），真实 Forgejo 测试会检查推送的提交和 tag 打出来的内容。
+
+`tests/repository/git/test_source_packages_live_bkrepo.py`（`bkrepo` marker）对真实制品库走一遍
+「打包上传 → 签地址并匿名下载 → 回收删除」，只在 `BLOBSTORE_BKREPO_CONFIG` 配齐（如写在
+`settings_local.yaml`）时执行，否则跳过；测试结束会删掉自己上传的包：
+
+```bash
+uv run pytest --reuse-db -m bkrepo tests/repository/git/
+```
 
 #### Runtime 怎么拿到仓库
 

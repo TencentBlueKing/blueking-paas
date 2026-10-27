@@ -102,7 +102,7 @@ class ProjectSourcePackage(TimestampedModel):
     key = models.CharField(verbose_name="制品库中的对象路径", max_length=512)
     size = models.PositiveBigIntegerField(verbose_name="包大小（字节）")
     last_used_at = models.DateTimeField(verbose_name="最近一次被使用的时间", default=timezone.now)
-    tenant_id = tenant_id_field_factory(db_index=False)
+    tenant_id = tenant_id_field_factory()
 
     objects = ProjectSourcePackageQuerySet.as_manager()
 

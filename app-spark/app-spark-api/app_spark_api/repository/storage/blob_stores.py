@@ -58,6 +58,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The code BkRepo answers with when the object at a key does not exist ("Node [...] not found").
+BKREPO_NODE_NOT_FOUND = "251010"
+
 
 class BlobStore(abc.ABC):
     """Read and replace the one blob this store addresses.
@@ -191,15 +194,21 @@ class BkRepo(BlobStore):
         self.client.download_fileobj(key=self.key, fh=handle)
 
     def delete(self) -> None:
+        """Remove the blob, succeeding if BkRepo says it is already gone.
+
+        :raises RequestError: BkRepo refused for any other reason, e.g. bad credentials or a
+            missing repository; callers decide whether an orphaned blob is worth failing over.
+        """
         # BkRepo reports "no such object" as an ordinary non-zero code, which `blue_krill` turns
-        # into `RequestError` -- the same exception it uses for a genuine failure. Since the two
-        # cannot be told apart from here and reclamation must be idempotent, this logs and moves
-        # on: an orphaned blob costs storage, whereas raising would fail a request over a blob
-        # nobody needs.
+        # into `RequestError` -- the same exception it uses for a genuine failure. Only the code
+        # tells them apart; the HTTP status does not, since a missing repository is a 404 too
+        # and must not pass for a deleted blob.
         try:
             self.client.delete_file(key=self.key)
-        except RequestError:
-            logger.warning("Could not delete the blob at %s; it may already be gone", self.key)
+        except RequestError as exc:
+            if str(exc.code) != BKREPO_NODE_NOT_FOUND:
+                raise
+            logger.info("The blob at %s is already gone", self.key)
 
     def generate_presigned_url(self, expires_in: int) -> str:
         """Return a URL anyone holding it can download the blob from, without credentials.

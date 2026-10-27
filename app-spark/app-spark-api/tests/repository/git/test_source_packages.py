@@ -29,6 +29,7 @@ from http import HTTPStatus
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
+from django.db import DatabaseError
 
 from app_spark_api.infras.forgejo import ForgejoClient
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
@@ -168,6 +169,46 @@ class TestUploadSourcePackage:
 
         assert package.key == "appspark-src-packages/winner.tar.gz"
         # The loser's blob is referenced by no row, so nothing would ever reclaim it.
+        assert fake_bkrepo.objects == {}
+
+    def test_a_winner_reclaimed_before_the_loser_reuses_it_is_an_error(self, repo, fake_bkrepo, monkeypatch):
+        download_archive = ForgejoClient.download_archive
+        mark_used = ProjectSourcePackage.mark_used
+
+        def concurrent_release_records_first(client, **kwargs):
+            download_archive(client, **kwargs)
+            ProjectSourcePackage.objects.create(
+                project=repo.project,
+                repo_full_name=f"{repo.owner}/{repo.name}",
+                commit_sha=kwargs["ref"],
+                bucket=BUCKET,
+                key="appspark-src-packages/winner.tar.gz",
+                size=1,
+            )
+
+        def reclaimed_first(package):
+            ProjectSourcePackage.objects.filter(pk=package.pk).delete()
+            return mark_used(package)
+
+        monkeypatch.setattr(ForgejoClient, "download_archive", concurrent_release_records_first)
+        monkeypatch.setattr(ProjectSourcePackage, "mark_used", reclaimed_first)
+
+        with pytest.raises(SourcePackageError, match="reclaimed while being recorded"):
+            RepoPackager(repo).upload()
+
+        assert not ProjectSourcePackage.objects.exists()
+        assert fake_bkrepo.objects == {}
+
+    def test_a_failure_recording_the_upload_deletes_its_blob(self, repo, fake_bkrepo, monkeypatch):
+        def database_down(**kwargs):
+            raise DatabaseError("connection lost")
+
+        monkeypatch.setattr(ProjectSourcePackage.objects, "get_or_create", database_down)
+
+        with pytest.raises(DatabaseError):
+            RepoPackager(repo).upload()
+
+        # Nothing records the blob, so reclamation would never find it.
         assert fake_bkrepo.objects == {}
 
     def test_each_new_tip_of_the_working_branch_gets_its_own_package(self, repo, head, fake_forgejo, fake_bkrepo):

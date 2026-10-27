@@ -225,7 +225,7 @@ def test_dispatch_slug_image_to_registry(
 
 
 @pytest.mark.parametrize(
-    ("package_name", "layer_digest_list"),
+    ("package_name", "layer_digest_list", "expected_path"),
     [
         (
             "cnb-image",
@@ -233,8 +233,14 @@ def test_dispatch_slug_image_to_registry(
                 "1cad71326f6c0f3196ae135e80033987496ea7e2a6e6f31389e7cba9ce7c8996",
                 "741772c7f3e2c81925ccb74a032df3ee0ff15079c81fdee1ae4f581cdf9fcdf2",
             ],
+            "/cnb/process:/cnb/lifecycle:/app/.heroku/python/bin:"
+            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         ),
-        ("cnb-image-with-index", ["a73021ffe901b947e70157b20a513779576a1f72e2aacf606905fcad4a93e10a"]),
+        (
+            "cnb-image-with-index",
+            ["a73021ffe901b947e70157b20a513779576a1f72e2aacf606905fcad4a93e10a"],
+            "/app/.heroku/python/bin:/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        ),
     ],
 )
 def test_dispatch_cnb_image_to_registry(
@@ -247,6 +253,7 @@ def test_dispatch_cnb_image_to_registry(
     smart_app_extra,
     package_name,
     layer_digest_list,
+    expected_path,
 ):
     """测试将 cnb 镜像分发到 registry, 涉及多次网络请求, 要保证顺序正确。
 
@@ -365,9 +372,10 @@ def test_dispatch_cnb_image_to_registry(
             assert expected_url == req.url
 
     # 上传的镜像配置中应写入 buildpack 目录, 使得不经过 launcher 也能使用 python
-    env = _get_uploaded_image_env(mock_adapter.request_history[2 + 4 * len(layer_digest_list) + 1])
-    paths = env["PATH"].split(":")
-    assert all(p.startswith("/cnb/") for p in paths[: paths.index("/app/.heroku/python/bin")])
+    # 镜像配置在所有镜像层之后上传, 因此是最后一个 PATCH 请求
+    config_req = [req for req in mock_adapter.request_history if req.method == "PATCH"][-1]
+    env = _get_uploaded_image_env(config_req)
+    assert env["PATH"] == expected_path
     assert env["LD_LIBRARY_PATH"].startswith("/app/.heroku/python/lib:")
 
 
@@ -394,6 +402,14 @@ def _get_uploaded_image_env(config_req) -> dict[str, str]:
             ["PATH=/cnb/process:/app/apt/bin:/app/py/bin:/usr/bin"],
         ),
         (["PATH=/app/py/bin:/usr/bin"], {"PATH": ["/app/py/bin"]}, ["PATH=/app/py/bin:/usr/bin"]),
+        # 配置中重复的目录只插入一次
+        (["PATH=/usr/bin"], {"PATH": ["/app/py/bin", "/app/py/bin"]}, ["PATH=/app/py/bin:/usr/bin"]),
+        # 只有 PATH 需要跳过 CNB 目录, 其他变量直接插到最前面
+        (
+            ["LD_LIBRARY_PATH=/cnb/lib:/usr/lib"],
+            {"LD_LIBRARY_PATH": ["/app/py/lib"]},
+            ["LD_LIBRARY_PATH=/app/py/lib:/cnb/lib:/usr/lib"],
+        ),
         # 变量不存在时新增, PATH 以容器运行时的默认值为基础
         (
             ["PATH=/usr/bin"],

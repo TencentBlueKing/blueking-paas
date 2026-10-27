@@ -240,7 +240,7 @@ def dispatch_cnb_image_to_registry(
 def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[str]]) -> List[str]:
     """将额外的目录插入镜像配置 Env 中的路径类变量（如 PATH）
 
-    目录插在开头的 "/cnb/*" 目录之后, 已存在的目录跳过, 变量不存在时新增。示例::
+    目录插在变量值的最前面（PATH 则插在开头的 "/cnb/*" 目录之后）, 已存在的目录跳过, 变量不存在时新增。示例::
 
         env = ["PATH=/cnb/process:/usr/bin"]
         extra_paths = {"PATH": ["/app/py/bin"], "LD_LIBRARY_PATH": ["/app/py/lib"]}
@@ -260,15 +260,16 @@ def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[st
             # 设置 PATH 会覆盖容器运行时的默认值, 因此需要保留默认目录
             current = _DEFAULT_PATH.split(":") if name == "PATH" else []
 
-        new_dirs = [d for d in dirs if d not in current]
+        new_dirs = [d for d in dict.fromkeys(dirs) if d not in current]
         if not new_dirs:
             continue
 
         # 进程类型（如 "web"）依赖 PATH 开头的 "/cnb/*" 目录查找,
         # 额外目录必须放在它们之后, 避免同名命令遮蔽进程
         pos = 0
-        while pos < len(current) and current[pos].startswith(_CNB_DIR_PREFIX):
-            pos += 1
+        if name == "PATH":
+            while pos < len(current) and current[pos].startswith(_CNB_DIR_PREFIX):
+                pos += 1
         item = f"{name}={':'.join(current[:pos] + new_dirs + current[pos:])}"
 
         # 原来有这一项则原地替换, 否则追加

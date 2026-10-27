@@ -76,7 +76,7 @@ spec:
         {{- $images = append $images .Values.utility.images.k8sWaitFor }}
       {{- end }}
       {{- include "app-spark-api.imagePullSecrets" (dict "images" $images "context" $) | nindent 6 }}
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 75
       {{- if .Values.migrate.enabled }}
       serviceAccountName: {{ include "app-spark-api.fullname" . }}
       initContainers:
@@ -108,7 +108,8 @@ spec:
             {{- /* local_process keeps every Runtime inside one API process; others match the Dockerfile. */}}
             - {{ eq $provider "local_process" | ternary "1" "4" | quote }}
             - --timeout-graceful-shutdown
-            - "30"
+            {{- /* 结束 e2b 会话最多 STOP_GRACE_SECONDS 25s 加 kill 请求 5s，这里要比它长。 */}}
+            - "40"
           ports:
             - name: http
               containerPort: 8000

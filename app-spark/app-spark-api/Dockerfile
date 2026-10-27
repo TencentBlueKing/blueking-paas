@@ -24,4 +24,4 @@ RUN mkdir -p /data/app-spark
 EXPOSE 8000
 # Forward shutdown signals and reap any child process the API starts.
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "30"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "40"]

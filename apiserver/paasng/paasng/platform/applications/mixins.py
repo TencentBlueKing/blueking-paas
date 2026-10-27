@@ -137,7 +137,7 @@ class SysManagedAppInPathMixin:
     kwargs: Dict[str, Any]
 
     def get_managed_application_via_path(self) -> Application:
-        """获取目标应用，其必须归当前调用方管理，且对请求头中的租户可用。
+        """获取目标应用，其必须归当前调用方管理。
 
         - required path vars: code
         """

@@ -429,7 +429,9 @@ class UpdateProcessSLZ(serializers.Serializer):
 class SysUpdateProcessSLZ(UpdateProcessSLZ):
     """Serializer for updating processes of the system API"""
 
-    operator = serializers.CharField(required=True, help_text=_("操作人用户名，仅用于记录操作人，允许使用虚拟账号"))
+    operator = serializers.CharField(
+        required=True, max_length=32, help_text=_("操作人用户名，仅用于记录操作人，允许使用虚拟账号")
+    )
 
 
 class ListProcessesQuerySLZ(serializers.Serializer):

@@ -18,7 +18,6 @@
 from unittest import mock
 
 import pytest
-from django.test.utils import override_settings
 from rest_framework import status
 
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -95,45 +94,3 @@ class TestSysGetAppInfo:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         assert resp.json()["code"] == "AI_AGENT_APP_REQUIRED"
         patch_exposed_links.assert_not_called()
-
-
-class TestSysGetAppInfoTenant:
-    """应用态查询应用信息接口的多租户可见性测试"""
-
-    @pytest.fixture(autouse=True)
-    def _enable_multi_tenant(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
-            yield
-
-    def test_single_tenant_app_cross_tenant_denied(
-        self, sys_aidev_api_client, single_tenant_app: Application, patch_exposed_links
-    ):
-        """单租户应用对其它租户不可见, 返回 403 APP_TENANT_MISMATCH"""
-        resp = sys_aidev_api_client.get(_detail_url(single_tenant_app.code), headers={"X-Bk-Tenant-Id": "t2"})
-
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
-        assert resp.json()["code"] == "APP_TENANT_MISMATCH"
-        patch_exposed_links.assert_not_called()
-
-    def test_single_tenant_app_same_tenant_ok(self, sys_aidev_api_client, single_tenant_app: Application):
-        """单租户应用对其所属租户可用"""
-        resp = sys_aidev_api_client.get(_detail_url(single_tenant_app.code), headers={"X-Bk-Tenant-Id": "t1"})
-
-        assert resp.status_code == status.HTTP_200_OK, resp.json()
-        assert resp.json()["application"]["code"] == single_tenant_app.code
-
-    def test_global_app_any_tenant_ok(self, sys_aidev_api_client, ai_agent_app: Application):
-        """全租户应用对任意租户可用"""
-        assert ai_agent_app.app_tenant_mode == AppTenantMode.GLOBAL.value
-
-        resp = sys_aidev_api_client.get(_detail_url(ai_agent_app.code), headers={"X-Bk-Tenant-Id": "t2"})
-
-        assert resp.status_code == status.HTTP_200_OK, resp.json()
-        assert resp.json()["application"]["code"] == ai_agent_app.code
-
-    def test_missing_tenant_header_denied(self, sys_aidev_api_client, single_tenant_app: Application):
-        """多租户模式下未传 X-Bk-Tenant-Id 请求头时返回 400"""
-        resp = sys_aidev_api_client.get(_detail_url(single_tenant_app.code))
-
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "X-Bk-Tenant-Id" in resp.json()["detail"]

@@ -26,10 +26,11 @@ export default {
       default: '',
     },
     value: {
+      type: [String, Number],
       default: '',
     },
     labelWidth: {
-      type: String | Number,
+      type: [String, Number],
       default: 120,
     },
     align: {

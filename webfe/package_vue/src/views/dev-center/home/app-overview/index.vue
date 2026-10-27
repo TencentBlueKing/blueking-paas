@@ -236,8 +236,8 @@ export default {
           color: '#3E96C2',
         },
       ];
-      return data.find((v) => v.colorType === 'high' && v.value === 0)
-        ? data.filter((v) => v.colorType === 'low')
+      return data.find(v => v.colorType === 'high' && v.value === 0)
+        ? data.filter(v => v.colorType === 'low')
         : data;
     },
     appChartOption() {
@@ -301,7 +301,7 @@ export default {
   },
   mounted() {
     const types = this.platformFeature.MONITORING ? ['alarm', 'app'] : ['appType', 'appDeployStatus'];
-    types.forEach((type) => this.initChart(type));
+    types.forEach(type => this.initChart(type));
   },
   methods: {
     /**
@@ -331,14 +331,14 @@ export default {
      * 构建图表配置
      */
     buildChartOption(chartData, options) {
-      const colors = chartData.map((v) => v.color);
+      const colors = chartData.map(v => v.color);
       return alertChartOption(chartData, colors, options);
     },
     /**
      * 获取默认中心标签（第一个 value > 0 的项，否则取第一项）
      */
     getDefaultLabel(chartData) {
-      return chartData.find((v) => v.value > 0) ?? (chartData[0] || { value: 0, name: '' });
+      return chartData.find(v => v.value > 0) ?? (chartData[0] || { value: 0, name: '' });
     },
     /**
      * 初始化/更新图表
@@ -385,7 +385,7 @@ export default {
       try {
         const res = await this.$store.dispatch('baseInfo/getAppsInfoCount');
         this.chartAppInfo = res;
-        this.chartAppInfo.issueCount = res.issue_type_counts.find((v) => v.issue_type === 'misconfigured')?.count ?? 0;
+        this.chartAppInfo.issueCount = res.issue_type_counts.find(v => v.issue_type === 'misconfigured')?.count ?? 0;
         this.$store.commit('baseInfo/updateAppChartData', { allCount: this.chartAppInfo.total });
       } catch (e) {
         this.catchErrorHandler(e);

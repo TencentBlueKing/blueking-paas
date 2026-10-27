@@ -264,7 +264,7 @@ export default {
       });
     },
 
-    isCreateCredential(data) {
+    isCreateCredential() {
       this.visiableDialogConfig.visiable = false;
       this.visiableDialog = false;
     },

@@ -221,7 +221,7 @@ export default {
     ...mapGetters(['isShowTenant']),
     isCodePrefixMatched() {
       if (!this.formData.code || !this.reservedPrefixes.length) return false;
-      return this.reservedPrefixes.some((prefix) => this.formData.code.startsWith(prefix));
+      return this.reservedPrefixes.some(prefix => this.formData.code.startsWith(prefix));
     },
     curUserInfo() {
       return this.$store.state.curUserInfo;
@@ -263,7 +263,7 @@ export default {
         },
         (validator) => {
           console.error(validator);
-        }
+        },
       );
     },
     // 提交表单

@@ -215,7 +215,7 @@ export default {
     // 时间筛选
     handleDateChange(date) {
       // 清空
-      if (date?.every((t) => t === '')) {
+      if (date?.every(t => t === '')) {
         this.dateParams = {};
         this.getPluginOperations(1);
         return;

@@ -428,13 +428,6 @@ export default {
   computed: {
     ...mapState(['localLanguage', 'userFeature']),
     compiledMarkdown() {
-      this.$nextTick(() => {
-        $('#markdown')
-          .find('a')
-          .each(function () {
-            $(this).attr('target', '_blank');
-          });
-      });
       return marked(this.serviceMarkdown);
     },
     region() {
@@ -442,7 +435,7 @@ export default {
     },
     pageTips() {
       return `${this.$t('实例被以下模块共享：')}${this.delAppDialog.moduleList
-        .map((item) => item.name)
+        .map(item => item.name)
         .join('、')}${this.$t('，这些模块将获得实例的所有环境变量。')}`;
     },
     isLoading() {
@@ -456,7 +449,7 @@ export default {
     },
     errorTips() {
       return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList
-        .map((item) => item.name)
+        .map(item => item.name)
         .join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
     },
     asideWidth() {
@@ -467,17 +460,17 @@ export default {
     },
     isGcsMysqlAlert() {
       return (
-        this.serviceDetail.name === 'gcs_mysql' &&
-        this.userFeature.APP_AVAILABILITY_LEVEL &&
-        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        this.serviceDetail.name === 'gcs_mysql'
+        && this.userFeature.APP_AVAILABILITY_LEVEL
+        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
     // 应用登记为高级别可用性保障时，Redis 增强服务同样无法满足要求
     isRedisAlert() {
       return (
-        ['redis', 'paas_redis', 'bk_paas_redis'].includes(this.serviceDetail.name) &&
-        this.userFeature.APP_AVAILABILITY_LEVEL &&
-        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        ['redis', 'paas_redis', 'bk_paas_redis'].includes(this.serviceDetail.name)
+        && this.userFeature.APP_AVAILABILITY_LEVEL
+        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },
@@ -510,7 +503,22 @@ export default {
     }
     next();
   },
+  mounted() {
+    this.setMarkdownLinkTarget();
+  },
+  updated() {
+    this.setMarkdownLinkTarget();
+  },
   methods: {
+    setMarkdownLinkTarget() {
+      this.$nextTick(() => {
+        $('#markdown')
+          .find('a')
+          .each(function () {
+            $(this).attr('target', '_blank');
+          });
+      });
+    },
     async fetchServicesShareDetail() {
       try {
         const res = await this.$store.dispatch('service/getServicesShareDetail', {
@@ -580,9 +588,7 @@ export default {
         for (const instanceIndex in results) {
           this.hFieldstoggleStatus.push({});
           // eslint-disable-next-line max-len
-          this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(
-            this.instanceList[instanceIndex].service_instance.credentials
-          );
+          this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(this.instanceList[instanceIndex].service_instance.credentials);
           this.instanceList[instanceIndex].usage = JSON.parse(this.instanceList[instanceIndex].usage);
         }
       } catch (e) {

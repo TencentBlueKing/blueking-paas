@@ -9,7 +9,7 @@ export default {
   name: 'ViewMode',
   props: {
     labelWidth: {
-      type: String | Number,
+      type: [String, Number],
       default: 120,
     },
   },

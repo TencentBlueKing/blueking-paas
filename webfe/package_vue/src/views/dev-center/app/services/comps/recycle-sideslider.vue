@@ -276,10 +276,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -323,7 +323,7 @@ export default {
     // 设置默认数据
     setInstance(active) {
       this.activeInstance = active;
-      this.activeInstanceData = this.list.find((v) => v.service?.uuid === active) || {};
+      this.activeInstanceData = this.list.find(v => v.service?.uuid === active) || {};
       this.instanceList = this.activeInstanceData.unbound_instances || [];
       this.hFieldstoggleStatus = this.instanceList.map(() => ({}));
     },

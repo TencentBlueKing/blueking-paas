@@ -23,7 +23,7 @@
         <Directory
           :node="dir"
           :path="fullPath"
-          :indentLevel="indentLevel + 18"
+          :indent-level="indentLevel + 18"
         />
       </li>
       <li

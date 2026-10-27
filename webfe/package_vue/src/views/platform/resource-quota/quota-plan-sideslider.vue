@@ -254,7 +254,7 @@ export default {
       }
       // 触发 CPU Request 校验
       this.$refs.formRef?.validateField('cpu_request').catch((e) => {
-        console.error(`Validation error on field:`, e);
+        console.error('Validation error on field:', e);
       });
     },
     'formData.memory_limit'() {
@@ -263,7 +263,7 @@ export default {
       }
       // 触发内存 Request 校验
       this.$refs.formRef?.validateField('memory_request').catch((e) => {
-        console.error(`Validation error on field:`, e);
+        console.error('Validation error on field:', e);
       });
     },
   },
@@ -299,23 +299,23 @@ export default {
     },
     // 自动生成方案名称
     autoGenerateName() {
-      const { cpu_limit, memory_limit } = this.formData;
-      if (cpu_limit && memory_limit) {
+      const { cpu_limit: cpuLimit, memory_limit: memoryLimit } = this.formData;
+      if (cpuLimit && memoryLimit) {
         // 处理 CPU：所有 CPU 值都是 "xxxm" 格式，转换为核心数
         let cpuDisplay;
-        if (cpu_limit.endsWith('m')) {
-          const cpuMilliValue = parseInt(cpu_limit.replace('m', ''));
+        if (cpuLimit.endsWith('m')) {
+          const cpuMilliValue = parseInt(cpuLimit.replace('m', ''));
           const cpuCoreValue = cpuMilliValue / 1000;
           // 如果是整数核心数，显示整数；否则显示一位小数
           cpuDisplay = cpuCoreValue % 1 === 0 ? cpuCoreValue.toString() : cpuCoreValue.toFixed(1);
         } else {
-          cpuDisplay = parseFloat(cpu_limit.replace(/[^0-9.]/g, '')).toString();
+          cpuDisplay = parseFloat(cpuLimit.replace(/[^0-9.]/g, '')).toString();
         }
 
         // 处理内存：所有内存值都是 "xxxMi" 格式
         let memoryDisplay;
-        if (memory_limit.endsWith('Mi')) {
-          const memoryMiValue = parseInt(memory_limit.replace('Mi', ''));
+        if (memoryLimit.endsWith('Mi')) {
+          const memoryMiValue = parseInt(memoryLimit.replace('Mi', ''));
           if (memoryMiValue >= 1024 && memoryMiValue % 1024 === 0) {
             // 如果是 1024 的整数倍，转换为 G
             const gValue = memoryMiValue / 1024;
@@ -325,7 +325,7 @@ export default {
             memoryDisplay = `${memoryMiValue}M`;
           }
         } else {
-          memoryDisplay = memory_limit;
+          memoryDisplay = memoryLimit;
         }
 
         // 生成格式：0.1C256M, 1C1G, 4C2G 等
@@ -334,20 +334,20 @@ export default {
     },
     // 校验 CPU Requests 是否小于等于 Limits
     validateCpuRequest() {
-      const { cpu_limit, cpu_request } = this.formData;
-      if (!cpu_request || !cpu_limit) return true;
+      const { cpu_limit: cpuLimit, cpu_request: cpuRequest } = this.formData;
+      if (!cpuRequest || !cpuLimit) return true;
       // 将 CPU 值转换为数值进行比较(去除 'm' 单位)
-      const requestNum = parseFloat(cpu_request.replace('m', ''));
-      const limitNum = parseFloat(cpu_limit.replace('m', ''));
+      const requestNum = parseFloat(cpuRequest.replace('m', ''));
+      const limitNum = parseFloat(cpuLimit.replace('m', ''));
       return requestNum <= limitNum;
     },
     // 校验内存 Requests 是否小于等于 Limits
     validateMemoryRequest() {
-      const { memory_limit, memory_request } = this.formData;
-      if (!memory_request || !memory_limit) return true;
+      const { memory_limit: memoryLimit, memory_request: memoryRequest } = this.formData;
+      if (!memoryRequest || !memoryLimit) return true;
       // 将内存值转换为字节数进行比较
-      const requestBytes = convertMemoryToBytes(memory_request);
-      const limitBytes = convertMemoryToBytes(memory_limit);
+      const requestBytes = convertMemoryToBytes(memoryRequest);
+      const limitBytes = convertMemoryToBytes(memoryLimit);
       return requestBytes <= limitBytes;
     },
     // 关闭前确认

@@ -429,7 +429,7 @@ export default {
 
         // 如果有deployid，默认显示
         if (this.$route.query.deployId) {
-          const recordItem = this.historyList.find((item) => item.deployment_id === this.$route.query.deployId);
+          const recordItem = this.historyList.find(item => item.deployment_id === this.$route.query.deployId);
           if (recordItem) {
             this.handleShowLog(recordItem);
           }
@@ -468,9 +468,7 @@ export default {
       const operator = row.operator.username;
       const time = row.created;
       if (row.operation_type === 'offline') {
-        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t(
-          '下架日志'
-        )} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
         this.historySideslider.title = title;
         this.curDeployLog = row.logDetail;
       } else {

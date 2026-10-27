@@ -208,7 +208,8 @@ export default {
     async fetchData() {
       this.isLoading = true;
       try {
-        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu()].map(item => this.promiseWithError(item)));
+        const requests = [this.fetchApp(), this.fetchIwiki(), this.fetchDocu()];
+        const res = await Promise.all(requests.map(item => this.promiseWithError(item)));
         res.forEach((item, index) => {
           const { count, results } = item;
           this.panels[index].count = count || 0;
@@ -225,7 +226,9 @@ export default {
         this.filterKey = this.value;
         this.isShowTab = true;
         this.$nextTick(() => {
-          this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+          this.$refs.tabRef
+            && this.$refs.tabRef.$refs.tabLabel
+            && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
         });
 
         this.handleInitTab();
@@ -266,7 +269,9 @@ export default {
       }
 
       this.$nextTick(() => {
-        this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+        this.$refs.tabRef
+          && this.$refs.tabRef.$refs.tabLabel
+          && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
       });
     },
 
@@ -305,7 +310,9 @@ export default {
     handleSwitchTab() {
       this.handleInitPageConf();
       this.$nextTick(() => {
-        this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+        this.$refs.tabRef
+          && this.$refs.tabRef.$refs.tabLabel
+          && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
       });
 
       this.$router.push({

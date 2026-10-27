@@ -5,6 +5,7 @@ npm-debug.log
 yarn-error.log
 config/local.env.js
 package-lock.json
+/prettier.config.mjs
 static/json/paas_static.js
 static/json/paas_static.json
 static/js/bklogout.js

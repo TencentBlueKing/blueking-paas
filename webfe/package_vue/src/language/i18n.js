@@ -45,9 +45,9 @@ const i18n = new VueI18n({
     // 中文语言包
     'zh-cn': Object.assign(lang.zhCN, zh),
     // 英文语言包
-    en: Object.assign(lang.enUS, en)
+    en: Object.assign(lang.enUS, en),
   },
-  silentTranslationWarn: true
+  silentTranslationWarn: true,
 });
 locale.i18n((key, value) => i18n.t(key, value));
 

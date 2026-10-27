@@ -26,12 +26,12 @@ export default {
   props: {
     iconClass: {
       type: String,
-      validator: (value) => value.startsWith('paasng-'), // 类名格式验证
+      validator: value => value.startsWith('paasng-'), // 类名格式验证
     },
     iconColor: {
       type: String,
       default: '#3A84FF',
-      validator: (value) => COLOR_REGEX.test(value), // 颜色格式验证
+      validator: value => COLOR_REGEX.test(value), // 颜色格式验证
     },
     label: {
       type: String,

@@ -40,7 +40,7 @@ export default {
       default: '',
     },
     runLog: {
-      type: String | Object,
+      type: [String, Object],
       required: true,
     },
   },

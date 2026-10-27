@@ -55,7 +55,7 @@
 
 <script>
 import { debounce, cloneDeep } from 'lodash';
-import selectEventMixin from '@/components/searching/selectEventMixin';
+import selectEventMixin from '@/components/searching/select-event-mixin';
 
 export default {
   mixins: [selectEventMixin],

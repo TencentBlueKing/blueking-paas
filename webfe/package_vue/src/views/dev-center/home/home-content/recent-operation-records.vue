@@ -125,7 +125,8 @@ export default {
       });
     },
     formattedOperate(operate) {
-      return operate ? operate.split(' ').slice(1).join(' ') : '';
+      return operate ? operate.split(' ').slice(1)
+        .join(' ') : '';
     },
     loadLocalStorageBoolean(key, defaultValue) {
       const value = window.localStorage.getItem(key);

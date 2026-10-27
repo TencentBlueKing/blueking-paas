@@ -148,10 +148,10 @@ export default {
   },
   computed: {
     dialogVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -164,14 +164,13 @@ export default {
       }
       if (!this.errorFileNames.length) {
         return this.$t('文件名不符合规范');
-      } else if (this.errorFileNames.length < 3) {
+      } if (this.errorFileNames.length < 3) {
         return this.$t('文件 {x} 名称不符合规范', { x: this.errorFileNames.join('，') });
-      } else {
-        return this.$t('文件 {x} 等 {n} 个文件名称不符合规范', {
-          x: this.errorFileNames.slice(0, 2).join('，'),
-          n: this.errorFileNames.length,
-        });
       }
+      return this.$t('文件 {x} 等 {n} 个文件名称不符合规范', {
+        x: this.errorFileNames.slice(0, 2).join('，'),
+        n: this.errorFileNames.length,
+      });
     },
   },
   watch: {
@@ -213,7 +212,7 @@ export default {
         },
         (e) => {
           console.error(e);
-        }
+        },
       );
     },
     handleChange(flag) {

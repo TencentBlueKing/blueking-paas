@@ -529,11 +529,11 @@ export default {
     // 部署密钥和默认密钥是否一致
     isSameSecrect() {
       if (this.deployedSecretList.length !== 0) {
-        const isNull = this.deployedSecretList.some((item) => item.bk_app_secret === null);
+        const isNull = this.deployedSecretList.some(item => item.bk_app_secret === null);
         if (isNull) {
           return true;
         }
-        return this.deployedSecretList.every((item) => item.bk_app_secret === this.defaultSecret);
+        return this.deployedSecretList.every(item => item.bk_app_secret === this.defaultSecret);
       }
       return true;
     },
@@ -640,7 +640,7 @@ export default {
           () => {
             this.appSecretVerificationCode = '';
             reject(new Error(this.$t('请求失败，请稍候重试！')));
-          }
+          },
         );
       });
     },
@@ -865,10 +865,10 @@ export default {
       try {
         const res = await this.$store.dispatch('authenticationInfo/getDeployedSecret', { appCode: this.appCode });
         // KMS 托管的环境读不到密钥，不参与「是否与默认密钥一致」的判断
-        const readableRes = res.filter((item) => !item.kms_managed);
+        const readableRes = res.filter(item => !item.kms_managed);
         this.deployedSecretList = readableRes;
         const formatRes = readableRes.reduce((arr, obj) => {
-          const foundIndex = arr.findIndex((item) => item.module === obj.module);
+          const foundIndex = arr.findIndex(item => item.module === obj.module);
           if (foundIndex !== -1) {
             arr[foundIndex].data.unshift(obj);
           } else {
@@ -913,7 +913,7 @@ export default {
     },
     // 确认更换密钥
     confirmchangeDefault() {
-      const data = this.optionSecretList.find((item) => item.bk_app_secret === this.curSelectedDefaultSecret);
+      const data = this.optionSecretList.find(item => item.bk_app_secret === this.curSelectedDefaultSecret);
       this.changeDefaultsSecret(data.id);
       this.appSecret = null;
       this.isViewMode = false;

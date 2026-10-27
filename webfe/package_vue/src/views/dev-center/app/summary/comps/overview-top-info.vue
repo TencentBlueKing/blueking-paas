@@ -138,9 +138,7 @@ export default {
       return this.curAppInfo.role?.name === 'operator';
     },
     viewList() {
-      return (this.isModule ? this.enginelessList : this.notAnalyticsList).filter(
-        (item) => !(this.isOperador && item.id === 'apiNumber')
-      );
+      return (this.isModule ? this.enginelessList : this.notAnalyticsList).filter(item => !(this.isOperador && item.id === 'apiNumber'));
     },
     appCode() {
       return this.$route.params.id;
@@ -209,11 +207,10 @@ export default {
           // 启用扩缩容时显示范围
           const rangeText = minValue && maxValue ? `${minValue} ~ ${maxValue}` : '--';
           return `${rangeText} ${this.$t(`${unit}（${envName}）`)}`;
-        } else {
-          // 未启用扩缩容时只显示单个值
-          const valueText = minValue || '--';
-          return `${valueText} ${this.$t(`${unit}（${envName}）`)}`;
         }
+        // 未启用扩缩容时只显示单个值
+        const valueText = minValue || '--';
+        return `${valueText} ${this.$t(`${unit}（${envName}）`)}`;
       };
 
       const prodText = formatEnvResource(prod, '生产环境');

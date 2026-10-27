@@ -219,12 +219,10 @@ export default {
   computed: {
     ...mapState(['localLanguage']),
     tenantSelectList() {
-      const tenantList = this.tenants.map((item) => {
-        return {
-          name: item.id,
-          label: item.name,
-        };
-      });
+      const tenantList = this.tenants.map(item => ({
+        name: item.id,
+        label: item.name,
+      }));
       return [
         {
           name: 'all',
@@ -451,7 +449,7 @@ export default {
       if (!this.isSoftDeletePage) {
         return results;
       }
-      return results.map((item) => ({
+      return results.map(item => ({
         ...item,
         deletedHumanized: dayjs(item.deleted_at).fromNow(),
       }));
@@ -494,7 +492,7 @@ export default {
     async getAppTypes() {
       try {
         const res = await this.$store.dispatch('tenantOperations/getAppTypes');
-        this.appTypes = res.map((item) => ({
+        this.appTypes = res.map(item => ({
           value: item.type,
           text: item.label,
         }));
@@ -505,7 +503,7 @@ export default {
     async getCategoryTypes() {
       try {
         const res = await this.$store.dispatch('tenantOperations/getCategoryTypes');
-        this.categoryTypes = res.map((item) => ({
+        this.categoryTypes = res.map(item => ({
           value: item.id,
           text: item.name,
         }));

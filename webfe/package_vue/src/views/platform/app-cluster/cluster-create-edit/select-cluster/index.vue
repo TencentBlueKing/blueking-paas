@@ -427,8 +427,8 @@ export default {
   },
   computed: {
     ...mapState({
-      curUserInfo: (state) => state.curUserInfo,
-      platformFeature: (state) => state.platformFeature,
+      curUserInfo: state => state.curUserInfo,
+      platformFeature: state => state.platformFeature,
     }),
     displayBcsOptions() {
       return this.queryClusterId ? this.updateRequiredFields(bcsOptions, ['token']) : bcsOptions;
@@ -439,13 +439,11 @@ export default {
         : elasticSearchOptions;
       if (this.platformFeature.BK_LOG) {
         // BK_LOG 为 ture，form 为非必填
-        return options.map((item) => {
-          return {
-            ...item,
-            required: false,
-            rules: [],
-          };
-        });
+        return options.map(item => ({
+          ...item,
+          required: false,
+          rules: [],
+        }));
       }
       return options;
     },
@@ -552,9 +550,7 @@ export default {
       // k8s APIServers 数据（数组）
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
       // apiServices 数据回填
-      const apiServers = data.api_servers.map((v) => {
-        return { value: v };
-      });
+      const apiServers = data.api_servers.map(v => ({ value: v }));
       // 回填 Servers
       this.$nextTick(() => {
         this.$refs.apiServices[0]?.setData(apiServers);
@@ -608,10 +604,10 @@ export default {
     },
     // 检查每个字段是否为 ''
     areAllFieldsEmptyString(obj) {
-      return Object.values(obj).every((value) => value === '');
+      return Object.values(obj).every(value => value === '');
     },
     formatBcsData() {
-      let data = pick(this.infoFormData, [
+      const data = pick(this.infoFormData, [
         'name',
         'description',
         'cluster_source',
@@ -684,7 +680,7 @@ export default {
     // 表单校验
     formValidate() {
       // APIServers 组件校验
-      let validateArr = [this.$refs.clusterInfoForm.validate(), this.$refs.tenantForm.validate()];
+      const validateArr = [this.$refs.clusterInfoForm.validate(), this.$refs.tenantForm.validate()];
       if (this.isImageRepository) {
         validateArr.push(this.$refs.imageRepositoryRef.validate());
       }

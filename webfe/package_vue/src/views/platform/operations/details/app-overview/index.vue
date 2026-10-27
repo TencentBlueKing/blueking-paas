@@ -373,7 +373,7 @@ import MoreOperations from './more-operations.vue';
 import UserDisplay from '@/components/user/user-display.vue';
 
 export default {
-  name: 'appOverview',
+  name: 'AppOverview',
   components: {
     DetailsRow,
     MoreOperations,
@@ -527,7 +527,7 @@ export default {
       await this.getCategoryList();
 
       // 查找当前分类的ID
-      const currentCategory = this.editCategory.categoryList.find((item) => item.name === this.baseInfo.category);
+      const currentCategory = this.editCategory.categoryList.find(item => item.name === this.baseInfo.category);
       this.editCategory.selectedCategory = currentCategory ? currentCategory.id : null;
     },
     // 获取分类列表
@@ -619,7 +619,7 @@ export default {
     },
     // 获取部署信息
     getDeployInfo(envData, envKey) {
-      const curEnv = envData.find((v) => v.name === envKey);
+      const curEnv = envData.find(v => v.name === envKey);
       return curEnv?.is_deployed ? this.$t('已部署') : this.$t('未部署');
     },
     // 访问应用

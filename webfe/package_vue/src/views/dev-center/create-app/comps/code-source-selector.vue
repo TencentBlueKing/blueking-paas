@@ -62,11 +62,11 @@ export default {
       if (this.selectionType === 'index') {
         return this.value;
       }
-      return this.items.findIndex((item) => item.value === this.value);
+      return this.items.findIndex(item => item.value === this.value);
     },
     // 获取代码源图片
     getSourceImage() {
-      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
+      return imgSrc => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
   },
   mounted() {

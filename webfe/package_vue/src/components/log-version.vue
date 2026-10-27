@@ -90,7 +90,7 @@ export default {
       this.$emit('update:dialogShow', v);
     },
     // 查看log详情
-    async handleItemClick(index = 0, curEvent) {
+    async handleItemClick(index = 0) {
       this.loading = true;
       this.active = index;
       setTimeout(() => {
@@ -210,7 +210,8 @@ export default {
         h4,
         h5 {
             margin: 10px 0;
-            font: normal 14px/1.5 "Helvetica Neue",Helvetica Neue,Helvetica,Arial,Lantinghei SC,Hiragino Sans GB,Microsoft Yahei,sans-serif;
+            font: normal 14px/1.5 "Helvetica Neue", Helvetica Neue, Helvetica, Arial, Lantinghei SC,
+                Hiragino Sans GB, Microsoft Yahei, sans-serif;
             color: #34383e;
             height: auto;
             font-weight: bold;

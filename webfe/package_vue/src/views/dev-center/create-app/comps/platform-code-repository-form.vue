@@ -107,7 +107,7 @@ export default {
         this.selectOptions = [baseOption, ...res.results] || [];
         this.selectValue = this.curUsername || '';
         if (Object.keys(this.data)?.length) {
-          const curOption = this.selectOptions.find((item) => item.web_url === this.data.repo_group);
+          const curOption = this.selectOptions.find(item => item.web_url === this.data.repo_group);
           this.selectValue = curOption?.name ?? this.curUsername;
         }
       } catch (e) {
@@ -122,7 +122,7 @@ export default {
           repo_name: this.repositoryName,
         };
       }
-      const selectedItem = this.selectOptions.find((item) => item.name === this.selectValue);
+      const selectedItem = this.selectOptions.find(item => item.name === this.selectValue);
       return {
         repo_name: this.repositoryName,
         repo_group: selectedItem.web_url,

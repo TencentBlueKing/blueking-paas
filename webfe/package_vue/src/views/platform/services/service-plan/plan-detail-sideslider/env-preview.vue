@@ -78,10 +78,11 @@ export default {
       });
     },
     previewDesc() {
-      const id = this.serviceName ? this.serviceName.toUpperCase().replace(/-/g, '_').replace(/_$/, '') : 'ID';
+      const id = this.serviceName ? this.serviceName.toUpperCase().replace(/-/g, '_')
+        .replace(/_$/, '') : 'ID';
       return this.$t(
         'TLS 相关的配置（证书和密钥）以文件形式存储在容器内; 环境变量 {id}_CERT、{id}_KEY、{id}_CA 分别指向对应文件的路径',
-        { id }
+        { id },
       );
     },
   },

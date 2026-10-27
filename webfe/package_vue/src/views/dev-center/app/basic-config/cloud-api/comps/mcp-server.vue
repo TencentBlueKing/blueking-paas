@@ -59,6 +59,7 @@
               v-if="row.permission?.status === 'pending'"
               ext-cls="applying"
             />
+            <!-- eslint-disable max-len -- Preserve the complete translation key. -->
             <span
               v-else
               :class="['dot-icon', 'paasng-icon', row.permission?.status]"
@@ -115,6 +116,7 @@
             >
               <i class="paasng-icon paasng-cc-lang"></i>
             </span>
+            <!-- eslint-enable max-len -->
           </component>
           <span v-else-if="column.prop === 'description'">
             <span v-dompurify-html="highlight(row.mcp_server?.description || '--')"></span>
@@ -203,7 +205,7 @@ export default {
       },
       isTableError: false,
       MCP_SERVER_STATUS,
-      statusFilters: Object.keys(MCP_SERVER_STATUS).map((key) => ({
+      statusFilters: Object.keys(MCP_SERVER_STATUS).map(key => ({
         text: this.$t(MCP_SERVER_STATUS[key]),
         value: key,
       })),
@@ -279,7 +281,7 @@ export default {
           approved: this.$t('已有权限，无需申请'),
           owned: this.$t('已有权限，无需申请'),
         };
-        const mcpServers = results.map((item) => ({
+        const mcpServers = results.map(item => ({
           ...item,
           applyDisabled: item?.permission?.action !== 'apply',
           applyTips: disabledTips[item?.permission?.status] || '',
@@ -319,7 +321,7 @@ export default {
       }
 
       // 表头状态过滤
-      return keywordFilteredData.filter((item) => item.permission?.status === this.headerFilterField);
+      return keywordFilteredData.filter(item => item.permission?.status === this.headerFilterField);
     },
 
     // 分页处理
@@ -374,20 +376,18 @@ export default {
 
     // 格式化申请选择数据
     formatData(type, row) {
-      const formatRow = (row) => {
-        return {
-          id: row.mcp_server?.id,
-          name: row.mcp_server?.name,
-          description: row.mcp_server?.description,
-          oauth2_public_client_enabled: row.mcp_server?.oauth2_public_client_enabled,
-          status: row.permission?.status,
-          expires_in: row.permission?.expires_in,
-        };
-      };
+      const formatRow = row => ({
+        id: row.mcp_server?.id,
+        name: row.mcp_server?.name,
+        description: row.mcp_server?.description,
+        oauth2_public_client_enabled: row.mcp_server?.oauth2_public_client_enabled,
+        status: row.permission?.status,
+        expires_in: row.permission?.expires_in,
+      });
       if (type === 'single') {
         return [formatRow(row)];
-      } else if (type === 'batch') {
-        return this.selectionList.map((item) => formatRow(item));
+      } if (type === 'batch') {
+        return this.selectionList.map(item => formatRow(item));
       }
     },
 
@@ -427,9 +427,7 @@ export default {
     highlight(text) {
       const keyword = this.searchQuery;
       if (!keyword || !text) return text;
-      const escapeRegExp = (str) => {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      };
+      const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const escapedKeyword = escapeRegExp(keyword);
       const regex = new RegExp(`(${escapedKeyword})`, 'gi');
       return text.replace(regex, '<marked>$1</marked>');

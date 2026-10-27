@@ -214,14 +214,14 @@ const richTextXssOptions = {
         /-moz-binding/i,
       ];
 
-      if (dangerousPatterns.some((pattern) => pattern.test(value))) {
+      if (dangerousPatterns.some(pattern => pattern.test(value))) {
         return '';
       }
 
       // 验证每个样式属性
-      const styles = value.split(';').filter((s) => s.trim());
+      const styles = value.split(';').filter(s => s.trim());
       const validStyles = styles.filter((style) => {
-        const [prop] = style.split(':').map((s) => s.trim());
+        const [prop] = style.split(':').map(s => s.trim());
         return safeStyles.includes(prop.toLowerCase());
       });
 
@@ -256,7 +256,7 @@ const richTextXssOptions = {
 
     // 对于非 img 标签的 src 属性或非 data:image 的情况，检查危险模式
     if (!(tag === 'img' && name === 'src' && value.startsWith('data:image/'))) {
-      if (dangerousPatterns.some((pattern) => pattern.test(value))) {
+      if (dangerousPatterns.some(pattern => pattern.test(value))) {
         return '';
       }
     }
@@ -342,7 +342,7 @@ export function deepFilterXss(data, filterFn = filterPlainText) {
   }
 
   if (Array.isArray(data)) {
-    return data.map((item) => deepFilterXss(item, filterFn));
+    return data.map(item => deepFilterXss(item, filterFn));
   }
 
   if (typeof data === 'object') {

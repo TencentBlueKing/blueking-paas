@@ -21,7 +21,11 @@
         </div>
         <div class="region-info">
           <span
-            :class="['reg-tag', { 'inner': appItem.region_name === $t('内部版') }, { 'clouds': appItem.region_name === $t('混合云版') }]"
+            :class="[
+              'reg-tag',
+              { inner: appItem.region_name === $t('内部版') },
+              { clouds: appItem.region_name === $t('混合云版') },
+            ]"
           >
             {{ appItem.region_name }}
           </span>

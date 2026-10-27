@@ -33,7 +33,8 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <span class="tips"
+            <span
+              class="tips"
               v-bk-overflow-tips
               v-dompurify-html="namespaceTips"
             >
@@ -340,7 +341,9 @@ export default {
     // 刷新操作
     async handleWindowReload() {
       // 当前状态与进入时的初始状态不同，且为迁移成功状态，需要刷新当前页
-      if (this.initStatus !== this.migrationData.status && (this.isMigrationStepSuccessful || this.isMigrationConfirmed)) {
+      const hasMigrationStatusChanged = this.initStatus !== this.migrationData.status;
+      const hasMigrationSucceeded = this.isMigrationStepSuccessful || this.isMigrationConfirmed;
+      if (hasMigrationStatusChanged && hasMigrationSucceeded) {
         if (this.$route.name === 'myApplications') {
           // 列表页直接刷新
           window.location.reload();
@@ -523,7 +526,7 @@ export default {
     // 确定迁移轮询
     confirmMigrationPolling() {
       this.confirmMigrationIntervalId = setInterval(async () => {
-        this.attempts++;
+        this.attempts += 1;
         this.queryMigrationStatus();
 
         // 检查是否达到最大尝试次数，或已经确定迁移成功

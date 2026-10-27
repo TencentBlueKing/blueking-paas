@@ -4,8 +4,8 @@
     :width="baseWidth"
     :height="200"
     :speed="loadingConf.speed"
-    :primaryColor="loadingConf.primaryColor"
-    :secondaryColor="loadingConf.secondaryColor"
+    :primary-color="loadingConf.primaryColor"
+    :secondary-color="loadingConf.secondaryColor"
   >
     <rect
       x="0"

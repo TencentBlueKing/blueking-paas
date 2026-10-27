@@ -129,8 +129,8 @@ export default {
   methods: {
     init(data) {
       this.probeList = Object.entries(data?.probes || {})
-        .filter(([key, value]) => value !== null)
-        .map(([key, value]) => key);
+        .filter(([_key, value]) => value !== null)
+        .map(([key, _value]) => key);
     },
     // 探测启停
     handlerChange() {

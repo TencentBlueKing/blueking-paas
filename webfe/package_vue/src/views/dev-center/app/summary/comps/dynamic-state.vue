@@ -29,12 +29,9 @@ export default {
     },
     timelineList() {
       const getContent = this.isMultiTenantDisplayMode
-        ? (item) =>
-            `<bk-user-display-name user-id="${item.operator}"></bk-user-display-name> ${this.formattedOperate(
-              item.operate
-            )}`
-        : (item) => item.operate;
-      return this.operationsList.map((item) => ({
+        ? item => `<bk-user-display-name user-id="${item.operator}"></bk-user-display-name> ${this.formattedOperate(item.operate)}`
+        : item => item.operate;
+      return this.operationsList.map(item => ({
         tag: item.at_friendly,
         content: getContent(item),
         type: 'primary',
@@ -43,7 +40,8 @@ export default {
   },
   methods: {
     formattedOperate(operate) {
-      return operate ? operate.split(' ').slice(1).join(' ') : '';
+      return operate ? operate.split(' ').slice(1)
+        .join(' ') : '';
     },
   },
 };

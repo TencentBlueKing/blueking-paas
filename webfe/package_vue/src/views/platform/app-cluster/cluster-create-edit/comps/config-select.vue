@@ -28,10 +28,12 @@ export default {
   name: 'ConfigSelectContainer',
   props: {
     formData: {
-      default: () => {},
+      type: Object,
+      default: () => ({}),
     },
     source: {
-      default: () => {},
+      type: Object,
+      default: () => ({}),
     },
     property: {
       type: String,
@@ -69,7 +71,7 @@ export default {
             this.list = [];
             this.$emit('input', '');
             this.getSelectList(newVal);
-          }
+          },
         );
       }
     },
@@ -90,7 +92,7 @@ export default {
       this.$emit('input', data);
       this.$emit('change', {
         property: this.property,
-        data: this.list.find((v) => v.id === data) ?? {},
+        data: this.list.find(v => v.id === data) ?? {},
       });
     },
   },

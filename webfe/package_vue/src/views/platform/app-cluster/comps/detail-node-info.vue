@@ -216,7 +216,7 @@ export default {
         const res = await this.$store.dispatch('tenant/getNodesSyncRecords', {
           clusterName: this.clusterName,
         });
-        this.syncRecords = res.map((v) => ({
+        this.syncRecords = res.map(v => ({
           ...v,
           createdAt: dayjs(v.created_at).fromNow(),
           nodeCount: v.nodes?.length || 0,

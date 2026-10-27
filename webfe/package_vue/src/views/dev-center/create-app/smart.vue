@@ -276,8 +276,8 @@ export default {
     },
     isConflict() {
       if (
-        this.packageData &&
-        this.packageData.app_description?.code === this.packageData.original_app_description?.code
+        this.packageData
+        && this.packageData.app_description?.code === this.packageData.original_app_description?.code
       ) {
         return false;
       }
@@ -285,9 +285,9 @@ export default {
     },
     // original_app_description 与 app_description 如果不一致说明(code|name)冲突了 (如果code一致，后台回在code加上两位随机数)
     isCodeConflicted() {
-      const { original_app_description, app_description } = this.packageData;
-      const originalCode = original_app_description?.code;
-      const appCode = app_description?.code;
+      const { original_app_description: originalAppDescription, app_description: appDescription } = this.packageData;
+      const originalCode = originalAppDescription?.code;
+      const appCode = appDescription?.code;
       // 修改后
       if (this.modifiedAppData) {
         return originalCode !== appCode && originalCode === this.modifiedAppData?.code;

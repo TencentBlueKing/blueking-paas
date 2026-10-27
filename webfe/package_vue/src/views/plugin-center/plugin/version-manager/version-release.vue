@@ -354,7 +354,7 @@ export default {
           stageId: curStepStageId || this.stageId,
         };
         this.currentStepId = params.stageId;
-        if (Object.values(params).some((value) => value === undefined)) {
+        if (Object.values(params).some(value => value === undefined)) {
           return;
         }
         const res = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
@@ -395,7 +395,7 @@ export default {
     // 设置步骤状态
     setStepsDataStatus() {
       const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
-      const curIndex = this.curAllStages.findIndex((v) => v.stage_id === id) + 1;
+      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
       this.stepAllStages = this.curAllStages.map((v, index) => ({
         ...v,
         // 已完成步骤设置状态
@@ -539,7 +539,7 @@ export default {
       this.isShowButtonGroup = false;
       // 点击返回了这在执行的发布步骤
       const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
-      const curIndex = this.curAllStages.findIndex((v) => v.stage_id === id) + 1;
+      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
       let isPolling = false;
       // 点击步骤为当前执行步骤
       if (curIndex === this.curStep) {

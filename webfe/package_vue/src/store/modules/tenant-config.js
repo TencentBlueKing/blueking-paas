@@ -93,7 +93,7 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/spec_cls_choices/`;
       return http.get(url);
     },
-     /**
+    /**
      * 代码库配置-获取表单默认配置项
      */
     getDefaultConfigsTemplates() {

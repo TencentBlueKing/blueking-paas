@@ -66,11 +66,9 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployModuleList from './deploy-module-list.vue';
-import SandboxSideslider from './sandbox-sideslider.vue';
 export default {
   components: {
     deployModuleList,
-    SandboxSideslider,
   },
   mixins: [appBaseMixin],
   props: {
@@ -123,7 +121,7 @@ export default {
       if (value === this.$t('全部模块') || value === '') {
         this.showModuleList = this.moduleInfoList;
       } else {
-        this.showModuleList = this.moduleInfoList.filter((module) => module.name === this.moduleValue);
+        this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
       }
     },
     curAppModuleList: {

@@ -281,8 +281,8 @@
   </section>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
-import { bus } from '@/common/bus';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 
 export default {
   mixins: [appBaseMixin],
@@ -366,7 +366,7 @@ export default {
     },
     isDisabled() {
       // 在发布状态开启的情况下可以关闭
-      if(this.appMarketConfig.enabled) {
+      if (this.appMarketConfig.enabled) {
         return false;
       }
       return !this.appPreparations.all_conditions_matched

@@ -46,7 +46,7 @@
         </div>
         <div class="info-item">
           <div class="label">{{ $t('环境变量') }}：</div>
-          <div class="value">{{ $t('共 {n} 个', { n: this.sandboxEnvVars?.length ?? 0 }) }}</div>
+          <div class="value">{{ $t('共 {n} 个', { n: sandboxEnvVars?.length ?? 0 }) }}</div>
         </div>
       </div>
     </template>
@@ -197,7 +197,7 @@ export default {
       }
       const searchTerm = this.searchValue.toLowerCase();
       return this.sandboxEnvVars.filter(
-        ({ key, value }) => key.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm)
+        ({ key, value }) => key.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm),
       );
     },
     htmlConfig() {
@@ -207,7 +207,7 @@ export default {
       return this.baseHtmlConfig('#edit-sandbox-env-html', 'edit');
     },
     displayServices() {
-      return this.addonsServices.map((service) => service.display_name)?.join('，');
+      return this.addonsServices.map(service => service.display_name)?.join('，');
     },
   },
   created() {

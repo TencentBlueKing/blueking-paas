@@ -194,10 +194,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -249,7 +249,7 @@ export default {
         return;
       }
       // 新增成员
-      const parmas = users.map((username) => ({
+      const parmas = users.map(username => ({
         application: { code: this.appCode },
         user: { username },
         roles: [{ id: role }],

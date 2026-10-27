@@ -245,7 +245,7 @@ export default {
           {
             // validator: value => /(^\/(.+\/)+)$/.test(value),
             // 避免 ReDOS 风险
-            validator: (value) => value.startsWith('/') && value.endsWith('/') && value.length > 2,
+            validator: value => value.startsWith('/') && value.endsWith('/') && value.length > 2,
             message: this.$t('路径前缀格式错误，以反斜杠(/)开始、结束，如：/api/user/'),
             trigger: 'blur',
           },
@@ -361,7 +361,7 @@ export default {
               src: this.sortIcon,
             },
           }),
-        ]
+        ],
       );
     },
 
@@ -453,7 +453,7 @@ export default {
         {
           path,
           desc,
-        }
+        },
       );
       this.addPathDialog.title = this.$t('更新豁免路径前缀');
       this.addPathDialog.action = 'update';
@@ -505,7 +505,7 @@ export default {
           },
           () => {
             this.addPathDialog.isLoading = false;
-          }
+          },
         );
       }, 200);
     },
@@ -575,7 +575,7 @@ export default {
         await this.$store.dispatch('user/batchDeleteExempt', {
           appCode: this.appCode,
           restriction_type: 'user',
-          id: this.currentSelectList.map((item) => item.id),
+          id: this.currentSelectList.map(item => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;

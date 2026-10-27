@@ -9,7 +9,7 @@
             class="directory-tree"
             ref="singleModuleTree"
           >
-                  <i 
+                  <i
                     class="paasng-icon paasng-general-copy"
                     @click="copyDirectoryTree('singleModuleTree')"
                   ></i>
@@ -24,7 +24,7 @@
             class="directory-tree"
             ref="multiModuleTree"
           >
-                  <i 
+                  <i
                     class="paasng-icon paasng-general-copy"
                     @click="copyDirectoryTree('multiModuleTree')"
                   ></i>

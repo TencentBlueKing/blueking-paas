@@ -46,7 +46,7 @@ export default {
     status: {
       type: String,
       required: true,
-      validator: (value) => ['running', 'success', 'failed'].includes(value),
+      validator: value => ['running', 'success', 'failed'].includes(value),
     },
     timeTaken: {
       type: String,

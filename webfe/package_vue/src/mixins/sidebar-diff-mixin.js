@@ -1,8 +1,8 @@
 export default {
-  data () {
+  data() {
     return {
       // 初始化状态
-      initDataStr: ''
+      initDataStr: '',
     };
   },
   methods: {
@@ -10,9 +10,9 @@ export default {
      * 侧边栏离开，二次确认
      * @return true / error
      */
-    $isSidebarClosed (targetDataStr) {
+    $isSidebarClosed(targetDataStr) {
       const isEqual = this.initDataStr === targetDataStr;
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         // 未编辑
         if (isEqual) {
           resolve(true);
@@ -23,18 +23,18 @@ export default {
             title: this.$t('确认离开当前页？'),
             subTitle: this.$t('离开将会导致未保存信息丢失'),
             okText: this.$t('离开'),
-            confirmFn () {
+            confirmFn() {
               resolve(true);
             },
-            cancelFn () {
+            cancelFn() {
               resolve(false);
-            }
+            },
           });
         }
       });
     },
-    initSidebarFormData (data) {
+    initSidebarFormData(data) {
       this.initDataStr = JSON.stringify(data);
-    }
-  }
+    },
+  },
 };

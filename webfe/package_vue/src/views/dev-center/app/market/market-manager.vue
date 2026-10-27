@@ -456,13 +456,13 @@ export default {
   computed: {
     ...mapGetters(['tenantId', 'tenantApiBaseUrl', 'isMultiTenantDisplayMode']),
     users() {
-      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
+      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'user');
     },
     departments() {
-      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'department');
+      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'department');
     },
     businessDetailName() {
-      return this.businessList.find((e) => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
+      return this.businessList.find(e => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
     },
     marketVisibility() {
       return this.curAppInfo.feature.MARKET_VISIBILITY;
@@ -500,12 +500,12 @@ export default {
     },
 
     handleDeleteUser(payload) {
-      const index = this.baseInfo.visiable_labels.findIndex((item) => item.id === payload);
+      const index = this.baseInfo.visiable_labels.findIndex(item => item.id === payload);
       this.baseInfo.visiable_labels.splice(index, 1);
     },
 
     handleDeleteDepartment(payload) {
-      const index = this.baseInfo.visiable_labels.findIndex((item) => item.id === payload);
+      const index = this.baseInfo.visiable_labels.findIndex(item => item.id === payload);
       this.baseInfo.visiable_labels.splice(index, 1);
     },
 
@@ -639,7 +639,7 @@ export default {
       this.isInfoSaving = true;
       this.baseInfo.resizable = this.baseInfo.resizableKey === 'able';
 
-      let params = JSON.parse(JSON.stringify(this.baseInfo));
+      const params = JSON.parse(JSON.stringify(this.baseInfo));
       delete params.logo;
 
       // 暂未注册 --开始注册信息

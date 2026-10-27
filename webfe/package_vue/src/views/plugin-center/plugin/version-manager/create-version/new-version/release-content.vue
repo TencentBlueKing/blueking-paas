@@ -272,16 +272,16 @@ export default {
     },
     // 重新发布设置默认值
     setVersionDefaultValue() {
-      const { source_version_name, semver_type, comment } = this.versionData;
-      const version = this.versionTypes.find(v => v.key === semver_type).value;
+      const { source_version_name: sourceVersionName, semver_type: semverType, comment } = this.versionData;
+      const version = this.versionTypes.find(v => v.key === semverType).value;
       const versionDisplay = `${version} (${this.$t('主版本号、次版本号、修正版本号')})`;
       this.releaseContent = {
         ...this.releaseContent,
-        source_versions: source_version_name,
+        source_versions: sourceVersionName,
         version,
         versionDisplay,
         comment,
-        semver_type,
+        semver_type: semverType,
       };
     },
     // 表单校验

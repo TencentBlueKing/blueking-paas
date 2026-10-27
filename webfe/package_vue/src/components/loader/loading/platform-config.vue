@@ -4,8 +4,8 @@
     :style="{ transform: `scaleX(${contentWidth / baseWidth})` }"
     :height="440"
     :speed="loadingConf.speed"
-    :primaryColor="loadingConf.primaryColor"
-    :secondaryColor="loadingConf.secondaryColor"
+    :primary-color="loadingConf.primaryColor"
+    :secondary-color="loadingConf.secondaryColor"
   >
     <!-- 顶部筛选栏 -->
     <rect

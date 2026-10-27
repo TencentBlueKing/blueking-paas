@@ -16,9 +16,7 @@ export default {
         hasLink: true,
         link: this.GLOBAL.LINK.MAGICBOX_INDEX,
         image: require('@static/images/service-pic8.png'),
-        apiexplain: this.$t(
-          '蓝鲸MagicBox提供丰富的PC端、移动端前端UI组件，更有样例套餐助您快速搭建前端页面。同时蓝鲸MagicBox提供可视化开发服务，支持在线拖拽页面，所见即所得。'
-        ),
+        apiexplain: this.$t('蓝鲸MagicBox提供丰富的PC端、移动端前端UI组件，更有样例套餐助您快速搭建前端页面。同时蓝鲸MagicBox提供可视化开发服务，支持在线拖拽页面，所见即所得。'),
         apiList: [
           {
             title: this.$t('前端jQuery组件库'),
@@ -37,9 +35,7 @@ export default {
           },
           {
             title: this.$t('蓝鲸前端开发脚手架（BKUI_CLI）'),
-            explain: this.$t(
-              '基于 Vue.js 研发的一键构建蓝鲸体系前端工程的脚手架工具，包括了基础工程化能力、基础 mock 服务、蓝鲸前端Vue组件库等。'
-            ),
+            explain: this.$t('基于 Vue.js 研发的一键构建蓝鲸体系前端工程的脚手架工具，包括了基础工程化能力、基础 mock 服务、蓝鲸前端Vue组件库等。'),
             url: this.GLOBAL.LINK.MAGICBOX_BKUI_CLI,
             isDoc: true,
           },

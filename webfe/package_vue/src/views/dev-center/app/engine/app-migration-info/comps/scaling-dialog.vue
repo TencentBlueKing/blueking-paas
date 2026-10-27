@@ -272,7 +272,7 @@ export default {
           },
           (validator) => {
             console.error(validator);
-          }
+          },
         );
       }
     },

@@ -196,38 +196,25 @@ export default {
       tenantPlanCountMap: {},
     };
   },
-  created() {
-    this.getPlans();
-  },
-  mounted() {
-    this.initResizeObserver();
-  },
-  beforeDestroy() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-  },
   computed: {
     // 当前租户下的方案
     displayPlans() {
-      return this.planList.filter((item) => item.tenant_id === this.curTenantId);
+      return this.planList.filter(item => item.tenant_id === this.curTenantId);
     },
     // 字段搜索、服务名、租户模式过滤
     searchPlans() {
       const { searchValue, activeServiceId, activeType, displayPlans = [] } = this;
       const lowerCaseSearchTerm = searchValue?.toLocaleLowerCase() || '';
       return displayPlans
-        .filter((item) => !activeServiceId || item.service_id === activeServiceId)
-        .filter((item) => !activeType || item.type === activeType)
-        .filter((item) => !lowerCaseSearchTerm || (item.name?.toLocaleLowerCase() || '').includes(lowerCaseSearchTerm));
+        .filter(item => !activeServiceId || item.service_id === activeServiceId)
+        .filter(item => !activeType || item.type === activeType)
+        .filter(item => !lowerCaseSearchTerm || (item.name?.toLocaleLowerCase() || '').includes(lowerCaseSearchTerm));
     },
     tabData() {
-      return this.tenants.map((item) => {
-        return {
-          name: item.id,
-          label: item.name,
-        };
-      });
+      return this.tenants.map(item => ({
+        name: item.id,
+        label: item.name,
+      }));
     },
   },
   watch: {
@@ -238,6 +225,17 @@ export default {
       },
       immediate: true,
     },
+  },
+  created() {
+    this.getPlans();
+  },
+  mounted() {
+    this.initResizeObserver();
+  },
+  beforeDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   methods: {
     // 获取全量服务方案
@@ -314,7 +312,7 @@ export default {
       this.resizeObserver = new ResizeObserver((entries) => {
         window.requestAnimationFrame(() => {
           // 使用 requestAnimationFrame 延迟更新
-          for (let entry of entries) {
+          for (const entry of entries) {
             if (entry.target === this.$refs.contentRef) {
               const height = entry.contentRect.height;
               this.tableHeight = height - 50;

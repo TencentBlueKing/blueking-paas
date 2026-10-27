@@ -149,10 +149,9 @@ export default {
     // 新建存储
     async handlerConfirm() {
       this.storageDialogConfig.isLoading = true;
-      const storageSize =
-        this.createPersistentStorageData.capacity === 'custom'
-          ? `${this.customStorageSize}Gi`
-          : this.createPersistentStorageData.capacity;
+      const storageSize = this.createPersistentStorageData.capacity === 'custom'
+        ? `${this.customStorageSize}Gi`
+        : this.createPersistentStorageData.capacity;
       const data = {
         environment_name: this.createPersistentStorageData.stage,
         source_type: defaultSourceType,

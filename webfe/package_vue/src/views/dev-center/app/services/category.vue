@@ -314,7 +314,7 @@ export default {
             theme: 'error',
             message: resp.detail || this.$t('接口异常'),
           });
-        }
+        },
       );
     },
 

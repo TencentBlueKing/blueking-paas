@@ -42,10 +42,10 @@ export default {
         window.open(
           authUrl,
           this.$t('授权窗口'),
-          'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'
+          'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no',
         ),
         300,
-        callback
+        callback,
       );
     },
   },

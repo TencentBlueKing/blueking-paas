@@ -169,7 +169,7 @@ export default {
       return this.loaderPlaceholder === 'table-loading' ? { operationCount: 1 } : {};
     },
     routerRefs() {
-      const curPenel = this.panels.find((e) => e.name === this.active);
+      const curPenel = this.panels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
     curAppModuleList() {
@@ -194,9 +194,9 @@ export default {
     // 是否显示高级别提示icon
     isHaRiskAlertIcon() {
       return (
-        this.isHaRiskService &&
-        this.userFeature.APP_AVAILABILITY_LEVEL &&
-        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+        this.isHaRiskService
+        && this.userFeature.APP_AVAILABILITY_LEVEL
+        && this.curAppInfo.application?.extra_info?.availability_level === 'premium'
       );
     },
   },
@@ -217,7 +217,7 @@ export default {
     },
   },
   created() {
-    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -233,7 +233,7 @@ export default {
   },
   methods: {
     handleGoPage(routeName) {
-      const label = this.panels.find((item) => item.name === routeName).label;
+      const label = this.panels.find(item => item.name === routeName).label;
       this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.active = routeName;
@@ -327,8 +327,9 @@ export default {
           list.some((item) => HA_RISK_SERVICES.includes(key === 'service' ? item?.service?.name : item.name));
 
         // 包含存在可用性风险的增强服务，添加风险icon提示
-        this.isHaRiskService =
-          containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
+        this.isHaRiskService = containsRiskServer(bound)
+          || containsRiskServer(shared)
+          || containsRiskServer(unbound, 'unbound');
       } catch (error) {
         this.isHaRiskService = false;
       }

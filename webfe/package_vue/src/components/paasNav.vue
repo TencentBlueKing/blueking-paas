@@ -115,13 +115,13 @@ export default {
       });
       // 遍历 navTree 进行分组
       this.navTree.forEach((item) => {
-        const group = groups.find((g) => g.groupId === item.groupId);
+        const group = groups.find(g => g.groupId === item.groupId);
         if (group) {
           group.children.push(item);
         }
       });
       // 返回过滤后的分组
-      return groups.filter((item) => item.children.length > 0);
+      return groups.filter(item => item.children.length > 0);
     },
   },
   watch: {
@@ -244,7 +244,8 @@ export default {
       done();
     },
     afterEnter(el) {
-      $(el).hide().slideDown(400);
+      $(el).hide()
+        .slideDown(400);
     },
     leave(el, done) {
       $(el).slideUp(400, () => {

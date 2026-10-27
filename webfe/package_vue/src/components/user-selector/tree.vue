@@ -10,7 +10,12 @@
         :class="['node-item', { 'is-disabled': item.disabled && item.type === 'user' }]"
         @click.stop="nodeClick(item)">
         <template v-if="item.async">
-          <img class="arrow-icon mr5" src="./images/angle-up-fill.svg" alt="" v-if="item.expanded" @click.stop="expandNode(item)">
+          <img
+            v-if="item.expanded"
+            class="arrow-icon mr5"
+            src="./images/angle-up-fill.svg"
+            alt=""
+            @click.stop="expandNode(item)">
           <img class="arrow-icon mr5" src="./images/right-shape.svg" alt="" v-else @click.stop="expandNode(item)">
         </template>
         <template v-if="item.type === 'department'">
@@ -20,7 +25,13 @@
         <span
           :style="nameStyle(item)"
           :class="['node-title', { 'is-disabled': item.disabled && item.type === 'user' }]"
-          :title="item.type === 'department' ? item.full_name : item.username !== '' ? `${item.display_name}(${item.username})` : item.display_name">
+          :title="
+            item.type === 'department'
+              ? item.full_name
+              : item.username !== ''
+                ? `${item.display_name}(${item.username})`
+                : item.display_name
+          ">
           {{ item.type === 'user' ? item.display_name : item.name }}
           <template v-if="item.type === 'user' && item.username !== ''">
             ({{ item.username }})

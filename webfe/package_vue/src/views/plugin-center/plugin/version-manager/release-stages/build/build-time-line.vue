@@ -137,7 +137,7 @@ export default {
       if (item.stage) {
         this.curHoverItem = Object.assign({}, item);
       } else if (item.parentStage) {
-        const match = this.list.find((timelineItem) => timelineItem.stage === item.parentStage);
+        const match = this.list.find(timelineItem => timelineItem.stage === item.parentStage);
         if (match) {
           this.curHoverItem = Object.assign({}, match);
         }
@@ -161,7 +161,7 @@ export default {
       if (item.stage) {
         this.curSelectedItem = Object.assign({}, item);
       } else if (item.parentStage) {
-        const match = this.list.find((timelineItem) => timelineItem.stage === item.parentStage);
+        const match = this.list.find(timelineItem => timelineItem.stage === item.parentStage);
         if (match) {
           this.curSelectedItem = Object.assign({}, match);
         }
@@ -194,7 +194,7 @@ export default {
 
     // 获取状态对应的颜色
     getStatusColor(status) {
-      const type = Object.keys(this.STATUS_TYPE_MAP).find((key) => this.STATUS_TYPE_MAP[key].includes(status));
+      const type = Object.keys(this.STATUS_TYPE_MAP).find(key => this.STATUS_TYPE_MAP[key].includes(status));
       return this.STATUS_COLORS[type] || this.STATUS_COLORS.default;
     },
   },

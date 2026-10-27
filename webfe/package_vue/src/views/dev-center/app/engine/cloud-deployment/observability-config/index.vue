@@ -345,7 +345,7 @@ export default {
       return this.curAppModule?.name;
     },
     hasSharedIndexRow() {
-      return this.logCollectionList.some((row) => this.isSharedIndexRow(row));
+      return this.logCollectionList.some(row => this.isSharedIndexRow(row));
     },
   },
   created() {
@@ -373,8 +373,8 @@ export default {
 
     // 新增/编辑采集信息
     async editorCollectionRule() {
-      const paths = this.formData.logPaths.map((v) => v.value);
-      const collector = this.collectionRules.find((v) => v.collector_config_id === this.formData.ruleId);
+      const paths = this.formData.logPaths.map(v => v.value);
+      const collector = this.collectionRules.find(v => v.collector_config_id === this.formData.ruleId);
       const params = {
         name_en: collector.name_en,
         collector_config_id: collector.collector_config_id,
@@ -463,7 +463,7 @@ export default {
     // 编辑采集规则
     handleCollectionRuleEdit(data) {
       // 采集路径
-      const paths = data.log_paths.map((v) => ({ value: v }));
+      const paths = data.log_paths.map(v => ({ value: v }));
       if (!paths.length) {
         paths.push({ value: '' });
       }
@@ -510,7 +510,7 @@ export default {
                   color: '#313238',
                 },
               },
-              `${i18n.t('采集规则')}：${data.name_en}`
+              `${i18n.t('采集规则')}：${data.name_en}`,
             ),
             h(
               'div',
@@ -520,9 +520,9 @@ export default {
                   color: '#63656E',
                 },
               },
-              i18n.t('删除后，将不再采集相关日志。')
+              i18n.t('删除后，将不再采集相关日志。'),
             ),
-          ]
+          ],
         ),
         confirmFn: () => {
           this.deleteCollectionRule(data.name_en);
@@ -538,7 +538,7 @@ export default {
         },
         (validator) => {
           console.error(validator.content);
-        }
+        },
       );
     },
 

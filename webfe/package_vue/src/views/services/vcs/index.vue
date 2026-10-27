@@ -30,33 +30,33 @@
 </template>
 
 <script>
-    import svn from './comps/svn.vue';
-    import git from './comps/git.vue';
+import svn from './comps/svn.vue';
+import git from './comps/git.vue';
 
-    export default {
-        components: {
-            git,
-            svn
-        },
-        data () {
-            return {
-                gitReady: false,
-                svnReady: false,
-                isTips: {
-                    git: false,
-                    svn: false
-                }
-            };
-        },
-        computed: {
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            }
-        },
-        methods: {
-            changeTips (attribute) {
-                this.isTips[attribute] = true;
-            }
-        }
+export default {
+  components: {
+    git,
+    svn,
+  },
+  data() {
+    return {
+      gitReady: false,
+      svnReady: false,
+      isTips: {
+        git: false,
+        svn: false,
+      },
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  methods: {
+    changeTips(attribute) {
+      this.isTips[attribute] = true;
+    },
+  },
+};
 </script>

@@ -129,6 +129,12 @@ import DetailComponentsSideslider from './detail-components-sideslider.vue';
 import { COMPONENT_STATUS } from '@/common/constants';
 export default {
   name: 'DefaultComponentDetails',
+  components: {
+    DetailsRow,
+    EditorSideslider,
+    DetailComponentsSideslider,
+    IconStatus,
+  },
   props: {
     data: {
       type: Object,
@@ -138,12 +144,6 @@ export default {
       type: Object,
       default: () => {},
     },
-  },
-  components: {
-    DetailsRow,
-    EditorSideslider,
-    DetailComponentsSideslider,
-    IconStatus,
   },
   data() {
     return {

@@ -10,30 +10,30 @@
   </div>
 </template>
 <script>
-    export default {
-        name: '',
-        props: {
-            status: {
-                type: String,
-                default: 'Running'
-            },
-            abnormalCount: {
-                type: Number,
-                default: 0
-            }
-        },
-        methods: {
-            getClass () {
-                if (this.status === 'Running') {
-                    return 'success';
-                }
-                if (['Starting', 'Pending'].includes(this.status)) {
-                    return 'now';
-                }
-                return 'failed';
-            }
-        }
-    };
+export default {
+  name: '',
+  props: {
+    status: {
+      type: String,
+      default: 'Running',
+    },
+    abnormalCount: {
+      type: Number,
+      default: 0,
+    },
+  },
+  methods: {
+    getClass() {
+      if (this.status === 'Running') {
+        return 'success';
+      }
+      if (['Starting', 'Pending'].includes(this.status)) {
+        return 'now';
+      }
+      return 'failed';
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paas-deploy-process-status-item {

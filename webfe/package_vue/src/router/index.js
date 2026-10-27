@@ -1161,21 +1161,20 @@ router.beforeEach(async (to, from, next) => {
   if (window.location.href.indexOf(window.GLOBAL_CONFIG.V3_OA_DOMAIN) !== -1) {
     const url = window.location.href.replace(window.GLOBAL_CONFIG.V3_OA_DOMAIN, window.GLOBAL_CONFIG.V3_WOA_DOMAIN);
     return window.location.replace(url);
-  } else {
-    const checkUserFeature = async (featureKey) => {
-      // 可能为页面刷新重新调用获取功能开关
-      if (!store.state.userFeature[featureKey]) {
-        await store.dispatch('getUserFeature');
-      }
-      store.state.userFeature[featureKey] ? next() : next({ name: '404' });
-    };
-    if (to.path.startsWith('/plugin-center')) {
-      await checkUserFeature('ALLOW_PLUGIN_CENTER');
-    } else if (to.path.startsWith('/plat-mgt')) {
-      await checkUserFeature('PLATFORM_MANAGEMENT');
-    } else {
-      next();
+  }
+  const checkUserFeature = async (featureKey) => {
+    // 可能为页面刷新重新调用获取功能开关
+    if (!store.state.userFeature[featureKey]) {
+      await store.dispatch('getUserFeature');
     }
+    store.state.userFeature[featureKey] ? next() : next({ name: '404' });
+  };
+  if (to.path.startsWith('/plugin-center')) {
+    await checkUserFeature('ALLOW_PLUGIN_CENTER');
+  } else if (to.path.startsWith('/plat-mgt')) {
+    await checkUserFeature('PLATFORM_MANAGEMENT');
+  } else {
+    next();
   }
 });
 

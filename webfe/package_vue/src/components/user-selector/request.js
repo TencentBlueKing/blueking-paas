@@ -20,7 +20,8 @@ let callbackSeed = 0;
 function JSONP(api, params = {}, options = {}) {
   return new Promise((resolve, reject) => {
     let timer;
-    const callbackName = `USER_LIST_CALLBACK${callbackSeed++}`;
+    const callbackName = `USER_LIST_CALLBACK${callbackSeed}`;
+    callbackSeed += 1;
     window[callbackName] = (response) => {
       timer && clearTimeout(timer);
       document.body.removeChild(script);

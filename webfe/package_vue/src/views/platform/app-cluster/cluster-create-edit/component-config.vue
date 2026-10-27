@@ -135,7 +135,7 @@ export default {
       return Promise.all([this.$refs.formRef?.validate(), this.$refs.appDomains[0]?.validate()]);
     },
     getFormData() {
-      let data = pick(this.formData, ['component_preferred_namespace', 'component_image_registry', 'app_address_type']);
+      const data = pick(this.formData, ['component_preferred_namespace', 'component_image_registry', 'app_address_type']);
       data.app_domains = this.$refs.appDomains[0]?.getData();
       return {
         ...this.clusterDetails,

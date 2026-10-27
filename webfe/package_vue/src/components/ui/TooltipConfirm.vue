@@ -28,9 +28,9 @@
 </template>
 
 <script>
-    import dropdown from '@/components/ui/Dropdown';
+import dropdown from '@/components/ui/Dropdown';
 
-    /*
+/*
 
   okText: '确定',
   cancelText: '取消',
@@ -38,53 +38,53 @@
   openOn: 'click'  click/hover  默认click
 
 */
-    export default {
-        components: {
-            'dropdown': dropdown
-        },
-        props: {
-            theme: {
-                type: String
-            },
-            okText: {
-                type: String
-            },
-            cancelText: {
-                type: String
-            },
-            openOn: {
-                type: Object
-            }
-        },
-        data () {
-            return {
-                defaultOptions: {
-                    openDelay: 2000,
-                    hoverOpenDelay: 2000,
-                    focusDelay: 2000,
-                    position: 'top center',
-                    remove: 'click',
-                    classes: 'up-theme-ps-arrow',
-                    openOn: this.openOn || 'click'
-                }
-            };
-        },
-        methods: {
-            ok () {
-                this.$emit('ok');
-            },
-            cancel () {
-                this.$emit('cancel');
-                this.$refs.tooltip.close();
-            },
-            mouseoverHandler () {
-                this.$emit('mouseover');
-            },
-            mouseoutHandler () {
-                this.$emit('mouseout');
-            }
-        }
+export default {
+  components: {
+    dropdown,
+  },
+  props: {
+    theme: {
+      type: String,
+    },
+    okText: {
+      type: String,
+    },
+    cancelText: {
+      type: String,
+    },
+    openOn: {
+      type: Object,
+    },
+  },
+  data() {
+    return {
+      defaultOptions: {
+        openDelay: 2000,
+        hoverOpenDelay: 2000,
+        focusDelay: 2000,
+        position: 'top center',
+        remove: 'click',
+        classes: 'up-theme-ps-arrow',
+        openOn: this.openOn || 'click',
+      },
     };
+  },
+  methods: {
+    ok() {
+      this.$emit('ok');
+    },
+    cancel() {
+      this.$emit('cancel');
+      this.$refs.tooltip.close();
+    },
+    mouseoverHandler() {
+      this.$emit('mouseover');
+    },
+    mouseoutHandler() {
+      this.$emit('mouseout');
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

@@ -57,19 +57,19 @@
 </template>
 
 <script>
-    export default {
-        data () {
-            return {
-                appname: '',
-                reason: ''
-            };
-        },
-        created () {
-            const getAppInfo = window.location.search.split('&');
-            this.appname = decodeURI(getAppInfo[0].split('=')[1].toString());
-            this.reason = decodeURI(getAppInfo[1].split('=')[1].toString());
-        }
+export default {
+  data() {
+    return {
+      appname: '',
+      reason: '',
     };
+  },
+  created() {
+    const getAppInfo = window.location.search.split('&');
+    this.appname = decodeURI(getAppInfo[0].split('=')[1].toString());
+    this.reason = decodeURI(getAppInfo[1].split('=')[1].toString());
+  },
+};
 </script>
 
 <style lang="scss" scoped>

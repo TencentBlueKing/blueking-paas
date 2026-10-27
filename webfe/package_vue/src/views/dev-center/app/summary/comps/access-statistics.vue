@@ -103,12 +103,12 @@ import defaultChartOptions from '@/json/analysis-chart-option';
 import MetricsDataItem from './metrics-data-item.vue';
 
 export default {
-  mixins: [appBaseMixin],
   components: {
     CardItem,
     chart: ECharts,
     MetricsDataItem,
   },
+  mixins: [appBaseMixin],
   inject: ['overviewDateRange'],
   data() {
     return {
@@ -134,8 +134,8 @@ export default {
 
       // 根据日期范围动态设置 X 轴格式
       const xAxisData = this.getXAxisData();
-      const pvData = this.chartData.map((item) => item.pv);
-      const uvData = this.chartData.map((item) => item.uv);
+      const pvData = this.chartData.map(item => item.pv);
+      const uvData = this.chartData.map(item => item.uv);
 
       // 使用默认配置
       const options = cloneDeep(defaultChartOptions.pv_uv);
@@ -238,11 +238,10 @@ export default {
       const isSameDay = firstTime.isSame(lastTime, 'day');
       if (isSameDay) {
         // 同一天的数据显示小时格式
-        return this.chartData.map((item) => dayjs(item.time).format('HH:mm'));
-      } else {
-        // 跨天数据显示日期格式
-        return this.chartData.map((item) => dayjs(item.time).format('MM-DD'));
+        return this.chartData.map(item => dayjs(item.time).format('HH:mm'));
       }
+      // 跨天数据显示日期格式
+      return this.chartData.map(item => dayjs(item.time).format('MM-DD'));
     },
     // 显示图表加载状态
     showChartLoading() {

@@ -48,14 +48,14 @@ export default {
   redirectToLogin() {
     if (window.location.href.indexOf(window.GLOBAL_CONFIG.V3_OA_DOMAIN) !== -1) {
       const url = window.location.href.replace(window.GLOBAL_CONFIG.V3_OA_DOMAIN, window.GLOBAL_CONFIG.V3_WOA_DOMAIN);
-      window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + encodeURIComponent(url);
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?c_url=${encodeURIComponent(url)}`;
     } else {
-      window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + encodeURIComponent(window.location.href);
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?c_url=${encodeURIComponent(window.location.href)}`;
     }
   },
   requestCurrentUser() {
     // Request user endpoint and set user info to currentUser
-    const endpoint = BACKEND_URL + '/api/user/';
+    const endpoint = `${BACKEND_URL}/api/user/`;
     const req = http.get(endpoint);
 
     const promise = new Promise((resolve, reject) => {
@@ -79,13 +79,13 @@ export default {
           } else {
             reject(err);
           }
-        }
+        },
       );
     });
     return promise;
   },
   requestHasApp() {
-    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal?is_active=true';
+    const endpoint = `${BACKEND_URL}/api/bkapps/applications/lists/minimal?is_active=true`;
     const req = http.get(endpoint);
 
     const promise = new Promise((resolve) => {
@@ -97,13 +97,13 @@ export default {
           if (err.status === this.HTTP_STATUS_UNAUTHORIZED) {
             bus.$emit('show-login-modal');
           }
-        }
+        },
       );
     });
     return promise;
   },
   requestOffApp() {
-    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal';
+    const endpoint = `${BACKEND_URL}/api/bkapps/applications/lists/minimal`;
     const req = http.get(endpoint);
 
     const promise = new Promise((resolve) => {
@@ -115,7 +115,7 @@ export default {
           if (err.status === this.HTTP_STATUS_UNAUTHORIZED) {
             bus.$emit('show-login-modal');
           }
-        }
+        },
       );
     });
     return promise;

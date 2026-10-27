@@ -778,7 +778,7 @@ export default {
     },
     // 当前环境
     curEnvPersistentStorageList() {
-      return this.persistentStorageList.filter((v) => v.environment_name === this.volumeFormData.environment_name);
+      return this.persistentStorageList.filter(v => v.environment_name === this.volumeFormData.environment_name);
     },
     readonly() {
       return this.volumeFormData.sourceConfigArrData?.length <= 0;
@@ -805,7 +805,7 @@ export default {
             });
             return p;
           },
-          []
+          [],
         );
         // 重置数据
         this.resetData();
@@ -981,7 +981,7 @@ export default {
       const data = cloneDeep(this.volumeFormData);
       // 持久存储
       if (this.isPersistentStorage) {
-        const curStorage = this.persistentStorageList.find((v) => v.name === this.volumeFormData.source_name);
+        const curStorage = this.persistentStorageList.find(v => v.name === this.volumeFormData.source_name);
         data.environment_name = curStorage.environment_name;
         delete data.sourceConfigArrData;
         delete data.source_config_data;
@@ -1088,7 +1088,7 @@ export default {
         this.isAddFile = false;
         return;
       }
-      const isValueRepeat = this.volumeFormData.sourceConfigArrData.find((e) => e.value === this.addFileInput);
+      const isValueRepeat = this.volumeFormData.sourceConfigArrData.find(e => e.value === this.addFileInput);
       // 有相同名称的文件名
       if (isValueRepeat) {
         this.$paasMessage({
@@ -1113,7 +1113,7 @@ export default {
     handleBlur(item, index) {
       const sourceConfigArrData = cloneDeep(this.volumeFormData.sourceConfigArrData);
       sourceConfigArrData.splice(index, 1);
-      const isValueRepeat = sourceConfigArrData.find((e) => e.value === item.value);
+      const isValueRepeat = sourceConfigArrData.find(e => e.value === item.value);
       if (isValueRepeat) {
         this.$paasMessage({
           theme: 'error',
@@ -1150,7 +1150,7 @@ export default {
       // 当前点击的文件名
       this.curValue = cloneDeep(key);
       this.activeIndex = i;
-      this.volumeFormData.sourceConfigArrData.forEach((e) => (e.isEdit = false));
+      this.volumeFormData.sourceConfigArrData.forEach(e => (e.isEdit = false));
       // 设置值
       this.handleSetEditValue(this.volumeFormData.source_config_data[key]);
       // 判断是否是json字符串
@@ -1171,7 +1171,7 @@ export default {
     },
     // 编辑左边的lable数据
     handleEditLabel(item) {
-      this.volumeFormData.sourceConfigArrData.forEach((e) => (e.isEdit = false));
+      this.volumeFormData.sourceConfigArrData.forEach(e => (e.isEdit = false));
       setTimeout(() => {
         item.isEdit = true;
         this.$nextTick(() => {

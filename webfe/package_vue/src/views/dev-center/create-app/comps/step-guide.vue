@@ -47,19 +47,15 @@ export default {
     steps: {
       type: Array,
       required: true,
-      validator: (steps) => {
-        return steps.every((step) => typeof step.title === 'string');
-      },
+      validator: steps => steps.every(step => typeof step.title === 'string'),
     },
   },
   computed: {
     processedSteps() {
-      return this.steps.map((step) => {
-        return {
-          ...step,
-          codeLines: typeof step.code === 'string' ? [step.code] : Array.isArray(step.code) ? step.code : [],
-        };
-      });
+      return this.steps.map(step => ({
+        ...step,
+        codeLines: typeof step.code === 'string' ? [step.code] : Array.isArray(step.code) ? step.code : [],
+      }));
     },
   },
 };

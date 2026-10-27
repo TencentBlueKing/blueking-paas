@@ -68,7 +68,7 @@ export default {
       return this.$route.params.code;
     },
     curProcessData() {
-      return this.processList.find((item) => item.name === this.curProcess);
+      return this.processList.find(item => item.name === this.curProcess);
     },
   },
   async created() {
@@ -112,7 +112,7 @@ export default {
       }
     },
     // 模块变更
-    handleModuleChange(value) {
+    handleModuleChange() {
       this.curProcess = ''; // 切换模块时清空当前进程
       this.fetchProcessList();
     },

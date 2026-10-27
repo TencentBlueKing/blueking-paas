@@ -165,7 +165,7 @@
 </template>
 
 <script>
-import searchAppList from '@/components/searching/searchAppList';
+import searchAppList from '@/components/searching/search-app-list';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { bus } from '@/common/bus';
 
@@ -206,7 +206,7 @@ export default {
       return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
     },
     showEntrances() {
-      return Object.keys(this.customDomainEntrances).some((key) => this.customDomainEntrances[key].length);
+      return Object.keys(this.customDomainEntrances).some(key => this.customDomainEntrances[key].length);
     },
     platformFeature() {
       return this.$store.state.platformFeature;

@@ -172,11 +172,11 @@ import { mapState } from 'vuex';
 
 export default {
   name: 'UserFeature',
-  // 分页逻辑使用mixins导入
-  mixins: [paginationMixin],
   components: {
     DeleteDialog,
   },
+  // 分页逻辑使用mixins导入
+  mixins: [paginationMixin],
   data() {
     return {
       // api用户列表
@@ -213,7 +213,7 @@ export default {
   },
   computed: {
     ...mapState({
-      platformFeature: (state) => state.platformFeature,
+      platformFeature: state => state.platformFeature,
     }),
     // 权限对应映射关系
     roleMap() {
@@ -282,12 +282,10 @@ export default {
     async getSystemApiRoles() {
       try {
         const res = await this.$store.dispatch('tenant/getSystemApiRoles');
-        this.roleList = res.map((v) => {
-          return {
-            text: v.label,
-            ...v,
-          };
-        });
+        this.roleList = res.map(v => ({
+          text: v.label,
+          ...v,
+        }));
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -323,7 +321,7 @@ export default {
         },
         (validator) => {
           console.error(validator);
-        }
+        },
       );
     },
     async addSystemApiUser(data) {

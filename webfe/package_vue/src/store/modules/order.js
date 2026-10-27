@@ -30,32 +30,32 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取单据列表
-         *
-         * @param {Object} params 请求参数：filter_type, appCode, order_by, limit, offset
-         */
-    getOrderList ({ commit, state }, { filterType, appCode, order_by, limit, offset }, config = {}) {
+     * 获取单据列表
+     *
+     * @param {Object} params 请求参数：filter_type, appCode, order_by, limit, offset
+     */
+    getOrderList({}, { filterType, appCode, order_by, limit, offset }, config = {}) {
       const params = {
         order_by,
         limit,
-        offset
+        offset,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/apply_record/filter_type/${filterType}/?${json2Query(params)}`;
       return http.get(url, config);
     },
 
     /**
-         * 单据操作(通过/驳回)
-         *
-         * @param {Object} params 请求参数：appCode, type, record_ids, remark
-         */
-    operateOrder ({ commit, state }, { appCode, type, record_ids, remark }, config = {}) {
+     * 单据操作(通过/驳回)
+     *
+     * @param {Object} params 请求参数：appCode, type, record_ids, remark
+     */
+    operateOrder({}, { appCode, type, record_ids, remark }, config = {}) {
       const params = {
         record_ids,
-        remark
+        remark,
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/access_control/apply_record/approval_type/${type}/`;
       return http.post(url, params, config);
-    }
-  }
+    },
+  },
 };

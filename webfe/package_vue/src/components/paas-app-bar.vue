@@ -12,7 +12,9 @@
           class="expert"
         >
           <template v-if="path.routeName">
-            <router-link :to="{ name: path.routeName, params: { id: appCode, moduleId: moduleId } }">{{ path.title }}</router-link>
+            <router-link :to="{ name: path.routeName, params: { id: appCode, moduleId } }">
+              {{ path.title }}
+            </router-link>
           </template>
           <template v-else>
             <span>{{ path.title }}</span>

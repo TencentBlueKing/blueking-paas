@@ -14,8 +14,8 @@
           :height="30"
           :speed="2"
           preserveAspectRatio="none"
-          :primaryColor="loadingConf.primaryColor"
-          :secondaryColor="loadingConf.secondaryColor"
+          :primary-color="loadingConf.primaryColor"
+          :secondary-color="loadingConf.secondaryColor"
         >
           <rect
             x="0"
@@ -95,7 +95,7 @@ export default {
           isShow: this.userFeature.ALLOW_CREATE_SMART_APP || false,
         },
       ];
-      return [...staticApps, ...dynamicApps].filter((app) => app.isShow);
+      return [...staticApps, ...dynamicApps].filter(app => app.isShow);
     },
   },
   watch: {

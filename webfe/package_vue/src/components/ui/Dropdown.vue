@@ -48,7 +48,7 @@ export default {
       });
 
       if (this.closeOnLinkClicked) {
-        $(this.$slots.content[0].elm).on('click', 'a', (event) => {
+        $(this.$slots.content[0].elm).on('click', 'a', () => {
           this.close();
         });
       }

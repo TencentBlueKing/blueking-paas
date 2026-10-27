@@ -11,8 +11,8 @@
         </div>
         <span class="line"></span>
         <div class="flex-row info">
-          <div>{{ $t('应用') }}：{{ this.code }}</div>
-          <div>{{ $t('模块') }}：{{ this.module }}</div>
+          <div>{{ $t('应用') }}：{{ code }}</div>
+          <div>{{ $t('模块') }}：{{ module }}</div>
         </div>
       </div>
     </section>
@@ -89,8 +89,8 @@
               class="right-tab-cls"
               :data="sandboxData"
               :service-name="serviceName"
-              :buildLog="buildLog"
-              :runLog="runLog"
+              :build-log="buildLog"
+              :run-log="runLog"
               :loading="isLogsLoading"
               :is-load-complete="isSandboxReady"
               :is-rerun="isProcessRunning || isBuildSuccess"
@@ -345,7 +345,7 @@ export default {
           appCode: this.code,
           moduleId: this.module,
         });
-        this.serviceName = res.map((service) => service.service?.display_name)?.join(', ');
+        this.serviceName = res.map(service => service.service?.display_name)?.join(', ');
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -427,9 +427,7 @@ export default {
           devSandboxCode: this.devSandboxCode,
         });
         // 对环境变量进行排序，确保自定义变量排在前面
-        this.envData.sandboxEnvVars = (res || []).sort((a, b) => {
-          return b.source === 'custom' ? 1 : a.source === 'custom' ? -1 : 0;
-        });
+        this.envData.sandboxEnvVars = (res || []).sort((a, b) => (b.source === 'custom' ? 1 : a.source === 'custom' ? -1 : 0));
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -483,9 +481,7 @@ export default {
     async getBuildLog(isAutomaticRefresh = false) {
       if (this.isBuildSuccess && isAutomaticRefresh) return;
       try {
-        const url = this.ensureHttpProtocol(
-          `${this.sandboxData.devserver_url}deploys/${this.deployId}/results?log=true`
-        );
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}deploys/${this.deployId}/results?log=true`);
         const res = await this.executeRequest(url);
         this.buildLog = res.log;
         // 构建日志成功，无需自动刷新
@@ -599,7 +595,7 @@ export default {
                 color: '#3A84FF',
               },
             },
-            that.$t('点击跳转到仓库查看')
+            that.$t('点击跳转到仓库查看'),
           ),
         ]),
         theme: 'success',

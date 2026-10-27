@@ -11,19 +11,19 @@
   </div>
 </template>
 <script>
-    export default {
-        name: '',
-        props: {
-            title: {
-                type: String,
-                default: ''
-            },
-            theme: {
-                type: String,
-                default: 'primary'
-            }
-        }
-    };
+export default {
+  name: '',
+  props: {
+    title: {
+      type: String,
+      default: '',
+    },
+    theme: {
+      type: String,
+      default: 'primary',
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .paasng-alert {

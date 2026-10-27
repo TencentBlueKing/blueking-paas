@@ -13,7 +13,6 @@ RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/
 # 拷贝源码
 ADD ./.babelrc .
 ADD ./.bootstraprc .
-ADD ./.eslintrc.js .
 ADD ./postcss.config.js .
 ADD ./paasng/assets ./paasng/assets
 ADD ./configs ./configs

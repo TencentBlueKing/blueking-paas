@@ -82,7 +82,7 @@ import RenderMemberList from './render-member-list';
 import BkOrgSelector from '@blueking/bk-org-selector/vue2';
 import { cloneDeep } from 'lodash';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
-import { mapGetters, mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 import { normalizeOrgSelectionData } from '@/common/tools';
 export default {
   name: 'AppVisibleRange',
@@ -112,10 +112,10 @@ export default {
       return this.$route.params.id;
     },
     users() {
-      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
+      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'user');
     },
     departments() {
-      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'department');
+      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'department');
     },
     infoMsg() {
       return this.$t('已选择 <span>{d}</span> 个组织，<span class="s2">{s}</span> 个用户', {

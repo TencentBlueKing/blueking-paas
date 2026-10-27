@@ -25,18 +25,18 @@ import store from '@/store';
 
 const config = {
   fromCache: false,
-  cancelWhenRouteChange: false
+  cancelWhenRouteChange: false,
 };
 
 /**
  * 获取应用信息
  */
-function getAppInfo (appCode) {
+function getAppInfo(appCode) {
   return store.dispatch('deploy/checkProductInfoProvided', appCode, config);
 }
 
 export default function () {
   return Promise.all([
-    getAppInfo()
+    getAppInfo(),
   ]);
 }

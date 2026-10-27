@@ -99,7 +99,7 @@
                 <div
                   slot="custom-error"
                   class="error-links"
-                  slot-scope="{ file }"
+                  slot-scope="{ _file }"
                 >
                   <a
                     class="f12"
@@ -205,10 +205,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },

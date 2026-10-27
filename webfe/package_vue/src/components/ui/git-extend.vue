@@ -125,8 +125,8 @@ export default {
     },
     labelWidth: {
       type: Number,
-      default: 100
-    }
+      default: 100,
+    },
   },
   data() {
     return {

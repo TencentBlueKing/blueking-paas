@@ -136,7 +136,7 @@ export default {
       return this.$route.meta.history;
     },
     currentReplicasPolicy() {
-      return this.smartConfig.options.find((item) => item.value === this.smartConfig.replicasPolicy);
+      return this.smartConfig.options.find(item => item.value === this.smartConfig.replicasPolicy);
     },
   },
   watch: {
@@ -159,7 +159,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find((item) => item.name === name);
+      const curEnv = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curEnv.routeName,
       });
@@ -196,11 +196,11 @@ export default {
     // 获取应用副本数策略
     async getAppDeployOptions() {
       try {
-        const { replicas_policy = 'web_form_priority' } = await this.$store.dispatch('deploy/getAppDeployOptions', {
+        const { replicas_policy: replicasPolicy = 'web_form_priority' } = await this.$store.dispatch('deploy/getAppDeployOptions', {
           appCode: this.appCode,
         });
-        this.smartConfig.replicasPolicy = replicas_policy;
-        this.tempReplicasPolicy = replicas_policy;
+        this.smartConfig.replicasPolicy = replicasPolicy;
+        this.tempReplicasPolicy = replicasPolicy;
       } catch (e) {
         this.catchErrorHandler(e);
       }

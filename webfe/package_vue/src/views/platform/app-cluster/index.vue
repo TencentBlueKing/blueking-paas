@@ -13,15 +13,15 @@ import Config from './config.vue';
 import List from './list.vue';
 export default {
   name: 'PlatformCluster',
+  components: {
+    Config,
+    List,
+  },
   props: {
     tabActive: {
       type: String,
       default: '',
     },
-  },
-  components: {
-    Config,
-    List,
   },
   computed: {
     isDetail() {

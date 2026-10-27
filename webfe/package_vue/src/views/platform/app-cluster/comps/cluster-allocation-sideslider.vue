@@ -132,10 +132,10 @@ export default {
   },
   computed: {
     sidesliderVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -159,9 +159,9 @@ export default {
   methods: {
     handleShown() {
       if (this.isEdit) {
-        const { type, allocation_policy = {} } = this.curTenantData.policies;
+        const { type, allocation_policy: allocationPolicy = {} } = this.curTenantData.policies;
         this.methodValue = type;
-        this.isAllocatedByEnv = allocation_policy?.env_specific || false;
+        this.isAllocatedByEnv = allocationPolicy?.env_specific || false;
       }
       this.getClusterAllocationPolicyConditionTypes();
       this.$nextTick(() => {
@@ -237,16 +237,14 @@ export default {
             return;
           }
           // 分配规则
-          parmas.allocation_precedence_policies = data.map((item) => {
-            return {
-              matcher: item.matcher.key && item.matcher.value ? { [item.matcher.key]: item.matcher.value } : {},
-              policy: {
-                env_specific: item.hasEnv,
-                ...(item.hasEnv ? {} : { clusters: item.clusters }),
-                ...(item.hasEnv ? { env_clusters: item.envClusters } : {}),
-              },
-            };
-          });
+          parmas.allocation_precedence_policies = data.map(item => ({
+            matcher: item.matcher.key && item.matcher.value ? { [item.matcher.key]: item.matcher.value } : {},
+            policy: {
+              env_specific: item.hasEnv,
+              ...(item.hasEnv ? {} : { clusters: item.clusters }),
+              ...(item.hasEnv ? { env_clusters: item.envClusters } : {}),
+            },
+          }));
         }
         if (this.isEdit) {
           this.updateClusterAllocationPolicies(parmas);

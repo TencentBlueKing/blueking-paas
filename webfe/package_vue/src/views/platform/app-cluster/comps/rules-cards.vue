@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-mutating-props -- This component edits the parent-owned allocation rule object in place. -->
 <template>
   <div class="rules-cards">
     <div class="conditional">{{ getConditionalType(allLength, order) }}</div>
@@ -155,9 +156,13 @@
 </template>
 
 <script>
+/* eslint-disable vue/no-mutating-props -- This component edits the parent-owned allocation rule object in place. */
 import ClusterSelect from './cluster-select.vue';
 export default {
   name: 'RulesCards',
+  components: {
+    ClusterSelect,
+  },
   props: {
     conditional: {
       type: String,
@@ -188,9 +193,6 @@ export default {
       default: '如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。',
     },
   },
-  components: {
-    ClusterSelect,
-  },
   data() {
     return {
       isAllocatedByEnv: false,
@@ -202,45 +204,35 @@ export default {
       rules: {
         matcherKey: [
           {
-            validator: () => {
-              return this.data.matcher?.key !== '';
-            },
+            validator: () => this.data.matcher?.key !== '',
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         matcherValue: [
           {
-            validator: () => {
-              return this.data.matcher?.value !== '';
-            },
+            validator: () => this.data.matcher?.value !== '',
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         cluster: [
           {
-            validator: () => {
-              return this.allowEmptyPlans || this.data.clusters.length;
-            },
+            validator: () => this.allowEmptyPlans || this.data.clusters.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         stagCluster: [
           {
-            validator: () => {
-              return this.data.envClusters?.stag?.length;
-            },
+            validator: () => this.data.envClusters?.stag?.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         prodCluster: [
           {
-            validator: () => {
-              return this.data.envClusters?.prod?.length;
-            },
+            validator: () => this.data.envClusters?.prod?.length,
             message: this.$t('必填项'),
             trigger: 'blur',
           },
@@ -253,7 +245,7 @@ export default {
       return this.allLength - 1 === this.order;
     },
     curCardMatcher() {
-      return this.types.find((v) => v.key === this.data.matcher?.key) ?? {};
+      return this.types.find(v => v.key === this.data.matcher?.key) ?? {};
     },
     placeholder() {
       const { name = '' } = this.curCardMatcher;
@@ -274,11 +266,10 @@ export default {
     getConditionalType(arrayLength, currentIndex) {
       if (currentIndex === 0) {
         return 'if';
-      } else if (currentIndex === arrayLength - 1) {
+      } if (currentIndex === arrayLength - 1) {
         return 'else';
-      } else {
-        return 'else if';
       }
+      return 'else if';
     },
     // 不按环境
     clusterSelectChange(data) {

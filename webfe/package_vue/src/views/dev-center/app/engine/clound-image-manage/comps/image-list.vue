@@ -174,7 +174,7 @@ export default {
   },
   computed: {
     isCustomImage() {
-      const curModule = this.curAppModuleList.find((module) => module.name === this.moduleName);
+      const curModule = this.curAppModuleList.find(module => module.name === this.moduleName);
       return curModule?.web_config?.runtime_type === 'custom_image';
     },
   },
@@ -219,7 +219,7 @@ export default {
             search_term: this.searchValue,
           },
         });
-        this.imageList = res.results.map((image) => ({
+        this.imageList = res.results.map(image => ({
           isLoading: false,
           detail: {
             build_records: [],

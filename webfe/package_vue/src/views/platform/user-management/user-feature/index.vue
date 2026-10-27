@@ -191,12 +191,12 @@ import UserDisplay from '@/components/user/user-display.vue';
 import { mapState, mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
-  // 分页逻辑使用mixins导入
-  mixins: [paginationMixin],
   components: {
     User,
     UserDisplay,
   },
+  // 分页逻辑使用mixins导入
+  mixins: [paginationMixin],
   data() {
     return {
       isTableLoading: false,
@@ -226,7 +226,7 @@ export default {
   },
   computed: {
     ...mapState({
-      localLanguage: (state) => state.localLanguage,
+      localLanguage: state => state.localLanguage,
     }),
     ...mapGetters(['isMultiTenantDisplayMode']),
     featureMap() {
@@ -236,7 +236,7 @@ export default {
       }, {});
     },
     curFeatureSelected() {
-      return this.featureList.find((v) => v.value === this.addDialogConfig.formData.feature) || {};
+      return this.featureList.find(v => v.value === this.addDialogConfig.formData.feature) || {};
     },
     columns() {
       const baseColumns = [
@@ -271,7 +271,7 @@ export default {
 
       // 如果 isMultiTenantDisplayMode 为 false，过滤掉 'user' 列
       if (!this.isMultiTenantDisplayMode) {
-        return baseColumns.filter((column) => column.label !== this.$t('用户'));
+        return baseColumns.filter(column => column.label !== this.$t('用户'));
       }
       return baseColumns;
     },
@@ -303,12 +303,10 @@ export default {
     async getAccountFeatures() {
       try {
         const res = await this.$store.dispatch('tenant/getAccountFeatures');
-        this.featureList = res.map((v) => {
-          return {
-            text: v.label,
-            ...v,
-          };
-        });
+        this.featureList = res.map(v => ({
+          text: v.label,
+          ...v,
+        }));
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -318,10 +316,9 @@ export default {
       this.isTableLoading = true;
       try {
         const res = await this.$store.dispatch('tenant/getAccountFeatureFlags');
-        const srotList = res.sort((a, b) => {
+        const srotList = res.sort((a, b) =>
           // 将 is_effect 为 false 的对象排序到后面
-          return a.is_effect === b.is_effect ? 0 : a.is_effect ? -1 : 1;
-        });
+          (a.is_effect === b.is_effect ? 0 : a.is_effect ? -1 : 1));
         // mixin-初始化分页数据
         this.pgInitPaginationData(srotList);
       } catch (e) {

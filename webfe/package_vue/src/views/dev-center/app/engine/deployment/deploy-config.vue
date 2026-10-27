@@ -440,7 +440,7 @@ export default {
         command: this.configInfo.command,
       };
       try {
-        const res = await this.$store.dispatch('deploy/updateDeployConfig', {
+        await this.$store.dispatch('deploy/updateDeployConfig', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           params,
@@ -461,7 +461,7 @@ export default {
     },
     async closeCommand() {
       try {
-        const res = await this.$store.dispatch('deploy/closeDeployConfig', {
+        await this.$store.dispatch('deploy/closeDeployConfig', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           type: this.configInfo.type,

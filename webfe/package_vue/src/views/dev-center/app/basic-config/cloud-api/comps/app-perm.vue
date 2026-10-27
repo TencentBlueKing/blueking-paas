@@ -335,7 +335,7 @@ export default {
     },
     // 是否允许批量续期
     isRenewalDisabled() {
-      return !this.selectedList.some((item) => item.renewDisabled === false);
+      return !this.selectedList.some(item => item.renewDisabled === false);
     },
     isSesetTableList() {
       return !this.nameFilterValues.length && !this.statusFilterValues.length;
@@ -392,12 +392,12 @@ export default {
   },
   created() {
     this.init();
-    this.compare = (p) => (m, n) => {
+    this.compare = p => (m, n) => {
       const a = m[p] ? m[p] : 0;
       const b = n[p] ? n[p] : 0;
       return this.is_up ? a - b : b - a;
     };
-    this.compareName = (p) => (m, n) => {
+    this.compareName = p => (m, n) => {
       const a = m[p].slice(0, 1).charCodeAt();
       const b = n[p].slice(0, 1).charCodeAt();
       return a - b;
@@ -470,14 +470,14 @@ export default {
       });
     },
 
-    handleSelect(value, option) {
+    handleSelect() {
       this.pagination = Object.assign(
         {},
         {
           current: 1,
           limit: 10,
           count: 0,
-        }
+        },
       );
       this.nameFilters = [];
       this.selectedList = [];
@@ -510,7 +510,7 @@ export default {
           title: '',
           rows: [],
           name: '',
-        }
+        },
       );
     },
 
@@ -550,7 +550,8 @@ export default {
         dataSource = this.filterAllList;
       }
       if (!page) {
-        this.pagination.current = page = 1;
+        page = 1;
+        this.pagination.current = page;
       }
       let startIndex = (page - 1) * this.pagination.limit;
       let endIndex = page * this.pagination.limit;
@@ -563,7 +564,7 @@ export default {
       return dataSource.slice(startIndex, endIndex);
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.pageChange(this.pagination.current);
@@ -600,7 +601,7 @@ export default {
       this.isFilter = true;
       this.allData = [
         ...this.apiList.filter(
-          (api) => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1
+          api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1,
         ),
       ];
       this.pagination.count = this.allData.length;
@@ -618,7 +619,7 @@ export default {
 
     // mcp service 数据格式化
     formatMcpServiceData(data) {
-      return data.map((item) => ({
+      return data.map(item => ({
         ...item.permission,
         ...item.mcp_server,
         ...item,
@@ -655,7 +656,7 @@ export default {
           });
         }
         this.apiList = Object.freeze(apiData);
-        const nameSet = new Set(this.nameFilters.map((item) => item.value));
+        const nameSet = new Set(this.nameFilters.map(item => item.value));
         this.apiList.forEach((item) => {
           const name = item[this.isComponentApi ? 'system_name' : 'gateway_name'];
           if (!nameSet.has(name)) {
@@ -775,13 +776,13 @@ export default {
           rows: [],
           superiorId: '',
           superiorName: '',
-        }
+        },
       );
     },
 
     // 通用筛选逻辑
     getFilterAllList(data, fields, key) {
-      return data.filter((v) => fields.includes(v[key]));
+      return data.filter(v => fields.includes(v[key]));
     },
 
     // 重置TableList
@@ -804,7 +805,7 @@ export default {
         const curFilterList = this.getFilterAllList(
           this.allData,
           this.nameFilterValues,
-          this.isComponentApi ? 'system_name' : 'gateway_name'
+          this.isComponentApi ? 'system_name' : 'gateway_name',
         );
         this.filterAllList = this.getFilterAllList(curFilterList, this.statusFilterValues, 'permission_status');
       } else {

@@ -354,7 +354,7 @@ export default {
         },
         (e) => {
           console.error(e);
-        }
+        },
       );
     },
     // 新建环境变量弹窗

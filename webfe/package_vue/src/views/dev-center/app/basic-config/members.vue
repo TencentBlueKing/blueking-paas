@@ -237,12 +237,6 @@ const ROLE_MAPPING = {
   operator: '运营者',
 };
 
-const ROLE_ID_TO_NAME_MAPPING = {
-  2: 'administrator',
-  3: 'developer',
-  4: 'operator',
-};
-
 export default {
   components: {
     user,
@@ -409,7 +403,7 @@ export default {
     // 处理成员数据
     processMembers(members) {
       return members.map((user) => {
-        const translatedRoles = user.roles.map((role) => this.$t(ROLE_MAPPING[role.name]));
+        const translatedRoles = user.roles.map(role => this.$t(ROLE_MAPPING[role.name]));
         return {
           ...user,
           displayRoles: translatedRoles.join('，'), // 角色中文显示
@@ -426,22 +420,22 @@ export default {
       }, {});
       // 统计各角色数量
       this.memberList.forEach((member) => {
-        roleCounts.all++;
+        roleCounts.all += 1;
         member.roles.forEach((role) => {
           switch (role.id) {
             case 2:
-              roleCounts.administrator++;
+              roleCounts.administrator += 1;
               break;
             case 3:
-              roleCounts.developer++;
+              roleCounts.developer += 1;
               break;
             case 4:
-              roleCounts.operator++;
+              roleCounts.operator += 1;
               break;
           }
         });
       });
-      this.filterList = this.filterList.map((item) => ({
+      this.filterList = this.filterList.map(item => ({
         ...item,
         count: roleCounts[item.name],
       }));
@@ -622,10 +616,9 @@ export default {
         const usernameMatch = !searchValues?.length || (item.user?.username && searchSet.has(item.user.username));
 
         // 2. 检查权限是否匹配（如果 selectedRole 有值且不是 'all'）
-        const roleMatch =
-          !selectedRole ||
-          selectedRole === 'all' ||
-          item.roles?.some((role) => {
+        const roleMatch = !selectedRole
+          || selectedRole === 'all'
+          || item.roles?.some((role) => {
             switch (selectedRole) {
               case 'administrator':
                 return role.id === 2; // 管理员
@@ -696,7 +689,7 @@ export default {
      * @returns 精确匹配的权限描述文本
      */
     getExactPermissionDescription(roles = []) {
-      const hasRole = (id) => roles.some((role) => role.id === id);
+      const hasRole = id => roles.some(role => role.id === id);
       // 管理员
       if (hasRole(2)) {
         return this.$t('拥有应用全部权限');

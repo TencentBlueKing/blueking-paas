@@ -417,7 +417,7 @@ export default {
   专用应用: 'Dedicated apps',
   可见范围: 'Visibility',
   全部应用: 'All apps',
-  '留空表示全部应用可见': 'Leave empty to make this plan visible to all apps',
+  留空表示全部应用可见: 'Leave empty to make this plan visible to all apps',
   '请输入 app_code，回车确认': 'Enter app_code and press Enter',
   编辑资源配额: 'Edit Resource Quota',
   源码摘要: 'Source Code Summary',

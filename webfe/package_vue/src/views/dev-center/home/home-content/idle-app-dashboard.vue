@@ -283,8 +283,8 @@ export default {
         const res = await this.$store.dispatch('baseInfo/getIdleAppList');
         // 该应用无模块，则无需展示
         this.idleAppList = res.applications
-          .filter((app) => app.module_envs.length)
-          .map((item) => ({
+          .filter(app => app.module_envs.length)
+          .map(item => ({
             ...item,
             staffList: [...item.administrators, ...item.developers],
           }));
@@ -378,9 +378,9 @@ export default {
         this.$paasMessage({
           theme: 'error',
           message:
-            e.detail ||
-            e.message ||
-            (name === 'offlineApp' ? this.$t('下架失败，请稍候再试') : this.$t('忽略失败，请稍候再试')),
+            e.detail
+            || e.message
+            || (name === 'offlineApp' ? this.$t('下架失败，请稍候再试') : this.$t('忽略失败，请稍候再试')),
         });
       } finally {
         this.isPopoverLoading = false;

@@ -90,7 +90,7 @@ export default {
   computed: {
     accessControl() {
       return this.$store.state.region?.access_control
-        ? this.$store.state.region?.access_control?.module?.map((e) => e)
+        ? this.$store.state.region?.access_control?.module?.map(e => e)
         : [];
     },
     panels() {
@@ -135,7 +135,7 @@ export default {
       this.$nextTick(() => {
         // 优先使用 URL 中的 tab 参数
         const tabFromQuery = this.$route.query.tab;
-        if (tabFromQuery && this.panels.some((panel) => panel.name === tabFromQuery)) {
+        if (tabFromQuery && this.panels.some(panel => panel.name === tabFromQuery)) {
           this.active = tabFromQuery;
         } else {
           this.active = this.curAppInfo.role.name !== 'operator' ? 'moduleAddress' : 'user_access_control';
@@ -152,7 +152,7 @@ export default {
       this.isLoading = false;
     },
     handleTabChange(v) {
-      const label = this.panels.find((item) => item.name === v).label;
+      const label = this.panels.find(item => item.name === v).label;
       this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
 
       // 如果是初始化页面，直接设置 active 值

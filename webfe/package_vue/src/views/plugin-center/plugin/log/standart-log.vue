@@ -72,18 +72,6 @@
           >
             {{ formatTime(log.timestamp) }}
           </span>
-          <!-- <div>
-                        <span v-if="log.process_id.length < 5" class="mouseStyle">{{log.process_id}}</span>
-                        <span v-else style="cursor: pointer;" v-bk-tooltips.right="{ theme: 'light', content: log.process_id }">{{processIdSlice(log.process_id)}}</span>
-                    </div>
-                    <template v-if="streamLogFilters.length">
-                        <span class="pod-name" style="cursor: default;">{{log.podShortName}}</span>
-                    </template>
-                    <template v-else>
-                        <div class="pod-name" @click="handleAddStreamLogFilters(log)">
-                            <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{log.podShortName}}</span>
-                        </div>
-                    </template> -->
           <pre
             class="message"
             v-dompurify-html="log.message || '--'"
@@ -174,7 +162,7 @@ export default {
     'logParams.keyword'(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
         if (this.isFilter) {
-          this.loadData(false);
+          this.loadData();
           this.isFilter = false;
         }
       }
@@ -182,8 +170,8 @@ export default {
     '$route.params'(newVal, oldVal) {
       if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
         this.isLoading = true;
-        this.renderIndex++;
-        this.routeChangeIndex++;
+        this.renderIndex += 1;
+        this.routeChangeIndex += 1;
         this.resetParams();
         this.loadData();
       }
@@ -225,7 +213,7 @@ export default {
       }
     },
 
-    handleTabChange(name) {
+    handleTabChange() {
       this.resetParams();
       this.loadData();
     },
@@ -294,7 +282,7 @@ export default {
       };
 
       const filters = this.streamLogFilters;
-      filters.forEach((filter) => {
+      filters.forEach(filter => {
         if (!params.query.terms) {
           params.query.terms = {};
         }
@@ -327,7 +315,7 @@ export default {
     /**
      * 加载所有数据
      */
-    loadData(isLoadFilter = true, isMaskLayer) {
+    loadData(isMaskLayer) {
       // 限制在一天内
       const startDay = dayjs(this.logParams.start_time).add(1, 'day');
       const endDay = dayjs(this.logParams.end_time);
@@ -386,7 +374,7 @@ export default {
     setKeywordHight(text) {
       const keywords = this.logParams.keyword.split(';');
       if (keywords.length) {
-        keywords.forEach((keyword) => {
+        keywords.forEach(keyword => {
           keyword = keyword.trim();
           if (keyword) {
             const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
@@ -428,7 +416,7 @@ export default {
         // this.lastScrollId = res.scroll_id;
         // logs: [message 日志内容, timestamp 时间戳]
         const data = res.logs.reverse();
-        data.forEach((item) => {
+        data.forEach(item => {
           item.message = this.highlight(logXss.process(item.message));
           // item.podShortName = item.pod_name.split('-').reverse()[0];
         });
@@ -471,7 +459,7 @@ export default {
       this.logParams = params;
       this.resetStreamLog();
       // 改为获取插件日志
-      this.loadData(params.isDateChange);
+      this.loadData();
 
       const query = Object.assign({}, this.$route.query, params);
       this.$router.push({
@@ -483,7 +471,7 @@ export default {
 
     handleLogReload(params) {
       this.resetStreamLog();
-      this.loadData(false, params);
+      this.loadData(params);
     },
 
     resetStreamLog() {
@@ -502,12 +490,12 @@ export default {
       this.logParams.stream = '';
       this.logParams.levelname = '';
 
-      params.forEach((item) => {
+      params.forEach(item => {
         const type = item.id;
         const selectItem = item.value;
         this.logParams[type] = selectItem.id;
       });
-      this.loadData(false);
+      this.loadData();
     },
 
     handleAddStreamLogFilters(log) {
@@ -517,13 +505,13 @@ export default {
         text: log.podShortName,
       });
       this.resetStreamLog();
-      this.loadData(false);
+      this.loadData();
     },
 
     handleClearStreamLogFilters() {
       this.streamLogFilters = [];
-      this.renderIndex++;
-      this.loadData(false);
+      this.renderIndex += 1;
+      this.loadData();
     },
 
     processIdSlice(str) {
@@ -864,8 +852,8 @@ export default {
   .stream-log {
     display: flex;
     margin-bottom: 8px;
-    font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-      'Arial';
+    font-family:
+      Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑', 'Arial';
 
     .pod-name {
       min-width: 95px;

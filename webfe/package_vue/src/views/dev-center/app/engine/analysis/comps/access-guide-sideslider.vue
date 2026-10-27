@@ -88,7 +88,9 @@
           - {{ $t('然后在相应的元素使用') }}<code>bk-trace</code> {{ $t('属性配置参数来进行埋点，具体参数如下') }}
         </p>
         <div class="examples">
-          &lt;bk-button theme="primary" :title="$t('submit')" bk-trace="{id: 'UserSearchButton', action: 'click', category: 'UserManage'}"&gt;$t('search')&lt;/bk-button&gt;
+          &lt;bk-button theme="primary" :title="$t('submit')"
+          bk-trace="{id: 'UserSearchButton', action: 'click', category: 'UserManage'}"&gt;
+          $t('search')&lt;/bk-button&gt;
         </div>
         <p class="tips">
           - {{ $t('js脚本会在初初化后对页面的带有') }}<code>bk-trace</code> {{ $t('属性元素进行监听并自动上报定义的参数') }}
@@ -118,62 +120,62 @@
   </bk-sideslider>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+import appBaseMixin from '@/mixins/app-base-mixin';
 
-    export default {
-        name: '',
-        mixins: [appBaseMixin],
-        props: {
-            isShow: {
-                type: Boolean,
-                default: false
-            },
-            title: {
-                type: String,
-                default: ''
-            },
-            siteName: {
-                type: String,
-                default: ''
-            },
-            engineEnable: {
-                type: Boolean,
-                default: true
-            },
-            isEvent: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                isShowSideslider: false,
-                copyText: ''
-            };
-        },
-        computed: {
-            entranceConfig () {
-                return this.$store.state.region.entrance_config;
-            }
-        },
-        watch: {
-            isShow (value) {
-                this.isShowSideslider = !!value;
-                if (this.isShowSideslider) {
-                    this.$nextTick(() => {
-                        const targetDom = document.getElementsByClassName('examples')[0];
-                        this.copyText = targetDom.innerText;
-                    });
-                }
-            }
-        },
-        methods: {
-            handleAnimationEnd () {
-                this.isShowSideslider = false;
-                this.$emit('update:isShow', false);
-            }
-        }
+export default {
+  name: '',
+  mixins: [appBaseMixin],
+  props: {
+    isShow: {
+      type: Boolean,
+      default: false,
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    siteName: {
+      type: String,
+      default: '',
+    },
+    engineEnable: {
+      type: Boolean,
+      default: true,
+    },
+    isEvent: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      isShowSideslider: false,
+      copyText: '',
     };
+  },
+  computed: {
+    entranceConfig() {
+      return this.$store.state.region.entrance_config;
+    },
+  },
+  watch: {
+    isShow(value) {
+      this.isShowSideslider = !!value;
+      if (this.isShowSideslider) {
+        this.$nextTick(() => {
+          const targetDom = document.getElementsByClassName('examples')[0];
+          this.copyText = targetDom.innerText;
+        });
+      }
+    },
+  },
+  methods: {
+    handleAnimationEnd() {
+      this.isShowSideslider = false;
+      this.$emit('update:isShow', false);
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .paas-analysis-sideslider-cls {

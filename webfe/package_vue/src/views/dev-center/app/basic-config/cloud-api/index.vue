@@ -251,7 +251,7 @@ export default {
         { name: 'appPerm', label: this.$t('已申请的权限') },
         { name: 'applyRecord', label: this.$t('申请记录') },
       ];
-      return panels.filter((panel) => panel.show === undefined || !!panel.show);
+      return panels.filter(panel => panel.show === undefined || !!panel.show);
     },
     typeList() {
       const types = [
@@ -259,7 +259,7 @@ export default {
         { id: 'component', name: this.$t('组件API'), visible: this.platformFeature?.ESB_API },
         { id: 'mcp', name: this.$t('MCP Server'), visible: this.userFeature?.MCP_SERVER_API },
       ];
-      return types.filter((type) => type.visible !== false);
+      return types.filter(type => type.visible !== false);
     },
     activeComponent() {
       const componentMap = {

@@ -397,12 +397,12 @@ export default {
   computed: {
     ...mapState('tenantConfig', ['encryptConfig']),
     curSourceControl() {
-      const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
+      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
       return match;
     },
     // 获取代码源图片
     getSourceImage() {
-      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
+      return imgSrc => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     // 部署目录校验
     isSourceDirInvalid() {
@@ -447,7 +447,7 @@ export default {
       // 获取代码检查详情
       this.getCodeInspection();
 
-      const sourceControlTypes = this.sourceControlTypes.map((e) => e.value);
+      const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
       // 初始化 repo List
       for (const key in this.gitExtendConfig) {
         const config = this.gitExtendConfig[key];
@@ -461,7 +461,7 @@ export default {
 
     // 获取加密配置
     async fetchEncryptConfig() {
-      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch((e) => this.catchErrorHandler(e));
+      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch(e => this.catchErrorHandler(e));
     },
 
     // 获取代码源列表
@@ -519,7 +519,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -574,8 +574,8 @@ export default {
         return;
       }
       if (
-        this.curAppModule?.source_origin === 1 ||
-        this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+        this.curAppModule?.source_origin === 1
+        || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
       ) {
         this.sourceControlType = this.curAppModule.repo.type;
         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
@@ -741,8 +741,8 @@ export default {
         this.initTemplateType = this.curAppModule.template_display_name;
 
         if (
-          this.curAppModule?.source_origin === 1 ||
-          this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+          this.curAppModule?.source_origin === 1
+          || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
         ) {
           const { repo } = this.curAppModule;
           if (repo) {
@@ -777,7 +777,7 @@ export default {
         const initLanguage = this.curAppModule?.language;
         if (res[region] && res[region].languages) {
           const languages = res[region].languages[initLanguage] || [];
-          const lanObj = languages.find((item) => item.display_name === this.initTemplateType) || {};
+          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
           this.initTemplateDesc = lanObj.description || '--';
         }
       } catch (res) {

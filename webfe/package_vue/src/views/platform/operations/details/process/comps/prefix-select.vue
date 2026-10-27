@@ -69,7 +69,7 @@ export default {
   computed: {
     currentLabel() {
       if (!this.value) return '';
-      const option = this.options.find((item) => item.value === this.value);
+      const option = this.options.find(item => item.value === this.value);
       return option?.label || this.value;
     },
     selectWidth() {

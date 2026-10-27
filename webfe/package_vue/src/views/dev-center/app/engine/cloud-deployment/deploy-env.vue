@@ -37,7 +37,7 @@
                 :active="switchConfig.active"
                 :has-icon="false"
                 :has-count="false"
-                @change="($event) => (switchConfig.active = $event.name)"
+                @change="$event => (switchConfig.active = $event.name)"
               />
             </template>
           </div>
@@ -421,7 +421,7 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
   created() {
@@ -442,20 +442,23 @@ export default {
 
     // 获取环境变量冲突提示
     getConflictMessage(key) {
-      const conflictItem = this.allConflictedKeys.find((item) => item.key === key);
+      const conflictItem = this.allConflictedKeys.find(item => item.key === key);
 
       if (!conflictItem) return {};
 
-      const { conflicted_detail, override_conflicted, conflicted_source } = conflictItem;
-      const basicText = override_conflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
-      const conflictSourceMessage =
-        conflicted_source === 'builtin_addons'
-          ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
-          : this.$t('和平台的内置环境变量冲突');
+      const {
+        conflicted_detail: conflictedDetail,
+        override_conflicted: overrideConflicted,
+        conflicted_source: conflictedSource,
+      } = conflictItem;
+      const basicText = overrideConflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
+      const conflictSourceMessage = conflictedSource === 'builtin_addons'
+        ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflictedDetail })
+        : this.$t('和平台的内置环境变量冲突');
 
       return {
         message: `${basicText}，${conflictSourceMessage}`,
-        overrideConflicted: override_conflicted,
+        overrideConflicted,
       };
     },
 
@@ -486,11 +489,11 @@ export default {
         if (isUpdate) {
           this.envLocalVarList = [...res];
         }
-        this.envLocalVarList = res.map((item) => ({
+        this.envLocalVarList = res.map(item => ({
           ...item,
           isEdit: false, // 取消编辑态
           conflict: this.getConflictMessage(item.key), // 环境变量冲突提示
-          id: item.id || res.find((i) => i.key === item.key)?.id,
+          id: item.id || res.find(i => i.key === item.key)?.id,
         }));
       } catch (e) {
         this.showErrorMessage(e);
@@ -521,7 +524,7 @@ export default {
         await this.$store.dispatch('envVar/createdEnvVariable', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          data: data,
+          data,
         });
         this.handleEnvVarChange(this.$t('添加'));
         this.getEnvVarList();
@@ -541,7 +544,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           varId: data.id,
-          data: data,
+          data,
         });
         this.handleEnvVarChange(this.$t('修改'));
         this.getEnvVarList();
@@ -638,27 +641,19 @@ export default {
           let messageText = '';
           switch (numStr) {
             case '111':
-              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t(
-                '个变量，更新'
-              )}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '110':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                '个变量，更新'
-              )} ${overwritedNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
               break;
             case '100':
               messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
               break;
             case '101':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                '个变量，忽略'
-              )} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '011':
-              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                '个变量，忽略'
-              )} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '010':
               messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -719,7 +714,7 @@ export default {
           },
           (errRes) => {
             this.showErrorMessage(errRes);
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -743,7 +738,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -778,33 +773,23 @@ export default {
             const ignoreNum = response.ignore_num;
             this.isEdited = createNum > 0 || overwritedNum > 0;
             const message = (() => {
-              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
-                Boolean(ignoreNum)
-              )}`;
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
               let messageText = '';
               switch (numStr) {
                 case '111':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，更新'
-                  )} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '110':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，更新'
-                  )} ${overwritedNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
                   break;
                 case '100':
                   messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
                   break;
                 case '101':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
-                    '个变量，忽略'
-                  )} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '011':
-                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
-                    '个变量，忽略'
-                  )} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '010':
                   messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -829,7 +814,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;

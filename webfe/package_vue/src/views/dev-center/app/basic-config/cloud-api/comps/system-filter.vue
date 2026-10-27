@@ -135,7 +135,7 @@ export default {
       }
       this.isFilter = true;
       this.curList = this.list.filter((item) => {
-        const regex = new RegExp('(' + payload + ')', 'gi');
+        const regex = new RegExp(`(${payload})`, 'gi');
         return (item.name && !!item.name.match(regex)) || (item.description && !!item.description.match(regex));
       });
       this.updateVirtualScrollData();
@@ -168,7 +168,7 @@ export default {
       if (!item || !item.name) {
         return '--';
       }
-      const regex = new RegExp('(' + this.searchValue + ')', 'gi');
+      const regex = new RegExp(`(${this.searchValue})`, 'gi');
       return item.name.replace(regex, '<filtermark>$1</filtermark>');
     },
 
@@ -177,7 +177,7 @@ export default {
         return this.$t('暂无描述');
       }
       if (item.description !== '' || item.description !== null) {
-        const regex = new RegExp('(' + this.searchValue + ')', 'gi');
+        const regex = new RegExp(`(${this.searchValue})`, 'gi');
         return item.description.replace(regex, '<filtermark>$1</filtermark>');
       }
       return this.$t('暂无描述');

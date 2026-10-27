@@ -72,7 +72,7 @@ export default {
         {},
         {
           services: [],
-        }
+        },
       );
       this.fetchCategoryInfo();
     },

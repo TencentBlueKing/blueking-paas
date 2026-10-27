@@ -72,10 +72,10 @@ export default {
   },
   computed: {
     dialogVisible: {
-      get: function () {
+      get() {
         return this.show;
       },
-      set: function (val) {
+      set(val) {
         this.$emit('update:show', val);
       },
     },
@@ -127,7 +127,7 @@ export default {
           () => {
             this.appSecretVerificationCode = '';
             reject(new Error(this.$t('请求失败，请稍候重试！')));
-          }
+          },
         );
       });
     },

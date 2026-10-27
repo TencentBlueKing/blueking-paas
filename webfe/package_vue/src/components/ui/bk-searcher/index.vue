@@ -105,7 +105,7 @@
               href="javascript:void(0);"
               :class="filterIndex === filterKeyboardIndex ? 'active' : ''"
               @click="selectFilter(filter, filterIndex)"
-              >{{ filter.text }}</a
+            >{{ filter.text }}</a
             >
           </li>
         </ul>
@@ -134,7 +134,7 @@
               href="javascript:void(0);"
               :class="fvIndex === filterValueKeyboardIndex ? 'active' : ''"
               @click="selectFilterValue(fv)"
-              >{{ fv.text }}</a
+            >{{ fv.text }}</a
             >
           </li>
         </ul>
@@ -152,6 +152,7 @@
 </template>
 
 <script>
+/* eslint-disable vue/no-mutating-props -- Updates caller-owned filter collections in place. */
 import clickoutside from './clickoutside';
 
 /**
@@ -186,7 +187,7 @@ function getStringLen(str) {
     if (str.charCodeAt(i) > 127 || str.charCodeAt(i) === 94) {
       len += 2;
     } else {
-      len++;
+      len += 1;
     }
   }
   return len;
@@ -296,7 +297,7 @@ export default {
     const fixedSearchParams = [];
     const fixedSearchParamsIds = [];
     this.fixedSearchParams.forEach((fsp) => {
-      let selected = fsp.list.filter((val) => val.isSelected)[0];
+      let selected = fsp.list.filter(val => val.isSelected)[0];
       if (!selected) {
         selected = fsp.list[0];
       }
@@ -311,7 +312,7 @@ export default {
     const searchParams = [];
     this.filterList.forEach((filter) => {
       if (filter.list) {
-        const selected = filter.list.filter((val) => val.isSelected)[0];
+        const selected = filter.list.filter(val => val.isSelected)[0];
         if (selected) {
           filter.value = selected;
           this.filterValueKey = filter.id;
@@ -330,8 +331,8 @@ export default {
     this.filterListCache.splice(0, this.filterListCache.length, ...filterList);
 
     const { searchWrapper, searchParamsWrapper } = this.$refs;
-    this.searcherDropdownLeft =
-      getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) + this.searchParamsItemMargin;
+    const searchParamsOffset = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper);
+    this.searcherDropdownLeft = searchParamsOffset + this.searchParamsItemMargin;
 
     // 绑定清除 searchParams 的方法，父组件调用方式如下：
     // this.$refs.bkSearcher.$emit('resetSearchParams')
@@ -350,7 +351,7 @@ export default {
      * @param {Object} filter 当前选择的 filter
      * @param {number} filterIndex 当前选择的 filter 的索引
      */
-    selectFilter(filter, filterIndex) {
+    selectFilter(filter) {
       // 当前 filter 有可用的值
       this.filterKeyboardIndex = -1;
       if (filter.list && !filter.dynamicData) {
@@ -405,7 +406,7 @@ export default {
           },
           (err) => {
             console.error(err);
-          }
+          },
         );
       }
     },
@@ -423,7 +424,7 @@ export default {
       });
       this.filterValueList.splice(0, this.filterValueList.length, ...filterValueList);
 
-      const selected = this.filterValueList.filter((val) => val.isSelected)[0];
+      const selected = this.filterValueList.filter(val => val.isSelected)[0];
 
       // 说明选择的是固定参数的 fixedSearchParams
       if (this.fixedSearchParamsIds.indexOf(this.filterValueKey) > -1) {
@@ -471,7 +472,7 @@ export default {
      * @param {Object} fsp 当前点击的固定参数对象
      * @param {number} fspIndex 当前点击的固定参数对象 索引
      */
-    fixedSearchParamsClickHandler(e, fsp, fspIndex) {
+    fixedSearchParamsClickHandler(e, fsp) {
       this.hideFilterList();
 
       const target = e.currentTarget;
@@ -482,8 +483,7 @@ export default {
       const { searchWrapper, searchParamsWrapper } = this.$refs;
       // this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper)
       //     + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode)
-      this.searcherDropdownLeft =
-        getActualLeft(searchParamsWrapper)
+      this.searcherDropdownLeft = getActualLeft(searchParamsWrapper)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)
@@ -508,7 +508,7 @@ export default {
      * @param {Object} sp 当前点击的固定参数对象
      * @param {number} spIndex 当前点击的固定参数对象 索引
      */
-    searchParamsClickHandler(e, sp, spIndex) {
+    searchParamsClickHandler(e, sp) {
       this.hideFilterList();
 
       const target = e.currentTarget;
@@ -516,8 +516,7 @@ export default {
       const valueContainerNode = target.querySelector('.value-container');
 
       const { searchWrapper } = this.$refs;
-      this.searcherDropdownLeft =
-        getActualLeft(target)
+      this.searcherDropdownLeft = getActualLeft(target)
         - getActualLeft(searchWrapper)
         + this.searchParamsItemMargin
         + getActualLeft(valueContainerNode)
@@ -538,7 +537,7 @@ export default {
     /**
      * 组件 click 事件
      */
-    foucusSearcher(e) {
+    foucusSearcher() {
       this.$nextTick(() => {
         this.$refs.searchInput.focus();
       });
@@ -566,7 +565,7 @@ export default {
      * @param {Object} sp 当前点击的固定参数对象
      * @param {number} spIndex 当前点击的固定参数对象 索引
      */
-    removeSearchParams(e, sp, spIndex) {
+    removeSearchParams(e, sp) {
       const searchParams = [];
       this.searchParams.forEach((s) => {
         if (s.id !== sp.id) {
@@ -584,7 +583,7 @@ export default {
         delete sp.value;
         filterList.push(JSON.parse(JSON.stringify(sp)));
       }
-      const item = filterList.filter((item) => sp.id === item.id);
+      const item = filterList.filter(item => sp.id === item.id);
       if (!item.length) {
         filterList.push(JSON.parse(JSON.stringify(sp)));
       }
@@ -670,13 +669,13 @@ export default {
             // down
             case 40:
               if (this.filterKeyboardIndex < this.filterList.length - 1) {
-                this.filterKeyboardIndex++;
+                this.filterKeyboardIndex += 1;
               }
               break;
             // up
             case 38:
               if (this.filterKeyboardIndex > 0) {
-                this.filterKeyboardIndex--;
+                this.filterKeyboardIndex -= 1;
               }
               break;
             // enter
@@ -703,7 +702,7 @@ export default {
         // down
         case 40:
           if (this.filterValueKeyboardIndex < this.filterValueList.length - 1) {
-            this.filterValueKeyboardIndex++;
+            this.filterValueKeyboardIndex += 1;
             if (this.filterValueKeyboardIndex >= 8) {
               filterValueListNode.scrollTo(0, filterValueListNode.scrollTop + 45);
             }
@@ -712,7 +711,7 @@ export default {
         // up
         case 38:
           if (this.filterValueKeyboardIndex > 0) {
-            this.filterValueKeyboardIndex--;
+            this.filterValueKeyboardIndex -= 1;
             if (this.filterValueKeyboardIndex < Math.ceil((filterValueListNode.scrollHeight - 320) / 42)) {
               filterValueListNode.scrollTo(0, filterValueListNode.scrollTop - 42);
             }

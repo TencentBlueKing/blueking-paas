@@ -60,7 +60,7 @@ export default {
   },
   methods: {
     handleChange(name) {
-      const curDashboardData = this.data.find((v) => v.name === name);
+      const curDashboardData = this.data.find(v => v.name === name);
       this.$emit('change', curDashboardData);
     },
     viewMoreDashboards() {

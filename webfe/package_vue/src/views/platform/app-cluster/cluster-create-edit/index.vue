@@ -230,7 +230,7 @@ export default {
           [
             h('p', { class: 'tip-text' }, this.$t('后续的配置：组件配置、组件安装、集群特性')),
             h('p', { class: 'tip-text' }, this.$t('支持在集群列表页面继续配置')),
-          ]
+          ],
         ),
         confirmFn: () => {
           // 集群新建完成，添加id参数

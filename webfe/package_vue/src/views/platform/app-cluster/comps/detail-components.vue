@@ -118,15 +118,15 @@ import DetailsRow from '@/components/details-row';
 import DefaultComponentDetails from './default-component-details.vue';
 export default {
   name: 'DetailComponents',
+  components: {
+    DetailsRow,
+    DefaultComponentDetails,
+  },
   props: {
     data: {
       type: Object,
       default: () => {},
     },
-  },
-  components: {
-    DetailsRow,
-    DefaultComponentDetails,
   },
   data() {
     return {
@@ -150,12 +150,9 @@ export default {
       tabKey: 0,
     };
   },
-  created() {
-    this.init();
-  },
   computed: {
     curActiveTabData() {
-      return this.componentList.find((v) => v.name === this.tabActive) ?? {};
+      return this.componentList.find(v => v.name === this.tabActive) ?? {};
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -171,6 +168,9 @@ export default {
       },
       deep: true,
     },
+  },
+  created() {
+    this.init();
   },
   methods: {
     init() {
@@ -195,12 +195,10 @@ export default {
       }
       try {
         const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: this.data?.name });
-        this.componentList = res.map((item) => {
-          return {
-            ...item,
-            label: item.name,
-          };
-        });
+        this.componentList = res.map(item => ({
+          ...item,
+          label: item.name,
+        }));
         if (this.firstLoad) {
           this.handleTabChange(this.componentList[0]?.name);
         }

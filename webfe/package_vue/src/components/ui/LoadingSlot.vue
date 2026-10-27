@@ -22,13 +22,13 @@
 
 <script>
 
-    export default {
-        props: {
-            loading: {
-                type: Boolean
-            }
-        }
-    };
+export default {
+  props: {
+    loading: {
+      type: Boolean,
+    },
+  },
+};
 </script>
 
 <style lang="scss">

@@ -151,7 +151,8 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = dayjs().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = dayjs().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -257,7 +258,7 @@ export default {
       }
     },
 
-    handleTabChange(name) {
+    handleTabChange() {
       this.resetParams();
       this.loadData();
     },
@@ -591,7 +592,7 @@ export default {
 
     handleClearStreamLogFilters() {
       this.streamLogFilters = [];
-      this.renderIndex++;
+      this.renderIndex += 1;
       this.loadData(false);
     },
 

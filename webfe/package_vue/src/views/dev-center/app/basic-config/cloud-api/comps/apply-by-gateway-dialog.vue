@@ -136,7 +136,7 @@ export default {
         {
           reason: '',
           expired: 6,
-        }
+        },
       );
       this.$emit('update:show', false);
       this.$emit('after-leave');

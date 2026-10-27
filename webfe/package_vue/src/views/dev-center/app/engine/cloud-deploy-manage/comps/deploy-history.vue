@@ -300,7 +300,7 @@ export default {
     init() {
       this.moduleValue = '';
       this.getDeployHistory();
-      this.moduleList = this.curAppModuleList.map((item) => ({ key: item.name, name: item.name }));
+      this.moduleList = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
       // 在列表头新增一项
       this.moduleList.unshift({ key: '', name: `${this.$t('全部')}` });
     },
@@ -440,7 +440,7 @@ export default {
         this.$nextTick(() => {
           if (!this.logId) return;
           // query参数获取默认打开项
-          const curLog = this.historyList.find((v) => v.deployment?.id === this.logId);
+          const curLog = this.historyList.find(v => v.deployment?.id === this.logId);
           curLog && this.handleShowLogSideslider(curLog);
         });
       }

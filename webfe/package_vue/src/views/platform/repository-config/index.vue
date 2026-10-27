@@ -191,9 +191,7 @@ export default {
     renderHeader(h, data) {
       const directive = {
         name: 'bkTooltips',
-        content: this.$t(
-          '关闭后，用户将无法创建与该源码类型仓库关联的新应用，可以通过“用户特性”为特定用户单独开启此功能。'
-        ),
+        content: this.$t('关闭后，用户将无法创建与该源码类型仓库关联的新应用，可以通过“用户特性”为特定用户单独开启此功能。'),
         placement: 'top',
         width: 220,
       };

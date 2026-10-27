@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-mutating-props -- This cell edits a parent-owned table row through its v-model bindings. -->
 <template>
   <bk-form
     :label-width="0"
@@ -36,6 +37,7 @@
 </template>
 
 <script>
+/* eslint-disable vue/no-mutating-props -- This cell edits a parent-owned table row through its v-model bindings. */
 export default {
   props: {
     row: Object,

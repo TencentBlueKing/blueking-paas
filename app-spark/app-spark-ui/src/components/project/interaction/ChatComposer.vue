@@ -51,15 +51,7 @@
         >
           <AppIcon name="plus-line" />
         </button>
-        <button
-          type="button"
-          class="composer__model is-inert"
-          aria-disabled="true"
-          title="暂不支持切换模型"
-        >
-          DeepSeek v4.1 flash
-          <AppIcon name="chevron-down" />
-        </button>
+        <ModelSelector placement="top-start" />
         <button
           type="button"
           class="composer__send"
@@ -79,6 +71,8 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import Message from '@/common/message';
 import { Close } from 'bkui-vue/lib/icon';
 import AppIcon from '@/components/AppIcon.vue';
+import ModelSelector from '@/components/model/ModelSelector.vue';
+import { useModelCatalogStore } from '@/store/model-catalog';
 import { appendImages } from './read-image';
 import type { ChatImage } from './types';
 
@@ -92,9 +86,10 @@ const props = defineProps<{
 const enableUpload = computed(() => props.enableUpload !== false);
 
 const emit = defineEmits<{
-  (e: 'send', value: string, images: ChatImage[]): void;
+  (e: 'send', value: string, images: ChatImage[], modelCode?: string): void;
 }>();
 
+const modelCatalogStore = useModelCatalogStore();
 const INPUT_LINE_HEIGHT = 22;
 const INPUT_MIN_HEIGHT = INPUT_LINE_HEIGHT * 2;
 const INPUT_MAX_HEIGHT = 300;
@@ -160,7 +155,7 @@ const handleDrop = async (event: DragEvent) => {
 
 const handleSend = () => {
   if (props.disabled || !canSend.value) return;
-  emit('send', draft.value.trim(), images.value);
+  emit('send', draft.value.trim(), images.value, modelCatalogStore.requestModelCode);
   draft.value = '';
   images.value = [];
   nextTick(resizeInput);
@@ -274,7 +269,6 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .composer__tool,
-.composer__model,
 .composer__send {
   display: inline-flex;
   align-items: center;
@@ -282,8 +276,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   border: 0;
 }
 
-.composer__tool,
-.composer__model {
+.composer__tool {
   height: 32px;
   color: var(--muted, #5c6573);
   background: transparent;
@@ -296,18 +289,8 @@ const handleKeydown = (event: KeyboardEvent) => {
   border: 1px solid var(--line);
 }
 
-.composer__model {
-  gap: 4px;
-  padding: 0 8px;
-  font-size: 13px;
-}
-
 .composer__tool :deep(.app-icon) {
   font-size: 16px;
-}
-
-.composer__model :deep(.app-icon) {
-  font-size: 13px;
 }
 
 .is-inert {
@@ -340,8 +323,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .composer__send:focus-visible,
-.composer__tool:focus-visible,
-.composer__model:focus-visible {
+.composer__tool:focus-visible {
   outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
 }

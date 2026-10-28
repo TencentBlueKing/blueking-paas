@@ -9,6 +9,7 @@ import type {
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
+  ModelCatalogResponse,
   PagedConversationResponse,
   PagedProjectResponse,
   PageQuery,
@@ -35,6 +36,9 @@ export type {
   ListConversationsQuery,
   ListHistoryQuery,
   ListUiEventsQuery,
+  ModelCatalogItem,
+  ModelCatalogResponse,
+  ModelCatalogSource,
   PagedConversationResponse,
   PagedProjectResponse,
   PagedResponse,
@@ -54,6 +58,11 @@ const apiPrefix = '/api-svc/api';
 
 export const getUserInfo = (): Promise<AuthenticatedUserResponse> => (
   http.get(`${apiPrefix}/accounts/userinfo/`, {}, { globalError: false })
+);
+
+/** 当前用户可用的模型目录。失败时由调用方降级到沙箱默认模型，不弹全局错误。 */
+export const listModels = (): Promise<ModelCatalogResponse> => (
+  http.get(`${apiPrefix}/models/`, {}, { globalError: false })
 );
 
 export const listProjects = (query: PageQuery = {}): Promise<PagedProjectResponse> => (
@@ -166,13 +175,14 @@ export const startConversationRun = async (
 
   if (!response.ok) {
     let detail = response.statusText || '发起对话失败';
+    let data: any = null;
     try {
-      const data = await response.json();
+      data = await response.json();
       detail = data.detail || data.message || detail;
     } catch {
       // 保持 statusText
     }
-    throw new RequestError(response.status, detail);
+    throw new RequestError(data?.code ?? response.status, detail, data);
   }
 
   return response;

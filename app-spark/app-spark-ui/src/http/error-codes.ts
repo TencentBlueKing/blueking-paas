@@ -12,6 +12,8 @@ export const ApiErrorCode = {
   CONVERSATION_CLOSED: 'CONVERSATION_CLOSED',
   /** 同项目里已有别的会话占着 workspace，新会话拉不起自己的 Agent Runtime。 */
   AGENT_WORKSPACE_BUSY: 'AGENT_WORKSPACE_BUSY',
+  /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
+  MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
 } as const;
 
 /** 判断一个异常是否为指定业务错误码的接口错误。 */

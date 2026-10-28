@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import Message from '@/common/message';
+import { createStartRunRequest } from '@/common/model-catalog';
 import type { ChatImage, ChatMessage } from '@/components/project/interaction/types';
 import {
   closeConversation,
@@ -27,6 +28,7 @@ import {
   hasConversationContent,
   readSseEvents,
 } from '@/services/agent/ag-ui';
+import { useModelCatalogStore } from '@/store/model-catalog';
 
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
 
@@ -39,6 +41,7 @@ const MAX_CATCH_UP_FAILURES = 3;
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const useProjectStore = defineStore('project', () => {
+  const modelCatalogStore = useModelCatalogStore();
   const projectId = ref('');
   const conversationNumber = ref<number | null>(null);
   const conversationId = ref('');
@@ -55,7 +58,11 @@ export const useProjectStore = defineStore('project', () => {
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
-  const pendingInitialMessage = ref<{ projectId: string; content: string } | null>(null);
+  const pendingInitialMessage = ref<{
+    projectId: string;
+    content: string;
+    modelCode?: string;
+  } | null>(null);
   // 取更早一页历史用的游标，null 表示已经翻到会话开头（或者还没拉过第一页）。
   const historyCursor = ref<string | null>(null);
   const loadingEarlier = ref(false);
@@ -105,15 +112,17 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.toolCalls = new Map();
   };
 
-  const queueInitialMessage = (id: string, content: string) => {
+  const queueInitialMessage = (id: string, content: string, modelCode?: string) => {
     const text = content.trim();
-    pendingInitialMessage.value = id && text ? { projectId: id, content: text } : null;
+    pendingInitialMessage.value = id && text
+      ? { projectId: id, content: text, modelCode }
+      : null;
   };
 
-  const consumeInitialMessage = (id: string): string => {
+  const consumeInitialMessage = (id: string) => {
     const pending = pendingInitialMessage.value;
     pendingInitialMessage.value = null;
-    return pending?.projectId === id ? pending.content : '';
+    return pending?.projectId === id ? pending : null;
   };
 
   const applyState = (state: RuntimeStateResponse, options?: { syncEventSeq?: boolean }) => {
@@ -707,7 +716,7 @@ export const useProjectStore = defineStore('project', () => {
   };
 
   // TODO: 项目对话暂不上传图片，后续再接入
-  const sendMessage = async (text: string, images: ChatImage[] = []) => {
+  const sendMessage = async (text: string, images: ChatImage[] = [], modelCode?: string) => {
     void images;
     const content = text.trim();
     if (!content || busy.value || !projectId.value || conversationNumber.value == null || !isLive.value) {
@@ -769,7 +778,7 @@ export const useProjectStore = defineStore('project', () => {
       const response = await startConversationRun(
         runProjectId,
         runNumber,
-        { content },
+        createStartRunRequest(content, modelCode),
         controller.signal,
       );
       if (!stillCurrent()) return;
@@ -787,13 +796,20 @@ export const useProjectStore = defineStore('project', () => {
     } catch (error) {
       // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
       if (!stillCurrent()) return;
-      const textBlock = assistantMessage.blocks.find(block => block.type === 'text');
-      const detail = error instanceof Error ? error.message : '发起对话失败';
-      assistantMessage.tone = 'error';
+      const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
+      const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
+      const detail = modelUnavailable
+        ? '该模型已不可用，请重新选择后重试。'
+        : error instanceof Error ? error.message : '发起对话失败';
+      liveAssistant.tone = 'error';
       if (textBlock && !textBlock.text) {
         textBlock.text = detail;
       } else {
-        assistantMessage.blocks.push({ type: 'text', text: detail });
+        liveAssistant.blocks.push({ type: 'text', text: detail });
+      }
+      if (modelUnavailable) {
+        Message({ theme: 'warning', message: '该模型已不可用' });
+        await modelCatalogStore.recoverFromUnavailableModel();
       }
     } finally {
       preparingOver = true;

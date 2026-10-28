@@ -37,20 +37,31 @@ import Message from '@/common/message';
 import InteractionPanel from '@/components/project/interaction/index.vue';
 import WorkspacePanel from '@/components/project/workspace/index.vue';
 import ProjectLayout from '@/layouts/ProjectLayout.vue';
+import { useModelCatalogStore } from '@/store/model-catalog';
 import { useProjectStore } from '@/store/project';
 
 const route = useRoute();
 const projectStore = useProjectStore();
+const modelCatalogStore = useModelCatalogStore();
 const { entering } = storeToRefs(projectStore);
 
 watch(() => route.params.projectId, async (projectId) => {
   const id = String(projectId || '');
   if (!id) return;
   try {
-    await projectStore.enterProject(id);
+    await Promise.all([
+      projectStore.enterProject(id),
+      modelCatalogStore.loadCatalog(),
+    ]);
     if (String(route.params.projectId || '') !== id) return;
     const initialMessage = projectStore.consumeInitialMessage(id);
-    if (initialMessage) await projectStore.sendMessage(initialMessage);
+    if (initialMessage) {
+      await projectStore.sendMessage(
+        initialMessage.content,
+        [],
+        initialMessage.modelCode,
+      );
+    }
   } catch (error) {
     projectStore.consumeInitialMessage(id);
     Message({

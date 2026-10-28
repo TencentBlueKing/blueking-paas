@@ -133,8 +133,25 @@ export interface PreviewResponse {
   dev_server_status: DevServerStatus | null;
 }
 
+export type ModelCatalogSource = 'bkaidev' | 'direct';
+
+export interface ModelCatalogItem {
+  code: string;
+  name: string;
+  context_window: number | null;
+  supports_vision: boolean;
+}
+
+export interface ModelCatalogResponse {
+  source: ModelCatalogSource;
+  switchable: boolean;
+  default_code: string;
+  models: ModelCatalogItem[];
+}
+
 export interface StartRunRequest {
   content: string;
+  model_code?: string;
 }
 
 export interface ListUiEventsQuery {

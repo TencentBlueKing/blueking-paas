@@ -2,7 +2,7 @@
   <bk-popover
     ref="popoverRef"
     trigger="click"
-    placement="bottom-end"
+    :placement="placement"
     theme="light"
     :arrow="false"
     :padding="0"
@@ -41,6 +41,12 @@
 import { onBeforeUnmount, ref } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
+
+withDefaults(defineProps<{
+  placement?: 'top-end' | 'bottom-end';
+}>(), {
+  placement: 'bottom-end',
+});
 
 const emit = defineEmits<{
   (e: 'rename'): void;

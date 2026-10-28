@@ -40,15 +40,7 @@
             >
               <AppIcon name="plus-line" />
             </button>
-            <button
-              type="button"
-              class="composer__model"
-              aria-disabled="true"
-              v-bk-tooltips="'暂不支持切换模型'"
-            >
-              DeepSeek v4.1 flash
-              <AppIcon name="chevron-down" />
-            </button>
+            <ModelSelector />
             <button
               type="submit"
               class="composer__send"
@@ -110,12 +102,11 @@
                 </time>
               </button>
               <div class="recent-card__actions">
-                <button type="button" aria-label="更多操作">
-                  <AppIcon name="more" />
-                </button>
-                <div class="recent-card__menu">
-                  <button type="button" @click="openDelete(project)">删除</button>
-                </div>
+                <ProjectActionsMenu
+                  placement="top-end"
+                  @rename="openRename(project)"
+                  @delete="openDelete(project)"
+                />
               </div>
             </article>
           </li>
@@ -128,6 +119,11 @@
       :project="deletingProject"
       @deleted="handleDeleted"
     />
+    <RenameProjectDemoDialog
+      v-model="renameVisible"
+      :project="renamingProject"
+      @renamed="handleRenamed"
+    />
   </HomeLayout>
 </template>
 
@@ -137,15 +133,20 @@ import { useRoute, useRouter } from 'vue-router';
 import { generateProjectId, projectNameFromPrompt } from '@/common/project';
 import { readableError, timeFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
+import ModelSelector from '@/components/model/ModelSelector.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
+import ProjectActionsMenu from '@/components/project/ProjectActionsMenu.vue';
+import RenameProjectDemoDialog from '@/components/project/RenameProjectDemoDialog.vue';
 import { createProject, listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import HomeLayout from '@/layouts/HomeLayout.vue';
+import { useModelCatalogStore } from '@/store/model-catalog';
 import { useProjectStore } from '@/store/project';
 
 const router = useRouter();
 const route = useRoute();
 const projectStore = useProjectStore();
+const modelCatalogStore = useModelCatalogStore();
 const composerRef = ref<HTMLFormElement>();
 const inputRef = ref<HTMLTextAreaElement>();
 const prompt = ref('');
@@ -156,6 +157,8 @@ const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
 const deleteVisible = ref(false);
 const deletingProject = ref<ProjectResponse | null>(null);
+const renameVisible = ref(false);
+const renamingProject = ref<ProjectResponse | null>(null);
 const spotlighted = ref(false);
 
 const samples = [
@@ -199,7 +202,11 @@ const submitPrompt = async () => {
       id: generateProjectId(),
       name: projectNameFromPrompt(content),
     });
-    projectStore.queueInitialMessage(created.id, content);
+    projectStore.queueInitialMessage(
+      created.id,
+      content,
+      modelCatalogStore.requestModelCode,
+    );
     await router.push({ name: 'project', params: { projectId: created.id } });
   } catch (error) {
     createError.value = readableError(error, '创建失败，请稍后重试');
@@ -231,6 +238,15 @@ const openDelete = (project: ProjectResponse) => {
   deleteVisible.value = true;
 };
 
+const openRename = (project: ProjectResponse) => {
+  renamingProject.value = project;
+  renameVisible.value = true;
+};
+
+const handleRenamed = (name: string) => {
+  if (renamingProject.value) renamingProject.value.name = name;
+};
+
 const handleDeleted = () => {
   fetchRecent();
 };
@@ -242,6 +258,7 @@ const handleSpotlightEnd = (event: AnimationEvent) => {
 };
 
 fetchRecent();
+void modelCatalogStore.loadCatalog();
 
 onMounted(async () => {
   if (route.query.compose !== '1') return;
@@ -420,7 +437,6 @@ onMounted(async () => {
 }
 
 .composer__tool,
-.composer__model,
 .composer__send {
   display: inline-flex;
   align-items: center;
@@ -429,8 +445,7 @@ onMounted(async () => {
   border: 0;
 }
 
-.composer__tool,
-.composer__model {
+.composer__tool {
   height: 32px;
   color: var(--muted);
   cursor: not-allowed;
@@ -444,18 +459,8 @@ onMounted(async () => {
   border: 1px solid var(--line);
 }
 
-.composer__model {
-  gap: 4px;
-  padding: 0 8px;
-  font-size: 13px;
-}
-
 .composer__tool :deep(.app-icon) {
   font-size: 16px;
-}
-
-.composer__model :deep(.app-icon) {
-  font-size: 13px;
 }
 
 .composer__send :deep(.app-icon),
@@ -526,8 +531,7 @@ onMounted(async () => {
 
 .composer__samples button:focus-visible,
 .composer__send:focus-visible,
-.composer__tool:focus-visible,
-.composer__model:focus-visible {
+.composer__tool:focus-visible {
   outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
 }
@@ -639,53 +643,7 @@ onMounted(async () => {
   bottom: 8px;
 }
 
-.recent-card__actions > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--faint);
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.recent-card__actions:hover > button,
-.recent-card__actions:focus-within > button {
-  color: var(--ink);
-  background: var(--subtle-bg);
-}
-
-.recent-card__menu {
-  position: absolute;
-  right: 0;
-  z-index: 4;
-  display: none;
-  padding-top: 6px;
-}
-
-.recent-card__actions:hover .recent-card__menu,
-.recent-card__actions:focus-within .recent-card__menu {
-  display: block;
-}
-
-.recent-card__menu button {
-  min-width: 88px;
-  height: 36px;
-  padding: 0 16px;
-  color: var(--danger);
-  font-size: 13px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(18, 28, 48, 0.12);
-  cursor: pointer;
-}
-
-.recent-card__open:focus-visible,
-.recent-card__actions > button:focus-visible {
+.recent-card__open:focus-visible {
   outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
 }
@@ -775,13 +733,6 @@ onMounted(async () => {
 
   .hero__sparks {
     display: none;
-  }
-
-  .composer__model {
-    max-width: 170px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
 
   .recent__grid {

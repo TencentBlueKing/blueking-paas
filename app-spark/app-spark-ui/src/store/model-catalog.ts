@@ -51,13 +51,13 @@ export const useModelCatalogStore = defineStore('model-catalog', () => {
   const loadCatalog = (
     { force = false, resetToDefault = false }: { force?: boolean; resetToDefault?: boolean } = {},
   ): Promise<void> => {
-    if (loadingPromise) return loadingPromise;
-    if (!force && status.value !== 'idle') return Promise.resolve();
-
     if (resetToDefault) {
       selectedCode.value = null;
       writeStoredCode(null);
     }
+    if (loadingPromise) return loadingPromise;
+    if (!force && status.value === 'ready') return Promise.resolve();
+
     status.value = 'loading';
     loadingPromise = (async () => {
       try {

@@ -119,7 +119,7 @@
       :project="deletingProject"
       @deleted="handleDeleted"
     />
-    <RenameProjectDemoDialog
+    <RenameProjectDialog
       v-model="renameVisible"
       :project="renamingProject"
       @renamed="handleRenamed"
@@ -136,7 +136,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import ModelSelector from '@/components/model/ModelSelector.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
 import ProjectActionsMenu from '@/components/project/ProjectActionsMenu.vue';
-import RenameProjectDemoDialog from '@/components/project/RenameProjectDemoDialog.vue';
+import RenameProjectDialog from '@/components/project/RenameProjectDialog.vue';
 import { createProject, listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import HomeLayout from '@/layouts/HomeLayout.vue';

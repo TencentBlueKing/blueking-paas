@@ -94,7 +94,7 @@
       :project="deletingProject"
       @deleted="handleDeleted"
     />
-    <RenameProjectDemoDialog
+    <RenameProjectDialog
       v-model="renameVisible"
       :project="renamingProject"
       @renamed="handleRenamed"
@@ -105,12 +105,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import Message from '@/common/message';
 import { fromNowFormatter, readableError, timeFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
 import ProjectActionsMenu from '@/components/project/ProjectActionsMenu.vue';
-import RenameProjectDemoDialog from '@/components/project/RenameProjectDemoDialog.vue';
+import RenameProjectDialog from '@/components/project/RenameProjectDialog.vue';
 import { listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import HomeLayout from '@/layouts/HomeLayout.vue';
@@ -169,10 +168,6 @@ const openRename = (project: ProjectResponse) => {
 
 const handleRenamed = (name: string) => {
   if (renamingProject.value) renamingProject.value.name = name;
-  Message({
-    theme: 'primary',
-    message: '演示名称已临时更新，刷新页面后会恢复',
-  });
 };
 
 const handleDeleted = async () => {

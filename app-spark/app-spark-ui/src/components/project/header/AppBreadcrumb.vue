@@ -68,6 +68,7 @@
                   @focusout="scheduleRecentHide"
                   @keydown.left.prevent="closeRecent(true)"
                   @keydown.esc.stop.prevent="closeRecent(true)"
+                  @scroll.passive="handleRecentScroll"
                 >
                   <div
                     v-if="recentLoading"
@@ -98,6 +99,27 @@
                       <span>{{ item.name || item.id }}</span>
                       <time>{{ fromNowFormatter(item.updated_at) }}</time>
                     </button>
+                    <div
+                      v-if="recentLoadingMore"
+                      class="project-switcher__status is-loading-more"
+                      role="status"
+                    >
+                      <span class="project-switcher__spinner" aria-hidden="true" />
+                      加载更多…
+                    </div>
+                    <div
+                      v-else-if="recentLoadMoreError"
+                      class="project-switcher__status is-error"
+                    >
+                      <span>{{ recentLoadMoreError }}</span>
+                      <button
+                        type="button"
+                        class="project-switcher__retry"
+                        @click="loadNextRecentPage"
+                      >
+                        重试
+                      </button>
+                    </div>
                   </template>
                 </div>
               </template>
@@ -130,24 +152,11 @@
       @update:modelValue="onConfirmVisible"
     />
 
-    <AppModal
+    <RenameProjectDialog
       v-model="renameVisible"
-      :title="`重命名 — ${currentName}`"
-      confirm-text="确认"
-      :confirm-disabled="!renameInput.trim() || renameInput.trim() === currentName"
-      :focus-confirm="false"
-      @confirm="confirmRename"
-    >
-      <label class="rename-demo">
-        <span>新名字</span>
-        <input
-          v-model="renameInput"
-          maxlength="20"
-          placeholder="给项目起个好记的名字"
-        >
-        <em>{{ renameInput.trim().length }}/20</em>
-      </label>
-    </AppModal>
+      :project="currentProject"
+      @renamed="handleRenamed"
+    />
 
     <DeleteProjectDialog
       v-model="deleteVisible"
@@ -158,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
@@ -166,6 +175,8 @@ import { fromNowFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
 import AppModal from '@/components/project/AppModal.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
+import RenameProjectDialog from '@/components/project/RenameProjectDialog.vue';
+import { useHoverSubmenu } from '@/composables/use-hover-submenu';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
 import { listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
@@ -173,7 +184,10 @@ import { useProjectStore } from '@/store/project';
 
 const router = useRouter();
 const { projectId } = storeToRefs(useProjectStore());
-const projects = ref<ProjectResponse[]>([]);
+const RECENT_PAGE_SIZE = 21;
+const RECENT_LOAD_THRESHOLD = 48;
+const currentProjectData = ref<ProjectResponse | null>(null);
+const recentProjectItems = ref<ProjectResponse[]>([]);
 const {
   popoverRef,
   visible,
@@ -184,29 +198,27 @@ const {
 const confirmVisible = ref(false);
 const pendingProjectId = ref('');
 const renameVisible = ref(false);
-const renameInput = ref('');
 const deleteVisible = ref(false);
 const deletingProject = ref<ProjectResponse | null>(null);
-const demoNames = reactive<Record<string, string>>({});
-const recentTriggerRef = ref<HTMLButtonElement>();
-const recentPanelRef = ref<HTMLElement>();
-const recentVisible = ref(false);
 const recentLoading = ref(false);
+const recentLoadingMore = ref(false);
 const recentError = ref('');
-let recentHideTimer = 0;
+const recentLoadMoreError = ref('');
+const recentCount = ref(0);
+const recentPage = ref(0);
+const hasMoreRecentProjects = computed(() => recentProjectItems.value.length < recentCount.value);
+let currentProjectRequest = 0;
+let recentLoadGeneration = 0;
 
 const currentProject = computed<ProjectResponse | null>(() => {
-  const current = projects.value.find(item => item.id === projectId.value);
-  if (current) {
-    return {
-      ...current,
-      name: demoNames[current.id] || current.name,
-    };
-  }
+  const current = currentProjectData.value?.id === projectId.value
+    ? currentProjectData.value
+    : null;
+  if (current) return current;
   if (!projectId.value) return null;
   return {
     id: projectId.value,
-    name: demoNames[projectId.value] || projectId.value,
+    name: projectId.value,
     created_at: '',
     updated_at: '',
   };
@@ -215,9 +227,8 @@ const currentProject = computed<ProjectResponse | null>(() => {
 const currentName = computed(() => currentProject.value?.name || '选择项目');
 
 const recentProjects = computed(() => (
-  projects.value
+  recentProjectItems.value
     .filter(item => item.id !== projectId.value)
-    .slice(0, 20)
 ));
 
 const handlePopoverShow = () => {
@@ -230,69 +241,88 @@ const handlePopoverHidden = () => {
   closeRecent();
 };
 
-const fetchProjects = async () => {
+const fetchCurrentProject = async () => {
+  const id = projectId.value;
+  const request = ++currentProjectRequest;
+  currentProjectData.value = null;
+  if (!id) return;
   try {
     const data = await listProjects({ page: 1, page_size: 100 });
-    projects.value = data.items || [];
-    if (projectId.value && !projects.value.some(item => item.id === projectId.value)) {
-      projects.value.unshift({
-        id: projectId.value,
-        name: projectId.value,
-        created_at: '',
-        updated_at: '',
-      });
+    if (request === currentProjectRequest && projectId.value === id) {
+      currentProjectData.value = (data.items || []).find(item => item.id === id) ?? null;
     }
   } catch (error) {
+    if (request !== currentProjectRequest || projectId.value !== id) return;
     Message({
       theme: 'error',
-      message: error instanceof Error ? error.message : '获取项目列表失败',
+      message: error instanceof Error ? error.message : '获取项目信息失败',
     });
   }
 };
 
 const fetchRecentProjects = async () => {
+  const generation = ++recentLoadGeneration;
   recentLoading.value = true;
+  recentLoadingMore.value = false;
   recentError.value = '';
+  recentLoadMoreError.value = '';
+  recentProjectItems.value = [];
+  recentCount.value = 0;
+  recentPage.value = 0;
   try {
-    const data = await listProjects({ page: 1, page_size: 21 });
-    projects.value = data.items || [];
+    const data = await listProjects({ page: 1, page_size: RECENT_PAGE_SIZE });
+    if (generation !== recentLoadGeneration) return;
+    recentProjectItems.value = data.items || [];
+    recentCount.value = data.count || 0;
+    recentPage.value = 1;
   } catch (error) {
+    if (generation !== recentLoadGeneration) return;
     recentError.value = error instanceof Error ? error.message : '获取最近项目失败';
   } finally {
-    recentLoading.value = false;
+    if (generation === recentLoadGeneration) recentLoading.value = false;
   }
 };
 
-const cancelRecentHide = () => {
-  window.clearTimeout(recentHideTimer);
-};
-
-const closeRecent = (restoreFocus = false) => {
-  cancelRecentHide();
-  recentVisible.value = false;
-  if (restoreFocus) nextTick(() => recentTriggerRef.value?.focus());
-};
-
-const scheduleRecentHide = () => {
-  cancelRecentHide();
-  recentHideTimer = window.setTimeout(() => closeRecent(), 120);
-};
-
-const showRecent = (focusFirst = false) => {
-  cancelRecentHide();
-  if (!recentVisible.value) {
-    recentVisible.value = true;
-    fetchRecentProjects();
-  }
-  if (focusFirst) {
-    nextTick(() => recentPanelRef.value?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
+const loadNextRecentPage = async () => {
+  if (recentLoading.value || recentLoadingMore.value || !hasMoreRecentProjects.value) return;
+  const generation = recentLoadGeneration;
+  const nextPage = recentPage.value + 1;
+  recentLoadingMore.value = true;
+  recentLoadMoreError.value = '';
+  try {
+    const data = await listProjects({ page: nextPage, page_size: RECENT_PAGE_SIZE });
+    if (generation !== recentLoadGeneration) return;
+    const knownIds = new Set(recentProjectItems.value.map(item => item.id));
+    const additions = (data.items || []).filter(item => !knownIds.has(item.id));
+    recentProjectItems.value = [...recentProjectItems.value, ...additions];
+    recentCount.value = additions.length
+      ? data.count || recentProjectItems.value.length
+      : recentProjectItems.value.length;
+    recentPage.value = nextPage;
+  } catch (error) {
+    if (generation !== recentLoadGeneration) return;
+    recentLoadMoreError.value = error instanceof Error ? error.message : '加载更多项目失败';
+  } finally {
+    if (generation === recentLoadGeneration) recentLoadingMore.value = false;
   }
 };
 
-const toggleRecent = () => {
-  if (recentVisible.value) closeRecent();
-  else showRecent();
+const handleRecentScroll = (event: Event) => {
+  const panel = event.currentTarget as HTMLElement;
+  const distanceToBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+  if (distanceToBottom <= RECENT_LOAD_THRESHOLD) void loadNextRecentPage();
 };
+
+const {
+  triggerRef: recentTriggerRef,
+  panelRef: recentPanelRef,
+  visible: recentVisible,
+  show: showRecent,
+  close: closeRecent,
+  toggle: toggleRecent,
+  scheduleClose: scheduleRecentHide,
+  cancelClose: cancelRecentHide,
+} = useHoverSubmenu({ onOpen: fetchRecentProjects });
 
 const handleSelect = (id: string) => {
   closeRecent();
@@ -317,19 +347,13 @@ const handleConfirm = () => {
 const openRename = () => {
   closeRecent();
   close();
-  renameInput.value = currentName.value;
   renameVisible.value = true;
 };
 
-const confirmRename = () => {
-  const name = renameInput.value.trim();
-  if (!projectId.value || !name || name === currentName.value) return;
-  demoNames[projectId.value] = name;
-  renameVisible.value = false;
-  Message({
-    theme: 'success',
-    message: '名称已更新',
-  });
+const handleRenamed = (name: string) => {
+  const current = currentProjectData.value;
+  if (!current || current.id !== projectId.value) return;
+  currentProjectData.value = { ...current, name };
 };
 
 const openDelete = () => {
@@ -345,8 +369,7 @@ const handleDeleted = () => {
   router.replace({ name: 'projects' });
 };
 
-onMounted(fetchProjects);
-onBeforeUnmount(cancelRecentHide);
+watch(projectId, fetchCurrentProject, { immediate: true });
 </script>
 
 <style lang="postcss" scoped>
@@ -529,6 +552,10 @@ onBeforeUnmount(cancelRecentHide);
   color: var(--danger);
 }
 
+.project-switcher__status.is-loading-more {
+  justify-content: center;
+}
+
 .project-switcher__spinner {
   display: inline-block;
   flex-shrink: 0;
@@ -553,44 +580,6 @@ onBeforeUnmount(cancelRecentHide);
   to {
     transform: rotate(360deg);
   }
-}
-
-.rename-demo {
-  position: relative;
-  display: block;
-  margin-top: 22px;
-}
-
-.rename-demo > span {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.rename-demo input {
-  width: 100%;
-  height: 42px;
-  padding: 0 52px 0 12px;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-}
-
-.rename-demo input:focus {
-  border-color: var(--accent-focus);
-  box-shadow: 0 0 0 3px rgba(61, 109, 255, 0.12);
-  outline: none;
-}
-
-.rename-demo em {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  color: var(--faint);
-  font-size: 11px;
-  font-style: normal;
 }
 
 .project-switcher__trigger:focus-visible,

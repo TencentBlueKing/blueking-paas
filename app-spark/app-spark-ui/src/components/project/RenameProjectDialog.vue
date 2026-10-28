@@ -10,14 +10,16 @@
   >
     <label class="rename-project">
       <span>新名字</span>
-      <input
-        ref="inputRef"
-        v-model="name"
-        maxlength="20"
-        placeholder="给项目起个好记的名字"
-        @keydown.enter.prevent="confirm"
-      >
-      <em>{{ name.trim().length }}/20</em>
+      <span class="rename-project__field">
+        <input
+          ref="inputRef"
+          v-model="name"
+          maxlength="20"
+          placeholder="给项目起个好记的名字"
+          @keydown.enter.prevent="confirm"
+        >
+        <em>{{ name.trim().length }}/20</em>
+      </span>
     </label>
   </AppModal>
 </template>
@@ -70,19 +72,26 @@ watch(() => props.modelValue, async (visible) => {
   margin-top: 24px;
 }
 
-.rename-project > span {
+.rename-project > span:first-child {
   color: var(--ink);
   font-size: 13px;
   font-weight: 600;
+}
+
+.rename-project__field {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .rename-project input {
   box-sizing: border-box;
   display: block;
   width: 100%;
-  max-width: 100%;
+  min-width: 0;
   height: 44px;
-  padding: 0 12px;
+  padding: 0 58px 0 12px;
   color: var(--ink);
   font-size: 15px;
   background: #f7f8fa;
@@ -97,9 +106,14 @@ watch(() => props.modelValue, async (visible) => {
 }
 
 .rename-project em {
-  align-self: flex-end;
+  position: absolute;
+  top: 50%;
+  right: 12px;
   color: var(--faint);
   font-size: 12px;
   font-style: normal;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 </style>

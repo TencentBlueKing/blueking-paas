@@ -61,17 +61,30 @@
       </template>
     </bk-popover>
 
-    <button
-      v-else
-      type="button"
-      class="model-selector__trigger is-readonly"
-      disabled
-      aria-disabled="true"
-      :title="displayName"
-    >
-      <span>{{ displayName }}</span>
-      <em v-if="catalog?.source === 'direct'" class="model-selector__source">内置</em>
-    </button>
+    <div v-else class="model-selector__static">
+      <button
+        type="button"
+        class="model-selector__trigger is-readonly"
+        disabled
+        aria-disabled="true"
+        :title="displayName"
+      >
+        <span>{{ displayName }}</span>
+        <em v-if="catalog?.source === 'direct'" class="model-selector__source">内置</em>
+      </button>
+      <button
+        v-if="status === 'unavailable' || retrying"
+        type="button"
+        class="model-selector__retry"
+        :class="{ 'is-loading': retrying }"
+        :disabled="retrying"
+        :aria-label="retrying ? '正在刷新模型列表' : '刷新模型列表'"
+        :title="retrying ? '正在刷新模型列表' : '刷新模型列表'"
+        @click="handleRetry"
+      >
+        <AppIcon name="rotate-cw" />
+      </button>
+    </div>
   </div>
 </template>
 
@@ -91,6 +104,7 @@ withDefaults(defineProps<{
 
 const modelStore = useModelCatalogStore();
 const {
+  status,
   models,
   catalog,
   selectedCode,
@@ -107,6 +121,7 @@ const {
 } = usePopoverVisible();
 const keyword = ref('');
 const searchRef = ref<HTMLInputElement>();
+const retrying = ref(false);
 
 const filteredModels = computed(() => filterModels(models.value, keyword.value));
 
@@ -120,6 +135,16 @@ const handleAfterShow = async () => {
 const handleSelect = (code: string) => {
   modelStore.selectModel(code);
   close();
+};
+
+const handleRetry = async () => {
+  if (retrying.value) return;
+  retrying.value = true;
+  try {
+    await modelStore.loadCatalog({ force: true });
+  } finally {
+    retrying.value = false;
+  }
 };
 </script>
 
@@ -174,6 +199,54 @@ const handleSelect = (code: string) => {
   color: var(--muted);
   cursor: default;
   opacity: 1;
+}
+
+.model-selector__static {
+  display: inline-flex;
+  align-items: center;
+  max-width: 240px;
+  min-width: 0;
+}
+
+.model-selector__static .model-selector__trigger {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.model-selector__retry {
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.model-selector__retry:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--subtle-bg);
+}
+
+.model-selector__retry:disabled {
+  cursor: default;
+}
+
+.model-selector__retry.is-loading :deep(.app-icon) {
+  animation: model-selector-retry-spin 0.8s linear infinite;
+}
+
+.model-selector__retry:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
 }
 
 .model-selector__trigger :deep(.app-icon) {
@@ -302,6 +375,18 @@ const handleSelect = (code: string) => {
   min-height: 96px;
   color: var(--faint);
   font-size: 13px;
+}
+
+@keyframes model-selector-retry-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .model-selector__retry.is-loading :deep(.app-icon) {
+    animation: none;
+  }
 }
 
 :global(.model-selector-popover),

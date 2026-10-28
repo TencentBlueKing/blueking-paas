@@ -77,6 +77,7 @@
                   @focusout="scheduleArchiveHide"
                   @keydown.left.prevent="closeArchive(true)"
                   @keydown.esc.stop.prevent="closeArchive(true)"
+                  @scroll.passive="handleArchiveScroll"
                 >
                   <div
                     v-if="loading"
@@ -111,6 +112,27 @@
                       <span>会话 #{{ row.number }}</span>
                       <time>{{ fromNowFormatter(row.closed_at || row.created_at) }}</time>
                     </button>
+                    <div
+                      v-if="loadingMore"
+                      class="conversation-menu__status is-loading-more"
+                      role="status"
+                    >
+                      <span class="conversation-menu__spinner" aria-hidden="true" />
+                      加载更多…
+                    </div>
+                    <div
+                      v-else-if="loadMoreError"
+                      class="conversation-menu__status is-error"
+                    >
+                      <span>{{ loadMoreError }}</span>
+                      <button
+                        type="button"
+                        class="conversation-menu__retry"
+                        @click="loadNextPage"
+                      >
+                        重试
+                      </button>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -131,11 +153,12 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref } from 'vue';
+import { computed, ref } from 'vue';
 import Message from '@/common/message';
 import { fromNowFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
 import AppModal from '@/components/project/AppModal.vue';
+import { useHoverSubmenu } from '@/composables/use-hover-submenu';
 import { usePopoverVisible } from '@/composables/use-popover-visible';
 import type { ConversationResponse } from '@/http/types';
 import { useProjectStore } from '@/store/project';
@@ -147,27 +170,80 @@ const props = defineProps<{
 
 const projectStore = useProjectStore();
 const { popoverRef, visible, onAfterShow, onAfterHidden, close } = usePopoverVisible();
-const archiveTriggerRef = ref<HTMLButtonElement>();
-const archivePanelRef = ref<HTMLElement>();
-const archiveVisible = ref(false);
+const ARCHIVE_PAGE_SIZE = 20;
+const ARCHIVE_LOAD_THRESHOLD = 48;
 const loading = ref(false);
+const loadingMore = ref(false);
 const confirmVisible = ref(false);
 const archived = ref<ConversationResponse[]>([]);
+const archiveCount = ref(0);
+const archivePage = ref(0);
 const archiveError = ref('');
-let archiveHideTimer = 0;
+const loadMoreError = ref('');
+const hasMore = computed(() => archived.value.length < archiveCount.value);
+let archiveLoadGeneration = 0;
 
 const fetchConversations = async () => {
+  const generation = ++archiveLoadGeneration;
   loading.value = true;
+  loadingMore.value = false;
   archiveError.value = '';
+  loadMoreError.value = '';
+  archived.value = [];
+  archiveCount.value = 0;
+  archivePage.value = 0;
   try {
-    const history = await projectStore.fetchArchivedConversations(1, 20);
+    const history = await projectStore.fetchArchivedConversations(1, ARCHIVE_PAGE_SIZE);
+    if (generation !== archiveLoadGeneration) return;
     archived.value = history.items || [];
+    archiveCount.value = history.count || 0;
+    archivePage.value = 1;
   } catch (error) {
+    if (generation !== archiveLoadGeneration) return;
     archiveError.value = error instanceof Error ? error.message : '获取对话归档失败';
   } finally {
-    loading.value = false;
+    if (generation === archiveLoadGeneration) loading.value = false;
   }
 };
+
+const loadNextPage = async () => {
+  if (loading.value || loadingMore.value || !hasMore.value) return;
+  const generation = archiveLoadGeneration;
+  const nextPage = archivePage.value + 1;
+  loadingMore.value = true;
+  loadMoreError.value = '';
+  try {
+    const history = await projectStore.fetchArchivedConversations(nextPage, ARCHIVE_PAGE_SIZE);
+    if (generation !== archiveLoadGeneration) return;
+    const knownNumbers = new Set(archived.value.map(row => row.number));
+    const additions = (history.items || []).filter(row => !knownNumbers.has(row.number));
+    archived.value = [...archived.value, ...additions];
+    archiveCount.value = history.count || archived.value.length;
+    archivePage.value = nextPage;
+  } catch (error) {
+    if (generation !== archiveLoadGeneration) return;
+    loadMoreError.value = error instanceof Error ? error.message : '加载更多归档失败';
+  } finally {
+    if (generation === archiveLoadGeneration) loadingMore.value = false;
+  }
+};
+
+const handleArchiveScroll = (event: Event) => {
+  const panel = event.currentTarget as HTMLElement;
+  const distanceToBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+  if (distanceToBottom <= ARCHIVE_LOAD_THRESHOLD) void loadNextPage();
+};
+
+const {
+  triggerRef: archiveTriggerRef,
+  panelRef: archivePanelRef,
+  visible: archiveVisible,
+  show: showArchive,
+  close: closeArchive,
+  toggle: toggleArchive,
+  scheduleClose: scheduleArchiveHide,
+  cancelClose: cancelArchiveHide,
+} = useHoverSubmenu({ onOpen: fetchConversations });
 
 const handleShow = () => {
   onAfterShow();
@@ -177,37 +253,6 @@ const handleShow = () => {
 const handleHidden = () => {
   onAfterHidden();
   closeArchive();
-};
-
-const cancelArchiveHide = () => {
-  window.clearTimeout(archiveHideTimer);
-};
-
-const closeArchive = (restoreFocus = false) => {
-  cancelArchiveHide();
-  archiveVisible.value = false;
-  if (restoreFocus) nextTick(() => archiveTriggerRef.value?.focus());
-};
-
-const scheduleArchiveHide = () => {
-  cancelArchiveHide();
-  archiveHideTimer = window.setTimeout(() => closeArchive(), 120);
-};
-
-const showArchive = (focusFirst = false) => {
-  cancelArchiveHide();
-  if (!archiveVisible.value) {
-    archiveVisible.value = true;
-    fetchConversations();
-  }
-  if (focusFirst) {
-    nextTick(() => archivePanelRef.value?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
-  }
-};
-
-const toggleArchive = () => {
-  if (archiveVisible.value) closeArchive();
-  else showArchive();
 };
 
 const openNewConversation = () => {
@@ -247,7 +292,6 @@ const openConversation = async (row: ConversationResponse) => {
   }
 };
 
-onBeforeUnmount(cancelArchiveHide);
 </script>
 
 <style lang="postcss" scoped>
@@ -358,7 +402,7 @@ onBeforeUnmount(cancelArchiveHide);
   flex-direction: column;
 }
 
-.conversation-menu__archive button {
+.conversation-menu__archive > button {
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -373,14 +417,14 @@ onBeforeUnmount(cancelArchiveHide);
   cursor: pointer;
 }
 
-.conversation-menu__archive button:hover,
-.conversation-menu__archive button:focus-visible,
-.conversation-menu__archive button.is-current {
+.conversation-menu__archive > button:hover,
+.conversation-menu__archive > button:focus-visible,
+.conversation-menu__archive > button.is-current {
   background: var(--accent-soft);
   outline: none;
 }
 
-.conversation-menu__archive span {
+.conversation-menu__archive > button > span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -388,7 +432,7 @@ onBeforeUnmount(cancelArchiveHide);
   white-space: nowrap;
 }
 
-.conversation-menu__archive time {
+.conversation-menu__archive > button > time {
   flex-shrink: 0;
   color: var(--faint);
   font-size: 12px;
@@ -409,6 +453,11 @@ onBeforeUnmount(cancelArchiveHide);
 }
 
 .conversation-menu__status.is-loading {
+  min-height: 44px;
+}
+
+.conversation-menu__status.is-loading-more {
+  justify-content: center;
   min-height: 44px;
 }
 

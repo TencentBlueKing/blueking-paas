@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from svc_redis.controller.entities import RedisPlanConfig
 from svc_redis.controller.manifests import get_redis_resource
 from svc_redis.controller.resource_presets import resolve_plan_resources
+from svc_redis.vendor.redis_crd.constants import DEFAULT_REDIS_EXPORTER_IMAGE
 
 
 def _plan_config(**overrides) -> RedisPlanConfig:
@@ -90,4 +91,36 @@ class TestGetRedisResource:
         assert resources == {
             "requests": {"cpu": requests_cpu, "memory": requests_memory},
             "limits": {"cpu": limits_cpu, "memory": limits_memory},
+        }
+
+
+class TestRedisExporter:
+    def test_no_exporter_when_monitor_disabled(self):
+        deployable = get_redis_resource(_plan_config()).to_deployable()
+        assert "redisExporter" not in deployable["spec"]
+
+    def test_exporter_with_default_settings(self):
+        deployable = get_redis_resource(_plan_config(monitor=True)).to_deployable()
+
+        exporter = deployable["spec"]["redisExporter"]
+        assert exporter["enabled"] is True
+        assert exporter["image"] == DEFAULT_REDIS_EXPORTER_IMAGE
+        assert exporter["resources"] == {
+            "requests": {"cpu": "1m", "memory": "16Mi"},
+            "limits": {"cpu": "100m", "memory": "64Mi"},
+        }
+
+    def test_exporter_with_custom_settings(self, settings):
+        settings.REDIS_EXPORTER_IMAGE = "mirrors.example.com/redis-exporter:v1.44.0"
+        settings.REDIS_EXPORTER_RESOURCES = {
+            "requests": {"cpu": "10m", "memory": "32Mi"},
+            "limits": {"cpu": "200m", "memory": "128Mi"},
+        }
+        deployable = get_redis_resource(_plan_config(type="RedisReplication", monitor=True)).to_deployable()
+
+        exporter = deployable["spec"]["redisExporter"]
+        assert exporter["image"] == "mirrors.example.com/redis-exporter:v1.44.0"
+        assert exporter["resources"] == {
+            "requests": {"cpu": "10m", "memory": "32Mi"},
+            "limits": {"cpu": "200m", "memory": "128Mi"},
         }

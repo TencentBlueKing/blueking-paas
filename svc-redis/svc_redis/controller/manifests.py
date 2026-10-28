@@ -75,13 +75,10 @@ class MonitorManifestConstructor(ManifestConstructor):
         monitor = plan_config.monitor
         if monitor:
             model_res.spec.redisExporter = crd.RedisExporter(
-                enabled=True, image=DEFAULT_REDIS_EXPORTER_IMAGE, resources=self._get_default_resources()
+                enabled=True,
+                image=settings.REDIS_EXPORTER_IMAGE or DEFAULT_REDIS_EXPORTER_IMAGE,
+                resources=crd.ResourceRequirements(**settings.REDIS_EXPORTER_RESOURCES),
             )
-
-    def _get_default_resources(self) -> crd.ResourceRequirements:
-        return crd.ResourceRequirements(
-            requests={"cpu": "500m", "memory": "512Mi"}, limits={"cpu": "500m", "memory": "512Mi"}
-        )
 
 
 class ResourceManifestConstructor(ManifestConstructor):

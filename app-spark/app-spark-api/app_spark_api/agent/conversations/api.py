@@ -21,7 +21,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from django.http import StreamingHttpResponse
-from django.shortcuts import aget_object_or_404
 from ninja import Path, Query, Router, Status
 from ninja.pagination import paginate
 
@@ -37,8 +36,7 @@ from app_spark_api.agent.conversations.entities import (
 )
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError
-from app_spark_api.core.projects.models import Project
-from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
@@ -76,7 +74,7 @@ async def create_conversation(request: HttpRequest, project_id: str = PROJECT_ID
     这里是唯一会顺手拉起 Runtime 的读接口：「新开一个会话」本身就意味着马上要干活，先把启动
     成本付掉，比让用户在第一句话上等着更好。
     """
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     conversation = await services.create_conversation(project, owner=authenticated_user(request).pk)
     await services.open_client(conversation, credential=get_user_credential(request))
     return Status(HTTPStatus.CREATED, _to_state(conversation, await services.get_state(conversation)))
@@ -101,7 +99,7 @@ async def list_conversations(
     """
     # 返回还没取值的 queryset：`@paginate` 会自己 COUNT 加切片，这里 `async for` 一遍再交出去
     # 等于把整个列表读进内存，翻页也就白翻了。
-    return Conversation.objects.for_project(await _get_project(request, project_id), is_live=is_live)
+    return Conversation.objects.for_project(await aget_project_or_404(request, project_id), is_live=is_live)
 
 
 @router.get(
@@ -335,15 +333,6 @@ async def proxy_preview(
     )
 
 
-async def _get_project(request: HttpRequest, project_id: str) -> Project:
-    """Return a Project the caller is allowed to reach, or raise 404."""
-    user = authenticated_user(request)
-    return await aget_object_or_404(
-        Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id),
-        id=project_id,
-    )
-
-
 async def _get_conversation(request: HttpRequest, project_id: str, number: int) -> Conversation:
     """Return one of the Project's conversations by its number, or raise 404.
 
@@ -351,7 +340,7 @@ async def _get_conversation(request: HttpRequest, project_id: str, number: int) 
     reached by naming a Project the caller does happen to have. Numbers only being unique
     within a Project, that check is also what makes this lookup unambiguous.
     """
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     try:
         return await Conversation.objects.aget(number=number, project=project)
     except Conversation.DoesNotExist as exc:

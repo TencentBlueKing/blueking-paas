@@ -57,6 +57,18 @@ class ProjectManager(models.Manager["Project"]):
 
         return bool(changed)
 
+    async def arename(self, project_id: str, name: str) -> bool:
+        """修改一个活跃 Project 的名称。
+
+        名称在租户内的唯一性由 ``unique_together`` 保证，撞上时抛出 ``IntegrityError``，由调用方翻译。
+
+        :param project_id: 要改名的 Project。
+        :param name: 新名称。
+        :return: 是否改到了行。Project 不存在或已被删除时返回 ``False``。
+        """
+        changed = await self.filter(pk=project_id).aupdate(name=name, updated_at=timezone.now())
+        return bool(changed)
+
 
 class Project(OwnerTimestampedModel):
     """app-spark 的 Project 是开发者通过自然语言开发的 SaaS 项目，可以被发布到蓝鲸运营系统 PaaS 平台。

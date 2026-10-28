@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Creating a Project and listing the ones the caller owns."""
+"""Creating, listing, renaming and deleting the Projects the caller owns."""
 
 from __future__ import annotations
 
@@ -64,6 +64,14 @@ async def create_via_api(client, *, project_id: str, name: str):
     return await client.post(
         PROJECTS_URL,
         data={"id": project_id, "name": name},
+        content_type="application/json",
+    )
+
+
+async def rename_via_api(client, project_id: str, *, name: str):
+    return await client.post(
+        f"{PROJECTS_URL}{project_id}/rename/",
+        data={"name": name},
         content_type="application/json",
     )
 
@@ -348,6 +356,65 @@ async def test_the_list_of_a_user_without_projects_is_empty_rather_than_missing(
     body = (await aapi_client.get(PROJECTS_URL)).json()
 
     assert body == {"items": [], "count": 0}
+
+
+# --- renaming ---------------------------------------------------------------------------
+# 规则本身（冲突、并发、名称释放）在 tests/core/projects/test_services.py 里测，这里只覆盖 HTTP 映射。
+
+
+async def test_renaming_a_project_returns_it_with_the_new_name(aapi_client, bk_user):
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)
+
+    response = await rename_via_api(aapi_client, "spark-demo", name="Spark Renamed")
+
+    assert response.status_code == HTTPStatus.OK
+    assert (response.json()["id"], response.json()["name"]) == ("spark-demo", "Spark Renamed")
+
+
+async def test_renaming_to_a_taken_name_is_a_conflict(aapi_client, bk_user):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(project_id="other-demo", name="Taken", owner=bk_user, tenant_id=tenant_id)
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
+
+    response = await rename_via_api(aapi_client, "spark-demo", name="Taken")
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
+    assert "Taken" in response.json()["detail"]
+    assert (await Project.objects.aget(pk="spark-demo")).name == "Spark Demo"
+
+
+async def test_invisible_projects_cannot_be_renamed(aapi_client, bk_user):
+    tenant_id = get_tenant(bk_user).id
+    await make_project(project_id="deleted-demo", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+    await make_project(project_id="other-owner", name="Other Owner", owner=create_user(), tenant_id=tenant_id)
+    await make_project(project_id="other-tenant", name="Other Tenant", owner=bk_user, tenant_id="some-other-tenant")
+
+    responses = [
+        await rename_via_api(aapi_client, project_id, name="Hijacked")
+        for project_id in ("missing-demo", "deleted-demo", "other-owner", "other-tenant")
+    ]
+
+    assert {response.status_code for response in responses} == {HTTPStatus.NOT_FOUND}
+    assert {response.json()["code"] for response in responses} == {"RESOURCE_NOT_FOUND"}
+    assert not await Project.default_objects.filter(name="Hijacked").aexists()
+
+
+@pytest.mark.parametrize("name", ["", "x" * 21])
+async def test_a_new_name_outside_the_column_limits_is_refused(aapi_client, bk_user, name):
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)
+
+    response = await rename_via_api(aapi_client, "spark-demo", name=name)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+async def test_an_anonymous_caller_cannot_rename_a_project(aanonymous_api_client):
+    response = await rename_via_api(aanonymous_api_client, "spark-demo", name="Spark Renamed")
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
 
 # --- deleting ---------------------------------------------------------------------------

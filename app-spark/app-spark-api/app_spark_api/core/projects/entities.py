@@ -31,6 +31,12 @@ class ProjectCreateRequest(Schema):
     name: str = Field(min_length=1, max_length=20, description="项目名称，同租户内唯一")
 
 
+class ProjectRenameRequest(Schema):
+    """给一个 Project 改名。"""
+
+    name: str = Field(min_length=1, max_length=20, description="新的项目名称，同租户内唯一")
+
+
 class ProjectResponse(Schema):
     """一个 Project 对象。"""
 

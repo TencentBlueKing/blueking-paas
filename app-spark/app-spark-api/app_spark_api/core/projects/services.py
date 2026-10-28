@@ -84,8 +84,50 @@ async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:
     if await Project.default_objects.filter(pk=project_id).aexists():
         raise ProjectIdTakenError(f"Project id {project_id} is already taken")
 
-    if await Project.objects.filter(tenant_id=tenant_id, name=name).aexists():
+    await _reject_name_taken(name=name, tenant_id=tenant_id)
+
+
+async def _reject_name_taken(*, name: str, tenant_id: str, exclude_project_id: str | None = None) -> None:
+    """同租户下已有其他活跃项目使用 ``name`` 就拒掉。
+
+    :param exclude_project_id: 不参与比较的项目，改名时传入它自己，免得把自己的名称当成冲突。
+    :raises ProjectNameTakenError: 同租户下已有同名项目。
+    """
+    qs = Project.objects.filter(tenant_id=tenant_id, name=name)
+    if exclude_project_id is not None:
+        qs = qs.exclude(pk=exclude_project_id)
+    if await qs.aexists():
         raise ProjectNameTakenError(f"Project name {name} is already taken in tenant {tenant_id}")
+
+
+async def rename_project(project: Project, *, name: str) -> Project:
+    """把 Project 改名为 ``name``。
+
+    改成当前名称不算冲突，直接原样返回。名称只影响展示：仓库等外部资源以项目 ID 命名，不需要同步。
+
+    :param project: 要改名的 Project，调用方负责确认它对当前用户可见。
+    :param name: 新名称，长度必须已经校验过。
+    :return: 改名后的 Project，字段已从数据库刷新。
+    :raises ProjectNameTakenError: 同租户下已有其他同名项目。
+    :raises ProjectAlreadyDeletedError: Project 在取出之后被并发删除了。
+    """
+    if name == project.name:
+        return project
+
+    await _reject_name_taken(name=name, tenant_id=project.tenant_id, exclude_project_id=project.pk)
+
+    try:
+        changed = await Project.objects.arename(project.pk, name)
+    except IntegrityError:
+        # 理由同 `create_project`：检查和更新之间有人抢先占用了这个名称。
+        await _reject_name_taken(name=name, tenant_id=project.tenant_id, exclude_project_id=project.pk)
+        raise
+
+    if not changed:
+        raise ProjectAlreadyDeletedError
+
+    await project.arefresh_from_db()
+    return project
 
 
 async def delete_project(project: Project) -> None:

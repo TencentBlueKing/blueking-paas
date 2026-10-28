@@ -70,6 +70,14 @@ class Recorder:
         self.calls.append("release")
 
 
+async def as_chunk(message: str) -> str:
+    return message
+
+
+async def as_error_chunk(message: str) -> str:
+    return f"error:{message}"
+
+
 async def chunks_of(*items: str) -> AsyncIterator[str]:
     for item in items:
         yield item
@@ -85,7 +93,7 @@ async def test_the_run_winds_down_before_its_stream_ends() -> None:
         events=chunks_of("a", "b"),
         finish=seen.finish,
         release=seen.release,
-        error_frame=lambda message: f"error:{message}",
+        record_error=as_error_chunk,
     )
     assert supervisor.current is run
 
@@ -109,7 +117,7 @@ async def test_a_broken_stream_ends_in_an_error_event_and_still_frees_the_slot()
         events=breaking(),
         finish=seen.finish,
         release=seen.release,
-        error_frame=lambda message: f"error:{message}",
+        record_error=as_error_chunk,
     )
 
     received = await collect(run.events.subscribe())
@@ -132,7 +140,7 @@ async def test_a_wind_down_that_fails_still_frees_the_slot() -> None:
         events=chunks_of("a"),
         finish=failing_finish,
         release=lambda: released.append(True),
-        error_frame=lambda message: message,
+        record_error=as_chunk,
     )
 
     assert await collect(run.events.subscribe()) == ["a"]
@@ -154,7 +162,7 @@ async def test_a_stop_names_the_run_it_means() -> None:
         events=held(),
         finish=seen.finish,
         release=seen.release,
-        error_frame=lambda message: message,
+        record_error=as_chunk,
     )
 
     assert supervisor.request_stop("another") is False
@@ -185,11 +193,11 @@ async def test_shutdown_cancels_a_run_that_does_not_stop_in_time() -> None:
         events=stuck(),
         finish=seen.finish,
         release=seen.release,
-        error_frame=lambda message: message,
+        record_error=as_chunk,
     )
     await asyncio.sleep(0.01)
 
-    await supervisor.aclose(timeout_seconds=0.05)
+    await supervisor.aclose(stop_timeout_seconds=0.05, wind_down_timeout_seconds=1)
 
     assert run.task.done()
     assert supervisor.closing is True
@@ -199,7 +207,45 @@ async def test_shutdown_cancels_a_run_that_does_not_stop_in_time() -> None:
     assert await collect(run.events.subscribe()) == ["a"]
 
 
+async def test_shutdown_stops_waiting_for_a_wind_down_that_overruns_its_bound() -> None:
+    """A cancelled run whose commit is stuck, e.g. behind a push holding the Git lock, must not
+    keep the drain after it from ever running."""
+
+    async def stuck() -> AsyncIterator[str]:
+        yield "a"
+        await asyncio.Event().wait()
+        yield "never"
+
+    committed = asyncio.Event()
+    calls: list[str] = []
+
+    async def slow_finish(completed: bool) -> None:
+        await committed.wait()
+        calls.append(f"finish:{completed}")
+
+    supervisor = RunSupervisor()
+    run = supervisor.start(
+        run_id="r1",
+        stopper=RunStopper(),
+        events=stuck(),
+        finish=slow_finish,
+        release=lambda: calls.append("release"),
+        record_error=as_chunk,
+    )
+    await asyncio.sleep(0.01)
+
+    await asyncio.wait_for(supervisor.aclose(stop_timeout_seconds=0.01, wind_down_timeout_seconds=0.05), 1)
+
+    # Left running rather than cancelled again: its wind-down still completes, and still in order.
+    assert not run.task.done()
+    assert supervisor.current is run
+    committed.set()
+    await asyncio.wait({run.task})
+    assert calls == ["finish:False", "release"]
+    assert supervisor.current is None
+
+
 async def test_shutdown_with_no_run_in_progress_returns_at_once() -> None:
     supervisor = RunSupervisor()
-    await supervisor.aclose(timeout_seconds=0)
+    await supervisor.aclose(stop_timeout_seconds=0, wind_down_timeout_seconds=0)
     assert supervisor.closing is True

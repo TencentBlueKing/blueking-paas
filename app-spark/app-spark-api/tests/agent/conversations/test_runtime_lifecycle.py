@@ -220,6 +220,35 @@ async def test_a_stop_is_handed_to_the_runtime_running_the_turn(provider, conver
 
 
 @STOP_TESTS
+async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, conversation, monkeypatch):
+    """/health 报出 run_id 的那一刻前端就可能拿它来停，所以 Runtime 收到这一轮之前，归属就得已经落库。"""
+    owned_when_started: list[bool] = []
+
+    class StartingClient(FakeClient):
+        async def start_run(self, *, content: str, context_version: int, run_id: str) -> FakeRun:
+            owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
+            owned_when_started.append(await owned.aexists())
+            run = FakeRun([])
+            run.run_id = run_id
+            return run
+
+    async def open_client(_conversation: Conversation, **_kwargs: Any) -> StartingClient:
+        return StartingClient(HANDLE)
+
+    async def already_warm(_conversation: Conversation, _client: Any, health: RuntimeHealth) -> RuntimeHealth:
+        return health
+
+    monkeypatch.setattr(services, "open_client", open_client)
+    monkeypatch.setattr(services, "_resume_if_cold", already_warm)
+
+    run = await services.start_run(conversation, content="hi")
+
+    assert owned_when_started == [True]
+    await services.stop_run(conversation, run.run_id)
+    assert FakeClient.stopped == [run.run_id]
+
+
+@STOP_TESTS
 async def test_a_run_of_another_conversation_is_never_asked_about(provider, conversation):
     with pytest.raises(RunNotFoundError):
         await services.stop_run(conversation, "run-of-someone-else")

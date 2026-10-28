@@ -24,12 +24,12 @@ only to *advance* a conversation, never to look at one.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
 from functools import partial
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import attrs
 from asgiref.sync import sync_to_async
@@ -57,6 +57,7 @@ from app_spark_api.agent.runtime import (
     StateCallback,
 )
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.agent.runtime.lifetime import extend_lifetime_quietly
 from app_spark_api.agent.runtime.model_access import resolve_model_access
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
@@ -326,7 +327,7 @@ async def terminate_runtime(conversation: Conversation) -> None:
     """
     await revoke_state_access(conversation)
 
-    # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 25 秒再销毁沙箱。凭证已吊销，
+    # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 STOP_GRACE_SECONDS 再销毁沙箱。凭证已吊销，
     # Agent 退出前最后那次状态回写会被拒绝，会话历史以此前已回写的为准。
     try:
         await get_agent_runtime_provider().terminate(str(conversation.id))
@@ -468,11 +469,15 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         health.dev_server_status,
         health.running,
     )
+    # run_id 在请求 Runtime 之前就随消息落库。Runtime 一接受，/health 就会报出这个 run_id，前端随即可以
+    # 拿它来停；要是等 Runtime 应答后再补写，这中间 stop_run 的归属校验会把一个真实的 run 当成不存在。
+    # 落库在前，也就不会因为浏览器断开或任务取消而丢掉用户输入与 run 的关联。
+    run_id = str(uuid4())
     message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
-        conversation, content=content
+        conversation, content=content, run_id=run_id
     )
     try:
-        run = await client.start_run(content=content, context_version=health.context_version)
+        run = await client.start_run(content=content, context_version=health.context_version, run_id=run_id)
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
         logger.warning(
@@ -488,21 +493,12 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         await message.adelete()
         raise
 
-    try:
-        # 接受后立即补上用于排查的 run_id，不能等 SSE 消费完。
-        # 否则浏览器断开连接或生成失败，就会丢掉用户输入与 run 的关联信息。
-        message.run_id = run.run_id
-        await message.asave(update_fields=["run_id", "updated_at"])
-        logger.info(
-            "Conversation %s accepted run %s at %s",
-            conversation.id,
-            run.run_id,
-            client.handle.base_url,
-        )
-    except BaseException:
-        # 此时连接已经打开，但还没有交给 stream_run；保存失败或任务取消也必须释放它。
-        await run.aclose()
-        raise
+    logger.info(
+        "Conversation %s accepted run %s at %s",
+        conversation.id,
+        run.run_id,
+        client.handle.base_url,
+    )
     return run
 
 
@@ -749,18 +745,7 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
         # 一轮开始时 ensure 已经把存活期续成空闲超时。这里再续一次，从流结束起再算同一个秒数。
         # 流断了、客户端走了也照样续；但那时这一轮可能还在跑，它真正结束时由状态回写那边再续一次，
         # 见 internal_api.append_ui_events。进行中不再续，一轮按不超过空闲超时来对待。
-        await _extend_runtime_lifetime(conversation_id)
-
-
-async def _extend_runtime_lifetime(conversation_id: UUID) -> None:
-    """Count a turn as activity for the conversation's Runtime, never failing."""
-    # shield：客户端断开会取消这个流，续期不能被一起取消。失败只记告警，这一轮本身不受影响。
-    try:
-        await asyncio.shield(get_agent_runtime_provider().extend_lifetime(str(conversation_id)))
-    except Exception:
-        logger.warning(
-            "Could not extend the Agent Runtime lifetime of conversation %s", conversation_id, exc_info=True
-        )
+        await extend_lifetime_quietly(get_agent_runtime_provider(), conversation_id)
 
 
 def _sse_frame(event: dict[str, Any]) -> bytes:

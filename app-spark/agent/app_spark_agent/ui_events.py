@@ -69,6 +69,15 @@ async def record_ui_events(
         await _persist(_terminate_open(buffers), log=log, run_id=run_id)
 
 
+async def record_ui_event(event: BaseEvent, *, log: AppendLog, run_id: str) -> None:
+    """Persist one event that never went through :func:`record_ui_events`, masked the same way.
+
+    For the event a run ends with when its stream broke: the stream is gone by then, but a client
+    replaying the log still needs to see the run end.
+    """
+    await _persist([event], log=log, run_id=run_id)
+
+
 def _coalesce(event: BaseEvent, buffers: _Buffers) -> list[BaseEvent]:
     """Return what to store for ``event``: nothing for a delta, the whole message at its end."""
     match event:

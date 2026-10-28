@@ -30,7 +30,7 @@ from app_spark_agent.state import (
     ConversationStateError,
     CursorStateError,
 )
-from app_spark_agent.ui_events import record_ui_events
+from app_spark_agent.ui_events import record_ui_event, record_ui_events
 
 router = APIRouter()
 
@@ -438,13 +438,25 @@ async def _start_run(
         on_cancel=commit_stopped_context,
     )
     encoder = adapter.build_event_stream()
+
+    async def end_with_error(message: str) -> str:
+        event = RunErrorEvent(message=message)
+        # Stored as well as streamed: a client that reconnects replays the log, and the control
+        # plane renews the Runtime on a run's last event. Best effort, because the stream most
+        # likely broke on this very log, and the subscribers still deserve their final event.
+        try:
+            await record_ui_event(event, log=runtime.ui_events, run_id=prepared.run_id)
+        except Exception:  # noqa: BLE001
+            logger.exception("the error ending run %s could not be stored", prepared.run_id)
+        return encoder.encode_event(event)
+
     run = runtime.runs.start(
         run_id=prepared.run_id,
         stopper=stopper,
         events=encoder.encode_stream(record_ui_events(events, log=runtime.ui_events, run_id=prepared.run_id)),
         finish=finish,
         release=release,
-        error_frame=lambda message: encoder.encode_event(RunErrorEvent(message=message)),
+        record_error=end_with_error,
     )
     return StreamingResponse(
         run.events.subscribe(),

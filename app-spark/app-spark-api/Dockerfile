@@ -24,4 +24,5 @@ RUN mkdir -p /data/app-spark
 EXPOSE 8000
 # Forward shutdown signals and reap any child process the API starts.
 ENTRYPOINT ["/usr/bin/tini", "--"]
+# --timeout-graceful-shutdown 与 chart 里的取值一致，理由见 charts/app-spark-api/templates/deployment.yaml。
 CMD ["uv", "run", "--no-sync", "uvicorn", "app_spark_api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "40"]

@@ -76,6 +76,9 @@ spec:
         {{- $images = append $images .Values.utility.images.k8sWaitFor }}
       {{- end }}
       {{- include "app-spark-api.imagePullSecrets" (dict "images" $images "context" $) | nindent 6 }}
+      {{- /* 要比下面的 --timeout-graceful-shutdown 长：uvicorn 等完进行中的请求之后，local_process 还要在
+      atexit 里停掉 Agent 子进程，每个最多等 SHUTDOWN_GRACE_SECONDS；这里按停一个 Runtime 再加些余量来取。
+      到点 kubelet 直接 SIGKILL。 */}}
       terminationGracePeriodSeconds: 75
       {{- if .Values.migrate.enabled }}
       serviceAccountName: {{ include "app-spark-api.fullname" . }}
@@ -108,7 +111,8 @@ spec:
             {{- /* local_process keeps every Runtime inside one API process; others match the Dockerfile. */}}
             - {{ eq $provider "local_process" | ternary "1" "4" | quote }}
             - --timeout-graceful-shutdown
-            {{- /* 结束 e2b 会话最多 STOP_GRACE_SECONDS 25s 加 kill 请求 5s，这里要比它长。 */}}
+            {{- /* 要比结束一个 e2b 会话的最长耗时（STOP_GRACE_SECONDS 加 KILL_REQUEST_TIMEOUT_SECONDS）长，
+            否则停服会掐断正在结束会话的请求。Dockerfile 里的值与这里保持一致。 */}}
             - "40"
           ports:
             - name: http

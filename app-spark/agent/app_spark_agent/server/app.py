@@ -87,7 +87,10 @@ def create_runtime_app(
                 # A turn does not end with its connection, so uvicorn cutting the SSE off ends
                 # nothing. It has to be stopped here, and before the drain, so that what the
                 # turn wrote is part of what gets handed over.
-                await runtime.runs.aclose(timeout_seconds=settings.RUN_STOP_TIMEOUT_SECONDS)
+                await runtime.runs.aclose(
+                    stop_timeout_seconds=settings.RUN_STOP_TIMEOUT_SECONDS,
+                    wind_down_timeout_seconds=settings.RUN_CANCEL_WIND_DOWN_SECONDS,
+                )
                 # The last attempt to hand over whatever the background tasks had not reached,
                 # and the only one: both the workspace disk and the state directory go away with
                 # this process. Bounded, so it cannot turn an orderly stop into a SIGKILL --

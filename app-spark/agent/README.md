@@ -115,6 +115,10 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 一轮 run 是 Runtime 自己的后台任务，SSE 只是它的订阅者：**客户端断开 SSE 不会中断这一轮**，它会照常
 跑完、提交上下文和文件、回写控制面。`/health` 的 `running` 与 `run_id` 说明此刻是否有一轮在跑、是哪一轮。
 
+断线后回来的客户端靠 `/ui-events` 补上错过的事件，每一轮都以 `RUN_FINISHED` 或 `RUN_ERROR` 结尾。
+唯一的例外是事件流本身崩了：结尾的 `RUN_ERROR` 也会尽力写进 `/ui-events`，但流多半就是因为这份日志写不进去
+才崩的，这时可能没有结尾事件。所以判断一轮是否结束，以 `running` 变回 false 为准。
+
 要停下一轮，调用 `POST /runs/{run_id}/stop`（同样需要 Bearer）。它只发出请求、立即返回 202，重复调用
 也是 202；被停下的一轮按 pydantic-ai 的取消收尾：SSE 以 `RUN_FINISHED` 结束，没返回的工具调用记为 interrupted，已做的部分照样提交为会话上下文，文件提交为 `(interrupted)`。`running` 变回 false 即收尾完毕。
 
@@ -359,7 +363,7 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
   执行的，commit 也能落地。
 - **屏障外**由后台任务做 **push**，自带重试。
 
-为什么 push 不能放屏障里：关停时进行中的一轮只有 `RUN_STOP_TIMEOUT_SECONDS`（5 秒）收尾，
+为什么 push 不能放屏障里：关停时进行中的一轮只有 `RUN_STOP_TIMEOUT_SECONDS` 收尾，
 超时就被直接取消——一部分保存动作发生在已取消的任务里，一次网络往返在那个位置没法保证做完。
 何况它还会把一轮对话挂在网络上，用户看到的就是「卡住了」。
 
@@ -386,13 +390,14 @@ credential helper 全部关掉——helper 有权把凭据写到磁盘上，那�
 
 普通路径从不在屏障里等 push——那是后台任务的事。关停是唯一的例外：进程一走，workspace 盘和
 状态目录一起没了，只存在本地的 commit 就等于用户丢了一轮。所以 lifespan 在收尾时先停下进行中的一轮
-（`RUN_STOP_TIMEOUT_SECONDS`，5 秒，到点直接取消；这一步不等回写），再调 `ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去。
+（`RUN_STOP_TIMEOUT_SECONDS`，到点直接取消；取消后再最多等 `RUN_CANCEL_WIND_DOWN_SECONDS`
+让它做完本地 commit，还没做完就不再等；这一步不等回写），再调 `ConversationRuntime.drain()`，在一个有界窗口里把未推送的 commit 和未回写的状态送出去。
 
-这个窗口是 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS`（8 秒），push 和状态回写共用，先 push 再用剩下的时间
-flush。控制面停 Runtime 的宽限比它长：uvicorn 掐连接 1 秒、停下进行中的一轮 5 秒、本窗口 8 秒、停应用子进程
-5 秒，合计仍小于
-`SHUTDOWN_GRACE_SECONDS` / e2b 的 `STOP_GRACE_SECONDS`（都是 25 秒），超时控制面会 SIGKILL。
-空闲退出另有 `IDLE_EXIT_DEADLINE_SECONDS`（25 秒）兜底，有序关停到点还没走完就 `os._exit`。
+这个窗口是 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS`，push 和状态回写共用，先 push 再用剩下的时间 flush。
+uvicorn 掐连接、停下进行中的一轮、取消后收尾、本窗口、停应用子进程，这几段加起来必须小于控制面给的宽限
+（local_process 的 `SHUTDOWN_GRACE_SECONDS` / e2b 的 `STOP_GRACE_SECONDS`），超时控制面会 SIGKILL。
+具体秒数和合计只写在 `settings.py` 里 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS` 的注释中，改任何一段都要回头核对。
+空闲退出另有 `IDLE_EXIT_DEADLINE_SECONDS` 兜底，有序关停到点还没走完就 `os._exit`。
 
 ### 未保存时的下一轮：有界等待与逃生口
 

@@ -1,11 +1,16 @@
 """``GET /ui-events``: the stored, replayable copy of what the client saw."""
 
 import json
-from typing import Any
+from collections.abc import AsyncGenerator, AsyncIterator
+from typing import Any, cast
 from uuid import uuid4
 
+import pytest
+from ag_ui.core import BaseEvent
 from fastapi.testclient import TestClient
 
+from app_spark_agent.server import routes
+from app_spark_agent.state import AppendLog
 from tests.api.support import ApiFactory, drain_channel, run_turn
 from tests.support.fake_models import probe, tool_calling_model
 
@@ -56,3 +61,30 @@ def test_tool_calls_are_stored_with_their_arguments(make_api: ApiFactory) -> Non
     stored = stored_events(api)
     assert "TOOL_CALL_RESULT" in [event["type"] for event in stored]
     assert json.loads("".join(deltas(stored, "TOOL_CALL_ARGS"))) == {"index": 0}
+
+
+def test_a_run_whose_stream_breaks_still_ends_in_the_stored_log(
+    api: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The error a broken stream ends with is stored too: a client that reconnected replays the
+    log, not the stream it missed, and must see the run end."""
+    recording = routes.record_ui_events
+
+    async def breaking(stream: AsyncIterator[BaseEvent], *, log: AppendLog, run_id: str) -> AsyncIterator[BaseEvent]:
+        recorded = cast(AsyncGenerator[BaseEvent], recording(stream, log=log, run_id=run_id))
+        try:
+            yield await anext(recorded)
+            # The recorder stores an event once the next one is asked for; break only after that.
+            await anext(recorded)
+            raise RuntimeError("the stream broke")
+        finally:
+            await recorded.aclose()
+
+    monkeypatch.setattr(routes, "record_ui_events", breaking)
+
+    outcome = run_turn(api, conversation_id=str(uuid4()))
+
+    assert outcome.event_types[-1] == "RUN_ERROR"
+    stored = stored_events(api)
+    assert [event["type"] for event in stored] == ["RUN_STARTED", "RUN_ERROR"]
+    assert "the stream broke" in stored[-1]["message"]

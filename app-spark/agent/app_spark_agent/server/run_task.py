@@ -69,8 +69,13 @@ class RunStopper(AbstractCapability[Any]):
 class RunEvents:
     """The encoded SSE chunks of one run, kept for as long as the run is referenced.
 
-    Every subscriber starts from the first chunk, so one that attaches late misses nothing. One
-    turn's events are kilobytes to a few megabytes, and they go when the run does.
+    There is one subscriber today, the response that started the run, and it is always late: the
+    task is running before that response is even returned, let alone iterated, so the first
+    chunks exist before anyone reads them. Every subscriber therefore starts from the first chunk.
+
+    Nothing is trimmed once read. Trimming would buy little -- one turn's events are kilobytes to
+    a few megabytes, and they go when the run does -- and would make "from the first chunk" true
+    only for the first subscriber, which a reconnecting one would then silently not get.
     """
 
     def __init__(self) -> None:
@@ -150,7 +155,7 @@ class RunSupervisor:
         events: AsyncIterator[str],
         finish: Callable[[bool], Awaitable[None]],
         release: Callable[[], None],
-        error_frame: Callable[[str], str],
+        record_error: Callable[[str], Awaitable[str]],
     ) -> ActiveRun:
         """Start driving one run, and return it with the task already scheduled.
 
@@ -160,7 +165,7 @@ class RunSupervisor:
         Example::
 
             run = supervisor.start(run_id=..., stopper=stopper, events=encoded, finish=finish,
-                                   release=lease.release, error_frame=encode_error)
+                                   release=lease.release, record_error=end_with_error)
             return StreamingResponse(run.events.subscribe(), media_type="text/event-stream")
 
         :param run_id: The run's identifier, as the client chose it.
@@ -169,8 +174,9 @@ class RunSupervisor:
         :param finish: Called once the events are over, with whether the event stream ran to its
             end rather than being broken off. Saving the workspace and flushing state goes here.
         :param release: Hands the run guard back. Called after ``finish``, and always.
-        :param error_frame: Encodes a failure that broke the event stream itself as a final
-            chunk, so a subscriber sees a run that ended badly instead of one that just stopped.
+        :param record_error: Records a failure that broke the event stream itself, wherever the
+            run's events are kept, and returns it encoded as a final chunk -- so that neither a
+            subscriber nor a later replay sees a run that just stopped. Must not raise.
         :return: The run now in progress.
         :raises RuntimeClosingError: If shutdown has begun. A run admitted just before it, still
             preparing when the run in progress was stopped, would otherwise start afterwards and
@@ -186,7 +192,7 @@ class RunSupervisor:
                 sink=buffered,
                 finish=finish,
                 release=release,
-                error_frame=error_frame,
+                record_error=record_error,
             ),
             name=f"run-{run_id}",
         )
@@ -206,30 +212,43 @@ class RunSupervisor:
         run.stopper.request()
         return True
 
-    async def aclose(self, *, timeout_seconds: float) -> None:
-        """Stop the run in progress, if any, and wait for it to finish winding down.
+    async def aclose(self, *, stop_timeout_seconds: float, wind_down_timeout_seconds: float) -> None:
+        """Stop the run in progress, if any, and wait a bounded time for it to finish winding down.
 
         Asked politely first, so the turn's context still gets committed. A run that does not
         stop within the bound is cancelled outright, and still winds down: ``finish`` runs either
         way, it only loses the context commit.
 
-        :param timeout_seconds: How long the polite stop gets before the task is cancelled.
+        Cancelling does not end a task, it only interrupts it once: the wind-down that follows is
+        ordinary awaits again, and the workspace commit in it queues behind any push the
+        background saver has in flight. That is why the wind-down has a bound of its own. A run
+        still winding down past it is left running, not cancelled a second time -- the commit is
+        shielded and holds the Git lock, so it stays consistent whether anyone awaits it or not --
+        and shutdown carries on to the drain, which still has the state to hand over.
+
+        :param stop_timeout_seconds: How long the polite stop gets before the task is cancelled.
+        :param wind_down_timeout_seconds: How long a cancelled run then gets to wind down.
         """
         self._closing = True
         run = self._current
         if run is None:
             return
         run.stopper.request()
-        try:
-            await asyncio.wait_for(asyncio.shield(run.task), timeout=timeout_seconds)
-        except TimeoutError:
+        if await _settled(run.task, timeout_seconds=stop_timeout_seconds):
+            return
+        logger.warning(
+            "run %s did not stop within %.0fs, cancelling it; its context will not be committed",
+            run.run_id,
+            stop_timeout_seconds,
+        )
+        run.task.cancel()
+        if not await _settled(run.task, timeout_seconds=wind_down_timeout_seconds):
             logger.warning(
-                "run %s did not stop within %.0fs, cancelling it; its context will not be committed",
+                "run %s was still winding down %.0fs after being cancelled; shutting down without "
+                "waiting for it, so its files may not be part of what gets handed over",
                 run.run_id,
-                timeout_seconds,
+                wind_down_timeout_seconds,
             )
-            run.task.cancel()
-            await asyncio.gather(run.task, return_exceptions=True)
 
     async def _drive(
         self,
@@ -239,7 +258,7 @@ class RunSupervisor:
         sink: RunEvents,
         finish: Callable[[bool], Awaitable[None]],
         release: Callable[[], None],
-        error_frame: Callable[[str], str],
+        record_error: Callable[[str], Awaitable[str]],
     ) -> None:
         completed = False
         try:
@@ -259,7 +278,7 @@ class RunSupervisor:
             # pydantic-ai turns model and tool failures into events of their own. Reaching here
             # means the stream itself broke, e.g. the AG-UI log could not be written.
             logger.exception("the event stream of run %s broke", run_id)
-            sink.append(error_frame(f"The Agent Runtime could not continue this run: {exc}"))
+            sink.append(await record_error(f"The Agent Runtime could not continue this run: {exc}"))
         finally:
             try:
                 await finish(completed)
@@ -275,3 +294,9 @@ class RunSupervisor:
                 # reporting the Runtime as idle.
                 sink.close()
                 logger.info("run stream closed run_id=%s stream_completed=%s", run_id, completed)
+
+
+async def _settled(task: asyncio.Task[None], *, timeout_seconds: float) -> bool:
+    """Wait up to a bound for ``task`` to finish, without cancelling it when the bound passes."""
+    done, _ = await asyncio.wait({task}, timeout=timeout_seconds)
+    return bool(done)

@@ -1,0 +1,38 @@
+:root {
+  --ink: #12141a;
+  --muted: #5c6573;
+  --faint: #88919e;
+  --line: #e4e9f1;
+  --canvas: #fff;
+  --surface: #fff;
+  --subtle-bg: #f5f7fa;
+  --hover-bg: #e8ecf3;
+  --accent: #3d6dff;
+  --accent-soft: #eef2ff;
+  --accent-focus: #8ea2ff;
+  --check: #2f5bff;
+  --live: #3d8f6a;
+  --danger: #e5484d;
+  --danger-hover: #d13b40;
+  --danger-soft: #fff1f1;
+  --publish: #5b3fd6;
+  --publish-soft: #efeaff;
+  --warning: #b26b00;
+  --warning-soft: #fff4e0;
+  --bk-primary: #3a84ff;
+  --bk-primary-hover: #1768ef;
+  --nav-h: 56px;
+  --nav-bg: #182132;
+  --nav-text: #dcdee5;
+  --sidebar-w: 224px;
+  --sidebar-collapsed-w: 64px;
+  --rail-h: 56px;
+  --interaction-w: 400px;
+  --spark-shape: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  --spark-gradient: linear-gradient(135deg, #ffb547 0%, #ff5f8f 52%, #7c5cff 100%);
+  --brand-gradient: linear-gradient(135deg, #4fa3d9 0%, #3d6dff 55%, #3a3fa8 100%);
+  --brand-glow: rgba(61, 109, 255, 0.32);
+  --brand-glow-strong: rgba(61, 109, 255, 0.55);
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: Menlo, Consolas, monospace;
+}

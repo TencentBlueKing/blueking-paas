@@ -124,6 +124,7 @@ watch(() => props.modelValue, (visible) => {
 
 .app-modal__panel {
   position: relative;
+  box-sizing: border-box;
   max-width: 100%;
   padding: 28px 28px 24px;
   background: #fff;
@@ -151,6 +152,10 @@ watch(() => props.modelValue, (visible) => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+}
+
+.app-modal__foot :deep(button) {
+  border-radius: 10px;
 }
 
 .app-modal__ghost,

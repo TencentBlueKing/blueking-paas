@@ -31,36 +31,36 @@
         @keydown="handleKeydown"
       />
       <div class="chat-composer__bar">
-        <p class="chat-composer__hint">{{ hint }}</p>
-        <div class="chat-composer__tools">
-          <template v-if="enableUpload">
-            <input
-              ref="fileRef"
-              class="chat-composer__file"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple
-              @change="handleFileChange"
-            >
-            <button
-              type="button"
-              class="chat-composer__icon"
-              :disabled="disabled"
-              title="上传设计稿或截图"
-              @click="openFile"
-            >
-              <ImageFill />
-            </button>
-          </template>
-          <button
-            type="button"
-            class="chat-composer__send"
-            :disabled="disabled || !canSend"
-            @click="handleSend"
-          >
-            发送
-          </button>
-        </div>
+        <input
+          v-if="enableUpload"
+          ref="fileRef"
+          class="chat-composer__file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
+          @change="handleFileChange"
+        >
+        <button
+          type="button"
+          class="composer__tool"
+          :class="{ 'is-inert': !enableUpload }"
+          :disabled="disabled"
+          :aria-disabled="!enableUpload"
+          :title="enableUpload ? '上传设计稿或截图' : '暂不支持添加附件'"
+          @click="enableUpload && openFile()"
+        >
+          <AppIcon name="plus-line" />
+        </button>
+        <ModelSelector placement="top-start" />
+        <button
+          type="button"
+          class="composer__send"
+          :disabled="disabled || !canSend"
+          aria-label="发送"
+          @click="handleSend"
+        >
+          <AppIcon name="arrow-up" />
+        </button>
       </div>
     </div>
   </div>
@@ -69,7 +69,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
 import Message from '@/common/message';
-import { Close, ImageFill } from 'bkui-vue/lib/icon';
+import { Close } from 'bkui-vue/lib/icon';
+import AppIcon from '@/components/AppIcon.vue';
+import ModelSelector from '@/components/model/ModelSelector.vue';
+import { useModelCatalogStore } from '@/store/model-catalog';
 import { appendImages } from './read-image';
 import type { ChatImage } from './types';
 
@@ -83,9 +86,10 @@ const props = defineProps<{
 const enableUpload = computed(() => props.enableUpload !== false);
 
 const emit = defineEmits<{
-  (e: 'send', value: string, images: ChatImage[]): void;
+  (e: 'send', value: string, images: ChatImage[], modelCode?: string): void;
 }>();
 
+const modelCatalogStore = useModelCatalogStore();
 const INPUT_LINE_HEIGHT = 22;
 const INPUT_MIN_HEIGHT = INPUT_LINE_HEIGHT * 2;
 const INPUT_MAX_HEIGHT = 300;
@@ -110,11 +114,6 @@ const placeholder = computed(() => (
   props.placeholder
   || (enableUpload.value ? '描述你想要的改动，或上传设计稿 / 截图后发送' : '描述你想做的改动')
 ));
-const hint = computed(() => {
-  if (props.hint) return props.hint;
-  return 'Shift + Enter 换行';
-});
-
 const openFile = () => {
   fileRef.value?.click();
 };
@@ -156,7 +155,7 @@ const handleDrop = async (event: DragEvent) => {
 
 const handleSend = () => {
   if (props.disabled || !canSend.value) return;
-  emit('send', draft.value.trim(), images.value);
+  emit('send', draft.value.trim(), images.value, modelCatalogStore.requestModelCode);
   draft.value = '';
   images.value = [];
   nextTick(resizeInput);
@@ -264,62 +263,68 @@ const handleKeydown = (event: KeyboardEvent) => {
 .chat-composer__bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-  padding: 8px 10px 10px;
-}
-
-.chat-composer__hint {
-  margin: 0;
-  overflow: hidden;
-  color: var(--faint, #88919e);
-  font-size: 12px;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chat-composer__tools {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
   gap: 8px;
+  min-width: 0;
+  padding: 6px 10px 10px;
 }
 
-.chat-composer__icon {
+.composer__tool,
+.composer__send {
   display: inline-flex;
-  color: var(--muted, #5c6573);
-  background: none;
+  align-items: center;
+  justify-content: center;
   border: 0;
-  cursor: pointer;
 }
 
-.chat-composer__send {
+.composer__tool {
   height: 32px;
-  padding: 0 14px;
+  color: var(--muted, #5c6573);
+  background: transparent;
+  border-radius: 10px;
+}
+
+.composer__tool {
+  width: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+}
+
+.composer__tool :deep(.app-icon) {
+  font-size: 16px;
+}
+
+.is-inert {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.composer__send {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--ink, #12141a);
-  border: 0;
-  border-radius: 8px;
+  background: var(--accent);
+  border-radius: 10px;
   cursor: pointer;
 }
 
-.chat-composer__send:hover:not(:disabled) {
-  background: #2a2e38;
+.composer__send :deep(.app-icon) {
+  font-size: 16px;
 }
 
-.chat-composer__send:disabled {
-  color: #a8b0bc;
-  background: #eef0f4;
+.composer__send:hover:not(:disabled) {
+  background: #1f46d6;
+}
+
+.composer__send:disabled {
+  background: #c9d3e6;
   cursor: not-allowed;
 }
 
-.chat-composer__send:focus-visible,
-.chat-composer__icon:focus-visible {
-  outline: 2px solid var(--accent, #3d6dff);
+.composer__send:focus-visible,
+.composer__tool:focus-visible {
+  outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
 }
 

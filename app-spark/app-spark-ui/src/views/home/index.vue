@@ -1,394 +1,618 @@
 <template>
   <HomeLayout>
-    <div class="home-page">
+    <div class="home-body">
       <section class="hero">
-        <h1>{{ greeting }}</h1>
-        <p>用自然语言来开发蓝鲸 SaaS。</p>
-        <bk-button
-          class="hero__cta"
-          theme="primary"
-          size="large"
-          @click="openCreate"
+        <h1>
+          把每个灵感变为精彩应用
+          <span class="hero__sparks" aria-hidden="true"><i /><i /><i /></span>
+        </h1>
+        <p>通过和 AI 聊天来创建网站应用</p>
+
+        <form
+          ref="composerRef"
+          :class="['composer', {
+            'is-error': Boolean(createError),
+            'is-spotlight': spotlighted,
+          }]"
+          novalidate
+          @submit.prevent="submitPrompt"
+          @animationend="handleSpotlightEnd"
         >
-          创建项目
-        </bk-button>
+          <textarea
+            ref="inputRef"
+            v-model="prompt"
+            class="composer__input"
+            rows="3"
+            maxlength="2000"
+            aria-label="描述你想做的应用"
+            placeholder="我想要实现一个…"
+            :disabled="creating"
+            @input="handleInput"
+            @keydown.enter="handleEnter"
+          />
+          <div class="composer__bar">
+            <button
+              type="button"
+              class="composer__tool"
+              aria-label="添加附件"
+              aria-disabled="true"
+              v-bk-tooltips="'暂不支持添加附件'"
+            >
+              <AppIcon name="plus-line" />
+            </button>
+            <ModelSelector />
+            <button
+              type="submit"
+              class="composer__send"
+              :disabled="creating || !prompt.trim()"
+              :aria-label="creating ? '正在创建项目' : '发送'"
+            >
+              <span v-if="creating" class="composer__spinner" aria-hidden="true" />
+              <AppIcon v-else name="arrow-up" />
+            </button>
+          </div>
+        </form>
+        <p v-if="createError" class="composer__error" role="alert">{{ createError }}</p>
+
+        <div class="composer__samples" aria-label="试试这些想法">
+          <span>试试：</span>
+          <button
+            v-for="sample in samples"
+            :key="sample.label"
+            type="button"
+            :disabled="creating"
+            @click="applySample(sample.prompt)"
+          >
+            {{ sample.label }}
+          </button>
+        </div>
       </section>
 
-      <section class="library" aria-live="polite">
-        <div class="library__head">
-          <h2>我的项目</h2>
-          <p v-if="pagination.count">{{ pagination.count }} 个</p>
+      <section class="recent" aria-labelledby="recent-title">
+        <header class="recent__head">
+          <h2 id="recent-title">最近编辑</h2>
+          <router-link class="recent__more" :to="{ name: 'projects' }">
+            全部项目
+            <AppIcon name="chevron-right" />
+          </router-link>
+        </header>
+
+        <div v-if="loading" class="recent__grid" aria-busy="true">
+          <div v-for="index in 3" :key="index" class="skeleton-card" />
         </div>
-
-        <bk-loading :loading="loading">
-          <div
-            v-if="listError && !projects.length"
-            class="state-panel"
-            role="alert"
-          >
-            <h3>项目没有加载出来</h3>
-            <p>{{ listError }}</p>
-            <bk-button theme="primary" @click="fetchProjects">
-              重试
-            </bk-button>
-          </div>
-
-          <div
-            v-else-if="!loading && !pagination.count"
-            class="state-panel"
-          >
-            <h3>工作室还是空的</h3>
-            <p>创建第一个项目后，就可以在对话里把应用做出来。</p>
-            <bk-button
-              class="create-project-btn"
-              theme="primary"
-              @click="openCreate"
-            >
-              创建项目
-            </bk-button>
-          </div>
-
-          <div v-else-if="projects.length">
-            <p
-              v-if="listError"
-              class="inline-error"
-              role="alert"
-            >
-              {{ listError }}
-              <button type="button" class="text-action" @click="fetchProjects">
-                重试
+        <div v-else-if="listError" class="recent__state is-error" role="alert">
+          <p>{{ listError }}</p>
+          <button type="button" @click="fetchRecent">重试</button>
+        </div>
+        <div v-else-if="!projects.length" class="recent__state">
+          <p>还没有项目。在上面描述你的想法，AI 会帮你把它做出来。</p>
+        </div>
+        <ul v-else class="recent__grid">
+          <li v-for="project in projects" :key="project.id">
+            <article class="recent-card">
+              <button
+                type="button"
+                class="recent-card__open"
+                :aria-label="`进入项目 ${project.name}`"
+                @click="enterProject(project)"
+              >
+                <h3 :title="project.name">{{ project.name }}</h3>
+                <time :datetime="project.updated_at">
+                  更新于 {{ timeFormatter(project.updated_at, 'YYYY-MM-DD HH:mm') }}
+                </time>
               </button>
-            </p>
-
-            <ul class="card-grid">
-              <li>
-                <button
-                  type="button"
-                  class="create-card"
-                  @click="openCreate"
-                >
-                  <Plus
-                    class="create-card__plus"
-                    width="72px"
-                    height="72px"
-                  />
-                  <span class="create-card__title">新项目</span>
-                </button>
-              </li>
-              <li
-                v-for="row in projects"
-                :key="row.id"
-              >
-                <article class="project-card">
-                  <button
-                    type="button"
-                    class="project-card__open"
-                    :aria-label="`进入项目 ${row.name}`"
-                    @click="enterProject(row)"
-                  >
-                    <header class="project-card__top">
-                      <h3>{{ row.name }}</h3>
-                      <p class="project-card__id">{{ row.id }}</p>
-                    </header>
-                    <footer class="project-card__foot">
-                      <time :datetime="row.updated_at">
-                        更新于 {{ timeFormatter(row.updated_at, 'YYYY-MM-DD HH:mm') }}
-                      </time>
-                      <span>进入</span>
-                    </footer>
-                  </button>
-                  <div
-                    class="project-card__more"
-                    @keydown.esc.prevent="closeMenu"
-                  >
-                    <button
-                      type="button"
-                      class="project-card__more-btn"
-                      aria-haspopup="menu"
-                      aria-label="项目操作"
-                    >
-                      <span aria-hidden="true" />
-                      <span aria-hidden="true" />
-                      <span aria-hidden="true" />
-                    </button>
-                    <div class="project-card__menu" role="menu">
-                      <div class="project-card__menu-panel">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          @click="openDelete(row)"
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </li>
-            </ul>
-
-            <div class="pager">
-              <p>共 {{ pagination.count }} 个项目</p>
-              <div
-                v-if="pagination.count > pagination.limit"
-                class="pager__nav"
-              >
-                <button
-                  type="button"
-                  class="pager__btn"
-                  :disabled="pagination.current <= 1 || loading"
-                  @click="handlePageChange(pagination.current - 1)"
-                >
-                  上一页
-                </button>
-                <span>{{ pagination.current }} / {{ totalPages }}</span>
-                <button
-                  type="button"
-                  class="pager__btn"
-                  :disabled="pagination.current >= totalPages || loading"
-                  @click="handlePageChange(pagination.current + 1)"
-                >
-                  下一页
-                </button>
+              <div class="recent-card__actions">
+                <ProjectActionsMenu
+                  placement="top-end"
+                  @rename="openRename(project)"
+                  @delete="openDelete(project)"
+                />
               </div>
-            </div>
-          </div>
-        </bk-loading>
+            </article>
+          </li>
+        </ul>
       </section>
     </div>
 
-    <CreateProjectDialog
-      v-model="dialogVisible"
-      @created="enterProject"
-    />
     <DeleteProjectDialog
       v-model="deleteVisible"
       :project="deletingProject"
       @deleted="handleDeleted"
     />
+    <RenameProjectDialog
+      v-model="renameVisible"
+      :project="renamingProject"
+      @renamed="handleRenamed"
+    />
   </HomeLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { Plus } from 'bkui-vue/lib/icon';
-import { listProjects } from '@/http/api';
-import type { ProjectResponse } from '@/http/types';
-import CreateProjectDialog from '@/components/project/CreateProjectDialog.vue';
+import { nextTick, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { generateProjectId, projectNameFromPrompt } from '@/common/project';
+import { readableError, timeFormatter } from '@/common/util';
+import AppIcon from '@/components/AppIcon.vue';
+import ModelSelector from '@/components/model/ModelSelector.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
+import ProjectActionsMenu from '@/components/project/ProjectActionsMenu.vue';
+import RenameProjectDialog from '@/components/project/RenameProjectDialog.vue';
+import { createProject, listProjects } from '@/http/api';
+import type { ProjectResponse } from '@/http/types';
 import HomeLayout from '@/layouts/HomeLayout.vue';
-import { timeFormatter } from '@/common/util';
-import { useUser } from '@/store/user';
+import { useModelCatalogStore } from '@/store/model-catalog';
+import { useProjectStore } from '@/store/project';
 
 const router = useRouter();
-const user = useUser();
+const route = useRoute();
+const projectStore = useProjectStore();
+const modelCatalogStore = useModelCatalogStore();
+const composerRef = ref<HTMLFormElement>();
+const inputRef = ref<HTMLTextAreaElement>();
+const prompt = ref('');
+const creating = ref(false);
+const createError = ref('');
 const loading = ref(false);
-const dialogVisible = ref(false);
-const deleteVisible = ref(false);
-const deletingProject = ref<ProjectResponse | null>(null);
 const listError = ref('');
 const projects = ref<ProjectResponse[]>([]);
+const deleteVisible = ref(false);
+const deletingProject = ref<ProjectResponse | null>(null);
+const renameVisible = ref(false);
+const renamingProject = ref<ProjectResponse | null>(null);
+const spotlighted = ref(false);
 
-const greeting = computed(() => {
-  const name = user.user.display_name || user.user.username;
-  return name ? `你好，${name}` : '开始下一个蓝鲸 SaaS';
-});
+const samples = [
+  { label: '番茄钟小工具', prompt: '开发一个番茄钟小工具，使用活泼的配色风格' },
+  { label: '活动报名页', prompt: '做一个团队活动报名页，可以填写姓名和人数，并导出名单' },
+  { label: '抽奖小工具', prompt: '开发一个抽奖小工具，可录入抽奖名单，奖品固定为一台 Switch 2' },
+];
 
-const pagination = reactive({
-  current: 1,
-  count: 0,
-  limit: 30,
-});
-
-const totalPages = computed(() => (
-  Math.max(1, Math.ceil(pagination.count / pagination.limit))
-));
-
-const enterProject = (row: ProjectResponse) => {
-  router.push({ name: 'project', params: { projectId: row.id } });
+const resizeInput = () => {
+  const input = inputRef.value;
+  if (!input) return;
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(Math.max(input.scrollHeight, 72), 240)}px`;
 };
 
-const handlePageChange = (page: number) => {
-  pagination.current = page;
-  fetchProjects();
+const handleInput = () => {
+  createError.value = '';
+  resizeInput();
 };
 
-const openCreate = () => {
-  dialogVisible.value = true;
+const handleEnter = (event: KeyboardEvent) => {
+  if (event.shiftKey || event.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
+  submitPrompt();
 };
 
-const closeMenu = (event: KeyboardEvent) => {
-  const current = event.currentTarget;
-  if (current instanceof HTMLElement) current.querySelector('button')?.blur();
+const applySample = async (value: string) => {
+  prompt.value = value;
+  await nextTick();
+  resizeInput();
+  inputRef.value?.focus();
 };
 
-const openDelete = (row: ProjectResponse) => {
-  deletingProject.value = row;
-  deleteVisible.value = true;
-};
-
-const handleDeleted = async () => {
-  const removedId = deletingProject.value?.id;
-  if (removedId && projects.value.some(item => item.id === removedId)) {
-    projects.value = projects.value.filter(item => item.id !== removedId);
-    pagination.count = Math.max(0, pagination.count - 1);
+const submitPrompt = async () => {
+  const content = prompt.value.trim();
+  if (!content || creating.value) return;
+  createError.value = '';
+  creating.value = true;
+  try {
+    const created = await createProject({
+      id: generateProjectId(),
+      name: projectNameFromPrompt(content),
+    });
+    projectStore.queueInitialMessage(
+      created.id,
+      content,
+      modelCatalogStore.requestModelCode,
+    );
+    await router.push({ name: 'project', params: { projectId: created.id } });
+  } catch (error) {
+    createError.value = readableError(error, '创建失败，请稍后重试');
+    creating.value = false;
+    await nextTick();
+    inputRef.value?.focus();
   }
-  if (!projects.value.length && pagination.current > 1) {
-    pagination.current -= 1;
-  }
-  await fetchProjects();
 };
 
-const fetchProjects = async () => {
+const fetchRecent = async () => {
   loading.value = true;
   listError.value = '';
   try {
-    const data = await listProjects({
-      page: pagination.current,
-      page_size: pagination.limit,
-    });
-    projects.value = data.items || [];
-    pagination.count = data.count || 0;
-  } catch (error: any) {
-    listError.value = error?.message || '项目列表加载失败，请稍后重试';
-    if (!projects.value.length) {
-      pagination.count = 0;
-    }
+    const response = await listProjects({ page: 1, page_size: 3 });
+    projects.value = response.items || [];
+  } catch (error) {
+    listError.value = readableError(error, '项目列表加载失败，请稍后重试');
   } finally {
     loading.value = false;
   }
 };
 
-fetchProjects();
+const enterProject = (project: ProjectResponse) => {
+  router.push({ name: 'project', params: { projectId: project.id } });
+};
+
+const openDelete = (project: ProjectResponse) => {
+  deletingProject.value = project;
+  deleteVisible.value = true;
+};
+
+const openRename = (project: ProjectResponse) => {
+  renamingProject.value = project;
+  renameVisible.value = true;
+};
+
+const handleRenamed = (name: string) => {
+  if (renamingProject.value) renamingProject.value.name = name;
+};
+
+const handleDeleted = () => {
+  fetchRecent();
+};
+
+const handleSpotlightEnd = (event: AnimationEvent) => {
+  if (event.animationName === 'composer-spin') {
+    spotlighted.value = false;
+  }
+};
+
+fetchRecent();
+void modelCatalogStore.loadCatalog();
+
+onMounted(async () => {
+  if (route.query.compose !== '1') return;
+  inputRef.value?.focus();
+  spotlighted.value = false;
+  await nextTick();
+  void composerRef.value?.offsetWidth;
+  spotlighted.value = true;
+  router.replace({ name: 'home' });
+});
 </script>
 
 <style lang="postcss" scoped>
-.home-page {
-  --ink: #12151c;
-  --muted: #556070;
-  --faint: #7a8494;
-  --paper: #ffffff;
-  --line: #dbe3ee;
-  --accent: #2f5bff;
-  --focus: #1f46d6;
-  width: 100%;
-  /* 一行最多 8 张：8×280 + 7×18。更宽时整页居中，问候语和卡片左边对齐。 */
-  max-width: 2366px;
-  margin-inline: auto;
+.home-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 clamp(20px, 4vw, 56px) 40px;
   color: var(--ink);
-}
-
-.home-page ::selection {
-  background: #d7e0ff;
-  color: var(--ink);
+  background-color: #d9e3f2;
+  background-image:
+    radial-gradient(ellipse 72% 52% at 6% -4%, rgba(91, 132, 255, 0.5), transparent 56%),
+    radial-gradient(ellipse 50% 40% at 96% 4%, rgba(56, 189, 248, 0.32), transparent 52%),
+    radial-gradient(ellipse 58% 46% at 78% 108%, rgba(129, 140, 248, 0.28), transparent 58%),
+    linear-gradient(168deg, #f3f6ff 0%, #dbe6f8 38%, #e3eef7 68%, #d5ebe6 100%);
+  background-attachment: fixed;
 }
 
 .hero {
-  max-width: 34em;
-  padding: 28px 0 48px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 470px;
+  padding: 56px 0 32px;
+  text-align: center;
 }
 
 .hero h1 {
-  margin: 0 0 14px;
-  font-size: clamp(40px, 6vw, 64px);
-  font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1.05;
-}
-
-.hero p {
-  margin: 0 0 28px;
-  color: var(--muted);
-  font-size: 18px;
-  line-height: 1.55;
-}
-
-.hero :deep(.hero__cta),
-:deep(.create-project-btn) {
-  --bk-button-primary-hover-bg: #1768ef;
-  background: #3a84ff !important;
-  border-color: #3a84ff !important;
-}
-
-.hero :deep(.hero__cta) {
-  min-width: 148px;
-  height: 44px;
-}
-
-.library__head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.library__head h2 {
+  position: relative;
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: clamp(30px, 4.2vw, 44px);
+  font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
-.library__head p {
-  margin: 0;
+.hero h1 + p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.hero__sparks {
+  position: absolute;
+  top: -0.35em;
+  left: 100%;
+  width: 0.95em;
+  height: 1em;
+  margin-left: 0.12em;
+  filter: drop-shadow(0 0 6px rgba(255, 95, 143, 0.45));
+  pointer-events: none;
+}
+
+.hero__sparks i {
+  position: absolute;
+  display: block;
+  background: var(--spark-gradient);
+  clip-path: var(--spark-shape);
+}
+
+.hero__sparks i:nth-child(1) {
+  top: 0.18em;
+  left: 0.12em;
+  width: 0.56em;
+  height: 0.56em;
+  animation: hero-spark-pop 3.2s ease-in-out infinite;
+}
+
+.hero__sparks i:nth-child(2) {
+  top: 0;
+  left: 0.64em;
+  width: 0.24em;
+  height: 0.24em;
+  animation: hero-spark-twinkle 2.4s ease-in-out 0.4s infinite;
+}
+
+.hero__sparks i:nth-child(3) {
+  top: 0.7em;
+  left: 0.68em;
+  width: 0.16em;
+  height: 0.16em;
+  animation: hero-spark-twinkle 2s ease-in-out 1.1s infinite;
+}
+
+@property --composer-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.composer {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin-top: 32px;
+  padding: 16px 14px 12px 18px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #d5ddea;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(18, 28, 48, 0.08);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.composer:focus-within {
+  border-color: #a9b9ff;
+  box-shadow: 0 0 0 4px rgba(61, 109, 255, 0.12), 0 12px 32px rgba(18, 28, 48, 0.08);
+}
+
+.composer.is-error {
+  border-color: #e76761;
+}
+
+.composer::before {
+  position: absolute;
+  inset: -2px;
+  padding: 2px;
+  pointer-events: none;
+  content: "";
+  background: conic-gradient(
+    from var(--composer-angle),
+    transparent 0deg,
+    transparent 220deg,
+    #7c5cff 300deg,
+    #3d6dff 345deg,
+    transparent 360deg
+  );
+  border-radius: 22px;
+  opacity: 0;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+.composer.is-spotlight::before {
+  animation: composer-spin 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.composer__input {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  max-height: 240px;
+  padding: 0;
+  overflow-y: auto;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 24px;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.composer__input::placeholder {
+  color: #707b8c;
+}
+
+.composer__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.composer__tool,
+.composer__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+}
+
+.composer__tool {
+  height: 32px;
+  color: var(--muted);
+  cursor: not-allowed;
+  border-radius: 10px;
+  opacity: 0.5;
+}
+
+.composer__tool {
+  width: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+}
+
+.composer__tool :deep(.app-icon) {
+  font-size: 16px;
+}
+
+.composer__send :deep(.app-icon),
+.recent-card__actions :deep(.app-icon) {
+  font-size: 18px;
+}
+
+.composer__send {
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  color: #fff;
+  cursor: pointer;
+  background: var(--accent);
+  border-radius: 12px;
+}
+
+.composer__send:hover:not(:disabled) {
+  background: #274edb;
+}
+
+.composer__send:disabled {
+  cursor: not-allowed;
+  background: #c9d3e6;
+}
+
+.composer__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.composer__error {
+  margin: 12px 0 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.composer__samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
   color: var(--faint);
+  font-size: 13px;
+}
+
+.composer__samples button {
+  height: 30px;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+}
+
+.composer__samples button:hover:not(:disabled) {
+  color: var(--ink);
+  background: #fff;
+}
+
+.composer__samples button:focus-visible,
+.composer__send:focus-visible,
+.composer__tool:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+}
+
+.recent {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 18px 20px 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(18, 28, 48, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.recent__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.recent__head h2 {
+  margin: 0;
+  padding-bottom: 6px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--accent);
+}
+
+.recent__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.recent__more :deep(.app-icon) {
   font-size: 14px;
 }
 
-.card-grid {
+.recent__more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.recent__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.project-card,
-.create-card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-height: 220px;
-  padding: 22px 22px 18px;
-  text-align: left;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: 0 12px 28px rgba(18, 28, 48, 0.06);
-}
-
-.project-card {
+.recent-card {
   position: relative;
-  justify-content: space-between;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
+  min-height: 108px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.create-card {
-  cursor: pointer;
+.recent-card:hover {
+  border-color: #c6d2ea;
+  box-shadow: 0 12px 24px rgba(18, 28, 48, 0.08);
+  transform: translateY(-2px);
 }
 
-.project-card:hover,
-.create-card:hover {
-  z-index: 2;
-  transform: translateY(-3px);
-  box-shadow: 0 18px 36px rgba(18, 28, 48, 0.1);
-}
-
-.create-card:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-}
-
-.project-card__open {
+.recent-card__open {
   display: flex;
-  flex: 1;
   flex-direction: column;
   justify-content: space-between;
   width: 100%;
-  min-height: 180px;
-  padding: 0 28px 0 0;
+  min-height: 106px;
+  padding: 16px 46px 16px 18px;
   color: inherit;
   text-align: left;
   background: transparent;
@@ -396,248 +620,140 @@ fetchProjects();
   cursor: pointer;
 }
 
-.project-card__open:focus,
-.project-card__open:focus-visible {
-  outline: none;
-}
-
-.project-card h3 {
-  margin: 0 0 10px;
-  overflow: hidden;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.project-card__id {
+.recent-card h3 {
   margin: 0;
-  color: var(--faint);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 24px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.project-card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 16px;
+.recent-card time {
+  margin-top: 16px;
   color: var(--faint);
   font-size: 13px;
-  border-top: 1px solid var(--line);
 }
 
-.project-card__foot time,
-.project-card__foot span {
-  white-space: nowrap;
-}
-
-.project-card__foot span {
-  color: #7b91ff;
-  font-weight: 500;
-}
-
-.project-card__more {
+.recent-card__actions {
   position: absolute;
-  right: 16px;
-  bottom: 14px;
+  right: 8px;
+  bottom: 8px;
 }
 
-.project-card__more-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.project-card__more-btn span {
-  display: block;
-  width: 3px;
-  height: 3px;
-  background: #7a8494;
-  border-radius: 50%;
-}
-
-.project-card__more-btn:hover,
-.project-card__more:focus-within .project-card__more-btn {
-  background: #f3f4f7;
-}
-
-.project-card__more-btn:focus-visible {
-  outline: 2px solid var(--focus);
+.recent-card__open:focus-visible {
+  outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
 }
 
-.project-card__menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 2;
-  display: none;
-  /* 上边距留在菜单范围内，鼠标从点点点移下来时悬停不会断。 */
-  padding-top: 6px;
+.skeleton-card {
+  height: 108px;
+  background: linear-gradient(90deg, #eef1f6 25%, #f7f9fc 37%, #eef1f6 63%);
+  background-size: 400% 100%;
+  border-radius: 14px;
+  animation: skeleton 1.4s ease infinite;
 }
 
-.project-card__more:hover .project-card__menu,
-.project-card__more:focus-within .project-card__menu {
-  display: block;
-}
-
-.project-card__menu-panel {
-  padding: 6px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(18, 28, 48, 0.12);
-}
-
-.project-card__menu button {
-  display: block;
-  min-width: 88px;
-  height: 36px;
-  padding: 0 16px;
-  color: #3a84ff;
-  font-size: 14px;
-  text-align: center;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.project-card__menu button:hover {
-  background: #f3f6ff;
-}
-
-.create-card {
-  position: relative;
-  align-items: flex-start;
-  justify-content: flex-end;
-  color: inherit;
-  background:
-    linear-gradient(180deg, rgba(47, 91, 255, 0.07), transparent 46%),
-    var(--paper);
-}
-
-.create-card__plus {
-  position: absolute;
-  top: 46%;
-  left: 50%;
-  color: #8aa0ff;
-  font-size: 72px;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-}
-
-.create-card__plus :deep(svg) {
-  width: 72px !important;
-  height: 72px !important;
-}
-
-.create-card__title {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.create-card__hint {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.state-panel {
-  max-width: 28em;
-  padding: 28px 0 48px;
-}
-
-.state-panel h3 {
-  margin: 0 0 8px;
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.state-panel p {
-  margin: 0 0 20px;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.inline-error {
-  display: flex;
-  gap: 12px;
-  margin: 0 0 16px;
-  color: #8a2b2b;
-  font-size: 13px;
-}
-
-.pager {
+.recent__state {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 22px;
-  color: var(--faint);
-  font-size: 13px;
+  justify-content: center;
+  gap: 12px;
+  min-height: 108px;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-.pager p {
+.recent__state p {
   margin: 0;
 }
 
-.pager__nav {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.recent__state.is-error p {
+  color: #8a2b2b;
 }
 
-.pager__btn,
-.text-action {
+.recent__state button {
   padding: 0;
   color: var(--accent);
-  font-size: 13px;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 0;
   cursor: pointer;
 }
 
-.pager__btn:disabled {
-  color: #a8b0bd;
-  cursor: not-allowed;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.pager__btn:focus-visible,
-.text-action:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
+@keyframes composer-spin {
+  0% {
+    --composer-angle: 0deg;
+    opacity: 0;
+  }
+
+  12%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    --composer-angle: 360deg;
+    opacity: 0;
+  }
 }
 
-@media (max-width: 640px) {
+@keyframes skeleton {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@keyframes hero-spark-pop {
+  0%,
+  70%,
+  100% { transform: rotate(0) scale(1); }
+  82% { transform: rotate(90deg) scale(1.12); }
+}
+
+@keyframes hero-spark-twinkle {
+  0%,
+  100% { opacity: 0.35; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 760px) {
+  .home-body {
+    padding-inline: 16px;
+  }
+
   .hero {
-    padding-top: 12px;
+    min-height: 430px;
+    padding-top: 36px;
   }
 
-  .hero p {
-    font-size: 16px;
+  .hero__sparks {
+    display: none;
   }
 
-  .pager {
-    align-items: flex-start;
-    flex-direction: column;
+  .recent__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__sparks i,
+  .composer__spinner,
+  .skeleton-card {
+    animation: none;
+  }
+
+  .composer.is-spotlight::before {
+    animation-duration: 0.01s;
+  }
+
+  .recent-card,
+  .composer {
+    transition: none;
   }
 }
 </style>

@@ -1,117 +1,62 @@
 <template>
   <div class="workspace-toolbar">
-    <div class="seg" role="tablist" aria-label="视图">
-      <button
-        type="button"
-        role="tab"
-        :class="{ 'is-on': viewType === 'preview' }"
-        :aria-selected="viewType === 'preview'"
-        @click="setView('preview')"
-      >
-        预览
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :class="{ 'is-on': viewType === 'code' }"
-        :aria-selected="viewType === 'code'"
-        @click="setView('code')"
-      >
-        代码
-      </button>
+    <div class="workspace-toolbar__seg" role="tablist" aria-label="视图">
+      <button type="button" role="tab" aria-selected="true">预览</button>
     </div>
 
-    <div
-      v-if="viewType === 'preview'"
-      class="seg"
-      role="tablist"
-      aria-label="设备"
-    >
-      <button
-        type="button"
-        role="tab"
-        :class="{ 'is-on': deviceType === 'mobile' }"
-        :aria-selected="deviceType === 'mobile'"
-        @click="setDevice('mobile')"
+    <div class="workspace-toolbar__actions">
+      <PublishDemo />
+      <bk-popover
+        trigger="click"
+        placement="bottom-end"
+        theme="light"
+        :arrow="false"
+        :padding="0"
+        :offset="6"
+        ext-cls="workspace-action-popover"
       >
-        手机
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :class="{ 'is-on': deviceType === 'desktop' }"
-        :aria-selected="deviceType === 'desktop'"
-        @click="setDevice('desktop')"
-      >
-        Web
-      </button>
+        <button class="workspace-toolbar__more" type="button" aria-label="更多操作">
+          <AppIcon name="more" />
+        </button>
+        <template #content>
+          <div class="workspace-action-menu" role="menu">
+            <a
+              v-if="archiveUrl"
+              class="workspace-action-menu__item"
+              :href="archiveUrl"
+              target="_blank"
+              rel="noopener"
+              role="menuitem"
+            >
+              <AppIcon name="download" />
+              <span class="workspace-action-menu__text">
+                <span>下载源码</span>
+                <small>主分支源码，不含本轮尚未保存的改动</small>
+              </span>
+            </a>
+            <button v-else class="workspace-action-menu__item" type="button" role="menuitem" disabled>
+              <AppIcon name="download" />
+              <span class="workspace-action-menu__text">
+                <span>下载源码</span>
+                <small>主分支源码，不含本轮尚未保存的改动</small>
+              </span>
+            </button>
+          </div>
+        </template>
+      </bk-popover>
     </div>
-
-    <!--
-      直接当链接用，而不是 fetch 下来再造 blob：压缩包多大取决于项目源码，交给浏览器原生下载既
-      不占内存，也能沿用它自带的下载进度。文件名由响应头给出（带 commit 短 SHA）。
-      target="_blank" 是留给出错的那一下：后端报错时返回的是 JSON，让它显示在新标签里，而不是
-      把用户从对话页面上带走。
-    -->
-    <a
-      v-if="archiveUrl"
-      class="workspace-toolbar__download"
-      :href="archiveUrl"
-      target="_blank"
-      rel="noopener"
-      v-bk-tooltips="{
-        content: '下载主分支源码，不含本轮尚未保存的改动',
-        placement: 'bottom-end',
-      }"
-    >
-      下载源码
-    </a>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSourceArchive } from '@/composables/use-source-archive';
 import { useProjectStore } from '@/store/project';
-import type { WorkspaceDevice, WorkspaceView } from './types';
-
-const props = withDefaults(defineProps<{
-  view?: WorkspaceView;
-  device?: WorkspaceDevice;
-}>(), {
-  view: 'preview',
-  device: 'desktop',
-});
-
-const emit = defineEmits<{
-  (e: 'update:view', value: WorkspaceView): void;
-  (e: 'update:device', value: WorkspaceDevice): void;
-}>();
-
-const viewType = ref<WorkspaceView>(props.view);
-const deviceType = ref<WorkspaceDevice>(props.device);
+import AppIcon from '@/components/AppIcon.vue';
+import PublishDemo from './PublishDemo.vue';
 
 const { projectId } = storeToRefs(useProjectStore());
 const { archiveUrl } = useSourceArchive(projectId);
-
-watch(() => props.view, (value) => {
-  viewType.value = value;
-});
-
-watch(() => props.device, (value) => {
-  deviceType.value = value;
-});
-
-const setView = (value: WorkspaceView) => {
-  viewType.value = value;
-  emit('update:view', value);
-};
-
-const setDevice = (value: WorkspaceDevice) => {
-  deviceType.value = value;
-  emit('update:device', value);
-};
 </script>
 
 <style lang="postcss" scoped>
@@ -119,59 +64,125 @@ const setDevice = (value: WorkspaceDevice) => {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 10px;
-  height: var(--rail-h, 56px);
+  justify-content: space-between;
+  height: var(--rail-h);
   padding: 0 16px;
   background: #fff;
-  border-bottom: 1px solid var(--line, #e4e9f1);
+  border-bottom: 1px solid var(--line);
 }
 
-.seg {
+.workspace-toolbar__seg {
   display: inline-flex;
   padding: 3px;
   background: #f3f4f7;
   border-radius: 10px;
 }
 
-.seg button {
+.workspace-toolbar__seg button {
   height: 28px;
   padding: 0 12px;
-  color: var(--muted, #5c6573);
+  color: var(--ink);
   font-size: 13px;
+  font-weight: 600;
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(18, 28, 48, 0.08);
+}
+
+.workspace-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-toolbar__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--faint);
   background: transparent;
   border: 0;
   border-radius: 8px;
   cursor: pointer;
 }
 
-.seg button.is-on {
-  color: var(--ink, #12141a);
-  font-weight: 600;
+.workspace-toolbar__more:hover {
+  color: var(--ink);
+  background: var(--hover-bg);
+}
+
+.workspace-toolbar__more :deep(.app-icon) {
+  font-size: 18px;
+}
+
+.workspace-action-menu {
+  box-sizing: border-box;
+  width: 268px;
+  padding: 6px;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(18, 28, 48, 0.08);
+  border-radius: 12px;
 }
 
-.seg button:focus-visible {
-  outline: 2px solid var(--accent, #3d6dff);
-  outline-offset: 2px;
+:global(.workspace-action-popover) {
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(16, 22, 34, 0.14), 0 0 0 1px rgba(16, 22, 34, 0.05);
 }
 
-/* margin-left: auto 把它推到最右：左边的设备切换只在预览视图下存在，靠它才能不受影响地贴边。 */
-.workspace-toolbar__download {
-  margin-left: auto;
-  color: var(--accent, #3d6dff);
+.workspace-action-menu__item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  color: var(--ink);
   font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
   text-decoration: none;
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.workspace-action-menu__item :deep(.app-icon) {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--faint);
+}
+
+.workspace-action-menu__text {
+  min-width: 0;
+}
+
+.workspace-action-menu__text small {
+  display: block;
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 12px;
   white-space: nowrap;
 }
 
-.workspace-toolbar__download:hover {
-  text-decoration: underline;
+.workspace-action-menu__item:hover:not(:disabled),
+.workspace-action-menu__item:focus-visible {
+  background: var(--subtle-bg);
+  outline: none;
 }
 
-.workspace-toolbar__download:focus-visible {
-  outline: 2px solid var(--accent, #3d6dff);
+.workspace-action-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.workspace-toolbar__more:focus-visible {
+  outline: 2px solid var(--accent-focus);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 </style>

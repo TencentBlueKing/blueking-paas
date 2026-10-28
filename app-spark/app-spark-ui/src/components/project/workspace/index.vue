@@ -1,18 +1,15 @@
 <template>
   <section class="workspace-panel">
-    <WorkspaceToolbar v-model:view="view" v-model:device="device" />
+    <WorkspaceToolbar />
     <PreviewCanvas
-      v-if="view === 'preview'"
-      :device="device"
+      v-model:device="device"
       :src="frameSrc"
-      :frame-key="frameKey"
+      :frame-key="frameKey + manualRefreshKey"
       :phase="phase"
       :waiting="waiting"
       :busy="busy"
+      @refresh="manualRefreshKey += 1"
     />
-    <div v-else class="workspace-panel__code">
-      敬请期待
-    </div>
   </section>
 </template>
 
@@ -23,12 +20,12 @@ import { useConversationPreview } from '@/composables/use-conversation-preview';
 import { useProjectStore } from '@/store/project';
 import PreviewCanvas from './PreviewCanvas.vue';
 import WorkspaceToolbar from './WorkspaceToolbar.vue';
-import type { WorkspaceDevice, WorkspaceView } from './types.js';
+import type { WorkspaceDevice } from './types.js';
 
-const view = ref<WorkspaceView>('preview');
 const device = ref<WorkspaceDevice>('desktop');
+const manualRefreshKey = ref(0);
 const { busy } = storeToRefs(useProjectStore());
-const panelOpen = computed(() => view.value === 'preview');
+const panelOpen = computed(() => true);
 const { phase, frameSrc, frameKey, waiting } = useConversationPreview(panelOpen);
 </script>
 
@@ -37,16 +34,8 @@ const { phase, frameSrc, frameKey, waiting } = useConversationPreview(panelOpen)
   display: flex;
   flex: 1;
   flex-direction: column;
+  height: 100%;
   min-width: 0;
-}
-
-.workspace-panel__code {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  color: var(--faint, #88919e);
-  background: #15171c;
+  min-height: 0;
 }
 </style>

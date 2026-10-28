@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.test import override_settings
 from pydantic import ValidationError
 from svc_redis.controller.entities import RedisPlanConfig
 from svc_redis.controller.manifests import get_redis_resource
@@ -110,12 +111,14 @@ class TestRedisExporter:
             "limits": {"cpu": "100m", "memory": "64Mi"},
         }
 
-    def test_exporter_with_custom_settings(self, settings):
-        settings.REDIS_EXPORTER_IMAGE = "mirrors.example.com/redis-exporter:v1.44.0"
-        settings.REDIS_EXPORTER_RESOURCES = {
+    @override_settings(
+        REDIS_EXPORTER_IMAGE="mirrors.example.com/redis-exporter:v1.44.0",
+        REDIS_EXPORTER_RESOURCES={
             "requests": {"cpu": "10m", "memory": "32Mi"},
             "limits": {"cpu": "200m", "memory": "128Mi"},
-        }
+        },
+    )
+    def test_exporter_with_custom_settings(self):
         deployable = get_redis_resource(_plan_config(type="RedisReplication", monitor=True)).to_deployable()
 
         exporter = deployable["spec"]["redisExporter"]

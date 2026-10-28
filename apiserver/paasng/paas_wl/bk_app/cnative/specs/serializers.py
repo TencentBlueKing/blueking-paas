@@ -18,6 +18,7 @@
 import logging
 import re
 
+import humanize
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -25,6 +26,7 @@ from rest_framework import serializers
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, PersistentStorageSize, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
+from paas_wl.utils.error_codes import error_codes
 
 from .models import AppModelRevision, ConfigMapSource, Mount, PersistentStorageSource
 
@@ -43,6 +45,12 @@ class AppModelRevisionSerializer(serializers.ModelSerializer):
 
 
 class ConfigMapSLZ(serializers.Serializer):
+    """挂载卷内容 (configmap source) 序列化器
+
+    文件由前端选择并在本地解析, 之后以 {文件名: 文本内容} 整体提交;
+    后端在此确认链路上做服务端兜底校验: 文件后缀白名单, 单文件大小, 内容总大小.
+    """
+
     source_config_data = serializers.DictField(
         help_text=_(
             "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
@@ -58,7 +66,56 @@ class ConfigMapSLZ(serializers.Serializer):
         for key in data:
             if not key:
                 raise serializers.ValidationError("key cannot be empty")
+
+        total_size = 0
+        for filename, content in data.items():
+            self._validate_file_extension(filename)
+            self._validate_file_size(filename, content)
+            total_size += len(filename) + len(content)
+
+        max_source_size = settings.MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE
+        if total_size > max_source_size:
+            raise error_codes.VOLUME_SOURCE_SIZE_EXCEEDED.f(
+                _("挂载资源的内容总大小不能超过 {size_limit} 上限 (当前 {current_size})").format(
+                    size_limit=humanize.naturalsize(max_source_size, binary=True),
+                    current_size=humanize.naturalsize(total_size, binary=True),
+                )
+            )
         return data
+
+    def _validate_file_extension(self, filename: str) -> None:
+        """校验文件后缀是否在上传白名单中
+
+        白名单通过环境配置 MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS 决定, 为空表示允许所有后缀.
+        匹配规则: 取文件名最后一个 `.` 之后的字符串作为后缀, 大小写不敏感, 白名单项可带前导点.
+
+        :param filename: 文件名
+        :raises error_codes.VOLUME_FILE_EXTENSION_NOT_ALLOWED: 当文件后缀不在白名单中时
+        """
+        allowed_extensions = settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS
+        if not allowed_extensions:
+            return
+
+        extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if extension not in [ext.lower().lstrip(".") for ext in allowed_extensions]:
+            raise error_codes.VOLUME_FILE_EXTENSION_NOT_ALLOWED.f(
+                _("仅允许上传以下后缀的文件: {extensions}").format(extensions=", ".join(allowed_extensions))
+            )
+
+    def _validate_file_size(self, filename: str, content: str) -> None:
+        """校验单个文件内容的大小, 上限由 MOUNT_FILE_UPLOAD_MAX_SIZE 配置
+
+        :param filename: 文件名
+        :param content: 文件内容
+        :raises error_codes.VOLUME_FILE_TOO_LARGE: 当文件内容超过上限时
+        """
+        max_size = settings.MOUNT_FILE_UPLOAD_MAX_SIZE
+        if len(content) > max_size:
+            raise error_codes.VOLUME_FILE_TOO_LARGE.f(
+                _("文件 {filename} 的大小不能超过 {size_limit}").format(
+                    filename=filename, size_limit=humanize.naturalsize(max_size, binary=True)
+                )
+            )
 
 
 class PersistentStorageSLZ(serializers.Serializer):

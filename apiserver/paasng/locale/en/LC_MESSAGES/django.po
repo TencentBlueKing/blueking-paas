@@ -187,6 +187,23 @@ msgstr ""
 msgid "挂载卷内容不可为空"
 msgstr "Mount volume content cannot be empty"
 
+#: paas_wl/bk_app/cnative/specs/serializers.py:102
+#, python-brace-format
+msgid "仅允许上传以下后缀的文件: {extensions}"
+msgstr "Only files with the following extensions are allowed: {extensions}"
+
+#: paas_wl/bk_app/cnative/specs/serializers.py:115
+#, python-brace-format
+msgid "文件 {filename} 的大小不能超过 {size_limit}"
+msgstr "The size of file {filename} cannot exceed {size_limit}"
+
+#: paas_wl/bk_app/cnative/specs/serializers.py:79
+#, python-brace-format
+msgid "挂载资源的内容总大小不能超过 {size_limit} 上限 (当前 {current_size})"
+msgstr ""
+"The total size of the mount source content cannot exceed the {size_limit} "
+"limit (currently {current_size})"
+
 #: paas_wl/bk_app/cnative/specs/serializers.py:152
 msgid "configmap 挂载"
 msgstr "ConfigMap mounting"
@@ -528,7 +545,19 @@ msgstr "Failed to list volume mount sources"
 msgid "Failed to create volume mount source"
 msgstr "Failed to create volume mount source"
 
+#: paas_wl/utils/error_codes.py:57
+msgid "The file extension is not allowed"
+msgstr "The file extension is not allowed"
+
+#: paas_wl/utils/error_codes.py:58
+msgid "The file is too large"
+msgstr "The file is too large"
+
 #: paas_wl/utils/error_codes.py:59
+msgid "The volume source is too large"
+msgstr "The volume source is too large"
+
+#: paas_wl/utils/error_codes.py:63
 msgid "Failed to create credentials"
 msgstr "Failed to create credentials"
 

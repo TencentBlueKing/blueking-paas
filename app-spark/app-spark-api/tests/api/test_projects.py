@@ -400,6 +400,24 @@ async def test_invisible_projects_cannot_be_renamed(aapi_client, bk_user):
     assert not await Project.default_objects.filter(name="Hijacked").aexists()
 
 
+async def test_a_project_deleted_during_the_rename_is_not_found(aapi_client, bk_user, monkeypatch):
+    """A concurrent delete must look like any other invisible project, not a 500."""
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)
+    real_arename = Project.objects.arename
+
+    async def arename_then_lose_to_a_delete(project_id, name):
+        changed = await real_arename(project_id, name)
+        await Project.objects.asoft_delete(project_id)
+        return changed
+
+    monkeypatch.setattr(Project.objects, "arename", arename_then_lose_to_a_delete)
+
+    response = await rename_via_api(aapi_client, "spark-demo", name="Spark Renamed")
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {"code": "RESOURCE_NOT_FOUND", "detail": "Resource not found."}
+
+
 @pytest.mark.parametrize("name", ["", "x" * 21])
 async def test_a_new_name_outside_the_column_limits_is_refused(aapi_client, bk_user, name):
     await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)

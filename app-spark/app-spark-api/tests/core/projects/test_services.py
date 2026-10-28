@@ -101,6 +101,25 @@ async def test_renaming_a_project_deleted_after_it_was_fetched_is_reported_as_de
     assert (deleted.is_deleted, deleted.name) == (True, None)
 
 
+async def test_a_project_deleted_right_after_the_rename_is_reported_as_deleted(monkeypatch):
+    """The update lands, then a concurrent delete wins before the result is read back.
+
+    Returning that row would hand a deleted project (with no name) to the caller.
+    """
+    project = await make_project(project_id="spark-demo", name="Spark Demo")
+    real_arename = Project.objects.arename
+
+    async def arename_then_lose_to_a_delete(project_id, name):
+        changed = await real_arename(project_id, name)
+        await Project.objects.asoft_delete(project_id)
+        return changed
+
+    monkeypatch.setattr(Project.objects, "arename", arename_then_lose_to_a_delete)
+
+    with pytest.raises(ProjectAlreadyDeletedError):
+        await services.rename_project(project, name="Spark Renamed")
+
+
 async def test_a_name_taken_after_the_check_is_still_reported_as_a_conflict(monkeypatch):
     """The up-front check only narrows the race; the unique constraint is what closes it.
 

@@ -127,6 +127,9 @@ async def rename_project(project: Project, *, name: str) -> Project:
         raise ProjectAlreadyDeletedError
 
     await project.arefresh_from_db()
+    # 刷新走基础管理器，能读到软删除行：更新成功之后、刷新之前被并发删除，也按已删除处理。
+    if project.is_deleted:
+        raise ProjectAlreadyDeletedError
     return project
 
 

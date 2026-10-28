@@ -23,7 +23,28 @@ def _render(
         command.extend(["--set-json", f"{key}={json.dumps(value)}"])
     rendered = subprocess.run(command, check=False, capture_output=True, text=True)
     assert rendered.returncode == 0, rendered.stderr
-    return {resource["kind"]: resource for resource in YAML(typ="safe").load_all(rendered.stdout) if resource}
+    resources: dict[str, Any] = {}
+    for resource in YAML(typ="safe").load_all(rendered.stdout):
+        if not resource:
+            continue
+
+        # 同一个 kind 只能留一份。Celery worker 也是 Deployment，放进来会盖掉 API。
+        if resource["kind"] == "Deployment" and read_component(resource) == "celery-worker":
+            continue
+
+        resources[resource["kind"]] = resource
+    return resources
+
+
+def read_component(resource: dict[str, Any]) -> str | None:
+    """Return the component label the resource selects, when it has one."""
+
+    labels = resource.get("spec", {}).get("selector", {}).get("matchLabels", {})
+    component = labels.get("app.kubernetes.io/component")
+    if isinstance(component, str):
+        return component
+
+    return None
 
 
 @pytest.mark.parametrize("kube_version", ["1.19.0", "1.35.0"])

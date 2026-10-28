@@ -29,11 +29,20 @@ def run_helm_template(overrides: dict[str, Any]) -> subprocess.CompletedProcess[
     return subprocess.run(command, check=False, capture_output=True, text=True)
 
 
-def render_deployment(overrides: dict[str, Any]) -> dict[str, Any]:
+def render_resources(overrides: dict[str, Any]) -> list[dict[str, Any]]:
     rendered = run_helm_template(overrides)
     assert rendered.returncode == 0, rendered.stderr
-    resources = [resource for resource in YAML(typ="safe").load_all(rendered.stdout) if resource]
-    (deployment,) = [resource for resource in resources if resource["kind"] == "Deployment"]
+    return [resource for resource in YAML(typ="safe").load_all(rendered.stdout) if resource]
+
+
+def render_deployment(overrides: dict[str, Any]) -> dict[str, Any]:
+    # 渲染结果里还有一个 Celery worker Deployment。这里只取 API，避免原有断言被它打断。
+    (deployment,) = [
+        resource
+        for resource in render_resources(overrides)
+        if resource["kind"] == "Deployment"
+        and resource["spec"]["template"]["metadata"]["labels"].get("app.kubernetes.io/component") == "api"
+    ]
     return deployment
 
 
@@ -130,3 +139,32 @@ def test_local_process_still_requires_one_replica(provider):
 
 def test_no_replica_is_refused():
     assert "at least 1" in collect_render_error({"replicaCount": 0})
+
+
+def test_the_celery_worker_is_a_single_replica_beside_the_api():
+    resources = render_resources({})
+    worker = _worker_deployment(resources)
+    container = worker["spec"]["template"]["spec"]["containers"][0]
+
+    assert worker["spec"]["replicas"] == 1
+    assert container["command"][-1] == "celery"
+    assert container["args"][:3] == ["-A", "app_spark_api.celery", "worker"]
+    assert container["envFrom"] == [{"configMapRef": {"name": "spark-test-app-spark-api"}}]
+    assert not any(_is_rabbitmq_resource(resource) for resource in resources)
+
+
+def _is_rabbitmq_resource(resource: dict[str, Any]) -> bool:
+    """Chart must not install a broker; configuring one is not the same as shipping one."""
+
+    name = str(resource["metadata"]["name"]).lower()
+    return resource["kind"].lower() == "rabbitmqcluster" or "rabbitmq" in name
+
+
+def _worker_deployment(resources: list[dict[str, Any]]) -> dict[str, Any]:
+    (worker,) = [
+        resource
+        for resource in resources
+        if resource["kind"] == "Deployment"
+        and resource["spec"]["template"]["metadata"]["labels"].get("app.kubernetes.io/component") == "celery-worker"
+    ]
+    return worker

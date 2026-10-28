@@ -24,6 +24,13 @@ DATABASE_PASSWORD: ...
 DATABASE_HOST: ...
 DATABASE_PORT: ...
 
+# RabbitMQ。没写时用占位默认值，进程能起来，但占位地址不是真实队列。
+RABBITMQ_HOST: ...
+RABBITMQ_PORT: 5672
+RABBITMQ_USER: ...
+RABBITMQ_PASSWORD: ...
+RABBITMQ_VHOST: ...
+
 # 必选：EncryptField 使用的 Fernet key，必须自己生成且保持稳定
 # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 BKKRILL_ENCRYPT_SECRET_KEY: ...
@@ -41,6 +48,12 @@ uv run uvicorn app_spark_api.asgi:application --reload
 在 WSGI 下这个流会被缓冲到结束才吐出来，等于失去流式的意义。
 
 日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
+
+另开一个进程跑 Celery worker。它和 API 加载同一份 settings。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
+
+```bash
+uv run celery -A app_spark_api.celery worker --loglevel=INFO
+```
 
 ### 运行测试
 

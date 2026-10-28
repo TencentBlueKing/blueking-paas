@@ -44,7 +44,7 @@ from typing import Any
 import pymysql
 from dynaconf import LazySettings, Validator
 
-from .utils import get_database_conf
+from .utils import build_rabbitmq_broker_url, get_database_conf
 
 pymysql.install_as_MySQLdb()
 
@@ -208,6 +208,11 @@ DATABASES = {}
 # 等不需要数据库的运维命令正常执行。数据库仍是正式运行时的必选项。
 if default_db_conf := get_database_conf(settings):
     DATABASES["default"] = default_db_conf
+
+# 五项没写时用占位拼 URL，不连接 RabbitMQ。
+CELERY_BROKER_URL = build_rabbitmq_broker_url(settings)
+# 不查询任务结果，也不部署 result backend。
+CELERY_TASK_IGNORE_RESULT = True
 
 # == 缓存相关配置项
 # DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)

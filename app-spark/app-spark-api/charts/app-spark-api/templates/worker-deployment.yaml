@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app-spark-api.fullname" . }}-worker
+  labels:
+    {{- include "app-spark-api.labels" . | nindent 4 }}
+spec:
+  # 副本不跟随 API。本单只要一个常驻消费者，API 扩成多副本时队列仍然只有这一处。
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "app-spark-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-worker
+  template:
+    metadata:
+      labels:
+        {{- include "app-spark-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-worker
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/general-envs-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "app-spark-api.imagePullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
+      containers:
+        - name: celery-worker
+          image: {{ include "app-spark-api.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          # 与 API 同一镜像，换启动命令。tini 要写在 command 里，因为 command 会替换镜像的 ENTRYPOINT。
+          command: [/usr/bin/tini, --, uv, run, --no-sync, celery]
+          args: ["-A", "app_spark_api.celery", "worker", "--loglevel", "INFO"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "app-spark-api.fullname" . }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

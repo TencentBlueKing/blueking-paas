@@ -10,6 +10,8 @@ dependencies = [
     "bkpaas-auth>=4.4.0,<5.0.0",
     "blue-krill>=3.1.1,<4.0.0",
     "cattrs>=26.1.0,<27.0.0",
+    # 5.6 起才能在 Python 3.14 上导入；5.6.3 修了 Django worker 的递归和 PEP 649 注解。
+    "celery>=5.6.3,<5.7",
     "django>=6.0.8,<6.1",
     "django-ninja>=1.6.2,<2.0.0",
     "dynaconf>=3.3.5,<4.0.0",
@@ -58,7 +60,7 @@ files = ["app_spark_api", "manage.py"]
 plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
-module = ["dynaconf", "dynaconf.*", "pymysql", "blue_krill", "blue_krill.*"]
+module = ["dynaconf", "dynaconf.*", "pymysql", "blue_krill", "blue_krill.*", "celery", "celery.*", "kombu", "kombu.*", "amqp", "amqp.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

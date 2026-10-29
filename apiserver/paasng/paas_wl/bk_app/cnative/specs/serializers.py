@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import os
 import re
 
 import humanize
@@ -63,13 +64,14 @@ class ConfigMapSLZ(serializers.Serializer):
     def validate_source_config_data(self, data):
         if not data:
             return None
-        for key in data:
-            if not key:
-                raise serializers.ValidationError("key cannot be empty")
 
+        allowed_extensions = {ext.lower().lstrip(".") for ext in settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS}
         total_size = 0
         for filename, content in data.items():
-            self._validate_file_extension(filename)
+            if not filename:
+                raise serializers.ValidationError("key cannot be empty")
+
+            self._validate_file_extension(filename, allowed_extensions)
             content_size = len(content.encode("utf-8"))
             self._validate_file_size(filename, content_size)
             total_size += len(filename.encode("utf-8")) + content_size
@@ -84,23 +86,23 @@ class ConfigMapSLZ(serializers.Serializer):
             )
         return data
 
-    def _validate_file_extension(self, filename: str) -> None:
+    def _validate_file_extension(self, filename: str, allowed_extensions: set[str]) -> None:
         """校验文件后缀是否在上传白名单中
 
         白名单通过环境配置 MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS 决定, 为空表示允许所有后缀.
-        匹配规则: 取文件名最后一个 `.` 之后的字符串作为后缀, 大小写不敏感, 白名单项可带前导点.
+        匹配规则: 取文件名的后缀部分 (os.path.splitext), 大小写不敏感, 白名单项可带前导点.
 
         :param filename: 文件名
+        :param allowed_extensions: 规范化后的后缀白名单
         :raises error_codes.VOLUME_FILE_EXTENSION_NOT_ALLOWED: 当文件后缀不在白名单中时
         """
-        allowed_extensions = settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS
         if not allowed_extensions:
             return
 
-        extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        if extension not in [ext.lower().lstrip(".") for ext in allowed_extensions]:
+        extension = os.path.splitext(filename)[1].lstrip(".").lower()
+        if extension not in allowed_extensions:
             raise error_codes.VOLUME_FILE_EXTENSION_NOT_ALLOWED.f(
-                _("仅允许上传以下后缀的文件: {extensions}").format(extensions=", ".join(allowed_extensions))
+                _("仅允许上传以下后缀的文件: {extensions}").format(extensions=", ".join(sorted(allowed_extensions)))
             )
 
     def _validate_file_size(self, filename: str, content_size: int) -> None:

@@ -187,17 +187,17 @@ msgstr ""
 msgid "挂载卷内容不可为空"
 msgstr "Mount volume content cannot be empty"
 
-#: paas_wl/bk_app/cnative/specs/serializers.py:102
+#: paas_wl/bk_app/cnative/specs/serializers.py:105
 #, python-brace-format
 msgid "仅允许上传以下后缀的文件: {extensions}"
 msgstr "Only files with the following extensions are allowed: {extensions}"
 
-#: paas_wl/bk_app/cnative/specs/serializers.py:115
+#: paas_wl/bk_app/cnative/specs/serializers.py:118
 #, python-brace-format
 msgid "文件 {filename} 的大小不能超过 {size_limit}"
 msgstr "The size of file {filename} cannot exceed {size_limit}"
 
-#: paas_wl/bk_app/cnative/specs/serializers.py:79
+#: paas_wl/bk_app/cnative/specs/serializers.py:82
 #, python-brace-format
 msgid "挂载资源的内容总大小不能超过 {size_limit} 上限 (当前 {current_size})"
 msgstr ""

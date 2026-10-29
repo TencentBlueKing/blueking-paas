@@ -62,7 +62,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
-from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.constants import AppFeatureFlag, AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
@@ -660,6 +660,8 @@ def get_bkapp_resource_for_deploy(
     mgr = ModuleRuntimeManager(env.module)
     if mgr.build_config.build_method == RuntimeType.BUILDPACK:
         _update_cmd_args_from_wl_build(model_res, WlBuild.objects.get(uuid=deployment.build_id))
+        if env.module.language == AppLanguage.PYTHON:
+            apply_python_runtime_env_vars(model_res)
 
     # 显式声明 workloadType，隔离沙箱应用使用 SandboxInstance，其余使用 Deployment
     application = env.application
@@ -734,6 +736,20 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
             [env],
             configuration_env_variables=model_res.spec.configuration.env,
         )
+
+
+def apply_python_runtime_env_vars(model_res: crd.BkAppResource):
+    """Apply the env vars which make the app's python usable without the buildpack launcher,
+    such as `kubectl exec <pod> -- python ...`. Vars defined by user take precedence.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    """
+    env_vars = [
+        crd.EnvVar(name=name, value=value) for name, value in settings.PYTHON_BUILDPACK_RUNTIME_ENV_VARS.items()
+    ]
+    model_res.spec.configuration.env = merge_env_vars(
+        model_res.spec.configuration.env, env_vars, strategy=MergeStrategy.IGNORE
+    )
 
 
 def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironment):

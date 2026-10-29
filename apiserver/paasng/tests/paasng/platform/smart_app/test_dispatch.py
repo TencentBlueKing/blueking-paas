@@ -32,7 +32,6 @@ from paasng.platform.smart_app.services.dispatch import (
     dispatch_cnb_image_to_registry,
     dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
-    inject_extra_env_paths,
     parse_and_save_cnb_metadata,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
@@ -225,7 +224,7 @@ def test_dispatch_slug_image_to_registry(
 
 
 @pytest.mark.parametrize(
-    ("package_name", "layer_digest_list", "expected_path"),
+    ("package_name", "layer_digest_list"),
     [
         (
             "cnb-image",
@@ -233,14 +232,8 @@ def test_dispatch_slug_image_to_registry(
                 "1cad71326f6c0f3196ae135e80033987496ea7e2a6e6f31389e7cba9ce7c8996",
                 "741772c7f3e2c81925ccb74a032df3ee0ff15079c81fdee1ae4f581cdf9fcdf2",
             ],
-            "/cnb/process:/cnb/lifecycle:/app/.heroku/python/bin:"
-            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         ),
-        (
-            "cnb-image-with-index",
-            ["a73021ffe901b947e70157b20a513779576a1f72e2aacf606905fcad4a93e10a"],
-            "/app/.heroku/python/bin:/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        ),
+        ("cnb-image-with-index", ["a73021ffe901b947e70157b20a513779576a1f72e2aacf606905fcad4a93e10a"]),
     ],
 )
 def test_dispatch_cnb_image_to_registry(
@@ -253,7 +246,6 @@ def test_dispatch_cnb_image_to_registry(
     smart_app_extra,
     package_name,
     layer_digest_list,
-    expected_path,
 ):
     """测试将 cnb 镜像分发到 registry, 涉及多次网络请求, 要保证顺序正确。
 
@@ -370,64 +362,6 @@ def test_dispatch_cnb_image_to_registry(
             assert expected_url.fullmatch(req.url)
         else:
             assert expected_url == req.url
-
-    # 上传的镜像配置中应写入 buildpack 目录, 使得不经过 launcher 也能使用 python
-    # 镜像配置在所有镜像层之后上传, 因此是最后一个 PATCH 请求
-    config_req = [req for req in mock_adapter.request_history if req.method == "PATCH"][-1]
-    env = _get_uploaded_image_env(config_req)
-    assert env["PATH"] == expected_path
-    assert env["LD_LIBRARY_PATH"] == "/app/.heroku/python/lib:/app/.apt/usr/lib/x86_64-linux-gnu:/app/.apt/usr/lib"
-
-
-def _get_uploaded_image_env(config_req) -> dict[str, str]:
-    """从上传镜像配置的请求中解析出 Env"""
-    return dict(item.split("=", 1) for item in json.loads(config_req.body)["config"]["Env"])
-
-
-@pytest.mark.parametrize(
-    ("env", "extra_paths", "expected"),
-    [
-        # 插入到 CNB 目录之后, 避免遮蔽 /cnb/process 下的进程
-        (
-            ["PATH=/cnb/process:/cnb/lifecycle:/usr/bin:/bin", "CNB_APP_DIR=/app"],
-            {"PATH": ["/app/py/bin"]},
-            ["PATH=/cnb/process:/cnb/lifecycle:/app/py/bin:/usr/bin:/bin", "CNB_APP_DIR=/app"],
-        ),
-        # 没有 CNB 目录时插入到最前面
-        (["PATH=/usr/bin:/bin"], {"PATH": ["/app/py/bin"]}, ["PATH=/app/py/bin:/usr/bin:/bin"]),
-        # 已存在的目录不重复插入
-        (
-            ["PATH=/cnb/process:/app/py/bin:/usr/bin"],
-            {"PATH": ["/app/py/bin", "/app/apt/bin"]},
-            ["PATH=/cnb/process:/app/apt/bin:/app/py/bin:/usr/bin"],
-        ),
-        (["PATH=/app/py/bin:/usr/bin"], {"PATH": ["/app/py/bin"]}, ["PATH=/app/py/bin:/usr/bin"]),
-        # 配置中重复的目录只插入一次
-        (["PATH=/usr/bin"], {"PATH": ["/app/py/bin", "/app/py/bin"]}, ["PATH=/app/py/bin:/usr/bin"]),
-        # 只有 PATH 需要跳过 CNB 目录, 其他变量直接插到最前面
-        (
-            ["LD_LIBRARY_PATH=/cnb/lib:/usr/lib"],
-            {"LD_LIBRARY_PATH": ["/app/py/lib"]},
-            ["LD_LIBRARY_PATH=/app/py/lib:/cnb/lib:/usr/lib"],
-        ),
-        # 变量不存在时新增, PATH 以容器运行时的默认值为基础
-        (
-            ["PATH=/usr/bin"],
-            {"LD_LIBRARY_PATH": ["/app/py/lib", "/app/apt/lib"]},
-            ["PATH=/usr/bin", "LD_LIBRARY_PATH=/app/py/lib:/app/apt/lib"],
-        ),
-        (
-            None,
-            {"PATH": ["/app/py/bin"]},
-            ["PATH=/app/py/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-        ),
-        # 变量值为空时视为不存在
-        (["LD_LIBRARY_PATH="], {"LD_LIBRARY_PATH": ["/app/py/lib"]}, ["LD_LIBRARY_PATH=/app/py/lib"]),
-        (["PATH=/usr/bin"], {}, ["PATH=/usr/bin"]),
-    ],
-)
-def test_inject_extra_env_paths(env, extra_paths, expected):
-    assert inject_extra_env_paths(env, extra_paths) == expected
 
 
 @pytest.mark.usefixtures("smart_app_extra")

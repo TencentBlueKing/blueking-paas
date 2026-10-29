@@ -82,6 +82,22 @@ PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get("PYTHON_BUILDPACK_PIP_INDEX_URL")
 # 从源码构建应用时，注入额外环境变量
 BUILD_EXTRA_ENV_VARS = settings.get("BUILD_EXTRA_ENV_VARS", {})
 
+# 部署 Python 语言的 buildpack 模块时注入的环境变量，让 kubectl exec 等不经过 launcher 的方式也能使用应用的 python。
+# PATH 需写全（K8s 不会展开镜像中的 $PATH），/cnb/* 用于查找 CNB 进程命令；不存在的目录会被忽略。
+# apt 库目录按 amd64 架构填写。置为 {} 即关闭注入，用户自行定义的同名变量优先。
+PYTHON_BUILDPACK_RUNTIME_ENV_VARS = settings.get(
+    "PYTHON_BUILDPACK_RUNTIME_ENV_VARS",
+    {
+        "PATH": (
+            "/cnb/process:/cnb/lifecycle:/app/bin:/app/.heroku/python/bin:/app/.heroku/node/bin:/app/.apt/usr/bin:"
+            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        ),
+        "LD_LIBRARY_PATH": (
+            "/app/.heroku/python/lib:/app/.heroku/vendor/lib:/app/.apt/usr/lib/x86_64-linux-gnu:/app/.apt/usr/lib"
+        ),
+    },
+)
+
 
 # ---------------
 # 服务导出配置

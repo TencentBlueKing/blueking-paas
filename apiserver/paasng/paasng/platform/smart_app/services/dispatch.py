@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Dict, List, Set, Tuple, cast
+from typing import Callable, List, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -45,10 +45,6 @@ logger = logging.getLogger(__name__)
 # A flag value for parallel patching, turned on by default. A unittest might patch this value to
 # alter the behaviour.
 _PARALLEL_PATCHING = True
-
-_CNB_DIR_PREFIX = "/cnb/"
-# The PATH used by container runtimes when the image doesn't set one
-_DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 
 def dispatch_package_to_modules(
@@ -210,9 +206,6 @@ def dispatch_cnb_image_to_registry(
         config_path = safe_resolve_subpath(image_tmp_folder, tarball_manifest.config)
         cnb_layers_image_json = ImageJSON(**json.loads(config_path.read_text()))
         base_image_json.config = cnb_layers_image_json.config
-        base_image_json.config.Env = inject_extra_env_paths(
-            base_image_json.config.Env, bksmart_settings.cnb_base_image.extra_env_paths
-        )
         image_ref._initial_config = base_image_json.json(
             exclude_unset=True, exclude_defaults=True, separators=(",", ":")
         )
@@ -235,49 +228,6 @@ def dispatch_cnb_image_to_registry(
         module, policy, operator=operator, image_sha256_signature=image_sha256_signature
     )
     return source_package
-
-
-def inject_extra_env_paths(env: List[str] | None, extra_paths: Dict[str, List[str]]) -> List[str]:
-    """将额外的目录插入镜像配置 Env 中的路径类变量（如 PATH）
-
-    目录插在变量值的最前面（PATH 则插在开头的 "/cnb/*" 目录之后）, 已存在的目录跳过, 变量不存在时新增。示例::
-
-        env = ["PATH=/cnb/process:/usr/bin"]
-        extra_paths = {"PATH": ["/app/py/bin"], "LD_LIBRARY_PATH": ["/app/py/lib"]}
-        # => ["PATH=/cnb/process:/app/py/bin:/usr/bin", "LD_LIBRARY_PATH=/app/py/lib"]
-
-    :param env: 镜像配置的 Env, 每项为 "KEY=VALUE" 格式
-    :param extra_paths: 需要插入的目录, 格式为 {变量名: [目录, ...]}
-    :return: 新的 Env 列表
-    """
-    result = list(env or [])
-    for name, dirs in extra_paths.items():
-        # 找到 "NAME=..." 这一项, 并将其值拆分为目录列表
-        idx = next((i for i, item in enumerate(result) if item.startswith(f"{name}=")), None)
-        if idx is not None:
-            current = [p for p in result[idx].split("=", 1)[1].split(":") if p]
-        else:
-            # 设置 PATH 会覆盖容器运行时的默认值, 因此需要保留默认目录
-            current = _DEFAULT_PATH.split(":") if name == "PATH" else []
-
-        new_dirs = [d for d in dict.fromkeys(dirs) if d not in current]
-        if not new_dirs:
-            continue
-
-        # 进程类型（如 "web"）依赖 PATH 开头的 "/cnb/*" 目录查找,
-        # 额外目录必须放在它们之后, 避免同名命令遮蔽进程
-        pos = 0
-        if name == "PATH":
-            while pos < len(current) and current[pos].startswith(_CNB_DIR_PREFIX):
-                pos += 1
-        item = f"{name}={':'.join(current[:pos] + new_dirs + current[pos:])}"
-
-        # 原来有这一项则原地替换, 否则追加
-        if idx is not None:
-            result[idx] = item
-        else:
-            result.append(item)
-    return result
 
 
 def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:

@@ -59,6 +59,7 @@ from paasng.platform.bkapp_model.manifest import (
     _update_cmd_args_from_wl_build,
     apply_builtin_env_vars,
     apply_env_annots,
+    apply_python_runtime_env_vars,
     get_manifest,
 )
 from paasng.platform.bkapp_model.models import (
@@ -747,6 +748,18 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
 
     assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
     assert vars_["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+
+
+@override_settings(
+    PYTHON_BUILDPACK_RUNTIME_ENV_VARS={"PATH": "/app/.heroku/python/bin:/bin", "LD_LIBRARY_PATH": "/lib"}
+)
+def test_apply_python_runtime_env_vars_keep_user_defined(blank_resource):
+    blank_resource.spec.configuration.env = [crd.EnvVar(name="PATH", value="/custom/bin")]
+
+    apply_python_runtime_env_vars(blank_resource)
+
+    vars_ = {item.name: item.value for item in blank_resource.spec.configuration.env}
+    assert vars_ == {"PATH": "/custom/bin", "LD_LIBRARY_PATH": "/lib"}
 
 
 class Test__update_cmd_args_from_wl_build:

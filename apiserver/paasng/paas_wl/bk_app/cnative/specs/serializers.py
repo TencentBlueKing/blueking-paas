@@ -70,8 +70,9 @@ class ConfigMapSLZ(serializers.Serializer):
         total_size = 0
         for filename, content in data.items():
             self._validate_file_extension(filename)
-            self._validate_file_size(filename, content)
-            total_size += len(filename) + len(content)
+            content_size = len(content.encode("utf-8"))
+            self._validate_file_size(filename, content_size)
+            total_size += len(filename.encode("utf-8")) + content_size
 
         max_source_size = settings.MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE
         if total_size > max_source_size:
@@ -102,15 +103,15 @@ class ConfigMapSLZ(serializers.Serializer):
                 _("仅允许上传以下后缀的文件: {extensions}").format(extensions=", ".join(allowed_extensions))
             )
 
-    def _validate_file_size(self, filename: str, content: str) -> None:
+    def _validate_file_size(self, filename: str, content_size: int) -> None:
         """校验单个文件内容的大小, 上限由 MOUNT_FILE_UPLOAD_MAX_SIZE 配置
 
         :param filename: 文件名
-        :param content: 文件内容
+        :param content_size: 文件内容的字节数
         :raises error_codes.VOLUME_FILE_TOO_LARGE: 当文件内容超过上限时
         """
         max_size = settings.MOUNT_FILE_UPLOAD_MAX_SIZE
-        if len(content) > max_size:
+        if content_size > max_size:
             raise error_codes.VOLUME_FILE_TOO_LARGE.f(
                 _("文件 {filename} 的大小不能超过 {size_limit}").format(
                     filename=filename, size_limit=humanize.naturalsize(max_size, binary=True)

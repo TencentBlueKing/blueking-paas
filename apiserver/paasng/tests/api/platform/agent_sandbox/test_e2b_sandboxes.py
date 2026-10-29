@@ -30,6 +30,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayTimeout,
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
+    E2BTemplateNotFound,
 )
 from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
 
@@ -176,6 +177,14 @@ class TestErrorMapping:
 
         assert resp.status_code == expected_status
         assert resp.json() == {"code": expected_status, "message": mock.ANY}
+
+    def test_template_not_found_reports_template(self, e2b_client):
+        """创建时缺的是模板，文案不能写成沙箱不存在。"""
+        with mock.patch.object(sandboxes, "create_sandbox", side_effect=E2BTemplateNotFound("drift")):
+            resp = e2b_client.post(CREATE_URL, data={"templateID": "e2b-envd"}, format="json")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.json() == {"code": 404, "message": "Template not found"}
 
     def test_does_not_leak_internal_details(self, e2b_client):
         """异常自带的信息里有集群名、网关地址这类内部拓扑，不该出现在响应里。"""

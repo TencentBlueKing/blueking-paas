@@ -31,6 +31,7 @@ from .clusters import select_e2b_cluster
 from .constants import (
     DATA_PLANE_DOMAIN_FIELD,
     SANDBOX_ID_FIELD,
+    TEMPLATE_ID_FIELD,
     E2BSandboxStatus,
 )
 from .exceptions import (
@@ -38,6 +39,7 @@ from .exceptions import (
     E2BGatewayError,
     E2BGatewayNotFound,
     E2BSandboxNotFound,
+    E2BTemplateNotFound,
 )
 from .gateway import E2BGatewayClient
 
@@ -52,11 +54,20 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
     :returns: 网关响应，数据面地址字段已改写为该集群的对外地址
     :raises E2BClusterUnavailable: 没有可用于 e2b 的集群
     :raises E2BGatewayTimeout: 网关未在创建超时窗口内返回
+    :raises E2BTemplateNotFound: 平台已登记的模板在网关侧不存在，两边配置漂移
     """
     cluster = select_e2b_cluster(application.tenant_id, application.region)
 
     with E2BGatewayClient.for_cluster(cluster.name) as client:
-        resp = client.create_sandbox(payload)
+        try:
+            resp = client.create_sandbox(payload)
+        except E2BGatewayNotFound as exc:
+            # 创建时还没有沙箱，网关的 404 只能是模板不存在（平台登记与网关漂移）。
+            # 不转译就会被统一映射成 "Sandbox not found"，把用户引向错误方向。
+            # 若是网关自身路由缺失这类部署问题，日志里的 method/path 能区分
+            raise E2BTemplateNotFound(
+                f"template {payload.get(TEMPLATE_ID_FIELD)} is not available on gateway"
+            ) from exc
 
         # 从这里开始沙箱已在网关侧存在。后面任何一步失败都必须销毁它，
         # 否则会留下一个本地无记录、用户看不到、也没人回收的孤儿实例
@@ -222,7 +233,7 @@ def _record_ownership(application: Application, cluster_name: str, resp: dict[st
         sandbox_id=resp[SANDBOX_ID_FIELD],
         application=application,
         cluster_name=cluster_name,
-        template_id=resp.get("templateID", ""),
+        template_id=resp.get(TEMPLATE_ID_FIELD, ""),
         expired_at=parse_datetime(resp["endAt"]) if resp.get("endAt") else None,
         tenant_id=application.tenant_id,
     )

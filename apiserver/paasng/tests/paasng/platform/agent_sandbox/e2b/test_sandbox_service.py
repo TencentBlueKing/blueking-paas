@@ -32,6 +32,7 @@ from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayNotFound,
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
+    E2BTemplateNotFound,
 )
 from paasng.platform.agent_sandbox.models import E2BSandbox
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
@@ -180,6 +181,15 @@ class TestCreate:
         sandboxes.create_sandbox(bk_app, payload)
 
         assert gateway.created_payloads == [payload]
+
+    def test_gateway_404_becomes_template_not_found(self, gateway, bk_app):
+        """创建时还没有沙箱，网关 404 缺的是模板，不能报成沙箱不存在。"""
+        gateway.fail("create_sandbox", E2BGatewayNotFound("gateway returned 404 on POST /sandboxes"))
+
+        with pytest.raises(E2BTemplateNotFound):
+            sandboxes.create_sandbox(bk_app, {"templateID": "e2b-ghost"})
+
+        assert not E2BSandbox.objects.exists()
 
     def test_rolls_back_when_recording_fails(self, gateway, bk_app):
         """落库失败同样要回滚。这里用重复的沙箱 ID 触发唯一约束冲突。"""

@@ -132,6 +132,8 @@ class E2BGatewayClient:
         except requests.HTTPError as exc:
             status = exc.response.status_code
             if status == 404:
+                # 响应体只进日志：创建接口的 404 是模板不存在还是网关路由缺失，靠它区分
+                logger.warning("e2b gateway returned 404 on %s %s: %s", method, path, exc.response.text[:500])
                 self._record_request(method, E2BGatewayOutcome.NOT_FOUND)
                 raise E2BGatewayNotFound(f"gateway returned 404 on {method} {path}") from exc
             logger.warning("e2b gateway returned %s on %s %s: %s", status, method, path, exc.response.text[:500])
@@ -151,5 +153,5 @@ class E2BGatewayClient:
             E2B_GATEWAY_REQUESTS_COUNTER.labels(
                 cluster=self.cluster_name, method=method.upper(), outcome=outcome.value
             ).inc()
-        except Exception:
+        except Exception:  # noqa: BLE001 - 埋点失败不能影响网关请求本身
             logger.warning("failed to record e2b gateway request metric", exc_info=True)

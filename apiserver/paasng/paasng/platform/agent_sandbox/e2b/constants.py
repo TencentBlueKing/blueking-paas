@@ -48,6 +48,9 @@ DATA_PLANE_DOMAIN_FIELD = "domain"
 # 网关响应中的沙箱标识字段
 SANDBOX_ID_FIELD = "sandboxID"
 
+# 创建请求与网关响应中的模板标识字段
+TEMPLATE_ID_FIELD = "templateID"
+
 # 网关响应中的运行状态字段，对账时以它为权威值
 SANDBOX_STATE_FIELD = "state"
 

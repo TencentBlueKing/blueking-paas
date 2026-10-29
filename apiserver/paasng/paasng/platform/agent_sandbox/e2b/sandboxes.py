@@ -30,6 +30,7 @@ from paasng.platform.applications.models import Application
 from .clusters import select_e2b_cluster
 from .constants import (
     DATA_PLANE_DOMAIN_FIELD,
+    DEFAULT_SANDBOX_TIMEOUT_SECONDS,
     SANDBOX_ID_FIELD,
     TEMPLATE_ID_FIELD,
     E2BSandboxStatus,
@@ -50,12 +51,17 @@ def create_sandbox(application: Application, payload: dict[str, Any]) -> dict[st
     """创建沙箱并登记归属。
 
     :param application: 归属应用，由 API Key 认证后端解析得出
-    :param payload: 透传给网关的创建请求体
+    :param payload: 透传给网关的创建请求体。未带 ``timeout`` 时补平台默认值，
+        如果不加的话底层网关对缺省 timeout 的处理是永不过期
     :returns: 网关响应，数据面地址字段已改写为该集群的对外地址
     :raises E2BClusterUnavailable: 没有可用于 e2b 的集群
     :raises E2BGatewayTimeout: 网关未在创建超时窗口内返回
     :raises E2BTemplateNotFound: 平台已登记的模板在网关侧不存在，两边配置漂移
     """
+    payload = dict(payload)
+    if payload.get("timeout") is None:
+        payload["timeout"] = DEFAULT_SANDBOX_TIMEOUT_SECONDS
+
     cluster = select_e2b_cluster(application.tenant_id, application.region)
 
     with E2BGatewayClient.for_cluster(cluster.name) as client:

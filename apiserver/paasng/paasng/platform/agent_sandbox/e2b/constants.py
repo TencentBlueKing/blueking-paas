@@ -41,6 +41,11 @@ GATEWAY_CREATE_TIMEOUT_SECONDS = 30
 # 其余控制面调用都是查询或状态变更，网关侧没有耗时操作
 GATEWAY_REQUEST_TIMEOUT_SECONDS = 10
 
+# 创建时未指定 timeout 的默认存活时长。网关对缺省 timeout 的处理是永不过期
+# （endAt 返回 2099 年），绕过 SDK 直接打接口就会留不回收的沙箱，因此在代理层兜底。
+# 取值与 e2b SDK 的默认沙箱超时（300 秒）对齐，两条路径行为一致
+DEFAULT_SANDBOX_TIMEOUT_SECONDS = 300
+
 # 网关响应中承载数据面地址的字段，apiserver 必须改写它：
 # 网关填的是集群内 Service 域名，集群外的 SDK 解析不到
 DATA_PLANE_DOMAIN_FIELD = "domain"

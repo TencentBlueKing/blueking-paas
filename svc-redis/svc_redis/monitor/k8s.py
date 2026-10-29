@@ -29,6 +29,7 @@ from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
 from django.utils.timezone import now
+from kubernetes.utils.quantity import parse_quantity
 
 from svc_redis.controller.manifests import generate_redis_name
 from svc_redis.monitor.utils import request_timeout
@@ -114,19 +115,40 @@ def _parse_k8s_time(value: str | None) -> datetime | None:
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
 
-def pick_exporter_pod_name(pods: list) -> str:
-    """挑一个带 redis-exporter sidecar 的 Pod 名: 主从架构优先 master, 没有 master 时取第一个
+def pick_exporter_pod(pods: list):
+    """挑一个带 redis-exporter sidecar 的 Pod: 主从架构优先 master, 没有 master 时取第一个, 都没有返回 None
 
     与 pick_instance_pod 的区别: 这里只用于读 exporter 指标, 允许在缺少 master 时回退到副本;
     实例存活判定不允许这种回退.
     """
     candidates = [pod for pod in pods if _has_exporter_container(pod)]
     if not candidates:
-        return ""
+        return None
 
     # 主从架构下, 应用连接与连接数统计都以 master 为准
     masters = [pod for pod in candidates if _is_master(pod)]
-    return (masters or candidates)[0].metadata.name
+    return (masters or candidates)[0]
+
+
+def get_redis_memory_limit(pod) -> int | None:
+    """Pod 中 Redis 容器 (非 exporter) 的内存 limit 字节数, 未设置或无法解析时返回 None
+
+    以 Pod 实际规格为准而非套餐配置: 套餐修改后, 已创建实例的规格不会随之变化.
+    """
+    for container in pod.spec.containers:
+        if EXPORTER_CONTAINER_NAME_KEYWORD in container.name:
+            continue
+        resources = container["resources"]
+        limits = resources["limits"] if resources is not None else None
+        memory = limits["memory"] if limits is not None else None
+        if not memory:
+            return None
+        try:
+            return int(parse_quantity(str(memory)))
+        except (ValueError, TypeError):
+            logger.warning("unable to parse memory limit<%s> of pod<%s>", memory, pod.metadata.name)
+            return None
+    return None
 
 
 def pick_instance_pod(pods: list):

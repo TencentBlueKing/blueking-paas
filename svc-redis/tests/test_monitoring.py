@@ -51,15 +51,17 @@ def _instance(app_info=None) -> ServiceInstance:
     plan = Plan.objects.create(
         name="redis",
         service=service,
-        config=json.dumps({"cluster_name": "redis-cluster", "memory_size": "2Gi", "monitor": True}),
+        config=json.dumps({"cluster_name": "redis-cluster", "resources": {"preset": "512"}, "monitor": True}),
     )
     instance = ServiceInstance.objects.create(plan=plan, config={"namespace": "ns-a"})
     ServiceInstanceConfig.objects.create(instance=instance, paas_app_info=app_info or {})
     return instance
 
 
-def _pod(exporter=True, oom_finished_at=None, role="master", ready=True, name="svc-redis-0"):
-    containers = [_Obj(name="redis")] + ([_Obj(name="redis-exporter")] if exporter else [])
+def _pod(exporter=True, oom_finished_at=None, role="master", ready=True, name="svc-redis-0", memory_limit="2Gi"):
+    limits = _Obj(memory=memory_limit) if memory_limit else _Obj()
+    containers = [_Obj(name="svc-redis", resources=_Obj(limits=limits))]
+    containers += [_Obj(name="redis-exporter")] if exporter else []
     terminated = {"reason": "OOMKilled", "finishedAt": oom_finished_at.isoformat()} if oom_finished_at else None
     return _Obj(
         metadata=_Obj(name=name, labels=_Obj({"redis-role": role})),
@@ -97,7 +99,7 @@ def _clean_metrics_cache():
 
 
 def test_metrics_of_instance(monkeypatch):
-    """正常实例: 各实例指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退套餐上限"""
+    """正常实例: 各实例指标一次出全, 标签来自实例身份与平台应用信息, 内存分母回退 Redis 容器的内存 limit"""
     iid = str(_instance(app_info={"app_code": "app", "module": "default", "environment": "stag"}).uuid)
     monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod()]})
     monkeypatch.setattr(
@@ -152,6 +154,28 @@ def test_metrics_reuse_cached_result(monkeypatch, settings):
 
     assert _metrics() == first
     assert len(pod_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("maxmemory", "memory_limit", "expected"),
+    [
+        (4096, "2Gi", 1024 / 4096),
+        (0, None, None),
+    ],
+)
+def test_memory_usage_rate_denominator(monkeypatch, maxmemory, memory_limit, expected):
+    """内存使用率分母优先取 maxmemory, 其次取 Redis 容器的内存 limit, 都取不到时不产出样本"""
+    iid = str(_instance().uuid)
+    monkeypatch.setattr(k8s, "list_pods", lambda *args: {"ns-a": [_pod(memory_limit=memory_limit)]})
+    monkeypatch.setattr(
+        exporter,
+        "fetch_usage",
+        lambda *args: ExporterUsage(
+            used_memory=1024, maxmemory=maxmemory, connected_clients=10, maxclients=100, db_keys=7
+        ),
+    )
+
+    assert _metrics().get(("redis_instance_memory_usage_rate", iid)) == expected
 
 
 @pytest.mark.parametrize(
@@ -279,7 +303,7 @@ def test_usage_skipped_when_deadline_exceeded(monkeypatch):
     monkeypatch.setattr(exporter, "fetch_usage", lambda *args: pytest.fail("should not be called"))
 
     instances._collect_usage(
-        [status], {"i-1": instances.ExporterTarget(object(), "svc-redis-0")}, {}, deadline=time.monotonic() - 1
+        [status], {"i-1": instances.ExporterTarget(object(), "svc-redis-0")}, deadline=time.monotonic() - 1
     )
 
     assert status.exporter_up is False

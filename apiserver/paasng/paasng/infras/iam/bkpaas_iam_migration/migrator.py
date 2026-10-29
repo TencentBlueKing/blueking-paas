@@ -26,6 +26,8 @@ from iam.contrib.iam_migration.migrator import renders
 from iam.contrib.iam_migration.utils import do_migrate
 
 from paasng.core.tenant.user import get_init_tenant_id
+from paasng.infras.iam.base.constants import IAMVersion
+from paasng.infras.iam.shim import get_iam_version
 
 
 class BKPaaSIAMMigrator:
@@ -52,6 +54,10 @@ class BKPaaSIAMMigrator:
             return
 
         if getattr(settings, "BK_IAM_SKIP", False):
+            return
+
+        # V4 的权限模型由 sync_iam_v4_model 命令同步，V4 环境中可能不存在 V3 网关
+        if get_iam_version() == IAMVersion.V4:
             return
 
         json_path = getattr(settings, "BK_IAM_MIGRATION_JSON_PATH", "support-files/iam/")

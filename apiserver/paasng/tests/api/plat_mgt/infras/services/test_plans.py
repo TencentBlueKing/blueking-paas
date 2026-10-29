@@ -29,6 +29,8 @@ pytestmark = pytest.mark.django_db
 
 
 class TestUpdatePlan:
+    """平台管理-更新增强服务方案"""
+
     @pytest.fixture()
     def plan(self) -> Plan:
         service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
@@ -48,6 +50,7 @@ class TestUpdatePlan:
         return client.put(url, data=data, format="json")
 
     def test_keep_config_when_absent(self, plat_mgt_api_client, plan):
+        """请求中不提供 config（如列表页编辑侧栏只修改名称、简介、可见性）时，应保留原有方案配置"""
         resp = self._update(
             plat_mgt_api_client, plan, {"name": "new-name", "description": "new-desc", "is_active": False}
         )
@@ -59,6 +62,7 @@ class TestUpdatePlan:
         assert json.loads(plan.config) == {"host": "127.0.0.1"}
 
     def test_update_config(self, plat_mgt_api_client, plan):
+        """请求中提供 config 时，应使用新值覆盖原有方案配置"""
         resp = self._update(
             plat_mgt_api_client,
             plan,

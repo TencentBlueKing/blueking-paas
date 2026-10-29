@@ -27,6 +27,7 @@ RUN_ENVS = AppEnvironment.get_values()
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get("service_name", "rabbitmq")
 BKREPO_SERVICE_NAME = settings.BKREPO_MONITOR_CONF.get("service_name", "bkrepo")
 GCS_MYSQL_SERVICE_NAME = settings.GCS_MYSQL_MONITOR_CONF.get("service_name", "gcs_mysql")
+REDIS_SERVICE_NAME = settings.REDIS_MONITOR_CONF.get("service_name", "redis")
 
 DEFAULT_RULE_CONFIGS = {
     AlertCode.HIGH_CPU_USAGE.value: {
@@ -83,5 +84,20 @@ DEFAULT_RULE_CONFIGS = {
         "display_name": _("GCS-MySQL 慢查询新增"),
         "metric_label_names": ["gcs_mysql_user"],
         "threshold_expr": "> 5",  # 慢查询增长超过 5
+    },
+    AlertCode.HIGH_REDIS_MEMORY_USAGE.value: {
+        "display_name": _("Redis 内存使用率过高"),
+        "metric_label_names": ["bk_module"],
+        "threshold_expr": ">= 0.9",  # 使用率 90%
+    },
+    AlertCode.HIGH_REDIS_CONNECTION_USAGE.value: {
+        "display_name": _("Redis 连接数使用率过高"),
+        "metric_label_names": ["bk_module"],
+        "threshold_expr": ">= 0.9",  # 使用率 90%
+    },
+    AlertCode.REDIS_OOM_KILLED.value: {
+        "display_name": _("Redis OOMKilled 退出"),
+        "metric_label_names": ["bk_module"],
+        "threshold_expr": ">= 1",  # 出现至少 1 次
     },
 }

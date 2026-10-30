@@ -20,14 +20,12 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from django.http import StreamingHttpResponse
-from django.shortcuts import aget_object_or_404
 from ninja import Path, Router
 
-from app_spark_api.core.projects.models import Project
-from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
-from app_spark_api.infras.accounts.auth import authenticated_user, login_required
+from app_spark_api.infras.accounts.auth import login_required
 from app_spark_api.repository.git import archives, services
 from app_spark_api.repository.git.entities import GitRepositoryResponse
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError
@@ -53,7 +51,7 @@ PROJECT_ID = Path(..., description="项目 ID")
 )
 async def get_git_repository(request: HttpRequest, project_id: str = PROJECT_ID):
     """仓库状态，不含 token 明文。尚未建仓时 404。"""
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     try:
         repo = await ProjectGitRepository.objects.aget(project=project)
     except ProjectGitRepository.DoesNotExist as exc:
@@ -81,7 +79,7 @@ async def download_git_archive(request: HttpRequest, project_id: str = PROJECT_I
     内容是 Agent 最后一次成功保存的那一轮，而不是运行中 Runtime 工作区的实时状态；文件名里带
     commit 短 SHA，调用方据此分辨拿到的是哪一版。
     """
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     try:
         repo = await ProjectGitRepository.objects.aget(project=project)
     except ProjectGitRepository.DoesNotExist as exc:
@@ -109,7 +107,7 @@ async def download_git_archive(request: HttpRequest, project_id: str = PROJECT_I
 )
 async def provision_git_repository(request: HttpRequest, project_id: str = PROJECT_ID):
     """已有 Project 的显式建仓入口，也用于上次失败后的重试。"""
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     repo = await services.aprovision_project_repository(project)
     return _to_response(repo)
 
@@ -125,20 +123,12 @@ async def provision_git_repository(request: HttpRequest, project_id: str = PROJE
 )
 async def revoke_git_credentials(request: HttpRequest, project_id: str = PROJECT_ID):
     """生命周期与应急操作：凭据泄露、仓库归档。不在每轮对话里调用。"""
-    project = await _get_project(request, project_id)
+    project = await aget_project_or_404(request, project_id)
     try:
         repo = await services.arevoke_project_credentials(project)
     except GitRepositoryNotReadyError as exc:
         raise error_codes.GIT_REPOSITORY_NOT_FOUND from exc
     return _to_response(repo)
-
-
-async def _get_project(request: HttpRequest, project_id: str) -> Project:
-    user = authenticated_user(request)
-    return await aget_object_or_404(
-        Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id),
-        id=project_id,
-    )
 
 
 def _to_response(repo: ProjectGitRepository) -> GitRepositoryResponse:

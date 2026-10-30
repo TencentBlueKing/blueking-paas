@@ -19,13 +19,12 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-from django.shortcuts import aget_object_or_404
 from ninja import Path, Router, Status
 from ninja.pagination import paginate
 
 from app_spark_api.core.projects import services
 from app_spark_api.core.projects.constants import PROJECT_ID_PATTERN
-from app_spark_api.core.projects.entities import ProjectCreateRequest, ProjectResponse
+from app_spark_api.core.projects.entities import ProjectCreateRequest, ProjectRenameRequest, ProjectResponse
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
     ProjectDeletionError,
@@ -33,6 +32,7 @@ from app_spark_api.core.projects.exceptions import (
     ProjectNameTakenError,
 )
 from app_spark_api.core.projects.models import Project
+from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
@@ -90,6 +90,26 @@ async def list_projects(request: HttpRequest):
     return Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id)
 
 
+@router.post(
+    "/{project_id}/rename/",
+    response={**ERROR_RESPONSES, HTTPStatus.OK: ProjectResponse},
+    url_name="projects-rename",
+    summary="给一个 Project 改名",
+)
+async def rename_project(request: HttpRequest, payload: ProjectRenameRequest, project_id: str = PROJECT_ID):
+    """给当前用户自己的 Project 改名，新名称在同租户内必须唯一。"""
+    project = await aget_project_or_404(request, project_id)
+
+    try:
+        project = await services.rename_project(project, name=payload.name)
+    except ProjectNameTakenError as exc:
+        raise error_codes.PROJECT_NAME_TAKEN.f(name=payload.name) from exc
+    except ProjectAlreadyDeletedError as exc:
+        # 取出之后被并发删除，与请求开始前就已删除的项目保持相同的不可见响应。
+        raise error_codes.RESOURCE_NOT_FOUND from exc
+    return project
+
+
 @router.delete(
     "/{project_id}/",
     response={**ERROR_RESPONSES, HTTPStatus.NO_CONTENT: None},
@@ -98,11 +118,7 @@ async def list_projects(request: HttpRequest):
 )
 async def delete_project(request: HttpRequest, project_id: str = PROJECT_ID):
     """Delete a Project visible to its owner, ending its live conversations and releasing its resources."""
-    user = authenticated_user(request)
-    project = await aget_object_or_404(
-        Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id),
-        id=project_id,
-    )
+    project = await aget_project_or_404(request, project_id)
 
     try:
         await services.delete_project(project)

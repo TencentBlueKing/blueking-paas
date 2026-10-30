@@ -52,7 +52,7 @@ class ErrorCodes:
         _("Failed to delete {category}. Some resources may already be deleted; please retry the deletion."),
         status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
     )
-    # A missing Project has no code of its own: `aget_object_or_404` already says it plainly, and
+    # A missing Project has no code of its own: `aget_project_or_404` already says it plainly, and
     # the endpoints nested under one only need the *inner* resource to be named. See RESOURCE_NOT_FOUND.
 
     # --- Conversations ----------------------------------------------------------------------------

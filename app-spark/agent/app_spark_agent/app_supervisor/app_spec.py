@@ -21,16 +21,10 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from app_spark_agent import settings
+from app_spark_agent.app_arch.python import build_uvicorn_args
 from app_spark_agent.app_supervisor.process import ProcessSpec
 from app_spark_agent.app_supervisor.project_env import project_python, project_venv, strip_agent_environ
 from app_spark_agent.app_supervisor.types import APP_PORT_ENV
-
-# 模型被要求把应用导出成这个路径，启动方也只启这一个。settings.INSTRUCTIONS 里写着同一条
-# 约定，两处要一起改：模型写成别的入口名，launch 一定失败。
-APP_IMPORT_PATH = "main:app"
-
-# 听所有网卡，给沙箱外的预览代理访问。判活仍只连 127.0.0.1。
-APP_LISTEN_HOST = "0.0.0.0"
 
 
 def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
@@ -39,16 +33,7 @@ def build_app_spec(workspace: Path, port: int) -> ProcessSpec:
     Runs the project's own interpreter, which sync_project_environment has just built.
     """
     return ProcessSpec(
-        argv=(
-            str(project_python(workspace)),
-            "-m",
-            "uvicorn",
-            APP_IMPORT_PATH,
-            "--host",
-            APP_LISTEN_HOST,
-            "--port",
-            str(port),
-        ),
+        argv=(str(project_python(workspace)), *build_uvicorn_args(port)),
         cwd=workspace,
         env=build_child_environ(workspace, port),
         log_path=Path(settings.APP_LOG_PATH),

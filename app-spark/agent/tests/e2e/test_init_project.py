@@ -13,7 +13,8 @@ from typing import Any
 import pytest
 
 from app_spark_agent import settings
-from app_spark_agent.tools.init_project import PROJECT_FILES
+from app_spark_agent.app_arch.architecture import SYNC_FILENAMES
+from app_spark_agent.app_arch.python import PYTHON_PROJECT_FILES
 from tests.support import console
 from tests.support.live import LiveRuntime, model_messages
 
@@ -27,6 +28,7 @@ CHANGE = 'Add GET /health returning {"status": "ok"} to main.py. Do not launch i
 # "Todo Board" normalized the way uv records it in uv.lock.
 PROJECT_NAME = "todo-board"
 WRITE_TOOLS = {"write_file", "edit_file", "create_directory"}
+INITIALIZED_FILES = (*PYTHON_PROJECT_FILES, *SYNC_FILENAMES)
 
 
 def test_a_new_app_starts_from_the_project_template(
@@ -38,7 +40,7 @@ def test_a_new_app_starts_from_the_project_template(
     asked = runtime.turn(conversation_id=conversation_id, prompt=ASK)
 
     assert "init_project" not in asked.tool_calls
-    assert not any((workspace / name).exists() for name in PROJECT_FILES)
+    assert not any((workspace / name).exists() for name in INITIALIZED_FILES)
 
     console.banner("turn 2: the first code is preceded by init_project")
     started = runtime.turn(conversation_id=conversation_id, prompt=START)
@@ -47,32 +49,40 @@ def test_a_new_app_starts_from_the_project_template(
     writes = [index for index, name in enumerate(started.tool_calls) if name in WRITE_TOOLS]
     assert writes, "the model never wrote main.py with the file tools"
     assert started.tool_calls.index("init_project") < writes[0], started.tool_calls
-    missing = [name for name in PROJECT_FILES if not (workspace / name).is_file()]
+    missing = [name for name in INITIALIZED_FILES if not (workspace / name).is_file()]
     assert not missing, f"init_project ran but left no {missing} in the workspace"
     # Compared with app-template/ itself rather than with what the tool renders, so a rendering
     # bug cannot vouch for its own output. Nothing but the name may differ: anything else makes uv
     # treat the lock as stale and re-resolve over the network on the first launch. A uv.lock this
     # exact is also something no model writes by hand, so it can only have come from the tool.
     assert changes_from_template(workspace) == renamed_only(PROJECT_NAME)
-    written = {name: (workspace / name).read_bytes() for name in PROJECT_FILES}
+    written = {name: (workspace / name).read_bytes() for name in INITIALIZED_FILES}
     assert "FastAPI" in (workspace / "main.py").read_text()
 
     console.banner("turn 3: a change to an existing project leaves its files alone")
     changed = runtime.turn(conversation_id=conversation_id, prompt=CHANGE)
 
     assert "init_project" not in changed.tool_calls
-    assert {name: (workspace / name).read_bytes() for name in PROJECT_FILES} == written
+    assert {name: (workspace / name).read_bytes() for name in INITIALIZED_FILES} == written
     assert "/health" in (workspace / "main.py").read_text()
 
     console.banner("what the model was told")
     returns = init_project_returns(model_messages(runtime.drain("log")))
-    assert returns == [{"status": "created", "name": PROJECT_NAME, "detail": ""}]
+    assert returns == [
+        {
+            "status": "synced",
+            "files": list(INITIALIZED_FILES),
+            "changed": list(INITIALIZED_FILES),
+            "errcode": None,
+            "detail": f"Created Python project {PROJECT_NAME}.",
+        }
+    ]
 
 
 def changes_from_template(workspace: Path) -> dict[str, list[tuple[str, str]]]:
     """Return, for each project file, the (template, workspace) line pairs that differ."""
     changes = {}
-    for name in PROJECT_FILES:
+    for name in PYTHON_PROJECT_FILES:
         template = (settings.APP_TEMPLATE_DIR / name).read_text().splitlines()
         written = (workspace / name).read_text().splitlines()
         assert len(written) == len(template), f"{name} has {len(written)} lines, the template {len(template)}"
@@ -84,7 +94,7 @@ def renamed_only(name: str) -> dict[str, list[tuple[str, str]]]:
     """Return what changes_from_template reports when the project was renamed and nothing else."""
     template_pyproject = (settings.APP_TEMPLATE_DIR / "pyproject.toml").read_text()
     template_name = tomllib.loads(template_pyproject)["project"]["name"]
-    return {filename: [(f'name = "{template_name}"', f'name = "{name}"')] for filename in PROJECT_FILES}
+    return {filename: [(f'name = "{template_name}"', f'name = "{name}"')] for filename in PYTHON_PROJECT_FILES}
 
 
 def init_project_returns(messages: list[dict[str, Any]]) -> list[Any]:

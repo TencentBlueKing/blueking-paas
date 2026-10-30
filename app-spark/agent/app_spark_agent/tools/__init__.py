@@ -22,22 +22,23 @@ FileSystem 与 Shell 来自 harness，不在这里。这里的每个工具都把
 
 - read_app_log.py：只读本会话的应用日志，路径不是参数；
 - init_project.py：真要开始写代码时，从模板建出 Python 项目；
+- sync_platform_config.py：补齐并修复平台拥有的部署配置文件；
 - launch_app.py：拉起或重启应用，单轮有次数上限。它有按轮的状态，归 ConversationRuntime 持有，
-  由 create_agent 的 extra_tools 交进来，另外两个由 create_agent 自己绑定 workspace 建出。
+  由 create_agent 的 extra_tools 交进来，另外三个由 create_agent 自己绑定 workspace 建出。
 """
 
-from app_spark_agent.tools.init_project import InitProjectResult, ProjectInitializer, build_init_project_tool
+from app_spark_agent.tools.init_project import build_init_project_tool
 from app_spark_agent.tools.launch_app import MAX_LAUNCHES_PER_RUN, LaunchTool, LaunchToolResult
 from app_spark_agent.tools.read_app_log import AppLogReader, AppLogReadResult, build_read_app_log_tool
+from app_spark_agent.tools.sync_platform_config import build_sync_platform_config_tool
 
 __all__ = [
     "MAX_LAUNCHES_PER_RUN",
     "AppLogReadResult",
     "AppLogReader",
-    "InitProjectResult",
     "LaunchTool",
     "LaunchToolResult",
-    "ProjectInitializer",
     "build_init_project_tool",
     "build_read_app_log_tool",
+    "build_sync_platform_config_tool",
 ]

@@ -25,6 +25,8 @@ from pathlib import Path
 from ag_ui.core import CustomEvent
 
 from app_spark_agent import settings
+from app_spark_agent.app_arch.architecture import AppArchitecture
+from app_spark_agent.app_arch.files import FileSyncStatus
 from app_spark_agent.app_supervisor.app_spec import build_app_spec
 from app_spark_agent.app_supervisor.process import (
     ManagedProcess,
@@ -32,7 +34,7 @@ from app_spark_agent.app_supervisor.process import (
     http_get_answers,
     tcp_port_is_open,
 )
-from app_spark_agent.app_supervisor.project_env import sync_project_environment
+from app_spark_agent.app_supervisor.project_env import require_project, sync_project_environment
 from app_spark_agent.app_supervisor.types import (
     CRASH_RETRY_INTERVAL_SECONDS,
     CRASH_RETRY_LIMIT,
@@ -67,6 +69,7 @@ class AppSupervisor:
         # 进程层只管 spawn / stop / poll / probe：启什么由这边每次 launch 构造 spec 交给它，
         # 怎么算就绪也由这边的探针决定。processes 把子进程挂到 SIGTERM / 空闲退出名单上。
         self._process = ManagedProcess(processes, probe=self._app_answers)
+        self._app_arch = AppArchitecture(workspace)
 
         # 与 RunGuard 分开：run 进行中仍允许 launch，第二次 launch 才冲突。
         self._lock = asyncio.Lock()
@@ -216,11 +219,24 @@ class AppSupervisor:
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until it answers, or fail if it exits first."""
 
+        # 先确认有项目，避免在还没有项目的 workspace 里留下平台配置文件。
+        require_project(self.workspace)
+
+        # 平台配置要赶在 uv sync 之前写：.python-version 是 uv 选解释器的输入，残留的过期版本
+        # 会让 uv sync 先失败（沙箱里禁止下载解释器），修复就永远轮不到。写不成则不启动，否则会
+        # 产生「预览能跑、代码却因为缺平台必需文件而不能部署」的项目。
+        sync_result = await asyncio.to_thread(self._app_arch.sync)
+        if sync_result.status is FileSyncStatus.FAILED:
+            raise AppLaunchFailed(
+                f"The platform configuration could not be saved ({sync_result.errcode}): {sync_result.detail}"
+            )
+
         # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
         # 多少时间，不值得为跳过它去自己判断锁文件变没变。
         await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
 
         spec = build_app_spec(self.workspace, self.port)
+
         try:
             self._process.start(spec)
         except OSError as exc:

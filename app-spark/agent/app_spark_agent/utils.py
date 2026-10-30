@@ -7,6 +7,7 @@ callers must hand them to ``asyncio.to_thread``.
 
 import contextlib
 import os
+import secrets
 import signal
 from pathlib import Path
 
@@ -23,17 +24,22 @@ def write_atomic(path: Path, data: bytes) -> None:
     A reader either sees the previous file or the new one, never a half-written mix: the
     content is staged in a sibling temporary file, fsynced, and moved into place with
     ``os.replace``, which is atomic within one filesystem.
+
+    Every call stages in a file of its own, so concurrent writers of the same path cannot
+    delete or replace each other's staging file; the last replace wins.
     """
-    temporary_path = path.with_name(f".{path.name}.tmp")
+    temporary_path = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
     try:
-        with temporary_path.open("wb") as handle:
+        # "x" refuses an existing file rather than writing into someone else's staging file. Unlike
+        # tempfile.mkstemp it keeps the umask-derived mode, which the replaced file then carries.
+        with temporary_path.open("xb") as handle:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, path)
     finally:
-        # A no-op after a successful replace; it is what removes the staging file when the
-        # write or the replace failed.
+        # A no-op after a successful replace; it is what removes this call's staging file when
+        # the write or the replace failed.
         temporary_path.unlink(missing_ok=True)
 
 

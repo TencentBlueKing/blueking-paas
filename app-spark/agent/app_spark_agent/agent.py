@@ -36,7 +36,11 @@ from app_spark_agent.bkaidev.auth import (
     authorization_headers,
 )
 from app_spark_agent.fake_model import FAKE_MODEL_PREFIX, build_fake_model
-from app_spark_agent.tools import build_init_project_tool, build_read_app_log_tool
+from app_spark_agent.tools import (
+    build_init_project_tool,
+    build_read_app_log_tool,
+    build_sync_platform_config_tool,
+)
 
 
 class ApiKeyProvider(Protocol):
@@ -189,6 +193,7 @@ def create_agent(
     :param extra_tools: Further tools to register, already in the harness's form; a caller
         holding a tools.LaunchTool hands over its as_tool(). The instructions name launch_app
         unconditionally, so omitting it leaves the model hunting for a tool it was told to use.
+        Workspace-bound read, init, and platform configuration tools are added here.
     :return: A configured Pydantic AI coding agent.
     :raises NotADirectoryError: If workspace is not an existing directory.
     """
@@ -202,6 +207,7 @@ def create_agent(
     tools: list[Any] = [
         build_read_app_log_tool(workspace=workspace_path, state_dir=resolved_state),
         build_init_project_tool(workspace_path),
+        build_sync_platform_config_tool(workspace_path),
         *extra_tools,
     ]
 

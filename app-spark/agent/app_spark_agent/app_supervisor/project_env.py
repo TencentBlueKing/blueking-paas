@@ -115,6 +115,16 @@ def uv_environ(source: Mapping[str, str]) -> dict[str, str]:
     return env
 
 
+def require_project(workspace: Path) -> None:
+    """Fail the launch when the workspace has no project yet.
+
+    :raises AppLaunchFailed: The workspace has no pyproject.toml.
+    """
+    # uv 自己也会报找不到 pyproject.toml，但不会告诉模型该用哪个工具去建。
+    if not (workspace / "pyproject.toml").is_file():
+        raise AppLaunchFailed(NO_PROJECT_DETAIL)
+
+
 async def sync_project_environment(workspace: Path, log_path: Path) -> None:
     """Bring workspace/.venv in line with the project's lock file, installing what is missing.
 
@@ -124,9 +134,7 @@ async def sync_project_environment(workspace: Path, log_path: Path) -> None:
     :raises AppLaunchFailed: The workspace has no project yet, or uv is missing, timed out, or
         could not install the dependencies.
     """
-    # uv 自己也会报找不到 pyproject.toml，但不会告诉模型该用哪个工具去建。
-    if not (workspace / "pyproject.toml").is_file():
-        raise AppLaunchFailed(NO_PROJECT_DETAIL)
+    require_project(workspace)
 
     uv = shutil.which("uv")
     if uv is None:

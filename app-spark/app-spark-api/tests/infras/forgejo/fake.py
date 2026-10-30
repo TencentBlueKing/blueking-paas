@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 
+import io
 import json
+import tarfile
 import threading
 from http import HTTPStatus
 from typing import Any
@@ -30,6 +32,8 @@ from app_spark_api.infras.forgejo import ForgejoAsyncClient, ForgejoClient, Forg
 ORG = "app-spark"
 SERVICE_ACCOUNT = "app-spark-bot"
 SERVICE_PASSWORD = "service-password"
+# What a commit's archive holds when a test did not say: the `auto_init` README.
+DEFAULT_TREE = {"README.md": b"# fake project\n"}
 
 
 def repo_server_config(**overrides: Any) -> dict[str, Any]:
@@ -79,6 +83,13 @@ class FakeForgejo:
         # are what check a downloaded archive actually unpacks.
         self.archive_bytes = b"PK\x03\x04 fake archive"
         self.archive_status = HTTPStatus.OK
+        # Tags per repository, name -> commit SHA, keyed the same way as `repos`.
+        self.tags: dict[tuple[str, str], dict[str, str]] = {}
+        # Source trees by commit SHA, served as real `tar.gz` archives so tests can read the
+        # stored source packages back. A commit without an entry gets DEFAULT_TREE.
+        self.trees: dict[str, dict[str, bytes]] = {}
+        # Every archive ref that was downloaded, in order, e.g. `3f2a....tar.gz`.
+        self.archive_requests: list[str] = []
 
     def client(self, config: ForgejoClientConfig | None = None) -> ForgejoClient:
         resolved = config if isinstance(config, ForgejoClientConfig) else forgejo_client_config()
@@ -150,12 +161,21 @@ class FakeForgejo:
                 if (owner, name, tail) in self.protections:
                     return self._json(HTTPStatus.OK, {"rule_name": tail})
                 return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
-        if method == "GET" and resource == "branches" and tail is not None:
-            return self._get_branch(owner, name, tail)
-        if method == "GET" and resource == "archive" and tail is not None:
-            return self._get_archive(owner, name, tail)
+        if method == "GET" and tail is not None:
+            return self._dispatch_repo_read(owner, name, resource, rest[4:])
         if method == "POST" and resource == "contents" and tail is not None:
             return self._write_contents(request)
+        return None
+
+    def _dispatch_repo_read(self, owner: str, name: str, resource: str, tail: list[str]) -> httpx2.Response | None:
+        """Route one `GET /repos/{owner}/{name}/{resource}/{tail...}` read."""
+        if resource == "branches":
+            return self._get_branch(owner, name, tail[0])
+        if resource == "tags":
+            # A tag such as `release/v1` arrives percent-encoded but is decoded by now.
+            return self._get_tag(owner, name, "/".join(tail))
+        if resource == "archive":
+            return self._get_archive(owner, name, tail[0])
         return None
 
     def _dispatch_user(self, method: str, rest: list[str], body: dict[str, Any]) -> httpx2.Response | None:
@@ -236,7 +256,17 @@ class FakeForgejo:
             return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
         return self._json(HTTPStatus.OK, {"name": branch, "commit": {"id": self.heads[(owner, name)]}})
 
+    def _get_tag(self, owner: str, name: str, tag: str) -> httpx2.Response:
+        commit = self.tags.get((owner, name), {}).get(tag)
+        if (owner, name) not in self.repos or commit is None:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+        # Shaped like an annotated tag: `id` is the tag object, `commit.sha` what it tags.
+        return self._json(HTTPStatus.OK, {"name": tag, "id": "f" * 40, "commit": {"sha": commit}})
+
     def _get_archive(self, owner: str, name: str, archive: str) -> httpx2.Response:
+        self.archive_requests.append(archive)
+        if archive.endswith(".tar.gz"):
+            return self._get_tarball(owner, name, archive.removesuffix(".tar.gz"))
         # Forgejo takes the ref and the format as one path segment, e.g. `main.zip`.
         ref, _, suffix = archive.rpartition(".")
         repo = self.repos.get((owner, name))
@@ -248,6 +278,25 @@ class FakeForgejo:
             HTTPStatus.OK,
             content=self.archive_bytes,
             headers={"Content-Type": "application/zip"},
+        )
+
+    def _get_tarball(self, owner: str, name: str, commit: str) -> httpx2.Response:
+        """Serve ``commit`` the way Forgejo does: a tarball nested under ``{name}/``."""
+        known = {self.heads.get((owner, name)), *self.tags.get((owner, name), {}).values()}
+        if (owner, name) not in self.repos or commit not in known:
+            return self._json(HTTPStatus.NOT_FOUND, {"message": "not found"})
+        if self.archive_status != HTTPStatus.OK:
+            return self._json(self.archive_status, {"message": "could not pack the archive"})
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+            for path, content in self.trees.get(commit, DEFAULT_TREE).items():
+                info = tarfile.TarInfo(f"{name}/{path}")
+                info.size = len(content)
+                archive.addfile(info, io.BytesIO(content))
+        return httpx2.Response(
+            HTTPStatus.OK,
+            content=buffer.getvalue(),
+            headers={"Content-Type": "application/gzip"},
         )
 
     def _list_tokens(self) -> httpx2.Response:

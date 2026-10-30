@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
+import io
 import json
+import tarfile
 from http import HTTPStatus
 
 import httpx2
@@ -290,3 +292,58 @@ def test_read_probe_connection_errors_become_client_errors():
         pytest.raises(ForgejoUnavailableError, match="Read-token verification failed"),
     ):
         client.verify_read_token_cannot_write(AccessToken(token_id=1, name="read", sha1="read-secret"), ORG, "a")
+
+
+def test_a_missing_tag_is_none_not_an_error():
+    fake = FakeForgejo()
+    client = _client(fake)
+    client.ensure_private_repo(owner=ORG, name="spark-a", default_branch="main")
+    fake.tags[(ORG, "spark-a")] = {"v1": "a" * 40}
+
+    assert client.get_tag(ORG, "spark-a", "v2") is None
+    tag = client.get_tag(ORG, "spark-a", "v1")
+    assert tag is not None
+    # The tagged commit, not the annotated tag object's own SHA.
+    assert tag.commit == "a" * 40
+
+
+def test_a_tag_name_cannot_pick_a_different_route():
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx2.Response(HTTPStatus.NOT_FOUND, json={"message": "not found"})
+
+    with ForgejoClient(forgejo_client_config(), transport=httpx2.MockTransport(respond)) as client:
+        client.get_tag(ORG, "spark-a", "release/v1")
+
+    assert requests[0].url.raw_path.endswith(b"/tags/release%2Fv1")
+
+
+def test_download_archive_streams_the_body_into_the_handle():
+    fake = FakeForgejo()
+    client = _client(fake)
+    client.ensure_private_repo(owner=ORG, name="spark-a", default_branch="main")
+    head = fake.heads[(ORG, "spark-a")]
+    handle = io.BytesIO()
+
+    client.download_archive(owner=ORG, name="spark-a", ref=head, suffix="tar.gz", handle=handle)
+
+    with tarfile.open(fileobj=io.BytesIO(handle.getvalue()), mode="r:gz") as archive:
+        assert archive.getnames() == ["spark-a/README.md"]
+
+
+@pytest.mark.parametrize("failure", ["status", "connection"])
+def test_download_archive_failures_become_client_errors(failure):
+    fake = FakeForgejo()
+    client = _client(fake)
+    client.ensure_private_repo(owner=ORG, name="spark-a", default_branch="main")
+    if failure == "status":
+        fake.archive_status = HTTPStatus.INTERNAL_SERVER_ERROR
+    else:
+        fake.fail_next_request = True
+
+    with pytest.raises(ForgejoUnavailableError, match="archive"):
+        client.download_archive(
+            owner=ORG, name="spark-a", ref=fake.heads[(ORG, "spark-a")], suffix="tar.gz", handle=io.BytesIO()
+        )

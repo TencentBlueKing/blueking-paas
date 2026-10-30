@@ -28,6 +28,7 @@ import os
 import secrets
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import zipfile
 from http import HTTPStatus
@@ -42,7 +43,9 @@ from app_spark_api.infras.forgejo.entities import AccessToken
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 from app_spark_api.repository.git.constants import READ_TOKEN_SCOPE, STATUS_READY, read_token_name
 from app_spark_api.repository.git.entities import RepoServerConfig
+from app_spark_api.repository.git.exceptions import SourceRefNotFoundError
 from app_spark_api.repository.git.models import ProjectGitRepository
+from app_spark_api.repository.git.source_packages import RepoPackager
 from tests.helpers import read_streaming_response
 
 pytestmark = [pytest.mark.django_db(transaction=True), pytest.mark.forgejo]
@@ -264,12 +267,82 @@ async def test_the_archive_endpoint_returns_a_real_zip_of_the_pushed_source(aapi
     assert response.headers["Content-Disposition"].startswith(f'attachment; filename="{project_id}-')
     body = await read_streaming_response(response)
     with zipfile.ZipFile(io.BytesIO(body)) as archive:
-        # Forgejo nests the tree under a top-level directory named after the ref.
         names = archive.namelist()
-        assert any(name.endswith("/downloaded.txt") for name in names), names
-        # The pushed commit, not the `auto_init` one the repository was created with, and
-        # no `.git` -- an archive is source, not history.
-        assert not any(".git/" in name for name in names), names
+    # The pushed commit, not the `auto_init` one the repository was created with, nested under
+    # a directory named after the repository, and no `.git` -- an archive is source, not history.
+    assert sorted(names) == [f"{row.name}/", f"{row.name}/README.md", f"{row.name}/downloaded.txt"], names
+
+
+async def test_source_packages_hold_the_real_tree_of_the_chosen_commit(
+    aapi_client, forgejo_settings, fake_bkrepo, tmp_path
+):
+    """Only a real Forgejo shows the archive layout the package relies on and what a tag resolves to.
+
+    BkRepo stays faked: what is checked is what would have been uploaded.
+    """
+    project_id = _project_id("pkg")
+    repository = await _create_project(aapi_client, project_id)
+    assert repository["status"] == STATUS_READY
+    row = await ProjectGitRepository.objects.select_related("project").aget(project_id=project_id)
+    username = forgejo_settings.service_account
+    work = tmp_path / "repo"
+
+    def git(*args: str) -> str:
+        result = _git(row.write_token, *args, cwd=work, username=username)
+        assert result.returncode == 0, result.stderr
+        return result.stdout.strip()
+
+    def commit_file(filename: str) -> str:
+        (work / filename).write_text(f"{filename}\n")
+        git("add", filename)
+        git("commit", "-m", filename)
+        return git("rev-parse", "HEAD")
+
+    cloned = _git(row.write_token, "clone", row.clone_url, str(work), cwd=tmp_path, username=username)
+    assert cloned.returncode == 0, cloned.stderr
+    git("config", "user.name", "App-Spark")
+    git("config", "user.email", "app-spark@localhost.invalid")
+    tagged = commit_file("released.txt")
+    # Annotated, so the tag object's SHA differs from the commit's, and with a slash, so the
+    # name has to survive being put in a URL.
+    git("-c", "tag.gpgSign=false", "tag", "-a", "release/v1", "-m", "release v1")
+    git("push", "origin", "HEAD", "release/v1")
+    tip = commit_file("after-tag.txt")
+    git("push", "origin", "HEAD")
+
+    head_package = await RepoPackager(row).aupload()
+    tag_package = await RepoPackager(row).aupload("release/v1")
+
+    assert head_package.commit_sha == tip
+    assert tag_package.commit_sha == tagged
+    assert head_package.repo_full_name == f"{forgejo_settings.org}/{project_id}"
+    stored = fake_bkrepo.objects[(head_package.bucket, head_package.key)]
+    assert head_package.size == len(stored)
+    # Nested under a directory named after the repository, which the Developer Center accepts.
+    assert _package_names(fake_bkrepo, head_package) == {
+        f"{row.name}/README.md",
+        f"{row.name}/released.txt",
+        f"{row.name}/after-tag.txt",
+    }
+    assert _package_names(fake_bkrepo, tag_package) == {f"{row.name}/README.md", f"{row.name}/released.txt"}
+    # Uploaded as Forgejo served it, not repacked; Forgejo caches the archive per commit, so
+    # downloading it again gives the same bytes.
+    served = io.BytesIO()
+    with ForgejoClient(forgejo_settings.forgejo_client_config()) as client:
+        client.download_archive(owner=row.owner, name=row.name, ref=tip, suffix="tar.gz", handle=served)
+    assert served.getvalue() == stored
+    # Packing the same tip again reuses the row rather than uploading a duplicate.
+    again = await RepoPackager(row).aupload()
+    assert again.pk == head_package.pk
+    with pytest.raises(SourceRefNotFoundError):
+        await RepoPackager(row).aupload("release/v2")
+
+
+def _package_names(fake_bkrepo, package) -> set[str]:
+    """Regular files in a stored package, by the path stored in it."""
+    data = fake_bkrepo.objects[(package.bucket, package.key)]
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+        return {member.name for member in archive.getmembers() if member.isfile()}
 
 
 async def test_a_mis_scoped_probe_is_removed_from_the_working_tree(aapi_client, forgejo_settings, tmp_path):

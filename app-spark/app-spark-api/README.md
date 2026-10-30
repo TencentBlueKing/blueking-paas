@@ -318,6 +318,45 @@ APP_SPARK_FORGEJO_LIVE=1 .venv/bin/pytest tests/api/live_forgejo
 
 未设置 `APP_SPARK_FORGEJO_LIVE=1` 时该目录不会被收集；一旦设置，缺少 Forgejo 会失败而不是跳过。
 
+#### 发布用的源码包
+
+发布时把某个 commit 的源码打成 tgz 传到蓝鲸制品库，再签一个预签名地址交给发布流程去下载，
+见 `repository/git/source_packages.py`。
+
+包就是 Forgejo 对该 commit 的 `tar.gz` 归档，原样上传，不解压重打。源码在包里套着一层以仓库名
+命名的目录（`{repo}/...`），开发者中心支持源码位于单个子目录内，所以不必把文件提到包根目录。
+
+每次上传记一行 `ProjectSourcePackage`，以「Project + commit SHA」唯一：主分支会被反复发布，只有
+SHA 能区分版本；同一个 SHA 不论经由主分支还是 tag 选中都只上传一次，后来者复用已有记录。
+
+包不会永久保存。上传、复用和签地址都会刷新行上的 `last_used_at`，长期没人用的包由命令回收，建议
+用定时任务每天跑一次：
+
+```bash
+python manage.py delete_unused_source_packages            # 删除 15 天未被使用的包
+python manage.py delete_unused_source_packages --days 30  # 自定义天数
+python manage.py delete_unused_source_packages --dry-run  # 只列出，不删除
+```
+
+回收先删行再删制品库对象。对象已不存在（制品库错误码 `251010`）算删除成功；其余删不掉的情况
+（网络错误、鉴权失败、仓库不存在等）会列出对象 key 并让命令以失败退出，以便有人去手工清理。
+
+删除项目时（Project 只是软删除，外键级联不会触发），在删完 Git 仓库之后用同一套逻辑删掉该项目的
+全部源码包，不看 `last_used_at`。删不掉的对象只记日志，不让项目删除失败：行已经没了，重试也找不回它。
+
+因为预签名地址只有制品库能给，`BLOBSTORE_BKREPO_CONFIG` 是必填配置，缺了在第一次打包时就报
+`ImproperlyConfigured`，不会先去下载归档。包所在的通用仓库由 `BLOBSTORE_BUCKET_SOURCE_PACKAGES`
+指定（默认 `app-spark-source-packages`），需事先建好。测试里制品库默认是内存假实现（`fake_bkrepo`
+fixture），真实 Forgejo 测试会检查推送的提交和 tag 打出来的内容。
+
+`tests/repository/git/test_source_packages_live_bkrepo.py`（`bkrepo` marker）对真实制品库走一遍
+「打包上传 → 签地址并匿名下载 → 回收删除」，只在 `BLOBSTORE_BKREPO_CONFIG` 配齐（如写在
+`settings_local.yaml`）时执行，否则跳过；测试结束会删掉自己上传的包：
+
+```bash
+uv run pytest --reuse-db -m bkrepo tests/repository/git/
+```
+
 #### Runtime 怎么拿到仓库
 
 起 Runtime 时把 `GitRemote`（clone 地址、分支、服务账号、写 token）交给 provider，由它写进子进程

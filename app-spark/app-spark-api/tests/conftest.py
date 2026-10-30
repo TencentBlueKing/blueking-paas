@@ -26,6 +26,7 @@ from django.urls import get_script_prefix, set_script_prefix
 from app_spark_api.core.projects.models import Project
 from tests.helpers import create_user
 from tests.infras.forgejo.fake import FakeForgejo, repo_server_config
+from tests.repository.storage.fake_bkrepo import BKREPO_CONFIG, SOURCE_PACKAGES_BUCKET, FakeBkRepoServer
 
 if os.environ.get("APP_SPARK_FORGEJO_LIVE") != "1":
     collect_ignore = ["api/live_forgejo"]
@@ -57,7 +58,19 @@ def fake_forgejo(settings, monkeypatch, request):
     settings.REPO_SERVER = repo_server_config()
     monkeypatch.setattr("app_spark_api.repository.git.services.make_forgejo_client", fake.client)
     monkeypatch.setattr("app_spark_api.repository.git.archives.make_forgejo_async_client", fake.async_client)
+    monkeypatch.setattr("app_spark_api.repository.git.source_packages.make_forgejo_client", fake.client)
     yield fake
+
+
+@pytest.fixture
+def fake_bkrepo(settings, monkeypatch):
+    """Configure BkRepo and keep what is stored in memory. Tests never reach a real BkRepo."""
+    server = FakeBkRepoServer()
+    settings.BLOBSTORE_BKREPO_CONFIG = dict(BKREPO_CONFIG)
+    # Pinned with the config, so a bucket in the developer's local settings cannot leak in.
+    settings.BLOBSTORE_BUCKET_SOURCE_PACKAGES = SOURCE_PACKAGES_BUCKET
+    monkeypatch.setattr("app_spark_api.repository.storage.blob_stores.BKGenericRepo", server.client)
+    return server
 
 
 @pytest.fixture()

@@ -76,6 +76,7 @@ addopts = "-p no:cacheprovider"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
+    "bkrepo: requires a configured live BkRepo (BLOBSTORE_BKREPO_CONFIG); skipped otherwise",
     "e2b: requires a configured live E2B endpoint and provisions real sandboxes",
     "forgejo: requires a live Forgejo; collected only when APP_SPARK_FORGEJO_LIVE=1",
 ]

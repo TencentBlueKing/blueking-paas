@@ -39,6 +39,7 @@ from app_spark_api.core.projects.exceptions import (
 )
 from app_spark_api.core.projects.models import Project
 from app_spark_api.repository.git.services import adelete_project_repository, aprovision_project_repository
+from app_spark_api.repository.git.source_packages import adelete_project_source_packages
 
 
 async def create_project(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:
@@ -124,6 +125,13 @@ async def delete_project(project: Project) -> None:
             current_category = "repository"
             try:
                 await adelete_project_repository(project)
+            except Exception as exc:
+                raise ProjectDeletionError(current_category) from exc
+
+            # 放在仓库之后：远端仓库没了，就不会再有发布把新的包传上来。
+            current_category = "source package"
+            try:
+                await adelete_project_source_packages(project.pk)
             except Exception as exc:
                 raise ProjectDeletionError(current_category) from exc
 

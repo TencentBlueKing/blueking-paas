@@ -327,8 +327,12 @@ BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get("BKAUTH_TOKEN_USER_INFO_ENDPOINT"
 # 项目 Project 源码相关配置（存储、远程仓库等）
 # --------
 
-## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
+## 蓝鲸制品库的连接配置，仅基础配置，具体仓库名和 key 在各自对应的模型中。
+## 发布用的源码包只能存在制品库（要签预签名下载地址），所以这一项是必填的。
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
+
+## 存放发布用源码包的制品库通用仓库名，需事先在 BLOBSTORE_BKREPO_CONFIG.PROJECT 下建好。
+BLOBSTORE_BUCKET_SOURCE_PACKAGES = settings.get("BLOBSTORE_BUCKET_SOURCE_PACKAGES", "app-spark-source-packages")
 
 ## 蓝鲸数据库内容加密私钥（EncryptField）。进程启动必须配置，没有默认值。
 ## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

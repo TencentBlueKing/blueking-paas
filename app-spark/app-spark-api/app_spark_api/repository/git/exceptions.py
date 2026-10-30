@@ -30,3 +30,11 @@ class GitRepositoryNotReadyError(GitBackendError):
 
     重试同一请求不会自己变好，要先走补建入口。
     """
+
+
+class SourceRefNotFoundError(GitBackendError):
+    """要打包的 tag 不存在，或者名字本身就不可能是一个合法的 tag。"""
+
+
+class SourcePackageError(GitBackendError):
+    """源码包没能传上制品库，或者没能为它签出下载地址。"""

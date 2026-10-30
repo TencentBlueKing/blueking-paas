@@ -47,12 +47,15 @@
 ## 每页条数上限，客户端传更大的值会被压回这个数
 # NINJA_MAX_PER_PAGE_SIZE: 100
 
-## Project 源码使用蓝鲸制品库时的连接配置，仅基础配置，具体仓库名和 key 在各 Project 对应模型中
+## 蓝鲸制品库的连接配置，必填：发布用的源码包只能存在制品库
+## 仅基础配置，具体仓库名和 key 在各自对应的模型中
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: ''
 #   ENDPOINT: ''
 #   USERNAME: ''
 #   PASSWORD: ''
+## 存放发布用源码包的通用仓库名，需事先在上面的 PROJECT 下建好
+# BLOBSTORE_BUCKET_SOURCE_PACKAGES: app-spark-source-packages
 
 ## EncryptField 使用的 Fernet key。进程启动必须配置，不要留空：
 ## python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

@@ -78,6 +78,7 @@ def test_null_groups_and_values_are_omitted():
         ("externalDatabase.password", "00123", "DATABASE_PASSWORD"),
         ("externalRabbitmq.password", "00123", "RABBITMQ_PASSWORD"),
         ("blobstoreBkrepoConfig", {"PROJECT": "test", "PASSWORD": "true"}, "BLOBSTORE_BKREPO_CONFIG"),
+        ("blobstoreBucketSourcePackages", "source-packages", "BLOBSTORE_BUCKET_SOURCE_PACKAGES"),
         ("django.encryptSecretKey", "Q3NyY0V3cFpTUlVNbHp3RUZMYWtXaEdOdXp3eWZNSkc=", "BKKRILL_ENCRYPT_SECRET_KEY"),
         ("repoServer", {"type": "forgejo", "org": "app-spark"}, "REPO_SERVER"),
         ("bkAuth.tokenAuthEndpoint", "https://bkssm.example.com/api/v1/auth/access-tokens", "TOKEN_AUTH_ENDPOINT"),

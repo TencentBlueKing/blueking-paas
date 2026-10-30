@@ -95,6 +95,28 @@ class RemoteBranch:
 
 
 @attrs.frozen
+class RemoteTag:
+    """A tag as Forgejo described it, reduced to the commit it points at.
+
+    :param name: Tag name, as Forgejo echoed it back.
+    :param commit: Full SHA of the commit the tag points at. For an annotated tag this is
+        the tagged commit, not the tag object, which is what an archive must be cut from.
+    """
+
+    name: str
+    commit: str
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> RemoteTag:
+        if not isinstance(payload, dict):
+            raise ForgejoUnavailableError(f"Expected a tag object, got {payload!r}")
+        try:
+            return cls(name=str(payload["name"]), commit=str(payload["commit"]["sha"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ForgejoUnavailableError(f"Unreadable tag response: {exc}") from exc
+
+
+@attrs.frozen
 class AccessToken:
     """A Forgejo access token. ``sha1`` is present only on create."""
 

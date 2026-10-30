@@ -14,23 +14,33 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""A narrow Forgejo HTTP client. Not a general SDK: only the calls provision needs."""
+"""A narrow Forgejo HTTP client. Not a general SDK: only the calls provision and source
+packaging need."""
 
 from __future__ import annotations
 
 import logging
 from http import HTTPStatus
-from typing import Any, Self
+from typing import Any, BinaryIO, Self
+from urllib.parse import quote
 from uuid import uuid4
 
 import httpx2
 
-from app_spark_api.infras.forgejo.entities import AccessToken, ForgejoClientConfig, RemoteRepository
+from app_spark_api.infras.forgejo.entities import (
+    AccessToken,
+    ForgejoClientConfig,
+    RemoteBranch,
+    RemoteRepository,
+    RemoteTag,
+)
 from app_spark_api.infras.forgejo.exceptions import ForgejoUnavailableError
 
 # A probe file written with a read token must be refused; the name is not a real project file.
 # 该探针文件将被写入到项目中，作为 token 读写能力测试的一部分。
 _READ_PROBE_PATH = ".app-spark-read-token-probe"
+# Archives go straight to a local file, so the chunk size only trades syscalls for memory.
+_ARCHIVE_CHUNK_SIZE = 64 * 1024
 logger = logging.getLogger(__name__)
 
 
@@ -132,6 +142,56 @@ class ForgejoClient:
             return
 
         self._raise_for_status(response, f"DELETE repo {owner}/{name}")
+
+    def get_branch(self, owner: str, name: str, branch: str) -> RemoteBranch:
+        """Return the branch and the commit its tip is at.
+
+        :raises ForgejoUnavailableError: Forgejo was unreachable, or has no such branch.
+        """
+        response = self._request("GET", f"api/v1/repos/{owner}/{name}/branches/{branch}")
+        self._raise_for_status(response, f"GET branch {owner}/{name} {branch}")
+        return RemoteBranch.from_payload(response.json())
+
+    def get_tag(self, owner: str, name: str, tag: str) -> RemoteTag | None:
+        """Return the tag and the commit it points at, or ``None`` if there is no such tag.
+
+        Unlike a missing working branch, a missing tag is an ordinary answer: tags are named
+        by whoever asks for one, so asking for a tag that does not exist is a caller mistake.
+
+        :raises ForgejoUnavailableError: Forgejo was unreachable or answered unreadably.
+        """
+        # Encode `/` too: tags such as `release/v1` are legal, and Forgejo unescapes the
+        # wildcard segment, whereas a raw slash would let the name pick a different route.
+        response = self._request("GET", f"api/v1/repos/{owner}/{name}/tags/{quote(tag, safe='')}")
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            return None
+        self._raise_for_status(response, f"GET tag {owner}/{name} {tag}")
+        return RemoteTag.from_payload(response.json())
+
+    def download_archive(self, *, owner: str, name: str, ref: str, suffix: str, handle: BinaryIO) -> None:
+        """Write ``ref`` as an archive into ``handle``, streaming rather than buffering it.
+
+        Forgejo nests the tree under a single top-level directory named after the
+        repository; callers that need the files at the root must strip it themselves.
+
+        :param owner: Organization the repository belongs to.
+        :param name: Repository name.
+        :param ref: Branch, tag, or commit to archive. Pass a commit SHA when the caller has
+            already resolved one, so a push landing in between cannot change what is packed.
+        :param suffix: Extension Forgejo picks the archive format by, e.g. ``tar.gz``.
+        :param handle: Writable binary stream receiving the archive bytes.
+        :raises ForgejoUnavailableError: Forgejo was unreachable, or refused the read.
+        """
+        path = f"api/v1/repos/{owner}/{name}/archive/{ref}.{suffix}"
+        try:
+            # Override the client-wide JSON Accept: what comes back here is an archive.
+            with self._client.stream("GET", path, headers={"Accept": "*/*"}) as response:
+                if not response.is_success:
+                    response.read()
+                    self._raise_for_status(response, f"GET archive {owner}/{name} {ref}.{suffix}")
+                handle.writelines(response.iter_bytes(_ARCHIVE_CHUNK_SIZE))
+        except httpx2.HTTPError as exc:
+            raise ForgejoUnavailableError(f"Forgejo request GET {path} failed: {exc}") from exc
 
     def ensure_branch_protection(self, owner: str, name: str, branch: str) -> None:
         """Forbid force-push (and branch deletion) on the working branch.

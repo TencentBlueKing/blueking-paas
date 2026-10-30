@@ -37,5 +37,9 @@ RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selectio
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# 让 kubectl exec 进入的交互式 bash 也能加载应用环境
+COPY launcher-hook.sh /tmp/launcher-hook.sh
+RUN cat /tmp/launcher-hook.sh >> /etc/bash.bashrc && rm /tmp/launcher-hook.sh
+
 ENV HOME /app
 WORKDIR /app

@@ -86,7 +86,7 @@ const props = defineProps<{
 const enableUpload = computed(() => props.enableUpload !== false);
 
 const emit = defineEmits<{
-  (e: 'send', value: string, images: ChatImage[], modelCode?: string): void;
+  (e: 'send', value: string, images: ChatImage[], modelId?: string): void;
 }>();
 
 const modelCatalogStore = useModelCatalogStore();
@@ -155,7 +155,7 @@ const handleDrop = async (event: DragEvent) => {
 
 const handleSend = () => {
   if (props.disabled || !canSend.value) return;
-  emit('send', draft.value.trim(), images.value, modelCatalogStore.requestModelCode);
+  emit('send', draft.value.trim(), images.value, modelCatalogStore.requestModelId);
   draft.value = '';
   images.value = [];
   nextTick(resizeInput);

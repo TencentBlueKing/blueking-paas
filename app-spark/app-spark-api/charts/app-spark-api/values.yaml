@@ -212,8 +212,17 @@ agent:
   # directModelConfig:
   #   model: deepseek:deepseek-v4-flash
   #   api_key: ""
+  #   # 可选，只用于模型列表展示：name、context_window。
+  #   name: DeepSeek V4 Flash
   # modelSource 为 bkaidev 时可选。LLM 基址由 bkApiUrlTmpl + apigwEnvironment 拼接，换票地址是
   # bkAuth.tokenAuthEndpoint；app 身份用上面的 appCode / appSecret。default_model_name
-  # 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+  # 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。available_models 是提供给用户
+  # 选择的模型 ID 或通配模式（如 deepseek-*-flash），顺序即展示顺序；为空、或一项都没命中时
+  # 返回网关的全部可用模型。非空时必须有一项能匹配 default_model_name，且不能有重复项，否则
+  # 服务启动失败。
   # bkaidevModelConfig:
   #   default_model_name: deepseek-v4-flash
+  #   available_models:
+  #     - deepseek-*-flash
+  #     - hy4-*
+  #     - qwen3-5-397B

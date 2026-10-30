@@ -21,12 +21,19 @@ from __future__ import annotations
 import pytest
 
 from app_spark_api.agent.runtime.entities import (
+    DirectModelAccess,
     EventPage,
     RuntimeHealth,
+    structure_bkaidev_model_config,
+    structure_direct_model_config,
     structure_e2b_config,
     structure_local_process_config,
 )
-from app_spark_api.agent.runtime.exceptions import AgentConfigurationError, AgentUnavailableError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentConfigurationError,
+    AgentUnavailableError,
+    ModelAccessConfigurationError,
+)
 
 MINIMAL_CONFIG = {
     "agent_project_dir": "/srv/app-spark/agent",
@@ -181,6 +188,83 @@ def test_the_idle_timeout_is_the_sandbox_deadline():
     config = structure_e2b_config(MINIMAL_E2B_CONFIG)
 
     assert (config.idle_timeout_seconds, config.max_lifetime_seconds) == (1800, 86400)
+
+
+def test_an_unset_available_list_offers_every_model():
+    config = structure_bkaidev_model_config({})
+
+    assert config.available_models == []
+
+
+def test_an_available_list_including_the_default_model_is_accepted():
+    config = structure_bkaidev_model_config(
+        {"default_model_name": "hy3", "available_models": ["deepseek-v4-flash", "hy3"]}
+    )
+
+    assert config.available_models == ["deepseek-v4-flash", "hy3"]
+
+
+def test_a_pattern_may_cover_the_default_model():
+    config = structure_bkaidev_model_config(
+        {"default_model_name": "deepseek-v4-flash", "available_models": ["hy4-*", "deepseek-*-flash"]}
+    )
+
+    assert config.available_models == ["hy4-*", "deepseek-*-flash"]
+
+
+@pytest.mark.parametrize(
+    ("raw_config", "reasons"),
+    [
+        # 用户不选时跑的是默认模型，它不在列表里，下拉框就显示不出用户实际在用的那个。
+        pytest.param(
+            {"default_model_name": "deepseek-v4-flash", "available_models": ["hy3"]},
+            ["default_model_name", "deepseek-v4-flash"],
+            id="the-default-model-left-out",
+        ),
+        # 模式区分大小写，模型 ID 本身就区分。
+        pytest.param(
+            {"default_model_name": "deepseek-v4-flash", "available_models": ["DeepSeek-*"]},
+            ["default_model_name", "matches nothing"],
+            id="a-pattern-of-another-case",
+        ),
+        pytest.param(
+            {"default_model_name": "hy3", "available_models": ["hy3", "kimi-26", "hy3"]},
+            ["hy3", "more than once"],
+            id="a-duplicated-entry",
+        ),
+        pytest.param(
+            {"default_model_name": "hy3", "available_models": ["hy3", ""]},
+            ["available_models"],
+            id="an-empty-entry",
+        ),
+        # 字符串不能被拆成单个字符再去比对，要直接说明类型不对。
+        pytest.param(
+            {"default_model_name": "hy3", "available_models": "hy3"},
+            ["available_models", "Expected list, got str"],
+            id="not-a-list",
+        ),
+    ],
+)
+def test_an_unusable_available_list_is_refused_by_name(raw_config, reasons):
+    with pytest.raises(ModelAccessConfigurationError) as exc_info:
+        structure_bkaidev_model_config(raw_config)
+
+    for reason in reasons:
+        assert reason in str(exc_info.value)
+
+
+def test_the_direct_display_fields_never_reach_a_runtime():
+    config = structure_direct_model_config(
+        {"model": "deepseek:deepseek-v4-flash", "api_key": "vendor-key", "name": "DeepSeek V4 Flash"}
+    )
+
+    assert config.name == "DeepSeek V4 Flash"
+    assert config.to_access() == DirectModelAccess(model="deepseek:deepseek-v4-flash", api_key="vendor-key")
+
+
+def test_a_misspelled_direct_display_field_is_refused_by_name():
+    with pytest.raises(ModelAccessConfigurationError, match="nmae"):
+        structure_direct_model_config({"model": "deepseek:deepseek-v4-flash", "nmae": "DeepSeek"})
 
 
 def test_a_health_snapshot_is_read_from_the_runtimes_own_words():

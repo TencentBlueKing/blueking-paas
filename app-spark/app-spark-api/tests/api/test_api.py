@@ -36,6 +36,7 @@ from app_spark_api.agent.runtime import (
 from app_spark_api.api import api
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.bk_access_token import AccessTokenUnavailableError
+from app_spark_api.infras.bkaidev import BkAidevGatewayError
 
 SECRET = "internal-secret-token"
 
@@ -101,6 +102,7 @@ def test_agent_runtime_errors_do_not_leak_internal_details(exc, status, detail):
         ),
         (ModelCredentialMissingError(SECRET), 401, "MODEL_CREDENTIAL_MISSING"),
         (AccessTokenUnavailableError(f"refused: {SECRET}"), 502, "MODEL_ACCESS_TOKEN_UNAVAILABLE"),
+        (BkAidevGatewayError(f"answered HTTP 500: {SECRET}"), 502, "MODEL_CATALOG_UNAVAILABLE"),
     ],
 )
 def test_model_access_errors_say_who_has_to_fix_them(exc, status, code):

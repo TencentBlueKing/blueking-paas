@@ -18,14 +18,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, get_origin
 
 from cattrs import Converter
+from cattrs.cols import list_structure_factory
 from cattrs.errors import BaseValidationError
 from cattrs.v import format_exception as format_cattrs_exception
 from cattrs.v import transform_error
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import attrs
 
 ConfigT = TypeVar("ConfigT")
@@ -45,15 +48,48 @@ def validate_non_empty_string(_: object, attribute: attrs.Attribute[str], value:
         raise ValueError(f"{attribute.name} must not be empty")
 
 
-def _structure_str(value: object, _: type[str]) -> str:
-    """Keep configuration strings strict instead of coercing arbitrary values."""
-    if not isinstance(value, str):
-        raise TypeError(f"Expected str, got {type(value).__name__}")
-    return value
+def make_strict_structure_hook(expected: type, *, reject_bool: bool = False) -> Callable[[object, type], object]:
+    """Build a cattrs hook that refuses a value of the wrong JSON type instead of coercing it.
+
+    Example::
+
+        converter.register_structure_hook(int, make_strict_structure_hook(int, reject_bool=True))
+
+    :param expected: The only type a value may already have.
+    :param reject_bool: Also refuse bool, which is a subclass of int.
+    """
+
+    def structure(value: object, _: type) -> object:
+        # bool 是 int 的子类，不单独挡的话 true 会被读成 1。
+        if not isinstance(value, expected) or (reject_bool and isinstance(value, bool)):
+            raise TypeError(f"Expected {expected.__name__}, got {type(value).__name__}")
+
+        return value
+
+    return structure
+
+
+def register_strict_list_hook(converter: Converter) -> None:
+    """Make converter refuse anything but a list where a list field is declared."""
+
+    def make_hook(type_: type) -> Callable[[object, type], list]:
+        structure_items = list_structure_factory(type_, converter)
+
+        def structure(value: object, _: type) -> list:
+            # cattrs 默认把任何可迭代对象当成列表：字符串会被拆成单个字符，{} 和 "" 都会变成 []。
+            if not isinstance(value, list):
+                raise TypeError(f"Expected list, got {type(value).__name__}")
+
+            return structure_items(value, type_)
+
+        return structure
+
+    converter.register_structure_hook_factory(lambda type_: get_origin(type_) is list, make_hook)
 
 
 cattrs_converter = Converter(forbid_extra_keys=True)
-cattrs_converter.register_structure_hook(str, _structure_str)
+cattrs_converter.register_structure_hook(str, make_strict_structure_hook(str))
+register_strict_list_hook(cattrs_converter)
 
 
 def _describe_failure(exc: BaseException, type_: type | None) -> str:

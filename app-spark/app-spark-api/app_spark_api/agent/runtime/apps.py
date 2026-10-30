@@ -17,6 +17,7 @@
 """Django registration for persisted Agent Runtime sandboxes."""
 
 from django.apps import AppConfig
+from django.core.exceptions import ImproperlyConfigured
 
 
 class RuntimeConfig(AppConfig):
@@ -24,3 +25,13 @@ class RuntimeConfig(AppConfig):
 
     default_auto_field = "django.db.models.BigAutoField"
     name = "app_spark_api.agent.runtime"
+
+    def ready(self) -> None:
+        from app_spark_api.agent.runtime.exceptions import ModelAccessConfigurationError
+        from app_spark_api.agent.runtime.model_access import check_model_source_settings
+
+        # 可选模型列表配错要在启动时暴露，不等到用户打开下拉框才报 503。
+        try:
+            check_model_source_settings()
+        except ModelAccessConfigurationError as exc:
+            raise ImproperlyConfigured(str(exc)) from exc

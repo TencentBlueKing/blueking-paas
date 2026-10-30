@@ -5,15 +5,15 @@ import type { ModelCatalogItem } from '../http/types.ts';
 import {
   createStartRunRequest,
   filterModels,
-  resolveModelCode,
+  resolveModelId,
 } from './model-catalog.ts';
 
 const model = (
-  code: string,
-  name = code,
+  id: string,
+  name = id,
   supportsVision = false,
 ): ModelCatalogItem => ({
-  code,
+  id,
   name,
   context_window: null,
   supports_vision: supportsVision,
@@ -26,24 +26,24 @@ const models = [
 ];
 
 test('a valid stored model wins over the API default', () => {
-  assert.equal(resolveModelCode(models, 'glm-online', 'hy3'), 'hy3');
+  assert.equal(resolveModelId(models, 'glm-online', 'hy3'), 'hy3');
 });
 
 test('an unavailable stored model falls back to the API default', () => {
-  assert.equal(resolveModelCode(models, 'glm-online', 'removed'), 'glm-online');
+  assert.equal(resolveModelId(models, 'glm-online', 'removed'), 'glm-online');
 });
 
 test('the first model is used when the API default is unavailable', () => {
-  assert.equal(resolveModelCode(models, 'removed', null), 'hy3');
+  assert.equal(resolveModelId(models, 'removed', null), 'hy3');
 });
 
-test('model search matches name and code without changing API order', () => {
+test('model search matches name and id without changing API order', () => {
   assert.deepEqual(
-    filterModels(models, 'GLM').map(item => item.code),
+    filterModels(models, 'GLM').map(item => item.id),
     ['glm-online'],
   );
   assert.deepEqual(
-    filterModels(models, 'VISION').map(item => item.code),
+    filterModels(models, 'VISION').map(item => item.id),
     ['vision-auto'],
   );
   assert.deepEqual(filterModels(models, 'zzz'), []);
@@ -52,7 +52,7 @@ test('model search matches name and code without changing API order', () => {
 test('run payload includes a selected model and omits an unavailable selection', () => {
   assert.deepEqual(
     createStartRunRequest('build a page', 'hy3'),
-    { content: 'build a page', model_code: 'hy3' },
+    { content: 'build a page', model_id: 'hy3' },
   );
   assert.deepEqual(
     createStartRunRequest('build a page'),

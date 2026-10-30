@@ -109,13 +109,22 @@
 #   model: ''
 #   ## 可选。厂商 API Key，fake: 模型不需要。
 #   api_key: ''
+#   ## 可选，只用于模型列表展示（详见 DirectModelConfig）：name、context_window。
+#   name: ''
 
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选（详见 BkAidevModelConfig）。
 ## app_code / app_secret 用上面的 APP_CODE / APP_SECRET，不在这里再配。
 ## LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接，换票地址是 TOKEN_AUTH_ENDPOINT，都不在这里配。
 ## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
+## available_models 是提供给用户选择的模型 ID 或通配模式（如 deepseek-*-flash），顺序即展示顺序；
+## 为空、或一项都没命中时返回网关的全部可用模型。非空时必须有一项能匹配 default_model_name，
+## 且不能有重复项，否则服务启动失败。
 # BKAIDEV_MODEL_CONFIG:
 #   default_model_name: deepseek-v4-flash
+#   available_models:
+#     - deepseek-*-flash
+#     - hy4-*
+#     - qwen3-5-397B
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。backend 可选 host_tmp_path（root 为父目录）或 bk_repo（root 为

@@ -58,6 +58,12 @@ class FrontendFeatureViewSet(ViewSet):
             "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
             # 是否允许用户自定义持久存储大小
             "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
+            # 挂载卷内容: 允许上传的文件后缀白名单, 为空表示允许所有后缀
+            "MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS": settings.MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS,
+            # 挂载卷内容: 单个文件大小上限 (字节)
+            "MOUNT_FILE_UPLOAD_MAX_SIZE": settings.MOUNT_FILE_UPLOAD_MAX_SIZE,
+            # 挂载卷内容: 挂载资源内容总大小上限 (字节)
+            "MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE": settings.MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE,
             # 是否开启构建 S-Mart 包功能
             "SMART_APP_BUILDER": settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER,
         }

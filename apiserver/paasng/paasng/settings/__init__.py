@@ -1692,6 +1692,20 @@ PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM: bool = settings.get("PERSISTENT_STORAGE_SI
 PERSISTENT_STORAGE_SIZE_MAX: int = settings.get("PERSISTENT_STORAGE_SIZE_MAX", 100)
 
 # ---------------------------------------------
+#  挂载卷内容文件限制
+# ---------------------------------------------
+# NOTE: 文件的选择与解析由前端完成, 后端在确认提交链路上做服务端校验兜底
+
+# 允许上传的文件后缀白名单, 为空表示允许所有后缀
+MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS: list = settings.get("MOUNT_FILE_UPLOAD_ALLOWED_EXTENSIONS", [])
+
+# 单个文件大小上限 (单位: 字节)
+MOUNT_FILE_UPLOAD_MAX_SIZE: int = settings.get("MOUNT_FILE_UPLOAD_MAX_SIZE", 512 * 1024)
+
+# 挂载资源内容总大小上限 (单位: 字节)
+MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE: int = settings.get("MOUNT_FILE_UPLOAD_MAX_SOURCE_SIZE", 1 * 1024 * 1024)
+
+# ---------------------------------------------
 #  前端特性配置
 # ---------------------------------------------
 # 应用市场可见范围

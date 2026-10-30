@@ -54,6 +54,9 @@ class ErrorCodes:
     UPDATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to update volume mount"))
     LIST_VOLUME_SOURCES_FAILED = ErrorCode(_("Failed to list volume mount sources"))
     CREATE_VOLUME_SOURCE_FAILED = ErrorCode(_("Failed to create volume mount source"))
+    VOLUME_FILE_EXTENSION_NOT_ALLOWED = ErrorCode(_("The file extension is not allowed"))
+    VOLUME_FILE_TOO_LARGE = ErrorCode(_("The file is too large"))
+    VOLUME_SOURCE_SIZE_EXCEEDED = ErrorCode(_("The volume source is too large"))
 
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode(_("Failed to create credentials"))

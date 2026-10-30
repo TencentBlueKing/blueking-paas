@@ -28,7 +28,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 
-from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME
+from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME, REDIS_SERVICE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,20 @@ def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] =
     env_vars = _get_service_env_vars(app_code, run_env, GCS_MYSQL_SERVICE_NAME, module_name)
     if env_vars:
         return env_vars["GCS_MYSQL_USER"]
+
+    return ""
+
+
+def get_redis_bk_module(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 Redis 增强服务指标中的 bk_module, 模块未绑定 Redis 时返回空
+
+    规则按 bk_app_code / bk_module / bk_env 过滤而不按实例 ID 过滤: 已下发的规则不会随实例重新分配而更新
+    """
+    if not module_name:
+        raise ValueError(f"get_redis_bk_module(app_code: {app_code}): module_name is required")
+
+    if _get_service_env_vars(app_code, run_env, REDIS_SERVICE_NAME, module_name):
+        return module_name
 
     return ""
 
@@ -157,6 +171,7 @@ LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     "bkrepo_private_bucket": get_bkrepo_private_bucket,
     "bkrepo_public_bucket": get_bkrepo_public_bucket,
     "gcs_mysql_user": get_gcs_mysql_user,
+    "redis_bk_module": get_redis_bk_module,
 }
 
 

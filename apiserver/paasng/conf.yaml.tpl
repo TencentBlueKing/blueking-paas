@@ -728,6 +728,10 @@ BK_CI_CLIENT_USERNAME = "blueking"
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'gcs_mysql'
+# REDIS_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'redis'
 
 ## ------------------------------------ 蓝鲸日志配置 ------------------------------------
 # 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"

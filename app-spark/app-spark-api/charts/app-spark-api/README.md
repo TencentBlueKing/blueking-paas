@@ -29,6 +29,10 @@ Chart 在 e2b 模式下会自动去掉它们。`api_key`、`api_url`、`callback
 e2b 模式每个 Pod 跑 4 个 uvicorn worker，与 Dockerfile 的默认命令一致；同一 Pod 内的 worker 共享
 `/data/app-spark`，所以单副本用 `host_tmp_path` 也没问题。
 
+另外还有一个 Celery worker Deployment，和 API 使用同一镜像、不同命令，副本数固定为 1，不随 `replicaCount` 变化。
+它消费 RabbitMQ 上的后台任务。队列由环境提供，chart 只把 `externalRabbitmq` 的 host、port、user、password、vhost
+注入 API 和该 worker。
+
 e2b 模式可以多副本（`replicaCount` 大于 1），前提是 `agent.contextStorage.backend` 为 `bk_repo`。其余后端
 （包括默认的 `host_tmp_path`）只存在单个 Pod 内，会话换到别的副本冷启动时读不回上下文，Chart 渲染时直接拒绝。
 改用 `bk_repo` 时 `root` 要一起改成通用仓库名：只改 `backend`，Helm 会把默认的路径合并进来，Chart 会拒绝以 `/` 开头的 `root`。

@@ -109,6 +109,14 @@ externalDatabase:
   options:
     charset: utf8mb4
 
+# 使用外部环境已有的 RabbitMQ，不在 chart 里安装队列。
+externalRabbitmq:
+  host: ""
+  port: 5672
+  user: ""
+  password: ""
+  vhost: ""
+
 # 对应 Django CACHES.default；null 使用项目的文件缓存默认值。
 # defaultCacheConfig: null
 

@@ -1,5 +1,6 @@
 {{- $django := .Values.django | default dict -}}
 {{- $database := .Values.externalDatabase | default dict -}}
+{{- $rabbitmq := .Values.externalRabbitmq | default dict -}}
 {{- $bkAuth := .Values.bkAuth | default dict -}}
 {{- $agent := .Values.agent | default dict -}}
 {{- $providerConfig := $agent.runtimeProviderConfig -}}
@@ -35,6 +36,11 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "DATABASE_USER" $database.user
   "DATABASE_PASSWORD" $database.password
   "DATABASE_OPTIONS" $database.options
+  "RABBITMQ_HOST" $rabbitmq.host
+  "RABBITMQ_PORT" $rabbitmq.port
+  "RABBITMQ_USER" $rabbitmq.user
+  "RABBITMQ_PASSWORD" $rabbitmq.password
+  "RABBITMQ_VHOST" $rabbitmq.vhost
   "DEFAULT_CACHE_CONFIG" .Values.defaultCacheConfig
   "ENABLE_MULTI_TENANT_MODE" .Values.enableMultiTenantMode
   "LOGIN_FULL" .Values.loginFull

@@ -29,6 +29,11 @@ def test_default_configmap_omits_optional_settings():
     for setting in ("DEBUG", "LANGUAGE_CODE", "LANGUAGES", "TIME_ZONE", "STATIC_URL", "AGENT_RUNTIME_PROVIDER"):
         assert f"APP_SPARK_API_{setting}" not in data
     assert "APP_SPARK_API_DATABASE_HOST" in data
+    assert "APP_SPARK_API_RABBITMQ_HOST" in data
+    assert "APP_SPARK_API_RABBITMQ_PORT" in data
+    assert "APP_SPARK_API_RABBITMQ_USER" in data
+    assert "APP_SPARK_API_RABBITMQ_PASSWORD" in data
+    assert "APP_SPARK_API_RABBITMQ_VHOST" in data
     assert "APP_SPARK_API_APP_CODE" in data
     assert "APP_SPARK_API_AGENT_RUNTIME_PROVIDER_CONFIG" in data
     assert "APP_SPARK_API_FORCE_SCRIPT_NAME" in data
@@ -47,6 +52,7 @@ def test_null_groups_and_values_are_omitted():
             [
                 "django",
                 "externalDatabase",
+                "externalRabbitmq",
                 "bkAuth",
                 "agent",
                 "enableMultiTenantMode",
@@ -70,6 +76,7 @@ def test_null_groups_and_values_are_omitted():
         ("defaultCacheConfig", {}, "DEFAULT_CACHE_CONFIG"),
         ("django.languageCode", "en", "LANGUAGE_CODE"),
         ("externalDatabase.password", "00123", "DATABASE_PASSWORD"),
+        ("externalRabbitmq.password", "00123", "RABBITMQ_PASSWORD"),
         ("blobstoreBkrepoConfig", {"PROJECT": "test", "PASSWORD": "true"}, "BLOBSTORE_BKREPO_CONFIG"),
         ("django.encryptSecretKey", "Q3NyY0V3cFpTUlVNbHp3RUZMYWtXaEdOdXp3eWZNSkc=", "BKKRILL_ENCRYPT_SECRET_KEY"),
         ("repoServer", {"type": "forgejo", "org": "app-spark"}, "REPO_SERVER"),

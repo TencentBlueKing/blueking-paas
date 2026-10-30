@@ -14,6 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 from typing import TYPE_CHECKING, Dict, Optional
+from urllib.parse import quote
 
 if TYPE_CHECKING:
     from dynaconf.base import LazySettings
@@ -40,3 +41,15 @@ def get_database_conf(settings: LazySettings) -> Optional[Dict]:
             "OPTIONS": database_options,
         }
     return None
+
+
+def build_rabbitmq_broker_url(settings: LazySettings) -> str:
+    """Build the AMQP URL from the five broker settings."""
+
+    # 没写的项用占位，跟其他 settings.get 一样。不在这里连队列。
+    host = settings.get("RABBITMQ_HOST", "rabbitmq.example.com")
+    port = settings.get("RABBITMQ_PORT", 5672)
+    user = quote(str(settings.get("RABBITMQ_USER", "app-spark")), safe="")
+    password = quote(str(settings.get("RABBITMQ_PASSWORD", "test-rabbitmq-password")), safe="")
+    vhost = quote(str(settings.get("RABBITMQ_VHOST", "app-spark")), safe="")
+    return f"amqp://{user}:{password}@{host}:{port}/{vhost}"

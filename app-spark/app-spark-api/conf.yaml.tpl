@@ -28,6 +28,14 @@
 # DATABASE_PORT: ''
 # DATABASE_OPTIONS: {}
 
+## RabbitMQ。没写时用占位默认值，进程能起来，但占位地址不是真实队列。
+## 启动时不探测队列是否可达。口令不要写进仓库。
+# RABBITMQ_HOST: ''
+# RABBITMQ_PORT: 5672
+# RABBITMQ_USER: ''
+# RABBITMQ_PASSWORD: ''
+# RABBITMQ_VHOST: ''
+
 ## 缓存
 ## 优先级最高，若不配置则默认使用本地临时文件缓存（仅适用于本地开发）
 ## 生产环境请配置远程服务缓存（如 RedisCache、DatabaseCache），以保证多副本多 worker 时缓存数据一致

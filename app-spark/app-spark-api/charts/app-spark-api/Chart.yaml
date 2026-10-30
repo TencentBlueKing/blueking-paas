@@ -2,8 +2,8 @@ apiVersion: v2
 name: app-spark-api
 description: App Spark API service
 type: application
-version: 0.1.0-alpha.5
-appVersion: "0.1.0-alpha.5"
+version: 0.1.0-alpha.6
+appVersion: "0.1.0-alpha.6"
 kubeVersion: ">=1.19.0-0"
 dependencies:
   - name: common

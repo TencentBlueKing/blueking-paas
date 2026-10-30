@@ -139,6 +139,12 @@ class ErrorCodes:
         _("The model list is unavailable. Please retry later."),
         status_code=HTTPStatus.BAD_GATEWAY,
     )
+    # Refused rather than quietly swapped for the default model: a user who believes they are
+    # talking to one model while another answers cannot make sense of the replies.
+    MODEL_NOT_AVAILABLE = ErrorCode(
+        _("The selected model is not available. Please choose another one."),
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
 
     # --- Workspace application preview --------------------------------------------------------------
     # Two separate failures, because only the first one is the user's to fix. No Runtime means

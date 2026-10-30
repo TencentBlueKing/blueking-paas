@@ -28,6 +28,20 @@ logger = logging.getLogger(__name__)
 
 VCS_DIRECTORIES = (".git", ".hg", ".svn", ".bzr", "CVS")
 
+# Absolute paths only, never a PATH lookup, so whatever is first on PATH cannot stand in for tar.
+# Systems disagree on whether tar lives in /bin or /usr/bin.
+_TAR_CANDIDATES = ("/bin/tar", "/usr/bin/tar")
+
+
+def _find_tar_executable() -> str:
+    """Return the first tar binary found at a known absolute path."""
+    for candidate in _TAR_CANDIDATES:
+        # Directories are executable too, so X_OK alone would take a directory named tar for tar.
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+
+    raise RuntimeError(f"No tar executable found at any of {_TAR_CANDIDATES}")
+
 
 def compress_directory(source_path, target_path):
     """Compress a directory using tar command, excluding VCS metadata."""
@@ -36,7 +50,7 @@ def compress_directory(source_path, target_path):
     # see: https://serverfault.com/questions/110208/different-md5sums-for-same-tar-contents
     process = subprocess.Popen(
         [
-            "/bin/tar",
+            _find_tar_executable(),
             *(f"--exclude={directory}" for directory in VCS_DIRECTORIES),
             "-czf",
             str(target_path),
@@ -60,7 +74,7 @@ def uncompress_directory(source_path, target_path):
     target_path = os.path.abspath(target_path)
     # -m, --touch                don't extract file modified time
     process = subprocess.Popen(
-        ["/bin/tar", "-m", "-xf", str(source_path), "-C", str(target_path)],
+        [_find_tar_executable(), "-m", "-xf", str(source_path), "-C", str(target_path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding="utf-8",

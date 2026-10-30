@@ -188,8 +188,7 @@ async def _fetch_gateway_models(
 
 def _build_direct_catalog(config: DirectModelConfig) -> ModelCatalog:
     """Describe the one fixed model of a direct deployment."""
-    # model 形如 deepseek:deepseek-v4-flash。冒号后的部分才是用户认得的模型名，也是一轮对话提交的值。
-    model_id = config.model.partition(":")[2] or config.model
+    model_id = config.model_id
     option = ModelOption(id=model_id, name=config.name or model_id, context_window=config.context_window)
     return ModelCatalog(source=ModelSource.DIRECT, allow_user_switch=False, default_model_id=model_id, models=[option])
 

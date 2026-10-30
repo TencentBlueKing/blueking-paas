@@ -51,22 +51,31 @@ def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient
     ("field", "value"),
     [
         ("MODEL_NAME", ""),
-        ("MODEL_NAME", "not-a-listed-model"),
+        ("MODEL_NAME", "   "),
         ("MODEL_BASE_URL", ""),
     ],
 )
-def test_readiness_requires_url_and_listed_model(
+def test_readiness_requires_url_and_model_name(
     api: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     field: str,
     value: str,
 ) -> None:
-    """网关地址和对照表内模型名缺一不可；表外名称不得假装就绪。"""
+    """网关地址和模型名缺一不可。"""
     monkeypatch.setattr(settings, field, value)
 
     reported: dict[str, Any] = api.get("/health").json()
 
     assert reported["model_ready"] is False
+
+
+def test_any_gateway_model_name_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模型名不再查对照表，hy3 这类以前表外的名字照样就绪，能不能调由网关裁决。"""
+    monkeypatch.setattr(settings, "MODEL_NAME", "hy3")
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is True
 
 
 def test_a_missing_token_is_reported_as_unready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

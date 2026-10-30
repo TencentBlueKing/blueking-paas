@@ -26,7 +26,7 @@ uv sync
 | `APP_SPARK_AGENT_RUNTIME_TOKEN` | 是 | 业务 HTTP 接口的 Bearer（含 `GET /health`、`POST /runs`、控制面）。交互文档和 OpenAPI 不提供 |
 | `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN` | 走 bkaidev 时是 | 用户态 access_token。出站只放进 `X-Bkapi-Authorization`。不参与官网直连 |
 | `APP_SPARK_AGENT_MODEL_API_KEY` | 走官网直连时是 | 和 `MODEL` 的 `<provider>:<model>` 一起走官网 Bearer。有任一网关项时不拿它补网关 |
-| `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 不带 vendor 前缀，必须落在对照表（本期 `deepseek-v4-flash`） |
+| `APP_SPARK_AGENT_MODEL_NAME` | 走 bkaidev 时是 | 沙箱默认模型，不带 vendor 前缀（如 `deepseek-v4-flash`）。没指定模型的一轮和上下文压缩都用它 |
 | `APP_SPARK_AGENT_MODEL_BASE_URL` | 走 bkaidev 时是 | bkaidev LLM 网关 v1 入口，不要带 `/chat/completions` |
 | `APP_SPARK_AGENT_APP_PORT` | 是 | 用户应用监听的端口，未注入时缺省 `8000`。e2b 注入 `preview_port`（默认 `9000`，各沙箱相同）；`local_process` 为每个 Runtime 分一个不同的端口。`launch_app` 用它拼启动命令，并注入同名环境变量；就绪只认该端口应不应答 HTTP |
 | `APP_SPARK_AGENT_PORT` | 否 | 监听端口，未注入时缺省 `8090`。镜像 ENV 里的 `8090` 只对本地 `docker run` 生效；e2b 经 envd 启动时由接入层注入 `runtime_port`（默认 `8000`） |
@@ -40,8 +40,9 @@ uv sync
 | `APP_SPARK_AGENT_MODEL` | 否 | 缺省 `deepseek:deepseek-v4-flash` |
 
 就绪门闩三选一，不要混用：`fake:*` 直接就绪；只配 `MODEL_API_KEY`（没有网关项）走官网直连；
-`BK_AIDEV_ACCESS_TOKEN`、`MODEL_BASE_URL`、对照表内的 `MODEL_NAME` 三者齐全走 bkaidev。
+`BK_AIDEV_ACCESS_TOKEN`、`MODEL_BASE_URL`、`MODEL_NAME` 三者齐全走 bkaidev。
 网关三项只要出现一项，缺的那些不会用 `MODEL_API_KEY` 补上。
+网关下任何模型名都用同一份显式能力档（工具调用、结构化输出全开），不按名字推断。
 bkaidev 鉴权是 `X-Bkapi-Authorization: {"access_token":"..."}`，不是 `Authorization: Bearer`。
 沙箱不注入 `bk_app_code` / `bk_app_secret`。
 

@@ -15,13 +15,20 @@ def run_body(
     run_id: str,
     context_version: int,
     prompt: str = "hello",
+    model_name: str | None = None,
 ) -> dict[str, object]:
     """Build a minimal valid AG-UI run request.
 
     This document is AG-UI's, so it keeps AG-UI's camelCase -- including ``threadId``, which is
     the protocol's name for what the Runtime calls a conversation everywhere else. Only what the
     Runtime itself emits is snake_case.
+
+    :param model_name: Sent as forwardedProps.modelName; omitted when None.
     """
+    forwarded_props: dict[str, object] = {"contextVersion": context_version}
+    if model_name is not None:
+        forwarded_props["modelName"] = model_name
+
     return {
         "threadId": conversation_id,
         "runId": run_id,
@@ -29,7 +36,7 @@ def run_body(
         "messages": [{"id": str(uuid4()), "role": "user", "content": prompt}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"contextVersion": context_version},
+        "forwardedProps": forwarded_props,
     }
 
 

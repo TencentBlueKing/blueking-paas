@@ -1,4 +1,4 @@
-"""就绪门闩：fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套。"""
+"""就绪门闩：fake、只配 MODEL_API_KEY 的直连、或齐全的网关三件套（模型名不查表）。"""
 
 import pytest
 from marshmallow import ValidationError
@@ -15,26 +15,27 @@ def ready(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
 
 
-def test_listed_model_has_an_explicit_profile(ready: None) -> None:
+def test_the_gateway_profile_turns_every_capability_on() -> None:
+    # 推断出的档会关掉 supports_tool_return_schema，保守档连工具调用都关，所以这四项必须显式全开。
     profile = settings.openai_capability_profile()
 
-    assert settings.model_profile() == "deepseek"
-    assert settings.is_model_ready() is True
-    assert profile is not None
     assert profile["supports_tools"] is True
     assert profile["supports_json_schema_output"] is True
+    assert profile["supports_json_object_output"] is True
+    assert profile["supports_tool_return_schema"] is True
 
 
-def test_unknown_model_has_no_capability_profile(ready: None, monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "MODEL_NAME", "not-a-listed-model")
+@pytest.mark.parametrize("name", ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"])
+def test_any_model_name_completes_the_gateway(ready: None, monkeypatch: MonkeyPatch, name: str) -> None:
+    monkeypatch.setattr(settings, "MODEL_NAME", name)
 
-    assert settings.openai_capability_profile() is None
+    assert settings.model_mode() == settings.ModelMode.GATEWAY
+    assert settings.is_model_ready() is True
 
 
-def test_unknown_model_is_not_inferred(ready: None, monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "MODEL_NAME", "some-new-vendor-model")
+def test_a_blank_model_name_leaves_the_gateway_unready(ready: None, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "MODEL_NAME", "   ")
 
-    assert settings.model_profile() is None
     assert settings.is_model_ready() is False
 
 

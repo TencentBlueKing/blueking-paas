@@ -119,6 +119,7 @@
 ## available_models 是提供给用户选择的模型 ID 或通配模式（如 deepseek-*-flash），顺序即展示顺序；
 ## 为空、或一项都没命中时返回网关的全部可用模型。非空时必须有一项能匹配 default_model_name，
 ## 且不能有重复项，否则服务启动失败。
+## 每轮对话带的 model_id：非空时只接受能被列表匹配上的，为空时交给网关裁决。
 # BKAIDEV_MODEL_CONFIG:
 #   default_model_name: deepseek-v4-flash
 #   available_models:

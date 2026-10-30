@@ -59,7 +59,7 @@ watch(() => route.params.projectId, async (projectId) => {
       await projectStore.sendMessage(
         initialMessage.content,
         [],
-        initialMessage.modelCode,
+        initialMessage.modelId,
       );
     }
   } catch (error) {

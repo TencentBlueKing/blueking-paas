@@ -1,7 +1,7 @@
 <template>
   <div class="model-selector">
     <bk-popover
-      v-if="switchable"
+      v-if="canSwitchModel"
       ref="popoverRef"
       trigger="click"
       :placement="placement"
@@ -42,13 +42,13 @@
           <div class="model-selector__list" role="listbox" aria-label="可用模型">
             <button
               v-for="model in filteredModels"
-              :key="model.code"
+              :key="model.id"
               type="button"
               class="model-selector__option"
-              :class="{ 'is-selected': model.code === selectedCode }"
+              :class="{ 'is-selected': model.id === selectedModelId }"
               role="option"
-              :aria-selected="model.code === selectedCode"
-              @click="handleSelect(model.code)"
+              :aria-selected="model.id === selectedModelId"
+              @click="handleSelect(model.id)"
             >
               <strong class="model-selector__name">{{ model.name }}</strong>
               <em v-if="model.supports_vision" class="model-selector__multimodal">多模态</em>
@@ -107,9 +107,9 @@ const {
   status,
   models,
   catalog,
-  selectedCode,
+  selectedModelId,
   selectedModel,
-  switchable,
+  canSwitchModel,
   displayName,
 } = storeToRefs(modelStore);
 const {
@@ -132,8 +132,8 @@ const handleAfterShow = async () => {
   searchRef.value?.focus();
 };
 
-const handleSelect = (code: string) => {
-  modelStore.selectModel(code);
+const handleSelect = (modelId: string) => {
+  modelStore.selectModel(modelId);
   close();
 };
 

@@ -205,7 +205,7 @@ const submitPrompt = async () => {
     projectStore.queueInitialMessage(
       created.id,
       content,
-      modelCatalogStore.requestModelCode,
+      modelCatalogStore.requestModelId,
     );
     await router.push({ name: 'project', params: { projectId: created.id } });
   } catch (error) {

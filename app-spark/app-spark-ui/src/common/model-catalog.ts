@@ -1,14 +1,14 @@
 import type { ModelCatalogItem, StartRunRequest } from '../http/types';
 
-export const resolveModelCode = (
+export const resolveModelId = (
   models: ModelCatalogItem[],
-  defaultCode: string,
-  storedCode?: string | null,
+  defaultModelId: string,
+  storedModelId?: string | null,
 ): string | null => {
-  const stored = storedCode?.trim();
-  if (stored && models.some(model => model.code === stored)) return stored;
-  if (models.some(model => model.code === defaultCode)) return defaultCode;
-  return models[0]?.code ?? null;
+  const stored = storedModelId?.trim();
+  if (stored && models.some(model => model.id === stored)) return stored;
+  if (models.some(model => model.id === defaultModelId)) return defaultModelId;
+  return models[0]?.id ?? null;
 };
 
 export const filterModels = (models: ModelCatalogItem[], keyword: string): ModelCatalogItem[] => {
@@ -16,14 +16,14 @@ export const filterModels = (models: ModelCatalogItem[], keyword: string): Model
   if (!normalized) return models;
   return models.filter(model => (
     model.name.toLocaleLowerCase().includes(normalized)
-    || model.code.toLocaleLowerCase().includes(normalized)
+    || model.id.toLocaleLowerCase().includes(normalized)
   ));
 };
 
 export const createStartRunRequest = (
   content: string,
-  modelCode?: string,
+  modelId?: string,
 ): StartRunRequest => ({
   content,
-  ...(modelCode ? { model_code: modelCode } : {}),
+  ...(modelId ? { model_id: modelId } : {}),
 });

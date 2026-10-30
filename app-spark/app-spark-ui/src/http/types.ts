@@ -136,7 +136,7 @@ export interface PreviewResponse {
 export type ModelCatalogSource = 'bkaidev' | 'direct';
 
 export interface ModelCatalogItem {
-  code: string;
+  id: string;
   name: string;
   context_window: number | null;
   supports_vision: boolean;
@@ -144,14 +144,16 @@ export interface ModelCatalogItem {
 
 export interface ModelCatalogResponse {
   source: ModelCatalogSource;
-  switchable: boolean;
-  default_code: string;
+  /** 平台是否允许用户在会话中切换模型 */
+  allow_user_switch: boolean;
+  /** 用户不选时使用的模型 ID，可能不在 models 中 */
+  default_model_id: string;
   models: ModelCatalogItem[];
 }
 
 export interface StartRunRequest {
   content: string;
-  model_code?: string;
+  model_id?: string;
 }
 
 export interface ListUiEventsQuery {

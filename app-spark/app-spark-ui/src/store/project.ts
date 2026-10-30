@@ -61,7 +61,7 @@ export const useProjectStore = defineStore('project', () => {
   const pendingInitialMessage = ref<{
     projectId: string;
     content: string;
-    modelCode?: string;
+    modelId?: string;
   } | null>(null);
   // 取更早一页历史用的游标，null 表示已经翻到会话开头（或者还没拉过第一页）。
   const historyCursor = ref<string | null>(null);
@@ -112,10 +112,10 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.toolCalls = new Map();
   };
 
-  const queueInitialMessage = (id: string, content: string, modelCode?: string) => {
+  const queueInitialMessage = (id: string, content: string, modelId?: string) => {
     const text = content.trim();
     pendingInitialMessage.value = id && text
-      ? { projectId: id, content: text, modelCode }
+      ? { projectId: id, content: text, modelId }
       : null;
   };
 
@@ -716,7 +716,7 @@ export const useProjectStore = defineStore('project', () => {
   };
 
   // TODO: 项目对话暂不上传图片，后续再接入
-  const sendMessage = async (text: string, images: ChatImage[] = [], modelCode?: string) => {
+  const sendMessage = async (text: string, images: ChatImage[] = [], modelId?: string) => {
     void images;
     const content = text.trim();
     if (!content || busy.value || !projectId.value || conversationNumber.value == null || !isLive.value) {
@@ -778,7 +778,7 @@ export const useProjectStore = defineStore('project', () => {
       const response = await startConversationRun(
         runProjectId,
         runNumber,
-        createStartRunRequest(content, modelCode),
+        createStartRunRequest(content, modelId),
         controller.signal,
       );
       if (!stillCurrent()) return;

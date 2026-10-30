@@ -58,9 +58,9 @@ class BkAidevGatewayClient:
         self._transport = transport
 
     async def list_models(self) -> list[GatewayModel]:
-        """GET /models: the models the gateway lets this app call for this user.
+        """GET /models: the models the gateway lets this app call.
 
-        :return: The models, in the gateway's order.
+        :return: The readable models, in the gateway's order; unreadable cards are skipped.
         :raises BkAidevGatewayError: If the gateway was unreachable, answered non-2xx, or
             answered with a body that is not a model list.
         """

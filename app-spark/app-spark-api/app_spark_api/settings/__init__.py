@@ -455,13 +455,13 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 ## BKAIDEV_MODEL_CONFIG:
 ##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash，须是 agent 支持的模型名。
 ##   default_model_name: deepseek-v4-flash
-##   ## 可选。模型列表接口提供给用户选择的模型编码，顺序即展示顺序；为空时不过滤，返回网关对本应用
-##   ## 开放、且能调工具的全部模型。编码不能重复；非空时必须包含 default_model_name，否则服务启动失败。
-##   ## 改动后重启生效。
-##   recommended_models:
-##     - deepseek-v4.1-flash
-##     - deepseek-v4-flash
-##     - hy4-preview
+##   ## 可选。模型列表接口提供给用户选择的模型，顺序即展示顺序。每项是模型 ID 或通配模式（fnmatch 的
+##   ## * ? [...]，区分大小写），一项命中多个模型时按网关顺序。为空时不过滤，返回网关对本应用开放、且能
+##   ## 调工具的全部模型；配了但一项都没命中时同样退回全部，并记 warning。
+##   ## 不能有重复项；非空时必须有一项能匹配 default_model_name，否则服务启动失败。改动后重启生效。
+##   available_models:
+##     - deepseek-*-flash
+##     - hy4-*
 ##     - qwen3-5-397B
 BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 

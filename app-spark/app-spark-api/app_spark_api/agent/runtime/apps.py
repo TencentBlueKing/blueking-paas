@@ -30,7 +30,7 @@ class RuntimeConfig(AppConfig):
         from app_spark_api.agent.runtime.exceptions import ModelAccessConfigurationError
         from app_spark_api.agent.runtime.model_access import check_model_source_settings
 
-        # 推荐模型列表配错要在启动时暴露，不等到用户打开下拉框才报 503。
+        # 可选模型列表配错要在启动时暴露，不等到用户打开下拉框才报 503。
         try:
             check_model_source_settings()
         except ModelAccessConfigurationError as exc:

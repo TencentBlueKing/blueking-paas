@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import logging
 
 import attrs
 from cattrs import Converter
@@ -27,9 +27,9 @@ from cattrs.gen import make_dict_structure_fn, override
 from cattrs.v import transform_error
 
 from app_spark_api.infras.bkaidev.exceptions import BkAidevGatewayError
+from app_spark_api.utils.attrs import make_strict_structure_hook
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+logger = logging.getLogger(__name__)
 
 
 @attrs.frozen
@@ -50,65 +50,55 @@ class GatewayModelProperty:
 class GatewayModel:
     """One model the gateway lets this app call, as listed by GET /models.
 
-    :param code: The llm_code, sent back as the model name of a chat completion.
+    :param id: The llm_code, sent back as the model name of a chat completion.
     :param properties: The gateway's extension fields; None when the card has none.
     """
 
-    code: str
+    id: str
     properties: GatewayModelProperty | None = None
-
-
-@attrs.frozen
-class GatewayModelList:
-    """The body of GET /models: an OpenAI list object."""
-
-    data: list[GatewayModel]
-
-
-def _structure_strict(expected: type, *, reject_bool: bool = False) -> Callable[[object, type], object]:
-    """Build a hook that refuses a value of the wrong JSON type instead of coercing it."""
-
-    def structure(value: object, _: type) -> object:
-        # bool 是 int 的子类，不单独挡的话 "max_model_len": true 会被读成 1。
-        if not isinstance(value, expected) or (reject_bool and isinstance(value, bool)):
-            raise TypeError(f"Expected {expected.__name__}, got {type(value).__name__}")
-
-        return value
-
-    return structure
 
 
 # 上游卡片上的字段远多于这里读的那几个，而且会继续加，所以不开 forbid_extra_keys。
 # 读到的字段则按 JSON 类型严格校验："support_tools": "false" 被宽松转换成 True 的话，
 # 一个不能调工具的模型就混进了列表。
 _converter = Converter()
-_converter.register_structure_hook(str, _structure_strict(str))
-_converter.register_structure_hook(bool, _structure_strict(bool))
-_converter.register_structure_hook(int, _structure_strict(int, reject_bool=True))
-# Python 属性避开 id / property 这两个内置名，JSON 仍用网关的字段名。
+_converter.register_structure_hook(str, make_strict_structure_hook(str))
+_converter.register_structure_hook(bool, make_strict_structure_hook(bool))
+_converter.register_structure_hook(int, make_strict_structure_hook(int, reject_bool=True))
+# Python 属性避开 property 这个内置名，JSON 仍用网关的字段名。
 _converter.register_structure_hook(
     GatewayModel,
-    make_dict_structure_fn(
-        GatewayModel,
-        _converter,
-        code=override(rename="id"),
-        properties=override(rename="property"),
-    ),
+    make_dict_structure_fn(GatewayModel, _converter, properties=override(rename="property")),
 )
 
 
 def structure_gateway_model_list(payload: object) -> list[GatewayModel]:
-    """Read the models out of a GET /models body.
+    """Read the models out of a GET /models body, skipping the cards that cannot be read.
 
     :param payload: Decoded JSON body.
-    :return: The models, in the gateway's order.
-    :raises BkAidevGatewayError: If the body is not the shape GET /models promises.
+    :return: The readable models, in the gateway's order.
+    :raises BkAidevGatewayError: If the body is not a model list, or none of its cards can be read.
     """
-    try:
-        return _converter.structure(payload, GatewayModelList).data
-    except BaseValidationError as exc:
-        # 异常组自己的 str() 只有「N sub-exceptions」，展开才知道是哪张卡片的哪个字段不对。
-        reasons = "; ".join(transform_error(exc, path="$"))
-        raise BkAidevGatewayError(f"Unreadable GET /models response: {reasons}") from exc
-    except (AttributeError, TypeError, ValueError) as exc:
-        raise BkAidevGatewayError(f"Unreadable GET /models response: {exc}") from exc
+    # 外层结构不对说明整张响应不可信。{"data": {}} 或 {"data": ""} 不能当成「没有模型」。
+    cards = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(cards, list):
+        raise BkAidevGatewayError("Unreadable GET /models response: $.data is not a list")
+
+    # 卡片由网关维护且字段还在增加。一张与本服务无关的卡片写坏了，不该让所有人的下拉框都 502，
+    # 所以逐张读，读不了的跳过。support_tools 类型不对的卡片也跳过，不会混进不能调工具的模型。
+    models = []
+    for index, card in enumerate(cards):
+        path = f"$.data[{index}]"
+        try:
+            models.append(_converter.structure(card, GatewayModel))
+        except BaseValidationError as exc:
+            # 异常组自己的 str() 只有「N sub-exceptions」，展开才知道是哪个字段不对。
+            logger.warning("Skipping an unreadable GET /models card: %s", "; ".join(transform_error(exc, path=path)))
+        except (AttributeError, TypeError, ValueError) as exc:
+            logger.warning("Skipping an unreadable GET /models card at %s: %s", path, exc)
+
+    # 有卡片却一张都读不了，多半是网关改了格式，和真的没有模型是两回事。
+    if cards and not models:
+        raise BkAidevGatewayError(f"Unreadable GET /models response: none of its {len(cards)} cards can be read")
+
+    return models

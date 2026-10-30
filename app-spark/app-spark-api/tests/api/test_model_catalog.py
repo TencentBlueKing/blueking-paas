@@ -79,6 +79,24 @@ class FakeUpstream:
         return httpx2.Response(HTTPStatus.NOT_FOUND)
 
 
+class FakeClock:
+    """A monotonic clock that only moves when told to."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch) -> FakeClock:
+    """Give every test a fresh, empty gateway model cache on a clock it controls."""
+    fake = FakeClock()
+    monkeypatch.setattr(services, "gateway_models_cache", services.GatewayModelsCache(clock=fake))
+    return fake
+
+
 @pytest.fixture()
 def upstream(monkeypatch) -> FakeUpstream:
     """Route the model list's outbound calls to a fake token service and gateway."""
@@ -91,7 +109,7 @@ def upstream(monkeypatch) -> FakeUpstream:
 
 @pytest.fixture()
 def bkaidev_settings(settings):
-    """A bkaidev deployment on a bk_token site, recommending nothing."""
+    """A bkaidev deployment on a bk_token site, narrowing nothing."""
     settings.AGENT_MODEL_SOURCE = "bkaidev"
     settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "deepseek-v4-flash"}
     settings.BK_API_URL_TMPL = "https://{api_name}.apigw.example.com"
@@ -110,14 +128,14 @@ def logged_in_client(aapi_client):
     return aapi_client
 
 
-def collect_codes(body: dict) -> list[str]:
-    return [model["code"] for model in body["models"]]
+def collect_ids(body: dict) -> list[str]:
+    return [model["id"] for model in body["models"]]
 
 
-async def test_a_recommended_list_picks_and_orders_the_models(bkaidev_settings, upstream, logged_in_client):
+async def test_an_available_list_picks_and_orders_the_models(bkaidev_settings, upstream, logged_in_client):
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
         "default_model_name": "deepseek-v4-flash",
-        "recommended_models": ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"],
+        "available_models": ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"],
     }
     upstream.cards = [
         make_card("GLM-5_3-Online-32k", max_model_len=32000),
@@ -131,19 +149,42 @@ async def test_a_recommended_list_picks_and_orders_the_models(bkaidev_settings, 
 
     assert response.status_code == HTTPStatus.OK
     body = response.json()
-    assert collect_codes(body) == ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"]
-    assert (body["source"], body["switchable"], body["default_code"]) == ("bkaidev", True, "deepseek-v4-flash")
+    assert collect_ids(body) == ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"]
+    assert (body["source"], body["allow_user_switch"], body["default_model_id"]) == (
+        "bkaidev",
+        True,
+        "deepseek-v4-flash",
+    )
+
+
+async def test_a_pattern_picks_its_models_in_gateway_order(bkaidev_settings, upstream, logged_in_client):
+    """模式之间按配置顺序，同一模式命中的按网关顺序；被前面选中过的不重复出现。"""
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
+        "default_model_name": "deepseek-v4-flash",
+        "available_models": ["hy4-*", "deepseek-v4-flash", "deepseek-*-flash"],
+    }
+    upstream.cards = [
+        make_card("deepseek-v4.1-flash"),
+        make_card("hy4-preview"),
+        make_card("deepseek-v4-flash"),
+        make_card("deepseek-v4-pro"),
+        make_card("hy4-turbo"),
+    ]
+
+    response = await logged_in_client.get(MODELS_URL)
+
+    assert collect_ids(response.json()) == ["hy4-preview", "hy4-turbo", "deepseek-v4-flash", "deepseek-v4.1-flash"]
 
 
 async def test_a_model_shows_what_the_gateway_card_says(bkaidev_settings, upstream, logged_in_client):
-    """网关卡片没有展示名，用编码代替。"""
+    """网关卡片没有展示名，用 ID 代替。"""
     upstream.cards = [make_card("hy3", vision=True, max_model_len=256000)]
 
     response = await logged_in_client.get(MODELS_URL)
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["models"] == [
-        {"code": "hy3", "name": "hy3", "context_window": 256000, "supports_vision": True}
+        {"id": "hy3", "name": "hy3", "context_window": 256000, "supports_vision": True}
     ]
 
 
@@ -153,39 +194,61 @@ async def test_a_card_without_properties_is_still_offered(bkaidev_settings, upst
     response = await logged_in_client.get(MODELS_URL)
 
     assert response.json()["models"] == [
-        {"code": "bare", "name": "bare", "context_window": None, "supports_vision": False}
+        {"id": "bare", "name": "bare", "context_window": None, "supports_vision": False}
     ]
 
 
-async def test_a_recommended_model_the_gateway_does_not_offer_is_left_out_and_logged(
+async def test_an_available_model_the_gateway_does_not_offer_is_left_out_and_logged(
     bkaidev_settings, upstream, logged_in_client, caplog
 ):
-    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "recommended_models": ["hy3", "not-exist"]}
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "not-exist"]}
     upstream.cards = [make_card("hy3"), make_card("kimi-26")]
 
     with caplog.at_level(logging.WARNING):
         response = await logged_in_client.get(MODELS_URL)
 
-    assert collect_codes(response.json()) == ["hy3"]
+    assert collect_ids(response.json()) == ["hy3"]
     assert any("not-exist" in record.getMessage() for record in caplog.records if record.levelno == logging.WARNING)
 
 
-async def test_a_recommended_model_that_cannot_call_tools_is_still_left_out(
+async def test_an_available_list_matching_nothing_falls_back_to_every_tool_calling_model(
+    bkaidev_settings, upstream, logged_in_client, caplog
+):
+    """配置没跟上网关的变化时，宁可给全量，也不给用户一个空的下拉框。"""
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "kimi-*"]}
+    upstream.cards = [
+        make_card("deepseek-v4-flash"),
+        make_card("aidev-embedding-auto", tools=False),
+        make_card("hy4-preview"),
+    ]
+
+    with caplog.at_level(logging.WARNING):
+        response = await logged_in_client.get(MODELS_URL)
+
+    assert collect_ids(response.json()) == ["deepseek-v4-flash", "hy4-preview"]
+    assert any(
+        "offering every tool-calling model" in record.getMessage()
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    )
+
+
+async def test_an_available_model_that_cannot_call_tools_is_still_left_out(
     bkaidev_settings, upstream, logged_in_client
 ):
-    """推荐列表只收窄，不放宽：上游说不能调工具的模型，推荐了也不出现。"""
+    """可选列表只收窄，不放宽：上游说不能调工具的模型，配了也不出现。"""
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
         "default_model_name": "hy3",
-        "recommended_models": ["hy3", "hunyuan-turbos-vision"],
+        "available_models": ["hy3", "hunyuan-turbos-vision"],
     }
     upstream.cards = [make_card("hunyuan-turbos-vision", tools=False, vision=True), make_card("hy3")]
 
     response = await logged_in_client.get(MODELS_URL)
 
-    assert collect_codes(response.json()) == ["hy3"]
+    assert collect_ids(response.json()) == ["hy3"]
 
 
-async def test_without_a_recommended_list_every_tool_calling_model_is_offered_in_gateway_order(
+async def test_without_an_available_list_every_tool_calling_model_is_offered_in_gateway_order(
     bkaidev_settings, upstream, logged_in_client
 ):
     upstream.cards = make_filler_cards(35)
@@ -194,9 +257,9 @@ async def test_without_a_recommended_list_every_tool_calling_model_is_offered_in
 
     response = await logged_in_client.get(MODELS_URL)
 
-    codes = collect_codes(response.json())
-    assert len(codes) == 33
-    assert codes == [card["id"] for card in upstream.cards if card["property"]["support_tools"]]
+    ids = collect_ids(response.json())
+    assert len(ids) == 33
+    assert ids == [card["id"] for card in upstream.cards if card["property"]["support_tools"]]
 
 
 async def test_a_model_the_gateway_says_nothing_about_tools_for_is_offered(
@@ -206,7 +269,7 @@ async def test_a_model_the_gateway_says_nothing_about_tools_for_is_offered(
 
     response = await logged_in_client.get(MODELS_URL)
 
-    assert collect_codes(response.json()) == ["deepseek-v4-flash", "silent"]
+    assert collect_ids(response.json()) == ["deepseek-v4-flash", "silent"]
 
 
 async def test_the_gateway_is_asked_with_the_users_own_token(bkaidev_settings, upstream, logged_in_client):
@@ -214,6 +277,52 @@ async def test_the_gateway_is_asked_with_the_users_own_token(bkaidev_settings, u
 
     (request,) = upstream.gateway_requests
     assert json.loads(request.headers["X-Bkapi-Authorization"]) == {"access_token": ACCESS_TOKEN}
+
+
+async def test_a_fetched_list_is_served_from_the_cache_until_it_expires(
+    bkaidev_settings, upstream, logged_in_client, clock
+):
+    """缓存命中时不换票也不调网关；过期后重新去问，网关的变化随之可见。"""
+    upstream.cards = [make_card("hy3")]
+    await logged_in_client.get(MODELS_URL)
+    upstream.cards = [make_card("hy3"), make_card("hy4-preview")]
+    asked = len(upstream.requests)
+
+    clock.now += services.GATEWAY_MODELS_CACHE_SECONDS - 1
+    cached = await logged_in_client.get(MODELS_URL)
+
+    assert collect_ids(cached.json()) == ["hy3"]
+    assert len(upstream.requests) == asked
+
+    clock.now += 1
+    refreshed = await logged_in_client.get(MODELS_URL)
+
+    assert collect_ids(refreshed.json()) == ["hy3", "hy4-preview"]
+    assert len(upstream.gateway_requests) == 2
+
+
+async def test_a_failure_is_not_cached(bkaidev_settings, upstream, logged_in_client):
+    upstream.gateway_status = HTTPStatus.INTERNAL_SERVER_ERROR
+    await logged_in_client.get(MODELS_URL)
+
+    upstream.gateway_status = HTTPStatus.OK
+    upstream.cards = [make_card("hy3")]
+    response = await logged_in_client.get(MODELS_URL)
+
+    assert collect_ids(response.json()) == ["hy3"]
+    assert len(upstream.gateway_requests) == 2
+
+
+async def test_a_warm_cache_still_needs_the_users_login(bkaidev_settings, upstream, logged_in_client):
+    """一个请求会不会 401，不取决于别人刚才有没有把缓存填上。"""
+    upstream.cards = [make_card("hy3")]
+    await logged_in_client.get(MODELS_URL)
+
+    del logged_in_client.cookies["bk_token"]
+    response = await logged_in_client.get(MODELS_URL)
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json()["code"] == "MODEL_CREDENTIAL_MISSING"
 
 
 async def test_a_failing_gateway_is_an_error_not_an_empty_list(bkaidev_settings, upstream, logged_in_client, caplog):
@@ -272,9 +381,13 @@ async def test_a_direct_deployment_offers_its_one_model_without_asking_anyone(se
 
     assert response.status_code == HTTPStatus.OK
     body = response.json()
-    assert (body["source"], body["switchable"], body["default_code"]) == ("direct", False, "deepseek-v4-flash")
+    assert (body["source"], body["allow_user_switch"], body["default_model_id"]) == (
+        "direct",
+        False,
+        "deepseek-v4-flash",
+    )
     assert body["models"] == [
-        {"code": "deepseek-v4-flash", "name": "deepseek-v4-flash", "context_window": None, "supports_vision": False}
+        {"id": "deepseek-v4-flash", "name": "deepseek-v4-flash", "context_window": None, "supports_vision": False}
     ]
     assert upstream.requests == []
 
@@ -301,7 +414,7 @@ async def test_a_direct_deployment_shows_its_configured_display_fields(settings,
     (model,) = (await aapi_client.get(MODELS_URL)).json()["models"]
 
     assert model == {
-        "code": "deepseek-v4-flash",
+        "id": "deepseek-v4-flash",
         "name": "DeepSeek V4 Flash",
         "context_window": 128000,
         "supports_vision": False,

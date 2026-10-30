@@ -22,15 +22,13 @@ from typing import TYPE_CHECKING
 from ninja import Router
 
 from app_spark_api.agent.model_catalog import services
-from app_spark_api.agent.model_catalog.entities import ModelCatalogResponse, ModelOptionResponse
+from app_spark_api.agent.model_catalog.entities import ModelCatalogResponse
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.infras.accounts.auth import login_required
 from app_spark_api.infras.accounts.credentials import get_user_credential
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
-
-    from app_spark_api.agent.model_catalog.services import ModelCatalog, ModelOption
 
 router = Router(tags=["models"], auth=login_required)
 
@@ -44,27 +42,8 @@ router = Router(tags=["models"], auth=login_required)
 async def list_models(request: HttpRequest):
     """列出当前部署下可选的模型、不指定模型时使用的默认模型，以及能否切换。
 
-    不挂在项目下：决定列表的是「本服务的应用身份 + 当前用户」，和 Project 没有对应关系。
+    不挂在项目下：决定列表的是本服务的应用身份，和 Project 没有对应关系。
     上游拿不到列表时报错，不返回空列表，免得把一次网络故障说成「没有可用模型」。
     """
-    return _to_catalog(await services.list_models(get_user_credential(request)))
-
-
-def _to_catalog(catalog: ModelCatalog) -> ModelCatalogResponse:
-    """Present the models on offer as this API's own view of them."""
-    return ModelCatalogResponse(
-        source=catalog.source,
-        switchable=catalog.switchable,
-        default_code=catalog.default_code,
-        models=[_to_option(model) for model in catalog.models],
-    )
-
-
-def _to_option(model: ModelOption) -> ModelOptionResponse:
-    """Present one model on offer."""
-    return ModelOptionResponse(
-        code=model.code,
-        name=model.name,
-        context_window=model.context_window,
-        supports_vision=model.supports_vision,
-    )
+    # ModelCatalog 与 ModelCatalogResponse 字段一一对应，ninja 按属性读出即可。
+    return await services.list_models(get_user_credential(request))

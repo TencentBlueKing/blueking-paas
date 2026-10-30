@@ -116,14 +116,14 @@
 ## app_code / app_secret 用上面的 APP_CODE / APP_SECRET，不在这里再配。
 ## LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接，换票地址是 TOKEN_AUTH_ENDPOINT，都不在这里配。
 ## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
-## recommended_models 是提供给用户选择的模型编码，顺序即展示顺序；为空时不过滤。
-## 非空时必须包含 default_model_name，且不能重复，否则服务启动失败。
+## available_models 是提供给用户选择的模型 ID 或通配模式（如 deepseek-*-flash），顺序即展示顺序；
+## 为空、或一项都没命中时返回网关的全部可用模型。非空时必须有一项能匹配 default_model_name，
+## 且不能有重复项，否则服务启动失败。
 # BKAIDEV_MODEL_CONFIG:
 #   default_model_name: deepseek-v4-flash
-#   recommended_models:
-#     - deepseek-v4.1-flash
-#     - deepseek-v4-flash
-#     - hy4-preview
+#   available_models:
+#     - deepseek-*-flash
+#     - hy4-*
 #     - qwen3-5-397B
 
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob

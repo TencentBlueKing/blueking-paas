@@ -17,6 +17,7 @@
 """Reading the bkaidev gateway's model list, and refusing one it never promised."""
 
 import json
+import logging
 
 import httpx2
 import pytest
@@ -63,7 +64,7 @@ async def test_the_models_are_read_off_a_real_shaped_answer():
 
     assert await client.list_models() == [
         GatewayModel(
-            code="hy3",
+            id="hy3",
             properties=GatewayModelProperty(support_tools=True, support_vision=False, max_model_len=256000),
         )
     ]
@@ -113,24 +114,23 @@ async def test_an_unreachable_gateway_is_a_gateway_error():
         await make_client(refuse).list_models()
 
 
+async def test_an_empty_model_list_is_read_as_no_models():
+    assert await make_client(make_answer(json={"object": "list", "data": []})).list_models() == []
+
+
 @pytest.mark.parametrize(
     ("answer", "reason"),
     [
         pytest.param(make_answer(text="<html>gateway</html>"), "not JSON", id="not-json"),
-        pytest.param(make_answer(json={"object": "list"}), "data", id="no-data"),
+        pytest.param(make_answer(json=["hy3"]), "$.data is not a list", id="not-an-object"),
+        pytest.param(make_answer(json={"object": "list"}), "$.data is not a list", id="no-data"),
+        # 逐项迭代的话 {} 和 "" 都会读成空列表，把一份坏响应说成「没有模型」。
+        pytest.param(make_answer(json={"object": "list", "data": {}}), "$.data is not a list", id="data-an-object"),
+        pytest.param(make_answer(json={"object": "list", "data": ""}), "$.data is not a list", id="data-a-string"),
         pytest.param(
-            make_answer(json={"object": "list", "data": [{"object": "model"}]}), "data[0]", id="a-card-without-id"
-        ),
-        # 被宽松转换成 True 的话，一个不能调工具的模型就混进了列表。
-        pytest.param(
-            make_answer(json={"object": "list", "data": [{"id": "m", "property": {"support_tools": "false"}}]}),
-            "support_tools",
-            id="a-flag-that-is-not-a-bool",
-        ),
-        pytest.param(
-            make_answer(json={"object": "list", "data": [{"id": "m", "property": {"max_model_len": True}}]}),
-            "max_model_len",
-            id="a-length-that-is-a-bool",
+            make_answer(json={"object": "list", "data": [{"object": "model"}, "hy3"]}),
+            "none of its 2 cards",
+            id="no-readable-card",
         ),
     ],
 )
@@ -139,3 +139,24 @@ async def test_an_answer_that_is_not_a_model_list_is_refused_by_name(answer, rea
         await make_client(answer).list_models()
 
     assert reason in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("card", "reason"),
+    [
+        pytest.param({"object": "model"}, "$.data[0].id", id="a-card-without-id"),
+        # 被宽松转换成 True 的话，一个不能调工具的模型就混进了列表。
+        pytest.param({"id": "m", "property": {"support_tools": "false"}}, "support_tools", id="a-flag-not-a-bool"),
+        pytest.param({"id": "m", "property": {"max_model_len": True}}, "max_model_len", id="a-length-that-is-a-bool"),
+        pytest.param("m", "$.data[0]", id="a-card-not-an-object"),
+    ],
+)
+async def test_an_unreadable_card_is_skipped_and_named(card, reason, caplog):
+    """一张卡片写坏了只丢这一张，不让整个列表 502。"""
+    client = make_client(make_answer(json={"object": "list", "data": [card, HY3_CARD]}))
+
+    with caplog.at_level(logging.WARNING):
+        models = await client.list_models()
+
+    assert [model.id for model in models] == ["hy3"]
+    assert any(reason in record.getMessage() for record in caplog.records if record.levelno == logging.WARNING)

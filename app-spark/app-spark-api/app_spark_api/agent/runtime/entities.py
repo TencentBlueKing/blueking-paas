@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import posixpath
 from collections.abc import Awaitable, Callable
+from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
@@ -227,33 +228,33 @@ class BkAidevModelConfig:
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
     :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
-    :param recommended_models: Model codes offered for picking, in the order they are shown.
-        Empty means every model the gateway offers this app.
+    :param available_models: Model IDs or fnmatch patterns (case-sensitive) offered for picking,
+        in the order they are shown. Empty means every model the gateway offers this app.
     """
 
     # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
     # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
     default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
-    recommended_models: list[str] = attrs.field(
+    available_models: list[str] = attrs.field(
         factory=list,
         validator=attrs.validators.deep_iterable(member_validator=validate_non_empty_string),
     )
 
-    @recommended_models.validator
-    def _validate_recommended_models(self, attribute: attrs.Attribute[list[str]], value: list[str]) -> None:
-        # 重复的编码会让下拉框出现两个一样的选项，多半是配置时复制粘贴出了错。
+    @available_models.validator
+    def _validate_available_models(self, attribute: attrs.Attribute[list[str]], value: list[str]) -> None:
+        # 重复的项会让同一批模型在下拉框里出现两次，多半是配置时复制粘贴出了错。
         seen: set[str] = set()
-        for code in value:
-            if code in seen:
-                raise ValueError(f"{attribute.name} lists {code!r} more than once")
+        for pattern in value:
+            if pattern in seen:
+                raise ValueError(f"{attribute.name} lists {pattern!r} more than once")
 
-            seen.add(code)
+            seen.add(pattern)
 
-        # 用户不选时跑的是默认模型。它不在推荐列表里，下拉框就显示不出用户实际在用的那个。
-        if value and self.default_model_name not in seen:
+        # 用户不选时跑的是默认模型。没有一项能匹配上它，下拉框就显示不出用户实际在用的那个。
+        if value and not any(fnmatchcase(self.default_model_name, pattern) for pattern in value):
             raise ValueError(
-                f"default_model_name {self.default_model_name!r} is not in {attribute.name}; "
-                "a non-empty list must include the model used when the user picks none"
+                f"default_model_name {self.default_model_name!r} matches nothing in {attribute.name}; "
+                "a non-empty list must cover the model used when the user picks none"
             )
 
 

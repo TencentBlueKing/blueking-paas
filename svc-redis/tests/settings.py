@@ -126,7 +126,6 @@ ENABLE_ADMIN = False
 BK_CRYPTO_TYPE = "CLASSIC"
 ENCRYPT_CIPHER_TYPE = "FernetCipher"
 
-REDIS_EXPORTER_IMAGE = ""
 REDIS_EXPORTER_RESOURCES = {
     "requests": {"cpu": "1m", "memory": "16Mi"},
     "limits": {"cpu": "100m", "memory": "64Mi"},

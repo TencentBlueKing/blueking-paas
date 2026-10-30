@@ -112,7 +112,6 @@ class TestRedisExporter:
         }
 
     @override_settings(
-        REDIS_EXPORTER_IMAGE="mirrors.example.com/redis-exporter:v1.44.0",
         REDIS_EXPORTER_RESOURCES={
             "requests": {"cpu": "10m", "memory": "32Mi"},
             "limits": {"cpu": "200m", "memory": "128Mi"},
@@ -122,7 +121,7 @@ class TestRedisExporter:
         deployable = get_redis_resource(_plan_config(type="RedisReplication", monitor=True)).to_deployable()
 
         exporter = deployable["spec"]["redisExporter"]
-        assert exporter["image"] == "mirrors.example.com/redis-exporter:v1.44.0"
+        assert exporter["image"] == DEFAULT_REDIS_EXPORTER_IMAGE
         assert exporter["resources"] == {
             "requests": {"cpu": "10m", "memory": "32Mi"},
             "limits": {"cpu": "200m", "memory": "128Mi"},

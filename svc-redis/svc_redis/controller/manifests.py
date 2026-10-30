@@ -76,7 +76,7 @@ class MonitorManifestConstructor(ManifestConstructor):
         if monitor:
             model_res.spec.redisExporter = crd.RedisExporter(
                 enabled=True,
-                image=settings.REDIS_EXPORTER_IMAGE or DEFAULT_REDIS_EXPORTER_IMAGE,
+                image=DEFAULT_REDIS_EXPORTER_IMAGE,
                 resources=crd.ResourceRequirements(**settings.REDIS_EXPORTER_RESOURCES),
             )
 

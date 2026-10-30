@@ -34,7 +34,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.platform.agent_sandbox.models import E2BApiKey
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
 from paasng.platform.agent_sandbox.permissions import IsAPIGWVerifiedApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
@@ -48,6 +48,8 @@ from .serializers import (
     E2BConsoleApiKeyOutputSLZ,
     E2BConsoleSandboxListInputSLZ,
     E2BConsoleSandboxOutputSLZ,
+    E2BConsoleTemplateDetailOutputSLZ,
+    E2BConsoleTemplateOutputSLZ,
 )
 
 logger = logging.getLogger(__name__)
@@ -159,3 +161,33 @@ class E2BConsoleSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMix
             logger.warning("failed to kill e2b sandbox %s for app %s: %s", sandbox_id, application.code, exc)
             raise error_codes.AGENT_SANDBOX_E2B_SERVICE_UNAVAILABLE
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class E2BConsoleTemplateViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    """开发者中心页面浏览平台已启用且公开的沙箱模板。
+
+    模板全平台共享、与应用无关，路径带上应用 code 是为了沿用页面的应用权限口径。
+    """
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox.e2b"],
+        responses={status.HTTP_200_OK: E2BConsoleTemplateOutputSLZ(many=True)},
+    )
+    def list(self, request, code):
+        """列出已启用且公开的模板"""
+        # 模板本身不按应用过滤，调用只为触发应用权限校验
+        self.get_application()
+        templates = E2BSandboxTemplate.objects.filter(enabled=True, is_public=True)
+        return Response(E2BConsoleTemplateOutputSLZ(templates, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox.e2b"],
+        responses={status.HTTP_200_OK: E2BConsoleTemplateDetailOutputSLZ()},
+    )
+    def retrieve(self, request, code, template_id):
+        """查询模板详情，未启用或不公开的模板按不存在处理"""
+        self.get_application()
+        template = get_object_or_404(E2BSandboxTemplate, template_id=template_id, enabled=True, is_public=True)
+        return Response(E2BConsoleTemplateDetailOutputSLZ(template).data)

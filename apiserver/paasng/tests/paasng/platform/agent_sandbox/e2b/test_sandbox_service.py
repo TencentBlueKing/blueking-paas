@@ -27,11 +27,12 @@ from django.db.utils import IntegrityError
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.agent_sandbox.e2b import sandboxes
 from paasng.platform.agent_sandbox.e2b.clusters import get_e2b_cluster_config
-from paasng.platform.agent_sandbox.e2b.constants import E2BSandboxStatus
+from paasng.platform.agent_sandbox.e2b.constants import DEFAULT_SANDBOX_TIMEOUT_SECONDS, E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import (
     E2BGatewayNotFound,
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
+    E2BTemplateNotFound,
 )
 from paasng.platform.agent_sandbox.models import E2BSandbox
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
@@ -180,6 +181,27 @@ class TestCreate:
         sandboxes.create_sandbox(bk_app, payload)
 
         assert gateway.created_payloads == [payload]
+
+    def test_gateway_404_becomes_template_not_found(self, gateway, bk_app):
+        """创建时还没有沙箱，网关 404 缺的是模板，不能报成沙箱不存在。"""
+        gateway.fail("create_sandbox", E2BGatewayNotFound("gateway returned 404 on POST /sandboxes"))
+
+        with pytest.raises(E2BTemplateNotFound):
+            sandboxes.create_sandbox(bk_app, {"templateID": "e2b-ghost"})
+
+        assert not E2BSandbox.objects.exists()
+
+    def test_injects_default_timeout_when_missing(self, gateway, bk_app):
+        """不带 timeout 时补平台默认值，网关的缺省语义是永不过期。"""
+        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd"})
+
+        assert gateway.created_payloads[0]["timeout"] == DEFAULT_SANDBOX_TIMEOUT_SECONDS
+
+    def test_keeps_explicit_timeout(self, gateway, bk_app):
+        """显式传的存活时长原样转发，不能被默认值覆盖。"""
+        sandboxes.create_sandbox(bk_app, {"templateID": "e2b-envd", "timeout": 3600})
+
+        assert gateway.created_payloads[0]["timeout"] == 3600
 
     def test_rolls_back_when_recording_fails(self, gateway, bk_app):
         """落库失败同样要回滚。这里用重复的沙箱 ID 触发唯一约束冲突。"""

@@ -32,6 +32,14 @@ class E2BSandboxNotFound(E2BError):
     """沙箱不存在，或存在但不属于发起方"""
 
 
+class E2BTemplateNotFound(E2BError):
+    """创建所用的模板在网关侧不存在
+
+    平台登记表里有、网关侧没有，说明两边配置漂移。与网关在查询/销毁时返回的
+    「沙箱不存在」分开，否则用户看到的会是与操作无关的报错。
+    """
+
+
 class E2BClusterUnavailable(E2BError):
     """没有可用于 e2b 沙箱的集群"""
 

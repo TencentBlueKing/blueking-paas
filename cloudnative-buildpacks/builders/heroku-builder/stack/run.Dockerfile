@@ -37,9 +37,9 @@ RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selectio
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 让 kubectl exec 直接执行的 python 也能使用应用自带的 python
-COPY python-shim.sh /usr/local/bin/python
-RUN chmod 755 /usr/local/bin/python && ln -s python /usr/local/bin/python3
+# 让 kubectl exec 进入的交互式 bash 也能加载应用环境
+COPY launcher-hook.sh /tmp/launcher-hook.sh
+RUN cat /tmp/launcher-hook.sh >> /etc/bash.bashrc && rm /tmp/launcher-hook.sh
 
 ENV HOME /app
 WORKDIR /app

@@ -73,7 +73,7 @@ logger = logging.getLogger(__name__)
 API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 
-class PluginInstanceViewSet(viewsets.ViewSet):
+class SysPluginInstanceViewSet(viewsets.ViewSet):
     """插件开发中心-插件实例相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -179,7 +179,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
         return Response(data={})
 
 
-class PluginDeployViewSet(viewsets.ViewSet):
+class SysPluginDeployViewSet(viewsets.ViewSet):
     """插件开发中心-插件部署相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -312,7 +312,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 
-class PluginMarketViewSet(viewsets.ViewSet):
+class SysPluginMarketViewSet(viewsets.ViewSet):
     """插件开发中心-插件市场信息相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -362,7 +362,7 @@ class PluginMarketViewSet(viewsets.ViewSet):
         )
 
 
-class PluginMembersViewSet(viewsets.ViewSet):
+class SysPluginMembersViewSet(viewsets.ViewSet):
     """插件开发中心-成员管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -451,7 +451,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PluginConfigurationViewSet(viewsets.ViewSet):
+class SysPluginConfigurationViewSet(viewsets.ViewSet):
     """插件开发中心-配置管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES

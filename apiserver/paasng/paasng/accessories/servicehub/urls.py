@@ -143,8 +143,8 @@ urlpatterns += [
     # Retrieve application information related to the mysql db_name
     re_path(
         r"^sys/api/services/mysql/(?P<db_name>[^/]+)/related_applications_info/$",
-        views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
-        name="api.services.mysql.retrieve_related_applications_info",
+        views.SysRelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
+        name="sys.api.services.mysql.retrieve_related_applications_info",
     ),
 ]
 

@@ -28,13 +28,13 @@ from .api import (
     VolumeFileViewSet,
     VolumeViewSet,
 )
-from .sys_api import AgentSandboxAPIPermissionViewSet
+from .sys_api import SysAgentSandboxAPIPermissionViewSet
 
 __all__ = [
-    "AgentSandboxAPIPermissionViewSet",
     "AgentSandboxFSViewSet",
     "AgentSandboxProcessViewSet",
     "AgentSandboxViewSet",
+    "SysAgentSandboxAPIPermissionViewSet",
     "VolumeFileViewSet",
     "VolumeViewSet",
 ]

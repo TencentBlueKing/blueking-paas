@@ -16,9 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.plat_admin.system.views import (
-    ClusterNamespaceInfoView,
     LessCodeSystemAPIViewSet,
     SysAddonsAPIViewSet,
+    SysClusterNamespaceInfoView,
     SysUniApplicationViewSet,
 )
 from paasng.utils.basic import make_app_pattern, re_path
@@ -43,7 +43,7 @@ urlpatterns = [
     ),
     re_path(
         r"^sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$",
-        ClusterNamespaceInfoView.as_view({"get": "list_by_app_code"}),
+        SysClusterNamespaceInfoView.as_view({"get": "list_by_app_code"}),
         name="sys.api.applications.cluster_namespace.list_by_app_code",
     ),
     re_path(

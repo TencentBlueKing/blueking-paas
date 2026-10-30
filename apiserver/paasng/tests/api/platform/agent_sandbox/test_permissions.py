@@ -51,7 +51,7 @@ def sys_api_client_without_perm(bk_user):
 
 
 class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
-    """Test cases for AgentSandboxAPIPermissionViewSet.grant_permissions API."""
+    """Test cases for SysAgentSandboxAPIPermissionViewSet.grant_permissions API."""
 
     @pytest.fixture()
     def grant_url(self) -> str:
@@ -59,7 +59,7 @@ class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
 
         :returns: The URL string.
         """
-        return reverse("agent_sandbox.permissions.grant")
+        return reverse("sys.agent_sandbox.permissions.grant")
 
     def test_grant_permissions_success(
         self,

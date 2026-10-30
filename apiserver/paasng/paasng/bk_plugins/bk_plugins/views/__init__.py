@@ -28,11 +28,11 @@ from .api import (
     DistributorsViewSet,
 )
 from .pluginscenter_sys_api import (
-    PluginConfigurationViewSet,
-    PluginDeployViewSet,
-    PluginInstanceViewSet,
-    PluginMarketViewSet,
-    PluginMembersViewSet,
+    SysPluginConfigurationViewSet,
+    SysPluginDeployViewSet,
+    SysPluginInstanceViewSet,
+    SysPluginMarketViewSet,
+    SysPluginMembersViewSet,
 )
 from .sys_api import (
     SysBkPluginDistributorsViewSet,
@@ -47,14 +47,14 @@ __all__ = [
     "BkPluginTagsViewSet",
     "DistributorRelsViewSet",
     "DistributorsViewSet",
-    "PluginConfigurationViewSet",
-    "PluginDeployViewSet",
-    "PluginInstanceViewSet",
-    "PluginMarketViewSet",
-    "PluginMembersViewSet",
     "SysBkPluginDistributorsViewSet",
     "SysBkPluginLogsViewset",
     "SysBkPluginTagsViewSet",
     "SysBkPluginsBatchViewset",
     "SysBkPluginsViewset",
+    "SysPluginConfigurationViewSet",
+    "SysPluginDeployViewSet",
+    "SysPluginInstanceViewSet",
+    "SysPluginMarketViewSet",
+    "SysPluginMembersViewSet",
 ]

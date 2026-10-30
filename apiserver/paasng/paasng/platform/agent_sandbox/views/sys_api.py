@@ -36,7 +36,7 @@ from paasng.utils.error_codes import error_codes
 
 
 @ForceAllowAuthedApp.mark_view_set
-class AgentSandboxAPIPermissionViewSet(viewsets.ViewSet):
+class SysAgentSandboxAPIPermissionViewSet(viewsets.ViewSet):
     """Agent Sandbox API 权限管理相关接口。
 
     AIDev 平台通过该接口为指定的 AI Agent 应用授予 Agent Sandbox 相关 API 的调用权限。

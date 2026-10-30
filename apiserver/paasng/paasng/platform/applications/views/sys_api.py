@@ -57,7 +57,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class LightAppViewSet(viewsets.ViewSet):
+class SysLightAppViewSet(viewsets.ViewSet):
     """为标准运维提供轻应用管理接口，部分代码迁移自 open—paas"""
 
     permission_classes = [sysapi_client_perm_class(ClientAction.MANAGE_LIGHT_APPLICATIONS)]

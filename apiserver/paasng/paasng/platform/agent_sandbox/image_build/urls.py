@@ -17,17 +17,17 @@
 
 from django.urls import path
 
-from .views import ImageBuildViewSet
+from .views import SysImageBuildViewSet
 
 urlpatterns = [
     path(
         "",
-        ImageBuildViewSet.as_view({"post": "create", "get": "list"}),
-        name="image_build.list_create",
+        SysImageBuildViewSet.as_view({"post": "create", "get": "list"}),
+        name="sys.image_build.list_create",
     ),
     path(
         "<str:build_id>/",
-        ImageBuildViewSet.as_view({"get": "retrieve"}),
-        name="image_build.retrieve",
+        SysImageBuildViewSet.as_view({"get": "retrieve"}),
+        name="sys.image_build.retrieve",
     ),
 ]

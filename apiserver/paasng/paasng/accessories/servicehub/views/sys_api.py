@@ -60,7 +60,7 @@ class SysModuleServicesViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
         return Response(get_module_service_instances(module, service, slzs.SysServiceInstanceInfoSLZ))
 
 
-class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
+class SysRelatedApplicationsInfoViewSet(viewsets.ViewSet):
     permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
     def retrieve_related_applications_info(self, request, db_name):

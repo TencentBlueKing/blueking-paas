@@ -31,17 +31,17 @@ from .api import (
     SharingReferencesViewSet,
     UnboundServiceEngineAppAttachmentViewSet,
 )
-from .sys_api import RelatedApplicationsInfoViewSet, SysModuleServicesViewSet
+from .sys_api import SysModuleServicesViewSet, SysRelatedApplicationsInfoViewSet
 
 __all__ = [
     "ModuleServiceAttachmentsViewSet",
     "ModuleServicesViewSet",
-    "RelatedApplicationsInfoViewSet",
     "ServiceEngineAppAttachmentViewSet",
     "ServiceSetViewSet",
     "ServiceSharingViewSet",
     "ServiceViewSet",
     "SharingReferencesViewSet",
     "SysModuleServicesViewSet",
+    "SysRelatedApplicationsInfoViewSet",
     "UnboundServiceEngineAppAttachmentViewSet",
 ]

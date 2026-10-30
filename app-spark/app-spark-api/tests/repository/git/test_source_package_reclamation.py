@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Reclaiming source packages nobody has used for a while, and the command that runs it."""
+"""Reclaiming source packages nobody has used for a while or whose Project is deleted, and the command."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management import CommandError, call_command
 from django.utils import timezone
 
+from app_spark_api.core.projects.models import Project
 from app_spark_api.repository.git import source_packages
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from app_spark_api.repository.storage.blob_stores import BkRepo
@@ -37,16 +38,20 @@ BUCKET = "app-spark-source-packages"
 
 @pytest.fixture
 def make_package(project, fake_bkrepo):
-    """Record a package last used ``days_ago`` days ago, with its blob in the fake BkRepo."""
+    """Record a package last used ``days_ago`` days ago, with its blob in the fake BkRepo.
+
+    The package belongs to the ``project`` fixture unless ``owner`` names another Project.
+    """
     counter = iter(range(1, 1000))
 
-    def make(days_ago: float) -> ProjectSourcePackage:
+    def make(days_ago: float, owner: Project | None = None) -> ProjectSourcePackage:
+        owner = owner or project
         commit = format(next(counter), "040x")
-        key = f"appspark-src-packages/{project.pk}/{commit}/upload.tar.gz"
+        key = f"appspark-src-packages/{owner.pk}/{commit}/upload.tar.gz"
         fake_bkrepo.objects[(BUCKET, key)] = b"package"
         return ProjectSourcePackage.objects.create(
-            project=project,
-            repo_full_name=f"app-spark/{project.pk}",
+            project=owner,
+            repo_full_name=f"app-spark/{owner.pk}",
             commit_sha=commit,
             bucket=BUCKET,
             key=key,
@@ -143,6 +148,58 @@ class TestDeleteUnusedSourcePackages:
             source_packages.delete_unused_source_packages()
 
         assert ProjectSourcePackage.objects.filter(pk=stale.pk).exists()
+
+
+class TestDeleteProjectSourcePackages:
+    @pytest.fixture
+    def other_project(self, bk_user):
+        return Project.objects.create(
+            id="other-project",
+            name="Other Project",
+            creator=bk_user,
+            owner=bk_user,
+            tenant_id=bk_user.tenant_id,
+        )
+
+    def test_every_package_of_the_project_goes_however_recently_used(
+        self, project, other_project, make_package, fake_bkrepo
+    ):
+        stale = make_package(days_ago=16)
+        fresh = make_package(days_ago=0)
+        unrelated = make_package(days_ago=16, owner=other_project)
+
+        reclaimed = source_packages.delete_project_source_packages(project.pk)
+
+        assert [package.pk for package in reclaimed.packages] == [stale.pk, fresh.pk]
+        assert reclaimed.orphaned_keys == []
+        assert list(ProjectSourcePackage.objects.values_list("pk", flat=True)) == [unrelated.pk]
+        assert set(fake_bkrepo.objects) == {(BUCKET, unrelated.key)}
+
+    def test_a_project_without_packages_needs_no_bkrepo_configuration(self, project, settings):
+        settings.BLOBSTORE_BKREPO_CONFIG = None
+
+        reclaimed = source_packages.delete_project_source_packages(project.pk)
+
+        assert reclaimed == source_packages.Reclaimed(packages=[], orphaned_keys=[])
+
+    def test_a_blob_that_cannot_be_deleted_is_reported_without_failing(self, project, make_package, fake_bkrepo):
+        """Its row is already gone, so failing would not let a retry find the blob again."""
+        package = make_package(days_ago=0)
+        fake_bkrepo.fail_deletes = True
+
+        reclaimed = source_packages.delete_project_source_packages(project.pk)
+
+        assert not ProjectSourcePackage.objects.exists()
+        assert reclaimed.orphaned_keys == [package.key]
+
+    def test_missing_bkrepo_configuration_deletes_no_row(self, project, make_package, settings):
+        package = make_package(days_ago=0)
+        settings.BLOBSTORE_BKREPO_CONFIG = None
+
+        with pytest.raises(ImproperlyConfigured):
+            source_packages.delete_project_source_packages(project.pk)
+
+        assert ProjectSourcePackage.objects.filter(pk=package.pk).exists()
 
 
 class TestCommand:

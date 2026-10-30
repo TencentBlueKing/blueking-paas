@@ -27,7 +27,8 @@ Two operations, kept apart on purpose:
 
 Packages are not kept forever. Both operations above mark a package as used, and
 :func:`delete_unused_source_packages` (run by the ``delete_unused_source_packages`` command)
-removes those nobody has used for a while.
+removes those nobody has used for a while. Deleting a Project removes all of its packages
+through :func:`delete_project_source_packages`.
 
 Example::
 
@@ -62,7 +63,7 @@ from app_spark_api.repository.storage.utils import generate_temp_file
 
 if TYPE_CHECKING:
     from app_spark_api.infras.forgejo.client import ForgejoClient
-    from app_spark_api.repository.git.models import ProjectGitRepository
+    from app_spark_api.repository.git.models import ProjectGitRepository, ProjectSourcePackageQuerySet
 
 SOURCE_PACKAGE_SUFFIX = "tar.gz"
 # A release may sit in a build queue before it fetches the package, so the URL has to outlive
@@ -303,7 +304,44 @@ def delete_unused_source_packages(unused_for: timedelta = DEFAULT_UNUSED_FOR, *,
         raise ValueError(f"unused_for must exceed the longest URL lifetime of {MAX_URL_EXPIRES_IN} seconds")
 
     cutoff = timezone.now() - unused_for
-    candidates = list(ProjectSourcePackage.objects.unused_since(cutoff).order_by("last_used_at", "pk"))
+    reclaimed = _delete_source_packages(ProjectSourcePackage.objects.unused_since(cutoff), dry_run=dry_run)
+    if not dry_run:
+        logger.info("Reclaimed %d source package(s) unused since %s", len(reclaimed.packages), cutoff.isoformat())
+    return reclaimed
+
+
+def delete_project_source_packages(project_id: str) -> Reclaimed:
+    """Delete every package of a Project, both its row and its blob, as part of deleting the Project.
+
+    Works like :func:`delete_unused_source_packages`, rows first, but regardless of when each
+    package was last used: a deleted Project has nobody left to release it.
+
+    A blob that cannot be deleted does not fail the call. Its row is already gone, so a retry
+    would not find it again; it is logged and reported in the result instead.
+
+    :param project_id: ID of the Project whose packages to delete.
+    :return: What was deleted, and which blobs could not be.
+    :raises django.core.exceptions.ImproperlyConfigured: ``BLOBSTORE_BKREPO_CONFIG`` is missing
+        or incomplete while the Project has packages. Raised before any row is deleted.
+    """
+    reclaimed = _delete_source_packages(ProjectSourcePackage.objects.filter(project_id=project_id))
+    logger.info("Deleted %d source package(s) of project %s", len(reclaimed.packages), project_id)
+    return reclaimed
+
+
+async def adelete_project_source_packages(project_id: str) -> Reclaimed:
+    """Async wrapper for :func:`delete_project_source_packages`."""
+    return await sync_to_async(delete_project_source_packages)(project_id)
+
+
+def _delete_source_packages(packages: ProjectSourcePackageQuerySet, *, dry_run: bool = False) -> Reclaimed:
+    """Delete the rows and blobs of ``packages``, re-checking each row against it under a lock.
+
+    :param packages: Selects the packages to delete. It is evaluated once to list them, then
+        again for each row under the lock, so a row that no longer matches is kept.
+    :param dry_run: Only report what would be deleted.
+    """
+    candidates = list(packages.order_by("last_used_at", "pk"))
     if dry_run:
         return Reclaimed(packages=candidates, orphaned_keys=[])
 
@@ -314,17 +352,13 @@ def delete_unused_source_packages(unused_for: timedelta = DEFAULT_UNUSED_FOR, *,
         # deleting every row and orphaning every blob.
         store = BkRepo(bucket=package.bucket, key=package.key)
         with transaction.atomic():
-            locked = (
-                ProjectSourcePackage.objects.select_for_update().unused_since(cutoff).filter(pk=package.pk).first()
-            )
+            locked = packages.select_for_update().filter(pk=package.pk).first()
             if locked is None:
                 continue
             locked.delete()
         deleted.append(package)
         if not _delete_blob(store):
             orphaned_keys.append(package.key)
-
-    logger.info("Reclaimed %d source package(s) unused since %s", len(deleted), cutoff.isoformat())
     return Reclaimed(packages=deleted, orphaned_keys=orphaned_keys)
 
 

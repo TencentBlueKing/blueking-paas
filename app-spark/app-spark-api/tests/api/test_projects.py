@@ -30,7 +30,9 @@ from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
 from app_spark_api.core.projects import constants, services
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
+from tests.repository.storage.fake_bkrepo import SOURCE_PACKAGES_BUCKET
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -375,6 +377,27 @@ async def test_deleting_a_project_finishes_cleanup_before_releasing_its_name(aap
     assert (blocked.status_code, blocked.json()["code"]) == (HTTPStatus.CONFLICT, "PROJECT_ID_TAKEN")
 
 
+async def test_deleting_a_project_deletes_its_source_packages(aapi_client, bk_user, deletion_provider, fake_bkrepo):
+    """The Project row is only soft-deleted, so its packages would otherwise outlive it."""
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)
+    key = "appspark-src-packages/spark-demo/abc/upload.tar.gz"
+    fake_bkrepo.objects[(SOURCE_PACKAGES_BUCKET, key)] = b"package"
+    await ProjectSourcePackage.objects.acreate(
+        project_id="spark-demo",
+        repo_full_name="app-spark/spark-demo",
+        commit_sha="abc",
+        bucket=SOURCE_PACKAGES_BUCKET,
+        key=key,
+        size=len(b"package"),
+    )
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert not await ProjectSourcePackage.objects.filter(project_id="spark-demo").aexists()
+    assert fake_bkrepo.objects == {}
+
+
 async def test_deleting_a_project_closes_live_conversations_before_stopping_runtimes(
     aapi_client, bk_user, deletion_provider
 ):
@@ -457,6 +480,7 @@ async def test_an_invalid_project_id_is_rejected_before_deletion(aapi_client, de
         ("runtime", "local directory"),
         ("conversation", "context file"),
         ("repository", "repository"),
+        ("package", "source package"),
         ("project", "project record"),
     ],
 )
@@ -482,6 +506,8 @@ async def test_a_deletion_failure_keeps_the_project_visible(
         monkeypatch.setattr(services, "adelete_project_conversations", fail_cleanup)
     elif stage == "repository":
         monkeypatch.setattr(services, "adelete_project_repository", fail_cleanup)
+    elif stage == "package":
+        monkeypatch.setattr(services, "adelete_project_source_packages", fail_cleanup)
     else:
         monkeypatch.setattr(Project.objects, "asoft_delete", fail_cleanup)
 

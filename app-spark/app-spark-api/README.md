@@ -328,6 +328,9 @@ python manage.py delete_unused_source_packages --dry-run  # 只列出，不删�
 回收先删行再删制品库对象。对象已不存在（制品库错误码 `251010`）算删除成功；其余删不掉的情况
 （网络错误、鉴权失败、仓库不存在等）会列出对象 key 并让命令以失败退出，以便有人去手工清理。
 
+删除项目时（Project 只是软删除，外键级联不会触发），在删完 Git 仓库之后用同一套逻辑删掉该项目的
+全部源码包，不看 `last_used_at`。删不掉的对象只记日志，不让项目删除失败：行已经没了，重试也找不回它。
+
 因为预签名地址只有制品库能给，`BLOBSTORE_BKREPO_CONFIG` 是必填配置，缺了在第一次打包时就报
 `ImproperlyConfigured`，不会先去下载归档。包所在的通用仓库由 `BLOBSTORE_BUCKET_SOURCE_PACKAGES`
 指定（默认 `app-spark-source-packages`），需事先建好。测试里制品库默认是内存假实现（`fake_bkrepo`

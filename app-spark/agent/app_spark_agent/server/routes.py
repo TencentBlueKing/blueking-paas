@@ -8,17 +8,19 @@ from ag_ui.core import RunErrorEvent
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic_ai.exceptions import RunCancelled
+from pydantic_ai.models import Model
 from pydantic_ai.run import AgentRunResult
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.responses import JSONResponse, Response
 
 from app_spark_agent import VERSION, settings
+from app_spark_agent.agent import build_run_model
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
 from app_spark_agent.observability import log as logger
 from app_spark_agent.recorder import TranscriptRecorder, record_messages
-from app_spark_agent.server.run_input import prepare_run, request_with_body
+from app_spark_agent.server.run_input import PreparedRun, prepare_run, request_with_body
 from app_spark_agent.server.run_task import RunStopper, RuntimeClosingError
 from app_spark_agent.server.runtime import ConversationRuntime, RuntimeBusyError
 from app_spark_agent.state import (
@@ -347,14 +349,17 @@ async def _start_run(
     """
     context = runtime.context_store.context
     prepared = prepare_run(await request.body(), context, runtime.transcript)
+    run_model = _resolve_run_model(runtime, prepared)
 
     # 额度按轮清零：防的是一轮里反复重试，不是给整个会话设总量。
     runtime.launch_tool.begin_run()
+    # 模型名来自用户输入，用 %r 把换行等控制字符转义掉，否则能在日志里伪造出新的一行。
     logger.info(
-        "run started run_id=%s conversation_id=%s context_version=%s",
+        "run started run_id=%s conversation_id=%s context_version=%s model=%r",
         prepared.run_id,
         prepared.conversation_id,
         prepared.context_version,
+        run_model.model_name if run_model is not None else _get_default_model_name(runtime),
     )
     adapter = await AGUIAdapter.from_request(
         request_with_body(request, prepared.body),
@@ -433,6 +438,8 @@ async def _start_run(
         message_history=context.messages,
         conversation_id=prepared.conversation_id,
         run_id=prepared.run_id,
+        # None 时 pydantic-ai 用 agent 构造时的默认模型。
+        model=run_model,
         capabilities=[recorder, stopper],
         on_complete=commit_context,
         on_cancel=commit_stopped_context,
@@ -463,6 +470,28 @@ async def _start_run(
         media_type=encoder.content_type,
         headers={**(encoder.response_headers or {}), **SSE_RESPONSE_HEADERS},
     )
+
+
+def _resolve_run_model(runtime: ConversationRuntime, prepared: PreparedRun) -> Model | None:
+    """Return the model this turn asked for, or None to run it on the default model."""
+    if prepared.model_name is None:
+        return None
+
+    # 第二道防线：控制面在 direct 下本来就不发 modelName。direct 的钥匙只对那一个内置模型有效，
+    # fake 是脚本，按名字换都没有意义；照单全收会让用户以为换了模型，实际还是原来那个。
+    if settings.model_mode() != settings.ModelMode.GATEWAY:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.modelName is only accepted when the model is called through the gateway.",
+        )
+
+    return build_run_model(runtime.agent.model, prepared.model_name)
+
+
+def _get_default_model_name(runtime: ConversationRuntime) -> str:
+    """Name of the model a turn without modelName runs on, for the logs."""
+    default = runtime.agent.model
+    return default.model_name if isinstance(default, Model) else str(default)
 
 
 def _drain(log: AppendLog, since: int, limit: int) -> JSONResponse:

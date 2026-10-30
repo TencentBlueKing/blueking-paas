@@ -15,10 +15,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from ninja import Field, Schema
+from pydantic import StringConstraints
 
 
 class ConversationResponse(Schema):
@@ -94,6 +95,9 @@ class RuntimeStateResponse(Schema):
 # 预算（COMPACTION_TARGET_TOKENS，480,000 token），不会先于压缩成为瓶颈。
 MAX_RUN_CONTENT_LENGTH = 32 * 1024
 
+# 模型 ID 的长度上限。
+MAX_MODEL_ID_LENGTH = 128
+
 
 class PreviewResponse(Schema):
     """会话里那个工作区应用该去哪儿打开，以及此刻打不打得开。
@@ -140,6 +144,16 @@ class StartRunRequest(Schema):
         min_length=1,
         max_length=MAX_RUN_CONTENT_LENGTH,
         description="用户本轮发送的内容",
+    )
+    # 先去掉首尾空白再量长度：纯空白在这里就是 422，带空格的 ID 也不会原样转发给网关。
+    model_id: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MODEL_ID_LENGTH)] | None
+    ) = Field(
+        None,
+        description=(
+            "本轮使用的模型 ID，取自模型列表接口的 models[].id；不传则用沙箱默认模型。"
+            "不在可选列表里、或 direct 来源下不是内置模型时返回 422 MODEL_NOT_AVAILABLE"
+        ),
     )
 
 

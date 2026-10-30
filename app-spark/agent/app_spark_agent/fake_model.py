@@ -16,9 +16,9 @@
 
     APP_SPARK_AGENT_MODEL=fake:write-file uv run uvicorn app_spark_agent.server.asgi:app
 
-已知边界：``SummarizingCompaction`` 没有自己的模型时会借用本轮的模型，届时这段脚本会去写
-文件而不是总结。触发点在 ``COMPACTION_TARGET_TOKENS``（默认 48 万 token），假模型的使用场景
-够不到，因此不做处理。
+已知边界：SummarizingCompaction 固定用沙箱默认模型写总结，fake 下默认模型就是这段脚本，
+届时它会去写文件而不是总结。触发点在 COMPACTION_TARGET_TOKENS（默认 48 万 token），假模型的
+使用场景够不到，因此不做处理。
 """
 
 from __future__ import annotations

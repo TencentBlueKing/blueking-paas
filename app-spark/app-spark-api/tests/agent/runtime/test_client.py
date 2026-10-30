@@ -108,6 +108,18 @@ async def test_a_turn_is_submitted_as_one_new_agui_message():
     assert [(m["role"], m["content"]) for m in body["messages"]] == [("user", "write my first note")]
     assert sent[0].headers["accept"] == "text/event-stream"
     assert sent[0].headers["authorization"] == f"Bearer {RUNTIME_TOKEN}"
+    assert "modelName" not in body["forwardedProps"]
+
+
+async def test_a_turn_names_its_model_in_forwarded_props():
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"data: {}\n\n")}, recorder=sent)
+
+    run = await client.start_run(content="hello", context_version=3, model_name="hy3")
+    await run.aclose()
+
+    body = json.loads(sent[0].content)
+    assert body["forwardedProps"] == {"contextVersion": 3, "modelName": "hy3"}
 
 
 async def test_every_runtime_client_request_uses_the_handle_bearer():

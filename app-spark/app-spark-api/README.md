@@ -113,6 +113,7 @@ AGENT_MODEL_SOURCE: bkaidev
 ## app 身份用 APP_CODE / APP_SECRET。
 ## default_model_name 注入为 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。
 ## available_models 是模型列表提供给用户选择的模型 ID 或通配模式，顺序即展示顺序；为空时不过滤。
+## 每轮对话带的 model_id：非空时只接受能被列表匹配上的，为空时交给网关裁决。
 # BKAIDEV_MODEL_CONFIG:
 #   default_model_name: deepseek-v4-flash
 #   available_models: [deepseek-*-flash, hy4-*, qwen3-5-397B]
@@ -150,6 +151,12 @@ AGENT_MODEL_SOURCE: bkaidev
 每个模型只给 ID、名称、上下文窗口和是否支持图像输入：网关卡片只有这些，名称用 ID 代替。
 direct 下只读 `AGENT_DIRECT_MODEL_CONFIG`，返回那一个模型，`allow_user_switch` 为 false，不换票
 也不访问网络，`api_key` 不出现在响应里。
+
+**每轮指定模型**：发起一轮对话时可以带列表里的 `model_id`，Runtime 用它跑这一轮；不带时用
+`default_model_name`。校验只读配置、不访问网络：bkaidev 下 `available_models` 非空时只接受能被其中
+某一项匹配上的 ID（匹配规则和模型列表相同），为空时原样交给网关；direct 下只接受那一个内置模型的 ID。
+不接受时返回 422 `MODEL_NOT_AVAILABLE`，不会悄悄换成默认模型。网关不认这个模型时，本轮以 AG-UI
+`RUN_ERROR` 结束。
 
 **前置条件**：local_process 用 `uv run --project <agent_project_dir> --no-sync` 拉起 Runtime，
 `--no-sync` 意味着它不会在请求路径上解析依赖，所以 agent 的虚拟环境必须提前备好：

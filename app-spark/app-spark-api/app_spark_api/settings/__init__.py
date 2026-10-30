@@ -453,11 +453,12 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 ## LLM 基址不在这里配，由 {BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1 拼出。
 ##
 ## BKAIDEV_MODEL_CONFIG:
-##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash，须是 agent 支持的模型名。
+##   ## 可选。注入 Runtime 的 MODEL_NAME，默认 deepseek-v4-flash。没指定模型的一轮用它托底。
 ##   default_model_name: deepseek-v4-flash
 ##   ## 可选。模型列表接口提供给用户选择的模型，顺序即展示顺序。每项是模型 ID 或通配模式（fnmatch 的
 ##   ## * ? [...]，区分大小写），一项命中多个模型时按网关顺序。为空时不过滤，返回网关对本应用开放、且能
 ##   ## 调工具的全部模型；配了但一项都没命中时同样退回全部，并记 warning。
+##   ## 每轮对话请求里的 model_id 也只接受能被某一项匹配上的，否则返回 422；为空时原样交给网关裁决。
 ##   ## 不能有重复项；非空时必须有一项能匹配 default_model_name，否则服务启动失败。改动后重启生效。
 ##   available_models:
 ##     - deepseek-*-flash

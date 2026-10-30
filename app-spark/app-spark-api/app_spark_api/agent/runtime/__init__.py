@@ -53,6 +53,7 @@ from app_spark_api.agent.runtime.exceptions import (
     AgentWorkspaceSavePendingError,
     ModelAccessConfigurationError,
     ModelCredentialMissingError,
+    ModelNotAvailableError,
 )
 from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 
@@ -79,6 +80,7 @@ __all__ = [
     "ModelAccessConfigurationError",
     "ModelAccessResolver",
     "ModelCredentialMissingError",
+    "ModelNotAvailableError",
     "ModelSource",
     "PreviewTarget",
     "RuntimeHealth",

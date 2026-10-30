@@ -247,6 +247,7 @@ class AgentRuntimeClient:
         content: str,
         context_version: int,
         run_id: str | None = None,
+        model_name: str | None = None,
     ) -> AgentRun:
         """Submit one conversation turn and return its still-open event stream.
 
@@ -259,11 +260,17 @@ class AgentRuntimeClient:
             not good enough.
         :param run_id: Identifier for this turn; a fresh UUID when omitted. The Runtime refuses
             a replayed one.
+        :param model_name: Model to run this turn on; None leaves the Runtime on its default.
         :return: The accepted run.
         :raises AgentBusyError: If a run is already occupying the Runtime.
         :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
         """
         run_id = run_id or str(uuid4())
+        forwarded_props: dict[str, object] = {"contextVersion": context_version}
+        # 不带这个键 Runtime 就用沙箱默认模型；旧版 Runtime 不认识它，会忽略并照样用默认模型。
+        if model_name is not None:
+            forwarded_props["modelName"] = model_name
+
         body = {
             # AG-UI's own document, so it keeps AG-UI's camelCase -- `threadId` included, which
             # is the protocol's name for what everything else here calls a conversation.
@@ -273,7 +280,7 @@ class AgentRuntimeClient:
             "messages": [{"id": str(uuid4()), "role": "user", "content": content}],
             "tools": [],
             "context": [],
-            "forwardedProps": {"contextVersion": context_version},
+            "forwardedProps": forwarded_props,
         }
 
         # No read timeout: the stream stays open for as long as the model keeps working.

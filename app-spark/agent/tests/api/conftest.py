@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai.capabilities import AbstractCapability
-from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.models import Model
 
 from app_spark_agent import settings
 from tests.api.support import MODEL_API_KEY, RUNTIME_TOKEN, ApiFactory, build_test_client
@@ -49,7 +49,7 @@ def make_api(tmp_path: Path) -> Iterator[ApiFactory]:
 
         def factory(
             *,
-            model: FunctionModel | None = None,
+            model: Model | None = None,
             capabilities: Sequence[AbstractCapability[object]] = (),
             tools: Sequence[Any] = (),
         ) -> TestClient:

@@ -21,7 +21,6 @@ from datetime import timedelta
 from pathlib import PurePosixPath
 from urllib.parse import urlencode, urlparse
 
-from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -31,11 +30,6 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
-from paasng.accessories.cloudapi_v2.apigateway.exceptions import ApiGatewayServiceError
-from paasng.infras.accounts.utils import ForceAllowAuthedApp
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.agent_sandbox.artifact import (
     archive_volume_file,
     build_download_url,
@@ -72,7 +66,6 @@ from paasng.platform.agent_sandbox.sandbox import (
     get_sandbox_client,
 )
 from paasng.platform.agent_sandbox.serializers import (
-    GrantAgentSandboxPermissionSLZ,
     SandboxCodeRunInputSLZ,
     SandboxCreateFolderInputSLZ,
     SandboxCreateInputSLZ,
@@ -100,7 +93,6 @@ from paasng.platform.agent_sandbox.serializers import (
 from paasng.platform.agent_sandbox.utils import public_detail
 from paasng.platform.agent_sandbox.volume import delete_volume, share_volume, unshare_volume
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -641,42 +633,3 @@ class AgentSandboxProcessViewSet(SandboxViewMixin, viewsets.GenericViewSet):
             logger.exception("Failed to get logs from sandbox: %s", sandbox.uuid)
             raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED.f(public_detail(exc))
         return Response(SandboxGetLogsOutputSLZ({"logs": logs}).data)
-
-
-@ForceAllowAuthedApp.mark_view_set
-class AgentSandboxAPIPermissionViewSet(viewsets.ViewSet):
-    """Agent Sandbox API 权限管理相关接口。
-
-    AIDev 平台通过该接口为指定的 AI Agent 应用授予 Agent Sandbox 相关 API 的调用权限。
-    授权完成后，该应用即可通过开发者中心提供的网关接口，访问沙箱的创建、删除、文件操作、进程管理及日志查看等接口。
-    """
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.GRANT_APIGW_PERMISSIONS)]
-
-    @swagger_auto_schema(
-        tags=["agent_sandbox"],
-        request_body=GrantAgentSandboxPermissionSLZ(),
-        responses={status.HTTP_201_CREATED: ""},
-    )
-    def grant_permissions(self, request):
-        """为指定的 AI Agent 应用授予 Agent Sandbox 相关 API 的调用权限。"""
-        slz = GrantAgentSandboxPermissionSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        validated_data = slz.validated_data
-
-        target_app_code = validated_data["target_app_code"]
-        expire_days = validated_data["expire_days"]
-
-        tenant_id = get_tenant_id_for_app(target_app_code)
-        try:
-            client = ApiGatewayClient(tenant_id=tenant_id)
-            client.grant_apigw_permissions(
-                gateway_name=settings.APIGW_GRANT_GATEWAY_NAME,
-                target_app_code=target_app_code,
-                resource_names=settings.APIGW_GRANT_AGENT_SANDBOX_APIS,
-                expire_days=expire_days,
-            )
-        except ApiGatewayServiceError as e:
-            raise error_codes.REMOTE_REQUEST_ERROR.f(str(e))
-
-        return Response(status=status.HTTP_201_CREATED)

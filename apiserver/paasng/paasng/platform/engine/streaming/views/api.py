@@ -29,18 +29,18 @@ from rest_framework.viewsets import ViewSet
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.platform.applications.mixins import SysManagedAppInPathMixin
 from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.streaming.serializers import (
+    HistoryEventsQuerySLZ,
+    StreamEventSLZ,
+    StreamingQuerySLZ,
+)
 from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.workflow import ServerSendEvent
 from paasng.utils.error_codes import error_codes
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
 from paasng.utils.views import EventStreamRender
-
-from .serializers import HistoryEventsQuerySLZ, StreamEventSLZ, StreamingQuerySLZ
 
 
 class StreamViewSet(ViewSet):
@@ -56,9 +56,9 @@ class StreamViewSet(ViewSet):
 
     def get_subscriber(self, request, channel_id):
         # Do permission check to avoid user viewing logs of others by passing a random channel_id
-        app = _get_channel_deployment(channel_id).app_environment.module.application
+        app = get_channel_deployment(channel_id).app_environment.module.application
         self.check_object_permissions(request, app)
-        return _make_subscriber(channel_id)
+        return make_subscriber(channel_id)
 
     @rate_limits_by_user(UserAction.FETCH_DEPLOY_LOG, window_size=60, threshold=10)
     @swagger_auto_schema(
@@ -113,31 +113,10 @@ class StreamViewSet(ViewSet):
         slz.is_valid(raise_exception=True)
 
         subscriber = self.get_subscriber(request, channel_id)
-        return _render_history_events(subscriber, slz.validated_data["last_event_id"])
+        return render_history_events(subscriber, slz.validated_data["last_event_id"])
 
 
-class SysStreamViewSet(ViewSet, SysManagedAppInPathMixin):
-    """应用态事件流接口：AIDEV 获取 AI Agent 应用、AppSpark 获取 AppSpark 应用的部署日志。"""
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.DEPLOY_APPLICATIONS)]
-
-    @swagger_auto_schema(
-        query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)}, tags=["streams"]
-    )
-    def history_events(self, request, channel_id):
-        """应用态获取部署日志历史事件，只允许查询调用方管理的应用的部署。"""
-        slz = HistoryEventsQuerySLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
-        # 路径里只有部署 ID，没有应用和模块，所以按部署所在的环境校验归属。
-        # 同一个权限动作 AIDEV 和 AppSpark 都有，漏掉这一步就能读到对方应用的日志
-        self.ensure_env_managed_by_client(_get_channel_deployment(channel_id).app_environment)
-
-        subscriber = _make_subscriber(channel_id)
-        return _render_history_events(subscriber, slz.validated_data["last_event_id"])
-
-
-def _get_channel_deployment(channel_id: str) -> Deployment:
+def get_channel_deployment(channel_id: str) -> Deployment:
     """将 channel_id 作为一个有效的 Deployment ID 获取部署对象，用于后续鉴权"""
     try:
         return Deployment.objects.get(pk=channel_id)
@@ -146,7 +125,7 @@ def _get_channel_deployment(channel_id: str) -> Deployment:
         raise error_codes.CANNOT_GET_DEPLOYMENT
 
 
-def _make_subscriber(channel_id: str) -> StreamChannelSubscriber:
+def make_subscriber(channel_id: str) -> StreamChannelSubscriber:
     subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
     channel_state = subscriber.get_channel_state()
     if channel_state == "none":
@@ -154,7 +133,7 @@ def _make_subscriber(channel_id: str) -> StreamChannelSubscriber:
     return subscriber
 
 
-def _render_history_events(subscriber: StreamChannelSubscriber, last_event_id: int) -> Response:
+def render_history_events(subscriber: StreamChannelSubscriber, last_event_id: int) -> Response:
     with closing(subscriber):
         events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
     return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")

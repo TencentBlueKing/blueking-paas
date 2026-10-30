@@ -116,14 +116,22 @@ class E2BConsoleSandboxOutputSLZ(serializers.Serializer):
     end_at = _GatewayDateTimeField(source="endAt", help_text="预计回收时间")
 
 
-class E2BConsoleTemplateOutputSLZ(serializers.ModelSerializer):
-    """模板列表项。资源字段仅供展示，实际规格以网关侧模板为准，未登记时为 null。"""
+class E2BConsoleTemplateOutputSLZ(serializers.Serializer):
+    """模板列表项。资源字段仅供展示，实际规格以网关侧模板为准。"""
 
-    class Meta:
-        model = E2BSandboxTemplate
-        fields = ["template_id", "name", "description", "cpu_count", "memory_mb", "disk_size_mb", "timeout"]
+    template_id = serializers.CharField(help_text="模板标识，即 SDK 创建沙箱时传入的 templateID")
+    name = serializers.CharField(help_text="展示名称")
+    description = serializers.CharField(help_text="描述，可能为空字符串")
+    cpu_count = serializers.IntegerField(allow_null=True, help_text="CPU 核数，未登记时为 null")
+    memory_mb = serializers.IntegerField(allow_null=True, help_text="内存（MB），未登记时为 null")
+    disk_size_mb = serializers.IntegerField(allow_null=True, help_text="磁盘（MB），未登记时为 null")
+    timeout = serializers.IntegerField(allow_null=True, help_text="默认存活秒数（TTL），未登记时为 null")
 
 
 class E2BConsoleTemplateDetailOutputSLZ(E2BConsoleTemplateOutputSLZ):
-    class Meta(E2BConsoleTemplateOutputSLZ.Meta):
-        fields = [*E2BConsoleTemplateOutputSLZ.Meta.fields, "image", "network", "region", "prewarm_count"]
+    """模板详情，在列表项基础上增加镜像等信息。"""
+
+    image = serializers.CharField(help_text="镜像，可能为空字符串")
+    network = serializers.CharField(help_text="网络说明，语义待确认，可能为空字符串")
+    region = serializers.CharField(help_text="地域，语义待确认，可能为空字符串")
+    prewarm_count = serializers.IntegerField(allow_null=True, help_text="预热数量，语义待确认，未登记时为 null")

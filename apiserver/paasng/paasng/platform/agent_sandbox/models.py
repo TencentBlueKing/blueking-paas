@@ -480,11 +480,11 @@ class E2BSandboxTemplate(UuidAuditedModel):
 
     模板的真实定义在 e2b 网关侧，这里只登记展示用的元数据与状态：
 
-    - ``enabled``：SDK 只能用已启用的模板创建沙箱
-    - ``is_public``：页面只展示已启用且公开的模板。不公开的模板（如某些服务自用的）
-      仍可由知道 ``template_id`` 的调用方通过 SDK 使用，它不是访问控制
+    - enabled：SDK 只能用已启用的模板创建沙箱
+    - is_public：页面只展示已启用且公开的模板。不公开的模板（如某些服务自用的）
+      仍可由知道 template_id 的调用方通过 SDK 使用，它不是访问控制
 
-    ``template_id`` 须与网关侧一致，由运维登记时保证，平台不做校验。
+    template_id 须与网关侧一致，由运维登记时保证，平台不做校验。
 
     [multi-tenancy] This model is not tenant-aware.
     """

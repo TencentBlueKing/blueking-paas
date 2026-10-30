@@ -340,3 +340,14 @@ ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher
 
 # 持久存储
 DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = ""
+
+# 套餐开启 monitor 时注入的 redis-exporter sidecar 资源配额
+# exporter 只执行 INFO 类命令, 实测常驻内存约 13Mi; 主从实例每个 Pod 都会注入一份.
+# memory requests 不宜低于实际用量: 节点内存紧张时会按 Pod 整体驱逐, 连带 Redis 一起被驱逐
+REDIS_EXPORTER_RESOURCES = env.json(
+    "REDIS_EXPORTER_RESOURCES",
+    default={
+        "requests": {"cpu": "1m", "memory": "16Mi"},
+        "limits": {"cpu": "100m", "memory": "64Mi"},
+    },
+)

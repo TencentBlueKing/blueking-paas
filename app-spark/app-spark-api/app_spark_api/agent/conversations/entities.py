@@ -68,6 +68,14 @@ class RuntimeStateResponse(Schema):
             "所以单看 running=false 并不代表这一轮已经在库里"
         )
     )
+    # 停一轮要点名，刷新页面后的客户端手里没有 SSE 里的 runId，只能从这里拿。
+    run_id: str | None = Field(
+        default=None,
+        description=(
+            "活跃 Runtime 上正在跑的那一轮的 run ID，即停止接口要的 run_id；"
+            "没有在跑的一轮时为 null，一轮刚被接受、还在准备时也可能短暂为 null"
+        ),
+    )
     # 运行环境空闲回收、Agent 退出或到了最长存活期之后，下一轮要先花几十秒准备，前端靠它提前提示。
     runtime_ready: bool = Field(
         description=(
@@ -113,6 +121,12 @@ class PreviewResponse(Schema):
             "null 表示此刻问不到——没有活跃 Runtime，或者有但联系不上"
         ),
     )
+
+
+class RunStopResponse(Schema):
+    """停止请求已经交给 Runtime，这一轮正在收尾。"""
+
+    run_id: str = Field(description="被请求停止的那一轮")
 
 
 class StartRunRequest(Schema):

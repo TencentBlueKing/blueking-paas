@@ -104,7 +104,7 @@ class SandboxAgentStop:
                     sandbox, grace_seconds=constants.STOP_GRACE_SECONDS if grace_seconds is None else grace_seconds
                 )
         finally:
-            # 被取消也要走到这里：结束会话的请求在等 Agent 的那 20 秒里被断开时，不 kill、不释放，
+            # 被取消也要走到这里：结束会话的请求在等 Agent 的 STOP_GRACE_SECONDS 里被断开时，不 kill、不释放，
             # 会话已经关了，没有谁会再来收拾，这条记录会一直占着 Project，直到沙箱自己到期。
             await self._kill(sandbox)
             await self._release(reason)

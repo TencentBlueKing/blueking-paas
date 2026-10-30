@@ -24,12 +24,12 @@ only to *advance* a conversation, never to look at one.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
 from functools import partial
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import attrs
 from asgiref.sync import sync_to_async
@@ -38,7 +38,11 @@ from django.db.models import F
 from django.utils import timezone
 
 from app_spark_api.agent.conversations import checkpoints, state
-from app_spark_api.agent.conversations.exceptions import ConversationClosedError
+from app_spark_api.agent.conversations.exceptions import (
+    ConversationClosedError,
+    RunNotFoundError,
+    RunNotInProgressError,
+)
 from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
@@ -53,6 +57,7 @@ from app_spark_api.agent.runtime import (
     StateCallback,
 )
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.agent.runtime.lifetime import extend_lifetime_quietly
 from app_spark_api.agent.runtime.model_access import resolve_model_access
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
@@ -97,6 +102,9 @@ class ConversationState:
     :param runtime_ready: Whether the next turn can go straight to the Runtime that is up now.
         False when none is up, the one that is up does not answer, or the provider is going
         to replace it anyway; the next turn then has to prepare one first, which takes a while.
+    :param run_id: The turn the live Runtime is running, which is what :func:`stop_run` takes.
+        ``None`` when nothing is running, and also briefly at the start of a turn that is
+        ``running`` but not under way yet.
     """
 
     context_version: int
@@ -107,6 +115,7 @@ class ConversationState:
     model: str | None
     dev_server_status: str | None = None
     runtime_ready: bool = False
+    run_id: str | None = None
 
 
 async def get_dev_server_status(conversation: Conversation) -> str | None:
@@ -318,7 +327,7 @@ async def terminate_runtime(conversation: Conversation) -> None:
     """
     await revoke_state_access(conversation)
 
-    # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 20 秒再销毁沙箱。凭证已吊销，
+    # 同步等 provider 停完：e2b 会先让 Agent 推送工作区，最多等 STOP_GRACE_SECONDS 再销毁沙箱。凭证已吊销，
     # Agent 退出前最后那次状态回写会被拒绝，会话历史以此前已回写的为准。
     try:
         await get_agent_runtime_provider().terminate(str(conversation.id))
@@ -384,6 +393,7 @@ async def get_state(conversation: Conversation) -> ConversationState:
         replication_pending=health.replication_pending,
         model=health.model,
         dev_server_status=health.dev_server_status,
+        run_id=health.run_id,
         # 有一轮在跑时 ensure 不会换掉它（超龄也一样），下一轮要么复用、要么因忙被拒，都不用准备。
         runtime_ready=health.running or not await provider.needs_replacement(str(conversation.id)),
     )
@@ -459,11 +469,15 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         health.dev_server_status,
         health.running,
     )
+    # run_id 在请求 Runtime 之前就随消息落库。Runtime 一接受，/health 就会报出这个 run_id，前端随即可以
+    # 拿它来停；要是等 Runtime 应答后再补写，这中间 stop_run 的归属校验会把一个真实的 run 当成不存在。
+    # 落库在前，也就不会因为浏览器断开或任务取消而丢掉用户输入与 run 的关联。
+    run_id = str(uuid4())
     message = await sync_to_async(ConversationUserMessage.objects.create_for_conversation)(
-        conversation, content=content
+        conversation, content=content, run_id=run_id
     )
     try:
-        run = await client.start_run(content=content, context_version=health.context_version)
+        run = await client.start_run(content=content, context_version=health.context_version, run_id=run_id)
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。
         logger.warning(
@@ -479,22 +493,39 @@ async def start_run(conversation: Conversation, *, content: str, credential: Use
         await message.adelete()
         raise
 
-    try:
-        # 接受后立即补上用于排查的 run_id，不能等 SSE 消费完。
-        # 否则浏览器断开连接或生成失败，就会丢掉用户输入与 run 的关联信息。
-        message.run_id = run.run_id
-        await message.asave(update_fields=["run_id", "updated_at"])
-        logger.info(
-            "Conversation %s accepted run %s at %s",
-            conversation.id,
-            run.run_id,
-            client.handle.base_url,
-        )
-    except BaseException:
-        # 此时连接已经打开，但还没有交给 stream_run；保存失败或任务取消也必须释放它。
-        await run.aclose()
-        raise
+    logger.info(
+        "Conversation %s accepted run %s at %s",
+        conversation.id,
+        run.run_id,
+        client.handle.base_url,
+    )
     return run
+
+
+async def stop_run(conversation: Conversation, run_id: str) -> None:
+    """请求停下这个会话正在跑的那一轮，不等它真正收尾就返回。
+
+    一轮对话不随客户端连接结束：浏览器刷新、网络断开都不会打断它（见 :func:`stream_run`）。
+    想让它提前结束，只能显式调用这里。Runtime 会按「停止」收尾：这一轮已经做了的部分照样提交为
+    会话上下文，文件以「被中断」提交，事件流以 ``RUN_FINISHED`` 结束。收尾完成的标志是
+    :func:`get_state` 的 ``running`` 变回 false。
+
+    只看、不拉：没有 Runtime 就没有在跑的一轮，不能为了停一轮去拉起一个 Runtime。
+
+    :param conversation: 这一轮所属的会话。
+    :param run_id: 要停的那一轮。点名是为了不误停：请求晚到时，Runtime 上跑的可能已经是下一轮。
+    :raises RunNotFoundError: 这个会话从来没有接受过这一轮。
+    :raises RunNotInProgressError: 这一轮已经结束，或者它所在的 Runtime 已经不在了。
+    :raises AgentUnavailableError: Runtime 联系不上，或者回了不该回的东西。
+    """
+    # 先认归属，再问 Runtime：run_id 是客户端传来的，不能让它借这个会话的 Runtime 去试探别的会话。
+    if not await ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id).aexists():
+        raise RunNotFoundError(f"Conversation {conversation.id} has no run {run_id}")
+
+    handle = await get_agent_runtime_provider().peek(str(conversation.id))
+    if handle is None or not await AgentRuntimeClient(handle).stop_run(run_id):
+        raise RunNotInProgressError(f"Run {run_id} of conversation {conversation.id} is not in progress")
+    logger.info("Conversation %s asked its Agent Runtime to stop run %s", conversation.id, run_id)
 
 
 async def _reject_if_closed_meanwhile(conversation: Conversation) -> None:
@@ -692,6 +723,10 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
     Once the first byte is out the status code is spent, so a connection that breaks here cannot
     be reported as an HTTP error. AG-UI has its own way to say a run ended badly, and a client
     that receives it can show something better than a stream that simply stopped.
+
+    Forwarding is all this does. A client that goes away cancels it, which closes the connection
+    to the Runtime -- and that only stops the Runtime sending: the turn itself runs on there and
+    replicates what it produced as usual. Ending a turn early is :func:`stop_run`.
     """
     try:
         async for chunk in run.aiter_bytes():
@@ -707,20 +742,10 @@ async def stream_run(run: AgentRun, conversation_id: UUID) -> AsyncIterator[byte
             }
         )
     finally:
-        # 一轮开始时 ensure 已经把存活期续成空闲超时。这里再续一次，从这一轮结束起再算同一个秒数。
-        # 流断了、客户端走了也照样续。进行中不再续，一轮按不超过空闲超时来对待。
-        await _extend_runtime_lifetime(conversation_id)
-
-
-async def _extend_runtime_lifetime(conversation_id: UUID) -> None:
-    """Count a turn as activity for the conversation's Runtime, never failing."""
-    # shield：客户端断开会取消这个流，续期不能被一起取消。失败只记告警，这一轮本身不受影响。
-    try:
-        await asyncio.shield(get_agent_runtime_provider().extend_lifetime(str(conversation_id)))
-    except Exception:
-        logger.warning(
-            "Could not extend the Agent Runtime lifetime of conversation %s", conversation_id, exc_info=True
-        )
+        # 一轮开始时 ensure 已经把存活期续成空闲超时。这里再续一次，从流结束起再算同一个秒数。
+        # 流断了、客户端走了也照样续；但那时这一轮可能还在跑，它真正结束时由状态回写那边再续一次，
+        # 见 internal_api.append_ui_events。进行中不再续，一轮按不超过空闲超时来对待。
+        await extend_lifetime_quietly(get_agent_runtime_provider(), conversation_id)
 
 
 def _sse_frame(event: dict[str, Any]) -> bytes:

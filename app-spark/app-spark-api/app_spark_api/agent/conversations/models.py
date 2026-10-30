@@ -200,11 +200,14 @@ class Conversation(OwnerTimestampedModel):
 class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
     """保存用户输入及创建时的 UI event 游标。"""
 
-    def create_for_conversation(self, conversation: Conversation, *, content: str) -> ConversationUserMessage:
+    def create_for_conversation(
+        self, conversation: Conversation, *, content: str, run_id: str | None = None
+    ) -> ConversationUserMessage:
         """在同一个事务里固定用户输入的位置并保存原文。
 
         :param conversation: 输入所属的会话。
         :param content: 用户输入原文。
+        :param run_id: 即将用来提交这条输入的 run，由调用方在请求 Runtime 之前生成。
         :return: 带租户、所有者和 after_seq 的消息；空事件频道使用游标 0。
         """
         with transaction.atomic():
@@ -220,6 +223,7 @@ class ConversationUserMessageManager(models.Manager["ConversationUserMessage"]):
             return self.create(
                 conversation=locked,
                 content=content,
+                run_id=run_id,
                 after_seq=after_seq or 0,
                 tenant_id=locked.tenant_id,
                 owner=locked.owner,
@@ -235,7 +239,8 @@ class ConversationUserMessage(OwnerTimestampedModel):
         on_delete=models.CASCADE,
         related_name="user_messages",
     )
-    # 发送前创建消息，接受后再补上 run_id；它只用于排查，不参与历史定位。
+    # 发送前随消息一起写入，Runtime 拒绝时连同消息删除。不参与历史定位，但它是「这一轮属于这个会话」
+    # 的凭据：stop_run 靠它校验客户端传来的 run_id 的归属，所以不能删，也不能改成可由客户端补写。
     run_id = models.CharField(verbose_name="接受该输入的 run", max_length=64, null=True, default=None)
     content = models.TextField(verbose_name="用户输入原文")
     after_seq = models.PositiveIntegerField(verbose_name="插入位置之前的 UI event 序号", default=0)

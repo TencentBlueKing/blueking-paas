@@ -29,6 +29,7 @@ from app_spark_api.agent.conversations.entities import (
     ConversationHistoryResponse,
     ConversationResponse,
     PreviewResponse,
+    RunStopResponse,
     RuntimeStateResponse,
     StartRunRequest,
     UiEventPageResponse,
@@ -136,7 +137,10 @@ async def start_run(
     """把用户本轮内容发送给 Agent，并把 AG-UI 的 SSE 事件流原样透传回去。
 
     - client 需要等待每轮会话结束后，再发送新的内容；
-    - 已结束的会话不能再推进，会返回 409。
+    - 已结束的会话不能再推进，会返回 409；
+    - 这条 SSE 只是在「看」这一轮：client 断开（刷新页面、网络中断）不会打断它，它会照常跑完并入库。
+      重新进入会话后，用会话状态的 `running` 判断是否还在跑，用 ui-events 接口补上错过的事件；
+    - 要提前结束这一轮，调用停止接口 `POST .../runs/<run_id>/stop/`。
 
     AG-UI 协议说明：https://github.com/ag-ui-protocol/ag-ui
     """
@@ -153,6 +157,30 @@ async def start_run(
         content_type="text/event-stream",
         headers=SSE_RESPONSE_HEADERS,
     )
+
+
+@router.post(
+    "{number}/runs/{run_id}/stop/",
+    response={**ERROR_RESPONSES, HTTPStatus.ACCEPTED: RunStopResponse},
+    url_name="conversations-stop-run",
+    summary="请求停止正在进行的一轮对话",
+)
+async def stop_run(
+    request: HttpRequest,
+    number: int,
+    run_id: str,
+    project_id: str = PROJECT_ID,
+):
+    """请求停止这个会话正在跑的那一轮，不等它收尾就返回 202。
+
+    - 被停下的一轮照常收尾：已经做了的部分仍会写入会话上下文，下一轮的模型看得到；SSE 流以
+      `RUN_FINISHED` 结束；会话状态的 `running` 变回 false 即收尾完成；
+    - `run_id` 来自 AG-UI 事件里的 `runId`，或者会话状态里的 `run_id`；
+    - 这一轮不属于本会话返回 404，已经结束或 Runtime 已不在返回 409；重复请求停止同一轮仍返回 202。
+    """
+    conversation = await _get_conversation(request, project_id, number)
+    await services.stop_run(conversation, run_id)
+    return Status(HTTPStatus.ACCEPTED, RunStopResponse(run_id=run_id))
 
 
 @router.post(
@@ -362,4 +390,5 @@ def _to_state(conversation: Conversation, state: ConversationState) -> RuntimeSt
         dev_server_status=state.dev_server_status,
         replication_pending=state.replication_pending,
         runtime_ready=state.runtime_ready,
+        run_id=state.run_id,
     )

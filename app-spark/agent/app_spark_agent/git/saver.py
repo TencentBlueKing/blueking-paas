@@ -3,10 +3,10 @@
 The split is the whole design, and it follows the shape :mod:`app_spark_agent.replication`
 already uses for conversation state. Two facts about the barrier force it:
 
-- The barrier's ``finally`` runs on a client disconnect just as it does on a completed turn, so
-  a good share of saves happen inside a **cancelled** task, where every ``await`` may raise
-  immediately.
-- On SIGTERM, uvicorn's graceful shutdown deliberately cuts in-flight SSE off after one second.
+- The barrier runs for a turn that was stopped, or cancelled outright at shutdown, just as it
+  does for a completed one, so some saves happen inside a **cancelled** task, where every
+  ``await`` may raise immediately.
+- On SIGTERM, the process has seconds left, and a turn still in progress is cut short to fit.
 
 A network push started in that position cannot be guaranteed to finish -- and "it finished" is
 exactly the guarantee this feature exists to provide. It would also hold the stream open on a
@@ -63,7 +63,7 @@ class Checkpoint:
     :param tag: The immovable remote tag keeping that commit reachable.
     :param context_version: Where the conversation stood when these files were committed. A
         record of which turn wrote them, not a pairing the restore has to honour.
-    :param completed: Whether the run's event stream reached its end.
+    :param completed: Whether the run got to finish rather than being stopped or cancelled.
     """
 
     run_id: str
@@ -380,10 +380,9 @@ class WorkspaceSaver:
         :param run_id: The run this commit belongs to.
         :param conversation_id: The conversation the run belongs to.
         :param context_version: Where the turn left the conversation, carried into the checkpoint.
-        :param completed: Whether the run's event stream reached its end. ``False`` means the
-            client hung up or the task was cancelled part-way through, which says nothing about
-            whether the model itself succeeded -- that is the transcript's business, not the
-            repository's.
+        :param completed: Whether the run got to finish. ``False`` means it was stopped or its
+            task was cancelled part-way through, which says nothing about whether the model
+            itself succeeded -- that is the transcript's business, not the repository's.
         :return: The new commit's SHA, or ``None`` when the turn changed no files.
         """
         subject = f"App-Spark turn {run_id}" if completed else f"App-Spark turn {run_id} (interrupted)"
@@ -394,7 +393,7 @@ class WorkspaceSaver:
             "Turn-Status": "completed" if completed else "interrupted",
         }
         # Cancellation must not split the blocking commit from the state update after it. The
-        # worker thread would keep running after the awaiting SSE task was cancelled, leaving a
+        # worker thread would keep running after the awaiting run task was cancelled, leaving a
         # real commit at HEAD that neither the background pusher nor shutdown knew existed.
         operation = asyncio.create_task(
             self._commit_and_record(

@@ -18,6 +18,7 @@ import type {
   RuntimeStateResponse,
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
+import RequestError from '@/http/fetch/request-error';
 import type { AgUiApplyContext } from '@/services/agent/ag-ui';
 import {
   appendUserMessage,
@@ -80,7 +81,8 @@ export const useProjectStore = defineStore('project', () => {
 
   let enterToken = 0;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
-  // 后端这一轮不靠这条连接。abort 只让当前页面停止读取，任务继续跑；切回来靠轮询补已入库的内容。
+  // 后端这一轮不靠这条连接：abort、刷新页面、网络中断都只让当前页面停止读取，这一轮在 Runtime 里
+  // 照常跑完；切回来靠轮询补已入库的内容。
   let liveRunAbort: AbortController | null = null;
   let liveRunGeneration = 0;
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
@@ -379,6 +381,61 @@ export const useProjectStore = defineStore('project', () => {
     if (state.ui_event_seq > prevSeq) {
       await pullUiEvents();
     }
+  };
+
+  /**
+   * 本页读的 SSE 没读到 `RUN_FINISHED` 就结束了，把这一段会话对齐到服务端。
+   *
+   * 流断了不等于这一轮结束：网络中断、本服务重启都会让流提前断开，而这一轮仍在 Runtime 里跑，
+   * 甚至已经跑完存好了。眼前画出来的只是断开之前的那一截，所以：
+   *
+   * - 服务端比发送前多存了事件，或这一轮还在跑、还没回写完：整段按历史重画，再按
+   *   `running || replication_pending` 轮询补齐，和进入一个正在回复的会话走同一条路。不在原地
+   *   续补：读 SSE 时游标不前进，从本轮开头再拉入库事件，会把已经画出来的字再接一遍；
+   * - 服务端什么都没多存（请求没到、一轮没开始就失败）：没有可补的，留着眼前的报错。
+   *
+   * 服务端明确拒绝的一轮（比如别的标签页正在跑而回 409）不走这里，调用方直接按原样收尾。
+   *
+   * 状态没问到之前不算这一轮结束：让流断开的那次故障，往往也让紧接着的这一问失败。所以有界
+   * 重试，期间输入框一直锁着；离开会话就不再问；连续失败到上限才放开并提示。
+   *
+   * @param stillCurrent 这一轮所在的会话是否还在眼前
+   * @param seqBeforeRun 发送这一轮之前本地的事件游标；读 SSE 时它不前进，服务端超过它说明这一轮有入库的内容
+   */
+  const settleAfterInterruptedRun = async (stillCurrent: () => boolean, seqBeforeRun: number) => {
+    const targetProjectId = projectId.value;
+    const targetNumber = conversationNumber.value;
+    if (!targetProjectId || targetNumber == null) {
+      status.value = 'idle';
+      return;
+    }
+    status.value = 'thinking';
+
+    let state: RuntimeStateResponse | null = null;
+    for (let attempt = 1; attempt <= MAX_CATCH_UP_FAILURES; attempt++) {
+      try {
+        state = await getConversation(targetProjectId, targetNumber, { globalError: false });
+        break;
+      } catch {
+        if (!stillCurrent()) return;
+        if (attempt === MAX_CATCH_UP_FAILURES) {
+          status.value = 'idle';
+          Message({ theme: 'error', message: '回复同步失败，刷新页面可重试。' });
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, CATCH_UP_INTERVAL_MS));
+        if (!stillCurrent()) return;
+      }
+    }
+    // 问的路上切走了：状态属于上一段会话。
+    if (!state || !stillCurrent()) return;
+
+    if (state.running || state.replication_pending || state.ui_event_seq > seqBeforeRun) {
+      await bindConversation(state);
+      return;
+    }
+    applyState(state);
+    status.value = 'idle';
   };
 
   /**
@@ -740,6 +797,13 @@ export const useProjectStore = defineStore('project', () => {
     const runProjectId = projectId.value;
     const runNumber = conversationNumber.value;
     const runGeneration = liveRunGeneration;
+    // 读 SSE 时游标不前进，所以它一直是「这一轮之前」的位置。
+    const seqBeforeRun = uiEventSeq.value;
+    // 只有读到 RUN_FINISHED 才算这一轮完整画出来了。RUN_ERROR 不算：本服务和 Runtime 之间断开时，
+    // 本服务会自己补一个 RUN_ERROR，而这一轮在 Runtime 里还在跑。
+    let sawRunFinished = false;
+    // 服务端明确拒绝了这一轮（4xx/5xx 响应）：没有一轮在跑，眼前的报错就是结果，不用去对齐。
+    let refused = false;
     const controller = new AbortController();
     liveRunAbort = controller;
     // 代数在取消时立刻加一，比项目号、会话号变得更早：openConversation 还在等接口时，
@@ -790,12 +854,14 @@ export const useProjectStore = defineStore('project', () => {
           // 开始输出，运行环境已就绪。只清自己设的那句，事件带来的进度留给 applyResult。
           if (liveAssistant.progress === PREPARING_RUNTIME_TEXT) liveAssistant.progress = '';
         }
+        if (event.type === 'RUN_FINISHED') sawRunFinished = true;
         syncApplyCtx();
         applyResult(applyCtx, applyAgUiEvent(applyCtx, event, { ignoreUser: true }));
       }
     } catch (error) {
       // 切走时 abort 会落到这里。那条助手消息已经不在眼前的列表里，错误不能写到新对话上。
       if (!stillCurrent()) return;
+      refused = error instanceof RequestError;
       const modelUnavailable = isApiError(error, ApiErrorCode.MODEL_NOT_AVAILABLE);
       const textBlock = liveAssistant.blocks.find(block => block.type === 'text');
       const detail = modelUnavailable
@@ -820,12 +886,21 @@ export const useProjectStore = defineStore('project', () => {
         if (textBlock && !textBlock.text) {
           textBlock.text = '本轮对话已结束。';
         }
-        status.value = 'idle';
-        if (projectId.value && conversationNumber.value != null) {
+        if (!sawRunFinished && !refused) {
           try {
-            await syncConversationOnce();
+            await settleAfterInterruptedRun(stillCurrent, seqBeforeRun);
           } catch {
-            // 发送结果已展示，追赶失败不覆盖当前消息
+            // 只有按历史重画失败会到这里，bindConversation 已在对话区留了报错；它也已把状态改对。
+          }
+        } else {
+          status.value = 'idle';
+          if (projectId.value && conversationNumber.value != null) {
+            try {
+              // 这一轮已经完整画出来了：游标直接拨到最新，不再把本轮入库的事件接一遍。
+              await syncConversationOnce();
+            } catch {
+              // 发送结果已展示，追赶失败不覆盖当前消息
+            }
           }
         }
       }

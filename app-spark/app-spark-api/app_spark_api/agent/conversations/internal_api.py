@@ -41,6 +41,8 @@ from app_spark_api.agent.conversations.tokens import (
     StateTokenClaims,
     read_state_token,
 )
+from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
+from app_spark_api.agent.runtime.lifetime import extend_lifetime_quietly
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.utils.urls import reverse_public
@@ -190,7 +192,13 @@ async def append_ui_events(
     payload: AppendRequest,
     conversation_id: UUID = CONVERSATION_ID,
 ):
-    return await _append(request, conversation_id, "ui_event", payload)
+    response = await _append(request, conversation_id, "ui_event", payload)
+    if any(_ends_a_run(record.event) for record in payload.records):
+        # A turn does not end with the client's stream any more, so the renewal the stream makes on
+        # its way out can come long before the turn is over -- or never, for a turn nobody was
+        # following. The turn's last event reaching this service is the one moment always seen.
+        await extend_lifetime_quietly(get_agent_runtime_provider(), conversation_id)
+    return response
 
 
 @router.put(
@@ -264,6 +272,14 @@ async def _append(
     except state.ConversationStateError as exc:
         raise error_codes.INVALID_CONVERSATION_STATE from exc
     return AppendResponse(last_seq=stored_through)
+
+
+# AG-UI's last event of every run, finished or failed. A stopped run ends with RUN_FINISHED too.
+_RUN_END_EVENT_TYPES = frozenset({"RUN_FINISHED", "RUN_ERROR"})
+
+
+def _ends_a_run(event: Any) -> bool:
+    return isinstance(event, dict) and event.get("type") in _RUN_END_EVENT_TYPES
 
 
 async def _authorized_conversation(request: HttpRequest, conversation_id: UUID) -> Conversation:

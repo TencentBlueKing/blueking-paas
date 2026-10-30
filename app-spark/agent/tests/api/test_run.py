@@ -233,11 +233,6 @@ def test_control_plane_without_bearer_is_401(api: TestClient) -> None:
     assert raw.put("/context", json={}).status_code == 401
 
 
-def test_no_independent_cancel_route(api: TestClient) -> None:
-    paths = [getattr(route, "path", "") for route in api.app.routes]
-    assert not any("cancel" in path for path in paths)
-
-
 @pytest.mark.parametrize(
     ("field", "value"),
     [("MODEL_NAME", "not-a-listed-model"), ("MODEL_BASE_URL", "")],

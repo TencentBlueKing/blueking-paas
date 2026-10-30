@@ -10,7 +10,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +22,7 @@ from app_spark_agent.app_supervisor import AppSupervisor
 from app_spark_agent.git.saver import WorkspaceSaver
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
+from app_spark_agent.server.run_task import RunSupervisor
 from app_spark_agent.state import (
     AppendLog,
     ChangeSignal,
@@ -59,19 +60,14 @@ class RuntimeBusyError(RuntimeError):
 class RunLease:
     """Hold the single run slot until :meth:`release`.
 
-    If Starlette never iterates the SSE generator, :meth:`release_if_never_started`
-    still frees the slot so a failed handshake cannot leave the Runtime busy.
+    Owned by the task driving the run (see :mod:`app_spark_agent.server.run_task`), not by the
+    request that started it, so the slot stays taken for as long as the turn actually runs.
     """
 
     def __init__(self, guard: RunGuard, on_release: Callable[[], None] | None = None) -> None:
         self._guard = guard
         self._on_release = on_release
-        self._entered = False
         self._released = False
-
-    def mark_entered(self) -> None:
-        """Mark that the SSE generator has started."""
-        self._entered = True
 
     def release(self) -> None:
         """Release the slot. Safe to call more than once."""
@@ -81,11 +77,6 @@ class RunLease:
         self._guard.release()
         if self._on_release is not None:
             self._on_release()
-
-    def release_if_never_started(self) -> None:
-        """Release only if the SSE generator never started."""
-        if not self._entered:
-            self.release()
 
 
 class RunGuard:
@@ -172,6 +163,7 @@ class ConversationRuntime:
         Runtime has no control plane and its state directory is all there is.
     :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
         this Runtime has no repository configured and the workspace is local-only.
+    :param runs: The run in progress, driven as a task of its own rather than by a request.
     """
 
     agent: Agent[Any, Any]
@@ -185,6 +177,7 @@ class ConversationRuntime:
     launch_tool: LaunchTool
     replicator: StateReplicator | None
     saver: WorkspaceSaver | None = None
+    runs: RunSupervisor = field(default_factory=RunSupervisor)
 
     @classmethod
     def open(

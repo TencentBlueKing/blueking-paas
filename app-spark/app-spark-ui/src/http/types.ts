@@ -112,6 +112,11 @@ export interface RuntimeStateResponse {
    * 到了最长存活期）下一轮要先花几十秒准备运行环境。
    */
   runtime_ready: boolean;
+  /**
+   * 正在跑的那一轮的 run ID，停止接口用它点名；没有在跑的一轮时为 null。
+   * 刷新过页面就没有 SSE 里的 runId 了，只能从这里拿。
+   */
+  run_id?: string | null;
 }
 
 /**

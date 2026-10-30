@@ -25,15 +25,28 @@ GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 1
 # 关停时 lifespan 允许为「把东西送出去」花掉的总墙钟秒数：workspace 的 push 和状态回写的
 # flush 共用它，先 push 后 flush。见 ``ConversationRuntime.drain``。
 #
-# 这个值不能自己定。控制面停 Runtime 时给的是 ``SHUTDOWN_GRACE_SECONDS``（见 app-spark-api 的
-# local_process provider），超时就 SIGKILL，而关停要按顺序花掉：
-#   uvicorn 掐连接 1s + 本值 + 停应用子进程 5s = 14s < 20s
+# 这个值不能自己定。控制面停 Runtime 时给的是 ``SHUTDOWN_GRACE_SECONDS``（local_process provider）
+# 或 ``STOP_GRACE_SECONDS``（e2b provider），超时就 SIGKILL，而关停要按顺序花掉下面这些。这里是
+# 关停预算唯一写出具体秒数的地方，别处只引用常量名：
+#   uvicorn 掐连接 1s + 停下进行中的一轮 RUN_STOP_TIMEOUT_SECONDS 5s
+#   + 取消后收尾 RUN_CANCEL_WIND_DOWN_SECONDS 2s + 本值 + 停应用子进程 5s = 21s < 25s
 # 改这里必须回头看那个常量，否则 drain 会被杀在半路，等于一点没送出去。
 SHUTDOWN_DRAIN_TIMEOUT_SECONDS = 8.0
 
+# 关停时给进行中的一轮多少秒按「停止」收尾（提交上下文、本地提交文件）；到点直接取消任务，
+# 文件照样提交，只是这一轮的上下文不再提交。一轮不随连接断开而结束，所以这一步只能在这里做。
+# 计入上面那串关停预算。
+RUN_STOP_TIMEOUT_SECONDS = 5.0
+
+# 取消之后再等这一轮收尾（本地提交文件）多少秒。取消只打断一次，收尾里的本地 commit 要排在后台
+# saver 正在进行的 push 后面拿 Git 锁，push 卡在网络上时可以等上几分钟。到点不再等，直接进 drain：
+# 那个 commit 自己带 shield 并持锁，没人等也不会登记错乱；而此时 push 反正也拿不到锁，drain
+# 真正还能送出去的是不需要 Git 锁的状态回写。计入上面那串关停预算。
+RUN_CANCEL_WIND_DOWN_SECONDS = 2.0
+
 # 空闲退出发出 SIGTERM 后，等有序关停走完的上限；到点无条件 ``os._exit``。
-# 比上面那串 14s 留出余量：它是兜底，不是正常路径的预算。
-IDLE_EXIT_DEADLINE_SECONDS = 20.0
+# 比上面那笔关停预算留出余量：它是兜底，不是正常路径的预算。
+IDLE_EXIT_DEADLINE_SECONDS = 25.0
 
 env = Env(prefix=ENV_PREFIX)
 env.read_env(".env")

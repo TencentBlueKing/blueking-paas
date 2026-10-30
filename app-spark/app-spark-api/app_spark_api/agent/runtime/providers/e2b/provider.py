@@ -258,7 +258,7 @@ class E2BProvider(AgentRuntimeProvider):
         records = [record async for record in E2BSandboxRecord.objects.active()]
         for record in records:
             async with self._conversation_lock(record.conversation_id):
-                # 不等 Agent 推送：沙箱是一个个停的，每个都等上 20 秒，停服就要等 N 倍。
+                # 不等 Agent 推送：沙箱是一个个停的，每个都等上 STOP_GRACE_SECONDS，停服就要等 N 倍。
                 await _SandboxClaim(record, self.config).terminate(reason="terminated", graceful=False)
 
     async def peek(self, conversation_id: str) -> AgentRuntimeHandle | None:

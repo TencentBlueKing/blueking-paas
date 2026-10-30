@@ -301,3 +301,33 @@ async def test_any_other_restore_refusal_is_not_mistaken_for_a_busy_runtime(path
 async def test_a_restore_reports_a_runtime_that_is_not_listening(path, dead_handle):
     with pytest.raises(AgentUnavailableError, match="Could not restore"):
         await RESTORES[path](AgentRuntimeClient(dead_handle))
+
+
+# --- Stopping a run ----------------------------------------------------------------------------
+
+
+async def test_a_stop_names_the_run_it_means() -> None:
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs/run-1/stop": (202, b'{"run_id":"run-1","stopping":true}')}, sent)
+
+    assert await client.stop_run("run-1") is True
+    assert [(request.method, request.url.path) for request in sent] == [("POST", "/runs/run-1/stop")]
+    assert sent[0].headers["Authorization"] == f"Bearer {RUNTIME_TOKEN}"
+
+
+async def test_a_run_that_is_not_in_progress_is_reported_rather_than_raised() -> None:
+    client = runtime_answering({"/runs/run-1/stop": (404, b'{"detail":"No such run in progress."}')})
+
+    assert await client.stop_run("run-1") is False
+
+
+async def test_any_other_answer_to_a_stop_is_a_runtime_failure() -> None:
+    client = runtime_answering({"/runs/run-1/stop": (500, b"boom")})
+
+    with pytest.raises(AgentUnavailableError, match="500"):
+        await client.stop_run("run-1")
+
+
+async def test_a_stop_that_cannot_reach_the_runtime_is_a_runtime_failure(dead_handle: AgentRuntimeHandle) -> None:
+    with pytest.raises(AgentUnavailableError, match="stop run run-1"):
+        await AgentRuntimeClient(dead_handle).stop_run("run-1")

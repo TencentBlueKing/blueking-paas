@@ -61,6 +61,10 @@ class ErrorCodes:
     # The history cursor is opaque and only this service issues them, so a cursor it does not
     # recognize is the caller having made one up -- not a conversation that moved on.
     INVALID_HISTORY_CURSOR = ErrorCode(_("The history cursor is invalid."), status_code=HTTPStatus.BAD_REQUEST)
+    # Two codes, because they ask different things of the client: a run that was never this
+    # conversation's is a bug in the caller, one that has already ended is just late.
+    RUN_NOT_FOUND = ErrorCode(_("This conversation has no such run."), status_code=HTTPStatus.NOT_FOUND)
+    RUN_NOT_RUNNING = ErrorCode(_("This run is not in progress."), status_code=HTTPStatus.CONFLICT)
 
     # --- Conversation state write-back ------------------------------------------------------------
     # The Agent Runtime's replication path. The split that matters: `INVALID_` is the Runtime

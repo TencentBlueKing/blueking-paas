@@ -203,7 +203,7 @@ DELETE /api/v1/users/{service_account}/tokens/{id}
 
 - ~~修正当前空闲退出直接 `os._exit()` 的路径，并协调现有退出超时，让 Git 保存有实际执行机会。~~
   **已落地（agent `ConversationRuntime.drain` + lifespan；空闲退出改发 SIGTERM，硬退变成兜底）。**
-  控制面 `SHUTDOWN_GRACE_SECONDS` 已抬到 20s 与之对齐。
+  控制面 `SHUTDOWN_GRACE_SECONDS` 已与 Agent 的关停预算对齐（合计见 agent `settings.py` 里 `SHUTDOWN_DRAIN_TIMEOUT_SECONDS` 的注释）。
 - 同步失败时阻止正常回收；强制销毁需要明确记录未保存状态。
 - 将 Project 写入者所有权持久化，解决现有进程内 Runtime 列表无法覆盖多 API worker、API 重启的问题。
 - ~~检查点回写校验写入者租约与既有 `state_epoch`，非属主的回写一律拒绝。~~

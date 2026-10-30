@@ -171,7 +171,7 @@ LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     "bkrepo_private_bucket": get_bkrepo_private_bucket,
     "bkrepo_public_bucket": get_bkrepo_public_bucket,
     "gcs_mysql_user": get_gcs_mysql_user,
-    "bk_module": get_redis_bk_module,
+    "redis_bk_module": get_redis_bk_module,
 }
 
 

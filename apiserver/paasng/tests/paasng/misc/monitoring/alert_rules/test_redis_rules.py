@@ -33,6 +33,7 @@ REDIS_ALERT_CODES = [
     AlertCode.HIGH_REDIS_MEMORY_USAGE.value,
     AlertCode.HIGH_REDIS_CONNECTION_USAGE.value,
     AlertCode.REDIS_OOM_KILLED.value,
+    AlertCode.REDIS_UNAVAILABLE.value,
 ]
 
 
@@ -66,7 +67,7 @@ class TestRenderRedisRules:
             module_name="default",
             threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]["threshold_expr"],
             receivers=["admin"],
-            metric_labels={"bk_module": "default"},
+            metric_labels={"redis_bk_module": "default"},
         )
 
         with override_settings(REDIS_MONITOR_CONF={"enabled": True, "metric_name_prefix": "bkmonitor:redis:"}):

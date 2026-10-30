@@ -87,17 +87,22 @@ DEFAULT_RULE_CONFIGS = {
     },
     AlertCode.HIGH_REDIS_MEMORY_USAGE.value: {
         "display_name": _("Redis 内存使用率过高"),
-        "metric_label_names": ["bk_module"],
-        "threshold_expr": ">= 0.9",  # 使用率 90%
+        "metric_label_names": ["redis_bk_module"],
+        "threshold_expr": ">= 0.85",  # 使用率 85%
     },
     AlertCode.HIGH_REDIS_CONNECTION_USAGE.value: {
         "display_name": _("Redis 连接数使用率过高"),
-        "metric_label_names": ["bk_module"],
+        "metric_label_names": ["redis_bk_module"],
         "threshold_expr": ">= 0.9",  # 使用率 90%
     },
     AlertCode.REDIS_OOM_KILLED.value: {
         "display_name": _("Redis OOMKilled 退出"),
-        "metric_label_names": ["bk_module"],
+        "metric_label_names": ["redis_bk_module"],
         "threshold_expr": ">= 1",  # 出现至少 1 次
+    },
+    AlertCode.REDIS_UNAVAILABLE.value: {
+        "display_name": _("Redis 实例不可用"),
+        "metric_label_names": ["redis_bk_module"],
+        "threshold_expr": "< 1",  # 主节点 Pod 未就绪
     },
 }

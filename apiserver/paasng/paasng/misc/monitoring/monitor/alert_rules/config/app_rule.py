@@ -95,6 +95,7 @@ if settings.REDIS_MONITOR_CONF.get("enabled", False):
         AlertCode.HIGH_REDIS_MEMORY_USAGE.value,
         AlertCode.HIGH_REDIS_CONNECTION_USAGE.value,
         AlertCode.REDIS_OOM_KILLED.value,
+        AlertCode.REDIS_UNAVAILABLE.value,
     ]:
         _default_supported_alert_codes.module_scoped_codes.append(_redis_alert_code)
         _cnative_supported_alert_codes.module_scoped_codes.append(_redis_alert_code)

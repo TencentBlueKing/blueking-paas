@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'max by (bk_instance) ({{ redis_metric_name_prefix }}redis_instance_oom_killed{bk_app_code="{{ app_code }}", bk_module="{{ metric_labels['bk_module'] }}", bk_env="{{ run_env }}"})'
+  - metric: 'max by (bk_instance) ({{ redis_metric_name_prefix }}redis_instance_oom_killed{bk_app_code="{{ app_code }}", bk_module="{{ module_name }}", bk_env="{{ run_env }}"})'
     interval: 60 # 单位 s
 
 detect: # 检测配置

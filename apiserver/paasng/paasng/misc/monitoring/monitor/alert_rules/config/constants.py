@@ -103,6 +103,6 @@ DEFAULT_RULE_CONFIGS = {
     AlertCode.REDIS_UNAVAILABLE.value: {
         "display_name": _("Redis 实例不可用"),
         "metric_label_names": ["redis_bk_module"],
-        "threshold_expr": "< 1",  # 主节点 Pod 未就绪
+        "threshold_expr": "< 1",  # 实例 Pod 未就绪
     },
 }

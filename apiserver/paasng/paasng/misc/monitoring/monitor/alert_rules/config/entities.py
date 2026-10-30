@@ -41,5 +41,5 @@ class AlertCode(StrStructuredEnum):
     HIGH_REDIS_CONNECTION_USAGE = "high_redis_connection_usage"
     # Redis 实例近期发生 OOMKilled 时触发
     REDIS_OOM_KILLED = "redis_oom_killed"
-    # Redis 实例的主节点 Pod 未就绪时触发
+    # Redis 实例的 Pod 未就绪时触发
     REDIS_UNAVAILABLE = "redis_unavailable"

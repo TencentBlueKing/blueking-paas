@@ -175,38 +175,6 @@ urlpatterns = [
         views.OfflineViewset.as_view({"get": "get_offline_result"}),
         name="api.deploy.result",
     ),
-    # 应用态部署/下架：AIDEV 操作 AI Agent 应用，AppSpark 操作 AppSpark 应用
-    re_path(
-        make_app_pattern(r"/deployments/$", prefix="sys/api/bkapps/applications/"),
-        views.SysDeploymentViewSet.as_view({"post": "deploy"}),
-        name="sys.api.deploy",
-    ),
-    re_path(
-        make_app_pattern(
-            r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
-        ),
-        views.SysDeploymentViewSet.as_view({"get": "get_deployment_result"}),
-        name="sys.api.deploy.result",
-    ),
-    re_path(
-        make_app_pattern(
-            r"/deployments/%s/interruptions/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
-        ),
-        views.SysDeploymentViewSet.as_view({"post": "interrupt"}),
-        name="sys.api.deploy.interruptions",
-    ),
-    re_path(
-        make_app_pattern(r"/offlines/$", prefix="sys/api/bkapps/applications/"),
-        views.SysOfflineViewSet.as_view({"post": "offline"}),
-        name="sys.api.offline",
-    ),
-    re_path(
-        make_app_pattern(
-            r"/offlines/%s/result/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
-        ),
-        views.SysOfflineViewSet.as_view({"get": "get_offline_result"}),
-        name="sys.api.offline.result",
-    ),
     re_path(
         make_app_pattern(r"/deploy_operations/lists/$", include_envs=False),
         views.OperationsViewset.as_view({"get": "list"}),
@@ -265,3 +233,39 @@ urlpatterns += [
 ]
 
 # Deploy Phase End
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
+    # 应用态部署/下架：AIDEV 操作 AI Agent 应用，AppSpark 操作 AppSpark 应用
+    re_path(
+        make_app_pattern(r"/deployments/$", prefix="sys/api/bkapps/applications/"),
+        views.SysDeploymentViewSet.as_view({"post": "deploy"}),
+        name="sys.api.deploy",
+    ),
+    re_path(
+        make_app_pattern(
+            r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
+        ),
+        views.SysDeploymentViewSet.as_view({"get": "get_deployment_result"}),
+        name="sys.api.deploy.result",
+    ),
+    re_path(
+        make_app_pattern(
+            r"/deployments/%s/interruptions/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
+        ),
+        views.SysDeploymentViewSet.as_view({"post": "interrupt"}),
+        name="sys.api.deploy.interruptions",
+    ),
+    re_path(
+        make_app_pattern(r"/offlines/$", prefix="sys/api/bkapps/applications/"),
+        views.SysOfflineViewSet.as_view({"post": "offline"}),
+        name="sys.api.offline",
+    ),
+    re_path(
+        make_app_pattern(
+            r"/offlines/%s/result/$" % PVAR_UUID, include_envs=False, prefix="sys/api/bkapps/applications/"
+        ),
+        views.SysOfflineViewSet.as_view({"get": "get_offline_result"}),
+        name="sys.api.offline.result",
+    ),
+]

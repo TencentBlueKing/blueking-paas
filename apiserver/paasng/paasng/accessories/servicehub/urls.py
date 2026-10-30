@@ -84,11 +84,6 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
     ),
-    re_path(
-        make_app_pattern(f"/services/{SERVICE_UUID}/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
-        views.SysModuleServicesViewSet.as_view({"get": "retrieve"}),
-        name="sys.api.services.detail",
-    ),
     # Manager service attachments (from services side)
     re_path(
         r"^api/services/service-attachments/$",
@@ -117,12 +112,6 @@ urlpatterns = [
         views.SharingReferencesViewSet.as_view({"get": "list_related_modules"}),
         name="api.services.sharing_references.list_related_modules",
     ),
-    # Retrieve application information related to the mysql db_name
-    re_path(
-        r"^sys/api/services/mysql/(?P<db_name>[^/]+)/related_applications_info/$",
-        views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
-        name="api.services.mysql.retrieve_related_applications_info",
-    ),
     # List unbound instances by module
     re_path(
         make_app_pattern("/services/unbound_attachments/$", include_envs=False),
@@ -140,6 +129,22 @@ urlpatterns = [
         make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/retrieve_field/$", include_envs=False),
         views.UnboundServiceEngineAppAttachmentViewSet.as_view({"post": "retrieve_sensitive_field"}),
         name="api.services.attachment.unbound.retrieve_sensitive_field",
+    ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
+    # Retrieve service instances bound to the module
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/$", include_envs=False, prefix="sys/api/bkapps/applications/"),
+        views.SysModuleServicesViewSet.as_view({"get": "retrieve"}),
+        name="sys.api.services.detail",
+    ),
+    # Retrieve application information related to the mysql db_name
+    re_path(
+        r"^sys/api/services/mysql/(?P<db_name>[^/]+)/related_applications_info/$",
+        views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
+        name="api.services.mysql.retrieve_related_applications_info",
     ),
 ]
 

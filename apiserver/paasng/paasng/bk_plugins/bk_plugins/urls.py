@@ -20,7 +20,30 @@ from paasng.utils.basic import re_path
 from . import pluginscenter_views, views
 
 urlpatterns = [
-    # System APIs start
+    re_path(
+        r"^api/bk_plugins/(?P<code>[^/]+)/profile/$",
+        views.BkPluginProfileViewSet.as_view({"get": "retrieve", "patch": "patch"}),
+        name="api.bk_plugins.profile",
+    ),
+    re_path(
+        r"^api/bk_plugins/(?P<code>[^/]+)/distributors/$",
+        views.DistributorRelsViewSet.as_view({"get": "list", "put": "update"}),
+        name="api.bk_plugins.distributor_rels",
+    ),
+    re_path(
+        r"^api/bk_plugin_distributors/$",
+        views.DistributorsViewSet.as_view({"get": "list"}),
+        name="api.bk_plugin_distributors",
+    ),
+    re_path(
+        r"^api/bk_plugin_tags/$",
+        views.BkPluginTagsViewSet.as_view({"get": "list"}),
+        name="api.bk_plugin_tags",
+    ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
     re_path(
         r"^sys/api/bk_plugins/$",
         views.SysBkPluginsViewset.as_view({"get": "list"}),
@@ -107,27 +130,4 @@ urlpatterns = [
         pluginscenter_views.PluginConfigurationViewSet.as_view({"post": "sync_configurations"}),
         name="sys.api.plugins_center.bk_plugins.configurations.sync",
     ),
-    # System APIs end
-    # User interface APIs start
-    re_path(
-        r"^api/bk_plugins/(?P<code>[^/]+)/profile/$",
-        views.BkPluginProfileViewSet.as_view({"get": "retrieve", "patch": "patch"}),
-        name="api.bk_plugins.profile",
-    ),
-    re_path(
-        r"^api/bk_plugins/(?P<code>[^/]+)/distributors/$",
-        views.DistributorRelsViewSet.as_view({"get": "list", "put": "update"}),
-        name="api.bk_plugins.distributor_rels",
-    ),
-    re_path(
-        r"^api/bk_plugin_distributors/$",
-        views.DistributorsViewSet.as_view({"get": "list"}),
-        name="api.bk_plugin_distributors",
-    ),
-    re_path(
-        r"^api/bk_plugin_tags/$",
-        views.BkPluginTagsViewSet.as_view({"get": "list"}),
-        name="api.bk_plugin_tags",
-    ),
-    # User interface APIs end
 ]

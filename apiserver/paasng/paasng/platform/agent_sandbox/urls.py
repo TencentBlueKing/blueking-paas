@@ -119,12 +119,16 @@ urlpatterns = [
         AgentSandboxProcessViewSet.as_view({"get": "logs"}),
         name="agent_sandbox.process.logs",
     ),
-    # System API for granting Agent Sandbox permissions
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
+    # 授权 Agent Sandbox API 权限
     path(
         "sys/api/agent_sandbox/permissions/grant/",
         AgentSandboxAPIPermissionViewSet.as_view({"post": "grant_permissions"}),
         name="agent_sandbox.permissions.grant",
     ),
-    # Image build system API
+    # 镜像构建 API
     path("sys/api/agent_sandbox/image_build/", include("paasng.platform.agent_sandbox.image_build.urls")),
 ]

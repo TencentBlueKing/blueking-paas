@@ -17,7 +17,8 @@
 
 from paasng.utils.basic import re_path
 
-from . import pluginscenter_views, views
+from . import views
+from .views import pluginscenter_sys_api as pluginscenter_views
 
 urlpatterns = [
     re_path(

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
+import logging
 from collections import defaultdict
 from contextlib import closing
 from typing import Dict, List
@@ -37,7 +38,6 @@ from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
 from paasng.bk_plugins.bk_plugins.constants import AI_AGENT_TEMPLATE_PREFIX, EventType
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
-from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import AppTenantInfo
@@ -68,6 +68,8 @@ from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 # TODO: 确认具体权限
+logger = logging.getLogger(__name__)
+
 API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 
@@ -258,7 +260,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
         manager = DeployPhaseManager(deployment.app_environment)
         try:
             phases = [deployment.deployphase_set.get(type=type_) for type_ in manager.list_phase_types()]
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("failed to get phase info")
             raise error_codes.CANNOT_GET_DEPLOYMENT_PHASES
 

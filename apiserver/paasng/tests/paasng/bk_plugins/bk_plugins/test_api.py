@@ -82,12 +82,22 @@ class TestCreatePluginAPI:
     def _setup_mocks(self):
         """设置必要的 mock"""
         with (
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_application") as mock_create_app,
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_default_module") as mock_create_module,
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.init_module_in_view") as mock_init_module,
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.create_market_config") as mock_create_market,
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.post_create_application.send") as mock_signal,
-            mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.make_bk_plugin") as mock_make_plugin,
+            mock.patch(
+                "paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.create_application"
+            ) as mock_create_app,
+            mock.patch(
+                "paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.create_default_module"
+            ) as mock_create_module,
+            mock.patch(
+                "paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.init_module_in_view"
+            ) as mock_init_module,
+            mock.patch(
+                "paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.create_market_config"
+            ) as mock_create_market,
+            mock.patch(
+                "paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.post_create_application.send"
+            ) as mock_signal,
+            mock.patch("paasng.bk_plugins.bk_plugins.views.pluginscenter_sys_api.make_bk_plugin") as mock_make_plugin,
         ):
             # 设置 mock 返回值
             mock_app = mock.MagicMock()

@@ -135,7 +135,10 @@ def _read_model_name(forwarded_props: dict[str, object]) -> str | None:
     # on a model the caller did not ask for, without either side noticing.
     model_name = forwarded_props["modelName"]
     if not isinstance(model_name, str) or not model_name.strip():
-        raise HTTPException(status_code=422, detail="forwardedProps.modelName must be a non-empty string.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.modelName must be a non-empty string.",
+        )
 
     # Stripped like MODEL_NAME, or a padded default name is neither recognised as the default nor
     # understood by the gateway.

@@ -384,9 +384,9 @@ class RuntimeHealth:
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
     :param dev_server_status: What the Runtime says about the dev server hosting the workspace
-        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
-        than interpreted: this service has no opinion on the names, and an older Runtime that
-        says nothing leaves it ``None``.
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``, or ``None`` when
+        it reported no status. Forwarded rather than interpreted: this service has no opinion on
+        the names.
     """
 
     model: str
@@ -417,18 +417,12 @@ class RuntimeHealth:
                 log_seq=int(payload["log_seq"]),
                 ui_event_seq=int(payload["ui_event_seq"]),
                 running=bool(payload["running"]),
-                # Read leniently, unlike every field above it: a Runtime with no control plane
-                # configured has no answer to give, and treating "did not say" as "nothing
-                # pending" is the truthful reading of that.
-                replication_pending=bool(payload.get("replication_pending", False)),
-                # Lenient for a different reason: a Runtime that predates the field says
-                # nothing, and "this Runtime cannot tell me" is not the same answer as any of
-                # the four statuses it could have given.
+                replication_pending=bool(payload["replication_pending"]),
+                # null 是「这台 Runtime 报了没有状态」，不能折成 not_started 那几档里的任何一个。
                 dev_server_status=(
-                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                    None if payload["dev_server_status"] is None else str(payload["dev_server_status"])
                 ),
-                # Lenient for the same reason as dev_server_status.
-                run_id=None if payload.get("run_id") is None else str(payload["run_id"]),
+                run_id=None if payload["run_id"] is None else str(payload["run_id"]),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc

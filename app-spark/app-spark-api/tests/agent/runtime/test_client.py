@@ -136,6 +136,9 @@ async def test_every_runtime_client_request_uses_the_handle_bearer():
                         "log_seq": 0,
                         "ui_event_seq": 0,
                         "running": False,
+                        "replication_pending": False,
+                        "dev_server_status": "not_started",
+                        "run_id": None,
                     }
                 ).encode(),
             ),
@@ -172,6 +175,9 @@ async def test_provider_port_header_is_sent_alongside_the_runtime_bearer():
                 "log_seq": 0,
                 "ui_event_seq": 0,
                 "running": False,
+                "replication_pending": False,
+                "dev_server_status": "not_started",
+                "run_id": None,
             },
         )
 

@@ -251,7 +251,7 @@ async def test_configuration_errors_have_a_safe_service_unavailable_response(
     }
 
 
-async def test_legacy_status_details_are_hidden_from_queries_and_agent_start(aapi_client, fake_forgejo):
+async def test_unexpected_status_details_are_hidden_from_queries_and_agent_start(aapi_client, fake_forgejo):
     await aapi_client.post(
         "/api/projects/",
         data={"id": PROJECT_ID, "name": "Spark Demo"},

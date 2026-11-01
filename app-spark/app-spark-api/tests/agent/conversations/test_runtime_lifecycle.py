@@ -225,7 +225,14 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
     owned_when_started: list[bool] = []
 
     class StartingClient(FakeClient):
-        async def start_run(self, *, content: str, context_version: int, run_id: str) -> FakeRun:
+        async def start_run(
+            self,
+            *,
+            content: str,
+            context_version: int,
+            run_id: str,
+            model_name: str | None = None,
+        ) -> FakeRun:
             owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
             owned_when_started.append(await owned.aexists())
             run = FakeRun([])
@@ -246,6 +253,41 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
     assert owned_when_started == [True]
     await services.stop_run(conversation, run.run_id)
     assert FakeClient.stopped == [run.run_id]
+
+
+@STOP_TESTS
+async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversation, settings, monkeypatch):
+    """用户选的模型要原样交给 Runtime。"""
+    settings.AGENT_MODEL_SOURCE = "bkaidev"
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3"]}
+    seen: list[str | None] = []
+
+    class StartingClient(FakeClient):
+        async def start_run(
+            self,
+            *,
+            content: str,
+            context_version: int,
+            run_id: str,
+            model_name: str | None = None,
+        ) -> FakeRun:
+            seen.append(model_name)
+            run = FakeRun([])
+            run.run_id = run_id
+            return run
+
+    async def open_client(_conversation: Conversation, **_kwargs: Any) -> StartingClient:
+        return StartingClient(HANDLE)
+
+    async def already_warm(_conversation: Conversation, _client: Any, health: RuntimeHealth) -> RuntimeHealth:
+        return health
+
+    monkeypatch.setattr(services, "open_client", open_client)
+    monkeypatch.setattr(services, "_resume_if_cold", already_warm)
+
+    await services.start_run(conversation, content="hi", model_id="hy3")
+
+    assert seen == ["hy3"]
 
 
 @STOP_TESTS

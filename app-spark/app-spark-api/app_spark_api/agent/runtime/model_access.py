@@ -96,7 +96,7 @@ def resolve_run_model_name(model_id: str | None) -> str | None:
         return None
 
     # 可选列表为空时不收窄，名字原样交给网关裁决；非空时只放行能被某一项匹配上的，和模型列表用同一套
-    # 匹配规则。模型列表在一项都没命中网关时会退回全部模型，这里不跟着放宽：那要先调网关才知道。
+    # 匹配规则。列表一项都没命中网关时会关掉切换，而不是把网关的全部模型放出来：放出来的选项这里都会拒。
     config = structure_bkaidev_model_config(settings.BKAIDEV_MODEL_CONFIG)
     if config.available_models and not any(fnmatchcase(model_id, pattern) for pattern in config.available_models):
         raise ModelNotAvailableError(f"Model {model_id!r} matches nothing in BKAIDEV_MODEL_CONFIG.available_models")

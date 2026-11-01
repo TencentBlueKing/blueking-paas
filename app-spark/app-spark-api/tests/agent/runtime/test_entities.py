@@ -49,6 +49,9 @@ HEALTHY_PAYLOAD = {
     "log_seq": 8,
     "ui_event_seq": 18,
     "running": False,
+    "replication_pending": False,
+    "dev_server_status": "ready",
+    "run_id": None,
 }
 
 
@@ -283,9 +286,9 @@ def test_the_application_status_is_forwarded_as_the_runtime_worded_it():
     assert health.dev_server_status == "starting"
 
 
-def test_a_runtime_that_says_nothing_about_its_application_is_not_read_as_a_status():
-    """「问不出来」和 Runtime 能给的那几档里的任何一个都不是一回事，不能折成其中之一。"""
-    health = RuntimeHealth.from_payload(HEALTHY_PAYLOAD)
+def test_a_runtime_that_reports_no_application_status_is_not_given_one():
+    """null 就是没有状态，不能折成 not_started 那几档里的任何一个。"""
+    health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "dev_server_status": None})
 
     assert health.dev_server_status is None
 
@@ -300,6 +303,9 @@ def test_a_runtime_that_has_never_run_has_no_conversation_yet():
     "payload",
     [
         pytest.param({k: v for k, v in HEALTHY_PAYLOAD.items() if k != "log_seq"}, id="truncated"),
+        pytest.param(
+            {k: v for k, v in HEALTHY_PAYLOAD.items() if k != "dev_server_status"}, id="no-dev-server-status"
+        ),
         pytest.param({**HEALTHY_PAYLOAD, "context_version": "two"}, id="wrongly-typed"),
         pytest.param(["not", "an", "object"], id="not-an-object"),
     ],

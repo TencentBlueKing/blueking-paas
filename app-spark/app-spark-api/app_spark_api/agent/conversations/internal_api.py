@@ -162,10 +162,6 @@ class CheckpointRequest(Schema):
 class CheckpointResponse(Schema):
     """检查点已登记。"""
 
-    # 登记即可恢复，所以恒为 true。字段保留下来，是因为已部署的 Runtime 仍会读它：缺了这个字段，
-    # 它会当成 false 记一条「上下文还没到」的误导日志。
-    restorable: bool = Field(default=True, description="恒为 true，仅为兼容旧版 Runtime 保留")
-
 
 @router.post(
     f"{{conversation_id}}/state/{MESSAGES_SEGMENT}",

@@ -267,7 +267,7 @@ class AgentRuntimeClient:
         """
         run_id = run_id or str(uuid4())
         forwarded_props: dict[str, object] = {"contextVersion": context_version}
-        # 不带这个键 Runtime 就用沙箱默认模型；旧版 Runtime 不认识它，会忽略并照样用默认模型。
+        # 不带这个键 Runtime 就用沙箱默认模型。
         if model_name is not None:
             forwarded_props["modelName"] = model_name
 

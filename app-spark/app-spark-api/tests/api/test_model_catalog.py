@@ -211,10 +211,10 @@ async def test_an_available_model_the_gateway_does_not_offer_is_left_out_and_log
     assert any("not-exist" in record.getMessage() for record in caplog.records if record.levelno == logging.WARNING)
 
 
-async def test_an_available_list_matching_nothing_falls_back_to_every_tool_calling_model(
+async def test_an_available_list_matching_nothing_turns_switching_off(
     bkaidev_settings, upstream, logged_in_client, caplog
 ):
-    """配置没跟上网关的变化时，宁可给全量，也不给用户一个空的下拉框。"""
+    """配置没命中时不能把网关全量标成可切换：每轮校验仍只认配置，那些选项提交后全是 422。"""
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "kimi-*"]}
     upstream.cards = [
         make_card("deepseek-v4-flash"),
@@ -225,9 +225,11 @@ async def test_an_available_list_matching_nothing_falls_back_to_every_tool_calli
     with caplog.at_level(logging.WARNING):
         response = await logged_in_client.get(MODELS_URL)
 
-    assert collect_ids(response.json()) == ["deepseek-v4-flash", "hy4-preview"]
+    body = response.json()
+    assert body["allow_user_switch"] is False
+    assert collect_ids(body) == []
     assert any(
-        "offering every tool-calling model" in record.getMessage()
+        "model switching is off" in record.getMessage()
         for record in caplog.records
         if record.levelno == logging.WARNING
     )

@@ -203,14 +203,20 @@ def _build_bkaidev_catalog(gateway_models: list[GatewayModel], config: BkAidevMo
     # 没有可选列表时不过滤，按网关顺序。
     picked = _pick_available(usable, config.available_models) if config.available_models else usable
 
-    # 配了列表却一项都没命中，多半是配置没跟上网关的模型变化。退回全部能调工具的模型，
-    # 免得用户面对一个空的下拉框。
+    # 配了列表却一项都没命中，多半是配置没跟上网关的模型变化。不能改成「全部可切换」：每轮校验
+    # 仍只认这份列表，放出来的选项提交后全是 422。合法配置必有一项盖住默认模型，所以走到这里时
+    # 网关也没有那个默认模型，列表留空，切换关掉。
     if config.available_models and not picked:
         logger.warning(
-            "Nothing in available_models %s is offered by the bkaidev gateway; offering every tool-calling model",
+            "Nothing in available_models %s is offered by the bkaidev gateway; model switching is off",
             config.available_models,
         )
-        picked = usable
+        return ModelCatalog(
+            source=ModelSource.BKAIDEV,
+            allow_user_switch=False,
+            default_model_id=config.default_model_name,
+            models=[],
+        )
 
     # default_model_id 取本服务的默认模型，不取上游的 default 标记。
     # default_model_name 是注入 Runtime 的 MODEL_NAME，和网关卡片的 id 是同一个值。

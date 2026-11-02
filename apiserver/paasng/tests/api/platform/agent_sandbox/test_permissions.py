@@ -59,7 +59,7 @@ class TestAgentSandboxAPIPermissionViewSetGrantPermissions:
 
         :returns: The URL string.
         """
-        return reverse("sys.agent_sandbox.permissions.grant")
+        return reverse("sys.api.agent_sandbox.permissions.grant")
 
     def test_grant_permissions_success(
         self,

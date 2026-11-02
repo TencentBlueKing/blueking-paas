@@ -23,11 +23,11 @@ urlpatterns = [
     path(
         "",
         SysImageBuildViewSet.as_view({"post": "create", "get": "list"}),
-        name="sys.image_build.list_create",
+        name="sys.api.agent_sandbox.image_build.list_create",
     ),
     path(
         "<str:build_id>/",
         SysImageBuildViewSet.as_view({"get": "retrieve"}),
-        name="sys.image_build.retrieve",
+        name="sys.api.agent_sandbox.image_build.retrieve",
     ),
 ]

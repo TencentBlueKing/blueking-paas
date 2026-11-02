@@ -127,7 +127,7 @@ urlpatterns += [
     path(
         "sys/api/agent_sandbox/permissions/grant/",
         SysAgentSandboxAPIPermissionViewSet.as_view({"post": "grant_permissions"}),
-        name="sys.agent_sandbox.permissions.grant",
+        name="sys.api.agent_sandbox.permissions.grant",
     ),
     # 镜像构建 API
     path("sys/api/agent_sandbox/image_build/", include("paasng.platform.agent_sandbox.image_build.urls")),

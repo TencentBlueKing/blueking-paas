@@ -18,7 +18,6 @@
 from paasng.utils.basic import re_path
 
 from . import views
-from .views import pluginscenter_sys_api as pluginscenter_views
 
 urlpatterns = [
     re_path(
@@ -81,54 +80,52 @@ urlpatterns += [
     # shim api for plugin-center
     re_path(
         r"^sys/api/plugins_center/bk_plugins/$",
-        pluginscenter_views.SysPluginInstanceViewSet.as_view({"post": "create_plugin"}),
+        views.SysPluginInstanceViewSet.as_view({"post": "create_plugin"}),
         name="sys.api.plugins_center.bk_plugins.create",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/$",
-        pluginscenter_views.SysPluginInstanceViewSet.as_view({"put": "update_plugin", "delete": "archive_plugin"}),
+        views.SysPluginInstanceViewSet.as_view({"put": "update_plugin", "delete": "archive_plugin"}),
         name="sys.api.plugins_center.bk_plugins.detail",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/$",
-        pluginscenter_views.SysPluginDeployViewSet.as_view({"post": "deploy_plugin"}),
+        views.SysPluginDeployViewSet.as_view({"post": "deploy_plugin"}),
         name="sys.api.plugins_center.bk_plugins.deploy",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/(?P<deploy_id>[^/]+)/status/$",
-        pluginscenter_views.SysPluginDeployViewSet.as_view({"get": "check_deploy_status"}),
+        views.SysPluginDeployViewSet.as_view({"get": "check_deploy_status"}),
         name="sys.api.plugins_center.bk_plugins.deploy.status",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/(?P<deploy_id>[^/]+)/logs/$",
-        pluginscenter_views.SysPluginDeployViewSet.as_view({"get": "get_deploy_logs"}),
+        views.SysPluginDeployViewSet.as_view({"get": "get_deploy_logs"}),
         name="sys.api.plugins_center.bk_plugins.deploy.logs",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/market/$",
-        pluginscenter_views.SysPluginMarketViewSet.as_view({"post": "upsert_market_info"}),
+        views.SysPluginMarketViewSet.as_view({"post": "upsert_market_info"}),
         name="sys.api.plugins_center.bk_plugins.market.upsert",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/market/category/$",
-        pluginscenter_views.SysPluginMarketViewSet.as_view({"get": "list_category"}),
+        views.SysPluginMarketViewSet.as_view({"get": "list_category"}),
         name="sys.api.plugins_center.bk_plugins.market.list_category",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/members/$",
-        pluginscenter_views.SysPluginMembersViewSet.as_view({"get": "list_members", "post": "sync_members"}),
+        views.SysPluginMembersViewSet.as_view({"get": "list_members", "post": "sync_members"}),
         name="sys.api.plugins_center.bk_plugins.members",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/roles/(?P<role>[^/]+)/members/$",
-        pluginscenter_views.SysPluginMembersViewSet.as_view(
-            {"post": "add_members_to_role", "delete": "delete_members_from_role"}
-        ),
+        views.SysPluginMembersViewSet.as_view({"post": "add_members_to_role", "delete": "delete_members_from_role"}),
         name="sys.api.plugins_center.bk_plugins.role.members",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/configuration/$",
-        pluginscenter_views.SysPluginConfigurationViewSet.as_view({"post": "sync_configurations"}),
+        views.SysPluginConfigurationViewSet.as_view({"post": "sync_configurations"}),
         name="sys.api.plugins_center.bk_plugins.configurations.sync",
     ),
 ]

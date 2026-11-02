@@ -62,7 +62,7 @@ class TestImageBuildCreate:
         with mock.patch("paasng.platform.agent_sandbox.image_build.views.run_image_build") as mock_task:
             mock_task.delay = mock.MagicMock()
             resp = sys_aidev_api_client.post(
-                reverse("sys.image_build.list_create"),
+                reverse("sys.api.agent_sandbox.image_build.list_create"),
                 data={
                     "source_url": "https://example.com/source.tar.gz",
                     "image_name": "my-app",
@@ -85,7 +85,7 @@ class TestImageBuildCreate:
     def test_create_invalid_params(self, sys_aidev_api_client: APIClient):
         """Test creating with invalid params returns 400."""
         resp = sys_aidev_api_client.post(
-            reverse("sys.image_build.list_create"),
+            reverse("sys.api.agent_sandbox.image_build.list_create"),
             data={"source_url": "not-a-url", "image_name": "my-app", "image_tag": "v1.0"},
             format="json",
         )
@@ -106,7 +106,7 @@ class TestImageBuildRetrieveAndList:
 
     def test_retrieve(self, sys_aidev_api_client: APIClient):
         resp = sys_aidev_api_client.get(
-            reverse("sys.image_build.retrieve", kwargs={"build_id": str(self.build.uuid)}),
+            reverse("sys.api.agent_sandbox.image_build.retrieve", kwargs={"build_id": str(self.build.uuid)}),
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["build_id"] == str(self.build.uuid)
@@ -115,14 +115,17 @@ class TestImageBuildRetrieveAndList:
 
     def test_retrieve_not_found(self, sys_aidev_api_client: APIClient):
         resp = sys_aidev_api_client.get(
-            reverse("sys.image_build.retrieve", kwargs={"build_id": "00000000-0000-0000-0000-000000000000"}),
+            reverse(
+                "sys.api.agent_sandbox.image_build.retrieve",
+                kwargs={"build_id": "00000000-0000-0000-0000-000000000000"},
+            ),
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_list_filtered(self, sys_aidev_api_client: APIClient):
         """Test listing builds filtered by image_name and image_tag."""
         resp = sys_aidev_api_client.get(
-            reverse("sys.image_build.list_create"),
+            reverse("sys.api.agent_sandbox.image_build.list_create"),
             data={"image_name": "my-app", "image_tag": "v1.0"},
         )
         assert resp.status_code == status.HTTP_200_OK

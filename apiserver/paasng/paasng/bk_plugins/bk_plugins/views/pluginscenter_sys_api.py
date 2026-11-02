@@ -67,9 +67,9 @@ from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
-# TODO: 确认具体权限
 logger = logging.getLogger(__name__)
 
+# TODO: 确认具体权限
 API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 

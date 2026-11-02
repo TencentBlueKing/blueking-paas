@@ -66,6 +66,9 @@ class ScalingConfigSLZ(serializers.Serializer):
         default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices(), help_text="扩缩容策略"
     )
 
+    class Meta:
+        ref_name = "paasng.platform.bkapp_model.ScalingConfigSLZ"
+
 
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-单一环境相关配置"""

@@ -363,6 +363,9 @@ class ScalingConfigSLZ(serializers.Serializer):
     policy = serializers.CharField(required=False, default="default", help_text=_("扩缩容策略"))
     metrics = serializers.ListField(child=MetricSpecSLZ(), required=False, min_length=1, help_text=_("扩缩容指标"))
 
+    class Meta:
+        ref_name = "paas_wl.bk_app.processes.ScalingConfigSLZ"
+
 
 class ProcessSpecSLZ(serializers.Serializer):
     """Serializer for representing process packages

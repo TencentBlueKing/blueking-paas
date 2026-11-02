@@ -147,6 +147,11 @@ class PlanViewSet(viewsets.GenericViewSet):
         service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         data_before = DataDetail(data=BasePlanObjSLZ(plan).data)
 
+        # 请求未提供的字段沿用当前值，避免被序列化器的默认值（空字典）覆盖
+        for field in ("config", "properties"):
+            if field not in request.data:
+                data[field] = getattr(plan, field)
+
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
         except UnsupportedOperationError as e:

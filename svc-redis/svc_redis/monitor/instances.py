@@ -21,7 +21,7 @@
 
 指标:
 - redis_instance_alive: 代表 Pod (主从的 master / 单机的唯一 Pod) 已就绪; 副本未就绪不影响; 查询失败时该样本不产出, 不把 "采集失败" 当成 "实例不可用"
-- redis_instance_memory_usage_rate: Redis `used_memory` / `maxmemory`; 未设置 maxmemory 时, 分母回退为套餐的内存上限
+- redis_instance_memory_usage_rate: Redis `used_memory` / `maxmemory`; 未设置 maxmemory 时, 分母回退为 Redis 容器的内存 limit
 - redis_instance_connection_usage_rate: Redis `connected_clients` / `maxclients`
 - redis_instance_oom_killed: 最近 METRIC_OOM_KILLED_WINDOW 秒内是否因内存被杀死, 超过时间窗自动回到 0
 - redis_instance_exporter_up: 实例有 exporter 且取数成功为 1, 取数失败为 0; 没有 exporter 的实例不产出
@@ -49,10 +49,11 @@ logger = logging.getLogger(__name__)
 
 
 class ExporterTarget(NamedTuple):
-    """exporter 取数目标: 实例所在集群的 k8s client + 目标 Pod 名"""
+    """exporter 取数目标: 实例所在集群的 k8s client + 目标 Pod 名 + 该 Pod 中 Redis 容器的内存 limit"""
 
     client: EnhancedApiClient
     pod_name: str
+    memory_limit: int | None = None
 
 
 # 实例 ID -> exporter 取数目标
@@ -76,15 +77,9 @@ def collect_instance_statuses() -> list[RedisInstanceStatus]:
     # k8s 与 exporter 的查询共用这一份 deadline
     deadline = collect_deadline()
 
-    statuses: list[RedisInstanceStatus] = []
-    # 套餐内存上限: Redis 未设置 maxmemory 时的内存使用率分母
-    memory_limits: dict[str, int | None] = {}
-    for allocated in list_allocated_instances():
-        statuses.append(RedisInstanceStatus(allocated.instance))
-        memory_limits[allocated.instance.bk_instance] = allocated.memory_limit
-
+    statuses = [RedisInstanceStatus(instance) for instance in list_allocated_instances()]
     exporter_targets = _collect_k8s_states(statuses, deadline)
-    _collect_usage(statuses, exporter_targets, memory_limits, deadline)
+    _collect_usage(statuses, exporter_targets, deadline)
 
     if ttl > 0:
         cache.set(_STATUSES_CACHE_KEY, [status.as_dict() for status in statuses], ttl)
@@ -123,9 +118,11 @@ def _collect_k8s_states(statuses: list[RedisInstanceStatus], deadline: float) ->
             pods_list = pods.get(status.instance.namespace)
             _apply_pod_state(status, pods_list)
 
-            pod_name = k8s.pick_exporter_pod_name(pods_list or [])
-            if pod_name:
-                exporter_targets[status.instance.bk_instance] = ExporterTarget(clients[cluster_name], pod_name)
+            pod = k8s.pick_exporter_pod(pods_list or [])
+            if pod is not None:
+                exporter_targets[status.instance.bk_instance] = ExporterTarget(
+                    clients[cluster_name], pod.metadata.name, k8s.get_redis_memory_limit(pod)
+                )
 
     _mark_missing_clusters(statuses_by_cluster, collected_clusters)
     return exporter_targets
@@ -174,7 +171,6 @@ def _mark_missing_clusters(
 def _collect_usage(
     statuses: list[RedisInstanceStatus],
     exporter_targets: ExporterTargets,
-    memory_limits: dict[str, int | None],
     deadline: float,
 ) -> None:
     """并发读取 exporter 指标, 回填 exporter_up / 内存与连接使用率 / db_keys
@@ -196,8 +192,8 @@ def _collect_usage(
 
         status.db_keys = usage.db_keys
 
-        # 未设置 maxmemory (值为 0) 时, 使用率分母回退为套餐的内存上限
-        limit = usage.maxmemory or memory_limits.get(status.instance.bk_instance)
+        # 未设置 maxmemory (值为 0) 时, 使用率分母回退为 Redis 容器的内存 limit
+        limit = usage.maxmemory or exporter_targets[status.instance.bk_instance].memory_limit
         if usage.used_memory is not None and limit:
             status.memory_usage_rate = usage.used_memory / limit
         if usage.connected_clients is not None and usage.maxclients:

@@ -348,7 +348,7 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = ""
 REDIS_EXPORTER_RESOURCES = env.json(
     "REDIS_EXPORTER_RESOURCES",
     default={
-        "requests": {"cpu": "10m", "memory": "16Mi"},
-        "limits": {"cpu": "100m", "memory": "64Mi"},
+        "requests": {"cpu": "20m", "memory": "32Mi"},
+        "limits": {"cpu": "200m", "memory": "128Mi"},
     },
 )

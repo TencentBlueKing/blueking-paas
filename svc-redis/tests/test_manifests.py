@@ -107,14 +107,14 @@ class TestRedisExporter:
         assert exporter["enabled"] is True
         assert exporter["image"] == DEFAULT_REDIS_EXPORTER_IMAGE
         assert exporter["resources"] == {
-            "requests": {"cpu": "10m", "memory": "16Mi"},
-            "limits": {"cpu": "100m", "memory": "64Mi"},
+            "requests": {"cpu": "20m", "memory": "32Mi"},
+            "limits": {"cpu": "200m", "memory": "128Mi"},
         }
 
     @override_settings(
         REDIS_EXPORTER_RESOURCES={
-            "requests": {"cpu": "10m", "memory": "32Mi"},
-            "limits": {"cpu": "200m", "memory": "128Mi"},
+            "requests": {"cpu": "30m", "memory": "64Mi"},
+            "limits": {"cpu": "500m", "memory": "256Mi"},
         },
     )
     def test_exporter_with_custom_settings(self):
@@ -123,6 +123,6 @@ class TestRedisExporter:
         exporter = deployable["spec"]["redisExporter"]
         assert exporter["image"] == DEFAULT_REDIS_EXPORTER_IMAGE
         assert exporter["resources"] == {
-            "requests": {"cpu": "10m", "memory": "32Mi"},
-            "limits": {"cpu": "200m", "memory": "128Mi"},
+            "requests": {"cpu": "30m", "memory": "64Mi"},
+            "limits": {"cpu": "500m", "memory": "256Mi"},
         }

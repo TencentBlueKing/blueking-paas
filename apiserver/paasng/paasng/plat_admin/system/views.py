@@ -221,7 +221,7 @@ class SysAddonsAPIViewSet(viewsets.ViewSet):
         return Response(data=service_info)
 
 
-class LessCodeSystemAPIViewSet(viewsets.ViewSet):
+class SysLessCodeViewSet(viewsets.ViewSet):
     """System api for lesscode"""
 
     permission_classes = [

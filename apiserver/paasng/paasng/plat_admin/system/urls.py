@@ -16,9 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.plat_admin.system.views import (
-    LessCodeSystemAPIViewSet,
     SysAddonsAPIViewSet,
     SysClusterNamespaceInfoView,
+    SysLessCodeViewSet,
     SysUniApplicationViewSet,
 )
 from paasng.utils.basic import make_app_pattern, re_path
@@ -48,14 +48,14 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(suffix="/lesscode/query_db_credentials", prefix="sys/api/bkapps/applications/"),
-        LessCodeSystemAPIViewSet.as_view({"get": "query_db_credentials"}),
+        SysLessCodeViewSet.as_view({"get": "query_db_credentials"}),
         name="sys.api.lesscode.query_db_credentials",
     ),
     re_path(
         make_app_pattern(
             suffix="/lesscode/bind_db_service", prefix="sys/api/bkapps/applications/", include_envs=False
         ),
-        LessCodeSystemAPIViewSet.as_view({"post": "bind_db_service"}),
+        SysLessCodeViewSet.as_view({"post": "bind_db_service"}),
         name="sys.api.lesscode.bind_db_service",
     ),
     re_path(

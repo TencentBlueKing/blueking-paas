@@ -230,7 +230,9 @@ class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     def validate(self, attrs):
         build_method = attrs.get("build_method")
         has_dockerfile_path = attrs.get("dockerfile_path") not in (None, "")
-        has_docker_build_args = "docker_build_args" in attrs and attrs.get("docker_build_args") is not None
+        # 表单/multipart 提交时, DRF 的 DictField 会把未传的 docker_build_args 解析成空 dict
+        # 这里按真值判断, 避免调用方没传任何构建参数却命中下面的互斥校验
+        has_docker_build_args = bool(attrs.get("docker_build_args"))
         if not build_method and (has_dockerfile_path or has_docker_build_args):
             raise ValidationError(_("指定 dockerfile_path / docker_build_args 时必须同时提供 build_method"))
 

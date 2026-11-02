@@ -18,7 +18,7 @@
 from django.urls import path
 
 from .sandbox_views import E2BSandboxViewSet
-from .views import E2BApiKeyViewSet, E2BConsoleApiKeyViewSet, E2BConsoleSandboxViewSet
+from .views import E2BApiKeyViewSet, E2BConsoleApiKeyViewSet, E2BConsoleSandboxViewSet, E2BConsoleTemplateViewSet
 
 # e2b 协议端点的挂载前缀。用户侧要设 E2B_API_URL=https://<domain>/api/agent_sandbox/e2b，
 # SDK 拿它当 httpx 的 base_url，再接协议规定的相对路径（/sandboxes、/v2/sandboxes 等）。
@@ -47,6 +47,16 @@ urlpatterns = [
         E2B_CONSOLE_PREFIX + "sandboxes/<str:sandbox_id>",
         E2BConsoleSandboxViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.e2b.console.sandboxes.destroy",
+    ),
+    path(
+        E2B_CONSOLE_PREFIX + "templates/",
+        E2BConsoleTemplateViewSet.as_view({"get": "list"}),
+        name="agent_sandbox.e2b.console.templates",
+    ),
+    path(
+        E2B_CONSOLE_PREFIX + "templates/<str:template_id>",
+        E2BConsoleTemplateViewSet.as_view({"get": "retrieve"}),
+        name="agent_sandbox.e2b.console.templates.detail",
     ),
     path(
         "api/agent_sandbox/applications/<slug:code>/e2b/api_keys/",

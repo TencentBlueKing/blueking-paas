@@ -40,6 +40,7 @@ from .exceptions import (
     E2BGatewayTimeout,
     E2BGatewayUnavailable,
     E2BSandboxNotFound,
+    E2BTemplateNotFound,
 )
 from .permissions import IsE2BApiKey
 
@@ -52,6 +53,7 @@ logger = logging.getLogger(__name__)
 #
 # 顺序有意义，按从具体到宽泛匹配，子类必须排在基类前面。
 _ERROR_RESPONSES: tuple[tuple[type[E2BError], int, str], ...] = (
+    (E2BTemplateNotFound, status.HTTP_404_NOT_FOUND, "Template not found"),
     (E2BSandboxNotFound, status.HTTP_404_NOT_FOUND, "Sandbox not found"),
     (E2BGatewayNotFound, status.HTTP_404_NOT_FOUND, "Sandbox not found"),
     (E2BGatewayTimeout, status.HTTP_408_REQUEST_TIMEOUT, "Sandbox service timed out, please retry"),
@@ -82,6 +84,15 @@ def _e2b_error_response(exc: E2BError) -> Response:
     return Response({"code": status_code, "message": message}, status=status_code)
 
 
+def _flatten_error_detail(detail) -> str:
+    """把 DRF 的错误详情压成一行文本。字段错误是 ErrorDetail 列表，直接 str 会带出 repr。"""
+    if isinstance(detail, dict):
+        return "; ".join(f"{k}: {_flatten_error_detail(v)}" for k, v in detail.items())
+    if isinstance(detail, list):
+        return "; ".join(_flatten_error_detail(item) for item in detail)
+    return str(detail)
+
+
 def e2b_exception_handler(exc, context):
     """把异常渲染成 e2b 的错误体：``{"code": <状态码>, "message": "<描述>"}``。
 
@@ -98,13 +109,7 @@ def e2b_exception_handler(exc, context):
         # 非 DRF 异常交回上层，由 Django 的 500 处理链兜底
         return None
 
-    detail = exc.detail
-    if isinstance(detail, dict):
-        message = "; ".join(f"{k}: {v}" for k, v in detail.items())
-    elif isinstance(detail, list):
-        message = "; ".join(str(item) for item in detail)
-    else:
-        message = str(detail)
+    message = _flatten_error_detail(exc.detail)
 
     set_rollback()
     headers = {}

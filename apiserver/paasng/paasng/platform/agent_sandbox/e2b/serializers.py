@@ -18,7 +18,7 @@
 from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
-from paasng.platform.agent_sandbox.models import E2BApiKey
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandboxTemplate
 from paasng.utils.serializers import UserNameField
 
 
@@ -65,6 +65,13 @@ class E2BSandboxCreateInputSLZ(serializers.Serializer):
     # 字段名是 e2b 协议规定的驼峰形式，不能改成平台习惯的下划线
     templateID = serializers.CharField(help_text="沙箱模板标识")
 
+    def validate_templateID(self, value: str) -> str:  # noqa: N802
+        # 未登记与已下线不作区分，SDK 侧只需要知道这个模板不能用。
+        # 不看 is_public：不公开只影响页面展示，服务自用的模板要能通过 SDK 使用
+        if not E2BSandboxTemplate.objects.filter(template_id=value, enabled=True).exists():
+            raise serializers.ValidationError(f"template {value} is not available")
+        return value
+
 
 class E2BSandboxTimeoutInputSLZ(serializers.Serializer):
     timeout = serializers.IntegerField(min_value=1, help_text="从此刻起的存活秒数")
@@ -107,3 +114,24 @@ class E2BConsoleSandboxOutputSLZ(serializers.Serializer):
     disk_size_mb = serializers.IntegerField(source="diskSizeMB", help_text="磁盘（MB）")
     started_at = _GatewayDateTimeField(source="startedAt", help_text="启动时间")
     end_at = _GatewayDateTimeField(source="endAt", help_text="预计回收时间")
+
+
+class E2BConsoleTemplateOutputSLZ(serializers.Serializer):
+    """模板列表项。资源字段仅供展示，实际规格以网关侧模板为准。"""
+
+    template_id = serializers.CharField(help_text="模板标识，即 SDK 创建沙箱时传入的 templateID")
+    name = serializers.CharField(help_text="展示名称")
+    description = serializers.CharField(help_text="描述，可能为空字符串")
+    cpu_count = serializers.IntegerField(allow_null=True, help_text="CPU 核数，未登记时为 null")
+    memory_mb = serializers.IntegerField(allow_null=True, help_text="内存（MB），未登记时为 null")
+    disk_size_mb = serializers.IntegerField(allow_null=True, help_text="磁盘（MB），未登记时为 null")
+    timeout = serializers.IntegerField(allow_null=True, help_text="默认存活秒数（TTL），未登记时为 null")
+
+
+class E2BConsoleTemplateDetailOutputSLZ(E2BConsoleTemplateOutputSLZ):
+    """模板详情，在列表项基础上增加镜像等信息。"""
+
+    image = serializers.CharField(help_text="镜像，可能为空字符串")
+    network = serializers.CharField(help_text="网络说明，语义待确认，可能为空字符串")
+    region = serializers.CharField(help_text="地域，语义待确认，可能为空字符串")
+    prewarm_count = serializers.IntegerField(allow_null=True, help_text="预热数量，语义待确认，未登记时为 null")

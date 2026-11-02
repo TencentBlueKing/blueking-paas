@@ -28,7 +28,7 @@ from rest_framework.test import APIClient
 from paasng.platform.agent_sandbox.e2b import sandboxes
 from paasng.platform.agent_sandbox.e2b.constants import MAX_ACTIVE_KEYS_PER_APP, E2BSandboxStatus
 from paasng.platform.agent_sandbox.e2b.exceptions import E2BClusterNotConfigured, E2BGatewayTimeout
-from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox
+from paasng.platform.agent_sandbox.models import E2BApiKey, E2BSandbox, E2BSandboxTemplate
 from paasng.platform.applications.models import Application
 from tests.utils.auth import create_user
 
@@ -51,6 +51,14 @@ def _sandbox_list_url(app: Application) -> str:
 
 def _sandbox_detail_url(app: Application, sandbox_id: str) -> str:
     return reverse("agent_sandbox.e2b.console.sandboxes.destroy", kwargs={"code": app.code, "sandbox_id": sandbox_id})
+
+
+def _template_list_url(app: Application) -> str:
+    return reverse("agent_sandbox.e2b.console.templates", kwargs={"code": app.code})
+
+
+def _template_detail_url(app: Application, template_id: str) -> str:
+    return reverse("agent_sandbox.e2b.console.templates.detail", kwargs={"code": app.code, "template_id": template_id})
 
 
 def _gateway_item(sandbox_id: str = SANDBOX_ID, template_id: str = "e2b-envd") -> dict:
@@ -210,6 +218,66 @@ class TestSandboxDestroy:
         assert "e2b-cluster" not in resp.content.decode()
 
 
+class TestTemplates:
+    @pytest.fixture()
+    def templates(self):
+        E2BSandboxTemplate.objects.create(
+            template_id="e2b-envd",
+            name="Base",
+            description="基础镜像",
+            image="mirrors.example.com/e2b/envd:v1",
+            cpu_count=2,
+            memory_mb=4096,
+            disk_size_mb=20480,
+            timeout=600,
+            network="内网",
+            region="ieod",
+            prewarm_count=3,
+            is_public=True,
+        )
+        E2BSandboxTemplate.objects.create(template_id="e2b-legacy", name="Legacy", enabled=False, is_public=True)
+        E2BSandboxTemplate.objects.create(template_id="e2b-internal", name="Internal")
+
+    def test_list_only_enabled_and_public(self, api_client, bk_app, templates):
+        resp = api_client.get(_template_list_url(bk_app))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == [
+            {
+                "template_id": "e2b-envd",
+                "name": "Base",
+                "description": "基础镜像",
+                "cpu_count": 2,
+                "memory_mb": 4096,
+                "disk_size_mb": 20480,
+                "timeout": 600,
+            }
+        ]
+
+    def test_list_empty(self, api_client, bk_app):
+        resp = api_client.get(_template_list_url(bk_app))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == []
+
+    def test_detail_includes_extra_fields(self, api_client, bk_app, templates):
+        resp = api_client.get(_template_detail_url(bk_app, "e2b-envd"))
+
+        assert resp.status_code == status.HTTP_200_OK
+        body = resp.json()
+        assert body["template_id"] == "e2b-envd"
+        assert body["image"] == "mirrors.example.com/e2b/envd:v1"
+        assert body["network"] == "内网"
+        assert body["region"] == "ieod"
+        assert body["prewarm_count"] == 3
+
+    @pytest.mark.parametrize("template_id", ["e2b-legacy", "e2b-internal", "not-registered"])
+    def test_detail_of_unavailable_template_gets_404(self, api_client, bk_app, templates, template_id):
+        resp = api_client.get(_template_detail_url(bk_app, template_id))
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
 class TestPermission:
     @pytest.mark.parametrize(
         ("method", "url_factory"),
@@ -219,6 +287,8 @@ class TestPermission:
             ("delete", lambda app: _key_detail_url(app, uuid.uuid4())),
             ("get", _sandbox_list_url),
             ("delete", lambda app: _sandbox_detail_url(app, SANDBOX_ID)),
+            ("get", _template_list_url),
+            ("get", lambda app: _template_detail_url(app, "e2b-envd")),
         ],
     )
     def test_outsider_is_forbidden(self, outsider_client, bk_app, method, url_factory):
@@ -226,8 +296,12 @@ class TestPermission:
 
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_anonymous_is_rejected(self, bk_app):
-        resp = APIClient().get(_key_list_url(bk_app))
+    @pytest.mark.parametrize(
+        "url_factory",
+        [_key_list_url, _template_list_url, lambda app: _template_detail_url(app, "e2b-envd")],
+    )
+    def test_anonymous_is_rejected(self, bk_app, url_factory):
+        resp = APIClient().get(url_factory(bk_app))
 
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 

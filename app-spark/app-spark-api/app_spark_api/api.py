@@ -44,6 +44,7 @@ from app_spark_api.agent.runtime import (
     AgentWorkspaceSavePendingError,
     ModelAccessConfigurationError,
     ModelCredentialMissingError,
+    ModelNotAvailableError,
 )
 from app_spark_api.core.projects.api import router as projects_router
 from app_spark_api.error_codes import error_codes
@@ -96,6 +97,7 @@ _EXCEPTION_ERROR_CODES: dict[type[Exception], APIError] = {
     AgentWorkspaceSavePendingError: error_codes.AGENT_WORKSPACE_SAVE_PENDING,
     ModelAccessConfigurationError: error_codes.MODEL_ACCESS_CONFIGURATION_ERROR,
     ModelCredentialMissingError: error_codes.MODEL_CREDENTIAL_MISSING,
+    ModelNotAvailableError: error_codes.MODEL_NOT_AVAILABLE,
     AccessTokenError: error_codes.MODEL_ACCESS_TOKEN_UNAVAILABLE,
     BkAidevGatewayError: error_codes.MODEL_CATALOG_UNAVAILABLE,
     AgentRuntimeError: error_codes.AGENT_UNAVAILABLE,

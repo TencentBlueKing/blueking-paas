@@ -51,7 +51,7 @@ FIXED_MODEL_KEY = "fixed-model-key"
 DIRECT_ACCESS = DirectModelAccess(model="deepseek:deepseek-v4-flash", api_key=FIXED_MODEL_KEY)
 MODEL_ACCESS = BkAidevModelAccess(
     base_url="https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1",
-    model_name="deepseek-v4-flash",
+    model_id="deepseek-v4-flash",
     access_token="user-token",
 )
 
@@ -253,7 +253,7 @@ def test_a_bkaidev_runtime_gets_the_users_token_and_nothing_to_fall_back_on(tmp_
 
     assert env[f"{ENV_PREFIX}BK_AIDEV_ACCESS_TOKEN"] == "user-token"
     assert env[f"{ENV_PREFIX}MODEL_BASE_URL"] == MODEL_ACCESS.base_url
-    assert env[f"{ENV_PREFIX}MODEL_NAME"] == "deepseek-v4-flash"
+    assert env[f"{ENV_PREFIX}MODEL_ID"] == "deepseek-v4-flash"
     # The agent falls back to this key when it has no token, so there must be none.
     assert f"{ENV_PREFIX}MODEL_API_KEY" not in env
 
@@ -264,7 +264,7 @@ def test_a_direct_runtime_gets_the_fixed_key_and_no_gateway_settings(tmp_path):
     assert env[f"{ENV_PREFIX}MODEL"] == "deepseek:deepseek-v4-flash"
     assert env[f"{ENV_PREFIX}MODEL_API_KEY"] == FIXED_MODEL_KEY
     # Any of these would make the agent treat the fixed key as a bkaidev token.
-    for name in ("BK_AIDEV_ACCESS_TOKEN", "MODEL_BASE_URL", "MODEL_NAME"):
+    for name in ("BK_AIDEV_ACCESS_TOKEN", "MODEL_BASE_URL", "MODEL_ID"):
         assert f"{ENV_PREFIX}{name}" not in env
 
 

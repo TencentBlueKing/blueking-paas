@@ -49,6 +49,9 @@ HEALTHY_PAYLOAD = {
     "log_seq": 8,
     "ui_event_seq": 18,
     "running": False,
+    "replication_pending": False,
+    "dev_server_status": "ready",
+    "run_id": None,
 }
 
 
@@ -198,48 +201,37 @@ def test_an_unset_available_list_offers_every_model():
 
 def test_an_available_list_including_the_default_model_is_accepted():
     config = structure_bkaidev_model_config(
-        {"default_model_name": "hy3", "available_models": ["deepseek-v4-flash", "hy3"]}
+        {"default_model_id": "hy3", "available_models": ["deepseek-v4-flash", "hy3"]}
     )
 
     assert config.available_models == ["deepseek-v4-flash", "hy3"]
 
 
-def test_a_pattern_may_cover_the_default_model():
+def test_an_available_list_leaving_out_the_default_model_is_accepted():
+    """默认模型不在列表里时顺延到列表第一个，网关的模型会变，启动时判断不了。"""
     config = structure_bkaidev_model_config(
-        {"default_model_name": "deepseek-v4-flash", "available_models": ["hy4-*", "deepseek-*-flash"]}
+        {"default_model_id": "deepseek-v4-flash", "available_models": ["hy4-*", "hy3"]}
     )
 
-    assert config.available_models == ["hy4-*", "deepseek-*-flash"]
+    assert config.available_models == ["hy4-*", "hy3"]
 
 
 @pytest.mark.parametrize(
     ("raw_config", "reasons"),
     [
-        # 用户不选时跑的是默认模型，它不在列表里，下拉框就显示不出用户实际在用的那个。
         pytest.param(
-            {"default_model_name": "deepseek-v4-flash", "available_models": ["hy3"]},
-            ["default_model_name", "deepseek-v4-flash"],
-            id="the-default-model-left-out",
-        ),
-        # 模式区分大小写，模型 ID 本身就区分。
-        pytest.param(
-            {"default_model_name": "deepseek-v4-flash", "available_models": ["DeepSeek-*"]},
-            ["default_model_name", "matches nothing"],
-            id="a-pattern-of-another-case",
-        ),
-        pytest.param(
-            {"default_model_name": "hy3", "available_models": ["hy3", "kimi-26", "hy3"]},
+            {"default_model_id": "hy3", "available_models": ["hy3", "kimi-26", "hy3"]},
             ["hy3", "more than once"],
             id="a-duplicated-entry",
         ),
         pytest.param(
-            {"default_model_name": "hy3", "available_models": ["hy3", ""]},
+            {"default_model_id": "hy3", "available_models": ["hy3", ""]},
             ["available_models"],
             id="an-empty-entry",
         ),
         # 字符串不能被拆成单个字符再去比对，要直接说明类型不对。
         pytest.param(
-            {"default_model_name": "hy3", "available_models": "hy3"},
+            {"default_model_id": "hy3", "available_models": "hy3"},
             ["available_models", "Expected list, got str"],
             id="not-a-list",
         ),
@@ -283,9 +275,9 @@ def test_the_application_status_is_forwarded_as_the_runtime_worded_it():
     assert health.dev_server_status == "starting"
 
 
-def test_a_runtime_that_says_nothing_about_its_application_is_not_read_as_a_status():
-    """「问不出来」和 Runtime 能给的那几档里的任何一个都不是一回事，不能折成其中之一。"""
-    health = RuntimeHealth.from_payload(HEALTHY_PAYLOAD)
+def test_a_runtime_that_reports_no_application_status_is_not_given_one():
+    """null 就是没有状态，不能折成 not_started 那几档里的任何一个。"""
+    health = RuntimeHealth.from_payload({**HEALTHY_PAYLOAD, "dev_server_status": None})
 
     assert health.dev_server_status is None
 
@@ -300,6 +292,9 @@ def test_a_runtime_that_has_never_run_has_no_conversation_yet():
     "payload",
     [
         pytest.param({k: v for k, v in HEALTHY_PAYLOAD.items() if k != "log_seq"}, id="truncated"),
+        pytest.param(
+            {k: v for k, v in HEALTHY_PAYLOAD.items() if k != "dev_server_status"}, id="no-dev-server-status"
+        ),
         pytest.param({**HEALTHY_PAYLOAD, "context_version": "two"}, id="wrongly-typed"),
         pytest.param(["not", "an", "object"], id="not-an-object"),
     ],

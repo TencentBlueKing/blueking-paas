@@ -57,11 +57,11 @@ class ProjectGitRepository(TimestampedModel):
 
     @property
     def public_status_detail(self) -> str:
-        """Return a safe summary, including for rows containing legacy errors."""
-        # Older rows may contain remote response bodies or internal URLs. Only
-        # pass through known safe messages; substring redaction is too fragile.
+        """Return a safe summary of the stored status."""
+        # 只放行已知的安全文案。库里若是远端响应或内网地址，原样返回会把它们露到查询接口。
         if self.status_detail in {"", "credentials revoked"}:
             return self.status_detail
+
         return REPOSITORY_ERROR_DETAIL
 
 

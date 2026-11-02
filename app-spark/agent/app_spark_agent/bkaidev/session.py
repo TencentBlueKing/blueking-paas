@@ -81,12 +81,12 @@ class ConversationSession:
         """用可信历史加上本轮增量，发一次非流式 chat/completions。
 
         :param extra_messages: 尚未写入 context 的本轮消息（通常是最新 user）。
-        :param model: 覆盖 MODEL_NAME；默认用对照表里的注入名。
+        :param model: 覆盖 MODEL_ID；默认用注入的 MODEL_ID。
         :param tools: 本轮可供调用的函数。
         :param temperature: 覆盖协议默认温度。
         """
         request = ChatCompletionRequest(
-            model=model or settings.resolved_model_name(),
+            model=model or settings.resolved_model_id(),
             messages=[*self.history(), *extra_messages],
             tools=list(tools) if tools is not None else None,
             temperature=temperature,

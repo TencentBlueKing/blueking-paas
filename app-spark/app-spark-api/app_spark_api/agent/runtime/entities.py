@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import posixpath
 from collections.abc import Awaitable, Callable
-from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
@@ -227,14 +226,16 @@ class BkAidevModelConfig:
     is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
-    :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    :param default_model_id: The preferred default model, injected as the Runtime's MODEL_ID
+        when the model list offers it; otherwise the first model in the list is used instead.
     :param available_models: Model IDs or fnmatch patterns (case-sensitive) offered for picking,
-        in the order they are shown. Empty means every model the gateway offers this app.
+        in the order they are shown, and the only ones a turn may ask for. Empty means every model
+        the gateway offers this app.
     """
 
-    # agent 只在启动时按 MODEL_NAME 建一次模型，缺了就起不来可用的模型，所以这里必须有值。
-    # 默认值要落在 agent 的 MODEL_PROFILES 里，表外的名字同样会让 Runtime 不可用。
-    default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+    # 第一顺位的默认模型。列表里没有它时顺延到列表第一个，两者都落空才报错，所以这里不要求它被
+    # available_models 匹配上：网关的模型会变，启动时的静态校验判断不了它最终在不在列表里。
+    default_model_id: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
     available_models: list[str] = attrs.field(
         factory=list,
         validator=attrs.validators.deep_iterable(member_validator=validate_non_empty_string),
@@ -249,13 +250,6 @@ class BkAidevModelConfig:
                 raise ValueError(f"{attribute.name} lists {pattern!r} more than once")
 
             seen.add(pattern)
-
-        # 用户不选时跑的是默认模型。没有一项能匹配上它，下拉框就显示不出用户实际在用的那个。
-        if value and not any(fnmatchcase(self.default_model_name, pattern) for pattern in value):
-            raise ValueError(
-                f"default_model_name {self.default_model_name!r} matches nothing in {attribute.name}; "
-                "a non-empty list must cover the model used when the user picks none"
-            )
 
 
 @attrs.frozen
@@ -289,6 +283,12 @@ class DirectModelConfig:
     name: str = ""
     context_window: int | None = None
 
+    @property
+    def model_id(self) -> str:
+        """The model ID a user sees and a turn submits: the part of model after the colon."""
+        # 模型列表给前端的 ID 和每轮请求的校验都取这里，两处取法不一致时，列表给出的默认模型会被拒掉。
+        return self.model.partition(":")[2] or self.model
+
     def to_access(self) -> DirectModelAccess:
         """Return what a Runtime calling this model is given."""
         return DirectModelAccess(model=self.model, api_key=self.api_key)
@@ -303,12 +303,12 @@ class BkAidevModelAccess:
 
     :param base_url: The gateway's OpenAI-compatible v1 root.
     :param access_token: The user's access_token for the configured app.
-    :param model_name: The model the Runtime asks the gateway for.
+    :param model_id: The model the Runtime asks the gateway for.
     """
 
     base_url: str = attrs.field(validator=validate_non_empty_string)
     access_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
-    model_name: str = attrs.field(validator=validate_non_empty_string)
+    model_id: str = attrs.field(validator=validate_non_empty_string)
 
 
 # Exactly one of the two, so a provider never has to guess what a missing value was meant to be.
@@ -377,9 +377,9 @@ class RuntimeHealth:
         replicate. Distinct from ``running``: a flush that times out at the end of a turn hands
         the run guard back anyway, so an idle Runtime can still be ahead of this service.
     :param dev_server_status: What the Runtime says about the dev server hosting the workspace
-        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``. Forwarded rather
-        than interpreted: this service has no opinion on the names, and an older Runtime that
-        says nothing leaves it ``None``.
+        application -- ``not_started``, ``starting``, ``ready``, or ``stopped``, or ``None`` when
+        it reported no status. Forwarded rather than interpreted: this service has no opinion on
+        the names.
     """
 
     model: str
@@ -410,18 +410,12 @@ class RuntimeHealth:
                 log_seq=int(payload["log_seq"]),
                 ui_event_seq=int(payload["ui_event_seq"]),
                 running=bool(payload["running"]),
-                # Read leniently, unlike every field above it: a Runtime with no control plane
-                # configured has no answer to give, and treating "did not say" as "nothing
-                # pending" is the truthful reading of that.
-                replication_pending=bool(payload.get("replication_pending", False)),
-                # Lenient for a different reason: a Runtime that predates the field says
-                # nothing, and "this Runtime cannot tell me" is not the same answer as any of
-                # the four statuses it could have given.
+                replication_pending=bool(payload["replication_pending"]),
+                # null 是「这台 Runtime 报了没有状态」，不能折成 not_started 那几档里的任何一个。
                 dev_server_status=(
-                    None if payload.get("dev_server_status") is None else str(payload["dev_server_status"])
+                    None if payload["dev_server_status"] is None else str(payload["dev_server_status"])
                 ),
-                # Lenient for the same reason as dev_server_status.
-                run_id=None if payload.get("run_id") is None else str(payload["run_id"]),
+                run_id=None if payload["run_id"] is None else str(payload["run_id"]),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AgentUnavailableError(f"Unreadable /health response: {exc}") from exc

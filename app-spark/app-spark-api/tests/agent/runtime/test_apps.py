@@ -20,7 +20,7 @@ import pytest
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 
-BAD_AVAILABLE_LIST = {"default_model_name": "deepseek-v4-flash", "available_models": ["hy3"]}
+BAD_AVAILABLE_LIST = {"default_model_id": "hy3", "available_models": ["hy3", "hy3"]}
 
 
 def start_runtime_app() -> None:
@@ -28,20 +28,20 @@ def start_runtime_app() -> None:
     apps.get_app_config("runtime").ready()
 
 
-def test_a_default_model_outside_the_available_list_stops_startup(settings):
+def test_a_duplicated_available_model_stops_startup(settings):
     settings.AGENT_MODEL_SOURCE = "bkaidev"
     settings.BKAIDEV_MODEL_CONFIG = BAD_AVAILABLE_LIST
 
-    with pytest.raises(ImproperlyConfigured, match="default_model_name 'deepseek-v4-flash' matches nothing in"):
-        start_runtime_app()
-
-
-def test_a_duplicated_available_model_stops_startup(settings):
-    settings.AGENT_MODEL_SOURCE = "bkaidev"
-    settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "hy3"]}
-
     with pytest.raises(ImproperlyConfigured, match="'hy3' more than once"):
         start_runtime_app()
+
+
+def test_a_default_model_outside_the_available_list_still_starts(settings):
+    """默认模型落在列表外时运行期顺延到列表第一个，不在启动时拦。"""
+    settings.AGENT_MODEL_SOURCE = "bkaidev"
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "deepseek-v4-flash", "available_models": ["hy3"]}
+
+    start_runtime_app()
 
 
 def test_a_direct_deployment_does_not_check_the_bkaidev_configuration(settings):

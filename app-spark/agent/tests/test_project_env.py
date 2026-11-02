@@ -27,6 +27,7 @@ import os
 import re
 import signal
 import stat
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -125,8 +126,12 @@ def install_fake_uv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, body: str) 
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     script = bin_dir / "uv"
-    script.write_text(f"#!/bin/sh\n{body}\n")
+    script.write_text(f'#!/bin/sh\n[ "$FAKE_UV_WARMUP" = 1 ] && exit 0\n{body}\n')
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
+
+    # 有的系统首次执行新写出的可执行文件要先做安全检查，这段开销不能算进被测的超时里。
+    subprocess.run([script], env={**os.environ, "FAKE_UV_WARMUP": "1"}, check=True)
+
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}/usr/bin{os.pathsep}/bin")
 
 

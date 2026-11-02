@@ -47,11 +47,16 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 from app_spark_api.agent.conversations import checkpoints
-from app_spark_api.agent.conversations.models import Conversation
+from app_spark_api.agent.conversations import services as conversation_services
+from app_spark_api.agent.conversations.entities import MAX_MODEL_ID_LENGTH
+from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
+from app_spark_api.agent.model_catalog import services as model_catalog_services
+from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.infras.bkaidev import GatewayModel
 from app_spark_api.repository.git.services import provision_project_repository
 from tests.infras.forgejo.fake import ORG, repo_server_config
 
@@ -202,11 +207,14 @@ async def create_conversation(client: AsyncClient) -> dict[str, Any]:
     return json.loads(response.content)
 
 
-async def post_run(client: AsyncClient, number: int, prompt: str) -> Any:
+async def post_run(client: AsyncClient, number: int, prompt: str, *, model_id: str | None = None) -> Any:
     """Submit one turn without judging how it was answered."""
+    payload: dict[str, Any] = {"content": prompt}
+    if model_id is not None:
+        payload["model_id"] = model_id
     return await client.post(
         f"/api/projects/{PROJECT_ID}/conversations/{number}/runs/",
-        data={"content": prompt},
+        data=payload,
         content_type="application/json",
     )
 
@@ -776,6 +784,94 @@ async def test_a_turn_can_be_stopped_while_it_runs(aapi_client, project, slow_ag
     unknown = await aapi_client.post(stop_url.format(run_id="not-a-run-of-this-conversation"))
     assert unknown.status_code == HTTPStatus.NOT_FOUND, unknown.content
     assert json.loads(unknown.content)["code"] == "RUN_NOT_FOUND"
+
+
+async def test_a_turn_on_the_built_in_model_runs_like_one_without_a_model(aapi_client, project, chat_agent):
+    # direct 下 AGENT_DIRECT_MODEL_CONFIG.model 是 fake:chat，内置模型的 ID 就是冒号后的 chat。
+    state = await create_conversation(aapi_client)
+
+    response = await post_run(aapi_client, state["number"], "hello", model_id="chat")
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
+
+
+@pytest.fixture()
+def gateway_models(monkeypatch) -> None:
+    """Stand in for the models the bkaidev gateway offers, so a turn's model can be checked."""
+
+    async def fetch_gateway_models(*_args: Any, **_kwargs: Any) -> list[GatewayModel]:
+        return [GatewayModel(id=model_id) for model_id in ("deepseek-v4-flash", "hy3", "kimi-26")]
+
+    monkeypatch.setattr(model_catalog_services, "_fetch_gateway_models", fetch_gateway_models)
+
+
+@pytest.mark.usefixtures("chat_agent", "gateway_models")
+@pytest.mark.parametrize(
+    ("source", "model_id"),
+    [
+        pytest.param("direct", "hy3", id="direct-not-the-built-in-model"),
+        pytest.param("bkaidev", "kimi-26", id="bkaidev-not-in-the-available-list"),
+    ],
+)
+async def test_a_turn_on_a_model_not_offered_is_refused_before_anything_starts(
+    aapi_client, project, settings, source, model_id
+):
+    settings.AGENT_MODEL_SOURCE = source
+    settings.BKAIDEV_MODEL_CONFIG = {"available_models": ["deepseek-*-flash", "hy3"]}
+    # 不经 API 建会话，这样它还没有 Runtime：拒绝之后仍然没有，才说明校验排在拉起沙箱之前。
+    conversation = await conversation_services.create_conversation(project, owner=project.owner)
+
+    response = await post_run(aapi_client, conversation.number, "hello", model_id=model_id)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, response.content
+    assert json.loads(response.content)["code"] == "MODEL_NOT_AVAILABLE"
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    assert await provider.peek(str(conversation.id)) is None
+    assert not await ConversationUserMessage.objects.filter(conversation=conversation).aexists()
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("   ", id="blank"),
+        pytest.param("m" * (MAX_MODEL_ID_LENGTH + 1), id="too-long"),
+    ],
+)
+async def test_a_malformed_model_id_is_a_validation_error(aapi_client, project, chat_agent, settings, model_id):
+    # 畸形的 ID 在请求校验就挡下，不必为它去换票、取网关的模型列表。
+    settings.AGENT_MODEL_SOURCE = "bkaidev"
+    settings.BKAIDEV_MODEL_CONFIG = {}
+    conversation = await conversation_services.create_conversation(project, owner=project.owner)
+
+    response = await post_run(aapi_client, conversation.number, "hello", model_id=model_id)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, response.content
+    assert json.loads(response.content)["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.usefixtures("gateway_models")
+async def test_a_turn_forwards_the_model_it_asked_for(aapi_client, project, chat_agent, settings, monkeypatch):
+    state = await create_conversation(aapi_client)
+    # Runtime 已经按 direct 拉起来了，之后切到 bkaidev 只影响每轮校验，不会重新拉起。
+    settings.AGENT_MODEL_SOURCE = "bkaidev"
+    settings.BKAIDEV_MODEL_CONFIG = {"available_models": ["deepseek-*-flash", "hy3"]}
+    forwarded: list[str | None] = []
+    start_run = AgentRuntimeClient.start_run
+
+    # 只记下转发的模型 ID，不交给 Runtime：它跑的是 fake 模型，带 modelId 会被拒。
+    async def record_model_id(self: AgentRuntimeClient, *, model_id: str | None = None, **kwargs: Any) -> Any:
+        forwarded.append(model_id)
+        return await start_run(self, **kwargs)
+
+    monkeypatch.setattr(AgentRuntimeClient, "start_run", record_model_id)
+
+    response = await post_run(aapi_client, state["number"], "hello", model_id=" hy3 ")
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
+    assert forwarded == ["hy3"]
 
 
 async def test_a_second_conversation_on_one_project_is_refused(aapi_client, project, agent):

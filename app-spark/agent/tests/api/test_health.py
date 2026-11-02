@@ -50,23 +50,32 @@ def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("MODEL_NAME", ""),
-        ("MODEL_NAME", "not-a-listed-model"),
+        ("MODEL_ID", ""),
+        ("MODEL_ID", "   "),
         ("MODEL_BASE_URL", ""),
     ],
 )
-def test_readiness_requires_url_and_listed_model(
+def test_readiness_requires_url_and_model_id(
     api: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     field: str,
     value: str,
 ) -> None:
-    """网关地址和对照表内模型名缺一不可；表外名称不得假装就绪。"""
+    """网关地址和模型名缺一不可。"""
     monkeypatch.setattr(settings, field, value)
 
     reported: dict[str, Any] = api.get("/health").json()
 
     assert reported["model_ready"] is False
+
+
+def test_any_gateway_model_id_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模型名不再查对照表，hy3 这类以前表外的名字照样就绪，能不能调由网关裁决。"""
+    monkeypatch.setattr(settings, "MODEL_ID", "hy3")
+
+    reported: dict[str, Any] = api.get("/health").json()
+
+    assert reported["model_ready"] is True
 
 
 def test_a_missing_token_is_reported_as_unready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,7 +106,7 @@ def test_an_api_key_alone_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(settings, "MODEL", "deepseek:deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
-    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     reported: dict[str, Any] = api.get("/health").json()

@@ -108,6 +108,18 @@ async def test_a_turn_is_submitted_as_one_new_agui_message():
     assert [(m["role"], m["content"]) for m in body["messages"]] == [("user", "write my first note")]
     assert sent[0].headers["accept"] == "text/event-stream"
     assert sent[0].headers["authorization"] == f"Bearer {RUNTIME_TOKEN}"
+    assert "modelId" not in body["forwardedProps"]
+
+
+async def test_a_turn_names_its_model_in_forwarded_props():
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/runs": (200, b"data: {}\n\n")}, recorder=sent)
+
+    run = await client.start_run(content="hello", context_version=3, model_id="hy3")
+    await run.aclose()
+
+    body = json.loads(sent[0].content)
+    assert body["forwardedProps"] == {"contextVersion": 3, "modelId": "hy3"}
 
 
 async def test_every_runtime_client_request_uses_the_handle_bearer():
@@ -124,6 +136,9 @@ async def test_every_runtime_client_request_uses_the_handle_bearer():
                         "log_seq": 0,
                         "ui_event_seq": 0,
                         "running": False,
+                        "replication_pending": False,
+                        "dev_server_status": "not_started",
+                        "run_id": None,
                     }
                 ).encode(),
             ),
@@ -160,6 +175,9 @@ async def test_provider_port_header_is_sent_alongside_the_runtime_bearer():
                 "log_seq": 0,
                 "ui_event_seq": 0,
                 "running": False,
+                "replication_pending": False,
+                "dev_server_status": "not_started",
+                "run_id": None,
             },
         )
 

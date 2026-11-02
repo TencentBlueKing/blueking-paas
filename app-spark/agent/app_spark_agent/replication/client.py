@@ -132,8 +132,7 @@ class ControlPlaneClient:
         another would add an identical tree under a new SHA for no reason.
 
         Once the control plane has taken it, the checkpoint is what a cold start restores the
-        workspace from. The response still carries a ``restorable`` flag for older Runtimes; it
-        is always true and is not read here.
+        workspace from.
 
         :param checkpoint: ``commit``, ``tag``, ``run_id``, ``context_version`` and ``completed``.
         :raises ControlPlaneError: If the control plane cannot be reached or refused the write.
@@ -182,8 +181,7 @@ def _response_error(path: str, response: httpx2.Response) -> ControlPlaneError:
     detail = payload.get("detail") if isinstance(payload, dict) else None
     code = code if isinstance(code, str) and code else None
     detail = detail if isinstance(detail, str) else None
-    # Older servers may return only detail; proxies may return HTML. Preserve
-    # the HTTP status in both cases, but never copy an arbitrary response body.
+    # 代理可能回一页 HTML。状态码留下，正文不整段抄进异常。
     message = f"the control plane answered {path} with {response.status_code}"
     if code:
         message += f" [{code}]"

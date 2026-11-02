@@ -14,25 +14,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Which model source a new Runtime gets, and when the token service is asked."""
+"""Where model calls go, the bkaidev address, and when the token service is asked."""
 
 import json
 
 import httpx2
 import pytest
 
-from app_spark_api.agent.runtime import (
-    BkAidevModelAccess,
-    DirectModelAccess,
-    ModelAccessConfigurationError,
-    ModelCredentialMissingError,
+from app_spark_api.agent.runtime import ModelAccessConfigurationError, ModelCredentialMissingError
+from app_spark_api.agent.runtime.model_access import (
+    build_bkaidev_llm_base_url,
+    fetch_bkaidev_access_token,
+    get_model_source,
 )
-from app_spark_api.agent.runtime.model_access import resolve_model_access
 from app_spark_api.infras.bk_access_token import UserCredential, UserCredentialType
 
 APP_SECRET = "app-secret-value"
-BKAIDEV_CONFIG = {"default_model_name": "deepseek-v4-pro"}
-EXPECTED_BASE_URL = "https://bkapi.example.com/api/bkaidev/prod/openapi/aidev/gateway/llm/v1"
 AUTH_API_URL = "http://apigw.example.com/auth_api/token/"
 SSM_URL = "https://bkssm.example.com/api/v1/auth/access-tokens"
 CREDENTIAL = UserCredential(type=UserCredentialType.BK_TICKET, value="login-cookie", username="alice")
@@ -40,9 +37,9 @@ CREDENTIAL = UserCredential(type=UserCredentialType.BK_TICKET, value="login-cook
 
 @pytest.fixture()
 def bkaidev_settings(settings):
-    """Top-level settings every bkaidev resolve needs, on a bk_ticket site."""
+    """Top-level settings every bkaidev token exchange needs, on a bk_ticket site."""
     settings.AGENT_MODEL_SOURCE = "bkaidev"
-    settings.BKAIDEV_MODEL_CONFIG = BKAIDEV_CONFIG
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "deepseek-v4-pro"}
     settings.BK_API_URL_TMPL = "https://bkapi.example.com/api/{api_name}/"
     settings.APIGW_ENVIRONMENT = "prod"
     settings.BKAUTH_BACKEND_TYPE = "bk_ticket"
@@ -70,34 +67,31 @@ def token_transport(token_requests) -> httpx2.MockTransport:
     return httpx2.MockTransport(issue)
 
 
-async def test_bkaidev_source_gets_the_users_token(bkaidev_settings, token_transport):
-    access = await resolve_model_access(CREDENTIAL, transport=token_transport)
+@pytest.mark.parametrize(
+    ("tmpl", "expected"),
+    [
+        pytest.param(
+            "https://bkapi.example.com/api/{api_name}/",
+            "https://bkapi.example.com/api/bkaidev/prod/openapi/aidev/gateway/llm/v1",
+            id="path",
+        ),
+        pytest.param(
+            "https://{api_name}.apigw.example.com",
+            "https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1",
+            id="subdomain",
+        ),
+    ],
+)
+def test_both_template_shapes_build_the_same_llm_path(bkaidev_settings, tmpl, expected):
+    bkaidev_settings.BK_API_URL_TMPL = tmpl
 
-    assert access == BkAidevModelAccess(
-        base_url=EXPECTED_BASE_URL, access_token="same-token", model_name="deepseek-v4-pro"
-    )
-
-
-async def test_an_unset_default_model_name_falls_back_to_deepseek_v4_flash(bkaidev_settings, token_transport):
-    # agent 缺 MODEL_NAME 就起不来可用的模型，所以不配也要给一个。
-    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {}
-
-    access = await resolve_model_access(CREDENTIAL, transport=token_transport)
-
-    assert access.model_name == "deepseek-v4-flash"
-
-
-async def test_the_subdomain_template_shape_builds_the_same_llm_path(bkaidev_settings, token_transport):
-    bkaidev_settings.BK_API_URL_TMPL = "https://{api_name}.apigw.example.com"
-
-    access = await resolve_model_access(CREDENTIAL, transport=token_transport)
-
-    assert access.base_url == "https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1"
+    assert build_bkaidev_llm_base_url() == expected
 
 
 async def test_bk_ticket_site_exchanges_at_token_auth_endpoint(bkaidev_settings, token_transport, token_requests):
-    await resolve_model_access(CREDENTIAL, transport=token_transport)
+    token = await fetch_bkaidev_access_token(CREDENTIAL, transport=token_transport)
 
+    assert token == "same-token"
     (request,) = token_requests
     assert str(request.url) == AUTH_API_URL
     payload = json.loads(request.content)
@@ -115,9 +109,9 @@ async def test_bk_token_site_exchanges_at_token_auth_endpoint(bkaidev_settings, 
     bkaidev_settings.AUTH_ENV_NAME = ""
     credential = UserCredential(type=UserCredentialType.BK_TOKEN, value="login-cookie", username="alice")
 
-    access = await resolve_model_access(credential, transport=token_transport)
+    token = await fetch_bkaidev_access_token(credential, transport=token_transport)
 
-    assert access.access_token == "same-token"
+    assert token == "same-token"
     (request,) = token_requests
     assert str(request.url) == SSM_URL
     assert json.loads(request.content) == {
@@ -130,36 +124,18 @@ async def test_bk_token_site_exchanges_at_token_auth_endpoint(bkaidev_settings, 
 async def test_the_token_service_is_asked_every_time_and_reuses_the_token(
     bkaidev_settings, token_transport, token_requests
 ):
-    first = await resolve_model_access(CREDENTIAL, transport=token_transport)
-    second = await resolve_model_access(CREDENTIAL, transport=token_transport)
+    first = await fetch_bkaidev_access_token(CREDENTIAL, transport=token_transport)
+    second = await fetch_bkaidev_access_token(CREDENTIAL, transport=token_transport)
 
     # Nothing kept here between the two: both went to the token service, which hands back the
     # still-valid token instead of issuing one over the first Runtime's.
-    assert first.access_token == second.access_token == "same-token"
+    assert first == second == "same-token"
     assert len(token_requests) == 2
-
-
-async def test_direct_source_gets_the_fixed_key_and_never_asks_for_a_token(settings, token_transport, token_requests):
-    settings.AGENT_MODEL_SOURCE = "direct"
-    settings.AGENT_DIRECT_MODEL_CONFIG = {"model": "deepseek:deepseek-v4-flash", "api_key": "vendor-key"}
-
-    access = await resolve_model_access(None, transport=token_transport)
-
-    assert access == DirectModelAccess(model="deepseek:deepseek-v4-flash", api_key="vendor-key")
-    assert token_requests == []
-
-
-async def test_direct_source_without_a_model_is_a_configuration_error(settings):
-    settings.AGENT_MODEL_SOURCE = "direct"
-    settings.AGENT_DIRECT_MODEL_CONFIG = {}
-
-    with pytest.raises(ModelAccessConfigurationError):
-        await resolve_model_access(CREDENTIAL)
 
 
 async def test_bkaidev_without_a_login_is_refused(bkaidev_settings, token_transport, token_requests):
     with pytest.raises(ModelCredentialMissingError):
-        await resolve_model_access(None, transport=token_transport)
+        await fetch_bkaidev_access_token(None, transport=token_transport)
     assert token_requests == []
 
 
@@ -171,7 +147,7 @@ async def test_incomplete_bkaidev_settings_are_a_configuration_error(
 
     # Reported even without a login: the operator has to fix this, not the user.
     with pytest.raises(ModelAccessConfigurationError) as exc_info:
-        await resolve_model_access(None, transport=token_transport)
+        await fetch_bkaidev_access_token(None, transport=token_transport)
     assert "APP_SECRET" in str(exc_info.value)
     assert token_requests == []
 
@@ -181,7 +157,7 @@ async def test_missing_token_auth_endpoint_is_a_configuration_error(bkaidev_sett
     bkaidev_settings.TOKEN_AUTH_ENDPOINT = ""
 
     with pytest.raises(ModelAccessConfigurationError) as exc_info:
-        await resolve_model_access(None, transport=token_transport)
+        await fetch_bkaidev_access_token(None, transport=token_transport)
     assert "TOKEN_AUTH_ENDPOINT" in str(exc_info.value)
     assert token_requests == []
 
@@ -199,13 +175,13 @@ async def test_a_bad_apigw_template_is_a_configuration_error(bkaidev_settings, t
     bkaidev_settings.BK_API_URL_TMPL = tmpl
 
     with pytest.raises(ModelAccessConfigurationError) as exc_info:
-        await resolve_model_access(None, transport=token_transport)
+        await fetch_bkaidev_access_token(None, transport=token_transport)
     assert "BK_API_URL_TMPL" in str(exc_info.value)
     assert token_requests == []
 
 
-async def test_an_unknown_source_is_a_configuration_error(settings):
+def test_an_unknown_source_is_a_configuration_error(settings):
     settings.AGENT_MODEL_SOURCE = "openai"
 
     with pytest.raises(ModelAccessConfigurationError):
-        await resolve_model_access(CREDENTIAL)
+        get_model_source()

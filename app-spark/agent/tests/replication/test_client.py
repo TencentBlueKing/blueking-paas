@@ -36,12 +36,12 @@ async def test_structured_api_errors_keep_the_code_detail_and_http_status(operat
 @pytest.mark.parametrize(
     ("body", "expected_detail"),
     [
-        ({"detail": "legacy error"}, "legacy error"),
+        ({"detail": "detail only"}, "detail only"),
         ({"code": 42, "detail": ["invalid shape"]}, None),
         (["not an object"], None),
     ],
 )
-async def test_legacy_or_malformed_error_envelopes_preserve_http_status(body, expected_detail):
+async def test_malformed_error_envelopes_preserve_http_status(body, expected_detail):
     client = ControlPlaneClient(
         base_url="http://api.invalid/state/",
         token="secret",

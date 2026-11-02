@@ -10,7 +10,9 @@ from urllib.parse import urlsplit
 from environs import Env, EnvError
 from marshmallow import ValidationError
 from marshmallow.validate import Length, Range
+from pydantic_ai.profiles import ModelProfile, merge_profile
 from pydantic_ai.profiles.openai import OpenAIModelProfile
+from pydantic_ai.providers.openai import OpenAIProvider
 
 # 所有配置项共用的环境变量前缀。接入层与本地开发都只下这一套。
 ENV_PREFIX = "APP_SPARK_AGENT_"
@@ -113,7 +115,7 @@ MODEL = env.str("MODEL", "deepseek:deepseek-v4-flash", validate=Length(min=1))
 #
 # fake: MODEL=fake:<scenario>，不需要任何凭据。
 # 直连: 只提供 MODEL_API_KEY，和 MODEL 的 <provider>:<model> 一起走官网 Bearer。
-# 网关: BK_AIDEV_ACCESS_TOKEN、MODEL_NAME、MODEL_BASE_URL 三者齐全，走 bkaidev。
+# 网关: BK_AIDEV_ACCESS_TOKEN、MODEL_ID、MODEL_BASE_URL 三者齐全，走 bkaidev。
 # 网关三项只要出现一项，就不把 MODEL_API_KEY 当成直连钥匙；缺项保持未就绪。
 MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 
@@ -122,26 +124,26 @@ MODEL_API_KEY = env.str("MODEL_API_KEY", "") or None
 # bk_app_secret。本组件不调创建空间 / 智能体的 API。
 BK_AIDEV_ACCESS_TOKEN = env.str("BK_AIDEV_ACCESS_TOKEN", "") or None
 
-# 不带 vendor 前缀的模型名（如 deepseek-v4-flash），必须落在 MODEL_PROFILES。
-MODEL_NAME = env.str("MODEL_NAME", "")
+# 沙箱默认模型，不带 vendor 前缀（如 deepseek-v4-flash）。没指定模型的一轮和上下文压缩都用它；
+# 每轮可以用 forwardedProps.modelId 换成别的模型，能不能调由网关按用户 token 裁决。
+MODEL_ID = env.str("MODEL_ID", "")
 
 # bkaidev LLM 网关 OpenAI 兼容入口，注入到 v1 这一层，不要带 /chat/completions。
 # prod 示例：https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1。
 MODEL_BASE_URL = env.str("MODEL_BASE_URL", "")
 
-# MODEL_NAME → 能力档。表外名称不得走「按名字猜测」的保守档，否则工具调用会静默关掉。
-# 值是档位标识，不是拼进请求的 vendor 前缀。
-MODEL_PROFILES: dict[str, str] = {
-    "deepseek-v4-flash": "deepseek",
-}
-
-# 对照表内每一档都必须显式打开工具调用和结构化输出，禁止落到 pydantic-ai 的保守推断。
+# 网关下不管模型 ID 是什么都用这一档，不交给 pydantic-ai 按 ID 推断：推断出的档会关掉
+# supports_tool_return_schema，保守档甚至会把工具调用静默关掉。
 _TOOL_AND_STRUCTURED_PROFILE = OpenAIModelProfile(
     supports_tools=True,
     supports_json_schema_output=True,
     supports_json_object_output=True,
     supports_tool_return_schema=True,
 )
+
+# 网关模型实际用的能力档：OpenAI 兼容协议的通用设置，再叠上面那 4 个开关。
+# 通用设置取空名字的档，因为 pydantic-ai 会拿模型名套 OpenAI 的命名规则，空名字不命中任何一条。
+_GATEWAY_PROFILE = merge_profile(OpenAIProvider.model_profile("") or {}, _TOOL_AND_STRUCTURED_PROFILE)
 
 # -----------------------------------------------------------------------
 # 应用日志
@@ -410,7 +412,7 @@ def gateway_access_token() -> str | None:
 
 def _has_gateway_intent() -> bool:
     """网关三项里只要有一项非空，就表示要走 bkaidev，而不是官网直连。"""
-    return gateway_access_token() is not None or bool(MODEL_BASE_URL.strip()) or bool(resolved_model_name())
+    return gateway_access_token() is not None or bool(MODEL_BASE_URL.strip()) or bool(resolved_model_id())
 
 
 def uses_direct_provider() -> bool:
@@ -419,8 +421,8 @@ def uses_direct_provider() -> bool:
 
 
 def _gateway_ready() -> bool:
-    """网关三件套齐全，且模型名在对照表内。"""
-    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and model_profile() is not None
+    """网关三件套齐全。"""
+    return gateway_access_token() is not None and bool(MODEL_BASE_URL.strip()) and bool(resolved_model_id())
 
 
 def model_mode() -> ModelMode:
@@ -441,21 +443,14 @@ def model_mode() -> ModelMode:
     return ModelMode.UNREADY
 
 
-def resolved_model_name() -> str:
-    """去掉首尾空白后的 MODEL_NAME。"""
-    return MODEL_NAME.strip()
+def resolved_model_id() -> str:
+    """去掉首尾空白后的 MODEL_ID。"""
+    return MODEL_ID.strip()
 
 
-def model_profile(name: str | None = None) -> str | None:
-    """对照表中的能力档；表外名称返回 None，调用方必须当成未就绪。"""
-    return MODEL_PROFILES.get(name if name is not None else resolved_model_name())
-
-
-def openai_capability_profile(name: str | None = None) -> OpenAIModelProfile | None:
-    """列出模型对应的显式 OpenAI 能力档；表外名称返回 None，不得猜测。"""
-    if model_profile(name) is None:
-        return None
-    return _TOOL_AND_STRUCTURED_PROFILE
+def openai_capability_profile() -> ModelProfile:
+    """网关模型统一使用的完整能力档，与模型 ID 无关。"""
+    return _GATEWAY_PROFILE
 
 
 def is_model_ready() -> bool:

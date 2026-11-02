@@ -29,6 +29,10 @@ class ModelAccessConfigurationError(AgentConfigurationError):
     """The configured model source, or the bkaidev settings it needs, are invalid."""
 
 
+class ModelNotAvailableError(AgentRuntimeError):
+    """A turn asked for a model this deployment does not offer."""
+
+
 class ModelCredentialMissingError(AgentRuntimeError):
     """A Runtime calling bkaidev needs the user's login to get a token, and the request had none."""
 

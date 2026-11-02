@@ -24,6 +24,8 @@ class PreparedRun:
     run_id: str
     context_version: int
     body: bytes
+    # None runs the turn on the sandbox's default model.
+    model_id: str | None = None
 
 
 def prepare_run(
@@ -88,6 +90,8 @@ def prepare_run(
             detail=f"Context version mismatch; Runtime is at {context.context_version}.",
         )
 
+    model_id = _read_model_id(typed_forwarded_props)
+
     user_message = next(
         (message for message in reversed(run_input.messages) if isinstance(message, UserMessage)),
         None,
@@ -114,7 +118,31 @@ def prepare_run(
         run_id=run_id,
         context_version=context_version,
         body=filtered_input.model_dump_json(by_alias=True).encode(),
+        model_id=model_id,
     )
+
+
+def _read_model_id(forwarded_props: dict[str, object]) -> str | None:
+    """Return the model the turn asked for, or None when it asked for the default."""
+
+    # Only an ID ever crosses here: the model is built from the gateway address and token this
+    # Runtime was started with, so a caller can pick which model answers but not where the
+    # request goes.
+    if "modelId" not in forwarded_props:
+        return None
+
+    # A present key must name something. Reading null or "" as "the default" would run the turn
+    # on a model the caller did not ask for, without either side noticing.
+    model_id = forwarded_props["modelId"]
+    if not isinstance(model_id, str) or not model_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="forwardedProps.modelId must be a non-empty string.",
+        )
+
+    # Stripped like MODEL_ID, or a padded default ID is neither recognised as the default nor
+    # understood by the gateway.
+    return model_id.strip()
 
 
 def request_with_body(request: Request, body: bytes) -> Request:

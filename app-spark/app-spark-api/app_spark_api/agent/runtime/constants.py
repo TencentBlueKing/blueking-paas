@@ -22,8 +22,7 @@ ENV_PREFIX = "APP_SPARK_AGENT_"
 # 模型相关的 agent 变量只能由模型来源决定。extra_env 里不许出现：否则一份配置就能把固定 key
 # 塞给本该拿用户态 token 的 Runtime，或者让 bkaidev 的 Runtime 回落到共享密钥。
 MODEL_ENV_NAMES = frozenset(
-    f"{ENV_PREFIX}{name}"
-    for name in ("MODEL", "MODEL_API_KEY", "BK_AIDEV_ACCESS_TOKEN", "MODEL_BASE_URL", "MODEL_NAME")
+    f"{ENV_PREFIX}{name}" for name in ("MODEL", "MODEL_API_KEY", "BK_AIDEV_ACCESS_TOKEN", "MODEL_BASE_URL", "MODEL_ID")
 )
 
 

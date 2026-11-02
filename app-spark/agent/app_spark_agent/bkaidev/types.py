@@ -223,7 +223,7 @@ class ModelPermission(BaseModel):
 class ModelCard(BaseModel):
     """一张可用模型。
 
-    :param llm_code: 应对 MODEL_NAME / 请求里的 model。
+    :param llm_code: 应对 MODEL_ID / 请求里的 model。
     :param object_type: 固定 model。
     :param created: Unix 秒。
     :param owned_by: 协议默认 aidev。

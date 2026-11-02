@@ -47,6 +47,7 @@ from app_spark_api.agent.conversations.internal_api import state_ingest_path
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
 from app_spark_api.agent.conversations.tokens import mint_state_token
+from app_spark_api.agent.model_catalog.services import resolve_model_access, resolve_run_model_id
 from app_spark_api.agent.runtime import (
     AgentProvisionError,
     AgentRuntimeClient,
@@ -58,7 +59,6 @@ from app_spark_api.agent.runtime import (
 )
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.agent.runtime.lifetime import extend_lifetime_quietly
-from app_spark_api.agent.runtime.model_access import resolve_model_access, resolve_run_model_name
 from app_spark_api.repository.git.factory import get_repo_server_config
 from app_spark_api.repository.git.services import arequire_project_git_ready
 
@@ -272,11 +272,13 @@ async def open_client(conversation: Conversation, *, credential: UserCredential 
     :raises AgentWorkspaceBusyError: If another conversation of the same Project holds one.
     :raises GitRepositoryNotReadyError: If the Project repo is missing or not ready.
     :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
-        its settings are invalid.
+        its settings are invalid, or no model is left to run on.
     :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
         ``credential`` is None.
     :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
         access_token could not be obtained.
+    :raises BkAidevGatewayError: If a Runtime must be started for bkaidev and the gateway could
+        not give the model list its default model comes from.
     """
     repo = await arequire_project_git_ready(conversation.project_id)
 
@@ -440,15 +442,15 @@ async def start_run(
     :param model_id: The model this turn asked for; None runs it on the Runtime's default.
     :return: The accepted run, whose bytes are still to come.
     :raises ConversationClosedError: If the conversation has been closed.
-    :raises ModelNotAvailableError: If this deployment does not offer ``model_id``.
+    :raises ModelNotAvailableError: If the model list does not offer model_id.
     :raises AgentBusyError: If a run is already occupying the Runtime.
     :raises AgentProvisionError: If no Runtime could be brought up.
-    :raises ModelAccessConfigurationError: If a Runtime must be started and the model source or
-        its settings are invalid.
-    :raises ModelCredentialMissingError: If a Runtime must be started for bkaidev and
-        ``credential`` is None.
-    :raises AccessTokenUnavailableError: If a Runtime must be started and the caller's
-        access_token could not be obtained.
+    :raises ModelAccessConfigurationError: If the model source or its settings are invalid, or
+        no model is left to run on.
+    :raises ModelCredentialMissingError: If bkaidev needs the caller's login, to check
+        model_id or to start a Runtime, and credential is None.
+    :raises AccessTokenUnavailableError: If the caller's access_token could not be obtained.
+    :raises BkAidevGatewayError: If the gateway could not give the model list.
     :raises AgentUnavailableError: If the Runtime cannot be reached or refuses the turn.
     """
     # 这道闸门是「结束会话」有意义的前提。没有它，结束一个会话只是杀掉了一个进程：下一轮对话
@@ -458,7 +460,7 @@ async def start_run(
 
     # 模型不可用时在拉起沙箱、写入用户消息之前就拒掉：这一轮本来就不会发生，不该为它付启动成本，
     # 也不该在历史里留一条没有回答的输入。
-    model_name = resolve_run_model_name(model_id)
+    forwarded_model_id = await resolve_run_model_id(model_id, credential)
 
     client = await open_client(conversation, credential=credential)
 
@@ -494,7 +496,7 @@ async def start_run(
             content=content,
             context_version=health.context_version,
             run_id=run_id,
-            model_name=model_name,
+            model_id=forwarded_model_id,
         )
     except AgentWorkspaceSavePendingError as exc:
         # 409 不会进 API 的异常日志，而页面上的文案是固定的，沙箱地址和 Runtime 的说明只在这里。

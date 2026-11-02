@@ -28,7 +28,7 @@ from app_spark_api.infras.bk_access_token import UserCredential, UserCredentialT
 CREDENTIAL = UserCredential(type=UserCredentialType.BK_TICKET, value="login-cookie", username="alice")
 MODEL_ACCESS = BkAidevModelAccess(
     base_url="https://bkaidev.apigw.example.com/prod/openapi/aidev/gateway/llm/v1",
-    model_name="deepseek-v4-flash",
+    model_id="deepseek-v4-flash",
     access_token="user-token",
 )
 REMOTE = GitRemote(clone_url="http://git.example/p.git", branch="main", username="bot", token="repo-token")

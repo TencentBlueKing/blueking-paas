@@ -353,13 +353,13 @@ async def _start_run(
 
     # 额度按轮清零：防的是一轮里反复重试，不是给整个会话设总量。
     runtime.launch_tool.begin_run()
-    # 模型名来自用户输入，用 %r 把换行等控制字符转义掉，否则能在日志里伪造出新的一行。
+    # 模型 ID 来自用户输入，用 %r 把换行等控制字符转义掉，否则能在日志里伪造出新的一行。
     logger.info(
         "run started run_id=%s conversation_id=%s context_version=%s model=%r",
         prepared.run_id,
         prepared.conversation_id,
         prepared.context_version,
-        run_model.model_name if run_model is not None else _get_default_model_name(runtime),
+        run_model.model_name if run_model is not None else _get_default_model_id(runtime),
     )
     adapter = await AGUIAdapter.from_request(
         request_with_body(request, prepared.body),
@@ -474,22 +474,22 @@ async def _start_run(
 
 def _resolve_run_model(runtime: ConversationRuntime, prepared: PreparedRun) -> Model | None:
     """Return the model this turn asked for, or None to run it on the default model."""
-    if prepared.model_name is None:
+    if prepared.model_id is None:
         return None
 
-    # 第二道防线：控制面在 direct 下本来就不发 modelName。direct 的钥匙只对那一个内置模型有效，
-    # fake 是脚本，按名字换都没有意义；照单全收会让用户以为换了模型，实际还是原来那个。
+    # 第二道防线：控制面在 direct 下本来就不发 modelId。direct 的钥匙只对那一个内置模型有效，
+    # fake 是脚本，按 ID 换都没有意义；照单全收会让用户以为换了模型，实际还是原来那个。
     if settings.model_mode() != settings.ModelMode.GATEWAY:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="forwardedProps.modelName is only accepted when the model is called through the gateway.",
+            detail="forwardedProps.modelId is only accepted when the model is called through the gateway.",
         )
 
-    return build_run_model(runtime.agent.model, prepared.model_name)
+    return build_run_model(runtime.agent.model, prepared.model_id)
 
 
-def _get_default_model_name(runtime: ConversationRuntime) -> str:
-    """Name of the model a turn without modelName runs on, for the logs."""
+def _get_default_model_id(runtime: ConversationRuntime) -> str:
+    """ID of the model a turn without modelId runs on, for the logs."""
     default = runtime.agent.model
     return default.model_name if isinstance(default, Model) else str(default)
 

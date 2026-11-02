@@ -132,9 +132,9 @@ def build_model_env(model_access: ModelAccess) -> dict[str, str]:
 
         # bkaidev：只有用户态 access_token。不给 MODEL_API_KEY，agent 缺 token 时会回落到它，
         # 那就成了用共享密钥冒充用户。
-        case BkAidevModelAccess(base_url=base_url, model_name=model_name, access_token=access_token):
+        case BkAidevModelAccess(base_url=base_url, model_id=model_id, access_token=access_token):
             return {
                 "BK_AIDEV_ACCESS_TOKEN": access_token,
                 "MODEL_BASE_URL": base_url,
-                "MODEL_NAME": model_name,
+                "MODEL_ID": model_id,
             }

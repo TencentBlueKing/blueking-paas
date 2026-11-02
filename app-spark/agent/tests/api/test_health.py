@@ -50,12 +50,12 @@ def test_every_reported_cursor_matches_the_endpoint_it_points_at(api: TestClient
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("MODEL_NAME", ""),
-        ("MODEL_NAME", "   "),
+        ("MODEL_ID", ""),
+        ("MODEL_ID", "   "),
         ("MODEL_BASE_URL", ""),
     ],
 )
-def test_readiness_requires_url_and_model_name(
+def test_readiness_requires_url_and_model_id(
     api: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     field: str,
@@ -69,9 +69,9 @@ def test_readiness_requires_url_and_model_name(
     assert reported["model_ready"] is False
 
 
-def test_any_gateway_model_name_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_any_gateway_model_id_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """模型名不再查对照表，hy3 这类以前表外的名字照样就绪，能不能调由网关裁决。"""
-    monkeypatch.setattr(settings, "MODEL_NAME", "hy3")
+    monkeypatch.setattr(settings, "MODEL_ID", "hy3")
 
     reported: dict[str, Any] = api.get("/health").json()
 
@@ -106,7 +106,7 @@ def test_an_api_key_alone_is_ready(api: TestClient, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(settings, "MODEL", "deepseek:deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
-    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     reported: dict[str, Any] = api.get("/health").json()

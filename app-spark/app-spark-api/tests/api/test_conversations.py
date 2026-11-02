@@ -51,10 +51,12 @@ from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations.entities import MAX_MODEL_ID_LENGTH
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
 from app_spark_api.agent.conversations.state_models import ConversationContextVersion
+from app_spark_api.agent.model_catalog import services as model_catalog_services
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.infras.bkaidev import GatewayModel
 from app_spark_api.repository.git.services import provision_project_repository
 from tests.infras.forgejo.fake import ORG, repo_server_config
 
@@ -794,7 +796,17 @@ async def test_a_turn_on_the_built_in_model_runs_like_one_without_a_model(aapi_c
     assert event_types(await collect_events(response))[-1] == "RUN_FINISHED"
 
 
-@pytest.mark.usefixtures("chat_agent")
+@pytest.fixture()
+def gateway_models(monkeypatch) -> None:
+    """Stand in for the models the bkaidev gateway offers, so a turn's model can be checked."""
+
+    async def fetch_gateway_models(*_args: Any, **_kwargs: Any) -> list[GatewayModel]:
+        return [GatewayModel(id=model_id) for model_id in ("deepseek-v4-flash", "hy3", "kimi-26")]
+
+    monkeypatch.setattr(model_catalog_services, "_fetch_gateway_models", fetch_gateway_models)
+
+
+@pytest.mark.usefixtures("chat_agent", "gateway_models")
 @pytest.mark.parametrize(
     ("source", "model_id"),
     [
@@ -828,7 +840,7 @@ async def test_a_turn_on_a_model_not_offered_is_refused_before_anything_starts(
     ],
 )
 async def test_a_malformed_model_id_is_a_validation_error(aapi_client, project, chat_agent, settings, model_id):
-    # 可选列表为空时 ID 不经比对就转发，畸形的 ID 只能靠请求校验挡在这里。
+    # 畸形的 ID 在请求校验就挡下，不必为它去换票、取网关的模型列表。
     settings.AGENT_MODEL_SOURCE = "bkaidev"
     settings.BKAIDEV_MODEL_CONFIG = {}
     conversation = await conversation_services.create_conversation(project, owner=project.owner)
@@ -839,6 +851,7 @@ async def test_a_malformed_model_id_is_a_validation_error(aapi_client, project, 
     assert json.loads(response.content)["code"] == "VALIDATION_ERROR"
 
 
+@pytest.mark.usefixtures("gateway_models")
 async def test_a_turn_forwards_the_model_it_asked_for(aapi_client, project, chat_agent, settings, monkeypatch):
     state = await create_conversation(aapi_client)
     # Runtime 已经按 direct 拉起来了，之后切到 bkaidev 只影响每轮校验，不会重新拉起。
@@ -847,12 +860,12 @@ async def test_a_turn_forwards_the_model_it_asked_for(aapi_client, project, chat
     forwarded: list[str | None] = []
     start_run = AgentRuntimeClient.start_run
 
-    # 只记下转发的模型名，不交给 Runtime：它跑的是 fake 模型，带 modelName 会被拒。
-    async def record_model_name(self: AgentRuntimeClient, *, model_name: str | None = None, **kwargs: Any) -> Any:
-        forwarded.append(model_name)
+    # 只记下转发的模型 ID，不交给 Runtime：它跑的是 fake 模型，带 modelId 会被拒。
+    async def record_model_id(self: AgentRuntimeClient, *, model_id: str | None = None, **kwargs: Any) -> Any:
+        forwarded.append(model_id)
         return await start_run(self, **kwargs)
 
-    monkeypatch.setattr(AgentRuntimeClient, "start_run", record_model_name)
+    monkeypatch.setattr(AgentRuntimeClient, "start_run", record_model_id)
 
     response = await post_run(aapi_client, state["number"], "hello", model_id=" hy3 ")
 

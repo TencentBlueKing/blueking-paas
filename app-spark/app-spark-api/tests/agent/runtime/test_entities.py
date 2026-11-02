@@ -201,48 +201,37 @@ def test_an_unset_available_list_offers_every_model():
 
 def test_an_available_list_including_the_default_model_is_accepted():
     config = structure_bkaidev_model_config(
-        {"default_model_name": "hy3", "available_models": ["deepseek-v4-flash", "hy3"]}
+        {"default_model_id": "hy3", "available_models": ["deepseek-v4-flash", "hy3"]}
     )
 
     assert config.available_models == ["deepseek-v4-flash", "hy3"]
 
 
-def test_a_pattern_may_cover_the_default_model():
+def test_an_available_list_leaving_out_the_default_model_is_accepted():
+    """默认模型不在列表里时顺延到列表第一个，网关的模型会变，启动时判断不了。"""
     config = structure_bkaidev_model_config(
-        {"default_model_name": "deepseek-v4-flash", "available_models": ["hy4-*", "deepseek-*-flash"]}
+        {"default_model_id": "deepseek-v4-flash", "available_models": ["hy4-*", "hy3"]}
     )
 
-    assert config.available_models == ["hy4-*", "deepseek-*-flash"]
+    assert config.available_models == ["hy4-*", "hy3"]
 
 
 @pytest.mark.parametrize(
     ("raw_config", "reasons"),
     [
-        # 用户不选时跑的是默认模型，它不在列表里，下拉框就显示不出用户实际在用的那个。
         pytest.param(
-            {"default_model_name": "deepseek-v4-flash", "available_models": ["hy3"]},
-            ["default_model_name", "deepseek-v4-flash"],
-            id="the-default-model-left-out",
-        ),
-        # 模式区分大小写，模型 ID 本身就区分。
-        pytest.param(
-            {"default_model_name": "deepseek-v4-flash", "available_models": ["DeepSeek-*"]},
-            ["default_model_name", "matches nothing"],
-            id="a-pattern-of-another-case",
-        ),
-        pytest.param(
-            {"default_model_name": "hy3", "available_models": ["hy3", "kimi-26", "hy3"]},
+            {"default_model_id": "hy3", "available_models": ["hy3", "kimi-26", "hy3"]},
             ["hy3", "more than once"],
             id="a-duplicated-entry",
         ),
         pytest.param(
-            {"default_model_name": "hy3", "available_models": ["hy3", ""]},
+            {"default_model_id": "hy3", "available_models": ["hy3", ""]},
             ["available_models"],
             id="an-empty-entry",
         ),
         # 字符串不能被拆成单个字符再去比对，要直接说明类型不对。
         pytest.param(
-            {"default_model_name": "hy3", "available_models": "hy3"},
+            {"default_model_id": "hy3", "available_models": "hy3"},
             ["available_models", "Expected list, got str"],
             id="not-a-list",
         ),

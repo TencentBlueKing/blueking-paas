@@ -11,7 +11,7 @@ from app_spark_agent import settings
 def ready(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-token")
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
 
 
@@ -26,15 +26,15 @@ def test_the_gateway_profile_turns_every_capability_on() -> None:
 
 
 @pytest.mark.parametrize("name", ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"])
-def test_any_model_name_completes_the_gateway(ready: None, monkeypatch: MonkeyPatch, name: str) -> None:
-    monkeypatch.setattr(settings, "MODEL_NAME", name)
+def test_any_model_id_completes_the_gateway(ready: None, monkeypatch: MonkeyPatch, name: str) -> None:
+    monkeypatch.setattr(settings, "MODEL_ID", name)
 
     assert settings.model_mode() == settings.ModelMode.GATEWAY
     assert settings.is_model_ready() is True
 
 
-def test_a_blank_model_name_leaves_the_gateway_unready(ready: None, monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "MODEL_NAME", "   ")
+def test_a_blank_model_id_leaves_the_gateway_unready(ready: None, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "MODEL_ID", "   ")
 
     assert settings.is_model_ready() is False
 
@@ -43,7 +43,7 @@ def test_a_fake_model_is_ready_without_gateway_settings(monkeypatch: MonkeyPatch
     monkeypatch.setattr(settings, "MODEL", "fake:write-file")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
-    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     assert settings.is_model_ready() is True
@@ -53,7 +53,7 @@ def test_api_key_alone_is_the_direct_provider(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "MODEL", "deepseek:deepseek-v4-flash")
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
-    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     assert settings.gateway_access_token() is None
@@ -65,7 +65,7 @@ def test_api_key_alone_is_the_direct_provider(monkeypatch: MonkeyPatch) -> None:
 def test_api_key_does_not_complete_a_partial_gateway(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
 
     assert settings.gateway_access_token() is None
@@ -76,7 +76,7 @@ def test_api_key_does_not_complete_a_partial_gateway(monkeypatch: MonkeyPatch) -
 def test_whitespace_token_is_absent(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "   ")
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
 
     assert settings.gateway_access_token() is None
@@ -86,12 +86,12 @@ def test_whitespace_token_is_absent(monkeypatch: MonkeyPatch) -> None:
 def test_direct_provider_is_only_for_api_key_without_gateway(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", None)
     monkeypatch.setattr(settings, "MODEL_API_KEY", "provider-key")
-    monkeypatch.setattr(settings, "MODEL_NAME", "")
+    monkeypatch.setattr(settings, "MODEL_ID", "")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
 
     assert settings.uses_direct_provider() is True
 
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
 
     assert settings.uses_direct_provider() is False
 

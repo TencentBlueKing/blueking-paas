@@ -26,7 +26,7 @@ def sandbox_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "RUNTIME_TOKEN", RUNTIME_TOKEN)
     monkeypatch.setattr(settings, "MODEL_API_KEY", MODEL_API_KEY)
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "test-aidev-access-token")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://model-gateway.test/v1")
     monkeypatch.setattr(settings, "APP_PORT", settings.DEFAULT_APP_PORT)
     # A short idle timeout in a developer .env must not os._exit during TestClient.

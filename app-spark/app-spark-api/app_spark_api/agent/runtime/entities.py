@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import posixpath
 from collections.abc import Awaitable, Callable
-from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
@@ -227,15 +226,16 @@ class BkAidevModelConfig:
     is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
-    :param default_model_name: Model name injected as the Runtime's MODEL_NAME.
+    :param default_model_id: The preferred default model, injected as the Runtime's MODEL_ID
+        when the model list offers it; otherwise the first model in the list is used instead.
     :param available_models: Model IDs or fnmatch patterns (case-sensitive) offered for picking,
         in the order they are shown, and the only ones a turn may ask for. Empty means every model
-        the gateway offers this app, and any well-formed ID a turn asks for is passed on for the
-        gateway to decide.
+        the gateway offers this app.
     """
 
-    # 没带模型的一轮、刚重建的沙箱都用它托底，缺了 Runtime 就起不来可用的模型，所以这里必须有值。
-    default_model_name: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
+    # 第一顺位的默认模型。列表里没有它时顺延到列表第一个，两者都落空才报错，所以这里不要求它被
+    # available_models 匹配上：网关的模型会变，启动时的静态校验判断不了它最终在不在列表里。
+    default_model_id: str = attrs.field(default="deepseek-v4-flash", validator=validate_non_empty_string)
     available_models: list[str] = attrs.field(
         factory=list,
         validator=attrs.validators.deep_iterable(member_validator=validate_non_empty_string),
@@ -250,13 +250,6 @@ class BkAidevModelConfig:
                 raise ValueError(f"{attribute.name} lists {pattern!r} more than once")
 
             seen.add(pattern)
-
-        # 用户不选时跑的是默认模型。没有一项能匹配上它，下拉框就显示不出用户实际在用的那个。
-        if value and not any(fnmatchcase(self.default_model_name, pattern) for pattern in value):
-            raise ValueError(
-                f"default_model_name {self.default_model_name!r} matches nothing in {attribute.name}; "
-                "a non-empty list must cover the model used when the user picks none"
-            )
 
 
 @attrs.frozen
@@ -310,12 +303,12 @@ class BkAidevModelAccess:
 
     :param base_url: The gateway's OpenAI-compatible v1 root.
     :param access_token: The user's access_token for the configured app.
-    :param model_name: The model the Runtime asks the gateway for.
+    :param model_id: The model the Runtime asks the gateway for.
     """
 
     base_url: str = attrs.field(validator=validate_non_empty_string)
     access_token: str = attrs.field(repr=False, validator=validate_non_empty_string)
-    model_name: str = attrs.field(validator=validate_non_empty_string)
+    model_id: str = attrs.field(validator=validate_non_empty_string)
 
 
 # Exactly one of the two, so a provider never has to guess what a missing value was meant to be.

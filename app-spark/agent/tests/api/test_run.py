@@ -140,9 +140,9 @@ def test_a_replayed_run_id_is_rejected(api: TestClient) -> None:
         pytest.param({"forwardedProps": {}}, id="context-version-missing"),
         pytest.param({"forwardedProps": {"contextVersion": "0"}}, id="context-version-not-an-int"),
         pytest.param({"forwardedProps": []}, id="forwarded-props-not-an-object"),
-        pytest.param({"forwardedProps": {"contextVersion": 0, "modelName": ""}}, id="model-name-empty"),
-        pytest.param({"forwardedProps": {"contextVersion": 0, "modelName": None}}, id="model-name-null"),
-        pytest.param({"forwardedProps": {"contextVersion": 0, "modelName": 3}}, id="model-name-not-a-string"),
+        pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": ""}}, id="model-id-empty"),
+        pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": None}}, id="model-id-null"),
+        pytest.param({"forwardedProps": {"contextVersion": 0, "modelId": 3}}, id="model-id-not-a-string"),
         pytest.param({"messages": []}, id="no-user-message"),
         pytest.param(
             {"messages": [{"id": "blank", "role": "user", "content": "   "}]},
@@ -240,7 +240,7 @@ def test_control_plane_without_bearer_is_401(api: TestClient) -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("MODEL_NAME", ""), ("MODEL_BASE_URL", "")],
+    [("MODEL_ID", ""), ("MODEL_BASE_URL", "")],
 )
 def test_runs_rejects_an_unready_gateway(
     api: TestClient,
@@ -352,24 +352,24 @@ def make_streamed_completion(request: httpx2.Request) -> httpx2.Response:
     return httpx2.Response(200, content=f"{body}data: [DONE]\n\n", headers={"Content-Type": "text/event-stream"})
 
 
-def post_run_with_model(api: TestClient, model_name: str | None) -> Any:
-    """Post one fresh-conversation run that asks for model_name."""
+def post_run_with_model(api: TestClient, model_id: str | None) -> Any:
+    """Post one fresh-conversation run that asks for model_id."""
     return api.post(
         "/runs",
         headers=SSE_HEADERS,
-        json=run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0, model_name=model_name),
+        json=run_body(conversation_id=str(uuid4()), run_id=str(uuid4()), context_version=0, model_id=model_id),
     )
 
 
 @pytest.mark.parametrize(
-    ("model_name", "expected"),
+    ("model_id", "expected"),
     [
         pytest.param("hy3", "hy3", id="asked-for-hy3"),
         pytest.param(" hy3 ", "hy3", id="padded-name-is-stripped"),
         pytest.param(None, "deepseek-v4-flash", id="asked-for-nothing"),
     ],
 )
-def test_the_gateway_is_asked_for_the_turns_model(make_api: ApiFactory, model_name: str | None, expected: str) -> None:
+def test_the_gateway_is_asked_for_the_turns_model(make_api: ApiFactory, model_id: str | None, expected: str) -> None:
     asked: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -378,7 +378,7 @@ def test_the_gateway_is_asked_for_the_turns_model(make_api: ApiFactory, model_na
 
     api = make_gateway_api(make_api, handler)
 
-    response = post_run_with_model(api, model_name)
+    response = post_run_with_model(api, model_id)
 
     assert response.status_code == 200, response.text
     assert sse_events(response.text)[-1]["type"] == "RUN_FINISHED"
@@ -407,10 +407,10 @@ def test_a_model_the_gateway_refuses_ends_the_turn_without_falling_back(make_api
     "overrides",
     [
         pytest.param({"MODEL": "fake:chat"}, id="fake"),
-        pytest.param({"BK_AIDEV_ACCESS_TOKEN": None, "MODEL_BASE_URL": "", "MODEL_NAME": ""}, id="direct"),
+        pytest.param({"BK_AIDEV_ACCESS_TOKEN": None, "MODEL_BASE_URL": "", "MODEL_ID": ""}, id="direct"),
     ],
 )
-def test_only_the_gateway_accepts_a_model_name(
+def test_only_the_gateway_accepts_a_model_id(
     api: TestClient, monkeypatch: pytest.MonkeyPatch, overrides: dict[str, Any]
 ) -> None:
     for name, value in overrides.items():

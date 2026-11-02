@@ -29,8 +29,10 @@ import pytest
 from app_spark_api.agent.conversations import services
 from app_spark_api.agent.conversations.exceptions import RunNotFoundError, RunNotInProgressError
 from app_spark_api.agent.conversations.models import Conversation, ConversationUserMessage
+from app_spark_api.agent.model_catalog import services as model_catalog_services
 from app_spark_api.agent.runtime import AgentRuntimeHandle, AgentUnavailableError, RuntimeHealth
 from app_spark_api.core.projects.models import Project
+from app_spark_api.infras.bkaidev import GatewayModel
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -231,7 +233,7 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
             content: str,
             context_version: int,
             run_id: str,
-            model_name: str | None = None,
+            model_id: str | None = None,
         ) -> FakeRun:
             owned = ConversationUserMessage.objects.filter(conversation=conversation, run_id=run_id)
             owned_when_started.append(await owned.aexists())
@@ -259,8 +261,13 @@ async def test_a_turn_can_be_stopped_as_soon_as_its_runtime_has_it(provider, con
 async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversation, settings, monkeypatch):
     """用户选的模型要原样交给 Runtime。"""
     settings.AGENT_MODEL_SOURCE = "bkaidev"
-    settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3"]}
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy3"]}
     seen: list[str | None] = []
+
+    async def fetch_gateway_models(*_args: Any, **_kwargs: Any) -> list[GatewayModel]:
+        return [GatewayModel(id="hy3")]
+
+    monkeypatch.setattr(model_catalog_services, "_fetch_gateway_models", fetch_gateway_models)
 
     class StartingClient(FakeClient):
         async def start_run(
@@ -269,9 +276,9 @@ async def test_a_turn_that_names_a_model_reaches_the_runtime(provider, conversat
             content: str,
             context_version: int,
             run_id: str,
-            model_name: str | None = None,
+            model_id: str | None = None,
         ) -> FakeRun:
-            seen.append(model_name)
+            seen.append(model_id)
             run = FakeRun([])
             run.run_id = run_id
             return run

@@ -111,7 +111,7 @@ def upstream(monkeypatch) -> FakeUpstream:
 def bkaidev_settings(settings):
     """A bkaidev deployment on a bk_token site, narrowing nothing."""
     settings.AGENT_MODEL_SOURCE = "bkaidev"
-    settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "deepseek-v4-flash"}
+    settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "deepseek-v4-flash"}
     settings.BK_API_URL_TMPL = "https://{api_name}.apigw.example.com"
     settings.APIGW_ENVIRONMENT = "prod"
     settings.BKAUTH_BACKEND_TYPE = "bk_token"
@@ -134,7 +134,7 @@ def collect_ids(body: dict) -> list[str]:
 
 async def test_an_available_list_picks_and_orders_the_models(bkaidev_settings, upstream, logged_in_client):
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
-        "default_model_name": "deepseek-v4-flash",
+        "default_model_id": "deepseek-v4-flash",
         "available_models": ["deepseek-v4-flash", "hy3", "GLM-5_3-Online-32k"],
     }
     upstream.cards = [
@@ -160,7 +160,7 @@ async def test_an_available_list_picks_and_orders_the_models(bkaidev_settings, u
 async def test_a_pattern_picks_its_models_in_gateway_order(bkaidev_settings, upstream, logged_in_client):
     """模式之间按配置顺序，同一模式命中的按网关顺序；被前面选中过的不重复出现。"""
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
-        "default_model_name": "deepseek-v4-flash",
+        "default_model_id": "deepseek-v4-flash",
         "available_models": ["hy4-*", "deepseek-v4-flash", "deepseek-*-flash"],
     }
     upstream.cards = [
@@ -201,7 +201,7 @@ async def test_a_card_without_properties_is_still_offered(bkaidev_settings, upst
 async def test_an_available_model_the_gateway_does_not_offer_is_left_out_and_logged(
     bkaidev_settings, upstream, logged_in_client, caplog
 ):
-    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "not-exist"]}
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy3", "not-exist"]}
     upstream.cards = [make_card("hy3"), make_card("kimi-26")]
 
     with caplog.at_level(logging.WARNING):
@@ -211,28 +211,32 @@ async def test_an_available_model_the_gateway_does_not_offer_is_left_out_and_log
     assert any("not-exist" in record.getMessage() for record in caplog.records if record.levelno == logging.WARNING)
 
 
-async def test_an_available_list_matching_nothing_turns_switching_off(
-    bkaidev_settings, upstream, logged_in_client, caplog
+async def test_a_default_model_left_out_gives_way_to_the_first_model(bkaidev_settings, upstream, logged_in_client):
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy4-*", "hy3"]}
+    upstream.cards = [make_card("deepseek-v4-flash"), make_card("hy4-preview")]
+
+    response = await logged_in_client.get(MODELS_URL)
+
+    body = response.json()
+    assert collect_ids(body) == ["hy4-preview"]
+    assert (body["allow_user_switch"], body["default_model_id"]) == (True, "hy4-preview")
+
+
+async def test_an_available_list_matching_nothing_is_an_operators_problem(
+    bkaidev_settings, upstream, logged_in_client
 ):
-    """配置没命中时不能把网关全量标成可切换：每轮校验仍只认配置，那些选项提交后全是 422。"""
-    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_name": "hy3", "available_models": ["hy3", "kimi-*"]}
+    """默认模型和列表第一个都落空，没有模型可跑，不返回一个空下拉框。"""
+    bkaidev_settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "hy3", "available_models": ["hy3", "kimi-*"]}
     upstream.cards = [
         make_card("deepseek-v4-flash"),
         make_card("aidev-embedding-auto", tools=False),
         make_card("hy4-preview"),
     ]
 
-    with caplog.at_level(logging.WARNING):
-        response = await logged_in_client.get(MODELS_URL)
+    response = await logged_in_client.get(MODELS_URL)
 
-    body = response.json()
-    assert body["allow_user_switch"] is False
-    assert collect_ids(body) == []
-    assert any(
-        "model switching is off" in record.getMessage()
-        for record in caplog.records
-        if record.levelno == logging.WARNING
-    )
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json()["code"] == "MODEL_ACCESS_CONFIGURATION_ERROR"
 
 
 async def test_an_available_model_that_cannot_call_tools_is_still_left_out(
@@ -240,7 +244,7 @@ async def test_an_available_model_that_cannot_call_tools_is_still_left_out(
 ):
     """可选列表只收窄，不放宽：上游说不能调工具的模型，配了也不出现。"""
     bkaidev_settings.BKAIDEV_MODEL_CONFIG = {
-        "default_model_name": "hy3",
+        "default_model_id": "hy3",
         "available_models": ["hy3", "hunyuan-turbos-vision"],
     }
     upstream.cards = [make_card("hunyuan-turbos-vision", tools=False, vision=True), make_card("hy3")]

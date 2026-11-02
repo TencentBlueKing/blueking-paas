@@ -20,5 +20,5 @@ def require_api_key() -> None:
     if settings.MODEL.startswith("fake:") or not settings.is_model_ready():
         pytest.skip(
             "e2e needs one complete model mode: MODEL_API_KEY alone, "
-            "or BK_AIDEV_ACCESS_TOKEN with MODEL_NAME and MODEL_BASE_URL"
+            "or BK_AIDEV_ACCESS_TOKEN with MODEL_ID and MODEL_BASE_URL"
         )

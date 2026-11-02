@@ -63,7 +63,7 @@ def build_model() -> Model:
         token = settings.gateway_access_token()
         assert token is not None
         return _build_gateway_model(
-            settings.resolved_model_name(),
+            settings.resolved_model_id(),
             settings.MODEL_BASE_URL.strip(),
             token,
             profile=settings.openai_capability_profile(),
@@ -78,7 +78,7 @@ def build_model() -> Model:
 
 
 def _build_gateway_model(
-    model_name: str,
+    model_id: str,
     base_url: str,
     access_token: str,
     *,
@@ -98,20 +98,20 @@ def _build_gateway_model(
         http_client=DefaultAsyncHttpxClient(transport=WithoutAuthorization(transport)),
     )
     return OpenAIChatModel(
-        model_name,
+        model_id,
         provider=OpenAIProvider(openai_client=client),
         profile=_pin_profile(profile),
     )
 
 
 def _pin_profile(profile: ModelProfile) -> Callable[[ModelProfile], ModelProfile]:
-    """把固定能力档包成函数形式交给 pydantic-ai，让模型名不再影响能力档。"""
+    """把固定能力档包成函数形式交给 pydantic-ai，让模型 ID 不再影响能力档。"""
 
     # OpenAIChatModel 的 profile= 有两种传法，效果不同。
     # 传 dict：只覆盖 dict 里有的键，pydantic-ai 按模型名推断出的其它键会留下来。
     # 这些规则是按 OpenAI 自家模型名写的，网关上的名字撞上就会误判：o3-mini 会被当成 OpenAI 的推理模型；
     # deepseek-v4.1-flash 因为名字里有 4.1，会被套上 gpt-4.1 的规则，当成能生成图片。
-    # 传函数：用返回值整份替换推断结果。网关下的模型名由用户选，所以要用函数形式把档钉死。
+    # 传函数：用返回值整份替换推断结果。网关下的模型 ID 由用户选，所以要用函数形式把档钉死。
     def replace(_inferred: ModelProfile) -> ModelProfile:
         return profile
 
@@ -121,7 +121,7 @@ def _pin_profile(profile: ModelProfile) -> Callable[[ModelProfile], ModelProfile
 async def _unready_stream(_messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str]:
     """未就绪占位：被调用说明门闩被绕过了。"""
     raise RuntimeError(
-        "model is not ready: fake, MODEL_API_KEY alone, or BK_AIDEV_ACCESS_TOKEN with MODEL_BASE_URL and MODEL_NAME"
+        "model is not ready: fake, MODEL_API_KEY alone, or BK_AIDEV_ACCESS_TOKEN with MODEL_BASE_URL and MODEL_ID"
     )
     yield ""
 
@@ -145,22 +145,22 @@ def _build_inferred_model() -> Model:
     return infer_model(settings.MODEL, provider_factory=provider_factory)
 
 
-def build_run_model(default: Model | str | None, model_name: str) -> Model:
-    """Build the model one turn asked for by name, on the default model's gateway client."""
+def build_run_model(default: Model | str | None, model_id: str) -> Model:
+    """Build the model one turn asked for by ID, on the default model's gateway client."""
 
-    # 只有网关模型能按名字换：调用方已经在 direct / fake 下拒掉了 modelName，走到这里还不是
+    # 只有网关模型能按 ID 换：调用方已经在 direct / fake 下拒掉了 modelId，走到这里还不是
     # OpenAIChatModel 说明门闩被绕过了。
     if not isinstance(default, OpenAIChatModel):
-        raise TypeError(f"only a gateway model can be swapped by name, got {type(default).__name__}")
+        raise TypeError(f"only a gateway model can be swapped by ID, got {type(default).__name__}")
 
-    # 和默认模型同名就是默认模型，不必再包一层。
-    if model_name == default.model_name:
+    # 和默认模型同一个 ID 就是默认模型，不必再包一层。pydantic-ai 把 ID 存在 model_name 上。
+    if model_id == default.model_name:
         return default
 
     # 复用默认模型的 AsyncOpenAI：基址、用户 token、HTTP 连接池都在它身上，每轮只多一个轻量的模型
-    # 对象。不按名字缓存，推荐列表为空时名字是任意的，缓存会随它无限增长。
+    # 对象。不按 ID 缓存，ID 来自调用方，缓存会随它无限增长。
     return OpenAIChatModel(
-        model_name,
+        model_id,
         provider=OpenAIProvider(openai_client=default.client),
         profile=_pin_profile(settings.openai_capability_profile()),
     )

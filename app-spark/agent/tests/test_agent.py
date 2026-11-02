@@ -214,7 +214,7 @@ def test_gateway_model_uses_access_token_header_not_bearer(monkeypatch: MonkeyPa
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-access-token")
     monkeypatch.setattr(settings, "MODEL_API_KEY", "must-not-become-bearer")
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/prod/openapi/aidev/gateway/llm/v1")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
 
     model = build_model()
     client = cast(Any, model).client
@@ -283,7 +283,7 @@ def test_incomplete_gateway_settings_do_not_infer_a_public_provider(
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-access-token")
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
 
     model = build_model()
     agent = create_agent(tmp_path)
@@ -355,7 +355,7 @@ def set_gateway_settings(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "BK_AIDEV_ACCESS_TOKEN", "user-access-token")
     monkeypatch.setattr(settings, "MODEL_API_KEY", None)
     monkeypatch.setattr(settings, "MODEL_BASE_URL", "https://bkaidev.test/v1")
-    monkeypatch.setattr(settings, "MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setattr(settings, "MODEL_ID", "deepseek-v4-flash")
 
 
 def test_file_read_key_matches_the_harness_read_tool() -> None:

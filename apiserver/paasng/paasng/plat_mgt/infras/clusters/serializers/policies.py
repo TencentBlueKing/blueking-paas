@@ -57,7 +57,7 @@ class AllocationPrecedencePolicySLZ(serializers.Serializer):
     policy = AllocationPolicySLZ(help_text="分配策略")
 
     class Meta:
-        ref_name = "plat_mgt.infras.clusters.AllocationPolicySLZ"
+        ref_name = "plat_mgt.infras.clusters.AllocationPrecedencePolicySLZ"
 
     def to_internal_value(self, data: Dict[str, Any]) -> AllocationPrecedencePolicy:
         return AllocationPrecedencePolicy(**super().to_internal_value(data))

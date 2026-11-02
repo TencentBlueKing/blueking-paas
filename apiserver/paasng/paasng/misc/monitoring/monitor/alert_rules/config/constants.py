@@ -27,7 +27,7 @@ RUN_ENVS = AppEnvironment.get_values()
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get("service_name", "rabbitmq")
 BKREPO_SERVICE_NAME = settings.BKREPO_MONITOR_CONF.get("service_name", "bkrepo")
 GCS_MYSQL_SERVICE_NAME = settings.GCS_MYSQL_MONITOR_CONF.get("service_name", "gcs_mysql")
-REDIS_SERVICE_NAME = settings.REDIS_MONITOR_CONF.get("service_name", "redis")
+REDIS_SERVICE_NAME = settings.REDIS_MONITOR_CONF.get("service_name", "bk_paas_redis")
 
 DEFAULT_RULE_CONFIGS = {
     AlertCode.HIGH_CPU_USAGE.value: {

@@ -731,7 +731,8 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # REDIS_MONITOR_CONF:
 #    enabled: true
 #    metric_name_prefix: ''
-#    service_name: 'redis'
+#    # svc-redis 在开发者中心注册的服务名, 不能填平台自带的旧版本地 Redis 服务 'redis'
+#    service_name: 'bk_paas_redis'
 
 ## ------------------------------------ 蓝鲸日志配置 ------------------------------------
 # 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"

@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'min by (bk_instance) ({{ redis_metric_name_prefix }}redis_instance_alive{bk_app_code="{{ app_code }}", bk_module="{{ module_name }}", bk_env="{{ run_env }}"})'
+  - metric: 'min by (bk_instance) ({{ redis_metric_name_prefix }}redis_instance_alive{bk_app_code="{{ app_code }}", bk_module="{{ metric_labels['redis_bk_module'] }}", bk_env="{{ run_env }}"})'
     interval: 60 # 单位 s
 
 detect: # 检测配置

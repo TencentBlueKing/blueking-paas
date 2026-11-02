@@ -18,6 +18,7 @@
 """Tests for serializers module"""
 
 import pytest
+from django.http import QueryDict
 
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.sourcectl.serializers import SourcePackageUploadViaUrlSLZ
@@ -127,3 +128,14 @@ class TestSourcePackageUploadViaUrlSLZ:
         if valid:
             for key, value in expected.items():
                 assert slz.validated_data.get(key) == value
+
+    @pytest.mark.parametrize("extra", [{}, {"build_method": RuntimeType.BUILDPACK}])
+    def test_form_encoded_request_without_docker_args(self, settings, extra):
+        """表单提交时 DRF 会把未传的 docker_build_args 解析成空 dict，不应命中互斥校验"""
+        settings.SRC_PACKAGE_UPLOAD_ALLOWED_HOSTS = ["example.com"]
+        data = QueryDict(mutable=True)
+        data.update({**_make_data("https://example.com/pkg.tar.gz"), **extra})
+
+        slz = SourcePackageUploadViaUrlSLZ(data=data)
+
+        assert slz.is_valid(), slz.errors

@@ -295,8 +295,10 @@ class SourcePackageUploadViaUrlMixin:
 
     def _validate_optional_build_method(self, module: Module, data: dict) -> None:
         """上传前校验：仅 AI Agent 和 AppSpark 来源允许携带构建方式相关字段。"""
+        # docker_build_args 在表单提交时会被解析成空 dict, 需按真值判断,
+        # 否则非 AI Agent / AppSpark 应用的普通表单请求会被误判为“指定了构建方式”
         has_build_method_fields = bool(
-            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args") is not None
+            data.get("build_method") or data.get("dockerfile_path") or data.get("docker_build_args")
         )
         if not has_build_method_fields:
             return

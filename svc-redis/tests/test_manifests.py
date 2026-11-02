@@ -107,7 +107,7 @@ class TestRedisExporter:
         assert exporter["enabled"] is True
         assert exporter["image"] == DEFAULT_REDIS_EXPORTER_IMAGE
         assert exporter["resources"] == {
-            "requests": {"cpu": "1m", "memory": "16Mi"},
+            "requests": {"cpu": "10m", "memory": "16Mi"},
             "limits": {"cpu": "100m", "memory": "64Mi"},
         }
 

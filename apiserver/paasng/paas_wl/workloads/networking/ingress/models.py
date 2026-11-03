@@ -187,6 +187,7 @@ class TxtFile(AuditedModel):
     """
 
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
+    host = models.CharField(max_length=253, help_text="生效的域名")
     path = models.CharField(max_length=128, help_text="访问路径，如 /verify.txt")
     content = models.TextField(help_text="文件内容")
     remark = models.CharField(max_length=128, blank=True, default="", help_text="备注")
@@ -195,7 +196,7 @@ class TxtFile(AuditedModel):
     environment = ModuleEnvAttrFromID()
 
     class Meta:
-        unique_together = ("environment_id", "path")
+        unique_together = ("environment_id", "host", "path")
 
     def __str__(self):
-        return f"env={self.environment_id}-{self.path}"
+        return f"env={self.environment_id}-{self.host}{self.path}"

@@ -27,15 +27,18 @@ from paas_wl.workloads.networking.ingress.txt_files.serializers import (
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+HOST = "foo.example.com"
+
+
 def make_slz(env, instance=None, **data):
-    data = {"path": "/verify.txt", "content": "abc", **data}
-    return TxtFileSLZ(instance, data=data, context={"env": env})
+    data = {"host": HOST, "path": "/verify.txt", "content": "abc", **data}
+    return TxtFileSLZ(instance, data=data, context={"env": env, "served_hosts": [HOST, "bar.example.com"]})
 
 
 @pytest.mark.parametrize(
     ("path", "valid"),
     [
-        ("/MP_verify_a-B.1.txt", True),
+        ("/MP_verify_a-B.1~x.txt", True),
         ("/a/verify.txt", False),
         ("/../verify.txt", False),
         ("/verify.txt?a=1", False),
@@ -44,6 +47,10 @@ def make_slz(env, instance=None, **data):
 )
 def test_path(bk_stag_env, path, valid):
     assert make_slz(bk_stag_env, path=path).is_valid() is valid
+
+
+def test_host_must_be_served(bk_stag_env):
+    assert make_slz(bk_stag_env, host="other.example.com").is_valid() is False
 
 
 @pytest.mark.parametrize(
@@ -63,11 +70,16 @@ def test_content(bk_stag_env, content, expected):
 
 
 def test_env_constraints(bk_stag_env):
-    txt_file = TxtFile.objects.create(environment_id=bk_stag_env.id, path="/verify.txt", content="abc")
+    txt_file = TxtFile.objects.create(environment_id=bk_stag_env.id, host=HOST, path="/verify.txt", content="abc")
     assert make_slz(bk_stag_env).is_valid() is False
     assert make_slz(bk_stag_env, instance=txt_file).is_valid() is True
+    # The same path is allowed on another host
+    assert make_slz(bk_stag_env, host="bar.example.com").is_valid() is True
 
     TxtFile.objects.bulk_create(
-        [TxtFile(environment_id=bk_stag_env.id, path=f"/{i}.txt", content="abc") for i in range(MAX_FILES_PER_ENV - 1)]
+        [
+            TxtFile(environment_id=bk_stag_env.id, host=HOST, path=f"/{i}.txt", content="abc")
+            for i in range(MAX_FILES_PER_ENV - 1)
+        ]
     )
     assert make_slz(bk_stag_env, path="/new.txt").is_valid() is False

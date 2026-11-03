@@ -5422,17 +5422,17 @@ msgstr "Only cloud-native applications support txt verification files"
 msgid "txt 校验文件下发到集群失败，请稍候重试"
 msgstr "Failed to apply txt verification files to the cluster, please try again later"
 
-#: paasng/utils/error_codes.py:230
-msgid "环境未部署或没有可用的访问域名，请部署后再配置"
-msgstr "The environment is not deployed or has no available domain, please deploy it first"
-
 #: paas_wl/workloads/networking/ingress/txt_files/serializers.py:36
 msgid "路径格式错误，仅支持根目录下的 .txt 文件，如 /verify.txt"
 msgstr "Invalid path, only .txt files under the root directory are supported, e.g. /verify.txt"
 
-#: paas_wl/workloads/networking/ingress/txt_files/serializers.py:58
-msgid "该路径已存在"
-msgstr "The path already exists"
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py
+msgid "该域名不可用，仅支持已部署环境的子域名和路径为 / 的独立域名"
+msgstr "The domain is unavailable, only sub-domains and custom domains with path \"/\" of a deployed environment are supported"
+
+#: paas_wl/workloads/networking/ingress/txt_files/serializers.py
+msgid "该域名下已存在相同路径的文件"
+msgstr "A file with the same path already exists on this domain"
 
 #: paas_wl/workloads/networking/ingress/txt_files/serializers.py:64
 msgid "内容不能包含 $ 字符"

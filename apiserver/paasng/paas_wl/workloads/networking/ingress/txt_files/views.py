@@ -27,7 +27,11 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.workloads.networking.ingress.models import TxtFile
 from paas_wl.workloads.networking.ingress.txt_files.serializers import TxtFileListSLZ, TxtFileSLZ
-from paas_wl.workloads.networking.ingress.txt_files.sync import is_txt_files_supported, sync_txt_file_ingresses
+from paas_wl.workloads.networking.ingress.txt_files.sync import (
+    get_served_hosts,
+    is_txt_files_supported,
+    sync_txt_file_ingresses,
+)
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
@@ -52,23 +56,24 @@ class TxtFilesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         env = self._get_env()
         data = {
             "supported": is_txt_files_supported(env),
+            "hosts": get_served_hosts(env),
             "files": TxtFile.objects.filter(environment_id=env.id).order_by("id"),
         }
         return Response(TxtFileListSLZ(data).data)
 
     @swagger_auto_schema(request_body=TxtFileSLZ, response_serializer=TxtFileSLZ, tags=["访问入口"])
     def create(self, request, code, module_name, environment):
-        """新建 txt 校验文件，环境需已部署，保存后立即生效"""
+        """新建 txt 校验文件，保存后立即生效"""
         env = self._get_env()
-        slz = TxtFileSLZ(data=request.data, context={"env": env})
+        slz = TxtFileSLZ(data=request.data, context={"env": env, "served_hosts": get_served_hosts(env)})
         slz.is_valid(raise_exception=True)
 
         with transaction.atomic(using="workloads"):
             txt_file = slz.save(environment_id=env.id, tenant_id=env.application.tenant_id, operator=request.user.pk)
-            self._sync(env, require_hosts=True)
+            self._sync(env)
 
         data = TxtFileSLZ(txt_file).data
-        self._add_audit_record(request, env, OperationEnum.CREATE, txt_file.path, data_after=data)
+        self._add_audit_record(request, env, OperationEnum.CREATE, f"{txt_file.host}{txt_file.path}", data_after=data)
         return Response(data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(request_body=TxtFileSLZ, response_serializer=TxtFileSLZ, tags=["访问入口"])
@@ -77,16 +82,21 @@ class TxtFilesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         env = self._get_env()
         txt_file = get_object_or_404(TxtFile, environment_id=env.id, pk=id)
         data_before = TxtFileSLZ(txt_file).data
-        slz = TxtFileSLZ(txt_file, data=request.data, context={"env": env})
+        slz = TxtFileSLZ(txt_file, data=request.data, context={"env": env, "served_hosts": get_served_hosts(env)})
         slz.is_valid(raise_exception=True)
 
         with transaction.atomic(using="workloads"):
             txt_file = slz.save(operator=request.user.pk)
-            self._sync(env, require_hosts=True)
+            self._sync(env)
 
         data = TxtFileSLZ(txt_file).data
         self._add_audit_record(
-            request, env, OperationEnum.MODIFY, txt_file.path, data_before=data_before, data_after=data
+            request,
+            env,
+            OperationEnum.MODIFY,
+            f"{txt_file.host}{txt_file.path}",
+            data_before=data_before,
+            data_after=data,
         )
         return Response(data)
 
@@ -101,7 +111,9 @@ class TxtFilesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             txt_file.delete()
             self._sync(env)
 
-        self._add_audit_record(request, env, OperationEnum.DELETE, txt_file.path, data_before=data_before)
+        self._add_audit_record(
+            request, env, OperationEnum.DELETE, f"{txt_file.host}{txt_file.path}", data_before=data_before
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _get_env(self) -> ModuleEnvironment:
@@ -110,14 +122,12 @@ class TxtFilesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return self.get_env_via_path()
 
     @staticmethod
-    def _sync(env: ModuleEnvironment, require_hosts: bool = False):
+    def _sync(env: ModuleEnvironment):
         try:
-            hosts = sync_txt_file_ingresses(env)
+            sync_txt_file_ingresses(env)
         except Exception:
             logger.exception("Failed to sync txt file ingresses for env %s", env)
             raise error_codes.SYNC_TXT_FILE_FAILED
-        if require_hosts and not hosts:
-            raise error_codes.TXT_FILE_NO_SERVED_HOST
 
     @staticmethod
     def _add_audit_record(

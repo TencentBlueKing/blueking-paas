@@ -29,31 +29,31 @@ def url(bk_cnative_app, bk_module):
     return f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/envs/stag/txt_files/"
 
 
-SYNC_PATH = "paas_wl.workloads.networking.ingress.txt_files.views.sync_txt_file_ingresses"
+VIEWS_MODULE = "paas_wl.workloads.networking.ingress.txt_files.views"
+HOST = "foo.example.com"
 
 
-@mock.patch(SYNC_PATH, return_value=["foo.example.com"])
+@pytest.fixture(autouse=True)
+def _served_hosts():
+    with mock.patch(f"{VIEWS_MODULE}.get_served_hosts", return_value=[HOST]):
+        yield
+
+
+@mock.patch(f"{VIEWS_MODULE}.sync_txt_file_ingresses")
 def test_create_and_list(mocked_sync, api_client, bk_user, bk_stag_env, url):
-    resp = api_client.post(url, data={"path": "/verify.txt", "content": "abc"})
+    resp = api_client.post(url, data={"host": HOST, "path": "/verify.txt", "content": "abc"})
     assert resp.status_code == 201
     assert resp.data["operator"] == bk_user.username
     assert mocked_sync.called
 
     resp = api_client.get(url)
-    assert [f["path"] for f in resp.data["files"]] == ["/verify.txt"]
+    assert resp.data["hosts"] == [HOST]
+    assert [(f["host"], f["path"]) for f in resp.data["files"]] == [(HOST, "/verify.txt")]
 
 
-@pytest.mark.parametrize(
-    ("sync_result", "error_code"),
-    [
-        ({"side_effect": RuntimeError("boom")}, "SYNC_TXT_FILE_FAILED"),
-        # The environment isn't deployed
-        ({"return_value": []}, "TXT_FILE_NO_SERVED_HOST"),
-    ],
-)
-def test_rollback_when_sync_failed(api_client, bk_stag_env, url, sync_result, error_code):
-    with mock.patch(SYNC_PATH, **sync_result):
-        resp = api_client.post(url, data={"path": "/verify.txt", "content": "abc"})
+@mock.patch(f"{VIEWS_MODULE}.sync_txt_file_ingresses", side_effect=RuntimeError("boom"))
+def test_rollback_when_sync_failed(mocked_sync, api_client, bk_stag_env, url):
+    resp = api_client.post(url, data={"host": HOST, "path": "/verify.txt", "content": "abc"})
     assert resp.status_code == 400
-    assert resp.data["code"] == error_code
+    assert resp.data["code"] == "SYNC_TXT_FILE_FAILED"
     assert not TxtFile.objects.filter(environment_id=bk_stag_env.id).exists()

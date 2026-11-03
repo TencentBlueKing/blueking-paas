@@ -21,15 +21,17 @@ from rest_framework import serializers
 from paas_wl.utils.models import SimpleUserIDWrapper
 from paas_wl.workloads.networking.ingress.models import TxtFile
 
-TXT_FILE_PATH_REGEX = r"^/[A-Za-z0-9._-]+\.txt$"
+# Only the unreserved characters of URL (RFC 3986) are allowed
+TXT_FILE_PATH_REGEX = r"^/[A-Za-z0-9._~-]+\.txt$"
 # The content is written into the annotation and the nginx config, keep it small
 MAX_CONTENT_BYTES = 4096
 MAX_FILES_PER_ENV = 20
 
 
 class TxtFileSLZ(serializers.ModelSerializer):
-    """txt 校验文件，需要在 context 中提供 env"""
+    """txt 校验文件，需要在 context 中提供 env 和 served_hosts（环境当前可用的域名）"""
 
+    host = serializers.CharField(max_length=253, help_text="生效的域名，需为列表接口返回的 hosts 之一")
     path = serializers.RegexField(
         TXT_FILE_PATH_REGEX,
         max_length=128,
@@ -42,23 +44,19 @@ class TxtFileSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = TxtFile
-        fields = ["id", "path", "content", "remark", "operator", "updated"]
+        fields = ["id", "host", "path", "content", "remark", "operator", "updated"]
         read_only_fields = ["id", "updated"]
-        # Uniqueness is validated in `validate_path` with a friendlier message
+        # Uniqueness is validated in `validate` with a friendlier message
         validators: list = []
 
     def get_operator(self, obj: TxtFile) -> str:
         # The value is a raw user id instead of a wrapper before the object is reloaded from DB
         return SimpleUserIDWrapper(obj.operator).username if obj.operator else ""
 
-    def validate_path(self, path: str) -> str:
-        env = self.context["env"]
-        qs = TxtFile.objects.filter(environment_id=env.id, path=path)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError(_("该路径已存在"))
-        return path
+    def validate_host(self, host: str) -> str:
+        if host not in self.context["served_hosts"]:
+            raise serializers.ValidationError(_("该域名不可用，仅支持已部署环境的子域名和路径为 / 的独立域名"))
+        return host
 
     def validate_content(self, content: str) -> str:
         content = content.replace("\r\n", "\n")
@@ -71,13 +69,18 @@ class TxtFileSLZ(serializers.ModelSerializer):
         return content
 
     def validate(self, attrs):
-        if not self.instance:
-            env = self.context["env"]
-            if TxtFile.objects.filter(environment_id=env.id).count() >= MAX_FILES_PER_ENV:
-                raise serializers.ValidationError(_("每个环境最多配置 {} 个 txt 文件").format(MAX_FILES_PER_ENV))
+        files = TxtFile.objects.filter(environment_id=self.context["env"].id)
+        if self.instance:
+            files = files.exclude(pk=self.instance.pk)
+        elif files.count() >= MAX_FILES_PER_ENV:
+            raise serializers.ValidationError(_("每个环境最多配置 {} 个 txt 文件").format(MAX_FILES_PER_ENV))
+
+        if files.filter(host=attrs["host"], path=attrs["path"]).exists():
+            raise serializers.ValidationError({"path": _("该域名下已存在相同路径的文件")})
         return attrs
 
 
 class TxtFileListSLZ(serializers.Serializer):
-    supported = serializers.BooleanField(help_text="当前环境是否有可用的域名（子域名或根路径的独立域名）")
+    supported = serializers.BooleanField(help_text="当前环境是否可能有可用的域名（子域名或根路径的独立域名）")
+    hosts = serializers.ListField(child=serializers.CharField(), help_text="当前可配置的域名，环境未部署时为空")
     files = TxtFileSLZ(many=True)

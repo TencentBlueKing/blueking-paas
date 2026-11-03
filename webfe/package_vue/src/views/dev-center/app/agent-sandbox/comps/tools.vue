@@ -3,7 +3,8 @@
     <access-guide
       v-if="activePanel === 'guide'"
       :key="`guide-${appCode}`"
-      :template-id="templateId"
+      :app-code="appCode"
+      :template-id.sync="templateId"
       @close="close"
       @api-keys="openKeys"
     />

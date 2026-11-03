@@ -40,8 +40,8 @@
 
 <script>
 import SandboxTools from './comps/tools.vue';
-import { displayValue, formatResources, formatTimeout } from './format';
-import { getErrorMessage } from './utils';
+import { formatResources, formatTimeout } from './format';
+import { getErrorMessage, isNil } from './utils';
 
 export default {
   name: 'AgentSandboxTemplateDetail',
@@ -63,15 +63,20 @@ export default {
       const template = this.template;
       if (!template) return [];
       return [
-        { key: 'template_id', label: 'templateID', value: displayValue(template.template_id) },
-        { key: 'description', label: this.$t('描述'), value: displayValue(template.description) },
-        { key: 'image', label: this.$t('镜像'), value: displayValue(template.image) },
+        { key: 'template_id', label: `${this.$t('模板')} ID`, value: template.template_id },
+        { key: 'description', label: this.$t('描述'), value: template.description },
+        { key: 'image', label: this.$t('镜像'), value: template.image },
         { key: 'resources', label: this.$t('资源'), value: formatResources(template) },
         { key: 'timeout', label: this.$t('生命周期 TTL'), value: formatTimeout(template.timeout) },
-        { key: 'network', label: this.$t('网络'), value: displayValue(template.network) },
-        { key: 'region', label: this.$t('地域'), value: displayValue(template.region) },
-        { key: 'prewarm_count', label: this.$t('预热'), value: displayValue(template.prewarm_count) },
-      ];
+        { key: 'network', label: this.$t('网络'), value: template.network },
+        { key: 'region', label: this.$t('地域'), value: template.region },
+        { key: 'prewarm_count', label: this.$t('预热'), value: template.prewarm_count },
+      ].filter(({ key }) => {
+        const values = key === 'resources'
+          ? [template.cpu_count, template.memory_mb, template.disk_size_mb]
+          : [template[key]];
+        return values.some(value => !isNil(value) && value !== '');
+      });
     },
   },
   watch: {

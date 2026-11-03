@@ -6,7 +6,13 @@
     ext-cls="sandbox-guide-slider"
     show-mask
   >
-    <div slot="header">{{ $t('使用指南') }}</div>
+    <div slot="header" class="guide-header">
+      <span>{{ $t('使用指南') }}</span>
+      <a :href="guideDocsUrl" class="guide-doc-link" target="_blank" rel="noopener noreferrer">
+        {{ $t('查看文档') }}
+        <i class="paasng-icon paasng-jump-link" aria-hidden="true" />
+      </a>
+    </div>
     <div
       slot="content"
       class="sandbox-guide"
@@ -35,7 +41,7 @@
             :aria-label="$t('复制')"
             :title="$t('复制')"
           ><i class="paasng-icon paasng-general-copy" aria-hidden="true" /></button>
-          <pre><code>{{ installCommand }}</code></pre>
+          <pre><code class="hljs" v-dompurify-html="highlightedInstallCommand" /></pre>
         </div>
       </section>
       <section class="guide-step">
@@ -52,11 +58,29 @@
             :aria-label="$t('复制')"
             :title="$t('复制')"
           ><i class="paasng-icon paasng-general-copy" aria-hidden="true" /></button>
-          <pre><code>{{ environmentCode }}</code></pre>
+          <pre><code class="hljs" v-dompurify-html="highlightedEnvironmentCode" /></pre>
         </div>
       </section>
       <section class="guide-step">
         <h3><span>4</span>{{ $t('启动沙箱') }}</h3>
+        <div class="guide-template">
+          <span>{{ $t('模板') }} ID</span>
+          <bk-select
+            v-model="selectedTemplateId"
+            class="template-select"
+            :clearable="false"
+            :loading="templateLoading"
+            :placeholder="$t('请选择模板')"
+            searchable
+          >
+            <bk-option
+              v-for="id in templateOptions"
+              :id="id"
+              :key="id"
+              :name="id"
+            />
+          </bk-select>
+        </div>
         <bk-radio-group v-model="clientType">
           <bk-radio-button value="python">Python SDK</bk-radio-button>
           <bk-radio-button value="browser">{{ $t('浏览器 SDK') }}</bk-radio-button>
@@ -71,7 +95,7 @@
             :aria-label="$t('复制')"
             :title="$t('复制')"
           ><i class="paasng-icon paasng-general-copy" aria-hidden="true" /></button>
-          <pre><code>{{ exampleCode }}</code></pre>
+          <pre><code class="hljs" v-dompurify-html="highlightedExampleCode" /></pre>
         </div>
       </section>
     </div>
@@ -79,11 +103,21 @@
 </template>
 
 <script>
+import hljs from 'highlight.js/lib/core';
+import bash from 'highlight.js/lib/languages/bash';
+import python from 'highlight.js/lib/languages/python';
 import { buildEnvironmentCode, buildSandboxExample } from '../guide-examples';
+
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('python', python);
 
 export default {
   name: 'SandboxAccessGuide',
   props: {
+    appCode: {
+      type: String,
+      required: true,
+    },
     templateId: {
       type: String,
       default: '',
@@ -95,14 +129,35 @@ export default {
       sandboxType: 'code',
       environmentMode: 'python',
       clientType: 'python',
+      templates: [],
+      templateLoading: false,
     };
   },
   computed: {
+    guideDocsUrl() {
+      return `${this.GLOBAL.LINK.BK_APP_DOC.replace(/\/+$/, '')}/topics/paas/paas3_e2b_sandbox`;
+    },
+    selectedTemplateId: {
+      get() {
+        return this.templateId;
+      },
+      set(value) {
+        this.$emit('update:templateId', value);
+      },
+    },
+    templateOptions() {
+      return [...new Set([...this.templates.map(template => template.template_id), this.templateId])].filter(Boolean);
+    },
     apiUrl() {
-      return `${BACKEND_URL.replace(/\/+$/, '')}/api/agent_sandbox/e2b`;
+      const apiName = window.GLOBAL_CONFIG.APP_VERSION === 'te' ? 'paasv3' : 'bkpaas3';
+      const apiUrl = (window.BK_API_URL_TMPL || '').replace('{api_name}', apiName).replace(/\/+$/, '');
+      return apiUrl ? `${apiUrl}/prod/agent_sandbox/e2b` : '';
     },
     installCommand() {
       return 'pip install \'e2b==2.44.0\' \'e2b-code-interpreter==2.10.0\'';
+    },
+    highlightedInstallCommand() {
+      return hljs.highlight(this.installCommand, { language: 'bash' }).value;
     },
     environmentCode() {
       return buildEnvironmentCode({
@@ -110,6 +165,9 @@ export default {
         environmentMode: this.environmentMode,
         t: key => this.$t(key),
       });
+    },
+    highlightedEnvironmentCode() {
+      return hljs.highlight(this.environmentCode, { language: 'python' }).value;
     },
     exampleDescription() {
       if (this.clientType === 'http') {
@@ -128,6 +186,10 @@ export default {
         t: key => this.$t(key),
       });
     },
+    highlightedExampleCode() {
+      const language = this.clientType === 'http' ? 'bash' : 'python';
+      return hljs.highlight(this.exampleCode, { language }).value;
+    },
   },
   watch: {
     visible(value) {
@@ -138,6 +200,22 @@ export default {
   },
   mounted() {
     this.visible = true;
+    this.loadTemplates();
+  },
+  methods: {
+    async loadTemplates() {
+      this.templateLoading = true;
+      try {
+        this.templates = await this.$store.dispatch('agentSandbox/listTemplates', { appCode: this.appCode });
+        if (!this.templateId && this.templateOptions.length) {
+          this.selectedTemplateId = this.templateOptions[0];
+        }
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.templateLoading = false;
+      }
+    },
   },
 };
 </script>
@@ -156,6 +234,18 @@ export default {
   /deep/ .bk-sideslider-title {
     font-size: 16px;
   }
+}
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.guide-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #3a84ff;
+  font-size: 12px;
 }
 .sandbox-guide {
   padding: 24px 32px 40px 72px;
@@ -208,6 +298,15 @@ export default {
   font-size: inherit;
   line-height: inherit;
 }
+.guide-template {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.template-select {
+  width: 280px;
+}
 .guide-description {
   margin: 12px 0 10px;
   font-size: 13px;
@@ -223,15 +322,16 @@ export default {
   background: #f5f7fa;
   pre {
     margin: 0;
-    overflow-x: auto;
+    overflow-x: hidden;
     color: #313238;
     line-height: 22px;
     font-family: Consolas, monospace;
-    font-size: 14px;
+    font-size: 12px;
     white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    word-break: break-all;
     code {
       display: block;
+      overflow-x: hidden;
       padding: 0;
       border-radius: 0;
       background: transparent;

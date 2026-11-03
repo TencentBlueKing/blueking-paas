@@ -6,7 +6,10 @@
       quick-close
       show-mask
     >
-      <div slot="header">API Keys</div>
+      <div slot="header" class="keys-header">
+        <span>API Keys</span>
+        <span class="keys-subtitle">{{ $t('用于创建和管理沙箱实例的唯一凭证') }}</span>
+      </div>
       <div
         slot="content"
         class="p-24"
@@ -45,14 +48,24 @@
             label="API Key"
             min-width="160"
           >
-            <template slot-scope="{ row }">{{ row.key_prefix }}...</template>
+            <template slot-scope="{ row }">
+              <span
+                v-bk-tooltips="$t('完整内容仅在创建时显示一次，无法再次查看。')"
+                class="api-key-preview"
+              >
+                {{ row.key_prefix }}<span class="api-key-mask">••••••••</span>
+              </span>
+            </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('签发时间')"
             prop="created"
-            min-width="200"
-            show-overflow-tooltip
-          />
+            min-width="120"
+          >
+            <template slot-scope="{ row }">
+              <span v-bk-tooltips="displayValue(row.created)">{{ formatRelativeTime(row.created) }}</span>
+            </template>
+          </bk-table-column>
           <bk-table-column
             :label="$t('签发人')"
             min-width="100"
@@ -154,7 +167,7 @@
             class="secret-success-message"
           >
             <i class="paasng-icon paasng-pass" aria-hidden="true" />
-            {{ $t('API Key 创建成功！请复制该密钥，关闭弹窗后将无法再次看到它。') }}
+            {{ $t('API Key 创建成功！请复制该 API Key，关闭弹窗后将无法再次看到它。') }}
           </div>
         </bk-alert>
         <p class="secret-label">API Key</p>
@@ -185,7 +198,7 @@
 
 <script>
 import UserDisplay from '@/components/user/user-display.vue';
-import { displayValue } from '../format';
+import { displayValue, formatRelativeTime } from '../format';
 import { getErrorMessage, isEmptyResponse } from '../utils';
 
 // 单个应用允许持有的 API Key 上限
@@ -279,6 +292,7 @@ export default {
   },
   methods: {
     displayValue,
+    formatRelativeTime,
     isCurrent(appCode, version) {
       return this.visible && this.appCode === appCode && this.contextVersion === version;
     },
@@ -386,9 +400,9 @@ export default {
       this.keyToRevoke = key;
       this.revokeDialog = this.$bkInfo({
         type: 'warning',
-        width: 400,
-        title: this.$t('确认删除该密钥？'),
-        subTitle: this.$t('删除后无法恢复，使用该密钥的请求将立即被拒绝。'),
+        width: 480,
+        title: this.$t('确认删除该 API Key？'),
+        subTitle: this.$t('删除后无法恢复，使用该 API Key 的请求将立即被拒绝。'),
         okText: this.$t('确定'),
         cancelText: this.$t('取消'),
         maskClose: false,
@@ -441,6 +455,19 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.keys-header {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.keys-subtitle {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid #dcdee5;
+  color: #979ba5;
+  font-size: 12px;
+  line-height: 16px;
+}
 .keys-toolbar {
   display: flex;
   align-items: center;
@@ -449,6 +476,14 @@ export default {
 }
 .back-guide {
   margin-left: auto;
+}
+.api-key-preview {
+  white-space: nowrap;
+  cursor: help;
+}
+.api-key-mask {
+  margin-left: 2px;
+  color: #c4c6cc;
 }
 .secret-title {
   color: #313238;

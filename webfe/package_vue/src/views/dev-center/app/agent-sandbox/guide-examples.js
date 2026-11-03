@@ -20,10 +20,6 @@ function shellQuote(value) {
   return `'${value.replace(/'/g, '\'\\\'\'')}'`;
 }
 
-function getApiKeyComment(t) {
-  return `# ${t('API Key 支持 e2b_ 和 ark_ 两种前缀格式，E2B SDK 新版请使用 e2b_ 格式')}`;
-}
-
 function getPythonEnvironment({ apiUrl, environmentMode }) {
   if (environmentMode === 'dotenv') {
     return 'from dotenv import load_dotenv\nload_dotenv()';
@@ -41,30 +37,23 @@ sandbox = Sandbox.create(
 }
 
 export function buildEnvironmentCode({ apiUrl, environmentMode, t }) {
-  const apiKeyComment = getApiKeyComment(t);
   const pythonEnvironment = getPythonEnvironment({ apiUrl, environmentMode });
   if (environmentMode === 'dotenv') {
-    return `${apiKeyComment}
-# ${t('在项目根目录创建 .env 文件，写入环境变量：')}
+    return `# ${t('在项目根目录创建 .env 文件，写入环境变量：')}
 E2B_API_URL=${JSON.stringify(apiUrl)}
 E2B_API_KEY="<your-api-key>"
 
-# ${t('请先执行 pip install python-dotenv')}
-# ${t('在代码中使用 python-dotenv 自动加载环境变量：')}
 ${pythonEnvironment}`;
   }
-  return `${apiKeyComment}
-# ${t('直接在代码中使用环境变量')}
+  return `# ${t('直接在代码中使用环境变量')}
 import os
 ${pythonEnvironment}`;
 }
 
 export function buildSandboxExample({ apiUrl, templateId, environmentMode, clientType, t }) {
-  const apiKeyComment = getApiKeyComment(t);
   const template = templateId || '<templateID>';
   if (clientType === 'http') {
-    return `${apiKeyComment}
-curl --request POST ${shellQuote(`${apiUrl}/sandboxes`)} \\
+    return `curl --request POST ${shellQuote(`${apiUrl}/sandboxes`)} \\
   --header 'X-API-Key: <your-api-key>' \\
   --header "Content-Type: application/json" \\
   --data-binary @- <<'JSON'
@@ -74,8 +63,7 @@ JSON`;
   const pythonEnvironment = getPythonEnvironment({ apiUrl, environmentMode });
   const createSandboxCode = getCreateSandboxCode({ templateId, t });
   if (clientType === 'browser') {
-    return `${apiKeyComment}
-import os
+    return `import os
 import asyncio
 from e2b import Sandbox
 from playwright.async_api import async_playwright
@@ -98,8 +86,7 @@ async def main():
 
 asyncio.run(main())`;
   }
-  return `${apiKeyComment}
-import os
+  return `import os
 from e2b_code_interpreter import Sandbox
 
 ${pythonEnvironment}

@@ -3148,8 +3148,9 @@ export default {
   申请成为管理员: 'Apply to become an administrator',
   '请输入 3-20 字符的小写字母、数字、连字符(-)和下划线(_)，以小写字母开头': 'Please enter 3-20 lowercase letters, numbers, hyphens (-), and underscores (_), starting with a lowercase letter',
   // Agent Sandbox
-  'API Key 支持 e2b_ 和 ark_ 两种前缀格式，E2B SDK 新版请使用 e2b_ 格式':
-    'API Keys support both e2b_ and ark_ prefixes. Use the e2b_ format with newer versions of the E2B SDK.',
+  '兼容 E2B，为 Agent 提供隔离的代码与浏览器运行环境。':
+    'Compatible with E2B, providing isolated code and browser environments for Agents.',
+  用于创建和管理沙箱实例的唯一凭证: 'The sole credential for creating and managing sandbox instances',
   接入示例: 'Integration examples',
   代码沙箱: 'Code sandbox',
   浏览器沙箱: 'Browser sandbox',
@@ -3169,9 +3170,6 @@ export default {
   直接在代码中使用环境变量: 'Set environment variables directly in your code',
   '在项目根目录创建 .env 文件，写入环境变量：':
     'Create a .env file in the project root and add the environment variables:',
-  '在代码中使用 python-dotenv 自动加载环境变量：':
-    'Use python-dotenv in your code to load the environment variables automatically:',
-  '请先执行 pip install python-dotenv': 'First run pip install python-dotenv',
   'templateID 取自「沙箱模板」，timeout 为存活秒数':
     'Use a templateID from Sandbox templates; timeout is the lifetime in seconds',
   '执行 Python 代码，代码执行超时时间为 600 秒': 'Execute Python code with a code execution timeout of 600 seconds',
@@ -3180,23 +3178,26 @@ export default {
   启动沙箱: 'Start a sandbox',
   '安装 SDK': 'Install the SDK',
   '创建 API Key': 'Create API Key',
+  '完整内容仅在创建时显示一次，无法再次查看。':
+    'The full API Key is shown only once when created and cannot be viewed again.',
   返回接入示例: 'Back to integration examples',
   签发时间: 'Issued at',
   签发人: 'Issued by',
   '请输入名称，最多 64 个字符': 'Enter a name, up to 64 characters',
   创建: 'Create',
-  'API Key 创建成功！请复制该密钥，关闭弹窗后将无法再次看到它。':
-    'API Key created successfully! Copy this key; it cannot be viewed again after closing this dialog.',
+  'API Key 创建成功！请复制该 API Key，关闭弹窗后将无法再次看到它。':
+    'API Key created successfully! Copy this API Key; it cannot be viewed again after closing this dialog.',
   我已复制: 'I have copied it',
-  '确认删除该密钥？': 'Delete this key?',
-  '删除后无法恢复，使用该密钥的请求将立即被拒绝。':
-    'This cannot be undone. Requests using this key will be rejected immediately.',
+  '确认删除该 API Key？': 'Delete this API Key?',
+  '删除后无法恢复，使用该 API Key 的请求将立即被拒绝。':
+    'This cannot be undone. Requests using this API Key will be rejected immediately.',
   'Agent 沙箱': 'Agent Sandbox',
   沙箱实例: 'Sandbox instances',
   沙箱模板: 'Sandbox templates',
   '沙箱需通过 SDK 或 HTTP API 创建，请参考「沙箱模板」的「接入示例」。':
     'Create sandboxes using the SDK or HTTP API. See "Integration examples" under "Sandbox templates".',
   模板: 'Template',
+  请选择模板: 'Select a template',
   已暂停: 'Paused',
   '搜索沙箱 ID、模板、状态': 'Search sandbox ID, template or status',
   '沙箱 ID': 'Sandbox ID',

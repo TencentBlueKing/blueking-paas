@@ -2,11 +2,16 @@
   <div class="agent-sandbox-page">
     <cloud-app-top-bar
       class="sandbox-navigation"
-      :title="$t('Agent 沙箱')"
       :nav-list="tabPanels"
       :active="activeTab"
       @change="changeTab"
     >
+      <div slot="title" class="sandbox-title">
+        <span>{{ $t('Agent 沙箱') }}</span>
+        <span class="sandbox-subtitle">
+          {{ $t('兼容 E2B，为 Agent 提供隔离的代码与浏览器运行环境。') }}
+        </span>
+      </div>
       <bk-button slot="right" class="f12" theme="primary" outline @click="$refs.tools.openKeys()">
         API Keys
       </bk-button>
@@ -460,6 +465,20 @@ export default {
     min-width: 100px;
     padding: 0 18px;
   }
+}
+.sandbox-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  margin-right: 112px;
+  white-space: nowrap;
+}
+.sandbox-subtitle {
+  overflow: hidden;
+  margin-left: 16px;
+  color: #979ba5;
+  font-size: 12px;
 }
 .sandbox-card {
   padding: 24px;

@@ -25,7 +25,6 @@ they don't have the "domain-group-mapping-name" label.
 
 import hashlib
 import re
-from typing import Dict, List, Optional, Set
 
 from attrs import define
 
@@ -60,12 +59,12 @@ class HostRoute:
     otherwise it may be handled by another ingress controller.
     """
 
-    ingress_class: Optional[str]
-    ingress_class_name: Optional[str]
-    backend: Dict
+    ingress_class: str | None
+    ingress_class_name: str | None
+    backend: dict
 
 
-def sync_txt_file_ingresses(env: ModuleEnvironment) -> List[str]:
+def sync_txt_file_ingresses(env: ModuleEnvironment) -> list[str]:
     """Make the txt file Ingresses in the cluster match the txt files of the environment,
     on every host which the operator's Ingresses serve from the root path.
 
@@ -78,7 +77,7 @@ def sync_txt_file_ingresses(env: ModuleEnvironment) -> List[str]:
     with get_client_by_app(wl_app) as client:
         kres = _make_kres(client)
         routes = _get_host_routes(kres, env)
-        wanted: Dict[str, Dict] = {}
+        wanted: dict[str, dict] = {}
         for host, route in routes.items():
             for txt_file in txt_files:
                 body = build_txt_file_ingress(bkapp_name, txt_file, host, route)
@@ -109,7 +108,7 @@ def is_txt_files_supported(env: ModuleEnvironment) -> bool:
     return CustomDomain.objects.filter(environment_id=env.id, path_prefix="/").exists()
 
 
-def build_txt_file_ingress(bkapp_name: str, txt_file: TxtFile, host: str, route: HostRoute) -> Dict:
+def build_txt_file_ingress(bkapp_name: str, txt_file: TxtFile, host: str, route: HostRoute) -> dict:
     """Build the Ingress manifest which serves the txt file on the host"""
     host_digest = hashlib.sha256(host.encode()).hexdigest()[:8]
     annotations = {
@@ -120,7 +119,7 @@ def build_txt_file_ingress(bkapp_name: str, txt_file: TxtFile, host: str, route:
     if route.ingress_class:
         annotations[ANNOT_INGRESS_CLASS] = route.ingress_class
 
-    spec: Dict = {
+    spec: dict = {
         "rules": [
             {
                 "host": host,
@@ -169,12 +168,12 @@ def _make_kres(client: EnhancedApiClient) -> KIngress:
     return KIngress(client, api_version="networking.k8s.io/v1")
 
 
-def _get_host_routes(kres: KIngress, env: ModuleEnvironment) -> Dict[str, HostRoute]:
+def _get_host_routes(kres: KIngress, env: ModuleEnvironment) -> dict[str, HostRoute]:
     """Get the routes of the hosts which the operator's Ingresses serve from the root path"""
     wl_app = env.wl_app
     # The value is the name of the DomainGroupMapping, see `gen_domain_group_mapping_name`
     labels = {LABEL_DOMAIN_GROUP_MAPPING: wl_app.scheduler_safe_name}
-    routes: Dict[str, HostRoute] = {}
+    routes: dict[str, HostRoute] = {}
     for item in kres.ops_batch.list(labels=labels, namespace=wl_app.namespace).items:
         ingress = item.to_dict()
         annotations = ingress["metadata"].get("annotations") or {}
@@ -193,7 +192,7 @@ def _get_host_routes(kres: KIngress, env: ModuleEnvironment) -> Dict[str, HostRo
     return routes
 
 
-def _list_txt_file_ingress_names(kres: KIngress, env: ModuleEnvironment) -> Set[str]:
+def _list_txt_file_ingress_names(kres: KIngress, env: ModuleEnvironment) -> set[str]:
     labels = {BKAPP_NAME_ANNO_KEY: generate_bkapp_name(env), LABEL_TXT_FILE: "true"}
     items = kres.ops_batch.list(labels=labels, namespace=env.wl_app.namespace).items
     return {item.metadata.name for item in items}

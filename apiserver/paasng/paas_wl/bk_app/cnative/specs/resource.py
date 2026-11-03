@@ -167,11 +167,7 @@ def delete_networking(env: ModuleEnvironment):
         crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).delete(
             gen_domain_group_mapping_name(wl_app), namespace=wl_app.namespace
         )
-
-    try:
-        delete_txt_file_ingresses(env)
-    except Exception:
-        logger.exception("Failed to delete txt file ingresses for env %s", env)
+    delete_txt_file_ingresses(env)
 
 
 @define

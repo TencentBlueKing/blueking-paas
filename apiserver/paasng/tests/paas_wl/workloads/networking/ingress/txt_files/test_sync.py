@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List
-
 import pytest
 
 from paas_wl.bk_app.cnative.specs.addresses import gen_domain_group_mapping_name
@@ -63,7 +61,7 @@ class TestSyncTxtFileIngresses:
             kres.create(name, body=body, namespace=bk_stag_wl_app.namespace)
 
     @staticmethod
-    def _make_operator_ingress(wl_app, name: str, host: str, path: str) -> Dict:
+    def _make_operator_ingress(wl_app, name: str, host: str, path: str) -> dict:
         return {
             "apiVersion": "networking.k8s.io/v1",
             "kind": "Ingress",
@@ -82,7 +80,7 @@ class TestSyncTxtFileIngresses:
             },
         }
 
-    def list_txt_ingresses(self, kres, wl_app) -> List[Dict]:
+    def list_txt_ingresses(self, kres, wl_app) -> list[dict]:
         items = kres.ops_batch.list(labels={LABEL_TXT_FILE: "true"}, namespace=wl_app.namespace).items
         return [item.to_dict() for item in items]
 

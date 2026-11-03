@@ -111,6 +111,11 @@ class ErrorCodes:
         _("Application name may contain only Chinese characters, letters, digits, hyphens and underscores."),
         status_code=HTTPStatus.BAD_REQUEST,
     )
+    # 还没有哪轮对话改过代码，没有可发布的版本，先在对话里开发一些功能。
+    PUBLICATION_NO_VERSION = ErrorCode(
+        _("This project has no version to publish yet."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
     PUBLICATION_VERSION_NOT_FOUND = ErrorCode(
         _("Version `{version_id}` does not belong to this project or cannot be published."),
         status_code=HTTPStatus.BAD_REQUEST,

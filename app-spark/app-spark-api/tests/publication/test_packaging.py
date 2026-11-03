@@ -26,6 +26,7 @@ from app_spark_api.core.projects.models import Project
 from app_spark_api.publication.packaging import (
     PACKAGE_URL_EXPIRES_IN,
     SourcePackagingError,
+    alatest_version,
     apackage_version,
     aversion_exists,
 )
@@ -49,6 +50,28 @@ async def test_only_checkpoints_of_the_project_are_versions(project, bk_user):
 
     assert await aversion_exists(other, TAG)
     assert not await aversion_exists(project, TAG)
+
+
+async def test_the_latest_version_is_the_last_checkpoint_recorded_in_the_project(project, bk_user):
+    assert await alatest_version(project) is None
+
+    first = await Conversation.objects.acreate(project=project, number=1, owner=bk_user, tenant_id=project.tenant_id)
+    second = await Conversation.objects.acreate(project=project, number=2, owner=bk_user, tenant_id=project.tenant_id)
+    # 上下文版本更高也不算新：只看登记先后，跨会话也一样。
+    await ConversationCheckpoint.objects.acreate(
+        conversation=second, run_id="run-1", commit="a" * 40, tag="app-spark/checkpoint/run-1", context_version=9
+    )
+    await ConversationCheckpoint.objects.acreate(
+        conversation=first, run_id="run-2", commit="b" * 40, tag="app-spark/checkpoint/run-2", context_version=1
+    )
+
+    other = await Project.objects.acreate(id="other", name="Other", owner=bk_user.pk, tenant_id=project.tenant_id)
+    elsewhere = await Conversation.objects.acreate(project=other, number=1, owner=bk_user, tenant_id=other.tenant_id)
+    await ConversationCheckpoint.objects.acreate(
+        conversation=elsewhere, run_id="run-3", commit="c" * 40, tag="app-spark/checkpoint/run-3", context_version=1
+    )
+
+    assert await alatest_version(project) == "app-spark/checkpoint/run-2"
 
 
 async def test_packing_uploads_the_tag_and_signs_a_short_lived_link(project, monkeypatch):

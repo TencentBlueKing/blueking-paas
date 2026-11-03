@@ -54,6 +54,7 @@ from app_spark_api.publication.constants import (
 )
 from app_spark_api.publication.exceptions import (
     PublicationAppNameInvalidError,
+    PublicationNoVersionError,
     PublicationSubmitError,
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
@@ -113,6 +114,7 @@ class PublicationState:
     :param app_code: 已绑定的开发者中心应用 ID，首次发布创建应用前为 None。
     :param default_app_name: 首次发布时弹窗里预填的应用名称；已绑定应用后为 None。
     :param console_links: 开发者中心页面链接，未绑定应用或没配置站点地址时为 None。
+    :param latest_version_id: 不指定版本时会发布的最新版本，项目还没有版本时为 None。
     """
 
     online: OnlineVersion | None
@@ -122,11 +124,12 @@ class PublicationState:
     app_code: str | None
     default_app_name: str | None
     console_links: ConsoleLinks | None
+    latest_version_id: str | None
 
 
 async def start_deployment(
     project: Project,
-    version_id: str,
+    version_id: str | None,
     operator: str,
     *,
     app_name: str | None = None,
@@ -134,15 +137,23 @@ async def start_deployment(
 ) -> PublicationTask:
     """Start deploying a version to the developer center: create the application if needed, and queue the rest.
 
+    :param version_id: 要发布的版本，None 表示发最新版本。
     :param operator: 发起人用户名，作为开发者中心应用管理员和各操作的记录人。
     :param app_name: 首次发布时创建的应用名称，默认见 resolve_default_app_name；已绑定应用时忽略。
     :param client_factory: 构造开发者中心客户端，默认按配置构造。
+    :raises PublicationNoVersionError: 没指定版本，项目也还没有任何版本。
     :raises PublicationVersionNotFoundError: 版本不属于该项目。
     :raises PublicationAppNameInvalidError: 首次发布时应用名称按开发者中心的规则过滤后为空。
     :raises PublicationTaskInProgressError: 项目已有发布任务在进行。
     :raises PublicationSubmitError: 创建应用失败，任务已记为失败。
     """
-    if not await packaging.aversion_exists(project, version_id):
+    # 发布暂不支持选版本，前端不传版本时发最新的；任务里记下实际发的版本，线上版本和失败记录据此展示。
+    if version_id is None:
+        version_id = await packaging.alatest_version(project)
+        if version_id is None:
+            raise PublicationNoVersionError(f"Project {project.pk} has no version to publish")
+
+    elif not await packaging.aversion_exists(project, version_id):
         raise PublicationVersionNotFoundError(f"Project {project.pk} has no publishable version {version_id!r}")
 
     # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存也不查重，
@@ -314,6 +325,7 @@ async def get_publication_state(project: Project) -> PublicationState:
         app_code=None if binding is None else binding.app_code,
         default_app_name=resolve_default_app_name(project) if binding is None else None,
         console_links=links,
+        latest_version_id=await packaging.alatest_version(project),
     )
 
 

@@ -32,16 +32,20 @@ def dev_center() -> FakeBkPaaSClient:
 
 @pytest.fixture(autouse=True)
 def packager(monkeypatch, settings) -> None:
-    """Know versions v1 and v2 and pack them instantly, and give the developer center a console address."""
+    """Know versions v1 and v2 (the latest) and pack them instantly, and give the developer center a console address."""
     settings.BKPAAS_URL = CONSOLE_URL
 
     async def version_exists(project, version_id):
         return version_id in ("v1", "v2")
 
+    async def latest_version(project):
+        return "v2"
+
     async def package_version(project, version_id):
         return PackagedSource(f"{version_id}-abc1234", f"https://bkrepo.example.com/{version_id}")
 
     monkeypatch.setattr("app_spark_api.publication.packaging.aversion_exists", version_exists)
+    monkeypatch.setattr("app_spark_api.publication.packaging.alatest_version", latest_version)
     monkeypatch.setattr("app_spark_api.publication.packaging.apackage_version", package_version)
 
 

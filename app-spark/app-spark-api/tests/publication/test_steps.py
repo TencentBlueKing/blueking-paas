@@ -21,15 +21,18 @@ from datetime import timedelta
 import httpx2
 import pytest
 from django.db import IntegrityError
-from django.http import Http404
 from django.utils import timezone
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import BkPaaSApiError, DeploymentResult
-from app_spark_api.publication import services, steps
+from app_spark_api.publication import packaging, services, steps
 from app_spark_api.publication.constants import PublicationTaskStatus
-from app_spark_api.publication.exceptions import PublicationAppNameInvalidError, PublicationSubmitError
-from app_spark_api.publication.models import DevCenterAppBinding, PublicationTask
+from app_spark_api.publication.exceptions import (
+    PublicationAppNameInvalidError,
+    PublicationProjectGoneError,
+    PublicationSubmitError,
+)
+from app_spark_api.publication.models import BkPaaSAppBinding, PublicationTask
 from app_spark_api.publication.packaging import SourcePackagingError
 from tests.publication.conftest import CONSOLE_URL
 
@@ -38,47 +41,49 @@ pytestmark = pytest.mark.django_db(transaction=True)
 APP_URL = f"{CONSOLE_URL}/developer-center/apps/test-project"
 
 
-async def start(project, dev_center, version_id: str = "v2") -> PublicationTask:
-    return await services.start_deployment(project, version_id, operator="alice", client_factory=lambda: dev_center)
+async def start(project, bkpaas, version_id: str = "v2") -> PublicationTask:
+    return await services.start_deployment(project, version_id, operator="alice", client_factory=lambda: bkpaas)
 
 
-async def prepare(task: PublicationTask, dev_center) -> PublicationTask:
-    await steps.prepare_deployment(task.pk, dev_center)
+async def prepare(task: PublicationTask, bkpaas) -> PublicationTask:
+    await steps.prepare_deployment(task.pk, bkpaas)
     await task.arefresh_from_db()
     return task
 
 
-async def poll_until_done(task: PublicationTask, dev_center) -> PublicationTask:
-    """Poll the way Celery would, without waiting between polls."""
+async def poll_until_done(task: PublicationTask, bkpaas) -> PublicationTask:
+    """Poll the way the poller would, carrying each round's progress into the next, without waiting between polls."""
+    access_url_polls = 0
     for _ in range(20):
-        # 测试里不等轮询间隔，把上一轮的时间清掉，免得被「刚查过」拦下。
-        await PublicationTask.objects.filter(pk=task.pk).aupdate(last_polled_at=None)
-        if await steps.poll_deployment(task.pk, dev_center) is None:
+        outcome = await steps.poll_deployment(task.pk, bkpaas, access_url_polls=access_url_polls)
+        if outcome.finished:
             await task.arefresh_from_db()
             return task
+
+        access_url_polls = outcome.access_url_polls
 
     raise AssertionError("the deployment did not end within 20 polls")
 
 
-async def publish(project, dev_center, version_id: str = "v2") -> PublicationTask:
-    task = await prepare(await start(project, dev_center, version_id), dev_center)
-    return await poll_until_done(task, dev_center)
+async def publish(project, bkpaas, version_id: str = "v2") -> PublicationTask:
+    task = await prepare(await start(project, bkpaas, version_id), bkpaas)
+    return await poll_until_done(task, bkpaas)
 
 
-async def test_a_first_deployment_goes_from_the_request_through_celery_to_online(project, dev_center, queued):
-    task = await start(project, dev_center)
+async def test_a_first_deployment_goes_from_the_request_through_celery_to_online(project, bkpaas, queued):
+    task = await start(project, bkpaas)
 
     # 请求里只建应用：应用 ID 就是项目 ID；名称默认取项目名称，按开发者中心的规则去掉空格后发出去。
-    (create,) = dev_center.called("create_app")
+    (create,) = bkpaas.called("create_app")
     assert (create["code"], create["name"], create["operator"]) == ("test-project", "TestProject", "alice")
     assert (task.stage, queued) == ("packaging", [("prepare", task.pk)])
 
-    assert await steps.prepare_deployment(task.pk, dev_center)
+    assert await steps.prepare_deployment(task.pk, bkpaas)
     await task.arefresh_from_db()
-    assert [name for name, _ in dev_center.calls][1:] == ["upload_package_via_link", "deploy"]
+    assert [name for name, _ in bkpaas.calls][1:] == ["upload_package_via_link", "deploy"]
     assert (task.stage, task.deployment_id) == ("deploying", "d-1")
 
-    await poll_until_done(task, dev_center)
+    await poll_until_done(task, bkpaas)
 
     state = await services.get_publication_state(project)
     assert state.task is None
@@ -86,26 +91,26 @@ async def test_a_first_deployment_goes_from_the_request_through_celery_to_online
     assert (state.unseen_result.status, state.last_failure) == ("successful", None)
 
 
-async def test_an_update_reuses_the_app_and_keeps_the_url(project, dev_center):
-    await publish(project, dev_center, "v1")
-    dev_center.calls.clear()
+async def test_an_update_reuses_the_app_and_keeps_the_url(project, bkpaas):
+    await publish(project, bkpaas, "v1")
+    bkpaas.calls.clear()
     # 开发者中心这次没给访问地址：更新版本不会改变访问地址，沿用之前的。
     for _ in range(4):
-        dev_center.queue("get_deployment_result", DeploymentResult("successful"))
+        bkpaas.queue("get_deployment_result", DeploymentResult("successful"))
 
-    task = await publish(project, dev_center, "v2")
+    task = await publish(project, bkpaas, "v2")
 
     state = await services.get_publication_state(project)
     assert task.is_update
-    assert dev_center.called("create_app") == []
+    assert bkpaas.called("create_app") == []
     assert (state.online.version_id, state.online.url) == ("v2", "https://apps.example.com/test-project/")
 
 
-async def test_a_failed_update_leaves_the_online_version_alone(project, dev_center):
-    await publish(project, dev_center, "v1")
-    dev_center.queue("get_deployment_result", DeploymentResult("failed", error_detail="Procfile error"))
+async def test_a_failed_update_leaves_the_online_version_alone(project, bkpaas):
+    await publish(project, bkpaas, "v1")
+    bkpaas.queue("get_deployment_result", DeploymentResult("failed", error_detail="Procfile error"))
 
-    await publish(project, dev_center, "v2")
+    await publish(project, bkpaas, "v2")
 
     state = await services.get_publication_state(project)
     assert state.online.version_id == "v1"
@@ -126,19 +131,19 @@ async def test_a_failed_update_leaves_the_online_version_alone(project, dev_cent
         (BkPaaSApiError(403, "x", code="APP_SPARK_APP_REQUIRED"), steps.MSG_APP_NOT_MANAGED),
         (BkPaaSApiError(403, "x", code="APP_SPARK_MODULE_REQUIRED"), steps.MSG_MODULE_NOT_DEFAULT),
         (BkPaaSApiError(403, "x", code="SYSAPI_CLIENT_PERM_DENIED"), steps.MSG_NOT_AUTHORIZED),
-        (httpx2.ReadTimeout("timed out"), steps.MSG_DEV_CENTER_UNAVAILABLE),
+        (httpx2.ReadTimeout("timed out"), steps.MSG_BKPAAS_UNAVAILABLE),
     ],
 )
-async def test_failing_to_create_the_app_is_told_in_the_response(project, dev_center, queued, error, message):
-    dev_center.queue("create_app", error)
+async def test_failing_to_create_the_app_is_told_in_the_response(project, bkpaas, queued, error, message):
+    bkpaas.queue("create_app", error)
 
     with pytest.raises(PublicationSubmitError, match=message):
-        await start(project, dev_center)
+        await start(project, bkpaas)
 
     # 用户在响应里已经看到原因：项目放开、留下失败记录，但不再提醒一次，也不投递准备任务。
     state = await services.get_publication_state(project)
     assert (state.task, state.unseen_result, state.last_failure.error) == (None, None, message)
-    assert not await DevCenterAppBinding.objects.filter(project=project).aexists()
+    assert not await BkPaaSAppBinding.objects.filter(project=project).aexists()
     assert queued == []
 
 
@@ -150,51 +155,47 @@ async def test_failing_to_create_the_app_is_told_in_the_response(project, dev_ce
         ("!!!", "test-project"),
     ],
 )
-async def test_the_default_app_name_comes_from_the_project_name(project, dev_center, project_name, expected):
+async def test_the_default_app_name_comes_from_the_project_name(project, bkpaas, project_name, expected):
     await Project.objects.filter(pk=project.pk).aupdate(name=project_name)
     await project.arefresh_from_db()
 
-    await start(project, dev_center)
+    await start(project, bkpaas)
 
-    assert dev_center.called("create_app")[0]["name"] == expected
-
-
-async def test_a_given_app_name_is_sent_after_filtering(project, dev_center):
-    await services.start_deployment(
-        project, "v2", operator="alice", app_name="Spa rk", client_factory=lambda: dev_center
-    )
-
-    assert dev_center.called("create_app")[0]["name"] == "Spark"
+    assert bkpaas.called("create_app")[0]["name"] == expected
 
 
-async def test_an_app_name_without_usable_characters_is_refused_up_front(project, dev_center):
+async def test_a_given_app_name_is_sent_after_filtering(project, bkpaas):
+    await services.start_deployment(project, "v2", operator="alice", app_name="Spa rk", client_factory=lambda: bkpaas)
+
+    assert bkpaas.called("create_app")[0]["name"] == "Spark"
+
+
+async def test_an_app_name_without_usable_characters_is_refused_up_front(project, bkpaas):
     with pytest.raises(PublicationAppNameInvalidError):
-        await services.start_deployment(
-            project, "v2", operator="alice", app_name="!!!", client_factory=lambda: dev_center
-        )
+        await services.start_deployment(project, "v2", operator="alice", app_name="!!!", client_factory=lambda: bkpaas)
 
-    assert dev_center.calls == []
+    assert bkpaas.calls == []
     assert not await PublicationTask.objects.filter(project=project).aexists()
 
 
-async def test_a_project_deleted_before_the_task_is_created_is_not_published(project, dev_center):
+async def test_a_project_deleted_before_the_task_is_created_is_not_published(project, bkpaas):
     await Project.objects.asoft_delete(project.pk)
 
-    with pytest.raises(Http404):
-        await start(project, dev_center)
+    with pytest.raises(PublicationProjectGoneError):
+        await start(project, bkpaas)
 
-    assert dev_center.calls == []
+    assert bkpaas.calls == []
 
 
-async def test_an_app_created_but_not_recorded_is_told_in_the_response(project, dev_center, monkeypatch):
+async def test_an_app_created_but_not_recorded_is_told_in_the_response(project, bkpaas, monkeypatch):
     def fail_to_record(project, app):
         raise IntegrityError("Duplicate entry for key project_id")
 
-    monkeypatch.setattr("app_spark_api.publication.steps._record_app", fail_to_record)
+    monkeypatch.setattr("app_spark_api.publication.steps.binding._record_app", fail_to_record)
 
     # 应用已在开发者中心建好：说清楚是哪个应用，任务当场结束，项目不被挂住。
     with pytest.raises(PublicationSubmitError, match="test-project"):
-        await start(project, dev_center)
+        await start(project, bkpaas)
 
     assert (await services.get_publication_state(project)).task is None
 
@@ -209,43 +210,43 @@ async def test_an_app_created_but_not_recorded_is_told_in_the_response(project, 
         ("deploy", BkPaaSApiError(502, "bad gateway"), steps.MSG_DEPLOY_UNCERTAIN),
     ],
 )
-async def test_a_failure_while_preparing_is_left_for_the_owner_to_see(project, dev_center, method, error, message):
-    dev_center.queue(method, error)
-    task = await start(project, dev_center)
+async def test_a_failure_while_preparing_is_left_for_the_owner_to_see(project, bkpaas, method, error, message):
+    bkpaas.queue(method, error)
+    task = await start(project, bkpaas)
 
-    assert not await steps.prepare_deployment(task.pk, dev_center)
+    assert not await steps.prepare_deployment(task.pk, bkpaas)
 
     state = await services.get_publication_state(project)
-    assert len(dev_center.called("deploy")) <= 1
+    assert len(bkpaas.called("deploy")) <= 1
     assert (state.task, state.unseen_result.status, state.last_failure.error) == (None, "failed", message)
     # 没拿到部署 ID，指向部署管理页。
     assert state.last_failure.detail_url == f"{APP_URL}/deployments/prod"
 
 
-async def test_a_packaging_failure_is_left_for_the_owner_to_see(project, dev_center, monkeypatch):
+async def test_a_packaging_failure_is_left_for_the_owner_to_see(project, bkpaas, monkeypatch):
     async def fail_to_pack(project, version_id):
         raise SourcePackagingError("代码仓库里找不到版本")
 
     monkeypatch.setattr("app_spark_api.publication.packaging.apackage_version", fail_to_pack)
 
-    await prepare(await start(project, dev_center), dev_center)
+    await prepare(await start(project, bkpaas), bkpaas)
 
     assert (await services.get_publication_state(project)).last_failure.error == "代码仓库里找不到版本"
-    assert dev_center.called("upload_package_via_link") == []
+    assert bkpaas.called("upload_package_via_link") == []
 
 
-async def test_a_redelivered_preparation_is_dropped(project, dev_center):
-    task = await start(project, dev_center)
+async def test_a_redelivered_preparation_is_dropped(project, bkpaas):
+    task = await start(project, bkpaas)
 
-    assert await steps.prepare_deployment(task.pk, dev_center)
+    assert await steps.prepare_deployment(task.pk, bkpaas)
     # 重复投递、worker 崩溃后的重投都撞上认领，不会再打包、再部署。
-    assert not await steps.prepare_deployment(task.pk, dev_center)
-    assert len(dev_center.called("deploy")) == 1
+    assert not await steps.prepare_deployment(task.pk, bkpaas)
+    assert len(bkpaas.called("deploy")) == 1
 
 
-async def test_a_task_failed_while_packing_is_not_deployed(project, dev_center, monkeypatch):
-    task = await start(project, dev_center)
-    pack = steps.packaging.apackage_version
+async def test_a_task_failed_while_packing_is_not_deployed(project, bkpaas, monkeypatch):
+    task = await start(project, bkpaas)
+    pack = packaging.apackage_version
 
     async def pack_too_slowly(project, version_id):
         # 打包太慢，期间被兜底判了失败。
@@ -254,24 +255,24 @@ async def test_a_task_failed_while_packing_is_not_deployed(project, dev_center, 
 
     monkeypatch.setattr("app_spark_api.publication.packaging.apackage_version", pack_too_slowly)
 
-    assert not await steps.prepare_deployment(task.pk, dev_center)
+    assert not await steps.prepare_deployment(task.pk, bkpaas)
     # 打包回来发现任务已经结束，不再上传，更不会部署。
-    assert dev_center.called("upload_package_via_link") == []
-    assert dev_center.called("deploy") == []
+    assert bkpaas.called("upload_package_via_link") == []
+    assert bkpaas.called("deploy") == []
 
 
-async def test_a_deployment_submitted_after_the_task_ended_is_not_polled(project, dev_center, monkeypatch):
-    task = await start(project, dev_center)
-    deploy = dev_center.deploy
+async def test_a_deployment_submitted_after_the_task_ended_is_not_polled(project, bkpaas, monkeypatch):
+    task = await start(project, bkpaas)
+    deploy = bkpaas.deploy
 
     async def deploy_while_judged_failed(**kwargs):
         # 部署请求在路上时任务被并发判了失败。
         await PublicationTask.objects.filter(pk=task.pk).aupdate(status=PublicationTaskStatus.FAILED)
         return await deploy(**kwargs)
 
-    monkeypatch.setattr(dev_center, "deploy", deploy_while_judged_failed)
+    monkeypatch.setattr(bkpaas, "deploy", deploy_while_judged_failed)
 
-    assert not await steps.prepare_deployment(task.pk, dev_center)
+    assert not await steps.prepare_deployment(task.pk, bkpaas)
 
     # 不轮询，但留下部署 ID，失败详情能直接指向这次部署。
     await task.arefresh_from_db()
@@ -289,40 +290,24 @@ async def test_a_deployment_submitted_after_the_task_ended_is_not_polled(project
         pytest.param(DeploymentResult("successful"), id="no-url-yet"),
     ],
 )
-async def test_a_hiccup_while_polling_is_waited_out(project, dev_center, hiccup):
-    dev_center.queue("get_deployment_result", hiccup)
+async def test_a_hiccup_while_polling_is_waited_out(project, bkpaas, hiccup):
+    bkpaas.queue("get_deployment_result", hiccup)
 
-    task = await publish(project, dev_center)
+    task = await publish(project, bkpaas)
 
     assert task.status == PublicationTaskStatus.SUCCESSFUL
-    assert len(dev_center.called("get_deployment_result")) == 2
+    assert len(bkpaas.called("get_deployment_result")) == 2
     assert (await services.get_publication_state(project)).online.url == "https://apps.example.com/test-project/"
 
 
-async def test_a_deployment_that_never_ends_times_out(project, dev_center):
-    task = await prepare(await start(project, dev_center), dev_center)
-    await PublicationTask.objects.filter(pk=task.pk).aupdate(deploy_submitted_at=timezone.now() - timedelta(hours=1))
-    dev_center.queue("get_deployment_result", DeploymentResult("pending"))
+async def test_a_result_seen_by_two_polls_is_recorded_once(project, bkpaas):
+    task = await publish(project, bkpaas)
+    polls = len(bkpaas.called("get_deployment_result"))
 
-    await poll_until_done(task, dev_center)
-
-    state = await services.get_publication_state(project)
-    assert state.last_failure.error == steps.MSG_DEPLOY_TIMEOUT.format(minutes=15)
-
-
-async def test_a_duplicate_poll_is_dropped_and_the_result_is_recorded_once(project, dev_center):
-    task = await prepare(await start(project, dev_center), dev_center)
-    dev_center.queue("get_deployment_result", DeploymentResult("pending"))
-
-    # 重复投递的消息前后脚到达：任务还在进行中，第二条被「刚查过」拦下，不会再去问开发者中心。
-    assert await steps.poll_deployment(task.pk, dev_center) == 3
-    assert await steps.poll_deployment(task.pk, dev_center) is None
-    assert len(dev_center.called("get_deployment_result")) == 1
-
-    task = await poll_until_done(task, dev_center)
-
-    # 两条轮询都看到了结束，也只有先到的那条记结果。
+    # 重复投递的两条轮询都看到了结束，也只有先到的那条记结果；后到的发现任务已结束，不再去问开发者中心。
     assert not await steps.afinish_task(task, PublicationTaskStatus.FAILED, error="late")
+    assert (await steps.poll_deployment(task.pk, bkpaas)).finished
+    assert len(bkpaas.called("get_deployment_result")) == polls
     assert (await services.get_publication_state(project)).online.version_id == "v2"
 
 
@@ -344,21 +329,23 @@ async def test_a_duplicate_poll_is_dropped_and_the_result_is_recorded_once(proje
             None,
             id="deploy-request-in-flight",
         ),
-        # 轮询一直失败、走不到超时判断：兜底按部署超时判失败。
+        # 轮询停掉了（投递失败、消息丢了），没人判超时：兜底按部署超时判失败。
         pytest.param(
             {"deployment_id": "d-1", "deploy_submitted_at": timedelta(minutes=16)},
-            steps.MSG_DEPLOY_TIMEOUT.format(minutes=15),
+            steps.make_deploy_timeout_message(),
             id="deploy-timed-out",
+        ),
+        # 部署还没到超时：交给轮询，不动它。
+        pytest.param(
+            {"deployment_id": "d-1", "deploy_submitted_at": timedelta(minutes=5)}, None, id="still-deploying"
         ),
         # 还没到超时：不动它。
         pytest.param({"started_at": timedelta(minutes=5)}, None, id="still-preparing"),
-        # 轮询消息丢了：隔一个轮询间隔再投一次轮询。
-        pytest.param({"deployment_id": "d-1", "last_polled_at": timedelta(minutes=5)}, ("poll", 3), id="poll-lost"),
     ],
 )
-async def test_reading_the_state_handles_a_stalled_task(project, dev_center, queued, stalled, expected):
-    """expected is the failure recorded, the message queued again, or None when the task is left alone."""
-    task = await start(project, dev_center)
+async def test_reading_the_state_handles_a_stalled_task(project, bkpaas, queued, stalled, expected):
+    """expected is the failure recorded, or None when the task is left alone."""
+    task = await start(project, bkpaas)
     now = timezone.now()
     fields = {key: now - value if isinstance(value, timedelta) else value for key, value in stalled.items()}
     await PublicationTask.objects.filter(pk=task.pk).aupdate(**fields)
@@ -366,41 +353,36 @@ async def test_reading_the_state_handles_a_stalled_task(project, dev_center, que
 
     state = await services.get_publication_state(project)
 
-    if isinstance(expected, str):
-        assert (state.task, state.last_failure.error, queued) == (None, expected, [])
-    else:
+    if expected is None:
         assert state.task is not None
-        assert queued == ([] if expected is None else [(expected[0], task.pk, *expected[1:])])
+    else:
+        assert (state.task, state.last_failure.error) == (None, expected)
+
+    # 兜底只判失败，不重投任何消息。
+    assert queued == []
 
 
-async def test_a_stalled_poll_is_queued_again_only_once(project, dev_center, queued):
-    task = await start(project, dev_center)
-    stalled_at = timezone.now() - timedelta(minutes=5)
-    await PublicationTask.objects.filter(pk=task.pk).aupdate(deployment_id="d-1", last_polled_at=stalled_at)
-    queued.clear()
-
-    # 前端每几秒查一次：轮询恢复之前，只有第一次查询会补投。
-    await services.get_publication_state(project)
-    await services.get_publication_state(project)
-
-    assert queued == [("poll", task.pk, 3)]
-
-
-async def test_a_stale_read_does_not_fail_a_task_whose_deployment_was_just_submitted(project, dev_center):
-    task = await start(project, dev_center)
+async def test_a_stale_read_does_not_fail_a_task_whose_deployment_was_just_submitted(project, bkpaas):
+    task = await start(project, bkpaas)
     # 兜底读到的还没有部署 ID，worker 随后记下了它。
     await PublicationTask.objects.filter(pk=task.pk).aupdate(deploy_requested_at=timezone.now(), deployment_id="d-1")
 
     assert not await steps.afinish_task(
-        task, PublicationTaskStatus.FAILED, error=steps.MSG_DEPLOY_UNCERTAIN, before_deployment_submitted=True
+        task,
+        PublicationTaskStatus.FAILED,
+        error=steps.MSG_DEPLOY_UNCERTAIN,
+        guard=steps.FinishGuard.BEFORE_DEPLOYMENT_SUBMITTED,
     )
 
 
-async def test_a_stale_read_does_not_fail_a_task_whose_deployment_was_just_requested(project, dev_center):
-    task = await start(project, dev_center)
+async def test_a_stale_read_does_not_fail_a_task_whose_deployment_was_just_requested(project, bkpaas):
+    task = await start(project, bkpaas)
     # 兜底读到的是旧状态，worker 随后发出了部署请求。
     await PublicationTask.objects.filter(pk=task.pk).aupdate(deploy_requested_at=timezone.now())
 
     assert not await steps.afinish_task(
-        task, PublicationTaskStatus.FAILED, error=steps.MSG_PREPARE_INTERRUPTED, before_deploy_request=True
+        task,
+        PublicationTaskStatus.FAILED,
+        error=steps.MSG_PREPARE_INTERRUPTED,
+        guard=steps.FinishGuard.BEFORE_DEPLOY_REQUEST,
     )

@@ -25,7 +25,7 @@ CONSOLE_URL = "https://bkpaas.example.com"
 
 
 @pytest.fixture()
-def dev_center() -> FakeBkPaaSClient:
+def bkpaas() -> FakeBkPaaSClient:
     """A developer center client that succeeds unless told otherwise."""
     return FakeBkPaaSClient()
 

@@ -21,3 +21,7 @@ class PublicationConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "app_spark_api.publication"
     label = "publication"
+
+    def ready(self):
+        # 注册「删除 Project 前结束发布任务」的 receiver，否则删除期间准备任务还会把项目部署上去。
+        from app_spark_api.publication import signals  # noqa: F401

@@ -33,6 +33,7 @@ from app_spark_api.core.projects import constants, services, tasks
 from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.publication.models import PublicationTask
+from app_spark_api.publication.steps import MSG_PROJECT_DELETED
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
 from tests.repository.storage.fake_bkrepo import SOURCE_PACKAGES_BUCKET
@@ -624,7 +625,7 @@ async def test_deleting_a_project_ends_its_running_publication(aapi_client, bk_u
     # 任务结束后，准备任务不会再把已删除的项目部署上去。
     assert response.status_code == HTTPStatus.NO_CONTENT
     await task.arefresh_from_db()
-    assert (task.status, task.error) == ("failed", "Project deleted")
+    assert (task.status, task.error) == ("failed", MSG_PROJECT_DELETED)
 
 
 async def test_deleting_a_project_deletes_its_source_packages(aapi_client, bk_user, deletion_provider, fake_bkrepo):

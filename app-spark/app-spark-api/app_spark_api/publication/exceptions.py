@@ -16,9 +16,18 @@
 
 """发起发布时的领域错误，由 api.py 翻译成对外错误码。"""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app_spark_api.publication.steps.errors import FailureCause
+
 
 class PublicationError(Exception):
     """Base class of failures starting a publication task."""
+
+
+class PublicationProjectGoneError(PublicationError):
+    """The Project was deleted while the publication task was being created."""
 
 
 class PublicationTaskInProgressError(PublicationError):
@@ -42,4 +51,12 @@ class PublicationAppNameInvalidError(PublicationError):
 
 
 class PublicationSubmitError(PublicationError):
-    """Creating the developer center application failed; the message says why."""
+    """Creating the developer center application failed; the message says why.
+
+    :param cause: 失败属于哪一类，决定对外的状态码。
+    """
+
+    def __init__(self, message: str, cause: FailureCause) -> None:
+        super().__init__(message)
+        self.message = message
+        self.cause = cause

@@ -43,6 +43,7 @@ def test_make_configuration_snippet():
 
 
 @pytest.mark.auto_create_ns
+@pytest.mark.usefixtures("skip_if_old_k8s_version")
 class TestSyncTxtFileIngresses:
     @pytest.fixture()
     def kres(self, k8s_client):

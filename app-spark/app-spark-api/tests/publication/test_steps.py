@@ -28,11 +28,7 @@ from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import BkPaaSApiError, DeploymentResult
 from app_spark_api.publication import services, steps
 from app_spark_api.publication.constants import PublicationTaskStatus
-from app_spark_api.publication.exceptions import (
-    PublicationAppNameInvalidError,
-    PublicationAppNameTakenError,
-    PublicationSubmitError,
-)
+from app_spark_api.publication.exceptions import PublicationAppNameInvalidError, PublicationSubmitError
 from app_spark_api.publication.models import DevCenterAppBinding, PublicationTask
 from app_spark_api.publication.packaging import SourcePackagingError
 from tests.publication.conftest import CONSOLE_URL
@@ -72,12 +68,9 @@ async def publish(project, dev_center, version_id: str = "v2") -> PublicationTas
 async def test_a_first_deployment_goes_from_the_request_through_celery_to_online(project, dev_center, queued):
     task = await start(project, dev_center)
 
-    # 请求里只建应用：应用 ID 就是项目 ID；唯一名称还是 ID 时，名称默认取项目名称，按开发者中心的规则
-    # 去掉空格后发出去，并写回唯一名称。
+    # 请求里只建应用：应用 ID 就是项目 ID；名称默认取项目名称，按开发者中心的规则去掉空格后发出去。
     (create,) = dev_center.called("create_app")
     assert (create["code"], create["name"], create["operator"]) == ("test-project", "TestProject", "alice")
-    await project.arefresh_from_db()
-    assert project.uniq_name == "TestProject"
     assert (task.stage, queued) == ("packaging", [("prepare", task.pk)])
 
     assert await steps.prepare_deployment(task.pk, dev_center)
@@ -149,61 +142,39 @@ async def test_failing_to_create_the_app_is_told_in_the_response(project, dev_ce
     assert queued == []
 
 
-async def test_a_changed_unique_name_is_the_default_app_name(project, dev_center):
-    await Project.objects.filter(pk=project.pk).aupdate(uniq_name="Spark")
+@pytest.mark.parametrize(
+    ("project_name", "expected"),
+    [
+        ("Spark App", "SparkApp"),
+        # 项目名称全是开发者中心不认的字符时退回 ID。
+        ("!!!", "test-project"),
+    ],
+)
+async def test_the_default_app_name_comes_from_the_project_name(project, dev_center, project_name, expected):
+    await Project.objects.filter(pk=project.pk).aupdate(name=project_name)
     await project.arefresh_from_db()
 
     await start(project, dev_center)
+
+    assert dev_center.called("create_app")[0]["name"] == expected
+
+
+async def test_a_given_app_name_is_sent_after_filtering(project, dev_center):
+    await services.start_deployment(
+        project, "v2", operator="alice", app_name="Spa rk", client_factory=lambda: dev_center
+    )
 
     assert dev_center.called("create_app")[0]["name"] == "Spark"
 
 
-@pytest.mark.parametrize(
-    ("app_name", "error"),
-    [
-        # 按开发者中心的规则过滤、不分大小写比较之后撞上了别的项目。
-        ("Spark App", PublicationAppNameTakenError),
-        ("sparkapp", PublicationAppNameTakenError),
-        ("!!!", PublicationAppNameInvalidError),
-    ],
-)
-async def test_an_unusable_app_name_is_refused_up_front(project, dev_center, bk_user, app_name, error):
-    await Project.objects.acreate(
-        id="other", name="Other", uniq_name="SparkApp", creator=bk_user, owner=bk_user, tenant_id=project.tenant_id
-    )
-
-    with pytest.raises(error):
+async def test_an_app_name_without_usable_characters_is_refused_up_front(project, dev_center):
+    with pytest.raises(PublicationAppNameInvalidError):
         await services.start_deployment(
-            project, "v2", operator="alice", app_name=app_name, client_factory=lambda: dev_center
+            project, "v2", operator="alice", app_name="!!!", client_factory=lambda: dev_center
         )
 
     assert dev_center.calls == []
     assert not await PublicationTask.objects.filter(project=project).aexists()
-
-
-async def test_a_unique_name_taken_meanwhile_keeps_the_binding(project, dev_center, bk_user, monkeypatch):
-    create_app = dev_center.create_app
-
-    async def create_while_name_is_taken(**kwargs):
-        # 本地查重之后、写回之前，别的项目抢先用了这个名称。
-        await Project.objects.acreate(
-            id="other",
-            name="Other",
-            uniq_name=kwargs["name"],
-            creator=bk_user,
-            owner=bk_user,
-            tenant_id=project.tenant_id,
-        )
-        return await create_app(**kwargs)
-
-    monkeypatch.setattr(dev_center, "create_app", create_while_name_is_taken)
-
-    await start(project, dev_center)
-
-    # 应用已经建好，绑定必须留下；唯一名称保持原样。
-    assert await DevCenterAppBinding.objects.filter(project=project).aexists()
-    await project.arefresh_from_db()
-    assert project.uniq_name == "test-project"
 
 
 async def test_a_project_deleted_before_the_task_is_created_is_not_published(project, dev_center):
@@ -217,7 +188,7 @@ async def test_a_project_deleted_before_the_task_is_created_is_not_published(pro
 
 async def test_an_app_created_but_not_recorded_is_told_in_the_response(project, dev_center, monkeypatch):
     def fail_to_record(project, app):
-        raise IntegrityError("Duplicate entry for key uniq_name")
+        raise IntegrityError("Duplicate entry for key project_id")
 
     monkeypatch.setattr("app_spark_api.publication.steps._record_app", fail_to_record)
 

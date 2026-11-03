@@ -23,7 +23,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from django.shortcuts import aget_object_or_404
-from ninja import Path, Query, Router, Status
+from ninja import Path, Router, Status
 
 from app_spark_api.core.projects.models import Project
 from app_spark_api.core.tenant.user import get_tenant
@@ -31,14 +31,9 @@ from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.publication import services
-from app_spark_api.publication.entities import (
-    AppNameAvailabilityResponse,
-    DeploymentCreateRequest,
-    PublicationResponse,
-)
+from app_spark_api.publication.entities import DeploymentCreateRequest, PublicationResponse
 from app_spark_api.publication.exceptions import (
     PublicationAppNameInvalidError,
-    PublicationAppNameTakenError,
     PublicationSubmitError,
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
@@ -87,8 +82,6 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
         raise error_codes.PUBLICATION_VERSION_NOT_FOUND.f(version_id=payload.version_id) from exc
     except PublicationAppNameInvalidError as exc:
         raise error_codes.PUBLICATION_APP_NAME_INVALID from exc
-    except PublicationAppNameTakenError as exc:
-        raise error_codes.PUBLICATION_APP_NAME_TAKEN.f(name=exc.name) from exc
     except PublicationSubmitError as exc:
         raise error_codes.PUBLICATION_SUBMIT_FAILED.f(reason=str(exc)) from exc
     except PublicationTaskInProgressError as exc:
@@ -109,23 +102,3 @@ async def delete_unseen_result(request: HttpRequest, project_id: str = PROJECT_I
     project = await aget_object_or_404(Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id), id=project_id)
     await services.clear_unseen_result(project)
     return Status(HTTPStatus.NO_CONTENT, None)
-
-
-@router.get(
-    "app-name-availability/",
-    response={**ERROR_RESPONSES, HTTPStatus.OK: AppNameAvailabilityResponse},
-    url_name="publication-app-name-availability",
-    summary="检查应用名称能否用于首次发布",
-)
-async def get_app_name_availability(
-    request: HttpRequest,
-    project_id: str = PROJECT_ID,
-    name: str = Query(..., min_length=1, max_length=20, description="要检查的应用名称"),
-):
-    """只查本租户里有没有其他项目占用了这个名称，发布弹窗据此实时提示。"""
-    user = authenticated_user(request)
-    project = await aget_object_or_404(Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id), id=project_id)
-    # 和发布时一样，按开发者中心的规则过滤后再查，并把过滤后的名称告诉前端。
-    normalized = services.normalize_app_name(name)
-    available = bool(normalized) and await services.is_app_name_available(project, normalized)
-    return AppNameAvailabilityResponse(name=normalized, available=available)

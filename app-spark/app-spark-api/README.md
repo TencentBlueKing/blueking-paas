@@ -567,15 +567,13 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 - `POST "deployments/"`，body `{"version_id": "app-spark/checkpoint/<run_id>", "app_name": "..."}`：
   发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。已有任务进行中返回 409，版本不属于该项目
   返回 400。首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，
-  可以改，名称已被本租户其他项目占用时返回 400（`PUBLICATION_APP_NAME_TAKEN`）。开发者中心那边创建失败
-  （如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），detail 原样是开发者中心的说明。
-- `GET "app-name-availability/?name=..."`：返回 `{"name": "...", "available": bool}`。名称先按开发者中心的规则过滤
-  （只保留中文、字母、数字、连接符和下划线），`name` 是实际会用的名称；只查本租户里有没有其他项目占用它
-  （不分大小写），发布弹窗据此实时提示。
+  可以改，先按开发者中心的规则过滤（只保留中文、字母、数字、连接符和下划线），过滤后为空返回 400
+  （`PUBLICATION_APP_NAME_INVALID`）。开发者中心那边创建失败（如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），
+  detail 原样是开发者中心的说明。
 - `DELETE "unseen-result/"`：确认看过结果，返回 204，结果页只展示一次。
 
-应用名称来自项目的 `uniq_name`：它在租户内唯一，建项目时等于项目 ID；还没改过时，预填项目名称（`name` 只用于展示，
-可以重名）。首次发布创建应用后，开发者中心实际使用的名称写回 `uniq_name`。
+应用名称只作为首次发布的参数传给开发者中心，AppSpark 不保存，也不在本地查重。不传时取项目名称（`name` 只用于展示，
+可以重名），过滤后为空则用项目 ID。
 
 打包、上传、提交部署在 Celery 准备任务里做（`publication/tasks.py`），之后每 3 秒轮询一次部署结果，超过 15 分钟
 判失败。准备任务只做一次：worker 中途崩溃不重做；部署请求超时或返回 5xx 时不重发，提示用户到开发者中心查看部署记录。

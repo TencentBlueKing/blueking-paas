@@ -37,13 +37,5 @@ class PublicationAppNameInvalidError(PublicationError):
         self.name = name
 
 
-class PublicationAppNameTakenError(PublicationError):
-    """Another project in the tenant already holds the application name as its unique name."""
-
-    def __init__(self, name: str) -> None:
-        super().__init__(f"Application name {name!r} is already taken in the tenant")
-        self.name = name
-
-
 class PublicationSubmitError(PublicationError):
     """Creating the developer center application failed; the message says why."""

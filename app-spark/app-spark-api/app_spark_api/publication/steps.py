@@ -29,15 +29,14 @@
 import logging
 from datetime import timedelta
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 
 import httpx2
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from app_spark_api.core.projects.models import Project
 from app_spark_api.infras.bk_paas import (
     BkPaaSApiError,
     BkPaaSClient,
@@ -50,7 +49,6 @@ from app_spark_api.infras.bk_paas import (
 )
 from app_spark_api.publication import packaging
 from app_spark_api.publication.constants import (
-    APP_NAME_MAX_LENGTH,
     DEPLOY_POLL_INTERVAL_SECONDS,
     DEPLOY_TIMEOUT,
     MAX_POLLS_FOR_ACCESS_URL,
@@ -59,6 +57,9 @@ from app_spark_api.publication.constants import (
 )
 from app_spark_api.publication.models import DevCenterAppBinding, PublicationTask
 from app_spark_api.publication.packaging import SourcePackagingError
+
+if TYPE_CHECKING:
+    from app_spark_api.core.projects.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -118,18 +119,10 @@ async def bind_app(
 
 
 def _record_app(project: Project, app: CreatedApp) -> None:
-    # 绑定必须先单独写下：应用已经在开发者中心建好，没有绑定的话这个项目再也发布不了。
+    # 应用已经在开发者中心建好，没有绑定的话这个项目再也发布不了。
     DevCenterAppBinding.objects.create(
         project=project, app_code=app.code, module_name=app.default_module, tenant_id=project.tenant_id
     )
-
-    # 唯一名称跟着开发者中心里的应用名称走。本地查重之后被并发抢走时会撞唯一约束，这不影响发布，
-    # 留着原来的唯一名称、记一条日志即可。
-    try:
-        with transaction.atomic():
-            Project.objects.filter(pk=project.pk).update(uniq_name=app.name[:APP_NAME_MAX_LENGTH])
-    except IntegrityError:
-        logger.warning("Unique name %s of project %s is taken; keeping the old one", app.name, project.pk)
 
 
 async def prepare_deployment(task_id: int, client: BkPaaSClient) -> bool:

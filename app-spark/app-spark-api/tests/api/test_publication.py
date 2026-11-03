@@ -83,7 +83,7 @@ async def test_an_unpublished_project_has_nothing_to_show(aapi_client, owned_pro
         "last_failure": None,
         "unseen_result": None,
         "app_code": None,
-        # 唯一名称还是项目 ID 时，预填项目名称。
+        # 预填项目名称，按开发者中心的规则去掉空格。
         "default_app_name": "SparkDemo",
         "dev_center_links": None,
     }
@@ -106,23 +106,6 @@ async def test_a_bound_project_ignores_the_app_code_and_name(aapi_client, owned_
 
     assert response.status_code == HTTPStatus.ACCEPTED
     assert (response.json()["app_code"], response.json()["default_app_name"]) == ("sparkdemo-a1b2", None)
-
-
-async def test_an_app_name_held_by_another_project_is_reported(aapi_client, owned_project, bk_user, dev_center):
-    await Project.objects.acreate(
-        id="other", name="Other", uniq_name="Spark", creator=bk_user, owner=bk_user, tenant_id=owned_project.tenant_id
-    )
-
-    # 按开发者中心的规则过滤后再查，并告诉前端实际会用的名称。
-    available = (await aapi_client.get(f"{URL}app-name-availability/", {"name": "Spa rk"})).json()
-    response = await post_deployment(aapi_client, app_name="Spark")
-
-    assert available == {"name": "Spark", "available": False}
-    assert (response.status_code, response.json()["code"]) == (HTTPStatus.BAD_REQUEST, "PUBLICATION_APP_NAME_TAKEN")
-    assert dev_center.calls == []
-    # 项目自己的唯一名称不算被占用。
-    own = (await aapi_client.get(f"{URL}app-name-availability/", {"name": PROJECT_ID})).json()
-    assert own == {"name": PROJECT_ID, "available": True}
 
 
 @pytest.mark.parametrize(

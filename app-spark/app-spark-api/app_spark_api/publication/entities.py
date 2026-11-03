@@ -39,8 +39,8 @@ class DeploymentCreateRequest(Schema):
         min_length=1,
         max_length=20,
         description=(
-            "首次发布时创建的开发者中心应用名称。不传时，uniq_name 已改过就用它，"
-            "否则用项目名称（过滤后为空则用项目 ID）。应用 ID 固定为项目 ID。已创建应用后忽略"
+            "首次发布时创建的开发者中心应用名称，AppSpark 不保存。不传时用项目名称（过滤后为空则用项目 ID）。"
+            "应用 ID 固定为项目 ID。已创建应用后忽略"
         ),
     )
 
@@ -88,15 +88,6 @@ class DevCenterLinksResponse(Schema):
     deployments: str = Field(description="部署管理")
     env_vars: str = Field(description="环境变量")
     members: str = Field(description="成员管理")
-
-
-class AppNameAvailabilityResponse(Schema):
-    """应用名称能否用于首次发布。"""
-
-    name: str = Field(description="按开发者中心的规则过滤后实际会使用的名称，为空表示没有可用字符")
-    available: bool = Field(
-        description="本租户内没有其他项目占用这个名称；开发者中心里是否已有同名应用要到发布时才知道"
-    )
 
 
 class PublicationResponse(Schema):

@@ -107,11 +107,6 @@ class ErrorCodes:
         _("A publish task is already running for this project."),
         status_code=HTTPStatus.CONFLICT,
     )
-    # 应用名称在开发者中心租户内唯一，本地已被别的项目占用的肯定建不出来，换一个名称再发布。
-    PUBLICATION_APP_NAME_TAKEN = ErrorCode(
-        _("Application name `{name}` is already used by another project."),
-        status_code=HTTPStatus.BAD_REQUEST,
-    )
     PUBLICATION_APP_NAME_INVALID = ErrorCode(
         _("Application name may contain only Chinese characters, letters, digits, hyphens and underscores."),
         status_code=HTTPStatus.BAD_REQUEST,

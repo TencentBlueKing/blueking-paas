@@ -46,7 +46,7 @@ class PublicationTaskStatus(StrEnum):
     FAILED = "failed"
 
 
-# 开发者中心应用名称的长度上限，也是 Project.uniq_name 的长度。名称里它不认的字符（如空格）由开发者中心自己去掉。
+# 开发者中心应用名称的长度上限。名称里它不认的字符（如空格）由开发者中心自己去掉。
 APP_NAME_MAX_LENGTH = 20
 # 查询部署结果的间隔秒数。
 DEPLOY_POLL_INTERVAL_SECONDS = 3

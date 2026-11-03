@@ -54,7 +54,6 @@ from app_spark_api.publication.constants import (
 )
 from app_spark_api.publication.exceptions import (
     PublicationAppNameInvalidError,
-    PublicationAppNameTakenError,
     PublicationSubmitError,
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
@@ -140,24 +139,19 @@ async def start_deployment(
     :param client_factory: 构造开发者中心客户端，默认按配置构造。
     :raises PublicationVersionNotFoundError: 版本不属于该项目。
     :raises PublicationAppNameInvalidError: 首次发布时应用名称按开发者中心的规则过滤后为空。
-    :raises PublicationAppNameTakenError: 首次发布时应用名称已被本租户的其他项目占用。
     :raises PublicationTaskInProgressError: 项目已有发布任务在进行。
     :raises PublicationSubmitError: 创建应用失败，任务已记为失败。
     """
     if not await packaging.aversion_exists(project, version_id):
         raise PublicationVersionNotFoundError(f"Project {project.pk} has no publishable version {version_id!r}")
 
-    # 已绑定的项目复用原应用，不需要名称。首次发布时先查本地：名称在开发者中心也要租户内唯一，本地已被
-    # 别的项目占用的肯定建不出来。开发者中心那边的冲突（如手动建过同名应用）由创建应用的报错说明。
-    # 查重和发给开发者中心的都是按它的规则过滤后的名称，否则查的和最后建出来的不是同一个名字。
+    # 已绑定的项目复用原应用，不需要名称。名称只在开发者中心里要求租户内唯一，本地不存也不查重，
+    # 重名由创建应用的报错说明。
     name = ""
     if not await DevCenterAppBinding.objects.filter(project=project).aexists():
         name = normalize_app_name(app_name) if app_name is not None else resolve_default_app_name(project)
         if not name:
             raise PublicationAppNameInvalidError(app_name or "")
-
-        if not await is_app_name_available(project, name):
-            raise PublicationAppNameTakenError(name)
 
     task = await sync_to_async(_create_deployment_task)(project, version_id, operator)
 
@@ -170,24 +164,13 @@ async def start_deployment(
 
 def resolve_default_app_name(project: Project) -> str:
     """Return the application name to suggest on the first deployment."""
-    # 唯一名称改过（不再是建项目时的 ID）就用它；否则取项目名称，项目名称一般比 ID 好读。
-    # 项目名称全是开发者中心不认的字符时退回 ID。
-    if project.uniq_name and project.uniq_name != project.id:
-        return project.uniq_name
-
+    # 项目名称一般比 ID 好读；全是开发者中心不认的字符时退回 ID。
     return normalize_app_name(project.name) or project.id
 
 
 def normalize_app_name(name: str) -> str:
     """Return the name the developer center would keep, cut to its length limit."""
     return "".join(_APP_NAME_CHAR.findall(name.strip()))[:APP_NAME_MAX_LENGTH]
-
-
-async def is_app_name_available(project: Project, name: str) -> bool:
-    """Return whether no other active project in the tenant holds the name as its unique name."""
-    # 生产 MySQL 的唯一索引不区分大小写，这里按同样的口径查，免得放过去再在写回时撞上。
-    taken = Project.objects.filter(tenant_id=project.tenant_id, uniq_name__iexact=name).exclude(pk=project.pk)
-    return not await taken.aexists()
 
 
 async def afail_pending_tasks(project: Project, error: str) -> None:

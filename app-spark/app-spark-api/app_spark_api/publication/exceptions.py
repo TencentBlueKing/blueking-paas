@@ -29,6 +29,10 @@ class PublicationVersionNotFoundError(PublicationError):
     """The version does not belong to the Project, or cannot be published."""
 
 
+class PublicationNoVersionError(PublicationError):
+    """No conversation of the Project has left a version to publish yet."""
+
+
 class PublicationAppNameInvalidError(PublicationError):
     """The application name keeps nothing once the developer center's character rules are applied."""
 

@@ -29,10 +29,14 @@ if TYPE_CHECKING:
 class DeploymentCreateRequest(Schema):
     """把一个版本部署到开发者中心；已发布时即为更新版本。"""
 
-    version_id: str = Field(
+    version_id: str | None = Field(
+        default=None,
         min_length=1,
         max_length=64,
-        description="要发布的版本，须属于该项目。暂时为会话检查点的 tag，如 app-spark/checkpoint/<run_id>",
+        description=(
+            "要发布的版本，须属于该项目。暂不支持选版本，前端不传，发最新版本（见 latest_version_id）。"
+            "暂时为会话检查点的 tag，如 app-spark/checkpoint/<run_id>"
+        ),
     )
     app_name: str | None = Field(
         default=None,
@@ -100,6 +104,9 @@ class PublicationResponse(Schema):
     app_code: str | None = Field(description="已创建的开发者中心应用 ID（即项目 ID）；为空表示下次发布会新建应用")
     default_app_name: str | None = Field(description="首次发布时预填的应用名称，可在发布时修改；已创建应用后为空")
     dev_center_links: DevCenterLinksResponse | None = Field(description="开发者中心页面链接，首次发布创建应用后才有")
+    latest_version_id: str | None = Field(
+        description="不指定版本时会发布的最新版本；为空表示还没有可发布的版本，发布按钮应禁用"
+    )
 
     @classmethod
     def from_state(cls, state: PublicationState) -> PublicationResponse:
@@ -139,4 +146,5 @@ class PublicationResponse(Schema):
             app_code=state.app_code,
             default_app_name=state.default_app_name,
             dev_center_links=dev_center_links,
+            latest_version_id=state.latest_version_id,
         )

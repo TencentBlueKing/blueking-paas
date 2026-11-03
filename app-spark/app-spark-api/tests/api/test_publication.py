@@ -37,16 +37,20 @@ URL = f"/api/projects/{PROJECT_ID}/publication/"
 
 @pytest.fixture(autouse=True)
 def packager(monkeypatch, settings) -> None:
-    """Know versions v1 and v2 and pack them instantly, and give the developer center a console address."""
+    """Know versions v1 and v2 (the latest) and pack them instantly, and give the developer center a console address."""
     settings.BKPAAS_URL = "https://bkpaas.example.com"
 
     async def version_exists(project, version_id):
         return version_id in ("v1", "v2")
 
+    async def latest_version(project):
+        return "v2"
+
     async def package_version(project, version_id):
         return PackagedSource(f"{version_id}-abc1234", f"https://bkrepo.example.com/{version_id}")
 
     monkeypatch.setattr("app_spark_api.publication.packaging.aversion_exists", version_exists)
+    monkeypatch.setattr("app_spark_api.publication.packaging.alatest_version", latest_version)
     monkeypatch.setattr("app_spark_api.publication.packaging.apackage_version", package_version)
 
 
@@ -86,7 +90,30 @@ async def test_an_unpublished_project_has_nothing_to_show(aapi_client, owned_pro
         # 预填项目名称，按开发者中心的规则去掉空格。
         "default_app_name": "SparkDemo",
         "dev_center_links": None,
+        "latest_version_id": "v2",
     }
+
+
+async def test_deploying_without_a_version_publishes_the_latest(aapi_client, owned_project):
+    response = await aapi_client.post(f"{URL}deployments/", data={}, content_type="application/json")
+
+    assert response.status_code == HTTPStatus.ACCEPTED
+    assert response.json()["task"]["version_id"] == "v2"
+
+
+async def test_a_project_without_versions_cannot_be_published(aapi_client, owned_project, monkeypatch):
+    async def no_version(project):
+        return None
+
+    monkeypatch.setattr("app_spark_api.publication.packaging.alatest_version", no_version)
+
+    state = (await aapi_client.get(URL)).json()
+    response = await aapi_client.post(f"{URL}deployments/", data={}, content_type="application/json")
+
+    # 状态里能看出没有版本，前端据此禁用发布按钮；硬发也会被拒。
+    assert state["latest_version_id"] is None
+    assert (response.status_code, response.json()["code"]) == (HTTPStatus.BAD_REQUEST, "PUBLICATION_NO_VERSION")
+    assert not await PublicationTask.objects.filter(project=owned_project).aexists()
 
 
 async def test_deploying_creates_the_app_and_leaves_packing_to_celery(aapi_client, owned_project, bk_user, dev_center):

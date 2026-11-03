@@ -34,6 +34,7 @@ from app_spark_api.publication import services
 from app_spark_api.publication.entities import DeploymentCreateRequest, PublicationResponse
 from app_spark_api.publication.exceptions import (
     PublicationAppNameInvalidError,
+    PublicationNoVersionError,
     PublicationSubmitError,
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
@@ -78,6 +79,8 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
 
     try:
         await services.start_deployment(project, payload.version_id, operator=operator, app_name=payload.app_name)
+    except PublicationNoVersionError as exc:
+        raise error_codes.PUBLICATION_NO_VERSION from exc
     except PublicationVersionNotFoundError as exc:
         raise error_codes.PUBLICATION_VERSION_NOT_FOUND.f(version_id=payload.version_id) from exc
     except PublicationAppNameInvalidError as exc:

@@ -564,11 +564,13 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 接口挂在 `/api/projects/{project_id}/publication/` 下，只对项目所有者可见，其他人一律 404：
 
 - `GET ""`：线上版本、进行中的任务（`task.stage` 依次为 `binding`、`packaging`、`uploading`、`deploying`）、
-  最近一次失败、还没看过的结果（`unseen_result`）、首次发布时预填的应用名称（`default_app_name`）和开发者中心页面链接。
-- `POST "deployments/"`，body `{"version_id": "app-spark/checkpoint/<run_id>", "app_name": "..."}`：
-  发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。已有任务进行中返回 409，版本不属于该项目
-  返回 400。首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，
-  可以改，先按开发者中心的规则过滤（只保留中文、字母、数字、连接符和下划线），过滤后为空返回 400
+  最近一次失败、还没看过的结果（`unseen_result`）、首次发布时预填的应用名称（`default_app_name`）、开发者中心页面链接，
+  以及不指定版本时会发布的最新版本（`latest_version_id`，为空表示还没有可发布的版本）。
+- `POST "deployments/"`，body `{"app_name": "..."}`：发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。
+  暂不支持选版本，不传 `version_id` 就发最新版本，项目还没有版本时返回 400（`PUBLICATION_NO_VERSION`）；
+  传了 `version_id` 但不属于该项目返回 400（`PUBLICATION_VERSION_NOT_FOUND`）。已有任务进行中返回 409。
+  首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，可以改，
+  先按开发者中心的规则过滤（只保留中文、字母、数字、连接符和下划线），过滤后为空返回 400
   （`PUBLICATION_APP_NAME_INVALID`）。开发者中心那边创建失败（如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），
   detail 原样是开发者中心的说明。
 - `DELETE "unseen-result/"`：确认看过结果，返回 204，结果页只展示一次。
@@ -581,9 +583,9 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 查询发布状态时顺带兜底：轮询停了就重新投递，发起 10 分钟还没提交部署就判失败。打包可能占住 worker 几分钟，
 `celery-worker` 的并发数要留出余量。
 
-版本暂时就是会话检查点的 tag，只认本项目会话留下的。打包用 `repository/git/source_packages.py`，构建方式固定为
-`buildpack`，项目源码里要带 `app_desc.yaml` 与 `.python-version`，开发者中心的 Python 构建工具要支持 heroku-24、
-Python 3.14 与 uv。
+版本暂时就是会话检查点的 tag，只认本项目会话留下的；最新版本是本项目所有会话里最后登记的那个检查点。
+打包用 `repository/git/source_packages.py`，构建方式固定为 `buildpack`，项目源码里要带 `app_desc.yaml` 与
+`.python-version`，开发者中心的 Python 构建工具要支持 heroku-24、Python 3.14 与 uv。
 
 ### 配置
 

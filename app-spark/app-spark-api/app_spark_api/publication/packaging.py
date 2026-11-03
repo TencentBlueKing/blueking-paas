@@ -16,7 +16,7 @@
 
 """发布流程对版本和打包的依赖。
 
-还没有面向用户的版本列表，版本暂时就是会话检查点的 tag（形如 app-spark/checkpoint/<run_id>）：
+还没有面向用户的版本列表，发布默认发最新版本。版本暂时就是会话检查点的 tag（形如 app-spark/checkpoint/<run_id>）：
 每轮对话结束 Agent 推送一个不可移动的 tag，钉住那一轮的提交。打包用 repository.git.source_packages，
 把 tag 对应的提交打成源码包存进制品库，再签一个带有效期的下载链接给开发者中心。
 """
@@ -67,6 +67,13 @@ async def aversion_exists(project: Project, version_id: str) -> bool:
     """Return whether the version belongs to the project and can be published."""
     # 只认本项目会话留下的检查点：tag 名字可以猜，但别的项目的检查点不能拿来发布。
     return await ConversationCheckpoint.objects.filter(conversation__project=project, tag=version_id).aexists()
+
+
+async def alatest_version(project: Project) -> str | None:
+    """Return the project's newest version, or None when no conversation has left one yet."""
+    # 按登记先后而不是上下文版本排，理由见 ConversationCheckpointQuerySet.newest_first。
+    checkpoints = ConversationCheckpoint.objects.filter(conversation__project=project).order_by("-created_at", "-pk")
+    return await checkpoints.values_list("tag", flat=True).afirst()
 
 
 async def apackage_version(project: Project, version_id: str) -> PackagedSource:

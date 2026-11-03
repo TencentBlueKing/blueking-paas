@@ -130,6 +130,10 @@ appSecret: ""
 # bkApiUrlTmpl: "https://bkapi.example.com/api/{api_name}/"
 # 调用网关时的环境名（stage）。
 # apigwEnvironment: prod
+# 开发者中心在 API 网关上的网关名，与 bkApiUrlTmpl 拼出发布用的系统 API 地址；不同版本的开发者中心不一样，默认 bkpaas3。
+# bkpaasApigwName: bkpaas3
+# 开发者中心前端站点地址，只用来拼发布结果里的开发者中心页面链接；不填时不返回这些链接。
+# bkpaasUrl: ""
 bkAuth:
   # 同时决定换票 backend：bk_token 直连 SSM，其余直连 auth api。
   backendType: bk_token

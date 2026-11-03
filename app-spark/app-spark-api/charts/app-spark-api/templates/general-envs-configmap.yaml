@@ -48,6 +48,8 @@ Only omit nil: false, 0, empty strings and empty collections are explicit overri
   "APP_SECRET" .Values.appSecret
   "BK_API_URL_TMPL" .Values.bkApiUrlTmpl
   "APIGW_ENVIRONMENT" .Values.apigwEnvironment
+  "BKPAAS_APIGW_NAME" .Values.bkpaasApigwName
+  "BKPAAS_URL" .Values.bkpaasUrl
   "BKAUTH_BACKEND_TYPE" $bkAuth.backendType
   "BKAUTH_BK_LOGIN_APIGW_STAGE" $bkAuth.bkLoginApigwStage
   "BKAUTH_USER_INFO_APIGW_URL" $bkAuth.userInfoApigwUrl

@@ -555,6 +555,68 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 代理不了）；请求体整份进内存，没有流式上传；HTML 正文里的根绝对路径（`/static/app.css`）仍会
 404——重定向那一类已经在响应里改写了，正文没有改写。
 
+## 发布到开发者中心
+
+项目所有者选一个版本，AppSpark 把它作为标准云原生应用（默认模块的源码来源为 AppSpark）发布到蓝鲸开发者中心的
+生产环境，拿到可以分享的访问地址。代码在 `app_spark_api/publication/` 和 `app_spark_api/infras/bk_paas/`。
+
+接口挂在 `/api/projects/{project_id}/publication/` 下，只对项目所有者可见，其他人一律 404：
+
+- `GET ""`：线上版本、进行中的任务（`task.stage` 依次为 `binding`、`packaging`、`uploading`、`deploying`）、
+  最近一次失败、还没看过的结果（`unseen_result`）、首次发布时预填的应用名称（`default_app_name`）和开发者中心页面链接。
+- `POST "deployments/"`，body `{"version_id": "app-spark/checkpoint/<run_id>", "app_name": "..."}`：
+  发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。已有任务进行中返回 409，版本不属于该项目
+  返回 400。首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，
+  可以改，名称已被本租户其他项目占用时返回 400（`PUBLICATION_APP_NAME_TAKEN`）。开发者中心那边创建失败
+  （如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），detail 原样是开发者中心的说明。
+- `GET "app-name-availability/?name=..."`：返回 `{"name": "...", "available": bool}`。名称先按开发者中心的规则过滤
+  （只保留中文、字母、数字、连接符和下划线），`name` 是实际会用的名称；只查本租户里有没有其他项目占用它
+  （不分大小写），发布弹窗据此实时提示。
+- `DELETE "unseen-result/"`：确认看过结果，返回 204，结果页只展示一次。
+
+应用名称来自项目的 `uniq_name`：它在租户内唯一，建项目时等于项目 ID；还没改过时，预填项目名称（`name` 只用于展示，
+可以重名）。首次发布创建应用后，开发者中心实际使用的名称写回 `uniq_name`。
+
+打包、上传、提交部署在 Celery 准备任务里做（`publication/tasks.py`），之后每 3 秒轮询一次部署结果，超过 15 分钟
+判失败。准备任务只做一次：worker 中途崩溃不重做；部署请求超时或返回 5xx 时不重发，提示用户到开发者中心查看部署记录。
+查询发布状态时顺带兜底：轮询停了就重新投递，发起 10 分钟还没提交部署就判失败。打包可能占住 worker 几分钟，
+`celery-worker` 的并发数要留出余量。
+
+版本暂时就是会话检查点的 tag，只认本项目会话留下的。打包用 `repository/git/source_packages.py`，构建方式固定为
+`buildpack`，项目源码里要带 `app_desc.yaml` 与 `.python-version`，开发者中心的 Python 构建工具要支持 heroku-24、
+Python 3.14 与 uv。
+
+### 配置
+
+开发者中心的系统 API 走蓝鲸 API 网关，以本服务的应用身份调用（不需要用户登录态）：
+
+```yaml
+APP_CODE: app-spark            # 本服务的应用身份，同时用于调用开发者中心
+APP_SECRET: ...
+BK_API_URL_TMPL: https://bkapi.example.com/api/{api_name}/
+APIGW_ENVIRONMENT: prod
+## 开发者中心在 API 网关上的网关名，不同版本的开发者中心不一样，默认 bkpaas3
+BKPAAS_APIGW_NAME: bkpaas3
+## 开发者中心前端站点地址，只用来拼页面链接；不填时这些链接为空，发布本身不受影响
+BKPAAS_URL: https://bkpaas.example.com
+```
+
+### 在开发者中心开通权限
+
+缺了下面任何一件，发布都会失败并提示「AppSpark 未获得开发者中心授权，请联系管理员」：
+
+1. 把本服务的 app_code 注册为 AppSpark 系统角色（角色值 100）。在开发者中心 apiserver 里执行：
+
+   ```bash
+   python manage.py create_authed_app_user --bk_app_code app-spark --role 100
+   ```
+
+2. 在 API 网关上为本服务的 app_code 申请 `BKPAAS_APIGW_NAME` 指向的网关的资源权限，至少包括
+   `create_sys_app_spark_app`、`upload_ai_agent_source_package_via_link`、`sys_deploy_with_module`、
+   `sys_get_deployment_result`。
+
+用户在开发者中心把应用改成代码仓库部署后，应用就脱离 AppSpark 管理，之后的发布会失败并提示到开发者中心操作。
+
 ## 部署相关
 
 ### 镜像构建

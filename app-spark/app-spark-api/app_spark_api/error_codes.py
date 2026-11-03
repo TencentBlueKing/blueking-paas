@@ -101,6 +101,28 @@ class ErrorCodes:
         status_code=HTTPStatus.BAD_GATEWAY,
     )
 
+    # --- Publication to the developer center ------------------------------------------------------
+    # 同一项目同时只能有一个发布任务；等它结束再发起，原任务不受影响。
+    PUBLICATION_TASK_IN_PROGRESS = ErrorCode(
+        _("A publish task is already running for this project."),
+        status_code=HTTPStatus.CONFLICT,
+    )
+    # 应用名称在开发者中心租户内唯一，本地已被别的项目占用的肯定建不出来，换一个名称再发布。
+    PUBLICATION_APP_NAME_TAKEN = ErrorCode(
+        _("Application name `{name}` is already used by another project."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    PUBLICATION_APP_NAME_INVALID = ErrorCode(
+        _("Application name may contain only Chinese characters, letters, digits, hyphens and underscores."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    PUBLICATION_VERSION_NOT_FOUND = ErrorCode(
+        _("Version `{version_id}` does not belong to this project or cannot be published."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    # 创建开发者中心应用失败（如应用 ID 已被占用）：任务已记为失败，detail 是给用户看的原因。
+    PUBLICATION_SUBMIT_FAILED = ErrorCode(_("{reason}"), status_code=HTTPStatus.BAD_REQUEST)
+
     # --- Agent Runtime ----------------------------------------------------------------------------
     AGENT_BUSY = ErrorCode(
         _("The Agent Runtime is already executing a run for this conversation."),

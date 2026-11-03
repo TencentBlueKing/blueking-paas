@@ -52,6 +52,7 @@ from app_spark_api.infras.accounts.api import router as accounts_router
 from app_spark_api.infras.bk_access_token import AccessTokenError
 from app_spark_api.infras.bkaidev import BkAidevGatewayError
 from app_spark_api.infras.forgejo.exceptions import ForgejoError
+from app_spark_api.publication.api import router as publication_router
 from app_spark_api.repository.git.api import router as git_repository_router
 from app_spark_api.repository.git.exceptions import GitRepositoryNotReadyError, RepoServerConfigurationError
 from app_spark_api.repository.storage.exceptions import StorageConfigurationError
@@ -67,6 +68,7 @@ root_router.add_router("/models/", model_catalog_router)
 root_router.add_router("/projects/", projects_router)
 root_router.add_router("/projects/{project_id}/git-repository/", git_repository_router)
 root_router.add_router("/projects/{project_id}/conversations/", conversations_router)
+root_router.add_router("/projects/{project_id}/publication/", publication_router)
 # Mounted under `/internal/` and addressed by conversation id rather than by project and
 # number: the caller is an Agent Runtime this service started, it has no user and no project
 # context, and the token it holds names exactly one conversation. Keeping it off the

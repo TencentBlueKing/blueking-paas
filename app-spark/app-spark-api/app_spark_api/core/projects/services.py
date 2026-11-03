@@ -19,7 +19,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import secrets
+import string
 
+import attrs
 from asgiref.sync import sync_to_async
 from django.db import IntegrityError, transaction
 
@@ -27,12 +31,14 @@ from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.conversations.services import (
     aclose_project_conversations,
     adelete_project_conversations,
+    create_conversation,
 )
 from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
 from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects import constants
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
+    ProjectConflictError,
     ProjectDeletionError,
     ProjectIdTakenError,
     ProjectNameTakenError,
@@ -41,14 +47,33 @@ from app_spark_api.core.projects.models import Project
 from app_spark_api.repository.git.services import adelete_project_repository, aprovision_project_repository
 from app_spark_api.repository.git.source_packages import adelete_project_source_packages
 
+logger = logging.getLogger(__name__)
 
-async def create_project(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:
+_GENERATED_ID_ALPHABET = string.ascii_lowercase + string.digits
+
+
+@attrs.frozen
+class PromptProjectCreation:
+    """从一句话建出来的东西：Project 和承接第一轮对话的会话。
+
+    :param project: 已落库的 Project。
+    :param conversation: 已落库、尚未拉起 Runtime 的会话。
+    """
+
+    project: Project
+    conversation: Conversation
+
+
+async def create_project(
+    *, project_id: str, name: str, owner: str, tenant_id: str, initial_prompt: str = ""
+) -> Project:
     """建一个 Project，owner 与 creator 都记为 ``owner``。
 
     :param project_id: 项目 ID，必须已经按 ``PROJECT_ID_PATTERN`` 校验过。
     :param name: 项目名称。
     :param owner: 建项目的用户 pk。
     :param tenant_id: 项目所属租户。
+    :param initial_prompt: 从一句话创建时的那句话；手动创建时留空。
     :return: 已经落库的 Project。
     :raises ProjectIdTakenError: ID 已被占用。
     :raises ProjectNameTakenError: 同租户下已有同名项目。
@@ -61,6 +86,7 @@ async def create_project(*, project_id: str, name: str, owner: str, tenant_id: s
             name=name,
             owner=owner,
             tenant_id=tenant_id,
+            initial_prompt=initial_prompt,
         )
     except IntegrityError:
         # 上面查过了还是撞，那就只有一种情况：在检查和插入之间有人抢先把同一个 ID 或名称建成了。
@@ -71,6 +97,55 @@ async def create_project(*, project_id: str, name: str, owner: str, tenant_id: s
     # 建仓在事务外：远端失败必须留下 Project 和 failed 状态，而不是把刚建成的行回滚掉。
     await aprovision_project_repository(project)
     return project
+
+
+async def create_project_from_prompt(*, content: str, owner: str, tenant_id: str) -> PromptProjectCreation:
+    """用用户的第一句话建一个 Project，并为它开好第一个会话。
+
+    ID 由服务端生成，名称暂时就用 ID，之后交给自动命名去改。这句话会记到 Project 上，但不会在
+    这里发给 Agent：第一轮对话仍由客户端拿着返回的会话编号走 runs 接口，和手动建项目之后发的
+    第一句话是同一条路径。会话也只建行、不拉 Runtime，那几十秒留给 runs 去付。
+
+    Example::
+
+        created = await create_project_from_prompt(content="做一个番茄钟", owner=user.pk, tenant_id="default")
+        # 随后客户端调用 POST /projects/{created.project.id}/conversations/{created.conversation.number}/runs/
+
+    :param content: 用户的第一句话。
+    :param owner: 建项目的用户 pk。
+    :param tenant_id: 项目所属租户。
+    :return: 建好的 Project 与会话。
+    :raises ProjectConflictError: 连续几次生成的 ID 都已被占用。实际上不会发生。
+    """
+    for attempt in range(1, constants.GENERATED_PROJECT_ID_MAX_ATTEMPTS + 1):
+        project_id = generate_project_id()
+        try:
+            project = await create_project(
+                project_id=project_id,
+                name=project_id,
+                owner=owner,
+                tenant_id=tenant_id,
+                initial_prompt=content,
+            )
+        except ProjectConflictError:
+            # 名称就是 ID，所以撞名也只可能是有人手动建了一个恰好叫这个的项目，换一个 ID 即可。
+            if attempt == constants.GENERATED_PROJECT_ID_MAX_ATTEMPTS:
+                raise
+            logger.warning("Generated project id %s is taken, generating another one", project_id)
+            continue
+        break
+
+    # TODO: 在这里触发后台的自动命名，它只改 name，不动 ID。
+    conversation = await create_conversation(project, owner=owner)
+    return PromptProjectCreation(project=project, conversation=conversation)
+
+
+def generate_project_id() -> str:
+    """生成一个符合 ``PROJECT_ID_PATTERN`` 的随机项目 ID，例如 ``p-k3x9q0m2ab``。"""
+    suffix = "".join(
+        secrets.choice(_GENERATED_ID_ALPHABET) for _ in range(constants.GENERATED_PROJECT_ID_SUFFIX_LENGTH)
+    )
+    return f"{constants.GENERATED_PROJECT_ID_PREFIX}{suffix}"
 
 
 async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:
@@ -193,7 +268,7 @@ async def delete_project(project: Project) -> None:
         raise ProjectDeletionError(current_category) from exc
 
 
-def _insert(*, project_id: str, name: str, owner: str, tenant_id: str) -> Project:
+def _insert(*, project_id: str, name: str, owner: str, tenant_id: str, initial_prompt: str) -> Project:
     """把 Project 落库。同步，因为要开事务，而 Django 的异步 ORM 没有自己的事务。"""
     # 放在事务里，是为了让 Project 和它的会话计数器一起成立：计数器行由 post_save signal
     # 建（见 conversations.signals），没有事务的话，signal 挂掉就会留下一个永远开不出会话
@@ -205,4 +280,5 @@ def _insert(*, project_id: str, name: str, owner: str, tenant_id: str) -> Projec
             creator=owner,
             owner=owner,
             tenant_id=tenant_id,
+            initial_prompt=initial_prompt,
         )

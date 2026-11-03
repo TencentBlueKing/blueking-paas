@@ -18,6 +18,7 @@ from datetime import datetime
 
 from ninja import Field, Schema
 
+from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH, ConversationResponse
 from app_spark_api.core.projects.constants import PROJECT_ID_PATTERN
 
 
@@ -44,3 +45,21 @@ class ProjectResponse(Schema):
     name: str = Field(description="项目名称")
     created_at: datetime = Field(description="创建时间")
     updated_at: datetime = Field(description="最后更新时间")
+
+
+class ProjectFromPromptRequest(Schema):
+    """用第一句话创建一个 Project。"""
+
+    # 和 runs 接口用同一个上限：这句话随后要原样作为第一轮对话发出去。
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_RUN_CONTENT_LENGTH,
+        description="用户的第一句话，客户端随后要把它作为第一轮对话发出",
+    )
+
+
+class ProjectFromPromptResponse(Schema):
+    """从一句话建出来的 Project，以及承接第一轮对话的会话。"""
+
+    project: ProjectResponse = Field(description="新建的 Project，名称暂时与 ID 相同")
+    conversation: ConversationResponse = Field(description="新建的会话，用它的 number 发起第一轮对话")

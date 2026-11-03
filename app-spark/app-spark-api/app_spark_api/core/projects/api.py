@@ -23,8 +23,14 @@ from ninja import Path, Router, Status
 from ninja.pagination import paginate
 
 from app_spark_api.core.projects import services
-from app_spark_api.core.projects.constants import PROJECT_ID_PATTERN
-from app_spark_api.core.projects.entities import ProjectCreateRequest, ProjectRenameRequest, ProjectResponse
+from app_spark_api.core.projects.constants import COLLECTION_ACTIONS_SEGMENT, PROJECT_ID_PATTERN
+from app_spark_api.core.projects.entities import (
+    ProjectCreateRequest,
+    ProjectFromPromptRequest,
+    ProjectFromPromptResponse,
+    ProjectRenameRequest,
+    ProjectResponse,
+)
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
     ProjectDeletionError,
@@ -70,6 +76,30 @@ async def create_project(request: HttpRequest, payload: ProjectCreateRequest):
     except ProjectNameTakenError as exc:
         raise error_codes.PROJECT_NAME_TAKEN.f(name=payload.name) from exc
     return Status(HTTPStatus.CREATED, project)
+
+
+@router.post(
+    f"{COLLECTION_ACTIONS_SEGMENT}/create-from-prompt/",
+    response={**ERROR_RESPONSES, HTTPStatus.CREATED: ProjectFromPromptResponse},
+    url_name="projects-create-from-prompt",
+    summary="用第一句话创建一个 Project",
+)
+async def create_project_from_prompt(request: HttpRequest, payload: ProjectFromPromptRequest):
+    """用用户的第一句话创建一个 Project，并开好承接这句话的会话。
+
+    - 项目 ID 由服务端生成，名称暂时与 ID 相同，之后会在后台自动改成更好认的名字；
+    - 这句话不会由本接口发给 Agent。客户端拿到响应后，用返回的项目 ID 和会话编号调用
+      `POST /projects/{project_id}/conversations/{number}/runs/` 把它作为第一轮对话发出，
+      之后的交互与手动创建项目完全一致；
+    - 本接口不拉起 Agent Runtime，准备运行环境的耗时落在第一轮对话上。
+    """
+    user = authenticated_user(request)
+    created = await services.create_project_from_prompt(
+        content=payload.content,
+        owner=user.pk,
+        tenant_id=get_tenant(user).id,
+    )
+    return Status(HTTPStatus.CREATED, {"project": created.project, "conversation": created.conversation})
 
 
 @router.get(

@@ -82,6 +82,9 @@ class Project(OwnerTimestampedModel):
     name = models.CharField(verbose_name="项目名称", max_length=20, null=True)
     # 删除前的名称，只作记录，不参与唯一约束。
     name_at_deletion = models.CharField(verbose_name="删除前的项目名称", max_length=20, blank=True, default="")
+    # 从一句话创建时用户发的那句话，手动创建的项目为空。第一轮对话仍由客户端照常经 runs 接口发出，
+    # 这里只是留底：客户端没来得及发出去（比如页面刷新）时可以拿回来，之后的自动命名也要读它。
+    initial_prompt = models.TextField(verbose_name="创建项目时的第一句话", blank=True, default="")
     creator = BkUserField()
     is_deleted = models.BooleanField("是否删除", default=False)
 

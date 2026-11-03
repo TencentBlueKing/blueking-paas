@@ -19,13 +19,15 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime
 from http import HTTPStatus
 
 import pytest
 from django.utils import timezone
 
-from app_spark_api.agent.conversations.models import Conversation, ConversationNumber
+from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH
+from app_spark_api.agent.conversations.models import Conversation, ConversationNumber, ConversationUserMessage
 from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
 from app_spark_api.core.projects import constants, services
 from app_spark_api.core.projects.models import Project
@@ -284,6 +286,76 @@ async def test_a_name_longer_than_the_column_is_refused_rather_than_truncated(aa
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+# --- creating from a prompt -------------------------------------------------------------
+
+FROM_PROMPT_URL = f"{PROJECTS_URL}-/create-from-prompt/"
+
+
+async def create_from_prompt_via_api(client, content: str):
+    return await client.post(FROM_PROMPT_URL, data={"content": content}, content_type="application/json")
+
+
+async def test_creating_from_a_prompt_names_the_project_after_its_generated_id(aapi_client, bk_user):
+    response = await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")
+
+    assert response.status_code == HTTPStatus.CREATED
+    body = response.json()
+    project_id = body["project"]["id"]
+    assert re.fullmatch(constants.PROJECT_ID_PATTERN, project_id)
+    assert project_id.startswith(constants.GENERATED_PROJECT_ID_PREFIX)
+    assert body["project"]["name"] == project_id
+
+    project = await Project.objects.aget(pk=project_id)
+    assert project.initial_prompt == "做一个番茄钟小工具"
+    assert (project.owner, project.creator, project.tenant_id) == (bk_user.pk, bk_user.pk, get_tenant(bk_user).id)
+
+
+async def test_creating_from_a_prompt_opens_the_first_conversation_without_sending_the_prompt(aapi_client):
+    """The prompt goes out through the runs endpoint afterwards, so nothing is in the history yet."""
+    body = (await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")).json()
+
+    assert body["conversation"]["number"] == 1
+    assert body["conversation"]["is_live"] is True
+    conversation = await Conversation.objects.aget(project_id=body["project"]["id"])
+    assert str(conversation.id) == body["conversation"]["conversation_id"]
+    assert not await ConversationUserMessage.objects.filter(conversation=conversation).aexists()
+
+
+async def test_creating_from_a_prompt_retries_with_another_id_when_the_generated_one_is_taken(
+    aapi_client, bk_user, monkeypatch
+):
+    await make_project(project_id="p-taken", name="Taken", owner=bk_user, tenant_id="some-other-tenant")
+    generated = iter(["p-taken", "p-free"])
+    monkeypatch.setattr(services, "generate_project_id", lambda: next(generated))
+
+    response = await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert response.json()["project"]["id"] == "p-free"
+
+
+@pytest.mark.parametrize("content", ["", "x" * (MAX_RUN_CONTENT_LENGTH + 1)])
+async def test_a_prompt_the_runs_endpoint_would_refuse_creates_nothing(aapi_client, content):
+    response = await create_from_prompt_via_api(aapi_client, content)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert not await Project.default_objects.aexists()
+
+
+def test_generated_ids_and_the_collection_actions_segment_respect_the_id_pattern():
+    """Generated ids must be valid ids; the actions segment must never be one, so it needs no reserving."""
+    assert re.fullmatch(constants.PROJECT_ID_PATTERN, services.generate_project_id())
+    assert not re.fullmatch(constants.PROJECT_ID_PATTERN, constants.COLLECTION_ACTIONS_SEGMENT)
+
+
+async def test_an_anonymous_caller_cannot_create_from_a_prompt(aanonymous_api_client):
+    response = await create_from_prompt_via_api(aanonymous_api_client, "做一个番茄钟小工具")
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert not await Project.default_objects.aexists()
 
 
 # --- listing ----------------------------------------------------------------------------

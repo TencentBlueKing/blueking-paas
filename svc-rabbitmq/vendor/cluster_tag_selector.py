@@ -56,6 +56,7 @@ class ClusterTagSelector:
         return f"{key}={tag_value}"
 
     def filter(self, clusters: "Iterable[Cluster]") -> "list[Cluster]":
+        # 集合的 <= 表示子集判断：match_tags 中的标签集群都要有，集群可以额外拥有其他标签
         return [
             cluster
             for cluster in clusters

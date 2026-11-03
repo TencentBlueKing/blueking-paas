@@ -224,7 +224,8 @@ class BkAidevModelConfig:
 
     The LLM base URL and the access_token exchange endpoint are not configured here: the former
     is built from BK_API_URL_TMPL and BKAIDEV_APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
-    app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
+    app identity for the exchange is the top-level SANDBOX_APP_CODE / SANDBOX_APP_SECRET,
+    never a nested copy.
 
     :param default_model_id: The preferred default model, injected as the Runtime's MODEL_ID
         when the model list offers it; otherwise the first model in the list is used instead.

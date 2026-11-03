@@ -5419,8 +5419,8 @@ msgid "仅云原生应用支持配置 txt 校验文件"
 msgstr "Only cloud-native applications support txt verification files"
 
 #: paasng/utils/error_codes.py:229
-msgid "txt 校验文件下发到集群失败，请稍候重试"
-msgstr "Failed to apply txt verification files to the cluster, please try again later"
+msgid "txt 校验文件访问集群失败，请稍候重试"
+msgstr "Failed to access the cluster for txt verification files, please try again later"
 
 #: paas_wl/workloads/networking/ingress/txt_files/serializers.py:36
 msgid "路径格式错误，仅支持根目录下的 .txt 文件，如 /verify.txt"

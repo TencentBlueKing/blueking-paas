@@ -72,6 +72,8 @@ def test_content(bk_stag_env, content, expected):
 def test_env_constraints(bk_stag_env):
     txt_file = TxtFile.objects.create(environment_id=bk_stag_env.id, host=HOST, path="/verify.txt", content="abc")
     assert make_slz(bk_stag_env).is_valid() is False
+    # nginx matches the path case-insensitively
+    assert make_slz(bk_stag_env, path="/VERIFY.txt").is_valid() is False
     assert make_slz(bk_stag_env, instance=txt_file).is_valid() is True
     # The same path is allowed on another host
     assert make_slz(bk_stag_env, host="bar.example.com").is_valid() is True

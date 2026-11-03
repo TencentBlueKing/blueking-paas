@@ -57,3 +57,10 @@ def test_rollback_when_sync_failed(mocked_sync, api_client, bk_stag_env, url):
     assert resp.status_code == 400
     assert resp.data["code"] == "SYNC_TXT_FILE_FAILED"
     assert not TxtFile.objects.filter(environment_id=bk_stag_env.id).exists()
+
+
+def test_list_when_cluster_unavailable(api_client, url):
+    with mock.patch(f"{VIEWS_MODULE}.get_served_hosts", side_effect=RuntimeError("boom")):
+        resp = api_client.get(url)
+    assert resp.status_code == 400
+    assert resp.data["code"] == "SYNC_TXT_FILE_FAILED"

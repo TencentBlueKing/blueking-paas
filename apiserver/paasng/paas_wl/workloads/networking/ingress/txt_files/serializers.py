@@ -75,7 +75,8 @@ class TxtFileSLZ(serializers.ModelSerializer):
         elif files.count() >= MAX_FILES_PER_ENV:
             raise serializers.ValidationError(_("每个环境最多配置 {} 个 txt 文件").format(MAX_FILES_PER_ENV))
 
-        if files.filter(host=attrs["host"], path=attrs["path"]).exists():
+        # The location of nginx matches case-insensitively, so do the unique index of MySQL
+        if files.filter(host=attrs["host"], path__iexact=attrs["path"]).exists():
             raise serializers.ValidationError({"path": _("该域名下已存在相同路径的文件")})
         return attrs
 

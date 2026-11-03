@@ -15,9 +15,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.db import models
-from django.db.models import F
 from django.utils import timezone
 
+from app_spark_api.core.projects.constants import PROJECT_NAME_MAX_LENGTH, IntRenamingStatus
 from app_spark_api.core.tenant.fields import tenant_id_field_factory
 from app_spark_api.utils.models import BkUserField, OwnerTimestampedModel
 
@@ -40,27 +40,16 @@ class ProjectManager(models.Manager["Project"]):
         return self.filter(owner=owner, tenant_id=tenant_id).order_by("-created_at", "id")
 
     async def asoft_delete(self, project_id: str) -> bool:
-        """把一个活跃 Project 标记为已删除，并释放它的名称。
+        """把一个活跃 Project 标记为已删除。
 
         :param project_id: 要删除的 Project。
         :return: 是否由本次调用完成了删除。Project 不存在或已被删除时返回 ``False``。
         """
-        now = timezone.now()
-
-        # MySQL 按 SET 顺序从左到右求值，name_at_deletion 必须排在 name 之前。
-        changed = await self.filter(pk=project_id).aupdate(
-            is_deleted=True,
-            name_at_deletion=F("name"),
-            name=None,
-            updated_at=now,
-        )
-
+        changed = await self.filter(pk=project_id).aupdate(is_deleted=True, updated_at=timezone.now())
         return bool(changed)
 
     async def arename(self, project_id: str, name: str) -> bool:
         """修改一个活跃 Project 的名称。
-
-        名称在租户内的唯一性由 ``unique_together`` 保证，撞上时抛出 ``IntegrityError``，由调用方翻译。
 
         :param project_id: 要改名的 Project。
         :param name: 新名称。
@@ -77,11 +66,11 @@ class Project(OwnerTimestampedModel):
     """
 
     id = models.CharField(verbose_name="项目 ID", max_length=20, primary_key=True)
-    # 已删除项目把名称置空以释放租户内唯一约束。MySQL 的唯一索引允许多行 NULL，
-    # 因此同一租户可以留下多个软删除项目，同时不必改成数据库不支持的条件唯一索引。
-    name = models.CharField(verbose_name="项目名称", max_length=20, null=True)
-    # 删除前的名称，只作记录，不参与唯一约束。
-    name_at_deletion = models.CharField(verbose_name="删除前的项目名称", max_length=20, blank=True, default="")
+    # 展示用的名称，不要求唯一：两个项目可以取同一个名字，自动命名也不必为了避让而加后缀。
+    name = models.CharField(verbose_name="项目名称", max_length=PROJECT_NAME_MAX_LENGTH)
+    # 从一句话创建时用户发的那句话，手动创建的项目为空。第一轮对话仍由客户端照常经 runs 接口发出，
+    # 这里只是留底：客户端没来得及发出去（比如页面刷新）时可以拿回来，之后的自动命名也要读它。
+    initial_prompt = models.TextField(verbose_name="创建项目时的第一句话", blank=True, default="")
     creator = BkUserField()
     is_deleted = models.BooleanField("是否删除", default=False)
 
@@ -91,6 +80,81 @@ class Project(OwnerTimestampedModel):
     # 需要访问全量数据（含已软删除项目）时使用本管理器，例如数据订正、管理后台等场景
     default_objects = models.Manager()
 
+
+class ProjIntRenaming(models.Model):
+    """给从一句话创建的项目自动起名的结果，一个项目最多一行。
+
+    ``name`` 为空是正常结果：描述不足以起名时模型会明确留空，调用方保留项目原来的名字即可。
+
+    是否结束看时间字段，两者都为空表示任务还在排队或执行：
+    - ``completed_at`` 有值：正常结束，``name`` 是最终结论（可以为空）；
+    - ``error_at`` 有值：执行失败，``error_msg`` 说明原因。
+    """
+
+    # 失败原因要展示给用户，也可能被贴进工单里，截断到一段合理的长度。
+    ERROR_MESSAGE_MAX_LENGTH = 2000
+
+    project = models.OneToOneField(
+        Project,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="int_renaming",
+        verbose_name="所属项目",
+    )
+    name = models.CharField(verbose_name="生成的项目名称", max_length=PROJECT_NAME_MAX_LENGTH, null=True)
+    completed_at = models.DateTimeField(verbose_name="完成时间", null=True)
+    error_at = models.DateTimeField(verbose_name="失败时间", null=True)
+    error_msg = models.TextField(verbose_name="失败原因", blank=True, default="")
+
     class Meta:
-        # 活跃项目的名称非空，因此这个约束仍保证它们在租户内唯一；软删除行统一存 NULL。
-        unique_together = ("tenant_id", "name")
+        constraints = [
+            # 一次任务只有一个结局，防止「既完成又失败」这种自相矛盾的行被写进来。
+            models.CheckConstraint(
+                condition=models.Q(completed_at__isnull=True) | models.Q(error_at__isnull=True),
+                name="projects_projintrenaming_at_most_one_outcome",
+            ),
+        ]
+
+    @property
+    def is_finished(self) -> bool:
+        """任务是否已经有结论（不论成功还是失败）。"""
+        return self.completed_at is not None or self.error_at is not None
+
+    @property
+    def status(self) -> IntRenamingStatus:
+        """当前状态，供 API 直接读出。"""
+        if self.completed_at is not None:
+            return IntRenamingStatus.COMPLETED
+        if self.error_at is not None:
+            return IntRenamingStatus.FAILED
+        return IntRenamingStatus.PENDING
+
+    async def complete(self, name: str | None) -> None:
+        """把一次成功的命名写进记录，并在项目名仍是占位 ID 时更新项目。
+
+        :param name: 生成的名字；模型认为描述不足以起名时为 None。
+        """
+        now = timezone.now()
+        # 已经有了结论的记录不再改写。用条件更新代替加锁，重复执行也只会成功一次。
+        changed = (
+            await type(self)
+            .objects.filter(pk=self.pk, completed_at__isnull=True, error_at__isnull=True)
+            .aupdate(name=name, completed_at=now)
+        )
+        if not changed:
+            return
+
+        if name:
+            # 只改还挂着占位 ID 的项目：用户在后台任务跑完前手动改过名的话，保留用户的名字。
+            await Project.objects.filter(pk=self.project_id, name=self.project_id).aupdate(name=name, updated_at=now)
+
+    async def fail(self, message: str) -> None:
+        """把一次失败写进记录；已经有结论的记录不再改写。
+
+        :param message: 失败原因，过长会被截断。
+        """
+        await (
+            type(self)
+            .objects.filter(pk=self.pk, completed_at__isnull=True, error_at__isnull=True)
+            .aupdate(error_at=timezone.now(), error_msg=message[: self.ERROR_MESSAGE_MAX_LENGTH])
+        )

@@ -49,7 +49,7 @@ uv run uvicorn app_spark_api.asgi:application --reload
 
 日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
 
-另开一个进程跑 Celery worker。它和 API 加载同一份 settings。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
+另开一个进程跑 Celery worker。它和 API 加载同一份 settings，自动命名任务在这里执行。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
 
 ```bash
 uv run celery -A app_spark_api.celery worker --loglevel=INFO
@@ -63,6 +63,68 @@ uv run pytest --reuse-db tests/
 
 会话相关的测试不 mock agent，而是真的 spawn agent 进程、走真实 HTTP。
 
+本服务自己调模型（给从一句话创建的项目起名）的配置与 Agent 的 `AGENT_MODEL_SOURCE` 分开，见 settings 里的
+`LLM_*`。下面是直连 DeepSeek 的示例配置：
+
+```yaml
+LLM_SOURCE: direct
+LLM_DIRECT_CONFIG:
+  model: deepseek:deepseek-v4-flash
+  api_key: ...
+```
+
+`infras/llm` 与项目自动命名的测试默认用假模型和 MockTransport，不联网。标了 `live_llm` 的用例会对每个
+真实模型各跑一遍（共用同一份用例，靠 `live_llm` fixture 参数化），哪个没配凭据就跳过哪个：
+
+| 目标 | 需要的环境变量 |
+|---|---|
+| 直连 DeepSeek | `DEEPSEEK_API_KEY`；模型可用 `APP_SPARK_LIVE_LLM_MODEL` 换，默认 `deepseek:deepseek-v4-flash` |
+| bkaidev 网关 | `APP_SPARK_LIVE_BKAIDEV_ACCESS_TOKEN`（用户态 token）、`APP_SPARK_LIVE_BKAIDEV_BASE_URL`（v1 地址）；要测的模型用 `APP_SPARK_LIVE_BKAIDEV_MODEL_IDS` 逗号分隔，默认 `deepseek-v4-flash`，每个模型一组用例 |
+
+```bash
+set -a; . ~/.app-spark-live-bkaidev.env; set +a
+uv run pytest --reuse-db -m live_llm tests/infras/llm tests/ext/llm
+```
+
+网关有调用频率限制（超了返回 429 `RATE_LIMIT_RESTRICTION`），一次别测太多模型。
+
+### bkaidev 网关的 thinking 支持
+
+网关把 `reasoning_effort` 原样转给后面的模型，各模型接受的取值不统一，传了不接受的值返回 400。因此 thinking
+走人工维护的白名单 `_GATEWAY_THINKING_PROFILES`（`infras/llm/models.py`，写法见那里的注释），不在表里的模型
+不发任何 thinking 参数。
+
+维护这张表时要知道的几点：
+
+- 接受 `none` 不等于能关掉思考（例如 kimi），要看用量；
+- 有的模型不回传思考内容（例如混元），只能看 completion tokens 有没有降到只剩答案的几个；
+- 厂商自有的开关（`thinking.type`、`enable_thinking`）在网关上基本无效，GLM 还会对 `thinking.type` 报 400；
+- pydantic-ai 的厂商档按官方 API 写，借来之前要确认它发出的取值网关都接受。
+
+### 为网关模型适配 thinking
+
+工具是 `scripts/probe_gateway_thinking.py`，凭据与 live 测试相同；网关限频，一个模型要一两分钟。
+
+```bash
+set -a; . ~/.app-spark-live-bkaidev.env; set +a
+uv run python -m scripts.probe_gateway_thinking list                      # 1. 确认模型 ID（大小写敏感）
+uv run python -m scripts.probe_gateway_thinking probe hy3 --repeat 3      # 2. 看接受哪些取值、none 能否关掉
+uv run python -m scripts.probe_gateway_thinking verify hy3                # 4. 经白名单实际调用，看发了什么
+```
+
+3. 按探测结果写表项，依次考虑：
+   - 借 pydantic-ai 的厂商档（自部署的开源模型可试 `VLLMProvider.model_profile`），条件是它发出的取值都被接受；
+   - 用 `None` 排除个别会被拒绝的模型；
+   - 自己写 `_measured_thinking(...)`，只列接受的取值，`none` 关得掉才列进去；
+   - 都不合适就不收录。
+
+   通配符只用于确认过行为一致的同系列模型。
+4. 用 `verify` 核对：关思考时要么真的关掉，要么对关不掉的模型发出指定强度，不能失败。
+5. 在 `test_gateway_thinking_follows_the_whitelist` 里补上期望值，再跑这个模型的 live 测试：
+   `APP_SPARK_LIVE_BKAIDEV_MODEL_IDS=hy3 uv run pytest --reuse-db -m live_llm -k bkaidev tests/infras/llm tests/ext/llm`。
+
+升级 pydantic-ai 后，对借上游档的表项重跑第 4、5 步。
+
 ## API 错误响应
 
 所有已匹配 API 路由的失败响应使用 `blue_krill.web.std_error` 的 `APIError`，保留原有 HTTP
@@ -71,6 +133,20 @@ uv run pytest --reuse-db tests/
 ```json
 {"code": "PROJECT_ID_TAKEN", "detail": "Project id `demo` is already taken."}
 ```
+
+## 从一句话创建项目
+
+`POST /api/projects/-/create-from-prompt/`（`{"content": "..."}`）：服务端生成项目 ID（`p-` 加 10 位），
+名称暂时与 ID 相同，并建好第一个会话，返回 `{project, conversation}`。这句话会记在
+`Project.initial_prompt` 上留底，但本接口不发给 Agent，也不拉起 Runtime：客户端随后用返回的会话
+编号调 `.../conversations/{number}/runs/` 把它作为第一轮对话发出，之后与手动创建项目没有区别。
+
+创建成功后，本接口还会排一个 Celery 任务，用这句话请模型给项目起名（配置见上面的 `LLM_*`）。任务
+结果写在 `ProjIntRenaming` 里，客户端轮询：
+
+`GET /api/projects/{project_id}/int-renaming/` → `{status, name, completed_at, error_at, error_msg}`
+
+前端应用 `name` 前先确认页面上显示的仍是占位 ID，否则会把用户这期间手动改的名字盖掉。
 
 ## 驱动 Agent
 

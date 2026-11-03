@@ -4,6 +4,12 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 
 ## Common workflows
 
+* Making a bkaidev gateway model honour thinking settings (adding to or changing
+  `_GATEWAY_THINKING_PROFILES` in `app_spark_api/infras/llm/models.py`): follow the README's
+  「为网关模型适配 thinking」. Probe the model with `scripts/probe_gateway_thinking.py` before writing an
+  entry, and never list a `reasoning_effort` value the probe did not see the gateway accept: an
+  unaccepted value fails the request with HTTP 400.
+
 ## Coding style
 
 * For Python files, follow PEP-8.

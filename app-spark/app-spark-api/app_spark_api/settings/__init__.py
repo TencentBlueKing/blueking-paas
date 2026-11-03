@@ -462,6 +462,33 @@ AGENT_DIRECT_MODEL_CONFIG = settings.get("AGENT_DIRECT_MODEL_CONFIG", {})
 ##     - qwen3-5-397B
 BKAIDEV_MODEL_CONFIG = settings.get("BKAIDEV_MODEL_CONFIG", {})
 
+# --------
+# 本服务自己调模型（目前用于给从一句话创建的项目起名）
+# --------
+
+## 走哪条路，可选值见 ext.llm.config.LLMSource。与 Agent Runtime 的 AGENT_MODEL_SOURCE 分开配，这类小活儿
+## 可以换更便宜、更快的模型：
+## - bkaidev（默认）：走 bkaidev 的 LLM 网关，基址与 Agent Runtime 相同（BK_API_URL_TMPL + APIGW_ENVIRONMENT
+##   拼出），凭用户态 access_token 调用。token 由有用户态的请求先换好，再交给后台任务；
+## - direct：直连模型厂商，用 LLM_DIRECT_CONFIG 里固定的 key；
+## - fake：不发起网络请求的假模型，本地不花钱跑通链路用。
+LLM_SOURCE = settings.get("LLM_SOURCE", "bkaidev")
+
+## LLM_SOURCE 为 bkaidev 时使用的模型 ID，不带厂商前缀。
+LLM_BKAIDEV_MODEL_ID = settings.get("LLM_BKAIDEV_MODEL_ID", "deepseek-v4-flash")
+
+## LLM_SOURCE 为 direct 时必填，字段详见 infras.llm.DirectLLMConfig。
+##
+## LLM_DIRECT_CONFIG:
+##   ## 必填。pydantic-ai 的 <provider>:<model>。
+##   model: deepseek:deepseek-v4-flash
+##   ## 必填。厂商 API Key。
+##   api_key: ''
+LLM_DIRECT_CONFIG = settings.get("LLM_DIRECT_CONFIG", {})
+
+## 单次模型请求的超时秒数。
+LLM_TIMEOUT_SECONDS = settings.get("LLM_TIMEOUT_SECONDS", 30)
+
 ## 会话上下文文档存哪儿，字段见 ContextStorageConfig。一份 context 可能有好几 MB，所以走 blob
 ## 存储而不是塞进 MySQL 行里。会话冷启动就是从这里把文档取回来再注入新 Runtime。
 AGENT_CONTEXT_STORAGE = settings.get(

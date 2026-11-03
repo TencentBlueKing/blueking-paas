@@ -16,7 +16,7 @@
 
 """Client for the bkaidev LLM gateway, the one a bkaidev-sourced Runtime calls its model through."""
 
-from app_spark_api.infras.bkaidev.client import BkAidevGatewayClient
+from app_spark_api.infras.bkaidev.client import BkAidevGatewayClient, build_authorization_headers
 from app_spark_api.infras.bkaidev.entities import GatewayModel, GatewayModelProperty
 from app_spark_api.infras.bkaidev.exceptions import BkAidevGatewayError
 
@@ -25,4 +25,5 @@ __all__ = [
     "BkAidevGatewayError",
     "GatewayModel",
     "GatewayModelProperty",
+    "build_authorization_headers",
 ]

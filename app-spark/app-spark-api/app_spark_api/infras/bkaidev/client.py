@@ -30,6 +30,14 @@ from app_spark_api.infras.bkaidev.exceptions import BkAidevGatewayError
 BKAPI_AUTHORIZATION_HEADER = "X-Bkapi-Authorization"
 
 
+def build_authorization_headers(access_token: str) -> dict[str, str]:
+    """Build the headers that authenticate one user to the gateway.
+
+    :param access_token: The user's access_token for this service's app.
+    """
+    return {BKAPI_AUTHORIZATION_HEADER: json.dumps({"access_token": access_token}, separators=(",", ":"))}
+
+
 class BkAidevGatewayClient:
     """Ask the bkaidev LLM gateway what it offers, on one user's behalf.
 
@@ -67,7 +75,7 @@ class BkAidevGatewayClient:
         url = f"{self._base_url}/models"
         async with httpx2.AsyncClient(timeout=self._timeout_seconds, transport=self._transport) as client:
             try:
-                response = await client.get(url, headers=self._build_headers())
+                response = await client.get(url, headers=build_authorization_headers(self._access_token))
             except httpx2.HTTPError as exc:
                 # 只带异常类型：httpx 的消息里可能带着请求细节，这里不冒把 token 写进日志的险。
                 raise BkAidevGatewayError(f"Requesting {url} failed: {type(exc).__name__}") from exc
@@ -82,7 +90,3 @@ class BkAidevGatewayClient:
             raise BkAidevGatewayError(f"{url} answered with a body that is not JSON") from exc
 
         return structure_gateway_model_list(payload)
-
-    def _build_headers(self) -> dict[str, str]:
-        """Build the headers every gateway request carries."""
-        return {BKAPI_AUTHORIZATION_HEADER: json.dumps({"access_token": self._access_token}, separators=(",", ":"))}

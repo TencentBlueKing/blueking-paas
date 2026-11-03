@@ -4346,3 +4346,225 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: false
         descriptionEn: Get gateway resource permission apply record detail
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/:
+    get:
+      operationId: sys_list_cloud_api_gateways
+      description: 应用态获取网关列表
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateways with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/resources/:
+    get:
+      operationId: sys_list_cloud_api_gateway_apis
+      description: 应用态获取网关下的接口列表（含当前应用的权限状态）
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/resources/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateway APIs with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/apply/:
+    post:
+      operationId: sys_apply_cloud_api_permission
+      description: 应用态申请网关接口权限
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      - in: path
+        name: gateway_name
+        schema:
+          type: string
+        required: true
+        description: 网关名称
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/{gateway_name}/permissions/apply/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Apply gateway API permission with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/gateways/permissions/apply-records/:
+    get:
+      operationId: sys_list_cloud_api_permission_apply_records
+      description: 应用态查询网关接口权限申请记录
+      tags:
+      - 网关 API
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/gateways/permissions/apply-records/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List gateway API permission apply records
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/:
+    get:
+      operationId: sys_list_mcp_servers
+      description: 应用态获取 MCP Server 列表
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List MCP servers with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply/:
+    post:
+      operationId: sys_apply_mcp_server_permission
+      description: 应用态申请 MCP Server 权限
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Apply MCP server permission with system API credentials
+  /system/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply-records/:
+    get:
+      operationId: sys_list_mcp_server_permission_apply_records
+      description: 应用态查询 MCP Server 权限申请记录
+      tags:
+      - MCP Server
+      parameters:
+      - in: path
+        name: app_code
+        schema:
+          type: string
+        required: true
+        description: 应用 ID
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /{env.BKPAAS_SUB_PATH}backend/sys/api/cloudapi_v2/bkapps/applications/{app_code}/mcp-servers/permissions/apply-records/
+          matchSubpath: false
+          timeout: 30
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: List MCP server permission apply records

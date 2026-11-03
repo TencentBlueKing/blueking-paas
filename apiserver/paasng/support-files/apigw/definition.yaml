@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.10
-  title: "Add system APIs for AIDEV to query AI Agent app info, repo branches, add-ons, and manage processes."
-  comment: "Add sys_get_app_info, sys_get_repo_branches, sys_get_service_instance_by_module, sys_list_processes and sys_update_process for AI Agent applications."
+  version: 1.4.11
+  title: "Add system APIs for gateways and MCP servers."
+  comment: "Add 7 app-level system APIs under sys/api/cloudapi_v2."
 
 stages:
   - name: "prod"

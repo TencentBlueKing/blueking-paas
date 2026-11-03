@@ -15,9 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from paas_service.base_vendor import ArgumentInvalidError, InstanceData, OperationFailed
 from vendor.cluster_tag_selector import ClusterTagSelector
 from vendor.models import Cluster as ClusterModel
@@ -74,6 +75,37 @@ class TestClusterTagSelector:
 
 @pytest.mark.django_db
 class TestProviderTaggedCluster:
+    @pytest.fixture(autouse=True)
+    def mock_alive(self):
+        with patch("vendor.provider.Client.alive", return_value=True) as mocked:
+            yield mocked
+
+    @pytest.mark.parametrize("dead_error", [None, requests.ConnectionError("refused")])
+    def test_skip_unhealthy_cluster(self, dead_error):
+        create_db_cluster("dead", tags=[("usage", "ai_agent")])
+        healthy = create_db_cluster("healthy", tags=[("usage", "ai_agent")])
+
+        def make_client(cluster):
+            client = MagicMock()
+            if cluster.host != healthy.host and dead_error:
+                client.alive.side_effect = dead_error
+            else:
+                client.alive.return_value = cluster.host == healthy.host
+            return client
+
+        provider = Provider(cluster_selector={"match_tags": ["usage=ai_agent"]})
+        with patch("vendor.provider.Client.from_cluster", side_effect=make_client):
+            for _ in range(5):
+                assert provider.select_tagged_cluster(provider.get_cluster_tag_selector()) == healthy
+
+    def test_raises_when_all_clusters_unhealthy(self, mock_alive):
+        create_db_cluster("dead", tags=[("usage", "ai_agent")])
+        mock_alive.return_value = False
+
+        provider = Provider(cluster_selector={"match_tags": ["usage=ai_agent"]})
+        with pytest.raises(OperationFailed, match="no available cluster matches tags"):
+            provider.select_tagged_cluster(provider.get_cluster_tag_selector())
+
     def test_selector_disabled_when_match_tags_empty(self):
         assert Provider().get_cluster_tag_selector() is None
         assert Provider(cluster_selector={"match_tags": []}).get_cluster_tag_selector() is None

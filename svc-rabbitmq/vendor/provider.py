@@ -24,6 +24,7 @@ from django.conf import settings
 from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData, OperationFailed
 from paas_service.utils import WRItemList
 from pydantic import ValidationError
+from requests.exceptions import RequestException
 
 from .client import Client
 from .cluster_tag_selector import ClusterTagSelector
@@ -314,11 +315,18 @@ class Provider(BaseProvider):
         return selector
 
     def select_tagged_cluster(self, selector: ClusterTagSelector) -> ClusterModel:
-        """从数据库中启用的集群里随机选择一个拥有全部指定标签的集群"""
+        """从数据库中启用的集群里随机选择一个拥有全部指定标签且探活通过的集群"""
         db_clusters = selector.filter(ClusterModel.objects.filter(enable=True).prefetch_related("tags"))
-        if not db_clusters:
-            raise OperationFailed(f"no available cluster matches tags: {sorted(selector.match_tags)}")
-        return random.choice(db_clusters)
+        random.shuffle(db_clusters)
+        for db_cluster in db_clusters:
+            try:
+                if Client.from_cluster(self.to_runtime_cluster(db_cluster)).alive():
+                    return db_cluster
+                logger.warning("skip unhealthy cluster, cluster_pk=%s", db_cluster.pk)
+            except RequestException:
+                logger.warning("skip unreachable cluster, cluster_pk=%s", db_cluster.pk, exc_info=True)
+
+        raise OperationFailed(f"no available cluster matches tags: {sorted(selector.match_tags)}")
 
     @staticmethod
     def to_runtime_cluster(db_cluster: ClusterModel) -> Cluster:

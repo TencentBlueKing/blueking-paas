@@ -29,7 +29,7 @@ from requests.exceptions import RequestException
 from .client import Client
 from .cluster_tag_selector import ClusterTagSelector
 from .clusters import Cluster
-from .constants import DEFAULT_STREAM_PORT
+from .constants import DEFAULT_STREAM_PORT, ClusterSource
 from .helper import InstanceHelper, Version
 from .models import Cluster as ClusterModel
 from .models import InstanceBill, LimitPolicy, UserPolicy
@@ -424,9 +424,11 @@ class Provider(BaseProvider):
                 logger.info("selected rabbitmq cluster by tags, cluster_pk=%s", db_cluster.pk)
                 cluster = self.to_runtime_cluster(db_cluster)
                 context["cluster_pk"] = db_cluster.pk
+                context["cluster_source"] = ClusterSource.DB
             else:
                 cluster = self.pick_cluster()
                 context["cluster_pk"] = self.resolve_cluster_pk(cluster)
+                context["cluster_source"] = ClusterSource.PLAN
 
             if context["cluster_pk"] is None:
                 logger.warning(
@@ -463,8 +465,11 @@ class Provider(BaseProvider):
             plugin.on_delete()
 
     def get_instance_cluster(self, context: "dict") -> Cluster:
-        """获取实例所在的集群，按标签选择的实例使用创建时记录的 cluster_pk 定位集群"""
-        if not self.get_cluster_tag_selector():
+        """根据创建时记录的集群来源定位实例所在集群，不依赖当前方案配置，避免方案配置变更后删错集群
+
+        未记录来源的存量实例均由方案配置创建，沿用 pick_cluster
+        """
+        if context.get("cluster_source") != ClusterSource.DB:
             return self.pick_cluster()
 
         cluster_pk = context.get("cluster_pk")

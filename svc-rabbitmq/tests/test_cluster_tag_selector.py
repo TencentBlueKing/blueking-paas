@@ -21,6 +21,7 @@ import pytest
 import requests
 from paas_service.base_vendor import ArgumentInvalidError, InstanceData, OperationFailed
 from vendor.cluster_tag_selector import ClusterTagSelector
+from vendor.constants import ClusterSource
 from vendor.models import Cluster as ClusterModel
 from vendor.models import ClusterTag, InstanceBill
 from vendor.provider import Provider
@@ -40,6 +41,32 @@ def create_db_cluster(name, tags=(), enable=True, extra=None) -> ClusterModel:
     )
     for key, value in tags:
         ClusterTag.objects.create(instance=cluster, key=key, value=value)
+    return cluster
+
+
+PLAN_CLUSTER_CONFIG = {
+    "host": "plan.example.com",
+    "port": 5672,
+    "management_api": "http://plan.example.com:15672",
+    "admin": "admin",
+    "password": "secret",
+    "version": "3.9.0",
+}
+
+
+def create_bill(context: dict) -> InstanceBill:
+    bill = InstanceBill.objects.create(name="app", action="create")
+    bill.set_context(context)
+    bill.save()
+    return bill
+
+
+def delete_and_get_cluster(provider: Provider, bill: InstanceBill):
+    instance_data = InstanceData(credentials={}, config={"bill": bill.uuid.hex})
+    with patch.object(Provider, "delete_instance") as mocked_delete:
+        provider.delete(instance_data)
+
+    _, cluster, _ = mocked_delete.call_args.args
     return cluster
 
 
@@ -141,27 +168,45 @@ class TestProviderTaggedCluster:
 
         _, _, context, cluster = mocked_create.call_args.args
         assert context["cluster_pk"] == matched.pk
+        assert context["cluster_source"] == ClusterSource.DB
         assert cluster.host == matched.host
 
-    def test_delete_uses_cluster_recorded_in_bill(self):
+    def test_create_records_plan_source(self):
+        with patch.object(Provider, "create_instance") as mocked_create:
+            Provider(**PLAN_CLUSTER_CONFIG).create({"engine_app_name": "app"})
+
+        _, _, context, _ = mocked_create.call_args.args
+        assert context["cluster_source"] == ClusterSource.PLAN
+
+    @pytest.mark.parametrize(
+        "plan_config",
+        [
+            {"cluster_selector": {"match_tags": ["usage=ai_agent"]}},
+            # 创建后方案移除了 cluster_selector 并改为方案集群，仍应删除创建时所在的集群
+            PLAN_CLUSTER_CONFIG,
+            {"cluster_selector": {"match_tags": []}},
+        ],
+    )
+    def test_delete_db_source_uses_recorded_cluster(self, plan_config):
         create_db_cluster("other", tags=[("usage", "ai_agent")])
         recorded = create_db_cluster("recorded", tags=[("usage", "ai_agent")])
-        bill = InstanceBill.objects.create(name="app", action="create")
-        bill.set_context({"cluster_pk": recorded.pk})
-        bill.save()
+        bill = create_bill({"cluster_pk": recorded.pk, "cluster_source": ClusterSource.DB})
 
-        provider = Provider(cluster_selector={"match_tags": ["usage=ai_agent"]})
-        instance_data = InstanceData(credentials={}, config={"bill": bill.uuid.hex})
-        with patch.object(Provider, "delete_instance") as mocked_delete:
-            provider.delete(instance_data)
-
-        _, cluster, _ = mocked_delete.call_args.args
+        cluster = delete_and_get_cluster(Provider(**plan_config), bill)
         assert cluster.host == recorded.host
 
-    def test_delete_raises_when_cluster_missing(self):
-        bill = InstanceBill.objects.create(name="app", action="create")
+    def test_delete_db_source_raises_when_cluster_missing(self):
+        bill = create_bill({"cluster_pk": 404, "cluster_source": ClusterSource.DB})
 
-        provider = Provider(cluster_selector={"match_tags": ["usage=ai_agent"]})
-        instance_data = InstanceData(credentials={}, config={"bill": bill.uuid.hex})
         with pytest.raises(OperationFailed, match="cluster of instance not found"):
-            provider.delete(instance_data)
+            Provider().delete(InstanceData(credentials={}, config={"bill": bill.uuid.hex}))
+
+    @pytest.mark.parametrize("context", [{}, {"cluster_pk": None, "cluster_source": ClusterSource.PLAN}])
+    def test_delete_plan_source_ignores_new_selector(self, context):
+        """存量方案后续新增了 cluster_selector，方案集群创建的实例仍按方案集群删除"""
+        create_db_cluster("tagged", tags=[("usage", "ai_agent")])
+        bill = create_bill(context)
+        provider = Provider(cluster_selector={"match_tags": ["usage=ai_agent"]}, **PLAN_CLUSTER_CONFIG)
+
+        cluster = delete_and_get_cluster(provider, bill)
+        assert cluster.host == PLAN_CLUSTER_CONFIG["host"]

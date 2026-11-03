@@ -30,6 +30,7 @@ from app_spark_api.agent.runtime.model_access import (
 from app_spark_api.infras.bk_access_token import UserCredential, UserCredentialType
 
 APP_SECRET = "app-secret-value"
+TOKEN_APP_SECRET = "pub-secret-value"
 AUTH_API_URL = "http://apigw.example.com/auth_api/token/"
 SSM_URL = "https://bkssm.example.com/api/v1/auth/access-tokens"
 CREDENTIAL = UserCredential(type=UserCredentialType.BK_TICKET, value="login-cookie", username="alice")
@@ -47,6 +48,8 @@ def bkaidev_settings(settings):
     settings.AUTH_ENV_NAME = "test"
     settings.APP_CODE = "bk-app-spark"
     settings.APP_SECRET = APP_SECRET
+    settings.SANDBOX_APP_CODE = "bk-app-spark-pub"
+    settings.SANDBOX_APP_SECRET = TOKEN_APP_SECRET
     return settings
 
 
@@ -95,8 +98,8 @@ async def test_bk_ticket_site_exchanges_at_token_auth_endpoint(bkaidev_settings,
     (request,) = token_requests
     assert str(request.url) == AUTH_API_URL
     payload = json.loads(request.content)
-    assert payload["app_code"] == "bk-app-spark"
-    assert payload["app_secret"] == APP_SECRET
+    assert payload["app_code"] == "bk-app-spark-pub"
+    assert payload["app_secret"] == TOKEN_APP_SECRET
     assert payload["env_name"] == "test"
     assert payload["bk_ticket"] == "login-cookie"
     assert payload["need_new_token"] == 0
@@ -114,6 +117,8 @@ async def test_bk_token_site_exchanges_at_token_auth_endpoint(bkaidev_settings, 
     assert token == "same-token"
     (request,) = token_requests
     assert str(request.url) == SSM_URL
+    assert request.headers["X-BK-APP-CODE"] == "bk-app-spark-pub"
+    assert request.headers["X-BK-APP-SECRET"] == TOKEN_APP_SECRET
     assert json.loads(request.content) == {
         "grant_type": "authorization_code",
         "id_provider": "bk_login",
@@ -139,16 +144,27 @@ async def test_bkaidev_without_a_login_is_refused(bkaidev_settings, token_transp
     assert token_requests == []
 
 
-async def test_incomplete_bkaidev_settings_are_a_configuration_error(
+async def test_the_platform_app_identity_never_reaches_the_token_service(
     bkaidev_settings, token_transport, token_requests
 ):
-    # app_secret 只认顶层 APP_SECRET，嵌套配置已经没有这份字段。
-    bkaidev_settings.APP_SECRET = ""
+    """换出来的票会进 Runtime，它能调的是签发应用的全部授权，所以签发应用不能是本服务自己。"""
+    await fetch_bkaidev_access_token(CREDENTIAL, transport=token_transport)
+
+    (request,) = token_requests
+    assert json.loads(request.content)["app_code"] == request.headers["X-BK-APP-CODE"] == "bk-app-spark-pub"
+    assert APP_SECRET not in request.content.decode()
+    assert APP_SECRET not in request.headers.values()
+
+
+@pytest.mark.parametrize("name", ["SANDBOX_APP_CODE", "SANDBOX_APP_SECRET"])
+async def test_a_missing_token_app_is_a_configuration_error(bkaidev_settings, token_transport, token_requests, name):
+    # APP_CODE / APP_SECRET 仍配着，也不能拿来顶替：那样换出来的票带着本服务的全部授权进 Runtime。
+    setattr(bkaidev_settings, name, "")
 
     # Reported even without a login: the operator has to fix this, not the user.
     with pytest.raises(ModelAccessConfigurationError) as exc_info:
         await fetch_bkaidev_access_token(None, transport=token_transport)
-    assert "APP_SECRET" in str(exc_info.value)
+    assert name in str(exc_info.value)
     assert token_requests == []
 
 

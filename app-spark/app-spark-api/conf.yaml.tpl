@@ -5,9 +5,14 @@
 # DEBUG: false
 # ALLOWED_HOSTS: ['*']
 
-## 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对，APP_SECRET 不进 Runtime
+## 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、开发者中心等）都用这一对，APP_SECRET 不进 Runtime
 # APP_CODE: ''
 # APP_SECRET: ''
+
+## 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
+## 目前该应用只应包含 AIDEV 相关的大模型调用权限，AGENT_MODEL_SOURCE 为 bkaidev 时必填
+# SANDBOX_APP_CODE: ''
+# SANDBOX_APP_SECRET: ''
 
 ## 国际化
 # LANGUAGE_CODE: zh-hans

@@ -81,7 +81,7 @@ def bkaidev_settings(settings):
     settings.AGENT_MODEL_SOURCE = "bkaidev"
     settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "deepseek-v4-pro"}
     settings.BK_API_URL_TMPL = "https://{api_name}.apigw.example.com"
-    settings.APIGW_ENVIRONMENT = "prod"
+    settings.BKAIDEV_APIGW_ENVIRONMENT = "prod"
     settings.BKAUTH_BACKEND_TYPE = "bk_token"
     settings.TOKEN_AUTH_ENDPOINT = SSM_URL
     settings.APP_CODE = "bk-app-spark"

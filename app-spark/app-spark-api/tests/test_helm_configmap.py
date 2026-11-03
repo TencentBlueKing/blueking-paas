@@ -83,6 +83,8 @@ def test_null_groups_and_values_are_omitted():
         ("repoServer", {"type": "forgejo", "org": "app-spark"}, "REPO_SERVER"),
         ("bkAuth.tokenAuthEndpoint", "https://bkssm.example.com/api/v1/auth/access-tokens", "TOKEN_AUTH_ENDPOINT"),
         ("bkAuth.authEnvName", "test", "AUTH_ENV_NAME"),
+        ("bkpaasApigwName", "paasv3", "BKPAAS_APIGW_NAME"),
+        ("bkpaasUrl", "https://bkpaas.example.com", "BKPAAS_URL"),
     ],
 )
 def test_explicit_values_survive_dynaconf(monkeypatch, key, value, setting):

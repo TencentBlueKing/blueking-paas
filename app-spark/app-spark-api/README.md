@@ -185,7 +185,8 @@ AGENT_CONTEXT_STORAGE:
 AGENT_MODEL_SOURCE: bkaidev
 ## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
 # TOKEN_AUTH_ENDPOINT: ...
-## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT 拼接，
+## 后者不填时用 APIGW_ENVIRONMENT；
 ## app 身份用 APP_CODE / APP_SECRET。
 ## default_model_id 是第一顺位的默认模型，默认 deepseek-v4-flash；不在模型列表里时顺延到列表第一个。
 ## available_models 是模型列表提供给用户选择的模型 ID 或通配模式，顺序即展示顺序；为空时不过滤。
@@ -208,7 +209,7 @@ AGENT_MODEL_SOURCE: bkaidev
 活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
 `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
-`{BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
+`{BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
 `APP_SPARK_AGENT_MODEL_BASE_URL`，模型列表的默认模型（`default_model_id`，见下文）注入为
 `APP_SPARK_AGENT_MODEL_ID`。
 
@@ -554,6 +555,68 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 反代的已知缺口：不支持 WebSocket（`Upgrade` 属逐跳首部，且 Django 的 `StreamingHttpResponse`
 代理不了）；请求体整份进内存，没有流式上传；HTML 正文里的根绝对路径（`/static/app.css`）仍会
 404——重定向那一类已经在响应里改写了，正文没有改写。
+
+## 发布到开发者中心
+
+项目所有者选一个版本，AppSpark 把它作为标准云原生应用（默认模块的源码来源为 AppSpark）发布到蓝鲸开发者中心的
+生产环境，拿到可以分享的访问地址。代码在 `app_spark_api/publication/` 和 `app_spark_api/infras/bk_paas/`。
+
+接口挂在 `/api/projects/{project_id}/publication/` 下，只对项目所有者可见，其他人一律 404：
+
+- `GET ""`：线上版本、进行中的任务（`task.stage` 依次为 `binding`、`packaging`、`uploading`、`deploying`）、
+  最近一次失败、还没看过的结果（`unseen_result`）、首次发布时预填的应用名称（`default_app_name`）和开发者中心页面链接。
+- `POST "deployments/"`，body `{"version_id": "app-spark/checkpoint/<run_id>", "app_name": "..."}`：
+  发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。已有任务进行中返回 409，版本不属于该项目
+  返回 400。首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，
+  可以改，先按开发者中心的规则过滤（只保留中文、字母、数字、连接符和下划线），过滤后为空返回 400
+  （`PUBLICATION_APP_NAME_INVALID`）。开发者中心那边创建失败（如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），
+  detail 原样是开发者中心的说明。
+- `DELETE "unseen-result/"`：确认看过结果，返回 204，结果页只展示一次。
+
+应用名称只作为首次发布的参数传给开发者中心，AppSpark 不保存，也不在本地查重。不传时取项目名称（`name` 只用于展示，
+可以重名），过滤后为空则用项目 ID。
+
+打包、上传、提交部署在 Celery 准备任务里做（`publication/tasks.py`），之后每 3 秒轮询一次部署结果，超过 15 分钟
+判失败。准备任务只做一次：worker 中途崩溃不重做；部署请求超时或返回 5xx 时不重发，提示用户到开发者中心查看部署记录。
+查询发布状态时顺带兜底：轮询停了就重新投递，发起 10 分钟还没提交部署就判失败。打包可能占住 worker 几分钟，
+`celery-worker` 的并发数要留出余量。
+
+版本暂时就是会话检查点的 tag，只认本项目会话留下的。打包用 `repository/git/source_packages.py`，构建方式固定为
+`buildpack`，项目源码里要带 `app_desc.yaml` 与 `.python-version`，开发者中心的 Python 构建工具要支持 heroku-24、
+Python 3.14 与 uv。
+
+### 配置
+
+开发者中心的系统 API 走蓝鲸 API 网关，以本服务的应用身份调用（不需要用户登录态）：
+
+```yaml
+APP_CODE: app-spark            # 本服务的应用身份，同时用于调用开发者中心
+APP_SECRET: ...
+BK_API_URL_TMPL: https://bkapi.example.com/api/{api_name}/
+APIGW_ENVIRONMENT: prod
+## 开发者中心网关单独用的环境名，不填时用 APIGW_ENVIRONMENT；bkaidev 对应的是 BKAIDEV_APIGW_ENVIRONMENT
+# BKPAAS_APIGW_ENVIRONMENT: stag
+## 开发者中心在 API 网关上的网关名，不同版本的开发者中心不一样，默认 bkpaas3
+BKPAAS_APIGW_NAME: bkpaas3
+## 开发者中心前端站点地址，只用来拼页面链接；不填时这些链接为空，发布本身不受影响
+BKPAAS_URL: https://bkpaas.example.com
+```
+
+### 在开发者中心开通权限
+
+缺了下面任何一件，发布都会失败并提示「AppSpark 未获得开发者中心授权，请联系管理员」：
+
+1. 把本服务的 app_code 注册为 AppSpark 系统角色（角色值 100）。在开发者中心 apiserver 里执行：
+
+   ```bash
+   python manage.py create_authed_app_user --bk_app_code app-spark --role 100
+   ```
+
+2. 在 API 网关上为本服务的 app_code 申请 `BKPAAS_APIGW_NAME` 指向的网关的资源权限，至少包括
+   `create_sys_app_spark_app`、`upload_ai_agent_source_package_via_link`、`sys_deploy_with_module`、
+   `sys_get_deployment_result`。
+
+用户在开发者中心把应用改成代码仓库部署后，应用就脱离 AppSpark 管理，之后的发布会失败并提示到开发者中心操作。
 
 ## 部署相关
 

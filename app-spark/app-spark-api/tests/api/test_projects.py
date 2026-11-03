@@ -32,6 +32,7 @@ from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
 from app_spark_api.core.projects import constants, services, tasks
 from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.publication.models import PublicationTask
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
 from tests.repository.storage.fake_bkrepo import SOURCE_PACKAGES_BUCKET
@@ -593,6 +594,22 @@ async def test_deleting_a_project_finishes_cleanup_before_hiding_it(aapi_client,
     blocked = await create_via_api(aapi_client, project_id="spark-demo", name="Another Demo")
     assert reused.status_code == HTTPStatus.CREATED
     assert (blocked.status_code, blocked.json()["code"]) == (HTTPStatus.CONFLICT, "PROJECT_ID_TAKEN")
+
+
+async def test_deleting_a_project_ends_its_running_publication(aapi_client, bk_user, deletion_provider):
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    task = await PublicationTask.objects.acreate(
+        project=project, kind="deployment", version_id="v1", operator="alice", stage="packaging"
+    )
+
+    response = await delete_via_api(aapi_client, "spark-demo")
+
+    # 任务结束后，准备任务不会再把已删除的项目部署上去。
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    await task.arefresh_from_db()
+    assert (task.status, task.error) == ("failed", "Project deleted")
 
 
 async def test_deleting_a_project_deletes_its_source_packages(aapi_client, bk_user, deletion_provider, fake_bkrepo):

@@ -17,20 +17,8 @@
 """Project 相关的失败。"""
 
 
-class ProjectConflictError(Exception):
-    """要创建的 Project 和已有数据撞上了。
-
-    分成下面两个子类，是因为调用方要做的事不一样：撞 ID 换个 ID 就行，撞名字得换名字。只给一个
-    「已存在」会把这个判断推给调用方去猜。
-    """
-
-
-class ProjectIdTakenError(ProjectConflictError):
+class ProjectIdTakenError(Exception):
     """这个 Project ID 已经被占用了。ID 是全局唯一的，不分租户。"""
-
-
-class ProjectNameTakenError(ProjectConflictError):
-    """同租户下已经有同名 Project 了。"""
 
 
 class ProjectDeletionError(Exception):

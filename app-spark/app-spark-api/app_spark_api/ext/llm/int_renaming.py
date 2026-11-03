@@ -97,7 +97,7 @@ async def generate_project_name(prompt: str, *, llm: LLMClient) -> str | None:
     """根据用户创建项目时的第一句话，让模型起一个简短的中文项目名。
 
     不保证一定能起出名字：描述看不出要做什么应用时返回 None，这是正常结果，调用方保留原名即可。
-    返回的名字只保证能放进 Project.name，不保证在租户内唯一，撞名由调用方处理。
+    返回的名字只保证能放进 Project.name；项目名称不要求唯一，可以直接使用。
 
     Example::
 

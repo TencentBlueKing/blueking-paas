@@ -113,10 +113,10 @@ def test_model_access_errors_say_who_has_to_fix_them(exc, status, code):
     assert SECRET not in response.content.decode()
 
 
-@pytest.mark.parametrize("name", ["PROJECT_ID_TAKEN", "PROJECT_NAME_TAKEN"])
+@pytest.mark.parametrize("name", ["PROJECT_ID_TAKEN", "PROJECT_DELETE_FAILED"])
 def test_error_code_instances_do_not_share_message_or_data(name):
-    first = getattr(error_codes, name).f(project_id="one", name="one").set_data({"one": True})
-    second = getattr(error_codes, name).f(project_id="two", name="two")
+    first = getattr(error_codes, name).f(project_id="one", category="one").set_data({"one": True})
+    second = getattr(error_codes, name).f(project_id="two", category="two")
     assert first.code == second.code == name
     assert "one" in first.message
     assert "two" in second.message

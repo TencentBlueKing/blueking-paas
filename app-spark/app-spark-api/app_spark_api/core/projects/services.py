@@ -38,10 +38,8 @@ from app_spark_api.agent.runtime.factory import get_agent_runtime_provider
 from app_spark_api.core.projects import constants
 from app_spark_api.core.projects.exceptions import (
     ProjectAlreadyDeletedError,
-    ProjectConflictError,
     ProjectDeletionError,
     ProjectIdTakenError,
-    ProjectNameTakenError,
 )
 from app_spark_api.core.projects.models import Project
 from app_spark_api.repository.git.services import adelete_project_repository, aprovision_project_repository
@@ -70,15 +68,14 @@ async def create_project(
     """建一个 Project，owner 与 creator 都记为 ``owner``。
 
     :param project_id: 项目 ID，必须已经按 ``PROJECT_ID_PATTERN`` 校验过。
-    :param name: 项目名称。
+    :param name: 项目名称，不要求唯一。
     :param owner: 建项目的用户 pk。
     :param tenant_id: 项目所属租户。
     :param initial_prompt: 从一句话创建时的那句话；手动创建时留空。
     :return: 已经落库的 Project。
     :raises ProjectIdTakenError: ID 已被占用。
-    :raises ProjectNameTakenError: 同租户下已有同名项目。
     """
-    await _reject_taken(project_id=project_id, name=name, tenant_id=tenant_id)
+    await _reject_id_taken(project_id)
 
     try:
         project = await sync_to_async(_insert)(
@@ -89,9 +86,9 @@ async def create_project(
             initial_prompt=initial_prompt,
         )
     except IntegrityError:
-        # 上面查过了还是撞，那就只有一种情况：在检查和插入之间有人抢先把同一个 ID 或名称建成了。
-        # 唯一约束是这里真正的保证，前面那次检查只负责把话说清楚。
-        await _reject_taken(project_id=project_id, name=name, tenant_id=tenant_id)
+        # 上面查过了还是撞，那就只有一种情况：在检查和插入之间有人抢先把同一个 ID 建成了。
+        # 主键约束是这里真正的保证，前面那次检查只负责把话说清楚。
+        await _reject_id_taken(project_id)
         raise
 
     # 建仓在事务外：远端失败必须留下 Project 和 failed 状态，而不是把刚建成的行回滚掉。
@@ -106,6 +103,9 @@ async def create_project_from_prompt(*, content: str, owner: str, tenant_id: str
     这里发给 Agent：第一轮对话仍由客户端拿着返回的会话编号走 runs 接口，和手动建项目之后发的
     第一句话是同一条路径。会话也只建行、不拉 Runtime，那几十秒留给 runs 去付。
 
+    自动命名不在这里启动：它要用调用方请求里的用户登录态换 access_token，那只有 API 层拿得到。
+    调用方建完项目后应调用 ``tasks.start_int_renaming``。
+
     Example::
 
         created = await create_project_from_prompt(content="做一个番茄钟", owner=user.pk, tenant_id="default")
@@ -115,7 +115,7 @@ async def create_project_from_prompt(*, content: str, owner: str, tenant_id: str
     :param owner: 建项目的用户 pk。
     :param tenant_id: 项目所属租户。
     :return: 建好的 Project 与会话。
-    :raises ProjectConflictError: 连续几次生成的 ID 都已被占用。实际上不会发生。
+    :raises ProjectIdTakenError: 连续几次生成的 ID 都已被占用。实际上不会发生。
     """
     for attempt in range(1, constants.GENERATED_PROJECT_ID_MAX_ATTEMPTS + 1):
         project_id = generate_project_id()
@@ -127,15 +127,13 @@ async def create_project_from_prompt(*, content: str, owner: str, tenant_id: str
                 tenant_id=tenant_id,
                 initial_prompt=content,
             )
-        except ProjectConflictError:
-            # 名称就是 ID，所以撞名也只可能是有人手动建了一个恰好叫这个的项目，换一个 ID 即可。
+        except ProjectIdTakenError:
             if attempt == constants.GENERATED_PROJECT_ID_MAX_ATTEMPTS:
                 raise
             logger.warning("Generated project id %s is taken, generating another one", project_id)
             continue
         break
 
-    # TODO: 在这里触发后台的自动命名，它只改 name，不动 ID。
     conversation = await create_conversation(project, owner=owner)
     return PromptProjectCreation(project=project, conversation=conversation)
 
@@ -148,57 +146,30 @@ def generate_project_id() -> str:
     return f"{constants.GENERATED_PROJECT_ID_PREFIX}{suffix}"
 
 
-async def _reject_taken(*, project_id: str, name: str, tenant_id: str) -> None:
-    """ID 或名称已被占用就直接拒掉，并说清楚是哪一个。
+async def _reject_id_taken(project_id: str) -> None:
+    """ID 已被占用就直接拒掉。ID 是全局唯一的，不分租户，因此软删除的项目也仍占着它。
 
-    项目 ID 用 ``default_objects`` 查，因为软删除行仍占着主键。名称只查活跃项目：
-    软删除会把名称置空，同一租户可以重新使用原名称。
-
-    :raises ProjectIdTakenError: ID 已被占用。ID 是全局唯一的，不分租户。
-    :raises ProjectNameTakenError: 同租户下已有同名项目。
+    :raises ProjectIdTakenError: ID 已被占用。
     """
     if await Project.default_objects.filter(pk=project_id).aexists():
         raise ProjectIdTakenError(f"Project id {project_id} is already taken")
-
-    await _reject_name_taken(name=name, tenant_id=tenant_id)
-
-
-async def _reject_name_taken(*, name: str, tenant_id: str, exclude_project_id: str | None = None) -> None:
-    """同租户下已有其他活跃项目使用 ``name`` 就拒掉。
-
-    :param exclude_project_id: 不参与比较的项目，改名时传入它自己，免得把自己的名称当成冲突。
-    :raises ProjectNameTakenError: 同租户下已有同名项目。
-    """
-    qs = Project.objects.filter(tenant_id=tenant_id, name=name)
-    if exclude_project_id is not None:
-        qs = qs.exclude(pk=exclude_project_id)
-    if await qs.aexists():
-        raise ProjectNameTakenError(f"Project name {name} is already taken in tenant {tenant_id}")
 
 
 async def rename_project(project: Project, *, name: str) -> Project:
     """把 Project 改名为 ``name``。
 
-    改成当前名称不算冲突，直接原样返回。名称只影响展示：仓库等外部资源以项目 ID 命名，不需要同步。
+    名称只是展示用的标签，不要求唯一，改成当前名称也不算冲突，直接原样返回。名称只影响展示：
+    仓库等外部资源以项目 ID 命名，不需要同步。
 
     :param project: 要改名的 Project，调用方负责确认它对当前用户可见。
     :param name: 新名称，长度必须已经校验过。
     :return: 改名后的 Project，字段已从数据库刷新。
-    :raises ProjectNameTakenError: 同租户下已有其他同名项目。
     :raises ProjectAlreadyDeletedError: Project 在取出之后被并发删除了。
     """
     if name == project.name:
         return project
 
-    await _reject_name_taken(name=name, tenant_id=project.tenant_id, exclude_project_id=project.pk)
-
-    try:
-        changed = await Project.objects.arename(project.pk, name)
-    except IntegrityError:
-        # 理由同 `create_project`：检查和更新之间有人抢先占用了这个名称。
-        await _reject_name_taken(name=name, tenant_id=project.tenant_id, exclude_project_id=project.pk)
-        raise
-
+    changed = await Project.objects.arename(project.pk, name)
     if not changed:
         raise ProjectAlreadyDeletedError
 

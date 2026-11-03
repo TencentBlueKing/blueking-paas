@@ -29,8 +29,8 @@ from django.utils import timezone
 from app_spark_api.agent.conversations.entities import MAX_RUN_CONTENT_LENGTH
 from app_spark_api.agent.conversations.models import Conversation, ConversationNumber, ConversationUserMessage
 from app_spark_api.agent.runtime.exceptions import AgentResourceDeletionError
-from app_spark_api.core.projects import constants, services
-from app_spark_api.core.projects.models import Project
+from app_spark_api.core.projects import constants, services, tasks
+from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.repository.git.models import ProjectSourcePackage
 from tests.helpers import create_user
@@ -41,9 +41,7 @@ pytestmark = pytest.mark.django_db(transaction=True)
 PROJECTS_URL = "/api/projects/"
 
 
-async def make_project(
-    *, project_id: str, name: str | None, owner, tenant_id: str, is_deleted: bool = False
-) -> Project:
+async def make_project(*, project_id: str, name: str, owner, tenant_id: str, is_deleted: bool = False) -> Project:
     """Store a Project directly, bypassing the API under test.
 
     Async because these tests are: the sync ORM refuses to run inside a running event loop, and
@@ -148,7 +146,7 @@ async def test_a_taken_project_id_is_refused_even_from_another_tenant(aapi_clien
     assert "spark-demo" in response.json()["detail"]
 
 
-async def test_a_name_already_used_in_the_tenant_is_refused(aapi_client, bk_user):
+async def test_two_projects_may_share_a_name(aapi_client, bk_user):
     await make_project(
         project_id="taken-name",
         name="Spark Demo",
@@ -158,9 +156,8 @@ async def test_a_name_already_used_in_the_tenant_is_refused(aapi_client, bk_user
 
     response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
 
-    assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
-    assert "Spark Demo" in response.json()["detail"]
+    assert response.status_code == HTTPStatus.CREATED
+    assert (await Project.objects.aget(pk="spark-demo")).name == "Spark Demo"
 
 
 async def test_a_soft_deleted_project_still_holds_on_to_its_id(aapi_client, bk_user):
@@ -183,31 +180,20 @@ async def test_a_soft_deleted_project_still_holds_on_to_its_id(aapi_client, bk_u
     assert response.status_code == HTTPStatus.CONFLICT
 
 
-async def test_a_soft_deleted_project_releases_its_name(aapi_client, bk_user):
-    tenant_id = get_tenant(bk_user).id
-    await make_project(
-        project_id="deleted-demo",
-        name="Spark Demo",
-        owner=bk_user,
-        tenant_id=tenant_id,
-    )
-    await Project.objects.asoft_delete("deleted-demo")
-
-    response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
-
-    assert response.status_code == HTTPStatus.CREATED
-
-
-async def test_a_tenant_can_keep_multiple_soft_deleted_projects_without_names(bk_user):
+async def test_soft_deleted_projects_keep_their_names(bk_user):
     tenant_id = get_tenant(bk_user).id
 
-    await make_project(project_id="deleted-one", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
-    await make_project(project_id="deleted-two", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+    await make_project(project_id="deleted-one", name="One", owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+    await make_project(project_id="deleted-two", name="Two", owner=bk_user, tenant_id=tenant_id, is_deleted=True)
 
-    assert await Project.default_objects.filter(tenant_id=tenant_id, is_deleted=True, name=None).acount() == 2
+    names = {
+        project.id: project.name
+        async for project in Project.default_objects.filter(tenant_id=tenant_id, is_deleted=True)
+    }
+    assert names == {"deleted-one": "One", "deleted-two": "Two"}
 
 
-async def test_soft_delete_releases_name_only_once(bk_user):
+async def test_soft_delete_releases_nothing_and_reports_the_second_call(bk_user):
     tenant_id = get_tenant(bk_user).id
     await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
 
@@ -216,43 +202,7 @@ async def test_soft_delete_releases_name_only_once(bk_user):
 
     deleted = await Project.default_objects.aget(pk="spark-demo")
     assert deleted.is_deleted is True
-    assert deleted.name is None
-    # 第二次调用没有改到行，所以记下的仍是第一次删除前的名称，而不是被置空后的 NULL。
-    assert deleted.name_at_deletion == "Spark Demo"
-
-
-async def test_a_name_taken_after_the_check_is_still_reported_as_a_conflict(aapi_client, bk_user, monkeypatch):
-    """The window the up-front check cannot close, and why the insert still guards it.
-
-    Checking first only narrows the race, it does not remove it: two callers can both pass the
-    check and then both insert. Here the loser is simulated by having someone else's row appear
-    after the check has already passed. It has to come out as a 409 like any other duplicate --
-    the alternative is the unique constraint surfacing as a 500 for a request that is merely
-    unlucky rather than wrong.
-    """
-    real_insert = services._insert
-    tenant_id = get_tenant(bk_user).id
-
-    def insert_after_losing_the_race(**kwargs):
-        # Runs on the worker thread `create_project` hands `_insert` to, so the sync ORM is
-        # allowed here -- and the row is committed before the real insert is attempted, which
-        # is exactly the state the winner of a race would have left behind.
-        Project.objects.create(
-            id="faster-caller",
-            name="Spark Demo",
-            creator=bk_user.pk,
-            owner=bk_user.pk,
-            tenant_id=tenant_id,
-        )
-        return real_insert(**kwargs)
-
-    monkeypatch.setattr(services, "_insert", insert_after_losing_the_race)
-
-    response = await create_via_api(aapi_client, project_id="spark-demo", name="Spark Demo")
-
-    assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
-    assert "Spark Demo" in response.json()["detail"]
+    assert deleted.name == "Spark Demo"
 
 
 @pytest.mark.parametrize(
@@ -358,6 +308,117 @@ async def test_an_anonymous_caller_cannot_create_from_a_prompt(aanonymous_api_cl
     assert not await Project.default_objects.aexists()
 
 
+# --- automatic naming ------------------------------------------------------------------
+
+
+def int_renaming_url(project_id: str) -> str:
+    return f"{PROJECTS_URL}{project_id}/int-renaming/"
+
+
+async def test_creating_from_a_prompt_enqueues_the_automatic_naming(aapi_client, settings, monkeypatch):
+    settings.LLM_SOURCE = "fake"
+    enqueued = []
+    monkeypatch.setattr(
+        tasks.rename_project_from_prompt,
+        "apply_async",
+        lambda *, args: enqueued.append(args),
+    )
+
+    body = (await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")).json()
+
+    assert enqueued == [(body["project"]["id"], None)]
+    record = await ProjIntRenaming.objects.aget(project_id=body["project"]["id"])
+    assert record.status == constants.IntRenamingStatus.PENDING
+
+
+async def test_a_naming_failure_does_not_fail_creating_the_project(aapi_client, settings):
+    """Naming is a bonus; the project must survive a deployment that cannot reach a model."""
+    settings.LLM_SOURCE = "bkaidev"
+
+    response = await create_from_prompt_via_api(aapi_client, "做一个番茄钟小工具")
+
+    assert response.status_code == HTTPStatus.CREATED
+    record = await ProjIntRenaming.objects.aget(project_id=response.json()["project"]["id"])
+    assert record.status == constants.IntRenamingStatus.FAILED
+
+
+async def test_polling_reports_a_pending_renaming(aapi_client, bk_user):
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    await ProjIntRenaming.objects.acreate(project=project)
+
+    response = await aapi_client.get(int_renaming_url("spark-demo"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        "status": "pending",
+        "name": None,
+        "completed_at": None,
+        "error_at": None,
+        "error_msg": "",
+    }
+
+
+async def test_polling_reports_the_generated_name(aapi_client, bk_user):
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    await ProjIntRenaming.objects.acreate(project=project, name="番茄专注钟", completed_at=timezone.now())
+
+    body = (await aapi_client.get(int_renaming_url("spark-demo"))).json()
+
+    assert (body["status"], body["name"], body["error_at"]) == ("completed", "番茄专注钟", None)
+    assert body["completed_at"] is not None
+
+
+async def test_polling_reports_a_failure(aapi_client, bk_user):
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    await ProjIntRenaming.objects.acreate(
+        project=project, error_at=timezone.now(), error_msg="model refused the request"
+    )
+
+    body = (await aapi_client.get(int_renaming_url("spark-demo"))).json()
+
+    assert (body["status"], body["name"], body["error_msg"]) == ("failed", None, "model refused the request")
+    assert body["error_at"] is not None
+
+
+async def test_polling_a_project_without_a_naming_task_is_not_found(aapi_client, bk_user):
+    """Manually created projects never get a naming task."""
+    await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id)
+
+    response = await aapi_client.get(int_renaming_url("spark-demo"))
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()["code"] == "PROJECT_INT_RENAMING_NOT_FOUND"
+
+
+async def test_polling_an_invisible_project_is_not_found(aapi_client, bk_user):
+    tenant_id = get_tenant(bk_user).id
+    deleted = await make_project(
+        project_id="deleted-demo", name="Deleted Demo", owner=bk_user, tenant_id=tenant_id, is_deleted=True
+    )
+    await ProjIntRenaming.objects.acreate(project=deleted)
+    await make_project(project_id="other-owner", name="Other", owner=create_user(), tenant_id=tenant_id)
+
+    responses = [
+        await aapi_client.get(int_renaming_url(project_id))
+        for project_id in ("missing-demo", "deleted-demo", "other-owner")
+    ]
+
+    assert {response.status_code for response in responses} == {HTTPStatus.NOT_FOUND}
+    assert {response.json()["code"] for response in responses} == {"RESOURCE_NOT_FOUND"}
+
+
+async def test_an_anonymous_caller_cannot_poll_a_renaming(aanonymous_api_client):
+    response = await aanonymous_api_client.get(int_renaming_url("spark-demo"))
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+
+
 # --- listing ----------------------------------------------------------------------------
 
 
@@ -433,7 +494,7 @@ async def test_the_list_of_a_user_without_projects_is_empty_rather_than_missing(
 
 
 # --- renaming ---------------------------------------------------------------------------
-# 规则本身（冲突、并发、名称释放）在 tests/core/projects/test_services.py 里测，这里只覆盖 HTTP 映射。
+# 规则本身（同名、并发删除）在 tests/core/projects/test_services.py 里测，这里只覆盖 HTTP 映射。
 
 
 async def test_renaming_a_project_returns_it_with_the_new_name(aapi_client, bk_user):
@@ -445,22 +506,22 @@ async def test_renaming_a_project_returns_it_with_the_new_name(aapi_client, bk_u
     assert (response.json()["id"], response.json()["name"]) == ("spark-demo", "Spark Renamed")
 
 
-async def test_renaming_to_a_taken_name_is_a_conflict(aapi_client, bk_user):
+async def test_renaming_to_a_name_another_project_uses_works(aapi_client, bk_user):
     tenant_id = get_tenant(bk_user).id
     await make_project(project_id="other-demo", name="Taken", owner=bk_user, tenant_id=tenant_id)
     await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
 
     response = await rename_via_api(aapi_client, "spark-demo", name="Taken")
 
-    assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json()["code"] == "PROJECT_NAME_TAKEN"
-    assert "Taken" in response.json()["detail"]
-    assert (await Project.objects.aget(pk="spark-demo")).name == "Spark Demo"
+    assert response.status_code == HTTPStatus.OK
+    assert (await Project.objects.aget(pk="spark-demo")).name == "Taken"
 
 
 async def test_invisible_projects_cannot_be_renamed(aapi_client, bk_user):
     tenant_id = get_tenant(bk_user).id
-    await make_project(project_id="deleted-demo", name=None, owner=bk_user, tenant_id=tenant_id, is_deleted=True)
+    await make_project(
+        project_id="deleted-demo", name="Deleted Demo", owner=bk_user, tenant_id=tenant_id, is_deleted=True
+    )
     await make_project(project_id="other-owner", name="Other Owner", owner=create_user(), tenant_id=tenant_id)
     await make_project(project_id="other-tenant", name="Other Tenant", owner=bk_user, tenant_id="some-other-tenant")
 
@@ -512,7 +573,7 @@ async def test_an_anonymous_caller_cannot_rename_a_project(aanonymous_api_client
 # --- deleting ---------------------------------------------------------------------------
 
 
-async def test_deleting_a_project_finishes_cleanup_before_releasing_its_name(aapi_client, bk_user, deletion_provider):
+async def test_deleting_a_project_finishes_cleanup_before_hiding_it(aapi_client, bk_user, deletion_provider):
     tenant_id = get_tenant(bk_user).id
     await make_project(project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=tenant_id)
     counter = await ConversationNumber.objects.aget(project_id="spark-demo")
@@ -524,7 +585,7 @@ async def test_deleting_a_project_finishes_cleanup_before_releasing_its_name(aap
     assert response.content == b""
     assert deletion_provider.calls == [("spark-demo", [])]
     deleted = await Project.default_objects.aget(pk="spark-demo")
-    assert (deleted.is_deleted, deleted.name, deleted.name_at_deletion) == (True, None, "Spark Demo")
+    assert (deleted.is_deleted, deleted.name) == (True, "Spark Demo")
     counter = await ConversationNumber.objects.aget(project_id="spark-demo")
     assert counter.last_number == original_number
 
@@ -590,7 +651,7 @@ async def test_invisible_projects_have_identical_delete_responses(aapi_client, b
     tenant_id = get_tenant(bk_user).id
     await make_project(
         project_id="deleted-demo",
-        name=None,
+        name="Deleted Demo",
         owner=bk_user,
         tenant_id=tenant_id,
         is_deleted=True,

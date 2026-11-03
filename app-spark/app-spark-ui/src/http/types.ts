@@ -32,7 +32,7 @@ export type UserInfoResponse = AuthenticatedUserResponse | AnonymousUserResponse
 export interface ProjectCreateRequest {
   /** 全局唯一，2-20 个字符，小写字母开头，仅含小写字母、数字与连字符 */
   id: string;
-  /** 同租户内唯一，1-20 个字符 */
+  /** 不要求唯一，1-20 个字符 */
   name: string;
 }
 

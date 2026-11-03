@@ -49,7 +49,7 @@ uv run uvicorn app_spark_api.asgi:application --reload
 
 日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
 
-另开一个进程跑 Celery worker。它和 API 加载同一份 settings。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
+另开一个进程跑 Celery worker。它和 API 加载同一份 settings，自动命名任务在这里执行。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
 
 ```bash
 uv run celery -A app_spark_api.celery worker --loglevel=INFO
@@ -140,6 +140,13 @@ uv run python -m scripts.probe_gateway_thinking verify hy3                # 4. �
 名称暂时与 ID 相同，并建好第一个会话，返回 `{project, conversation}`。这句话会记在
 `Project.initial_prompt` 上留底，但本接口不发给 Agent，也不拉起 Runtime：客户端随后用返回的会话
 编号调 `.../conversations/{number}/runs/` 把它作为第一轮对话发出，之后与手动创建项目没有区别。
+
+创建成功后，本接口还会排一个 Celery 任务，用这句话请模型给项目起名（配置见上面的 `LLM_*`）。任务
+结果写在 `ProjIntRenaming` 里，客户端轮询：
+
+`GET /api/projects/{project_id}/int-renaming/` → `{status, name, completed_at, error_at, error_msg}`
+
+前端应用 `name` 前先确认页面上显示的仍是占位 ID，否则会把用户这期间手动改的名字盖掉。
 
 ## 驱动 Agent
 

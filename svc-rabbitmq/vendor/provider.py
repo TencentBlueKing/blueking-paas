@@ -16,15 +16,17 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import random
 from dataclasses import dataclass, field
-from typing import Dict, List, Type
+from typing import Dict, List, Optional, Type
 
 from django.conf import settings
-from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData
+from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData, OperationFailed
 from paas_service.utils import WRItemList
 from pydantic import ValidationError
 
 from .client import Client
+from .cluster_tag_selector import ClusterTagSelector
 from .clusters import Cluster
 from .constants import DEFAULT_STREAM_PORT
 from .helper import InstanceHelper, Version
@@ -231,6 +233,9 @@ class Provider(BaseProvider):
     # 开启后，实例凭证中会额外携带 stream 端口（应用侧为 RABBITMQ_STREAM_PORT）
     enable_stream: bool = False
     stream_port: int = DEFAULT_STREAM_PORT
+    # 集群标签选择器，格式为 {"match_tags": ["key=value", ...]}；
+    # 配置后从数据库中启用且拥有全部指定标签的集群里选择，忽略 plan 中的集群配置
+    cluster_selector: Dict | None = None
 
     def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []
@@ -293,6 +298,40 @@ class Provider(BaseProvider):
             return Cluster(**result.values)
         except ValidationError as e:
             raise ValueError(f"cluster 配置不正确: {e}")
+
+    def get_cluster_tag_selector(self) -> Optional[ClusterTagSelector]:
+        """获取 plan 配置中的集群标签选择器，未配置或 match_tags 为空时返回 None"""
+        if not self.cluster_selector:
+            return None
+
+        selector = ClusterTagSelector(self.cluster_selector)
+        if not selector.match_tags:
+            logger.warning(
+                "cluster_selector configured but match_tags is empty, fallback to plan clusters, selector=%s",
+                self.cluster_selector,
+            )
+            return None
+        return selector
+
+    def select_tagged_cluster(self, selector: ClusterTagSelector) -> ClusterModel:
+        """从数据库中启用的集群里随机选择一个拥有全部指定标签的集群"""
+        db_clusters = selector.filter(ClusterModel.objects.filter(enable=True).prefetch_related("tags"))
+        if not db_clusters:
+            raise OperationFailed(f"no available cluster matches tags: {sorted(selector.match_tags)}")
+        return random.choice(db_clusters)
+
+    @staticmethod
+    def to_runtime_cluster(db_cluster: ClusterModel) -> Cluster:
+        """将数据库中的集群转换为运行时的集群配置，TLS 配置存放在 extra.tls 中"""
+        return Cluster(
+            host=db_cluster.host,
+            port=db_cluster.port,
+            management_api=db_cluster.management_api,
+            admin=db_cluster.admin,
+            password=db_cluster.password,
+            version=db_cluster.version,
+            tls=(db_cluster.extra or {}).get("tls") or {},
+        )
 
     def create_instance(
         self, name: "str", bill: "InstanceBill", context: "dict", cluster: "Cluster"
@@ -372,8 +411,15 @@ class Provider(BaseProvider):
         bill = InstanceBill.objects.create(name=engine_app_name, action="create")
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
-            cluster = self.pick_cluster()
-            context["cluster_pk"] = self.resolve_cluster_pk(cluster)
+            if selector := self.get_cluster_tag_selector():
+                db_cluster = self.select_tagged_cluster(selector)
+                logger.info("selected rabbitmq cluster by tags, cluster_pk=%s", db_cluster.pk)
+                cluster = self.to_runtime_cluster(db_cluster)
+                context["cluster_pk"] = db_cluster.pk
+            else:
+                cluster = self.pick_cluster()
+                context["cluster_pk"] = self.resolve_cluster_pk(cluster)
+
             if context["cluster_pk"] is None:
                 logger.warning(
                     "cluster_pk resolve failed: host=%s port=%s management_api=%s",
@@ -408,6 +454,17 @@ class Provider(BaseProvider):
             plugin = cls(context=context, cluster=cluster, client=client, virtual_host=virtual_host)
             plugin.on_delete()
 
+    def get_instance_cluster(self, context: "dict") -> Cluster:
+        """获取实例所在的集群，按标签选择的实例使用创建时记录的 cluster_pk 定位集群"""
+        if not self.get_cluster_tag_selector():
+            return self.pick_cluster()
+
+        cluster_pk = context.get("cluster_pk")
+        db_cluster = ClusterModel.objects.filter(pk=cluster_pk).first() if cluster_pk else None
+        if not db_cluster:
+            raise OperationFailed(f"cluster of instance not found, cluster_pk={cluster_pk}")
+        return self.to_runtime_cluster(db_cluster)
+
     def delete(self, instance_data: "InstanceData"):
         """删除 RabbitMq 实例
 
@@ -426,8 +483,8 @@ class Provider(BaseProvider):
         bill = helper.get_bill()
         bill.action = "delete"
 
-        cluster = self.pick_cluster()
         with bill.log_context() as context:  # type: dict
+            cluster = self.get_instance_cluster(context)
             try:
                 self.delete_instance(context, cluster, instance_data)
             except Exception:

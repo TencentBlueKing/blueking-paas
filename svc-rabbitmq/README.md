@@ -89,6 +89,17 @@ Plan.objects.create(name="default", description="rabbitmq 实例", is_active=Tru
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 
+如需让某个方案使用专属集群，可以先在 admin 中录入集群（`Cluster`）并为其添加标签（`ClusterTag`），再在方案配置中通过 `cluster_selector` 按标签选择集群：
+
+```python
+config = {
+    # 从数据库中启用且同时拥有全部标签的集群里随机选择一个，此时会忽略方案中的 host、clusters 等集群配置
+    "cluster_selector": {"match_tags": ["usage=ai_agent"]},
+}
+```
+
+集群的 TLS 配置可以写在 `Cluster.extra` 的 `tls` 字段中，格式与方案配置中的 `tls` 相同。
+
 ### 5. 启动项目
 
 使用以下命令启动项目：

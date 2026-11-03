@@ -63,3 +63,6 @@ class ClientAction(StrStructuredEnum):
 
     # 仅供 AppSpark 使用
     CREATE_APP_SPARK_APP = EnumField("sysapi:create:app-spark-app", label=_("创建 AppSpark 应用"))
+
+    # 云 API 管理: 查询网关 / MCP Server 与其接口, 以应用身份申请权限并查询申请状态
+    MANAGE_CLOUD_API = EnumField("sysapi:manage:cloud-api", label=_("云 API 管理"))

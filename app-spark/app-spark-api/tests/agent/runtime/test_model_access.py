@@ -41,7 +41,7 @@ def bkaidev_settings(settings):
     settings.AGENT_MODEL_SOURCE = "bkaidev"
     settings.BKAIDEV_MODEL_CONFIG = {"default_model_id": "deepseek-v4-pro"}
     settings.BK_API_URL_TMPL = "https://bkapi.example.com/api/{api_name}/"
-    settings.APIGW_ENVIRONMENT = "prod"
+    settings.BKAIDEV_APIGW_ENVIRONMENT = "prod"
     settings.BKAUTH_BACKEND_TYPE = "bk_ticket"
     settings.TOKEN_AUTH_ENDPOINT = AUTH_API_URL
     settings.AUTH_ENV_NAME = "test"

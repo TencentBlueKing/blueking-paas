@@ -214,7 +214,7 @@ def build_gateway_base_url() -> str:
     :raises BkPaaSConfigurationError: 网关模板不含 {api_name}，或缺少环境、网关名。
     """
     tmpl = _require_setting("BK_API_URL_TMPL", settings.BK_API_URL_TMPL)
-    stage = _require_setting("APIGW_ENVIRONMENT", settings.APIGW_ENVIRONMENT)
+    stage = _require_setting("BKPAAS_APIGW_ENVIRONMENT", settings.BKPAAS_APIGW_ENVIRONMENT)
     api_name = _require_setting("BKPAAS_APIGW_NAME", settings.BKPAAS_APIGW_NAME)
 
     # format 遇到没用上的关键字参数不会报错，模板里没有 {api_name} 时会拼出少了网关名的地址，所以先显式检查。

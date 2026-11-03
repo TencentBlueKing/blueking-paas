@@ -35,7 +35,7 @@ from app_spark_api.infras.bk_paas import (
 )
 def test_gateway_base_url_uses_the_configured_gateway_name(settings, tmpl, expected):
     settings.BK_API_URL_TMPL = tmpl
-    settings.APIGW_ENVIRONMENT = "stag"
+    settings.BKPAAS_APIGW_ENVIRONMENT = "stag"
     settings.BKPAAS_APIGW_NAME = "paasv3"
 
     assert build_gateway_base_url() == expected

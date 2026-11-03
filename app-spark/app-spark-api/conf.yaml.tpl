@@ -154,8 +154,12 @@
 ## 例：https://bkapi.example.com/api/{api_name}/ 或 https://{api_name}.apigw.example.com
 # BK_API_URL_TMPL: ''
 
-## 调用网关时的环境名（stage），默认 prod
+## 调用网关时的环境名（stage），各网关没有单独配置时都用它，默认 prod
 # APIGW_ENVIRONMENT: prod
+
+## 各网关单独的环境名，例如 bkaidev 用 prod、开发者中心用 stag；不填时用 APIGW_ENVIRONMENT
+# BKAIDEV_APIGW_ENVIRONMENT: prod
+# BKPAAS_APIGW_ENVIRONMENT: stag
 
 ## 开发者中心在 API 网关上的网关名，发布到开发者中心时与 BK_API_URL_TMPL 拼出系统 API 地址，默认 bkpaas3
 # BKPAAS_APIGW_NAME: bkpaas3

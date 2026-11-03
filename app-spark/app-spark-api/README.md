@@ -185,7 +185,8 @@ AGENT_CONTEXT_STORAGE:
 AGENT_MODEL_SOURCE: bkaidev
 ## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
 # TOKEN_AUTH_ENDPOINT: ...
-## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT 拼接，
+## 后者不填时用 APIGW_ENVIRONMENT；
 ## app 身份用 APP_CODE / APP_SECRET。
 ## default_model_id 是第一顺位的默认模型，默认 deepseek-v4-flash；不在模型列表里时顺延到列表第一个。
 ## available_models 是模型列表提供给用户选择的模型 ID 或通配模式，顺序即展示顺序；为空时不过滤。
@@ -208,7 +209,7 @@ AGENT_MODEL_SOURCE: bkaidev
 活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
 `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
-`{BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
+`{BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
 `APP_SPARK_AGENT_MODEL_BASE_URL`，模型列表的默认模型（`default_model_id`，见下文）注入为
 `APP_SPARK_AGENT_MODEL_ID`。
 
@@ -593,6 +594,8 @@ APP_CODE: app-spark            # 本服务的应用身份，同时用于调用�
 APP_SECRET: ...
 BK_API_URL_TMPL: https://bkapi.example.com/api/{api_name}/
 APIGW_ENVIRONMENT: prod
+## 开发者中心网关单独用的环境名，不填时用 APIGW_ENVIRONMENT；bkaidev 对应的是 BKAIDEV_APIGW_ENVIRONMENT
+# BKPAAS_APIGW_ENVIRONMENT: stag
 ## 开发者中心在 API 网关上的网关名，不同版本的开发者中心不一样，默认 bkpaas3
 BKPAAS_APIGW_NAME: bkpaas3
 ## 开发者中心前端站点地址，只用来拼页面链接；不填时这些链接为空，发布本身不受影响

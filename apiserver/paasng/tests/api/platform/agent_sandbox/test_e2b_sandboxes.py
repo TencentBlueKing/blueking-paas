@@ -41,6 +41,7 @@ CREATE_URL = reverse("agent_sandbox.e2b.sandboxes.create")
 LIST_URL = reverse("agent_sandbox.e2b.sandboxes.list")
 DETAIL_URL = reverse("agent_sandbox.e2b.sandboxes.detail", kwargs={"sandbox_id": SANDBOX_ID})
 TIMEOUT_URL = reverse("agent_sandbox.e2b.sandboxes.timeout", kwargs={"sandbox_id": SANDBOX_ID})
+CONNECT_URL = reverse("agent_sandbox.e2b.sandboxes.connect", kwargs={"sandbox_id": SANDBOX_ID})
 
 
 @pytest.fixture()
@@ -158,6 +159,33 @@ class TestRetrieveAndDestroy:
         resp = e2b_client.post(TIMEOUT_URL, data={"timeout": 0}, format="json")
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+class TestConnect:
+    def test_returns_gateway_response(self, e2b_client):
+        """SDK 按 200 反序列化成沙箱详情，响应体不能被包装。"""
+        detail = {"sandboxID": SANDBOX_ID, "domain": "e2b.example.com", "envdAccessToken": "refreshed"}
+
+        with mock.patch.object(sandboxes, "connect_sandbox", return_value=detail) as connect:
+            resp = e2b_client.post(CONNECT_URL, data={"timeout": 600}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == detail
+        assert connect.call_args.args[1:] == (SANDBOX_ID, 600)
+
+    @pytest.mark.parametrize("body", [{}, {"timeout": 0}])
+    def test_requires_positive_timeout(self, e2b_client, body):
+        with mock.patch.object(sandboxes, "connect_sandbox") as connect:
+            resp = e2b_client.post(CONNECT_URL, data=body, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        connect.assert_not_called()
+
+    def test_missing_sandbox_is_404(self, e2b_client):
+        with mock.patch.object(sandboxes, "connect_sandbox", side_effect=E2BSandboxNotFound("gone")):
+            resp = e2b_client.post(CONNECT_URL, data={"timeout": 600}, format="json")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestErrorMapping:

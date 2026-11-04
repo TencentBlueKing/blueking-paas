@@ -83,6 +83,7 @@ class FakeGateway:
         self.created_payloads = []
         self.killed = []
         self.timeouts = []
+        self.connects = []
 
     def __call__(self, config):
         self.configs.append(config)
@@ -123,6 +124,11 @@ class FakeGateway:
     def set_timeout(self, sandbox_id, timeout):
         self.timeouts.append((sandbox_id, timeout))
         self._maybe_raise("set_timeout")
+
+    def connect_sandbox(self, sandbox_id, timeout):
+        self.connects.append((sandbox_id, timeout))
+        self._maybe_raise("connect_sandbox")
+        return dict(self.get_response)
 
     def _maybe_raise(self, method: str):
         if exc := self.errors.get(method):
@@ -345,3 +351,39 @@ class TestSetTimeout:
         sandboxes.set_sandbox_timeout(bk_app, SANDBOX_ID, 600)
 
         assert gateway.timeouts == [(SANDBOX_ID, 600)]
+
+
+class TestConnect:
+    def test_forwards_timeout_and_rewrites_address(self, gateway, bk_app):
+        """SDK 拿响应里的 domain 与令牌重建数据面连接，两者都必须是可用的新值。"""
+        _record(bk_app)
+        gateway.get_response = _create_response(envdAccessToken="refreshed-token")
+
+        resp = sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+        assert gateway.connects == [(SANDBOX_ID, 600)]
+        assert resp["domain"] == DATA_PLANE_ADDRESS
+        assert resp["envdAccessToken"] == "refreshed-token"
+
+    def test_other_application_is_not_found(self, gateway, bk_app, bk_app_full):
+        """归属不对的与不存在的不作区分，也不能续到别人的沙箱。"""
+        _record(bk_app_full)
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+        assert gateway.connects == []
+
+    def test_terminated_sandbox_is_not_found(self, gateway, bk_app):
+        _record(bk_app, status=E2BSandboxStatus.TERMINATED.value)
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)
+
+    def test_gateway_404_becomes_not_found(self, gateway, bk_app):
+        """SDK 靠 404 判断沙箱已被回收，需要重新创建。"""
+        _record(bk_app)
+        gateway.fail("connect_sandbox", E2BGatewayNotFound("gone"))
+
+        with pytest.raises(E2BSandboxNotFound):
+            sandboxes.connect_sandbox(bk_app, SANDBOX_ID, 600)

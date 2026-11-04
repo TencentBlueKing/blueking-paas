@@ -185,9 +185,13 @@ AGENT_CONTEXT_STORAGE:
 AGENT_MODEL_SOURCE: bkaidev
 ## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
 # TOKEN_AUTH_ENDPOINT: ...
+## 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
+## 目前该应用只应包含 AIDEV 相关的大模型调用权限，AGENT_MODEL_SOURCE 为 bkaidev 时必填
+# SANDBOX_APP_CODE: ...
+# SANDBOX_APP_SECRET: ...
 ## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT 拼接，
 ## 后者不填时用 APIGW_ENVIRONMENT；
-## app 身份用 APP_CODE / APP_SECRET。
+## 换票的 app 身份用 SANDBOX_APP_CODE / SANDBOX_APP_SECRET。
 ## default_model_id 是第一顺位的默认模型，默认 deepseek-v4-flash；不在模型列表里时顺延到列表第一个。
 ## available_models 是模型列表提供给用户选择的模型 ID 或通配模式，顺序即展示顺序；为空时不过滤。
 ## 每轮对话带的 model_id 只接受模型列表里有的。
@@ -206,8 +210,8 @@ AGENT_MODEL_SOURCE: bkaidev
 数据库密码）一律不进 Runtime，因为 Runtime 又会把环境交给模型写的应用。
 
 **模型的 access_token**：走 bkaidev 时，provider 在确定要新起 Runtime 的那一刻（持锁、确认没有
-活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
-`TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
+活着的 Runtime 之后）用当前用户的登录态加上换票应用的 `SANDBOX_APP_CODE` /
+`SANDBOX_APP_SECRET`，向 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
 `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
 `{BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
 `APP_SPARK_AGENT_MODEL_BASE_URL`，模型列表的默认模型（`default_model_id`，见下文）注入为
@@ -219,11 +223,18 @@ AGENT_MODEL_SOURCE: bkaidev
 服务在现有 token 仍有效时原样返回，所以新开会话不会把用户已在用的 token 废掉。已在跑的 Runtime
 继续对话时不会再换票。bkaidev 的 Runtime 拿不到 `app_secret`，也拿不到直连用的固定 key。
 
+**换票应用**：换票不用本服务的 `APP_CODE`，而是另一个专用应用（如 app-spark-pub）。网关按签发
+token 的应用决定这张票能调什么，用 `APP_CODE` 换出来的票会带着本服务调开发者中心（创建应用、发布）
+的授权进 Runtime。换票应用在网关上只申请 bkaidev LLM 的 `models` 和 `chat/completions`，不申请
+开发者中心，并在 bkaidev 里给它开通要用的模型。Runtime 里的票仍有这个应用被授权的全部资源，以后
+给它多批一个接口，这张票立刻就能用。开发者中心客户端和登录态校验仍用 `APP_CODE` / `APP_SECRET`。
+部署时先完成换票应用的注册、授权和模型开通，再切配置，否则换票和模型列表都会失败。
+
 **模型列表**：`GET /api/models/` 告诉前端可选哪些模型、不指定时用哪个（`default_model_id`）、
 平台是否允许用户切换（`allow_user_switch`）。bkaidev 来源下用当前用户换票，调网关 `GET .../llm/v1/models`
-取本应用可用的模型，剔除网关明确标记不能调工具的，再按 `available_models` 过滤和排序。每轮校验和
+取换票应用可用的模型，剔除网关明确标记不能调工具的，再按 `available_models` 过滤和排序。每轮校验和
 新起 Runtime 的默认模型都用这份列表。`default_model_id` 不在列表里时取列表第一个，列表为空时返回 503
-`MODEL_ACCESS_CONFIGURATION_ERROR`。网关的列表只跟应用有关，按应用在进程内缓存 5 分钟、所有用户共用，
+`MODEL_ACCESS_CONFIGURATION_ERROR`。网关的列表只跟换票应用有关，按换票应用在进程内缓存 5 分钟、所有用户共用，
 命中时不换票也不调网关；网关新开通或下线的模型最迟 5 分钟后可见。网关拿不到列表时返回 502
 `MODEL_CATALOG_UNAVAILABLE`，不返回空列表，失败也不缓存；个别读不了的模型卡片跳过并记 warning。
 每个模型只给 ID、名称、上下文窗口和是否支持图像输入：网关卡片只有这些，名称用 ID 代替。

@@ -123,9 +123,13 @@ externalRabbitmq:
 # 仅允许在初次部署时设置，部署后不要切换。
 enableMultiTenantMode: false
 loginFull: ""
-# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、换 access_token 等）都用这一对；appSecret 不进 Runtime。
+# 本服务在蓝鲸的应用身份，调用蓝鲸各服务（登录验票、开发者中心等）都用这一对；appSecret 不进 Runtime。
 appCode: ""
 appSecret: ""
+# 用于签发用户态 AccessToken。注意 AccessToken 会进入用户沙箱，因此需要确保该应用权限可控。
+# 目前该应用只应包含 AIDEV 相关的大模型调用权限，agent.modelSource 为 bkaidev 时必填
+# sandboxAppCode: ""
+# sandboxAppSecret: ""
 # 网关 API 访问地址模板，须含 {api_name}。bkaidev 的 LLM 基址从这里拼。
 # bkApiUrlTmpl: "https://bkapi.example.com/api/{api_name}/"
 # 调用网关时的环境名（stage），各网关没有单独配置时都用它。

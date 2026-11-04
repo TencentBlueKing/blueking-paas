@@ -229,6 +229,7 @@ def test_the_runtime_is_told_exactly_these_things_and_nothing_else(tmp_path):
 def test_only_allow_listed_variables_of_this_service_reach_the_runtime(tmp_path, monkeypatch):
     """本服务的环境里有平台自己的密钥，Runtime 又会把环境交给模型写的应用，所以只能按白名单放行。"""
     monkeypatch.setenv("APP_SPARK_API_APP_SECRET", "platform-secret")
+    monkeypatch.setenv("APP_SPARK_API_SANDBOX_APP_SECRET", "token-app-secret")
     monkeypatch.setenv("APP_SPARK_API_DATABASE_PASSWORD", "db-password")
     monkeypatch.setenv("SOME_UNRELATED_TOKEN", "unrelated")
     monkeypatch.setenv("UV_INDEX_PRIVATE_PASSWORD", "index-password")
@@ -241,7 +242,7 @@ def test_only_allow_listed_variables_of_this_service_reach_the_runtime(tmp_path,
     assert not any(name.startswith("APP_SPARK_API_") for name in env)
     assert "SOME_UNRELATED_TOKEN" not in env
     assert "UV_INDEX_PRIVATE_PASSWORD" not in env
-    for secret in ("platform-secret", "db-password", "index-password", FIXED_MODEL_KEY):
+    for secret in ("platform-secret", "token-app-secret", "db-password", "index-password", FIXED_MODEL_KEY):
         assert not any(secret in value for value in env.values())
     # What uv and the agent need to run at all still gets through.
     assert env["PATH"] == "/usr/bin"

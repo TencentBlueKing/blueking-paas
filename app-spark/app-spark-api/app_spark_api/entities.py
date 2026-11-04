@@ -22,6 +22,7 @@ conversations 各自定义一个字段一模一样的 `ErrorResponse`，除了�
 """
 
 from http import HTTPStatus
+from typing import Any
 
 from ninja import Field, Schema
 
@@ -31,6 +32,10 @@ class ErrorResponse(Schema):
 
     code: str = Field(description="稳定的业务错误码，调用方应按此字段判断错误类型")
     detail: str = Field(description="面向调用方的错误描述，可直接展示")
+    data: Any = Field(
+        None,
+        description="附加的结构化信息，多数错误没有。`VALIDATION_ERROR` 时是 `[{loc, msg, type}]`，逐条列出未通过校验的字段",
+    )
 
 
 # These errors are handled globally, including for operations that only declare

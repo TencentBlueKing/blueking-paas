@@ -5201,6 +5201,31 @@ msgstr "cannot update cluster components"
 msgid "无法获取集群状态"
 msgstr "Unable to retrieve cluster status"
 
+#: paasng/utils/error_codes.py:245
+msgid "无法删除集群 e2b 沙箱配置"
+msgstr "Unable to delete the e2b sandbox config of the cluster"
+
+#: paasng/plat_mgt/infras/clusters/views/e2b_configs.py:107
+#, python-brace-format
+msgid "集群上仍有 {} 个存活的 e2b 沙箱，请先停用配置，待存量沙箱全部销毁后再删除"
+msgstr ""
+"There are still {} live e2b sandboxes on the cluster, please disable the "
+"config first and delete it after all existing sandboxes are destroyed"
+
+#: paasng/plat_mgt/infras/clusters/serializers/e2b_configs.py:45
+msgid "数据面地址须为不带协议与路径的域名，如 e2b.example.com"
+msgstr ""
+"The data plane address must be a domain without scheme or path, e.g. e2b."
+"example.com"
+
+#: paasng/plat_mgt/infras/clusters/serializers/e2b_configs.py:58
+msgid "控制面地址必须以 http 或 https 开头"
+msgstr "The control plane URL must start with http or https"
+
+#: paasng/plat_mgt/infras/clusters/serializers/e2b_configs.py:67
+msgid "新建 e2b 沙箱配置时，api_key 必须提供"
+msgstr "api_key is required when creating the e2b sandbox config"
+
 #: paasng/utils/error_codes.py:235
 msgid "创建开发沙箱失败"
 msgstr "failed to create dev sandbox"

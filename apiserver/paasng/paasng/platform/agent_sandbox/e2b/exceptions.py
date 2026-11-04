@@ -45,7 +45,7 @@ class E2BClusterUnavailable(E2BError):
 
 
 class E2BClusterNotConfigured(E2BError):
-    """指定集群没有登记 e2b 配置，或配置已被停用"""
+    """指定集群没有登记 e2b 配置"""
 
 
 class E2BGatewayError(E2BError):

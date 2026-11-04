@@ -98,12 +98,12 @@ class TestGetClusterConfig:
         # 凭证以密文入库，读回时透明解密
         assert config.api_key == "e2b_real_gateway_key"
 
-    def test_rejects_disabled_config(self, e2b_config):
+    def test_returns_disabled_config(self, e2b_config):
+        """停用只影响新沙箱调度，存量沙箱仍要经配置访问网关。"""
         e2b_config.enabled = False
         e2b_config.save(update_fields=["enabled"])
 
-        with pytest.raises(E2BClusterNotConfigured):
-            get_e2b_cluster_config(CLUSTER_NAME_FOR_TESTING)
+        assert get_e2b_cluster_config(CLUSTER_NAME_FOR_TESTING).pk == e2b_config.pk
 
     def test_rejects_unregistered_cluster(self):
         with pytest.raises(E2BClusterNotConfigured):

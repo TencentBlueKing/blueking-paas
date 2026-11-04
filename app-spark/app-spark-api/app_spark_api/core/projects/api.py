@@ -41,9 +41,9 @@ from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.core.tenant.user import get_tenant
 from app_spark_api.entities import ERROR_RESPONSES
-from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.infras.accounts.credentials import get_user_credential
+from app_spark_api.utils.api_errors.error_codes import error_codes
 
 if TYPE_CHECKING:
     from django.http import HttpRequest

@@ -117,6 +117,17 @@ SYS_API_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "V1SysStructuredLogAPIView",
 }
 
+# Multi-editions specific start
+
+try:
+    from . import conf_ext
+
+    SYS_API_CHECKING_EXCLUDED_VIEWS |= set(conf_ext.SYS_API_CHECKING_EXCLUDED_VIEWS)
+except ImportError:
+    pass
+
+# Multi-editions specific end
+
 # Admin42 drf views' namespaces prefix, used to check if a view is an admin42 view
 ADMIN42_MODULE_NAMESPACES = (
     "paasng.plat_admin.admin42.views",

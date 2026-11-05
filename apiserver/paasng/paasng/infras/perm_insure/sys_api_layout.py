@@ -28,8 +28,8 @@ below:
 5. The url name of a `sys/api/` url must start with `sys.`, and the other urls must not.
 6. A module must not define both the `Sys` and non-`Sys` view classes.
 
-Any violation of the conventions above produces an error, which blocks the startup of the
-project. For the views that cannot follow the conventions (e.g. the deprecated views which
+Any violation of the conventions above produces an error by the Django system check
+framework. For the views that cannot follow the conventions (e.g. the deprecated views which
 have already been registered in APIGW), add them to `SYS_API_CHECKING_EXCLUDED_VIEWS` in
 `conf.py` to skip the checking.
 """

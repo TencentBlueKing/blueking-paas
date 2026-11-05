@@ -191,6 +191,7 @@ import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
 import McpServer from './comps/mcp-server.vue';
+import CallLogs from './comps/call-logs.vue';
 import { mapState } from 'vuex';
 
 export default {
@@ -199,6 +200,7 @@ export default {
     ApplyRecord,
     RenderApi,
     McpServer,
+    CallLogs,
   },
   mixins: [appBaseMixin],
   data() {
@@ -250,6 +252,7 @@ export default {
         { name: 'mcpServer', label: this.$t('MCP Server'), show: this.userFeature?.MCP_SERVER_API },
         { name: 'appPerm', label: this.$t('已申请的权限') },
         { name: 'applyRecord', label: this.$t('申请记录') },
+        { name: 'callLogs', label: this.$t('调用日志'), show: !this.isPlugin },
       ];
       return panels.filter(panel => panel.show === undefined || !!panel.show);
     },
@@ -268,6 +271,7 @@ export default {
         componentApi: 'RenderApi',
         appPerm: 'AppPerm',
         applyRecord: 'ApplyRecord',
+        callLogs: 'CallLogs',
       };
       return componentMap[this.active];
     },
@@ -281,10 +285,17 @@ export default {
     },
   },
   watch: {
-    $route() {
-      this.active = 'gatewayApi';
-      this.pageKey = +new Date();
-      this.isLoading = true;
+    $route(to, from) {
+      this.isPlugin = !!to.meta?.isGetAppInfo;
+      const nextTab = this.getRouteTab();
+      if (to.params.id !== from.params.id || to.name !== from.name) {
+        this.active = nextTab;
+        this.pageKey += 1;
+        this.isLoading = true;
+      } else if (this.active !== nextTab) {
+        this.active = nextTab;
+        this.comKey += 1;
+      }
     },
     curAppId(newVlaue) {
       if (newVlaue === this.appCode) {
@@ -296,12 +307,15 @@ export default {
   },
   created() {
     this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
-    const { tabActive } = this.$route.params;
-    if (tabActive) {
-      this.active = tabActive;
-    }
+    this.active = this.getRouteTab();
   },
   methods: {
+    getRouteTab() {
+      const { tab } = this.$route.query;
+      const { tabActive } = this.$route.params;
+      return [tab, tabActive].find(name => this.displayPanels.some(panel => panel.name === name)) || 'gatewayApi';
+    },
+
     toLink(type) {
       window.open(this.linkMap[type]);
     },
@@ -311,7 +325,10 @@ export default {
     },
 
     handleTabChange() {
-      this.comKey = +new Date();
+      // URL 已同步为当前页签时（如外部改 query.tab 触发），避免与 $route watcher 重复重建组件
+      if (this.$route.query.tab === this.active) return;
+      this.comKey += 1;
+      this.$router.replace({ query: { ...this.$route.query, tab: this.active } });
     },
 
     // 获取新令牌

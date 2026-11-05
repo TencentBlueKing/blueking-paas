@@ -134,6 +134,20 @@ uv run python -m scripts.probe_gateway_thinking verify hy3                # 4. �
 {"code": "PROJECT_ID_TAKEN", "detail": "Project id `demo` is already taken."}
 ```
 
+框架错误的原始信息一律不回显，只有请求参数校验失败（`VALIDATION_ERROR`，422）例外：它只描述调用方
+自己提交的内容。这时 `detail` 摘要前 3 条，`data` 列出全部：
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "detail": "Request validation failed: body.content: Field required",
+  "data": [{"loc": ["body", "content"], "msg": "Field required", "type": "missing"}]
+}
+```
+
+`loc` 是调用方发送时的位置：整个请求体就是一个 Schema 参数时，不含视图的参数名（ninja 默认会报
+`["body", "payload", "content"]`）。实现见 `utils/api_errors/hooks.py`。
+
 ## 从一句话创建项目
 
 `POST /api/projects/-/create-from-prompt/`（`{"content": "..."}`）：服务端生成项目 ID（`p-` 加 10 位），

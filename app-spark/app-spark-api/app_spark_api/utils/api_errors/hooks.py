@@ -99,9 +99,14 @@ def handle_validation_error(request: HttpRequest, exc: ValidationError, api: Nin
 def _summarize_validation_errors(errors: list[dict[str, Any]]) -> str:
     """Join ``{"loc", "msg"}`` errors into one sentence, e.g. ``body.content: Field required``.
 
-    Entries without a ``msg``, such as the ones ninja's pagination raises, are left to ``data``.
+    Entries without a ``msg``, such as the ones ninja's pagination raises, are left to ``data``;
+    one without a ``loc`` contributes its ``msg`` alone.
     """
-    parts = [f"{_format_error_loc(error.get('loc', ()))}: {error['msg']}" for error in errors if "msg" in error]
+    parts = [
+        f"{loc}: {error['msg']}" if (loc := _format_error_loc(error.get("loc", ()))) else error["msg"]
+        for error in errors
+        if "msg" in error
+    ]
     summary = "; ".join(parts[:_MAX_SUMMARIZED_VALIDATION_ERRORS])
     if len(parts) > _MAX_SUMMARIZED_VALIDATION_ERRORS:
         summary += f"; and {len(parts) - _MAX_SUMMARIZED_VALIDATION_ERRORS} more"

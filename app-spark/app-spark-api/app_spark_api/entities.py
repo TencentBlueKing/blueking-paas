@@ -22,9 +22,16 @@ conversations 各自定义一个字段一模一样的 `ErrorResponse`，除了�
 """
 
 from http import HTTPStatus
-from typing import Any
 
 from ninja import Field, Schema
+
+
+class ValidationErrorItem(Schema):
+    """一个未通过校验的请求参数。"""
+
+    loc: list[str | int] = Field(description='参数位置，首项是来源（body、query、path 等），如 `["body", "content"]`')
+    msg: str = Field(description="可展示的失败原因")
+    type: str = Field(description="pydantic 的错误类型，如 `missing`、`string_too_long`")
 
 
 class ErrorResponse(Schema):
@@ -32,9 +39,8 @@ class ErrorResponse(Schema):
 
     code: str = Field(description="稳定的业务错误码，调用方应按此字段判断错误类型")
     detail: str = Field(description="面向调用方的错误描述，可直接展示")
-    data: Any = Field(
-        None,
-        description="附加的结构化信息，多数错误没有。`VALIDATION_ERROR` 时是 `[{loc, msg, type}]`，逐条列出未通过校验的字段",
+    data: list[ValidationErrorItem] | None = Field(
+        None, description="只有 `VALIDATION_ERROR` 带：逐条列出未通过校验的参数，`detail` 只摘要前几条"
     )
 
 

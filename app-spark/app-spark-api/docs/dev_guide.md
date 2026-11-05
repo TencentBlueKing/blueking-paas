@@ -63,6 +63,20 @@ curl -s -b "bk_token=<浏览器里的值>" http://127.0.0.1:8000/api/projects/
 失败的响应统一是 `{"code": ..., "detail": ...}`，`code` 稳定、可以拿来分支，`detail` 可以直接展示给用户。配了
 `FORCE_SCRIPT_NAME` 时，路径前要加上这个前缀。
 
+框架错误的原始信息一律不回显，只有请求参数校验失败（`VALIDATION_ERROR`，422）例外：它只描述调用方
+自己提交的内容。这时 `detail` 摘要前 3 条，`data` 列出全部：
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "detail": "Request validation failed: body.content: Field required",
+  "data": [{"loc": ["body", "content"], "msg": "Field required", "type": "missing"}]
+}
+```
+
+`loc` 是调用方发送时的位置：整个请求体就是一个 Schema 参数时，不含视图的参数名（ninja 默认会报
+`["body", "payload", "content"]`）。实现见 `utils/api_errors/hooks.py`。
+
 ## 测试
 
 ```bash

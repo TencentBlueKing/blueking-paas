@@ -315,6 +315,15 @@ async def test_every_refused_field_is_reported(aapi_client):
     assert response.json()["detail"].endswith("; body.name: Field required")
 
 
+async def test_a_refused_pagination_parameter_is_located_in_the_query(aapi_client):
+    """Pagination arrives as one flattened Schema; the location is the query key the caller sent."""
+    response = await aapi_client.get(PROJECTS_URL, {"page": "first"})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["query", "page"]]
+    assert response.json()["detail"].startswith("Request validation failed: query.page: ")
+
+
 async def test_a_refused_path_parameter_is_located_in_the_path(aapi_client):
     response = await aapi_client.get(f"{PROJECTS_URL}Bad-Id/int-renaming/")
 

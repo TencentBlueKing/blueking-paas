@@ -23,6 +23,7 @@ from http import HTTPStatus
 
 import pytest
 from django.test import RequestFactory
+from ninja.errors import ValidationError
 
 from app_spark_api.agent.runtime import (
     AgentBusyError,
@@ -164,8 +165,6 @@ def test_handled_error_rolls_back_an_atomic_request(project):
 
 
 def test_a_validation_error_summarizes_a_few_failures_and_keeps_all_of_them_in_data():
-    from ninja.errors import ValidationError
-
     errors = [{"loc": ("body", "items", i, "name"), "msg": "Field required", "type": "missing"} for i in range(5)]
     response = api.on_exception(RequestFactory().get("/"), ValidationError(errors))
 
@@ -178,10 +177,22 @@ def test_a_validation_error_summarizes_a_few_failures_and_keeps_all_of_them_in_d
     assert len(body["data"]) == 5
 
 
+def test_a_validation_error_without_a_location_is_summarized_by_its_message():
+    response = api.on_exception(RequestFactory().get("/"), ValidationError([{"msg": "Pick a model first"}]))
+
+    assert json.loads(response.content)["detail"] == "Request validation failed: Pick a model first"
+
+
+def test_openapi_types_the_validation_errors_in_data():
+    schemas = json.loads(json.dumps(api.get_openapi_schema()))["components"]["schemas"]
+
+    assert set(schemas["ValidationErrorItem"]["required"]) == {"loc", "msg", "type"}
+    data = schemas["ErrorResponse"]["properties"]["data"]
+    assert {"$ref": "#/components/schemas/ValidationErrorItem"} in [option.get("items") for option in data["anyOf"]]
+
+
 def test_a_validation_error_without_messages_keeps_the_generic_detail():
     """ninja's own pagination raises entries with no `loc`/`msg`; they must not break the handler."""
-    from ninja.errors import ValidationError
-
     response = api.on_exception(RequestFactory().get("/"), ValidationError([{"cursor": "Invalid Cursor"}]))
 
     body = json.loads(response.content)

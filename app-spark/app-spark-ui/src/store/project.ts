@@ -7,6 +7,7 @@ import {
   closeConversation,
   createConversation,
   getConversation,
+  getProjectIntRenaming,
   listConversations,
   listHistory,
   listUiEvents,
@@ -15,6 +16,7 @@ import {
 import type {
   ConversationHistoryRecord,
   ConversationResponse,
+  ProjectIntRenamingResponse,
   RuntimeStateResponse,
 } from '@/http/types';
 import { ApiErrorCode, isApiError } from '@/http/error-codes';
@@ -32,18 +34,23 @@ import {
 import { useModelCatalogStore } from '@/store/model-catalog';
 
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
+export type ProjectIntRenamingStatus = 'idle' | ProjectIntRenamingResponse['status'];
 
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
 /** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
 const CATCH_UP_INTERVAL_MS = 2000;
 /** 追赶接口连续失败这么多次就停，并把输入框放开。成功一次就重新计数。 */
 const MAX_CATCH_UP_FAILURES = 3;
+const INT_RENAMING_POLL_INTERVAL_MS = 2000;
+const INT_RENAMING_MAX_DURATION_MS = 30000;
 
 const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const useProjectStore = defineStore('project', () => {
   const modelCatalogStore = useModelCatalogStore();
   const projectId = ref('');
+  const projectName = ref('');
+  const intRenamingStatus = ref<ProjectIntRenamingStatus>('idle');
   const conversationNumber = ref<number | null>(null);
   const conversationId = ref('');
   const isLive = ref(true);
@@ -61,6 +68,7 @@ export const useProjectStore = defineStore('project', () => {
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
   const pendingInitialMessage = ref<{
     projectId: string;
+    conversationNumber: number;
     content: string;
     modelId?: string;
   } | null>(null);
@@ -88,6 +96,9 @@ export const useProjectStore = defineStore('project', () => {
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
   let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
   let catchUpGeneration = 0;
+  let pageVisible = typeof document === 'undefined' || document.visibilityState !== 'hidden';
+  let catchUpPausedByVisibility = false;
+  let intRenamingGeneration = 0;
 
   const stopCatchUp = () => {
     catchUpGeneration += 1;
@@ -114,10 +125,20 @@ export const useProjectStore = defineStore('project', () => {
     applyCtx.toolCalls = new Map();
   };
 
-  const queueInitialMessage = (id: string, content: string, modelId?: string) => {
+  const queueInitialMessage = (
+    id: string,
+    number: number,
+    content: string,
+    modelId?: string,
+  ) => {
     const text = content.trim();
-    pendingInitialMessage.value = id && text
-      ? { projectId: id, content: text, modelId }
+    pendingInitialMessage.value = id && Number.isInteger(number) && number > 0 && text
+      ? {
+        projectId: id,
+        conversationNumber: number,
+        content: text,
+        modelId,
+      }
       : null;
   };
 
@@ -125,6 +146,61 @@ export const useProjectStore = defineStore('project', () => {
     const pending = pendingInitialMessage.value;
     pendingInitialMessage.value = null;
     return pending?.projectId === id ? pending : null;
+  };
+
+  const setProjectName = (id: string, name: string) => {
+    if (id === projectId.value && name) projectName.value = name;
+  };
+
+  /**
+   * 仅在「从第一句话创建项目」后调用。任务结束或 30 秒后静默停止；
+   * 用户已手动改名时，页面上的名称不再是占位项目 ID，因此不会被 AI 结果覆盖。
+   */
+  const pollProjectIntRenaming = async (id: string) => {
+    const generation = intRenamingGeneration;
+    const deadline = Date.now() + INT_RENAMING_MAX_DURATION_MS;
+    intRenamingStatus.value = 'pending';
+    while (Date.now() < deadline) {
+      if (generation !== intRenamingGeneration || projectId.value !== id) return;
+      let result: ProjectIntRenamingResponse;
+      try {
+        result = await getProjectIntRenaming(id);
+      } catch {
+        if (generation === intRenamingGeneration && projectId.value === id) {
+          intRenamingStatus.value = 'idle';
+        }
+        return;
+      }
+      if (generation !== intRenamingGeneration || projectId.value !== id) return;
+      if (result.status === 'completed') {
+        if (
+          result.name
+          && (!projectName.value || projectName.value === id || projectName.value === result.name)
+        ) {
+          projectName.value = result.name;
+          intRenamingStatus.value = 'completed';
+        } else {
+          intRenamingStatus.value = 'idle';
+        }
+        return;
+      }
+      if (result.status === 'failed') {
+        intRenamingStatus.value = 'failed';
+        return;
+      }
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        intRenamingStatus.value = 'idle';
+        return;
+      }
+      await new Promise(resolve => setTimeout(
+        resolve,
+        Math.min(INT_RENAMING_POLL_INTERVAL_MS, remaining),
+      ));
+    }
+    if (generation === intRenamingGeneration && projectId.value === id) {
+      intRenamingStatus.value = 'idle';
+    }
   };
 
   const applyState = (state: RuntimeStateResponse, options?: { syncEventSeq?: boolean }) => {
@@ -150,9 +226,13 @@ export const useProjectStore = defineStore('project', () => {
 
   const reset = () => {
     stopCatchUp();
+    catchUpPausedByVisibility = false;
     cancelLiveRun();
+    intRenamingGeneration += 1;
     enterToken += 1;
     projectId.value = '';
+    projectName.value = '';
+    intRenamingStatus.value = 'idle';
     conversationNumber.value = null;
     conversationId.value = '';
     isLive.value = true;
@@ -410,6 +490,10 @@ export const useProjectStore = defineStore('project', () => {
       return;
     }
     status.value = 'thinking';
+    if (!pageVisible) {
+      catchUpPausedByVisibility = true;
+      return;
+    }
 
     let state: RuntimeStateResponse | null = null;
     for (let attempt = 1; attempt <= MAX_CATCH_UP_FAILURES; attempt++) {
@@ -418,6 +502,10 @@ export const useProjectStore = defineStore('project', () => {
         break;
       } catch {
         if (!stillCurrent()) return;
+        if (!pageVisible) {
+          catchUpPausedByVisibility = true;
+          return;
+        }
         if (attempt === MAX_CATCH_UP_FAILURES) {
           status.value = 'idle';
           Message({ theme: 'error', message: '回复同步失败，刷新页面可重试。' });
@@ -425,10 +513,19 @@ export const useProjectStore = defineStore('project', () => {
         }
         await new Promise(resolve => setTimeout(resolve, CATCH_UP_INTERVAL_MS));
         if (!stillCurrent()) return;
+        if (!pageVisible) {
+          catchUpPausedByVisibility = true;
+          return;
+        }
       }
     }
     // 问的路上切走了：状态属于上一段会话。
     if (!state || !stillCurrent()) return;
+    if (!pageVisible) {
+      applyState(state, { syncEventSeq: false });
+      catchUpPausedByVisibility = true;
+      return;
+    }
 
     if (state.running || state.replication_pending || state.ui_event_seq > seqBeforeRun) {
       await bindConversation(state);
@@ -468,13 +565,20 @@ export const useProjectStore = defineStore('project', () => {
    * 停的条件是这轮已经落定，并且本地序号已经追上这次问到的水位。只看到落定还不够：
    * 紧接着的增量请求失败时，最后一批还在库里，下一拍还要再试。
    * 连续失败达到上限就停，并把输入框放开。状态接口正常返回且仍在跑时，继续问。
-   * 离开这个会话也会停，不在后台追别的项目。
+   * 离开这个会话或页面进入后台也会停；恢复可见时先按最新状态追一次，不在后台追别的项目。
    */
-  const scheduleCatchUp = (lockComposer: boolean) => {
+  const scheduleCatchUp = (
+    lockComposer: boolean,
+    { immediate = false, force = false }: { immediate?: boolean; force?: boolean } = {},
+  ) => {
     stopCatchUp();
     if (liveRunAbort) return;
     if (!projectId.value || conversationNumber.value == null) return;
-    if (!running.value && !replicationPending.value) return;
+    if (!force && !running.value && !replicationPending.value) return;
+    if (!pageVisible) {
+      catchUpPausedByVisibility = true;
+      return;
+    }
 
     const generation = catchUpGeneration;
     const targetProjectId = projectId.value;
@@ -485,6 +589,7 @@ export const useProjectStore = defineStore('project', () => {
     const still = () => (
       generation === catchUpGeneration
       && !liveRunAbort
+      && pageVisible
       && projectId.value === targetProjectId
       && conversationNumber.value === targetNumber
     );
@@ -518,9 +623,29 @@ export const useProjectStore = defineStore('project', () => {
       }, CATCH_UP_INTERVAL_MS);
     };
 
-    catchUpTimer = setTimeout(() => {
-      void tick();
-    }, CATCH_UP_INTERVAL_MS);
+    if (immediate) void tick();
+    else {
+      catchUpTimer = setTimeout(() => {
+        void tick();
+      }, CATCH_UP_INTERVAL_MS);
+    }
+  };
+
+  const setPageVisible = (visible: boolean) => {
+    if (pageVisible === visible) return;
+    pageVisible = visible;
+    if (!visible) {
+      catchUpPausedByVisibility = catchUpPausedByVisibility || (
+        !liveRunAbort
+        && (catchUpTimer != null || running.value || replicationPending.value)
+      );
+      stopCatchUp();
+      return;
+    }
+    if (!catchUpPausedByVisibility) return;
+    catchUpPausedByVisibility = false;
+    // 后台期间状态可能已经结束，先立即按服务端最新状态追一次，再决定是否继续每 2 秒补齐。
+    scheduleCatchUp(true, { immediate: true, force: true });
   };
 
   /**
@@ -632,12 +757,18 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
-  const enterProject = async (id: string) => {
+  const enterProject = async (id: string, preferredNumber?: number) => {
     reset();
     const token = enterToken;
     projectId.value = id;
     entering.value = true;
     try {
+      if (preferredNumber != null) {
+        const state = await getConversation(id, preferredNumber);
+        if (token !== enterToken) return;
+        await bindConversation(state);
+        return;
+      }
       const live = await findLiveConversation(id);
       if (token !== enterToken) return;
       if (!live) {
@@ -909,6 +1040,8 @@ export const useProjectStore = defineStore('project', () => {
 
   return {
     projectId,
+    projectName,
+    intRenamingStatus,
     conversationNumber,
     conversationId,
     isLive,
@@ -934,6 +1067,9 @@ export const useProjectStore = defineStore('project', () => {
     fetchArchivedConversations,
     queueInitialMessage,
     consumeInitialMessage,
+    setProjectName,
+    pollProjectIntRenaming,
+    setPageVisible,
     sendMessage,
   };
 });

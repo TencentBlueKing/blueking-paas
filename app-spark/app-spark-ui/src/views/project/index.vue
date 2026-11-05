@@ -36,6 +36,7 @@ import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
 import InteractionPanel from '@/components/project/interaction/index.vue';
 import WorkspacePanel from '@/components/project/workspace/index.vue';
+import { usePageVisibility } from '@/composables/use-page-visibility';
 import ProjectLayout from '@/layouts/ProjectLayout.vue';
 import { useModelCatalogStore } from '@/store/model-catalog';
 import { useProjectStore } from '@/store/project';
@@ -44,18 +45,22 @@ const route = useRoute();
 const projectStore = useProjectStore();
 const modelCatalogStore = useModelCatalogStore();
 const { entering } = storeToRefs(projectStore);
+const pageVisible = usePageVisibility();
+
+watch(pageVisible, visible => projectStore.setPageVisible(visible), { immediate: true });
 
 watch(() => route.params.projectId, async (projectId) => {
   const id = String(projectId || '');
   if (!id) return;
+  const initialMessage = projectStore.consumeInitialMessage(id);
   try {
     await Promise.all([
-      projectStore.enterProject(id),
+      projectStore.enterProject(id, initialMessage?.conversationNumber),
       modelCatalogStore.loadCatalog(),
     ]);
     if (String(route.params.projectId || '') !== id) return;
-    const initialMessage = projectStore.consumeInitialMessage(id);
     if (initialMessage) {
+      void projectStore.pollProjectIntRenaming(id);
       await projectStore.sendMessage(
         initialMessage.content,
         [],
@@ -63,7 +68,6 @@ watch(() => route.params.projectId, async (projectId) => {
       );
     }
   } catch (error) {
-    projectStore.consumeInitialMessage(id);
     Message({
       theme: 'error',
       message: error instanceof Error ? error.message : '进入项目失败',

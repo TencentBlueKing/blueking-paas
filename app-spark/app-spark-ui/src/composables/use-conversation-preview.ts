@@ -6,6 +6,7 @@ import { getConversationPreview } from '@/http/api';
 import type { DevServerStatus } from '@/http/types';
 import { useProjectStore } from '@/store/project';
 
+import { usePageVisibility } from './use-page-visibility';
 import { previewFrameUrl } from './preview-frame-url';
 
 /** 应用拉起要几十秒，更密也不会更快看到页面；每次请求都会再问一次 Runtime。 */
@@ -32,6 +33,7 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
  * 这一轮还在回复（`running`、页面上的回复中、或 `replication_pending`），或者预览还在
  * `starting`，才继续。会话已经闲下来，并且页面已经 `ready`、没启动、已停止或问不到，就停。
  * 离开这个面板，或会话已结束，也停。一次都还没成功时，失败一次就停，不再空转。
+ * 页面进入后台时暂停；恢复可见后先立即查询一次，再按最新状态判断是否继续。
  * 已经成功过之后，偶尔失败一次不停，连续失败 3 次再停，上次的地址和状态留着。
  * 停掉之后，对话框里出现新的回复，或重新进入这个会话，计数回到 0 再问。
  * 不要在后台对每个会话一直打。
@@ -43,6 +45,7 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
  * 一轮对话结束就递增，让 iframe 重新挂一次。
  */
 export const useConversationPreview = (panelOpen: Ref<boolean>) => {
+  const pageVisible = usePageVisibility();
   const {
     projectId,
     conversationNumber,
@@ -112,14 +115,18 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
    * 会话已经闲下来之后，只有还在启动、结果没出来时才继续。已经 ready 的完成页不再每 5 秒问。
    */
   const shouldKeepPolling = () => {
-    if (!panelOpen.value || conversationKey() === '' || !isLive.value) return false;
+    if (!pageVisible.value || !panelOpen.value || conversationKey() === '' || !isLive.value) {
+      return false;
+    }
     if (status.value !== 'idle' || running.value || replicationPending.value) return true;
     return devServerStatus.value === 'starting';
   };
 
   const start = () => {
     stop();
-    if (!panelOpen.value || conversationKey() === '' || !isLive.value) return;
+    if (!pageVisible.value || !panelOpen.value || conversationKey() === '' || !isLive.value) {
+      return;
+    }
     consecutiveFailures = 0;
     void pull();
     timer = window.setInterval(() => {
@@ -130,7 +137,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   const pull = async () => {
     const id = projectId.value;
     const number = conversationNumber.value;
-    if (!panelOpen.value || !id || number == null || !isLive.value) return;
+    if (!pageVisible.value || !panelOpen.value || !id || number == null || !isLive.value) return;
     if (inFlightGeneration === generation) return;
 
     const gen = generation;
@@ -140,7 +147,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
       if (gen !== generation) return;
       // 面板已经合上，或会话已经换过、结束了：这包响应不属于眼前这块预览。
       if (
-        !panelOpen.value
+        !pageVisible.value
+        || !panelOpen.value
         || projectId.value !== id
         || conversationNumber.value !== number
         || !isLive.value
@@ -160,7 +168,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     } catch (error) {
       if (gen !== generation) return;
       if (
-        !panelOpen.value
+        !pageVisible.value
+        || !panelOpen.value
         || projectId.value !== id
         || conversationNumber.value !== number
         || !isLive.value
@@ -195,7 +204,7 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     }
 
     stop();
-    if (!panelOpen.value || nextKey === '' || !isLive.value) {
+    if (!pageVisible.value || !panelOpen.value || nextKey === '' || !isLive.value) {
       // 离开面板时摘掉 iframe。origin 留下，下次进来问到 ready 再挂，避免把上次的 502 页留在里面。
       if (!panelOpen.value && nextKey !== '' && isLive.value) pending.value = true;
       return;
@@ -205,6 +214,17 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   };
 
   watch([panelOpen, projectId, conversationNumber, isLive], sync, { immediate: true });
+
+  watch(pageVisible, (visible) => {
+    // 后台发出的响应不应在恢复后覆盖最新状态；恢复可见时立即重新查询。
+    generation += 1;
+    inFlightGeneration = -1;
+    if (!visible) {
+      stop();
+      return;
+    }
+    sync();
+  });
 
   // 预览已经停了，对话框里又写出新回复：从 0 再给 3 次。
   // 正在输出时内容会一直变，计数跟着回到 0，不会在回复过程中被偶发失败停掉。
@@ -216,7 +236,15 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     }
     replyMark = next;
     consecutiveFailures = 0;
-    if (timer || !panelOpen.value || conversationKey() === '' || !isLive.value) return;
+    if (
+      timer
+      || !pageVisible.value
+      || !panelOpen.value
+      || conversationKey() === ''
+      || !isLive.value
+    ) {
+      return;
+    }
     if (!origin.value && devServerStatus.value == null) pending.value = true;
     start();
   }, { deep: true });

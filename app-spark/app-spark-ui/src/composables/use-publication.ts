@@ -110,9 +110,9 @@ export const usePublication = (projectId: Ref<string>) => {
     if (!id || !current?.latest_version_id || current.task || submitting.value) return false;
 
     const requestGeneration = generation;
-    const sequence = ++requestSequence;
+    const barrierSequence = ++requestSequence;
     // 这一刻之后，发得更早的状态查询即使晚回来，也不能把即将开始的任务覆盖掉。
-    appliedSequence = sequence;
+    appliedSequence = barrierSequence;
     const name = appName?.trim();
     actionError.value = '';
     submitting.value = true;
@@ -123,7 +123,22 @@ export const usePublication = (projectId: Ref<string>) => {
         id,
         createLatestDeploymentRequest(current, name),
       );
-      applyResponse(data, requestGeneration, sequence);
+      // POST 进行期间可能因面板打开或页面恢复触发了 GET。发布响应是本次操作的权威结果，
+      // 在返回时重新取序号，确保这些中途发出的旧快照不能盖掉已经创建好的任务。
+      if (requestGeneration !== generation || projectId.value !== id) return false;
+      const responseSequence = ++requestSequence;
+      if (!applyResponse(data, requestGeneration, responseSequence)) return false;
+
+      // 等掉 POST 之前已经在路上的 GET，再主动取一次完整快照。这样即使发布响应与「确认已读」
+      // 同时发生，任务状态和后续轮询也会按服务端最新结果恢复。
+      if (pullPromise) await pullPromise;
+      if (
+        requestGeneration === generation
+        && projectId.value === id
+        && pageVisible.value
+      ) {
+        await pull(true);
+      }
       return true;
     } catch (error) {
       if (requestGeneration !== generation) return false;
@@ -149,8 +164,6 @@ export const usePublication = (projectId: Ref<string>) => {
     const current = publication.value;
     if (!id || !current?.unseen_result) return;
     const requestGeneration = generation;
-    const sequence = ++requestSequence;
-    appliedSequence = sequence;
     try {
       await clearPublicationUnseenResult(id);
       if (

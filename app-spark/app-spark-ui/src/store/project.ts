@@ -1,8 +1,9 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import Message from '@/common/message';
 import { createStartRunRequest } from '@/common/model-catalog';
 import type { ChatImage, ChatMessage } from '@/components/project/interaction/types';
+import { usePageVisibility } from '@/composables/use-page-visibility';
 import {
   closeConversation,
   createConversation,
@@ -36,6 +37,16 @@ import { useModelCatalogStore } from '@/store/model-catalog';
 export type ProjectStatus = 'idle' | 'thinking' | 'streaming';
 export type ProjectIntRenamingStatus = 'idle' | ProjectIntRenamingResponse['status'];
 
+type VisibilityRecovery = {
+  kind: 'incremental';
+} | {
+  kind: 'interrupted-run';
+  projectId: string;
+  conversationNumber: number;
+  runGeneration: number;
+  seqBeforeRun: number;
+};
+
 const PREPARING_RUNTIME_TEXT = '正在准备运行环境…';
 /** 回复进行中，历史是分批入库的。两秒补一次，能跟上已经写进来的字，又不会把接口打满。 */
 const CATCH_UP_INTERVAL_MS = 2000;
@@ -48,6 +59,7 @@ const createId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 
 
 export const useProjectStore = defineStore('project', () => {
   const modelCatalogStore = useModelCatalogStore();
+  const pageVisible = usePageVisibility();
   const projectId = ref('');
   const projectName = ref('');
   const intRenamingStatus = ref<ProjectIntRenamingStatus>('idle');
@@ -96,12 +108,22 @@ export const useProjectStore = defineStore('project', () => {
   // 切进一个正在回复的会话时，靠轮询把已经入库的新内容补上。离开或这一轮落定后必须停。
   let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
   let catchUpGeneration = 0;
-  let pageVisible = typeof document === 'undefined' || document.visibilityState !== 'hidden';
-  let catchUpPausedByVisibility = false;
+  // 从定时器等待开始，到状态及事件请求全部结束为止都算活跃，避免请求在途时因 timer 为空而漏记恢复。
+  let catchUpActive = false;
+  // 普通追赶可以从当前游标继续；中断的 SSE 必须按历史重画，否则会把已经展示的增量再追加一次。
+  let visibilityRecovery: VisibilityRecovery | null = null;
   let intRenamingGeneration = 0;
+
+  const pauseIncrementalCatchUp = () => {
+    // 中断 SSE 的全量恢复优先级更高，不能被普通追赶覆盖。
+    if (visibilityRecovery?.kind !== 'interrupted-run') {
+      visibilityRecovery = { kind: 'incremental' };
+    }
+  };
 
   const stopCatchUp = () => {
     catchUpGeneration += 1;
+    catchUpActive = false;
     if (catchUpTimer != null) {
       clearTimeout(catchUpTimer);
       catchUpTimer = null;
@@ -226,7 +248,7 @@ export const useProjectStore = defineStore('project', () => {
 
   const reset = () => {
     stopCatchUp();
-    catchUpPausedByVisibility = false;
+    visibilityRecovery = null;
     cancelLiveRun();
     intRenamingGeneration += 1;
     enterToken += 1;
@@ -485,13 +507,23 @@ export const useProjectStore = defineStore('project', () => {
   const settleAfterInterruptedRun = async (stillCurrent: () => boolean, seqBeforeRun: number) => {
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
+    const runGeneration = liveRunGeneration;
     if (!targetProjectId || targetNumber == null) {
       status.value = 'idle';
       return;
     }
+    const pauseInterruptedRun = () => {
+      visibilityRecovery = {
+        kind: 'interrupted-run',
+        projectId: targetProjectId,
+        conversationNumber: targetNumber,
+        runGeneration,
+        seqBeforeRun,
+      };
+    };
     status.value = 'thinking';
-    if (!pageVisible) {
-      catchUpPausedByVisibility = true;
+    if (!pageVisible.value) {
+      pauseInterruptedRun();
       return;
     }
 
@@ -502,8 +534,8 @@ export const useProjectStore = defineStore('project', () => {
         break;
       } catch {
         if (!stillCurrent()) return;
-        if (!pageVisible) {
-          catchUpPausedByVisibility = true;
+        if (!pageVisible.value) {
+          pauseInterruptedRun();
           return;
         }
         if (attempt === MAX_CATCH_UP_FAILURES) {
@@ -513,17 +545,17 @@ export const useProjectStore = defineStore('project', () => {
         }
         await new Promise(resolve => setTimeout(resolve, CATCH_UP_INTERVAL_MS));
         if (!stillCurrent()) return;
-        if (!pageVisible) {
-          catchUpPausedByVisibility = true;
+        if (!pageVisible.value) {
+          pauseInterruptedRun();
           return;
         }
       }
     }
     // 问的路上切走了：状态属于上一段会话。
     if (!state || !stillCurrent()) return;
-    if (!pageVisible) {
+    if (!pageVisible.value) {
       applyState(state, { syncEventSeq: false });
-      catchUpPausedByVisibility = true;
+      pauseInterruptedRun();
       return;
     }
 
@@ -575,8 +607,8 @@ export const useProjectStore = defineStore('project', () => {
     if (liveRunAbort) return;
     if (!projectId.value || conversationNumber.value == null) return;
     if (!force && !running.value && !replicationPending.value) return;
-    if (!pageVisible) {
-      catchUpPausedByVisibility = true;
+    if (!pageVisible.value) {
+      pauseIncrementalCatchUp();
       return;
     }
 
@@ -584,12 +616,13 @@ export const useProjectStore = defineStore('project', () => {
     const targetProjectId = projectId.value;
     const targetNumber = conversationNumber.value;
     let consecutiveFailures = 0;
+    catchUpActive = true;
     if (lockComposer) status.value = 'thinking';
 
     const still = () => (
       generation === catchUpGeneration
       && !liveRunAbort
-      && pageVisible
+      && pageVisible.value
       && projectId.value === targetProjectId
       && conversationNumber.value === targetNumber
     );
@@ -607,11 +640,15 @@ export const useProjectStore = defineStore('project', () => {
         const stalled = outcome.settled && !caughtUp && uiEventSeq.value === seqBefore;
         const done = outcome.settled && (caughtUp || stalled);
         if (lockComposer) status.value = done ? 'idle' : 'thinking';
-        if (done) return;
+        if (done) {
+          catchUpActive = false;
+          return;
+        }
       } catch {
         if (!still()) return;
         consecutiveFailures += 1;
         if (consecutiveFailures >= MAX_CATCH_UP_FAILURES) {
+          catchUpActive = false;
           status.value = 'idle';
           Message({ theme: 'error', message: '回复同步失败，刷新页面可重试。' });
           return;
@@ -631,22 +668,43 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
-  const setPageVisible = (visible: boolean) => {
-    if (pageVisible === visible) return;
-    pageVisible = visible;
+  const handlePageVisibility = (visible: boolean) => {
     if (!visible) {
-      catchUpPausedByVisibility = catchUpPausedByVisibility || (
+      if (
         !liveRunAbort
-        && (catchUpTimer != null || running.value || replicationPending.value)
-      );
+        && (
+          catchUpActive
+          || catchUpTimer != null
+          || running.value
+          || replicationPending.value
+        )
+      ) {
+        pauseIncrementalCatchUp();
+      }
       stopCatchUp();
       return;
     }
-    if (!catchUpPausedByVisibility) return;
-    catchUpPausedByVisibility = false;
-    // 后台期间状态可能已经结束，先立即按服务端最新状态追一次，再决定是否继续每 2 秒补齐。
-    scheduleCatchUp(true, { immediate: true, force: true });
+    const recovery = visibilityRecovery;
+    visibilityRecovery = null;
+    if (!recovery) return;
+    if (recovery.kind === 'incremental') {
+      // 后台期间状态可能已经结束，先立即按服务端最新状态追一次，再决定是否继续每 2 秒补齐。
+      scheduleCatchUp(true, { immediate: true, force: true });
+      return;
+    }
+
+    const stillCurrent = () => (
+      liveRunGeneration === recovery.runGeneration
+      && projectId.value === recovery.projectId
+      && conversationNumber.value === recovery.conversationNumber
+    );
+    if (!stillCurrent()) return;
+    // SSE 的部分内容已经画过，但事件游标仍停在本轮之前。复用前台中断后的历史重画流程，
+    // 不能从旧游标增量追赶，否则恢复可见时会把已画出的回复再追加一遍。
+    void settleAfterInterruptedRun(stillCurrent, recovery.seqBeforeRun).catch(() => undefined);
   };
+
+  watch(pageVisible, handlePageVisibility);
 
   /**
    * 历史没拉回来时摆进对话区的那一条。
@@ -1069,7 +1127,6 @@ export const useProjectStore = defineStore('project', () => {
     consumeInitialMessage,
     setProjectName,
     pollProjectIntRenaming,
-    setPageVisible,
     sendMessage,
   };
 });

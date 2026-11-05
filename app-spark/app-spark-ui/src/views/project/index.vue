@@ -36,7 +36,6 @@ import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
 import InteractionPanel from '@/components/project/interaction/index.vue';
 import WorkspacePanel from '@/components/project/workspace/index.vue';
-import { usePageVisibility } from '@/composables/use-page-visibility';
 import ProjectLayout from '@/layouts/ProjectLayout.vue';
 import { useModelCatalogStore } from '@/store/model-catalog';
 import { useProjectStore } from '@/store/project';
@@ -45,9 +44,6 @@ const route = useRoute();
 const projectStore = useProjectStore();
 const modelCatalogStore = useModelCatalogStore();
 const { entering } = storeToRefs(projectStore);
-const pageVisible = usePageVisibility();
-
-watch(pageVisible, visible => projectStore.setPageVisible(visible), { immediate: true });
 
 watch(() => route.params.projectId, async (projectId) => {
   const id = String(projectId || '');

@@ -88,7 +88,7 @@ class SysGatewayAPIViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
 
         app = self.get_managed_application_via_path()
         tenant_id = get_tenant_id_for_app(app.code)
-        result = ApiGatewayClient(tenant_id=tenant_id).apply_gateway_resource_permission(
+        result = ApiGatewayClient(tenant_id=tenant_id, bk_username=operator).apply_gateway_resource_permission(
             app_code=app.code, gateway_name=gateway_name, **params
         )
 

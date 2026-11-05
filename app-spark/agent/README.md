@@ -126,7 +126,7 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 请求只需携带最新一条用户消息，展示历史会被丢弃，只使用 Runtime 自己的可信上下文；第一次
 运行的 `contextVersion` 是 `0`。
 
-`/log`、`/ui-events`、`GET/PUT /context`、`PUT /cursors` 同样需要 Bearer。
+`/log`、`/ui-events`、`GET/PUT /context`、`PUT /cursors`、`POST /preview/start` 同样需要 Bearer。
 
 以下接口是提供给外部访问会话状态的通道：`/health` 报三份状态的当前游标、运行标志，以及
 `pushed_*` 复制游标与 `replication_pending`（都只在配了控制面时才有意义），`/log` 与
@@ -135,10 +135,13 @@ curl -sS -N -H "Authorization: Bearer ${APP_SPARK_AGENT_RUNTIME_TOKEN}" \
 
 ## 拉起用户应用
 
-这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。唯一的触发路径是模型自己的 `launch_app`
-工具：进程内直调监督器（`tools/launch_app.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
-`APP_SPARK_AGENT_*`。只有 agent 第一时间知道代码什么时候真的能跑。失败不中断整轮：原因交回模型，
-它可以读日志改完再拉，单轮最多 2 次。
+这是沙箱里把 Agent 写好的代码跑起来，不是发布到 PaaS。两个入口共用一个监督器，区别见 `app_supervisor/starter.py`：
+
+- **模型**：`launch_app` 工具进程内直调监督器（`tools/launch_app.py`），不走 HTTP、不碰凭据——模型的 `Shell` 屏蔽了
+  `APP_SPARK_AGENT_*`。只有 agent 第一时间知道代码什么时候真的能跑。失败不中断整轮：原因交回模型，
+  它可以读日志改完再拉，单轮最多 2 次。
+- **控制面**：`POST /preview/start`，用户进入已有代码的项目时调，必须在 `POST /workspace/restore` 之后。
+  不等启动结果，失败只体现为 `/health` 的 `dev_server_status` 从 `starting` 回落，原因在应用日志里。
 
 成功落一条 `app.launched` 到 `ui_events`，控制面 drain 这条就知道应用起来了，不需要 agent 反向回调控制面接口。
 
@@ -168,13 +171,13 @@ Runtime 共享一台机器，才会各分一个应用端口。探针只连 `127.
   判成没就绪。
 - 探针只在被问到时才发（`GET /health`、launch 等待期间），crash-watch 那条 0.5 秒的循环只 `poll()`
   子进程，不发请求——否则用户应用的 access log 会被探针刷满，而那正是模型读 traceback 的那份日志。
-- 进行中的 launch 再打一次，或端口被非本监督器进程占用：冲突，不杀、不发事件。
-- 已是监督器进程：再次 launch 一律重启，为的是加载新代码。`launch_app` 不接受参数，事件里的
-  `path` / `label` 是常量（`/` + `Preview`）——当初能传别的值的只有控制面那个 launch 接口，它已经没了。
+- 进行中的 launch 再打一次就排队等它结束；端口被非本监督器进程占用：冲突，不杀、不发事件。
+- 已是监督器进程：再次 launch 一律重启，为的是加载新代码。两个入口都不接受参数，事件里的
+  `path` / `label` 是常量（`/` + `Preview`）。
 - 自动重启只看进程死没死，不看就绪。活着但答不出的进程是 `starting`，watch 不碰它：停掉一个正在
   预热的应用救不了它，只会把「慢」变成「永远起不来」。
 - 进程退出后间隔 2 秒、最多自动拉起 3 次（从上次手动 launch 起算，成功也不清零）；超过就停在
-  `stopped`，须再由模型 launch。
+  `stopped`，须再由模型 launch 或控制面 start。
 - 手动 launch 等不到应答也不算失败、更不停进程：进程活着就交回 `starting`，`launch_app` 据此告诉
   模型别改代码、别重来。只有进程自己退出了才是 `failed`。
 - run 与 launch 互不取消；run 结束不杀应用。SIGTERM / 空闲退出仍停掉已登记的子进程。

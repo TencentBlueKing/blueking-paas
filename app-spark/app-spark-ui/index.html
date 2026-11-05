@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
-    <link rel="icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.png" type="image/x-icon" />
-    <link rel="shortcut icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.png" type="image/x-icon" />
+    <link rel="icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="<%= process.env.BK_STATIC_URL %>/static/images/favicon.ico" type="image/x-icon" />
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>App-Spark</title>
+    <title>AppSpark</title>
+    <script>
+      // 首次绘制前恢复侧边栏状态，避免已收起的侧栏先展开再收起。
+      try {
+        if (localStorage.getItem('app-spark:sidebar') === 'collapsed') {
+          document.documentElement.classList.add('is-sidebar-collapsed')
+        }
+      } catch (error) {
+        // 存储不可用时默认展开。
+      }
+    </script>
   </head>
     <body>
       <div class="app"></div>

@@ -83,6 +83,7 @@ class AsCodeClient:
             "rabbitmq": settings.RABBITMQ_MONITOR_CONF,
             "bkrepo": settings.BKREPO_MONITOR_CONF,
             "gcs_mysql": settings.GCS_MYSQL_MONITOR_CONF,
+            "redis": settings.REDIS_MONITOR_CONF,
         }
         for code_snippet, config in alert_config_mapping.items():
             if code_snippet in alert_code:

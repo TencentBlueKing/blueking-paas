@@ -28,7 +28,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 
-from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME
+from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME, REDIS_SERVICE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,40 @@ def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] =
     env_vars = _get_service_env_vars(app_code, run_env, GCS_MYSQL_SERVICE_NAME, module_name)
     if env_vars:
         return env_vars["GCS_MYSQL_USER"]
+
+    return ""
+
+
+def get_redis_bk_module(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 Redis 增强服务指标中的 bk_module, 模块未绑定开启 monitor 套餐的 Redis 实例时返回空
+
+    返回值即 module_name, 实际用于判断是否为该模块下发 Redis 告警规则. svc-redis 只为开启 monitor 的套餐
+    创建的实例输出指标; 另有两种情况同样查不到指标但仍会下发规则: 没有套餐的客户端自建实例,
+    以及 svc-redis 同步实例配置失败导致指标缺少应用信息.
+    monitor 只对开启后新建的实例生效 (redis-exporter sidecar 在创建实例时注入): 套餐后开启 monitor 时,
+    存量实例只有 alive / oom_killed 指标, 内存与连接数使用率需重建实例后才有数据.
+
+    规则按 bk_app_code / bk_module / bk_env 过滤而不按实例 ID 过滤: 已下发的规则不会随实例重新分配而更新.
+    不做进程级缓存: 绑定关系和套餐会变化, 缓存会导致规则漏下发.
+    """
+    if not module_name:
+        raise ValueError(f"get_redis_bk_module(app_code: {app_code}): module_name is required")
+
+    try:
+        svc_obj = mixed_service_mgr.find_by_name(name=REDIS_SERVICE_NAME)
+    except ServiceObjNotFound as e:
+        logger.info(e)
+        return ""
+
+    engine_app = Application.objects.get(code=app_code).get_module(module_name).get_envs(run_env).engine_app
+    for rel in mixed_service_mgr.list_provisioned_rels(engine_app, service=svc_obj):
+        try:
+            plan = rel.get_plan()
+        except RuntimeError:
+            logger.warning("plan of redis service not found, app: %s, module: %s", app_code, module_name)
+            continue
+        if plan.config.get("monitor"):
+            return module_name
 
     return ""
 
@@ -157,6 +191,7 @@ LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     "bkrepo_private_bucket": get_bkrepo_private_bucket,
     "bkrepo_public_bucket": get_bkrepo_public_bucket,
     "gcs_mysql_user": get_gcs_mysql_user,
+    "redis_bk_module": get_redis_bk_module,
 }
 
 

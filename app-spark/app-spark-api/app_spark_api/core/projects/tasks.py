@@ -57,6 +57,8 @@ async def start_int_renaming(project: Project, *, credential: UserCredential | N
         await ProjIntRenaming.objects.aget_or_create(project_id=project.pk)
         access_token = await fetch_bkaidev_access_token(credential) if requires_access_token() else None
         # Celery 的投递是同步网络操作，在事件循环里直接调用会占住 worker。
+        # TODO: access_token 是用户登录态凭据，现在明文随任务参数进了 broker 和监控面板。有了缓存后改成
+        # 加密写入带 TTL 的缓存，任务只传引用、用完即删。
         await sync_to_async(rename_project_from_prompt.apply_async, thread_sensitive=False)(
             args=(project.pk, access_token),
         )

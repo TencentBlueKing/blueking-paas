@@ -154,8 +154,18 @@
 ## 例：https://bkapi.example.com/api/{api_name}/ 或 https://{api_name}.apigw.example.com
 # BK_API_URL_TMPL: ''
 
-## 调用网关时的环境名（stage），默认 prod
+## 调用网关时的环境名（stage），各网关没有单独配置时都用它，默认 prod
 # APIGW_ENVIRONMENT: prod
+
+## 各网关单独的环境名，例如 bkaidev 用 prod、开发者中心用 stag；不填时用 APIGW_ENVIRONMENT
+# BKAIDEV_APIGW_ENVIRONMENT: prod
+# BKPAAS_APIGW_ENVIRONMENT: stag
+
+## 开发者中心在 API 网关上的网关名，发布到开发者中心时与 BK_API_URL_TMPL 拼出系统 API 地址，默认 bkpaas3
+# BKPAAS_APIGW_NAME: bkpaas3
+
+## 开发者中心前端站点地址，只用于拼发布结果里的开发者中心页面链接；留空时不返回这些链接
+# BKPAAS_URL: ''
 
 ## 用户态 access_token 的签发地址，AGENT_MODEL_SOURCE 为 bkaidev 时必填
 ## 支持直连 auth api 或 SSM 两种 backend，由 BKAUTH_BACKEND_TYPE 决定：bk_token 用 SSM，其余用 auth api

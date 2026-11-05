@@ -148,6 +148,8 @@ export default {
           'appPermissions',
           // 云 API 管理
           'appCloudAPI',
+          // Agent 沙箱
+          'agentSandbox',
           // 镜像凭证
           'imageCredential',
           // 数据统计
@@ -208,6 +210,8 @@ export default {
           'appServices',
           // 云 API 管理
           'appCloudAPI',
+          // Agent 沙箱
+          'agentSandbox',
           // 镜像凭证
           'imageCredential',
           // 数据统计
@@ -329,7 +333,7 @@ export default {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+            return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'agentSandbox'].includes(nav.name);
           });
         }
 
@@ -480,6 +484,9 @@ export default {
           }
         }
       });
+      if (allowRouters.includes('agentSandbox')) {
+        this.allowedRouterName.push('agentSandboxTemplateDetail');
+      }
     },
 
     /**

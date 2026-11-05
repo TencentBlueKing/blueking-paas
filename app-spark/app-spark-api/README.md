@@ -49,7 +49,7 @@ uv run uvicorn app_spark_api.asgi:application --reload
 
 日志默认以 `INFO` 级别写到控制台。可用 `LOG_LEVEL` 调整级别。
 
-另开一个进程跑 Celery worker。它和 API 加载同一份 settings。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
+另开一个进程跑 Celery worker。它和 API 加载同一份 settings，自动命名任务在这里执行。五项都没写时用占位默认值，进程能起来，并且不会在启动时探测队列是否可达：
 
 ```bash
 uv run celery -A app_spark_api.celery worker --loglevel=INFO
@@ -63,6 +63,68 @@ uv run pytest --reuse-db tests/
 
 会话相关的测试不 mock agent，而是真的 spawn agent 进程、走真实 HTTP。
 
+本服务自己调模型（给从一句话创建的项目起名）的配置与 Agent 的 `AGENT_MODEL_SOURCE` 分开，见 settings 里的
+`LLM_*`。下面是直连 DeepSeek 的示例配置：
+
+```yaml
+LLM_SOURCE: direct
+LLM_DIRECT_CONFIG:
+  model: deepseek:deepseek-v4-flash
+  api_key: ...
+```
+
+`infras/llm` 与项目自动命名的测试默认用假模型和 MockTransport，不联网。标了 `live_llm` 的用例会对每个
+真实模型各跑一遍（共用同一份用例，靠 `live_llm` fixture 参数化），哪个没配凭据就跳过哪个：
+
+| 目标 | 需要的环境变量 |
+|---|---|
+| 直连 DeepSeek | `DEEPSEEK_API_KEY`；模型可用 `APP_SPARK_LIVE_LLM_MODEL` 换，默认 `deepseek:deepseek-v4-flash` |
+| bkaidev 网关 | `APP_SPARK_LIVE_BKAIDEV_ACCESS_TOKEN`（用户态 token）、`APP_SPARK_LIVE_BKAIDEV_BASE_URL`（v1 地址）；要测的模型用 `APP_SPARK_LIVE_BKAIDEV_MODEL_IDS` 逗号分隔，默认 `deepseek-v4-flash`，每个模型一组用例 |
+
+```bash
+set -a; . ~/.app-spark-live-bkaidev.env; set +a
+uv run pytest --reuse-db -m live_llm tests/infras/llm tests/ext/llm
+```
+
+网关有调用频率限制（超了返回 429 `RATE_LIMIT_RESTRICTION`），一次别测太多模型。
+
+### bkaidev 网关的 thinking 支持
+
+网关把 `reasoning_effort` 原样转给后面的模型，各模型接受的取值不统一，传了不接受的值返回 400。因此 thinking
+走人工维护的白名单 `_GATEWAY_THINKING_PROFILES`（`infras/llm/models.py`，写法见那里的注释），不在表里的模型
+不发任何 thinking 参数。
+
+维护这张表时要知道的几点：
+
+- 接受 `none` 不等于能关掉思考（例如 kimi），要看用量；
+- 有的模型不回传思考内容（例如混元），只能看 completion tokens 有没有降到只剩答案的几个；
+- 厂商自有的开关（`thinking.type`、`enable_thinking`）在网关上基本无效，GLM 还会对 `thinking.type` 报 400；
+- pydantic-ai 的厂商档按官方 API 写，借来之前要确认它发出的取值网关都接受。
+
+### 为网关模型适配 thinking
+
+工具是 `scripts/probe_gateway_thinking.py`，凭据与 live 测试相同；网关限频，一个模型要一两分钟。
+
+```bash
+set -a; . ~/.app-spark-live-bkaidev.env; set +a
+uv run python -m scripts.probe_gateway_thinking list                      # 1. 确认模型 ID（大小写敏感）
+uv run python -m scripts.probe_gateway_thinking probe hy3 --repeat 3      # 2. 看接受哪些取值、none 能否关掉
+uv run python -m scripts.probe_gateway_thinking verify hy3                # 4. 经白名单实际调用，看发了什么
+```
+
+3. 按探测结果写表项，依次考虑：
+   - 借 pydantic-ai 的厂商档（自部署的开源模型可试 `VLLMProvider.model_profile`），条件是它发出的取值都被接受；
+   - 用 `None` 排除个别会被拒绝的模型；
+   - 自己写 `_measured_thinking(...)`，只列接受的取值，`none` 关得掉才列进去；
+   - 都不合适就不收录。
+
+   通配符只用于确认过行为一致的同系列模型。
+4. 用 `verify` 核对：关思考时要么真的关掉，要么对关不掉的模型发出指定强度，不能失败。
+5. 在 `test_gateway_thinking_follows_the_whitelist` 里补上期望值，再跑这个模型的 live 测试：
+   `APP_SPARK_LIVE_BKAIDEV_MODEL_IDS=hy3 uv run pytest --reuse-db -m live_llm -k bkaidev tests/infras/llm tests/ext/llm`。
+
+升级 pydantic-ai 后，对借上游档的表项重跑第 4、5 步。
+
 ## API 错误响应
 
 所有已匹配 API 路由的失败响应使用 `blue_krill.web.std_error` 的 `APIError`，保留原有 HTTP
@@ -71,6 +133,20 @@ uv run pytest --reuse-db tests/
 ```json
 {"code": "PROJECT_ID_TAKEN", "detail": "Project id `demo` is already taken."}
 ```
+
+## 从一句话创建项目
+
+`POST /api/projects/-/create-from-prompt/`（`{"content": "..."}`）：服务端生成项目 ID（`p-` 加 10 位），
+名称暂时与 ID 相同，并建好第一个会话，返回 `{project, conversation}`。这句话会记在
+`Project.initial_prompt` 上留底，但本接口不发给 Agent，也不拉起 Runtime：客户端随后用返回的会话
+编号调 `.../conversations/{number}/runs/` 把它作为第一轮对话发出，之后与手动创建项目没有区别。
+
+创建成功后，本接口还会排一个 Celery 任务，用这句话请模型给项目起名（配置见上面的 `LLM_*`）。任务
+结果写在 `ProjIntRenaming` 里，客户端轮询：
+
+`GET /api/projects/{project_id}/int-renaming/` → `{status, name, completed_at, error_at, error_msg}`
+
+前端应用 `name` 前先确认页面上显示的仍是占位 ID，否则会把用户这期间手动改的名字盖掉。
 
 ## 驱动 Agent
 
@@ -109,7 +185,8 @@ AGENT_CONTEXT_STORAGE:
 AGENT_MODEL_SOURCE: bkaidev
 ## AGENT_MODEL_SOURCE 为 bkaidev 时必填：换票地址，按版本填（见下文）
 # TOKEN_AUTH_ENDPOINT: ...
-## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + APIGW_ENVIRONMENT 拼接；
+## AGENT_MODEL_SOURCE 为 bkaidev 时可选。LLM 基址由 BK_API_URL_TMPL + BKAIDEV_APIGW_ENVIRONMENT 拼接，
+## 后者不填时用 APIGW_ENVIRONMENT；
 ## app 身份用 APP_CODE / APP_SECRET。
 ## default_model_id 是第一顺位的默认模型，默认 deepseek-v4-flash；不在模型列表里时顺延到列表第一个。
 ## available_models 是模型列表提供给用户选择的模型 ID 或通配模式，顺序即展示顺序；为空时不过滤。
@@ -132,7 +209,7 @@ AGENT_MODEL_SOURCE: bkaidev
 活着的 Runtime 之后）用当前用户的登录态加上本服务的 `APP_CODE` / `APP_SECRET`，向
 `TOKEN_AUTH_ENDPOINT` 换一张用户态 access_token，只注入该 Runtime 的
 `APP_SPARK_AGENT_BK_AIDEV_ACCESS_TOKEN`，并把
-`{BK_API_URL_TMPL:bkaidev}/{APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
+`{BK_API_URL_TMPL:bkaidev}/{BKAIDEV_APIGW_ENVIRONMENT}/openapi/aidev/gateway/llm/v1` 注入为
 `APP_SPARK_AGENT_MODEL_BASE_URL`，模型列表的默认模型（`default_model_id`，见下文）注入为
 `APP_SPARK_AGENT_MODEL_ID`。
 
@@ -478,6 +555,70 @@ SAMEORIGIN` 要换成 `frame-ancestors`。直连地址的协议来自 `port_sche
 反代的已知缺口：不支持 WebSocket（`Upgrade` 属逐跳首部，且 Django 的 `StreamingHttpResponse`
 代理不了）；请求体整份进内存，没有流式上传；HTML 正文里的根绝对路径（`/static/app.css`）仍会
 404——重定向那一类已经在响应里改写了，正文没有改写。
+
+## 发布到开发者中心
+
+项目所有者选一个版本，AppSpark 把它作为标准云原生应用（默认模块的源码来源为 AppSpark）发布到蓝鲸开发者中心的
+生产环境，拿到可以分享的访问地址。代码在 `app_spark_api/publication/` 和 `app_spark_api/infras/bk_paas/`。
+
+接口挂在 `/api/projects/{project_id}/publication/` 下，只对项目所有者可见，其他人一律 404：
+
+- `GET ""`：线上版本、进行中的任务（`task.stage` 依次为 `binding`、`packaging`、`uploading`、`deploying`）、
+  最近一次失败、还没看过的结果（`unseen_result`）、首次发布时预填的应用名称（`default_app_name`）、开发者中心页面链接，
+  以及不指定版本时会发布的最新版本（`latest_version_id`，为空表示还没有可发布的版本）。
+- `POST "deployments/"`，body `{"app_name": "..."}`：发起发布，返回 202；已发布时即为更新版本，完成前线上旧版本继续服务。
+  暂不支持选版本，不传 `version_id` 就发最新版本，项目还没有版本时返回 400（`PUBLICATION_NO_VERSION`）；
+  传了 `version_id` 但不属于该项目返回 400（`PUBLICATION_VERSION_NOT_FOUND`）。已有任务进行中返回 409。
+  首次发布时在请求里创建开发者中心应用：应用 ID 固定为项目 ID；应用名称默认取 `default_app_name`，可以改，
+  先按开发者中心的规则过滤（只保留中文、字母、数字、连接符和下划线），过滤后为空返回 400
+  （`PUBLICATION_APP_NAME_INVALID`）。开发者中心那边创建失败（如已有同名应用）返回 400（`PUBLICATION_SUBMIT_FAILED`），
+  detail 原样是开发者中心的说明。
+- `DELETE "unseen-result/"`：确认看过结果，返回 204，结果页只展示一次。
+
+应用名称只作为首次发布的参数传给开发者中心，AppSpark 不保存，也不在本地查重。不传时取项目名称（`name` 只用于展示，
+可以重名），过滤后为空则用项目 ID。
+
+打包、上传、提交部署在 Celery 准备任务里做（`publication/tasks.py`），之后每 3 秒轮询一次部署结果，超过 15 分钟
+判失败。准备任务只做一次：worker 中途崩溃不重做；部署请求超时或返回 5xx 时不重发，提示用户到开发者中心查看部署记录。
+查询发布状态时顺带兜底：轮询停了就重新投递，发起 10 分钟还没提交部署就判失败。打包可能占住 worker 几分钟，
+`celery-worker` 的并发数要留出余量。
+
+版本暂时就是会话检查点的 tag，只认本项目会话留下的；最新版本是本项目所有会话里最后登记的那个检查点。
+打包用 `repository/git/source_packages.py`，构建方式固定为 `buildpack`，项目源码里要带 `app_desc.yaml` 与
+`.python-version`，开发者中心的 Python 构建工具要支持 heroku-24、Python 3.14 与 uv。
+
+### 配置
+
+开发者中心的系统 API 走蓝鲸 API 网关，以本服务的应用身份调用（不需要用户登录态）：
+
+```yaml
+APP_CODE: app-spark            # 本服务的应用身份，同时用于调用开发者中心
+APP_SECRET: ...
+BK_API_URL_TMPL: https://bkapi.example.com/api/{api_name}/
+APIGW_ENVIRONMENT: prod
+## 开发者中心网关单独用的环境名，不填时用 APIGW_ENVIRONMENT；bkaidev 对应的是 BKAIDEV_APIGW_ENVIRONMENT
+# BKPAAS_APIGW_ENVIRONMENT: stag
+## 开发者中心在 API 网关上的网关名，不同版本的开发者中心不一样，默认 bkpaas3
+BKPAAS_APIGW_NAME: bkpaas3
+## 开发者中心前端站点地址，只用来拼页面链接；不填时这些链接为空，发布本身不受影响
+BKPAAS_URL: https://bkpaas.example.com
+```
+
+### 在开发者中心开通权限
+
+缺了下面任何一件，发布都会失败并提示「AppSpark 未获得开发者中心授权，请联系管理员」：
+
+1. 把本服务的 app_code 注册为 AppSpark 系统角色（角色值 100）。在开发者中心 apiserver 里执行：
+
+   ```bash
+   python manage.py create_authed_app_user --bk_app_code app-spark --role 100
+   ```
+
+2. 在 API 网关上为本服务的 app_code 申请 `BKPAAS_APIGW_NAME` 指向的网关的资源权限，至少包括
+   `create_sys_app_spark_app`、`upload_ai_agent_source_package_via_link`、`sys_deploy_with_module`、
+   `sys_get_deployment_result`。
+
+用户在开发者中心把应用改成代码仓库部署后，应用就脱离 AppSpark 管理，之后的发布会失败并提示到开发者中心操作。
 
 ## 部署相关
 

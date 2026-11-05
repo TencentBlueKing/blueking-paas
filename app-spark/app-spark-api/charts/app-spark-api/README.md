@@ -67,6 +67,13 @@ Ingress 依赖 **ingress-nginx**，使用正则路径 `/api-svc(/|$)(.*)` 和重
 
 前端服务可在同一域名单独配置 `/` 的 Ingress，无需添加上述重写注解。
 
+## 发布到开发者中心
+
+发布任务在上面的 Celery worker 上推进，不需要额外的 Deployment。还需要 `appCode`、`appSecret`、`bkApiUrlTmpl`，
+以及 `bkpaasApigwName`（开发者中心网关名，默认 bkpaas3）、`bkpaasUrl`（开发者中心站点地址，用于拼页面链接）。
+在开发者中心开通权限的步骤见
+[app-spark-api README](../../README.md) 的「发布到开发者中心」。
+
 ## 数据持久化
 
 正式使用时设置 `persistence.existingClaim`，挂载已有 PVC。

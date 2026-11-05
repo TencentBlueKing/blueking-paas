@@ -46,7 +46,10 @@ class ErrorCodes:
 
     # --- Projects ---------------------------------------------------------------------------------
     PROJECT_ID_TAKEN = ErrorCode(_("Project id `{project_id}` is already taken."), status_code=HTTPStatus.CONFLICT)
-    PROJECT_NAME_TAKEN = ErrorCode(_("Project name `{name}` is already taken."), status_code=HTTPStatus.CONFLICT)
+    # 手动创建的项目没有自动命名任务；调用方只在用一句话创建之后轮询这个接口。
+    PROJECT_INT_RENAMING_NOT_FOUND = ErrorCode(
+        _("This project has no automatic naming task."), status_code=HTTPStatus.NOT_FOUND
+    )
     # 失败前已完成的步骤不会回滚（会话已结束、部分资源可能已删除），所以只承诺可以重试。
     PROJECT_DELETE_FAILED = ErrorCode(
         _("Failed to delete {category}. Some resources may already be deleted; please retry the deletion."),
@@ -97,6 +100,28 @@ class ErrorCodes:
         _("Git repository service is unavailable. Please retry later."),
         status_code=HTTPStatus.BAD_GATEWAY,
     )
+
+    # --- Publication to the developer center ------------------------------------------------------
+    # 同一项目同时只能有一个发布任务；等它结束再发起，原任务不受影响。
+    PUBLICATION_TASK_IN_PROGRESS = ErrorCode(
+        _("A publish task is already running for this project."),
+        status_code=HTTPStatus.CONFLICT,
+    )
+    PUBLICATION_APP_NAME_INVALID = ErrorCode(
+        _("Application name may contain only Chinese characters, letters, digits, hyphens and underscores."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    # 还没有哪轮对话改过代码，没有可发布的版本，先在对话里开发一些功能。
+    PUBLICATION_NO_VERSION = ErrorCode(
+        _("This project has no version to publish yet."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    PUBLICATION_VERSION_NOT_FOUND = ErrorCode(
+        _("Version `{version_id}` does not belong to this project or cannot be published."),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+    # 创建开发者中心应用失败（如应用 ID 已被占用）：任务已记为失败，detail 是给用户看的原因。
+    PUBLICATION_SUBMIT_FAILED = ErrorCode(_("{reason}"), status_code=HTTPStatus.BAD_REQUEST)
 
     # --- Agent Runtime ----------------------------------------------------------------------------
     AGENT_BUSY = ErrorCode(

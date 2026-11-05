@@ -15,13 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 
 class LinkType(IntEnum):
     empty = 0
     proxy = 1
     inherit = 2
+
+
+class ClusterSource(StrEnum):
+    """实例所在集群的来源，记录在单据上下文中，删除实例时据此定位集群"""
+
+    # 方案配置中的 host / clusters
+    PLAN = "plan"
+    # 按 cluster_selector 标签从数据库中选择
+    DB = "db"
 
 
 # RabbitMQ stream 插件的默认监听端口。凭证里的字段名是 stream_port，平台注入环境变量时

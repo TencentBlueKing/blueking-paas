@@ -31,6 +31,7 @@ from app_spark_agent.app_supervisor.app_spec import build_app_spec
 from app_spark_agent.app_supervisor.process import (
     ManagedProcess,
     ProcessRegistry,
+    ProcessSpec,
     http_get_answers,
     tcp_port_is_open,
 )
@@ -81,6 +82,9 @@ class AppSupervisor:
         # 从上次手动 launch 起算。成功也不清零，避免起来又立刻崩时无限重启。
         self._auto_restarts = 0
 
+        # launch 已经开始、子进程还没 spawn：装依赖可能要几十秒，这段状态报 starting。
+        self._preparing = False
+
     @property
     def port(self) -> int:
         """Return the port the application is expected to listen on."""
@@ -91,6 +95,10 @@ class AppSupervisor:
 
         # 不做成 property：判定要发一次真请求，把网络 I/O 藏在属性读取后面会让调用方看不出代价。
         #
+        # 还在 spawn 之前的准备阶段，这时进程不在不代表没拉或崩了。
+        if self._preparing:
+            return DevServerStatus.STARTING
+
         # 从未 launch 过就保持 not_started，哪怕别人占着端口。
         if not self._launched:
             return DevServerStatus.NOT_STARTED
@@ -101,20 +109,15 @@ class AppSupervisor:
 
         return DevServerStatus.READY if await self._process.is_ready() else DevServerStatus.STARTING
 
-    async def launch(self) -> LaunchResult:
+    async def restart(self) -> LaunchResult:
         """Start or restart the application, waiting a bounded time for it to answer."""
 
         # 不接受参数：路径和标签都是常量，见 DEFAULT_LAUNCH_PATH。
         #
-        # 不排队：进行中的 launch 被第二次打到就冲突。
-        if self._lock.locked():
-            raise AppLaunchConflict("An application launch is already in progress.")
-
+        # 排队而不是冲突：控制面的 ensure_running 可能正在为刚打开的项目装依赖，用户这时发消息、
+        # 模型 launch，报冲突会白白用掉它本轮的额度。等前一次结束再重启，新代码照样能加载。
         async with self._lock:
-            # 端口被占、却不是我们的子进程：不杀、不发事件。这里问 TCP 而不是就绪探针——
-            # 占着端口的东西不一定说 HTTP，用 HTTP 探针会把它当成端口空着，接着 bind 失败。
-            if self._port_is_taken() and not self._process.living():
-                raise AppLaunchConflict("The application port is owned by a process this supervisor did not start.")
+            self._refuse_foreign_port()
 
             # 已是监督器进程：再次 launch 一律先停再拉，好加载新代码。
             #
@@ -133,6 +136,35 @@ class AppSupervisor:
             result = await self._result()
             await self._emit_launched(result)
             return result
+
+    async def ensure_running(self) -> None:
+        """Start the application unless it is already running, waiting a bounded time for it to answer.
+
+        和 restart 的区别只有一条：进程活着就原样不动。谁在什么时候调它，见 PreviewStarter。
+        """
+        async with self._lock:
+            # 排队等锁期间，可能已被 restart 或 watch 拉起来了。
+            if self._process.living():
+                return
+            self._refuse_foreign_port()
+
+            # 和 restart 一样重新开始自动拉起额度。
+            self._auto_restarts = 0
+            await self._start_and_wait()
+            await self._emit_launched(await self._result())
+
+    def check_startable(self) -> None:
+        """Raise when a start cannot succeed: no project yet, or a foreign process owns the port.
+
+        :raises AppLaunchFailed: The workspace has no project.
+        :raises AppLaunchConflict: A process this supervisor did not start owns the port.
+        """
+        require_project(self.workspace)
+
+        # 有 launch 在进行时不看端口：restart 刚停掉旧进程、端口还没放开的那一刻，占着端口的是
+        # 我们自己的旧进程，不是外人。
+        if not self._lock.locked():
+            self._refuse_foreign_port()
 
     async def watch(self) -> None:
         """Restart the application when its process dies, up to CRASH_RETRY_LIMIT times."""
@@ -190,6 +222,14 @@ class AppSupervisor:
         """Return whether anything at all holds the agreed port, HTTP or not."""
         return tcp_port_is_open(self.port)
 
+    def _refuse_foreign_port(self) -> None:
+        """Raise AppLaunchConflict when something other than our child holds the port."""
+
+        # 不杀、不发事件。这里问 TCP 而不是就绪探针——占着端口的东西不一定说 HTTP，用 HTTP 探针
+        # 会把它当成端口空着，接着 bind 失败。
+        if self._port_is_taken() and not self._process.living():
+            raise AppLaunchConflict("The application port is owned by a process this supervisor did not start.")
+
     def _retries_exhausted(self) -> bool:
         """Return whether automatic restarts since the last manual launch are used up."""
         return self._auto_restarts >= CRASH_RETRY_LIMIT
@@ -218,24 +258,12 @@ class AppSupervisor:
 
     async def _start_and_wait(self) -> None:
         """Spawn the child and wait until it answers, or fail if it exits first."""
-
-        # 先确认有项目，避免在还没有项目的 workspace 里留下平台配置文件。
-        require_project(self.workspace)
-
-        # 平台配置要赶在 uv sync 之前写：.python-version 是 uv 选解释器的输入，残留的过期版本
-        # 会让 uv sync 先失败（沙箱里禁止下载解释器），修复就永远轮不到。写不成则不启动，否则会
-        # 产生「预览能跑、代码却因为缺平台必需文件而不能部署」的项目。
-        sync_result = await asyncio.to_thread(self._app_arch.sync)
-        if sync_result.status is FileSyncStatus.FAILED:
-            raise AppLaunchFailed(
-                f"The platform configuration could not be saved ({sync_result.errcode}): {sync_result.detail}"
-            )
-
-        # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
-        # 多少时间，不值得为跳过它去自己判断锁文件变没变。
-        await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
-
-        spec = build_app_spec(self.workspace, self.port)
+        self._preparing = True
+        try:
+            spec = await self._prepare()
+        finally:
+            # 先清掉再 spawn，中间不让出事件循环：从这里起状态由进程和探针现算。
+            self._preparing = False
 
         try:
             self._process.start(spec)
@@ -258,6 +286,27 @@ class AppSupervisor:
 
         # 到点还没应答，但进程活着。不停它、也不抛：把慢启动杀掉正是「拿就绪当健康」的那个错。
         # 调用方从结果里的 starting 知道现在还打不开，watch 会继续照看这个进程。
+
+    async def _prepare(self) -> ProcessSpec:
+        """Write the platform configuration and install the dependencies, then describe the child."""
+
+        # 先确认有项目，避免在还没有项目的 workspace 里留下平台配置文件。
+        require_project(self.workspace)
+
+        # 平台配置要赶在 uv sync 之前写：.python-version 是 uv 选解释器的输入，残留的过期版本
+        # 会让 uv sync 先失败（沙箱里禁止下载解释器），修复就永远轮不到。写不成则不启动，否则会
+        # 产生「预览能跑、代码却因为缺平台必需文件而不能部署」的项目。
+        sync_result = await asyncio.to_thread(self._app_arch.sync)
+        if sync_result.status is FileSyncStatus.FAILED:
+            raise AppLaunchFailed(
+                f"The platform configuration could not be saved ({sync_result.errcode}): {sync_result.detail}"
+            )
+
+        # 每次都对齐一遍：两次 launch 之间模型可能加了依赖。依赖没变时 uv 只做一次比对，花不了
+        # 多少时间，不值得为跳过它去自己判断锁文件变没变。
+        await sync_project_environment(self.workspace, Path(settings.APP_LOG_PATH))
+
+        return build_app_spec(self.workspace, self.port)
 
     async def _wait_until(self, predicate: Callable[[], bool], seconds: float) -> None:
         # 重启前等旧端口放开，避免立刻 bind 失败。到期没等到就继续，由后面的实听等待收场。

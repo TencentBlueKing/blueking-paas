@@ -1,4 +1,4 @@
-"""HTTP views: health, drain, context, and the AG-UI run."""
+"""HTTP views: health, drain, context, preview start, and the AG-UI run."""
 
 import json
 from collections.abc import Callable
@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse, Response
 
 from app_spark_agent import VERSION, settings
 from app_spark_agent.agent import build_run_model
+from app_spark_agent.app_supervisor import AppLaunchConflict, AppLaunchFailed
 from app_spark_agent.git import GitError
 
 # Imported under a different name: `log` already means "append-only channel" in this module.
@@ -241,6 +242,42 @@ async def restore_workspace(runtime: RuntimeDep, commit: str = Query(min_length=
                 detail=f"The workspace could not be restored to {commit}: {exc}",
             ) from exc
     return JSONResponse({"outcome": str(outcome), "head": runtime.saver.status.local_sha})
+
+
+@router.post("/preview/start", dependencies=[Depends(require_bearer)])
+async def start_preview(runtime: RuntimeDep) -> Response:
+    """Bring the workspace application up for preview, unless it is already up.
+
+    Meant for a workspace that already holds a project, typically right after the user reopens
+    it and ``POST /workspace/restore`` has put its files back. A live application is left alone
+    rather than restarted, and a start already under way absorbs a repeated request.
+
+    Returns without waiting: installing the dependencies of a freshly restored workspace can take
+    minutes. Follow ``dev_server_status`` on ``/health``, which reads ``starting`` until the
+    process answers; falling back to ``not_started`` or ``stopped`` means the start failed, and
+    the reason is in the application log. A successful start is recorded as ``app.launched`` in
+    ``/ui-events``, the same as the model's own launch.
+
+    Not held under the run guard: starting the preview does not touch the conversation, and a
+    turn in progress may want the preview just as much.
+
+    :return: ``202`` once a start is under way or the application is already running; ``409``
+        with ``code=no_project`` when the workspace has no project yet, or ``code=port_taken``
+        when a process this Runtime did not start holds the port.
+    """
+    try:
+        runtime.preview_starter.start()
+    except AppLaunchFailed as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "no_project", "message": "The workspace has no project to start yet."},
+        ) from exc
+    except AppLaunchConflict as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "port_taken", "message": str(exc)},
+        ) from exc
+    return Response(status_code=status.HTTP_202_ACCEPTED)
 
 
 @router.post("/runs", dependencies=[Depends(require_bearer)])

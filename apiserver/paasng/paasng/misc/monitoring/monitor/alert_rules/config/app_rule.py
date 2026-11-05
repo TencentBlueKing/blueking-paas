@@ -89,6 +89,17 @@ if settings.GCS_MYSQL_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
 
+# redis 增强服务监控
+if settings.REDIS_MONITOR_CONF.get("enabled", False):
+    for _redis_alert_code in [
+        AlertCode.HIGH_REDIS_MEMORY_USAGE.value,
+        AlertCode.HIGH_REDIS_CONNECTION_USAGE.value,
+        AlertCode.REDIS_OOM_KILLED.value,
+        AlertCode.REDIS_UNAVAILABLE.value,
+    ]:
+        _default_supported_alert_codes.module_scoped_codes.append(_redis_alert_code)
+        _cnative_supported_alert_codes.module_scoped_codes.append(_redis_alert_code)
+
 
 def get_supported_alert_codes(app_type: str) -> SupportedAlertCodes:
     """根据 app 类型返回支持的告警码"""

@@ -242,18 +242,19 @@ def _check_module_layout(entries_by_view: dict[type, list[UrlEntry]]) -> list[Er
 @register()
 def check_sys_api_view_layout(app_configs, **kwargs) -> list[Error]:
     """Check if the system API views are organized as expected."""
-    entries = list(iter_url_patterns())
-    errors = _check_url_naming(entries)
-
+    checked_entries: list[UrlEntry] = []
     # Group the url entries by their view class, the non class-based views are checked by
     # `check_views_perm_configured()` instead, skip them here.
     entries_by_view: dict[type, list[UrlEntry]] = defaultdict(list)
-    for entry in entries:
+    for entry in iter_url_patterns():
         view_cls = get_view_class(entry.callback)
-        if view_cls is None or view_cls.__name__ in SYS_API_CHECKING_EXCLUDED_VIEWS:
+        if view_cls is not None and view_cls.__name__ in SYS_API_CHECKING_EXCLUDED_VIEWS:
             continue
-        entries_by_view[view_cls].append(entry)
+        checked_entries.append(entry)
+        if view_cls is not None:
+            entries_by_view[view_cls].append(entry)
 
+    errors = _check_url_naming(checked_entries)
     for view_cls, view_entries in entries_by_view.items():
         sys_urls, other_urls = _split_urls(view_entries)
         errors.extend(_check_view_naming(view_cls, sys_urls, other_urls))

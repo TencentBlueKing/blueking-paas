@@ -12,6 +12,7 @@ import {
   listConversations,
   listHistory,
   listUiEvents,
+  startConversationPreview,
   startConversationRun,
 } from '@/http/api';
 import type {
@@ -75,6 +76,10 @@ export const useProjectStore = defineStore('project', () => {
   // 下一轮能不能直接用现有运行环境；不能时，发消息后要先等运行环境准备好。
   const runtimeReady = ref(false);
   const entering = ref(false);
+  /** 进入会话时发出的「拉起预览」请求还没回来。要先拉 Runtime、恢复工作区，可能要几十秒。 */
+  const previewStarting = ref(false);
+  /** 每回来一次「拉起预览」就加一。预览面板据此重新问状态：之前那次可能在 Runtime 起来前就问完停了。 */
+  const previewStartSeq = ref(0);
   const messages = ref<ChatMessage[]>([createWelcomeMessage()]);
   const status = ref<ProjectStatus>('idle');
   // 首页创建项目时暂存首条需求。只允许目标项目消费一次，避免刷新或切项目后误发。
@@ -100,6 +105,8 @@ export const useProjectStore = defineStore('project', () => {
   const applyCtx = createApplyContext(messages.value);
 
   let enterToken = 0;
+  // 只认最后一次「拉起预览」：换了会话再回来的旧请求，不能把新会话的标记清掉。
+  let previewStartGeneration = 0;
   // 正在读的那一轮 SSE。切项目、换会话都会把消息列表换掉，不中断的话后续事件会写进新列表。
   // 后端这一轮不靠这条连接：abort、刷新页面、网络中断都只让当前页面停止读取，这一轮在 Runtime 里
   // 照常跑完；切回来靠轮询补已入库的内容。
@@ -264,6 +271,8 @@ export const useProjectStore = defineStore('project', () => {
     replicationPending.value = false;
     runtimeReady.value = false;
     entering.value = false;
+    previewStartGeneration += 1;
+    previewStarting.value = false;
     status.value = 'idle';
     historyCursor.value = null;
     loadingEarlier.value = false;
@@ -754,6 +763,41 @@ export const useProjectStore = defineStore('project', () => {
     if (historyLoaded && stillBound()) scheduleCatchUp(true);
   };
 
+  /**
+   * 进入一个活跃会话时，在后台把它的工作区应用拉起来，不等。
+   *
+   * 查看会话不会拉 Runtime，没有一轮对话模型也不会去启动应用，进入一个已有代码的项目时预览就会
+   * 一直空着。和拉历史并行发：要先拉 Runtime、恢复工作区，比拉历史慢得多。应用已在跑后端不会动它，
+   * 每次进入都发也安全。失败只记日志，预览面板照常按状态显示，不影响对话。
+   */
+  const startPreviewInBackground = (state: RuntimeStateResponse) => {
+    if (!state.is_live || !projectId.value) return;
+    const id = projectId.value;
+    previewStartGeneration += 1;
+    const generation = previewStartGeneration;
+    const stillHere = () => (
+      generation === previewStartGeneration
+      && projectId.value === id
+      && conversationNumber.value === state.number
+    );
+    previewStarting.value = true;
+    startConversationPreview(id, state.number)
+      .then(() => {
+        if (!stillHere()) return;
+        // 后端已经把 Runtime 拉起来了，下一轮不用再等准备运行环境。
+        runtimeReady.value = true;
+      })
+      .catch((error) => {
+        if (!stillHere()) return;
+        console.warn('[project] 拉起预览失败', error);
+      })
+      .finally(() => {
+        if (generation !== previewStartGeneration) return;
+        previewStarting.value = false;
+        previewStartSeq.value += 1;
+      });
+  };
+
   /** 项目里还活着的那个会话，一个都没有则返回 null。 */
   const findLiveConversation = async (id: string): Promise<ConversationResponse | null> => {
     const listed = await listConversations(id, {
@@ -832,7 +876,11 @@ export const useProjectStore = defineStore('project', () => {
       if (!live) {
         const state = await startNewConversation(id);
         if (token !== enterToken) return;
-        await bindConversation(state);
+        // 项目可能是旧的：没有活跃会话时新建一个，workspace 里照样是之前写好的代码。
+        // bindConversation 先把会话编号定下来，这里不 await 它的历史，才能和拉历史并行。
+        const bound = bindConversation(state);
+        startPreviewInBackground(state);
+        await bound;
         return;
       }
       let state: RuntimeStateResponse;
@@ -845,7 +893,9 @@ export const useProjectStore = defineStore('project', () => {
         return;
       }
       if (token !== enterToken) return;
-      await bindConversation(state);
+      const bound = bindConversation(state);
+      startPreviewInBackground(state);
+      await bound;
     } finally {
       if (token === enterToken) entering.value = false;
     }
@@ -863,7 +913,10 @@ export const useProjectStore = defineStore('project', () => {
     try {
       const state = await getConversation(project, number);
       if (token !== enterToken || projectId.value !== project) return;
-      await bindConversation(state);
+      // 归档只读，不拉；回到活跃会话时拉，它的 Runtime 可能在翻归档期间被空闲回收了。
+      const bound = bindConversation(state);
+      startPreviewInBackground(state);
+      await bound;
     } finally {
       if (token === enterToken) entering.value = false;
     }
@@ -922,7 +975,9 @@ export const useProjectStore = defineStore('project', () => {
       if (!stillHere()) return;
       const created = await createConversation(id);
       if (!stillHere()) return;
-      await bindConversation(created);
+      const bound = bindConversation(created);
+      startPreviewInBackground(created);
+      await bound;
     } catch (error) {
       if (!stillHere()) return;
       await recoverConversationView(id, viewedNumber);
@@ -1108,6 +1163,8 @@ export const useProjectStore = defineStore('project', () => {
     running,
     replicationPending,
     entering,
+    previewStarting,
+    previewStartSeq,
     messages,
     status,
     busy,

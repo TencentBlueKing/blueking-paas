@@ -33,9 +33,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 
 import attrs
+import httpx2
 import pytest
 
 from app_spark_api.agent.conversations import services
+from app_spark_api.agent.conversations.lifecycle import start
 from app_spark_api.agent.conversations.models import Conversation
 from app_spark_api.agent.runtime import (
     AgentProvisionError,
@@ -593,3 +595,30 @@ async def test_a_caller_from_another_project_cannot_open_the_application(aapi_cl
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert APP_MARKER not in response.content.decode()
+
+
+# --- 拉起预览 --------------------------------------------------------------------------------
+
+
+async def test_a_port_held_by_another_process_is_reported_as_such(aapi_client, conversation, monkeypatch):
+    """Runtime 不杀不是自己拉起的进程。这种 409 要和「会话已结束」「workspace 被占」分得开。"""
+
+    def answer(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == "/health":
+            return httpx2.Response(200, json={**attrs.asdict(HEALTH), "replication_pending": False})
+        return httpx2.Response(409, json={"detail": {"code": "port_taken", "message": "owned by another process"}})
+
+    client = AgentRuntimeClient(
+        AgentRuntimeHandle(conversation_id=str(conversation.id), base_url="http://runtime.invalid", runtime_token="t"),
+        transport=httpx2.MockTransport(answer),
+    )
+
+    async def fake_open_client(_conversation, **_kwargs) -> AgentRuntimeClient:
+        return client
+
+    monkeypatch.setattr(start, "open_client", fake_open_client)
+
+    response = await aapi_client.post(f"{CONVERSATIONS_URL}{conversation.number}/preview/start/")
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json()["code"] == "PREVIEW_PORT_TAKEN"

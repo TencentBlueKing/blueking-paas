@@ -82,6 +82,13 @@ uv run python -m scripts.probe_gateway_thinking verify hy3            # 4. 经�
 3. **前端决定什么时候显示**。平台同时告诉前端应用现在的状态（没启动、启动中、可以看了、已停止）；只有「可以看了」
    才显示，「启动中」就继续等。
 
+**进入旧项目时由前端显式拉起。** 查看会话不拉 Runtime，没有一轮对话模型也不会 `launch_app`，所以旧项目
+打开后预览会一直空着。前端绑定活跃会话后调 `POST .../conversations/<n>/preview/start/`：按需拉起
+Runtime、像发起一轮对话那样恢复文件和上下文（见[冷恢复](conversation.md#冷恢复)），再调 Agent 的
+`POST /preview/start`，不等就绪就回 202，之后照常轮询应用状态。应用已在跑就不动它（重启加载新代码只是模型
+`launch_app` 的事），所以每次进入都调也安全。`outcome` 为 `no_project` 表示工作区里还没有 `pyproject.toml`，
+不是错误。这是唯一会为「看」付 Runtime 成本的接口，E2B 下预览本身不续期，没有对话照样按空闲超时回收。
+
 地址有两种，取决于 Runtime 跑在哪：
 
 ```mermaid

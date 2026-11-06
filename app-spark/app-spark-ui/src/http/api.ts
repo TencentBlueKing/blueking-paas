@@ -14,6 +14,7 @@ import type {
   PagedProjectResponse,
   PageQuery,
   PreviewResponse,
+  PreviewStartResponse,
   PublicationDeploymentRequest,
   PublicationResponse,
   ProjectFromPromptRequest,
@@ -49,6 +50,7 @@ export type {
   PagedResponse,
   PageQuery,
   PreviewResponse,
+  PreviewStartResponse,
   PublicationDeploymentRequest,
   PublicationDevCenterLinks,
   PublicationFailure,
@@ -182,6 +184,24 @@ export const getConversationPreview = (
 ): Promise<PreviewResponse> => (
   http.get(
     `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/`,
+    {},
+    { globalError: false },
+  )
+);
+
+/**
+ * 把会话的工作区应用拉起来，不等就绪就返回。
+ *
+ * 进入已有代码的项目时用：没有一轮对话，模型不会去拉起应用，预览会一直空着。会按需拉起 Agent
+ * Runtime 并恢复工作区，可能要几秒到几十秒。应用已在跑就不动它，重复调用安全。是否起来了照常看
+ * `getConversationPreview` 的 `dev_server_status`。失败不影响对话，所以关掉全局报错。
+ */
+export const startConversationPreview = (
+  projectId: string,
+  number: number,
+): Promise<PreviewStartResponse> => (
+  http.post(
+    `${apiPrefix}/projects/${projectId}/conversations/${number}/preview/start/`,
     {},
     { globalError: false },
   )

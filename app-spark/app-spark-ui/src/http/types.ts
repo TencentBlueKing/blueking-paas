@@ -207,6 +207,14 @@ export interface PreviewResponse {
   dev_server_status: DevServerStatus | null;
 }
 
+/** POST .../conversations/{number}/preview/start/ */
+export interface PreviewStartResponse {
+  /**
+   * starting：已在拉起，或本来就在跑；no_project：工作区里还没有可启动的项目，不是错误。
+   */
+  outcome: 'starting' | 'no_project';
+}
+
 export type ModelCatalogSource = 'bkaidev' | 'direct';
 
 export interface ModelCatalogItem {

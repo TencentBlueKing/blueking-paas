@@ -12,6 +12,8 @@ export const ApiErrorCode = {
   CONVERSATION_CLOSED: 'CONVERSATION_CLOSED',
   /** 同项目里已有别的会话占着 workspace，新会话拉不起自己的 Agent Runtime。 */
   AGENT_WORKSPACE_BUSY: 'AGENT_WORKSPACE_BUSY',
+  /** 工作区应用的端口被不是 Runtime 拉起的进程占着，预览拉不起来。 */
+  PREVIEW_PORT_TAKEN: 'PREVIEW_PORT_TAKEN',
   /** 用户选择的模型已经不在当前推荐目录中，需要刷新目录并重新选择。 */
   MODEL_NOT_AVAILABLE: 'MODEL_NOT_AVAILABLE',
   /** 当前项目还没有可发布的代码检查点。 */

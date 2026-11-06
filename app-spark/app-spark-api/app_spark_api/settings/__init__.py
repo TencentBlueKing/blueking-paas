@@ -517,7 +517,7 @@ AGENT_CONTEXT_STORAGE = settings.get(
 ## 小于 1 会被抬回 1：最新那一版是冷启动唯一能依赖的东西，任何配置都不该把它清掉。
 AGENT_CONTEXT_VERSIONS_KEPT = settings.get("AGENT_CONTEXT_VERSIONS_KEPT", 5)
 
-## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 services._restore_files），
+## 一个会话保留多少个最近的检查点。冷启动只用最新的那一个（见 lifecycle.utils._restore_files），
 ## 多留的几行只用于排查；行本身很小，不钉住任何上下文版本。
 AGENT_CHECKPOINTS_KEPT = settings.get("AGENT_CHECKPOINTS_KEPT", 3)
 

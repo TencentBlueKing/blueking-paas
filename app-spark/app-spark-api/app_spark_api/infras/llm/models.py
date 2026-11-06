@@ -83,7 +83,7 @@ def _measured_thinking(efforts: frozenset[OpenAIReasoningEffort]) -> Callable[[s
 # 其它强度都接受，但用量看不出差别。
 _HUNYUAN_THINKING = _measured_thinking(frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"}))
 
-# thinking 白名单，人工维护，增改的步骤见 README「为网关模型适配 thinking」。
+# thinking 白名单，人工维护，增改的步骤见 docs/misc.md「为网关模型适配 thinking」。
 #
 # 网关模型 ID（fnmatch，区分大小写，按顺序先匹配先用）→ 它的 thinking 档从哪来：
 # - pydantic-ai 自带的厂商档：只借其中和 thinking 有关的字段，怎么开关、发什么取值由 pydantic-ai 维护；

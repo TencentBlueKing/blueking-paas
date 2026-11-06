@@ -3,7 +3,7 @@
 沙箱内的编码 Agent。一个进程绑定一个会话和一个 workspace，通过 AG-UI over HTTP/SSE 接收新消息，
 把会话状态存在 workspace 之外，并复制到控制面和 Project 的 Git 仓库，所以 Runtime 本身可以随时丢弃。
 
-本组件与 `app-spark-api` 平级，HTTP 用 FastAPI，不引入 Django。
+本组件与 `app-spark-api` 平级，HTTP 用 FastAPI 实现。
 
 ## 快速开始
 

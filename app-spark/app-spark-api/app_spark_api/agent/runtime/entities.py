@@ -223,7 +223,7 @@ class BkAidevModelConfig:
     """Defaults for a Runtime that calls bkaidev.
 
     The LLM base URL and the access_token exchange endpoint are not configured here: the former
-    is built from BK_API_URL_TMPL and APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
+    is built from BK_API_URL_TMPL and BKAIDEV_APIGW_ENVIRONMENT, the latter is TOKEN_AUTH_ENDPOINT. The
     app identity for the exchange is the service's own APP_CODE / APP_SECRET, never a nested copy.
 
     :param default_model_id: The preferred default model, injected as the Runtime's MODEL_ID

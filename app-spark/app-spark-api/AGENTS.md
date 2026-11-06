@@ -8,7 +8,7 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
   `charts/app-spark-api/charts/*.tgz` from the main checkout (Helm tests fail without the latter),
   `uv sync` here and in `../agent`, then run the full test suite. Only live e2b/bkaidev tests may skip.
 * Making a bkaidev gateway model honour thinking settings (adding to or changing
-  `_GATEWAY_THINKING_PROFILES` in `app_spark_api/infras/llm/models.py`): follow the README's
+  `_GATEWAY_THINKING_PROFILES` in `app_spark_api/infras/llm/models.py`): follow docs/misc.md's
   「为网关模型适配 thinking」. Probe the model with `scripts/probe_gateway_thinking.py` before writing an
   entry, and never list a `reasoning_effort` value the probe did not see the gateway accept: an
   unaccepted value fails the request with HTTP 400.
@@ -29,7 +29,11 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 * Put pure queries on the model's manager/queryset, not in services; services orchestrate (transactions, translating database errors into domain exceptions).
 * Failures leave the API as `{"code", "detail"}`. Raise an `error_codes.*` entry at the boundary, or
   map a domain exception in `api.py`; do not raise `HttpError` or hand-build a `{"detail": ...}` body.
-  Routes declare `**ERROR_RESPONSES` so OpenAPI matches. See the README's 「API 错误响应」 section.
+  Routes declare `**ERROR_RESPONSES` so OpenAPI matches. See 「调用接口」 in docs/dev_guide.md.
+* `conf.yaml.tpl` is the reference for every setting. Adding, renaming, removing or changing the default of a
+  setting in `app_spark_api/settings/` means updating its template entry in the same change, marked 必填, 可选
+  (with the default) or 按条件必填; `tests/settings/test_conf_template.py` fails when the keys drift. Docs
+  name settings as 必填/可选 and link to the template instead of repeating values or field lists.
 
 ### Running tests
 

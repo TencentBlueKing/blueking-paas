@@ -34,8 +34,8 @@ def create_runtime_app(
 
     Three streams are persisted under ``state_dir``, split by how each one mutates: an
     append-only raw transcript, an append-only AG-UI event history, and the single mutable
-    context blob compaction rewrites. See ``README.md`` for why the context can never be
-    rebuilt from the transcript.
+    context blob compaction rewrites. See ``docs/harness_state.md`` for why the context can
+    never be rebuilt from the transcript.
 
     When a control plane is supplied all three are also replicated to it, which is what makes
     ``state_dir`` disposable. Without one the Runtime is entirely self-contained.

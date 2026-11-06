@@ -17,9 +17,9 @@
 from django.db import models
 from django.utils import timezone
 
-from app_spark_api.core.projects.constants import PROJECT_NAME_MAX_LENGTH, IntRenamingStatus
+from app_spark_api.core.projects.constants import INT_RENAMING_TIMEOUT, PROJECT_NAME_MAX_LENGTH, IntRenamingStatus
 from app_spark_api.core.tenant.fields import tenant_id_field_factory
-from app_spark_api.utils.models import BkUserField, OwnerTimestampedModel
+from app_spark_api.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
 
 class ProjectManager(models.Manager["Project"]):
@@ -81,7 +81,7 @@ class Project(OwnerTimestampedModel):
     default_objects = models.Manager()
 
 
-class ProjIntRenaming(models.Model):
+class ProjIntRenaming(TimestampedModel):
     """给从一句话创建的项目自动起名的结果，一个项目最多一行。
 
     ``name`` 为空是正常结果：描述不足以起名时模型会明确留空，调用方保留项目原来的名字即可。
@@ -93,6 +93,7 @@ class ProjIntRenaming(models.Model):
 
     # 失败原因要展示给用户，也可能被贴进工单里，截断到一段合理的长度。
     ERROR_MESSAGE_MAX_LENGTH = 2000
+    TIMED_OUT_MESSAGE = "Renaming did not finish in time."
 
     project = models.OneToOneField(
         Project,
@@ -139,7 +140,7 @@ class ProjIntRenaming(models.Model):
         changed = (
             await type(self)
             .objects.filter(pk=self.pk, completed_at__isnull=True, error_at__isnull=True)
-            .aupdate(name=name, completed_at=now)
+            .aupdate(name=name, completed_at=now, updated_at=now)
         )
         if not changed:
             return
@@ -153,8 +154,19 @@ class ProjIntRenaming(models.Model):
 
         :param message: 失败原因，过长会被截断。
         """
+        now = timezone.now()
         await (
             type(self)
             .objects.filter(pk=self.pk, completed_at__isnull=True, error_at__isnull=True)
-            .aupdate(error_at=timezone.now(), error_msg=message[: self.ERROR_MESSAGE_MAX_LENGTH])
+            .aupdate(error_at=now, error_msg=message[: self.ERROR_MESSAGE_MAX_LENGTH], updated_at=now)
         )
+
+    async def fail_if_overdue(self) -> None:
+        """超过 ``INT_RENAMING_TIMEOUT`` 仍没有结论的记录记为失败，并刷新本对象。
+
+        轮询时调用，免得任务失联后前端一直等下去。记成失败之后，迟到的任务也不会再改写记录或项目名。
+        """
+        if self.is_finished or timezone.now() - self.created_at < INT_RENAMING_TIMEOUT:
+            return
+        await self.fail(self.TIMED_OUT_MESSAGE)
+        await self.arefresh_from_db()

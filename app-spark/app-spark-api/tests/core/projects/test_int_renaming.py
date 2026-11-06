@@ -18,11 +18,14 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from app_spark_api.agent.runtime.exceptions import ModelCredentialMissingError
 from app_spark_api.core.projects import int_renaming, tasks
-from app_spark_api.core.projects.constants import IntRenamingStatus
+from app_spark_api.core.projects.constants import INT_RENAMING_TIMEOUT, IntRenamingStatus
 from app_spark_api.core.projects.models import Project, ProjIntRenaming
 from app_spark_api.infras.llm import FakeLLMConfig, LLMCallError, LLMClient
 
@@ -121,6 +124,29 @@ class TestRun:
         await record.arefresh_from_db()
         assert record.status == IntRenamingStatus.COMPLETED
         assert record.name is None
+
+    async def test_a_record_failed_as_overdue_is_not_completed_by_a_late_task(self):
+        project = await make_project()
+        record = await make_record(project)
+        overdue = timezone.now() - INT_RENAMING_TIMEOUT - timedelta(seconds=1)
+        await ProjIntRenaming.objects.filter(pk=record.pk).aupdate(created_at=overdue)
+        await record.arefresh_from_db()
+
+        await record.fail_if_overdue()
+        await int_renaming.run(project.pk, llm=fake_llm("番茄专注钟"))
+
+        await record.arefresh_from_db()
+        assert (record.status, record.error_msg) == (IntRenamingStatus.FAILED, ProjIntRenaming.TIMED_OUT_MESSAGE)
+        assert (await Project.objects.aget(pk=project.pk)).name == project.pk
+
+    async def test_a_recent_pending_record_is_not_failed(self):
+        project = await make_project()
+        record = await make_record(project)
+
+        await record.fail_if_overdue()
+
+        await record.arefresh_from_db()
+        assert record.status == IntRenamingStatus.PENDING
 
     async def test_a_deleted_project_is_skipped(self):
         project = await make_project()

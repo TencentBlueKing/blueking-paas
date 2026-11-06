@@ -4,6 +4,9 @@ You are in the ap-spark repo, helping implement features, fix bugs, and refactor
 
 ## Common workflows
 
+* Starting work in a fresh git worktree: copy the gitignored `settings_local.yaml` and
+  `charts/app-spark-api/charts/*.tgz` from the main checkout (Helm tests fail without the latter),
+  `uv sync` here and in `../agent`, then run the full test suite. Only live e2b/bkaidev tests may skip.
 * Making a bkaidev gateway model honour thinking settings (adding to or changing
   `_GATEWAY_THINKING_PROFILES` in `app_spark_api/infras/llm/models.py`): follow the README's
   「为网关模型适配 thinking」. Probe the model with `scripts/probe_gateway_thinking.py` before writing an

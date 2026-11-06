@@ -296,6 +296,40 @@ async def test_an_unusable_prompt_creates_nothing(aapi_client, content):
     assert not await Project.default_objects.aexists()
 
 
+async def test_a_refused_prompt_says_which_field_failed_and_why(aapi_client):
+    response = await aapi_client.post(FROM_PROMPT_URL, data={}, content_type="application/json")
+
+    body = response.json()
+    assert body["detail"] == "Request validation failed: body.content: Field required"
+    # `content` sits at the top of the body; the view's parameter name is not part of the location.
+    assert body["data"] == [{"loc": ["body", "content"], "msg": "Field required", "type": "missing"}]
+
+
+async def test_every_refused_field_is_reported(aapi_client):
+    response = await aapi_client.post(PROJECTS_URL, data={"id": "Bad Id"}, content_type="application/json")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["body", "id"], ["body", "name"]]
+    assert "body.id: String should match pattern" in response.json()["detail"]
+    assert response.json()["detail"].endswith("; body.name: Field required")
+
+
+async def test_a_refused_pagination_parameter_is_located_in_the_query(aapi_client):
+    """Pagination arrives as one flattened Schema; the location is the query key the caller sent."""
+    response = await aapi_client.get(PROJECTS_URL, {"page": "first"})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["query", "page"]]
+    assert response.json()["detail"].startswith("Request validation failed: query.page: ")
+
+
+async def test_a_refused_path_parameter_is_located_in_the_path(aapi_client):
+    response = await aapi_client.get(f"{PROJECTS_URL}Bad-Id/int-renaming/")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert [error["loc"] for error in response.json()["data"]] == [["path", "project_id"]]
+
+
 def test_generated_ids_and_the_collection_actions_segment_respect_the_id_pattern():
     """Generated ids must be valid ids; the actions segment must never be one, so it needs no reserving."""
     assert re.fullmatch(constants.PROJECT_ID_PATTERN, services.generate_project_id())

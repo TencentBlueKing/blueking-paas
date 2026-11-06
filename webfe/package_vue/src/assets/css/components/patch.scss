@@ -125,8 +125,8 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     width: 344px;
 }
 
-.bk-date-picker-rel .bk-date-picker-editor {
-    padding: 0 40px 0 10px;
+.bk-date-picker-rel .clear-action {
+    display: none;
 }
 
 .bk-form-radio {
@@ -192,10 +192,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     float: left;
 }
 
-.bk-date-picker-rel .icon-wrapper {
-    border-radius: 0 2px 2px 0;
-}
-
 .bk-options .bk-option-content {
     padding: 0 10px;
 }
@@ -258,16 +254,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .bk-searcher-wrapper .placeholder {
     top: 0 !important;
-}
-
-.bk-date-picker-rel {
-    .clear-action {
-        display: none;
-    }
-    .icon-wrapper {
-        left: auto !important;
-        right: 0;
-    }
 }
 
 .bk-selector-list .bk-selector-list-item .text {
@@ -341,16 +327,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .bk-searcher-wrapper .placeholder {
     top: 0 !important;
-}
-
-.bk-date-picker-rel {
-    .clear-action {
-        display: none;
-    }
-    .icon-wrapper {
-        left: auto !important;
-        right: 0;
-    }
 }
 
 .bk-selector-list .bk-selector-list-item .text {

@@ -22,50 +22,23 @@
     description_zh_cn: redis
     long_description_zh_cn: redis
     instance_tutorial_zh_cn: |-
-      通过环境变量获取 Redis 连接信息，`REDIS_MODE` 表示 Redis 的部署模式：
+      通过环境变量来获取对应的值：
 
-      - `single`：单实例模式。`REDIS_HOST`、`REDIS_PORT` 是 Redis 的地址和端口，用法与之前一致。未设置 `REDIS_MODE` 时按单实例模式处理。
-      - `replication`：哨兵模式。`REDIS_HOST`、`REDIS_PORT` 是哨兵节点的地址和端口，多个值用英文逗号分隔，按顺序一一对应；`REDIS_SERVICE_NAME` 是哨兵监控的主节点名称，未设置时使用 `mymaster`。
-
-      `REDIS_PASSWORD` 是 Redis 密码，`REDIS_DB` 是数据库编号（未设置时使用 0）。
-
-      单实例模式：
-
-      ```python
+      ```
       REDIS_HOST = os.environ.get('REDIS_HOST')
       REDIS_PORT = int(os.environ.get('REDIS_PORT'))
       REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
       ```
 
-      哨兵模式（以 redis-py 为例）：
+      如果 `REDIS_MODE` 为 `replication`（哨兵模式），`REDIS_HOST`、`REDIS_PORT` 为英文逗号分隔的哨兵节点地址和端口，`REDIS_SERVICE_NAME` 为哨兵的主节点名称。
 
-      ```python
-      from redis.sentinel import Sentinel
-
-      hosts = os.environ.get('REDIS_HOST').split(',')
-      ports = [int(p) for p in os.environ.get('REDIS_PORT').split(',')]
-      sentinel = Sentinel(list(zip(hosts, ports)))
-      client = sentinel.master_for(
-          os.environ.get('REDIS_SERVICE_NAME') or 'mymaster',
-          password=os.environ.get('REDIS_PASSWORD'),
-          db=int(os.environ.get('REDIS_DB') or 0),
-      )
-      ```
-
-      蓝鲸 Python 开发框架默认使用 RabbitMQ 作为 Celery 的 BROKER_URL；如需在单实例模式下使用 Redis，请在 Django 的配置中手动设置 BROKER_URL 的值:
+      蓝鲸 Python 开发框架默认使用 RabbitMQ 作为 Celery 的 BROKER_URL；如需使用 Redis，请在 Django 的配置中手动设置 BROKER_URL 的值:
 
       ```
       BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
       ```
     instance_tutorial_en: |-
-      Get the Redis connection info via environment variables. `REDIS_MODE` indicates the deployment mode of Redis:
-
-      - `single`: standalone mode. `REDIS_HOST` and `REDIS_PORT` are the address and port of Redis, the same as before. If `REDIS_MODE` is not set, standalone mode is assumed.
-      - `replication`: sentinel mode. `REDIS_HOST` and `REDIS_PORT` are the addresses and ports of the sentinel nodes, multiple values are separated by commas and correspond to each other in order; `REDIS_SERVICE_NAME` is the name of the master monitored by sentinel, defaults to `mymaster` if not set.
-
-      `REDIS_PASSWORD` is the Redis password, and `REDIS_DB` is the database number (defaults to 0 if not set).
-
-      Standalone mode:
+      To get the corresponding values via environment variables.
 
       ```python
       REDIS_HOST = os.environ.get('REDIS_HOST')
@@ -73,22 +46,9 @@
       REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
       ```
 
-      Sentinel mode (using redis-py as an example):
+      If `REDIS_MODE` is `replication` (sentinel mode), `REDIS_HOST` and `REDIS_PORT` are comma-separated addresses and ports of the sentinel nodes, and `REDIS_SERVICE_NAME` is the master name of the sentinel.
 
-      ```python
-      from redis.sentinel import Sentinel
-
-      hosts = os.environ.get('REDIS_HOST').split(',')
-      ports = [int(p) for p in os.environ.get('REDIS_PORT').split(',')]
-      sentinel = Sentinel(list(zip(hosts, ports)))
-      client = sentinel.master_for(
-          os.environ.get('REDIS_SERVICE_NAME') or 'mymaster',
-          password=os.environ.get('REDIS_PASSWORD'),
-          db=int(os.environ.get('REDIS_DB') or 0),
-      )
-      ```
-
-      By default, the BlueKing Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis in standalone mode, set the BROKER_URL value manually in Django's configuration:
+      By default, the BlueKing Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis, set the BROKER_URL value manually in Django's configuration:
 
       ```
       BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'

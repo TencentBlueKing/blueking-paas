@@ -183,6 +183,11 @@ class ErrorCodes:
         _("This conversation's application is not answering."),
         status_code=HTTPStatus.BAD_GATEWAY,
     )
+    # 端口被不是 Runtime 拉起的进程占着。不杀它：那可能正是模型自己用 shell 起的应用，预览照样能看。
+    PREVIEW_PORT_TAKEN = ErrorCode(
+        _("Another process already holds this conversation's application port."),
+        status_code=HTTPStatus.CONFLICT,
+    )
 
 
 error_codes = ErrorCodes()

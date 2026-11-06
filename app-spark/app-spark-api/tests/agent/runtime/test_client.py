@@ -35,8 +35,13 @@ import httpx2
 import pytest
 
 from app_spark_api.agent.runtime.client import AgentRuntimeClient
+from app_spark_api.agent.runtime.constants import PreviewStartOutcome
 from app_spark_api.agent.runtime.entities import AgentRuntimeHandle
-from app_spark_api.agent.runtime.exceptions import AgentBusyError, AgentUnavailableError
+from app_spark_api.agent.runtime.exceptions import (
+    AgentBusyError,
+    AgentPreviewPortTakenError,
+    AgentUnavailableError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -349,3 +354,55 @@ async def test_any_other_answer_to_a_stop_is_a_runtime_failure() -> None:
 async def test_a_stop_that_cannot_reach_the_runtime_is_a_runtime_failure(dead_handle: AgentRuntimeHandle) -> None:
     with pytest.raises(AgentUnavailableError, match="stop run run-1"):
         await AgentRuntimeClient(dead_handle).stop_run("run-1")
+
+
+# --- Starting the preview ----------------------------------------------------------------------
+
+
+async def test_a_start_under_way_is_reported_as_starting() -> None:
+    sent: list[httpx2.Request] = []
+    client = runtime_answering({"/preview/start": (202, b"")}, sent)
+
+    assert await client.start_preview() is PreviewStartOutcome.STARTING
+    assert [(request.method, request.url.path) for request in sent] == [("POST", "/preview/start")]
+    assert sent[0].headers["Authorization"] == f"Bearer {RUNTIME_TOKEN}"
+
+
+async def test_a_workspace_without_a_project_is_an_outcome_rather_than_a_failure() -> None:
+    """一个还没写出代码的项目是常态：进入时自动拉起预览，不该因此报错。"""
+    client = runtime_answering(
+        {"/preview/start": (409, b'{"detail":{"code":"no_project","message":"No project yet."}}')}
+    )
+
+    assert await client.start_preview() is PreviewStartOutcome.NO_PROJECT
+
+
+async def test_a_port_held_by_someone_else_is_its_own_refusal() -> None:
+    client = runtime_answering(
+        {"/preview/start": (409, b'{"detail":{"code":"port_taken","message":"owned by another process"}}')}
+    )
+
+    with pytest.raises(AgentPreviewPortTakenError, match="owned by another process"):
+        await client.start_preview()
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        pytest.param((409, b'{"detail":"some other conflict"}'), id="a-conflict-without-a-known-code"),
+        pytest.param((500, b"boom"), id="a-server-error"),
+    ],
+)
+async def test_any_other_answer_to_a_preview_start_is_a_runtime_failure(answer: Route) -> None:
+    client = runtime_answering({"/preview/start": answer})
+
+    with pytest.raises(AgentUnavailableError, match=str(answer[0])) as exc_info:
+        await client.start_preview()
+    assert not isinstance(exc_info.value, AgentPreviewPortTakenError)
+
+
+async def test_a_preview_start_that_cannot_reach_the_runtime_is_a_runtime_failure(
+    dead_handle: AgentRuntimeHandle,
+) -> None:
+    with pytest.raises(AgentUnavailableError, match="start the preview"):
+        await AgentRuntimeClient(dead_handle).start_preview()

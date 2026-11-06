@@ -31,9 +31,11 @@ from uuid import uuid4
 
 import httpx2
 
+from app_spark_api.agent.runtime.constants import PreviewStartOutcome
 from app_spark_api.agent.runtime.entities import EventPage, RuntimeHealth
 from app_spark_api.agent.runtime.exceptions import (
     AgentBusyError,
+    AgentPreviewPortTakenError,
     AgentUnavailableError,
     AgentWorkspaceSavePendingError,
 )
@@ -41,6 +43,10 @@ from app_spark_api.agent.runtime.exceptions import (
 # The Runtime's own name for "the previous turn's files are not on the Git remote yet". Kept as
 # a constant because it is a wire contract with the agent, not a message.
 WORKSPACE_SAVE_PENDING_CODE = "workspace_save_pending"
+
+# The Runtime's codes for the two ways it turns down starting the preview, same kind of contract.
+PREVIEW_NO_PROJECT_CODE = "no_project"
+PREVIEW_PORT_TAKEN_CODE = "port_taken"
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -240,6 +246,38 @@ class AgentRuntimeClient:
         ) as client:
             response = await client.post("/workspace/restore", params={"commit": commit})
         return _restore_outcome(response)
+
+    async def start_preview(self) -> PreviewStartOutcome:
+        """Ask the Runtime to bring the workspace application up for preview, without waiting for it.
+
+        Call it only after the files are back (see :meth:`restore_workspace`): the Runtime starts
+        whatever is on disk. An application that is already up is left running rather than
+        restarted, and a start already under way absorbs a repeated request, so calling this
+        every time a user opens a conversation is safe. Whether the application did come up is
+        ``dev_server_status`` on :meth:`health`, not something this call reports.
+
+        :return: Whether a start is under way, or there is no project in the workspace to start.
+        :raises AgentPreviewPortTakenError: If a process the Runtime did not start holds the port.
+        :raises AgentUnavailableError: If the Runtime cannot be reached or answers oddly.
+        """
+        try:
+            async with self._new_http_client(self._timeout_seconds) as client:
+                response = await client.post("/preview/start")
+                if response.status_code == HTTPStatus.ACCEPTED:
+                    return PreviewStartOutcome.STARTING
+                detail = await self._read_error(response)
+        except httpx2.HTTPError as exc:
+            raise AgentUnavailableError(f"Could not ask the Agent Runtime to start the preview: {exc}") from exc
+
+        if response.status_code == HTTPStatus.CONFLICT:
+            code = _refusal_code(response)
+            if code == PREVIEW_NO_PROJECT_CODE:
+                return PreviewStartOutcome.NO_PROJECT
+            if code == PREVIEW_PORT_TAKEN_CODE:
+                raise AgentPreviewPortTakenError(detail)
+        raise AgentUnavailableError(
+            f"The Agent Runtime refused to start the preview ({response.status_code}): {detail}"
+        )
 
     async def start_run(
         self,

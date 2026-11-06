@@ -80,15 +80,94 @@ stages:
 
 grant_permissions:
   - bk_app_code: "{{ settings.BK_APP_CODE }}"
+    grant_dimension: "gateway"
   - bk_app_code: bk_apigateway
-  - bk_app_code: bk_lesscode
-  - bk_app_code: bk_sops
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_username"
+  - bk_app_code: bk_vision
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_username"
   - bk_app_code: bk_log_search
+    grant_dimension: "resource"
+    resource_names:
+      - "get_app_info"
+      - "get_minimal_app_list"
+      - "uni_apps_query_by_id"
   - bk_app_code: bk_monitorv3
+    grant_dimension: "resource"
+    resource_names:
+      - "list_cluster_namespaces_by_code"
   - bk_app_code: bk_dataweb
+    grant_dimension: "resource"
+    resource_names:
+      - "get_app_info"
+      - "get_minimal_app_list"
+      - "get_detailed_app_list"
   - bk_app_code: bk_bkdata
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_list_minimal"
+      - "uni_apps_query_by_id"
+      - "get_app_info"
+      - "get_minimal_app_list"
   - bk_app_code: bk_notice
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_id"
   - bk_app_code: bk_flow_engine
+    grant_dimension: "resource"
+    resource_names:
+      - "uni_apps_query_by_id"
+      - "list_bk_plugins"
+      - "retrieve_bk_plugin"
+      - "list_detailed_bk_plugins"
+      - "list_bk_plugin_logs_cloned"
+      - "list_bk_plugin_tags"
+  - bk_app_code: bk_aidev
+    grant_dimension: "resource"
+    resource_names:
+      - "sys_get_app_info"
+      - "uni_apps_query_by_id"
+      - "create_sys_ai_agent_app"
+      - "sys_deploy_with_module"
+      - "sys_get_deployment_result"
+      - "sys_streams_history_events"
+      - "upload_ai_agent_source_package_via_link"
+      - "uni_apps_query_by_username"
+      - "granted_ai_agent_distributors"
+      - "delete_ai_agent_distributors"
+      - "sys_module_offline"
+      - "sys_get_offline_result"
+      - "sys_get_repo_branches"
+      - "sys_get_service_instance_by_module"
+      - "fetch_app_access_token"
+      - "shim_plugins_center_add_role_members"
+      - "shim_plugins_center_delete_role_members"
+      - "sys_update_process"
+      - "sys_list_processes"
+      - "uni_apps_list_minimal"
+  - bk_app_code: bk_dbm
+    grant_dimension: "resource"
+    resource_names:
+      - "create_agent_sandbox"
+      - "destroy_agent_sandbox"
+      - "exec_in_agent_sandbox"
+      - "upload_to_agent_sandbox"
+      - "download_from_agent_sandbox"
+      - "create_agent_sandbox_volume"
+      - "delete_agent_sandbox_volume"
+      - "list_agent_sandbox_volumes"
+      - "list_agent_sandbox_volume_files"
+      - "stat_agent_sandbox_volume_file"
+      - "preview_agent_sandbox_volume_file"
+      - "get_agent_sandbox_volume_file_download_url"
+      - "delete_agent_sandbox_volume_file"
+  - bk_app_code: cw_aitsm
+    grant_dimension: "resource"
+    resource_names:
+      - "get_minimal_app_list"
 
 strategies: []
 

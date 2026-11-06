@@ -4,7 +4,6 @@
       <div class="time-filter">
         <span>{{ $t('请求时间') }}</span>
         <bk-date-picker
-          ext-cls="application-time"
           :value="dateTimeRange"
           type="datetimerange"
           format="yyyy-MM-dd HH:mm:ss"
@@ -407,9 +406,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/deep/ .application-time .bk-date-picker-rel .bk-date-picker-editor {
-  padding: 0 40px 0 10px;
-}
 .search-wrapper {
   display: flex;
   flex-wrap: wrap;

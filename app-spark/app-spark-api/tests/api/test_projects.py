@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
 import pytest
@@ -287,8 +287,8 @@ async def test_creating_from_a_prompt_retries_with_another_id_when_the_generated
     assert response.json()["project"]["id"] == "p-free"
 
 
-@pytest.mark.parametrize("content", ["", "x" * (MAX_RUN_CONTENT_LENGTH + 1)])
-async def test_a_prompt_the_runs_endpoint_would_refuse_creates_nothing(aapi_client, content):
+@pytest.mark.parametrize("content", ["", " \n\t ", "x" * (MAX_RUN_CONTENT_LENGTH + 1)])
+async def test_an_unusable_prompt_creates_nothing(aapi_client, content):
     response = await create_from_prompt_via_api(aapi_client, content)
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
@@ -359,6 +359,21 @@ async def test_polling_reports_a_pending_renaming(aapi_client, bk_user):
         "error_at": None,
         "error_msg": "",
     }
+
+
+async def test_polling_fails_a_renaming_that_is_overdue(aapi_client, bk_user):
+    """A task lost by its worker never finishes by itself; polling must still come to an end."""
+    project = await make_project(
+        project_id="spark-demo", name="Spark Demo", owner=bk_user, tenant_id=get_tenant(bk_user).id
+    )
+    await ProjIntRenaming.objects.acreate(project=project)
+    overdue = timezone.now() - constants.INT_RENAMING_TIMEOUT - timedelta(seconds=1)
+    await ProjIntRenaming.objects.filter(project=project).aupdate(created_at=overdue)
+
+    body = (await aapi_client.get(int_renaming_url("spark-demo"))).json()
+
+    assert (body["status"], body["error_msg"]) == ("failed", ProjIntRenaming.TIMED_OUT_MESSAGE)
+    assert body["error_at"] is not None
 
 
 async def test_polling_reports_the_generated_name(aapi_client, bk_user):

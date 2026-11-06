@@ -50,10 +50,12 @@ class ProjectResponse(Schema):
 class ProjectFromPromptRequest(Schema):
     """用第一句话创建一个 Project。"""
 
-    # 和 runs 接口用同一个上限：这句话随后要原样作为第一轮对话发出去。
+    # 和 runs 接口用同一个上限：这句话随后要原样作为第一轮对话发出去，所以只校验、不去掉首尾空白。
+    # 纯空白建不出有意义的项目，也没有起名素材，直接 422。
     content: str = Field(
         min_length=1,
         max_length=MAX_RUN_CONTENT_LENGTH,
+        pattern=r"\S",
         description="用户的第一句话，客户端随后要把它作为第一轮对话发出",
     )
 

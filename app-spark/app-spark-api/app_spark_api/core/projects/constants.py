@@ -14,6 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import timedelta
 from enum import StrEnum
 
 
@@ -28,6 +29,11 @@ class IntRenamingStatus(StrEnum):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+# 自动命名过了这么久还没有结论就记为失败：worker 被杀、任务丢失或写回失败时，记录不会自己结束。
+# 要盖住排队、单次请求超时、SDK 重试和校验不过时的重答。
+INT_RENAMING_TIMEOUT = timedelta(minutes=10)
 
 
 # Project ID 由调用方指定，所以它的形状必须在入口处卡死，而不只是「建议这么写」。

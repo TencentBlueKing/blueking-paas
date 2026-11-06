@@ -97,8 +97,11 @@
                 @click="enterProject(project)"
               >
                 <h3 :title="project.name">{{ project.name }}</h3>
-                <time :datetime="project.updated_at">
-                  更新于 {{ timeFormatter(project.updated_at, 'YYYY-MM-DD HH:mm') }}
+                <time
+                  :datetime="project.updated_at"
+                  :title="`更新于 ${timeFormatter(project.updated_at, 'YYYY-MM-DD HH:mm')}`"
+                >
+                  {{ fromNowFormatter(project.updated_at) }}
                 </time>
               </button>
               <div class="recent-card__actions">
@@ -130,14 +133,13 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { generateProjectId, projectNameFromPrompt } from '@/common/project';
-import { readableError, timeFormatter } from '@/common/util';
+import { fromNowFormatter, readableError, timeFormatter } from '@/common/util';
 import AppIcon from '@/components/AppIcon.vue';
 import ModelSelector from '@/components/model/ModelSelector.vue';
 import DeleteProjectDialog from '@/components/project/DeleteProjectDialog.vue';
 import ProjectActionsMenu from '@/components/project/ProjectActionsMenu.vue';
 import RenameProjectDialog from '@/components/project/RenameProjectDialog.vue';
-import { createProject, listProjects } from '@/http/api';
+import { createProjectFromPrompt, listProjects } from '@/http/api';
 import type { ProjectResponse } from '@/http/types';
 import HomeLayout from '@/layouts/HomeLayout.vue';
 import { useModelCatalogStore } from '@/store/model-catalog';
@@ -198,16 +200,14 @@ const submitPrompt = async () => {
   createError.value = '';
   creating.value = true;
   try {
-    const created = await createProject({
-      id: generateProjectId(),
-      name: projectNameFromPrompt(content),
-    });
+    const created = await createProjectFromPrompt({ content });
     projectStore.queueInitialMessage(
-      created.id,
+      created.project.id,
+      created.conversation.number,
       content,
       modelCatalogStore.requestModelId,
     );
-    await router.push({ name: 'project', params: { projectId: created.id } });
+    await router.push({ name: 'project', params: { projectId: created.project.id } });
   } catch (error) {
     createError.value = readableError(error, '创建失败，请稍后重试');
     creating.value = false;
@@ -243,8 +243,11 @@ const openRename = (project: ProjectResponse) => {
   renameVisible.value = true;
 };
 
-const handleRenamed = (name: string) => {
-  if (renamingProject.value) renamingProject.value.name = name;
+const handleRenamed = (renamed: ProjectResponse) => {
+  projects.value = projects.value
+    .map(project => project.id === renamed.id ? renamed : project)
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  renamingProject.value = renamed;
 };
 
 const handleDeleted = () => {

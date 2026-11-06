@@ -15,11 +15,21 @@
       <button
         type="button"
         class="project-switcher__trigger"
-        :class="{ 'is-open': visible }"
+        :class="{
+          'is-open': visible,
+          'is-naming': namingVisual === 'shimmer',
+          'is-named': namingVisual === 'named',
+        }"
+        :title="triggerTitle"
         aria-haspopup="menu"
         :aria-expanded="visible"
       >
-        <span class="project-switcher__name">{{ currentName }}</span>
+        <span
+          class="project-switcher__name"
+          :class="{ 'has-caret': namingVisual === 'typing' }"
+        >
+          {{ displayName }}
+        </span>
         <AppIcon class="project-switcher__arrow" name="chevron-down" />
       </button>
       <template #content>
@@ -126,7 +136,14 @@
             </bk-popover>
           </div>
           <div class="project-switcher__separator" role="separator" />
-          <button type="button" class="project-switcher__action" role="menuitem" @click="openRename">
+          <button
+            type="button"
+            class="project-switcher__action"
+            role="menuitem"
+            :disabled="autoNamingActive"
+            :title="autoNamingActive ? 'AI 正在命名，完成后可重命名' : undefined"
+            @click="openRename"
+          >
             <AppIcon name="pencil" />
             <span>重命名</span>
           </button>
@@ -142,6 +159,18 @@
         </div>
       </template>
     </bk-popover>
+
+    <Transition name="naming-hint">
+      <span
+        v-if="namingHint"
+        class="project-switcher__naming-hint"
+        :class="{ 'is-warning': namingHint.tone === 'warning' }"
+        role="status"
+      >
+        <AppIcon :name="namingHint.tone === 'warning' ? 'alert-triangle' : 'sparkles'" />
+        {{ namingHint.text }}
+      </span>
+    </Transition>
 
     <AppModal
       v-model="confirmVisible"
@@ -167,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Message from '@/common/message';
@@ -183,9 +212,15 @@ import type { ProjectResponse } from '@/http/types';
 import { useProjectStore } from '@/store/project';
 
 const router = useRouter();
-const { projectId } = storeToRefs(useProjectStore());
+const projectStore = useProjectStore();
+const { intRenamingStatus, projectId, projectName } = storeToRefs(projectStore);
 const RECENT_PAGE_SIZE = 21;
 const RECENT_LOAD_THRESHOLD = 48;
+const NAMING_START_DELAY = 700;
+const NAMING_ERASE_STEP = 22;
+const NAMING_TYPE_STEP = 70;
+const NAMING_HIGHLIGHT_DURATION = 1600;
+const NAMING_HINT_DURATION = 3200;
 const currentProjectData = ref<ProjectResponse | null>(null);
 const recentProjectItems = ref<ProjectResponse[]>([]);
 const {
@@ -206,6 +241,13 @@ const recentError = ref('');
 const recentLoadMoreError = ref('');
 const recentCount = ref(0);
 const recentPage = ref(0);
+type NamingVisual = 'idle' | 'waiting' | 'shimmer' | 'typing' | 'named';
+type NamingHint = { text: string; tone: 'success' | 'warning' };
+const displayName = ref('选择项目');
+const namingVisual = ref<NamingVisual>('idle');
+const namingHint = ref<NamingHint | null>(null);
+const namingTimers = new Set<ReturnType<typeof setTimeout>>();
+let namingStartedAt = 0;
 const hasMoreRecentProjects = computed(() => recentProjectItems.value.length < recentCount.value);
 let currentProjectRequest = 0;
 let recentLoadGeneration = 0;
@@ -214,17 +256,94 @@ const currentProject = computed<ProjectResponse | null>(() => {
   const current = currentProjectData.value?.id === projectId.value
     ? currentProjectData.value
     : null;
-  if (current) return current;
+  if (current) {
+    return projectName.value && projectName.value !== current.name
+      ? { ...current, name: projectName.value }
+      : current;
+  }
   if (!projectId.value) return null;
   return {
     id: projectId.value,
-    name: projectId.value,
+    name: projectName.value || projectId.value,
     created_at: '',
     updated_at: '',
   };
 });
 
 const currentName = computed(() => currentProject.value?.name || '选择项目');
+const autoNamingActive = computed(() => (
+  intRenamingStatus.value === 'pending'
+  || namingVisual.value === 'waiting'
+  || namingVisual.value === 'shimmer'
+  || namingVisual.value === 'typing'
+));
+const triggerTitle = computed(() => (
+  autoNamingActive.value ? 'AI 正在根据你的描述命名…' : displayName.value
+));
+
+const scheduleNaming = (callback: () => void, delay: number) => {
+  const timer = setTimeout(() => {
+    namingTimers.delete(timer);
+    callback();
+  }, delay);
+  namingTimers.add(timer);
+};
+
+const clearNamingTimers = () => {
+  namingTimers.forEach(timer => clearTimeout(timer));
+  namingTimers.clear();
+};
+
+const showNamingHint = (text: string, tone: NamingHint['tone']) => {
+  namingHint.value = { text, tone };
+  scheduleNaming(() => {
+    namingHint.value = null;
+  }, NAMING_HINT_DURATION);
+};
+
+const finishNamingAnimation = (name: string) => {
+  displayName.value = name;
+  namingVisual.value = 'named';
+  showNamingHint('已根据对话命名', 'success');
+  scheduleNaming(() => {
+    namingStartedAt = 0;
+    namingVisual.value = 'idle';
+    displayName.value = currentName.value;
+  }, NAMING_HIGHLIGHT_DURATION);
+};
+
+const retypeProjectName = (name: string) => {
+  namingVisual.value = 'typing';
+  let text = displayName.value;
+  const erase = () => {
+    if (text.length) {
+      text = text.slice(0, -1);
+      displayName.value = text;
+      scheduleNaming(erase, NAMING_ERASE_STEP);
+      return;
+    }
+    let index = 0;
+    const type = () => {
+      index += 1;
+      displayName.value = name.slice(0, index);
+      if (index < name.length) {
+        scheduleNaming(type, NAMING_TYPE_STEP);
+        return;
+      }
+      finishNamingAnimation(name);
+    };
+    type();
+  };
+  erase();
+};
+
+const resetNamingVisual = () => {
+  clearNamingTimers();
+  namingStartedAt = 0;
+  namingVisual.value = 'idle';
+  namingHint.value = null;
+  displayName.value = currentName.value;
+};
 
 const recentProjects = computed(() => (
   recentProjectItems.value
@@ -249,7 +368,11 @@ const fetchCurrentProject = async () => {
   try {
     const data = await listProjects({ page: 1, page_size: 100 });
     if (request === currentProjectRequest && projectId.value === id) {
-      currentProjectData.value = (data.items || []).find(item => item.id === id) ?? null;
+      const current = (data.items || []).find(item => item.id === id) ?? null;
+      currentProjectData.value = current;
+      if (current && !projectName.value) {
+        projectStore.setProjectName(id, current.name);
+      }
     }
   } catch (error) {
     if (request !== currentProjectRequest || projectId.value !== id) return;
@@ -345,15 +468,17 @@ const handleConfirm = () => {
 };
 
 const openRename = () => {
+  if (autoNamingActive.value) return;
   closeRecent();
   close();
   renameVisible.value = true;
 };
 
-const handleRenamed = (name: string) => {
-  const current = currentProjectData.value;
-  if (!current || current.id !== projectId.value) return;
-  currentProjectData.value = { ...current, name };
+const handleRenamed = (renamed: ProjectResponse) => {
+  if (renamed.id !== projectId.value) return;
+  currentProjectData.value = renamed;
+  projectStore.setProjectName(renamed.id, renamed.name);
+  resetNamingVisual();
 };
 
 const openDelete = () => {
@@ -369,10 +494,62 @@ const handleDeleted = () => {
   router.replace({ name: 'projects' });
 };
 
-watch(projectId, fetchCurrentProject, { immediate: true });
+watch(currentName, (name) => {
+  if (
+    namingStartedAt === 0
+    && namingVisual.value === 'idle'
+    && intRenamingStatus.value !== 'pending'
+  ) {
+    displayName.value = name;
+  }
+}, { immediate: true });
+
+watch(intRenamingStatus, (status, previous) => {
+  if (status === 'pending') {
+    clearNamingTimers();
+    namingStartedAt = Date.now();
+    namingVisual.value = 'waiting';
+    namingHint.value = null;
+    displayName.value = projectId.value || currentName.value;
+    scheduleNaming(() => {
+      if (intRenamingStatus.value === 'pending') namingVisual.value = 'shimmer';
+    }, NAMING_START_DELAY);
+    return;
+  }
+
+  if (status === 'completed' && previous === 'pending') {
+    clearNamingTimers();
+    const wait = Math.max(0, NAMING_START_DELAY - (Date.now() - namingStartedAt));
+    scheduleNaming(() => retypeProjectName(currentName.value), wait);
+    return;
+  }
+
+  if (status === 'failed' && previous === 'pending') {
+    clearNamingTimers();
+    namingStartedAt = 0;
+    namingVisual.value = 'idle';
+    displayName.value = currentName.value;
+    showNamingHint('自动命名失败，可点击项目名重命名', 'warning');
+    return;
+  }
+
+  if (status === 'idle' && previous === 'pending') resetNamingVisual();
+}, { immediate: true });
+
+watch(projectId, () => {
+  resetNamingVisual();
+  void fetchCurrentProject();
+}, { immediate: true });
+
+onUnmounted(clearNamingTimers);
 </script>
 
 <style lang="postcss" scoped>
+.project-switcher {
+  position: relative;
+  min-width: 0;
+}
+
 .project-switcher__trigger {
   display: inline-flex;
   align-items: center;
@@ -386,7 +563,7 @@ watch(projectId, fetchCurrentProject, { immediate: true });
   background: transparent;
   border: 0;
   border-radius: 8px;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, box-shadow 200ms ease;
 }
 
 .project-switcher__trigger:hover,
@@ -401,6 +578,86 @@ watch(projectId, fetchCurrentProject, { immediate: true });
   letter-spacing: -0.01em;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.project-switcher__trigger.is-naming {
+  background: #f4f1ff;
+  box-shadow: inset 0 0 0 1px #ddd5ff;
+}
+
+.project-switcher__trigger.is-naming .project-switcher__name {
+  color: transparent;
+  background: linear-gradient(90deg, #9aa3b2 0%, #7c5cff 42%, #ff5f8f 55%, #9aa3b2 100%);
+  background-clip: text;
+  background-size: 250% 100%;
+  animation: naming-shimmer 1.2s linear infinite;
+  -webkit-background-clip: text;
+}
+
+.project-switcher__name.has-caret {
+  color: var(--ink);
+  background: none;
+  animation: none;
+}
+
+.project-switcher__name.has-caret::after {
+  display: inline-block;
+  width: 2px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  content: "";
+  background: #7c5cff;
+  animation: naming-caret-blink 0.8s steps(1) infinite;
+}
+
+.project-switcher__trigger.is-named {
+  animation: naming-complete-glow 1.6s ease-out;
+}
+
+.project-switcher__naming-hint {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 4px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  color: #6b4fd8;
+  font-size: 12px;
+  white-space: nowrap;
+  background: #fff;
+  border: 1px solid #e4ddff;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(16, 22, 34, 0.08);
+}
+
+.project-switcher__naming-hint.is-warning {
+  color: #a15c00;
+  background: #fffaf0;
+  border-color: #ffe0a3;
+}
+
+.project-switcher__naming-hint :deep(.app-icon) {
+  font-size: 13px;
+}
+
+.naming-hint-enter-active {
+  transition: opacity 240ms ease-out, transform 240ms ease-out;
+}
+
+.naming-hint-leave-active {
+  transition: opacity 400ms ease;
+}
+
+.naming-hint-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.naming-hint-leave-to {
+  opacity: 0;
 }
 
 .project-switcher__arrow {
@@ -464,6 +721,15 @@ watch(projectId, fetchCurrentProject, { immediate: true });
 .project-switcher__action.is-danger:hover,
 .project-switcher__action.is-danger:focus-visible {
   background: var(--danger-soft);
+}
+
+.project-switcher__action:disabled,
+.project-switcher__action:disabled:hover,
+.project-switcher__action:disabled:focus-visible {
+  cursor: not-allowed;
+  background: transparent;
+  opacity: 0.6;
+  outline: none;
 }
 
 .project-switcher__recent-owner,
@@ -582,11 +848,52 @@ watch(projectId, fetchCurrentProject, { immediate: true });
   }
 }
 
+@keyframes naming-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@keyframes naming-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes naming-complete-glow {
+  0% {
+    background: #f4f1ff;
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.35);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0);
+  }
+}
+
 .project-switcher__trigger:focus-visible,
 .project-switcher__action:focus-visible,
 .project-switcher__row:focus-visible {
   outline: 2px solid var(--accent-focus);
   outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-switcher__trigger.is-naming .project-switcher__name,
+  .project-switcher__name.has-caret::after,
+  .project-switcher__trigger.is-named {
+    animation: none;
+  }
+
+  .naming-hint-enter-active,
+  .naming-hint-leave-active {
+    transition: none;
+  }
 }
 </style>
 

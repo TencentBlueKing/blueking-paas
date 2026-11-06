@@ -57,6 +57,12 @@ export default {
     },
   },
   actions: {
+    /** 查询当前应用的云 API 调用日志 */
+    getAppRequestLogs({}, { appCode, ...params }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/monitor/request-logs/`;
+      return http.get(url, {}, { ...config, params });
+    },
+
     /**
      * 获取网关列表
      * @param {Object} params 请求参数：appCode

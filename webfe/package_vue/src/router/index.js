@@ -75,6 +75,14 @@ const appIndex = () => import(/* webpackChunkName: 'app-index' */'@/views/dev-ce
   window.showDeployTip(error);
 });
 
+const agentSandbox = () => import(/* webpackChunkName: 'agent-sandbox' */'@/views/dev-center/app/agent-sandbox/index.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const agentSandboxTemplateDetail = () => import(/* webpackChunkName: 'agent-sandbox' */'@/views/dev-center/app/agent-sandbox/template-detail.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // App: summary
 const appSummary = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev-center/app/summary').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -512,6 +520,16 @@ const router = new Router({
           path: ':id/summary_none',
           component: appSummaryNotDeployed,
           name: 'appSummaryEmpty',
+        },
+        {
+          path: ':id/agent-sandbox',
+          component: agentSandbox,
+          name: 'agentSandbox',
+        },
+        {
+          path: ':id/agent-sandbox/templates/:templateId',
+          component: agentSandboxTemplateDetail,
+          name: 'agentSandboxTemplateDetail',
         },
         {
           path: ':id/:moduleId/module-manage',

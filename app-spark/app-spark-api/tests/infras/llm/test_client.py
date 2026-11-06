@@ -23,6 +23,7 @@ import json
 import httpx2
 import pytest
 from pydantic import BaseModel, Field
+from pydantic_ai.models.openai import OpenAIChatModel
 
 from app_spark_api.infras.llm import (
     DirectLLMConfig,
@@ -33,7 +34,7 @@ from app_spark_api.infras.llm import (
     LLMConfigurationError,
     ThinkingConfig,
 )
-from app_spark_api.infras.llm.models import gateway_model_profile
+from app_spark_api.infras.llm.models import gateway_model_profile, open_model
 from tests.infras.llm.support import (
     OUTPUT_TOOL_NAME,
     RecordingTransport,
@@ -126,6 +127,14 @@ class TestDirect:
         with pytest.raises(LLMCallError, match="UnexpectedModelBehavior"):
             await client.run("1 + 1?", output_type=Answer)
 
+    async def test_the_vendor_client_is_closed_on_exit(self):
+        """Without an injected transport the provider owns its client; leaving the model must close it."""
+        async with open_model(DirectLLMConfig(model="deepseek:deepseek-v4-flash", api_key=API_KEY)) as model:
+            assert isinstance(model, OpenAIChatModel)
+            assert not model.client.is_closed()
+
+        assert model.client.is_closed()
+
     async def test_unknown_provider_is_a_configuration_error(self):
         client = LLMClient(DirectLLMConfig(model="no-such-vendor:m1", api_key=API_KEY))
 
@@ -174,17 +183,21 @@ class TestThinking:
             # 白名单里的模型按借来的上游档设 thinking。
             ("deepseek-v4-flash", ThinkingConfig(enabled=False), "none"),
             ("deepseek-v4-flash", ThinkingConfig(enabled=True, effort="high"), "high"),
+            ("qwen3", ThinkingConfig(enabled=False), "none"),
             ("qwen3-5-27B", ThinkingConfig(enabled=False), "none"),
             # 上游档认为关不掉思考的，改用指定强度。
             ("deepseek-reasoner", ThinkingConfig(enabled=False, effort="medium"), "medium"),
             # 匹配了 deepseek-*，但上游档不认为它能设 thinking。
             ("deepseek-v4.1-flash", ThinkingConfig(enabled=False), None),
-            # 在白名单里显式排除。
-            ("qwen3-235B", ThinkingConfig(enabled=True, effort="high"), None),
             # 按我们自己的实测写的档。
             ("hy3", ThinkingConfig(enabled=False), "none"),
+            ("hy4", ThinkingConfig(enabled=False), "none"),
+            ("hy4-preview", ThinkingConfig(enabled=True, effort="high"), "high"),
             ("hunyuan-turbos", ThinkingConfig(enabled=True, effort="medium"), "medium"),
-            # 不在白名单里。
+            # 不在白名单里。qwen3 系列各型号行为不一，没列的不能被别的条目顺带匹配上。
+            ("qwen3-235B", ThinkingConfig(enabled=True, effort="high"), None),
+            ("qwen3-8b", ThinkingConfig(enabled=False), None),
+            ("qwen3-nothinking", ThinkingConfig(enabled=True, effort="medium"), None),
             ("hunyuan-turbos-vision", ThinkingConfig(enabled=False), None),
             ("GLM-5_3-Online-32k", ThinkingConfig(enabled=False), None),
             ("deepseek-v4-flash", None, None),

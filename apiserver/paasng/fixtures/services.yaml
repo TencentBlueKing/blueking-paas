@@ -64,7 +64,7 @@
           {"key": "port", "type": "string", "required": true, "example": "6379；哨兵模式多个用 , 分隔，数量与 host 一致"},
           {"key": "password", "type": "string", "required": false, "example": ""},
           {"key": "db", "type": "string", "required": false, "example": "0"},
-          {"key": "service_name", "type": "string", "required": false, "example": "mymaster（哨兵模式，不填默认 mymaster）"}
+          {"key": "service_name", "type": "string", "required": false, "example": "mymaster（哨兵模式需填写）"}
         ],
         "template": [
           {"key": "REDIS_MODE", "value": "{{mode}}"},

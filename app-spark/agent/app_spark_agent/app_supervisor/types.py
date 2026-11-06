@@ -34,6 +34,8 @@ class DevServerStatus(StrEnum):
 
     # 子进程还在，但约定端口还答不出 HTTP。慢启动、首屏慢、应用自己卡住都落在这一档。
     # 不触发自动重启：停掉一个正在预热的进程解决不了任何问题。
+    # launch 已经开始、还在装依赖没 spawn 的那段也算这一档：首次进旧项目时 uv sync 可能要几十秒，
+    # 这段报 not_started / stopped 会让调用方以为没拉或者拉挂了。
     STARTING = "starting"
 
     # 子进程还在，且约定端口应答得了一个 HTTP GET。
@@ -81,7 +83,7 @@ class AppLaunchError(Exception):
 
 
 class AppLaunchConflict(AppLaunchError):
-    """Another launch is in progress, or a foreign process owns the port."""
+    """A process this supervisor did not start owns the application port."""
 
 
 class AppLaunchFailed(AppLaunchError):

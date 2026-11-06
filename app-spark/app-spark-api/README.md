@@ -356,8 +356,12 @@ Runtime 的 `/health` 的 `pushed_*` 游标看。
 从未推过检查点的会话不调 `restore_workspace`，只恢复最新上下文；全新沙箱里 Runtime 启动时就
 已经检出了远端分支的最新提交。
 
-恢复顺序是**先文件、后上下文、最后才接受新 run**（`_resume_if_cold`）。反过来会留下一个窗口：
+恢复顺序是**先文件、后上下文、最后才接受新 run**（`lifecycle/utils.py` 的 `resume_if_cold`）。反过来会留下一个窗口：
 Runtime 记得自己写过一些还没落盘的代码，这时进来一轮 run，模型就会基于这个错位行动。
+
+冷启动除了发生在一轮对话开始前，也发生在拉起预览时（见「工作区应用的预览」）。进入项目后用户紧接着发
+消息，两边会同时看到一台冷的 Runtime；Runtime 把恢复串行化并拒掉晚到的那次，晚到的一方重读 `/health`，
+发现已经不冷就接着用，不让这一轮失败。
 
 只有「没有会话、`context_version` 为 0、两个通道都没有记录」的 Runtime 才算冷的。通道这一条
 不能省：第一轮在提交上下文之前失败的 Runtime 仍报版本 0，但它已经有了自己的编号，再播种只会
@@ -514,7 +518,7 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 会话结束后历史仍然可读，只是不能再发起新的一轮对话——`start_run` 里有闸门拦着，否则「结束」
 只是杀掉了一个进程，下一轮对话会照常把 Runtime 重新拉起来。闸门有两道，因为拉起 Runtime 要花
 好几秒，够另一个请求在这中间把会话结束掉：进来时看一次，Runtime 拉起来之后再回库确认一次，
-确认没过就把刚拉起来的 Runtime 收掉并返回 409（见 `_reject_if_closed_meanwhile()`）。
+确认没过就把刚拉起来的 Runtime 收掉并返回 409（见 `lifecycle/utils.py` 的 `reject_if_closed_meanwhile()`）。
 
 ### 工作区应用的预览
 
@@ -528,6 +532,13 @@ workspace 同时只容得下一个 Runtime）。如果此刻正有一轮对话�
 推导，会话一建好就有。此刻有没有东西可看要看 `dev_server_status`：`not_started` / `starting` /
 `ready` / `stopped`，`null` 表示问不到。只有 `ready` 才挂 iframe；`starting` 是「进程在跑，还没答出来」，
 继续等就好，Runtime 那边不会因此重启它。
+
+**进入旧项目时由前端显式拉起。** 查看会话不拉 Runtime，没有一轮对话模型也不会 `launch_app`，所以旧项目
+打开后预览会一直空着。前端绑定活跃会话后调 `POST .../conversations/<n>/preview/start/`：按需拉起
+Runtime、像发起一轮对话那样恢复文件和上下文，再调 Agent 的 `POST /preview/start`，不等就绪就回 202，
+之后照常轮询上面的 `dev_server_status`。应用已在跑就不动它（重启加载新代码只是模型 `launch_app` 的事），
+所以每次进入都调也安全。`outcome` 为 `no_project` 表示工作区里还没有 `pyproject.toml`，不是错误。
+这是唯一会为「看」付 Runtime 成本的接口，E2B 下预览本身不续期，没有对话照样按空闲超时回收。
 
 E2B 直连意味着暴露域名本身就能打开预览，不经过平台登录；`allow_public_traffic` 是整个沙箱的开关。
 Agent Runtime 的业务路由另有 Bearer token 保护，交互文档和 OpenAPI 不对外提供。平台页面是 https 时

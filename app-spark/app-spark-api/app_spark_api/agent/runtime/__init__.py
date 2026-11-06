@@ -28,7 +28,7 @@ The Django app also records E2B sandbox ownership so workers can reconnect after
 """
 
 from app_spark_api.agent.runtime.client import AgentRun, AgentRuntimeClient
-from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType, ModelSource
+from app_spark_api.agent.runtime.constants import AgentRuntimeProviderType, ModelSource, PreviewStartOutcome
 from app_spark_api.agent.runtime.entities import (
     AgentRuntimeHandle,
     BkAidevModelAccess,
@@ -46,6 +46,7 @@ from app_spark_api.agent.runtime.entities import (
 from app_spark_api.agent.runtime.exceptions import (
     AgentBusyError,
     AgentConfigurationError,
+    AgentPreviewPortTakenError,
     AgentProvisionError,
     AgentRuntimeError,
     AgentUnavailableError,
@@ -60,6 +61,7 @@ from app_spark_api.agent.runtime.providers.base import AgentRuntimeProvider
 __all__ = [
     "AgentBusyError",
     "AgentConfigurationError",
+    "AgentPreviewPortTakenError",
     "AgentProvisionError",
     "AgentRun",
     "AgentRuntimeClient",
@@ -82,6 +84,7 @@ __all__ = [
     "ModelCredentialMissingError",
     "ModelNotAvailableError",
     "ModelSource",
+    "PreviewStartOutcome",
     "PreviewTarget",
     "RuntimeHealth",
     "StateCallback",

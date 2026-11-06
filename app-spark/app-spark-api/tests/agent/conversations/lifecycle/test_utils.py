@@ -32,7 +32,9 @@ import pytest
 from app_spark_api.agent.conversations import checkpoints
 from app_spark_api.agent.conversations import services as conversation_services
 from app_spark_api.agent.conversations import state as conversation_state
+from app_spark_api.agent.conversations.lifecycle import utils as lifecycle_utils
 from app_spark_api.agent.runtime.entities import RuntimeHealth
+from app_spark_api.agent.runtime.exceptions import AgentBusyError, AgentUnavailableError
 from app_spark_api.core.projects.models import Project
 
 if TYPE_CHECKING:
@@ -138,7 +140,7 @@ async def record_checkpoint(conversation: Conversation, *, context_version: int,
 
 
 async def resume(conversation: Conversation, client: RecordingClient, health: RuntimeHealth = COLD_HEALTH):
-    return await conversation_services._resume_if_cold(conversation, client, health)  # type: ignore[arg-type]
+    return await lifecycle_utils.resume_if_cold(conversation, client, health)  # type: ignore[arg-type]
 
 
 # --- Files and context ---------------------------------------------------------------------
@@ -182,7 +184,7 @@ async def test_a_commit_whose_own_context_never_arrived_is_still_restored(conver
     commit = await record_checkpoint(conversation, context_version=2, completed=False)
     client = RecordingClient()
 
-    restored = await conversation_services._restore_files(conversation, client)  # type: ignore[arg-type]
+    restored = await lifecycle_utils._restore_files(conversation, client)  # type: ignore[arg-type]
 
     assert client.workspaces == [commit]
     assert restored == document
@@ -241,3 +243,62 @@ async def test_a_runtime_with_entries_of_its_own_is_not_cold(conversation, healt
 
     assert await resume(conversation, client, health) == health
     assert not client.touched
+
+
+# --- Two requests resuming one Runtime -----------------------------------------------------
+
+# What the Runtime reads once the request that won the race has resumed it.
+RESUMED_HEALTH = attrs.evolve(COLD_HEALTH, context_version=2, log_seq=3, ui_event_seq=5)
+
+
+@attrs.define
+class LateClient(RecordingClient):
+    """A Runtime another request resumed between this one's ``/health`` and its own restore.
+
+    The Runtime serializes restores, so the late one is turned down -- the way a real Runtime
+    answers an ``If-Match: 0`` it has moved past -- and ``/health`` then reads ``after``.
+    """
+
+    refusal: Exception = attrs.field(factory=lambda: AgentUnavailableError("restore the context (412)"))
+    after: RuntimeHealth = RESUMED_HEALTH
+
+    async def restore_context(self, document: dict[str, Any], **_cursors: int) -> int:
+        raise self.refusal
+
+    async def restore_cursors(self, *, log_seq: int, ui_event_seq: int) -> None:
+        raise self.refusal
+
+    async def health(self) -> RuntimeHealth:
+        return self.after
+
+
+@pytest.mark.parametrize(
+    ("stored", "refusal"),
+    [
+        pytest.param("context", AgentUnavailableError("412"), id="context-version-moved"),
+        pytest.param("context", AgentBusyError("already holds a conversation"), id="context-already-held"),
+        pytest.param("cursors", AgentBusyError("already holds history"), id="numbering-already-adopted"),
+    ],
+)
+async def test_a_runtime_resumed_by_a_concurrent_request_is_taken_as_it_is(conversation, stored, refusal):
+    """Entering a Project starts the preview, and the user's first message is close behind.
+
+    Both find the Runtime cold. The one that loses the race must not fail the user's turn: the
+    restore it was about to do has just been done.
+    """
+    if stored == "context":
+        await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+    else:
+        await store_entries(conversation, log_seq=3, ui_event_seq=5)
+    client = LateClient(refusal=refusal)
+
+    assert await resume(conversation, client) == client.after
+
+
+async def test_a_restore_refused_on_a_runtime_still_cold_is_a_failure(conversation):
+    """Nobody else resumed it, so the refusal is the Runtime's real answer."""
+    await conversation_state.asave_context(conversation.id, {"context_version": 2, "messages": []})
+    client = LateClient(after=COLD_HEALTH)
+
+    with pytest.raises(AgentUnavailableError, match="412"):
+        await resume(conversation, client)

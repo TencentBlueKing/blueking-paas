@@ -65,6 +65,14 @@ class AgentBusyError(AgentRuntimeError):
     """The Agent Runtime is already executing a run for this conversation."""
 
 
+class AgentPreviewPortTakenError(AgentRuntimeError):
+    """A process the Runtime did not start holds the port the workspace application must listen on.
+
+    Not retried and not forced: the Runtime never kills a process it did not start, and whatever
+    holds the port may well be the application itself, started by the model through its shell.
+    """
+
+
 class AgentWorkspaceSavePendingError(AgentRuntimeError):
     """The previous turn's files have not reached the Project's Git repository yet.
 

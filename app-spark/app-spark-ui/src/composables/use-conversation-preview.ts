@@ -43,6 +43,8 @@ const asDevServerStatus = (value: string | null | undefined): DevServerStatus | 
  *
  * 接口只报地址和状态，模型改了代码这两样都不变，轮询看不出页面该刷新了。所以另给一个 `frameKey`，
  * 一轮对话结束就递增，让 iframe 重新挂一次。
+ *
+ * 进入会话时 store 会在后台拉起预览（`previewStarting`），请求回来后（`previewStartSeq`）重新开始问。
  */
 export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   const pageVisible = usePageVisibility();
@@ -54,6 +56,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     running,
     replicationPending,
     messages,
+    previewStarting,
+    previewStartSeq,
   } = storeToRefs(useProjectStore());
 
   const origin = ref('');
@@ -266,6 +270,13 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
     stop();
   });
 
+  // 进入会话时拉起预览的请求回来了。之前那次多半在 Runtime 起来前问到 null 就停了，这里重新问；
+  // 回来时应用已在 starting，shouldKeepPolling 会一直问到它出结果。
+  watch(previewStartSeq, () => {
+    if (!panelOpen.value || conversationKey() === '' || !isLive.value) return;
+    start();
+  });
+
   onScopeDispose(() => {
     stop();
     generation += 1;
@@ -274,6 +285,8 @@ export const useConversationPreview = (panelOpen: Ref<boolean>) => {
   const phase = computed<PreviewPhase>(() => {
     if (conversationNumber.value == null) return 'no-conversation';
     if (!isLive.value) return 'ended';
+    // 拉起预览的请求还在路上：Runtime 和工作区都在恢复，问到的 null / not_started 只是还没轮到应用。
+    if (previewStarting.value && devServerStatus.value !== 'ready') return 'starting';
     if (pending.value) return 'pending';
     switch (devServerStatus.value) {
       case 'not_started':

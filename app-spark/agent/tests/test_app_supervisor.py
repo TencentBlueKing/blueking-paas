@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""AppSupervisor 规则：校验、启动 spec、重启沿用、并发 409、启动失败、crash-watch。
+"""AppSupervisor 规则：校验、启动 spec、重启沿用、并发排队、启动失败、crash-watch，以及控制面的 PreviewStarter。
 
 状态分活着和能服务两档，crash-watch 只认前者。这一组里最该守住的是「活着但答不出的进程不会被
 重启」：把就绪当健康，正好会在应用启动最慢的时候把它停掉。
@@ -40,6 +40,7 @@ from app_spark_agent.app_supervisor import (
     AppLaunchFailed,
     AppSupervisor,
     DevServerStatus,
+    PreviewStarter,
     build_app_spec,
     build_child_environ,
 )
@@ -96,10 +97,14 @@ class App:
         self.synced_after_spawns: list[int] = []
         self.python_versions_at_sync: list[str] = []
         self.sync_error: AppLaunchFailed | None = None
+        # 设了就停在依赖对齐里，直到测试放行：用来看 spawn 之前那段的状态。
+        self.sync_gate: asyncio.Event | None = None
 
         async def sync(workspace: Path, _log_path: Path) -> None:
             self.synced_after_spawns.append(len(self.spawned))
             self.python_versions_at_sync.append((workspace / ".python-version").read_text())
+            if self.sync_gate is not None:
+                await self.sync_gate.wait()
             if self.sync_error is not None:
                 raise self.sync_error
 
@@ -139,8 +144,9 @@ class App:
 
 @pytest.fixture(autouse=True)
 def fast_supervisor_timings(monkeypatch: pytest.MonkeyPatch) -> None:
-    # 生产是 30s / 2s / 0.5s，单测不能真睡那么久。
+    # 生产是 30s / 2s / 0.5s / 5s，单测不能真睡那么久。假进程停掉后端口不会自己放开，重启总要等满最后一个。
     monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.4)
+    monkeypatch.setattr(supervisor_mod, "PORT_FREE_TIMEOUT_SECONDS", 0.1)
     monkeypatch.setattr(supervisor_mod, "CRASH_RETRY_INTERVAL_SECONDS", 0.01)
     monkeypatch.setattr(supervisor_mod, "CRASH_WATCH_POLL_SECONDS", 0.01)
 
@@ -232,7 +238,7 @@ async def test_launch_repairs_platform_configuration_before_spawning(
     workspace = tmp_path / "workspace"
     (workspace / "app_desc.yaml").write_text("stale\n")
 
-    await app.supervisor.launch()
+    await app.supervisor.restart()
 
     assert (workspace / "app_desc.yaml").read_text() == render_app_desc()
     assert (workspace / ".python-version").read_text() == f"{PYTHON_VERSION}\n"
@@ -246,7 +252,7 @@ async def test_launch_repairs_the_python_version_before_uv_reads_it(
     app = App(monkeypatch, tmp_path)
     (tmp_path / "workspace" / ".python-version").write_text("3.13\n")
 
-    await app.supervisor.launch()
+    await app.supervisor.restart()
 
     assert app.python_versions_at_sync == [f"{PYTHON_VERSION}\n"]
 
@@ -265,7 +271,7 @@ async def test_platform_configuration_write_failure_prevents_spawn(
     app = App(monkeypatch, tmp_path)
 
     with pytest.raises(AppLaunchFailed, match=r"platform configuration.*disk full"):
-        await app.supervisor.launch()
+        await app.supervisor.restart()
 
     assert app.synced_after_spawns == []
     assert app.spawned == []
@@ -278,7 +284,7 @@ async def test_a_launch_without_a_project_does_not_create_platform_configuration
     (tmp_path / "workspace" / "pyproject.toml").unlink()
 
     with pytest.raises(AppLaunchFailed, match="no pyproject"):
-        await app.supervisor.launch()
+        await app.supervisor.restart()
 
     assert list((tmp_path / "workspace").iterdir()) == []
     assert app.synced_after_spawns == []
@@ -293,7 +299,7 @@ async def test_a_failed_install_fails_the_launch_without_spawning(
     app.sync_error = AppLaunchFailed("Installing the project's dependencies failed")
 
     with pytest.raises(AppLaunchFailed, match="dependencies failed"):
-        await app.supervisor.launch()
+        await app.supervisor.restart()
     assert app.spawned == []
     assert await app.supervisor.dev_server_status() is DevServerStatus.NOT_STARTED
 
@@ -303,17 +309,17 @@ async def test_a_spawn_error_is_reported_as_a_launch_failure(tmp_path: Path, mon
     app = App(monkeypatch, tmp_path, fail_on=1)
 
     with pytest.raises(AppLaunchFailed, match="spawn refused"):
-        await app.supervisor.launch()
+        await app.supervisor.restart()
 
 
 async def test_relaunch_replaces_the_process_and_reuses_the_run_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = App(monkeypatch, tmp_path)
-    first = await app.supervisor.launch()
+    first = await app.supervisor.restart()
     app.listening = False
 
-    second = await app.supervisor.launch()
+    second = await app.supervisor.restart()
 
     assert (first.path, first.label) == (second.path, second.label) == ("/", "Preview")
     assert len(app.spawned) == 2
@@ -323,15 +329,21 @@ async def test_relaunch_replaces_the_process_and_reuses_the_run_id(
     assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
 
 
-async def test_second_launch_while_waiting_is_conflict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 1.0)
-    app = App(monkeypatch, tmp_path, auto_listen=False)
-    first = asyncio.create_task(app.supervisor.launch())
+async def test_a_second_restart_waits_for_the_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """排队而不是冲突：第二次照样重启，加载的是它那一刻的代码。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    first = asyncio.create_task(app.supervisor.restart())
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+    second = asyncio.create_task(app.supervisor.restart())
     await asyncio.sleep(0.05)
-    with pytest.raises(AppLaunchConflict, match="already in progress"):
-        await app.supervisor.launch()
-    app.listening = True
+    assert app.spawned == []
+
+    app.sync_gate.set()
     assert (await first).dev_server_status == DevServerStatus.READY
+    assert (await second).dev_server_status == DevServerStatus.READY
+    assert len(app.spawned) == 2
+    assert app.spawned[0].poll() is not None
 
 
 async def test_a_process_that_exits_before_listening_fails_the_launch(
@@ -342,7 +354,7 @@ async def test_a_process_that_exits_before_listening_fails_the_launch(
     app = App(monkeypatch, tmp_path, living=False, auto_listen=False)
 
     with pytest.raises(AppLaunchFailed, match="exited before it listened"):
-        await app.supervisor.launch()
+        await app.supervisor.restart()
 
     assert await app.supervisor.dev_server_status() == DevServerStatus.STOPPED
 
@@ -354,7 +366,7 @@ async def test_a_launch_that_times_out_leaves_the_live_process_alone(
     monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.1)
     app = App(monkeypatch, tmp_path, auto_listen=False)
 
-    result = await app.supervisor.launch()
+    result = await app.supervisor.restart()
 
     assert result.dev_server_status == DevServerStatus.STARTING
     assert app.spawned[-1].poll() is None
@@ -367,7 +379,7 @@ async def test_a_launch_that_times_out_leaves_the_live_process_alone(
 async def test_watch_restarts_after_a_spawn_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # fail_on=2：第一次手动 launch 成功，自动重启第一次抛 OSError，第二次拉起来。
     app = App(monkeypatch, tmp_path, fail_on=2)
-    await app.supervisor.launch()
+    await app.supervisor.restart()
     app.drop()
     async with watching(app.supervisor) as task:
         await wait_until(lambda: len(app.spawned) == 2)
@@ -385,7 +397,7 @@ async def test_watch_leaves_a_live_process_that_cannot_answer_alone(
     只会把一个正在预热的应用打断，让「慢」变成「永远起不来」。
     """
     app = App(monkeypatch, tmp_path)
-    await app.supervisor.launch()
+    await app.supervisor.restart()
     app.listening = False
 
     async with watching(app.supervisor):
@@ -401,7 +413,7 @@ async def test_watch_gives_up_after_retry_limit(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(supervisor_mod, "LISTEN_TIMEOUT_SECONDS", 0.08)
     monkeypatch.setattr(supervisor_mod, "CRASH_RETRY_LIMIT", 2)
     app = App(monkeypatch, tmp_path)
-    await app.supervisor.launch()
+    await app.supervisor.restart()
 
     # 之后拉起来的都活不下来，否则 watch 看到一个活进程就不再重试，额度永远用不完。
     app.spawns_living = False
@@ -422,3 +434,172 @@ async def test_watch_ignores_never_launched(tmp_path: Path, monkeypatch: pytest.
         await asyncio.sleep(0.08)
         assert app.spawned == []
         assert await app.supervisor.dev_server_status() == DevServerStatus.NOT_STARTED
+
+
+async def test_start_brings_the_app_up_in_the_background(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """控制面不等：装依赖可能要几分钟，那段时间状态得是 starting，而不是 not_started。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    starter = PreviewStarter(app.supervisor)
+
+    starter.start()
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+    assert await app.supervisor.dev_server_status() is DevServerStatus.STARTING
+    assert app.spawned == []
+
+    app.sync_gate.set()
+    await wait_until(lambda: len(app.run_ids()) == 1)
+    assert await app.supervisor.dev_server_status() is DevServerStatus.READY
+    assert app.run_ids() == {LAUNCH_EVENT_RUN_ID}
+
+
+async def test_start_leaves_a_live_process_alone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """用户打开页面不是重启的理由：重启加载新代码是模型 launch 的事。"""
+    app = App(monkeypatch, tmp_path)
+    await app.supervisor.restart()
+    app.listening = False
+
+    PreviewStarter(app.supervisor).start()
+    await asyncio.sleep(0.05)
+    assert len(app.spawned) == 1
+    assert app.spawned[0].poll() is None
+    assert len(app.synced_after_spawns) == 1
+
+
+async def test_start_twice_starts_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    starter = PreviewStarter(app.supervisor)
+
+    starter.start()
+    starter.start()
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+    starter.start()
+
+    app.sync_gate.set()
+    await wait_until(lambda: len(app.run_ids()) == 1)
+    await asyncio.sleep(0.05)
+    assert len(app.spawned) == 1
+    assert len(app.synced_after_spawns) == 1
+
+
+async def test_start_during_a_restart_does_not_spawn_again(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模型正在 launch 时控制面来 start：等那次结束，看到进程活着就不动。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    restart = asyncio.create_task(app.supervisor.restart())
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+
+    PreviewStarter(app.supervisor).start()
+
+    app.sync_gate.set()
+    await restart
+    await asyncio.sleep(0.05)
+    assert len(app.spawned) == 1
+
+
+async def test_a_restart_waits_for_a_start_in_progress(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """用户刚进旧项目就发消息：模型的 launch 不该因为控制面正在装依赖而算一次失败。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    PreviewStarter(app.supervisor).start()
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+
+    restart = asyncio.create_task(app.supervisor.restart())
+    await asyncio.sleep(0.05)
+    app.sync_gate.set()
+
+    assert (await restart).dev_server_status is DevServerStatus.READY
+    assert len(app.spawned) == 2
+    assert app.spawned[0].poll() is not None
+
+
+async def test_start_without_a_project_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path)
+    (tmp_path / "workspace" / "pyproject.toml").unlink()
+
+    with pytest.raises(AppLaunchFailed, match="no pyproject"):
+        PreviewStarter(app.supervisor).start()
+    await asyncio.sleep(0.05)
+    assert app.synced_after_spawns == []
+    assert list((tmp_path / "workspace").iterdir()) == []
+
+
+async def test_start_refuses_a_foreign_port(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path)
+    app.listening = True
+
+    with pytest.raises(AppLaunchConflict, match="did not start"):
+        PreviewStarter(app.supervisor).start()
+    assert await app.supervisor.dev_server_status() is DevServerStatus.NOT_STARTED
+
+
+async def test_start_during_a_restart_does_not_mistake_our_old_port_for_a_foreign_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """restart 停掉旧进程、端口还没放开时，占着端口的是我们自己的进程。"""
+    monkeypatch.setattr(supervisor_mod, "PORT_FREE_TIMEOUT_SECONDS", 1.0)
+    app = App(monkeypatch, tmp_path)
+    await app.supervisor.restart()
+
+    # 假进程停掉后端口不会自己放开：restart 停在等端口这一步。
+    restart = asyncio.create_task(app.supervisor.restart())
+    await asyncio.sleep(0.05)
+    assert app.spawned[0].poll() is not None
+    assert app.listening
+
+    PreviewStarter(app.supervisor).start()
+
+    app.listening = False
+    assert (await restart).dev_server_status is DevServerStatus.READY
+    await asyncio.sleep(0.05)
+    assert len(app.spawned) == 2
+
+
+async def test_a_failed_start_falls_back_from_starting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """没人等着接异常，调用方只能从状态回落看出失败了，所以 starting 不能卡住不动。"""
+    app = App(monkeypatch, tmp_path)
+    app.sync_error = AppLaunchFailed("Installing the project's dependencies failed")
+    starter = PreviewStarter(app.supervisor)
+
+    starter.start()
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+    await asyncio.sleep(0.05)
+
+    assert await app.supervisor.dev_server_status() is DevServerStatus.NOT_STARTED
+    assert app.spawned == []
+    assert app.run_ids() == set()
+
+    # 失败之后还能再来。
+    app.sync_error = None
+    starter.start()
+    await wait_until(lambda: len(app.run_ids()) == 1)
+    assert await app.supervisor.dev_server_status() is DevServerStatus.READY
+
+
+async def test_aclose_cancels_a_start_in_progress(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = App(monkeypatch, tmp_path)
+    app.sync_gate = asyncio.Event()
+    starter = PreviewStarter(app.supervisor)
+    starter.start()
+    await wait_until(lambda: len(app.synced_after_spawns) == 1)
+
+    await starter.aclose()
+
+    assert app.spawned == []
+    assert await app.supervisor.dev_server_status() is DevServerStatus.NOT_STARTED
+
+
+async def test_a_restart_reports_starting_while_installing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模型 launch 也一样：重启时旧进程已停、新进程还没 spawn，这段不是 stopped。"""
+    app = App(monkeypatch, tmp_path)
+    await app.supervisor.restart()
+    app.listening = False
+    app.sync_gate = asyncio.Event()
+    relaunch = asyncio.create_task(app.supervisor.restart())
+    await wait_until(lambda: len(app.synced_after_spawns) == 2)
+
+    assert await app.supervisor.dev_server_status() is DevServerStatus.STARTING
+
+    app.sync_gate.set()
+    assert (await relaunch).dev_server_status is DevServerStatus.READY

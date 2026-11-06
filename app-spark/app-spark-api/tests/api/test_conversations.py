@@ -539,6 +539,65 @@ async def test_a_destroyed_workspace_comes_back_from_its_checkpoint(
     assert after["context_version"] > checkpoint.context_version
 
 
+async def start_preview(client: AsyncClient, number: int) -> Any:
+    return await client.post(f"/api/projects/{PROJECT_ID}/conversations/{number}/preview/start/")
+
+
+async def test_reopening_a_project_brings_its_runtime_back_for_the_preview(
+    aapi_client,
+    project,
+    agent,
+    workspace_root,
+):
+    """The user comes back to a Project with no turn to send: the preview start resumes it alone.
+
+    Without this, opening the conversation reads only this service's tables, nothing provisions
+    a Runtime, and the preview stays empty until the user types something. The workspace has to
+    be back on disk before the Runtime is asked to start anything, since that is what it starts.
+    """
+    state = await create_conversation(aapi_client)
+    number, conversation_id = state["number"], state["conversation_id"]
+    await run_turn(aapi_client, number, "write my first note")
+    first = await wait_for_replication(aapi_client, number)
+    await wait_for_checkpoint(conversation_id)
+
+    workspace = workspace_root / PROJECT_ID
+    original = (workspace / FIRST_NOTE).read_text()
+    provider = cast("LocalProcessProvider", get_agent_runtime_provider())
+    await provider.terminate(conversation_id)
+    shutil.rmtree(provider.state_dir(conversation_id))
+    shutil.rmtree(workspace)
+
+    response = await start_preview(aapi_client, number)
+
+    assert response.status_code == HTTPStatus.ACCEPTED, response.content
+    # `fake:write-file` writes notes, not a project, so there is nothing for the Runtime to start.
+    assert json.loads(response.content) == {"outcome": "no_project"}
+    assert (workspace / FIRST_NOTE).read_text() == original
+    resumed = await read_state(aapi_client, number)
+    assert resumed["runtime_ready"] is True
+    assert resumed["dev_server_status"] == "not_started"
+
+    # The next turn goes to the Runtime warmed above, and it continues the conversation.
+    await run_turn(aapi_client, number, "write my second note")
+    assert (workspace / SECOND_NOTE).exists()
+    await wait_for_replication(aapi_client, number, after=first)
+
+
+async def test_a_closed_conversation_is_not_brought_back_for_its_preview(aapi_client, project, agent):
+    """Closing handed the Project's workspace back; looking at the preview must not retake it."""
+    state = await create_conversation(aapi_client)
+    number, conversation_id = state["number"], state["conversation_id"]
+    closed = await aapi_client.post(f"/api/projects/{PROJECT_ID}/conversations/{number}/close/")
+    assert closed.status_code == HTTPStatus.OK
+
+    response = await start_preview(aapi_client, number)
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert json.loads(response.content)["code"] == "CONVERSATION_CLOSED"
+    assert await get_agent_runtime_provider().peek(conversation_id) is None
+
+
 async def test_a_context_only_conversation_cold_restores_and_keeps_advancing(
     aapi_client,
     project,

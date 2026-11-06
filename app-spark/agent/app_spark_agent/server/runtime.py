@@ -18,7 +18,7 @@ from pydantic_ai import Agent
 
 from app_spark_agent import settings
 from app_spark_agent.agent import create_agent
-from app_spark_agent.app_supervisor import AppSupervisor
+from app_spark_agent.app_supervisor import AppSupervisor, PreviewStarter
 from app_spark_agent.git.saver import WorkspaceSaver
 from app_spark_agent.replication import ControlPlaneClient, StateReplicator
 from app_spark_agent.server.lifecycle import RuntimeLifecycle
@@ -159,6 +159,8 @@ class ConversationRuntime:
     :param launch_tool: The model's way to launch that process; its per-run budget is reset by
         ``POST /runs``. Held here rather than only inside the agent because an injected agent
         does not carry one.
+    :param preview_starter: The control plane's way to start that process, for
+        ``POST /preview/start``.
     :param replicator: Pushes the durable state to the control plane, or ``None`` when this
         Runtime has no control plane and its state directory is all there is.
     :param saver: Persists the workspace files to the Project's Git repository, or ``None`` when
@@ -175,6 +177,7 @@ class ConversationRuntime:
     lifecycle: RuntimeLifecycle
     app_supervisor: AppSupervisor
     launch_tool: LaunchTool
+    preview_starter: PreviewStarter
     replicator: StateReplicator | None
     saver: WorkspaceSaver | None = None
     runs: RunSupervisor = field(default_factory=RunSupervisor)
@@ -275,6 +278,7 @@ class ConversationRuntime:
             lifecycle=bound,
             app_supervisor=app_supervisor,
             launch_tool=launch_tool,
+            preview_starter=PreviewStarter(app_supervisor),
             replicator=replicator,
             saver=saver,
         )

@@ -225,6 +225,9 @@ class ErrorCodes:
     CREATE_CUSTOM_DOMAIN_FAILED = ErrorCode("创建独立域名失败")
     UPDATE_CUSTOM_DOMAIN_FAILED = ErrorCode("修改独立域名失败")
 
+    TXT_FILE_UNSUPPORTED = ErrorCode(_("仅云原生应用支持配置 txt 校验文件"))
+    SYNC_TXT_FILE_FAILED = ErrorCode(_("txt 校验文件访问集群失败，请稍候重试"))
+
     ERROR_UPDATING_PROC_SERVICE = ErrorCode("无法更新进程服务")
     ERROR_UPDATING_PROC_INGRESS = ErrorCode("无法更新主入口")
 

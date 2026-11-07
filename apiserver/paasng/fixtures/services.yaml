@@ -21,15 +21,60 @@
     category: 1
     description_zh_cn: redis
     long_description_zh_cn: redis
-    instance_tutorial_zh_cn: "\u901A\u8FC7\u73AF\u5883\u53D8\u91CF\u6765\u83B7\u53D6\u5BF9\u5E94\u7684\u503C\uFF1A\n\n```\nREDIS_HOST
-      = os.environ.get('REDIS_HOST')\nREDIS_PORT = int(os.environ.get('REDIS_PORT'))\nREDIS_PASSWORD
-      = os.environ.get('REDIS_PASSWORD')\n```\n\n\u84DD\u9CB8 Python \u5F00\u53D1\u6846\u67B6\u9ED8\u8BA4\u4F7F\u7528
-      RabbitMQ \u4F5C\u4E3A Celery \u7684 BROKER_URL\uFF1B\u5982\u9700\u4F7F\u7528
-      Redis\uFF0C\u8BF7\u5728 Django \u7684\u914D\u7F6E\u4E2D\u624B\u52A8\u8BBE\u7F6E
-      BROKER_URL \u7684\u503C:\n\n```\nBROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'\n```"
-    instance_tutorial_en: "To get the corresponding values via environment variables.\n\n```python\nREDIS_HOST = os.environ.get('REDIS_HOST')\nREDIS_PORT = int(os.environ.get('REDIS_PORT'))\nREDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')\n```\n\nBy default, the BlueKing Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis, set the BROKER_URL value manually in Django's configuration:\n\n```\nBROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'\n```"
+    instance_tutorial_zh_cn: |-
+      通过环境变量来获取对应的值：
+
+      ```
+      REDIS_HOST = os.environ.get('REDIS_HOST')
+      REDIS_PORT = int(os.environ.get('REDIS_PORT'))
+      REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
+      ```
+
+      如果 `REDIS_MODE` 为 `replication`（哨兵模式），`REDIS_HOST`、`REDIS_PORT` 为英文逗号分隔的哨兵节点地址和端口，`REDIS_SERVICE_NAME` 为哨兵的主节点名称。
+
+      蓝鲸 Python 开发框架默认使用 RabbitMQ 作为 Celery 的 BROKER_URL；如需使用 Redis，请在 Django 的配置中手动设置 BROKER_URL 的值:
+
+      ```
+      BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+      ```
+    instance_tutorial_en: |-
+      To get the corresponding values via environment variables.
+
+      ```python
+      REDIS_HOST = os.environ.get('REDIS_HOST')
+      REDIS_PORT = int(os.environ.get('REDIS_PORT'))
+      REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
+      ```
+
+      If `REDIS_MODE` is `replication` (sentinel mode), `REDIS_HOST` and `REDIS_PORT` are comma-separated addresses and ports of the sentinel nodes, and `REDIS_SERVICE_NAME` is the master name of the sentinel.
+
+      By default, the BlueKing Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis, set the BROKER_URL value manually in Django's configuration:
+
+      ```
+      BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+      ```
     available_languages: python
-    config: '{"provider_name":"pool"}'
+    config: |-
+      {
+        "provider_name": "pool",
+        "tls": false,
+        "config_items": [
+          {"key": "mode", "type": "string", "required": true, "example": "single 或 replication"},
+          {"key": "host", "type": "string", "required": true, "example": "redis.example.com；哨兵模式多个用 , 分隔"},
+          {"key": "port", "type": "string", "required": true, "example": "6379；哨兵模式多个用 , 分隔，数量与 host 一致"},
+          {"key": "password", "type": "string", "required": false, "example": ""},
+          {"key": "db", "type": "string", "required": false, "example": "0"},
+          {"key": "service_name", "type": "string", "required": false, "example": "mymaster（哨兵模式需填写）"}
+        ],
+        "template": [
+          {"key": "REDIS_MODE", "value": "{{mode}}"},
+          {"key": "REDIS_HOST", "value": "{{host}}"},
+          {"key": "REDIS_PORT", "value": "{{port}}"},
+          {"key": "REDIS_PASSWORD", "value": "{{password}}"},
+          {"key": "REDIS_DB", "value": "{{db}}"},
+          {"key": "REDIS_SERVICE_NAME", "value": "{{service_name}}"}
+        ]
+      }
     is_active: true
     is_visible: true
 

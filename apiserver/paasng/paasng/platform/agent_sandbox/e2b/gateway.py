@@ -102,6 +102,22 @@ class E2BGatewayClient:
         """重设沙箱的存活时长，对应 SDK 的 ``set_timeout``。"""
         self._request("POST", f"/sandboxes/{quote(sandbox_id, safe='')}/timeout", json={"timeout": timeout})
 
+    def connect_sandbox(self, sandbox_id: str, timeout: int) -> dict[str, Any]:
+        """连接沙箱，对应 SDK 的 ``Sandbox.connect``。
+
+        网关只会把到期时间往后延，不会缩短；沙箱处于暂停态时先恢复再返回，
+        所以超时窗口和创建一样宽。响应与详情同形，envdAccessToken 同样是新签发的。
+
+        :param timeout: 从此刻起的存活秒数
+        """
+        resp = self._request(
+            "POST",
+            f"/sandboxes/{quote(sandbox_id, safe='')}/connect",
+            json={"timeout": timeout},
+            timeout=GATEWAY_CREATE_TIMEOUT_SECONDS,
+        )
+        return resp.json()
+
     def close(self) -> None:
         self._session.close()
 

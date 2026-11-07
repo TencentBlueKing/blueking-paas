@@ -301,7 +301,7 @@ APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
 BKAIDEV_APIGW_ENVIRONMENT = settings.get("BKAIDEV_APIGW_ENVIRONMENT") or APIGW_ENVIRONMENT
 BKPAAS_APIGW_ENVIRONMENT = settings.get("BKPAAS_APIGW_ENVIRONMENT") or APIGW_ENVIRONMENT
 
-## 开发者中心在 API 网关上的网关名，发布到开发者中心时用它和 BK_API_URL_TMPL 拼出系统 API 地址。
+## 开发者中心在 API 网关上的网关名。发布和建项目时注册用户都用它和 BK_API_URL_TMPL 拼地址。
 ## 开发者中心不同版本的网关名不一样，按实际部署覆盖。
 BKPAAS_APIGW_NAME = settings.get("BKPAAS_APIGW_NAME", "bkpaas3")
 

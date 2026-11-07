@@ -64,6 +64,8 @@ class BkPaaSClient:
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
+        self._app_code = app_code
+        self._app_secret = app_secret
         self._client = httpx2.AsyncClient(
             base_url=self.base_url,
             headers={BKAPI_AUTHORIZATION_HEADER: json.dumps({"bk_app_code": app_code, "bk_app_secret": app_secret})},
@@ -157,6 +159,23 @@ class BkPaaSClient:
             f"{self._build_module_path(code, module)}/deployments/{deployment_id}/result/"
         )
         return structure_payload(self._read_json(response), DeploymentResult)
+
+    async def register_user_profile(self, access_token: str) -> None:
+        """Register the user identified by access_token, or return their existing profile."""
+
+        # 客户端默认头只有应用身份。这个接口要校验用户，所以这一次把 access_token 一并放进鉴权头。
+        authorization = json.dumps(
+            {
+                "bk_app_code": self._app_code,
+                "bk_app_secret": self._app_secret,
+                "access_token": access_token,
+            }
+        )
+        response = await self._client.post(
+            "/accounts/user_profile/",
+            headers={BKAPI_AUTHORIZATION_HEADER: authorization},
+        )
+        self._read_json(response)
 
     @staticmethod
     def _build_module_path(code: str, module: str) -> str:

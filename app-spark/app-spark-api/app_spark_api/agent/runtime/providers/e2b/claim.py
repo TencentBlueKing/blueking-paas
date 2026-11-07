@@ -32,6 +32,7 @@ from e2b import AsyncSandbox, AuthenticationException, NotFoundException, Sandbo
 from e2b.connection_config import ConnectionConfig
 from packaging.version import InvalidVersion, Version
 
+from app_spark_api.agent.runtime.constants import MODEL_ENV_NAMES
 from app_spark_api.agent.runtime.entities import AgentRuntimeHandle, E2BConfig
 from app_spark_api.agent.runtime.exceptions import AgentProvisionError, AgentWorkspaceBusyError
 from app_spark_api.agent.runtime.models import E2BSandboxRecord
@@ -96,7 +97,7 @@ class _SandboxClaim(SandboxAgentStop):
         :param envs: The Agent's whole environment. Passed to this one process through envd, not
             to the sandbox at creation, so no credential travels through the control plane.
         :raises AgentProvisionError: If the Agent cannot be started, exits during startup, never
-            becomes healthy, or the claim was released meanwhile.
+            becomes healthy, comes up without a usable model, or the claim was released meanwhile.
         """
         config = self.config
         # The Agent creates its state directory itself, but not the parent of it. `exec` makes the
@@ -125,7 +126,7 @@ class _SandboxClaim(SandboxAgentStop):
             handle.base_url,
         )
         try:
-            await self._wait_until_healthy(sandbox, process, handle)
+            await self._wait_until_healthy(sandbox, process, handle, envs)
             logger.info(
                 "Agent in E2B sandbox %s answered /health, pid %s",
                 sandbox.sandbox_id,
@@ -155,9 +156,9 @@ class _SandboxClaim(SandboxAgentStop):
         record.agent_pid = pid
 
     async def _wait_until_healthy(
-        self, sandbox: AsyncSandbox, process: AsyncCommandHandle, handle: AgentRuntimeHandle
+        self, sandbox: AsyncSandbox, process: AsyncCommandHandle, handle: AgentRuntimeHandle, envs: dict[str, str]
     ) -> None:
-        """Poll ``/health`` until the Agent answers, or explain why it never will."""
+        """Poll ``/health`` until the Agent answers with a usable model, or explain why it never will."""
         deadline = time.monotonic() + self.config.startup_timeout_seconds
         while True:
             # Checked on every pass, not only at the deadline: a bad configuration kills the Agent
@@ -179,10 +180,23 @@ class _SandboxClaim(SandboxAgentStop):
 
             # One probe never outlasts the time left, so the wait does not overrun the configured
             # timeout by a probe's length.
-            if await health.probe_agent_health(
+            snapshot = await health.probe_agent_health(
                 handle, timeout_seconds=min(constants.HEALTH_PROBE_TIMEOUT_SECONDS, remaining)
-            ):
+            )
+            if snapshot is not None:
+                # 模型没就绪的 Agent 也会回 /health，但之后每一轮都被 503 拒掉。在这里就判启动失败：
+                # 报出 Agent 读到的 MODEL 和这次实际注入了哪些模型变量，比等用户发消息再进沙箱翻要直接。
+                # 只列变量名不列值，值里有 token 和 key。
+                if not snapshot.model_ready:
+                    injected = sorted(name for name in envs if name in MODEL_ENV_NAMES)
+                    raise AgentProvisionError(
+                        f"The Agent Runtime started without a usable model: it reads MODEL={snapshot.model}, "
+                        f"and the model variables injected were {injected or 'none'}:\n"
+                        f"{await self._read_failure_output(sandbox, process)}"
+                    )
+
                 return
+
             await asyncio.sleep(min(constants.HEALTH_POLL_INTERVAL_SECONDS, max(deadline - time.monotonic(), 0)))
 
     async def _read_failure_output(self, sandbox: AsyncSandbox, process: AsyncCommandHandle) -> str:

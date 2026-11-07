@@ -19,6 +19,7 @@ from .bcs_resources import BCSResourceViewSet
 from .clusters import ClusterViewSet
 from .components import ClusterComponentViewSet
 from .default_configs import ClusterDefaultConfigViewSet
+from .e2b_configs import ClusterE2BConfigViewSet
 from .feature_flags import ClusterFeatureFlagViewSet
 from .policies import ClusterAllocationPolicyViewSet
 
@@ -27,6 +28,7 @@ __all__ = [
     "ClusterAllocationPolicyViewSet",
     "ClusterComponentViewSet",
     "ClusterDefaultConfigViewSet",
+    "ClusterE2BConfigViewSet",
     "ClusterFeatureFlagViewSet",
     "ClusterViewSet",
 ]

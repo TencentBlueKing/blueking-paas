@@ -241,6 +241,8 @@ class ErrorCodes:
     # 集群组件
     CANNOT_UPSERT_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
     CANNOT_GET_CLUSTER_STATUS = ErrorCode(_("无法获取集群状态"))
+    # 集群 e2b 沙箱配置
+    CANNOT_DELETE_CLUSTER_E2B_CONFIG = ErrorCode(_("无法删除集群 e2b 沙箱配置"))
 
     # dev sandbox
     DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))

@@ -44,12 +44,6 @@ from paasng.accessories.servicehub.exceptions import (
     UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.remote.manager import (
-    RemoteServiceInstanceMgr,
-    RemoteServiceMgr,
-    get_app_by_instance_name,
-)
-from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
@@ -61,15 +55,12 @@ from paasng.infras.accounts.permissions.application import (
     application_perm_class,
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin, SysManagedAppInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
-from paasng.platform.applications.serializers import ApplicationMembersInfoSLZ
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.platform.modules.manager import ModuleCleaner
@@ -309,25 +300,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data_before=DataDetail(data=service.config if service else None),
         )
         return Response(status=status.HTTP_200_OK)
-
-
-class SysModuleServicesViewSet(viewsets.ViewSet, SysManagedAppInPathMixin):
-    """应用态增强服务接口"""
-
-    permission_classes = [sysapi_client_perm_class(ClientAction.READ_AI_AGENT_APP)]
-
-    @swagger_auto_schema(tags=["增强服务"], operation_id="sys_get_service_instance_by_module")
-    def retrieve(self, request, code, module_name, service_id):
-        """应用态查看应用模块与增强服务的绑定关系详情, 仅 AIDEV 可调用, 仅允许操作 AI Agent 应用"""
-        module = self.get_managed_module_via_path()
-        service = mixed_service_mgr.get_or_404(service_id)
-
-        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
-        if not mixed_service_mgr.module_is_bound_with(service, module):
-            raise Http404
-
-        # 应用态仅返回实例 config 等必要信息
-        return Response(get_module_service_instances(module, service, slzs.SysServiceInstanceInfoSLZ))
 
 
 class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -678,26 +650,6 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         modules = SharingReferencesManager(module).list_related_modules(service_obj)
         return Response(MinimalModuleSLZ(modules, many=True).data)
-
-
-class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
-    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
-
-    def retrieve_related_applications_info(self, request, db_name):
-        """查看 mysql 增强服务的数据库关联的应用信息
-
-        APIGW 调用此接口,根据给定的 mysql 增强服务数据库名称(db_name)检索相关的应用信息。
-        """
-        store = get_remote_store()
-        service_mgr = RemoteServiceMgr(store)
-        services = service_mgr.get_mysql_services()
-        for service in services:
-            service_instance_mgr = RemoteServiceInstanceMgr(store, service)
-            app = get_app_by_instance_name(service_instance_mgr, db_name)
-            if app is None:
-                continue
-            return Response(ApplicationMembersInfoSLZ(app).data)
-        return Response(status=status.HTTP_200_OK)
 
 
 class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

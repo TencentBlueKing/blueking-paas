@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
+import logging
 from collections import defaultdict
 from contextlib import closing
 from typing import Dict, List
@@ -37,7 +38,6 @@ from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
 from paasng.bk_plugins.bk_plugins.constants import AI_AGENT_TEMPLATE_PREFIX, EventType
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
-from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import AppTenantInfo
@@ -67,11 +67,13 @@ from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
+logger = logging.getLogger(__name__)
+
 # TODO: 确认具体权限
 API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 
-class PluginInstanceViewSet(viewsets.ViewSet):
+class SysPluginInstanceViewSet(viewsets.ViewSet):
     """插件开发中心-插件实例相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -177,7 +179,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
         return Response(data={})
 
 
-class PluginDeployViewSet(viewsets.ViewSet):
+class SysPluginDeployViewSet(viewsets.ViewSet):
     """插件开发中心-插件部署相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -258,7 +260,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
         manager = DeployPhaseManager(deployment.app_environment)
         try:
             phases = [deployment.deployphase_set.get(type=type_) for type_ in manager.list_phase_types()]
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("failed to get phase info")
             raise error_codes.CANNOT_GET_DEPLOYMENT_PHASES
 
@@ -310,7 +312,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 
-class PluginMarketViewSet(viewsets.ViewSet):
+class SysPluginMarketViewSet(viewsets.ViewSet):
     """插件开发中心-插件市场信息相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -360,7 +362,7 @@ class PluginMarketViewSet(viewsets.ViewSet):
         )
 
 
-class PluginMembersViewSet(viewsets.ViewSet):
+class SysPluginMembersViewSet(viewsets.ViewSet):
     """插件开发中心-成员管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -449,7 +451,7 @@ class PluginMembersViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PluginConfigurationViewSet(viewsets.ViewSet):
+class SysPluginConfigurationViewSet(viewsets.ViewSet):
     """插件开发中心-配置管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES

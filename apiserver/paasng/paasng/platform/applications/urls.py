@@ -19,7 +19,6 @@ from paasng.infras.accounts.views import OauthTokenViewSet
 from paasng.utils.basic import re_path
 
 from . import views
-from .views.sys_api import SysApplicationViewSet
 
 urlpatterns = [
     # Every API startswith '/api/bkapps', 'bkapps' refers to blueking applications namespace
@@ -184,16 +183,6 @@ urlpatterns += [
     ),
 ]
 
-# 轻应用
-urlpatterns += [
-    re_path(
-        r"^sys/api/light-applications/$",
-        views.LightAppViewSet.as_view({"post": "create", "delete": "delete", "patch": "edit", "get": "query"}),
-        name="sys.api.light-applications",
-    ),
-]
-
-
 # 注册在 APIGW 网关上的 API, 输入、输出参数不能变更需走运营侧变更流程
 urlpatterns += [
     re_path(
@@ -207,7 +196,16 @@ urlpatterns += [
         views.ApplicationCreateViewSet.as_view({"post": "create_ai_agent_app"}),
         name="api.applications.create_ai_agent_app",
     ),
-    # 系统 API，给固定的系统使用
+]
+
+# System APIs：给固定的系统调用，与用户态 API 分块维护
+# 注意：以下接口同时注册在 APIGW 网关上，输入、输出参数不能变更需走运营侧变更流程
+urlpatterns += [
+    re_path(
+        r"^sys/api/light-applications/$",
+        views.SysLightAppViewSet.as_view({"post": "create", "delete": "delete", "patch": "edit", "get": "query"}),
+        name="sys.api.light-applications",
+    ),
     re_path(
         r"^sys/api/bkapps/ai_agent/$",
         views.SysAppViewSet.as_view({"post": "create_ai_agent_app"}),
@@ -225,7 +223,7 @@ urlpatterns += [
     ),
     re_path(
         r"^sys/api/bkapps/applications/(?P<code>[^/]+)/$",
-        SysApplicationViewSet.as_view({"get": "retrieve"}),
+        views.SysApplicationViewSet.as_view({"get": "retrieve"}),
         name="sys.api.applications.detail",
     ),
 ]

@@ -19,7 +19,7 @@ import json
 import logging
 import re
 from functools import wraps
-from typing import TYPE_CHECKING, ClassVar, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Optional, Tuple, Type
 
 import cattr
 from django.conf import settings
@@ -47,8 +47,6 @@ from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bk_log.exceptions import BkLogGatewayServiceError
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
@@ -453,10 +451,3 @@ class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView): ...
 
 
 class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView): ...
-
-
-class SysStructuredLogAPIView(StructuredLogAPIView):
-    permission_classes: List = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
-
-    def query_logs(self, request, code, module_name, environment):
-        return super().query_logs(request, code, module_name, environment)

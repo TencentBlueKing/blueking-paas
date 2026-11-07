@@ -17,10 +17,33 @@
 
 from paasng.utils.basic import re_path
 
-from . import pluginscenter_views, views
+from . import views
 
 urlpatterns = [
-    # System APIs start
+    re_path(
+        r"^api/bk_plugins/(?P<code>[^/]+)/profile/$",
+        views.BkPluginProfileViewSet.as_view({"get": "retrieve", "patch": "patch"}),
+        name="api.bk_plugins.profile",
+    ),
+    re_path(
+        r"^api/bk_plugins/(?P<code>[^/]+)/distributors/$",
+        views.DistributorRelsViewSet.as_view({"get": "list", "put": "update"}),
+        name="api.bk_plugins.distributor_rels",
+    ),
+    re_path(
+        r"^api/bk_plugin_distributors/$",
+        views.DistributorsViewSet.as_view({"get": "list"}),
+        name="api.bk_plugin_distributors",
+    ),
+    re_path(
+        r"^api/bk_plugin_tags/$",
+        views.BkPluginTagsViewSet.as_view({"get": "list"}),
+        name="api.bk_plugin_tags",
+    ),
+]
+
+# System APIs: 给固定的系统调用
+urlpatterns += [
     re_path(
         r"^sys/api/bk_plugins/$",
         views.SysBkPluginsViewset.as_view({"get": "list"}),
@@ -57,77 +80,52 @@ urlpatterns = [
     # shim api for plugin-center
     re_path(
         r"^sys/api/plugins_center/bk_plugins/$",
-        pluginscenter_views.PluginInstanceViewSet.as_view({"post": "create_plugin"}),
+        views.SysPluginInstanceViewSet.as_view({"post": "create_plugin"}),
         name="sys.api.plugins_center.bk_plugins.create",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/$",
-        pluginscenter_views.PluginInstanceViewSet.as_view({"put": "update_plugin", "delete": "archive_plugin"}),
+        views.SysPluginInstanceViewSet.as_view({"put": "update_plugin", "delete": "archive_plugin"}),
         name="sys.api.plugins_center.bk_plugins.detail",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/$",
-        pluginscenter_views.PluginDeployViewSet.as_view({"post": "deploy_plugin"}),
+        views.SysPluginDeployViewSet.as_view({"post": "deploy_plugin"}),
         name="sys.api.plugins_center.bk_plugins.deploy",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/(?P<deploy_id>[^/]+)/status/$",
-        pluginscenter_views.PluginDeployViewSet.as_view({"get": "check_deploy_status"}),
+        views.SysPluginDeployViewSet.as_view({"get": "check_deploy_status"}),
         name="sys.api.plugins_center.bk_plugins.deploy.status",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/deploy/(?P<deploy_id>[^/]+)/logs/$",
-        pluginscenter_views.PluginDeployViewSet.as_view({"get": "get_deploy_logs"}),
+        views.SysPluginDeployViewSet.as_view({"get": "get_deploy_logs"}),
         name="sys.api.plugins_center.bk_plugins.deploy.logs",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/market/$",
-        pluginscenter_views.PluginMarketViewSet.as_view({"post": "upsert_market_info"}),
+        views.SysPluginMarketViewSet.as_view({"post": "upsert_market_info"}),
         name="sys.api.plugins_center.bk_plugins.market.upsert",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/market/category/$",
-        pluginscenter_views.PluginMarketViewSet.as_view({"get": "list_category"}),
+        views.SysPluginMarketViewSet.as_view({"get": "list_category"}),
         name="sys.api.plugins_center.bk_plugins.market.list_category",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/members/$",
-        pluginscenter_views.PluginMembersViewSet.as_view({"get": "list_members", "post": "sync_members"}),
+        views.SysPluginMembersViewSet.as_view({"get": "list_members", "post": "sync_members"}),
         name="sys.api.plugins_center.bk_plugins.members",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/roles/(?P<role>[^/]+)/members/$",
-        pluginscenter_views.PluginMembersViewSet.as_view(
-            {"post": "add_members_to_role", "delete": "delete_members_from_role"}
-        ),
+        views.SysPluginMembersViewSet.as_view({"post": "add_members_to_role", "delete": "delete_members_from_role"}),
         name="sys.api.plugins_center.bk_plugins.role.members",
     ),
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/configuration/$",
-        pluginscenter_views.PluginConfigurationViewSet.as_view({"post": "sync_configurations"}),
+        views.SysPluginConfigurationViewSet.as_view({"post": "sync_configurations"}),
         name="sys.api.plugins_center.bk_plugins.configurations.sync",
     ),
-    # System APIs end
-    # User interface APIs start
-    re_path(
-        r"^api/bk_plugins/(?P<code>[^/]+)/profile/$",
-        views.BkPluginProfileViewSet.as_view({"get": "retrieve", "patch": "patch"}),
-        name="api.bk_plugins.profile",
-    ),
-    re_path(
-        r"^api/bk_plugins/(?P<code>[^/]+)/distributors/$",
-        views.DistributorRelsViewSet.as_view({"get": "list", "put": "update"}),
-        name="api.bk_plugins.distributor_rels",
-    ),
-    re_path(
-        r"^api/bk_plugin_distributors/$",
-        views.DistributorsViewSet.as_view({"get": "list"}),
-        name="api.bk_plugin_distributors",
-    ),
-    re_path(
-        r"^api/bk_plugin_tags/$",
-        views.BkPluginTagsViewSet.as_view({"get": "list"}),
-        name="api.bk_plugin_tags",
-    ),
-    # User interface APIs end
 ]

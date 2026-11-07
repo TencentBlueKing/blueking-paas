@@ -94,7 +94,7 @@ class TestAgentSandboxViewSetCreate:
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
             return_value=sandbox_obj,
         ):
             resp = api_client.post(
@@ -126,7 +126,7 @@ class TestAgentSandboxViewSetCreate:
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
             side_effect=SandboxAlreadyExists("sandbox already exists"),
         ):
             resp = api_client.post(create_url, data={"name": "existing-sandbox"}, format="json")
@@ -143,7 +143,7 @@ class TestAgentSandboxViewSetCreate:
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
             side_effect=SandboxError("failed to create sandbox"),
         ):
             resp = api_client.post(create_url, data={"name": "failed-sandbox"}, format="json")
@@ -160,7 +160,7 @@ class TestAgentSandboxViewSetCreate:
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
             side_effect=SandboxActiveCountLimitExceeded("limit reached", limit=100, current=100),
         ):
             resp = api_client.post(create_url, data={"name": "over-limit"}, format="json")
@@ -177,7 +177,7 @@ class TestAgentSandboxViewSetCreate:
         create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.create_sandbox",
+            "paasng.platform.agent_sandbox.views.api.create_sandbox",
             side_effect=SandboxImageValidateError("image not found"),
         ):
             resp = api_client.post(
@@ -202,7 +202,7 @@ class TestAgentSandboxViewSetDestroy:
         """
         destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
 
-        with mock.patch("paasng.platform.agent_sandbox.views.delete_sandbox") as mock_delete:
+        with mock.patch("paasng.platform.agent_sandbox.views.api.delete_sandbox") as mock_delete:
             resp = api_client.delete(destroy_url)
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -227,7 +227,7 @@ class TestAgentSandboxViewSetDestroy:
         destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": sandbox_obj.uuid.hex})
 
         with mock.patch(
-            "paasng.platform.agent_sandbox.views.delete_sandbox",
+            "paasng.platform.agent_sandbox.views.api.delete_sandbox",
             side_effect=SandboxError("failed to delete sandbox"),
         ):
             resp = api_client.delete(destroy_url)

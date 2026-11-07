@@ -47,7 +47,7 @@ def stubbed_version_service():
         last_update=datetime.datetime(2024, 9, 10, 16, 48, 24),
         message="init repo",
     )
-    with mock.patch("paasng.platform.sourcectl.views.get_version_service") as get_version_service:
+    with mock.patch("paasng.platform.sourcectl.views.api.get_version_service") as get_version_service:
         get_version_service.return_value.list_alternative_versions.return_value = [alternative_version]
         yield get_version_service
 

@@ -12,9 +12,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.10
-  title: "Add system APIs for AIDEV to query AI Agent app info, repo branches, add-ons, and manage processes."
-  comment: "Add sys_get_app_info, sys_get_repo_branches, sys_get_service_instance_by_module, sys_list_processes and sys_update_process for AI Agent applications."
+  version: 1.4.11
+  title: "Add an API for registering users who have never visited the Developer Center."
+  comment: "Add register_user_profile, so AppSpark can register a user with the user's own credentials before creating apps for them."
 
 stages:
   - name: "prod"

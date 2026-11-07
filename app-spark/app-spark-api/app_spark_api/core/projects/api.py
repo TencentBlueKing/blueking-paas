@@ -44,6 +44,7 @@ from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
 from app_spark_api.infras.accounts.credentials import get_user_credential
+from app_spark_api.infras.bk_paas.registration import aregister_user_profile
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -65,6 +66,10 @@ PROJECT_ID = Path(
 async def create_project(request: HttpRequest, payload: ProjectCreateRequest):
     """创建一个 Project。"""
     user = authenticated_user(request)
+
+    # 注册失败只记日志：人可以继续用 AppSpark，发布时再按开发者中心的报错找人处理。
+    await aregister_user_profile(request)
+
     try:
         project = await services.create_project(
             project_id=payload.id,
@@ -94,6 +99,10 @@ async def create_project_from_prompt(request: HttpRequest, payload: ProjectFromP
     - 自动命名在后台执行，客户端可轮询 `GET /projects/{project_id}/int-renaming/` 获取结果。
     """
     user = authenticated_user(request)
+
+    # 和手动建项目一样：注册失败只记日志，不挡住这次创建。
+    await aregister_user_profile(request)
+
     created = await services.create_project_from_prompt(
         content=payload.content,
         owner=user.pk,

@@ -18,6 +18,7 @@
 import logging
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -76,6 +77,30 @@ class UserInfoViewSet(APIView):
             "personal_center_url": f"{settings.BK_USER_URL}/personal-center" if settings.BK_USER_URL else "",
         }
         return Response(data)
+
+
+class UserProfileRegistrationView(APIView):
+    """为当前用户在开发者中心注册。"""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(tags=["accounts"], responses={200: serializers.UserProfileOutputSLZ})
+    def post(self, request):
+        """确保当前用户有 UserProfile，已有时原样返回。"""
+
+        # 首次访问时建档的逻辑在 SiteAccessControlMiddleware 里，它早于网关 JWT 中间件执行，
+        # 经网关来的请求到那一步还是匿名用户，所以没用过开发者中心的用户只能靠这里显式建档。
+        try:
+            profile = UserProfile.objects.get_profile(request.user)
+        except UserProfile.DoesNotExist:
+            # AUTO_CREATE_REGULAR_USER 关闭时只能由平台管理员手动添加用户。
+            raise error_codes.USER_PROFILE_AUTO_CREATE_DISABLED
+        except IntegrityError:
+            # 同一用户的并发首次调用会撞上 user 唯一约束，此时另一个请求已经建好档，直接读取。
+            profile = UserProfile.objects.get(user=request.user.pk)
+
+        data = {"username": request.user.username, "tenant_id": profile.tenant_id, "role": profile.role}
+        return Response(serializers.UserProfileOutputSLZ(data).data)
 
 
 class UserVerificationRateThrottle(UserRateThrottle):

@@ -22,6 +22,9 @@ from django.utils.translation import gettext_lazy as _
 class ErrorCodes:
     # 平台管理员相关
     USER_PROFILE_NOT_FOUND = ErrorCode(_("用户不存在"))
+    USER_PROFILE_AUTO_CREATE_DISABLED = ErrorCode(
+        _("开发者中心未开放自助注册，请联系平台管理员添加用户"), status_code=403
+    )
 
     # 用户特性相关
     USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))

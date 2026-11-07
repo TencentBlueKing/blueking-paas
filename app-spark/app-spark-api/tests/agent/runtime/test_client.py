@@ -139,6 +139,7 @@ async def test_every_runtime_client_request_uses_the_handle_bearer():
                         "replication_pending": False,
                         "dev_server_status": "not_started",
                         "run_id": None,
+                        "model_ready": True,
                     }
                 ).encode(),
             ),
@@ -178,6 +179,7 @@ async def test_provider_port_header_is_sent_alongside_the_runtime_bearer():
                 "replication_pending": False,
                 "dev_server_status": "not_started",
                 "run_id": None,
+                "model_ready": True,
             },
         )
 

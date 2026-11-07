@@ -120,8 +120,15 @@ class ErrorCodes:
         _("Version `{version_id}` does not belong to this project or cannot be published."),
         status_code=HTTPStatus.BAD_REQUEST,
     )
-    # 创建开发者中心应用失败（如应用 ID 已被占用）：任务已记为失败，detail 是给用户看的原因。
+    # 下面四个都是创建开发者中心应用失败：任务已记为失败，detail 是给用户看的原因，按该由谁处理分开。
+    # 开发者中心按业务规则拒绝了（如应用 ID 已被占用），用户看了原因自己能处理。
     PUBLICATION_SUBMIT_FAILED = ErrorCode(_("{reason}"), status_code=HTTPStatus.BAD_REQUEST)
+    # 开发者中心连不上、返回 5xx 或限流，稍后重试。
+    PUBLICATION_BKPAAS_UNAVAILABLE = ErrorCode(_("{reason}"), status_code=HTTPStatus.BAD_GATEWAY)
+    # 本服务没配好对接或没获得开发者中心授权，要管理员处理。
+    PUBLICATION_BKPAAS_MISCONFIGURED = ErrorCode(_("{reason}"), status_code=HTTPStatus.SERVICE_UNAVAILABLE)
+    # 本服务自己出错（如应用建好了却没记下来）。
+    PUBLICATION_INTERNAL_ERROR = ErrorCode(_("{reason}"), status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     # --- Agent Runtime ----------------------------------------------------------------------------
     AGENT_BUSY = ErrorCode(

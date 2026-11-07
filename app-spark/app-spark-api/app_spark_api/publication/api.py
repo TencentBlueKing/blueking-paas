@@ -22,11 +22,9 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-from django.shortcuts import aget_object_or_404
 from ninja import Path, Router, Status
 
-from app_spark_api.core.projects.models import Project
-from app_spark_api.core.tenant.user import get_tenant
+from app_spark_api.core.shortcuts import aget_project_or_404
 from app_spark_api.entities import ERROR_RESPONSES
 from app_spark_api.error_codes import error_codes
 from app_spark_api.infras.accounts.auth import authenticated_user, login_required
@@ -35,10 +33,12 @@ from app_spark_api.publication.entities import DeploymentCreateRequest, Publicat
 from app_spark_api.publication.exceptions import (
     PublicationAppNameInvalidError,
     PublicationNoVersionError,
+    PublicationProjectGoneError,
     PublicationSubmitError,
     PublicationTaskInProgressError,
     PublicationVersionNotFoundError,
 )
+from app_spark_api.publication.steps import FailureCause
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -46,6 +46,14 @@ if TYPE_CHECKING:
 router = Router(tags=["publication"], auth=login_required)
 
 PROJECT_ID = Path(..., description="项目 ID")
+
+# 创建应用失败时按该由谁处理给出不同的状态码，前端和监控据此区分用户能处理的拒绝与依赖故障。
+_SUBMIT_ERRORS = {
+    FailureCause.REJECTED: error_codes.PUBLICATION_SUBMIT_FAILED,
+    FailureCause.UNAVAILABLE: error_codes.PUBLICATION_BKPAAS_UNAVAILABLE,
+    FailureCause.MISCONFIGURED: error_codes.PUBLICATION_BKPAAS_MISCONFIGURED,
+    FailureCause.INTERNAL: error_codes.PUBLICATION_INTERNAL_ERROR,
+}
 
 
 @router.get(
@@ -55,9 +63,8 @@ PROJECT_ID = Path(..., description="项目 ID")
     summary="查看 Project 在开发者中心的发布状态",
 )
 async def get_publication(request: HttpRequest, project_id: str = PROJECT_ID):
-    """线上版本、进行中的任务、最近一次失败、还没看过的结果和开发者中心页面链接。"""
-    user = authenticated_user(request)
-    project = await aget_object_or_404(Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id), id=project_id)
+    """线上版本、进行中的任务、最近一次失败、要不要展开最近一次结果和开发者中心页面链接。"""
+    project = await aget_project_or_404(request, project_id)
     return PublicationResponse.from_state(await services.get_publication_state(project))
 
 
@@ -69,11 +76,10 @@ async def get_publication(request: HttpRequest, project_id: str = PROJECT_ID):
 )
 async def create_deployment(request: HttpRequest, payload: DeploymentCreateRequest, project_id: str = PROJECT_ID):
     """首次发布时同步创建应用，打包、部署在后台进行；已发布时为更新版本，线上旧版本在完成前继续服务。"""
-    user = authenticated_user(request)
-    project = await aget_object_or_404(Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id), id=project_id)
+    project = await aget_project_or_404(request, project_id)
 
     # 发起人会成为开发者中心应用的管理员和各操作的记录人，开发者中心只认用户名。
-    operator = user.username
+    operator = authenticated_user(request).username
     if not operator:
         raise error_codes.AUTHENTICATION_REQUIRED
 
@@ -86,9 +92,12 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
     except PublicationAppNameInvalidError as exc:
         raise error_codes.PUBLICATION_APP_NAME_INVALID from exc
     except PublicationSubmitError as exc:
-        raise error_codes.PUBLICATION_SUBMIT_FAILED.f(reason=str(exc)) from exc
+        raise _SUBMIT_ERRORS[exc.cause].f(reason=exc.message) from exc
     except PublicationTaskInProgressError as exc:
         raise error_codes.PUBLICATION_TASK_IN_PROGRESS from exc
+    except PublicationProjectGoneError as exc:
+        # 和取项目时一样按「不可见」处理，不暴露项目刚被删除。
+        raise error_codes.RESOURCE_NOT_FOUND from exc
 
     return Status(HTTPStatus.ACCEPTED, PublicationResponse.from_state(await services.get_publication_state(project)))
 
@@ -97,11 +106,15 @@ async def create_deployment(request: HttpRequest, payload: DeploymentCreateReque
     "unseen-result/",
     response={**ERROR_RESPONSES, HTTPStatus.NO_CONTENT: None},
     url_name="publication-unseen-result-delete",
-    summary="确认已看过最近一次任务结果",
+    summary="确认已点开看过最近一次任务结果",
 )
 async def delete_unseen_result(request: HttpRequest, project_id: str = PROJECT_ID):
-    """清空还没看过的结果，结果页只展示一次。"""
-    user = authenticated_user(request)
-    project = await aget_object_or_404(Project.objects.owned_by(user.pk, tenant_id=get_tenant(user).id), id=project_id)
+    """用户点开过最近一次任务的结果后调用，之后打开发布面板不再主动展开它。
+
+    发布面板打开时，若 unseen_result 不为空，前端主动展开最近一次部署记录（成功或失败）；用户点开看过后调用
+    本接口，unseen_result 随即为空，刷新页面也不会再弹出。线上版本、最近一次失败（last_failure）照常返回，
+    不受本接口影响。下一次任务结束后 unseen_result 又会出现。
+    """
+    project = await aget_project_or_404(request, project_id)
     await services.clear_unseen_result(project)
     return Status(HTTPStatus.NO_CONTENT, None)

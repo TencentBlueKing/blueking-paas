@@ -16,7 +16,7 @@
 
 """发布到开发者中心的两张表：项目与应用的绑定、发布任务。
 
-项目的发布状态（线上版本、最近一次失败、还没看过的结果）都从任务表推出来，不另存一份。
+项目的发布状态（线上版本、最近一次失败、要不要展开最近一次结果）都从任务表推出来，不另存一份。
 """
 
 from django.db import models
@@ -27,7 +27,7 @@ from app_spark_api.publication.constants import PublicationTaskKind, Publication
 from app_spark_api.utils.models import TimestampedModel
 
 
-class DevCenterAppBinding(TimestampedModel):
+class BkPaaSAppBinding(TimestampedModel):
     """The developer center application a Project publishes to.
 
     首次发布时创建应用并写入，之后一直复用。只在创建应用成功之后才写入，所以记录存在就说明开发者中心里确实有这个应用。
@@ -37,11 +37,11 @@ class DevCenterAppBinding(TimestampedModel):
         "projects.Project",
         verbose_name="所属项目",
         on_delete=models.CASCADE,
-        related_name="dev_center_app_binding",
+        related_name="bkpaas_app_binding",
     )
     app_code = models.CharField(verbose_name="开发者中心应用 ID", max_length=20, unique=True)
     module_name = models.CharField(verbose_name="发布到的模块", max_length=64)
-    tenant_id = tenant_id_field_factory(db_index=False)
+    tenant_id = tenant_id_field_factory()
 
 
 class PublicationTaskQuerySet(models.QuerySet["PublicationTask"]):
@@ -65,7 +65,7 @@ class PublicationTaskQuerySet(models.QuerySet["PublicationTask"]):
 class PublicationTask(TimestampedModel):
     """One deployment of a Project.
 
-    发布请求里同步创建应用；打包、上传、提交部署由 Celery 准备任务做，之后由 Celery 轮询结果直到结束，stage 跟着前进。
+    发布请求里同步创建应用；打包、上传、提交部署由 Celery 准备任务做，之后由 poll_task 轮询结果直到结束，stage 跟着前进。
     同一项目同时最多一个进行中的任务，发起时锁住项目行来保证。
     可选值见 constants：kind 取 PublicationTaskKind，stage 取 PublicationStage，status 取 PublicationTaskStatus。
     """
@@ -88,18 +88,16 @@ class PublicationTask(TimestampedModel):
     # 发出部署请求前写入。有它而没有 deployment_id，说明部署可能已经生效、只是没记下，不能再发一次。
     deploy_requested_at = models.DateTimeField(verbose_name="发出部署请求的时间", null=True, blank=True)
     deployment_id = models.CharField(verbose_name="开发者中心部署 ID", max_length=64, blank=True, default="")
-    # 部署超时从这里算。
+    # 轮询停掉时，兜底按它判部署超时。
     deploy_submitted_at = models.DateTimeField(verbose_name="提交部署的时间", null=True, blank=True)
-    # 每轮轮询都是一次独立的 Celery 任务，下面两个状态只能落库。
-    last_polled_at = models.DateTimeField(verbose_name="最近一次查询部署结果的时间", null=True, blank=True)
-    access_url_polls = models.PositiveSmallIntegerField(verbose_name="成功后等待访问地址的轮数", default=0)
 
     access_url = models.CharField(verbose_name="部署成功后的访问地址", max_length=512, blank=True, default="")
     error = models.TextField(verbose_name="失败原因", blank=True, default="")
-    # 结果页只展示一次：用户确认看过、或在发布请求里当场看到了失败原因时为 True。
+    # 发布面板打开时要不要主动展开这条任务的结果：任务结束时为 False，用户点开看过（或在发布请求的响应里
+    # 当场看到了失败原因）后为 True，之后刷新页面不再主动展开。线上版本、最近一次失败照常展示，不受它影响。
     result_seen = models.BooleanField(verbose_name="结果是否已看过", default=False)
     started_at = models.DateTimeField(verbose_name="发起时间", default=timezone.now)
     finished_at = models.DateTimeField(verbose_name="结束时间", null=True, blank=True)
-    tenant_id = tenant_id_field_factory(db_index=False)
+    tenant_id = tenant_id_field_factory()
 
     objects = PublicationTaskQuerySet.as_manager()
